@@ -1,6 +1,6 @@
 # Backlog
 
-`northline-backlog.csv` is the full remaining-work backlog after the Studio build: 13 epics, 120 stories, 708 story points, laid out over 19 two-week sprints (5 Oct 2026 → 25 Jun 2027).
+`northline-backlog.csv` is the full remaining-work backlog after the Studio build: 13 epics, 121 stories, 718 story points, laid out over 20 two-week sprints (5 Oct 2026 → 9 Jul 2027).
 
 ## Importing into Jira
 Jira → *Settings › System › External system import › CSV* (Cloud: *Import issues from CSV*). Map the columns:
@@ -29,3 +29,8 @@ Jira → *Settings › System › External system import › CSV* (Cloud: *Impor
   6. Pilot and Calgary launch.
 - **Holidays:** no allowance is made for holidays. Expect the late-December sprint to slip.
 - **Sources:** stories come from the gaps recorded in `docs/DECISIONS.md`, the screen inventory in `docs/SCREENS.md` (consumer web, mobile app, console) and the architecture in `docs/ARCHITECTURE.md`.
+
+## Platform decisions reflected in the backlog (2026-09-29)
+- **Portable, multi-cloud:** deployable to AWS, Google Cloud and Azure (startup credits). Kubernetes + Helm everywhere; Terraform modules share one interface with a per-cloud implementation; storage, KMS, secrets and email sit behind ports selected by configuration. Canadian regions only.
+- **Profiles:** `local` runs against your own Postgres/PostGIS, Valkey and local stand-ins (MinIO, Mailpit, Kafka, Elasticsearch, stripe-mock). Every environment has a runbook in `docs/runbooks/` listing what it needs.
+- **CI on GitHub Actions and GitLab CI**, both **manual trigger only** until CI credits are available.
