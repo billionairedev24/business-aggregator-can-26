@@ -1,4 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { ScreenPending } from '../../../features/shell/ScreenPending';
+import { MenuBuilderScreen } from '../../../features/kitchen/MenuBuilderScreen';
+import { groupsQuery, menusQuery } from '../../../features/kitchen/api';
 
-export const Route = createFileRoute('/b/$merchantId/kitchen/menu')({ component: () => <ScreenPending title="Menu builder" /> });
+export const Route = createFileRoute('/b/$merchantId/kitchen/menu')({
+  loader: ({ context, params }) => {
+    void context.queryClient.prefetchQuery(menusQuery(params.merchantId));
+    void context.queryClient.prefetchQuery(groupsQuery(params.merchantId));
+  },
+  component: MenuBuilderScreen,
+});

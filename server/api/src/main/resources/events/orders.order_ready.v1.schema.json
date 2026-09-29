@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:orders.order_ready:1",
+  "description": "order.ready — the kitchen marked a food order ready (published by food) — topic orders.order, key = order id.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "merchantId",
+    "actorId",
+    "late"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "orders.orders.id"
+    },
+    "merchantId": {
+      "type": "string",
+      "description": "merchants.merchants.id"
+    },
+    "actorId": {
+      "type": "string",
+      "description": "identity.users.id of the team member"
+    },
+    "late": {
+      "type": "boolean"
+    }
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:orders.order_handed_off:1",
+  "description": "order.handed_off — the kitchen handed a food order to the courier or the customer; food escrow for this merchant releases (published by food) — topic orders.order, key = order id.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "merchantId",
+    "actorId",
+    "fulfilmentMode"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "orders.orders.id"
+    },
+    "merchantId": {
+      "type": "string",
+      "description": "merchants.merchants.id"
+    },
+    "actorId": {
+      "type": "string",
+      "description": "identity.users.id of the team member"
+    },
+    "fulfilmentMode": {
+      "enum": [
+        "delivery",
+        "pickup"
+      ]
+    }
+  }
+}

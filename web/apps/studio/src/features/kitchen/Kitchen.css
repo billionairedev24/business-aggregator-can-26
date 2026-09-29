@@ -1,0 +1,96 @@
+/* Kitchen portal screens (design 02: kds, menu, combos, kitchenHours). Tokens only. */
+.nl-kitchen { min-width: 0; }
+.nl-k-kicker { display: block; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-neutral-700); margin-bottom: 10px; }
+.nl-k-title { font-size: clamp(30px, 3.5vw, 44px); margin: 0; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.nl-k-title-gap { margin-bottom: 8px; }
+.nl-k-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+.nl-k-head-tight { margin-bottom: 8px; }
+.nl-k-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.nl-k-muted { font-size: 13px; color: var(--color-neutral-700); }
+.nl-k-small { font-size: 12px; color: var(--color-neutral-700); }
+.nl-k-lede { max-width: 62ch; color: var(--color-neutral-700); margin: 0 0 20px; }
+.nl-k-danger { color: var(--color-accent-2-700); }
+.nl-k-foot { font-size: 13px; color: var(--color-neutral-700); margin-top: 20px; max-width: 64ch; }
+.nl-k-note { padding: 14px 16px; background: var(--color-surface); border: 1px solid var(--color-divider); border-radius: var(--radius-md); font-size: 13px; line-height: 1.55; margin-top: 14px; }
+.nl-k-link { font: inherit; color: var(--color-accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; min-height: 24px; }
+.nl-k-linkish { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; min-height: 32px; }
+.nl-k-linkish:hover { color: var(--color-accent); }
+.nl-k-small-btn { min-height: 34px; }
+.nl-k-x { min-height: 32px; min-width: 32px; padding: 4px 8px; font-size: 18px; }
+.nl-k-self-start { align-self: flex-start; }
+.nl-k-stack { display: flex; flex-direction: column; gap: 10px; }
+.nl-k-errlist { margin: 0; padding-left: 18px; }
+.nl-k-list { list-style: none; margin: 0; padding: 0; }
+
+/* Live orders */
+.nl-k-paused { padding: 12px 14px; background: var(--color-accent-2-100); border-radius: var(--radius-md); color: var(--color-accent-2-900); font-size: 14px; margin-bottom: 14px; }
+.nl-k-board { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 14px; }
+.nl-k-ticket { padding: 16px; background: var(--color-surface); border: 1px solid var(--color-divider); border-radius: var(--radius-md); display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.nl-k-ticket-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.nl-k-meta { font-size: 13px; color: var(--color-neutral-700); }
+.nl-k-lines { font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.nl-k-where { font-size: 12px; color: var(--color-neutral-700); }
+.nl-k-cta { min-height: 44px; margin-top: auto; }
+
+/* Menu builder */
+.nl-k-picker { min-height: 38px; max-width: 220px; }
+.nl-k-builder { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(min(100%, 280px), 1fr); gap: 28px clamp(24px, 4vw, 56px); align-items: start; }
+@media (max-width: 900px) { .nl-k-builder { grid-template-columns: minmax(0, 1fr); } }
+.nl-k-aside { position: sticky; top: 20px; min-width: 0; }
+@media (max-width: 900px) { .nl-k-aside { position: static; } }
+.nl-k-panel { padding: 18px; background: var(--color-surface); border: 1px solid var(--color-divider); border-radius: var(--radius-md); }
+.nl-k-panel-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.nl-k-panel-head h3 { font-size: 18px; margin: 0; }
+.nl-k-section { border-radius: var(--radius-md); }
+.nl-k-section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 18px 0 6px; }
+.nl-k-section-head h2 { font-size: 22px; margin: 0; display: flex; align-items: baseline; gap: 4px; }
+.nl-k-handle { font: inherit; color: var(--color-neutral-500); margin-right: 4px; background: none; border: 0; cursor: grab; min-width: 32px; min-height: 32px; padding: 0; }
+.nl-k-empty-line { margin: 6px 0; }
+.nl-k-item { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 10px 0; }
+@media (max-width: 480px) { .nl-k-item { grid-template-columns: 56px minmax(0, 1fr); } .nl-k-item-actions { grid-column: 1 / -1; } }
+.nl-k-photo { border-radius: var(--radius-md); background: var(--color-neutral-400); object-fit: cover; display: block; flex: none; }
+.nl-k-item-title { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.nl-k-item-desc { font-size: 13px; color: var(--color-neutral-700); overflow-wrap: anywhere; }
+.nl-k-item-meta { font-size: 12px; color: var(--color-neutral-700); margin-top: 2px; }
+.nl-k-mini-tag { font-size: 10px; padding: 1px 6px; margin-right: 4px; }
+.nl-k-small-tag { font-size: 11px; padding: 1px 8px; }
+.nl-k-item-actions { display: flex; gap: 6px; align-items: center; }
+.nl-k-avail { font: inherit; font-size: 12px; padding: 4px 10px; min-height: 32px; border-radius: var(--radius-md); cursor: pointer; border: 1px solid var(--color-divider); background: transparent; color: var(--color-neutral-700); }
+.nl-k-avail.is-on { border-color: var(--color-accent); background: var(--color-accent-100); color: var(--color-accent-800); }
+.nl-k-avail:disabled { cursor: default; }
+.nl-k-edit { min-height: 32px; padding: 4px 8px; }
+.nl-k-editor-form { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.nl-k-editor-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.nl-k-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); gap: 10px; }
+.nl-k-photos { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.nl-k-photo-add { width: 72px; height: 72px; border-radius: var(--radius-md); border: 1px dashed var(--color-neutral-400); display: grid; place-items: center; font-size: 11px; color: var(--color-neutral-700); text-align: center; background: transparent; cursor: pointer; }
+.nl-k-chip-link { text-decoration: none; display: inline-flex; align-items: center; }
+.nl-k-allergen-on[aria-pressed='true'] { border-color: var(--color-accent-2); background: var(--color-accent-2-100); color: var(--color-accent-2-900); }
+
+/* Modifiers & combos, hours */
+.nl-k-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 36px clamp(28px, 4vw, 64px); }
+.nl-k-two > section { min-width: 0; }
+.nl-k-subhead { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.nl-k-subhead h2, .nl-k-h2 { font-size: 22px; margin: 0 0 10px; }
+.nl-k-h2-gap { margin-top: 24px; }
+.nl-k-group { padding: 12px 0; }
+.nl-k-group-head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.nl-k-group-opts { margin-top: 6px; }
+.nl-k-tag-btn { cursor: pointer; font: inherit; font-size: 12px; min-height: 28px; }
+.nl-k-rows { font-size: 14px; display: flex; flex-direction: column; gap: 6px; }
+.nl-k-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 40px; flex-wrap: wrap; }
+.nl-k-row-tight { min-height: 32px; }
+.nl-k-row-end { display: flex; gap: 8px; align-items: center; }
+.nl-k-hours { margin: 0; }
+.nl-k-hours-row { display: grid; grid-template-columns: 50px 1fr auto; gap: 12px; align-items: center; min-height: 42px; font-size: 14px; }
+.nl-k-hours-row dt { font-weight: 600; }
+.nl-k-hours-row dd { margin: 0; }
+.nl-k-btnrow { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.nl-k-holidays { margin-top: 10px; }
+.nl-k-prep { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 12px; }
+.nl-k-fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.nl-k-day { padding-bottom: 10px; border-bottom: 1px solid var(--color-divider); }
+.nl-k-range, .nl-k-slot-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr)) auto; gap: 8px; align-items: end; }
+.nl-k-option-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto auto auto; gap: 8px; align-items: end; }
+@media (max-width: 560px) { .nl-k-option-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.nl-k-slot { display: flex; flex-direction: column; gap: 6px; padding-bottom: 8px; border-bottom: 1px solid var(--color-divider); }

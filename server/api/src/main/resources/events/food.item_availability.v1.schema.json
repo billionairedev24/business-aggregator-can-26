@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:food.item_availability:1",
+  "description": "food.item_availability — topic food.menu, key = item id.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "merchantId",
+    "menuId",
+    "visible"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "food.menu_items.id"
+    },
+    "merchantId": {
+      "type": "string",
+      "description": "merchants.merchants.id"
+    },
+    "menuId": {
+      "type": "string"
+    },
+    "visible": {
+      "type": "boolean"
+    },
+    "soldOutOn": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    }
+  }
+}
