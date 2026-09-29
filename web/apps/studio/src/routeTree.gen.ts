@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as BMerchantIdRouteImport } from './routes/b.$merchantId'
+import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as OnboardingIndexRouteImport } from './routes/onboarding/index'
 import { Route as OnboardingStepRouteImport } from './routes/onboarding/$step'
 import { Route as BMerchantIdIndexRouteImport } from './routes/b.$merchantId/index'
@@ -56,6 +57,11 @@ const SignInRoute = SignInRouteImport.update({
 const BMerchantIdRoute = BMerchantIdRouteImport.update({
   id: '/b/$merchantId',
   path: '/b/$merchantId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InviteTokenRoute = InviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingIndexRoute = OnboardingIndexRouteImport.update({
@@ -187,6 +193,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/sign-in': typeof SignInRoute
   '/b/$merchantId': typeof BMerchantIdRouteWithChildren
+  '/invite/$token': typeof InviteTokenRoute
   '/onboarding/$step': typeof OnboardingStepRoute
   '/onboarding/': typeof OnboardingIndexRoute
   '/b/$merchantId/appointments': typeof BMerchantIdAppointmentsRoute
@@ -216,6 +223,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/register': typeof RegisterRoute
   '/sign-in': typeof SignInRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/onboarding/$step': typeof OnboardingStepRoute
   '/onboarding': typeof OnboardingIndexRoute
   '/b/$merchantId/appointments': typeof BMerchantIdAppointmentsRoute
@@ -247,6 +255,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/sign-in': typeof SignInRoute
   '/b/$merchantId': typeof BMerchantIdRouteWithChildren
+  '/invite/$token': typeof InviteTokenRoute
   '/onboarding/$step': typeof OnboardingStepRoute
   '/onboarding/': typeof OnboardingIndexRoute
   '/b/$merchantId/appointments': typeof BMerchantIdAppointmentsRoute
@@ -279,6 +288,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/sign-in'
     | '/b/$merchantId'
+    | '/invite/$token'
     | '/onboarding/$step'
     | '/onboarding/'
     | '/b/$merchantId/appointments'
@@ -308,6 +318,7 @@ export interface FileRouteTypes {
     | '/'
     | '/register'
     | '/sign-in'
+    | '/invite/$token'
     | '/onboarding/$step'
     | '/onboarding'
     | '/b/$merchantId/appointments'
@@ -338,6 +349,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/sign-in'
     | '/b/$merchantId'
+    | '/invite/$token'
     | '/onboarding/$step'
     | '/onboarding/'
     | '/b/$merchantId/appointments'
@@ -369,6 +381,7 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   SignInRoute: typeof SignInRoute
   BMerchantIdRoute: typeof BMerchantIdRouteWithChildren
+  InviteTokenRoute: typeof InviteTokenRoute
   OnboardingStepRoute: typeof OnboardingStepRoute
   OnboardingIndexRoute: typeof OnboardingIndexRoute
 }
@@ -401,6 +414,13 @@ declare module '@tanstack/react-router' {
       path: '/b/$merchantId'
       fullPath: '/b/$merchantId'
       preLoaderRoute: typeof BMerchantIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invite/$token': {
+      id: '/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/invite/$token'
+      preLoaderRoute: typeof InviteTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding/': {
@@ -633,6 +653,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   SignInRoute: SignInRoute,
   BMerchantIdRoute: BMerchantIdRouteWithChildren,
+  InviteTokenRoute: InviteTokenRoute,
   OnboardingStepRoute: OnboardingStepRoute,
   OnboardingIndexRoute: OnboardingIndexRoute,
 }
