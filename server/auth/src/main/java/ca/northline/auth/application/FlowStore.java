@@ -19,6 +19,11 @@ public interface FlowStore {
             new Key<>("nl.auth.passkey-creation", PublicKeyCredentialCreationOptions.class);
     Key<PublicKeyCredentialRequestOptions> PASSKEY_REQUEST =
             new Key<>("nl.auth.passkey-request", PublicKeyCredentialRequestOptions.class);
+    /** Step-up (payouts): the pending passkey request and the failure count. */
+    Key<PublicKeyCredentialRequestOptions> STEP_UP_PASSKEY =
+            new Key<>("nl.auth.step-up-passkey", PublicKeyCredentialRequestOptions.class);
+
+    Key<Integer> STEP_UP_FAILURES = new Key<>("nl.auth.step-up-failures", Integer.class);
 
     <T extends Serializable> Optional<T> get(Key<T> key);
 
