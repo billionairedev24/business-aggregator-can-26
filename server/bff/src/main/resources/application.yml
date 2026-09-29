@@ -1,16 +1,37 @@
-# Backend-for-frontend: browser holds only an HttpOnly session cookie; tokens stay in Redis.
+# studio-bff — the browser holds only an HttpOnly session cookie (NL_STUDIO); tokens stay in the server-side session
+# (Redis). Profiles: `local` (application-local.yml: in-memory session, no Redis), `test`.
 spring:
-  application.name: northline-bff
-  data.redis.host: localhost
-  session.redis.namespace: nl:bff
+  application.name: northline-studio-bff
+  threads.virtual.enabled: true
+  data.redis.host: ${REDIS_HOST:localhost}
+  session:
+    redis.namespace: nl:studio-bff
+    timeout: 12h                          # "sessions expire after 12 h idle"
   security.oauth2.client:
-    registration.northline: { provider: northline, client-id: consumer-bff, client-secret: dev-consumer-bff, authorization-grant-type: authorization_code, scope: openid,profile,orders,bookings }
-    provider.northline.issuer-uri: http://localhost:9000
-  cloud.gateway.server.webmvc.routes:
-    - id: api
-      uri: http://localhost:8080
-      predicates: [ "Path=/api/**" ]
-      filters: [ TokenRelay= ]
+    registration:
+      studio:
+        provider: northline
+        client-id: studio-bff
+        client-secret: ${STUDIO_BFF_SECRET:dev-studio-bff}
+        client-authentication-method: client_secret_basic
+        authorization-grant-type: authorization_code
+        redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        scope: openid,profile,merchant
+    provider:
+      northline:                          # explicit endpoints: no discovery at start-up, no userinfo call
+        authorization-uri: ${AUTH_PUBLIC_URL:http://localhost:9000}/oauth2/authorize
+        token-uri: ${AUTH_INTERNAL_URL:http://localhost:9000}/oauth2/token
+        jwk-set-uri: ${AUTH_INTERNAL_URL:http://localhost:9000}/oauth2/jwks
+        user-name-attribute: sub
 server:
-  port: 8081
-  servlet.session.cookie: { http-only: true, secure: true, same-site: lax, name: NL_SESSION }
+  port: 8082
+  forward-headers-strategy: native
+  servlet.session:
+    timeout: 12h
+    cookie: { name: NL_STUDIO, http-only: true, secure: true, same-site: lax }
+management.endpoints.web.exposure.include: health,info
+northline.bff:
+  registration-id: studio
+  api-uri: ${API_URL:http://localhost:8080}
+  revocation-uri: ${AUTH_INTERNAL_URL:http://localhost:9000}/oauth2/revoke
+  sign-in-page: /sign-in

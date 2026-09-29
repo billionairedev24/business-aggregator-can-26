@@ -1,0 +1,4 @@
+spring.autoconfigure.exclude:
+  - org.springframework.boot.session.data.redis.autoconfigure.SessionDataRedisAutoConfiguration
+management.health.redis.enabled: false
+server.servlet.session.cookie.secure: false

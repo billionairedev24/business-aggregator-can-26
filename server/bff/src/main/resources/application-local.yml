@@ -1,0 +1,7 @@
+# `./gradlew :bff:bootRun --args='--spring.profiles.active=local'` — Redis isn't running locally: in-memory session.
+spring.autoconfigure.exclude:
+  - org.springframework.boot.session.data.redis.autoconfigure.SessionDataRedisAutoConfiguration
+management.health.redis.enabled: false
+server.servlet.session.cookie.secure: false
+logging.level:
+  ca.northline: debug
