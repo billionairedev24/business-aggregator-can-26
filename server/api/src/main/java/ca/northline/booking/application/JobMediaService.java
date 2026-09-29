@@ -12,7 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-class MediaService implements UploadMedia {
+class JobMediaService implements UploadMedia {
 
     private static final Set<String> ALLOWED =
             Set.of("image/jpeg", "image/png", "image/heic", "image/heif", "image/webp", "application/pdf");

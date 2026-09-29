@@ -277,7 +277,7 @@ class JobApiTest extends IntegrationTest {
 
         @Test
         void rejectsOtherFileTypes() throws Exception {
-            mvc.perform(multipart("/api/v1/merchants/{m}/media", biz.merchantId())
+            mvc.perform(multipart("/api/v1/merchants/{m}/jobs/media", biz.merchantId())
                             .file(new MockMultipartFile("file", "x.exe", "application/x-msdownload", new byte[] {1}))
                             .with(TestJwt.member(biz.userId())))
                     .andExpect(status().isUnprocessableContent())
@@ -286,7 +286,7 @@ class JobApiTest extends IntegrationTest {
     }
 
     private String upload() throws Exception {
-        var body = mvc.perform(multipart("/api/v1/merchants/{m}/media", biz.merchantId())
+        var body = mvc.perform(multipart("/api/v1/merchants/{m}/jobs/media", biz.merchantId())
                         .file(new MockMultipartFile("file", "brakes.jpg", "image/jpeg", new byte[] {1, 2, 3}))
                         .with(TestJwt.member(biz.userId())))
                 .andExpect(status().isCreated())

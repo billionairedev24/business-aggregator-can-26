@@ -133,7 +133,7 @@ class JobController {
     }
 
     /** Upload a completion photo or quote attachment (multipart field {@code file}). */
-    @PostMapping(path = "/media", consumes = "multipart/form-data")
+    @PostMapping(path = "/jobs/media", consumes = "multipart/form-data")
     @RequiresMerchant(OPERATE)
     @ResponseStatus(HttpStatus.CREATED)
     MediaResponse upload(@PathVariable String merchantId, @RequestPart("file") MultipartFile file, CurrentMember member)

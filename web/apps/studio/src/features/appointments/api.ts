@@ -86,7 +86,7 @@ export function useRequestApproval(m: string) {
 
 export function useUploadMedia(m: string) {
   return useMutation({
-    mutationFn: (file: File) => { const fd = new FormData(); fd.append('file', file); return http(`${base(m)}/media`, { method: 'POST', body: fd }, Media); },
+    mutationFn: (file: File) => { const fd = new FormData(); fd.append('file', file); return http(`${base(m)}/jobs/media`, { method: 'POST', body: fd }, Media); },
   });
 }
 
