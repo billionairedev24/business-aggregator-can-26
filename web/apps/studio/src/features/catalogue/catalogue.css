@@ -1,0 +1,104 @@
+/* Catalogue screens (listings editor, bulk upload). Values from tokens only. */
+
+/* two-column editor: form + side panels; one column on narrow screens */
+.nl-cat-editor { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 28px clamp(24px, 4vw, 56px); align-items: start; }
+.nl-cat-main { display: flex; flex-direction: column; gap: 14px; min-width: 0; border: 0; margin: 0; padding: 0; }
+.nl-cat-main:disabled .btn { pointer-events: none; }
+.nl-cat-aside { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.nl-cat-side { padding: 14px 16px; background: var(--color-surface); border: 1px solid var(--color-divider); border-radius: var(--radius-md); font-size: 13px; line-height: 1.55; }
+.nl-cat-note { margin: 0; font-size: 13px; color: var(--color-neutral-700); line-height: 1.55; }
+.nl-cat-note-box { margin-top: 8px; padding: 12px 14px; background: var(--color-surface); border: 1px solid var(--color-divider); border-radius: var(--radius-md); font-size: 13px; line-height: 1.55; }
+.nl-cat-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.nl-cat-row > .input { flex: 1 1 160px; min-width: 0; }
+.nl-cat-idtype { max-width: 140px; flex: 0 1 140px !important; }
+.nl-cat-stack { display: flex; flex-direction: column; gap: 8px; }
+.nl-cat-attention { margin: 6px 0 0; padding-left: 18px; }
+.nl-cat-h3 { font-size: 18px; margin: 0 0 10px; }
+
+/* tabs with completion dots */
+.nl-cat-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
+.nl-cat-tab { display: inline-flex; gap: 8px; align-items: center; }
+.nl-cat-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--color-accent-2); }
+.nl-cat-dot[data-done='true'] { background: var(--color-accent); }
+.nl-cat-tab[aria-selected='true'] .nl-cat-dot[data-done='true'] { background: var(--color-bg); }
+
+/* cascading category selects */
+.nl-cat-cascade { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: 8px; }
+.nl-cat-attrs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: 8px; }
+
+/* GTIN match banner */
+.nl-cat-match { display: flex; gap: 12px; align-items: center; padding: 10px 12px; background: var(--color-accent-100); border-radius: var(--radius-md); font-size: 13px; color: var(--color-accent-900); }
+
+/* completeness */
+.nl-cat-bar { position: relative; height: 6px; margin: 8px 0; background: var(--color-neutral-200); border-radius: var(--radius-md); overflow: hidden; }
+.nl-cat-bar-fill { position: absolute; inset: 0 auto 0 0; border-radius: var(--radius-md); background: var(--color-accent-2); transition: width .2s; }
+.nl-cat-bar-fill[data-complete='true'] { background: var(--color-accent); }
+.nl-cat-checklist, .nl-cat-checks { list-style: none; margin: 0; padding: 0; }
+.nl-cat-checklist li { display: flex; gap: 8px; align-items: center; min-height: 24px; }
+.nl-cat-checks li { display: flex; gap: 6px; align-items: flex-start; padding: 2px 0; }
+.nl-cat-checks li svg { flex: none; margin-top: 2px; }
+.nl-cat-checks li[data-ok='true'] svg { color: var(--color-accent); }
+.nl-cat-checks li[data-ok='false'] { color: var(--color-accent-2-700); }
+.nl-cat-checks li[data-ok='null'] svg { color: var(--color-neutral-500); }
+.nl-cat-expect { display: block; margin-top: 6px; color: var(--color-accent-800); }
+
+/* fulfilment option cards */
+.nl-cat-options { display: flex; flex-direction: column; gap: 6px; }
+
+/* variants */
+.nl-cat-values { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.nl-cat-value { min-height: 32px; display: inline-flex; align-items: center; gap: 4px; }
+.nl-cat-value button { border: 0; background: transparent; font: inherit; cursor: pointer; color: inherit; min-width: 28px; min-height: 28px; border-radius: var(--radius-sm); }
+.nl-cat-value button:focus-visible { outline: 2px solid var(--color-accent); }
+.nl-cat-value-input { max-width: 160px; }
+.nl-cat-variants { border: 1px solid var(--color-divider); }
+.nl-cat-variants .input { min-height: 36px; padding: 6px 10px; font-size: 14px; }
+.nl-cat-variants td { vertical-align: middle; }
+.nl-cat-variants td[data-col='sku'] .input { width: 110px; }
+.nl-cat-variants td[data-col='gtin'] .input { width: 140px; }
+.nl-cat-variants td[data-col='price'] .input { width: 84px; }
+.nl-cat-variants td[data-col='stock'] .input { width: 64px; }
+.nl-cat-main { container-type: inline-size; }
+/* the variant table becomes a card list when the form column is narrow (never horizontal scroll) */
+@container (max-width: 720px) {
+  .nl-cat-variants thead { display: none; }
+  .nl-cat-variants, .nl-cat-variants tbody, .nl-cat-variants tr, .nl-cat-variants td { display: block; width: 100%; }
+  .nl-cat-variants tr { padding: 10px 12px; border-bottom: 1px solid var(--color-divider); }
+  .nl-cat-variants tr:last-child { border-bottom: 0; }
+  .nl-cat-variants td { border: 0 !important; padding: 4px 0; display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 8px; align-items: center; }
+  .nl-cat-variants td::before { content: attr(data-label); font-size: 12px; color: var(--color-neutral-700); }
+  .nl-cat-variants td .input { width: 100% !important; }
+  .nl-cat-variants td .tag { justify-self: start; }
+  .nl-cat-variants td .nl-error { grid-column: 2; }
+}
+
+/* images */
+.nl-cat-images { list-style: none; margin: 0; padding: 0; display: flex; gap: 8px; flex-wrap: wrap; }
+.nl-cat-image { position: relative; }
+.nl-cat-thumb { display: block; flex: none; border-radius: var(--radius-md); background: var(--color-neutral-300); object-fit: cover; max-width: 100%; }
+.nl-cat-main-tag { position: absolute; left: 6px; top: 6px; font-size: 10px; }
+.nl-cat-image-tools { position: absolute; right: 4px; bottom: 4px; display: flex; gap: 2px; }
+.nl-cat-image-tools button { width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: var(--radius-sm); background: color-mix(in oklch, var(--color-bg) 88%, transparent); color: var(--color-text); cursor: pointer; }
+.nl-cat-image-tools button:disabled { opacity: .4; cursor: default; }
+.nl-cat-image-tools button:focus-visible { outline: 2px solid var(--color-accent); }
+.nl-cat-add-image { width: 110px; height: 110px; border-radius: var(--radius-md); border: 1px dashed var(--color-neutral-400); background: transparent; font: inherit; font-size: 12px; color: var(--color-neutral-700); cursor: pointer; padding: 8px; }
+.nl-cat-add-image:hover:not(:disabled) { background: var(--color-accent-100); }
+.nl-cat-add-image:focus-visible { outline: 2px solid var(--color-accent); }
+
+/* customer preview card */
+.nl-cat-preview { width: min(100%, 340px); border-radius: 28px; background: var(--color-bg); box-shadow: var(--shadow-lg); overflow: hidden; padding: 20px; }
+.nl-cat-preview .nl-cat-thumb { width: 100% !important; height: 200px !important; }
+.nl-cat-preview-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-top: 14px; }
+.nl-cat-preview-title { font-size: 18px; font-weight: 600; line-height: 1.2; }
+.nl-cat-preview-cta { margin-top: 14px; padding: 12px; text-align: center; border-radius: var(--radius-md); color: var(--color-on-accent); font-weight: 600; background: var(--color-accent); }
+
+/* bulk upload */
+.nl-cat-drop { padding: 28px; border: 1px dashed var(--color-neutral-400); border-radius: var(--radius-md); text-align: center; font-size: 14px; color: var(--color-neutral-700); }
+.nl-cat-drop[data-over='true'] { background: var(--color-accent-100); border-color: var(--color-accent); }
+.nl-cat-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr)); gap: 8px; font-size: 13px; margin-bottom: 14px; }
+.nl-cat-stat { padding: 12px; background: var(--color-surface); border: 1px solid var(--color-divider); border-radius: var(--radius-md); }
+.nl-cat-stat[data-tone='ok'] { background: var(--color-accent-100); border-color: transparent; color: var(--color-accent-900); }
+.nl-cat-stat[data-tone='error'] { background: var(--color-accent-2-100); border-color: transparent; color: var(--color-accent-2-900); }
+.nl-cat-stat-n { font-size: 22px; font-weight: 600; }
+.nl-cat-integrations { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.nl-cat-integration { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 14px; border: 1px solid var(--color-divider); border-radius: var(--radius-md); background: var(--color-surface); }

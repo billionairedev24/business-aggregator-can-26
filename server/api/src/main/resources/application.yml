@@ -12,6 +12,9 @@ spring:
     # Override with SPRING_FLYWAY_LOCATIONS=filesystem:/path/to/db/migrations if you must.
     locations: classpath:db/migration
   mvc.problemdetails.enabled: true
+  servlet.multipart:                  # catalogue: listing images (≤ 15 MB) and bulk-upload spreadsheets
+    max-file-size: 20MB
+    max-request-size: 25MB
   jackson:
     default-property-inclusion: always
   security.oauth2.resourceserver.jwt:
