@@ -61,7 +61,7 @@ See `docs/BACKEND_CONVENTIONS.md` (written by the backend foundation) — layeri
 - **Nav badges:** `GET /api/v1/merchants/{id}/nav-badges` → `{ "<screenKey>": "<badge text>" }` (screen keys as in `nav.ts`). Each module contributes through a `NavBadgeContributor` bean (interface in `ca.northline.shared`), the `studio` module aggregates. Badge text is computed server-side in the caller's locale (`Accept-Language`).
 - **Dashboard:** `GET /api/v1/merchants/{id}/dashboard` — composed by the `studio` module from other modules' public APIs (no cross-module repository access).
 - **Listings (catalogue ↔ onboarding step 6):** the catalogue workstream owns these; onboarding's "First listings" step calls them.
-  `GET /api/v1/merchants/{id}/listings?kind=service|product&limit=` → `[{ id, kind, name, sku, meta, priceCents, stock, sales30d, vetting: draft|pending|approved|rejected, status: live|hidden }]` ·
+  `GET /api/v1/merchants/{id}/listings?kind=service|product&limit=` → `{ items: [{ id, kind, name, sku, meta, priceCents, stock, sales30d, vetting: draft|pending|approved|rejected, status: live|hidden }] }` ·
   `POST /api/v1/merchants/{id}/services` `{ name, categoryId?, pricingMode: fixed|quote|hourly, priceCents?, durationMin, bufferMin, included, instantBook }` ·
   `POST /api/v1/merchants/{id}/products` `{ gtin?, title, categoryId, priceCents, stock, variantTheme?: none|size|colour|size_colour }` (created as `vetting=draft`).
   Menu items for kitchens: `POST /api/v1/merchants/{id}/menu-items` `{ menuId, sectionId, name, description, priceCents, prepAddMin, allergens[], modifierGroupIds[] }` (kitchen workstream owns; created hidden until approval).
