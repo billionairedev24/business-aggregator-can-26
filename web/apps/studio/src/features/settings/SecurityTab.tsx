@@ -21,11 +21,13 @@ export function deviceName(ua: string | null | undefined, t: SettingsT): string 
 /** Security (design 02 › st.security): the signed-in person's factors and sessions, from northline-auth. */
 export function SecurityTab() {
   const t = useSettingsT();
-  const q = useQuery(securityQuery);
+  const devAuth = !!useSession().data?.devAuth;
+  const q = useQuery({ ...securityQuery, enabled: !devAuth });
   return (
     <div className="nl-set-security">
       <div className="nl-set-banner"><strong>{t('securityBanner')}</strong>{t('securityBannerTail')}</div>
-      {q.isPending ? <PageSkeleton kpis={0} rows={6} />
+      {devAuth ? <Alert tone="neutral" title={t('securityDevAuthTitle')}>{t('securityDevAuth')}</Alert>
+        : q.isPending ? <PageSkeleton kpis={0} rows={6} />
         : q.isError ? <ErrorState message={t('securityError')} onRetry={() => void q.refetch()} />
         : q.data === null ? <ConfirmItsYou />
         : <Factors security={q.data} />}

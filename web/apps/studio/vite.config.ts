@@ -15,7 +15,7 @@ function devAuth(env: Record<string, string>): Plugin {
       server.middlewares.use('/bff/session', (_req, res) => {
         const [firstName = 'Dev', lastName = 'User'] = (env.NL_DEV_USER_NAME ?? 'Ravi Sandhu').split(' ');
         res.setHeader('content-type', 'application/json');
-        res.end(JSON.stringify({ user: { id: env.NL_DEV_USER, firstName, lastName, email: env.NL_DEV_USER_EMAIL ?? 'ravi@prairiewrench.ca', initials: (firstName[0]! + lastName[0]!).toUpperCase(), locale: 'en-CA', memberSince: '2026-03-02' }, acr: 'mfa' }));
+        res.end(JSON.stringify({ user: { id: env.NL_DEV_USER, firstName, lastName, email: env.NL_DEV_USER_EMAIL ?? 'ravi@prairiewrench.ca', initials: (firstName[0]! + lastName[0]!).toUpperCase(), locale: 'en-CA', memberSince: '2026-03-02' }, acr: 'mfa', devAuth: true }));
       });
       server.middlewares.use('/bff/logout', (_req, res) => { res.statusCode = 204; res.end(); });
     },

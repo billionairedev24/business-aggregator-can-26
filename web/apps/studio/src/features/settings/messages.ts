@@ -49,6 +49,8 @@ export const useSettingsT = defineMessages({
     confirmTitle: 'Confirm it’s you', confirmBody: 'To see your passkeys, backup codes and sign-ins, confirm with your passkey or authenticator app.',
     usePasskey: 'Use passkey', codeLabel: 'Authenticator code', confirm: 'Confirm', confirming: 'Checking…', confirmError: 'That didn’t work. Try again.', codeFormat: 'Enter the 6-digit code.',
     securityError: 'We couldn’t load your security settings.',
+    securityDevAuthTitle: 'Dev sign-in is on.',
+    securityDevAuth: 'Passkeys, authenticator and sessions live on the auth server, which isn’t used in this mode. Run the Studio with real sign-in to manage them (docs/runbooks/local.md).',
     device_iphone: 'iPhone', device_android: 'Android', device_mac: 'Mac', device_windows: 'Windows', device_other: 'Browser',
     // notifications
     colEvent: 'Event', ch_push: 'Push', ch_sms: 'SMS', ch_email: 'Email',
@@ -114,6 +116,8 @@ export const useSettingsT = defineMessages({
     confirmTitle: 'Confirmez que c’est vous', confirmBody: 'Pour voir vos clés d’accès, codes de secours et connexions, confirmez avec votre clé d’accès ou votre application d’authentification.',
     usePasskey: 'Utiliser la clé d’accès', codeLabel: 'Code d’authentification', confirm: 'Confirmer', confirming: 'Vérification…', confirmError: 'Cela n’a pas fonctionné. Réessayez.', codeFormat: 'Entrez le code à 6 chiffres.',
     securityError: 'Impossible de charger vos paramètres de sécurité.',
+    securityDevAuthTitle: 'La connexion de développement est active.',
+    securityDevAuth: 'Les clés d’accès, l’application d’authentification et les sessions sont gérées par le serveur d’authentification, qui n’est pas utilisé dans ce mode. Lancez le Studio avec la vraie connexion pour les gérer (docs/runbooks/local.md).',
     device_iphone: 'iPhone', device_android: 'Android', device_mac: 'Mac', device_windows: 'Windows', device_other: 'Navigateur',
     colEvent: 'Événement', ch_push: 'Push', ch_sms: 'SMS', ch_email: 'Courriel',
     ev_new_booking: 'Nouvelle réservation / commande', ev_quote_request: 'Demande de devis (délai de 2 h)', ev_customer_message: 'Message d’un client', ev_payout: 'Paiement libéré / versement envoyé',
