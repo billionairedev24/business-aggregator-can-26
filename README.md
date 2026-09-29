@@ -7,7 +7,7 @@ Implementation scaffold generated from the design project. Read `CLAUDE.md` firs
 CLAUDE.md                     agent instructions — spec precedence, stack, non-negotiables
 README.md
 docker-compose.yml            local infra: Postgres 17 + PostGIS, Redis, Kafka, OpenSearch, Keycloak
-db/migrations/V001..V016      Flyway migrations, one schema per module; V016 = spec constraints & triggers
+db/migrations/V001..V018      Flyway migrations, one schema per module; V016 = spec constraints & triggers
 db/seed/categories.json       grouped taxonomy (~120 services, shop departments, food types) with regulators
 docs/ARCHITECTURE.md          components, connections, end-to-end flows
 docs/DATA_MODEL.md            every table/column with notes, events, search projections
@@ -32,17 +32,26 @@ design/                       HTML design references (open in a browser) + desig
 
 Design files load `theme/northline.css` and `support.js`; keep the folder structure intact to open them.
 
-## Getting started
+## Getting started (backend)
+Needs JDK 25 (`export JAVA_HOME=/path/to/jdk-25`) and Docker. Details: `docs/BACKEND_CONVENTIONS.md`.
 ```
-docker compose up -d
-# run Flyway against postgres://northline:northline@localhost:5432/northline with db/migrations
-# seed: load db/seed/categories.json into catalogue.categories (group rows first, then leaves with parent_id)
+docker compose up -d postgres                     # PostGIS 17 on :5432 (northline/northline)
+cd server
+./gradlew build                                   # compile all 4 apps, Error Prone/NullAway, Checkstyle, Spotless, tests (Testcontainers)
+./gradlew :api:flywayMigrate                      # db/migrations → localhost:5432/northline (-Pdb.url=… for another DB, -Pdb.devSeed=true for personas)
+./gradlew :api:seedCategories                     # db/seed/categories.json → catalogue.categories (idempotent)
+./gradlew :api:bootRun --args='--spring.profiles.active=local'
+curl -H 'X-Dev-User: 01J9ZD3V00000000000000RAV1' localhost:8080/api/v1/me/businesses
 ```
-
+The `local` profile needs only Postgres. It applies the dev personas from `db/seed-dev`, authenticates the
+`X-Dev-User` header without the auth server, and keeps Kafka, Elasticsearch and Redis off. For the full stack, run
+`docker compose up -d` and `scripts/topics.sh`, then start `:auth:bootRun` and `:api:bootRun` without `local`.
 
 ## v2 layout
-- `server/` — Gradle multi-project: api, auth, bff, worker (Java 25, Spring Boot 4.1.1)
+- `server/` — Gradle multi-project (wrapper 9.8.0): api, auth, bff, worker (Java 25, Spring Boot 4.1.1, Spring Modulith 2.1)
 - `web/` — pnpm monorepo: packages/tokens, packages/ui (Storybook), apps/consumer (TanStack Start)
-- `db/migrations` — V001–V017 (V017: event outbox + authorization server)
+- `db/migrations` — V001–V017 design baseline, V018 foundation; workstream ranges in `docs/IMPLEMENTATION_PLAN.md`
+- `db/seed-dev` — dev-only seed (V100–V109), applied under the `local` profile
+- `docs/BACKEND_CONVENTIONS.md` — how to add a module, endpoint, migration, event, test
 
-Quick start: `docker compose up -d`, `cd server && ./gradlew :auth:bootRun :api:bootRun`, `cd web && pnpm i && pnpm storybook`.
+Frontend: `cd web && pnpm i && pnpm storybook`.

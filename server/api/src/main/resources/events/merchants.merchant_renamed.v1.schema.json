@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:merchants.merchant_renamed:1",
+  "type": "object",
+  "required": ["eventId", "occurredAt", "aggregateId", "actorId", "displayName"],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": { "type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$" },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "aggregateId": { "type": "string", "description": "merchants.merchants.id" },
+    "actorId": { "type": "string", "description": "identity.users.id of the team member who made the change" },
+    "displayName": { "type": "string", "minLength": 2, "maxLength": 80 }
+  }
+}

@@ -1,9 +1,10 @@
 -- schema: developer · audit · owner: Java (java)
+-- 2026-09-29 (backend foundation): Postgres schema is `developer` — the label "developer · audit" is not a valid identifier. See docs/DECISIONS.md.
 -- Generated from the Northline spec (docs/DATA_MODEL.md). Hand-edit freely; keep column names.
-CREATE SCHEMA IF NOT EXISTS developer · audit;
+CREATE SCHEMA IF NOT EXISTS developer;
 
 -- Scoped keys per merchant (hashed).
-CREATE TABLE developer · audit.api_keys (
+CREATE TABLE developer.api_keys (
   -- PK
   id text PRIMARY KEY,
   merchant_id text,
@@ -17,7 +18,7 @@ CREATE TABLE developer · audit.api_keys (
 -- TODO indexes/constraints: index(key_hash)
 
 -- HMAC-signed endpoints and subscribed events.
-CREATE TABLE developer · audit.webhook_endpoints (
+CREATE TABLE developer.webhook_endpoints (
   -- PK
   id text PRIMARY KEY,
   merchant_id text,
@@ -29,7 +30,7 @@ CREATE TABLE developer · audit.webhook_endpoints (
 );
 
 -- Attempts with response codes; retried with backoff.
-CREATE TABLE developer · audit.webhook_deliveries (
+CREATE TABLE developer.webhook_deliveries (
   -- PK
   id text PRIMARY KEY,
   endpoint_id text,
@@ -41,7 +42,7 @@ CREATE TABLE developer · audit.webhook_deliveries (
 -- TODO indexes/constraints: index(endpoint_id,at)
 
 -- Transactional outbox → Debezium → Kafka.
-CREATE TABLE developer · audit.outbox (
+CREATE TABLE developer.outbox (
   -- PK
   id text PRIMARY KEY,
   aggregate text,
@@ -55,7 +56,7 @@ CREATE TABLE developer · audit.outbox (
 -- outbox events: everything
 
 -- Immutable record of every privileged action (Console, Studio owners).
-CREATE TABLE developer · audit.audit_log (
+CREATE TABLE developer.audit_log (
   -- PK
   id text PRIMARY KEY,
   actor_id text,
@@ -70,6 +71,6 @@ CREATE TABLE developer · audit.audit_log (
 -- TODO indexes/constraints: append-only · nightly export to cold storage · 7-year retention
 
 -- Foreign keys (in-module only)
--- logical ref (cross-module, no FK): developer · audit.api_keys.merchant_id → merchants.merchants.id
--- logical ref (cross-module, no FK): developer · audit.webhook_endpoints.merchant_id → merchants.merchants.id
-ALTER TABLE developer · audit.webhook_deliveries ADD CONSTRAINT fk_webhook_deliveries_endpoint_id FOREIGN KEY (endpoint_id) REFERENCES developer · audit.webhook_endpoints(id);
+-- logical ref (cross-module, no FK): developer.api_keys.merchant_id → merchants.merchants.id
+-- logical ref (cross-module, no FK): developer.webhook_endpoints.merchant_id → merchants.merchants.id
+ALTER TABLE developer.webhook_deliveries ADD CONSTRAINT fk_webhook_deliveries_endpoint_id FOREIGN KEY (endpoint_id) REFERENCES developer.webhook_endpoints(id);

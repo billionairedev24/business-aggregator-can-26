@@ -7,8 +7,13 @@ import java.time.Instant;
  * Payloads carry ids, not PII. Schemas: api/src/main/resources/events/*.schema.json
  */
 public interface DomainEvent {
-    String eventId();      // ULID — consumer dedupe key
+    String eventId(); // ULID — consumer dedupe key
+
     Instant occurredAt();
+
     String aggregateId();
-    default int version() { return 1; }
+
+    default int version() {
+        return 1;
+    }
 }

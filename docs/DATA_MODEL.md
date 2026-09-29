@@ -1,5 +1,7 @@
 # Northline — Data model (generated from 08 Data Model.dc.html)
 
+> **Postgres schema names (2026-09-29):** the labels `trust · loyalty`, `messaging · support` and `developer · audit` below are the schemas **`trust`**, **`messaging`** and **`developer`**. `fulfilment.positions` is not created (Redis Streams). V018 adds `merchants.merchants.city` and the `merchant_members.role` CHECK (owner | technician | bookkeeper | cook). See DECISIONS.md.
+
 One Postgres schema per module. ULIDs stored as text. Enums are text + CHECK for now (promote to native enums once stable). Cross-schema references are logical (no FK) and listed as such.
 
 ## Schema `identity` — Java (java)
