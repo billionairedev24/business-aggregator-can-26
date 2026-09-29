@@ -98,7 +98,7 @@ export function AccountStep({ type, onboarding, isNew, onTypeChange, onDone }: A
 
       {isNew ? (
         <div className="nl-ob-terms">
-          <Checkbox checked={terms} onChange={v => { setTerms(v); setTouched(s => ({ ...s, businessTermsAccepted: true })); }} label={<>{t('termsBefore')}<a href="/terms#business" target="_blank" rel="noopener">{t('termsLink')}</a>{t('termsAfter')}</>} />
+          <Checkbox checked={terms} onChange={v => { setTerms(v); setTouched(s => ({ ...s, businessTermsAccepted: true })); }} label={<>{t('termsBefore')}<a href="/legal/terms.html#business" target="_blank" rel="noopener">{t('termsLink')}</a>{t('termsAfter')}</>} />
           {show('businessTermsAccepted') ? <div role="alert" className="nl-error">{show('businessTermsAccepted')}</div> : null}
         </div>
       ) : (

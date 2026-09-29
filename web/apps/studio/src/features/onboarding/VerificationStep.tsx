@@ -54,7 +54,7 @@ export function VerificationStep({ onboarding, onBack, onSubmitted }: Verificati
           : <button type="button" className="btn btn-primary" onClick={onSubmitted}>{t('step_review')} →</button>}
         <span className="nl-ob-hint">{t('checksDone', { done, total: checks.length })}</span>
         <button type="button" className="btn btn-ghost" onClick={onBack}>{t('back')}</button>
-        <Link to="/b/$merchantId/help" params={{ merchantId: onboarding.merchantId }} className="nl-small" style={{ marginLeft: 'auto' }}>{t('helpDoc')}</Link>
+        <Link to="/b/$merchantId/help" params={{ merchantId: onboarding.merchantId }} search={{ topic: "verification" } as never} className="nl-small" style={{ marginLeft: 'auto' }}>{t('helpDoc')}</Link>
       </div>
       {open && (
         <CheckDialog

@@ -66,7 +66,7 @@ export function SignedOutPage({ mode, onModeChange, recoverOnLoad, next, resumeI
           <h2 className="nl-auth-title" id="nl-auth-title">{title}</h2>
           {error && <Alert tone="error">{t('federationFailed')}</Alert>}
           {mode === 'register'
-            ? <RegisterFlow prefill={prefill} onSignIn={() => onModeChange('signin')} onFinished={() => navigate(bffLoginUrl('/onboarding'))} />
+            ? <RegisterFlow prefill={prefill} onSignIn={() => onModeChange('signin')} onFinished={() => navigate(bffLoginUrl(onboarding && next ? next : '/onboarding'))} />
             : <SignInFlow onboarding={onboarding} resumeIdentifier={resumeIdentifier} recover={recover}
                 onRegister={() => onModeChange('register')} onFinished={() => navigate(bffLoginUrl(next ?? '/'))} />}
           <p className="nl-auth-footer">
