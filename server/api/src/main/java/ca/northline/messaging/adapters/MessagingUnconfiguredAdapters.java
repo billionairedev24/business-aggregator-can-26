@@ -1,17 +1,20 @@
 package ca.northline.messaging.adapters;
 
 import ca.northline.messaging.application.AttachmentStorage;
+import ca.northline.shared.storage.UsesLocalStorage;
 import java.util.Optional;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
 /**
- * Placeholder outside {@code local}/{@code test} until the S3 attachment store (ca-central-1) is built: the
+ * Placeholder outside {@code local}/{@code test} while {@code STORAGE_PROVIDER=local} ({@link ObjectStoreAttachmentStorage}
+ * otherwise): the
  * application starts, and uploading fails loudly.
  */
 @Configuration(proxyBeanMethods = false)
 @Profile("!local & !test")
+@UsesLocalStorage
 class MessagingUnconfiguredAdapters {
 
     @Bean
@@ -19,7 +22,7 @@ class MessagingUnconfiguredAdapters {
         return new AttachmentStorage() {
             @Override
             public void put(String key, byte[] bytes, String contentType) {
-                throw new IllegalStateException("No attachment store configured (S3 adapter pending)");
+                throw new IllegalStateException("No attachment store configured (set STORAGE_PROVIDER, S-10)");
             }
 
             @Override

@@ -18,7 +18,7 @@ Pick **one** provider per environment; everything in a Canadian region: AWS `ca-
 | Valkey / Redis | Amazon ElastiCache for Valkey | Memorystore for Valkey | Azure Managed Redis (or Azure Cache for Redis) | the apps use one endpoint (no cluster client): cluster mode disabled / non-clustered endpoint; in-transit TLS → `REDIS_SSL=true` |
 | Kafka | Amazon MSK (provisioned) with SASL/SCRAM | Google Cloud Managed Service for Apache Kafka (SASL/PLAIN) | Azure Event Hubs, Standard tier or higher (Kafka endpoint, SASL/PLAIN) | IAM/OAuth-only options (MSK Serverless, OAUTHBEARER) need client libraries the apps don't have yet. Confluent Cloud works on all three |
 | Elasticsearch 9 | Elastic Cloud on AWS (`ca-central-1`) or ECK on EKS | Elastic Cloud on Google Cloud (`northamerica-northeast1`) or ECK on GKE | Elastic Cloud on Azure (`canadacentral`) or ECK on AKS | Amazon OpenSearch Service is **not** a drop-in: the apps use the Elasticsearch 9 client |
-| Object storage (S-10) | Amazon S3 | Cloud Storage | Azure Blob Storage | one private bucket/container per environment; no adapter yet |
+| Object storage (S-10) | Amazon S3 | Cloud Storage | Azure Blob Storage | one private bucket/container per environment in the Canadian region; set-up, least-privilege access and lifecycle: [object-storage.md](object-storage.md#cloud-set-up-until-terraform-does-it--s-2) |
 | Keys / KMS (S-7) | AWS KMS (`ECC_NIST_P256`, `SIGN_VERIFY`) | Cloud KMS (`EC_SIGN_P256_SHA256`, HSM) | Azure Key Vault keys (`EC-HSM`, P-256) | token signing keys, signed inside the KMS; set-up and rotation: [key-rotation.md](key-rotation.md) |
 | Secrets manager (S-6) | AWS Secrets Manager | Secret Manager | Azure Key Vault (secrets) | synced into Kubernetes Secrets by External Secrets Operator; the apps only see environment variables |
 | Email (S-13) | Amazon SES (`ca-central-1`) | SendGrid, Mailgun or any SMTP provider (no first-party service) | Azure Communication Services Email | no adapter yet |
@@ -75,8 +75,10 @@ Every app reads its configuration from environment variables; nothing environmen
 | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` | api | **yes** | `sk_live_…` / `pk_live_…` | Stripe dashboard (Connect platform account) → secrets manager → External Secrets (S-6) → Kubernetes Secret; until then `kubectl create secret` |
 | `STRIPE_API_BASE` | api | never | — | stripe-mock only (local) |
 | `WEBHOOK_SECRET_KEY` | api | **yes** | `openssl rand -base64 32` | secrets manager → External Secrets (S-6) → Kubernetes Secret; until then `kubectl create secret`. Encrypts partner webhook signing secrets; keep it stable |
-| `STORAGE_PROVIDER`, `STORAGE_BUCKET`, `STORAGE_REGION`, `STORAGE_ENDPOINT` | api | no (S-10) | `s3` / `gcs` / `azure`, `northline-prod-uploads`, the Canadian region | Terraform output (S-2/S-3) → ConfigMap; until then from the cloud console |
-| `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY` | api | no | empty in the cloud (workload identity) | — |
+| `STORAGE_PROVIDER`, `STORAGE_BUCKET` | api | **yes** (`local` is refused) | `s3` / `gcs` / `azure`, `northline-prod-uploads` (Azure: the container, e.g. `uploads`) | Terraform output (S-2/S-3) → ConfigMap; until then from the cloud console ([object-storage.md](object-storage.md)) |
+| `STORAGE_REGION`, `STORAGE_ENDPOINT` | api | no (Azure: `STORAGE_ENDPOINT` yes) | `ca-central-1` (S3); `https://nlproduploads.blob.core.windows.net` (Azure); empty otherwise | Terraform output (S-2/S-3) → ConfigMap |
+| `STORAGE_ENCRYPTION_KEY` | api | no | empty (provider-managed keys) or the KMS key ARN / Cloud KMS key name / Azure encryption scope | Terraform output → ConfigMap |
+| `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`, `STORAGE_PATH_STYLE` | api | no | empty / `false` in the cloud (workload identity: EKS Pod Identity or IRSA, GKE / AKS Workload Identity) | — |
 | `KMS_PROVIDER`, `KMS_KEY_ID` | auth | **yes** | `aws` + key ARN / `gcp` + key **version** name / `azure` + versioned key URL | Terraform output (S-2/S-3) → ConfigMap; until then created by hand ([key-rotation.md](key-rotation.md#creating-the-key-until-terraform-does-it--s-2)). `local` is refused. |
 | `KMS_PUBLISHED_KEY_IDS` | auth | no | empty; the next or previous key during a rotation | [key-rotation.md](key-rotation.md#rotating--cloud-providers) |
 | `KMS_REGION`, `KMS_ENDPOINT` | auth | no | AWS only: `ca-central-1`, a VPC endpoint URL | deployment manifest |
@@ -123,7 +125,6 @@ What still stops a complete deployment. Under the `local`/`test` profiles each o
 |---|---|---|---|
 | `SmsSender` (auth) | `UnconfiguredSmsSender` throws | **nobody can register** (the phone code can't be sent) — so an environment without seed data has no users | S-8 |
 | OAuth client registration (auth) | `ClientSeeder` registers the clients at start-up except under `prod` | prod has no way to create `studio-bff` etc. yet: decide before launch (allow the seeder in prod, or a one-off task) | not in the backlog yet |
-| Object storage: `MediaStorage` (catalogue), `DocumentStorage` (merchants), `AttachmentStorage` (messaging), `KitchenPhotoStore` (food), `MediaStore` (booking), dispute evidence (payments) | unconfigured adapters throw, or answer 409 `storage_unavailable` | no uploads: product images, onboarding documents and logos, message attachments, kitchen photos, quote/job photos, dispute evidence | S-10 |
 | `IdentityVerification` (merchants) | unconfigured adapter throws | onboarding identity check | S-22 |
 | `RegistryLookup` (merchants) | unconfigured adapter throws | business and licence checks | S-23 |
 | `BankLinking` (merchants) | unconfigured adapter throws | instant bank linking in onboarding | S-24 |
@@ -148,6 +149,13 @@ Delivery pieces that don't exist yet: Terraform per cloud (S-2), managed data st
 7. **Verify**: `curl https://auth.northline.ca/.well-known/openid-configuration` shows the issuer `https://auth.northline.ca`; the readiness probes answer `UP`, and the api's `/actuator/health` (Postgres, Valkey, Elasticsearch) is `UP`; the Studio loads at `https://business.northline.ca` and **Sign in** reaches the auth server.
 
 **Roll back**: redeploy the previous jars/images with the previous configuration. Flyway is forward-only, so every migration must keep the previous release working (expand → migrate → contract across releases). A bad migration is fixed forward with a new migration, or by restoring the point-in-time backup taken before the release into a new instance and pointing `DB_URL` at it (S-114 sets up and drills this). A configuration rollback is the previous secret/ConfigMap version plus a restart.
+
+## Object storage
+
+Uploads go to the bucket named by `STORAGE_BUCKET` through the provider in `STORAGE_PROVIDER` (`s3` | `gcs` | `azure`),
+under `<module>/<merchantId>/<ulid>.<ext>`, with the pod's workload identity. Bucket settings, the least-privilege
+policy per cloud, encryption keys, lifecycle and troubleshooting: [object-storage.md](object-storage.md). `STORAGE_PROVIDER=local` stops the api at start-up here. After a
+deploy: the api logs `Object storage: <provider> bucket=…`; upload a document in the Studio and open it again.
 
 ## Signing key rotation
 
@@ -180,6 +188,6 @@ api and bff (drops their JWK set caches). Nobody is signed out: refresh tokens a
 - [ ] Point-in-time restore enabled on Postgres; restore tested (S-114)
 - [ ] Alerts on readiness, error rate and DLQ depth (S-111–S-113)
 - [ ] OAuth clients registered (ClientSeeder is off under prod — see blockers)
-- [ ] Blockers S-8 (SMS), S-10 (storage) closed; S-18 (Google/Apple) closed or buttons hidden
+- [ ] Blocker S-8 (SMS) closed; upload bucket created and `STORAGE_*` set ([object-storage.md](object-storage.md)); S-18 (Google/Apple) closed or buttons hidden
 - [ ] Staging ran the same release first
 - [ ] Penetration test (S-104), privacy (S-105–S-108) and PCI SAQ-A (S-110) done

@@ -1,6 +1,7 @@
 package ca.northline.catalogue.adapters;
 
 import ca.northline.catalogue.application.MediaStorage;
+import ca.northline.shared.storage.UsesLocalStorage;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @Profile({"local", "test"})
+@UsesLocalStorage
 class LocalMediaStorage implements MediaStorage {
 
     private final Path root;

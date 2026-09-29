@@ -34,7 +34,11 @@ class SpreadsheetFiles implements SpreadsheetReader {
     /** Zip-bomb guard: no single part may inflate beyond this. */
     static final long MAX_PART_BYTES = 64L * 1024 * 1024;
 
-    private static final XMLInputFactory XML = XMLInputFactory.newFactory();
+    /**
+     * The JDK's own StAX parser, whatever else is on the classpath (the GCS SDK brings Woodstox, which rejects {@link
+     * XMLConstants#ACCESS_EXTERNAL_DTD}).
+     */
+    private static final XMLInputFactory XML = XMLInputFactory.newDefaultFactory();
 
     static {
         XML.setProperty(XMLInputFactory.SUPPORT_DTD, false);

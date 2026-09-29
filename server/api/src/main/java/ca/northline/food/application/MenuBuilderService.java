@@ -32,6 +32,7 @@ import ca.northline.shared.Ids;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
 import ca.northline.shared.RuleViolation.Violation;
+import ca.northline.shared.storage.ObjectKeys;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.time.Clock;
@@ -280,7 +281,7 @@ class MenuBuilderService
             throw RuleViolation.of("file", "file", KitchenMessages.PHOTO_FILE);
         }
         checkSize(bytes, contentType);
-        var key = "menu-items/%s/%s/%s".formatted(merchantId, itemId, Ids.next());
+        var key = ObjectKeys.merchantObject(merchantId, Ids.next(), contentType);
         photos.put(key, bytes, contentType);
         var row = before.toBuilder().photoKey(key).photoContentType(contentType).build();
         var approved = merchant.approved(merchantId);

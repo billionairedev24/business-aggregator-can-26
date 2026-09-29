@@ -6,13 +6,14 @@ import ca.northline.merchants.application.VerificationGateways.DomainVerifier;
 import ca.northline.merchants.application.VerificationGateways.IdentityVerification;
 import ca.northline.merchants.application.VerificationGateways.Outcome;
 import ca.northline.merchants.application.VerificationGateways.RegistryLookup;
+import ca.northline.shared.storage.UsesLocalStorage;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
 /**
  * Placeholders outside {@code local}/{@code test} until the production adapters exist (Stripe Identity S-22, registry
- * lookups S-23, Financial Connections S-24, custom domains S-31, object storage S-10): the application starts in the
+ * lookups S-23, Financial Connections S-24, custom domains S-31; object storage S-10 when {@code STORAGE_PROVIDER=local}): the application starts in the
  * {@code dev}/{@code staging}/{@code prod} profiles, and using the feature fails loudly — the same convention as the
  * other modules' unconfigured adapters.
  */
@@ -56,17 +57,19 @@ class UnconfiguredMerchantIntegrations {
         };
     }
 
+    /** Only while {@code STORAGE_PROVIDER=local} (dev); s3 | gcs | azure use {@link ObjectStoreDocumentStorage}. */
     @Bean
+    @UsesLocalStorage
     DocumentStorage unconfiguredDocumentStorage() {
         return new DocumentStorage() {
             @Override
             public String put(String merchantId, String documentId, String contentType, byte[] bytes) {
-                throw unconfigured("document storage (object storage adapter, S-10)");
+                throw unconfigured("document storage (set STORAGE_PROVIDER, S-10)");
             }
 
             @Override
             public byte[] get(String storageKey) {
-                throw unconfigured("document storage (object storage adapter, S-10)");
+                throw unconfigured("document storage (set STORAGE_PROVIDER, S-10)");
             }
         };
     }
