@@ -72,7 +72,9 @@ northline:
   stripe:                                                      # Stripe Connect (merchants) outside local/test
     secret-key: ${STRIPE_SECRET_KEY:}
     api-base: ${STRIPE_API_BASE:}
-  # Provider switches (ca.northline.platform). Only `local` adapters exist yet — see docs/runbooks/README.md.
+  # Provider switches (ca.northline.platform) — see docs/runbooks/README.md.
+  # Object storage (S-10, ca.northline.shared.storage): local (modules' disk fakes; placeholders under dev; refused
+  # under staging/prod) | s3 (AWS S3 or RustFS/MinIO: endpoint + path-style) | gcs | azure (endpoint = account URL).
   storage:
     provider: ${STORAGE_PROVIDER:local}
     bucket: ${STORAGE_BUCKET:northline-local}
@@ -81,6 +83,7 @@ northline:
     access-key: ${STORAGE_ACCESS_KEY:}
     secret-key: ${STORAGE_SECRET_KEY:}
     path-style: ${STORAGE_PATH_STYLE:false}
+    encryption-key: ${STORAGE_ENCRYPTION_KEY:}   # SSE-KMS key / Cloud KMS key (CMEK) / Azure encryption scope
   kms:
     provider: ${KMS_PROVIDER:local}
     key-id: ${KMS_KEY_ID:}

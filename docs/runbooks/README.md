@@ -11,6 +11,7 @@ is still manual or missing.
 | [dev.md](dev.md) | the shared cloud development environment |
 | [staging.md](staging.md) | pre-production: prod shape, Stripe test mode |
 | [prod.md](prod.md) | production (Calgary launch) |
+| [object-storage.md](object-storage.md) | uploads in S3 / RustFS, Cloud Storage or Azure Blob: variables, buckets, least-privilege access per cloud (S-10) |
 | [ci.md](ci.md) | CI pipelines on GitHub Actions and GitLab CI, manual trigger only (S-4/S-5) |
 
 ## Environment matrix
@@ -23,12 +24,12 @@ is still manual or missing.
 | Valkey / Redis | not needed (`valkey` add-on: yours, or `--profile cache`) | managed | managed | managed, replicated |
 | Kafka | off (`--profile events` for the worker) | managed | managed | managed, RF 3 |
 | Elasticsearch | off (`--profile search` for the worker) | Elastic Cloud / ECK | same | same |
-| Object storage | local folder (`--profile storage` ready for S-10) | *no adapter yet (S-10)* | same | same |
+| Object storage (`STORAGE_PROVIDER`) | `local` folders, or `s3` + RustFS (`--profile storage`) | `s3` / `gcs` / `azure` (`local` = uploads fail) | `s3` / `gcs` / `azure` **required** | same |
 | Sign-in | dev auth (`X-Dev-User`) or northline-auth with seeded personas | northline-auth | northline-auth | northline-auth |
 | Dev seed (`db/seed-dev`) | yes | **no** | **no** | **no** |
 | Stripe | fake gateway, or stripe-mock (`--profile payments`) | fake, or test keys | **test keys required** | **live keys required** |
 | SMS / email | logged | *no provider yet (S-8, S-13)* | same | same |
-| Required variables checked at start-up | none | yes | yes (+ Stripe) | yes (+ Stripe) |
+| Required variables checked at start-up | none | yes | yes (+ Stripe, storage) | yes (+ Stripe, storage) |
 | Log level `ca.northline` | debug | debug | info | info |
 | OpenAPI / Swagger UI | on | on | on | **off** |
 
@@ -58,12 +59,12 @@ is still manual or missing.
   `application-staging.yml` / `application-prod.yml` add `payments: STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY`).
   The check is `ca.northline.platform.RequiredEnvironmentCheck` (module `server/platform`).
 - **Providers are chosen by configuration** so that moving between AWS, Google Cloud and Azure is a variable change.
-  The property names exist now (`ca.northline.platform.*Properties`, default `local`); only the `local` adapters
-  exist, and the cloud adapters come with the stories below.
+  The property names live in `ca.northline.platform.*Properties` (default `local`); the cloud adapters come with the
+  stories below.
 
   | property | variable | values | adapters arrive in |
   |---|---|---|---|
-  | `northline.storage.provider` | `STORAGE_PROVIDER` | `local` · `s3` (AWS S3, MinIO/RustFS, any S3 API) · `gcs` · `azure` | S-10 |
+  | `northline.storage.provider` | `STORAGE_PROVIDER` | `local` · `s3` (AWS S3, MinIO/RustFS, any S3 API) · `gcs` · `azure` | **done** (S-10, api uploads — [object-storage.md](object-storage.md)) |
   | `northline.kms.provider` | `KMS_PROVIDER` | `local` · `aws` · `gcp` · `azure` | **done** (S-7, auth token signing keys — [key-rotation.md](key-rotation.md)) |
   | `northline.email.provider` | `EMAIL_PROVIDER` | `local` · `smtp` · `ses` · `sendgrid` · `azure` | S-13 |
   | `northline.sms.provider` | `SMS_PROVIDER` | `local` · `twilio` · `aws` (End User Messaging SMS and voice) · `azure` (reserved) | **done** (S-8, auth phone codes — [SMS and voice codes](#sms-and-voice-codes-s-8)) |
@@ -107,7 +108,8 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` | ✓ | | | | staging and prod |
 | `STRIPE_API_BASE` | ✓ | | | | never in the cloud (stripe-mock only) |
 | `WEBHOOK_SECRET_KEY` | ✓ | | | | yes |
-| `STORAGE_*` (`PROVIDER`, `BUCKET`, `REGION`, `ENDPOINT`, `ACCESS_KEY`, `SECRET_KEY`, `PATH_STYLE`) | ✓ | | | | no (until S-10) |
+| `STORAGE_PROVIDER`, `STORAGE_BUCKET` | ✓ | | | | staging and prod (`local` refused there — S-10, [object-storage.md](object-storage.md)) |
+| `STORAGE_REGION`, `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`, `STORAGE_PATH_STYLE`, `STORAGE_ENCRYPTION_KEY` | ✓ | | | | no (`STORAGE_ENDPOINT` needed for `azure`) |
 | `KMS_PROVIDER`, `KMS_KEY_ID` | | ✓ | | | `KMS_PROVIDER` everywhere, `KMS_KEY_ID` in staging and prod (S-7, [key-rotation.md](key-rotation.md)) |
 | `KMS_PUBLISHED_KEY_IDS`, `KMS_REGION`, `KMS_ENDPOINT`, `SIGNING_KEYS_DIR`, `SIGNING_KEYS_ROTATE_EVERY` | | ✓ | | | no |
 | `EMAIL_PROVIDER`, `EMAIL_FROM`, `SMTP_*` | ✓ | | | ✓ | no (until S-13) |

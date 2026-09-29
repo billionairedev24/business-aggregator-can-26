@@ -28,6 +28,12 @@ dependencies {
     implementation(libs.ulid)
     implementation(libs.stripe)
     implementation(libs.mapstruct)
+    // Object storage (S-10): only the provider selected by northline.storage.provider is instantiated.
+    implementation(libs.aws.s3) { exclude(group = "software.amazon.awssdk", module = "netty-nio-client") }
+    implementation(libs.gcp.storage)
+    implementation(libs.azure.storage.blob) { exclude(group = "com.azure", module = "azure-core-http-netty") }
+    implementation(libs.azure.identity) { exclude(group = "com.azure", module = "azure-core-http-netty") }
+    implementation(libs.azure.core.http.jdk) // JDK HttpClient instead of Netty for the Azure SDK
     annotationProcessor(libs.mapstruct.processor)
     annotationProcessor(libs.lombok.mapstruct.binding)
     runtimeOnly("org.postgresql:postgresql")
