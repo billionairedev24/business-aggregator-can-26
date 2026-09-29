@@ -4,7 +4,7 @@ E-1,,Epic,"Portable infrastructure, CI/CD and environments","Portable infrastruc
 Phase 1. 10 stories, 60 points.",High,,phase-1,infra,,platform,,2026-10-05,2026-11-13
 E-2,,Epic,Auth hardening for production,Auth hardening for production,"Close the production gaps in server/auth and server/bff recorded in docs/DECISIONS.md (Auth workstream).
 
-Phase 1. 9 stories, 42 points.",High,,phase-1,auth,,auth,,2026-10-19,2026-12-11
+Phase 1. 10 stories, 45 points.",High,,phase-1,auth,,auth,,2026-10-19,2026-12-11
 E-3,,Epic,Production adapters for external services,Production adapters for external services,"Replace the local/test fakes behind every port with real adapters (storage, Stripe, KYC, registries, bank linking, DNS, calendars, commerce sync, email/SMS). Today a non-local profile fails loudly by design.
 
 Phase 1. 12 stories, 94 points.",High,,phase-1,adapt,,integrations,,2026-10-19,2026-12-25
@@ -109,6 +109,14 @@ Acceptance criteria:
 - 429 with retry-after.
 
 Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Highest,5,phase-1,auth,security,auth,Sprint 2,2026-10-19,2026-10-30
+S-122,E-2,Story,"OAuth client registration outside local (studio/consumer/console BFFs, mobile, partners)",,"Under dev/staging/prod the auth server no longer seeds its OAuth clients at start-up (S-1) and nothing else registers them, so sign-in cannot work in a deployed environment. Provide an idempotent provisioning path (admin CLI/job or Flyway-managed registration from secrets) with client secrets from the secrets manager.
+
+Acceptance criteria:
+- Each deployed environment has its BFF clients registered from configuration
+- rotating a client secret needs no code change
+- documented in the runbooks.
+
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Highest,3,phase-1,auth,deploy,auth,Sprint 2,2026-10-19,2026-10-30
 S-10,E-3,Story,"Object storage adapters for all storage ports: S3-compatible (AWS S3, MinIO locally), Google Cloud Storage, Azure Blob",,"DocumentStorage, AttachmentStorage, KitchenPhotoStore, dispute evidence, catalogue media, job photos. Presigned URLs, virus-scan hook, per-merchant prefixes; provider chosen by configuration.
 
 Acceptance criteria:
