@@ -1,0 +1,5 @@
+/* Studio-wide: panels share the page's off-white and are outlined by a fine border (design decision 2026-09-29). */
+:root { --color-surface: var(--color-bg); }
+body { text-wrap: pretty; }
+a { color: var(--color-accent-700); }
+a:hover { color: var(--color-accent-800); }

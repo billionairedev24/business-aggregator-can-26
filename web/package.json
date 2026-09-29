@@ -3,13 +3,14 @@
   "private": true,
   "packageManager": "pnpm@10.17.0",
   "scripts": {
-    "dev": "pnpm --filter @northline/consumer dev",
+    "dev": "pnpm --filter @northline/studio dev",
     "storybook": "pnpm --filter @northline/ui storybook",
     "build-storybook": "pnpm --filter @northline/ui build-storybook",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "lint": "eslint .",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "dev:consumer": "pnpm --filter @northline/consumer dev"
   },
   "devDependencies": {
     "typescript": "^5.9.0",

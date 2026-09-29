@@ -1,0 +1,41 @@
+/* Studio / Console shell (design: 02 Provider Studio — nav, sideStyle, railStyle, drawer). */
+.nl-shell { min-height: 100vh; display: flex; flex-direction: column; font-family: var(--font-body); color: var(--color-text); }
+.nl-topbar { padding: 12px clamp(16px, 4vw, 48px); flex-wrap: wrap; row-gap: 8px; }
+.nl-topbar-menu { width: 44px; height: 44px; }
+.nl-topbar-end { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.nl-shell-body { display: flex; flex: 1; min-width: 0; align-items: stretch; }
+.nl-main { flex: 1; min-width: 0; padding: 28px clamp(16px, 3.5vw, 48px) 80px; }
+
+.nl-side { flex: none; position: sticky; align-self: flex-start; width: 256px; display: flex; flex-direction: column; background: var(--color-surface); color: var(--color-text); z-index: 5; border-right: 1px solid var(--color-neutral-300); box-shadow: 2px 0 12px color-mix(in oklch, var(--color-text) 6%, transparent); }
+.nl-side.nl-rail { width: 72px; }
+.nl-side-top { display: flex; align-items: center; justify-content: space-between; padding: 10px 10px 6px 20px; }
+.nl-side-caption { font-size: 12px; font-weight: 600; color: var(--color-neutral-700); }
+.nl-side-toggle { width: 40px; height: 40px; flex: none; display: grid; place-items: center; border: 0; border-radius: 10px; cursor: pointer; background: transparent; color: var(--color-neutral-800); }
+.nl-side-toggle:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
+.nl-side-scroll { flex: 1; overflow-y: auto; padding: 0 10px 16px; display: flex; flex-direction: column; gap: 2px; }
+.nl-side-item { display: flex; align-items: center; gap: 10px; width: 100%; font: inherit; font-size: 14px; text-align: left; padding: 8px 10px; min-height: 40px; border: 0; border-radius: 10px; cursor: pointer; color: var(--color-text); background: transparent; text-decoration: none; }
+.nl-side-item:hover { box-shadow: inset 0 0 0 1px var(--color-accent-300); color: var(--color-text); }
+.nl-side-item[aria-current='page'] { color: var(--color-accent-800); background: var(--color-accent-100); font-weight: 600; }
+.nl-side-icon { flex: none; color: var(--color-neutral-700); }
+.nl-side-item[aria-current='page'] .nl-side-icon { color: var(--color-accent); }
+.nl-side-label { flex: 1; min-width: 0; overflow-wrap: anywhere; line-height: 1.25; }
+.nl-side-badge { flex: none; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; white-space: nowrap; background: var(--color-neutral-200); color: var(--color-neutral-900); }
+.nl-side-item[aria-current='page'] .nl-side-badge { background: var(--color-accent-200); color: var(--color-accent-900); }
+.nl-side-group { display: flex; flex-direction: column; margin-top: 4px; }
+.nl-side-head { display: flex; align-items: center; gap: 10px; width: 100%; font: inherit; font-size: 14px; font-weight: 600; text-align: left; padding: 8px 10px; min-height: 42px; border: 0; border-radius: 10px; cursor: pointer; background: transparent; color: var(--color-neutral-900); }
+.nl-side-head:hover { background: var(--color-neutral-100); }
+.nl-side-head[data-active='true'] { color: var(--color-accent-800); }
+.nl-side-head-icon { flex: none; color: var(--color-accent); }
+.nl-side-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--color-accent); flex: none; }
+.nl-side-items { display: flex; flex-direction: column; gap: 2px; padding: 2px 0 6px 10px; margin-left: 18px; border-left: 1px solid var(--color-neutral-300); }
+
+.nl-rail-top { display: flex; justify-content: center; padding: 10px 0 6px; }
+.nl-rail-scroll { flex: 1; overflow-y: auto; padding: 4px 0 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.nl-rail-group { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.nl-rail-sep { width: 28px; height: 1px; flex: none; margin: 6px 0; background: var(--color-neutral-300); }
+.nl-rail-item { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border: 0; border-radius: 10px; cursor: pointer; color: var(--color-neutral-700); background: transparent; }
+.nl-rail-item:hover { box-shadow: inset 0 0 0 1px var(--color-accent-300); }
+.nl-rail-item[aria-current='page'] { color: var(--color-accent); background: var(--color-accent-100); }
+
+.nl-side-drawer { position: fixed; top: 0; left: 0; bottom: 0; z-index: 51; width: min(300px, 86vw); display: flex; flex-direction: column; background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow-lg); }
+.nl-side-drawer .nav-brand { font-size: 20px; }

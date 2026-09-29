@@ -1,6 +1,6 @@
 import type { Preview } from '@storybook/react-vite';
 import '@northline/tokens/tokens.css';
-import '../src/styles/base.css';
+import '../src/styles/index.css';
 
 // Theme switcher: overrides the five base tokens only — proves one-change theming.
 const themes: Record<string, Record<string, string>> = {

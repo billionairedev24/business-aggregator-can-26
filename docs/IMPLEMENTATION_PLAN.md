@@ -44,3 +44,18 @@ See `docs/BACKEND_CONVENTIONS.md` (written by the backend foundation) — layeri
 | V080–V089 | storefront, settings, compliance |
 | V090–V099 | kitchen / food |
 | V100–V109 | dev seed data (`db/seed-dev/`, only under the `local` profile) |
+
+## Studio app (`web/apps/studio`) — what exists
+- `pnpm dev` (port 3100). Dev without auth/bff: `NL_DEV_USER=<seeded user id> pnpm dev` → `/api` is proxied to the api (`:8080`) with `X-Dev-User` (accepted only by the api `local` profile) and `/bff/session` is answered by the dev server. Without `NL_DEV_USER`, `/api`, `/bff`, `/oauth2`, `/login` go to the studio BFF (`:8082`).
+- Routes (file-based, `src/routes/`): `/` (redirects: signed out → `/sign-in`, no business → `/onboarding`, else the first business's home), `/sign-in`, `/register`, `/onboarding/…`, and the studio under `/b/$merchantId/…`:
+  `''` dashboard · `appointments` · `orders` · `messages` · `listings` (+ `listings/new`, `listings/$listingId`, `listings/bulk`) · `availability` · `page` (business page / store / menu page) · `earnings` · `reports` · `payouts` · `refunds` · `compliance` · `reviews` · `settings` (`?tab=business|team|security|notifications|api`) · `help` · `kitchen/live` · `kitchen/menu` · `kitchen/combos` · `kitchen/hours`.
+  Each currently renders `ScreenPending`; a workstream replaces the route's component with its feature screen. The `/b/$merchantId` layout loads the merchant, renders the shell and redirects away from screens the portal doesn't have (`features/shell/nav.ts` → `screensFor`).
+- In a screen: `useMerchantId()`, `useMerchant()` (type provider|seller|kitchen|both, tier, status, role), `useRole()` from `features/shell/api.ts`; `http()` from `lib/http.ts` (CSRF header, 422 → `ValidationError` with `byField()`); `visibleError`, `serverFieldErrors`, `attentionCount` from `lib/forms.ts`.
+- UI kit (`@northline/ui`): `Field`/`TextInput`/`TextArea`/`Select`/`FormGrid`, `Checkbox`, `Switch`, `OptionCard`, `Chip`, `ChipTabs`, `Segmented`, `UnderlineTabs`, `StepBars`, `Dialog`, `Drawer`, `Menu`, `Panel`, `PageHeader`, `Kpi`/`KpiRow`, `Alert`, `LinkRow`, `Meter`, `Avatar`, `Skeleton`/`PageSkeleton`, `EmptyState`, `ErrorState`, `StackedBarChart`, `LineChart`, `BarList`, `Legend`, `AppShell`, `DataTable`, `defineMessages`, `useFormatters`, `formatMoney`, `formatDate`.
+- The studio sets `--color-surface: var(--color-bg)` globally: panels are the page's off-white outlined by a 1px `--color-divider` border (design decision of 2026-09-29).
+
+## Contracts between workstreams
+- **Session (BFF):** `GET /bff/session` → `200 { user: { id, firstName, lastName, email, phone, initials, locale, memberSince }, acr }` or `401`; `POST /bff/logout` → `204`. CSRF: cookie `XSRF-TOKEN`, header `X-XSRF-TOKEN`.
+- **Businesses:** `GET /api/v1/me/businesses`, `GET /api/v1/merchants/{id}` (backend foundation).
+- **Nav badges:** `GET /api/v1/merchants/{id}/nav-badges` → `{ "<screenKey>": "<badge text>" }` (screen keys as in `nav.ts`). Each module contributes through a `NavBadgeContributor` bean (interface in `ca.northline.shared`), the `studio` module aggregates. Badge text is computed server-side in the caller's locale (`Accept-Language`).
+- **Dashboard:** `GET /api/v1/merchants/{id}/dashboard` — composed by the `studio` module from other modules' public APIs (no cross-module repository access).
