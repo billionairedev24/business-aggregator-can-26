@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:food.kitchen_paused:1",
+  "description": "kitchen.paused — topic food.kitchen, key = merchant id.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "actorId",
+    "pausedUntil"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "merchants.merchants.id"
+    },
+    "actorId": {
+      "type": "string",
+      "description": "identity.users.id of the team member"
+    },
+    "pausedUntil": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}
