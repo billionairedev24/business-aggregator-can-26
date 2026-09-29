@@ -11,7 +11,7 @@ is still manual or missing.
 | [dev.md](dev.md) | the shared cloud development environment |
 | [staging.md](staging.md) | pre-production: prod shape, Stripe test mode |
 | [prod.md](prod.md) | production (Calgary launch) |
-| `ci.md` | CI pipelines (owned by the CI stories S-4/S-5) |
+| [ci.md](ci.md) | CI pipelines on GitHub Actions and GitLab CI, manual trigger only (S-4/S-5) |
 
 ## Environment matrix
 

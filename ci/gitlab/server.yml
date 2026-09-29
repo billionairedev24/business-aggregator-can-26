@@ -1,0 +1,50 @@
+# S-4 — CI for server/ (Java 25, Gradle) on GitLab. Included from .gitlab-ci.yml.
+# Pipelines only exist when started by hand (see workflow: rules in .gitlab-ci.yml).
+
+server:build:
+  stage: build
+  needs: [] # start at once; does not wait for the web check stage
+  image: eclipse-temurin:25-jdk
+  # Testcontainers (PostGIS) talks to a Docker-in-Docker service. Needs a runner with privileged = true
+  # (GitLab.com hosted Linux runners qualify).
+  services:
+    - name: docker:28-dind
+      alias: docker
+      command: ["--tls=false"]
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+    TESTCONTAINERS_HOST_OVERRIDE: docker
+    # The dind service disappears with the job, so the Ryuk reaper adds nothing.
+    TESTCONTAINERS_RYUK_DISABLED: "true"
+    GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle-home
+    GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2
+    # Optional (Settings › CI/CD › Variables): MAVEN_MIRROR_URL, MAVEN_MIRROR_USERNAME, MAVEN_MIRROR_PASSWORD.
+  rules:
+    - if: $PIPELINE_PART == "all" || $PIPELINE_PART == "server"
+  timeout: 45m
+  interruptible: true
+  cache:
+    key:
+      prefix: gradle
+      files:
+        - server/gradle/libs.versions.toml
+        - server/gradle/wrapper/gradle-wrapper.properties
+    paths:
+      - .gradle-home/wrapper/
+      - .gradle-home/caches/modules-2/
+      - .gradle-home/caches/build-cache-1/
+  before_script:
+    - rm -f .gradle-home/caches/modules-2/modules-2.lock
+  script:
+    - cd server
+    # build = Spotless check, Checkstyle, Error Prone + NullAway, tests (Testcontainers, ModularityTests, ArchUnit).
+    - ./gradlew $SERVER_GRADLE_ARGS --init-script ../ci/gradle/maven-mirror.init.gradle.kts --max-workers=2 --continue --console=plain
+  artifacts:
+    when: always
+    expire_in: 14 days
+    reports:
+      junit: server/*/build/test-results/test/TEST-*.xml
+    paths:
+      - server/*/build/test-results/
+      - server/*/build/reports/
