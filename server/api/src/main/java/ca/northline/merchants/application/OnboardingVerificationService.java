@@ -29,7 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional
-class VerificationService implements CompleteVerification {
+class OnboardingVerificationService implements CompleteVerification {
 
     static final String REFERENCE = "reference";
     static final String DOCUMENT = "documentId";

@@ -45,7 +45,7 @@ final class OnboardingFlow {
 
     String upload(String merchantId, String userId, String purpose) throws Exception {
         var file = new MockMultipartFile("file", "document.pdf", "application/pdf", PDF.getBytes());
-        var body = mvc.perform(multipart("/api/v1/merchants/{id}/documents", merchantId)
+        var body = mvc.perform(multipart("/api/v1/merchants/{id}/onboarding/documents", merchantId)
                         .file(file)
                         .param("purpose", purpose)
                         .with(TestJwt.member(userId)))

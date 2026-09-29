@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequiredArgsConstructor
-class TaxonomyController {
+class OnboardingTaxonomyController {
 
     private final BrowseTaxonomy browseTaxonomy;
     private final OnboardingWebMapper mapper;

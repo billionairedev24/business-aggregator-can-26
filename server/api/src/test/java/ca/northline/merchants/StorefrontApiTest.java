@@ -264,7 +264,7 @@ class StorefrontApiTest extends IntegrationTest {
             var file = new MockMultipartFile(
                     "file", "logo.svg", "image/svg+xml", "<svg xmlns='http://www.w3.org/2000/svg'/>".getBytes());
             String logoId = JsonPath.read(
-                    mvc.perform(multipart("/api/v1/merchants/{id}/documents", merchantId)
+                    mvc.perform(multipart("/api/v1/merchants/{id}/onboarding/documents", merchantId)
                                     .file(file)
                                     .param("purpose", "logo")
                                     .with(TestJwt.member(owner)))
@@ -277,8 +277,8 @@ class StorefrontApiTest extends IntegrationTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.logo.id").value(logoId))
                     .andExpect(jsonPath("$.logo.url")
-                            .value("/api/v1/merchants/%s/documents/%s".formatted(merchantId, logoId)));
-            mvc.perform(get("/api/v1/merchants/{id}/documents/{doc}", merchantId, logoId)
+                            .value("/api/v1/merchants/%s/onboarding/documents/%s".formatted(merchantId, logoId)));
+            mvc.perform(get("/api/v1/merchants/{id}/onboarding/documents/{doc}", merchantId, logoId)
                             .with(TestJwt.member(owner)))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType("image/svg+xml"));

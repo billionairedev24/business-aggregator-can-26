@@ -71,14 +71,17 @@ class TaxonomyAndDocumentsApiTest extends IntegrationTest {
         var id = flow.start(owner, "provider");
         var doc = flow.upload(id, owner, "verification");
 
-        mvc.perform(get("/api/v1/merchants/{id}/documents/{doc}", id, doc).with(TestJwt.member(owner)))
+        mvc.perform(get("/api/v1/merchants/{id}/onboarding/documents/{doc}", id, doc)
+                        .with(TestJwt.member(owner)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("application/pdf"))
                 .andExpect(content().bytes(OnboardingFlow.PDF.getBytes()));
-        mvc.perform(get("/api/v1/merchants/{id}/documents/{doc}", id, doc).with(TestJwt.member(data.user("X"))))
+        mvc.perform(get("/api/v1/merchants/{id}/onboarding/documents/{doc}", id, doc)
+                        .with(TestJwt.member(data.user("X"))))
                 .andExpect(status().isForbidden());
         var other = flow.start(owner, "provider");
-        mvc.perform(get("/api/v1/merchants/{id}/documents/{doc}", other, doc).with(TestJwt.member(owner)))
+        mvc.perform(get("/api/v1/merchants/{id}/onboarding/documents/{doc}", other, doc)
+                        .with(TestJwt.member(owner)))
                 .andExpect(status().isNotFound());
     }
 
@@ -86,18 +89,18 @@ class TaxonomyAndDocumentsApiTest extends IntegrationTest {
     void documentTypesAreChecked() throws Exception {
         var owner = data.user("Owner");
         var id = new OnboardingFlow(mvc).start(owner, "provider");
-        mvc.perform(multipart("/api/v1/merchants/{id}/documents", id)
+        mvc.perform(multipart("/api/v1/merchants/{id}/onboarding/documents", id)
                         .file(new MockMultipartFile("file", "virus.exe", "application/octet-stream", new byte[] {1, 2}))
                         .with(TestJwt.member(owner)))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(err("file", "Upload a PDF, PNG or JPEG under 10 MB."));
-        mvc.perform(multipart("/api/v1/merchants/{id}/documents", id)
+        mvc.perform(multipart("/api/v1/merchants/{id}/onboarding/documents", id)
                         .file(new MockMultipartFile("file", "logo.pdf", "application/pdf", new byte[] {1}))
                         .param("purpose", "logo")
                         .with(TestJwt.member(owner)))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(err("file", "Upload an SVG or PNG under 10 MB."));
-        mvc.perform(multipart("/api/v1/merchants/{id}/documents", id).with(TestJwt.member(owner)))
+        mvc.perform(multipart("/api/v1/merchants/{id}/onboarding/documents", id).with(TestJwt.member(owner)))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(err("file", "Choose a file to upload."));
     }

@@ -101,12 +101,12 @@ export const usePublishStorefront = (merchantId: string) =>
 export const UploadedDocument = z.object({ id: z.string(), fileName: z.string(), contentType: z.string(), sizeBytes: z.number() });
 export type UploadedDocument = z.infer<typeof UploadedDocument>;
 
-/** `POST …/documents` (multipart). Purpose: legal | verification | logo. */
+/** `POST …/onboarding/documents` (multipart). Purpose: legal | verification | logo. */
 export function uploadDocument(merchantId: string, file: File, purpose: 'legal' | 'verification' | 'logo') {
   const body = new FormData();
   body.append('file', file);
   body.append('purpose', purpose);
-  return http(`/api/v1/merchants/${merchantId}/documents`, { method: 'POST', body }, UploadedDocument);
+  return http(`/api/v1/merchants/${merchantId}/onboarding/documents`, { method: 'POST', body }, UploadedDocument);
 }
 
 /** Logo: upload the file, then point the page at it. */

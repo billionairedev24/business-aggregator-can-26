@@ -44,7 +44,7 @@ interface StorefrontWebMapper {
                         : new LogoResponse(
                                 logo.id(),
                                 logo.fileName(),
-                                "/api/v1/merchants/%s/documents/%s".formatted(s.getMerchantId(), logo.id())),
+                                "/api/v1/merchants/%s/onboarding/documents/%s".formatted(s.getMerchantId(), logo.id())),
                 s.getTagline(),
                 s.getCtaLabel(),
                 s.getAnnouncement(),

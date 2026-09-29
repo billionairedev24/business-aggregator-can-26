@@ -28,12 +28,12 @@ import tools.jackson.databind.json.JsonMapper;
  */
 @Repository
 @RequiredArgsConstructor
-class TaxonomyQueries implements Taxonomy {
+class OnboardingTaxonomyQueries implements Taxonomy {
 
     private static final String SEED = "db/seed/categories.json";
 
     private final JdbcClient jdbc;
-    private final JsonColumns json;
+    private final MerchantJsonColumns json;
     private final SeedOrder seed = SeedOrder.load();
 
     private record Row(
@@ -119,7 +119,8 @@ class TaxonomyQueries implements Taxonomy {
             var json = JsonMapper.builder().build();
             var ordinals = new HashMap<String, Integer>();
             var notes = new HashMap<String, String>();
-            try (InputStream in = TaxonomyQueries.class.getClassLoader().getResourceAsStream(SEED)) {
+            try (InputStream in =
+                    OnboardingTaxonomyQueries.class.getClassLoader().getResourceAsStream(SEED)) {
                 if (in == null) {
                     return new SeedOrder(ordinals, notes);
                 }

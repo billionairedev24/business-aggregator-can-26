@@ -41,7 +41,7 @@ class StorefrontPersistenceAdapter implements StorefrontRepository {
             """;
 
     private final JdbcClient jdbc;
-    private final JsonColumns json;
+    private final MerchantJsonColumns json;
 
     @Override
     public Optional<Storefront> findByMerchant(String merchantId) {

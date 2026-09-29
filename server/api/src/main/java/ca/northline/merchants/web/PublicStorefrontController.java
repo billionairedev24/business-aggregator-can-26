@@ -23,6 +23,6 @@ class PublicStorefrontController {
 
     @GetMapping("/api/v1/storefronts/{slug}/logo")
     ResponseEntity<byte[]> logo(@PathVariable String slug) {
-        return DocumentController.file(published.logo(slug));
+        return OnboardingDocumentController.file(published.logo(slug));
     }
 }

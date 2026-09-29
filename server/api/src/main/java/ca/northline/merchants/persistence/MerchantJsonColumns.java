@@ -13,7 +13,7 @@ import tools.jackson.databind.json.JsonMapper;
  * converters.
  */
 @Component
-class JsonColumns {
+class MerchantJsonColumns {
     private static final TypeReference<Map<String, Object>> MAP = new TypeReference<>() {};
 
     private final JsonMapper json = JsonMapper.builder().build();

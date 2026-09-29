@@ -98,7 +98,8 @@ Record anything the spec did not decide. Format: date · decision · why · spec
 - Events: `merchant.submitted`, `merchant.approved` (topic `merchants.merchant`), `storefront.published` (topic `merchants.storefront`); schemas in `resources/events`.
 - The city next to the business name is picked from the Business-step addresses (known AB/BC/ON/QC cities); languages are copied to `merchants.languages`.
 - External systems sit behind `IdentityVerification`, `RegistryLookup`, `BankLinking`, `DomainVerifier` and `DocumentStorage` ports. Only the `local`/`test` fakes exist (`merchants.integration`), so a production profile needs real adapters before it can start. Fake rules: licence numbers containing "manual" stay `submitted`; domains containing "pending" / "fail" stay pending / fail.
-- Documents: `POST …/documents` multipart (`file`, `purpose`): PDF/PNG/JPEG ≤ 10 MB ("Upload a PDF, PNG or JPEG under 10 MB."); logos SVG/PNG ("Upload an SVG or PNG under 10 MB."). `spring.servlet.multipart.max-file-size=10MB`.
+- Documents: `POST …/onboarding/documents` multipart (`file`, `purpose`): PDF/PNG/JPEG ≤ 10 MB ("Upload a PDF, PNG or JPEG under 10 MB."); logos SVG/PNG ("Upload an SVG or PNG under 10 MB."). `spring.servlet.multipart.max-file-size=10MB`.
+- Bean classes carry module-specific names (`OnboardingDocumentService`, `OnboardingTaxonomyQueries`, `MerchantJsonColumns` …) and every route sits under `/onboarding…`, `/verifications…` or `/storefront…` (documents: `/api/v1/merchants/{id}/onboarding/documents`) to avoid clashes after merging (coordinator note).
 - `GET /api/v1/me/businesses` now also returns `status`. `/onboarding` without `m`/`type` resumes the user's first `applicant` business at its furthest step, otherwise it shows the type picker. The rail only reaches steps up to the furthest one.
 
 ### Page builder / storefront API — decisions

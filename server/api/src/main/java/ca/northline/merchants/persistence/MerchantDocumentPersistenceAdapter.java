@@ -18,7 +18,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 @RequiredArgsConstructor
-class DocumentPersistenceAdapter implements DocumentRepository {
+class MerchantDocumentPersistenceAdapter implements DocumentRepository {
 
     private static final String COLUMNS = """
             select id, merchant_id, purpose, file_name, content_type, size_bytes, storage_key, uploaded_by, created_at

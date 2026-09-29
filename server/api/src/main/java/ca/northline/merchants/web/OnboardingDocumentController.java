@@ -31,18 +31,20 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * Documents: {@code POST /api/v1/merchants/{merchantId}/documents} (multipart {@code file} + {@code purpose} =
- * legal | verification | logo) and {@code GET …/documents/{documentId}} (the bytes).
+ * Documents: {@code POST /api/v1/merchants/{merchantId}/onboarding/documents} (multipart {@code file} + {@code purpose} =
+ * legal | verification | logo) and {@code GET …/onboarding/documents/{documentId}} (the bytes).
  */
 @RestController
 @RequiredArgsConstructor
-class DocumentController {
+class OnboardingDocumentController {
 
     private final UploadDocument uploadDocument;
     private final ReadDocument readDocument;
     private final OnboardingWebMapper mapper;
 
-    @PostMapping(path = "/api/v1/merchants/{merchantId}/documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(
+            path = "/api/v1/merchants/{merchantId}/onboarding/documents",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @RequiresMerchant(MANAGE)
     @ResponseStatus(HttpStatus.CREATED)
     DocumentResponse upload(
@@ -72,7 +74,7 @@ class DocumentController {
         }
     }
 
-    @GetMapping("/api/v1/merchants/{merchantId}/documents/{documentId}")
+    @GetMapping("/api/v1/merchants/{merchantId}/onboarding/documents/{documentId}")
     @RequiresMerchant(VIEW)
     ResponseEntity<byte[]> read(@PathVariable String merchantId, @PathVariable String documentId) {
         var content = readDocument.read(merchantId, documentId);

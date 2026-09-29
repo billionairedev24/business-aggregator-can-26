@@ -17,15 +17,15 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Profile({"local", "test"})
-@EnableConfigurationProperties(LocalDocumentStorage.Properties.class)
-class LocalDocumentStorage implements DocumentStorage {
+@EnableConfigurationProperties(LocalMerchantDocumentStorage.Properties.class)
+class LocalMerchantDocumentStorage implements DocumentStorage {
 
     @ConfigurationProperties("northline.documents")
     record Properties(@Nullable Path localDir) {}
 
     private final Path root;
 
-    LocalDocumentStorage(Properties properties) {
+    LocalMerchantDocumentStorage(Properties properties) {
         var dir = properties.localDir();
         this.root = (dir != null ? dir : Path.of(System.getProperty("java.io.tmpdir"), "northline-documents"))
                 .toAbsolutePath()

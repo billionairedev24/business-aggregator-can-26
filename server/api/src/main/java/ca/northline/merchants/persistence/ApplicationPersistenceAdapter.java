@@ -40,7 +40,7 @@ import org.springframework.stereotype.Repository;
 class ApplicationPersistenceAdapter implements ApplicationRepository {
 
     private final JdbcClient jdbc;
-    private final JsonColumns json;
+    private final MerchantJsonColumns json;
 
     @Override
     public Optional<MerchantApplication> findById(String merchantId) {

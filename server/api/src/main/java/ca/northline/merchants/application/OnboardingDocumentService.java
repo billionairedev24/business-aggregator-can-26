@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional
-class DocumentService implements UploadDocument, ReadDocument {
+class OnboardingDocumentService implements UploadDocument, ReadDocument {
 
     private static final Set<String> EVIDENCE_TYPES = Set.of("application/pdf", "image/png", "image/jpeg");
     private static final Set<String> LOGO_TYPES = Set.of("image/svg+xml", "image/png");
