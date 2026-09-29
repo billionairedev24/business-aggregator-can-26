@@ -73,6 +73,18 @@ public class RegistrationService {
         if (!taken.isEmpty()) {
             throw new InvalidInput(taken);
         }
+        // "Back" and submitting the same form again must not become a way around the resend cool-down.
+        var open = flow.get(FlowStore.REGISTRATION)
+                .filter(r -> r.phone().equals(phone) && !r.phoneVerified())
+                .filter(r -> r.otp().secondsUntilResend(clock.instant(), props.otpResendAfter()) > 0);
+        if (open.isPresent()) {
+            var same = open.get()
+                    .withFirstName(in.firstName().trim())
+                    .withLastName(in.lastName().trim())
+                    .withEmail(email);
+            flow.put(FlowStore.REGISTRATION, same);
+            return same;
+        }
         var registration = new PendingRegistration(
                 UlidCreator.getMonotonicUlid().toString(),
                 in.firstName().trim(),

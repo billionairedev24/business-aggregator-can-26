@@ -66,7 +66,7 @@ class WebSecurityConfig {
         var config = new CorsConfiguration();
         config.setAllowedOrigins(props.allowedOrigins());
         config.setAllowedMethods(List.of("GET", "POST"));
-        config.setAllowedHeaders(List.of("Content-Type", "Accept", "Accept-Language"));
+        config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
         var source = new UrlBasedCorsConfigurationSource();

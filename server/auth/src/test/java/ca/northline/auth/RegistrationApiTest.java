@@ -239,6 +239,16 @@ class RegistrationApiTest extends AuthIntegrationTest {
         }
 
         @Test
+        void resubmittingTheForm_insideTheCooldown_doesNotSendAnotherCode() throws Exception {
+            var person = newPerson();
+            var session = started(person);
+            postJson("/api/auth/register", session, person.json())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.resendAfterSeconds").value(45));
+            assertThat(sms.sentTo(person.e164())).hasSize(1);
+        }
+
+        @Test
         void voiceFallback_isAvailableRightAway_andTheNewCodeWorks() throws Exception {
             var person = newPerson();
             var session = started(person);
