@@ -66,7 +66,7 @@ is still manual or missing.
   | `northline.storage.provider` | `STORAGE_PROVIDER` | `local` · `s3` (AWS S3, MinIO/RustFS, any S3 API) · `gcs` · `azure` | S-10 |
   | `northline.kms.provider` | `KMS_PROVIDER` | `local` · `aws` · `gcp` · `azure` | **done** (S-7, auth token signing keys — [key-rotation.md](key-rotation.md)) |
   | `northline.email.provider` | `EMAIL_PROVIDER` | `local` · `smtp` · `ses` · `sendgrid` · `azure` | S-13 |
-  | `northline.sms.provider` | `SMS_PROVIDER` | `local` · `twilio` · `sns` · `azure` | S-8 |
+  | `northline.sms.provider` | `SMS_PROVIDER` | `local` · `twilio` · `aws` (End User Messaging SMS and voice) · `azure` (reserved) | **done** (S-8, auth phone codes — [SMS and voice codes](#sms-and-voice-codes-s-8)) |
 
   Secrets reach the apps as environment variables in every cloud (External Secrets from AWS Secrets Manager, Google
   Secret Manager or Azure Key Vault — S-6), so there is no `secrets.provider` switch. Each app logs its choice at
@@ -111,7 +111,9 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `KMS_PROVIDER`, `KMS_KEY_ID` | | ✓ | | | `KMS_PROVIDER` everywhere, `KMS_KEY_ID` in staging and prod (S-7, [key-rotation.md](key-rotation.md)) |
 | `KMS_PUBLISHED_KEY_IDS`, `KMS_REGION`, `KMS_ENDPOINT`, `SIGNING_KEYS_DIR`, `SIGNING_KEYS_ROTATE_EVERY` | | ✓ | | | no |
 | `EMAIL_PROVIDER`, `EMAIL_FROM`, `SMTP_*` | ✓ | | | ✓ | no (until S-13) |
-| `SMS_PROVIDER`, `SMS_FROM`, `SMS_ACCOUNT_ID`, `SMS_AUTH_TOKEN` | ✓ | ✓ | | ✓ | no (until S-8) |
+| `SMS_PROVIDER`, `SMS_FROM` | | ✓ | | | staging and prod (`local` refused there; `dev` may keep `local`) |
+| `SMS_ACCOUNT_ID`, `SMS_AUTH_TOKEN` | | ✓ | | | with `SMS_PROVIDER=twilio` |
+| `SMS_VOICE_FROM`, `SMS_REGION`, `SMS_ENDPOINT` | | ✓ | | | no (`= SMS_FROM`; SDK default region; provider API) |
 | `TRUSTED_PROXIES` | | ✓ | | | no (private ranges + loopback; narrow it to the ingress subnet) |
 | `RATE_LIMIT_STORE` | | ✓ | | | no (`redis`; `memory` only under `local`/`test`) |
 | `OTEL_EXPORT_ENABLED` | ✓ | | | | no (false until S-111) |
@@ -194,6 +196,69 @@ Keys: `type` (`confidential` | `public`), `optional`, `name`, `secret-hash`, `re
 `post-logout-redirect-uris`, `scopes`, `grant-types`, `require-pkce`, `require-consent`, `access-token-ttl`,
 `refresh-token-ttl`, `dpop-required`. Retiring a client: remove it from configuration (it is then only reported), and
 delete it by hand (`delete from auth.oauth2_registered_client where client_id = '…'`) once nothing uses it.
+
+## SMS and voice codes (S-8)
+
+northline-auth sends the registration phone code (6 digits, 10 min) by SMS, or by a voice call when the person picks
+"Call me instead". The adapter is chosen by `SMS_PROVIDER`:
+
+| `SMS_PROVIDER` | what happens | needs |
+|---|---|---|
+| `local` (default) | the code is **written to the auth log** (`grep "Verification code"`), nothing is sent. Refused under `staging`/`prod`; `dev` logs a warning | — |
+| `twilio` (recommended) | SMS via Programmable Messaging (`POST /2010-04-01/Accounts/{sid}/Messages.json`), voice via a call that reads the code twice (`Calls.json` with inline TwiML, Amazon Polly voices Joanna / Chantal) | `SMS_ACCOUNT_ID`, `SMS_AUTH_TOKEN`, `SMS_FROM`; `SMS_VOICE_FROM` when `SMS_FROM` is a Messaging Service |
+| `aws` | AWS End User Messaging SMS and voice (`pinpoint-sms-voice-v2`: `SendTextMessage` transactional, `SendVoiceMessage` Polly) — keeps an all-AWS deployment on one bill and IAM | `SMS_FROM` (phone number id/ARN or pool), `SMS_REGION=ca-central-1`; credentials from workload identity (IRSA / Pod Identity) with `sms-voice:SendTextMessage` + `sms-voice:SendVoiceMessage` |
+| `azure` | reserved (Azure Communication Services SMS + Call Automation) — start-up fails with "not implemented yet" | — |
+
+Google Cloud has no first-party SMS service; on GKE use `twilio`. A provider with missing settings stops start-up
+naming every missing variable; `staging`/`prod` also list `SMS_PROVIDER` and `SMS_FROM` among the variables checked
+before start-up (purpose `sms-provider`).
+
+**Language:** the Studio sends its UI language (`Accept-Language: fr-CA` / `en-CA`); French gets
+"Northline : votre code de vérification est 123456. Il expire dans 10 minutes. Ne le partagez jamais.", everyone else
+the English text. Each SMS is one GSM-7 segment (≤ 160 characters).
+
+**Failures** (no automatic retry — a retried request can deliver twice, and the person can resend):
+
+| provider answer | the person sees |
+|---|---|
+| the number can't get it (Twilio 21211, 21214, 21217, 21401, 21610 STOP, 21612, 21614 not a mobile, 13223/13224; AWS invalid destination, opted out) on the form | the mobile field error "Enter a valid Canadian mobile…" (existing message) |
+| anything else on the form (credentials, sender, geo permissions 21408, throttling, 5xx, time-out) | `503 code_not_sent` → "We couldn't send a code to this number right now. Try again in a moment." |
+| a resend by text / a call fails | `503 code_not_sent` → "…or choose Call me instead." / "…or resend the code by text." — the code already sent keeps working |
+
+Every failure is logged at WARN with the masked number (`+1 403 *** **48`) and the provider's code; the rate limits
+(S-9) count every attempt.
+
+### Twilio account setup (once per environment)
+
+1. Create a Twilio account (one per environment, or subaccounts of one: `dev`, `staging`, `prod`), upgrade it from
+   trial (a trial sends only to verified numbers and prefixes the text), enable two-factor sign-in for the console.
+2. **Geo permissions:** Messaging → Settings → Geo permissions: allow **Canada** only (and the US if needed);
+   Voice → Settings → Geo permissions: the same, low-risk numbers only. This is the main toll-fraud control.
+3. **Sender:** buy a Canadian long code (e.g. +1 587 / +1 403, SMS + voice capable) or a toll-free number (+1 833…,
+   needs toll-free verification before it can send, ~1–3 weeks). Canadian carriers filter unregistered A2P traffic:
+   for volume, a **Messaging Service** with the number in its sender pool is recommended (`SMS_FROM=MG…`), and then
+   `SMS_VOICE_FROM=+1…` must be a voice-capable number (a Messaging Service can't place calls).
+4. **Credentials:** the account (or subaccount) SID `AC…` is `SMS_ACCOUNT_ID`, its auth token `SMS_AUTH_TOKEN`
+   (the adapter authenticates with these two; Twilio API keys `SK…` are not supported yet). Keep the token in the
+   secrets manager (External Secrets, S-6). Rotate it from the console (create the secondary token, deploy it,
+   promote it), then restart auth.
+5. Optional: enable Twilio's SMS Pumping Protection (Messaging Service → Fraud Guard) and set a usage trigger
+   (Console → Usage → Triggers) as a spending alarm.
+6. Check: sign up in the Studio with your own mobile; the auth log shows `Twilio SMS to +1 587 *** **01 accepted: SM…`.
+
+```sh
+# staging / prod (auth only)
+SMS_PROVIDER=twilio
+SMS_ACCOUNT_ID=AC…              # secrets manager
+SMS_AUTH_TOKEN=…                # secrets manager
+SMS_FROM=+15875550100           # or MG… (Messaging Service)
+SMS_VOICE_FROM=                 # required when SMS_FROM is MG…
+```
+
+**AWS instead:** in End User Messaging SMS (`ca-central-1`) request a Canadian long code or toll-free number with SMS
+and voice, move the account out of the SMS sandbox, set a monthly spend limit, then `SMS_PROVIDER=aws`,
+`SMS_REGION=ca-central-1`, `SMS_FROM=<phone-number-id or ARN>`, and grant the auth service account the two
+`sms-voice:Send*` actions on that number.
 
 ## Rate limits (S-9)
 

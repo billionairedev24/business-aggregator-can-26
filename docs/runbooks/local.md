@@ -157,8 +157,8 @@ cd server && ./gradlew :api:bootRun     # first: the api applies the migrations
 curl localhost:8080/actuator/health/readiness
 ```
 
-Leave a variable out and the app stops with the list of what is missing. Under `dev` nobody can sign in yet: there are
-no seeded users and registration needs an SMS provider (S-8). Move `server/.env` aside while you do this, or its
+Leave a variable out and the app stops with the list of what is missing. Under `dev` there are no seeded users: register in
+the Studio — `SMS_PROVIDER` defaults to `local`, so the phone code is in the auth log (`grep "Verification code"`). Move `server/.env` aside while you do this, or its
 values fill in what you meant to leave out.
 
 ## 8. Troubleshooting

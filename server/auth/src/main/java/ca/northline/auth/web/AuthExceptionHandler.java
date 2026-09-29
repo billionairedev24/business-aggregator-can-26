@@ -60,6 +60,7 @@ class AuthExceptionHandler extends ResponseEntityExceptionHandler {
             case NOT_STARTED -> HttpStatus.CONFLICT;
             case THROTTLED, LOCKED, RATE_LIMITED -> HttpStatus.TOO_MANY_REQUESTS;
             case UNAUTHENTICATED -> HttpStatus.UNAUTHORIZED;
+            case CODE_NOT_SENT -> HttpStatus.SERVICE_UNAVAILABLE;
         };
         var problem = problem(status, ex.getReason().code(), ex.getMessage());
         var response = ResponseEntity.status(status);

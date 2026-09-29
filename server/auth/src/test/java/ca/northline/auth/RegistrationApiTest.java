@@ -9,6 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ca.northline.auth.application.SmsDeliveryFailed;
+import ca.northline.auth.domain.AuthMessages;
 import ca.northline.auth.domain.OtpChallenge.Channel;
 import ca.northline.auth.support.AuthIntegrationTest;
 import java.util.Map;
@@ -313,5 +315,69 @@ class RegistrationApiTest extends AuthIntegrationTest {
 
     private static String wrong(String code) {
         return code.equals("000000") ? "111111" : "000000";
+    }
+
+    /** S-8: what the person sees when the SMS/voice provider doesn't take the code. */
+    @Nested
+    class Delivery {
+
+        @Test
+        void numberTheProviderRefuses_isAFieldErrorOnTheMobile_andNothingIsStarted() throws Exception {
+            var person = newPerson();
+            var session = new MockHttpSession();
+            sms.failNext(SmsDeliveryFailed.Kind.UNDELIVERABLE_NUMBER);
+
+            postJson("/api/auth/register", session, person.json())
+                    .andExpect(status().isUnprocessableContent())
+                    .andExpect(jsonPath("$.errors[0].field").value("phone"))
+                    .andExpect(jsonPath("$.errors[0].rule").value("format"))
+                    .andExpect(jsonPath("$.errors[0].message").value(AuthMessages.PHONE_FORMAT));
+            postJson("/api/auth/register/verify", session, json(Map.of("code", "123456")))
+                    .andExpect(status().isConflict());
+        }
+
+        @Test
+        void providerDown_is503CodeNotSent_andTheFormCanBeSentAgain() throws Exception {
+            var person = newPerson();
+            var session = new MockHttpSession();
+            sms.failNext(SmsDeliveryFailed.Kind.PROVIDER_UNAVAILABLE);
+
+            postJson("/api/auth/register", session, person.json())
+                    .andExpect(status().isServiceUnavailable())
+                    .andExpect(jsonPath("$.code").value("code_not_sent"))
+                    .andExpect(jsonPath("$.detail").value(AuthMessages.CODE_NOT_SENT_FORM));
+            postJson("/api/auth/register", session, person.json()).andExpect(status().isOk());
+            assertThat(sms.sentTo(person.e164())).hasSize(1);
+        }
+
+        @Test
+        void failedVoiceCall_keepsTheSmsCodeWorking() throws Exception {
+            var person = newPerson();
+            var session = new MockHttpSession();
+            postJson("/api/auth/register", session, person.json()).andExpect(status().isOk());
+            var smsCode = sms.lastCodeTo(person.e164());
+            sms.failNext(SmsDeliveryFailed.Kind.UNDELIVERABLE_NUMBER);
+
+            postJson("/api/auth/register/resend", session, json(Map.of("channel", "voice")))
+                    .andExpect(status().isServiceUnavailable())
+                    .andExpect(jsonPath("$.code").value("code_not_sent"))
+                    .andExpect(jsonPath("$.detail").value(AuthMessages.CALL_NOT_PLACED));
+            postJson("/api/auth/register/verify", session, json(Map.of("code", smsCode)))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        void codesAreWordedInTheRequestLanguage() throws Exception {
+            var person = newPerson();
+            mvc.perform(post("/api/auth/register")
+                            .session(new MockHttpSession())
+                            .header("Accept-Language", "fr-CA")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(person.json()))
+                    .andExpect(status().isOk());
+
+            assertThat(sms.sentTo(person.e164()).getLast().locale().getLanguage())
+                    .isEqualTo("fr");
+        }
     }
 }

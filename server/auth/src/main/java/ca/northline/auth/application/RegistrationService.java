@@ -24,6 +24,7 @@ import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
  * authenticator app; mandatory, SMS never primary) → account created. The {@code identity.users} row is only written
  * once the second factor is confirmed.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RegistrationService {
@@ -95,7 +97,7 @@ public class RegistrationService {
                 phone,
                 email,
                 props.termsVersion(),
-                sendCode(phone, Channel.SMS),
+                sendCode(phone, Channel.SMS, true),
                 false,
                 null);
         flow.remove(FlowStore.PASSKEY_CREATION);
@@ -113,7 +115,7 @@ public class RegistrationService {
             throw new FlowRejected(Reason.THROTTLED, "Wait %d s before sending another code.".formatted(wait), wait);
         }
         limits.consume(LimitedAction.OTP_SEND, phoneSubject(registration.phone()));
-        var next = registration.withOtp(sendCode(registration.phone(), channel));
+        var next = registration.withOtp(sendCode(registration.phone(), channel, false));
         flow.put(FlowStore.REGISTRATION, next);
         return next;
     }
@@ -243,9 +245,26 @@ public class RegistrationService {
         return AttemptLimits.Subject.identifier(phone.e164(), null);
     }
 
-    private OtpChallenge sendCode(PhoneNumber phone, Channel channel) {
+    /**
+     * Sends a fresh code in the language of the request (the Studio sends its UI language). A number the provider
+     * refuses on the form step is a field error on the mobile ("Enter a valid Canadian mobile…"); any other failure is
+     * {@code 503 code_not_sent} — the Studio then offers the other channel. Nothing is stored for a code that wasn't
+     * sent (the open registration keeps its previous code).
+     */
+    private OtpChallenge sendCode(PhoneNumber phone, Channel channel, boolean formStep) {
         var code = "%06d".formatted(RANDOM.nextInt(1_000_000));
-        sms.sendCode(phone, code, channel);
+        try {
+            sms.sendCode(phone, code, channel, LocaleContextHolder.getLocale());
+        } catch (SmsDeliveryFailed e) {
+            log.warn("{} code to {} not sent ({}): {}", channel, phone.masked(), e.getKind(), e.getMessage());
+            if (formStep && e.getKind() == SmsDeliveryFailed.Kind.UNDELIVERABLE_NUMBER) {
+                throw InvalidInput.of("phone", "format", AuthMessages.PHONE_FORMAT);
+            }
+            var message = formStep
+                    ? AuthMessages.CODE_NOT_SENT_FORM
+                    : channel == Channel.VOICE ? AuthMessages.CALL_NOT_PLACED : AuthMessages.CODE_NOT_SENT;
+            throw new FlowRejected(Reason.CODE_NOT_SENT, message);
+        }
         return OtpChallenge.issue(code, channel, clock.instant(), props.otpTtl());
     }
 

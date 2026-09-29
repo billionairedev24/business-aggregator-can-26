@@ -33,13 +33,17 @@ export function fieldErrors(err: unknown, t: AuthT, mismatch: AuthKey = 'codeWro
   return out;
 }
 
-/** Anything that isn't a field error: flow restarted, throttled, passkey problems, network. */
-export function flowError(err: unknown, t: AuthT): string | undefined {
+/**
+ * Anything that isn't a field error: flow restarted, throttled, passkey problems, network, code not sent (`sent` = what
+ * was being sent when the SMS/voice provider failed: the form's first code, a text resend or a call).
+ */
+export function flowError(err: unknown, t: AuthT, sent: 'form' | 'sms' | 'voice' = 'form'): string | undefined {
   if (err instanceof ValidationError) return undefined;
   if (err instanceof PasskeyError) return t(err.reason === 'unsupported' ? 'passkeyUnsupported' : 'passkeyCancelled');
   if (err instanceof ApiError) {
     const code = err.body && typeof err.body === 'object' && 'code' in err.body ? String((err.body as { code: unknown }).code) : '';
     if (code === 'too_many_attempts') return t('tooMany');
+    if (code === 'code_not_sent') return t(sent === 'voice' ? 'codeNotSentVoice' : sent === 'sms' ? 'codeNotSentSms' : 'codeNotSentForm');
     if (code === 'rate_limited') {
       const s = rateLimitedFor(err);
       return s ? t('rateLimited', { time: mmss(s) }) : t('rateLimitedLater');

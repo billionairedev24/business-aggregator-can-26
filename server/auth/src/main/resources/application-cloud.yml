@@ -1,7 +1,7 @@
 # Shape shared by the deployed environments. Activated by the `dev`, `staging` and `prod` profiles (profile group in
 # application.yml); never activate it directly. Values come from the environment (docs/runbooks/dev.md, staging.md,
 # prod.md). Compared with `local`: Redis/Valkey sessions, Secure cookies, no Flyway (the api migrates), no dev seed,
-# no fixed dev TOTP key, SMS through the configured provider (none yet: UnconfiguredSmsSender fails loudly, S-8).
+# no fixed dev TOTP key, SMS through northline.sms.provider (S-8: dev may keep `local`, staging/prod require twilio or aws).
 northline.required-env:                 # checked before start-up (ca.northline.platform.RequiredEnvironmentCheck)
   database: DB_URL, DB_USER, DB_PASSWORD
   cache: REDIS_HOST

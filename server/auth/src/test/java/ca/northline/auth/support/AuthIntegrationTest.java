@@ -3,6 +3,7 @@ package ca.northline.auth.support;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ca.northline.auth.application.SmsDeliveryFailed;
 import ca.northline.auth.application.SmsSender;
 import ca.northline.auth.domain.OtpChallenge.Channel;
 import ca.northline.auth.domain.PhoneNumber;
@@ -13,10 +14,12 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -193,12 +196,24 @@ public abstract class AuthIntegrationTest {
         private final Map<String, List<Sent>> sent = new ConcurrentHashMap<>();
 
         /** One delivery. */
-        public record Sent(String code, Channel channel) {}
+        public record Sent(String code, Channel channel, Locale locale) {}
+
+        private volatile SmsDeliveryFailed.@Nullable Kind failNext;
+
+        /** The next send fails like a provider would (then sending works again). */
+        public void failNext(SmsDeliveryFailed.Kind kind) {
+            failNext = kind;
+        }
 
         @Override
-        public void sendCode(PhoneNumber to, String code, Channel channel) {
+        public void sendCode(PhoneNumber to, String code, Channel channel, Locale locale) {
+            var failure = failNext;
+            if (failure != null) {
+                failNext = null;
+                throw new SmsDeliveryFailed(failure, "simulated");
+            }
             sent.computeIfAbsent(to.e164(), _ -> new java.util.concurrent.CopyOnWriteArrayList<>())
-                    .add(new Sent(code, channel));
+                    .add(new Sent(code, channel, locale));
         }
 
         public String lastCodeTo(String e164) {

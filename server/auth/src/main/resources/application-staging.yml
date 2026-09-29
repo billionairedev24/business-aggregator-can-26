@@ -3,3 +3,4 @@
 # Token signing keys live in the cloud KMS (S-7, docs/runbooks/key-rotation.md); KMS_PROVIDER=local is refused.
 northline.required-env:
   signing-key: KMS_KEY_ID             # + KMS_PROVIDER (application-cloud.yml)
+  sms-provider: SMS_PROVIDER, SMS_FROM   # S-8: twilio or aws; `local` is refused here (SmsConfig)

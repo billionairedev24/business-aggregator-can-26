@@ -31,6 +31,15 @@ public final class AuthMessages {
     public static final String TOO_MANY_ATTEMPTS = "Too many attempts. Start again in a few minutes.";
     /** S-9 rate limits; the Studio shows its own (translated) copy with a countdown from retryAfterSeconds. */
     public static final String RATE_LIMITED = "Too many attempts. Wait a moment and try again.";
+    /** S-8: the provider didn't take the first code (the Studio shows its own translated copy by {@code code}). */
+    public static final String CODE_NOT_SENT_FORM =
+            "We couldn't send a code to this number right now. Try again in a moment.";
+    /** S-8: a resent text message wasn't taken. */
+    public static final String CODE_NOT_SENT =
+            "We couldn't send the text message. Try again in a moment, or choose Call me instead.";
+    /** S-8: the voice call couldn't be placed. */
+    public static final String CALL_NOT_PLACED =
+            "We couldn't call this number. Try again in a moment, or resend the code by text.";
 
     public static final String SIX_DIGITS = "^\\d{6}$";
 

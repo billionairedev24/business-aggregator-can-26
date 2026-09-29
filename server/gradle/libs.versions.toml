@@ -23,6 +23,7 @@ gcp-kms = "2.101.0"
 azure-keyvault-keys = "4.11.2"
 azure-identity = "1.18.6"
 azure-core-http-jdk = "1.1.7"
+wiremock = "3.13.2"
 
 [libraries]
 springdoc-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
@@ -38,6 +39,8 @@ errorprone-core = { module = "com.google.errorprone:error_prone_core", version.r
 nullaway = { module = "com.uber.nullaway:nullaway", version.ref = "nullaway" }
 totp = { module = "dev.samstevens.totp:totp", version.ref = "totp" }
 aws-kms = { module = "software.amazon.awssdk:kms", version.ref = "aws-sdk" }
+aws-sms-voice = { module = "software.amazon.awssdk:pinpointsmsvoicev2", version.ref = "aws-sdk" }
+wiremock = { module = "org.wiremock:wiremock-standalone", version.ref = "wiremock" }
 gcp-kms = { module = "com.google.cloud:google-cloud-kms", version.ref = "gcp-kms" }
 azure-keyvault-keys = { module = "com.azure:azure-security-keyvault-keys", version.ref = "azure-keyvault-keys" }
 azure-identity = { module = "com.azure:azure-identity", version.ref = "azure-identity" }

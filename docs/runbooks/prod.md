@@ -22,7 +22,7 @@ Pick **one** provider per environment; everything in a Canadian region: AWS `ca-
 | Keys / KMS (S-7) | AWS KMS (`ECC_NIST_P256`, `SIGN_VERIFY`) | Cloud KMS (`EC_SIGN_P256_SHA256`, HSM) | Azure Key Vault keys (`EC-HSM`, P-256) | token signing keys, signed inside the KMS; set-up and rotation: [key-rotation.md](key-rotation.md) |
 | Secrets manager (S-6) | AWS Secrets Manager | Secret Manager | Azure Key Vault (secrets) | synced into Kubernetes Secrets by External Secrets Operator; the apps only see environment variables |
 | Email (S-13) | Amazon SES (`ca-central-1`) | SendGrid, Mailgun or any SMTP provider (no first-party service) | Azure Communication Services Email | no adapter yet |
-| SMS / voice (S-8) | Twilio (or Amazon SNS) | Twilio | Twilio (or Azure Communication Services SMS) | Canadian sender numbers need registration; no adapter yet |
+| SMS / voice (S-8) | Twilio (`SMS_PROVIDER=twilio`) or AWS End User Messaging SMS and voice (`aws`) | Twilio (no first-party SMS service) | Twilio (Azure Communication Services: reserved, not implemented) | Canadian sender number (long code, or verified toll-free); set-up: [README § SMS and voice codes](README.md#sms-and-voice-codes-s-8) |
 | DNS + TLS (S-17) | Route 53 + ACM (or cert-manager) | Cloud DNS + Certificate Manager (or cert-manager) | Azure DNS + cert-manager | hosts listed under "Public URLs" below |
 | Container registry (S-14) | Amazon ECR | Artifact Registry | Azure Container Registry | in the same Canadian region |
 | Kubernetes (S-14, S-15) | Amazon EKS | GKE | AKS | Helm charts and Argo CD are not written yet |
@@ -84,7 +84,8 @@ Every app reads its configuration from environment variables; nothing environmen
 | `TRUSTED_PROXIES` | auth | no (private ranges + loopback) | the ingress / load balancer subnet, e.g. `10.20.0.0/22` (comma-separated CIDRs) | network plan (S-2); only these peers may set `X-Forwarded-For/-Proto/-Host` — the client IP the rate limits and the sign-in log use ([README § Rate limits](README.md#rate-limits-s-9)) |
 | `RATE_LIMIT_STORE` | auth | no (`redis`) | leave unset: `memory` is refused here | — |
 | `EMAIL_PROVIDER`, `EMAIL_FROM`, `SMTP_*` | api, worker | no (S-13) | `ses` / `sendgrid` / `azure` | email provider account |
-| `SMS_PROVIDER`, `SMS_FROM`, `SMS_ACCOUNT_ID`, `SMS_AUTH_TOKEN` | api, auth, worker | no (S-8) | `twilio`, `+1587…`, `AC…`, — | Twilio console → secrets manager → External Secrets (S-6) → Kubernetes Secret; until then `kubectl create secret` |
+| `SMS_PROVIDER`, `SMS_FROM`, `SMS_ACCOUNT_ID`, `SMS_AUTH_TOKEN` | auth | **`SMS_PROVIDER`, `SMS_FROM`** (`local` refused); the Twilio pair with `twilio` | `twilio`, `+15875550100` (or `MG…`), `AC…`, — | Twilio console → secrets manager (token) → External Secrets (S-6) → Kubernetes Secret; until then `kubectl create secret` |
+| `SMS_VOICE_FROM`, `SMS_REGION`, `SMS_ENDPOINT` | auth | no | `+15875550101` (needed when `SMS_FROM` is `MG…`), `ca-central-1` (`aws`), — | [README § SMS and voice codes](README.md#sms-and-voice-codes-s-8) |
 | `OTEL_EXPORT_ENABLED` | api | no | `false` until a collector exists (S-111) | deployment manifest |
 | `VITE_NL_AUTH_ORIGIN` (Studio build) | web/apps/studio | **yes** at build time | `https://auth.northline.ca` | CI build argument; one Studio build per environment |
 
@@ -101,7 +102,7 @@ docker run --rm httpd:2.4-alpine htpasswd -bnBC 12 "" "$SECRET" | tr -d ':\n' | 
 | account | needed for | status |
 |---|---|---|
 | Stripe (Connect Express, Tax) | payments, payouts, merchant onboarding — live mode (activated Connect platform, Canadian entity) | required |
-| Twilio (or the chosen SMS provider) | phone verification codes at registration | blocked on S-8 |
+| Twilio (or AWS End User Messaging SMS and voice) | phone verification codes at registration (SMS + voice) | required; set-up in [README § SMS and voice codes](README.md#sms-and-voice-codes-s-8) (upgraded account, Canada-only geo permissions, Canadian sender) |
 | Google Cloud OAuth client, Apple Developer (Sign in with Apple) | "continue with Google / Apple" | S-18; redirect URIs on the auth host |
 | Email provider (SES / SendGrid / Azure Communication Services) | invitations and notifications, with SPF/DKIM/DMARC on the sending domain | S-13 |
 | Elastic Cloud (unless ECK) | search | subscription in a Canadian region |
@@ -122,7 +123,6 @@ What still stops a complete deployment. Under the `local`/`test` profiles each o
 
 | port / piece | outside local | effect | fixed by |
 |---|---|---|---|
-| `SmsSender` (auth) | `UnconfiguredSmsSender` throws | **nobody can register** (the phone code can't be sent) — so an environment without seed data has no users | S-8 |
 | Object storage: `MediaStorage` (catalogue), `DocumentStorage` (merchants), `AttachmentStorage` (messaging), `KitchenPhotoStore` (food), `MediaStore` (booking), dispute evidence (payments) | unconfigured adapters throw, or answer 409 `storage_unavailable` | no uploads: product images, onboarding documents and logos, message attachments, kitchen photos, quote/job photos, dispute evidence | S-10 |
 | `IdentityVerification` (merchants) | unconfigured adapter throws | onboarding identity check | S-22 |
 | `RegistryLookup` (merchants) | unconfigured adapter throws | business and licence checks | S-23 |
@@ -181,6 +181,7 @@ api and bff (drops their JWK set caches). Nobody is signed out: refresh tokens a
 - [ ] Stripe keys (live mode) set; webhooks (S-12) configured
 - [ ] Point-in-time restore enabled on Postgres; restore tested (S-114)
 - [ ] Alerts on readiness, error rate and DLQ depth (S-111–S-113)
-- [ ] Blockers S-8 (SMS), S-10 (storage) closed; S-18 (Google/Apple) closed or buttons hidden
+- [ ] SMS provider set (`SMS_PROVIDER=twilio`/`aws`), a real registration received its code by SMS and by voice
+- [ ] Blocker S-10 (storage) closed; S-18 (Google/Apple) closed or buttons hidden
 - [ ] Staging ran the same release first
 - [ ] Penetration test (S-104), privacy (S-105–S-108) and PCI SAQ-A (S-110) done
