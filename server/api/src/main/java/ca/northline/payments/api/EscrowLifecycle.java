@@ -42,6 +42,9 @@ public interface EscrowLifecycle {
     /** The work was completed / delivered / handed off: starts the release clock of the escrow's kind. */
     void fulfilled(String refType, String refId, Instant at);
 
+    /** Like {@link #fulfilled} but a no-op when nothing is held for the reference (work paid without escrow). */
+    boolean fulfilledIfHeld(String refType, String refId, Instant at);
+
     /** The customer signed off / confirmed delivery: releases now. */
     void confirmed(String refType, String refId, Instant at);
 }

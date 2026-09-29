@@ -58,6 +58,15 @@ class EscrowService implements EscrowLifecycle {
     }
 
     @Override
+    public boolean fulfilledIfHeld(String refType, String refId, Instant at) {
+        if (escrows.findByRef(refType, refId).isEmpty()) {
+            return false;
+        }
+        fulfilled(refType, refId, at);
+        return true;
+    }
+
+    @Override
     public void confirmed(String refType, String refId, Instant at) {
         var escrow = byRef(refType, refId);
         var wasFulfilled = escrow.getFulfilledAt() != null;
