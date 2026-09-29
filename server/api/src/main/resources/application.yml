@@ -12,6 +12,10 @@ spring:
     # Override with SPRING_FLYWAY_LOCATIONS=filesystem:/path/to/db/migrations if you must.
     locations: classpath:db/migration
   mvc.problemdetails.enabled: true
+  # Onboarding documents and storefront logos (merchants module): 10 MB per file.
+  servlet.multipart:
+    max-file-size: 10MB
+    max-request-size: 11MB
   jackson:
     default-property-inclusion: always
   security.oauth2.resourceserver.jwt:

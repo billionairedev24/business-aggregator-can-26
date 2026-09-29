@@ -60,6 +60,8 @@ tasks.processResources {
     from(rootProject.file("../db/migrations")) { into("db/migration") }
     from(rootProject.file("../db/seed-dev")) { into("db/seed-dev") }
     from(rootProject.file("../db/seed")) { into("db/seed") }
+    // Machine-readable rules (legal-details.schema.json, storefront-sections.json) are validated against at runtime.
+    from(rootProject.file("../docs/spec")) { into("spec") }
 }
 
 // ./gradlew :api:flywayMigrate [-Pdb.url=jdbc:postgresql://localhost:5432/northline] [-Pdb.user=…] [-Pdb.password=…] [-Pdb.devSeed=true]

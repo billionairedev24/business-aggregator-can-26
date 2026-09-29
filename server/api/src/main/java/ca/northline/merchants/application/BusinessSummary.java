@@ -1,5 +1,6 @@
 package ca.northline.merchants.application;
 
+import ca.northline.merchants.domain.MerchantStatus;
 import ca.northline.merchants.domain.MerchantTier;
 import ca.northline.merchants.domain.MerchantType;
 import ca.northline.shared.security.MerchantRole;
@@ -12,4 +13,5 @@ public record BusinessSummary(
         MerchantType type,
         @Nullable MerchantTier tier,
         @Nullable String city,
+        @Nullable MerchantStatus status,
         MerchantRole role) {}

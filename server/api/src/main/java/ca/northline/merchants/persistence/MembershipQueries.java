@@ -2,6 +2,7 @@ package ca.northline.merchants.persistence;
 
 import ca.northline.merchants.application.BusinessDirectory;
 import ca.northline.merchants.application.BusinessSummary;
+import ca.northline.merchants.domain.MerchantStatus;
 import ca.northline.merchants.domain.MerchantTier;
 import ca.northline.merchants.domain.MerchantType;
 import ca.northline.shared.CodedEnum;
@@ -49,7 +50,7 @@ class MembershipQueries implements MerchantMemberships, BusinessDirectory {
     @Override
     public List<BusinessSummary> businessesOf(String userId) {
         return jdbc.sql("""
-                        select m.id, m.display_name, m.type, m.tier, m.city, mm.role
+                        select m.id, m.display_name, m.type, m.tier, m.city, m.status, mm.role
                           from merchants.merchant_members mm
                           join merchants.merchants m on m.id = mm.merchant_id
                          where mm.user_id = :userId
@@ -62,6 +63,7 @@ class MembershipQueries implements MerchantMemberships, BusinessDirectory {
                         CodedEnum.fromCode(MerchantType.class, rs.getString("type")),
                         CodedEnums.fromCode(rs.getString("tier"), MerchantTier.class),
                         rs.getString("city"),
+                        CodedEnums.fromCode(rs.getString("status"), MerchantStatus.class),
                         CodedEnum.fromCode(MerchantRole.class, rs.getString("role"))))
                 .list();
     }

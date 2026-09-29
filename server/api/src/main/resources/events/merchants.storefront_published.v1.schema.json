@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:merchants.storefront_published:1",
+  "type": "object",
+  "required": ["eventId", "occurredAt", "aggregateId", "actorId", "merchantId", "slug", "pageKind", "sections"],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": { "type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$" },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "aggregateId": { "type": "string", "description": "merchants.storefronts.id" },
+    "actorId": { "type": "string", "description": "identity.users.id of the team member who published" },
+    "merchantId": { "type": "string" },
+    "slug": { "type": "string", "pattern": "^[a-z0-9-]{3,40}$" },
+    "pageKind": { "enum": ["business_page", "store", "menu_page"] },
+    "sections": { "type": "array", "items": { "type": "string" }, "description": "enabled section kinds in page order" },
+    "customDomain": { "type": ["string", "null"], "description": "verified custom domain, if any" }
+  }
+}
