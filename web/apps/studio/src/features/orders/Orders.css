@@ -1,0 +1,7 @@
+.nl-orders-chips { display: flex; gap: 6px; margin: 20px 0 14px; flex-wrap: wrap; }
+.nl-orders-foot { font-size: 13px; color: var(--color-neutral-700); margin-top: 16px; max-width: 60ch; }
+.nl-orders-detail { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 10px 16px; margin: 0; font-size: 14px; }
+.nl-orders-detail dt { color: var(--color-neutral-700); }
+.nl-orders-detail dd { margin: 0; overflow-wrap: break-word; }
+.nl-orders-lines { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.nl-orders-lines li { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }

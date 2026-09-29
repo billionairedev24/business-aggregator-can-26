@@ -1,6 +1,6 @@
 package ca.northline.payments;
 
-import ca.northline.booking.QuoteAccepted;
+import ca.northline.booking.api.QuoteAccepted;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 

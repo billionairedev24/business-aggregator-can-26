@@ -1,0 +1,117 @@
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { CaretLeft, CaretRight } from '@phosphor-icons/react';
+import { DataTable, ErrorState, Segmented, Skeleton, useLocale, type DataTableColumn, type Locale } from '@northline/ui';
+import { useMerchantId } from '../shell/api';
+import { useSession } from '../../lib/session';
+import { timeOffQuery } from '../availability/api';
+import { addDays, clock, localDate, localInstant, mondayOf, today } from '../../lib/time';
+import { jobsQuery, type Job } from './api';
+import { JobPanel } from './JobPanel';
+import { useAppointmentsT } from './messages';
+import { QuoteRequests } from './QuoteRequests';
+import './Appointments.css';
+
+type View = 'day' | 'week' | 'list';
+type T = ReturnType<typeof useAppointmentsT>;
+const DONE = new Set(['completed', 'signed_off', 'cancelled']);
+
+const fmt = (date: string, locale: Locale, o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { ...o, timeZone: 'UTC' }).format(new Date(`${date}T12:00:00Z`)).replace('.', '');
+
+export function AppointmentsScreen() {
+  const t = useAppointmentsT();
+  const { locale } = useLocale();
+  const merchantId = useMerchantId();
+  const [view, setView] = useState<View>('week');
+  const [anchor, setAnchor] = useState(today());
+  const [selected, setSelected] = useState<string | null>(null);
+  const monday = mondayOf(anchor);
+  const range = view === 'day' ? [anchor, addDays(anchor, 1)] : [monday, addDays(monday, 7)];
+  const q = useQuery(jobsQuery(merchantId, localInstant(range[0]!), localInstant(range[1]!)));
+  const timeOff = useQuery(timeOffQuery(merchantId));
+  const jobs = useMemo(() => q.data ?? [], [q.data]);
+
+  useEffect(() => {
+    if (selected && jobs.some(j => j.id === selected)) return;
+    const d0 = today();
+    const pick = jobs.find(j => localDate(j.startsAt) === d0 && !DONE.has(j.state)) ?? jobs.find(j => !DONE.has(j.state)) ?? jobs[0];
+    if (pick) setSelected(pick.id);
+  }, [jobs, selected]);
+
+  const step = view === 'day' ? 1 : 7;
+  const title = view === 'day' ? fmt(anchor, locale, { weekday: 'long', month: 'long', day: 'numeric' }) : t('weekOf', { date: fmt(monday, locale, { month: 'short', day: 'numeric' }) });
+  const blocked = (date: string) => (timeOff.data?.entries ?? []).filter(e => e.kind === 'closed' && !e.memberUserId && e.startsOn <= date && e.endsOn >= date);
+
+  return (
+    <div className="nl-appt">
+      <div className="nl-appt-head">
+        <div>
+          <span className="nl-kicker">{t('kicker')}</span>
+          <div className="nl-appt-titlerow">
+            <button type="button" className="btn btn-ghost btn-icon" aria-label={view === 'day' ? t('prevDay') : t('prevWeek')} onClick={() => setAnchor(a => addDays(a, -step))}><CaretLeft size={18} /></button>
+            <h1 className="nl-page-title">{title}</h1>
+            <button type="button" className="btn btn-ghost btn-icon" aria-label={view === 'day' ? t('nextDay') : t('nextWeek')} onClick={() => setAnchor(a => addDays(a, step))}><CaretRight size={18} /></button>
+          </div>
+        </div>
+        <Segmented<View> name="appt-view" aria-label={t('view')} value={view} onChange={setView} options={[{ value: 'day', label: t('viewDay') }, { value: 'week', label: t('viewWeek') }, { value: 'list', label: t('viewList') }]} />
+      </div>
+
+      {q.isPending ? <div className="nl-appt-week" aria-busy="true">{Array.from({ length: 6 }, (_, i) => <div key={i}><Skeleton height={14} width={60} style={{ marginBottom: 8 }} /><Skeleton height={56} style={{ marginBottom: 6 }} /><Skeleton height={56} /></div>)}</div>
+        : q.isError ? <ErrorState message={t('loadJobsError')} onRetry={() => void q.refetch()} />
+        : view === 'week' ? <WeekGrid t={t} locale={locale} monday={monday} jobs={jobs} selected={selected} onSelect={setSelected} blocked={blocked} />
+        : view === 'day' ? <DayList t={t} locale={locale} jobs={jobs} selected={selected} onSelect={setSelected} blocked={blocked(anchor)} />
+        : <JobTable t={t} locale={locale} jobs={jobs} onOpen={setSelected} />}
+
+      <div className="nl-appt-cols">
+        <QuoteRequests />
+        <JobPanel jobId={selected} />
+      </div>
+    </div>
+  );
+}
+
+function JobButton({ j, t, locale, selected, onSelect }: { j: Job; t: T; locale: Locale; selected: boolean; onSelect: (id: string) => void }) {
+  const me = useSession().data?.user.id;
+  return (
+    <button type="button" className="nl-appt-job" data-dim={DONE.has(j.state)} aria-pressed={selected} onClick={() => onSelect(j.id)}>
+      <strong>{clock(j.startsAt, locale)}</strong><br />{j.memberName && j.memberUserId && j.memberUserId !== me ? t('jobWithMember', { title: j.title, member: j.memberName }) : j.title}<br /><span className="nl-appt-job-who">{j.customerName ?? ''}</span>
+    </button>
+  );
+}
+
+function WeekGrid({ t, locale, monday, jobs, selected, onSelect, blocked }: { t: T; locale: Locale; monday: string; jobs: Job[]; selected: string | null; onSelect: (id: string) => void; blocked: (d: string) => { reason?: string | null }[] }) {
+  const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+  const sunday = days[6]!;
+  const shown = jobs.some(j => localDate(j.startsAt) === sunday) ? days : days.slice(0, 6);
+  if (jobs.length === 0 && shown.every(d => blocked(d).length === 0)) return <p className="nl-muted nl-appt-empty">{t('noJobsWeek')}</p>;
+  return (
+    <div className="nl-appt-week" style={{ ['--nl-days' as string]: shown.length }}>
+      {shown.map(d => (
+        <div key={d} role="group" aria-label={fmt(d, locale, { weekday: 'long', month: 'long', day: 'numeric' })}>
+          <div className="nl-appt-dayname">{fmt(d, locale, { weekday: 'short', day: 'numeric' })}</div>
+          {blocked(d).map((b, i) => <div key={i} className="nl-appt-job nl-appt-blocked" data-dim="true">{t('blocked', { why: b.reason ?? '—' })}</div>)}
+          {jobs.filter(j => localDate(j.startsAt) === d).map(j => <JobButton key={j.id} j={j} t={t} locale={locale} selected={selected === j.id} onSelect={onSelect} />)}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DayList({ t, locale, jobs, selected, onSelect, blocked }: { t: T; locale: Locale; jobs: Job[]; selected: string | null; onSelect: (id: string) => void; blocked: { reason?: string | null }[] }) {
+  if (jobs.length === 0 && blocked.length === 0) return <p className="nl-muted nl-appt-empty">{t('noJobsDay')}</p>;
+  return (
+    <div className="nl-appt-day">
+      {blocked.map((b, i) => <div key={i} className="nl-appt-job nl-appt-blocked" data-dim="true">{t('blocked', { why: b.reason ?? '—' })}</div>)}
+      {jobs.map(j => <JobButton key={j.id} j={j} t={t} locale={locale} selected={selected === j.id} onSelect={onSelect} />)}
+    </div>
+  );
+}
+
+interface JobRow { id: string; when: string; job: string; who: string; member: string; state: string }
+function JobTable({ t, locale, jobs, onOpen }: { t: T; locale: Locale; jobs: Job[]; onOpen: (id: string) => void }) {
+  const rows: JobRow[] = jobs.map(j => ({ id: j.id, when: `${fmt(localDate(j.startsAt), locale, { weekday: 'short', day: 'numeric' })} · ${clock(j.startsAt, locale)}`, job: j.ref ? `${j.title} · ${j.ref}` : j.title, who: j.customerName ?? '—', member: j.memberName ?? '—', state: t(`state_${j.state}`) }));
+  const columns: DataTableColumn<JobRow>[] = [
+    { key: 'when', label: t('colWhen') }, { key: 'job', label: t('colJob'), primary: true }, { key: 'who', label: t('colCustomer') }, { key: 'member', label: t('colMember'), filter: 'facet' }, { key: 'state', label: t('colStatus'), type: 'tag' },
+  ];
+  return <DataTable<JobRow> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} can={{ create: false, update: false, delete: false, export: true }} onOpen={r => onOpen(r.id)} emptyText={t('noJobsWeek')} />;
+}

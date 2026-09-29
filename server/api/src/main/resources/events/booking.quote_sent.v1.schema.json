@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:booking.quote_sent:1",
+  "description": "quote.sent — topic booking.quote, key = quote id. Version > 1 = revision; the prior version is supersededQuoteId.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "requestId",
+    "merchantId",
+    "actorId",
+    "quoteVersion",
+    "totalCents",
+    "depositCents",
+    "validUntil"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "booking.quotes.id"
+    },
+    "requestId": {
+      "type": "string"
+    },
+    "merchantId": {
+      "type": "string",
+      "description": "merchants.merchants.id"
+    },
+    "actorId": {
+      "type": "string",
+      "description": "identity.users.id of the team member"
+    },
+    "quoteVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "totalCents": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "depositCents": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "validUntil": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "supersededQuoteId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}
