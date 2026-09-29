@@ -14,3 +14,4 @@ export * from './Layout';
 export * from './Charts';
 export * from './AppShell';
 export * from './DataTable';
+export * from './Chat';

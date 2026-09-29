@@ -1,0 +1,70 @@
+/* Studio › Help & support (design 02 › help). Values from tokens only. */
+.nl-help-tabs { margin: -4px 0 22px; }
+.nl-help-search { max-width: 560px; width: 100%; min-height: 46px; font-size: 16px; }
+.nl-help-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 28px clamp(24px, 4vw, 56px); margin-top: 24px; }
+.nl-help-grid > * { min-width: 0; }
+.nl-help-h2 { font-size: 22px; margin: 0 0 10px; overflow-wrap: anywhere; }
+.nl-help-h2-gap { margin-top: 24px; }
+.nl-help-h3 { font-size: 18px; margin: 22px 0 8px; }
+.nl-help-note { font-size: 13px; color: var(--color-neutral-700); margin: 10px 0 0; line-height: 1.55; }
+.nl-help-meta { font-size: 12px; color: var(--color-neutral-700); }
+.nl-help-back, .nl-help-link { font: inherit; font-size: 13px; border: 0; background: transparent; color: var(--color-accent-700); cursor: pointer; padding: 0; min-height: 32px; text-align: left; }
+.nl-help-back:focus-visible, .nl-help-link:focus-visible { outline: 2px solid var(--color-accent); }
+
+.nl-help-articles { list-style: none; margin: 0; padding: 0; }
+.nl-help-article { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; font-size: 15px; text-decoration: none; color: var(--color-text); min-height: 44px; }
+.nl-help-article:hover span:first-child { text-decoration: underline; }
+.nl-help-article .nl-help-meta { white-space: nowrap; }
+
+.nl-help-topics { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 10px; }
+.nl-help-topic { text-align: left; font: inherit; padding: 14px; background: var(--color-surface); border: 1px solid var(--color-divider); border-radius: var(--radius-md); cursor: pointer; color: var(--color-text); }
+.nl-help-topic[aria-pressed='true'] { border-color: var(--color-accent); }
+.nl-help-topic:focus-visible { outline: 2px solid var(--color-accent); }
+.nl-help-topic-name { display: block; font-weight: 600; }
+.nl-help-topic .nl-help-meta { display: block; margin-top: 2px; }
+
+.nl-help-talk { padding: 16px; background: var(--color-accent-100); border-radius: var(--radius-md); color: var(--color-accent-900); }
+.nl-help-talk-kicker { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+.nl-help-talk-sla { font-weight: 600; font-size: 18px; margin-top: 4px; }
+.nl-help-talk-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.nl-help-on-bg { background: var(--color-bg); }
+
+.nl-help-case { display: block; width: 100%; text-align: left; font: inherit; font-size: 14px; padding: 14px; border: 1px solid var(--color-divider); border-radius: var(--radius-md); background: transparent; color: var(--color-text); cursor: pointer; margin-bottom: 8px; }
+.nl-help-case:focus-visible { outline: 2px solid var(--color-accent); }
+.nl-help-case-head { display: flex; justify-content: space-between; gap: 8px; }
+.nl-help-case-title { display: block; margin-top: 4px; }
+.nl-help-case .nl-help-meta { display: block; margin-top: 2px; }
+
+.nl-help-fixes { list-style: none; margin: 0; padding: 0; font-size: 14px; display: flex; flex-direction: column; gap: 6px; color: var(--color-neutral-800); }
+.nl-help-fixes a { color: var(--color-accent-700); }
+.nl-help-footer { font-size: 12px; color: var(--color-neutral-700); margin-top: 18px; }
+
+.nl-help-table { max-width: 900px; width: 100%; min-width: 0; }
+.nl-help-sent { margin-top: 14px; padding: 14px 16px; background: var(--color-accent-100); border-radius: var(--radius-md); color: var(--color-accent-900); font-size: 14px; max-width: 900px; }
+.nl-help-convo { margin-top: 22px; max-width: 620px; display: flex; flex-direction: column; gap: 10px; }
+.nl-help-convo-title { margin: 0 0 8px; }
+.nl-help-chat { font-size: 14px; gap: 10px; }
+.nl-help-chat .nl-chat-bubble { padding: 10px 12px; }
+
+.nl-help-form { max-width: 640px; display: flex; flex-direction: column; gap: 14px; }
+.nl-help-fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.nl-help-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.nl-help-textarea { min-height: 110px; }
+.nl-help-tiles { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.nl-help-tile { width: 84px; height: 84px; border-radius: var(--radius-md); border: 1px dashed var(--color-neutral-400); display: grid; place-items: center; font-size: 12px; color: var(--color-neutral-700); background: transparent; font-family: inherit; position: relative; padding: 6px; text-align: center; }
+.nl-help-tile-add { cursor: pointer; }
+.nl-help-tile-add:focus-visible { outline: 2px solid var(--color-accent); }
+.nl-help-tile-file { border-style: solid; border-color: var(--color-divider); background: var(--color-surface); align-content: center; gap: 4px; }
+.nl-help-tile-name { max-width: 72px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nl-help-tile-file button { position: absolute; top: 2px; right: 2px; border: 0; background: transparent; cursor: pointer; min-width: 24px; min-height: 24px; color: inherit; border-radius: var(--radius-sm); }
+.nl-help-urgent { display: flex; gap: 10px; align-items: center; width: 100%; }
+.nl-help-urgent-text { flex: 1; text-align: left; }
+.nl-help-urgent-box { width: 18px; height: 18px; border-radius: var(--radius-md); flex: none; border: 1.5px solid var(--color-divider); background: transparent; }
+.nl-help-urgent-box[data-on] { border-color: var(--color-accent); background: var(--color-accent); }
+.nl-help-form-actions { display: flex; gap: 8px; margin-top: 2px; }
+
+.nl-help-status { max-width: 720px; }
+.nl-help-status-list { list-style: none; margin: 0; padding: 0; }
+.nl-help-status-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 48px; font-size: 15px; flex-wrap: wrap; }
+.nl-help-status-row .tag { white-space: normal; }
+.nl-help-body p { margin: 0 0 12px; line-height: 1.6; }
