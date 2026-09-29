@@ -4,28 +4,28 @@ The first cloud environment: the team's integration target and the place to try 
 
 Spring profile **`dev`** (it activates `cloud` automatically). Shape: `ca.northline` at debug, OpenAPI/Swagger UI on, no dev seed, no dev auth, Kafka externalization on, `Secure` cookies, required variables checked at start-up. Sizing: smallest tiers, single zone, no replicas; can be stopped out of hours. Data: synthetic only; may be wiped at any time. Stripe: optional — blank = the payments module's fake gateway; Stripe Connect settings answer 409 `stripe_unavailable`. Test-mode keys (`sk_test_…`, `pk_test_…`) recommended.
 
-> **Status (2026-09-29): not deployable end to end yet.** The apps start under this profile (checked against local stand-ins), but there are no container images, Helm charts or Terraform yet (S-2, S-3, S-14, S-15), and several features only have local fakes — see [Blockers](#blockers). Nothing below claims more than exists.
+> **Status (2026-09-29): not deployable end to end yet.** The apps start under this profile (checked against local stand-ins), and the Terraform for the cloud foundation exists but has not been applied yet — no cloud account exists ([infrastructure.md](infrastructure.md), S-2). There are no managed data stores in Terraform (S-3), container images or Helm charts yet (S-14, S-15), and several features only have local fakes — see [Blockers](#blockers). Nothing below claims more than exists.
 
 Other environments: [staging](staging.md), [prod](prod.md) · [local](local.md) · [overview and variable matrix](README.md)
 
 ## Managed services
 
-Pick **one** provider per environment; everything in a Canadian region: AWS `ca-central-1` (Montréal) or `ca-west-1` (Calgary), Google Cloud `northamerica-northeast1` (Montréal) or `northamerica-northeast2` (Toronto), Azure `canadacentral` (Toronto) or `canadaeast` (Québec City).
+Pick **one** provider per environment; `infra/terraform/envs/<aws|gcp|azure>/dev` creates it ([infrastructure.md](infrastructure.md)). Everything in a Canadian region: AWS `ca-central-1` (Montréal) or `ca-west-1` (Calgary), Google Cloud `northamerica-northeast1` (Montréal) or `northamerica-northeast2` (Toronto), Azure `canadacentral` (Toronto) or `canadaeast` (Québec City).
 
-| need | AWS | Google Cloud | Azure | notes |
-|---|---|---|---|---|
-| PostgreSQL 17 + PostGIS | Amazon RDS for PostgreSQL 17 (or Aurora PostgreSQL) | Cloud SQL for PostgreSQL 17 (or AlloyDB) | Azure Database for PostgreSQL – Flexible Server 17; allow-list `POSTGIS,CITEXT,PGCRYPTO` in `azure.extensions` | extensions `postgis`, `citext`, `pgcrypto` created once by the admin role; TLS (`?sslmode=require` in `DB_URL`). Cloud SQL: private IP, or the Cloud SQL Auth Proxy sidecar (`DB_URL=jdbc:postgresql://127.0.0.1:5432/northline`) |
-| Valkey / Redis | Amazon ElastiCache for Valkey | Memorystore for Valkey | Azure Managed Redis (or Azure Cache for Redis) | the apps use one endpoint (no cluster client): cluster mode disabled / non-clustered endpoint; in-transit TLS → `REDIS_SSL=true` |
-| Kafka | Amazon MSK (provisioned) with SASL/SCRAM | Google Cloud Managed Service for Apache Kafka (SASL/PLAIN) | Azure Event Hubs, Standard tier or higher (Kafka endpoint, SASL/PLAIN) | IAM/OAuth-only options (MSK Serverless, OAUTHBEARER) need client libraries the apps don't have yet. Confluent Cloud works on all three |
-| Elasticsearch 9 | Elastic Cloud on AWS (`ca-central-1`) or ECK on EKS | Elastic Cloud on Google Cloud (`northamerica-northeast1`) or ECK on GKE | Elastic Cloud on Azure (`canadacentral`) or ECK on AKS | Amazon OpenSearch Service is **not** a drop-in: the apps use the Elasticsearch 9 client |
-| Object storage (S-10) | Amazon S3 | Cloud Storage | Azure Blob Storage | one private bucket/container per environment; no adapter yet |
-| Keys / KMS (S-7) | AWS KMS | Cloud KMS | Azure Key Vault (keys) | token signing keys; no adapter yet |
-| Secrets manager (S-6) | AWS Secrets Manager | Secret Manager | Azure Key Vault (secrets) | synced into Kubernetes Secrets by External Secrets Operator; the apps only see environment variables |
-| Email (S-13) | Amazon SES (`ca-central-1`) | SendGrid, Mailgun or any SMTP provider (no first-party service) | Azure Communication Services Email | no adapter yet |
-| SMS / voice (S-8) | Twilio (or Amazon SNS) | Twilio | Twilio (or Azure Communication Services SMS) | Canadian sender numbers need registration; no adapter yet |
-| DNS + TLS (S-17) | Route 53 + ACM (or cert-manager) | Cloud DNS + Certificate Manager (or cert-manager) | Azure DNS + cert-manager | hosts listed under "Public URLs" below |
-| Container registry (S-14) | Amazon ECR | Artifact Registry | Azure Container Registry | in the same Canadian region |
-| Kubernetes (S-14, S-15) | Amazon EKS | GKE | AKS | Helm charts and Argo CD are not written yet |
+| need | AWS | Google Cloud | Azure | notes | Terraform (`infra/terraform/modules/`) |
+|---|---|---|---|---|---|
+| PostgreSQL 17 + PostGIS | Amazon RDS for PostgreSQL 17 (or Aurora PostgreSQL) | Cloud SQL for PostgreSQL 17 (or AlloyDB) | Azure Database for PostgreSQL – Flexible Server 17; allow-list `POSTGIS,CITEXT,PGCRYPTO` in `azure.extensions` | extensions `postgis`, `citext`, `pgcrypto` created once by the admin role; TLS (`?sslmode=require` in `DB_URL`). Cloud SQL: private IP, or the Cloud SQL Auth Proxy sidecar (`DB_URL=jdbc:postgresql://127.0.0.1:5432/northline`) | S-3 |
+| Valkey / Redis | Amazon ElastiCache for Valkey | Memorystore for Valkey | Azure Managed Redis (or Azure Cache for Redis) | the apps use one endpoint (no cluster client): cluster mode disabled / non-clustered endpoint; in-transit TLS → `REDIS_SSL=true` | S-3 |
+| Kafka | Amazon MSK (provisioned) with SASL/SCRAM | Google Cloud Managed Service for Apache Kafka (SASL/PLAIN) | Azure Event Hubs, Standard tier or higher (Kafka endpoint, SASL/PLAIN) | IAM/OAuth-only options (MSK Serverless, OAUTHBEARER) need client libraries the apps don't have yet. Confluent Cloud works on all three | S-3 |
+| Elasticsearch 9 | Elastic Cloud on AWS (`ca-central-1`) or ECK on EKS | Elastic Cloud on Google Cloud (`northamerica-northeast1`) or ECK on GKE | Elastic Cloud on Azure (`canadacentral`) or ECK on AKS | Amazon OpenSearch Service is **not** a drop-in: the apps use the Elasticsearch 9 client | S-3 |
+| Object storage (S-10) | Amazon S3 | Cloud Storage | Azure Blob Storage | one private bucket/container per environment; no adapter yet | `storage` (S-2) |
+| Keys / KMS (S-7) | AWS KMS | Cloud KMS | Azure Key Vault (keys) | token signing keys; no adapter yet | `kms` (S-2) |
+| Secrets manager (S-6) | AWS Secrets Manager | Secret Manager | Azure Key Vault (secrets) | synced into Kubernetes Secrets by External Secrets Operator; the apps only see environment variables | `secrets` (S-2) |
+| Email (S-13) | Amazon SES (`ca-central-1`) | SendGrid, Mailgun or any SMTP provider (no first-party service) | Azure Communication Services Email | no adapter yet | — |
+| SMS / voice (S-8) | Twilio (or Amazon SNS) | Twilio | Twilio (or Azure Communication Services SMS) | Canadian sender numbers need registration; no adapter yet | — |
+| DNS + TLS (S-17) | Route 53 + ACM (or cert-manager) | Cloud DNS + Certificate Manager (or cert-manager) | Azure DNS + cert-manager | hosts listed under "Public URLs" below | `dns` zone (S-2); records/TLS S-17 |
+| Container registry (S-14) | Amazon ECR | Artifact Registry | Azure Container Registry | in the same Canadian region | `registry` (S-2) |
+| Kubernetes (S-14, S-15) | Amazon EKS | GKE | AKS | Helm charts and Argo CD are not written yet | `network` + `kubernetes` (S-2) |
 
 ### Public URLs (proposed — S-17 decides)
 
@@ -66,20 +66,20 @@ Every app reads its configuration from environment variables; nothing environmen
 | `CONSOLE_ORIGIN` | auth | **yes** | `https://console.dev.northline.ca` | DNS plan (S-17) |
 | `WEBAUTHN_RP_ID` | auth | **yes** | `dev.northline.ca` | registrable domain shared by the Studio and consumer origins; changing it invalidates every passkey |
 | `COOKIE_DOMAIN` | auth, bff | no | empty (host-only cookies — recommended) | deployment manifest |
-| `TOTP_KEY` | auth | **yes** | `openssl rand -base64 32` | secrets manager → External Secrets (S-6) → Kubernetes Secret; until then `kubectl create secret`. Never rotate without re-encrypting `auth.totp_secrets`: losing it breaks every authenticator enrolment |
-| `STUDIO_BFF_SECRET` | bff | **yes** | `openssl rand -base64 32` | secrets manager → External Secrets (S-6) → Kubernetes Secret; until then `kubectl create secret` |
-| `STUDIO_BFF_SECRET_HASH` | auth | **yes** | `{bcrypt}$2y$12$…` of `STUDIO_BFF_SECRET` | secrets manager → External Secrets (S-6) → Kubernetes Secret; until then `kubectl create secret`. The three BFF secrets must differ (the authorization server rejects duplicates) |
-| `CONSUMER_BFF_SECRET_HASH`, `CONSOLE_BFF_SECRET_HASH` | auth | **yes** | `{bcrypt}…` of their own secrets | secrets manager → External Secrets (S-6) → Kubernetes Secret; until then `kubectl create secret` (the consumer and console BFFs don't exist yet; generate secrets anyway) |
+| `TOTP_KEY` | auth | **yes** | `openssl rand -base64 32` | secrets manager (secret created empty by Terraform, named in `secret_env`) → External Secrets (S-6) → Kubernetes Secret; until then `kubectl create secret`. Never rotate without re-encrypting `auth.totp_secrets`: losing it breaks every authenticator enrolment |
+| `STUDIO_BFF_SECRET` | bff | **yes** | `openssl rand -base64 32` | secrets manager (secret created empty by Terraform, named in `secret_env`) → External Secrets (S-6) → Kubernetes Secret; until then `kubectl create secret` |
+| `STUDIO_BFF_SECRET_HASH` | auth | **yes** | `{bcrypt}$2y$12$…` of `STUDIO_BFF_SECRET` | secrets manager (secret created empty by Terraform, named in `secret_env`) → External Secrets (S-6) → Kubernetes Secret; until then `kubectl create secret`. The three BFF secrets must differ (the authorization server rejects duplicates) |
+| `CONSUMER_BFF_SECRET_HASH`, `CONSOLE_BFF_SECRET_HASH` | auth | **yes** | `{bcrypt}…` of their own secrets | secrets manager (secret created empty by Terraform, named in `secret_env`) → External Secrets (S-6) → Kubernetes Secret; until then `kubectl create secret` (the consumer and console BFFs don't exist yet; generate secrets anyway) |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | auth | no (S-18) | `…apps.googleusercontent.com` | Google Cloud console → OAuth client; redirect `https://auth.dev.northline.ca/login/oauth2/code/google` |
 | `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET` | auth | no (S-18) | Services ID / signed client-secret JWT | Apple Developer → Sign in with Apple; redirect `https://auth.dev.northline.ca/login/oauth2/code/apple` |
-| `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` | api | no | `sk_test_…` / `pk_test_…` | Stripe dashboard (Connect platform account) → secrets manager → External Secrets (S-6) → Kubernetes Secret; until then `kubectl create secret` |
+| `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` | api | no | `sk_test_…` / `pk_test_…` | Stripe dashboard (Connect platform account) → secrets manager (secret created empty by Terraform, named in `secret_env`) → External Secrets (S-6) → Kubernetes Secret; until then `kubectl create secret` |
 | `STRIPE_API_BASE` | api | never | — | stripe-mock only (local) |
-| `WEBHOOK_SECRET_KEY` | api | **yes** | `openssl rand -base64 32` | secrets manager → External Secrets (S-6) → Kubernetes Secret; until then `kubectl create secret`. Encrypts partner webhook signing secrets; keep it stable |
-| `STORAGE_PROVIDER`, `STORAGE_BUCKET`, `STORAGE_REGION`, `STORAGE_ENDPOINT` | api | no (S-10) | `s3` / `gcs` / `azure`, `northline-dev-uploads`, the Canadian region | Terraform output (S-2/S-3) → ConfigMap; until then from the cloud console |
-| `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY` | api | no | empty in the cloud (workload identity) | — |
-| `KMS_PROVIDER`, `KMS_KEY_ID` | api, auth | no (S-7) | `aws` + key ARN / `gcp` + key name / `azure` + key URL | Terraform output (S-2/S-3) → ConfigMap; until then from the cloud console |
+| `WEBHOOK_SECRET_KEY` | api | **yes** | `openssl rand -base64 32` | secrets manager (secret created empty by Terraform, named in `secret_env`) → External Secrets (S-6) → Kubernetes Secret; until then `kubectl create secret`. Encrypts partner webhook signing secrets; keep it stable |
+| `STORAGE_PROVIDER`, `STORAGE_BUCKET`, `STORAGE_REGION`, `STORAGE_ENDPOINT` | api | no (S-10) | `s3` / `gcs` / `azure`, `northline-dev-uploads`, the Canadian region | Terraform `config_env` (module `storage`) → ConfigMap ([infrastructure.md § 4](infrastructure.md#4-outputs--the-apps-environment-variables)) |
+| `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY` | api | no | empty in the cloud (workload identity) | — (Terraform grants the `northline-api` workload identity access to the bucket) |
+| `KMS_PROVIDER`, `KMS_KEY_ID` | api, auth | no (S-7) | `aws` + key ARN / `gcp` + key name / `azure` + key URL | Terraform `config_env` (module `kms`, key `signing`) → ConfigMap |
 | `EMAIL_PROVIDER`, `EMAIL_FROM`, `SMTP_*` | api, worker | no (S-13) | `ses` / `sendgrid` / `azure` | email provider account |
-| `SMS_PROVIDER`, `SMS_FROM`, `SMS_ACCOUNT_ID`, `SMS_AUTH_TOKEN` | api, auth, worker | no (S-8) | `twilio`, `+1587…`, `AC…`, — | Twilio console → secrets manager → External Secrets (S-6) → Kubernetes Secret; until then `kubectl create secret` |
+| `SMS_PROVIDER`, `SMS_FROM`, `SMS_ACCOUNT_ID`, `SMS_AUTH_TOKEN` | api, auth, worker | no (S-8) | `twilio`, `+1587…`, `AC…`, — | Twilio console → secrets manager (secret created empty by Terraform, named in `secret_env`) → External Secrets (S-6) → Kubernetes Secret; until then `kubectl create secret` |
 | `OTEL_EXPORT_ENABLED` | api | no | `false` until a collector exists (S-111) | deployment manifest |
 | `VITE_NL_AUTH_ORIGIN` (Studio build) | web/apps/studio | **yes** at build time | `https://auth.dev.northline.ca` | CI build argument; one Studio build per environment |
 
@@ -133,11 +133,11 @@ What still stops a complete deployment. Under the `local`/`test` profiles each o
 | Search indexer (worker) | consumer is a stub (`TODO(implement)`) | nothing reaches Elasticsearch | S-42, S-43 |
 | Rate limits (auth) | per auth session only | no per-account / per-IP limits for codes and factors | S-9 |
 
-Delivery pieces that don't exist yet: Terraform per cloud (S-2), managed data stores (S-3), External Secrets (S-6), container images and Helm charts (S-14), Argo CD (S-15), migrations as a deploy step (S-16), DNS/TLS (S-17), Kafka topic provisioning (S-25), observability (S-111–S-113), backups and DR drill (S-114). The worker has no HTTP health endpoint yet (add with S-14).
+Terraform for the cloud foundation exists but is unapplied (S-2, [infrastructure.md](infrastructure.md)). Delivery pieces that don't exist yet: managed data stores in Terraform (S-3), External Secrets (S-6), container images and Helm charts (S-14), Argo CD (S-15), migrations as a deploy step (S-16), DNS/TLS (S-17), Kafka topic provisioning (S-25), observability (S-111–S-113), backups and DR drill (S-114). The worker has no HTTP health endpoint yet (add with S-14).
 
 ## Deploy, migrate, roll back (what is possible today)
 
-1. **Provision** the services above in the Canadian region (console/CLI until S-2/S-3). In Postgres, as the admin role: create the database and the app role, then `create extension if not exists postgis; create extension if not exists citext; create extension if not exists pgcrypto;` (on Azure allow-list them first).
+1. **Provision** with Terraform: `infra/terraform/envs/<cloud>/dev` creates the network, Kubernetes cluster, keys, registry, DNS zone, uploads bucket and secrets ([infrastructure.md](infrastructure.md)); load `config_env` into the ConfigMap and set the secret values. The data stores are still created in the console/CLI until S-3. In Postgres, as the admin role: create the database and the app role, then `create extension if not exists postgis; create extension if not exists citext; create extension if not exists pgcrypto;` (on Azure allow-list them first).
 2. **Secrets and config**: create every required variable above (secrets manager for secrets). Check a set of values locally first: [local.md § 7](local.md#7-rehearse-the-cloud-shape-locally-optional).
 3. **Build**: `cd server && ./gradlew build` → `server/{api,auth,bff,worker}/build/libs/<app>.jar` (Java 25). Images: no Dockerfiles or charts yet (S-14); a stop-gap is Spring Boot's buildpacks task, e.g. `./gradlew :api:bootBuildImage --imageName=<registry>/northline-api:<git-sha>` (not validated yet). Studio: `cd web && pnpm install && VITE_NL_AUTH_ORIGIN=https://auth.dev.northline.ca pnpm --filter @northline/studio build` → `web/apps/studio/dist` (static files).
 4. **Kafka topics**: `KAFKA_TOPICS_CMD='kafka-topics.sh --command-config client.properties' KAFKA_TOPICS_BOOTSTRAP=<bootstrap> KAFKA_REPLICATION_FACTOR=3 scripts/topics.sh` (client.properties holds the SASL settings). Retention, ACLs and DLQ policy: S-25.
@@ -150,6 +150,7 @@ Delivery pieces that don't exist yet: Terraform per cloud (S-2), managed data st
 ## Readiness checklist
 
 - [ ] Cloud account and Canadian region chosen; billing alerts on
+- [ ] `terraform apply` in `infra/terraform/envs/<cloud>/dev` (state in the bootstrapped bucket); `config_env` in the ConfigMap; secret values set
 - [ ] Postgres 17 with `postgis`, `citext`, `pgcrypto`; app role without superuser; TLS on
 - [ ] Valkey/Redis (single endpoint, TLS), Kafka (SASL_SSL) with topics created, Elasticsearch 9 reachable from the cluster
 - [ ] Every **required** variable set; `SPRING_PROFILES_ACTIVE=dev`; apps start without a "need environment variables" failure

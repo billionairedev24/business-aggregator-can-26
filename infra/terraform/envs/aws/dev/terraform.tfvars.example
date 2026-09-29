@@ -1,0 +1,5 @@
+# Copy to terraform.tfvars (git-ignored) and fill in.
+region = "ca-central-1"
+owner  = "platform"
+admin_principals  = []  # e.g. ["arn:aws:iam::<account>:role/northline-admin"]
+api_allowed_cidrs = []  # set in prod: office/VPN/CI egress CIDRs

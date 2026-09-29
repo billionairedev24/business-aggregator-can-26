@@ -1,0 +1,7 @@
+# Storage account + container created once by bootstrap/azure (README § Bootstrap the state bucket).
+# Blob leases lock the state; use_azuread_auth = Entra ID instead of storage keys.
+resource_group_name  = "rg-northline-tfstate"
+storage_account_name = "<nltfstate...>"
+container_name       = "tfstate"
+key                  = "azure/staging/terraform.tfstate"
+use_azuread_auth     = true

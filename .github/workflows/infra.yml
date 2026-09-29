@@ -1,0 +1,77 @@
+# S-2/S-3 — offline checks for infra/terraform (Terraform modules and env roots for AWS, Google Cloud and Azure).
+#
+# MANUAL ONLY: CI credits are depleted, so this workflow runs only when started from
+# Actions › infra › Run workflow (or `gh workflow run infra.yml`). To run it automatically later,
+# add triggers next to workflow_dispatch — see docs/runbooks/ci.md § Enabling automatic runs.
+#
+# No cloud credentials: nothing is planned against a real account and no state is read. `terraform test` plans each
+# env root against mocked providers.
+name: infra
+
+on:
+  workflow_dispatch:
+    inputs:
+      cloud:
+        description: Which cloud's modules and env roots to validate
+        type: choice
+        default: all
+        options: [all, aws, gcp, azure]
+      tflint:
+        description: Run tflint (terraform, aws, google and azurerm rulesets)
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infra-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TERRAFORM_VERSION: "1.16.4"
+  TFLINT_VERSION: "v0.64.0"
+  TF_IN_AUTOMATION: "1"
+  TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform-plugins
+
+defaults:
+  run:
+    working-directory: infra/terraform
+
+jobs:
+  validate:
+    name: fmt, contract, validate, mocked plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+      - name: Provider cache
+        uses: actions/cache@v4
+        with:
+          path: .terraform-plugins
+          key: terraform-plugins-${{ hashFiles('infra/terraform/**/versions.tf') }}
+      - run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
+      # terraform fmt -check, scripts/check-contract.sh, init -backend=false + validate everywhere, terraform test.
+      - name: Validate
+        run: scripts/validate.sh "${{ inputs.cloud }}"
+
+  tflint:
+    name: tflint
+    if: ${{ inputs.tflint }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: ${{ env.TFLINT_VERSION }}
+      - name: Install rulesets
+        run: tflint --init --config "$PWD/.tflint.hcl"
+        env:
+          GITHUB_TOKEN: ${{ github.token }} # avoids GitHub API rate limits when downloading plugins
+      - name: tflint
+        run: tflint --recursive --config "$PWD/.tflint.hcl" --format compact

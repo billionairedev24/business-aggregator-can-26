@@ -1,6 +1,6 @@
 # Runbook — CI (GitHub Actions and GitLab CI)
 
-Stories S-4 (server) and S-5 (web). The same checks are defined for **GitHub Actions** and **GitLab CI**; use
+Stories S-4 (server), S-5 (web) and the infrastructure checks of S-2/S-3 (Terraform). The same checks are defined for **GitHub Actions** and **GitLab CI**; use
 whichever has credits. Nothing is tied to one cloud: the jobs need only a Linux runner with Docker (GitHub) or a
 Docker executor that allows `docker:dind` (GitLab), plus public images and package registries.
 
@@ -14,6 +14,8 @@ Docker executor that allows `docker:dind` (GitLab), plus public images and packa
 | server | `server.yml` › `gradle build` | `server:build` | JDK 25 (Temurin). `./gradlew build` in `server/`: Spotless check, Checkstyle, Error Prone + NullAway, every test (Testcontainers PostGIS, `ModularityTests`, ArchUnit). Gradle cache, ≤ 2 workers. JUnit XML → GitHub check "server tests" / GitLab test report; HTML reports as artifacts. |
 | web | `web.yml` › `checks` | `web:checks` | Node 22 + pnpm 10 (corepack). No hex colours in components (`pnpm lint:colors`), `pnpm -r typecheck`, `pnpm -r test` (vitest), `pnpm --filter @northline/studio build` (artifact `studio-dist`). |
 | web | `web.yml` › `storybook` | `web:storybook` | `build-storybook` (artifact `storybook-static`) and `test-storybook`: every story in headless Chromium with its play function (interaction tests) and the a11y addon (`a11y.test: 'error'` — any violation fails). |
+| infra | `infra.yml` › `validate` | `infra:validate` | Terraform 1.16.4. `infra/terraform/scripts/validate.sh`: `terraform fmt -check`, the module contract check (the AWS, Google Cloud and Azure implementations of each capability share variables and outputs), `init -backend=false` + `validate` for every module, stack, bootstrap and env root, and `terraform test` in each env root (a plan against mocked providers, plus a check that non-Canadian regions are rejected). No cloud credentials, no state. |
+| infra | `infra.yml` › `tflint` (on by default) | `infra:tflint` (on by default) | tflint 0.64 with the terraform, aws, google and azurerm rulesets (`infra/terraform/.tflint.hcl`). |
 | web | `web.yml` › `studio-smoke` (optional) | `web:studio-smoke` (optional) | `ci/studio-smoke.sh`: PostGIS service → `:api:flywayMigrate -Pdb.devSeed=true` + `:api:seedCategories` → api and auth with the `local` profile → studio dev server (dev auth as Ravi Sandhu) → `scripts/studio-smoke.mjs` (135 screen/width/locale checks). Screenshots and logs in the `studio-smoke` artifact. |
 
 Expected durations (hosted runners; first run in brackets, before caches are warm):
@@ -24,13 +26,16 @@ Expected durations (hosted runners; first run in brackets, before caches are war
 | web checks | 2–3 min (3–4 min) |
 | web storybook | 3–4 min (4–5 min, incl. the Chromium download) |
 | web studio smoke | 8–10 min (12–15 min) — two Spring Boot apps, the studio dev server and 135 page loads (the sweep alone is about 3 min) |
+| infra validate | 3–4 min (5–6 min, provider downloads: aws, google, google-beta, azurerm, random) |
+| infra tflint | about 1 min |
 
 ## Running a pipeline by hand
 
 ### GitHub Actions
 - **UI:** repository › *Actions* › pick **server** or **web** › *Run workflow* › choose the branch and inputs › *Run workflow*.
 - **CLI:** `gh workflow run server.yml --ref <branch> [-f project=api] [-f skip-tests=true] [-f rerun-tasks=true]`
-  or `gh workflow run web.yml --ref <branch> [-f storybook=false] [-f studio-smoke=true]`; follow with `gh run watch`.
+  or `gh workflow run web.yml --ref <branch> [-f storybook=false] [-f studio-smoke=true]`,
+  or `gh workflow run infra.yml --ref <branch> [-f cloud=aws] [-f tflint=false]`; follow with `gh run watch`.
 
 | Workflow | Input | Default | Meaning |
 |---|---|---|---|
@@ -39,6 +44,8 @@ Expected durations (hosted runners; first run in brackets, before caches are war
 | server | `rerun-tasks` | `false` | ignore the Gradle build cache (`--rerun-tasks`) |
 | web | `storybook` | `true` | run the Storybook job |
 | web | `studio-smoke` | `false` | run the studio smoke sweep job |
+| infra | `cloud` | `all` | `all`, `aws`, `gcp` or `azure`: which modules and env roots to validate |
+| infra | `tflint` | `true` | run the tflint job |
 
 A new run on the same branch cancels the previous one of the same workflow (concurrency group per workflow and ref).
 
@@ -49,9 +56,11 @@ A new run on the same branch cancels the previous one of the same workflow (conc
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `PIPELINE_PART` | `all` | `all`, `server` or `web` |
+| `PIPELINE_PART` | `all` | `all`, `server`, `web` or `infra` |
 | `SERVER_GRADLE_ARGS` | `build` | Gradle arguments for server/, e.g. `:api:build`, `build -x test`, `build --rerun-tasks` |
 | `RUN_STUDIO_SMOKE` | `false` | `true` adds the studio smoke sweep |
+| `INFRA_CLOUD` | `all` | infra: `all`, `aws`, `gcp` or `azure` |
+| `RUN_TFLINT` | `true` | infra: `false` skips tflint (it downloads its rulesets from GitHub) |
 
 Runner requirements: `server:build` needs a runner with `privileged = true` for the `docker:dind` service that
 Testcontainers talks to (`DOCKER_HOST=tcp://docker:2375`, `TESTCONTAINERS_HOST_OVERRIDE=docker`, Ryuk disabled).
@@ -67,7 +76,7 @@ Every job is `interruptible`, so a newer pipeline on the same branch cancels the
 | `MAVEN_MIRROR_USERNAME`, `MAVEN_MIRROR_PASSWORD` | GitHub: *Secrets*; GitLab: masked variables | Optional, only for a mirror that needs credentials. |
 
 ## Enabling automatic runs
-**GitHub** — in `.github/workflows/server.yml` and `web.yml`, add triggers next to `workflow_dispatch` (inputs then
+**GitHub** — in `.github/workflows/server.yml`, `web.yml` and `infra.yml`, add triggers next to `workflow_dispatch` (inputs then
 use their defaults, e.g. no smoke sweep):
 ```yaml
 on:
@@ -76,7 +85,7 @@ on:
   workflow_dispatch:
     …
 ```
-Add `paths: [server/**, ci/**, .github/workflows/server.yml]` (or `web/**, scripts/**, …`) to each trigger to build only what changed.
+Add `paths: [server/**, ci/**, .github/workflows/server.yml]` (or `web/**, scripts/**, …`, or `infra/**`) to each trigger to build only what changed.
 
 **GitLab** — in `.gitlab-ci.yml`, add one line under `workflow: rules:` above `- when: never`:
 ```yaml
@@ -97,6 +106,10 @@ pnpm --filter @northline/ui exec playwright install chromium   # once
 pnpm --filter @northline/ui test-storybook
 pnpm --filter @northline/studio build
 
+# infra (Terraform ≥ 1.9, tflint; no cloud credentials needed)
+mkdir -p ~/.terraform.d/plugin-cache && cd infra/terraform && TF_PLUGIN_CACHE_DIR=~/.terraform.d/plugin-cache scripts/validate.sh
+tflint --init --config "$PWD/.tflint.hcl" && tflint --recursive --config "$PWD/.tflint.hcl"
+
 # studio smoke sweep against a DISPOSABLE database (it migrates and seeds it)
 docker run -d --name smoke-pg -p 55432:5432 -e POSTGRES_DB=northline -e POSTGRES_USER=northline -e POSTGRES_PASSWORD=northline postgis/postgis:17-3.5
 DB_PORT=55432 API_PORT=8190 AUTH_PORT=9190 STUDIO_PORT=3190 ci/studio-smoke.sh    # results in smoke-out/
@@ -110,6 +123,9 @@ Google logo, or merchant data such as brand-colour swatches — go in `web/scrip
 `packages/tokens`, `public/` assets (favicon) and `.storybook/` are not scanned.
 
 ## When a job fails
+- **infra `terraform fmt`:** run `terraform fmt -recursive infra/terraform` and commit.
+- **infra contract:** an implementation of a capability gained or lost a variable/output; keep `aws`, `gcp` and `azure` in step (`infra/terraform/README.md` § Module contract).
+- **infra `terraform test`:** the mocked plan names the resource and expression; a failure there would also fail a real `plan`.
 - **Maven Central 429 / timeouts:** set `MAVEN_MIRROR_URL` and re-run.
 - **Testcontainers cannot find Docker (GitLab):** the runner is not privileged, or the `docker:dind` service did not start; check the service log in the job.
 - **Storybook a11y failure:** the message names the story, the element and the axe rule; fix the component (tokens, roles), not the test. "Click to debug" links point at a local Storybook (`pnpm storybook`).

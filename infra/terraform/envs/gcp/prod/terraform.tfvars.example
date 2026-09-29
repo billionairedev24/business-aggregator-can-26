@@ -1,0 +1,6 @@
+# Copy to terraform.tfvars (git-ignored) and fill in.
+project_id = "northline-prod"
+region = "northamerica-northeast1"
+owner  = "platform"
+admin_principals  = []  # e.g. ["group:northline-ops@northline.ca"]
+api_allowed_cidrs = []  # set in prod: office/VPN/CI egress CIDRs
