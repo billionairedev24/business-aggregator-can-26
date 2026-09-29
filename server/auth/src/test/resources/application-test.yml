@@ -31,16 +31,17 @@ northline:
     webauthn:
       rp-id: localhost
       origins: [ "http://localhost:3100" ]
-  clients:
-    studio:
-      secret: "{noop}dev-studio-bff"
-      redirect-uris: [ "http://localhost:3100/login/oauth2/code/studio" ]
-      post-logout-redirect-uris: [ "http://localhost:3100/sign-in" ]
-    consumer:
-      secret: "{noop}dev-consumer-bff"
-      redirect-uris: [ "http://localhost:8081/login/oauth2/code/northline" ]
-      post-logout-redirect-uris: [ "http://localhost:8081/" ]
-    console:
-      secret: "{noop}dev-console-bff"
-      redirect-uris: [ "http://localhost:8083/login/oauth2/code/console" ]
-      post-logout-redirect-uris: [ "http://localhost:8083/" ]
+  oauth:
+    clients:
+      studio-bff:
+        secret-hash: "{noop}dev-studio-bff"
+        redirect-uris: [ "http://localhost:3100/login/oauth2/code/studio" ]
+        post-logout-redirect-uris: [ "http://localhost:3100/sign-in" ]
+      consumer-bff:
+        secret-hash: "{noop}dev-consumer-bff"
+        redirect-uris: [ "http://localhost:8081/login/oauth2/code/northline" ]
+        post-logout-redirect-uris: [ "http://localhost:8081/" ]
+      console-bff:
+        secret-hash: "{noop}dev-console-bff"
+        redirect-uris: [ "http://localhost:8083/login/oauth2/code/console" ]
+        post-logout-redirect-uris: [ "http://localhost:8083/" ]

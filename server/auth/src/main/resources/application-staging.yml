@@ -1,5 +1,5 @@
-# Pre-production (also activates `cloud`, see application-cloud.yml). Same shape as prod; clients are still registered
-# at start-up (ClientSeeder runs everywhere except prod).
+# Pre-production (also activates `cloud`, see application-cloud.yml). Same shape as prod, OAuth client rules included
+# (https only, {bcrypt} secret hashes only — S-122).
 # Token signing keys live in the cloud KMS (S-7, docs/runbooks/key-rotation.md); KMS_PROVIDER=local is refused.
 northline.required-env:
   signing-key: KMS_KEY_ID             # + KMS_PROVIDER (application-cloud.yml)
