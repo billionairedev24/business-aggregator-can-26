@@ -47,6 +47,17 @@ The `local` profile needs only Postgres. It applies the dev personas from `db/se
 `X-Dev-User` header without the auth server, and keeps Kafka, Elasticsearch and Redis off. For the full stack, run
 `docker compose up -d` and `scripts/topics.sh`, then start `:auth:bootRun` and `:api:bootRun` without `local`.
 
+## Studio without auth (fastest way to click through)
+```
+# one Postgres (docker compose up -d postgres), then from server/:
+./gradlew :api:flywayMigrate -Pdb.url=jdbc:postgresql://localhost:5432/northline -Pdb.devSeed=true
+./gradlew :api:seedCategories -Pdb.url=jdbc:postgresql://localhost:5432/northline
+./gradlew :api:bootRun --args='--spring.profiles.active=local'          # api :8080, accepts X-Dev-User
+cd ../web && NL_DEV_USER=01J9ZD3V00000000000000RAV1 VITE_NL_DEV_STEP_UP=1 pnpm dev   # studio :3100 as Ravi Sandhu
+```
+Ravi owns the three seeded businesses (Switch business in the account menu): **Prairie Wrench** (provider), **Prairie Wrench Parts** (seller) and **Pho Dau Bo** (kitchen). Settings › Security needs the auth server (see Local sign-in below).
+Smoke sweep of every screen: `npx -y -p playwright-core@1.56 node scripts/studio-smoke.mjs` (api on :8090 or set the proxy target with `NL_API`).
+
 ## Local sign-in (Studio → auth → BFF → api, Postgres only)
 ```
 cd server
