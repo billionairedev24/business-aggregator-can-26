@@ -1,9 +1,38 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
+import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
 
-// Unit tests for pure logic. Storybook interaction/a11y tests run through @storybook/addon-vitest separately.
+const dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Two projects:
+//  - unit: pure logic (`pnpm test`), Node environment.
+//  - storybook: every story rendered in headless Chromium (Playwright) with its play function (interaction tests)
+//    and the a11y addon (`parameters.a11y.test: 'error'` in .storybook/preview.tsx fails on violations).
+//    Run with `pnpm test-storybook`; needs the tokens build and a Playwright Chromium.
 export default defineConfig({
   test: {
-    include: ['src/**/*.test.ts'],
-    environment: 'node',
+    projects: [
+      {
+        test: {
+          name: 'unit',
+          include: ['src/**/*.test.ts'],
+          environment: 'node',
+        },
+      },
+      {
+        plugins: [storybookTest({ configDir: path.join(dirname, '.storybook') })],
+        test: {
+          name: 'storybook',
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: 'playwright',
+            instances: [{ browser: 'chromium' }],
+          },
+          setupFiles: ['.storybook/vitest.setup.ts'],
+        },
+      },
+    ],
   },
 });

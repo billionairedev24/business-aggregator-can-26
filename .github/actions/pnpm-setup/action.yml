@@ -1,0 +1,48 @@
+name: pnpm setup
+description: Node 22 + pnpm 10 (corepack, version from web/package.json), cached pnpm store, `pnpm install` in web/, optionally Playwright Chromium.
+inputs:
+  playwright:
+    description: Also install Playwright Chromium and its system libraries ("true"/"false")
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v5
+      with:
+        node-version: "22"
+
+    - name: Enable pnpm via corepack
+      shell: bash
+      working-directory: web
+      env:
+        COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+      run: |
+        corepack enable
+        pnpm --version
+        echo "PNPM_STORE=$(pnpm store path --silent)" >> "$GITHUB_ENV"
+
+    - name: Cache pnpm store
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.PNPM_STORE }}
+        key: pnpm-store-${{ runner.os }}-${{ hashFiles('web/pnpm-lock.yaml') }}
+        restore-keys: pnpm-store-${{ runner.os }}-
+
+    - name: pnpm install
+      shell: bash
+      working-directory: web
+      run: pnpm install --frozen-lockfile
+
+    - name: Cache Playwright browsers
+      if: ${{ inputs.playwright == 'true' }}
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ hashFiles('web/pnpm-lock.yaml') }}
+
+    # Same Playwright version as @northline/ui's devDependency, so Storybook tests and the smoke sweep find it.
+    - name: Install Playwright Chromium
+      if: ${{ inputs.playwright == 'true' }}
+      shell: bash
+      working-directory: web/packages/ui
+      run: pnpm exec playwright install --with-deps chromium
