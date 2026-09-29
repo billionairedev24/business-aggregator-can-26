@@ -1,5 +1,7 @@
 package ca.northline.shared;
 
+import ca.northline.shared.security.MerchantRole;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -8,5 +10,13 @@ import java.util.Map;
  * every bean implementing it.
  */
 public interface NavBadgeContributor {
-    Map<String, String> badges(String merchantId, java.util.Locale locale);
+
+    /** Who is asking: badges may depend on the member (a technician's unread count covers only their own jobs). */
+    record Context(String merchantId, String userId, MerchantRole role, Locale locale) {
+        public boolean french() {
+            return "fr".equals(locale.getLanguage());
+        }
+    }
+
+    Map<String, String> badges(Context context);
 }

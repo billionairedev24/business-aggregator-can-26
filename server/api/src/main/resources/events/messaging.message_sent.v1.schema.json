@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:messaging.message_sent:1",
+  "type": "object",
+  "required": ["eventId", "occurredAt", "aggregateId", "messageId", "merchantId", "threadKind", "senderRole", "senderId", "flagged"],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": { "type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$" },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "aggregateId": { "type": "string", "description": "messaging.threads.id" },
+    "messageId": { "type": "string", "description": "messaging.messages.id" },
+    "merchantId": { "type": "string", "description": "merchants.merchants.id" },
+    "threadKind": { "type": "string", "enum": ["customer", "support", "case"] },
+    "senderRole": { "type": "string", "enum": ["merchant", "customer", "agent", "system"] },
+    "senderId": { "type": "string", "description": "identity.users.id of the sender" },
+    "flagged": { "type": "boolean", "description": "contact details masked or payment outside Northline asked for" }
+  }
+}

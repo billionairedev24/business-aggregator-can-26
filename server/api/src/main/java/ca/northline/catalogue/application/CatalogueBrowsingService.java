@@ -47,8 +47,8 @@ class CatalogueBrowsingService implements BrowseListings, BrowseCategories, Look
 
     /** Sidebar badge for the Catalogue › Products / Services & prices / Listings item: the number of listings. */
     @Override
-    public Map<String, String> badges(String merchantId, Locale locale) {
-        var count = queries.count(merchantId);
+    public Map<String, String> badges(Context context) {
+        var count = queries.count(context.merchantId());
         return count == 0 ? Map.of() : Map.of("products", Integer.toString(count));
     }
 }
