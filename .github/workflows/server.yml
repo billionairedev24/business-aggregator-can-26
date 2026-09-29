@@ -1,0 +1,102 @@
+# S-4 — CI for server/ (Java 25, Gradle).
+#
+# MANUAL ONLY: CI credits are depleted, so this workflow runs only when started from
+# Actions › server › Run workflow (or `gh workflow run server.yml`). To run it automatically later,
+# add triggers next to workflow_dispatch — see docs/runbooks/ci.md § Enabling automatic runs.
+name: server
+
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: Which Gradle project to build (all = every app)
+        type: choice
+        default: all
+        options: [all, api, auth, bff, worker]
+      skip-tests:
+        description: Compile and run static checks only (skip tests, incl. Testcontainers)
+        type: boolean
+        default: false
+      rerun-tasks:
+        description: Ignore the Gradle build cache and re-run every task
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  checks: write # JUnit results are published as a check run
+
+concurrency:
+  group: server-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: server
+
+jobs:
+  build:
+    name: gradle build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      # Optional repository/organisation variable; the init script is a no-op when it is empty.
+      MAVEN_MIRROR_URL: ${{ vars.MAVEN_MIRROR_URL }}
+      MAVEN_MIRROR_USERNAME: ${{ secrets.MAVEN_MIRROR_USERNAME }}
+      MAVEN_MIRROR_PASSWORD: ${{ secrets.MAVEN_MIRROR_PASSWORD }}
+      GRADLE_OPTS: -Dorg.gradle.workers.max=2
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      # Caches the Gradle user home (dependencies, wrapper) and the build cache between runs.
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Select tasks
+        id: tasks
+        env:
+          PROJECT: ${{ inputs.project }}
+          SKIP_TESTS: ${{ inputs.skip-tests }}
+          RERUN: ${{ inputs.rerun-tasks }}
+        run: |
+          prefix=""
+          [ "$PROJECT" != "all" ] && prefix=":$PROJECT:"
+          args="${prefix}build"
+          [ "$SKIP_TESTS" = "true" ] && args="$args -x test"
+          [ "$RERUN" = "true" ] && args="$args --rerun-tasks"
+          echo "args=$args" >> "$GITHUB_OUTPUT"
+
+      # build = Spotless check, Checkstyle, Error Prone + NullAway, tests (Testcontainers, ModularityTests, ArchUnit).
+      # Testcontainers uses the runner's Docker daemon.
+      - name: ./gradlew build
+        env:
+          TASK_ARGS: ${{ steps.tasks.outputs.args }}
+        run: |
+          # shellcheck disable=SC2086 # TASK_ARGS holds several arguments
+          ./gradlew $TASK_ARGS \
+            --init-script ../ci/gradle/maven-mirror.init.gradle.kts \
+            --max-workers=2 --continue --console=plain
+
+      - name: Publish test results
+        if: ${{ !cancelled() && !inputs.skip-tests }}
+        uses: mikepenz/action-junit-report@v5
+        with:
+          check_name: server tests
+          report_paths: server/*/build/test-results/test/TEST-*.xml
+          require_tests: false
+          include_passed: false
+
+      - name: Upload reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-reports
+          path: |
+            server/*/build/test-results/
+            server/*/build/reports/
+          retention-days: 14
+          if-no-files-found: ignore

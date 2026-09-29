@@ -1,0 +1,40 @@
+# Northline CI on GitLab — S-4 (server) and S-5 (web). Runbook: docs/runbooks/ci.md
+#
+# MANUAL ONLY: CI credits are depleted, so pipelines are created only by Build › Pipelines › "Run pipeline"
+# (source "web") or the API/trigger tokens (source "api"). Pushes, merge requests and schedules create nothing.
+# To run automatically later, add one line under workflow: rules (see the runbook § Enabling automatic runs):
+#     - if: $CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "merge_request_event"
+
+workflow:
+  name: "Northline CI · $PIPELINE_PART"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api"
+    - when: never
+  auto_cancel:
+    on_new_commit: interruptible
+
+# Shown (and editable) in the "Run pipeline" form.
+variables:
+  PIPELINE_PART:
+    value: all
+    options: [all, server, web]
+    description: Which part to build and test.
+  SERVER_GRADLE_ARGS:
+    value: build
+    description: "Gradle arguments for server/ (e.g. build, :api:build, build -x test, build --rerun-tasks)."
+  RUN_STUDIO_SMOKE:
+    value: "false"
+    options: ["false", "true"]
+    description: Also run the studio smoke sweep (Postgres + api + studio + Playwright; slower).
+
+stages:
+  - check
+  - build
+  - smoke
+
+default:
+  interruptible: true
+
+# One file per part: ci/gitlab/server.yml (S-4), ci/gitlab/web.yml (S-5).
+include:
+  - local: ci/gitlab/*.yml
