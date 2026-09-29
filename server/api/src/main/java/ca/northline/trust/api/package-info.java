@@ -1,6 +1,6 @@
 /**
- * Public API of the trust module. {@link ca.northline.trust.api.Reputation} was added by the operations workstream for
- * the Studio dashboard; the messaging + reviews workstream owns it from here.
+ * Public API of the trust module: {@link ca.northline.trust.api.QualityQuery} and
+ * {@link ca.northline.trust.api.RatingQuery} (the Studio dashboard composes them) and the review events.
  */
 @NamedInterface("api")
 @NullMarked

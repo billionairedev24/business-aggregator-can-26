@@ -16,3 +16,4 @@ export * from './AppShell';
 export * from './DataTable';
 export * from './GroupedMultiSelect';
 export * from './FileButton';
+export * from './Chat';

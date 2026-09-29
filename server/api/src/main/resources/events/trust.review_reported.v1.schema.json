@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:trust.review_reported:1",
+  "type": "object",
+  "required": ["eventId", "occurredAt", "aggregateId", "merchantId", "actorId", "reason"],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": { "type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$" },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "aggregateId": { "type": "string", "description": "trust.reviews.id" },
+    "merchantId": { "type": "string", "description": "merchants.merchants.id" },
+    "actorId": { "type": "string", "description": "identity.users.id of the team member who reported" },
+    "reason": { "type": "string", "enum": ["fake", "offensive", "personal_info", "wrong_business", "other"] }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:messaging.ticket_opened:1",
+  "type": "object",
+  "required": ["eventId", "occurredAt", "aggregateId", "merchantId", "topic", "priority", "channel", "slaDueAt"],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": { "type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$" },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "aggregateId": { "type": "string", "description": "messaging.tickets.id" },
+    "merchantId": { "type": "string", "description": "merchants.merchants.id" },
+    "topic": { "type": "string", "enum": ["verification", "payouts", "refunds", "appointments", "listings", "account", "api", "safety", "other"] },
+    "priority": { "type": "string", "enum": ["normal", "priority", "urgent"] },
+    "channel": { "type": "string", "enum": ["chat", "call", "email"] },
+    "slaDueAt": { "type": "string", "format": "date-time" }
+  }
+}

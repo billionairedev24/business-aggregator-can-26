@@ -1,0 +1,26 @@
+/* Studio › Reviews (design 02 › reviews). Values from tokens only. */
+.nl-rev-grid { display: grid; grid-template-columns: minmax(200px, 260px) minmax(0, 1fr); gap: 28px clamp(28px, 4vw, 64px); }
+@media (max-width: 720px) { .nl-rev-grid { grid-template-columns: minmax(0, 1fr); } }
+
+.nl-rev-dist { list-style: none; margin: 0; padding: 0; }
+.nl-rev-dist-row { display: flex; align-items: center; gap: 10px; font-size: 14px; padding: 4px 0; }
+.nl-rev-dist-n { width: 14px; }
+.nl-rev-dist-track { flex: 1; height: 8px; background: var(--color-neutral-200); border-radius: var(--radius-md); position: relative; }
+.nl-rev-dist-fill { position: absolute; inset: 0 auto 0 0; border-radius: var(--radius-md); background: var(--color-accent); }
+.nl-rev-dist-c { width: 34px; text-align: right; color: var(--color-neutral-700); }
+.nl-rev-praise { font-size: 13px; color: var(--color-neutral-700); margin-top: 12px; }
+.nl-rev-note { font-size: 13px; color: var(--color-neutral-700); margin: 14px 0 0; line-height: 1.55; }
+
+.nl-rev-list { list-style: none; margin: 0 0 16px; padding: 0; }
+.nl-rev-item { padding: 14px 0; }
+.nl-rev-head { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--color-neutral-700); }
+.nl-rev-when { white-space: nowrap; }
+.nl-rev-text { margin: 6px 0 8px; font-style: italic; overflow-wrap: anywhere; }
+.nl-rev-reply { display: flex; flex-direction: column; gap: 6px; }
+.nl-rev-reply-row { display: flex; gap: 8px; }
+.nl-rev-reply-row > .input { flex: 1 1 auto; min-width: 0; }
+.nl-rev-reply-row > .btn { flex: none; }
+.nl-rev-replied { font-size: 13px; padding: 8px 12px; background: var(--color-surface); border: 1px solid var(--color-divider); border-radius: var(--radius-md); overflow-wrap: anywhere; }
+.nl-rev-actions { display: flex; justify-content: flex-end; margin-top: 4px; }
+.nl-rev-report { font-size: 13px; min-height: 36px; color: var(--color-neutral-700); }
+.nl-rev-reasons { border: 0; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 6px; }

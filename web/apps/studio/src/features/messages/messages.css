@@ -1,0 +1,41 @@
+/* Studio › Messages (design 02 › messages). Values from tokens only. */
+.nl-msg-grid { display: grid; grid-template-columns: minmax(200px, 280px) minmax(0, 1fr); gap: 0 clamp(20px, 3vw, 40px); margin-top: 10px; }
+@media (max-width: 720px) { .nl-msg-grid { grid-template-columns: minmax(0, 1fr); gap: 20px; } }
+
+.nl-msg-list { display: flex; flex-direction: column; min-width: 0; }
+.nl-msg-item { display: block; width: 100%; text-align: left; font: inherit; font-size: 14px; padding: 10px 12px; min-height: 56px; border: 0; border-radius: var(--radius-md); cursor: pointer; color: var(--color-text); background: transparent; }
+.nl-msg-item[aria-current='true'] { background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-divider); }
+.nl-msg-item:hover:not([aria-current='true']) { background: var(--color-accent-100); }
+.nl-msg-item:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+.nl-msg-item-head { display: flex; justify-content: space-between; gap: 8px; }
+.nl-msg-item-head strong { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.nl-msg-item:not([data-unread]) strong { font-weight: 500; }
+.nl-msg-when { font-size: 12px; opacity: .7; white-space: nowrap; }
+.nl-msg-last { display: block; font-size: 13px; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nl-msg-item[data-unread] .nl-msg-last { opacity: 1; }
+.nl-msg-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--color-accent-2); flex: none; }
+
+.nl-msg-thread { min-width: 0; }
+.nl-msg-title { font-size: 24px; margin: 0 0 4px; overflow-wrap: anywhere; }
+.nl-msg-note { font-size: 13px; color: var(--color-neutral-700); margin: 0 0 16px; }
+.nl-msg-ref { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 13px; margin: -8px 0 16px; }
+.nl-msg-ref a { color: var(--color-accent-700); }
+.nl-msg-body { max-width: 620px; display: flex; flex-direction: column; gap: 12px; }
+
+.nl-msg-composer { display: flex; flex-direction: column; gap: 12px; }
+.nl-msg-quick { display: flex; gap: 6px; flex-wrap: wrap; }
+.nl-msg-quick-tag { cursor: pointer; border: 0; font: inherit; font-size: 12px; font-weight: 600; background: transparent; min-height: 32px; }
+.nl-msg-quick-tag:hover { background: var(--color-accent-100); }
+.nl-msg-quick-tag:focus-visible { outline: 2px solid var(--color-accent); }
+.nl-msg-compose-row { display: flex; gap: 8px; align-items: center; }
+.nl-msg-compose-row > .input { flex: 1 1 auto; min-width: 0; }
+.nl-msg-compose-row > .btn { flex: none; }
+
+.nl-msg-files { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; font-size: 13px; }
+.nl-msg-files-in { margin-top: 8px; }
+.nl-msg-file { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid var(--color-divider); border-radius: var(--radius-md); background: var(--color-bg); max-width: 100%; color: var(--color-text); }
+.nl-msg-file-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px; }
+.nl-msg-file a { color: var(--color-accent-700); }
+.nl-msg-file button { border: 0; background: transparent; cursor: pointer; min-width: 28px; min-height: 28px; display: inline-grid; place-items: center; color: inherit; border-radius: var(--radius-sm); }
+.nl-msg-file button:focus-visible { outline: 2px solid var(--color-accent); }
+.nl-msg-flag { margin-top: 8px; font-size: 12px; color: var(--color-accent-2-800); }
