@@ -9,7 +9,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -142,7 +141,9 @@ class BookingInsightsQueries implements BookingCalendar, BookingInsights, NavBad
     }
 
     @Override
-    public Map<String, String> badges(String merchantId, Locale locale) {
+    public Map<String, String> badges(NavBadgeContributor.Context context) {
+        var merchantId = context.merchantId();
+        var locale = context.locale();
         var today = LocalDate.now(clock.withZone(ZONE));
         long count = jobCount(
                 merchantId,

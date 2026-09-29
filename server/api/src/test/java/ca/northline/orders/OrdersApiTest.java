@@ -69,10 +69,12 @@ class OrdersApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.counts.nextRunLabel").value("R-611"));
 
         var all = new HashMap<String, String>();
-        badges.forEach(b -> all.putAll(b.badges(seller, Locale.CANADA)));
+        badges.forEach(b ->
+                all.putAll(b.badges(new NavBadgeContributor.Context(seller, "u", MerchantRole.OWNER, Locale.CANADA))));
         assertThat(all).containsEntry("orders", "1 to pack");
         var fr = new HashMap<String, String>();
-        badges.forEach(b -> fr.putAll(b.badges(seller, Locale.CANADA_FRENCH)));
+        badges.forEach(b -> fr.putAll(
+                b.badges(new NavBadgeContributor.Context(seller, "u", MerchantRole.OWNER, Locale.CANADA_FRENCH))));
         assertThat(fr).containsEntry("orders", "1 à emballer");
 
         mvc.perform(post("/api/v1/merchants/{m}/orders/{o}/pack", seller, multi).with(TestJwt.member(owner)))

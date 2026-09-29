@@ -1,4 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { ScreenPending } from '../../features/shell/ScreenPending';
+import { StorefrontScreen } from '../../features/storefront/StorefrontScreen';
 
-export const Route = createFileRoute('/b/$merchantId/page')({ component: () => <ScreenPending title="Business page" /> });
+export const Route = createFileRoute('/b/$merchantId/page')({ component: StorefrontScreen });

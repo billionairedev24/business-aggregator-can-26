@@ -18,7 +18,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -185,7 +184,9 @@ class OrdersJdbc implements OrderQueries, OrderInsights, NavBadgeContributor {
 
     /** "4 to pack" / « 4 à emballer ». */
     @Override
-    public Map<String, String> badges(String merchantId, Locale locale) {
+    public Map<String, String> badges(NavBadgeContributor.Context context) {
+        var merchantId = context.merchantId();
+        var locale = context.locale();
         int toPack = packing(merchantId, clock.instant()).toPack();
         if (toPack == 0) {
             return Map.of();

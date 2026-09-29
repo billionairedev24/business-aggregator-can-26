@@ -403,7 +403,8 @@ class ProductListingApiTest extends CatalogueApiTest {
             create(biz.merchantId(), biz.userId(), completeProduct("B", "B-1", 1000));
 
             var badges = badgeContributors.stream()
-                    .map(c -> c.badges(biz.merchantId(), Locale.CANADA))
+                    .map(c -> c.badges(new NavBadgeContributor.Context(
+                            biz.merchantId(), biz.userId(), MerchantRole.OWNER, Locale.CANADA)))
                     .filter(b -> b.containsKey("products"))
                     .toList();
             assertThat(badges)

@@ -1,0 +1,62 @@
+/* Onboarding wizard (design 02 lines 99–301). Tokens only. */
+.nl-ob { max-width: 1100px; width: 100%; margin: 0 auto; padding: 20px clamp(16px, 4vw, 48px) 80px; display: grid; grid-template-columns: minmax(200px, 260px) minmax(0, 1fr); gap: 0 clamp(28px, 5vw, 80px); box-sizing: border-box; }
+@media (max-width: 759.98px) { .nl-ob { grid-template-columns: minmax(0, 1fr); gap: 20px; } .nl-ob-rail-note { display: none; } }
+.nl-ob-biz { font-size: 14px; color: var(--color-neutral-700); }
+.nl-ob-account { display: flex; align-items: center; gap: 8px; border: 0; background: transparent; font: inherit; font-size: 13px; cursor: pointer; color: var(--color-text); padding: 4px; min-height: 44px; }
+.nl-ob-rail-title { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-neutral-700); margin-bottom: 14px; }
+.nl-ob-steps { list-style: none; margin: 0; padding: 0; }
+.nl-ob-step { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; font: inherit; font-size: 15px; padding: 10px 12px; min-height: 48px; border: 0; border-radius: var(--radius-md); cursor: pointer; color: var(--color-text); background: transparent; }
+.nl-ob-step[aria-current='step'] { color: var(--color-accent-800); background: var(--color-accent-100); }
+.nl-ob-step:hover:not(:disabled):not([aria-current='step']) { background: var(--color-neutral-100); }
+.nl-ob-step:disabled { cursor: default; }
+.nl-ob-num { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; flex: none; background: var(--color-neutral-200); color: var(--color-text); }
+.nl-ob-num[data-state='current'], .nl-ob-num[data-state='done'] { background: var(--color-accent); color: var(--color-bg); }
+.nl-ob-step-text { flex: 1; }
+.nl-ob-step-sub { display: block; font-size: 12px; opacity: .7; }
+.nl-ob-rail-note { font-size: 13px; color: var(--color-neutral-700); margin-top: 28px; line-height: 1.5; }
+.nl-ob-main { min-width: 0; }
+.nl-ob-title { font-size: clamp(30px, 3.5vw, 42px); margin: 0 0 8px; letter-spacing: -0.02em; }
+.nl-ob-intro { max-width: 58ch; color: var(--color-neutral-700); margin: 0 0 22px; }
+.nl-ob-narrow { max-width: 640px; }
+.nl-ob-form { max-width: 720px; }
+.nl-ob-box { display: flex; gap: 10px; align-items: center; padding: 12px 14px; background: var(--color-surface); border: 1px solid var(--color-divider); border-radius: var(--radius-md); max-width: 640px; margin-bottom: 22px; font-size: 14px; flex-wrap: wrap; }
+.nl-ob-box-desc { flex: 1; min-width: 180px; color: var(--color-neutral-700); }
+.nl-ob-types { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 10px; margin-bottom: 22px; }
+.nl-ob-types .nl-option { flex-direction: column; align-items: flex-start; padding: 14px 16px; }
+.nl-ob-types .nl-option-title { font-size: 16px; }
+.nl-ob-types .nl-option-desc { font-size: 13px; margin-top: 4px; }
+.nl-ob-kicker { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-neutral-700); margin-bottom: 8px; }
+.nl-ob-user { display: flex; gap: 14px; align-items: center; padding: 14px 16px; background: var(--color-surface); border: 1px solid var(--color-divider); border-radius: var(--radius-md); max-width: 640px; flex-wrap: wrap; }
+.nl-ob-user-text { flex: 1; min-width: 200px; }
+.nl-ob-note { font-size: 13px; color: var(--color-neutral-700); max-width: 640px; margin: 10px 0 0; }
+.nl-ob-actions { display: flex; gap: 10px; margin-top: 22px; align-items: center; flex-wrap: wrap; }
+.nl-ob-hint { font-size: 13px; color: var(--color-neutral-700); }
+.nl-ob-terms { margin-top: 14px; font-size: 13px; color: var(--color-neutral-700); max-width: 640px; }
+.nl-ob-legal { grid-column: 1 / -1; padding: 16px 18px; background: var(--color-surface); border: 1px solid var(--color-divider); border-radius: var(--radius-md); min-width: 0; }
+.nl-ob-legal-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline; }
+.nl-ob-legal-why { font-size: 13px; color: var(--color-neutral-700); margin: 6px 0 14px; max-width: 62ch; }
+.nl-ob-owner { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 90px auto; gap: 8px; align-items: end; }
+@media (max-width: 559.98px) { .nl-ob-owner { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.nl-ob-owners { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.nl-ob-owners-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+.nl-ob-doc-btn { width: 100%; justify-content: flex-start; }
+.nl-ob-checks { display: flex; flex-direction: column; gap: 2px; max-width: 720px; }
+.nl-ob-check { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 14px 0; }
+.nl-ob-check + .nl-ob-check { border-top: 1px solid var(--color-divider); }
+.nl-ob-check-name { font-weight: 600; }
+.nl-ob-check-desc { font-size: 13px; color: var(--color-neutral-700); }
+.nl-ob-review { display: flex; flex-direction: column; gap: 12px; max-width: 620px; font-size: 15px; list-style: none; padding: 0; margin: 0; }
+.nl-ob-review li { display: flex; gap: 12px; }
+.nl-ob-review li[data-state='todo'] { color: var(--color-neutral-700); }
+.nl-ob-dot { width: 20px; height: 20px; border-radius: 50%; flex: none; border: 2px solid var(--color-neutral-300); }
+.nl-ob-dot[data-state='done'] { background: var(--color-accent); border-color: var(--color-accent); }
+.nl-ob-dot[data-state='progress'] { border-color: var(--color-accent-2); }
+.nl-ob-food { margin-top: 18px; max-width: 620px; }
+.nl-ob-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 28px clamp(24px, 4vw, 56px); }
+.nl-ob-stack { display: flex; flex-direction: column; gap: 12px; }
+.nl-ob-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); gap: 12px; }
+.nl-ob-listing { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; font-size: 14px; }
+.nl-ob-listing-meta { color: var(--color-neutral-700); font-size: 13px; }
+.nl-ob-photo { width: 84px; height: 84px; border-radius: var(--radius-md); border: 1px dashed var(--color-neutral-400); display: grid; place-items: center; font-size: 12px; color: var(--color-neutral-700); }
+.nl-ob-slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 8px; }
+.nl-ob-sign { font-size: 14px; line-height: 1.55; padding: 12px 14px; border-radius: var(--radius-md); background: var(--color-neutral-100); margin-bottom: 12px; }
