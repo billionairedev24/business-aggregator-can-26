@@ -1,12 +1,70 @@
+# northline-auth — production defaults. Profiles: `local` (application-local.yml: no Redis, dev keys, SMS logged)
+# and `test` (src/test/resources/application-test.yml).
 spring:
   application.name: northline-auth
   threads.virtual.enabled: true
-  datasource: { url: "jdbc:postgresql://localhost:5432/northline?currentSchema=auth", username: northline, password: northline }
-  data.redis.host: localhost
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/northline}
+    username: ${DB_USER:northline}
+    password: ${DB_PASSWORD:northline}
+    # Spring Authorization Server + WebAuthn JDBC tables are unqualified → schema `auth`; identity.* is always qualified.
+    hikari.connection-init-sql: SET search_path TO auth, public
+  flyway:
+    enabled: false                     # the api owns migrations in prod; local/test turn this on
+    default-schema: public             # same history table as the api (public.flyway_schema_history)
+    locations: classpath:db/migration
+  data.redis.host: ${REDIS_HOST:localhost}
+  session.redis.namespace: nl:auth
   security.oauth2:
-    authorizationserver.issuer: http://localhost:9000
-    client.registration:
-      google: { client-id: "${GOOGLE_CLIENT_ID:dev}", client-secret: "${GOOGLE_CLIENT_SECRET:dev}", scope: openid,email,profile }
-      apple:  { client-id: "${APPLE_CLIENT_ID:dev}", client-secret: "${APPLE_CLIENT_SECRET:dev}", authorization-grant-type: authorization_code, redirect-uri: "{baseUrl}/login/oauth2/code/apple", scope: openid,email,name }
-    client.provider.apple: { issuer-uri: https://appleid.apple.com }
-server.port: 9000
+    authorizationserver.issuer: ${AUTH_ISSUER:http://localhost:9000}
+    # "or continue with" Google / Apple — placeholder client ids until the apps are registered (DECISIONS.md).
+    client:
+      registration:
+        google:
+          client-id: ${GOOGLE_CLIENT_ID:placeholder-google-client-id}
+          client-secret: ${GOOGLE_CLIENT_SECRET:placeholder}
+          scope: openid,email,profile
+        apple:
+          provider: apple
+          client-id: ${APPLE_CLIENT_ID:placeholder-apple-service-id}
+          client-secret: ${APPLE_CLIENT_SECRET:placeholder}   # Apple wants a signed JWT here
+          authorization-grant-type: authorization_code
+          client-authentication-method: client_secret_post
+          redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+          scope: openid,email,name
+      provider:
+        apple:                         # explicit endpoints: no discovery call at start-up
+          authorization-uri: https://appleid.apple.com/auth/authorize?response_mode=form_post
+          token-uri: https://appleid.apple.com/auth/token
+          jwk-set-uri: https://appleid.apple.com/auth/keys
+          user-name-attribute: sub
+server:
+  port: 9000
+  forward-headers-strategy: native
+  servlet.session:
+    timeout: 12h                       # "sessions expire after 12 h idle"
+    cookie: { name: NL_AUTH, http-only: true, secure: true, same-site: lax }
+management:
+  endpoints.web.exposure.include: health,info
+northline:
+  auth:
+    terms-version: "3.0"               # design/09 Terms of Service · Version 3.0 · Effective 1 October 2026
+    totp-key: ${TOTP_KEY}
+    login-page: ${STUDIO_ORIGIN:https://business.northline.ca}/sign-in
+    allowed-origins: [ "${STUDIO_ORIGIN:https://business.northline.ca}", "${CONSUMER_ORIGIN:https://northline.ca}" ]
+    webauthn:
+      rp-id: ${WEBAUTHN_RP_ID:northline.ca}
+      origins: [ "${STUDIO_ORIGIN:https://business.northline.ca}", "${CONSUMER_ORIGIN:https://northline.ca}" ]
+  clients:
+    studio:
+      secret: ${STUDIO_BFF_SECRET:{noop}dev-studio-bff}
+      redirect-uris: [ "${STUDIO_ORIGIN:https://business.northline.ca}/login/oauth2/code/studio" ]
+      post-logout-redirect-uris: [ "${STUDIO_ORIGIN:https://business.northline.ca}/sign-in" ]
+    consumer:
+      secret: ${CONSUMER_BFF_SECRET:{noop}dev-consumer-bff}
+      redirect-uris: [ "${CONSUMER_ORIGIN:https://northline.ca}/login/oauth2/code/northline" ]
+      post-logout-redirect-uris: [ "${CONSUMER_ORIGIN:https://northline.ca}/" ]
+    console:
+      secret: ${CONSOLE_BFF_SECRET:{noop}dev-console-bff}
+      redirect-uris: [ "${CONSOLE_ORIGIN:https://console.northline.ca}/login/oauth2/code/console" ]
+      post-logout-redirect-uris: [ "${CONSOLE_ORIGIN:https://console.northline.ca}/" ]

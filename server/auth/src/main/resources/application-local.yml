@@ -1,0 +1,38 @@
+# `./gradlew :auth:bootRun --args='--spring.profiles.active=local'` — Postgres only (no Redis: in-memory sessions).
+# Applies db/migrations + db/seed-dev itself (a no-op when the api already migrated the same database).
+# Codes "sent" by SMS are written to the log: look for "Verification code".
+spring:
+  autoconfigure.exclude:
+    - org.springframework.boot.session.data.redis.autoconfigure.SessionDataRedisAutoConfiguration
+  flyway:
+    enabled: true
+    locations: classpath:db/migration,classpath:db/seed-dev
+management.health.redis.enabled: false
+server.servlet.session.cookie.secure: false
+logging.level:
+  ca.northline: debug
+northline:
+  auth:
+    # Dev-only key: the TOTP secret seeded for the personas in db/seed-dev/V101__auth.sql is encrypted with it.
+    totp-key: bm9ydGhsaW5lLWxvY2FsLWRldi10b3RwLWtleS0zMmI=
+    login-page: http://localhost:3100/sign-in
+    allowed-origins: [ "http://localhost:3100", "http://127.0.0.1:3100", "http://localhost:8082" ]
+    webauthn:
+      rp-id: localhost
+      origins: [ "http://localhost:3100", "http://localhost:8082" ]
+  clients:
+    studio:
+      secret: "{noop}dev-studio-bff"
+      redirect-uris:
+        - http://localhost:3100/login/oauth2/code/studio
+        - http://127.0.0.1:3100/login/oauth2/code/studio
+        - http://localhost:8082/login/oauth2/code/studio
+      post-logout-redirect-uris: [ "http://localhost:3100/sign-in" ]
+    consumer:
+      secret: "{noop}dev-consumer-bff"
+      redirect-uris: [ "http://localhost:8081/login/oauth2/code/northline" ]
+      post-logout-redirect-uris: [ "http://localhost:8081/" ]
+    console:
+      secret: "{noop}dev-console-bff"
+      redirect-uris: [ "http://localhost:8083/login/oauth2/code/console" ]
+      post-logout-redirect-uris: [ "http://localhost:8083/" ]
