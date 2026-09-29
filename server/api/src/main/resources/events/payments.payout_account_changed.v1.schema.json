@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:payments.payout_account_changed:1",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "merchantId",
+    "phase",
+    "effectiveAt"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "payments.payout_accounts.id"
+    },
+    "merchantId": {
+      "type": "string"
+    },
+    "phase": {
+      "enum": [
+        "requested",
+        "effective"
+      ]
+    },
+    "effectiveAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

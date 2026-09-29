@@ -1,4 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { ScreenPending } from '../../features/shell/ScreenPending';
+import { EarningsScreen } from '../../features/finance/EarningsScreen';
 
-export const Route = createFileRoute('/b/$merchantId/earnings')({ component: () => <ScreenPending title="Earnings" /> });
+export const Route = createFileRoute('/b/$merchantId/earnings')({ component: EarningsScreen });

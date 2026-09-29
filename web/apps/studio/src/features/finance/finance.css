@@ -1,0 +1,52 @@
+/* Finance screens (design 02: Earnings, Reports, Payouts, Refunds & disputes). Values from tokens only. */
+.fin-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 24px 40px; margin-bottom: 36px; }
+.fin-kpi-value { font-size: 30px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.fin-kpi-label { font-size: 13px; color: var(--color-neutral-700); }
+.fin-h2 { font-size: 22px; margin: 0 0 12px; }
+.fin-h3 { font-size: 18px; margin: 24px 0 8px; }
+.fin-muted { font-size: 13px; color: var(--color-neutral-700); }
+.fin-small { font-size: 12px; color: var(--color-neutral-700); }
+
+.fin-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; font-size: 13px; margin-bottom: 28px; padding: 0; list-style: none; }
+.fin-step { padding: 12px; background: var(--color-surface); border: 1px solid var(--color-divider); border-radius: var(--radius-md); min-width: 0; }
+.fin-step[data-current="true"] { background: var(--color-accent-100); border-color: transparent; color: var(--color-accent-900); }
+.fin-step-k { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-neutral-700); overflow-wrap: anywhere; }
+.fin-step[data-current="true"] .fin-step-k { color: inherit; }
+.fin-step-v { font-weight: 600; margin-top: 4px; }
+@media (max-width: 560px) { .fin-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.fin-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 36px clamp(28px, 4vw, 64px); }
+.fin-cols-300 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+.fin-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+.fin-head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.fin-rows { font-size: 14px; display: flex; flex-direction: column; gap: 6px; }
+.fin-row { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.fin-row-44 { min-height: 44px; }
+.fin-row-40 { min-height: 40px; }
+
+.fin-available { padding: 16px; background: var(--color-accent-100); border-radius: var(--radius-md); color: var(--color-accent-900); }
+.fin-available-k { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+.fin-available-v { font-size: 34px; font-weight: 600; letter-spacing: -0.02em; margin-top: 4px; }
+.fin-available .btn-secondary { background: var(--color-bg); }
+.fin-box { margin-top: 14px; padding: 16px; border: 1px solid var(--color-divider); border-radius: var(--radius-md); }
+.fin-box-k { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-neutral-700); }
+.fin-note { margin-top: 10px; padding: 12px 14px; background: var(--color-accent-100); border-radius: var(--radius-md); color: var(--color-accent-900); font-size: 14px; }
+.fin-warn { margin-top: 10px; padding: 12px 14px; background: var(--color-accent-2-100); border-radius: var(--radius-md); color: var(--color-accent-2-900); font-size: 13px; }
+.fin-dashed { margin-top: 12px; padding: 18px; border: 1px dashed var(--color-neutral-400); border-radius: var(--radius-md); text-align: center; font-size: 14px; color: var(--color-neutral-700); }
+.fin-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
+.fin-link { text-decoration: underline; }
+.fin-options { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.fin-days { display: flex; gap: 6px; flex-wrap: wrap; }
+.fin-bank-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); gap: 10px; margin-top: 12px; }
+
+.fin-case { font-size: 14px; display: flex; flex-direction: column; gap: 10px; }
+.fin-quote { padding: 12px 14px; background: var(--color-surface); border: 1px solid var(--color-divider); border-radius: var(--radius-md); }
+.fin-draft { padding: 12px 14px; background: var(--color-accent-100); border-radius: var(--radius-md); color: var(--color-accent-900); }
+.fin-tags { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.fin-tags a.tag { text-decoration: none; }
+.fin-file { position: relative; }
+.fin-file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.fin-file:focus-within { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: var(--radius-md); }
+.fin-case + .fin-case { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--color-divider); }
+.fin-sources { font-size: 14px; display: flex; flex-direction: column; gap: 6px; }
+.fin-sources > div { display: flex; justify-content: space-between; gap: 12px; }

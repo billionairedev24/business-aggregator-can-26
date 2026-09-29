@@ -1,0 +1,56 @@
+package ca.northline.payments.application;
+
+import ca.northline.payments.domain.Payout;
+import ca.northline.payments.domain.PayoutAccount;
+import ca.northline.payments.domain.PayoutSchedule;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import org.jspecify.annotations.Nullable;
+
+/** Outbound port: payouts, payout settings, bank accounts and the Stripe connected account. */
+public interface PayoutRepository {
+
+    /** The merchant's Stripe Connect Express account. */
+    record ConnectedAccount(String merchantId, String stripeAccount, boolean instantPayouts) {}
+
+    void insert(Payout payout);
+
+    void update(Payout payout);
+
+    /** Newest first. */
+    List<Payout> history(String merchantId, int limit);
+
+    List<Payout> inTransit(int limit);
+
+    /** Whether a scheduled payout was already created in {@code [from, to)} (the scheduled run is idempotent). */
+    boolean scheduledBetween(String merchantId, Instant from, Instant to);
+
+    Optional<PayoutSchedule> schedule(String merchantId);
+
+    void saveSchedule(String merchantId, PayoutSchedule schedule, String userId, Instant now);
+
+    /** Merchants whose schedule has a payout day (not manual), for the scheduled run. */
+    List<String> merchantsWithSchedules();
+
+    void bankChanged(String merchantId, Instant at);
+
+    Optional<ConnectedAccount> connectedAccount(String merchantId);
+
+    Optional<PayoutAccount> account(String merchantId, String accountId);
+
+    Optional<PayoutAccount> activeAccount(String merchantId);
+
+    Optional<PayoutAccount> pendingAccount(String merchantId);
+
+    List<PayoutAccount> dueAccounts(Instant now);
+
+    void insertAccount(PayoutAccount account);
+
+    void updateAccount(PayoutAccount account);
+
+    /** Escrows released since the previous payout (the "Jobs" column), after {@code since}. */
+    int releasedSince(String merchantId, @Nullable Instant since);
+
+    Optional<Instant> lastPayoutAt(String merchantId);
+}

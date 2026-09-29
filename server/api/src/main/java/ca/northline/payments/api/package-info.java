@@ -1,6 +1,7 @@
 /**
- * Public API of the payments module. {@link ca.northline.payments.api.EarningsSummary} was added by the operations
- * workstream for the Studio dashboard; the finance workstream owns it from here.
+ * Public API of the payments module: the events it publishes and the small ports other modules call (booking, orders
+ * and food hold and release escrow; the consumer app opens refunds and disputes; the console decides them; the Studio
+ * dashboard reads earnings).
  */
 @NamedInterface("api")
 @NullMarked
