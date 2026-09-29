@@ -14,6 +14,7 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as BMerchantIdRouteImport } from './routes/b.$merchantId'
 import { Route as OnboardingIndexRouteImport } from './routes/onboarding/index'
+import { Route as OnboardingStepRouteImport } from './routes/onboarding/$step'
 import { Route as BMerchantIdIndexRouteImport } from './routes/b.$merchantId/index'
 import { Route as BMerchantIdAppointmentsRouteImport } from './routes/b.$merchantId/appointments'
 import { Route as BMerchantIdAvailabilityRouteImport } from './routes/b.$merchantId/availability'
@@ -60,6 +61,11 @@ const BMerchantIdRoute = BMerchantIdRouteImport.update({
 const OnboardingIndexRoute = OnboardingIndexRouteImport.update({
   id: '/onboarding/',
   path: '/onboarding/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingStepRoute = OnboardingStepRouteImport.update({
+  id: '/onboarding/$step',
+  path: '/onboarding/$step',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BMerchantIdIndexRoute = BMerchantIdIndexRouteImport.update({
@@ -181,6 +187,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/sign-in': typeof SignInRoute
   '/b/$merchantId': typeof BMerchantIdRouteWithChildren
+  '/onboarding/$step': typeof OnboardingStepRoute
   '/onboarding/': typeof OnboardingIndexRoute
   '/b/$merchantId/appointments': typeof BMerchantIdAppointmentsRoute
   '/b/$merchantId/availability': typeof BMerchantIdAvailabilityRoute
@@ -209,6 +216,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/register': typeof RegisterRoute
   '/sign-in': typeof SignInRoute
+  '/onboarding/$step': typeof OnboardingStepRoute
   '/onboarding': typeof OnboardingIndexRoute
   '/b/$merchantId/appointments': typeof BMerchantIdAppointmentsRoute
   '/b/$merchantId/availability': typeof BMerchantIdAvailabilityRoute
@@ -239,6 +247,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/sign-in': typeof SignInRoute
   '/b/$merchantId': typeof BMerchantIdRouteWithChildren
+  '/onboarding/$step': typeof OnboardingStepRoute
   '/onboarding/': typeof OnboardingIndexRoute
   '/b/$merchantId/appointments': typeof BMerchantIdAppointmentsRoute
   '/b/$merchantId/availability': typeof BMerchantIdAvailabilityRoute
@@ -270,6 +279,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/sign-in'
     | '/b/$merchantId'
+    | '/onboarding/$step'
     | '/onboarding/'
     | '/b/$merchantId/appointments'
     | '/b/$merchantId/availability'
@@ -298,6 +308,7 @@ export interface FileRouteTypes {
     | '/'
     | '/register'
     | '/sign-in'
+    | '/onboarding/$step'
     | '/onboarding'
     | '/b/$merchantId/appointments'
     | '/b/$merchantId/availability'
@@ -327,6 +338,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/sign-in'
     | '/b/$merchantId'
+    | '/onboarding/$step'
     | '/onboarding/'
     | '/b/$merchantId/appointments'
     | '/b/$merchantId/availability'
@@ -357,6 +369,7 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   SignInRoute: typeof SignInRoute
   BMerchantIdRoute: typeof BMerchantIdRouteWithChildren
+  OnboardingStepRoute: typeof OnboardingStepRoute
   OnboardingIndexRoute: typeof OnboardingIndexRoute
 }
 
@@ -395,6 +408,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/onboarding/'
       preLoaderRoute: typeof OnboardingIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/$step': {
+      id: '/onboarding/$step'
+      path: '/onboarding/$step'
+      fullPath: '/onboarding/$step'
+      preLoaderRoute: typeof OnboardingStepRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/b/$merchantId/': {
@@ -613,6 +633,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   SignInRoute: SignInRoute,
   BMerchantIdRoute: BMerchantIdRouteWithChildren,
+  OnboardingStepRoute: OnboardingStepRoute,
   OnboardingIndexRoute: OnboardingIndexRoute,
 }
 export const routeTree = rootRouteImport

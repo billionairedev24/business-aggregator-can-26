@@ -11,7 +11,9 @@ export const MerchantStatus = z.enum(['applicant', 'pending', 'active', 'paused'
 /** GET /api/v1/me/businesses — every business the signed-in user belongs to (Switch business). */
 export const Business = z.object({ id: z.string(), displayName: z.string(), type: MerchantType, tier: MerchantTier.nullish(), city: z.string().nullish(), status: MerchantStatus.nullish(), role: z.string() });
 export type Business = z.infer<typeof Business>;
-export const businessesQuery = queryOptions({ queryKey: ['me', 'businesses'], queryFn: () => http('/api/v1/me/businesses', {}, z.array(Business)) });
+/** The api wraps collections as `{ items: [...] }` (BACKEND_CONVENTIONS.md); a bare array is accepted too. */
+const Businesses = z.union([z.array(Business), z.object({ items: z.array(Business) }).transform(r => r.items)]);
+export const businessesQuery = queryOptions({ queryKey: ['me', 'businesses'], queryFn: () => http('/api/v1/me/businesses', {}, Businesses) });
 
 /** GET /api/v1/merchants/{id} — Studio header summary. */
 export const MerchantSummary = z.object({ id: z.string(), displayName: z.string(), type: MerchantType, tier: MerchantTier.nullish(), city: z.string().nullish(), status: MerchantStatus.nullish(), role: z.string().nullish(), teamCount: z.number().nullish() });

@@ -1,4 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { ScreenPending } from '../../features/shell/ScreenPending';
+import { requireSession } from '../../features/shell/guards';
+import { OnboardingEntry } from '../../features/onboarding/OnboardingScreen';
+import { validateOnboardingSearch } from '../../features/onboarding/model';
 
-export const Route = createFileRoute('/onboarding/')({ component: () => <ScreenPending title="Onboarding" /> });
+/** `/onboarding[?type=provider|seller|kitchen|both]` — Account step; type picker when no type is given. */
+export const Route = createFileRoute('/onboarding/')({
+  validateSearch: validateOnboardingSearch,
+  beforeLoad: ({ context, location }) => requireSession(context.queryClient, location.href),
+  component: function OnboardingIndex() {
+    return <OnboardingEntry search={Route.useSearch()} />;
+  },
+});
