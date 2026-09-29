@@ -1,0 +1,47 @@
+.nl-av-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 20px 0 22px; align-items: center; }
+.nl-av-status { margin-left: auto; font-size: 13px; color: var(--color-neutral-700); }
+.nl-av-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 28px clamp(24px, 4vw, 56px); }
+.nl-av-rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 28px clamp(24px, 4vw, 56px); max-width: 960px; }
+.nl-av-col { display: flex; flex-direction: column; gap: 14px; }
+.nl-av-h3 { font-size: 18px; margin: 0 0 10px; }
+.nl-av-label { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-neutral-700); }
+.nl-av-members { display: flex; gap: 6px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+.nl-av-copy { margin-left: auto; min-height: 34px; }
+.nl-av-day { display: grid; grid-template-columns: 56px 44px minmax(0, 1fr); gap: 12px; align-items: start; padding: 10px 0; font-size: 14px; }
+.nl-av-dayname { font-weight: 600; padding-top: 8px; }
+.nl-av-day .nl-switch { margin-top: 7px; }
+.nl-av-off { color: var(--color-neutral-600); display: inline-block; padding-top: 8px; }
+.nl-av-ranges { display: flex; flex-direction: column; gap: 6px; }
+.nl-av-range { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.nl-av-time { width: 110px; min-height: 36px; }
+.nl-av-x { border: 0; background: transparent; font: inherit; color: var(--color-neutral-600); cursor: pointer; min-width: 32px; min-height: 32px; position: relative; }
+.nl-av-x::after { content: ''; position: absolute; inset: -6px; }
+.nl-av-add { min-height: 32px; align-self: flex-start; padding: 4px 8px; font-size: 13px; }
+.nl-av-save { display: flex; gap: 10px; margin-top: 18px; align-items: center; flex-wrap: wrap; }
+.nl-av-apply { max-width: 220px; min-height: 38px; }
+.nl-av-help { margin: 0 0 10px; }
+.nl-av-svc { min-height: 36px; margin-bottom: 10px; width: 100%; }
+.nl-av-daychips { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
+.nl-av-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 84px), 1fr)); gap: 6px; }
+.nl-av-slot { display: block; text-align: center; font-size: 12px; padding: 6px 4px; border-radius: var(--radius-md); background: var(--color-accent-100); color: var(--color-accent-900); border: 1px solid var(--color-accent); }
+.nl-av-slot[data-free='false'] { background: var(--color-neutral-200); color: var(--color-neutral-600); text-decoration: line-through; border-color: transparent; }
+.nl-av-note { margin-top: 8px; }
+.nl-av-legend { display: flex; gap: 10px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+.nl-av-swatch { display: inline-block; width: 12px; height: 12px; background: var(--color-accent-100); border: 1px solid var(--color-accent); }
+.nl-av-swatch[data-free='false'] { background: var(--color-neutral-200); border-color: transparent; }
+.nl-av-options { display: flex; flex-direction: column; gap: 6px; }
+.nl-av-saverules { margin-top: 22px; }
+.nl-av-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; font-size: 14px; }
+.nl-av-item { display: flex; justify-content: space-between; gap: 12px; align-items: center; min-height: 48px; }
+.nl-av-sub { display: block; font-size: 12px; color: var(--color-neutral-700); }
+.nl-av-itemactions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.nl-av-holiday { min-height: 44px; }
+.nl-av-cal { min-height: 52px; }
+.nl-av-smallchip { min-height: 34px; font-size: 12px; flex: none; }
+.nl-av-addbox { margin-top: 14px; padding: 14px; background: var(--color-surface); border: 1px solid var(--color-divider); border-radius: var(--radius-md); }
+.nl-av-addbox .nl-av-label { margin-bottom: 8px; }
+.nl-av-reason { margin-top: 8px; }
+.nl-av-addrow { display: flex; gap: 8px; margin-top: 10px; align-items: center; flex-wrap: wrap; }
+.nl-av-how { margin-top: 24px; }
+.nl-av-bullets { font-size: 14px; display: flex; flex-direction: column; gap: 6px; color: var(--color-neutral-800); padding-left: 18px; margin: 0; }
+.nl-av-code { font-family: ui-monospace, Menlo, monospace; font-size: 12px; overflow-wrap: anywhere; }

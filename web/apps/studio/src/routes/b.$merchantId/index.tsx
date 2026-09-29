@@ -1,4 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { ScreenPending } from '../../features/shell/ScreenPending';
+import { DashboardScreen } from '../../features/dashboard/DashboardScreen';
+import { dashboardQuery } from '../../features/dashboard/api';
 
-export const Route = createFileRoute('/b/$merchantId/')({ component: () => <ScreenPending title="Dashboard" /> });
+export const Route = createFileRoute('/b/$merchantId/')({
+  loader: ({ context, params }) => { void context.queryClient.prefetchQuery(dashboardQuery(params.merchantId)); },
+  component: DashboardScreen,
+});

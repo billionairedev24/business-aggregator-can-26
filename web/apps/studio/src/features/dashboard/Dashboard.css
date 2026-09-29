@@ -1,0 +1,13 @@
+.nl-dash .nl-kicker { display: block; margin-bottom: 10px; }
+.nl-dash-title { margin: 0 0 28px; }
+.nl-dash-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 36px clamp(28px, 4vw, 64px); margin-top: 44px; }
+.nl-dash-list { list-style: none; margin: 0; padding: 0; }
+.nl-dash-time { width: 60px; flex: none; color: var(--color-neutral-700); }
+.nl-dash-what { flex: 1; min-width: 0; overflow-wrap: break-word; }
+.nl-dash-who { display: block; font-size: 13px; color: var(--color-neutral-700); }
+.nl-dash-tag { align-self: center; }
+.nl-dash-needs { margin-top: 28px; }
+.nl-dash-needs-list { display: flex; flex-direction: column; gap: 8px; }
+.nl-dash-quality { margin: 28px 0 8px; }
+.nl-dash-score { color: var(--color-accent-700); }
+.nl-dash-coaching { font-size: 13px; margin: 12px 0 0; }
