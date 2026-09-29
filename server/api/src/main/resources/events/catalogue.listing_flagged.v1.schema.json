@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:catalogue.listing_flagged:1",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "merchantId",
+    "kind",
+    "flags"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "catalogue.offers.id or catalogue.services.id"
+    },
+    "merchantId": {
+      "type": "string",
+      "description": "merchants.merchants.id"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "service",
+        "product"
+      ]
+    },
+    "flags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "vetting flag codes: banned_category, price_outlier, missing_licence, duplicate_image, main_not_on_white"
+    }
+  }
+}
