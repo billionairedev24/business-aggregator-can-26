@@ -70,6 +70,7 @@ final class ListingResponses {
             Instant updatedAt,
             // catalogue record
             String catalogRef,
+            String catalogTitle,
             boolean sharedRecord,
             boolean contentShared,
             boolean contentLocked,

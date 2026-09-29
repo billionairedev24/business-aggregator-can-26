@@ -44,6 +44,7 @@ interface ListingWebMapper {
     @Mapping(target = "submittedAt", source = "listing.state.submittedAt")
     @Mapping(target = "updatedAt", source = "listing.state.updatedAt")
     @Mapping(target = "catalogRef", source = "listing.record.ref")
+    @Mapping(target = "catalogTitle", source = "listing.record.title")
     @Mapping(target = "sharedRecord", expression = "java(!view.listing().getRecord().isSellerOwned())")
     @Mapping(target = "contentLocked", source = "listing.record.locked")
     @Mapping(target = "sellerCount", source = "listing.record.sellerCount")
