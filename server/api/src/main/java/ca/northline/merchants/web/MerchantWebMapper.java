@@ -10,6 +10,8 @@ import org.mapstruct.Mapping;
 @Mapper
 interface MerchantWebMapper {
 
+    @Mapping(target = "role", ignore = true)
+    @Mapping(target = "teamCount", ignore = true)
     MerchantResponse toResponse(Merchant merchant);
 
     @Mapping(target = "id", source = "merchantId")

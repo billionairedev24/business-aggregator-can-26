@@ -3,6 +3,7 @@ package ca.northline.merchants.web;
 import static ca.northline.shared.security.MerchantPermission.MANAGE;
 import static ca.northline.shared.security.MerchantPermission.VIEW;
 
+import ca.northline.merchants.api.TeamRoster;
 import ca.northline.merchants.application.RenameMerchant;
 import ca.northline.merchants.application.ViewMerchant;
 import ca.northline.shared.security.CurrentMember;
@@ -24,12 +25,14 @@ class MerchantController {
 
     private final ViewMerchant viewMerchant;
     private final RenameMerchant renameMerchant;
+    private final TeamRoster team;
     private final MerchantWebMapper mapper;
 
     @GetMapping
     @RequiresMerchant(VIEW)
-    MerchantResponse get(@PathVariable String merchantId) {
-        return mapper.toResponse(viewMerchant.view(merchantId));
+    MerchantResponse get(@PathVariable String merchantId, CurrentMember member) {
+        return mapper.toResponse(viewMerchant.view(merchantId))
+                .forMember(member.role().code(), team.members(merchantId).size());
     }
 
     @PatchMapping
@@ -37,6 +40,7 @@ class MerchantController {
     MerchantResponse update(
             @PathVariable String merchantId, @Valid @RequestBody UpdateMerchantRequest body, CurrentMember member) {
         var command = new RenameMerchant.Command(merchantId, body.displayName(), member.userId());
-        return mapper.toResponse(renameMerchant.rename(command));
+        return mapper.toResponse(renameMerchant.rename(command))
+                .forMember(member.role().code(), team.members(merchantId).size());
     }
 }

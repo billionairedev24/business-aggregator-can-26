@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:developer.api_key_revoked:1",
+  "description": "An API key was revoked; stop accepting it at once. Topic developer.api_key, key = api key id.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "actorId",
+    "merchantId"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "developer.api_keys.id"
+    },
+    "actorId": {
+      "type": "string",
+      "description": "identity.users.id of the owner who revoked it"
+    },
+    "merchantId": {
+      "type": "string",
+      "description": "merchants.merchants.id"
+    }
+  }
+}

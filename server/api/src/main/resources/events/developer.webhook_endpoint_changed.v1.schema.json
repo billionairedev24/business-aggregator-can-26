@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:developer.webhook_endpoint_changed:1",
+  "description": "A webhook endpoint was created, re-keyed or deleted; the webhook worker reloads it. Topic developer.webhook_endpoint, key = endpoint id.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "actorId",
+    "merchantId",
+    "change"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "developer.webhook_endpoints.id"
+    },
+    "actorId": {
+      "type": "string"
+    },
+    "merchantId": {
+      "type": "string"
+    },
+    "change": {
+      "type": "string",
+      "enum": [
+        "created",
+        "secret_rotated",
+        "deleted"
+      ]
+    }
+  }
+}
