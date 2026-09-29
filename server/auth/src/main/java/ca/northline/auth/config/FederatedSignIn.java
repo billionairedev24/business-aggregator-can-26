@@ -1,6 +1,7 @@
 package ca.northline.auth.config;
 
 import ca.northline.auth.application.AuthProperties;
+import ca.northline.auth.application.FlowRejected;
 import ca.northline.auth.application.SignInService;
 import ca.northline.auth.application.UserAccounts;
 import jakarta.servlet.http.HttpServletRequest;
@@ -48,7 +49,14 @@ class FederatedSignIn implements AuthenticationSuccessHandler, AuthenticationFai
         var email = attribute(user, "email");
         String target;
         if (email != null && accounts.findByEmail(email).isPresent()) {
-            signIn.start(email);
+            try {
+                signIn.start(email);
+            } catch (FlowRejected e) {
+                response.sendRedirect(UriComponentsBuilder.fromUriString(props.loginPage())
+                        .queryParam("error", e.getReason().code())
+                        .toUriString());
+                return;
+            }
             target = UriComponentsBuilder.fromUriString(props.loginPage())
                     .queryParam("step", "factor")
                     .queryParam("identifier", email)

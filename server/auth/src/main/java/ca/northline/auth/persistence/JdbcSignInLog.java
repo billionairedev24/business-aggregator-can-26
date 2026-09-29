@@ -5,6 +5,8 @@ import ca.northline.auth.domain.Factor;
 import com.github.f4b6a3.ulid.UlidCreator;
 import java.time.Clock;
 import java.time.ZoneOffset;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,11 +15,13 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Sign-in log. A success adds an {@code identity.sessions} row (the device list in Settings → Security) and an
  * {@code developer.audit_log} row ({@code auth.sign_in}); a failure only the audit row ({@code auth.sign_in_failed}).
- * Failures are written in their own transaction so they survive the caller's rollback.
+ * Failures and rate-limit lockouts ({@code auth.rate_limited}) are written in their own transaction so they survive the
+ * caller's rollback.
  */
 @Slf4j
 @Repository
@@ -28,6 +32,7 @@ class JdbcSignInLog implements SignInLog {
 
     private final JdbcClient jdbc;
     private final Clock clock;
+    private final JsonMapper json;
 
     @Override
     public void succeeded(String userId, String method, boolean mfa, Client client) {
@@ -53,6 +58,19 @@ class JdbcSignInLog implements SignInLog {
     public void failed(@Nullable String userId, Factor factor, String reason, Client client) {
         audit(userId, "auth.sign_in_failed", "{\"method\":\"%s\",\"reason\":\"%s\"}".formatted(factor.code(), reason));
         log.info("Sign-in failed: user={} method={} reason={}", userId, factor.code(), reason);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void lockedOut(@Nullable String userId, String action, List<String> scopes, long seconds, Client client) {
+        var after = new LinkedHashMap<String, Object>();
+        after.put("action", action);
+        after.put("scopes", scopes);
+        after.put("seconds", seconds);
+        if (client.ip() != null) {
+            after.put("ip", client.ip());
+        }
+        audit(userId, "auth.rate_limited", json.writeValueAsString(after));
     }
 
     private void audit(@Nullable String userId, String action, String after) {

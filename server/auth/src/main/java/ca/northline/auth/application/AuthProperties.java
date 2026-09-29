@@ -17,6 +17,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param allowedOrigins browser origins that may call the JSON API (CORS + Origin check), e.g. the Studio
  * @param loginPage where an unauthenticated {@code /oauth2/authorize} is sent (the Studio's own sign-in page)
  * @param webauthn relying party
+ * @param trustedProxies CIDRs of the load balancers / ingress allowed to set {@code X-Forwarded-*} (client IP for rate
+ *     limits and the sign-in log); anyone else's forwarded headers are ignored
  */
 @ConfigurationProperties("northline.auth")
 public record AuthProperties(
@@ -28,7 +30,10 @@ public record AuthProperties(
         @DefaultValue("Northline") String totpIssuer,
         List<String> allowedOrigins,
         String loginPage,
-        WebAuthn webauthn) {
+        WebAuthn webauthn,
+
+        @DefaultValue({"127.0.0.0/8", "::1/128", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7"})
+        List<String> trustedProxies) {
 
     /** WebAuthn relying party: id (registrable domain) and the origins allowed in client data. */
     public record WebAuthn(

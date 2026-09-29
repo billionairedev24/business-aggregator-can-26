@@ -97,8 +97,13 @@ printed in the auth log (`Verification code for …`). Passkeys work on `localho
 pointed at the same directory share tokens. Rotate or inspect it with `./gradlew :auth:signingKeys --args='status'`
 ([key-rotation.md](key-rotation.md)). Cloud KMS providers aren't needed locally (`KMS_PROVIDER=local`, the default).
 
+**Rate limits (S-9):** under `local` they are kept in memory (the auth log says `Rate limits (S-9) are kept IN
+MEMORY`), so a restart clears a lockout; with `local,valkey` they live in your Valkey like in the cloud. Limits and
+how to clear them: [README § Rate limits](README.md#rate-limits-s-9). Every request from your browser comes from
+`127.0.0.1`: 30 sign-in lookups in 10 minutes lock the IP for 10 minutes — restart auth (memory) to clear it.
+
 **Sessions in your Valkey** (as in the cloud): start auth and bff with `--spring.profiles.active=local,valkey`.
-Sessions are stored under `nl:auth:*` and `nl:studio-bff:*` and survive restarts. Valkey from Docker:
+Sessions are stored under `nl:auth:*` and `nl:studio-bff:*` and survive restarts; auth's rate limits under `nl:auth-rl:*`. Valkey from Docker:
 `docker compose --profile cache up -d`.
 
 ## 6. Optional stand-ins
@@ -167,6 +172,7 @@ values fill in what you meant to leave out.
 | "Settings › Security" shows an error under dev auth | expected: it needs northline-auth (step 5). |
 | Authenticator code rejected | your clock is off; sync it. Codes are 30 s, ±1 step, and a used code can't be reused. |
 | `KMS_PROVIDER=local is not allowed under staging/prod` | rehearse `staging`/`prod` with a real KMS key (`KMS_PROVIDER`, `KMS_KEY_ID`; AWS also works against LocalStack with `KMS_ENDPOINT`), or rehearse `dev` |
+| "Too many attempts. Try again in …" while developing | an S-9 rate limit: wait, or restart auth (`local` keeps limits in memory), or with `local,valkey` delete `nl:auth-rl:*` in Valkey |
 | Passkey prompt fails | use `http://localhost:3100`, not `127.0.0.1` (WebAuthn RP id is `localhost`). |
 | Worker logs `UNKNOWN_TOPIC_OR_PARTITION` | topics missing: wait for the `kafka-topics` one-shot to finish (`docker compose logs kafka-topics`) or run `scripts/topics.sh`. |
 | Elasticsearch exits with code 137 | not enough memory for Docker: lower `ES_HEAP` in `.env` (e.g. `512m`). |

@@ -9,8 +9,10 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -60,6 +62,14 @@ class WebSecurityConfig {
             http.oauth2Login(o -> o.successHandler(federatedSignIn).failureHandler(federatedSignIn));
         }
         return http.build();
+    }
+
+    /** Before everything (Spring Session, Spring Security): the rest of the app sees the client's address. */
+    @Bean
+    FilterRegistrationBean<TrustedProxyFilter> trustedProxyFilter(AuthProperties props) {
+        var registration = new FilterRegistrationBean<>(new TrustedProxyFilter(props.trustedProxies()));
+        registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
+        return registration;
     }
 
     private static CorsConfigurationSource cors(AuthProperties props) {

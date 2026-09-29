@@ -80,6 +80,8 @@ Every app reads its configuration from environment variables; nothing environmen
 | `KMS_PROVIDER`, `KMS_KEY_ID` | auth | `KMS_PROVIDER` **yes** | `aws` + key ARN / `gcp` + key **version** name / `azure` + versioned key URL | Terraform output (S-2/S-3) → ConfigMap; until then created by hand ([key-rotation.md](key-rotation.md#creating-the-key-until-terraform-does-it--s-2)). `dev` may also run `local` with `SIGNING_KEYS_DIR` on a volume every auth replica mounts. |
 | `KMS_PUBLISHED_KEY_IDS` | auth | no | empty; the next or previous key during a rotation | [key-rotation.md](key-rotation.md#rotating--cloud-providers) |
 | `KMS_REGION`, `KMS_ENDPOINT` | auth | no | AWS only: `ca-central-1`, a VPC endpoint URL | deployment manifest |
+| `TRUSTED_PROXIES` | auth | no (private ranges + loopback) | the ingress / load balancer subnet, e.g. `10.20.0.0/22` (comma-separated CIDRs) | network plan (S-2); only these peers may set `X-Forwarded-For/-Proto/-Host` — the client IP the rate limits and the sign-in log use ([README § Rate limits](README.md#rate-limits-s-9)) |
+| `RATE_LIMIT_STORE` | auth | no (`redis`) | leave unset: `memory` is refused here | — |
 | `SIGNING_KEYS_DIR`, `SIGNING_KEYS_ROTATE_EVERY` | auth | with `KMS_PROVIDER=local` | `/var/lib/northline/auth-keys` (shared volume), `90d` | deployment manifest |
 | `EMAIL_PROVIDER`, `EMAIL_FROM`, `SMTP_*` | api, worker | no (S-13) | `ses` / `sendgrid` / `azure` | email provider account |
 | `SMS_PROVIDER`, `SMS_FROM`, `SMS_ACCOUNT_ID`, `SMS_AUTH_TOKEN` | api, auth, worker | no (S-8) | `twilio`, `+1587…`, `AC…`, — | Twilio console → secrets manager → External Secrets (S-6) → Kubernetes Secret; until then `kubectl create secret` |
@@ -133,7 +135,6 @@ What still stops a complete deployment. Under the `local`/`test` profiles each o
 | `PaymentGateway` / `ConnectAccountGateway` (payments, merchants) | stripe-java when `STRIPE_SECRET_KEY` is set | works with keys; end-to-end Connect flows and webhooks still to finish | S-11, S-12 |
 | Google / Apple sign-in (auth) | placeholder client ids | the buttons fail | S-18 |
 | Search indexer (worker) | consumer is a stub (`TODO(implement)`) | nothing reaches Elasticsearch | S-42, S-43 |
-| Rate limits (auth) | per auth session only | no per-account / per-IP limits for codes and factors | S-9 |
 
 Delivery pieces that don't exist yet: Terraform per cloud (S-2), managed data stores (S-3), External Secrets (S-6), container images and Helm charts (S-14), Argo CD (S-15), migrations as a deploy step (S-16), DNS/TLS (S-17), Kafka topic provisioning (S-25), observability (S-111–S-113), backups and DR drill (S-114). The worker has no HTTP health endpoint yet (add with S-14).
 

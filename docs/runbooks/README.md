@@ -110,11 +110,48 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `KMS_PUBLISHED_KEY_IDS`, `KMS_REGION`, `KMS_ENDPOINT`, `SIGNING_KEYS_DIR`, `SIGNING_KEYS_ROTATE_EVERY` | | ✓ | | | no |
 | `EMAIL_PROVIDER`, `EMAIL_FROM`, `SMTP_*` | ✓ | | | ✓ | no (until S-13) |
 | `SMS_PROVIDER`, `SMS_FROM`, `SMS_ACCOUNT_ID`, `SMS_AUTH_TOKEN` | ✓ | ✓ | | ✓ | no (until S-8) |
+| `TRUSTED_PROXIES` | | ✓ | | | no (private ranges + loopback; narrow it to the ingress subnet) |
+| `RATE_LIMIT_STORE` | | ✓ | | | no (`redis`; `memory` only under `local`/`test`) |
 | `OTEL_EXPORT_ENABLED` | ✓ | | | | no (false until S-111) |
 | `SERVER_PORT` | ✓ | ✓ | ✓ | | no (8080 / 9000 / 8082) |
 
 Studio build (web): `VITE_NL_AUTH_ORIGIN` (= `AUTH_ISSUER`) is baked into the bundle at build time, so each
 environment needs its own Studio build until runtime configuration exists.
+
+## Rate limits (S-9)
+
+northline-auth limits sign-in and registration attempts per **account** (what was typed: a known account by its id,
+an unknown email/mobile by its normalised value — both behave the same, so a 429 never reveals whether an account
+exists), per **client IP** and per **auth session**. Over a limit the answer is `429` with `Retry-After`,
+`{"code":"rate_limited","retryAfterSeconds":…}`; the Studio shows "Too many attempts. Try again in m:ss." (en/fr) and
+disables the button until then. Every lockout is written to `developer.audit_log` (`auth.rate_limited`: action,
+scopes, seconds, IP; actor = the account when known). These limits come on top of the per-flow rules (5 wrong tries
+per phone code, 45 s resend cool-down, 5 failed factors per sign-in attempt or step-up session).
+
+| action | account | IP | session | first lockout (doubles each time, max 24 h) |
+|---|---|---|---|---|
+| phone code sent / re-sent / voice call (`otp-send`, every "Send code" counts) | 5 / h | 20 / h | 5 / h | 1 h |
+| wrong phone code (`otp-verify`) | 10 / h | 50 / h | 10 / h | 15 min |
+| email or mobile looked up at sign-in (`sign-in-lookup`) | — (typing someone's email must not lock them out) | 30 / 10 min | 20 / 10 min | 10 min |
+| wrong authenticator code / backup code / failed passkey (`totp-verify`, `backup-code-verify`, `passkey-assertion`) | 10 / 15 min each | 30 / 15 min | 10 / 15 min | 15 min |
+| failed step-up for payouts (`step-up`) | 10 / 15 min | 30 / 15 min | 10 / 15 min | 15 min |
+
+- Sliding windows; a success resets the account and session counters of that action (never the IP's). Lockouts of
+  the same subject double while earlier ones are remembered (24 h). All numbers are properties under
+  `northline.auth.rate-limits.limits.<action>.<account|ip|session>` (`max`, `window`, `lockout`, `max-lockout`) in
+  `server/auth/src/main/resources/application.yml`; override one with e.g.
+  `NORTHLINE_AUTH_RATELIMITS_LIMITS_OTPSEND_IP_MAX=40`.
+- **Store:** Valkey/Redis (`REDIS_*`, keys `nl:auth-rl:{<action>}:<scope>:<hash>:…`, no email or IP in clear, TTLs
+  on everything), shared by every replica. `local` keeps them in memory and logs
+  `Rate limits (S-9) are kept IN MEMORY …`; `--spring.profiles.active=local,valkey` uses your Valkey. `memory` is
+  refused under `staging`/`prod`. If Valkey is unreachable the attempt is allowed and an error is logged (the
+  per-flow rules still apply).
+- **Client IP:** `X-Forwarded-For` (and `-Proto`, `-Host`) are believed only from `TRUSTED_PROXIES` (CIDRs, default
+  loopback + private ranges); the client is the right-most address that isn't a trusted proxy. Set it to the ingress
+  / load-balancer subnet in every cloud environment, or anyone inside the private network can pick their own IP.
+- **Unlocking someone** before the lockout ends: delete their keys in Valkey
+  (`valkey-cli --scan --pattern 'nl:auth-rl:*' | xargs valkey-cli del` clears everything — keys are hashed, so a
+  targeted unlock needs the hash; waiting is usually simpler).
 
 ## Choosing a cloud
 

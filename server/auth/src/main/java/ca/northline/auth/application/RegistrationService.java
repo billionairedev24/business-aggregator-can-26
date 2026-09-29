@@ -46,6 +46,7 @@ public class RegistrationService {
     private final FlowStore flow;
     private final PasskeyService passkeys;
     private final SignInLog signIns;
+    private final AttemptLimits limits;
     private final AuthProperties props;
     private final Clock clock;
 
@@ -62,6 +63,8 @@ public class RegistrationService {
     public PendingRegistration start(Start in) {
         var phone = PhoneNumber.parse(in.phone())
                 .orElseThrow(() -> InvalidInput.of("phone", "format", AuthMessages.PHONE_FORMAT));
+        // Every submission counts (also the ones answered "already in use"): codes cost money and the answer is a hint.
+        limits.consume(LimitedAction.OTP_SEND, phoneSubject(phone));
         var email = in.email().trim();
         var taken = new ArrayList<InvalidInput.Violation>();
         if (accounts.emailInUse(email)) {
@@ -109,6 +112,7 @@ public class RegistrationService {
         if (wait > 0 && !voiceFallback) {
             throw new FlowRejected(Reason.THROTTLED, "Wait %d s before sending another code.".formatted(wait), wait);
         }
+        limits.consume(LimitedAction.OTP_SEND, phoneSubject(registration.phone()));
         var next = registration.withOtp(sendCode(registration.phone(), channel));
         flow.put(FlowStore.REGISTRATION, next);
         return next;
@@ -120,20 +124,23 @@ public class RegistrationService {
         if (registration.phoneVerified()) {
             return registration;
         }
+        var who = phoneSubject(registration.phone());
+        limits.guard(LimitedAction.OTP_VERIFY, who);
         return switch (registration.otp().check(code, clock.instant(), props.otpMaxAttempts())) {
             case OtpChallenge.Check.Verified _ -> {
                 var verified = registration.withPhoneVerified(true);
                 flow.put(FlowStore.REGISTRATION, verified);
+                limits.succeeded(LimitedAction.OTP_VERIFY, who);
                 yield verified;
             }
             case OtpChallenge.Check.Wrong(var next) -> {
                 flow.put(FlowStore.REGISTRATION, registration.withOtp(next));
-                throw InvalidInput.of("code", "mismatch", CODE_WRONG);
+                throw limits.failed(LimitedAction.OTP_VERIFY, who, InvalidInput.of("code", "mismatch", CODE_WRONG));
             }
             case OtpChallenge.Check.Expired _ -> throw InvalidInput.of("code", "expired", CODE_EXPIRED);
             case OtpChallenge.Check.Locked(var next) -> {
                 flow.put(FlowStore.REGISTRATION, registration.withOtp(next));
-                throw InvalidInput.of("code", "locked", CODE_LOCKED);
+                throw limits.failed(LimitedAction.OTP_VERIFY, who, InvalidInput.of("code", "locked", CODE_LOCKED));
             }
         };
     }
@@ -230,6 +237,10 @@ public class RegistrationService {
             throw new FlowRejected(Reason.NOT_STARTED, "Verify your mobile number first.");
         }
         return registration;
+    }
+
+    private static AttemptLimits.Subject phoneSubject(PhoneNumber phone) {
+        return AttemptLimits.Subject.identifier(phone.e164(), null);
     }
 
     private OtpChallenge sendCode(PhoneNumber phone, Channel channel) {

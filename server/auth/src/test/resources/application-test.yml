@@ -11,6 +11,18 @@ logging.level:
   tc: warn
 northline:
   auth:
+    # S-9: in memory for the suite (every MockMvc call comes from 127.0.0.1, so the IP scope is effectively off);
+    # the rate-limit tests use Valkey (Testcontainers) and their own limits.
+    rate-limits:
+      store: memory
+      limits:
+        otp-send.ip.max: 100000
+        otp-verify.ip.max: 100000
+        sign-in-lookup.ip.max: 100000
+        totp-verify.ip.max: 100000
+        backup-code-verify.ip.max: 100000
+        passkey-assertion.ip.max: 100000
+        step-up.ip.max: 100000
     signing:
       local-dir: ${java.io.tmpdir}/northline-auth-test-signing-keys
     totp-key: bm9ydGhsaW5lLWxvY2FsLWRldi10b3RwLWtleS0zMmI=

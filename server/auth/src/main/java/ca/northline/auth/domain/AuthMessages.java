@@ -29,6 +29,8 @@ public final class AuthMessages {
     public static final String BACKUP_CODE_WRONG = "That backup code didn't work, or it was already used.";
     public static final String PASSKEY_FAILED = "That passkey couldn't be verified. Try again or use another method.";
     public static final String TOO_MANY_ATTEMPTS = "Too many attempts. Start again in a few minutes.";
+    /** S-9 rate limits; the Studio shows its own (translated) copy with a countdown from retryAfterSeconds. */
+    public static final String RATE_LIMITED = "Too many attempts. Wait a moment and try again.";
 
     public static final String SIX_DIGITS = "^\\d{6}$";
 
