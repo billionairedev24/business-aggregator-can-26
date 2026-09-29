@@ -20,10 +20,10 @@ export function AccountMenu({ user, activeOrders, onNavigate, onNotYou, onSignOu
           {i === 0 && activeOrders > 0 && <span style={{ fontSize: 12, fontWeight: 600, background: 'var(--color-accent)', color: 'var(--color-on-accent)', padding: '2px 8px', borderRadius: 999 }}>{activeOrders} active</span>}
         </button>
       ))}
-      <div style={{ height: 1, background: 'var(--color-divider)', margin: '6px 8px' }} />
+      <div role="separator" style={{ height: 1, background: 'var(--color-divider)', margin: '6px 8px' }} />
       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 10px' }}>
-        <button onClick={onNotYou} className="btn btn-ghost" style={{ minHeight: 36 }}>Not you?</button>
-        <button onClick={onSignOut} className="btn btn-ghost" style={{ minHeight: 36 }}><SignOut size={16} /> Sign out</button>
+        <button role="menuitem" onClick={onNotYou} className="btn btn-ghost" style={{ minHeight: 36 }}>Not you?</button>
+        <button role="menuitem" onClick={onSignOut} className="btn btn-ghost" style={{ minHeight: 36 }}><SignOut size={16} /> Sign out</button>
       </div>
     </div>
   );

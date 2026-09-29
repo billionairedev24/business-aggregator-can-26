@@ -1,0 +1,7 @@
+# Files allowed to contain hex colour literals (checked by scripts/check-hex-colors.mjs).
+# One path or glob per line, relative to web/. Always give the reason after " # ".
+# Not listed because never scanned: packages/tokens (the source of colours), tests, test fixtures, public/ assets
+# (e.g. apps/studio/public/favicon.svg), .storybook/ (theme-switcher demo values).
+
+apps/studio/src/features/auth/SocialButtons.tsx  # Google "G" logo: Google's brand colours, must not be themed
+apps/studio/src/features/storefront/sections.ts  # merchant brand-colour swatches are merchant data, not theme tokens (DECISIONS.md)

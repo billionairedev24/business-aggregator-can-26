@@ -1,0 +1,133 @@
+# S-5 — CI for web/ (pnpm monorepo: tokens, ui + Storybook, studio, consumer).
+#
+# MANUAL ONLY: CI credits are depleted, so this workflow runs only when started from
+# Actions › web › Run workflow (or `gh workflow run web.yml -f studio-smoke=true`). To run it automatically later,
+# add triggers next to workflow_dispatch — see docs/runbooks/ci.md § Enabling automatic runs.
+name: web
+
+on:
+  workflow_dispatch:
+    inputs:
+      storybook:
+        description: Build Storybook and run its interaction + a11y tests (headless Chromium)
+        type: boolean
+        default: true
+      studio-smoke:
+        description: Studio smoke sweep (Postgres + api + auth + studio dev server + Playwright; slower)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+
+defaults:
+  run:
+    working-directory: web
+
+jobs:
+  checks:
+    name: colours, typecheck, unit tests, studio build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/pnpm-setup
+
+      - name: No hex colour literals in components
+        run: pnpm lint:colors
+      - name: Typecheck
+        run: pnpm -r typecheck
+      - name: Unit tests (vitest)
+        run: pnpm -r test
+      - name: Studio build
+        run: pnpm --filter @northline/studio build
+
+      - name: Upload studio build
+        uses: actions/upload-artifact@v4
+        with:
+          name: studio-dist
+          path: web/apps/studio/dist/
+          retention-days: 7
+
+  storybook:
+    name: storybook build + interaction/a11y tests
+    if: ${{ inputs.storybook }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/pnpm-setup
+        with:
+          playwright: "true"
+
+      - name: Build Storybook
+        run: pnpm --filter @northline/ui build-storybook
+      # Every story in headless Chromium: play functions + a11y addon (violations fail).
+      - name: Storybook tests
+        run: pnpm --filter @northline/ui test-storybook
+
+      - name: Upload Storybook
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: storybook-static
+          path: web/packages/ui/storybook-static/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  studio-smoke:
+    name: studio smoke sweep
+    if: ${{ inputs.studio-smoke }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_DB: northline
+          POSTGRES_USER: northline
+          POSTGRES_PASSWORD: northline
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U northline -d northline"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      MAVEN_MIRROR_URL: ${{ vars.MAVEN_MIRROR_URL }}
+      MAVEN_MIRROR_USERNAME: ${{ secrets.MAVEN_MIRROR_USERNAME }}
+      MAVEN_MIRROR_PASSWORD: ${{ secrets.MAVEN_MIRROR_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@v5
+      - uses: ./.github/actions/pnpm-setup
+        with:
+          playwright: "true"
+
+      # Migrates + seeds the empty database, starts api + auth (local profile) and the studio dev server, sweeps.
+      - name: Smoke sweep
+        working-directory: .
+        env:
+          DB_HOST: localhost
+          SMOKE_OUT: ${{ github.workspace }}/smoke-out
+        run: ci/studio-smoke.sh
+
+      - name: Upload screenshots and logs
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: studio-smoke
+          path: |
+            smoke-out/
+            !smoke-out/runner/
+          retention-days: 7
+          if-no-files-found: ignore

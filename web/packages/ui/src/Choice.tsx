@@ -33,7 +33,8 @@ export function OptionCard({ selected, title, description, trailing, className, 
 }
 
 export interface ChipProps extends ButtonHTMLAttributes<HTMLButtonElement> { selected?: boolean }
-export const Chip = ({ selected = false, className, ...p }: ChipProps) => <button type="button" aria-pressed={selected} className={clsx('nl-chip', className)} {...p} />;
+// A chip inside a tablist carries aria-selected instead; aria-pressed is not allowed on role="tab".
+export const Chip = ({ selected = false, className, ...p }: ChipProps) => <button type="button" aria-pressed={p.role === 'tab' ? undefined : selected} className={clsx('nl-chip', className)} {...p} />;
 
 export interface ChipGroupProps<V extends string> { options: readonly { value: V; label: ReactNode }[]; value: V; onChange: (v: V) => void; 'aria-label': string }
 /** Single-select chip row (settings tabs, Phone/Web preview toggle). */

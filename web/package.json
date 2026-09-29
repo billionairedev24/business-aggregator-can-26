@@ -10,7 +10,9 @@
     "test": "pnpm -r test",
     "lint": "eslint .",
     "typecheck": "pnpm -r typecheck",
-    "dev:consumer": "pnpm --filter @northline/consumer dev"
+    "dev:consumer": "pnpm --filter @northline/consumer dev",
+    "lint:colors": "node scripts/check-hex-colors.mjs",
+    "test-storybook": "pnpm --filter @northline/ui test-storybook"
   },
   "devDependencies": {
     "typescript": "^5.9.0",
