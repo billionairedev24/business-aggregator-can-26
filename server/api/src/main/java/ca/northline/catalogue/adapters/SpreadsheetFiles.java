@@ -90,10 +90,11 @@ class SpreadsheetFiles implements SpreadsheetReader {
         var row = new ArrayList<String>();
         var cell = new StringBuilder();
         var quoted = false;
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
+        var i = 0;
+        while (i < text.length()) {
+            char c = text.charAt(i++);
             if (quoted) {
-                if (c == '"' && i + 1 < text.length() && text.charAt(i + 1) == '"') {
+                if (c == '"' && i < text.length() && text.charAt(i) == '"') {
                     cell.append('"');
                     i++;
                 } else if (c == '"') {
@@ -107,7 +108,7 @@ class SpreadsheetFiles implements SpreadsheetReader {
                 row.add(cell.toString());
                 cell.setLength(0);
             } else if (c == '\n' || c == '\r') {
-                if (c == '\r' && i + 1 < text.length() && text.charAt(i + 1) == '\n') {
+                if (c == '\r' && i < text.length() && text.charAt(i) == '\n') {
                     i++;
                 }
                 row.add(cell.toString());

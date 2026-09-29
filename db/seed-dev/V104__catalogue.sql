@@ -42,15 +42,15 @@ INSERT INTO catalogue.catalog_products
    '{01J9ZD3V0000000000000MED01,01J9ZD3V0000000000000MED02,01J9ZD3V0000000000000MED03}',
    '01J9ZD3V00000000000BOSCHCA', '01J9ZD3V00000000000BOSCHCA', true, '2025-11-02T16:00:00Z', '2025-11-02T16:00:00Z'),
   -- seller-owned records (no GTIN match) for Prairie Wrench Parts
-  ('01J9ZD3V0000000000000PBPCF', 'NL-P-88201', NULL, 'none', 'Prairie Wrench', 'Brake pads · ceramic (front)', '{"en": "Brake pads · ceramic (front)"}', 'PW-BP-F',
+  ('01J9ZD3V0000000000000PBPCF', 'NL-P-88121', NULL, 'none', 'Prairie Wrench', 'Brake pads · ceramic (front)', '{"en": "Brake pads · ceramic (front)"}', 'PW-BP-F',
    'shop.hardware-and-auto.auto-parts', '{"partType": "Brakes", "length": "n/a", "position": "Front"}',
    'Low-dust ceramic pads for most compact and mid-size cars.', '{"Low dust, quiet stops","Hardware kit included"}', '{}',
    NULL, '01J9ZD3V00000000000000PWP1', false, '2026-03-05T16:00:00Z', '2026-03-05T16:00:00Z'),
-  ('01J9ZD3V0000000000000POIL5', 'NL-P-88202', NULL, 'none', 'Prairie Wrench', 'Synthetic oil 5W-30 · 5 L', '{"en": "Synthetic oil 5W-30 · 5 L"}', 'PW-5W30-5',
+  ('01J9ZD3V0000000000000POIL5', 'NL-P-88122', NULL, 'none', 'Prairie Wrench', 'Synthetic oil 5W-30 · 5 L', '{"en": "Synthetic oil 5W-30 · 5 L"}', 'PW-5W30-5',
    'shop.hardware-and-auto.auto-parts', '{"partType": "Fluids & chemicals", "length": "n/a", "position": "n/a"}',
    'Full synthetic 5W-30, dexos1 Gen 3 approved.', '{"dexos1 Gen 3 approved"}', '{}',
    NULL, '01J9ZD3V00000000000000PWP1', false, '2026-03-05T16:05:00Z', '2026-03-05T16:05:00Z'),
-  ('01J9ZD3V0000000000000PCAF1', 'NL-P-88203', NULL, 'none', NULL, 'Cabin air filter', '{"en": "Cabin air filter"}', NULL,
+  ('01J9ZD3V0000000000000PCAF1', 'NL-P-88123', NULL, 'none', NULL, 'Cabin air filter', '{"en": "Cabin air filter"}', NULL,
    'shop.hardware-and-auto.auto-parts', '{"partType": "Filters"}', NULL, '{}', '{}',
    NULL, '01J9ZD3V00000000000000PWP1', false, '2026-09-28T17:00:00Z', '2026-09-28T17:00:00Z');
 UPDATE catalogue.catalog_products SET owner_merchant_id = '01J9ZD3V00000000000000PWP1'
