@@ -1,0 +1,21 @@
+# `./gradlew :api:bootRun --args='--spring.profiles.active=local'`
+# Runs against Postgres only: no auth server (DevAuthFilter: header X-Dev-User), no Kafka, no Elasticsearch, no Redis.
+# Loads the dev personas from db/seed-dev (V100–V109).
+spring:
+  flyway:
+    locations: classpath:db/migration,classpath:db/seed-dev
+  modulith:
+    events:
+      externalization.enabled: false      # nothing goes to Kafka; in-process @ApplicationModuleListeners still use the registry
+      republish-outstanding-events-on-restart: false
+  kafka.listener.auto-startup: false
+management:
+  health:
+    redis.enabled: false
+    elasticsearch.enabled: false
+  logging.export.enabled: false
+  otlp.metrics.export.enabled: false
+  tracing.export.enabled: false
+logging.level:
+  ca.northline: debug
+  ca.northline.config.DevAuthFilter: debug

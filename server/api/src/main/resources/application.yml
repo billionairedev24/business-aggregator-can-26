@@ -1,27 +1,39 @@
+# Production defaults. Profiles: `local` (application-local.yml — bootRun without Kafka/ES/Redis/auth server, dev
+# seed + dev auth) and `test` (src/test/resources/application-test.yml — Testcontainers Postgres).
 spring:
   application.name: northline-api
   threads.virtual.enabled: true
   datasource:
-    url: jdbc:postgresql://localhost:5432/northline
-    username: northline
-    password: northline
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/northline}
+    username: ${DB_USER:northline}
+    password: ${DB_PASSWORD:northline}
   flyway:
-    locations: filesystem:../../db/migrations
+    # db/migrations is packaged onto the classpath by :api:processResources (see api/build.gradle.kts).
+    # Override with SPRING_FLYWAY_LOCATIONS=filesystem:/path/to/db/migrations if you must.
+    locations: classpath:db/migration
+  mvc.problemdetails.enabled: true
+  jackson:
+    default-property-inclusion: always
   security.oauth2.resourceserver.jwt:
-    issuer-uri: http://localhost:9000
+    issuer-uri: ${AUTH_ISSUER:http://localhost:9000}
     audiences: northline-api
-  data.redis.host: localhost
-  elasticsearch.uris: http://localhost:9200
+  data.redis.host: ${REDIS_HOST:localhost}
+  elasticsearch.uris: ${ES_URIS:http://localhost:9200}
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
     producer:
       acks: all
       properties.enable.idempotence: true
   modulith:
     events:
-      jdbc.schema-initialization.enabled: false   # table created by V017
+      jdbc:
+        schema: events                      # tables created by V017 (+ indexes in V018)
+        schema-initialization.enabled: false
       externalization.enabled: true
       republish-outstanding-events-on-restart: true
       completion-mode: archive
 server.port: 8080
 management.endpoints.web.exposure.include: health,info,prometheus,modulith
+springdoc:
+  api-docs.path: /v3/api-docs
+  paths-to-match: /api/**

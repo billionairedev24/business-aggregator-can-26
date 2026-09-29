@@ -1,0 +1,19 @@
+# Integration tests (IntegrationTest base class). The datasource comes from the shared Testcontainers PostGIS via
+# @ServiceConnection; Flyway applies classpath:db/migration (no dev seed). Kafka/ES/Redis are not started.
+spring:
+  modulith:
+    events:
+      externalization.enabled: false
+      republish-outstanding-events-on-restart: false
+  kafka.listener.auto-startup: false
+  security.oauth2.resourceserver.jwt.issuer-uri: http://auth.invalid   # never contacted: tests use jwt() / X-Dev-User
+management:
+  health:
+    redis.enabled: false
+    elasticsearch.enabled: false
+  logging.export.enabled: false
+  otlp.metrics.export.enabled: false
+  tracing.export.enabled: false
+logging.level:
+  org.testcontainers: warn
+  tc: warn

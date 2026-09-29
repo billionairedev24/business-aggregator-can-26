@@ -8,10 +8,14 @@ import org.springframework.stereotype.Component;
 @Component
 class EscrowOnQuoteAccepted {
     private final EscrowService escrow;
-    EscrowOnQuoteAccepted(EscrowService escrow) { this.escrow = escrow; }
+
+    EscrowOnQuoteAccepted(EscrowService escrow) {
+        this.escrow = escrow;
+    }
 
     @ApplicationModuleListener
     void on(QuoteAccepted e) {
-        if (e.depositCents() > 0) escrow.authorizeDeposit(e.eventId(), e.aggregateId(), e.customerId(), e.depositCents());
+        if (e.depositCents() > 0)
+            escrow.authorizeDeposit(e.eventId(), e.aggregateId(), e.customerId(), e.depositCents());
     }
 }
