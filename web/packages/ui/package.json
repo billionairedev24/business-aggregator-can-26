@@ -6,14 +6,18 @@
   "scripts": {
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "test": "vitest run"
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
     "@northline/tokens": "workspace:*",
     "@phosphor-icons/react": "^2.1.7",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "clsx": "^2.1.1"
+    "clsx": "^2.1.1",
+    "intl-messageformat": "^10.7.16",
+    "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-virtual": "^3.13.12"
   },
   "devDependencies": {
     "storybook": "^9.1.0",
@@ -24,6 +28,8 @@
     "vite": "^7.0.0",
     "vitest": "^3.2.0",
     "@vitejs/plugin-react": "^5.0.0",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0"
   }
 }

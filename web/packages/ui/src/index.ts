@@ -6,3 +6,4 @@ export * from './SearchBar';
 export * from './AccountMenu';
 export * from './SiteHeader';
 export * from './useGeolocation';
+export * from './i18n';
