@@ -40,5 +40,6 @@ public interface EarningsSummary {
             String refType,
             String refId,
             @Nullable String customerId,
-            @Nullable String reason) {}
+            @Nullable String reason,
+            @Nullable String customerName) {}
 }

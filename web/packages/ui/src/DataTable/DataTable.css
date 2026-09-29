@@ -185,3 +185,6 @@
 .nl-dt-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 60; background: var(--color-text); color: var(--color-bg); padding: 10px 16px; border-radius: var(--radius-md); box-shadow: var(--shadow-lg); font-size: 14px; display: flex; gap: 8px; align-items: center; max-width: calc(100vw - 32px); }
 .nl-dt-toast > svg { flex: none; color: var(--color-highlight); }
 .nl-dt-toast.is-error > svg { color: var(--color-accent-2-300); }
+/* Inline row actions (e.g. "Mark packed" / « Marquer comme emballée ») wrap instead of widening the table — the
+   layout budget in model.ts reserves 170 px for them. */
+.nl-dt-table .nl-dt-actions-cell .nl-dt-act.is-labelled { max-width: 150px; white-space: normal; text-align: left; line-height: 1.2; }

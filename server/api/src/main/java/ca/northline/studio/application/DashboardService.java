@@ -33,6 +33,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
@@ -156,7 +157,8 @@ class DashboardService implements ViewDashboard {
                 cases.stream()
                         .map(c -> new OpenCase(
                                 c.kind(),
-                                shortName(names, c.customerId()),
+                                Optional.ofNullable(shortName(names, c.customerId()))
+                                        .orElse(c.customerName()),
                                 "booking".equals(c.refType())
                                         ? bookings.jobTitle(c.refId()).orElse(c.reason())
                                         : c.reason()))

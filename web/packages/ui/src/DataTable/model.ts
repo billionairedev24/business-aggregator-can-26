@@ -200,7 +200,7 @@ export interface LayoutInput<C extends { key: string; primary: boolean; priority
 }
 
 /** Estimated width a table with `n` data columns needs (checkbox + columns + actions + padding). */
-export const tableWidthFor = (n: number, iconActions: number, hasInlineAction: boolean) => 56 + n * 112 + iconActions * 40 + (hasInlineAction ? 130 : 0) + 24;
+export const tableWidthFor = (n: number, iconActions: number, hasInlineAction: boolean) => 56 + n * 112 + iconActions * 40 + (hasInlineAction ? 170 : 0) + 24;
 
 /** Drops the lowest-priority columns until the table fits (keeping at least 3), then falls back to cards. */
 export function computeLayout<C extends { key: string; primary: boolean; priority: number }>({ width, columns, iconActions, hasInlineAction }: LayoutInput<C>) {

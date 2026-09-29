@@ -72,11 +72,11 @@ class EarningsSummaryQueries implements EarningsSummary {
     public List<OpenCase> openCases(String merchantId) {
         return jdbc.sql("""
                         select 'dispute' as kind, d.id, e.ref_type, e.ref_id, d.opened_by as customer_id,
-                               d.subject as reason, 0 as ord
+                               d.subject as reason, d.customer_name, 0 as ord
                           from payments.disputes d join payments.escrows e on e.id = d.ref_id
                          where e.merchant_id = :merchantId and d.state in ('open', 'seller_replied', 'agent', 'appealed')
                         union all
-                        select 'refund', r.id, e.ref_type, e.ref_id, pi.customer_id, r.reason, 1
+                        select 'refund', r.id, e.ref_type, e.ref_id, pi.customer_id, r.reason, null::text as customer_name, 1
                           from payments.refunds r
                           join payments.escrows e on e.ref_id = coalesce(r.booking_id, r.order_line_id)
                           left join payments.payment_intents pi on pi.id = r.payment_intent_id
@@ -90,7 +90,8 @@ class EarningsSummaryQueries implements EarningsSummary {
                         rs.getString("ref_type"),
                         rs.getString("ref_id"),
                         rs.getString("customer_id"),
-                        rs.getString("reason")))
+                        rs.getString("reason"),
+                        rs.getString("customer_name")))
                 .list();
     }
 

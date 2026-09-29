@@ -31,7 +31,7 @@ export function HoursTab({ onState }: { onState: (s: SaveState) => void }) {
   const [applyDate, setApplyDate] = useState('');
   const [tried, setTried] = useState(false);
   const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
-  const [svc, setSvc] = useState<number | null>(null);
+  const [svcId, setSvcId] = useState<string | undefined>(undefined);
   const [previewDay, setPreviewDay] = useState<Day>(DAYS[isoWeekday(today()) - 1]!);
 
   useEffect(() => { if (hours.data) setDrafts(saved); }, [hours.data, saved]);
@@ -45,7 +45,8 @@ export function HoursTab({ onState }: { onState: (s: SaveState) => void }) {
   const interval = rules.data?.intervalMin ?? 30;
   const buffer = rules.data?.bufferMin ?? 20;
   const serviceList = services.data ?? [];
-  const duration = svc ?? serviceList[0]?.durationMin ?? 45;
+  const selected = serviceList.find(x => x.id === svcId) ?? serviceList[0];
+  const duration = selected?.durationMin ?? 45;
 
   const errorsFor = (id: string) => validateDays(drafts[id] ?? saved[id] ?? emptyDays());
   const clientErrors = current && days ? errorsFor(current) : {};
@@ -130,7 +131,7 @@ export function HoursTab({ onState }: { onState: (s: SaveState) => void }) {
       </div>
 
       <PreviewPanel
-        t={t} name={name} day={previewDay} setDay={setPreviewDay} duration={duration} setDuration={setSvc} services={serviceList}
+        t={t} name={name} day={previewDay} setDay={setPreviewDay} duration={duration} serviceId={selected?.id} setServiceId={setSvcId} services={serviceList}
         preview={preview.data} loading={preview.isPending && preview.fetchStatus !== 'idle'} error={preview.isError} retry={() => void preview.refetch()}
       />
     </div>
@@ -140,8 +141,8 @@ export function HoursTab({ onState }: { onState: (s: SaveState) => void }) {
 const emptyDays = (): Days => Object.fromEntries(DAYS.map(d => [d, []])) as unknown as Days;
 const withValue = (v: string) => (TIME_OPTIONS.includes(v) ? TIME_OPTIONS : [...TIME_OPTIONS, v].sort());
 
-function PreviewPanel({ t, name, day, setDay, duration, setDuration, services, preview, loading, error, retry }: {
-  t: ReturnType<typeof useAvailabilityT>; name: string; day: Day; setDay: (d: Day) => void; duration: number; setDuration: (n: number) => void;
+function PreviewPanel({ t, name, day, setDay, duration, serviceId, setServiceId, services, preview, loading, error, retry }: {
+  t: ReturnType<typeof useAvailabilityT>; name: string; day: Day; setDay: (d: Day) => void; duration: number; serviceId?: string; setServiceId: (id: string) => void;
   services: { id: string; name: string; durationMin: number }[]; preview?: { slots: { start: string; free: boolean }[]; jobs: number; intervalMin: number; bufferMin: number; closed?: string | null };
   loading: boolean; error: boolean; retry: () => void;
 }) {
@@ -155,8 +156,8 @@ function PreviewPanel({ t, name, day, setDay, duration, setDuration, services, p
     <section aria-labelledby="av-preview">
       <h3 id="av-preview" className="nl-av-h3">{t('previewTitle')}</h3>
       <p className="nl-small nl-muted nl-av-help">{t('previewHelp')}</p>
-      <Select aria-label={t('previewService')} className="nl-av-svc" value={String(duration)} onChange={e => setDuration(Number(e.target.value))}
-        options={services.map(s => ({ value: String(s.durationMin), label: s.name ? t('serviceDuration', { name: s.name, min: s.durationMin }) : t('durationOnly', { min: s.durationMin }) }))} />
+      <Select aria-label={t('previewService')} className="nl-av-svc" value={serviceId ?? ''} onChange={e => setServiceId(e.target.value)}
+        options={services.map(s => ({ value: s.id, label: s.name ? t('serviceDuration', { name: s.name, min: s.durationMin }) : t('durationOnly', { min: s.durationMin }) }))} />
       <div className="nl-av-daychips" role="group" aria-label={t('previewDay')}>
         {DAYS.map(d => <Chip key={d} selected={d === day} onClick={() => setDay(d)}>{t(`day_${d}`)}</Chip>)}
       </div>
