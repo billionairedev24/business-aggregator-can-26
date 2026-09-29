@@ -56,6 +56,7 @@ See `docs/BACKEND_CONVENTIONS.md` (written by the backend foundation) — layeri
 
 ## Contracts between workstreams
 - **Session (BFF):** `GET /bff/session` → `200 { user: { id, firstName, lastName, email, phone, initials, locale, memberSince }, acr }` or `401`; `POST /bff/logout` → `204`. CSRF: cookie `XSRF-TOKEN`, header `X-XSRF-TOKEN`.
+  Auth workstream additions: `GET /bff/login?next=/path` (sign-in hand-off), `GET /api/v1/me` → `{ id, firstName, lastName, email, phone, initials, locale, memberSince, mfaPrimary, mfa }`. Sign out (incl. onboarding "Not you?") = `useSignOut()` from `src/lib/session.ts`. Legal pages: `/legal/terms.html` (Part B: `#business`), `/legal/privacy.html`. Settings → Security can issue backup codes with `POST {VITE_NL_AUTH_ORIGIN}/api/auth/backup-codes` (credentials included). The sign-in log is `identity.sessions` (one row per sign-in).
 - **Businesses:** `GET /api/v1/me/businesses`, `GET /api/v1/merchants/{id}` (backend foundation).
 - **Nav badges:** `GET /api/v1/merchants/{id}/nav-badges` → `{ "<screenKey>": "<badge text>" }` (screen keys as in `nav.ts`). Each module contributes through a `NavBadgeContributor` bean (interface in `ca.northline.shared`), the `studio` module aggregates. Badge text is computed server-side in the caller's locale (`Accept-Language`).
 - **Dashboard:** `GET /api/v1/merchants/{id}/dashboard` — composed by the `studio` module from other modules' public APIs (no cross-module repository access).

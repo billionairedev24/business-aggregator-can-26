@@ -47,6 +47,27 @@ The `local` profile needs only Postgres. It applies the dev personas from `db/se
 `X-Dev-User` header without the auth server, and keeps Kafka, Elasticsearch and Redis off. For the full stack, run
 `docker compose up -d` and `scripts/topics.sh`, then start `:auth:bootRun` and `:api:bootRun` without `local`.
 
+## Local sign-in (Studio → auth → BFF → api, Postgres only)
+```
+cd server
+./gradlew :auth:bootRun --args='--spring.profiles.active=local'   # northline-auth :9000 (migrates + seeds the DB too; SMS codes are logged)
+./gradlew :api:bootRun  --args='--spring.profiles.active=local'   # api :8080
+./gradlew :bff:bootRun  --args='--spring.profiles.active=local'   # studio-bff :8082 (in-memory session, no Redis)
+cd ../web && pnpm --filter @northline/studio dev                   # http://localhost:3100 (no NL_DEV_USER → goes through the BFF)
+```
+Open http://localhost:3100 → Sign in. Seeded credentials (`db/seed-dev/V101__auth.sql`, local only):
+
+| persona | email / mobile | second factor |
+|---|---|---|
+| Ravi Sandhu (owner, all three businesses) | `ravi.sandhu@example.com` · `+1 403 555 0148` | authenticator key `NORTHLINERAVIDEVTOTPSECRET234567` (add it to any authenticator app, or `oathtool --totp -b <key>`), or backup codes `ravis-00001` … `ravis-00010` (single use) |
+| Jas Gill (technician) | `jas.gill@example.com` · `+1 403 555 0172` | authenticator key `NORTHLINEJASDEVTOTPSECRET2345672` |
+| Priya Sandhu (bookkeeper) | `priya.sandhu@example.com` · `+1 403 555 0191` | backup codes `priya-00001` … `priya-00010` |
+
+"Create account" works end to end: the 6-digit code is printed in the auth server's log (`Verification code for …`),
+passkeys work in any browser on `localhost` (WebAuthn RP id `localhost`). Google/Apple need real client ids
+(`GOOGLE_CLIENT_ID`, `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET`). The Studio reaches northline-auth at
+`VITE_NL_AUTH_ORIGIN` (default `http://localhost:9000`). How the hand-off works: `docs/DECISIONS.md` § Auth workstream.
+
 ## v2 layout
 - `server/` — Gradle multi-project (wrapper 9.8.0): api, auth, bff, worker (Java 25, Spring Boot 4.1.1, Spring Modulith 2.1)
 - `web/` — pnpm monorepo: packages/tokens, packages/ui (Storybook), apps/consumer (TanStack Start)
