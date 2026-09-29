@@ -72,7 +72,7 @@ class EarningsSummaryQueries implements EarningsSummary {
     public List<OpenCase> openCases(String merchantId) {
         return jdbc.sql("""
                         select 'dispute' as kind, d.id, e.ref_type, e.ref_id, d.opened_by as customer_id,
-                               null::text as reason, 0 as ord
+                               d.subject as reason, 0 as ord
                           from payments.disputes d join payments.escrows e on e.id = d.ref_id
                          where e.merchant_id = :merchantId and d.state in ('open', 'seller_replied', 'agent', 'appealed')
                         union all

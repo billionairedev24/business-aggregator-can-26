@@ -1,5 +1,6 @@
 package ca.northline.payments.api;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
@@ -29,4 +30,14 @@ public interface EarningsQuery {
     List<WeekNet> weeklyNet(String merchantId, int weeks);
 
     MonthNet monthNet(String merchantId);
+
+    /**
+     * What lands with the next payout: released balance plus escrow releasing before it ("$2,140.60 releasing
+     * Friday").
+     *
+     * @param at the next scheduled payout, null when payouts are manual or paused
+     */
+    record Releasing(long amountCents, @Nullable Instant at) {}
+
+    Releasing releasing(String merchantId);
 }

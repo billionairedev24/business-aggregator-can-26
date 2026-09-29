@@ -6,6 +6,7 @@ import ca.northline.identity.api.PersonDirectory;
 import ca.northline.identity.api.PersonDirectory.Person;
 import ca.northline.merchants.api.ComplianceStatus;
 import ca.northline.orders.api.OrderInsights;
+import ca.northline.payments.api.EarningsQuery;
 import ca.northline.payments.api.EarningsSummary;
 import ca.northline.studio.application.Dashboard.ComplianceItem;
 import ca.northline.studio.application.Dashboard.Counts;
@@ -17,6 +18,9 @@ import ca.northline.studio.application.Dashboard.Reputation;
 import ca.northline.studio.application.Dashboard.RunOrder;
 import ca.northline.studio.application.Dashboard.TodayJob;
 import ca.northline.studio.application.Dashboard.Week;
+import ca.northline.trust.api.QualityQuery;
+import ca.northline.trust.api.RatingQuery;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.Duration;
@@ -25,6 +29,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.TemporalAdjusters;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -50,7 +55,9 @@ class DashboardService implements ViewDashboard {
     private final BookingInsights bookings;
     private final OrderInsights orders;
     private final EarningsSummary earnings;
-    private final ca.northline.trust.api.Reputation reputation;
+    private final EarningsQuery earningsQuery;
+    private final RatingQuery ratings;
+    private final QualityQuery quality;
     private final ComplianceStatus compliance;
     private final CatalogueFacts catalogue;
     private final PersonDirectory people;
@@ -64,7 +71,6 @@ class DashboardService implements ViewDashboard {
         var dayEnd = start(today.plusDays(1));
         var monthStart = start(today.withDayOfMonth(1));
         var nextMonth = start(today.withDayOfMonth(1).plusMonths(1));
-        var lastMonth = start(today.withDayOfMonth(1).minusMonths(1));
 
         var jobs = bookings.jobs(merchantId, dayStart, dayEnd);
         var packing = orders.packing(merchantId, now);
@@ -93,30 +99,28 @@ class DashboardService implements ViewDashboard {
                 volume.orders(),
                 volume.items());
 
-        var weekStarts = weekStarts(today);
-        var release = earnings.nextRelease(merchantId, now);
+        var month = earningsQuery.monthNet(merchantId);
+        var releasing = earningsQuery.releasing(merchantId);
         var money = new Earnings(
-                earnings.netBetween(merchantId, monthStart, nextMonth),
-                earnings.netBetween(merchantId, lastMonth, monthStart),
-                release.map(EarningsSummary.Release::amountCents).orElse(null),
-                release.map(EarningsSummary.Release::arrivesAt).orElse(null),
-                earnings
-                        .weeklyNet(
-                                merchantId,
-                                weekStarts.stream().map(DashboardService::start).toList())
-                        .stream()
-                        .map(w -> new Week(w.start().atZone(ZONE).toLocalDate(), w.servicesCents(), w.partsCents()))
+                month.netCents(),
+                month.previousCents(),
+                releasing.amountCents() > 0 ? releasing.amountCents() : null,
+                releasing.at(),
+                earningsQuery.weeklyNet(merchantId, EARNING_WEEKS).stream()
+                        .map(w -> new Week(w.weekStart(), w.servicesCents() + w.foodCents(), w.partsCents()))
                         .toList());
 
-        var rating = reputation.rating(merchantId);
-        var quality = reputation.latestQuality(merchantId);
+        var rating = ratings.summary(merchantId);
+        var score = quality.latest(merchantId);
+        var components = new LinkedHashMap<String, BigDecimal>();
+        score.ifPresent(q -> q.components()
+                .forEach(c -> components.put(
+                        "disputes".equals(c.key()) ? "dispute_rate" : c.key(), BigDecimal.valueOf(c.value()))));
         var rep = new Reputation(
-                rating.map(ca.northline.trust.api.Reputation.Rating::average).orElse(null),
-                rating.map(ca.northline.trust.api.Reputation.Rating::count).orElse(0L),
-                quality.map(ca.northline.trust.api.Reputation.QualityScore::score)
-                        .orElse(null),
-                quality.map(ca.northline.trust.api.Reputation.QualityScore::components)
-                        .orElse(Map.of()),
+                rating.count() == 0 ? null : BigDecimal.valueOf(rating.average()),
+                rating.count(),
+                score.map(QualityQuery.QualityScore::score).orElse(null),
+                components,
                 earnings.refundRateBps(merchantId, start(today.minusDays(90)), dayEnd)
                         .orElse(null));
 

@@ -51,6 +51,12 @@ class EarningsService implements ViewEarnings, EarningsQuery {
     }
 
     @Override
+    public Releasing releasing(String merchantId) {
+        var o = overview(merchantId);
+        return new Releasing(o.headlineCents(), o.nextPayoutAt());
+    }
+
+    @Override
     public List<EarningsReadModel.LedgerLine> ledger(String merchantId, int limit) {
         return earnings.ledger(merchantId, Math.clamp(limit, 1, 1000));
     }
