@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="theme/northline.css">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>body{margin:0;text-wrap:pretty}a{color:var(--color-accent)}a:hover{color:var(--color-accent-700)}code{font-family:ui-monospace,Menlo,monospace;font-size:.88em;background:var(--color-neutral-200);padding:1px 5px;border-radius:5px}</style>
+</helmet>
+<div style="min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body)">
+<nav class="nav" style="padding:14px clamp(20px,4vw,48px)"><span class="nav-brand">Northline</span><span style="font-size:14px;color:var(--color-neutral-700)">Architecture · v2</span><div style="flex:1"></div><sc-for list="{{ toc }}" as="x" hint-placeholder-count="7"><a href="#{{ x.id }}" style="font-size:14px;text-decoration:none;color:var(--color-neutral-800)">{{ x.label }}</a></sc-for></nav>
+<main style="max-width:1200px;margin:0 auto;padding:40px clamp(20px,4vw,48px) 96px;display:flex;flex-direction:column;gap:64px">
+
+<header style="display:flex;flex-direction:column;gap:14px;max-width:820px">
+  <span class="tag tag-accent" style="align-self:flex-start">Java 25 · Spring Boot 4.1.1 · modular monolith</span>
+  <h1 style="font-size:clamp(36px,5vw,56px);margin:0;letter-spacing:-.02em">One Java platform, event-driven inside and out.</h1>
+  <p style="font-size:17px;line-height:1.6;color:var(--color-neutral-800);margin:0">A Spring Modulith application split into bounded modules, fronted by a Spring Authorization Server for OAuth 2.1 / OIDC. State lives in PostgreSQL; search in Elasticsearch; hot state, sessions and live tracking in Redis. Every cross-module change is a domain event persisted in the same transaction and fanned out through Kafka. All data resides in Canada (AWS ca-central-1).</p>
+</header>
+
+<section id="stack" style="display:flex;flex-direction:column;gap:18px">
+  <h2 style="margin:0">Stack</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px">
+    <sc-for list="{{ stack }}" as="s" hint-placeholder-count="9">
+    <div class="card" style="gap:10px">
+      <div style="display:flex;align-items:center;gap:10px"><span style="width:40px;height:40px;border-radius:var(--radius-md);background:var(--color-accent-100);display:grid;place-items:center;flex:none"><i class="ph-duotone {{ s.icon }}" style="font-size:22px;color:var(--color-accent)"></i></span><span class="card-title" style="font-size:18px">{{ s.layer }}</span></div>
+      <div style="font-weight:600;font-size:14px">{{ s.tech }}</div>
+      <p class="card-body">{{ s.why }}</p>
+    </div>
+    </sc-for>
+  </div>
+</section>
+
+<section id="topology" style="display:flex;flex-direction:column;gap:18px">
+  <h2 style="margin:0">Runtime topology</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;align-items:stretch">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <h6 style="margin:0;color:var(--color-neutral-700)">Clients</h6>
+      <sc-for list="{{ clients }}" as="c" hint-placeholder-count="5"><div style="background:var(--color-surface);border-radius:var(--radius-md);padding:12px 14px;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:2px"><span style="font-weight:600;font-size:14px">{{ c.n }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ c.d }}</span></div></sc-for>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <h6 style="margin:0;color:var(--color-neutral-700)">Edge</h6>
+      <sc-for list="{{ edge }}" as="c" hint-placeholder-count="3"><div style="background:var(--color-accent-100);border-radius:var(--radius-md);padding:12px 14px;display:flex;flex-direction:column;gap:2px;color:var(--color-accent-900)"><span style="font-weight:600;font-size:14px">{{ c.n }}</span><span style="font-size:12px">{{ c.d }}</span></div></sc-for>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <h6 style="margin:0;color:var(--color-neutral-700)">Deployables</h6>
+      <sc-for list="{{ apps }}" as="c" hint-placeholder-count="4"><div style="background:var(--color-accent);color:var(--color-on-accent);border-radius:var(--radius-md);padding:12px 14px;display:flex;flex-direction:column;gap:2px"><span style="font-weight:600;font-size:14px">{{ c.n }}</span><span style="font-size:12px;opacity:.85">{{ c.d }}</span></div></sc-for>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <h6 style="margin:0;color:var(--color-neutral-700)">Data &amp; messaging</h6>
+      <sc-for list="{{ data }}" as="c" hint-placeholder-count="5"><div style="background:var(--color-surface-2);border-radius:var(--radius-md);padding:12px 14px;display:flex;flex-direction:column;gap:2px"><span style="font-weight:600;font-size:14px">{{ c.n }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ c.d }}</span></div></sc-for>
+    </div>
+  </div>
+</section>
+
+<section id="modules" style="display:flex;flex-direction:column;gap:18px">
+  <div style="display:flex;flex-direction:column;gap:6px;max-width:760px"><h2 style="margin:0">Modules</h2><p style="margin:0;color:var(--color-neutral-800)">One Java package per module under <code>ca.northline</code>, one Postgres schema each. Modules call each other only through their published API package or by events; <code>ApplicationModules.verify()</code> fails the build on any other dependency.</p></div>
+  <table class="table">
+    <thead><tr><th>Module</th><th>Owns</th><th>Publishes</th><th>Listens to</th></tr></thead>
+    <tbody><sc-for list="{{ modules }}" as="m" hint-placeholder-count="12"><tr><td style="font-weight:600;white-space:nowrap">{{ m.n }}</td><td>{{ m.owns }}</td><td style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--color-accent-800)">{{ m.pub }}</td><td style="font-size:13px;color:var(--color-neutral-700)">{{ m.sub }}</td></tr></sc-for></tbody>
+  </table>
+</section>
+
+<section id="events" style="display:flex;flex-direction:column;gap:18px">
+  <div style="display:flex;flex-direction:column;gap:6px;max-width:760px"><h2 style="margin:0">Event management</h2><p style="margin:0;color:var(--color-neutral-800)">Events are facts, named <code>&lt;aggregate&gt;.&lt;past_tense&gt;</code>, immutable, versioned, and never lost.</p></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+    <sc-for list="{{ pipeline }}" as="p" hint-placeholder-count="6"><div style="background:var(--color-surface);border-radius:var(--radius-lg);padding:16px;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:8px"><span style="width:28px;height:28px;border-radius:999px;background:var(--color-accent);color:var(--color-on-accent);display:grid;place-items:center;font-size:13px;font-weight:700">{{ p.n }}</span><span style="font-weight:600">{{ p.t }}</span><span style="font-size:13px;line-height:1.5;color:var(--color-neutral-800)">{{ p.d }}</span></div></sc-for>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px">
+    <div class="card"><span class="card-kicker">Envelope</span><pre style="margin:0;font-size:12px;line-height:1.55;white-space:pre-wrap;font-family:ui-monospace,Menlo,monospace">{{ envelope }}</pre></div>
+    <div class="card"><span class="card-kicker">Rules</span><sc-for list="{{ eventRules }}" as="r" hint-placeholder-count="6"><div style="display:flex;gap:10px;font-size:14px;line-height:1.5"><i class="ph-duotone ph-check-circle" style="font-size:18px;color:var(--color-accent);flex:none;margin-top:2px"></i><span>{{ r }}</span></div></sc-for></div>
+  </div>
+</section>
+
+<section id="auth" style="display:flex;flex-direction:column;gap:18px">
+  <div style="display:flex;flex-direction:column;gap:6px;max-width:760px"><h2 style="margin:0">Identity — OAuth 2.1 / OIDC</h2><p style="margin:0;color:var(--color-neutral-800)"><code>northline-auth</code> is a Spring Authorization Server (in Spring Security 7) with its own schema. It is the only place passwords, passkeys and second factors are handled. Browsers never hold tokens: each web app talks to a BFF that keeps tokens server-side in a Redis session.</p></div>
+  <table class="table">
+    <thead><tr><th>Client</th><th>Grant</th><th>Token handling</th><th>Scopes / audience</th></tr></thead>
+    <tbody><sc-for list="{{ oauthClients }}" as="c" hint-placeholder-count="6"><tr><td style="font-weight:600">{{ c.n }}</td><td>{{ c.g }}</td><td style="font-size:13px">{{ c.t }}</td><td style="font-family:ui-monospace,Menlo,monospace;font-size:12px">{{ c.s }}</td></tr></sc-for></tbody>
+  </table>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px">
+    <sc-for list="{{ authNotes }}" as="a" hint-placeholder-count="4"><div class="card"><span class="card-title" style="font-size:17px">{{ a.t }}</span><p class="card-body">{{ a.d }}</p></div></sc-for>
+  </div>
+</section>
+
+<section id="data" style="display:flex;flex-direction:column;gap:18px">
+  <h2 style="margin:0">Data stores — who owns what</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px">
+    <sc-for list="{{ stores }}" as="s" hint-placeholder-count="3"><div class="card" style="gap:10px"><div style="display:flex;align-items:center;gap:10px"><i class="ph-duotone {{ s.icon }}" style="font-size:24px;color:var(--color-accent)"></i><span class="card-title">{{ s.n }}</span></div><sc-for list="{{ s.items }}" as="i" hint-placeholder-count="5"><div style="font-size:14px;line-height:1.5;display:flex;gap:8px"><span style="color:var(--color-accent);font-weight:700">·</span><span>{{ i }}</span></div></sc-for></div></sc-for>
+  </div>
+</section>
+
+<section id="frontend" style="display:flex;flex-direction:column;gap:18px">
+  <div style="display:flex;flex-direction:column;gap:6px;max-width:760px"><h2 style="margin:0">Front end</h2><p style="margin:0;color:var(--color-neutral-800)">A pnpm monorepo. Every component ships with a Storybook story; every colour, radius and font comes from <code>packages/tokens</code>. Change <code>--color-accent</code> once and every app, story and email re-themes.</p></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">
+    <sc-for list="{{ fe }}" as="f" hint-placeholder-count="8"><div style="background:var(--color-surface);border-radius:var(--radius-md);padding:14px;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:4px"><span style="font-weight:600;font-size:14px">{{ f.n }}</span><span style="font-size:13px;color:var(--color-neutral-700);line-height:1.45">{{ f.d }}</span></div></sc-for>
+  </div>
+</section>
+
+<section id="code" style="display:flex;flex-direction:column;gap:18px">
+  <div style="display:flex;flex-direction:column;gap:6px;max-width:760px"><h2 style="margin:0">Code standards — mandatory</h2><p style="margin:0;color:var(--color-neutral-800)">Every Java and Go app follows these rules. Code review rejects any PR that breaks them.</p></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+    <sc-for list="{{ code }}" as="c" hint-placeholder-count="8"><div style="background:var(--color-surface);border-radius:var(--radius-md);padding:14px;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:8px"><i class="ph-duotone {{ c.icon }}" style="font-size:20px;color:var(--color-accent)"></i><span style="font-weight:600;font-size:14px">{{ c.n }}</span></div><span style="font-size:13px;color:var(--color-neutral-700);line-height:1.5">{{ c.d }}</span></div></sc-for>
+  </div>
+</section>
+
+<section id="flows" style="display:flex;flex-direction:column;gap:18px">
+  <h2 style="margin:0">Key flows</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px">
+    <sc-for list="{{ flows }}" as="f" hint-placeholder-count="4"><div class="card" style="gap:10px"><span class="card-title">{{ f.t }}</span><sc-for list="{{ f.steps }}" as="st" hint-placeholder-count="5"><div style="display:flex;gap:10px;font-size:13px;line-height:1.5"><span style="font-family:ui-monospace,Menlo,monospace;color:var(--color-accent-700);flex:none;width:18px">{{ st.i }}</span><span>{{ st.s }}</span></div></sc-for></div></sc-for>
+  </div>
+</section>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const o = (keys, rows) => rows.map(r => Object.fromEntries(keys.map((k, i) => [k, r[i]])));
+    const numbered = steps => steps.map((s, i) => ({ i: String(i + 1).padStart(2, '0'), s }));
+    return {
+      code: o(['icon', 'n', 'd'], [
+        ['ph-coffee', 'Java 25 — use the modern language', 'Target Java 25 (LTS) and use its features: records for DTOs, commands, events and value objects; sealed interfaces with pattern-matching switch for closed hierarchies; record patterns; unnamed variables (_); var for locals; text blocks; enhanced instanceof; SequencedCollection; Stream.toList() and gatherers; scoped values instead of ThreadLocal; virtual threads (never hand-rolled pools); flexible constructor bodies; module import declarations. No pre-Java-17 idioms.'],
+        ['ph-lock-key', 'Encapsulation', 'Fields are private and final by default. Aggregates guard their own invariants and expose behaviour methods (order.cancel(reason)), not setters. No public mutable state; return unmodifiable views or copies. Each module exposes only its api package — internal packages are package-private and Modulith verifies this in tests.'],
+        ['ph-stack', 'Abstraction', 'Layers: web adapter → application service → domain → port. Controllers never touch repositories; domain code never imports Spring, JPA or Kafka types. Each concept is modelled once (Money, Address, TimeSlot as value objects) and reused.'],
+        ['ph-plugs', 'Interfaces', 'Program to interfaces at every boundary: inbound use cases (PlaceOrder) and outbound ports (PaymentGateway, Clock, Notifier) are interfaces; adapters implement them. Inject by constructor only. Keep interfaces small and single-purpose — no god interfaces, and no interface created for a class that will only ever have one implementation and no test double.'],
+        ['ph-magic-wand', 'Lombok — no boilerplate', 'Use Lombok on classes that cannot be records: @RequiredArgsConstructor for injection, @Getter, @Builder / @With for immutable construction, @Value for immutables, @Slf4j for logging, @EqualsAndHashCode(onlyExplicitlyIncluded = true) on JPA entities. Never @Data on entities; no @Setter on aggregates. lombok.config: addLombokGeneratedAnnotation = true, stopBubbling = true.'],
+        ['ph-broom', 'No boilerplate', 'Never hand-write getters, setters, constructors, equals/hashCode/toString, builders or null-check chains. Mapping via MapStruct; validation via Bean Validation annotations; HTTP clients via @HttpExchange interfaces; config via @ConfigurationProperties records. Spring Data derived queries before hand-written SQL.'],
+        ['ph-file-code', 'Go 1.26 — for any Go app', 'Any Go service or tool targets Go 1.26 (go 1.26 in go.mod, toolchain pinned). Use generics, range-over-func iterators, the slices / maps / iter packages, log/slog, errors.Join and %w wrapping, context everywhere, net/http ServeMux method + path patterns. Small consumer-side interfaces (accept interfaces, return structs); unexported fields with constructors; no global state; go vet + staticcheck + golangci-lint clean.'],
+        ['ph-check-circle', 'Enforced in CI', 'Checkstyle + Error Prone + NullAway (JSpecify), ArchUnit rules for layering and interface boundaries, Spring Modulith verify test, Spotless formatting. Go: golangci-lint with gofumpt. A build that fails any rule does not merge.']
+      ]),
+      toc: o(['id', 'label'], [['stack', 'Stack'], ['topology', 'Topology'], ['modules', 'Modules'], ['events', 'Events'], ['auth', 'Identity'], ['data', 'Data'], ['frontend', 'Front end'], ['code', 'Code standards'], ['flows', 'Flows']]),
+      stack: o(['icon', 'layer', 'tech', 'why'], [
+        ['ph-coffee', 'Runtime', 'Java 25 (LTS) · virtual threads', 'Virtual threads on by default (spring.threads.virtual.enabled) — blocking JDBC code scales without reactive plumbing.'],
+        ['ph-leaf', 'Framework', 'Spring Boot 4.1.1 · Spring Framework 7', 'Jakarta EE 11, JSpecify null-safety, built-in API versioning and HTTP interface clients.'],
+        ['ph-squares-four', 'Modularity', 'Spring Modulith 2', 'Module boundaries verified in tests, event publication registry, generated module docs.'],
+        ['ph-shield-check', 'Identity', 'Spring Authorization Server (Spring Security 7)', 'OAuth 2.1 + OIDC provider we own: PKCE, passkeys, TOTP MFA, Google/Apple federation.'],
+        ['ph-database', 'System of record', 'PostgreSQL 17 + PostGIS · Flyway', 'One schema per module, RLS by tenant, geospatial zones and distance queries.'],
+        ['ph-magnifying-glass', 'Search', 'Elasticsearch 9 · Spring Data Elasticsearch', 'Unified search across services, shops, products and dishes; completion suggester; fr/en analysers.'],
+        ['ph-lightning', 'Hot state', 'Redis 8', 'BFF sessions, cache, rate limits, idempotency keys, courier location pub/sub, slot holds.'],
+        ['ph-arrows-split', 'Events', 'Apache Kafka · Modulith externalization', 'Transactional outbox in Postgres, published to Kafka topics per aggregate for workers and partners.'],
+        ['ph-chart-line-up', 'Observability', 'Micrometer · OpenTelemetry · Grafana', 'Traces carry the event id end to end; SLOs on checkout, dispatch and search latency.']
+      ]),
+      clients: o(['n', 'd'], [['Consumer web', 'TanStack Start · SSR'], ['Business studio', 'Provider / Seller / Kitchen'], ['Platform console', 'Ops, trust & safety, finance'], ['Mobile apps', 'Consumer + courier, native'], ['Partner API', 'Client credentials, webhooks']]),
+      edge: o(['n', 'd'], [['CloudFront + WAF', 'TLS, bot rules, geo-fencing'], ['BFF gateway', 'Spring Cloud Gateway · token relay · Redis session'], ['northline-auth', 'Spring Authorization Server · /oauth2 · /.well-known']]),
+      apps: o(['n', 'd'], [['northline-api', 'Modulith · REST /api/v1 · OpenAPI 3.1'], ['northline-worker', 'Kafka consumers · search indexer · notifications · payouts'], ['northline-realtime', 'SSE / WebSocket · order + courier tracking'], ['northline-scheduler', 'Escrow release, quote expiry, reminders (ShedLock)']]),
+      data: o(['n', 'd'], [['PostgreSQL 17', 'RDS Multi-AZ · ca-central-1'], ['Elasticsearch 9', 'Read model, rebuilt from events'], ['Redis 8', 'ElastiCache · no durable truth'], ['Kafka', 'MSK · 7-day retention, compacted snapshots'], ['S3', 'Documents, photos, attachments (KMS)']]),
+      modules: o(['n', 'owns', 'pub', 'sub'], [
+        ['identity', 'Users, profiles, consents, households', 'user.registered · user.deleted', 'auth.* (from northline-auth)'],
+        ['region', 'Provinces, markets, zones, tax rules', 'market.opened', '—'],
+        ['merchants', 'Businesses, structure, legal details, principals, verification, storefront', 'merchant.submitted · merchant.verified · storefront.published', 'document.scanned'],
+        ['catalogue', 'Services, products, variants, inventory', 'listing.published · stock.changed', 'merchant.verified'],
+        ['food', 'Menus, modifiers, combos, prep times', 'menu.published · kitchen.paused', 'merchant.verified'],
+        ['availability', 'Calendars, slots, holds', 'slot.held · slot.released', 'booking.cancelled'],
+        ['booking', 'Quote requests, itemized quotes, bookings', 'quote.sent · quote.accepted · booking.completed', 'payment.authorized'],
+        ['orders', 'Carts, orders, pooled runs', 'order.placed · order.delivered', 'payment.authorized · delivery.completed'],
+        ['fulfilment', 'Couriers, runs, dispatch, proof of delivery', 'delivery.assigned · delivery.completed', 'order.placed'],
+        ['payments', 'Stripe Connect, escrow holds, refunds, payouts', 'payment.authorized · escrow.released · refund.issued', 'booking.completed · order.delivered · dispute.decided'],
+        ['trust', 'Reviews, disputes, loyalty, sanctions', 'review.posted · dispute.decided', 'booking.completed · order.delivered'],
+        ['messaging', 'Threads, notifications, email/SMS/push', 'message.sent', '* (notification rules)'],
+        ['search', 'Index projections (no tables of its own)', '—', 'listing.* · menu.* · storefront.* · merchant.*']
+      ]),
+      pipeline: o(['n', 't', 'd'], [
+        ['1', 'Publish in-transaction', 'Aggregate method records a domain event; ApplicationEventPublisher fires on commit.'],
+        ['2', 'Registry = outbox', 'Modulith JDBC event publication registry writes the event row in the same transaction.'],
+        ['3', 'In-process listeners', '@ApplicationModuleListener runs async, in its own transaction; completion marked in registry.'],
+        ['4', 'Externalize', '@Externalized events go to Kafka topic <aggregate>, key = aggregate id (ordering per aggregate).'],
+        ['5', 'Consume idempotently', 'Workers dedupe on event id (processed_events table), retry with backoff, then DLQ topic.'],
+        ['6', 'Replay & audit', 'Incomplete publications resubmitted on restart; compacted topics let the search index rebuild.']
+      ]),
+      envelope: '{\n  "id": "01J9Z3…",            // ULID, dedupe key\n  "type": "booking.quote_accepted",\n  "version": 2,\n  "occurredAt": "2026-09-27T21:04:11Z",\n  "aggregate": { "type": "quote", "id": "01J9Y…" },\n  "tenant": "merchant:01J8…",\n  "actor": { "type": "user", "id": "01J7…" },\n  "traceId": "4bf92f3577b34da6…",\n  "data": { … }                 // JSON Schema in /events/schemas\n}',
+      eventRules: ['Schemas live in api/events/schemas/*.json; CI rejects breaking changes without a version bump.', 'Consumers must tolerate unknown fields and duplicate delivery.', 'No PII in event payloads beyond ids — consumers look up what they need.', 'Money events carry cents + currency and the Stripe object id.', 'Cross-module calls that change state are events, never synchronous writes.', 'Partner webhooks are a Kafka consumer, signed with HMAC and retried for 72 h.'],
+      oauthClients: o(['n', 'g', 't', 's'], [
+        ['consumer-bff', 'Authorization code + PKCE', 'Confidential; tokens in Redis session, HttpOnly SameSite=Lax cookie to browser', 'openid profile orders bookings'],
+        ['studio-bff', 'Authorization code + PKCE', 'Confidential; step-up MFA (acr=mfa) required', 'openid merchant:{id} catalogue payouts'],
+        ['console-bff', 'Authorization code + PKCE', 'Confidential; staff IdP federation, MFA mandatory, 8 h max', 'openid console roles'],
+        ['mobile-consumer', 'Authorization code + PKCE (public)', 'Refresh token rotation, DPoP-bound, secure enclave', 'openid profile orders bookings offline_access'],
+        ['courier-app', 'Authorization code + PKCE (public)', 'Device-bound, short refresh', 'openid courier deliveries'],
+        ['partner:*', 'Client credentials', 'private_key_jwt client auth, 15 min tokens', 'api.read api.write (per merchant)']
+      ]),
+      authNotes: o(['t', 'd'], [
+        ['Sign-in methods', 'Passkeys first (WebAuthn), email magic link, Google and Apple via OIDC federation. SMS only as a backup factor.'],
+        ['Second factor', 'Business and staff accounts require passkey or TOTP; step-up enforced per route with acr claims.'],
+        ['Tokens', 'JWT access tokens 10 min, signed ES256, keys rotated monthly via JWKS. Refresh tokens opaque, rotating, revocable.'],
+        ['Resource servers', 'northline-api validates JWTs, maps roles + merchant memberships to Spring Security authorities, sets Postgres RLS tenant.']
+      ]),
+      stores: [
+        { icon: 'ph-database', n: 'PostgreSQL', items: ['Every write and every source of truth', 'Event publication registry (outbox) + processed_events', 'Authorization server clients, consents, authorizations', 'PostGIS zones, addresses, courier geofences', 'Migrations V001–V017 via Flyway'] },
+        { icon: 'ph-magnifying-glass', n: 'Elasticsearch', items: ['Index per locale: listings_en, listings_fr', 'Documents: service, product, dish, merchant', 'Geo-distance sort, availability-tonight boost', 'Completion suggester for the search bar', 'Rebuildable from Kafka; never written by the API directly'] },
+        { icon: 'ph-lightning', n: 'Redis', items: ['BFF sessions (Spring Session)', 'Cache: menus, storefronts, tax tables (TTL + event eviction)', 'Rate limits & idempotency keys (24 h)', 'Slot holds with 10 min TTL', 'Pub/sub channel per order for live tracking'] }
+      ],
+      fe: o(['n', 'd'], [
+        ['TanStack Start', 'SSR + server functions for the consumer site; streaming for search and storefronts.'],
+        ['TanStack Router', 'File-based, type-safe routes and search params (scope, query, filters).'],
+        ['TanStack Query', 'All server state; cache keys per resource; invalidated by SSE events.'],
+        ['TanStack Form', 'Onboarding, checkout, quotes; zod validators shared with spec messages.'],
+        ['TanStack Table', 'Studio orders, console queues, payouts — sorting, filtering, column pinning.'],
+        ['TanStack Virtual', 'Long menus, product grids, KDS tickets and audit logs.'],
+        ['Storybook 9', 'Every component and screen state; a11y + interaction tests; Chromatic visual diffs.'],
+        ['@northline/tokens', 'tokens.json → CSS variables + TS constants. The only place colours live.']
+      ]),
+      flows: [
+        { t: 'Sign in (web)', steps: numbered(['Browser hits BFF /login → redirect to northline-auth /oauth2/authorize (PKCE).', 'User signs in with passkey or Google/Apple; MFA if business role.', 'BFF exchanges code, stores tokens in Redis session, sets HttpOnly cookie.', 'Account menu shows the signed-in user; “Not you?” ends the session and re-prompts.', 'Sign out revokes refresh token and clears the session.']) },
+        { t: 'Itemized quote → booking', steps: numbered(['Consumer posts a quote request; booking publishes quote.requested.', 'Provider sends quote with lines; quote.sent → messaging notifies consumer.', 'Consumer accepts; payments authorizes deposit (manual capture); payment.authorized.', 'booking listener confirms the slot; availability releases the hold.', 'booking.completed → scheduler releases escrow after 48 h unless disputed.']) },
+        { t: 'Shop order on a pooled run', steps: numbered(['Checkout creates order with idempotency key; payment authorized.', 'order.placed → fulfilment adds it to the next run for the zone.', 'Courier location streams to Redis pub/sub → realtime → SSE to the browser.', 'delivery.completed → order.delivered → escrow release in 7 days.']) },
+        { t: 'Search', steps: numbered(['listing.published / menu.published land on Kafka.', 'Search worker builds a projection and upserts into Elasticsearch.', 'Search bar calls /api/v1/search?scope=all|services|shop|food with the detected location.', 'Results mix types, sorted by relevance, distance and availability tonight.']) }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

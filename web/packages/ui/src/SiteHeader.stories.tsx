@@ -1,0 +1,11 @@
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { fn } from 'storybook/test';
+import { SiteHeader } from './SiteHeader';
+const base = { geo: { status: 'detected' as const, label: 'Beltline, Calgary' }, onLocation: fn(), showSearch: false, query: '', onQuery: fn(), onSearch: fn(), cartCount: 3, onNavigate: fn(), onSignIn: fn(), onCreateAccount: fn(), onNotYou: fn(), onSignOut: fn() };
+const meta = { title: 'Header/SiteHeader', component: SiteHeader, args: base } satisfies Meta<typeof SiteHeader>;
+export default meta;
+type S = StoryObj<typeof meta>;
+export const SignedOut: S = {};
+export const SignedIn: S = { args: { user: { name: 'Amara Osei', email: 'amara@example.ca', initials: 'AO' }, activeOrders: 3 } };
+export const OffHomeWithSearch: S = { args: { ...SignedIn.args, showSearch: true } };
+export const Locating: S = { args: { geo: { status: 'locating' } } };

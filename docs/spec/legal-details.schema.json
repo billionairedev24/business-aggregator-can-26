@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://northline.ca/schemas/legal-details.json",
+  "title": "merchants.merchants.legal_details — validated by merchants.structure",
+  "description": "Mirrors the Business step of onboarding (02 Provider Studio.dc.html, bsDefs). Server must validate legal_details against the branch matching `structure` before status leaves 'applicant'. Principals live in merchants.merchant_principals, not here.",
+  "oneOf": [
+    { "$ref": "#/$defs/sole" }, { "$ref": "#/$defs/partnership" }, { "$ref": "#/$defs/corp_ab" },
+    { "$ref": "#/$defs/corp_fed" }, { "$ref": "#/$defs/corp_ex" }, { "$ref": "#/$defs/coop" }, { "$ref": "#/$defs/nonprofit" }
+  ],
+  "$defs": {
+    "doc": { "type": "string", "description": "media id of an uploaded document", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$" },
+    "address": { "type": "string", "minLength": 5, "maxLength": 200 },
+    "sole": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "structure": { "const": "sole" },
+        "owner_legal_name": { "type": "string", "minLength": 2 },
+        "trade_name": { "type": "string", "maxLength": 120 },
+        "trade_name_registration": { "type": "string", "description": "Alberta Registries; required if trade_name present" },
+        "sin_collected_by_stripe": { "const": true, "description": "SIN never stored by Northline" },
+        "address": { "$ref": "#/$defs/address" }
+      },
+      "required": ["structure", "owner_legal_name", "sin_collected_by_stripe", "address"],
+      "if": { "required": ["trade_name"] }, "then": { "required": ["trade_name_registration"] },
+      "x-law": "Alberta Partnership Act · trade-name registration",
+      "x-principals": { "min": 1, "roles": ["owner"], "kyc_threshold_pct": 0 }
+    },
+    "partnership": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "structure": { "const": "partnership" },
+        "partnership_name": { "type": "string", "minLength": 2 },
+        "partnership_registration": { "type": "string" },
+        "partnership_agreement_doc": { "$ref": "#/$defs/doc" },
+        "business_number": { "type": "string", "pattern": "^\\d{9}$" }
+      },
+      "required": ["structure", "partnership_name", "partnership_registration", "business_number"],
+      "x-law": "Alberta Partnership Act",
+      "x-principals": { "min": 2, "roles": ["partner_signing", "partner"], "kyc_threshold_pct": 25, "requires_signing": true }
+    },
+    "corp_ab": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "structure": { "const": "corp_ab" },
+        "legal_corporate_name": { "type": "string", "minLength": 2 },
+        "alberta_corporate_access_number": { "type": "string", "pattern": "^\\d{10}$" },
+        "business_number": { "type": "string", "pattern": "^\\d{9}$" },
+        "incorporation_date": { "type": "string", "format": "date" },
+        "registered_office": { "$ref": "#/$defs/address" },
+        "certificate_of_incorporation_doc": { "$ref": "#/$defs/doc" },
+        "operating_name": { "type": "string", "maxLength": 120 }
+      },
+      "required": ["structure", "legal_corporate_name", "alberta_corporate_access_number", "business_number", "incorporation_date", "registered_office", "certificate_of_incorporation_doc"],
+      "x-law": "Alberta Business Corporations Act",
+      "x-principals": { "min": 1, "roles": ["director", "officer", "shareholder"], "kyc_threshold_pct": 25, "requires_director": true }
+    },
+    "corp_fed": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "structure": { "const": "corp_fed" },
+        "legal_corporate_name": { "type": "string", "minLength": 2 },
+        "corporations_canada_number": { "type": "string", "pattern": "^\\d{7}$" },
+        "alberta_extra_provincial_registration": { "type": "string" },
+        "business_number": { "type": "string", "pattern": "^\\d{9}$" },
+        "registered_office": { "$ref": "#/$defs/address" },
+        "certificate_of_incorporation_doc": { "$ref": "#/$defs/doc" },
+        "annual_return_current": { "type": "boolean" }
+      },
+      "required": ["structure", "legal_corporate_name", "corporations_canada_number", "alberta_extra_provincial_registration", "business_number", "registered_office", "certificate_of_incorporation_doc", "annual_return_current"],
+      "x-law": "Canada Business Corporations Act + Alberta extra-provincial registration",
+      "x-principals": { "min": 1, "roles": ["director", "officer", "shareholder"], "kyc_threshold_pct": 25, "requires_director": true }
+    },
+    "corp_ex": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "structure": { "const": "corp_ex" },
+        "legal_corporate_name": { "type": "string", "minLength": 2 },
+        "home_jurisdiction": { "enum": ["BC", "SK", "MB", "ON", "QC", "OTHER_CA", "US", "OTHER"] },
+        "home_registration_number": { "type": "string" },
+        "alberta_extra_provincial_registration": { "type": "string" },
+        "attorney_for_service": { "type": "object", "properties": { "name": { "type": "string" }, "alberta_address": { "$ref": "#/$defs/address" } }, "required": ["name", "alberta_address"] },
+        "business_number": { "type": "string", "pattern": "^\\d{9}$" },
+        "certificate_of_status_doc": { "$ref": "#/$defs/doc", "description": "issued within 90 days" }
+      },
+      "required": ["structure", "legal_corporate_name", "home_jurisdiction", "home_registration_number", "alberta_extra_provincial_registration", "attorney_for_service", "business_number", "certificate_of_status_doc"],
+      "x-law": "Alberta BCA Part 21",
+      "x-principals": { "min": 1, "roles": ["director", "officer", "shareholder"], "kyc_threshold_pct": 25, "requires_director": true }
+    },
+    "coop": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "structure": { "const": "coop" },
+        "registered_name": { "type": "string", "minLength": 2 },
+        "cooperative_registration": { "type": "string" },
+        "business_number": { "type": "string", "pattern": "^\\d{9}$" },
+        "board_resolution_doc": { "$ref": "#/$defs/doc" },
+        "registered_office": { "$ref": "#/$defs/address" }
+      },
+      "required": ["structure", "registered_name", "cooperative_registration", "business_number", "board_resolution_doc", "registered_office"],
+      "x-law": "Alberta Cooperatives Act",
+      "x-principals": { "min": 3, "roles": ["chair", "director", "secretary", "treasurer"], "kyc_threshold_pct": 0, "requires_chair": true }
+    },
+    "nonprofit": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "structure": { "const": "nonprofit" },
+        "registered_name": { "type": "string", "minLength": 2 },
+        "society_registration": { "type": "string" },
+        "cra_charity_number": { "type": "string", "pattern": "^\\d{9}RR\\d{4}$" },
+        "business_number": { "type": "string", "pattern": "^\\d{9}$" },
+        "board_resolution_doc": { "$ref": "#/$defs/doc" },
+        "registered_office": { "$ref": "#/$defs/address" }
+      },
+      "required": ["structure", "registered_name", "society_registration", "business_number", "board_resolution_doc", "registered_office"],
+      "x-law": "Alberta Societies Act · CRA charity rules",
+      "x-principals": { "min": 3, "roles": ["president", "director", "treasurer", "secretary"], "kyc_threshold_pct": 0, "requires_president": true }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { Tag } from './Tag';
+const meta = { title: 'Core/Tag', component: Tag, args: { children: 'Licensed' } } satisfies Meta<typeof Tag>;
+export default meta;
+type S = StoryObj<typeof meta>;
+export const Accent: S = {};
+export const Highlight: S = { args: { tone: 'highlight', children: '3× points' } };
+export const Neutral: S = { args: { tone: 'neutral', children: 'Pickup' } };
+export const Alert: S = { args: { tone: 'accent-2', children: 'Refund open' } };
+export const Outline: S = { args: { tone: 'outline', children: 'New' } };

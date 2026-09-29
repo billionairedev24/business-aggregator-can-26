@@ -1,0 +1,12 @@
+{
+  "name": "@northline/tokens",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    "./tokens.css": "./dist/tokens.css",
+    ".": "./dist/tokens.js"
+  },
+  "scripts": {
+    "build": "node build.mjs"
+  }
+}

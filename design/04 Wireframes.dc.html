@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="theme/northline.css">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>body{margin:0}a{color:var(--color-accent-700)}a:hover{color:var(--color-accent-800)}</style>
+</helmet>
+<div style="padding:40px 44px 60px;font-family:var(--font-body);color:var(--color-text)">
+<div style="display:flex;align-items:baseline;gap:20px;flex-wrap:wrap;margin-bottom:36px">
+  <h1 style="font-size:34px;margin:0">Northline · storyboards</h1>
+  <span style="font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-700)">Low-fi · three journeys · read left to right</span>
+  <a href="00 Direction.dc.html" style="font-size:14px;margin-left:auto">← Direction</a>
+</div>
+<sc-for list="{{ flows }}" as="f" hint-placeholder-count="3">
+  <section style="margin-bottom:56px">
+    <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:16px"><span style="font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-700)">{{ f.kicker }}</span><h2 style="font-size:24px;margin:0">{{ f.title }}</h2></div>
+    <div style="display:flex;gap:20px;align-items:flex-start">
+      <sc-for list="{{ f.frames }}" as="fr" hint-placeholder-count="6">
+        <div style="display:flex;align-items:flex-start;gap:20px">
+          <div style="width:{{ f.w }}px;flex:none">
+            <div style="{{ f.frameStyle }}">
+              <div style="font-size:12px;font-weight:600;padding:8px 10px 4px">{{ fr.title }}</div>
+              <sc-for list="{{ fr.blocks }}" as="b" hint-placeholder-count="4">
+                <div style="{{ b.style }}">{{ b.label }}</div>
+              </sc-for>
+            </div>
+            <div style="font-size:12px;color:var(--color-neutral-700);margin-top:8px;line-height:1.4"><strong style="color:var(--color-text)">{{ fr.n }}</strong> {{ fr.note }}</div>
+          </div>
+          <div style="font-size:20px;color:var(--color-neutral-400);padding-top:150px">{{ fr.arrow }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+</sc-for>
+<p style="font-size:13px;color:var(--color-neutral-700);max-width:70ch">Cyan blocks are moments where trust mechanics surface (escrow, verification, scores). Magenta is money moving. Grey is ordinary UI.</p>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const B = (label, kind = 'g', h = 34) => ({ label, style: `margin:4px 10px;min-height:${h}px;display:flex;align-items:center;justify-content:center;text-align:center;padding:4px 6px;font-size:11px;line-height:1.25;border-radius:var(--radius-md);${kind === 'g' ? 'background:var(--color-neutral-200);color:var(--color-neutral-800)' : kind === 'c' ? 'background:var(--color-accent-100);color:var(--color-accent-900);border:1px dashed var(--color-accent)' : kind === 'm' ? 'background:var(--color-accent-2-100);color:var(--color-accent-2-900);border:1px dashed var(--color-accent-2)' : 'background:transparent;color:var(--color-neutral-600);border:1px dashed var(--color-neutral-400)'}` });
+    const mk = (frames) => frames.map((f, i) => ({ n: String(i + 1).padStart(2, '0'), title: f[0], blocks: f[1], note: f[2], arrow: i < frames.length - 1 ? '→' : '' }));
+    const phone = 'border:1.5px solid var(--color-neutral-700);border-radius:14px;background:var(--color-bg);padding:6px 0 12px;min-height:300px';
+    const web = 'border:1.5px solid var(--color-neutral-700);border-radius:4px;background:var(--color-bg);padding:6px 0 12px;min-height:220px';
+    return { flows: [
+      { kicker: 'Journey A', title: 'Consumer books a mobile mechanic and gets groceries the same evening', w: 190, frameStyle: phone, frames: mk([
+        ['Location', [B('Province picker (live / soon / waitlist)'), B('Address'), B('Zone confirmed', 'c'), B('Continue', 'g', 28)], 'Province gates everything: taxes, zones, catalogue.'],
+        ['Home', [B('Search'), B('Services | Shop'), B('Category grid 3×3', 'g', 60), B('Trusted near you · tier badges', 'c', 50)], 'One home for services and goods; tiers visible from the first list.'],
+        ['Provider page', [B('Themed hero (their colour, logo)', 'g', 56), B('Verified stats: rating, on-time, disputes', 'c'), B('Fixed prices'), B('Book / Message', 'g', 28)], 'Storefront is provider-branded but Northline-structured.'],
+        ['Book', [B('Service → slot → review'), B('Escrow explainer', 'c', 44), B('Hold $ in escrow', 'm', 28), B('Confirmed + points', 'g', 28)], 'Three steps; payment is a hold, not a charge.'],
+        ['Shop & cart', [B('Multi-shop cart'), B('Pooled window · price', 'm', 44), B('Totals · points'), B('Pay', 'm', 28)], 'Delivery priced like a shared utility; Plus makes it free.'],
+        ['Track', [B('Map · pooled stops', 'g', 70), B('ETA · courier · message'), B('Timeline')], 'Live fan-out from the Go tracking gateway.'],
+        ['Sign-off', [B('Completion photo + receipt', 'c', 50), B('Release / Raise issue', 'm', 28), B('Rate (both ways)', 'c'), B('Points balance')], 'Money moves only after the customer says so — or 48 h.'],
+      ]) },
+      { kicker: 'Journey B', title: 'Provider joins, gets verified, brands their store and gets paid', w: 260, frameStyle: web, frames: mk([
+        ['Apply', [B('Category · region · licence #'), B('Stripe KYC', 'c'), B('Insurance upload', 'c')], 'Regulated trades hit a registry check automatically.'],
+        ['Verification', [B('Console queue: checks as tags', 'c', 44), B('Approve → Registered tier')], 'Median 1.4 days; Trusted needs a video call.'],
+        ['Storefront studio', [B('Colour · logo · blocks'), B('Live phone preview', 'g', 56), B('Publish + API embed')], 'Theme JSON validated; contrast enforced.'],
+        ['Jobs', [B('Calendar week'), B('Quote requests · customer reliability score', 'c'), B('Templates for messages')], 'Two-way trust: providers see who they are accepting.'],
+        ['Quality & tier', [B('Score bars vs. floors', 'c', 44), B('Coaching notes'), B('Tier review date')], 'Corner-cutting shows up as metrics, not bans.'],
+        ['Earnings', [B('Escrow → released → payout', 'm', 44), B('Take rate by tier'), B('Ledger table')], 'Master tier earns a lower take rate — honesty pays.'],
+      ]) },
+      { kicker: 'Journey C', title: 'Ops turns on a province', w: 260, frameStyle: web, frames: mk([
+        ['Region record', [B('Tax profile · languages'), B('Rollout stage: Off / Waitlist / Pilot / Live', 'c')], 'A Region is data, not a deployment.'],
+        ['Zones & pricing', [B('Draw / import GeoJSON', 'g', 56), B('Fee per zone per window', 'm')], 'PostGIS polygons; cost model reviewed weekly.'],
+        ['Catalogue flags', [B('Categories live in this province'), B('Regulated trades → registry')], 'Flags via OpenFeature; effect in 30 s.'],
+        ['Dry-run', [B('Preview as a customer there', 'g', 56), B('Diff vs. live provinces')], 'See exactly what launches before the flip.'],
+        ['Go live', [B('Flip stage → Live', 'c'), B('Waitlist emailed'), B('Audit log')], 'Boring on purpose.'],
+      ]) },
+    ] };
+  }
+}
+</script>
+</body>
+</html>

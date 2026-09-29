@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="theme/northline.css">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+</helmet>
+<div ref="{{ boxRef }}" style="display:flex;flex-direction:column;gap:10px;width:100%;min-width:0;font-family:var(--font-body);color:var(--color-text)">
+
+  <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;min-width:0">
+    <div style="position:relative;flex:1 1 200px;min-width:0;max-width:340px">
+      <i class="ph-duotone ph-magnifying-glass" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:17px;color:var(--color-neutral-700);pointer-events:none"></i>
+      <input class="input" style="min-height:40px;padding-left:36px;font-size:14px" placeholder="{{ searchPh }}" value="{{ q }}" onChange="{{ setQ }}" aria-label="Search table">
+    </div>
+    <button onClick="{{ togFilters }}" class="btn btn-secondary" aria-expanded="{{ filtersExpanded }}"><i class="ph-duotone ph-funnel" style="font-size:17px"></i>Filters<sc-if value="{{ hasActive }}" hint-placeholder-val="{{ false }}"><span class="tag tag-accent" style="padding:1px 8px">{{ activeCount }}</span></sc-if></button>
+    <button onClick="{{ togCols }}" class="btn btn-secondary" aria-expanded="{{ colsExpanded }}"><i class="ph-duotone ph-columns" style="font-size:17px"></i>Columns</button>
+    <sc-if value="{{ canExport }}" hint-placeholder-val="{{ true }}"><button onClick="{{ openReport }}" class="btn btn-secondary"><i class="ph-duotone ph-file-arrow-down" style="font-size:17px"></i>Report</button></sc-if>
+    <sc-if value="{{ readOnly }}" hint-placeholder-val="{{ false }}"><span class="tag tag-neutral" title="Your role can view and export only"><i class="ph-duotone ph-lock-simple"></i>View only · {{ roleName }}</span></sc-if>
+    <sc-if value="{{ canCreate }}" hint-placeholder-val="{{ false }}"><button onClick="{{ openCreate }}" class="btn btn-primary" style="margin-left:auto"><i class="ph ph-plus" style="font-size:16px"></i>{{ createLabel }}</button></sc-if>
+  </div>
+
+  <sc-if value="{{ showFilters }}" hint-placeholder-val="{{ false }}">
+    <div style="background:var(--color-surface);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);padding:14px 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:14px 24px">
+      <sc-for list="{{ filterGroups }}" as="g" hint-placeholder-count="3">
+        <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+          <span style="font-size:12px;font-weight:600;color:var(--color-neutral-700)">{{ g.label }}</span>
+          <sc-if value="{{ g.isFacet }}" hint-placeholder-val="{{ true }}"><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ g.opts }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.toggle }}" aria-pressed="{{ o.pressed }}" style="{{ o.style }}">{{ o.name }}<span style="opacity:.65;font-weight:400">{{ o.count }}</span></button></sc-for></div></sc-if>
+          <sc-if value="{{ g.isRange }}" hint-placeholder-val="{{ false }}"><div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px"><input class="input" type="number" style="min-height:38px;font-size:14px" placeholder="Min" value="{{ g.min }}" onChange="{{ g.setMin }}" aria-label="Minimum"><input class="input" type="number" style="min-height:38px;font-size:14px" placeholder="Max" value="{{ g.max }}" onChange="{{ g.setMax }}" aria-label="Maximum"></div></sc-if>
+        </div>
+      </sc-for>
+      <sc-if value="{{ noFilterCols }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:var(--color-neutral-700)">Use search to narrow this table.</span></sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ showCols }}" hint-placeholder-val="{{ false }}">
+    <div style="background:var(--color-surface);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);padding:12px 16px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+      <span style="font-size:12px;font-weight:600;color:var(--color-neutral-700);margin-right:6px">Show columns</span>
+      <sc-for list="{{ colToggles }}" as="c" hint-placeholder-count="5"><button onClick="{{ c.toggle }}" aria-pressed="{{ c.pressed }}" disabled="{{ c.locked }}" style="{{ c.style }}"><i class="ph {{ c.icon }}" style="font-size:14px"></i>{{ c.label }}</button></sc-for>
+      <button onClick="{{ resetCols }}" class="btn btn-ghost" style="min-height:32px;font-size:13px;margin-left:auto">Reset</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hasActive }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+      <sc-for list="{{ activeChips }}" as="c" hint-placeholder-count="2"><button onClick="{{ c.remove }}" class="tag tag-accent" style="border:0;cursor:pointer;min-height:30px;font:inherit;font-size:12px;font-weight:600" aria-label="Remove filter {{ c.label }}">{{ c.label }}<i class="ph ph-x" style="font-size:12px"></i></button></sc-for>
+      <button onClick="{{ clearFilters }}" class="btn btn-ghost" style="min-height:30px;font-size:13px">Clear all</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hasSel }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 10px 8px 14px;background:var(--color-accent);color:var(--color-on-accent);border-radius:var(--radius-md);font-size:14px">
+      <strong>{{ selCount }} selected</strong>
+      <sc-if value="{{ canSelectAll }}" hint-placeholder-val="{{ false }}"><button onClick="{{ selectAllMatching }}" style="font:inherit;font-size:13px;background:transparent;border:0;color:var(--color-on-accent);text-decoration:underline;text-underline-offset:3px;cursor:pointer;min-height:36px">Select all {{ filteredCount }}</button></sc-if>
+      <span style="flex:1"></span>
+      <sc-if value="{{ canExport }}" hint-placeholder-val="{{ true }}"><button onClick="{{ reportSelected }}" class="btn btn-highlight" style="min-height:36px"><i class="ph-duotone ph-file-arrow-down" style="font-size:16px"></i>Generate report</button></sc-if>
+      <sc-for list="{{ bulkActs }}" as="a" hint-placeholder-count="1"><button onClick="{{ a.run }}" class="btn" style="min-height:36px;background:color-mix(in oklch, white 16%, transparent);color:var(--color-on-accent)" style-hover="background:color-mix(in oklch, white 26%, transparent)"><i class="ph-duotone {{ a.icon }}" style="font-size:16px"></i>{{ a.label }}</button></sc-for>
+      <sc-if value="{{ canDelete }}" hint-placeholder-val="{{ false }}"><button onClick="{{ bulkDelete }}" class="btn" style="min-height:36px;background:var(--color-accent-2-100);color:var(--color-accent-2-800)" style-hover="background:var(--color-accent-2-200)"><i class="ph-duotone ph-trash" style="font-size:16px"></i>Delete</button></sc-if>
+      <button onClick="{{ clearSel }}" aria-label="Clear selection" style="width:36px;height:36px;border:0;border-radius:var(--radius-sm);background:transparent;color:var(--color-on-accent);cursor:pointer;display:grid;place-items:center" style-hover="background:color-mix(in oklch, white 16%, transparent)"><i class="ph ph-x" style="font-size:16px"></i></button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ tableMode }}" hint-placeholder-val="{{ true }}">
+    <table class="table" style="table-layout:auto">
+      <thead><tr>
+        <th style="width:44px;padding:4px 6px 4px 10px;vertical-align:middle"><button onClick="{{ toggleAll }}" aria-label="Select all rows" style="width:36px;height:36px;border:0;background:transparent;cursor:pointer;display:grid;place-items:center;padding:0"><span style="{{ allBox }}"><i class="ph ph-{{ allIcon }}" style="font-size:13px"></i></span></button></th>
+        <sc-for list="{{ heads }}" as="h" hint-placeholder-count="5"><th style="{{ h.thStyle }}" aria-sort="{{ h.aria }}"><button onClick="{{ h.sort }}" title="Sort · Shift-click to add a second sort" style="font:inherit;color:inherit;background:transparent;border:0;padding:2px 0;cursor:pointer;display:inline-flex;gap:4px;align-items:center;min-height:32px;text-align:left" style-hover="color:var(--color-accent)">{{ h.label }}<i class="ph {{ h.icon }}" style="{{ h.iconStyle }}"></i><span style="font-size:10px;color:var(--color-accent)">{{ h.rank }}</span></button></th></sc-for>
+        <th style="text-align:right;vertical-align:middle">Actions</th>
+      </tr></thead>
+      <tbody>
+        <sc-for list="{{ pageRows }}" as="r" hint-placeholder-count="6"><tr onClick="{{ r.open }}" style="{{ r.rowStyle }}">
+          <td style="padding:4px 6px 4px 10px;vertical-align:middle"><button onClick="{{ r.toggle }}" aria-label="Select row" aria-pressed="{{ r.pressed }}" style="width:36px;height:36px;border:0;background:transparent;cursor:pointer;display:grid;place-items:center;padding:0"><span style="{{ r.box }}"><i class="ph ph-check" style="font-size:13px"></i></span></button></td>
+          <sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="5"><td style="{{ c.td }}"><sc-if value="{{ c.isTag }}" hint-placeholder-val="{{ false }}"><span class="tag {{ c.cls }}">{{ c.text }}</span></sc-if><sc-if value="{{ c.isText }}" hint-placeholder-val="{{ true }}"><span style="{{ c.ts }}">{{ c.text }}</span><sc-if value="{{ c.hasSub }}" hint-placeholder-val="{{ false }}"><span style="display:block;font-size:12px;color:var(--color-neutral-700);overflow-wrap:anywhere">{{ c.sub }}</span></sc-if></sc-if></td></sc-for>
+          <td style="vertical-align:middle;padding:4px 8px"><div style="display:flex;gap:2px;justify-content:flex-end;flex-wrap:wrap"><sc-for list="{{ r.acts }}" as="a" hint-placeholder-count="3"><button onClick="{{ a.run }}" aria-label="{{ a.label }}" title="{{ a.label }}" class="btn btn-ghost" style="{{ a.style }}"><i class="ph-duotone {{ a.icon }}" style="font-size:18px"></i><sc-if value="{{ a.showLabel }}" hint-placeholder-val="{{ false }}">{{ a.label }}</sc-if></button></sc-for></div></td>
+        </tr></sc-for>
+      </tbody>
+    </table>
+  </sc-if>
+
+  <sc-if value="{{ cardMode }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;color:var(--color-neutral-700)">
+        <button onClick="{{ toggleAll }}" style="display:flex;align-items:center;gap:8px;font:inherit;font-size:13px;min-height:40px;border:0;background:transparent;color:var(--color-text);cursor:pointer;padding:0 8px 0 4px"><span style="{{ allBox }}"><i class="ph ph-{{ allIcon }}" style="font-size:13px"></i></span>Select all</button>
+        <span style="margin-left:auto">Sort</span>
+        <sc-for list="{{ heads }}" as="h" hint-placeholder-count="3"><button onClick="{{ h.sort }}" style="{{ h.chip }}">{{ h.label }}<i class="ph {{ h.icon }}" style="font-size:12px"></i></button></sc-for>
+      </div>
+      <sc-for list="{{ pageRows }}" as="r" hint-placeholder-count="4">
+        <div onClick="{{ r.open }}" style="{{ r.card }}">
+          <div style="display:flex;gap:8px;align-items:flex-start">
+            <button onClick="{{ r.toggle }}" aria-label="Select row" aria-pressed="{{ r.pressed }}" style="width:36px;height:36px;margin:-6px 0 0 -8px;border:0;background:transparent;cursor:pointer;display:grid;place-items:center;padding:0;flex:none"><span style="{{ r.box }}"><i class="ph ph-check" style="font-size:13px"></i></span></button>
+            <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:15px;overflow-wrap:anywhere">{{ r.pText }}</div><sc-if value="{{ r.hasPSub }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:var(--color-neutral-700);overflow-wrap:anywhere">{{ r.pSub }}</div></sc-if></div>
+            <sc-if value="{{ r.hasPTag }}" hint-placeholder-val="{{ false }}"><span class="tag {{ r.pTagCls }}" style="white-space:normal">{{ r.pTag }}</span></sc-if>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,130px),1fr));gap:8px 16px">
+            <sc-for list="{{ r.fields }}" as="f" hint-placeholder-count="4"><div style="min-width:0"><div style="font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--color-neutral-700)">{{ f.label }}</div><sc-if value="{{ f.isTag }}" hint-placeholder-val="{{ false }}"><span class="tag {{ f.cls }}" style="white-space:normal">{{ f.text }}</span></sc-if><sc-if value="{{ f.isText }}" hint-placeholder-val="{{ true }}"><div style="font-size:14px;overflow-wrap:anywhere">{{ f.text }}</div></sc-if></div></sc-for>
+          </div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;border-top:1px solid var(--color-divider);padding-top:6px"><sc-for list="{{ r.acts }}" as="a" hint-placeholder-count="3"><button onClick="{{ a.run }}" aria-label="{{ a.label }}" class="btn btn-ghost" style="{{ a.cardStyle }}"><i class="ph-duotone {{ a.icon }}" style="font-size:17px"></i>{{ a.label }}</button></sc-for></div>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+    <div style="background:var(--color-surface);border-radius:var(--radius-lg);padding:32px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center">
+      <i class="ph-duotone ph-magnifying-glass-minus" style="font-size:32px;color:var(--color-accent)"></i>
+      <div style="font-size:15px">{{ emptyText }}</div>
+      <sc-if value="{{ canClearEmpty }}" hint-placeholder-val="{{ false }}"><button onClick="{{ clearAll }}" class="btn btn-secondary">Clear search &amp; filters</button></sc-if>
+    </div>
+  </sc-if>
+
+  <div style="display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;font-size:13px;color:var(--color-neutral-700)">
+    <span>{{ rangeLabel }}<sc-if value="{{ hasAutoHidden }}" hint-placeholder-val="{{ false }}"> · {{ autoHiddenLabel }}</sc-if></span>
+    <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+      <span style="margin-right:4px">Rows</span>
+      <sc-for list="{{ sizes }}" as="z" hint-placeholder-count="3"><button onClick="{{ z.pick }}" aria-pressed="{{ z.pressed }}" style="{{ z.style }}">{{ z.n }}</button></sc-for>
+      <button onClick="{{ prev }}" disabled="{{ noPrev }}" aria-label="Previous page" class="btn btn-ghost btn-icon" style="margin-left:8px"><i class="ph ph-caret-left" style="font-size:16px"></i></button>
+      <span>{{ pageLabel }}</span>
+      <button onClick="{{ next }}" disabled="{{ noNext }}" aria-label="Next page" class="btn btn-ghost btn-icon"><i class="ph ph-caret-right" style="font-size:16px"></i></button>
+    </div>
+  </div>
+
+  <sc-if value="{{ dlgOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="dialog-backdrop" onClick="{{ closeDlg }}" style="padding:16px">
+      <div class="dialog" onClick="{{ stop }}" role="dialog" aria-modal="true" style="max-width:600px;max-height:calc(100vh - 32px);overflow-y:auto;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:flex-start;gap:12px"><div class="dialog-title" style="flex:1;margin:0">{{ dlgTitle }}</div><button onClick="{{ closeDlg }}" aria-label="Close" class="btn btn-ghost btn-icon"><i class="ph ph-x" style="font-size:18px"></i></button></div>
+
+        <sc-if value="{{ dlgView }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,200px),1fr));gap:14px 20px">
+            <sc-for list="{{ viewFields }}" as="f" hint-placeholder-count="5"><div style="min-width:0"><div style="font-size:12px;color:var(--color-neutral-700)">{{ f.label }}</div><sc-if value="{{ f.isTag }}" hint-placeholder-val="{{ false }}"><span class="tag {{ f.cls }}" style="white-space:normal">{{ f.text }}</span></sc-if><sc-if value="{{ f.isText }}" hint-placeholder-val="{{ true }}"><div style="font-size:15px;overflow-wrap:anywhere">{{ f.text }}</div></sc-if></div></sc-for>
+          </div>
+          <div class="dialog-actions" style="margin-top:4px;flex-wrap:wrap">
+            <sc-if value="{{ canDelete }}" hint-placeholder-val="{{ false }}"><button onClick="{{ viewDelete }}" class="btn btn-ghost" style="color:var(--color-accent-2-700);margin-right:auto"><i class="ph-duotone ph-trash"></i>Delete</button></sc-if>
+            <button onClick="{{ closeDlg }}" class="btn btn-secondary">Close</button>
+            <sc-if value="{{ canUpdate }}" hint-placeholder-val="{{ false }}"><button onClick="{{ viewEdit }}" class="btn btn-primary"><i class="ph-duotone ph-pencil-simple"></i>Edit</button></sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ dlgForm }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));gap:14px 16px">
+            <sc-for list="{{ formFields }}" as="f" hint-placeholder-count="4"><div class="field" style="min-width:0"><label>{{ f.label }}<span style="color:var(--color-accent-2-700)">{{ f.req }}</span></label>
+              <sc-if value="{{ f.isChoice }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ f.opts }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.pick }}" aria-pressed="{{ o.pressed }}" style="{{ o.style }}">{{ o.name }}</button></sc-for></div></sc-if>
+              <sc-if value="{{ f.isInput }}" hint-placeholder-val="{{ true }}"><input class="input" type="{{ f.inputType }}" value="{{ f.value }}" onChange="{{ f.set }}"></sc-if>
+            </div></sc-for>
+          </div>
+          <sc-if value="{{ hasFormError }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:var(--color-accent-2-700);display:flex;gap:6px;align-items:center"><i class="ph-duotone ph-warning-circle" style="font-size:16px"></i>{{ formError }}</div></sc-if>
+          <div class="dialog-actions" style="margin-top:4px"><button onClick="{{ closeDlg }}" class="btn btn-secondary">Cancel</button><button onClick="{{ saveForm }}" class="btn btn-primary">{{ saveLabel }}</button></div>
+        </sc-if>
+
+        <sc-if value="{{ dlgDelete }}" hint-placeholder-val="{{ false }}">
+          <div class="dialog-body">{{ deleteText }}</div>
+          <div class="dialog-actions" style="margin-top:4px"><button onClick="{{ closeDlg }}" class="btn btn-secondary">Cancel</button><button onClick="{{ confirmDelete }}" class="btn" style="background:var(--color-accent-2);color:var(--color-on-accent)" style-hover="background:var(--color-accent-2-600)"><i class="ph-duotone ph-trash"></i>Delete</button></div>
+        </sc-if>
+
+        <sc-if value="{{ dlgReport }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:500;color:var(--color-neutral-800)">Rows</span><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ repScopes }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.pick }}" disabled="{{ o.disabled }}" aria-pressed="{{ o.pressed }}" style="{{ o.style }}">{{ o.name }}</button></sc-for></div></div>
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:500;color:var(--color-neutral-800)">Format</span><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ repFormats }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.pick }}" aria-pressed="{{ o.pressed }}" style="{{ o.style }}"><i class="ph-duotone {{ o.icon }}" style="font-size:15px"></i>{{ o.name }}</button></sc-for></div></div>
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:500;color:var(--color-neutral-800)">Columns</span><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ repCols }}" as="o" hint-placeholder-count="5"><button onClick="{{ o.pick }}" aria-pressed="{{ o.pressed }}" style="{{ o.style }}"><i class="ph {{ o.icon }}" style="font-size:13px"></i>{{ o.name }}</button></sc-for></div></div>
+          <div style="font-size:13px;color:var(--color-neutral-700)">{{ repSummary }}</div>
+          <div class="dialog-actions" style="margin-top:4px"><button onClick="{{ closeDlg }}" class="btn btn-secondary">Cancel</button><button onClick="{{ generate }}" class="btn btn-primary" disabled="{{ repEmpty }}"><i class="ph-duotone ph-file-arrow-down"></i>Generate report</button></div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div role="status" style="position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:60;background:var(--color-text);color:var(--color-bg);padding:10px 16px;border-radius:var(--radius-md);box-shadow:var(--shadow-lg);font-size:14px;display:flex;gap:8px;align-items:center;max-width:calc(100vw - 32px)"><i class="ph-duotone ph-check-circle" style="font-size:18px;color:var(--color-highlight)"></i>{{ toast }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1000,&quot;height&quot;:640},&quot;spec&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;{ entity: string; plural?: string; columns: { key: string; label: string; type?: 'text'|'num'|'money'|'tag'; sub?: string; subLabel?: string; filter?: 'facet'|'range'|false; options?: string[]; tones?: Record&lt;string,string&gt;; editable?: boolean; required?: boolean; primary?: boolean; priority?: number }[]; rows: Record&lt;string, any&gt;[]; can?: { create?: boolean; update?: boolean; delete?: boolean; export?: boolean }; roleName?: string; actions?: { id: string; label: string; icon?: string; perm?: 'create'|'update'|'delete'; set?: Record&lt;string,any&gt;; call?: string; when?: { key: string; in: string[] }; inline?: boolean; bulk?: boolean }[]; pageSize?: number; hidden?: string[]; createLabel?: string; onCreate?: () =&gt; void; onEdit?: (row) =&gt; void; openLabel?: string; onChange?: (e) =&gt; void }&quot;}}">
+class Component extends DCLogic {
+  state = { ed: { created: [], updated: {}, deleted: {} }, sel: {}, sort: [], q: '', facets: {}, ranges: {}, hidden: null, page: 0, size: null, panel: null, dlg: null, toast: '', w: 1000 };
+  boxRef = React.createRef();
+  componentDidMount() {
+    const el = this.boxRef.current; if (!el) return;
+    const measure = w => { w = Math.round(w); if (Math.abs(w - this.state.w) > 6) this.setState({ w }); };
+    measure(el.getBoundingClientRect().width);
+    if (typeof ResizeObserver !== 'undefined') { this.ro = new ResizeObserver(es => measure(es[0].contentRect.width)); this.ro.observe(el); }
+  }
+  componentWillUnmount() { if (this.ro) this.ro.disconnect(); clearTimeout(this.tt); }
+  flash(toast) { this.setState({ toast }); clearTimeout(this.tt); this.tt = setTimeout(() => this.setState({ toast: '' }), 2800); }
+
+  renderVals() {
+    const sp = this.props.spec || {}, s = this.state;
+    const can = { create: false, update: false, delete: false, export: true, ...(sp.can || {}) };
+    const entity = sp.entity || 'record', plural = sp.plural || (entity.endsWith('y') ? entity.slice(0, -1) + 'ies' : entity + 's');
+    const cap = t => t ? t[0].toUpperCase() + t.slice(1) : t;
+    const stop = e => { if (e && e.stopPropagation) e.stopPropagation(); };
+    const num = v => { if (typeof v === 'number') return v; if (v == null) return NaN; const m = String(v).replace(/[,$\s]/g, '').replace('−', '-').match(/^-?\d+(\.\d+)?/); return m ? parseFloat(m[0]) : NaN; };
+    const cols = (sp.columns || []).map((c, i) => { const type = c.type || 'text'; const isNum = type === 'num' || type === 'money'; return { ...c, type, isNum, filter: c.filter ?? (type === 'tag' ? 'facet' : isNum ? 'range' : false), editable: c.editable !== false, primary: c.primary ?? i === 0 }; });
+    const pk = cols.find(c => c.primary) || cols[0] || { key: 'id', label: 'ID' };
+    const byKey = Object.fromEntries(cols.map(c => [c.key, c]));
+    const base = (sp.rows || []).map((r, i) => ({ ...r, _id: String(r.id ?? r._id ?? 'r' + i) }));
+    const clsMap = {}; base.forEach(r => cols.forEach(c => { if (c.type === 'tag' && r._cls && r._cls[c.key]) clsMap[c.key + '|' + r[c.key]] = r._cls[c.key]; }));
+    const tagCls = (c, v) => (c.tones && c.tones[v]) || clsMap[c.key + '|' + v] || 'tag-neutral';
+    const all = [...s.ed.created, ...base].filter(r => !s.ed.deleted[r._id]).map(r => s.ed.updated[r._id] ? { ...r, ...s.ed.updated[r._id] } : r);
+    const fmt = (c, v) => v == null || v === '' ? '—' : c.type === 'money' && typeof v === 'number' ? '$' + v.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : String(v);
+    const hiddenSet = s.hidden || Object.fromEntries((sp.hidden || []).map(k => [k, true]));
+    const vis = cols.filter(c => c.primary || !hiddenSet[c.key]);
+
+    // filtering (global + faceted + range)
+    const q = s.q.trim().toLowerCase();
+    const facetOn = k => Object.values(s.facets[k] || {}).some(Boolean);
+    const passFacet = (r, skip) => Object.keys(s.facets).every(k => k === skip || !facetOn(k) || s.facets[k][String(r[k] ?? '—')]);
+    const passRange = r => Object.entries(s.ranges).every(([k, rg]) => { const n = num(r[k]); if (rg.min !== '' && rg.min != null && !(n >= +rg.min)) return false; if (rg.max !== '' && rg.max != null && !(n <= +rg.max)) return false; return true; });
+    const passQ = r => !q || cols.some(c => String(r[c.key] ?? '').toLowerCase().includes(q) || (c.sub && String(r[c.sub] ?? '').toLowerCase().includes(q)));
+    let rows = all.filter(r => passFacet(r) && passRange(r) && passQ(r));
+    if (s.sort.length) rows = [...rows].sort((a, b) => { for (const { key, dir } of s.sort) { const av = a[key], bv = b[key], an = num(av), bn = num(bv); const d = (!isNaN(an) && !isNaN(bn)) ? an - bn : String(av ?? '').localeCompare(String(bv ?? ''), 'en', { numeric: true }); if (d) return d * dir; } return 0; });
+
+    // selection + pagination
+    const size = s.size || sp.pageSize || 10, pageCount = Math.max(1, Math.ceil(rows.length / size)), page = Math.min(s.page, pageCount - 1);
+    const pageSlice = rows.slice(page * size, page * size + size);
+    const selRows = all.filter(r => s.sel[r._id]), selCount = selRows.length;
+    const selInFiltered = rows.filter(r => s.sel[r._id]).length, allOn = rows.length > 0 && selInFiltered === rows.length, someOn = selInFiltered > 0 && !allOn;
+    const box = on => `width:20px;height:20px;border-radius:6px;display:grid;place-items:center;flex:none;box-shadow:inset 0 0 0 1.5px ${on ? 'var(--color-accent)' : 'var(--color-neutral-500)'};background:${on ? 'var(--color-accent)' : 'var(--color-surface)'};color:${on ? 'var(--color-on-accent)' : 'transparent'}`;
+    const chip = (on, extra = '') => `display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:13px;font-weight:${on ? 600 : 500};padding:5px 12px;min-height:34px;border-radius:var(--radius-pill);cursor:pointer;border:1px solid ${on ? 'var(--color-accent)' : 'var(--color-neutral-300)'};background:${on ? 'var(--color-accent)' : 'var(--color-surface)'};color:${on ? 'var(--color-on-accent)' : 'var(--color-text)'};${extra}`;
+
+    // actions
+    const custom = (sp.actions || []).filter(a => !a.perm || can[a.perm]);
+    const applies = (a, r) => !a.when || (a.when.in || []).includes(String(r[a.when.key]));
+    const applyAct = (a, targets) => {
+      const hit = targets.filter(r => applies(a, r)); if (!hit.length) { this.flash(`Nothing to ${a.label.toLowerCase()} in the selection`); return; }
+      if (a.set) this.setState(st => { const upd = { ...st.ed.updated }; hit.forEach(r => { upd[r._id] = { ...(upd[r._id] || {}), ...a.set }; }); return { ed: { ...st.ed, updated: upd } }; });
+      if (a.call) hit.forEach(r => typeof r[a.call] === 'function' && r[a.call](r));
+      this.flash(`${a.label} · ${hit.length} ${hit.length === 1 ? entity : plural}`);
+    };
+    const openDlg = dlg => this.setState({ dlg, panel: null });
+    const formCols = cols.filter(c => c.editable);
+    const blankForm = () => { const f = {}; formCols.forEach(c => { f[c.key] = c.options ? c.options[0] : ''; if (c.sub) f[c.sub] = ''; }); return f; };
+    const pickForm = r => { const f = {}; formCols.forEach(c => { f[c.key] = r[c.key] ?? ''; if (c.sub) f[c.sub] = r[c.sub] ?? ''; }); return f; };
+    const doCreate = () => sp.onCreate ? sp.onCreate() : openDlg({ mode: 'create', form: blankForm() });
+    const doEdit = r => sp.onEdit ? sp.onEdit(r) : openDlg({ mode: 'edit', id: r._id, form: pickForm(r) });
+    const rowActs = r => {
+      const out = [];
+      if (typeof r.$open === 'function') out.push({ label: sp.openLabel || 'Open', icon: 'ph-arrow-square-out', run: e => { stop(e); r.$open(r); } });
+      else out.push({ label: 'View', icon: 'ph-eye', run: e => { stop(e); openDlg({ mode: 'view', id: r._id }); } });
+      custom.filter(a => a.inline && applies(a, r)).forEach(a => out.push({ label: a.label, icon: a.icon || 'ph-lightning', showLabel: true, run: e => { stop(e); applyAct(a, [r]); } }));
+      if (can.update) out.push({ label: 'Edit', icon: 'ph-pencil-simple', run: e => { stop(e); doEdit(r); } });
+      if (can.delete) out.push({ label: 'Delete', icon: 'ph-trash', danger: true, run: e => { stop(e); openDlg({ mode: 'delete', ids: [r._id] }); } });
+      return out.map(a => ({ ...a, showLabel: !!a.showLabel, style: `min-height:36px;padding:4px ${a.showLabel ? '10px' : '8px'};font-size:13px;${a.danger ? 'color:var(--color-accent-2-700)' : ''}`, cardStyle: `min-height:40px;padding:4px 10px;font-size:13px;${a.danger ? 'color:var(--color-accent-2-700)' : ''}` }));
+    };
+
+    // responsive: drop lowest-priority columns to fit, then fall back to cards
+    const maxActs = 1 + (can.update ? 1 : 0) + (can.delete ? 1 : 0), inlineW = custom.some(a => a.inline) ? 130 : 0;
+    const widthFor = n => 56 + n * 112 + maxActs * 40 + inlineW + 24;
+    let shown = [...vis]; const autoHidden = [];
+    const dropOrder = vis.filter(c => !c.primary).map((c, i) => ({ c, p: c.priority ?? (100 - i) })).sort((a, b) => a.p - b.p).map(x => x.c);
+    while (shown.length > 3 && widthFor(shown.length) > s.w && dropOrder.length) { const d = dropOrder.shift(); shown = shown.filter(c => c !== d); autoHidden.push(d); }
+    const cardMode = s.w < 600 || widthFor(shown.length) > s.w;
+    const cellOf = (c, r) => { const v = r[c.key], isTag = c.type === 'tag' && v != null && v !== ''; return { isTag, isText: !isTag, cls: isTag ? tagCls(c, v) : '', text: fmt(c, v), sub: c.sub ? (r[c.sub] ?? '') : '', hasSub: !!(c.sub && r[c.sub]), td: `vertical-align:middle;overflow-wrap:anywhere;${c.isNum ? 'text-align:right;font-feature-settings:"tnum" 1;white-space:nowrap' : ''}`, ts: c.primary ? 'font-weight:600' : '' }; };
+    const firstTag = cols.find(c => c.type === 'tag' && !c.primary && !hiddenSet[c.key]);
+    const pageRows = pageSlice.map(r => {
+      const on = !!s.sel[r._id], clickable = typeof r.$open === 'function';
+      return { toggle: e => { stop(e); this.setState(st => ({ sel: { ...st.sel, [r._id]: !st.sel[r._id] } })); }, pressed: on ? 'true' : 'false', box: box(on),
+        open: clickable ? () => r.$open(r) : () => {},
+        rowStyle: `${on ? 'background:var(--color-accent-100);' : ''}${clickable ? 'cursor:pointer' : ''}`,
+        card: `display:flex;flex-direction:column;gap:10px;padding:12px 14px;border-radius:var(--radius-md);background:${on ? 'var(--color-accent-100)' : 'var(--color-surface)'};box-shadow:${on ? 'inset 0 0 0 1.5px var(--color-accent)' : 'var(--shadow-sm)'};${clickable ? 'cursor:pointer' : ''}`,
+        cells: shown.map(c => cellOf(c, r)),
+        pText: fmt(pk, r[pk.key]), pSub: pk.sub ? (r[pk.sub] ?? '') : '', hasPSub: !!(pk.sub && r[pk.sub]),
+        hasPTag: !!(firstTag && r[firstTag.key]), pTag: firstTag ? r[firstTag.key] : '', pTagCls: firstTag ? tagCls(firstTag, r[firstTag.key]) : '',
+        fields: vis.filter(c => !c.primary && c !== firstTag).map(c => { const x = cellOf(c, r); return { label: c.label, isTag: x.isTag, isText: x.isText, cls: x.cls, text: x.hasSub ? x.text + ' · ' + x.sub : x.text }; }),
+        acts: rowActs(r) };
+    });
+
+    const sortFn = c => e => { const multi = !!(e && e.shiftKey); const cur = s.sort.find(x => x.key === c.key); let next; if (!cur) next = multi ? [...s.sort, { key: c.key, dir: 1 }] : [{ key: c.key, dir: 1 }]; else if (cur.dir === 1) next = (multi ? s.sort : [cur]).map(x => x.key === c.key ? { key: c.key, dir: -1 } : x); else next = multi ? s.sort.filter(x => x.key !== c.key) : []; this.setState({ sort: next, page: 0 }); };
+    const heads = shown.map(c => { const i = s.sort.findIndex(x => x.key === c.key), cur = s.sort[i]; return { label: c.label, sort: sortFn(c), icon: cur ? (cur.dir > 0 ? 'ph-caret-up' : 'ph-caret-down') : 'ph-arrows-down-up', iconStyle: `font-size:12px;${cur ? 'color:var(--color-accent)' : 'opacity:.4'}`, rank: cur && s.sort.length > 1 ? String(i + 1) : '', aria: cur ? (cur.dir > 0 ? 'ascending' : 'descending') : 'none', thStyle: `vertical-align:middle;${c.isNum ? 'text-align:right' : ''}`, chip: chip(!!cur, 'min-height:32px;padding:4px 10px;font-size:12px') }; });
+
+    // filter panel
+    const filterGroups = cols.filter(c => c.filter).map(c => {
+      if (c.filter === 'range') { const rg = s.ranges[c.key] || {}; const setR = k => e => { const val = e.target.value; this.setState(st => ({ ranges: { ...st.ranges, [c.key]: { ...(st.ranges[c.key] || {}), [k]: val } }, page: 0 })); }; return { label: c.label, isFacet: false, isRange: true, opts: [], min: rg.min ?? '', max: rg.max ?? '', setMin: setR('min'), setMax: setR('max') }; }
+      const counts = {}; all.filter(r => passFacet(r, c.key) && passRange(r) && passQ(r)).forEach(r => { const v = String(r[c.key] ?? '—'); counts[v] = (counts[v] || 0) + 1; });
+      const vals = [...new Set(all.map(r => String(r[c.key] ?? '—')))];
+      return { label: c.label, isFacet: true, isRange: false, opts: vals.map(v => { const on = !!(s.facets[c.key] || {})[v]; return { name: v, count: String(counts[v] || 0), pressed: on ? 'true' : 'false', style: chip(on), toggle: () => this.setState(st => ({ facets: { ...st.facets, [c.key]: { ...(st.facets[c.key] || {}), [v]: !on } }, page: 0 })) }; }) };
+    });
+    const activeChips = [];
+    Object.entries(s.facets).forEach(([k, vals]) => Object.entries(vals).forEach(([v, on]) => { if (on) activeChips.push({ label: `${(byKey[k] || {}).label}: ${v}`, remove: () => this.setState(st => ({ facets: { ...st.facets, [k]: { ...st.facets[k], [v]: false } } })) }); }));
+    Object.entries(s.ranges).forEach(([k, rg]) => { ['min', 'max'].forEach(m => { if (rg[m] !== '' && rg[m] != null) activeChips.push({ label: `${(byKey[k] || {}).label} ${m === 'min' ? '≥' : '≤'} ${rg[m]}`, remove: () => this.setState(st => ({ ranges: { ...st.ranges, [k]: { ...st.ranges[k], [m]: '' } } })) }); }); });
+    const clearAll = () => this.setState({ facets: {}, ranges: {}, q: '', page: 0 });
+
+    const colToggles = cols.map(c => { const on = c.primary || !hiddenSet[c.key]; return { label: c.label, pressed: on ? 'true' : 'false', locked: !!c.primary, icon: on ? 'ph-check' : 'ph-plus', style: chip(on, c.primary ? 'opacity:.7;cursor:default' : ''), toggle: () => this.setState({ hidden: { ...hiddenSet, [c.key]: !hiddenSet[c.key] } }) }; });
+
+    // dialogs
+    const d = s.dlg, dRow = d && d.id ? all.find(r => r._id === d.id) : null;
+    const setForm = (k, v) => this.setState(st => ({ dlg: { ...st.dlg, form: { ...st.dlg.form, [k]: v }, error: '' } }));
+    const formFields = [];
+    if (d && d.form) formCols.forEach(c => {
+      const opts = c.options || (c.type === 'tag' ? [...new Set(all.map(r => r[c.key]).filter(Boolean))] : null);
+      const val = d.form[c.key];
+      formFields.push({ label: c.label, req: c.primary || c.required ? ' *' : '', isChoice: !!opts, isInput: !opts, inputType: c.isNum && typeof (base[0] || {})[c.key] === 'number' ? 'number' : 'text', value: val ?? '', set: e => setForm(c.key, e.target.value), opts: (opts || []).map(o => ({ name: o, pressed: val === o ? 'true' : 'false', style: chip(val === o), pick: () => setForm(c.key, o) })) });
+      if (c.sub) formFields.push({ label: c.subLabel || c.label + ' · detail', req: '', isChoice: false, isInput: true, inputType: 'text', value: d.form[c.sub] ?? '', set: e => setForm(c.sub, e.target.value), opts: [] });
+    });
+    const saveForm = () => {
+      const f = { ...d.form };
+      const missing = formCols.filter(c => (c.primary || c.required) && String(f[c.key] ?? '').trim() === '');
+      if (missing.length) { this.setState(st => ({ dlg: { ...st.dlg, error: `${missing.map(c => c.label).join(', ')} is required.` } })); return; }
+      formCols.forEach(c => { if (c.isNum && typeof (base[0] || {})[c.key] === 'number' && f[c.key] !== '') f[c.key] = Number(f[c.key]); });
+      if (d.mode === 'create') { const _id = 'n' + Date.now(); this.setState(st => ({ ed: { ...st.ed, created: [{ ...f, _id }, ...st.ed.created] }, dlg: null, page: 0 })); this.flash(`${cap(entity)} created`); if (sp.onChange) sp.onChange({ type: 'create', row: f }); }
+      else { this.setState(st => ({ ed: { ...st.ed, updated: { ...st.ed.updated, [d.id]: { ...(st.ed.updated[d.id] || {}), ...f } } }, dlg: null })); this.flash('Changes saved'); if (sp.onChange) sp.onChange({ type: 'update', id: d.id, row: f }); }
+    };
+    const confirmDelete = () => { const ids = d.ids || []; this.setState(st => { const del = { ...st.ed.deleted }, sel = { ...st.sel }; ids.forEach(i => { del[i] = true; delete sel[i]; }); return { ed: { ...st.ed, deleted: del }, sel, dlg: null }; }); this.flash(`${ids.length} ${ids.length === 1 ? entity : plural} deleted`); if (sp.onChange) sp.onChange({ type: 'delete', ids }); };
+    const viewFields = dRow ? cols.map(c => { const x = cellOf(c, dRow); return { label: c.label, isTag: x.isTag, isText: x.isText, cls: x.cls, text: x.hasSub ? x.text + ' · ' + x.sub : x.text }; }) : [];
+
+    // report
+    const reportDlg = scope => openDlg({ mode: 'report', scope, fmt: 'csv', cols: Object.fromEntries(vis.map(c => [c.key, true])) });
+    const scopeRows = sc => sc === 'selected' ? selRows : sc === 'filtered' ? rows : all;
+    const repCols = d && d.mode === 'report' ? cols.filter(c => d.cols[c.key]) : [];
+    const generate = () => {
+      const data = scopeRows(d.scope), rc = repCols; const head = []; rc.forEach(c => { head.push(c.label); if (c.sub) head.push(c.subLabel || c.label + ' detail'); });
+      const matrix = data.map(r => { const o = []; rc.forEach(c => { o.push(fmt(c, r[c.key])); if (c.sub) o.push(r[c.sub] ?? ''); }); return o; });
+      const slug = (sp.reportName || plural).toLowerCase().replace(/[^a-z0-9]+/g, '-'), stamp = new Date().toISOString().slice(0, 10);
+      const escH = t => String(t).replace(/[&<>]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[ch]);
+      const htmlTable = `<table><thead><tr>${head.map(h => `<th>${escH(h)}</th>`).join('')}</tr></thead><tbody>${matrix.map(r => `<tr>${r.map(v => `<td>${escH(v)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+      const download = (blob, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); };
+      if (d.fmt === 'csv') { const esc = v => { const t = String(v ?? ''); return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; }; download(new Blob(['\ufeff' + [head, ...matrix].map(r => r.map(esc).join(',')).join('\n')], { type: 'text/csv' }), `${slug}-${stamp}.csv`); }
+      else if (d.fmt === 'xls') download(new Blob([`<html><head><meta charset="utf-8"></head><body>${htmlTable}</body></html>`], { type: 'application/vnd.ms-excel' }), `${slug}-${stamp}.xls`);
+      else { const wnd = window.open('', '_blank'); if (wnd) { wnd.document.write(`<!doctype html><title>${escH(cap(plural))} report</title><style>body{font:13px system-ui;margin:32px}h1{font:500 22px Georgia,serif}table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid #ddd}th{background:#f3f0ea}</style><h1>${escH(cap(plural))} · ${data.length} rows · ${stamp}</h1>${htmlTable}`); wnd.document.close(); wnd.focus(); wnd.print(); } }
+      this.setState({ dlg: null }); this.flash(`Report generated · ${data.length} rows`);
+    };
+    const repScopes = [['selected', `Selected (${selCount})`], ['filtered', `Filtered (${rows.length})`], ['all', `All (${all.length})`]].map(([k, n]) => ({ name: n, disabled: k === 'selected' && !selCount, pressed: d && d.scope === k ? 'true' : 'false', style: chip(!!d && d.scope === k), pick: () => this.setState(st => ({ dlg: { ...st.dlg, scope: k } })) }));
+    const repFormats = [['csv', 'CSV', 'ph-file-csv'], ['xls', 'Excel', 'ph-microsoft-excel-logo'], ['pdf', 'PDF / print', 'ph-file-pdf']].map(([k, n, icon]) => ({ name: n, icon, pressed: d && d.fmt === k ? 'true' : 'false', style: chip(!!d && d.fmt === k), pick: () => this.setState(st => ({ dlg: { ...st.dlg, fmt: k } })) }));
+    const repColsV = d && d.mode === 'report' ? cols.map(c => { const on = !!d.cols[c.key]; return { name: c.label, icon: on ? 'ph-check' : 'ph-plus', pressed: on ? 'true' : 'false', style: chip(on), pick: () => this.setState(st => ({ dlg: { ...st.dlg, cols: { ...st.dlg.cols, [c.key]: !on } } })) }; }) : [];
+    const repN = d && d.mode === 'report' ? scopeRows(d.scope).length : 0;
+
+    const titles = { create: `New ${entity}`, edit: `Edit ${entity}`, view: dRow ? fmt(pk, dRow[pk.key]) : cap(entity), delete: `Delete ${d && d.ids && d.ids.length > 1 ? d.ids.length + ' ' + plural : entity}?`, report: `Generate ${plural} report` };
+    const readOnly = !!sp.roleName && !can.create && !can.update && !can.delete;
+    const start = rows.length ? page * size + 1 : 0, end = Math.min(rows.length, (page + 1) * size);
+
+    return {
+      boxRef: this.boxRef, stop,
+      searchPh: sp.searchPlaceholder || `Search ${plural}…`, q: s.q, setQ: e => this.setState({ q: e.target.value, page: 0 }),
+      togFilters: () => this.setState({ panel: s.panel === 'filters' ? null : 'filters' }), togCols: () => this.setState({ panel: s.panel === 'cols' ? null : 'cols' }),
+      showFilters: s.panel === 'filters', showCols: s.panel === 'cols', filtersExpanded: s.panel === 'filters' ? 'true' : 'false', colsExpanded: s.panel === 'cols' ? 'true' : 'false',
+      filterGroups, noFilterCols: !filterGroups.length, activeChips, hasActive: activeChips.length > 0, activeCount: String(activeChips.length), clearFilters: clearAll, clearAll,
+      colToggles, resetCols: () => this.setState({ hidden: null }),
+      canExport: !!can.export, canCreate: !!can.create, canUpdate: !!can.update, canDelete: !!can.delete, readOnly, roleName: sp.roleName || '', createLabel: sp.createLabel || `New ${entity}`,
+      openCreate: doCreate, openReport: () => reportDlg(selCount ? 'selected' : 'filtered'), reportSelected: () => reportDlg('selected'),
+      hasSel: selCount > 0, selCount: String(selCount), filteredCount: String(rows.length), canSelectAll: selInFiltered < rows.length,
+      selectAllMatching: () => this.setState(st => { const sel = { ...st.sel }; rows.forEach(r => { sel[r._id] = true; }); return { sel }; }),
+      clearSel: () => this.setState({ sel: {} }),
+      bulkActs: custom.filter(a => a.bulk !== false).map(a => ({ label: a.label, icon: a.icon || 'ph-lightning', run: () => applyAct(a, selRows) })),
+      bulkDelete: () => openDlg({ mode: 'delete', ids: selRows.map(r => r._id) }),
+      toggleAll: () => this.setState(st => { const sel = { ...st.sel }; rows.forEach(r => { sel[r._id] = !allOn; }); return { sel }; }),
+      allBox: box(allOn || someOn), allIcon: someOn ? 'minus' : 'check',
+      tableMode: !cardMode && rows.length > 0, cardMode: cardMode && rows.length > 0, heads, pageRows,
+      isEmpty: rows.length === 0, emptyText: all.length ? `No ${plural} match your search or filters.` : (sp.emptyText || `No ${plural} yet.`), canClearEmpty: all.length > 0,
+      rangeLabel: rows.length ? `${start}–${end} of ${rows.length} ${rows.length === 1 ? entity : plural}` : `0 ${plural}`,
+      hasAutoHidden: !cardMode && autoHidden.length > 0, autoHiddenLabel: `${autoHidden.map(c => c.label).join(', ')} hidden to fit · open a row to see all`,
+      sizes: [5, 10, 25, 50].map(n => ({ n: String(n), pressed: n === size ? 'true' : 'false', style: chip(n === size, 'min-height:32px;padding:3px 10px;font-size:12px'), pick: () => this.setState({ size: n, page: 0 }) })),
+      pageLabel: `${page + 1} / ${pageCount}`, noPrev: page === 0, noNext: page >= pageCount - 1,
+      prev: () => this.setState({ page: Math.max(0, page - 1) }), next: () => this.setState({ page: Math.min(pageCount - 1, page + 1) }),
+      dlgOpen: !!d, closeDlg: () => this.setState({ dlg: null }), dlgTitle: d ? titles[d.mode] : '',
+      dlgView: !!d && d.mode === 'view', dlgForm: !!d && (d.mode === 'create' || d.mode === 'edit'), dlgDelete: !!d && d.mode === 'delete', dlgReport: !!d && d.mode === 'report',
+      viewFields, viewEdit: () => dRow && doEdit(dRow), viewDelete: () => dRow && openDlg({ mode: 'delete', ids: [dRow._id] }),
+      formFields, saveForm, saveLabel: d && d.mode === 'create' ? `Create ${entity}` : 'Save changes', hasFormError: !!(d && d.error), formError: (d && d.error) || '',
+      deleteText: d && d.mode === 'delete' ? `This permanently removes ${d.ids.length === 1 ? 'this ' + entity : d.ids.length + ' ' + plural} and is written to the audit log. You can't undo it.` : '', confirmDelete,
+      repScopes, repFormats, repCols: repColsV, repEmpty: !repN || !repCols.length, repSummary: `${repN} rows × ${repCols.length} columns${activeChips.length && d && d.scope === 'filtered' ? ' · filters: ' + activeChips.map(c => c.label).join(', ') : ''}`, generate,
+      hasToast: !!s.toast, toast: s.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

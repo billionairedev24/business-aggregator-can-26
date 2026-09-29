@@ -1,0 +1,16 @@
+# Backend-for-frontend: browser holds only an HttpOnly session cookie; tokens stay in Redis.
+spring:
+  application.name: northline-bff
+  data.redis.host: localhost
+  session.redis.namespace: nl:bff
+  security.oauth2.client:
+    registration.northline: { provider: northline, client-id: consumer-bff, client-secret: dev-consumer-bff, authorization-grant-type: authorization_code, scope: openid,profile,orders,bookings }
+    provider.northline.issuer-uri: http://localhost:9000
+  cloud.gateway.server.webmvc.routes:
+    - id: api
+      uri: http://localhost:8080
+      predicates: [ "Path=/api/**" ]
+      filters: [ TokenRelay= ]
+server:
+  port: 8081
+  servlet.session.cookie: { http-only: true, secure: true, same-site: lax, name: NL_SESSION }

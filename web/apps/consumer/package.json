@@ -1,0 +1,32 @@
+{
+  "name": "@northline/consumer",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "start": "node .output/server/index.mjs",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@northline/ui": "workspace:*",
+    "@northline/tokens": "workspace:*",
+    "@tanstack/react-start": "^1.130.0",
+    "@tanstack/react-router": "^1.130.0",
+    "@tanstack/react-query": "^5.85.0",
+    "@tanstack/react-form": "^1.19.0",
+    "@tanstack/react-table": "^8.21.0",
+    "@tanstack/react-virtual": "^3.13.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "vite": "^7.0.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "@tanstack/router-plugin": "^1.130.0",
+    "@tanstack/react-query-devtools": "^5.85.0",
+    "vitest": "^3.2.0",
+    "typescript": "^5.9.0"
+  }
+}

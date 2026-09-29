@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Instrument+Sans:wght@400;500;600&family=DM+Serif+Display&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=Instrument+Serif&family=Geist:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="theme/tokens.css">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>body{margin:0;background:#E6E4DF;-webkit-font-smoothing:antialiased;text-wrap:pretty}a{color:var(--brand)}a:hover{color:var(--brand-700)}button{font:inherit}</style>
+</helmet>
+<section style="padding:64px;display:flex;flex-direction:column;gap:32px;font-family:'Instrument Sans',system-ui,sans-serif;color:#15231B">
+  <div style="max-width:760px">
+    <div style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#5b6660">Turn 1 · Redesign directions</div>
+    <h1 style="font-family:'Newsreader',serif;font-weight:500;font-size:44px;margin:8px 0 10px;letter-spacing:-.01em">Three green systems, same search-first home.</h1>
+    <p style="font-size:16px;line-height:1.55;margin:0;color:#3d4842">Each option runs on one token file (<code>theme/tokens.css</code>). Every tint, shade, line and text colour is derived from four base values — change <code>--brand</code> and the whole product follows. Orders live in the account menu (shown open), location is auto-detected, Shop / Services / Food are search scopes rather than dead-end pages.</p>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start">
+  <sc-for list="{{ directions }}" as="d" hint-placeholder-count="3">
+  <div id="{{ d.id }}" data-theme="{{ d.theme }}" style="display:flex;flex-direction:column;gap:20px;font-family:var(--font-body);color:var(--ink)">
+    <div style="display:flex;align-items:flex-end;gap:24px;flex-wrap:wrap">
+      <span style="background:var(--ink);color:var(--bg);font-weight:600;font-size:15px;padding:6px 12px;border-radius:999px">{{ d.id }}</span>
+      <div style="display:flex;flex-direction:column;gap:4px;max-width:620px">
+        <div style="font-family:var(--font-head);font-size:34px;line-height:1.1">{{ d.name }}</div>
+        <div style="font-size:15px;line-height:1.5;color:var(--ink-2)">{{ d.blurb }}</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-left:auto">
+        <div style="display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--ink-2)"><span style="width:56px;height:40px;border-radius:8px;background:var(--brand)"></span>brand</div>
+        <div style="display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--ink-2)"><span style="width:56px;height:40px;border-radius:8px;background:var(--brand-700)"></span>brand-700</div>
+        <div style="display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--ink-2)"><span style="width:56px;height:40px;border-radius:8px;background:var(--brand-100)"></span>brand-100</div>
+        <div style="display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--ink-2)"><span style="width:56px;height:40px;border-radius:8px;background:var(--accent)"></span>accent</div>
+        <div style="display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--ink-2)"><span style="width:56px;height:40px;border-radius:8px;background:var(--accent-100)"></span>accent-100</div>
+        <div style="display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--ink-2)"><span style="width:56px;height:40px;border-radius:8px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--line)"></span>bg</div>
+        <div style="display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--ink-2)"><span style="width:56px;height:40px;border-radius:8px;background:var(--ink)"></span>ink</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:32px;align-items:flex-start">
+    <!-- WEB -->
+    <div data-screen-label="{{ d.id }} Web home" style="width:1280px;background:var(--bg);border-radius:12px;overflow:hidden;box-shadow:var(--shadow-2);position:relative;padding-bottom:48px">
+      <header style="display:flex;align-items:center;gap:24px;padding:16px 32px;background:var(--bg)">
+        <span style="font-family:var(--font-head);font-size:26px;color:var(--brand);letter-spacing:-.01em">Northline</span>
+        <button style="display:flex;align-items:center;gap:8px;border:0;background:var(--surface);border-radius:999px;padding:8px 14px 8px 10px;cursor:pointer;color:var(--ink);box-shadow:inset 0 0 0 1px var(--line);min-height:40px" style-hover="background:var(--brand-100)">
+          <i class="ph-duotone ph-map-pin" style="font-size:20px;color:var(--brand)"></i>
+          <span style="display:flex;flex-direction:column;align-items:flex-start;line-height:1.15"><span style="font-size:11px;color:var(--ink-2)">Detected · deliver to</span><span style="font-size:14px;font-weight:600">Beltline, Calgary</span></span>
+          <i class="ph ph-caret-down" style="font-size:14px;color:var(--ink-2)"></i>
+        </button>
+        <nav style="display:flex;gap:4px;margin-left:8px">
+          <a href="#" style="text-decoration:none;color:var(--ink);font-size:15px;font-weight:500;padding:8px 12px;border-radius:var(--radius-sm)">Services</a>
+          <a href="#" style="text-decoration:none;color:var(--ink);font-size:15px;font-weight:500;padding:8px 12px;border-radius:var(--radius-sm)">Shop</a>
+          <a href="#" style="text-decoration:none;color:var(--ink);font-size:15px;font-weight:500;padding:8px 12px;border-radius:var(--radius-sm)">Food</a>
+        </nav>
+        <div style="flex:1"></div>
+        <a href="#" style="font-size:14px;color:var(--ink-2);text-decoration:none">For business</a>
+        <button style="position:relative;width:44px;height:44px;border:0;border-radius:999px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);cursor:pointer;color:var(--ink);display:grid;place-items:center"><i class="ph-duotone ph-shopping-bag" style="font-size:22px"></i><span style="position:absolute;top:-2px;right:-2px;background:var(--accent);color:var(--accent-800);font-size:11px;font-weight:700;min-width:18px;height:18px;border-radius:999px;display:grid;place-items:center">3</span></button>
+        <button style="display:flex;align-items:center;gap:8px;border:0;background:var(--brand-100);border-radius:999px;padding:4px 10px 4px 4px;cursor:pointer;color:var(--brand-900);min-height:44px"><span style="width:36px;height:36px;border-radius:999px;background:var(--brand);color:var(--brand-ink);display:grid;place-items:center;font-weight:600;font-size:14px">AK</span><i class="ph ph-caret-down" style="font-size:14px"></i></button>
+      </header>
+
+      <!-- account menu (open) -->
+      <div style="position:absolute;top:74px;right:32px;width:288px;background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow-2);padding:8px;z-index:3;display:flex;flex-direction:column">
+        <div style="padding:12px 12px 10px;display:flex;flex-direction:column;gap:2px"><span style="font-weight:600;font-size:15px">Amara Kowalski</span><span style="font-size:13px;color:var(--ink-2)">amara.k@gmail.com</span></div>
+        <a href="#" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--radius-sm);text-decoration:none;color:var(--ink);background:var(--brand-100)"><i class="ph-duotone ph-receipt" style="font-size:20px;color:var(--brand)"></i><span style="flex:1;font-weight:600">Orders &amp; bookings</span><span style="font-size:12px;font-weight:600;background:var(--brand);color:var(--brand-ink);padding:2px 8px;border-radius:999px">3 active</span></a>
+        <a href="#" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--radius-sm);text-decoration:none;color:var(--ink)"><i class="ph-duotone ph-file-text" style="font-size:20px;color:var(--brand)"></i>Quotes</a>
+        <a href="#" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--radius-sm);text-decoration:none;color:var(--ink)"><i class="ph-duotone ph-heart" style="font-size:20px;color:var(--brand)"></i>Saved</a>
+        <a href="#" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--radius-sm);text-decoration:none;color:var(--ink)"><i class="ph-duotone ph-map-pin-line" style="font-size:20px;color:var(--brand)"></i>Addresses</a>
+        <a href="#" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--radius-sm);text-decoration:none;color:var(--ink)"><i class="ph-duotone ph-credit-card" style="font-size:20px;color:var(--brand)"></i>Payment</a>
+        <a href="#" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--radius-sm);text-decoration:none;color:var(--ink)"><i class="ph-duotone ph-gear-six" style="font-size:20px;color:var(--brand)"></i>Settings</a>
+        <div style="height:1px;background:var(--line);margin:6px 8px"></div>
+        <div style="display:flex;justify-content:space-between;padding:8px 12px;font-size:14px"><a href="#" style="color:var(--ink-2)">Not you?</a><a href="#" style="color:var(--ink-2)">Sign out</a></div>
+      </div>
+
+      <!-- HERO A -->
+      <sc-if value="{{ d.isA }}" hint-placeholder-val="{{ false }}">
+      <div style="margin:8px 32px 0;background:var(--brand);color:var(--brand-ink);border-radius:var(--radius);padding:56px 56px 44px;display:flex;flex-direction:column;gap:22px">
+        <span style="font-size:14px;opacity:.85">Good evening, Amara</span>
+        <h1 style="font-family:var(--font-head);font-weight:500;font-size:60px;line-height:1.02;margin:0;letter-spacing:-.02em;max-width:760px">What do you need in Beltline tonight?</h1>
+        <div style="display:flex;align-items:center;gap:8px;background:var(--surface);border-radius:999px;padding:6px;max-width:820px;color:var(--ink)">
+          <div style="display:flex;gap:2px;background:var(--surface-2);border-radius:999px;padding:3px"><span style="padding:8px 14px;border-radius:999px;background:var(--surface);font-size:14px;font-weight:600;box-shadow:var(--shadow-1)">All</span><span style="padding:8px 14px;font-size:14px;color:var(--ink-2)">Services</span><span style="padding:8px 14px;font-size:14px;color:var(--ink-2)">Shop</span><span style="padding:8px 14px;font-size:14px;color:var(--ink-2)">Food</span></div>
+          <i class="ph-duotone ph-magnifying-glass" style="font-size:22px;color:var(--ink-2);margin-left:8px"></i>
+          <span style="flex:1;font-size:17px;color:var(--ink-2)">Plumber, sourdough, pho for four…</span>
+          <button style="border:0;background:var(--accent);color:var(--accent-800);font-weight:600;font-size:15px;padding:0 24px;height:48px;border-radius:999px;cursor:pointer">Search</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:14px"><span style="opacity:.8;padding:6px 0">Try</span><span style="padding:6px 12px;border-radius:999px;background:color-mix(in oklch,var(--brand-ink),transparent 86%)">Furnace tune-up</span><span style="padding:6px 12px;border-radius:999px;background:color-mix(in oklch,var(--brand-ink),transparent 86%)">Groceries in 45 min</span><span style="padding:6px 12px;border-radius:999px;background:color-mix(in oklch,var(--brand-ink),transparent 86%)">Dinner for 4</span></div>
+      </div>
+      </sc-if>
+
+      <!-- HERO B -->
+      <sc-if value="{{ d.isB }}" hint-placeholder-val="{{ false }}">
+      <div style="margin:8px 32px 0;display:grid;grid-template-columns:1.05fr 1fr;gap:40px;align-items:center;padding:28px 0 8px">
+        <div style="display:flex;flex-direction:column;gap:22px">
+          <span style="font-size:14px;color:var(--brand);font-weight:600">Good evening, Amara</span>
+          <h1 style="font-family:var(--font-head);font-weight:400;font-size:64px;line-height:1.02;margin:0;letter-spacing:-.01em">Your neighbourhood, <span style="color:var(--brand)">delivered.</span></h1>
+          <p style="margin:0;font-size:17px;line-height:1.5;color:var(--ink-2);max-width:440px">Local pros, shops and kitchens around Beltline — verified, insured and paid through escrow.</p>
+          <div style="display:flex;align-items:center;gap:10px;background:var(--surface);border-radius:var(--radius);padding:8px 8px 8px 18px;box-shadow:var(--shadow-1)">
+            <i class="ph-duotone ph-magnifying-glass" style="font-size:22px;color:var(--brand)"></i>
+            <span style="flex:1;font-size:17px;color:var(--ink-2)">Search services, shops, food…</span>
+            <button style="border:0;background:var(--brand);color:var(--brand-ink);font-weight:600;font-size:15px;padding:0 22px;height:48px;border-radius:var(--radius-sm);cursor:pointer">Search</button>
+          </div>
+          <div style="display:flex;gap:8px;font-size:14px"><span style="padding:7px 14px;border-radius:999px;background:var(--brand);color:var(--brand-ink);font-weight:600">All</span><span style="padding:7px 14px;border-radius:999px;background:var(--surface-2)">Services</span><span style="padding:7px 14px;border-radius:999px;background:var(--surface-2)">Shop</span><span style="padding:7px 14px;border-radius:999px;background:var(--surface-2)">Food</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;grid-template-rows:200px 200px;gap:14px">
+          <div style="grid-row:span 2;border-radius:var(--radius);background:var(--photo);display:flex;align-items:flex-end;padding:14px;font-size:12px;color:var(--ink-2)">photo · baker at the counter, morning light</div>
+          <div style="border-radius:var(--radius);background:var(--photo);display:flex;align-items:flex-end;padding:14px;font-size:12px;color:var(--ink-2)">photo · plumber under sink</div>
+          <div style="border-radius:var(--radius);background:var(--accent-100);display:flex;flex-direction:column;justify-content:flex-end;gap:4px;padding:18px"><i class="ph-duotone ph-shield-check" style="font-size:28px;color:var(--accent-800)"></i><span style="font-family:var(--font-head);font-size:22px;color:var(--accent-800);line-height:1.1">Paid only when it’s done right</span></div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- HERO C -->
+      <sc-if value="{{ d.isC }}" hint-placeholder-val="{{ false }}">
+      <div style="margin:8px 32px 0;display:grid;grid-template-columns:1fr 360px;gap:24px;align-items:stretch">
+        <div style="background:var(--brand);color:var(--brand-ink);border-radius:var(--radius);padding:36px 40px;display:flex;flex-direction:column;gap:18px">
+          <h1 style="font-family:var(--font-head);font-weight:400;font-size:52px;line-height:1;margin:0">Anything local. <span style="color:var(--accent)">Fast.</span></h1>
+          <div style="display:flex;align-items:center;gap:10px;background:var(--surface);border-radius:var(--radius-sm);padding:6px 6px 6px 16px;color:var(--ink)">
+            <i class="ph-duotone ph-magnifying-glass" style="font-size:20px;color:var(--ink-2)"></i>
+            <span style="flex:1;font-size:16px;color:var(--ink-2)">Search 1,240 pros, shops &amp; kitchens near you</span>
+            <span style="font-size:12px;color:var(--ink-2);border:1px solid var(--line);border-radius:5px;padding:2px 6px">/</span>
+            <button style="border:0;background:var(--accent);color:var(--brand-900);font-weight:600;font-size:15px;padding:0 20px;height:44px;border-radius:var(--radius-sm);cursor:pointer">Search</button>
+          </div>
+          <div style="display:flex;gap:6px;font-size:13px"><span style="padding:6px 12px;border-radius:var(--radius-sm);background:var(--accent);color:var(--brand-900);font-weight:600">All</span><span style="padding:6px 12px;border-radius:var(--radius-sm);background:color-mix(in oklch,var(--brand-ink),transparent 86%)">Services</span><span style="padding:6px 12px;border-radius:var(--radius-sm);background:color-mix(in oklch,var(--brand-ink),transparent 86%)">Shop</span><span style="padding:6px 12px;border-radius:var(--radius-sm);background:color-mix(in oklch,var(--brand-ink),transparent 86%)">Food</span></div>
+        </div>
+        <div style="background:var(--surface);border-radius:var(--radius);padding:20px;display:flex;flex-direction:column;gap:12px;box-shadow:var(--shadow-1)">
+          <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-weight:600">Order again</span><a href="#" style="font-size:13px">All orders</a></div>
+          <div style="display:flex;gap:12px;align-items:center"><span style="width:48px;height:48px;border-radius:var(--radius-sm);background:var(--photo);flex:none"></span><span style="flex:1;display:flex;flex-direction:column"><span style="font-weight:600;font-size:14px">Glenmore Bakery</span><span style="font-size:12px;color:var(--ink-2)">Sourdough, 6 croissants · $24.50</span></span><button style="border:0;background:var(--brand-100);color:var(--brand-900);font-weight:600;font-size:13px;height:36px;padding:0 12px;border-radius:var(--radius-sm)">Reorder</button></div>
+          <div style="display:flex;gap:12px;align-items:center"><span style="width:48px;height:48px;border-radius:var(--radius-sm);background:var(--photo);flex:none"></span><span style="flex:1;display:flex;flex-direction:column"><span style="font-weight:600;font-size:14px">Pho Dau Bo</span><span style="font-size:12px;color:var(--ink-2)">Pho tai ×2, spring rolls · $38.10</span></span><button style="border:0;background:var(--brand-100);color:var(--brand-900);font-weight:600;font-size:13px;height:36px;padding:0 12px;border-radius:var(--radius-sm)">Reorder</button></div>
+          <div style="display:flex;gap:12px;align-items:center"><span style="width:48px;height:48px;border-radius:var(--radius-sm);background:var(--brand-100);flex:none;display:grid;place-items:center"><i class="ph-duotone ph-wrench" style="font-size:22px;color:var(--brand)"></i></span><span style="flex:1;display:flex;flex-direction:column"><span style="font-weight:600;font-size:14px">Maya Chen · Plumbing</span><span style="font-size:12px;color:var(--ink-2)">Booked Thu 9:00 · on the way</span></span><button style="border:0;background:var(--brand-100);color:var(--brand-900);font-weight:600;font-size:13px;height:36px;padding:0 12px;border-radius:var(--radius-sm)">Track</button></div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- CATEGORIES -->
+      <section style="padding:40px 32px 0;display:flex;flex-direction:column;gap:16px">
+        <h2 style="font-family:var(--font-head);font-weight:500;font-size:28px;margin:0">Browse by need</h2>
+        <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:12px">
+          <sc-for list="{{ cats }}" as="c" hint-placeholder-count="8">
+          <button style="border:0;background:var(--surface);border-radius:var(--radius);padding:16px 12px;display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer;color:var(--ink);box-shadow:var(--shadow-1)" style-hover="background:var(--brand-100)">
+            <span style="width:52px;height:52px;border-radius:999px;background:var(--brand-100);display:grid;place-items:center"><i class="ph-duotone {{ c.i }}" style="font-size:26px;color:var(--brand)"></i></span>
+            <span style="font-size:14px;font-weight:500">{{ c.n }}</span>
+          </button>
+          </sc-for>
+        </div>
+      </section>
+
+      <!-- NEARBY -->
+      <section style="padding:40px 32px 0;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline"><h2 style="font-family:var(--font-head);font-weight:500;font-size:28px;margin:0">Open near you</h2><a href="#" style="font-size:14px;font-weight:500">See map</a></div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px">
+          <sc-for list="{{ nearby }}" as="n" hint-placeholder-count="4">
+          <a href="#" style="text-decoration:none;color:var(--ink);display:flex;flex-direction:column;gap:10px">
+            <div style="aspect-ratio:4/3;border-radius:var(--radius);background:var(--photo);position:relative;display:flex;align-items:flex-end;padding:12px;font-size:12px;color:var(--ink-2)">photo · {{ n.photo }}<span style="position:absolute;top:10px;left:10px;background:var(--surface);color:var(--ink);font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;display:flex;align-items:center;gap:4px"><i class="ph-duotone ph-clock" style="color:var(--brand)"></i>{{ n.eta }}</span></div>
+            <div style="display:flex;justify-content:space-between;gap:8px"><span style="font-weight:600;font-size:16px">{{ n.name }}</span><span style="font-size:14px;display:flex;align-items:center;gap:3px"><i class="ph-fill ph-star" style="color:var(--accent)"></i>{{ n.rating }}</span></div>
+            <span style="font-size:14px;color:var(--ink-2);margin-top:-6px">{{ n.meta }}</span>
+          </a>
+          </sc-for>
+        </div>
+      </section>
+
+      <!-- PROS -->
+      <section style="padding:40px 32px 0;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline"><h2 style="font-family:var(--font-head);font-weight:500;font-size:28px;margin:0">Top-rated pros this week</h2><a href="#" style="font-size:14px;font-weight:500">All services</a></div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px">
+          <sc-for list="{{ pros }}" as="p" hint-placeholder-count="3">
+          <div style="background:var(--surface);border-radius:var(--radius);padding:18px;display:flex;gap:14px;align-items:center;box-shadow:var(--shadow-1)">
+            <span style="width:60px;height:60px;border-radius:999px;background:var(--photo);flex:none"></span>
+            <div style="flex:1;display:flex;flex-direction:column;gap:3px;min-width:0">
+              <span style="font-weight:600">{{ p.name }}</span>
+              <span style="font-size:13px;color:var(--ink-2)">{{ p.trade }} · <i class="ph-fill ph-star" style="color:var(--accent)"></i> {{ p.rating }}</span>
+              <span style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--ok);font-weight:600"><i class="ph-duotone ph-seal-check" style="font-size:15px"></i>{{ p.badge }}</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px"><span style="font-size:13px;color:var(--ink-2)">{{ p.rate }}</span><button style="border:0;background:var(--brand);color:var(--brand-ink);font-weight:600;font-size:14px;height:40px;padding:0 16px;border-radius:var(--radius-sm);cursor:pointer">Get a quote</button></div>
+          </div>
+          </sc-for>
+        </div>
+      </section>
+    </div>
+
+    <!-- MOBILE -->
+    <div data-screen-label="{{ d.id }} Mobile home" style="width:390px;height:844px;background:var(--bg);border-radius:48px;box-shadow:0 0 0 10px var(--ink),var(--shadow-2);overflow:hidden;display:flex;flex-direction:column;flex:none;position:relative">
+      <div style="height:50px;display:flex;justify-content:space-between;align-items:center;padding:0 28px;font-size:15px;font-weight:600"><span>9:41</span><span style="display:flex;gap:5px"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-full"></i></span></div>
+      <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;gap:18px;padding:6px 18px 0">
+        <div style="display:flex;align-items:center;gap:10px">
+          <button style="display:flex;align-items:center;gap:6px;border:0;background:transparent;padding:0;color:var(--ink);min-height:44px;flex:1;text-align:left"><i class="ph-duotone ph-map-pin" style="font-size:24px;color:var(--brand)"></i><span style="display:flex;flex-direction:column;line-height:1.15"><span style="font-size:11px;color:var(--ink-2)">Detected</span><span style="font-size:15px;font-weight:600">Beltline, Calgary <i class="ph ph-caret-down" style="font-size:12px"></i></span></span></button>
+          <span style="width:40px;height:40px;border-radius:999px;background:var(--brand);color:var(--brand-ink);display:grid;place-items:center;font-weight:600;font-size:14px">AK</span>
+        </div>
+        <h1 style="font-family:var(--font-head);font-weight:500;font-size:32px;line-height:1.08;margin:0">What do you need tonight?</h1>
+        <div style="display:flex;align-items:center;gap:10px;background:var(--surface);border-radius:var(--radius);padding:0 14px;height:52px;box-shadow:var(--shadow-1)"><i class="ph-duotone ph-magnifying-glass" style="font-size:22px;color:var(--brand)"></i><span style="color:var(--ink-2);font-size:16px">Plumber, sourdough, pho…</span></div>
+        <div style="display:flex;gap:6px;font-size:14px"><span style="padding:8px 14px;border-radius:999px;background:var(--brand);color:var(--brand-ink);font-weight:600">All</span><span style="padding:8px 14px;border-radius:999px;background:var(--surface-2)">Services</span><span style="padding:8px 14px;border-radius:999px;background:var(--surface-2)">Shop</span><span style="padding:8px 14px;border-radius:999px;background:var(--surface-2)">Food</span></div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px 6px">
+          <sc-for list="{{ cats }}" as="c" hint-placeholder-count="8">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:58px;height:58px;border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow-1);display:grid;place-items:center"><i class="ph-duotone {{ c.i }}" style="font-size:26px;color:var(--brand)"></i></span><span style="font-size:12px;text-align:center">{{ c.n }}</span></div>
+          </sc-for>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-family:var(--font-head);font-size:22px">Open near you</span><a href="#" style="font-size:13px">Map</a></div>
+        <div style="display:flex;gap:12px;margin-right:-18px">
+          <sc-for list="{{ nearby }}" as="n" hint-placeholder-count="2">
+          <div style="width:220px;flex:none;display:flex;flex-direction:column;gap:6px"><div style="height:130px;border-radius:var(--radius);background:var(--photo);position:relative"><span style="position:absolute;top:8px;left:8px;background:var(--surface);font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px">{{ n.eta }}</span></div><span style="font-weight:600;font-size:15px">{{ n.name }}</span><span style="font-size:12px;color:var(--ink-2);margin-top:-4px">{{ n.meta }}</span></div>
+          </sc-for>
+        </div>
+      </div>
+      <nav style="display:grid;grid-template-columns:repeat(4,1fr);padding:8px 8px 28px;background:var(--surface);box-shadow:0 -1px 0 var(--line)">
+        <span style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:600;color:var(--brand);min-height:44px"><i class="ph-duotone ph-house" style="font-size:24px"></i>Home</span>
+        <span style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--ink-2)"><i class="ph ph-magnifying-glass" style="font-size:24px"></i>Search</span>
+        <span style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--ink-2)"><i class="ph ph-shopping-bag" style="font-size:24px"></i>Cart</span>
+        <span style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--ink-2);position:relative"><i class="ph ph-user-circle" style="font-size:24px"></i>Account<span style="position:absolute;top:0;right:26px;width:8px;height:8px;border-radius:999px;background:var(--accent)"></span></span>
+      </nav>
+    </div>
+    </div>
+  </div>
+  </sc-for>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      directions: [
+        { id: '1a', theme: 'a', isA: true, name: 'Spruce & Honey', blurb: 'Clean utility. Deep spruce hero band, honey for the one action that matters. Newsreader headings, Instrument Sans body, 14px radius. Closest to a modern delivery app, still warm.' },
+        { id: '1b', theme: 'b', isB: true, name: 'Fern & Clay', blurb: 'Warm and local. Photo-led split hero, softer fern green with terracotta, rounder corners. DM Serif Display over DM Sans. Friendliest; leans on real photography.' },
+        { id: '1c', theme: 'c', isC: true, name: 'Evergreen & New Growth', blurb: 'Dense and fast. Dark evergreen with a bright growth-green accent, tight 10px radius, reorder panel beside search. Instrument Serif over Geist. Most “power user”.' }
+      ],
+      cats: [['ph-wrench', 'Home repair'], ['ph-broom', 'Cleaning'], ['ph-basket', 'Groceries'], ['ph-bread', 'Bakery'], ['ph-fork-knife', 'Restaurants'], ['ph-pill', 'Pharmacy'], ['ph-scissors', 'Beauty'], ['ph-paw-print', 'Pets']].map(([i, n]) => ({ i, n })),
+      nearby: [
+        { name: 'Glenmore Bakery', meta: 'Bakery · 0.8 km · $$', rating: '4.8', eta: '35 min', photo: 'sourdough on the counter' },
+        { name: 'Pho Dau Bo', meta: 'Vietnamese · 1.2 km · $$', rating: '4.7', eta: '25 min', photo: 'steaming bowl, overhead' },
+        { name: 'Sunnyside Greens', meta: 'Produce · 1.6 km · $', rating: '4.9', eta: '45 min', photo: 'crates of squash' },
+        { name: 'Kensington Apothecary', meta: 'Pharmacy · 2.4 km', rating: '4.6', eta: '40 min', photo: 'shelves, warm light' }
+      ],
+      pros: [
+        { name: 'Maya Chen', trade: 'Plumber', rating: '4.9 (212)', badge: 'Licensed · insured', rate: 'from $110/hr' },
+        { name: 'Luc Tremblay', trade: 'Electrician', rating: '4.8 (164)', badge: 'Master electrician', rate: 'from $125/hr' },
+        { name: 'Priya Nair', trade: 'Deep cleaning', rating: '5.0 (88)', badge: 'Background checked', rate: 'from $45/hr' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

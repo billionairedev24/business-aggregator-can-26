@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:booking.quote_accepted:2",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "merchantId",
+    "customerId",
+    "totalCents",
+    "depositCents"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string"
+    },
+    "merchantId": {
+      "type": "string"
+    },
+    "customerId": {
+      "type": "string"
+    },
+    "totalCents": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "depositCents": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

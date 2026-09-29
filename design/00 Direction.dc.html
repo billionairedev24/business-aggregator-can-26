@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="theme/northline.css">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>body{margin:0;text-wrap:pretty}a{color:var(--color-accent)}a:hover{color:var(--color-accent-700)}code{font-family:ui-monospace,Menlo,monospace;font-size:.88em;background:var(--color-neutral-200);padding:1px 5px;border-radius:5px}</style>
+</helmet>
+<div style="min-height:100vh;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body)">
+<nav class="nav" style="padding:14px clamp(20px,4vw,48px)"><span class="nav-brand">Northline</span><span style="font-size:14px;color:var(--color-neutral-700)">Design direction · v2</span><div style="flex:1"></div><a href="11 Redesign Directions.dc.html" style="font-size:14px">Explorations</a><a href="05 Architecture.dc.html" style="font-size:14px">Architecture</a></nav>
+<main style="max-width:1200px;margin:0 auto;padding:40px clamp(20px,4vw,48px) 96px;display:flex;flex-direction:column;gap:64px">
+
+<section style="background:var(--color-accent);color:var(--color-on-accent);border-radius:var(--radius-lg);padding:clamp(32px,5vw,64px);display:flex;flex-direction:column;gap:16px">
+  <span style="font-size:14px;opacity:.85">Spruce &amp; Honey</span>
+  <h1 style="font-size:clamp(40px,6vw,72px);margin:0;letter-spacing:-.02em;line-height:1;max-width:14ch;color:inherit">Local, fast, and warm to the touch.</h1>
+  <p style="font-size:17px;line-height:1.6;margin:0;max-width:60ch;opacity:.92">A clean, dense utility interface — the speed of a modern delivery app — set on a warm off-white ground with a deep spruce brand and honey for the single action that matters. Serif headings give it a local, trusted voice; a sans body keeps it quick to scan.</p>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:18px">
+  <div style="display:flex;flex-direction:column;gap:6px;max-width:760px"><h2 style="margin:0">Colour — five base tokens, everything derived</h2><p style="margin:0;color:var(--color-neutral-800)">Edit the five values at the top of <code>theme/northline.css</code> (in code: <code>packages/tokens/tokens.json</code>). Ramps, borders, shadows, hover and pressed states are computed from them with <code>color-mix(in oklch)</code>, so one change re-themes every screen.</p></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+    <sc-for list="{{ bases }}" as="b" hint-placeholder-count="5"><div style="background:var(--color-surface);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-sm)"><div style="height:96px;background:var({{ b.v }});box-shadow:inset 0 -1px 0 var(--color-divider)"></div><div style="padding:12px 14px;display:flex;flex-direction:column;gap:2px"><span style="font-weight:600">{{ b.n }}</span><code style="align-self:flex-start">{{ b.v }}</code><span style="font-size:13px;color:var(--color-neutral-700);margin-top:4px">{{ b.d }}</span></div></div></sc-for>
+  </div>
+  <sc-for list="{{ ramps }}" as="r" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:600">{{ r.n }}</span><div style="display:grid;grid-template-columns:repeat(9,1fr);gap:4px"><sc-for list="{{ r.steps }}" as="s" hint-placeholder-count="9"><div style="display:flex;flex-direction:column;gap:4px"><div style="height:44px;border-radius:var(--radius-sm);background:var({{ s.v }})"></div><span style="font-size:11px;color:var(--color-neutral-700)">{{ s.k }}</span></div></sc-for></div></div></sc-for>
+</section>
+
+<section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:32px">
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <h2 style="margin:0">Type</h2>
+    <div class="card" style="gap:14px">
+      <span style="font-family:var(--font-heading);font-size:48px;line-height:1">Newsreader</span>
+      <span style="font-size:13px;color:var(--color-neutral-700)">Headings · 500 · -0.01em · 22–72px</span>
+      <span style="font-size:26px;font-weight:500;line-height:1.1">Instrument Sans</span>
+      <span style="font-size:13px;color:var(--color-neutral-700)">Body, UI, numbers · 400 / 600 · 13–17px</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <h1 style="margin:0">Open near you</h1><h2 style="margin:0">Top-rated pros</h2><h3 style="margin:0">Order summary</h3>
+      <p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-neutral-800)">Body copy sits at 15px with 1.5 line height. Secondary text uses neutral-700, never an opacity.</p>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <h2 style="margin:0">Shape &amp; elevation</h2>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+      <div style="height:90px;border-radius:var(--radius-sm);background:var(--color-surface);box-shadow:var(--shadow-sm);display:grid;place-items:center;font-size:12px">sm 8 · shadow-sm</div>
+      <div style="height:90px;border-radius:var(--radius-md);background:var(--color-surface);box-shadow:var(--shadow-md);display:grid;place-items:center;font-size:12px">md 12 · shadow-md</div>
+      <div style="height:90px;border-radius:var(--radius-lg);background:var(--color-surface);box-shadow:var(--shadow-lg);display:grid;place-items:center;font-size:12px">lg 18 · shadow-lg</div>
+    </div>
+    <p style="margin:0;font-size:14px;color:var(--color-neutral-800);line-height:1.55">Controls take <code>md</code>; cards and panels <code>lg</code>; chips, search and avatars are pills. Surfaces are white on the warm ground — separation comes from soft shadows, not borders.</p>
+  </div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:18px">
+  <h2 style="margin:0">Components</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px">
+    <div class="card" style="gap:14px"><span class="card-kicker">Buttons</span><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary">Book now</button><button class="btn btn-highlight">Search</button><button class="btn btn-secondary">Get a quote</button><button class="btn btn-ghost">See all</button></div><span style="font-size:13px;color:var(--color-neutral-700)">Honey is reserved for one hero action per screen.</span></div>
+    <div class="card" style="gap:14px"><span class="card-kicker">Tags</span><div style="display:flex;gap:8px;flex-wrap:wrap"><span class="tag tag-accent">Licensed</span><span class="tag tag-highlight">3× points</span><span class="tag tag-neutral">Pickup</span><span class="tag tag-accent-2">Refund open</span><span class="tag tag-outline">New</span></div></div>
+    <div class="card" style="gap:12px"><span class="card-kicker">Fields</span><div class="field"><label>Email</label><input class="input" placeholder="you@example.ca"></div><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><div class="seg"><label class="seg-opt"><input type="radio" name="d1" checked><span>Deliver</span></label><label class="seg-opt"><input type="radio" name="d1"><span>Pickup</span></label></div><label class="radio"><input type="radio" name="d2" checked><span class="dot"></span>Today</label></div><span style="font-size:13px;color:var(--color-accent-2-700)">Inline errors use accent-2-700.</span></div>
+  </div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:18px">
+  <h2 style="margin:0">Header patterns</h2>
+  <div style="background:var(--color-surface-2);border-radius:var(--radius-lg);padding:24px;display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--color-bg);border-radius:var(--radius-md);padding:10px 16px;box-shadow:var(--shadow-sm);position:relative">
+      <span class="nav-brand" style="font-size:22px">Northline</span>
+      <span style="display:flex;align-items:center;gap:8px;background:var(--color-surface);box-shadow:inset 0 0 0 1px var(--color-divider);border-radius:999px;padding:6px 14px 6px 10px;min-height:44px"><i class="ph-duotone ph-map-pin" style="font-size:22px;color:var(--color-accent)"></i><span style="display:flex;flex-direction:column;line-height:1.15"><span style="font-size:11px;color:var(--color-neutral-700)">Detected · deliver to</span><span style="font-size:14px;font-weight:600">Beltline, Calgary</span></span></span>
+      <span style="display:flex;gap:4px;font-weight:500"><span style="padding:8px 12px">Services</span><span style="padding:8px 12px">Shop</span><span style="padding:8px 12px">Food</span></span>
+      <div style="flex:1"></div>
+      <span style="width:44px;height:44px;border-radius:999px;background:var(--color-surface);box-shadow:inset 0 0 0 1px var(--color-divider);display:grid;place-items:center"><i class="ph-duotone ph-shopping-bag" style="font-size:22px"></i></span>
+      <span style="display:flex;align-items:center;gap:6px;background:var(--color-accent-100);border-radius:999px;padding:4px 10px 4px 4px;min-height:44px"><span style="width:36px;height:36px;border-radius:999px;background:var(--color-accent);color:var(--color-on-accent);display:grid;place-items:center;font-weight:600;font-size:14px">AO</span><i class="ph ph-caret-down"></i></span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">
+      <sc-for list="{{ rules }}" as="r" hint-placeholder-count="4"><div style="display:flex;gap:10px;font-size:14px;line-height:1.5"><i class="ph-duotone {{ r.i }}" style="font-size:22px;color:var(--color-accent);flex:none"></i><span><strong>{{ r.t }}</strong> {{ r.d }}</span></div></sc-for>
+    </div>
+  </div>
+</section>
+
+<section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px">
+  <div style="display:flex;flex-direction:column;gap:10px"><h3 style="margin:0">Do</h3><sc-for list="{{ dos }}" as="d" hint-placeholder-count="5"><div style="display:flex;gap:10px;font-size:14px;line-height:1.5"><i class="ph-duotone ph-check-circle" style="font-size:20px;color:var(--color-accent);flex:none"></i>{{ d }}</div></sc-for></div>
+  <div style="display:flex;flex-direction:column;gap:10px"><h3 style="margin:0">Don't</h3><sc-for list="{{ donts }}" as="d" hint-placeholder-count="5"><div style="display:flex;gap:10px;font-size:14px;line-height:1.5"><i class="ph-duotone ph-x-circle" style="font-size:20px;color:var(--color-accent-2);flex:none"></i>{{ d }}</div></sc-for></div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:14px">
+  <h2 style="margin:0">Screens</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">
+    <sc-for list="{{ screens }}" as="s" hint-placeholder-count="10"><a href="{{ s.href }}" style="text-decoration:none;color:var(--color-text);background:var(--color-surface);border-radius:var(--radius-md);padding:14px 16px;box-shadow:var(--shadow-sm);display:flex;align-items:center;gap:12px" style-hover="background:var(--color-accent-100)"><i class="ph-duotone {{ s.i }}" style="font-size:22px;color:var(--color-accent)"></i><span style="display:flex;flex-direction:column"><span style="font-weight:600;font-size:14px">{{ s.n }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ s.d }}</span></span></a></sc-for>
+  </div>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const o = (k, rows) => rows.map(r => Object.fromEntries(k.map((x, i) => [x, r[i]])));
+    const ramp = (n, p) => ({ n, steps: [100, 200, 300, 400, 500, 600, 700, 800, 900].map(k => ({ k, v: `--color-${p}-${k}` })) });
+    return {
+      bases: o(['n', 'v', 'd'], [['Spruce', '--color-accent', 'Brand, primary actions, links, focus'], ['Honey', '--color-highlight', 'One hero CTA, ratings, badges'], ['Rosehip', '--color-accent-2', 'Errors, alerts, disputes'], ['Oat', '--color-bg', 'Warm off-white ground'], ['Pine ink', '--color-text', 'Text, green-black']]),
+      ramps: [ramp('Spruce ramp', 'accent'), ramp('Rosehip ramp', 'accent-2'), ramp('Neutral ramp (ink → ground)', 'neutral')],
+      rules: o(['i', 't', 'd'], [['ph-map-pin', 'Location is detected', 'on load via device geolocation, shown with a map-pin; tap to change. Falls back to the saved address.'], ['ph-magnifying-glass', 'Search is first', 'On home it lives in the hero; elsewhere it moves into the header.'], ['ph-list', 'Three scopes only', 'Services, Shop, Food — each a real landing page, never a raw result list.'], ['ph-receipt', 'Orders live in the account menu', 'with an active-count badge. Not in the top nav.']]),
+      dos: ['Use var(--color-*) everywhere — never a hex in a component.', 'One honey action per screen; everything else spruce or neutral.', 'Serif for headings and big numbers, sans for everything you read quickly.', 'Duotone Phosphor icons at 18–24px, tinted spruce.', 'Photography of real local people and places; placeholders until supplied.'],
+      donts: ['Don’t put Orders, Quotes or Settings in the top bar.', 'Don’t use rosehip for decoration — it means something is wrong.', 'Don’t draw borders to separate sections; use space and surfaces.', 'Don’t mix green tints by hand; pick a ramp step.', 'Don’t go below 44px touch targets on mobile.'],
+      screens: o(['i', 'n', 'd', 'href'], [['ph-globe', 'Consumer web', 'Search-first home, scopes, checkout', '06 Consumer Web.dc.html'], ['ph-device-mobile', 'Consumer app', 'iOS screens', '01 Consumer App.dc.html'], ['ph-wrench', 'Provider studio', 'Appointments, quotes, payouts', '02 Provider Studio.dc.html'], ['ph-storefront', 'Seller studio', 'Orders, inventory, store', '02b Seller Studio.dc.html'], ['ph-cooking-pot', 'Kitchen studio', 'Live orders, menu', '02c Kitchen Studio.dc.html'], ['ph-user-plus', 'Onboarding', 'New user + three business kinds', '07d Onboarding - New user.dc.html'], ['ph-shield-check', 'Platform console', 'Ops, trust, finance', '03 Platform Console.dc.html'], ['ph-tree-structure', 'Architecture', 'Spring Boot 4 · events · OIDC', '05 Architecture.dc.html'], ['ph-database', 'Data model', 'Schemas and constraints', '08 Data Model.dc.html'], ['ph-scales', 'Legal', 'Terms · Privacy', '09 Terms of Service.dc.html']])
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+/* Northline tokens — change a base value here; every ramp step derives from it. */
+:root, [data-theme="a"] {
+  --font-head: 'Newsreader', Georgia, serif;
+  --font-body: 'Instrument Sans', system-ui, sans-serif;
+  --brand: #1E4D36;   /* spruce */
+  --accent: #D9A441;  /* honey */
+  --bg: #F7F4EE;
+  --surface: #FFFFFF;
+  --surface-2: #EEE9DF;
+  --ink: #15231B;
+  --radius: 14px;
+  --radius-sm: 10px;
+}
+[data-theme="b"] {
+  --font-head: 'DM Serif Display', Georgia, serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+  --brand: #3F6B45;   /* fern */
+  --accent: #C0663F;  /* clay */
+  --bg: #F4EFE6;
+  --surface: #FBF8F2;
+  --surface-2: #E9E1D2;
+  --ink: #22261F;
+  --radius: 22px;
+  --radius-sm: 14px;
+}
+[data-theme="c"] {
+  --font-head: 'Instrument Serif', Georgia, serif;
+  --font-body: 'Geist', system-ui, sans-serif;
+  --brand: #0F3B2E;   /* evergreen */
+  --accent: #7FD65A;  /* new growth */
+  --bg: #F4F5F0;
+  --surface: #FFFFFF;
+  --surface-2: #E9ECE4;
+  --ink: #0E1A14;
+  --radius: 10px;
+  --radius-sm: 7px;
+}
+:root, [data-theme] {
+  --brand-900: color-mix(in oklch, var(--brand), black 45%);
+  --brand-700: color-mix(in oklch, var(--brand), black 20%);
+  --brand-300: color-mix(in oklch, var(--brand), white 55%);
+  --brand-100: color-mix(in oklch, var(--brand), white 87%);
+  --brand-ink: var(--bg);
+  --accent-800: color-mix(in oklch, var(--accent), black 55%);
+  --accent-100: color-mix(in oklch, var(--accent), white 78%);
+  --ink-2: color-mix(in oklch, var(--ink), var(--bg) 40%);
+  --line: color-mix(in oklch, var(--ink), var(--bg) 87%);
+  --ok: #2F7D4F; --warn: #B7791F; --danger: #B3402E;
+  --shadow-1: 0 1px 2px color-mix(in oklch, var(--ink), transparent 92%), 0 4px 14px color-mix(in oklch, var(--ink), transparent 94%);
+  --shadow-2: 0 12px 40px color-mix(in oklch, var(--ink), transparent 84%);
+  --photo: repeating-linear-gradient(135deg, var(--surface-2) 0 12px, color-mix(in oklch, var(--surface-2), var(--ink) 5%) 12px 24px);
+}

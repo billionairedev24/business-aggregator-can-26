@@ -1,0 +1,14 @@
+import { Meta, ColorPalette, ColorItem } from '@storybook/addon-docs/blocks';
+
+<Meta title="Foundations/Tokens" />
+
+# Tokens
+
+Change a value in `packages/tokens/tokens.json` → `pnpm --filter @northline/tokens build`. Every ramp below is derived.
+
+<ColorPalette>
+  <ColorItem title="Spruce · accent" colors={{ 100: 'var(--color-accent-100)', 300: 'var(--color-accent-300)', base: 'var(--color-accent)', 700: 'var(--color-accent-700)', 900: 'var(--color-accent-900)' }} />
+  <ColorItem title="Honey · highlight" colors={{ 100: 'var(--color-highlight-100)', base: 'var(--color-highlight)', on: 'var(--color-on-highlight)' }} />
+  <ColorItem title="Rosehip · accent-2" colors={{ 100: 'var(--color-accent-2-100)', base: 'var(--color-accent-2)', 700: 'var(--color-accent-2-700)' }} />
+  <ColorItem title="Neutral" colors={{ bg: 'var(--color-bg)', 200: 'var(--color-neutral-200)', 500: 'var(--color-neutral-500)', 700: 'var(--color-neutral-700)', text: 'var(--color-text)' }} />
+</ColorPalette>

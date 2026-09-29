@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="theme/northline.css">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>body{margin:0;background:var(--color-neutral-200);text-wrap:pretty}a{color:var(--color-accent-700)}a:hover{color:var(--color-accent-800)}</style>
+</helmet>
+<div style="padding:40px clamp(20px,4vw,44px) 80px;font-family:var(--font-body);color:var(--color-text)">
+<div style="display:flex;align-items:baseline;gap:20px;flex-wrap:wrap;margin-bottom:8px">
+  <h1 style="font-size:34px;margin:0;letter-spacing:-0.02em">Northline · consumer app</h1>
+  <span style="font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-700)">30 screens · 4 journeys · fully interactive</span>
+  <a href="00 Direction.dc.html" style="font-size:14px;margin-left:auto">← Direction</a>
+</div>
+<p style="max-width:70ch;font-size:15px;color:var(--color-neutral-700);margin:0 0 44px">Each journey below has one live phone. Tap through it like the real app, or click any step in the index to jump straight to that screen — the notes explain the design decision behind each one.</p>
+
+<sc-for list="{{ journeys }}" as="j" hint-placeholder-count="4">
+  <section data-screen-label="{{ j.label }}" style="margin-bottom:72px;display:grid;grid-template-columns:402px minmax(280px,1fr);gap:28px clamp(28px,4vw,64px);align-items:start">
+    <div style="grid-column:1/-1;display:flex;align-items:baseline;gap:14px"><span style="font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-700)">Journey {{ j.id }}</span><h2 style="font-size:26px;margin:0;letter-spacing:-0.02em">{{ j.title }}</h2><span style="font-size:13px;color:var(--color-neutral-700)">{{ j.count }} screens</span></div>
+    <div style="position:sticky;top:20px"><dc-import name="Consumer Screen" screen="{{ j.current }}" plus-member="{{ plus }}" hint-size="402px,874px"></dc-import></div>
+    <div style="display:flex;flex-direction:column;max-width:560px">
+      <sc-for list="{{ j.steps }}" as="st" hint-placeholder-count="6">
+        <button onClick="{{ st.go }}" style="{{ st.style }}">
+          <span style="{{ st.num }}">{{ st.n }}</span>
+          <span style="flex:1;text-align:left"><span style="display:block;font-weight:600;font-size:16px">{{ st.label }}</span><span style="display:block;font-size:14px;line-height:1.45;color:var(--color-neutral-700);margin-top:3px">{{ st.note }}</span></span>
+        </button>
+      </sc-for>
+    </div>
+  </section>
+</sc-for>
+<p style="font-size:13px;color:var(--color-neutral-700);max-width:70ch">Tweaks: <em>plusMember</em> flips delivery fees and points multipliers on every screen. Try next: "add the quote-request flow for event planning" · "French pass" · "Android frames".</p>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;plusMember&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Scenario&quot;}}">
+class Component extends DCLogic {
+  state = { cur: {} };
+  renderVals() {
+    const s = this.state;
+    const defs = [
+      ['A', 'Account & security', [['welcome', 'Welcome', 'Value prop in one breath. Browsing is allowed without an account; paying is not.'], ['signup', 'Sign up', 'Phone-first. No passwords ever — passkeys are the primary factor.'], ['otp', 'Verify phone', 'Auto-fills from SMS on iOS/Android. Call fallback for landlines.'], ['mfa', 'Second factor', 'Mandatory because escrow money and addresses live here. Passkey recommended, authenticator app, SMS as backup only.'], ['location', 'Province & address', 'Province is a hard gate: taxes, zones, catalogue. Waitlist provinces collect an email.']]],
+      ['B', 'Shop & get it delivered', [['home', 'Home', 'Tonight\'s pooled run is the hero — it is the reason delivery is cheap.'], ['search', 'Search & filters', 'OpenSearch: text + geo + facets. "On tonight\'s run" is the default filter.'], ['product', 'Product', 'Seller tier, points promo, options, quantity. Cross-sell from the same shop keeps one pickup.'], ['cart', 'Cart', 'Grouped by shop; one delivery fee regardless of shop count.'], ['checkout', 'Checkout', 'Window, substitution policy, redeem points — the three decisions that cause support tickets.'], ['pay', 'Payment + 3-D Secure', 'Apple Pay or card via Stripe; SCA challenge on first payment. Tap Pay to see the bank step.'], ['confirmed', 'Order confirmed', 'Status ladder sets expectations; shops are not paid yet.'], ['track', 'Track', 'Live pooled-run map, courier identity, substitution log.'], ['delivered', 'Delivered · confirm', 'Photo proof. Customer confirms → shops paid; auto after 24 h. Rate + tip.'], ['refund', 'Refund request', 'Item-level, instant approval under a threshold; feeds seller quality score.']]],
+      ['C', 'Find & book a service', [['services', 'Browse services', '62 categories, two taps deep; regulated trades carry licence checks.'], ['providers', 'Providers', 'Sorted by trust. Filters for tier, instant book, distance, price.'], ['provider', 'Provider profile', 'Provider-branded hero; Northline-verified stats, credentials, fixed prices, real reviews.'], ['book_service', 'Choose service', 'Fixed-price menu or ask for a quote. Vehicle + notes cut the phone tag.'], ['book_slot', 'Choose time', 'Live calendar, instant book for Master tier, SLA stated.'], ['book_review', 'Review & escrow', 'Escrow explained in plain words; extra parts need in-app approval.'], ['booked', 'Booked', 'What happens next — reminders, ETA, approvals, sign-off.'], ['notifications', 'Notifications', 'Bookings, orders, offers, security — one inbox with quiet hours.'], ['eta', 'Day-of ETA', 'Provider identity check (photo, plate), time-boxed access sharing.'], ['signoff', 'Completion & sign-off', 'Before/after photos, written report, receipt. Release or raise an issue.'], ['review', 'Two-way review', 'Only paid jobs; structured praise tags; favourite for re-booking.']]],
+      ['D', 'Account', [['orders', 'Orders & bookings', 'Active / past / refunds in one list across goods and services.'], ['quote', 'Quote received', 'Itemized: scope, every labour/part/fee line, tax, what could change the price, deposit, cancellation. Accepting pays the total to escrow.'], ['account', 'Profile', 'Wallet up top; every settings row leads somewhere real.'], ['security', 'Security centre', 'MFA methods, devices & sessions, payment step-up limit, data export.'], ['wallet', 'Wallet & points', 'Balance, 8-week earn chart, Plus membership, provider-funded rewards.']]]
+    ];
+    return { plus: this.props.plusMember ?? false, journeys: defs.map(d => { const cur = s.cur[d[0]] ?? d[2][0][0]; return { id: d[0], label: 'Journey ' + d[0], title: d[1], count: d[2].length, current: cur, steps: d[2].map((x, i) => { const on = cur === x[0]; return { n: String(i + 1).padStart(2, '0'), label: x[1], note: x[2], go: () => this.setState(st => ({ cur: { ...st.cur, [d[0]]: x[0] } })), style: `display:flex;gap:14px;align-items:flex-start;width:100%;text-align:left;font:inherit;padding:12px 14px;border:0;border-radius:var(--radius-md);cursor:pointer;color:var(--color-text);background:${on ? 'var(--color-accent-100)' : 'transparent'}`, num: `width:26px;height:26px;border-radius:50%;flex:none;display:grid;place-items:center;font-size:12px;font-weight:600;background:${on ? 'var(--color-accent)' : 'var(--color-neutral-200)'};color:${on ? 'var(--color-bg)' : 'var(--color-text)'}` }; }) }; }) };
+  }
+}
+</script>
+</body>
+</html>

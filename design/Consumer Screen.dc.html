@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="theme/northline.css">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+</helmet>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+<div style="background:var(--color-bg);min-height:100%;display:flex;flex-direction:column;font-family:var(--font-body);color:var(--color-text);font-size:15px">
+
+<!-- sub-screen header -->
+<sc-if value="{{ hasBack }}" hint-placeholder-val="{{ false }}">
+  <div style="padding:58px 16px 0;display:flex;align-items:center;gap:6px">
+    <button onClick="{{ back }}" style="min-width:44px;height:44px;border:0;background:transparent;font:inherit;font-size:15px;color:var(--color-accent-700);cursor:pointer;text-align:left;padding:0">← Back</button>
+    <span style="flex:1;text-align:center;font-weight:600;font-size:16px;margin-right:44px">{{ title }}</span>
+  </div>
+</sc-if>
+<sc-if value="{{ noBack }}" hint-placeholder-val="{{ true }}"><div style="height:64px"></div></sc-if>
+
+<!-- ═══ ONBOARDING ═══ -->
+<sc-if value="{{ s.welcome }}" hint-placeholder-val="{{ true }}">
+  <div style="flex:1;padding:40px 24px 0;display:flex;flex-direction:column">
+    <div style="font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-700)">Northline · Alberta</div>
+    <h1 style="font-size:40px;line-height:1.06;letter-spacing:-0.025em;margin:22px 0 0">Every trusted local,<br>one tap from<br>the door.</h1>
+    <p style="color:var(--color-neutral-700);margin:18px 0 0;font-size:16px">Book a mechanic, order tonight's groceries, hire the bartender — pay into escrow, get it delivered for the price of a coffee.</p>
+    <div style="margin-top:auto;padding-bottom:40px;display:flex;flex-direction:column;gap:10px">
+      <button onClick="{{ nav.signup }}" class="btn btn-primary" style="min-height:50px;font-size:16px">Create account</button>
+      <button onClick="{{ nav.signup }}" class="btn btn-secondary" style="min-height:48px">Sign in</button>
+      <button onClick="{{ nav.home }}" class="btn btn-ghost" style="min-height:44px">Browse first</button>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ s.signup }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;padding:20px 24px 40px;display:flex;flex-direction:column">
+    <h2 style="font-size:28px;margin:0;letter-spacing:-0.02em">Create your account</h2>
+    <p style="color:var(--color-neutral-700);margin:6px 0 22px">A phone number is all we need to start. No passwords — you'll set up a passkey next.</p>
+    <div class="field"><label>Mobile number</label><input class="input" style="min-height:46px;font-size:16px" value="+1 (403) 555-0148"></div>
+    <div class="field" style="margin-top:14px"><label>Full name</label><input class="input" style="min-height:46px;font-size:16px" value="Amara Osei"></div>
+    <div class="field" style="margin-top:14px"><label>Email (receipts)</label><input class="input" style="min-height:46px;font-size:16px" value="amara@example.ca"></div>
+    <label class="radio" style="margin-top:18px;align-items:flex-start;gap:10px;font-size:13px;color:var(--color-neutral-700)"><input type="checkbox" checked><span class="dot" style="border-radius:var(--radius-md);margin-top:2px"></span>I agree to the Terms and Privacy Policy. Northline stores data in Canada.</label>
+    <div style="margin-top:auto;display:flex;flex-direction:column;gap:10px">
+      <button onClick="{{ nav.otp }}" class="btn btn-primary" style="min-height:50px;font-size:16px">Send code</button>
+      <div style="display:flex;gap:10px"><button class="btn btn-secondary" style="flex:1;min-height:46px">Continue with Apple</button><button class="btn btn-secondary" style="flex:1;min-height:46px">Google</button></div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ s.otp }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;padding:20px 24px 40px;display:flex;flex-direction:column">
+    <h2 style="font-size:28px;margin:0;letter-spacing:-0.02em">Enter the 6-digit code</h2>
+    <p style="color:var(--color-neutral-700);margin:6px 0 24px">Sent to +1 (403) 555-0148 · <a href="#">Edit</a></p>
+    <div style="display:flex;gap:8px">
+      <sc-for list="{{ otpDigits }}" as="d" hint-placeholder-count="6"><div style="{{ d.style }}">{{ d.v }}</div></sc-for>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:14px;font-size:13px;color:var(--color-neutral-700)"><span>Resend in 0:{{ otpTimer }}</span><a href="#">Call me instead</a></div>
+    <div style="margin-top:auto"><button onClick="{{ nav.mfa }}" class="btn btn-primary" style="min-height:50px;font-size:16px;width:100%">Verify</button></div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ s.mfa }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;padding:20px 24px 40px;display:flex;flex-direction:column">
+    <span class="tag tag-accent" style="align-self:flex-start">Security</span>
+    <h2 style="font-size:28px;margin:12px 0 0;letter-spacing:-0.02em">Protect your account</h2>
+    <p style="color:var(--color-neutral-700);margin:6px 0 22px">You'll pay into escrow and store addresses here, so we require two factors. Pick your primary.</p>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <sc-for list="{{ mfaOpts }}" as="o" hint-placeholder-count="3"><button onClick="{{ o.pick }}" style="{{ o.style }}"><span style="flex:1;text-align:left"><span style="display:block;font-weight:600;font-size:16px">{{ o.name }}</span><span style="display:block;font-size:13px;opacity:.75">{{ o.desc }}</span></span><span class="tag tag-neutral" style="font-size:10px">{{ o.tag }}</span></button></sc-for>
+    </div>
+    <p style="font-size:13px;color:var(--color-neutral-700);margin:16px 0 0">Backup: SMS to your verified number. You can add a security key and review devices in Settings → Security.</p>
+    <div style="margin-top:auto"><button onClick="{{ nav.location }}" class="btn btn-primary" style="min-height:50px;font-size:16px;width:100%">{{ mfaCta }}</button></div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ s.location }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;padding:20px 24px 40px;display:flex;flex-direction:column">
+    <h2 style="font-size:28px;margin:0;letter-spacing:-0.02em">Where should we bring things?</h2>
+    <p style="color:var(--color-neutral-700);margin:6px 0 20px">Your province sets taxes, delivery zones and which providers you see.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button onClick="{{ pickAB }}" style="{{ provAB }}">Alberta<span style="display:block;font-size:11px;opacity:.75">Live · Calgary, Edmonton</span></button>
+      <button onClick="{{ pickBC }}" style="{{ provBC }}">British Columbia<span style="display:block;font-size:11px;opacity:.75">Pilot · invite only</span></button>
+      <button disabled style="text-align:left;font:inherit;padding:12px;border-radius:var(--radius-md);border:1px solid var(--color-divider);background:transparent;color:var(--color-text);opacity:.45">Ontario<span style="display:block;font-size:11px">Waitlist · 2,140 ahead</span></button>
+      <button disabled style="text-align:left;font:inherit;padding:12px;border-radius:var(--radius-md);border:1px solid var(--color-divider);background:transparent;color:var(--color-text);opacity:.45">Québec<span style="display:block;font-size:11px">Liste d'attente</span></button>
+    </div>
+    <div class="field" style="margin-top:18px"><label>Street address</label><input class="input" style="min-height:46px;font-size:16px" value="1204 17 Ave SW, Calgary"></div>
+    <div class="field" style="margin-top:12px"><label>Unit / buzzer / drop-off note</label><input class="input" style="min-height:46px" placeholder="Apt 804 · buzz 0804 · leave at door"></div>
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap"><span class="tag tag-accent">Zone · Beltline</span><span class="tag tag-neutral">3 pooled runs / day</span><span class="tag tag-neutral">GST 5%</span></div>
+    <div style="margin-top:auto;display:flex;flex-direction:column;gap:10px"><button onClick="{{ nav.home }}" class="btn btn-primary" style="min-height:50px;font-size:16px">Save and continue</button><button class="btn btn-ghost" style="min-height:44px">Use my location</button></div>
+  </div>
+</sc-if>
+
+<!-- ═══ HOME ═══ -->
+<sc-if value="{{ s.home }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column">
+    <div style="padding:0 24px;display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-700)">Beltline, Calgary ▾</div><h2 style="font-size:26px;margin:2px 0 0;letter-spacing:-0.02em">Good evening, Amara</h2></div>
+      <button onClick="{{ nav.notifications }}" style="width:44px;height:44px;border:0;border-radius:var(--radius-md);background:var(--color-surface);position:relative;cursor:pointer;font:inherit;font-size:13px">🔔<span style="position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--color-accent-2)"></span></button>
+    </div>
+    <div style="padding:16px 24px 0"><button onClick="{{ nav.search }}" class="input" style="min-height:46px;text-align:left;color:var(--color-neutral-700);cursor:pointer">Search “sourdough”, “mobile mechanic”, “DJ”…</button></div>
+    <div style="margin:18px 24px 0;padding:14px 16px;background:var(--color-accent-100);border-radius:var(--radius-md);display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-accent-800)">Tonight's pooled run</div><div style="font-weight:600;color:var(--color-accent-900)">Leaves 6:00 pm · {{ deliveryFee }} · order by 5:19</div></div><span style="font-size:13px;color:var(--color-accent-800)">5 neighbours</span></div>
+    <div style="padding:24px 24px 0;display:flex;justify-content:space-between;align-items:baseline"><h3 style="font-size:20px;margin:0">Shop</h3><a href="#" onClick="{{ nav.search }}" style="font-size:13px">All shops</a></div>
+    <div style="padding:12px 24px 0;display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+      <sc-for list="{{ shopCats }}" as="c" hint-placeholder-count="8"><button onClick="{{ nav.search }}" style="background:var(--color-surface);border:0;border-radius:var(--radius-md);padding:10px 6px;min-height:64px;font:inherit;font-size:12px;line-height:1.2;cursor:pointer;color:var(--color-text)">{{ c }}</button></sc-for>
+    </div>
+    <div style="padding:24px 24px 0;display:flex;justify-content:space-between;align-items:baseline"><h3 style="font-size:20px;margin:0">Services</h3><a href="#" onClick="{{ nav.services }}" style="font-size:13px">All 60+</a></div>
+    <div style="padding:12px 24px 0;display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+      <sc-for list="{{ svcCats }}" as="c" hint-placeholder-count="8"><button onClick="{{ nav.providers }}" style="background:var(--color-surface);border:0;border-radius:var(--radius-md);padding:10px 6px;min-height:64px;font:inherit;font-size:12px;line-height:1.2;cursor:pointer;color:var(--color-text)">{{ c }}</button></sc-for>
+    </div>
+    <div style="padding:24px 24px 0"><h3 style="font-size:20px;margin:0">Because you booked Prairie Wrench</h3></div>
+    <sc-for list="{{ recs }}" as="p" hint-placeholder-count="2">
+      <button onClick="{{ p.go }}" style="display:flex;gap:14px;align-items:center;padding:12px 24px;border:0;background:transparent;font:inherit;text-align:left;cursor:pointer;color:var(--color-text);width:100%">
+        <div class="halftone" style="width:52px;height:52px;flex:none;border-radius:var(--radius-md);background:linear-gradient(135deg,var(--color-neutral-400),var(--color-neutral-600))"></div>
+        <div style="flex:1;min-width:0"><div style="display:flex;gap:8px;align-items:baseline"><span style="font-weight:600">{{ p.name }}</span><span class="tag tag-accent" style="font-size:10px;padding:1px 7px">{{ p.tier }}</span></div><div style="font-size:13px;color:var(--color-neutral-700)">{{ p.meta }}</div></div>
+        <div style="text-align:right;font-size:13px"><div style="font-weight:600">★ {{ p.rating }}</div><div style="color:var(--color-neutral-700)">{{ p.dist }}</div></div>
+      </button>
+    </sc-for>
+  </div>
+</sc-if>
+
+<!-- ═══ SEARCH / RESULTS ═══ -->
+<sc-if value="{{ s.search }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column">
+    <div style="padding:12px 24px 0"><input class="input" style="min-height:46px;font-size:16px" value="{{ query }}" onChange="{{ setQuery }}"></div>
+    <div style="padding:12px 24px 0;display:flex;gap:6px;flex-wrap:wrap">
+      <sc-for list="{{ filters }}" as="f" hint-placeholder-count="5"><button onClick="{{ f.toggle }}" style="{{ f.style }}">{{ f.name }}</button></sc-for>
+    </div>
+    <div style="padding:16px 24px 0;font-size:13px;color:var(--color-neutral-700)">{{ resultCount }} results · sorted by <strong style="color:var(--color-text)">relevance ▾</strong></div>
+    <sc-for list="{{ results }}" as="r" hint-placeholder-count="5">
+      <button onClick="{{ r.go }}" style="display:flex;gap:14px;align-items:center;padding:12px 24px;border:0;background:transparent;font:inherit;text-align:left;cursor:pointer;color:var(--color-text);width:100%">
+        <div class="halftone" style="width:64px;height:64px;flex:none;border-radius:var(--radius-md);background:linear-gradient(135deg,var(--color-neutral-300),var(--color-neutral-500))"></div>
+        <div style="flex:1;min-width:0"><div style="font-weight:600">{{ r.name }}</div><div style="font-size:13px;color:var(--color-neutral-700)">{{ r.shop }} · {{ r.meta }}</div><div style="font-size:12px;margin-top:2px"><span class="tag {{ r.tagCls }}" style="font-size:10px;padding:1px 7px">{{ r.tag }}</span></div></div>
+        <div style="text-align:right"><div style="font-weight:600">{{ r.price }}</div><div style="font-size:12px;color:var(--color-neutral-700)">{{ r.unit }}</div></div>
+      </button>
+    </sc-for>
+  </div>
+</sc-if>
+
+<!-- ═══ PRODUCT ═══ -->
+<sc-if value="{{ s.product }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column">
+    <div class="halftone" style="margin:12px 24px 0;height:240px;border-radius:var(--radius-md);background:linear-gradient(150deg,var(--color-neutral-300),var(--color-neutral-600))"></div>
+    <div style="padding:18px 24px 0;display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div><h2 style="font-size:24px;margin:0;letter-spacing:-0.02em">Country sourdough</h2><div style="font-size:13px;color:var(--color-neutral-700);margin-top:2px">Glenmore Bakery · Master tier · ★ 4.8 (211)</div></div><div style="text-align:right"><div style="font-size:22px;font-weight:600">$7.50</div><div style="font-size:12px;color:var(--color-neutral-700)">900 g loaf</div></div></div>
+    <div style="padding:12px 24px 0;display:flex;gap:8px;flex-wrap:wrap"><span class="tag tag-accent-2">3× points this week</span><span class="tag tag-accent">On tonight's run</span><span class="tag tag-neutral">Baked today</span></div>
+    <p style="padding:16px 24px 0;margin:0;line-height:1.5">Naturally leavened, 36-hour ferment, Alberta hard red wheat. Sliced on request.</p>
+    <div style="padding:16px 24px 0"><div style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-700);margin-bottom:8px">Options</div><div style="display:flex;gap:8px"><button style="{{ optWhole }}" onClick="{{ pickWhole }}">Whole</button><button style="{{ optSliced }}" onClick="{{ pickSliced }}">Sliced</button></div></div>
+    <div style="padding:20px 24px 0"><div style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-700);margin-bottom:8px">Also from Glenmore</div><div style="display:flex;gap:10px;font-size:13px"><div style="flex:1;background:var(--color-surface);padding:10px;border-radius:var(--radius-md)">Rye · $8</div><div style="flex:1;background:var(--color-surface);padding:10px;border-radius:var(--radius-md)">Baguette · $4.50</div><div style="flex:1;background:var(--color-surface);padding:10px;border-radius:var(--radius-md)">Cinnamon buns · $12</div></div></div>
+    <div style="margin-top:auto;padding:20px 24px 40px;display:flex;gap:10px;align-items:center">
+      <div style="display:flex;align-items:center;border:1px solid var(--color-divider);border-radius:var(--radius-md)"><button onClick="{{ decProd }}" style="width:44px;height:46px;border:0;background:transparent;font:inherit;font-size:20px;color:var(--color-accent-700);cursor:pointer">−</button><span style="min-width:22px;text-align:center;font-weight:600">{{ prodQty }}</span><button onClick="{{ incProd }}" style="width:44px;height:46px;border:0;background:transparent;font:inherit;font-size:20px;color:var(--color-accent-700);cursor:pointer">+</button></div>
+      <button onClick="{{ addToCart }}" class="btn btn-primary" style="flex:1;min-height:48px;font-size:16px">{{ addLabel }}</button>
+    </div>
+  </div>
+</sc-if>
+
+<!-- ═══ CART ═══ -->
+<sc-if value="{{ s.cart }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column">
+    <div style="padding:8px 24px 0;font-size:13px;color:var(--color-neutral-700)">{{ cartCount }} items · {{ cartShops }} shops · one delivery</div>
+    <sc-for list="{{ cartGroups }}" as="g" hint-placeholder-count="2">
+      <div style="padding:20px 24px 0;display:flex;justify-content:space-between;align-items:baseline"><span style="font-weight:600">{{ g.shop }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ g.note }}</span></div>
+      <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="2">
+        <div style="display:flex;gap:12px;align-items:center;padding:10px 24px 0">
+          <div class="halftone" style="width:44px;height:44px;flex:none;border-radius:var(--radius-md);background:var(--color-neutral-400)"></div>
+          <div style="flex:1;min-width:0"><div>{{ it.name }}</div><div style="font-size:12px;color:var(--color-neutral-700)">{{ it.unit }}</div></div>
+          <div style="display:flex;align-items:center;border:1px solid var(--color-divider);border-radius:var(--radius-md)"><button onClick="{{ it.dec }}" style="width:38px;height:38px;border:0;background:transparent;font:inherit;font-size:18px;color:var(--color-accent-700);cursor:pointer">−</button><span style="min-width:18px;text-align:center">{{ it.qty }}</span><button onClick="{{ it.inc }}" style="width:38px;height:38px;border:0;background:transparent;font:inherit;font-size:18px;color:var(--color-accent-700);cursor:pointer">+</button></div>
+          <span style="width:56px;text-align:right">{{ it.line }}</span>
+        </div>
+      </sc-for>
+    </sc-for>
+    <div style="padding:22px 24px 0;display:flex;gap:8px"><input class="input" style="min-height:44px" placeholder="Promo or points code"><button class="btn btn-secondary" style="min-height:44px">Apply</button></div>
+    <div style="padding:20px 24px 0;display:flex;flex-direction:column;gap:6px;font-size:14px">
+      <div style="display:flex;justify-content:space-between"><span>Items</span><span>{{ cartSub }}</span></div>
+      <div style="display:flex;justify-content:space-between"><span>Delivery (chosen next)</span><span>from {{ deliveryFee }}</span></div>
+      <div style="display:flex;justify-content:space-between"><span>GST 5%</span><span>{{ cartTax }}</span></div>
+      <div style="font-size:12px;color:var(--color-neutral-700)">You'll earn {{ cartPoints }} points · {{ pointsBal }} available to redeem</div>
+    </div>
+    <div style="margin-top:auto;padding:20px 24px 40px"><button onClick="{{ nav.checkout }}" class="btn btn-primary" style="min-height:50px;font-size:16px;width:100%">Checkout · {{ cartPreTotal }}</button></div>
+  </div>
+</sc-if>
+
+<!-- ═══ CHECKOUT ═══ -->
+<sc-if value="{{ s.checkout }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;padding:8px 24px 40px">
+    <div style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-700)">Deliver to</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0 0"><div><div style="font-weight:600">1204 17 Ave SW, Apt 804</div><div style="font-size:13px;color:var(--color-neutral-700)">Buzz 0804 · leave at door</div></div><button class="btn btn-ghost" style="min-height:44px">Change</button></div>
+    <div style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-700);margin-top:22px">Delivery window</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+      <sc-for list="{{ windows }}" as="w" hint-placeholder-count="3"><button onClick="{{ w.pick }}" style="{{ w.style }}"><span style="flex:1;text-align:left"><span style="display:block;font-weight:600">{{ w.name }}</span><span style="display:block;font-size:12px;opacity:.75">{{ w.desc }}</span></span><span style="font-weight:600">{{ w.price }}</span></button></sc-for>
+    </div>
+    <div style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-700);margin-top:22px">Substitutions if out of stock</div>
+    <div style="display:flex;gap:8px;margin-top:8px"><button onClick="{{ subSimilar }}" style="{{ subA }}">Similar item</button><button onClick="{{ subRefund }}" style="{{ subB }}">Refund it</button><button onClick="{{ subAsk }}" style="{{ subC }}">Text me</button></div>
+    <div style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-700);margin-top:22px">Redeem points</div>
+    <button onClick="{{ toggleRedeem }}" style="{{ redeemStyle }}"><span style="flex:1;text-align:left">Use {{ pointsBal }} points (−{{ pointsValue }})</span><span style="{{ redeemDot }}"></span></button>
+    <div style="margin-top:22px;display:flex;flex-direction:column;gap:6px;font-size:14px">
+      <div style="display:flex;justify-content:space-between"><span>Items</span><span>{{ cartSub }}</span></div>
+      <div style="display:flex;justify-content:space-between"><span>Delivery</span><span>{{ cartDelivery }}</span></div>
+      <div style="display:flex;justify-content:space-between"><span>GST 5%</span><span>{{ cartTax }}</span></div>
+      <sc-if value="{{ redeem }}" hint-placeholder-val="{{ false }}"><div style="display:flex;justify-content:space-between;color:var(--color-accent-2-700)"><span>Points</span><span>−{{ pointsValue }}</span></div></sc-if>
+      <div style="display:flex;justify-content:space-between;font-weight:600;font-size:17px;padding-top:6px"><span>Total</span><span>{{ cartTotal }}</span></div>
+    </div>
+    <div style="margin-top:auto;padding-top:20px"><button onClick="{{ nav.pay }}" class="btn btn-primary" style="min-height:50px;font-size:16px;width:100%">Continue to payment</button></div>
+  </div>
+</sc-if>
+
+<!-- ═══ PAY ═══ -->
+<sc-if value="{{ s.pay }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;padding:8px 24px 40px">
+    <sc-if value="{{ payForm }}" hint-placeholder-val="{{ true }}">
+      <button class="btn" style="min-height:50px;background:#000;color:#fff;font-size:16px;width:100%">Apple Pay</button>
+      <div style="text-align:center;font-size:12px;color:var(--color-neutral-700);margin:14px 0">or pay with card</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <sc-for list="{{ cards }}" as="c" hint-placeholder-count="2"><button onClick="{{ c.pick }}" style="{{ c.style }}"><span style="flex:1;text-align:left">{{ c.name }}</span><span style="font-size:12px;opacity:.75">{{ c.exp }}</span></button></sc-for>
+        <button onClick="{{ pickNewCard }}" style="{{ newCardStyle }}"><span style="flex:1;text-align:left">+ New card</span></button>
+      </div>
+      <sc-if value="{{ newCard }}" hint-placeholder-val="{{ false }}">
+        <div class="field" style="margin-top:14px"><label>Card number</label><input class="input" style="min-height:46px" placeholder="4242 4242 4242 4242"></div>
+        <div style="display:flex;gap:10px;margin-top:10px"><div class="field" style="flex:1"><label>Expiry</label><input class="input" style="min-height:46px" placeholder="MM / YY"></div><div class="field" style="flex:1"><label>CVC</label><input class="input" style="min-height:46px" placeholder="123"></div><div class="field" style="flex:1"><label>Postal</label><input class="input" style="min-height:46px" placeholder="T2T 0A1"></div></div>
+      </sc-if>
+      <div style="margin-top:18px;padding:12px 14px;background:var(--color-surface);border-radius:var(--radius-md);font-size:13px;line-height:1.45">Charged {{ cartTotal }} now. Shops are paid only after delivery is confirmed; anything missing is refunded automatically. Secured by Stripe · PCI DSS.</div>
+      <div style="margin-top:auto;padding-top:20px"><button onClick="{{ startPay }}" class="btn btn-primary" style="min-height:50px;font-size:16px;width:100%">Pay {{ cartTotal }}</button></div>
+    </sc-if>
+    <sc-if value="{{ pay3ds }}" hint-placeholder-val="{{ false }}">
+      <div style="margin:30px 0 0;padding:20px;background:var(--color-surface);border-radius:var(--radius-md)">
+        <div style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-700)">Your bank · Verified by Visa</div>
+        <h3 style="font-size:20px;margin:10px 0 6px">Confirm this payment</h3>
+        <p style="font-size:14px;margin:0 0 14px">Northline Marketplace · {{ cartTotal }} · Visa ··4471. Approve in your banking app or enter the code we texted.</p>
+        <input class="input" style="min-height:46px;font-size:18px;letter-spacing:.3em" value="482 913">
+        <button onClick="{{ finishPay }}" class="btn btn-primary" style="min-height:48px;width:100%;margin-top:12px">Approve</button>
+      </div>
+      <p style="font-size:12px;color:var(--color-neutral-700);margin-top:14px">Strong customer authentication is required on your first payment and for unusual amounts.</p>
+    </sc-if>
+  </div>
+</sc-if>
+
+<!-- ═══ ORDER CONFIRMED ═══ -->
+<sc-if value="{{ s.confirmed }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;padding:30px 24px 40px">
+    <svg width="72" height="72" viewBox="0 0 72 72" aria-hidden="true"><circle cx="36" cy="36" r="34" fill="var(--color-accent-100)" stroke="var(--color-accent)" stroke-width="2"></circle><path d="M22 37 L32 47 L51 27" fill="none" stroke="var(--color-accent-700)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    <h2 style="font-size:28px;margin:20px 0 8px;letter-spacing:-0.02em">Order placed. Arriving {{ windowName }}.</h2>
+    <p style="color:var(--color-neutral-700);margin:0">Order NL-48213 · {{ cartTotal }} · {{ cartShops }} shops packing now. We'll notify you when the courier leaves.</p>
+    <div style="margin-top:22px;display:flex;flex-direction:column;gap:10px;font-size:14px">
+      <div style="display:flex;gap:12px"><span style="width:20px;height:20px;border-radius:50%;background:var(--color-accent);flex:none"></span><span>Paid · receipt emailed</span></div>
+      <div style="display:flex;gap:12px"><span style="width:20px;height:20px;border-radius:50%;border:2px solid var(--color-accent);flex:none"></span><span>Shops packing · 3 of 3 accepted</span></div>
+      <div style="display:flex;gap:12px;color:var(--color-neutral-700)"><span style="width:20px;height:20px;border-radius:50%;border:2px solid var(--color-neutral-300);flex:none"></span><span>Courier picks up</span></div>
+      <div style="display:flex;gap:12px;color:var(--color-neutral-700)"><span style="width:20px;height:20px;border-radius:50%;border:2px solid var(--color-neutral-300);flex:none"></span><span>Delivered · you confirm</span></div>
+    </div>
+    <div style="margin-top:auto;display:flex;flex-direction:column;gap:10px"><button onClick="{{ nav.track }}" class="btn btn-primary" style="min-height:50px;font-size:16px">Track order</button><button onClick="{{ nav.home }}" class="btn btn-ghost" style="min-height:44px">Back to home</button></div>
+  </div>
+</sc-if>
+
+<!-- ═══ TRACK ═══ -->
+<sc-if value="{{ s.track }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column">
+    <div class="halftone" style="margin-top:8px;height:340px;position:relative;background-color:var(--color-neutral-200);background-image:linear-gradient(var(--color-neutral-300) 1px,transparent 1px),linear-gradient(90deg,var(--color-neutral-300) 1px,transparent 1px);background-size:44px 44px">
+      <svg viewBox="0 0 402 340" style="position:absolute;inset:0;width:100%;height:100%"><path d="M40 300 L120 300 L120 200 L250 200 L250 110 L330 110" fill="none" stroke="var(--color-accent)" stroke-width="4" stroke-dasharray="8 6"/><circle cx="40" cy="300" r="8" fill="var(--color-neutral-700)"/><circle cx="120" cy="200" r="8" fill="var(--color-neutral-700)"/><circle cx="250" cy="160" r="11" fill="var(--color-accent-2)"/><circle cx="330" cy="110" r="9" fill="var(--color-bg)" stroke="var(--color-text)" stroke-width="3"/></svg>
+      <div style="position:absolute;left:24px;bottom:16px;background:var(--color-bg);padding:8px 12px;border-radius:var(--radius-md);box-shadow:var(--shadow-md);font-size:13px"><strong>Stop 3 of 6</strong> · you're next</div>
+    </div>
+    <div style="padding:20px 24px 0;display:flex;justify-content:space-between;align-items:baseline"><div><h2 style="font-size:26px;margin:0;letter-spacing:-0.02em">Arriving 6:52 pm</h2><div style="font-size:13px;color:var(--color-neutral-700);margin-top:2px">NL-48213 · pooled run · 9 min away</div></div><span class="tag tag-accent-2">On time</span></div>
+    <div style="padding:18px 24px 0;display:flex;gap:14px;align-items:center"><div style="width:48px;height:48px;border-radius:50%;background:var(--color-neutral-400)"></div><div style="flex:1"><div style="font-weight:600">Jordan · Northline courier</div><div style="font-size:13px;color:var(--color-neutral-700)">★ 4.97 · 1,204 deliveries · e-cargo bike</div></div><button class="btn btn-secondary" style="min-height:44px">Message</button></div>
+    <div style="padding:20px 24px 0;font-size:14px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;gap:12px"><span style="color:var(--color-neutral-700);width:66px">5:19 pm</span><span>Order accepted by 3 shops</span></div>
+      <div style="display:flex;gap:12px"><span style="color:var(--color-neutral-700);width:66px">6:04 pm</span><span>Picked up · 1 substitution (rye → country sourdough, approved by text)</span></div>
+      <div style="display:flex;gap:12px;font-weight:600"><span style="width:66px;color:var(--color-accent-700)">Now</span><span>Heading to you · leave at door, buzz 0804</span></div>
+    </div>
+    <div style="margin-top:auto;padding:20px 24px 40px"><button onClick="{{ nav.delivered }}" class="btn btn-secondary" style="min-height:46px;width:100%">Simulate delivery →</button></div>
+  </div>
+</sc-if>
+
+<!-- ═══ DELIVERED ═══ -->
+<sc-if value="{{ s.delivered }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;padding:8px 24px 40px">
+    <div class="halftone" style="height:200px;border-radius:var(--radius-md);background:linear-gradient(160deg,var(--color-neutral-300),var(--color-neutral-600));display:grid;place-items:center;font-size:12px;color:#fff">proof-of-delivery photo · 6:51 pm · at your door</div>
+    <h2 style="font-size:26px;margin:18px 0 6px;letter-spacing:-0.02em">Delivered at 6:51 pm</h2>
+    <p style="color:var(--color-neutral-700);margin:0">Everything there? Shops are paid when you confirm — or automatically in 24 h.</p>
+    <sc-if value="{{ notConfirmed }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;gap:10px;margin-top:18px"><button onClick="{{ confirmDelivery }}" class="btn btn-primary" style="flex:1;min-height:48px;font-size:16px">All good</button><button onClick="{{ nav.refund }}" class="btn btn-secondary" style="min-height:48px">Something's wrong</button></div>
+    </sc-if>
+    <sc-if value="{{ confirmedDelivery }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-top:18px;padding:14px 16px;background:var(--color-accent-100);border-radius:var(--radius-md);font-size:14px;color:var(--color-accent-900)"><strong>Thanks.</strong> 3 shops paid. You earned <strong>{{ cartPoints }} points</strong>.</div>
+      <h3 style="font-size:18px;margin:22px 0 8px">Rate the delivery</h3>
+      <div style="display:flex;gap:6px"><sc-for list="{{ stars }}" as="st" hint-placeholder-count="5"><button onClick="{{ st.pick }}" style="{{ st.style }}">★</button></sc-for></div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><span class="tag tag-neutral">On time</span><span class="tag tag-neutral">Careful with bags</span><span class="tag tag-neutral">Followed note</span></div>
+      <div style="display:flex;gap:10px;margin-top:18px;align-items:center;padding:12px 14px;background:var(--color-surface);border-radius:var(--radius-md)"><span style="flex:1;font-size:14px">Tip Jordan? 100% goes to the courier.</span><button class="btn btn-secondary" style="min-height:40px">$2</button><button class="btn btn-secondary" style="min-height:40px">$4</button></div>
+    </sc-if>
+    <div style="margin-top:auto"><button onClick="{{ nav.orders }}" class="btn btn-ghost" style="min-height:44px;width:100%">View order &amp; receipt</button></div>
+  </div>
+</sc-if>
+
+<!-- ═══ REFUND ═══ -->
+<sc-if value="{{ s.refund }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;padding:8px 24px 40px">
+    <sc-if value="{{ refundForm }}" hint-placeholder-val="{{ true }}">
+      <p style="color:var(--color-neutral-700);margin:0 0 14px">Pick what went wrong. Your request opens a case: the seller gets 24 h to respond, then Northline decides. Refunds land 3–5 business days after a decision.</p>
+      <div style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-700)">Items</div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">
+        <sc-for list="{{ refundItems }}" as="it" hint-placeholder-count="4"><button onClick="{{ it.toggle }}" style="{{ it.style }}"><span style="{{ it.box }}"></span><span style="flex:1;text-align:left">{{ it.name }}</span><span style="font-size:13px">{{ it.line }}</span></button></sc-for>
+      </div>
+      <div style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-700);margin-top:18px">Reason</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"><sc-for list="{{ reasons }}" as="r" hint-placeholder-count="5"><button onClick="{{ r.pick }}" style="{{ r.style }}">{{ r.name }}</button></sc-for></div>
+      <button class="btn btn-secondary" style="min-height:46px;margin-top:14px;width:100%">Add a photo</button>
+      <textarea class="input" style="margin-top:10px;min-height:70px" placeholder="Anything else (optional)"></textarea>
+      <div style="margin-top:auto;padding-top:16px"><button onClick="{{ submitRefund }}" class="btn btn-primary" style="min-height:50px;font-size:16px;width:100%">Request {{ refundAmt }} refund</button></div>
+    </sc-if>
+    <sc-if value="{{ refundDone }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:16px;background:var(--color-surface);border-radius:var(--radius-md)"><div style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-700)">Case RF-2201 · in review</div><div style="font-size:18px;font-weight:600;margin-top:4px">Request received · {{ refundAmt }}</div><div style="font-size:14px;color:var(--color-neutral-700);margin-top:4px">The seller's payout for these items is paused while we look.</div></div>
+      <div style="margin-top:18px;display:flex;flex-direction:column;gap:12px;font-size:14px">
+        <div style="display:flex;gap:12px"><span style="width:20px;height:20px;border-radius:50%;background:var(--color-accent);flex:none"></span><span><strong>Submitted</strong> · 7:04 pm · photo + reason attached</span></div>
+        <div style="display:flex;gap:12px"><span style="width:20px;height:20px;border-radius:50%;border:2px solid var(--color-accent);flex:none"></span><span><strong>Seller reviews</strong> · Glenmore Bakery has until tomorrow 7:04 pm to accept or respond</span></div>
+        <div style="display:flex;gap:12px;color:var(--color-neutral-700)"><span style="width:20px;height:20px;border-radius:50%;border:2px solid var(--color-neutral-300);flex:none"></span><span><strong>Northline decides</strong> · if the seller disputes, an agent rules within 2 business days</span></div>
+        <div style="display:flex;gap:12px;color:var(--color-neutral-700)"><span style="width:20px;height:20px;border-radius:50%;border:2px solid var(--color-neutral-300);flex:none"></span><span><strong>Refund issued</strong> · to Visa ··4471, 3–5 business days · points adjusted</span></div>
+      </div>
+      <p style="font-size:13px;color:var(--color-neutral-700);margin:16px 0 0">We'll notify you at each step. You can add photos or messages to the case any time from Orders → Refunds.</p>
+      <div style="margin-top:auto"><button onClick="{{ nav.orders }}" class="btn btn-primary" style="min-height:48px;width:100%">Back to orders</button></div>
+    </sc-if>
+  </div>
+</sc-if>
+
+<!-- ═══ SERVICES ═══ -->
+<sc-if value="{{ s.services }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column">
+    <div style="padding:0 24px"><h2 style="font-size:26px;margin:0;letter-spacing:-0.02em">Services</h2><div style="font-size:13px;color:var(--color-neutral-700);margin-top:2px">62 categories live in Alberta · every provider verified</div></div>
+    <div style="padding:14px 24px 0"><input class="input" style="min-height:46px;font-size:16px" placeholder="What do you need done?"></div>
+    <div style="padding:16px 24px 0;display:flex;gap:8px;flex-wrap:wrap"><span class="tag tag-accent-2">Snow removal season</span><span class="tag tag-neutral">Popular: mobile mechanic</span></div>
+    <sc-for list="{{ svcGroups }}" as="g" hint-placeholder-count="4">
+      <div style="padding:22px 24px 0"><h3 style="font-size:18px;margin:0 0 8px">{{ g.name }}</h3>
+        <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ g.items }}" as="i" hint-placeholder-count="6"><button onClick="{{ nav.providers }}" style="font:inherit;font-size:13px;padding:8px 12px;min-height:40px;border-radius:var(--radius-md);border:1px solid var(--color-divider);background:transparent;color:var(--color-text);cursor:pointer">{{ i }}</button></sc-for></div>
+      </div>
+    </sc-for>
+    <div style="height:30px"></div>
+  </div>
+</sc-if>
+
+<!-- ═══ PROVIDERS LIST ═══ -->
+<sc-if value="{{ s.providers }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column">
+    <div style="padding:8px 24px 0;display:flex;gap:6px;flex-wrap:wrap">
+      <sc-for list="{{ pFilters }}" as="f" hint-placeholder-count="5"><button onClick="{{ f.toggle }}" style="{{ f.style }}">{{ f.name }}</button></sc-for>
+    </div>
+    <div style="padding:14px 24px 0;font-size:13px;color:var(--color-neutral-700)">{{ provCount }} mobile mechanics come to Beltline · sorted by <strong style="color:var(--color-text)">trust ▾</strong></div>
+    <sc-for list="{{ provList }}" as="p" hint-placeholder-count="4">
+      <button onClick="{{ p.go }}" style="display:block;width:100%;padding:14px 24px 0;border:0;background:transparent;font:inherit;text-align:left;cursor:pointer;color:var(--color-text)">
+        <div style="display:flex;gap:14px;align-items:center">
+          <div style="width:56px;height:56px;flex:none;border-radius:var(--radius-md);background:{{ p.color }};color:#fff;display:grid;place-items:center;font-weight:600;font-size:22px">{{ p.initial }}</div>
+          <div style="flex:1;min-width:0"><div style="display:flex;gap:8px;align-items:baseline"><span style="font-weight:600;font-size:16px">{{ p.name }}</span><span class="tag {{ p.tierCls }}" style="font-size:10px;padding:1px 7px">{{ p.tier }}</span></div><div style="font-size:13px;color:var(--color-neutral-700)">★ {{ p.rating }} ({{ p.n }}) · {{ p.onTime }} on time · {{ p.dist }}</div></div>
+          <div style="text-align:right;font-size:13px"><div style="font-weight:600">from {{ p.from }}</div><div style="color:var(--color-neutral-700)">{{ p.avail }}</div></div>
+        </div>
+        <div style="margin-top:8px;font-size:13px;color:var(--color-neutral-700);padding-left:70px">{{ p.blurb }}</div>
+      </button>
+    </sc-for>
+    <div style="height:30px"></div>
+  </div>
+</sc-if>
+
+<!-- ═══ PROVIDER PROFILE ═══ -->
+<sc-if value="{{ s.provider }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column">
+    <div style="margin-top:8px;padding:22px 24px 24px;background:#2f5d3a">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start"><div style="width:56px;height:56px;border-radius:var(--radius-md);background:rgba(255,255,255,.92);color:var(--color-text);display:grid;place-items:center;font-weight:600;font-size:24px">P</div><span class="tag" style="background:rgba(255,255,255,.92);color:var(--color-text)">Master tier · verified</span></div>
+      <h2 style="font-size:28px;margin:20px 0 0;letter-spacing:-0.02em;color:#fff">Prairie Wrench</h2>
+      <div style="font-size:14px;color:rgba(255,255,255,.85);margin-top:2px">Mobile mechanic · Calgary &amp; Airdrie · since 2019</div>
+    </div>
+    <div style="padding:16px 24px 0;display:flex;gap:22px;font-size:12px"><div><div style="font-size:20px;font-weight:600">4.9</div><div style="color:var(--color-neutral-700)">312 verified</div></div><div><div style="font-size:20px;font-weight:600">98%</div><div style="color:var(--color-neutral-700)">on time</div></div><div><div style="font-size:20px;font-weight:600">0.3%</div><div style="color:var(--color-neutral-700)">disputes</div></div><div><div style="font-size:20px;font-weight:600">71%</div><div style="color:var(--color-neutral-700)">re-book</div></div></div>
+    <div style="padding:14px 24px 0;display:flex;gap:6px;flex-wrap:wrap"><span class="tag tag-accent">Red Seal journeyman</span><span class="tag tag-accent">AMVIC licensed</span><span class="tag tag-accent">$2M insured</span><span class="tag tag-neutral">Instant book</span></div>
+    <p style="padding:14px 24px 0;margin:0;line-height:1.5">I bring the shop to your driveway — brakes, oil, diagnostics, pre-purchase inspections. Parts at cost, receipts uploaded to every job.</p>
+    <div style="padding:20px 24px 0;display:flex;justify-content:space-between;align-items:baseline"><h3 style="font-size:20px;margin:0">Services &amp; fixed prices</h3><span style="font-size:13px;color:var(--color-neutral-700)">incl. travel</span></div>
+    <div style="padding:6px 24px 0"><sc-for list="{{ svcMenu }}" as="m" hint-placeholder-count="4"><button onClick="{{ m.go }}" style="display:flex;justify-content:space-between;width:100%;padding:12px 0;border:0;background:transparent;font:inherit;font-size:15px;color:var(--color-text);cursor:pointer;text-align:left"><span>{{ m.name }}<span style="display:block;font-size:12px;color:var(--color-neutral-700)">{{ m.dur }}</span></span><span style="font-weight:600">{{ m.price }}</span></button></sc-for></div>
+    <div style="padding:20px 24px 0"><h3 style="font-size:20px;margin:0 0 8px">Reviews · 312</h3><p style="font-style:italic;margin:0;line-height:1.5">“Showed up at 7 am in −22°, fixed the alternator in the parkade, receipt in the app before he left.”</p><div style="font-size:12px;color:var(--color-neutral-700);margin-top:4px">Dana K. · verified booking · 3 days ago</div></div>
+    <div style="margin-top:auto;padding:20px 24px 40px;display:flex;gap:10px"><button onClick="{{ nav.book_service }}" style="flex:1;min-height:48px;font:inherit;font-weight:600;font-size:16px;border:0;border-radius:var(--radius-md);cursor:pointer;color:#fff;background:#2f5d3a">Book a visit</button><button class="btn btn-secondary" style="min-height:48px">Message</button></div>
+  </div>
+</sc-if>
+
+<!-- ═══ BOOK: SERVICE ═══ -->
+<sc-if value="{{ s.book_service }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;padding:8px 24px 40px">
+    <div style="display:flex;gap:4px"><div style="flex:1;height:3px;background:var(--color-accent)"></div><div style="flex:1;height:3px;background:var(--color-neutral-300)"></div><div style="flex:1;height:3px;background:var(--color-neutral-300)"></div></div>
+    <h2 style="font-size:26px;margin:18px 0 12px;letter-spacing:-0.02em">What does the car need?</h2>
+    <div style="display:flex;flex-direction:column;gap:8px"><sc-for list="{{ services }}" as="sv" hint-placeholder-count="4"><button onClick="{{ sv.pick }}" style="{{ sv.style }}"><span style="flex:1;text-align:left"><span style="display:block;font-weight:600;font-size:16px">{{ sv.name }}</span><span style="display:block;font-size:13px;opacity:.75">{{ sv.desc }}</span></span><span style="font-weight:600">{{ sv.price }}</span></button></sc-for></div>
+    <div class="field" style="margin-top:18px"><label>Vehicle</label><input class="input" style="min-height:46px" value="2018 Honda Civic · BKT 4471"></div>
+    <div class="field" style="margin-top:12px"><label>Tell Ravi anything useful</label><textarea class="input" style="min-height:70px" placeholder="Grinding on braking, worse when cold. Parkade P2, stall 118."></textarea></div>
+    <p style="font-size:13px;color:var(--color-neutral-700);margin:12px 0 0">Not sure? <a href="#">Ask for a quote</a> — Master providers answer within 2 hours.</p>
+    <div style="margin-top:auto;padding-top:16px"><button onClick="{{ nav.book_slot }}" class="btn btn-primary" style="min-height:50px;font-size:16px;width:100%">Choose a time</button></div>
+  </div>
+</sc-if>
+
+<!-- ═══ BOOK: SLOT ═══ -->
+<sc-if value="{{ s.book_slot }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;padding:8px 24px 40px">
+    <div style="display:flex;gap:4px"><div style="flex:1;height:3px;background:var(--color-accent)"></div><div style="flex:1;height:3px;background:var(--color-accent)"></div><div style="flex:1;height:3px;background:var(--color-neutral-300)"></div></div>
+    <h2 style="font-size:26px;margin:18px 0 12px;letter-spacing:-0.02em">When suits you?</h2>
+    <div style="display:flex;gap:6px"><sc-for list="{{ days }}" as="d" hint-placeholder-count="5"><button onClick="{{ d.pick }}" style="{{ d.style }}"><span style="display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;opacity:.75">{{ d.dow }}</span><span style="display:block;font-size:20px;font-weight:600">{{ d.num }}</span><span style="display:block;font-size:10px;opacity:.7">{{ d.free }}</span></button></sc-for></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px"><sc-for list="{{ slots }}" as="t" hint-placeholder-count="6"><button onClick="{{ t.pick }}" style="{{ t.style }}" disabled="{{ t.off }}">{{ t.label }}</button></sc-for></div>
+    <div style="margin-top:18px;padding:12px 14px;background:var(--color-surface);border-radius:var(--radius-md);font-size:13px;line-height:1.45"><strong>Instant book.</strong> Ravi's calendar is live — this slot is yours the moment you confirm. Reschedule free up to 12 h before; his SLA is arrival within 15 min of the slot.</div>
+    <div class="field" style="margin-top:14px"><label>Where</label><input class="input" style="min-height:46px" value="1204 17 Ave SW · parkade P2, stall 118"></div>
+    <div style="margin-top:auto;padding-top:16px"><button onClick="{{ nav.book_review }}" class="btn btn-primary" style="min-height:50px;font-size:16px;width:100%">Review booking</button></div>
+  </div>
+</sc-if>
+
+<!-- ═══ BOOK: REVIEW ═══ -->
+<sc-if value="{{ s.book_review }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;padding:8px 24px 40px">
+    <div style="display:flex;gap:4px"><div style="flex:1;height:3px;background:var(--color-accent)"></div><div style="flex:1;height:3px;background:var(--color-accent)"></div><div style="flex:1;height:3px;background:var(--color-accent)"></div></div>
+    <h2 style="font-size:26px;margin:18px 0 12px;letter-spacing:-0.02em">Review and hold payment</h2>
+    <div style="display:flex;flex-direction:column;gap:10px;font-size:15px">
+      <div style="display:flex;justify-content:space-between"><span>{{ chosenService }}</span><span>{{ chosenPrice }}</span></div>
+      <div style="display:flex;justify-content:space-between"><span>{{ chosenWhen }}</span><span style="color:var(--color-neutral-700)">Prairie Wrench</span></div>
+      <div style="display:flex;justify-content:space-between"><span>Travel</span><span>Included</span></div>
+      <div style="display:flex;justify-content:space-between"><span>GST 5%</span><span>{{ bookingTax }}</span></div>
+      <div style="display:flex;justify-content:space-between;font-weight:600;font-size:17px;padding-top:6px"><span>Held in escrow</span><span>{{ bookingTotal }}</span></div>
+    </div>
+    <div style="margin-top:18px;padding:14px 16px;background:var(--color-accent-100);border-radius:var(--radius-md);font-size:13px;color:var(--color-accent-900);line-height:1.45"><strong>How escrow works.</strong> We hold the money. Ravi is paid only after he posts a completion photo and you sign off — or 48 h pass with no dispute. Parts beyond the quote need your approval in the app.</div>
+    <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:14px">Pay with Visa ··4471</span><button class="btn btn-ghost" style="min-height:44px">Change</button></div>
+    <div style="font-size:13px;color:var(--color-neutral-700)">Earn <strong style="color:var(--color-text)">{{ bookingPoints }} points</strong>. Cancellation: free until Wed 9 pm.</div>
+    <div style="margin-top:auto;padding-top:16px"><button onClick="{{ nav.booked }}" class="btn btn-primary" style="min-height:50px;font-size:16px;width:100%">Hold {{ bookingTotal }} in escrow</button></div>
+  </div>
+</sc-if>
+
+<!-- ═══ BOOKED ═══ -->
+<sc-if value="{{ s.booked }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;padding:30px 24px 40px">
+    <svg width="72" height="72" viewBox="0 0 72 72" aria-hidden="true"><circle cx="36" cy="36" r="34" fill="var(--color-accent-100)" stroke="var(--color-accent)" stroke-width="2"></circle><path d="M22 37 L32 47 L51 27" fill="none" stroke="var(--color-accent-700)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    <h2 style="font-size:28px;margin:20px 0 8px;letter-spacing:-0.02em">Booked. Ravi is coming {{ chosenWhen }}.</h2>
+    <p style="color:var(--color-neutral-700);margin:0">Booking BK-7712 · {{ bookingTotal }} held in escrow. Added to your calendar.</p>
+    <h3 style="font-size:16px;margin:24px 0 8px">What happens next</h3>
+    <div style="display:flex;flex-direction:column;gap:10px;font-size:14px;color:var(--color-neutral-800)">
+      <div>· Reminder the evening before, with Ravi's photo and plate number</div>
+      <div>· Live ETA when he's on the way (you can share access to the parkade)</div>
+      <div>· Any extra parts need your tap to approve — never a surprise bill</div>
+      <div>· Completion photo → you release payment → rate each other</div>
+    </div>
+    <div style="margin-top:auto;display:flex;flex-direction:column;gap:10px"><button onClick="{{ nav.notifications }}" class="btn btn-primary" style="min-height:50px;font-size:16px">See notifications</button><button onClick="{{ nav.home }}" class="btn btn-ghost" style="min-height:44px">Done</button></div>
+  </div>
+</sc-if>
+
+<!-- ═══ NOTIFICATIONS ═══ -->
+<sc-if value="{{ s.notifications }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column">
+    <div style="padding:8px 24px 0;display:flex;gap:6px"><span class="tag tag-accent">All</span><span class="tag tag-neutral">Bookings</span><span class="tag tag-neutral">Orders</span><span class="tag tag-neutral">Offers</span></div>
+    <sc-for list="{{ notifs }}" as="n" hint-placeholder-count="6">
+      <button onClick="{{ n.go }}" style="display:flex;gap:12px;align-items:flex-start;width:100%;padding:14px 24px 0;border:0;background:transparent;font:inherit;text-align:left;cursor:pointer;color:var(--color-text)">
+        <span style="{{ n.dot }}"></span>
+        <span style="flex:1"><span style="display:block;font-weight:600">{{ n.title }}</span><span style="display:block;font-size:13px;color:var(--color-neutral-700);line-height:1.4">{{ n.body }}</span></span>
+        <span style="font-size:12px;color:var(--color-neutral-700);white-space:nowrap">{{ n.when }}</span>
+      </button>
+    </sc-for>
+    <div style="margin-top:auto;padding:24px 24px 40px;font-size:13px;color:var(--color-neutral-700)">Quiet hours 10 pm – 7 am. Manage in Settings → Notifications.</div>
+  </div>
+</sc-if>
+
+<!-- ═══ ETA (day of) ═══ -->
+<sc-if value="{{ s.eta }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column">
+    <div class="halftone" style="margin-top:8px;height:300px;position:relative;background-color:var(--color-neutral-200);background-image:linear-gradient(var(--color-neutral-300) 1px,transparent 1px),linear-gradient(90deg,var(--color-neutral-300) 1px,transparent 1px);background-size:44px 44px">
+      <svg viewBox="0 0 402 300" style="position:absolute;inset:0;width:100%;height:100%"><path d="M60 260 L60 160 L200 160 L200 90 L330 90" fill="none" stroke="var(--color-accent)" stroke-width="4" stroke-dasharray="8 6"/><circle cx="130" cy="160" r="11" fill="var(--color-accent-2)"/><circle cx="330" cy="90" r="9" fill="var(--color-bg)" stroke="var(--color-text)" stroke-width="3"/></svg>
+    </div>
+    <div style="padding:20px 24px 0;display:flex;justify-content:space-between;align-items:baseline"><div><h2 style="font-size:26px;margin:0;letter-spacing:-0.02em">Ravi arrives 8:56 am</h2><div style="font-size:13px;color:var(--color-neutral-700);margin-top:2px">Brake inspection · Thu 9:00 · BK-7712</div></div><span class="tag tag-accent-2">On the way</span></div>
+    <div style="padding:18px 24px 0;display:flex;gap:14px;align-items:center"><div style="width:48px;height:48px;border-radius:50%;background:var(--color-neutral-400)"></div><div style="flex:1"><div style="font-weight:600">Ravi Sandhu · Prairie Wrench</div><div style="font-size:13px;color:var(--color-neutral-700)">White Transit · plate CVX 218 · ID verified today</div></div><button class="btn btn-secondary" style="min-height:44px">Call</button></div>
+    <div style="padding:18px 24px 0"><div style="padding:12px 14px;background:var(--color-surface);border-radius:var(--radius-md);font-size:14px;display:flex;justify-content:space-between;align-items:center"><span>Share parkade access code with Ravi for 2 h</span><button class="btn btn-ghost" style="min-height:40px">Share</button></div></div>
+    <div style="padding:18px 24px 0;font-size:14px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;gap:12px"><span style="color:var(--color-neutral-700);width:66px">Yesterday</span><span>Reminder sent · you confirmed</span></div>
+      <div style="display:flex;gap:12px"><span style="color:var(--color-neutral-700);width:66px">8:31 am</span><span>Ravi left previous job (Kensington)</span></div>
+      <div style="display:flex;gap:12px;font-weight:600"><span style="width:66px;color:var(--color-accent-700)">Now</span><span>12 min away</span></div>
+    </div>
+    <div style="margin-top:auto;padding:20px 24px 40px"><button onClick="{{ nav.signoff }}" class="btn btn-secondary" style="min-height:46px;width:100%">Simulate job complete →</button></div>
+  </div>
+</sc-if>
+
+<!-- ═══ SIGN-OFF ═══ -->
+<sc-if value="{{ s.signoff }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;padding:8px 24px 40px">
+    <div style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-700)">Job complete · awaiting your sign-off</div>
+    <h2 style="font-size:24px;margin:8px 0 0;letter-spacing:-0.02em">Ravi says the brake inspection is done.</h2>
+    <div style="display:flex;gap:8px;margin-top:14px"><div class="halftone" style="flex:1;height:130px;border-radius:var(--radius-md);background:linear-gradient(160deg,var(--color-neutral-300),var(--color-neutral-600));display:grid;place-items:center;font-size:11px;color:#fff">before · 9:04</div><div class="halftone" style="flex:1;height:130px;border-radius:var(--radius-md);background:linear-gradient(200deg,var(--color-neutral-300),var(--color-neutral-600));display:grid;place-items:center;font-size:11px;color:#fff">after · 9:48</div></div>
+    <div style="margin-top:12px;font-size:14px;line-height:1.5"><strong>Ravi's report:</strong> Front pads 4 mm, rear 6 mm — fine for the winter. Grinding was a stone in the caliper; removed. No parts used. Recommend pads in ~8,000 km.</div>
+    <div style="margin-top:8px;font-size:13px;color:var(--color-neutral-700)">Receipt: labour only, $89 as quoted. <a href="#">PDF</a></div>
+    <sc-if value="{{ notSigned }}" hint-placeholder-val="{{ true }}">
+      <div style="margin-top:16px;padding:12px 14px;background:var(--color-surface);border-radius:var(--radius-md);font-size:14px;display:flex;justify-content:space-between"><span>Held in escrow</span><strong>{{ bookingTotal }}</strong></div>
+      <div style="display:flex;gap:10px;margin-top:12px"><button onClick="{{ signOff }}" class="btn btn-primary" style="min-height:48px;flex:1;font-size:16px">Release payment</button><button class="btn btn-secondary" style="min-height:48px">Raise an issue</button></div>
+      <p style="font-size:12px;color:var(--color-neutral-700);margin:10px 0 0">Releases automatically in 47 h if you do nothing. Raising an issue pauses it and a Northline agent reviews within 1 business day.</p>
+    </sc-if>
+    <sc-if value="{{ signed }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-top:16px;padding:14px 16px;background:var(--color-accent-100);border-radius:var(--radius-md);font-size:14px;color:var(--color-accent-900)"><strong>Released.</strong> {{ bookingTotal }} paid to Prairie Wrench. You earned <strong>{{ bookingPoints }} points</strong>.</div>
+      <div style="margin-top:auto;padding-top:16px"><button onClick="{{ nav.review }}" class="btn btn-primary" style="min-height:48px;width:100%">Rate Ravi</button></div>
+    </sc-if>
+  </div>
+</sc-if>
+
+<!-- ═══ REVIEW ═══ -->
+<sc-if value="{{ s.review }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;padding:8px 24px 40px">
+    <h2 style="font-size:26px;margin:0 0 4px;letter-spacing:-0.02em">How was Ravi?</h2>
+    <p style="color:var(--color-neutral-700);margin:0 0 14px">Only paid bookings can be reviewed. Ravi rates you too — your reliability score is 4.9.</p>
+    <div style="display:flex;gap:6px"><sc-for list="{{ stars }}" as="st" hint-placeholder-count="5"><button onClick="{{ st.pick }}" style="{{ st.style }}">★</button></sc-for></div>
+    <div style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-700);margin-top:18px">What stood out</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"><sc-for list="{{ praise }}" as="p" hint-placeholder-count="6"><button onClick="{{ p.pick }}" style="{{ p.style }}">{{ p.name }}</button></sc-for></div>
+    <textarea class="input" style="margin-top:14px;min-height:80px" placeholder="What should the next customer know?"></textarea>
+    <label class="radio" style="margin-top:14px;font-size:14px"><input type="checkbox" checked><span class="dot" style="border-radius:var(--radius-md)"></span>Add Ravi to my favourites — book him first next time</label>
+    <div style="margin-top:auto;padding-top:16px"><button onClick="{{ nav.orders }}" class="btn btn-primary" style="min-height:50px;font-size:16px;width:100%">Submit review</button></div>
+  </div>
+</sc-if>
+
+<!-- ═══ QUOTE RECEIVED ═══ -->
+<sc-if value="{{ s.quote }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;padding:0 24px 24px;overflow:auto">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px"><h2 style="font-size:24px;margin:0;letter-spacing:-0.02em">Mocktail bar · 40 guests</h2><span class="tag tag-accent-2">Valid 71 h</span></div>
+    <div style="font-size:13px;color:var(--color-neutral-700);margin-top:4px">Quote QT-2988 from <strong style="color:var(--color-text)">Sable &amp; Soda</strong> · Master · ★ 4.9 · ProServe verified · Sat Oct 18, 6–10 pm</div>
+    <div style="margin-top:18px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">Scope of work</div>
+    <p style="font-size:14px;line-height:1.5;margin:6px 0 0">Two bartenders, 4 hours on site plus setup and teardown. Four signature mocktails from the menu you picked, unlimited for 40 guests, glassware and ice included. We arrive 5 pm.</p>
+    <div style="margin-top:18px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">Breakdown</div>
+    <sc-for list="{{ quoteLines }}" as="l" hint-placeholder-count="5"><div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;font-size:14px"><span><span style="display:block">{{ l.name }}</span><span style="display:block;font-size:12px;color:var(--color-neutral-700)">{{ l.meta }}</span></span><strong style="flex:none">{{ l.amt }}</strong></div></sc-for>
+    <div style="display:flex;justify-content:space-between;font-size:14px;padding:8px 0 0;color:var(--color-neutral-700)"><span>GST 5 %</span><span>$30.48</span></div>
+    <div style="display:flex;justify-content:space-between;font-weight:600;font-size:18px;padding-top:8px"><span>Total · held in escrow</span><span>$640.00</span></div>
+    <div style="margin-top:16px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">What could change the price</div>
+    <p style="font-size:13px;line-height:1.5;margin:6px 0 0;color:var(--color-neutral-700)">Guest count over 45 adds $8/guest. Venue without a sink adds a $40 water-station fee. Anything else needs your approval in the app before it happens.</p>
+    <div style="display:flex;gap:16px;margin-top:14px;font-size:13px"><span><strong>Deposit</strong><br>None</span><span><strong>Cancellation</strong><br>Free until Oct 15</span><span><strong>Attachments</strong><br><a href="#">Menu.pdf</a></span></div>
+    <div style="margin-top:14px;padding:12px 14px;background:var(--color-accent-100);border-radius:var(--radius-md);font-size:13px;color:var(--color-accent-900);line-height:1.45"><strong>Protected.</strong> The quote is honoured as written. Northline holds the full amount in escrow and releases it 48 h after the event unless you raise an issue.</div>
+    <div style="margin-top:auto;padding-top:16px;display:flex;flex-direction:column;gap:8px"><button onClick="{{ nav.book_review }}" class="btn btn-primary" style="min-height:50px;font-size:16px;width:100%">Accept · pay $640.00 to escrow</button><div style="display:flex;gap:8px"><button class="btn btn-secondary" style="flex:1;min-height:44px">Ask a question</button><button class="btn btn-ghost" style="flex:1;min-height:44px">Decline</button></div></div>
+  </div>
+</sc-if>
+
+<!-- ═══ ORDERS ═══ -->
+<sc-if value="{{ s.orders }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column">
+    <div style="padding:0 24px"><h2 style="font-size:26px;margin:0;letter-spacing:-0.02em">Orders &amp; bookings</h2></div>
+    <div style="padding:12px 24px 0;display:flex;gap:6px"><span class="tag tag-accent">Active · 3</span><span class="tag tag-neutral">Past</span><span class="tag tag-neutral">Refunds</span></div>
+    <sc-for list="{{ orderList }}" as="o" hint-placeholder-count="6">
+      <button onClick="{{ o.go }}" style="display:flex;justify-content:space-between;gap:12px;width:100%;padding:14px 24px 0;border:0;background:transparent;font:inherit;text-align:left;cursor:pointer;color:var(--color-text)">
+        <span><span style="display:block;font-weight:600">{{ o.title }}</span><span style="display:block;font-size:13px;color:var(--color-neutral-700)">{{ o.sub }}</span></span>
+        <span style="text-align:right"><span class="tag {{ o.cls }}" style="white-space:nowrap">{{ o.state }}</span><span style="display:block;font-size:13px;margin-top:4px">{{ o.amt }}</span></span>
+      </button>
+    </sc-for>
+    <div style="height:30px"></div>
+  </div>
+</sc-if>
+
+<!-- ═══ ACCOUNT ═══ -->
+<sc-if value="{{ s.account }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column">
+    <div style="padding:0 24px;display:flex;gap:14px;align-items:center"><div style="width:56px;height:56px;border-radius:50%;background:var(--color-neutral-400)"></div><div><h2 style="font-size:24px;margin:0;letter-spacing:-0.02em">Amara Osei</h2><div style="font-size:13px;color:var(--color-neutral-700)">Reliability 4.9 · member since May · Beltline</div></div></div>
+    <button onClick="{{ nav.wallet }}" style="margin:18px 24px 0;padding:14px 16px;border:0;border-radius:var(--radius-md);background:var(--color-accent-100);display:flex;justify-content:space-between;align-items:center;font:inherit;cursor:pointer;color:var(--color-accent-900);text-align:left"><div><div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-accent-800)">Wallet</div><div style="font-weight:600;font-size:18px">{{ pointsBal }} pts · {{ pointsValue }}</div></div><span class="tag tag-accent-2">{{ plusTag }}</span></button>
+    <div style="padding:20px 24px 0;display:flex;flex-direction:column">
+      <sc-for list="{{ acctRows }}" as="r" hint-placeholder-count="9"><button onClick="{{ r.go }}" style="display:flex;justify-content:space-between;align-items:center;min-height:48px;padding:0;border:0;background:transparent;font:inherit;font-size:15px;color:var(--color-text);cursor:pointer;text-align:left"><span>{{ r.name }}</span><span style="font-size:13px;color:var(--color-neutral-700)">{{ r.val }} ›</span></button></sc-for>
+    </div>
+    <div style="margin-top:auto;padding:20px 24px 40px;font-size:13px;color:var(--color-neutral-700)">Northline Marketplace Inc. · Calgary · <a href="#">Privacy</a> · <a href="#">Terms</a> · <a href="#">Français</a></div>
+  </div>
+</sc-if>
+
+<!-- ═══ SECURITY ═══ -->
+<sc-if value="{{ s.security }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;padding:8px 24px 40px">
+    <div style="padding:14px 16px;background:var(--color-accent-100);border-radius:var(--radius-md);color:var(--color-accent-900);font-size:14px"><strong>Your account is well protected.</strong> Passkey + SMS backup · 2 trusted devices.</div>
+    <h3 style="font-size:16px;margin:22px 0 6px">Sign-in methods</h3>
+    <div style="display:flex;justify-content:space-between;align-items:center;min-height:48px"><span>Passkey · iPhone 16 (Face ID)</span><span class="tag tag-accent">Primary</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;min-height:48px"><span>Authenticator app</span><button onClick="{{ toggleAuthApp }}" style="{{ authAppStyle }}">{{ authAppLabel }}</button></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;min-height:48px"><span>SMS backup · ··0148</span><span class="tag tag-neutral">Backup</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;min-height:48px"><span>Security key (FIDO2)</span><button class="btn btn-ghost" style="min-height:40px">Add</button></div>
+    <h3 style="font-size:16px;margin:22px 0 6px">Devices &amp; sessions</h3>
+    <div style="display:flex;justify-content:space-between;align-items:center;min-height:48px"><span>iPhone 16 · Calgary<span style="display:block;font-size:12px;color:var(--color-neutral-700)">This device · now</span></span></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;min-height:48px"><span>Safari · MacBook<span style="display:block;font-size:12px;color:var(--color-neutral-700)">Calgary · 2 days ago</span></span><button class="btn btn-ghost" style="min-height:40px">Sign out</button></div>
+    <h3 style="font-size:16px;margin:22px 0 6px">Payments</h3>
+    <div style="display:flex;justify-content:space-between;align-items:center;min-height:48px"><span>Require Face ID for payments over</span><span style="font-weight:600">$100</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;min-height:48px"><span>Login alerts by email</span><span class="tag tag-accent">On</span></div>
+    <div style="margin-top:auto;padding-top:16px;display:flex;flex-direction:column;gap:8px"><button class="btn btn-secondary" style="min-height:46px">Download my data</button><button class="btn btn-ghost" style="min-height:44px;color:var(--color-accent-2-700)">Sign out of all devices</button></div>
+  </div>
+</sc-if>
+
+<!-- ═══ WALLET ═══ -->
+<sc-if value="{{ s.wallet }}" hint-placeholder-val="{{ false }}">
+  <div style="flex:1;display:flex;flex-direction:column;padding:8px 24px 40px">
+    <div style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-700)">Northline points</div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:6px"><span style="font-size:44px;font-weight:600;letter-spacing:-0.02em">{{ pointsBal }}</span><span style="font-size:14px;color:var(--color-neutral-700)">= {{ pointsValue }} off anything</span></div>
+    <div style="display:flex;gap:4px;margin-top:14px"><sc-for list="{{ ptsBars }}" as="b" hint-placeholder-count="8"><div style="{{ b }}"></div></sc-for></div>
+    <div style="font-size:12px;color:var(--color-neutral-700);margin-top:4px">Points earned, last 8 weeks</div>
+    <div style="margin-top:22px;padding:14px 16px;border-radius:var(--radius-md);background:var(--color-surface);display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:600">{{ plusHeadline }}</div><div style="font-size:12px;color:var(--color-neutral-700)">{{ plusSub }}</div></div><button class="btn btn-ghost" style="min-height:44px;white-space:nowrap;flex:none">{{ plusCta }}</button></div>
+    <h3 style="font-size:16px;margin:22px 0 4px">Provider-funded rewards near you</h3>
+    <div style="display:flex;flex-direction:column;font-size:14px">
+      <div style="display:flex;justify-content:space-between;min-height:44px;align-items:center"><span>Glenmore Bakery · 3× points</span><span style="color:var(--color-neutral-700)">until Sun</span></div>
+      <div style="display:flex;justify-content:space-between;min-height:44px;align-items:center"><span>Bow Valley Cleaners · 500 pts on first clean</span><span style="color:var(--color-neutral-700)">new</span></div>
+    </div>
+    <h3 style="font-size:16px;margin:22px 0 4px">Activity</h3>
+    <div style="display:flex;flex-direction:column;font-size:14px">
+      <div style="display:flex;justify-content:space-between;min-height:40px;align-items:center"><span>Brake inspection · Prairie Wrench</span><span style="color:var(--color-accent-700)">+{{ bookingPoints }}</span></div>
+      <div style="display:flex;justify-content:space-between;min-height:40px;align-items:center"><span>Grocery run · 3 shops</span><span style="color:var(--color-accent-700)">+{{ cartPoints }}</span></div>
+      <div style="display:flex;justify-content:space-between;min-height:40px;align-items:center"><span>Redeemed at checkout</span><span style="color:var(--color-accent-2-700)">−500</span></div>
+    </div>
+    <div style="margin-top:auto;padding-top:16px"><div style="display:flex;justify-content:space-between;align-items:center;min-height:48px;font-size:15px"><span>Payment methods</span><span style="font-size:13px;color:var(--color-neutral-700)">Visa ··4471, Apple Pay ›</span></div></div>
+  </div>
+</sc-if>
+
+<!-- ═══ TAB BAR ═══ -->
+<sc-if value="{{ showTabs }}" hint-placeholder-val="{{ false }}">
+  <div style="position:sticky;bottom:0;margin-top:auto;padding:10px 12px 30px;display:flex;justify-content:space-around;background:var(--color-bg);box-shadow:0 -1px 0 var(--color-divider)">
+    <sc-for list="{{ tabs }}" as="tb" hint-placeholder-count="5"><button onClick="{{ tb.go }}" style="{{ tb.style }}">{{ tb.label }}<span style="{{ tb.badgeStyle }}">{{ tb.badge }}</span></button></sc-for>
+  </div>
+</sc-if>
+</div>
+</x-import>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:402,&quot;height&quot;:874},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;welcome&quot;,&quot;options&quot;:[&quot;welcome&quot;,&quot;signup&quot;,&quot;otp&quot;,&quot;mfa&quot;,&quot;location&quot;,&quot;home&quot;,&quot;search&quot;,&quot;product&quot;,&quot;cart&quot;,&quot;checkout&quot;,&quot;pay&quot;,&quot;confirmed&quot;,&quot;track&quot;,&quot;delivered&quot;,&quot;refund&quot;,&quot;services&quot;,&quot;providers&quot;,&quot;provider&quot;,&quot;book_service&quot;,&quot;book_slot&quot;,&quot;book_review&quot;,&quot;booked&quot;,&quot;notifications&quot;,&quot;eta&quot;,&quot;signoff&quot;,&quot;review&quot;,&quot;orders&quot;,&quot;account&quot;,&quot;security&quot;,&quot;wallet&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Start screen&quot;},&quot;plusMember&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Scenario&quot;}}">
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { screen: p.screen || 'welcome', hist: [], prov: 'AB', mfa: 0, query: 'sourdough', filters: { 'On tonight\'s run': true }, sliced: false, prodQty: 1, qty: [2, 1, 1, 0], win: 0, sub: 0, redeem: false, card: 0, payStep: 0, delivered: false, star: 0, refundSel: { 2: true }, reason: 0, pFilters: { 'Master tier': true }, svc: 0, day: 1, slot: 1, signed: false, praise: {}, authApp: false }; }
+  componentDidUpdate(prev) { if (prev.screen !== this.props.screen && this.props.screen && this.props.screen !== this.state.screen) this.setState({ screen: this.props.screen, hist: [] }); }
+  renderVals() {
+    const s = this.state, P = this.props, plus = P.plusMember ?? false, mult = plus ? 2 : 1;
+    const money = n => '$' + n.toFixed(2);
+    const go = name => () => this.setState(st => ({ screen: name, hist: [...st.hist, st.screen] }));
+    const set = patch => () => this.setState(patch);
+    const nav = {}; ['welcome', 'signup', 'otp', 'mfa', 'location', 'home', 'search', 'product', 'cart', 'checkout', 'pay', 'confirmed', 'track', 'delivered', 'refund', 'services', 'providers', 'provider', 'book_service', 'book_slot', 'book_review', 'booked', 'notifications', 'eta', 'signoff', 'review', 'orders', 'account', 'security', 'wallet', 'quote'].forEach(n => nav[n] = go(n));
+    const sc = {}; sc[s.screen] = true;
+    const titles = { signup: 'Sign up', otp: 'Verify', mfa: 'Security', location: 'Delivery address', search: 'Search', product: 'Glenmore Bakery', cart: 'Cart', checkout: 'Checkout', pay: 'Payment', track: 'Order NL-48213', delivered: 'Order NL-48213', refund: 'Report a problem', providers: 'Mobile mechanics', provider: 'Provider', book_service: 'Book · service', book_slot: 'Book · time', book_review: 'Book · review', notifications: 'Notifications', eta: 'Booking BK-7712', signoff: 'Sign-off', review: 'Review', security: 'Security', wallet: 'Wallet & points', quote: 'Quote QT-2988' };
+    const tabScreens = ['home', 'services', 'cart', 'orders', 'account'];
+    const hasBack = !!titles[s.screen] && !tabScreens.includes(s.screen) && s.screen !== 'welcome';
+    const opt = (on, extra = '') => `display:flex;align-items:center;gap:10px;width:100%;text-align:left;font:inherit;padding:12px 14px;border-radius:var(--radius-md);cursor:pointer;min-height:44px;color:var(--color-text);border:1px solid ${on ? 'var(--color-accent)' : 'var(--color-divider)'};background:${on ? 'var(--color-accent-100)' : 'transparent'};${extra}`;
+    const chip = on => `font:inherit;font-size:13px;padding:8px 12px;min-height:40px;white-space:nowrap;border-radius:var(--radius-md);cursor:pointer;border:1px solid ${on ? 'var(--color-accent)' : 'var(--color-divider)'};background:${on ? 'var(--color-accent)' : 'transparent'};color:${on ? 'var(--color-bg)' : 'var(--color-text)'}`;
+    const toggleIn = (key, name) => () => this.setState(st => ({ [key]: { ...st[key], [name]: !st[key][name] } }));
+    // cart
+    const items = [['Ribeye, AAA', '2 × 340 g', 18.5, 'Bridgeland Butcher'], ['Chicken thighs', '1 kg', 11.0, 'Bridgeland Butcher'], ['Kale & chard mix', 'bunch', 4.25, 'Sunnyside Greens'], ['Country sourdough', s.sliced ? 'sliced' : 'whole loaf', 7.5, 'Glenmore Bakery']];
+    const cartItems = items.map((it, i) => ({ name: it[0], unit: it[1], shop: it[3], qty: s.qty[i], val: it[2] * s.qty[i], line: money(it[2] * s.qty[i]), inc: () => this.setState(st => { const q = [...st.qty]; q[i]++; return { qty: q }; }), dec: () => this.setState(st => { const q = [...st.qty]; q[i] = Math.max(0, q[i] - 1); return { qty: q }; }) })).filter(x => x.qty > 0);
+    const shops = [...new Set(cartItems.map(x => x.shop))];
+    const cartGroups = shops.map(sh => ({ shop: sh, note: sh === 'Glenmore Bakery' ? '3× points' : 'closes to run 5:45', items: cartItems.filter(x => x.shop === sh) }));
+    const cartSub = cartItems.reduce((a, b) => a + b.val, 0);
+    const winDefs = [['Tonight 6–9 pm', 'Pooled with 5 neighbours', plus ? 0 : 2.99], ['Tomorrow 8–11 am', 'Pooled · most popular', plus ? 0 : 1.99], ['Now · 45 min', 'Direct courier', plus ? 5.99 : 9.99]];
+    const del = winDefs[s.win][2], cTax = cartSub * 0.05, ptsBal = 1240, ptsVal = ptsBal / 100;
+    const total = Math.max(0, cartSub + del + cTax - (s.redeem ? ptsVal : 0));
+    // booking
+    const svcDefs = [['Brake inspection', 'Pads, rotors, fluid — written report', 89, '45 min'], ['Oil & filter', 'Full synthetic, parts at cost', 79, '30 min'], ['Diagnostic scan', 'Check-engine and electrical', 120, '60 min'], ['Pre-purchase inspection', '120-point, photos, report', 160, '90 min']];
+    const services = svcDefs.map((x, i) => ({ name: x[0], desc: x[1], price: '$' + x[2], pick: set({ svc: i }), style: opt(s.svc === i) }));
+    const dayDefs = [['Wed', '9', '2 slots'], ['Thu', '10', '4 slots'], ['Fri', '11', '1 slot'], ['Sat', '12', 'Full'], ['Mon', '14', '5 slots']];
+    const days = dayDefs.map((d, i) => ({ dow: d[0], num: d[1], free: d[2], pick: set({ day: i }), style: opt(s.day === i, 'flex:1;flex-direction:column;align-items:flex-start;gap:0;padding:8px 10px') }));
+    const slotDefs = ['7:00', '9:00', '11:00', '1:00', '3:00', '5:00'];
+    const slots = slotDefs.map((t, i) => ({ label: t, off: i === 3 || i === 5, pick: set({ slot: i }), style: chip(s.slot === i) + (i === 3 || i === 5 ? ';opacity:.35;text-decoration:line-through' : '') }));
+    const bSub = svcDefs[s.svc][2], bTax = bSub * 0.05, when = `${dayDefs[s.day][0]} ${dayDefs[s.day][1]} · ${slotDefs[s.slot]} am`;
+    const stars = [1, 2, 3, 4, 5].map(n => ({ pick: set({ star: n }), style: `width:44px;height:44px;border:0;background:transparent;font-size:30px;cursor:pointer;color:${s.star >= n ? 'var(--color-accent-2)' : 'var(--color-neutral-300)'}` }));
+    const refundItems = items.map((it, i) => ({ name: it[0], line: money(it[2] * Math.max(1, s.qty[i])), val: it[2] * Math.max(1, s.qty[i]), toggle: toggleIn('refundSel', i), style: opt(!!s.refundSel[i]), box: `width:18px;height:18px;border-radius:var(--radius-md);border:1.5px solid ${s.refundSel[i] ? 'var(--color-accent)' : 'var(--color-divider)'};background:${s.refundSel[i] ? 'var(--color-accent)' : 'transparent'}` }));
+    const refundAmt = refundItems.filter((_, i) => s.refundSel[i]).reduce((a, b) => a + b.val, 0) * 1.05;
+    const resultsAll = [['Country sourdough', 'Glenmore Bakery', '900 g · baked today', 7.5, 'loaf', 'On tonight\'s run', 'tag-accent'], ['Seeded sourdough', 'Glenmore Bakery', '800 g', 8.0, 'loaf', '3× points', 'tag-accent-2'], ['Sourdough rye', 'Sidewalk Citizen', '700 g', 8.5, 'loaf', 'Tomorrow', 'tag-neutral'], ['Sourdough starter kit', 'Prairie Pantry', 'jar + guide', 14.0, 'kit', 'On tonight\'s run', 'tag-accent'], ['Sourdough discard crackers', 'Glenmore Bakery', '200 g', 6.0, 'bag', 'On tonight\'s run', 'tag-accent']];
+    const results = resultsAll.filter(r => !s.filters['On tonight\'s run'] || r[5] === 'On tonight\'s run').map(r => ({ name: r[0], shop: r[1], meta: r[2], price: money(r[3]), unit: r[4], tag: r[5], tagCls: r[6], go: nav.product }));
+    const provDefs = [['Prairie Wrench', 'Master', 'tag-accent', '4.9', 312, '98%', '1.2 km', '$79', 'Today 3 pm', '#2f5d3a', 'Red Seal · AMVIC · parts at cost, receipts on every job.'], ['Chinook Auto Mobile', 'Master', 'tag-accent', '4.8', 190, '96%', '3.4 km', '$85', 'Tomorrow', '#3b4a5a', 'EV-certified. Fleet and family cars.'], ['Bow River Mechanics', 'Trusted', 'tag-accent-2', '4.7', 88, '93%', '2.1 km', '$69', 'Today 5 pm', '#9a4a1f', 'Budget-friendly, weekend availability.'], ['Kensington Garage on Wheels', 'Registered', 'tag-neutral', '4.5', 12, '90%', '1.8 km', '$65', 'Thu', '#5b2a5e', 'New to Northline — request-only until 20 jobs.']];
+    const provList = provDefs.filter(p => !s.pFilters['Master tier'] || p[1] === 'Master').map(p => ({ name: p[0], tier: p[1], tierCls: p[2], rating: p[3], n: p[4], onTime: p[5], dist: p[6], from: p[7], avail: p[8], color: p[9], blurb: p[10], initial: p[0][0], go: nav.provider }));
+    const dot = c => `width:10px;height:10px;border-radius:50%;flex:none;margin-top:6px;background:${c}`;
+    const badge = s.qty.filter(q => q > 0).length;
+    const tabs = [['Home', 'home'], ['Services', 'services'], ['Cart', 'cart'], ['Orders', 'orders'], ['You', 'account']].map(t => ({ label: t[0], go: nav[t[1]], badge: t[1] === 'cart' && badge ? String(badge) : '', badgeStyle: `position:absolute;top:2px;right:8px;min-width:16px;height:16px;border-radius:8px;background:var(--color-accent-2);color:#fff;font-size:10px;display:${t[1] === 'cart' && badge ? 'grid' : 'none'};place-items:center;padding:0 4px`, style: `position:relative;flex:1;min-height:44px;border:0;background:transparent;font:inherit;font-size:12px;cursor:pointer;color:${s.screen === t[1] ? 'var(--color-accent-700)' : 'var(--color-neutral-700)'};font-weight:${s.screen === t[1] ? 600 : 400}` }));
+    const ptsBarVals = [120, 340, 90, 410, 260, 180, 520, 300];
+    return {
+      s: sc, isDark: s.screen === 'provider', hasBack, noBack: !hasBack, title: titles[s.screen] || '', nav, showTabs: tabScreens.includes(s.screen),
+      back: () => this.setState(st => { const h = [...st.hist]; const prev = h.pop() || 'home'; return { screen: prev, hist: h }; }),
+      otpDigits: '482913'.split('').map((v, i) => ({ v, style: `flex:1;height:56px;display:grid;place-items:center;font-size:24px;font-weight:600;border-radius:var(--radius-md);background:var(--color-surface);border:1px solid ${i === 5 ? 'var(--color-accent)' : 'var(--color-divider)'}` })), otpTimer: '42',
+      mfaOpts: [['Passkey (Face ID / Touch ID)', 'Phishing-resistant, nothing to remember', 'Recommended'], ['Authenticator app', 'Time-based codes · Google/Microsoft/1Password', 'Strong'], ['SMS code', 'Least secure — backup only', 'Basic']].map((o, i) => ({ name: o[0], desc: o[1], tag: o[2], pick: set({ mfa: i }), style: opt(s.mfa === i) })), mfaCta: ['Create passkey', 'Scan QR code', 'Continue with SMS'][s.mfa],
+      pickAB: set({ prov: 'AB' }), pickBC: set({ prov: 'BC' }), provAB: opt(s.prov === 'AB', 'flex-direction:column;align-items:flex-start;gap:2px'), provBC: opt(s.prov === 'BC', 'flex-direction:column;align-items:flex-start;gap:2px'),
+      deliveryFee: plus ? 'free with Plus' : '$2.99',
+      shopCats: ['Groceries', 'Butcher', 'Bakery', 'Produce', 'Clothing', 'Pharmacy', 'Hardware', 'More'], svcCats: ['Mechanic', 'Cleaning', 'Plumber', 'Events & bar', 'Realtor', 'Barber', 'Tutor', 'More'],
+      recs: [{ name: 'Bow Valley Cleaners', tier: 'Master', meta: 'Home cleaning · next day', rating: '4.9', dist: '0.8 km', go: nav.provider }, { name: 'Sable & Soda', tier: 'Trusted', meta: 'Cocktail & mocktail bar · events', rating: '4.8', dist: '2.4 km', go: nav.provider }],
+      query: s.query, setQuery: e => this.setState({ query: e.target.value }),
+      filters: ['On tonight\'s run', 'Under $10', 'Master sellers', 'Organic', 'Halal'].map(f => ({ name: f, toggle: toggleIn('filters', f), style: chip(!!s.filters[f]) })), results, resultCount: results.length,
+      optWhole: chip(!s.sliced), optSliced: chip(s.sliced), pickWhole: set({ sliced: false }), pickSliced: set({ sliced: true }), prodQty: s.prodQty, incProd: set({ prodQty: s.prodQty + 1 }), decProd: set({ prodQty: Math.max(1, s.prodQty - 1) }),
+      addLabel: `Add ${s.prodQty} · ${money(7.5 * s.prodQty)}`, addToCart: () => this.setState(st => { const q = [...st.qty]; q[3] += st.prodQty; return { qty: q, screen: 'cart', hist: [...st.hist, st.screen] }; }),
+      cartGroups, cartCount: cartItems.reduce((a, b) => a + b.qty, 0), cartShops: shops.length, cartSub: money(cartSub), cartTax: money(cTax), cartPreTotal: money(cartSub + cTax), cartPoints: Math.round(cartSub * mult), pointsBal: ptsBal.toLocaleString(), pointsValue: money(ptsVal),
+      windows: winDefs.map((w, i) => ({ name: w[0], desc: w[1], price: w[2] === 0 ? 'Free' : money(w[2]), pick: set({ win: i }), style: opt(s.win === i) })), windowName: winDefs[s.win][0].toLowerCase(),
+      subSimilar: set({ sub: 0 }), subRefund: set({ sub: 1 }), subAsk: set({ sub: 2 }), subA: chip(s.sub === 0), subB: chip(s.sub === 1), subC: chip(s.sub === 2),
+      redeem: s.redeem, toggleRedeem: set({ redeem: !s.redeem }), redeemStyle: opt(s.redeem, 'margin-top:8px'), redeemDot: `width:18px;height:18px;border-radius:var(--radius-md);border:1.5px solid ${s.redeem ? 'var(--color-accent)' : 'var(--color-divider)'};background:${s.redeem ? 'var(--color-accent)' : 'transparent'}`,
+      cartDelivery: del === 0 ? 'Free' : money(del), cartTotal: money(total),
+      cards: [['Visa ··4471', '09/28'], ['Mastercard ··0912', '02/27']].map((c, i) => ({ name: c[0], exp: c[1], pick: set({ card: i }), style: opt(s.card === i) })), pickNewCard: set({ card: 2 }), newCardStyle: opt(s.card === 2), newCard: s.card === 2,
+      payForm: s.payStep === 0, pay3ds: s.payStep === 1, startPay: set({ payStep: 1 }), finishPay: () => this.setState(st => ({ payStep: 0, screen: 'confirmed', hist: [...st.hist, 'pay'] })),
+      notConfirmed: !s.delivered, confirmedDelivery: s.delivered, confirmDelivery: set({ delivered: true }), stars,
+      refundForm: !s.refundDone, refundDone: !!s.refundDone, submitRefund: set({ refundDone: true }), refundItems, refundAmt: money(refundAmt), refundCount: Object.values(s.refundSel).filter(Boolean).length, refundReason: ['Missing', 'Damaged', 'Wrong item', 'Poor quality', 'Late'][s.reason].toLowerCase(),
+      reasons: ['Missing', 'Damaged', 'Wrong item', 'Poor quality', 'Late'].map((r, i) => ({ name: r, pick: set({ reason: i }), style: chip(s.reason === i) })),
+      svcGroups: [{ name: 'Home & trades', items: ['Plumber', 'Electrician', 'Carpenter', 'HVAC', 'Painter', 'Cleaning', 'Snow removal', 'Movers', 'Handyperson'] }, { name: 'Auto', items: ['Mobile mechanic', 'Tire change', 'Detailing', 'Towing', 'Windshield'] }, { name: 'Events & hospitality', items: ['Event planner', 'Cocktail & mocktail bar', 'Catering', 'Private chef', 'DJ', 'Photographer', 'Florist'] }, { name: 'Property & professional', items: ['Real-estate agent', 'Mortgage broker', 'Home inspector', 'Notary', 'Accountant'] }, { name: 'Personal, care & pets', items: ['Barber', 'Hair', 'Massage', 'Trainer', 'Tutor', 'Childcare', 'Dog walker', 'Groomer'] }],
+      pFilters: ['Master tier', 'Instant book', 'Today', '< 3 km', 'Under $80', 'EV certified'].map(f => ({ name: f, toggle: toggleIn('pFilters', f), style: chip(!!s.pFilters[f]) })), provList, provCount: provList.length,
+      svcMenu: svcDefs.map((x, i) => ({ name: x[0], dur: x[3], price: '$' + x[2], go: () => this.setState(st => ({ svc: i, screen: 'book_service', hist: [...st.hist, st.screen] })) })),
+      services, days, slots, chosenService: svcDefs[s.svc][0], chosenPrice: '$' + bSub, chosenWhen: when, bookingTax: money(bTax), bookingTotal: money(bSub + bTax), bookingPoints: Math.round(bSub * mult),
+      notifs: [{ title: 'Ravi is on the way', body: 'Brake inspection · arriving 8:56 am. Tap for live ETA.', when: 'now', dot: dot('var(--color-accent-2)'), go: nav.eta }, { title: 'Reminder: Prairie Wrench tomorrow 9:00', body: 'Ravi Sandhu · white Transit CVX 218. Reply to confirm the parkade code.', when: 'Yesterday', dot: dot('var(--color-accent)'), go: nav.eta }, { title: 'Order NL-48213 delivered', body: 'Photo at your door · confirm to release payment to 3 shops.', when: 'Yesterday', dot: dot('var(--color-accent)'), go: nav.delivered }, { title: 'Quote ready · Sable & Soda', body: 'Mocktail bar for 40 · $640 all-in. Valid 72 h.', when: '2 d', dot: dot('var(--color-neutral-400)'), go: nav.orders }, { title: '3× points at Glenmore Bakery', body: 'Provider-funded reward, until Sunday.', when: '3 d', dot: dot('var(--color-neutral-400)'), go: nav.search }, { title: 'New sign-in from Safari · MacBook', body: 'Calgary. Not you? Review devices.', when: '3 d', dot: dot('var(--color-neutral-400)'), go: nav.security }],
+      notSigned: !s.signed, signed: s.signed, signOff: set({ signed: true }),
+      praise: ['On time', 'Clear explanation', 'Fair price', 'Clean work', 'Went the extra mile', 'Great with the dog'].map(p => ({ name: p, pick: toggleIn('praise', p), style: chip(!!s.praise[p]) })),
+      orderList: [{ title: 'Grocery run · 3 shops', sub: 'NL-48213 · arriving 6:52 pm · Jordan', state: 'On the way', cls: 'tag-accent', amt: money(total), go: nav.track }, { title: 'Brake inspection · Prairie Wrench', sub: 'BK-7712 · Thu 9:00 · escrow', state: 'Booked', cls: 'tag-neutral', amt: money(bSub + bTax), go: nav.eta }, { title: 'Mocktail bar · 40 guests', sub: 'Quote from Sable & Soda · valid 72 h', state: 'Quote ready', cls: 'tag-accent-2', amt: '$640', go: nav.quote }, { title: 'Winter tire swap · Prairie Wrench', sub: 'Oct 12 · released · reviewed ★5', state: 'Done', cls: 'tag-neutral', amt: '$120', go: nav.review }, { title: 'Deep clean · Bow Valley Cleaners', sub: 'Sep 28 · released · reviewed ★4', state: 'Done', cls: 'tag-neutral', amt: '$210', go: nav.review }, { title: 'Grocery run · 2 shops', sub: 'Sep 26 · 1 item refunded ($4.25)', state: 'Refunded', cls: 'tag-neutral', amt: '$59.95', go: nav.refund }],
+      quoteLines: [['Bartender × 2 · 4 h', 'Labour · ProServe certified · $45/h each', '$360.00'], ['Setup & teardown', 'Labour · 1 h', '$60.00'], ['Mocktail ingredients · 40 guests', 'Materials · 4 signature drinks, unlimited', '$140.00'], ['Glassware & ice', 'Rental', '$40.00'], ['Travel · within Calgary', 'Fee', '$15.00'], ['Returning-customer discount', 'Discount', '−$5.48']].map(l => ({ name: l[0], meta: l[1], amt: l[2] })),
+      acctRows: [['Addresses & household', '2', 'location'], ['Payment methods', 'Visa ··4471', 'wallet'], ['Security & sign-in', 'Passkey + SMS', 'security'], ['Notifications', 'Quiet 10 pm–7 am', 'notifications'], ['Favourite providers', '3', 'providers'], ['Refunds & help', '1 case', 'refund'], ['Language / Langue', 'English', 'account'], ['Invite a neighbour', '+500 pts', 'wallet'], ['Become a seller or provider', '', 'account']].map(r => ({ name: r[0], val: r[1], go: nav[r[2]] })),
+      plusTag: plus ? 'Plus' : 'Standard', plusHeadline: plus ? 'Northline Plus · active' : 'Northline Plus', plusSub: plus ? 'Free pooled delivery · 2× points · priority windows' : 'Free pooled delivery, 2× points, priority windows · $7.99/mo per household', plusCta: plus ? 'Manage' : 'Try free',
+      toggleAuthApp: set({ authApp: !s.authApp }), authAppStyle: `font:inherit;font-size:13px;min-height:40px;padding:6px 12px;border-radius:var(--radius-md);cursor:pointer;border:1px solid ${s.authApp ? 'var(--color-accent)' : 'var(--color-divider)'};background:${s.authApp ? 'var(--color-accent-100)' : 'transparent'};color:${s.authApp ? 'var(--color-accent-800)' : 'var(--color-text)'}`, authAppLabel: s.authApp ? 'Enabled' : 'Set up',
+      tabs,
+      ptsBars: ptsBarVals.map(v => `flex:1;height:60px;display:flex;align-items:flex-end;--h:${Math.round(v / 5.2)}px;background:linear-gradient(to top,var(--color-accent) var(--h),var(--color-neutral-200) var(--h))`)
+    };
+  }
+}
+</script>
+</body>
+</html>

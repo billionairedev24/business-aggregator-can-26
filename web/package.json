@@ -1,0 +1,18 @@
+{
+  "name": "northline-web",
+  "private": true,
+  "packageManager": "pnpm@10.17.0",
+  "scripts": {
+    "dev": "pnpm --filter @northline/consumer dev",
+    "storybook": "pnpm --filter @northline/ui storybook",
+    "build-storybook": "pnpm --filter @northline/ui build-storybook",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "eslint": "^9.30.0",
+    "prettier": "^3.6.0"
+  }
+}

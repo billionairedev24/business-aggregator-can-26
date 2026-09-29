@@ -1,0 +1,10 @@
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { Button } from './Button';
+const meta = { title: 'Core/Button', component: Button, args: { children: 'Book now' }, argTypes: { variant: { control: 'inline-radio', options: ['primary', 'highlight', 'secondary', 'ghost'] } } } satisfies Meta<typeof Button>;
+export default meta;
+type S = StoryObj<typeof meta>;
+export const Primary: S = {};
+export const Highlight: S = { args: { variant: 'highlight', children: 'Search' } };
+export const Secondary: S = { args: { variant: 'secondary', children: 'Get a quote' } };
+export const Ghost: S = { args: { variant: 'ghost', children: 'See all' } };
+export const Disabled: S = { args: { disabled: true } };

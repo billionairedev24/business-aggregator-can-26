@@ -1,0 +1,29 @@
+{
+  "$comment": "Seed for catalogue.categories. Group → leaf. `regulator` becomes regulated_registry; leaf selection adds a registry verification for the merchant. Limits per merchant type: provider 10 · seller 5 · both 10 · kitchen 3 (merchants.merchant_categories trigger). Mirrors `taxonomy` in 02 Provider Studio.dc.html.",
+  "service": [
+    { "group": "Automotive", "note": "AMVIC licence checked", "items": [["Mobile mechanic", "AMVIC"], ["Oil change & fluids", "AMVIC"], ["Brakes & suspension", "AMVIC"], ["Tire change & storage"], ["Windshield repair"], ["Detailing"], ["Battery boost & replacement"], ["Pre-purchase inspection", "AMVIC"], ["Towing & roadside"], ["EV charger install", "Safety Codes"]] },
+    { "group": "Home trades", "note": "Safety Codes / municipal permits", "items": [["Plumber", "Safety Codes"], ["Electrician", "Safety Codes"], ["Gas fitter", "Safety Codes"], ["HVAC & furnace", "Safety Codes"], ["Hot water tank"], ["Drywall & taping"], ["Painting"], ["Flooring & tile"], ["Carpentry & finishing"], ["Roofing"], ["Eavestrough"], ["Siding & exterior"], ["Fencing & decks"], ["Concrete & paving"], ["Foundation & waterproofing"], ["Handyman"], ["Appliance repair"], ["Garage doors"], ["Locksmith", "Security services licence"], ["Home inspector"]] },
+    { "group": "Cleaning & property", "note": "Insurance required", "items": [["House cleaning"], ["Move-in / move-out clean"], ["Carpet & upholstery"], ["Window cleaning"], ["Pressure washing"], ["Junk removal"], ["Movers"], ["Snow removal"], ["Lawn & yard"], ["Landscaping"], ["Tree service"], ["Pest control", "AB Environment pesticide licence"], ["Duct cleaning"], ["Pool & hot tub service"], ["Property management", "RECA"]] },
+    { "group": "Events & hospitality", "note": "ProServe / AGLC for bar", "items": [["Cocktail & mocktail bar", "ProServe"], ["Bartender", "ProServe"], ["Event planner"], ["Wedding planner"], ["DJ"], ["Live music"], ["Photographer"], ["Videographer"], ["Photo booth"], ["Florist"], ["Balloon & decor"], ["Rentals · tents, tables, chairs"], ["Catering server staff"], ["MC / host"], ["Kids party entertainer"]] },
+    { "group": "Personal care & wellness", "note": "Provincial college where applicable", "items": [["Barber & hair"], ["Mobile hair & makeup"], ["Nail technician"], ["Esthetician"], ["Massage therapist", "RMT"], ["Personal trainer"], ["Yoga / pilates instructor"], ["Nutritionist"], ["Registered dietitian", "College of Dietitians"], ["Physiotherapist", "College of PT"], ["Doula"], ["Home care aide"]] },
+    { "group": "Pets", "note": "", "items": [["Dog walker"], ["Pet sitter"], ["Dog grooming"], ["Dog training"], ["Pet taxi"]] },
+    { "group": "Education & coaching", "note": "", "items": [["Tutor · K–12"], ["Tutor · post-secondary"], ["Music lessons"], ["Language lessons"], ["Driving instructor", "AB Transportation licence"], ["Swim instructor"], ["Test prep"], ["Career coach"], ["Life coach"]] },
+    { "group": "Professional", "note": "Regulated professions verified", "items": [["Real-estate agent", "RECA"], ["Mortgage broker", "RECA"], ["Accountant / bookkeeper", "CPA"], ["Tax preparer"], ["Notary", "Law Society"], ["Immigration consultant", "CICC"], ["Insurance broker", "AIC"], ["Translator"], ["Legal document services"]] },
+    { "group": "Tech & digital", "note": "", "items": [["Computer repair"], ["Phone & tablet repair"], ["Home network & Wi-Fi"], ["Smart home install"], ["TV mounting"], ["Web design"], ["Photography editing"], ["IT support for small business"]] },
+    { "group": "Childcare & family", "note": "Vulnerable-sector check", "requires_vs_check": true, "items": [["Babysitter", "VS check"], ["Nanny", "VS check"], ["Newborn care"], ["Senior companionship", "VS check"], ["Errand & shopping help"]] }
+  ],
+  "shop": [
+    { "group": "Food & grocery", "note": "AHS / CFIA rules", "items": [["Groceries"], ["Butcher", "AHS"], ["Bakery", "AHS"], ["Produce"], ["Dairy & eggs"], ["Specialty & international"], ["Coffee & tea"], ["Frozen"]] },
+    { "group": "Health & beauty", "note": "Health Canada labelling", "items": [["Pharmacy (OTC)", "ACP"], ["Vitamins & supplements", "NPN"], ["Cosmetics & skincare"], ["Baby care"]] },
+    { "group": "Home", "note": "", "items": [["Home & kitchen"], ["Furniture"], ["Bedding & bath"], ["Decor"], ["Cleaning supplies"], ["Garden"]] },
+    { "group": "Hardware & auto", "note": "", "items": [["Hardware"], ["Tools"], ["Paint"], ["Plumbing & electrical supply"], ["Auto parts"], ["Tires"]] },
+    { "group": "Apparel", "note": "", "items": [["Clothing"], ["Footwear"], ["Accessories"], ["Kids clothing"], ["Workwear"]] },
+    { "group": "Electronics", "note": "", "items": [["Electronics"], ["Phones & accessories"], ["Computers"], ["Small appliances"]] },
+    { "group": "Kids, gifts & hobbies", "note": "Health Canada toy safety", "items": [["Toys", "CCPSA"], ["Kids"], ["Gifts & crafts"], ["Books & stationery"], ["Sporting goods"], ["Pet supplies"]] },
+    { "group": "Restricted", "note": "Licence required", "items": [["Alcohol", "AGLC"], ["Tobacco & vape", "AB Tobacco Act"], ["Cannabis accessories"]] }
+  ],
+  "food": [
+    { "group": "Format", "note": "", "items": [["Restaurant · dine-in & takeout"], ["Takeout only"], ["Ghost kitchen"], ["Food truck", "Mobile permit"], ["Home-based food business", "AHS home-based"], ["Grocery with hot counter"]] },
+    { "group": "Service", "note": "", "items": [["Caterer", "Event endorsement"], ["Meal prep · weekly plans"], ["Bakery"], ["Coffee & dessert"], ["Juice & smoothies"], ["Alcohol with food", "AGLC"]] }
+  ]
+}
