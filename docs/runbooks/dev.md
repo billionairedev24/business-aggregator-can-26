@@ -19,7 +19,7 @@ Pick **one** provider per environment; everything in a Canadian region: AWS `ca-
 | Kafka | Amazon MSK (provisioned) with SASL/SCRAM | Google Cloud Managed Service for Apache Kafka (SASL/PLAIN) | Azure Event Hubs, Standard tier or higher (Kafka endpoint, SASL/PLAIN) | IAM/OAuth-only options (MSK Serverless, OAUTHBEARER) need client libraries the apps don't have yet. Confluent Cloud works on all three |
 | Elasticsearch 9 | Elastic Cloud on AWS (`ca-central-1`) or ECK on EKS | Elastic Cloud on Google Cloud (`northamerica-northeast1`) or ECK on GKE | Elastic Cloud on Azure (`canadacentral`) or ECK on AKS | Amazon OpenSearch Service is **not** a drop-in: the apps use the Elasticsearch 9 client |
 | Object storage (S-10) | Amazon S3 | Cloud Storage | Azure Blob Storage | one private bucket/container per environment; no adapter yet |
-| Keys / KMS (S-7) | AWS KMS | Cloud KMS | Azure Key Vault (keys) | token signing keys; no adapter yet |
+| Keys / KMS (S-7) | AWS KMS (`ECC_NIST_P256`, `SIGN_VERIFY`) | Cloud KMS (`EC_SIGN_P256_SHA256`, HSM) | Azure Key Vault keys (`EC-HSM`, P-256) | token signing keys, signed inside the KMS; set-up and rotation: [key-rotation.md](key-rotation.md) |
 | Secrets manager (S-6) | AWS Secrets Manager | Secret Manager | Azure Key Vault (secrets) | synced into Kubernetes Secrets by External Secrets Operator; the apps only see environment variables |
 | Email (S-13) | Amazon SES (`ca-central-1`) | SendGrid, Mailgun or any SMTP provider (no first-party service) | Azure Communication Services Email | no adapter yet |
 | SMS / voice (S-8) | Twilio (or Amazon SNS) | Twilio | Twilio (or Azure Communication Services SMS) | Canadian sender numbers need registration; no adapter yet |
@@ -77,7 +77,10 @@ Every app reads its configuration from environment variables; nothing environmen
 | `WEBHOOK_SECRET_KEY` | api | **yes** | `openssl rand -base64 32` | secrets manager → External Secrets (S-6) → Kubernetes Secret; until then `kubectl create secret`. Encrypts partner webhook signing secrets; keep it stable |
 | `STORAGE_PROVIDER`, `STORAGE_BUCKET`, `STORAGE_REGION`, `STORAGE_ENDPOINT` | api | no (S-10) | `s3` / `gcs` / `azure`, `northline-dev-uploads`, the Canadian region | Terraform output (S-2/S-3) → ConfigMap; until then from the cloud console |
 | `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY` | api | no | empty in the cloud (workload identity) | — |
-| `KMS_PROVIDER`, `KMS_KEY_ID` | api, auth | no (S-7) | `aws` + key ARN / `gcp` + key name / `azure` + key URL | Terraform output (S-2/S-3) → ConfigMap; until then from the cloud console |
+| `KMS_PROVIDER`, `KMS_KEY_ID` | auth | `KMS_PROVIDER` **yes** | `aws` + key ARN / `gcp` + key **version** name / `azure` + versioned key URL | Terraform output (S-2/S-3) → ConfigMap; until then created by hand ([key-rotation.md](key-rotation.md#creating-the-key-until-terraform-does-it--s-2)). `dev` may also run `local` with `SIGNING_KEYS_DIR` on a volume every auth replica mounts. |
+| `KMS_PUBLISHED_KEY_IDS` | auth | no | empty; the next or previous key during a rotation | [key-rotation.md](key-rotation.md#rotating--cloud-providers) |
+| `KMS_REGION`, `KMS_ENDPOINT` | auth | no | AWS only: `ca-central-1`, a VPC endpoint URL | deployment manifest |
+| `SIGNING_KEYS_DIR`, `SIGNING_KEYS_ROTATE_EVERY` | auth | with `KMS_PROVIDER=local` | `/var/lib/northline/auth-keys` (shared volume), `90d` | deployment manifest |
 | `EMAIL_PROVIDER`, `EMAIL_FROM`, `SMTP_*` | api, worker | no (S-13) | `ses` / `sendgrid` / `azure` | email provider account |
 | `SMS_PROVIDER`, `SMS_FROM`, `SMS_ACCOUNT_ID`, `SMS_AUTH_TOKEN` | api, auth, worker | no (S-8) | `twilio`, `+1587…`, `AC…`, — | Twilio console → secrets manager → External Secrets (S-6) → Kubernetes Secret; until then `kubectl create secret` |
 | `OTEL_EXPORT_ENABLED` | api | no | `false` until a collector exists (S-111) | deployment manifest |
@@ -118,7 +121,6 @@ What still stops a complete deployment. Under the `local`/`test` profiles each o
 | port / piece | outside local | effect | fixed by |
 |---|---|---|---|
 | `SmsSender` (auth) | `UnconfiguredSmsSender` throws | **nobody can register** (the phone code can't be sent) — so an environment without seed data has no users | S-8 |
-| Token signing key (auth) | generated in memory at start-up | run **exactly one** auth replica; every restart invalidates all tokens and BFF sessions | S-7 |
 | OAuth client registration (auth) | `ClientSeeder` registers the clients at start-up except under `prod` | prod has no way to create `studio-bff` etc. yet: decide before launch (allow the seeder in prod, or a one-off task) | not in the backlog yet |
 | Object storage: `MediaStorage` (catalogue), `DocumentStorage` (merchants), `AttachmentStorage` (messaging), `KitchenPhotoStore` (food), `MediaStore` (booking), dispute evidence (payments) | unconfigured adapters throw, or answer 409 `storage_unavailable` | no uploads: product images, onboarding documents and logos, message attachments, kitchen photos, quote/job photos, dispute evidence | S-10 |
 | `IdentityVerification` (merchants) | unconfigured adapter throws | onboarding identity check | S-22 |
@@ -142,10 +144,26 @@ Delivery pieces that don't exist yet: Terraform per cloud (S-2), managed data st
 3. **Build**: `cd server && ./gradlew build` → `server/{api,auth,bff,worker}/build/libs/<app>.jar` (Java 25). Images: no Dockerfiles or charts yet (S-14); a stop-gap is Spring Boot's buildpacks task, e.g. `./gradlew :api:bootBuildImage --imageName=<registry>/northline-api:<git-sha>` (not validated yet). Studio: `cd web && pnpm install && VITE_NL_AUTH_ORIGIN=https://auth.dev.northline.ca pnpm --filter @northline/studio build` → `web/apps/studio/dist` (static files).
 4. **Kafka topics**: `KAFKA_TOPICS_CMD='kafka-topics.sh --command-config client.properties' KAFKA_TOPICS_BOOTSTRAP=<bootstrap> KAFKA_REPLICATION_FACTOR=3 scripts/topics.sh` (client.properties holds the SASL settings). Retention, ACLs and DLQ policy: S-25.
 5. **Migrate**: the api applies `db/migrations` with Flyway when it starts (never `db/seed-dev`: the cloud profiles don't include it); northline-auth doesn't migrate. To migrate ahead of a release from a machine that can reach the database: `./gradlew :api:flywayMigrate -Pdb.url=… -Pdb.user=… -Pdb.password=…` (**never** `-Pdb.devSeed=true`). A separate migration job: S-16.
-6. **Start in order**: api (one replica first, so one process migrates) → northline-auth (**one replica**, see blockers) → studio-bff → worker → Studio static files and ingress routes. Probes: `/actuator/health/liveness` and `/actuator/health/readiness` on api (8080), auth (9000) and bff (8082).
+6. **Start in order**: api (one replica first, so one process migrates) → northline-auth (any number of replicas: the signing key is in the KMS, or with `local` on the volume they share) → studio-bff → worker → Studio static files and ingress routes. Probes: `/actuator/health/liveness` and `/actuator/health/readiness` on api (8080), auth (9000) and bff (8082).
 7. **Verify**: `curl https://auth.dev.northline.ca/.well-known/openid-configuration` shows the issuer `https://auth.dev.northline.ca`; the readiness probes answer `UP`, and the api's `/actuator/health` (Postgres, Valkey, Elasticsearch) is `UP`; the Studio loads at `https://business.dev.northline.ca` and **Sign in** reaches the auth server.
 
 **Roll back**: redeploy the previous jars/images with the previous configuration. Flyway is forward-only, so every migration must keep the previous release working (expand → migrate → contract across releases). A bad migration is fixed forward with a new migration; dev data is disposable — drop and recreate the database if needed. A configuration rollback is the previous secret/ConfigMap version plus a restart.
+
+## Signing key rotation
+
+northline-auth signs tokens with the KMS key `KMS_KEY_ID`; the private key never leaves the KMS, restarts and extra
+replicas keep every token valid, and `/oauth2/jwks` publishes the keys (full procedure, commands per cloud and the
+emergency path: [key-rotation.md](key-rotation.md)). Routine rotation (at least yearly), each step a normal rolling
+deploy of northline-auth only:
+
+1. Create a new key (AWS) or key version (Google Cloud, Azure) with the same permissions.
+2. `KMS_PUBLISHED_KEY_IDS=<new>` → deploy → `curl -s https://auth.<domain>/oauth2/jwks | jq '.keys[].kid'` shows two
+   kids → wait ≥ 5 min (JWK set caches of the api and bff).
+3. `KMS_KEY_ID=<new>`, `KMS_PUBLISHED_KEY_IDS=<old>` → deploy.
+4. After ≥ 1 h: `KMS_PUBLISHED_KEY_IDS=` → deploy → disable the old key/version in the KMS.
+
+Compromised key: new key, `KMS_KEY_ID=<new>` and `KMS_PUBLISHED_KEY_IDS=` in one deploy, disable the old key, restart
+api and bff (drops their JWK set caches). Nobody is signed out: refresh tokens and sessions are not signed with it.
 
 ## Readiness checklist
 
@@ -157,5 +175,5 @@ Delivery pieces that don't exist yet: Terraform per cloud (S-2), managed data st
 - [ ] Three distinct BFF client secrets; the bff's `STUDIO_BFF_SECRET` matches auth's `STUDIO_BFF_SECRET_HASH`
 - [ ] DNS and TLS for `https://business.dev.northline.ca` and `https://auth.dev.northline.ca`; ingress routes `/api`, `/bff`, `/oauth2`, `/login` on the Studio host to the bff
 - [ ] Studio built with `VITE_NL_AUTH_ORIGIN=https://auth.dev.northline.ca`
-- [ ] Exactly one northline-auth replica until S-7
+- [ ] Token signing key created in the KMS, `KMS_PROVIDER` / `KMS_KEY_ID` set, workload identity may sign with it; JWK set checked ([key-rotation.md](key-rotation.md)); rotation date in the calendar
 - [ ] Stripe keys (test mode) — optional

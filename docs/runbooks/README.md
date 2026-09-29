@@ -64,7 +64,7 @@ is still manual or missing.
   | property | variable | values | adapters arrive in |
   |---|---|---|---|
   | `northline.storage.provider` | `STORAGE_PROVIDER` | `local` · `s3` (AWS S3, MinIO/RustFS, any S3 API) · `gcs` · `azure` | S-10 |
-  | `northline.kms.provider` | `KMS_PROVIDER` | `local` · `aws` · `gcp` · `azure` | S-7 (signing keys) |
+  | `northline.kms.provider` | `KMS_PROVIDER` | `local` · `aws` · `gcp` · `azure` | **done** (S-7, auth token signing keys — [key-rotation.md](key-rotation.md)) |
   | `northline.email.provider` | `EMAIL_PROVIDER` | `local` · `smtp` · `ses` · `sendgrid` · `azure` | S-13 |
   | `northline.sms.provider` | `SMS_PROVIDER` | `local` · `twilio` · `sns` · `azure` | S-8 |
 
@@ -106,7 +106,8 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `STRIPE_API_BASE` | ✓ | | | | never in the cloud (stripe-mock only) |
 | `WEBHOOK_SECRET_KEY` | ✓ | | | | yes |
 | `STORAGE_*` (`PROVIDER`, `BUCKET`, `REGION`, `ENDPOINT`, `ACCESS_KEY`, `SECRET_KEY`, `PATH_STYLE`) | ✓ | | | | no (until S-10) |
-| `KMS_PROVIDER`, `KMS_KEY_ID` | ✓ | ✓ | | | no (until S-7) |
+| `KMS_PROVIDER`, `KMS_KEY_ID` | | ✓ | | | `KMS_PROVIDER` everywhere, `KMS_KEY_ID` in staging and prod (S-7, [key-rotation.md](key-rotation.md)) |
+| `KMS_PUBLISHED_KEY_IDS`, `KMS_REGION`, `KMS_ENDPOINT`, `SIGNING_KEYS_DIR`, `SIGNING_KEYS_ROTATE_EVERY` | | ✓ | | | no |
 | `EMAIL_PROVIDER`, `EMAIL_FROM`, `SMTP_*` | ✓ | | | ✓ | no (until S-13) |
 | `SMS_PROVIDER`, `SMS_FROM`, `SMS_ACCOUNT_ID`, `SMS_AUTH_TOKEN` | ✓ | ✓ | | ✓ | no (until S-8) |
 | `OTEL_EXPORT_ENABLED` | ✓ | | | | no (false until S-111) |

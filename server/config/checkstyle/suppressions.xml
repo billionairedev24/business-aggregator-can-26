@@ -5,5 +5,7 @@
   <suppress checks="IllegalImport" files="[\\/]src[\\/]test[\\/]"/>
   <!-- Test names may use underscores (whenX_thenY); ArchUnit rules are lower-camel static finals. -->
   <suppress checks="MethodName|ConstantName" files="[\\/]src[\\/]test[\\/]"/>
+  <!-- Nimbus JOSE takes java.util.Date for JWT/JWK times (iat, nbf, exp); converted from Instant at the call. -->
+  <suppress checks="IllegalImport" files="[\\/]auth[\\/]signing[\\/](LocalFileSigningKeys|KeyStoreJwtEncoder)\.java$"/>
   <suppress checks="." files="[\\/]build[\\/]generated[\\/]"/>
 </suppressions>

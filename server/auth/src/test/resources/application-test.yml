@@ -11,6 +11,8 @@ logging.level:
   tc: warn
 northline:
   auth:
+    signing:
+      local-dir: ${java.io.tmpdir}/northline-auth-test-signing-keys
     totp-key: bm9ydGhsaW5lLWxvY2FsLWRldi10b3RwLWtleS0zMmI=
     login-page: http://localhost:3100/sign-in
     allowed-origins: [ "http://localhost:3100" ]
