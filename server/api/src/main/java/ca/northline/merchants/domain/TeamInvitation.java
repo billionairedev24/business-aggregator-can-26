@@ -40,11 +40,14 @@ public record TeamInvitation(
 
     /** Guards accepting: only a pending invitation can be used. */
     public void requireUsable(Instant now) {
-        switch (state(now)) {
-            case PENDING -> {}
-            case EXPIRED -> throw new Conflict("invitation_expired", "This invitation has expired. Ask for a new one.");
-            case ACCEPTED -> throw new Conflict("invitation_used", "This invitation was already used.");
-            case REVOKED -> throw new Conflict("invitation_revoked", "This invitation was withdrawn.");
+        var refusal = switch (state(now)) {
+            case PENDING -> null;
+            case EXPIRED -> new Conflict("invitation_expired", "This invitation has expired. Ask for a new one.");
+            case ACCEPTED -> new Conflict("invitation_used", "This invitation was already used.");
+            case REVOKED -> new Conflict("invitation_revoked", "This invitation was withdrawn.");
+        };
+        if (refusal != null) {
+            throw refusal;
         }
     }
 }
