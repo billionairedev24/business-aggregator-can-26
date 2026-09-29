@@ -33,6 +33,7 @@ public class SignInService {
     private final PasskeyService passkeys;
     private final FlowStore flow;
     private final SignInLog signIns;
+    private final AttemptLimits limits;
     private final Clock clock;
 
     /** Signed in: who, and with which second factor. */
@@ -40,6 +41,7 @@ public class SignInService {
 
     public SignInAttempt start(String identifier) {
         var id = identifier.trim();
+        limits.consume(LimitedAction.SIGN_IN_LOOKUP, AttemptLimits.Subject.identifier(id, null));
         var userId = lookup(id).filter(UserAccount::active).map(UserAccount::id).orElse(null);
         var attempt = new SignInAttempt(id, userId, 0);
         flow.put(FlowStore.SIGN_IN, attempt);
@@ -62,6 +64,8 @@ public class SignInService {
     public SignedIn completeWithPasskey(String assertionJson, Client client) {
         var attempt = flow.get(FlowStore.SIGN_IN).orElse(null);
         guard(attempt);
+        var who = subject(attempt);
+        limits.guard(LimitedAction.PASSKEY_ASSERTION, who);
         var options = flow.get(FlowStore.PASSKEY_REQUEST)
                 .orElseThrow(() -> new FlowRejected(Reason.NOT_STARTED, "Start the passkey sign-in again."));
         flow.remove(FlowStore.PASSKEY_REQUEST);
@@ -69,21 +73,33 @@ public class SignInService {
         try {
             userId = passkeys.authenticate(options, assertionJson);
         } catch (InvalidInput e) {
-            throw failure(attempt, attempt == null ? null : attempt.userId(), Factor.PASSKEY, e, client);
+            throw limits.failed(
+                    LimitedAction.PASSKEY_ASSERTION,
+                    who,
+                    failure(attempt, attempt == null ? null : attempt.userId(), Factor.PASSKEY, e, client));
         }
         if (attempt != null && attempt.userId() != null && !attempt.userId().equals(userId)) {
-            throw failure(attempt, attempt.userId(), Factor.PASSKEY, passkeyMismatch(), client);
+            throw limits.failed(
+                    LimitedAction.PASSKEY_ASSERTION,
+                    who,
+                    failure(attempt, attempt.userId(), Factor.PASSKEY, passkeyMismatch(), client));
         }
         var account = accounts.findById(userId).filter(UserAccount::active);
         if (account.isEmpty()) {
-            throw failure(attempt, userId, Factor.PASSKEY, passkeyMismatch(), client);
+            throw limits.failed(
+                    LimitedAction.PASSKEY_ASSERTION,
+                    who,
+                    failure(attempt, userId, Factor.PASSKEY, passkeyMismatch(), client));
         }
+        limits.succeeded(LimitedAction.PASSKEY_ASSERTION, who);
         return succeed(account.get(), Factor.PASSKEY, client);
     }
 
     @Transactional
     public SignedIn verifyTotp(String code, Client client) {
         var attempt = requireAttempt();
+        var who = subject(attempt);
+        limits.guard(LimitedAction.TOTP_VERIFY, who);
         var userId = attempt.userId();
         var stored = userId == null ? Optional.<SecondFactors.StoredTotp>empty() : factors.findTotp(userId);
         var step = stored.flatMap(t -> {
@@ -91,28 +107,38 @@ public class SignInService {
             return s.isPresent() ? Optional.of(s.getAsLong()) : Optional.<Long>empty();
         });
         if (userId == null || step.isEmpty() || !factors.markTotpUsed(userId, step.get())) {
-            throw failure(
-                    attempt,
-                    userId,
-                    Factor.TOTP,
-                    InvalidInput.of("code", "mismatch", AuthMessages.SIGN_IN_CODE_WRONG),
-                    client);
+            throw limits.failed(
+                    LimitedAction.TOTP_VERIFY,
+                    who,
+                    failure(
+                            attempt,
+                            userId,
+                            Factor.TOTP,
+                            InvalidInput.of("code", "mismatch", AuthMessages.SIGN_IN_CODE_WRONG),
+                            client));
         }
+        limits.succeeded(LimitedAction.TOTP_VERIFY, who);
         return succeed(accounts.findById(userId).orElseThrow(), Factor.TOTP, client);
     }
 
     @Transactional
     public SignedIn verifyBackupCode(String code, Client client) {
         var attempt = requireAttempt();
+        var who = subject(attempt);
+        limits.guard(LimitedAction.BACKUP_CODE_VERIFY, who);
         var userId = attempt.userId();
         if (userId == null || !factors.consumeBackupCode(userId, BackupCodes.hash(code), clock.instant())) {
-            throw failure(
-                    attempt,
-                    userId,
-                    Factor.BACKUP_CODE,
-                    InvalidInput.of("code", "mismatch", AuthMessages.BACKUP_CODE_WRONG),
-                    client);
+            throw limits.failed(
+                    LimitedAction.BACKUP_CODE_VERIFY,
+                    who,
+                    failure(
+                            attempt,
+                            userId,
+                            Factor.BACKUP_CODE,
+                            InvalidInput.of("code", "mismatch", AuthMessages.BACKUP_CODE_WRONG),
+                            client));
         }
+        limits.succeeded(LimitedAction.BACKUP_CODE_VERIFY, who);
         return succeed(accounts.findById(userId).orElseThrow(), Factor.BACKUP_CODE, client);
     }
 
@@ -155,6 +181,13 @@ public class SignInService {
         flow.remove(FlowStore.SIGN_IN);
         signIns.succeeded(account.id(), factor.code(), factor.isSecondFactor(), client);
         return new SignedIn(account, factor);
+    }
+
+    /** The account as typed on the form (unknown accounts count the same); nobody for a passkey without a form. */
+    private static AttemptLimits.Subject subject(@Nullable SignInAttempt attempt) {
+        return attempt == null
+                ? AttemptLimits.Subject.NOBODY
+                : AttemptLimits.Subject.identifier(attempt.identifier(), attempt.userId());
     }
 
     private static InvalidInput passkeyMismatch() {

@@ -31,6 +31,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /**
@@ -107,26 +108,31 @@ public abstract class AuthIntegrationTest {
         return Totp.codeAt(secret, Totp.step(clock.instant()));
     }
 
+    /** Hook for every request {@link #register} sends (the rate-limit tests give each registration its own IP). */
+    protected MockHttpServletRequestBuilder client(MockHttpServletRequestBuilder request) {
+        return request;
+    }
+
     /** Registers through the API with an authenticator app; the returned session is signed in with acr=mfa. */
     protected Registered register(Person person) throws Exception {
         var session = new MockHttpSession();
-        mvc.perform(post("/api/auth/register")
+        mvc.perform(client(post("/api/auth/register"))
                         .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(person.json()))
                 .andExpect(status().isOk());
-        mvc.perform(post("/api/auth/register/verify")
+        mvc.perform(client(post("/api/auth/register/verify"))
                         .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(Map.of("code", sms.lastCodeTo(person.e164())))))
                 .andExpect(status().isOk());
-        var setup = mvc.perform(post("/api/auth/register/totp").session(session))
+        var setup = mvc.perform(client(post("/api/auth/register/totp")).session(session))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
         String secret = JsonPath.read(setup, "$.secret");
-        var created = mvc.perform(post("/api/auth/register/totp/verify")
+        var created = mvc.perform(client(post("/api/auth/register/totp/verify"))
                         .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(Map.of("code", totpNow(secret)))))

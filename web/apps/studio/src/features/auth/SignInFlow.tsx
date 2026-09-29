@@ -3,6 +3,7 @@ import { Alert, Button, Field, OptionCard, StepBars, TextInput } from '@northlin
 import { authApi, backupCodeSchema, codeSchema, firstIssue, type AuthSession } from './api';
 import { fieldErrors, flowError, isRestart } from './errors';
 import { useAuthT, type AuthKey } from './messages';
+import { RateLimitNotice, useRateLimit } from './rateLimit';
 import { SocialButtons } from './SocialButtons';
 import { getPasskey, PasskeyError, passkeysSupported } from './webauthn';
 
@@ -39,10 +40,12 @@ export function SignInFlow({ onboarding, resumeIdentifier, recover, onRegister, 
   const [failure, setFailure] = useState('');
   const [busy, setBusy] = useState(false);
   const [session, setSession] = useState<AuthSession | null>(null);
+  const limit = useRateLimit();
 
   const run = async (fn: () => Promise<void>, mismatch: AuthKey = 'signInCodeWrong') => {
     setFailure(''); setBusy(true);
-    try { await fn(); } catch (err) {
+    try { await fn(); limit.clear(); } catch (err) {
+      if (limit.hold(err)) return;
       if (isRestart(err)) { setStep('id'); setFailure(t('restart')); return; }
       const fields = fieldErrors(err, t, mismatch);
       setCodeError(fields.code ?? '');
@@ -95,8 +98,9 @@ export function SignInFlow({ onboarding, resumeIdentifier, recover, onRegister, 
               onChange={e => { setIdentifier(e.target.value); setFailure(''); }} />
           </Field>
           {failure && <Alert tone="error">{failure}</Alert>}
-          <Button type="submit" className="nl-auth-primary" disabled={!identifier.trim() || busy} aria-busy={busy || undefined}>{t('continue')}</Button>
-          <SocialButtons onPasskey={() => void passkey()} passkeyBusy={busy} />
+          <RateLimitNotice left={limit.left} />
+          <Button type="submit" className="nl-auth-primary" disabled={!identifier.trim() || busy || limit.limited} aria-busy={busy || undefined}>{t('continue')}</Button>
+          <SocialButtons onPasskey={() => void passkey()} passkeyBusy={busy || limit.limited} />
           <div className="nl-auth-switch">{t('newHere')}<button type="button" className="nl-auth-link" onClick={onRegister}>{t('createFirst')}</button>{t('newHereAfter')}</div>
         </form>
       )}
@@ -118,8 +122,9 @@ export function SignInFlow({ onboarding, resumeIdentifier, recover, onRegister, 
             </Field>
           )}
           {failure && <Alert tone="error">{failure}</Alert>}
+          <RateLimitNotice left={limit.left} />
           <div className="nl-auth-row">
-            <Button type="submit" disabled={busy} aria-busy={busy || undefined}>{t(cta)}</Button>
+            <Button type="submit" disabled={busy || limit.limited} aria-busy={busy || undefined}>{t(cta)}</Button>
             <Button type="button" variant="ghost" onClick={() => { setStep('id'); setFailure(''); }}>{t('back')}</Button>
           </div>
         </form>

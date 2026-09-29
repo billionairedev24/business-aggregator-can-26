@@ -52,7 +52,8 @@ spring:
           user-name-attribute: sub
 server:
   port: ${SERVER_PORT:9000}
-  forward-headers-strategy: native
+  # X-Forwarded-* are applied by TrustedProxyFilter, only from northline.auth.trusted-proxies (S-9), not by Tomcat.
+  forward-headers-strategy: none
   servlet.session:
     timeout: 12h                       # "sessions expire after 12 h idle"
     cookie: { name: NL_AUTH, http-only: true, secure: true, same-site: lax, domain: "${COOKIE_DOMAIN:}" }
@@ -67,6 +68,44 @@ northline:
     webauthn:
       rp-id: ${WEBAUTHN_RP_ID:localhost}
       origins: [ "${STUDIO_ORIGIN:http://localhost:3100}", "${CONSUMER_ORIGIN:http://localhost:3000}" ]
+    # Load balancer / ingress CIDRs whose X-Forwarded-For/-Proto/-Host are believed (client IP for the rate limits and
+    # the sign-in log). Narrow it to the ingress subnet in the cloud; anyone else's forwarded headers are dropped.
+    trusted-proxies: ${TRUSTED_PROXIES:127.0.0.0/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7}
+    # S-9 rate limits (docs/runbooks/README.md § Rate limits). A REQUESTS action (otp-send, sign-in-lookup) allows `max`
+    # calls per sliding `window`; a FAILURES action locks at the `max`-th failure. Each lockout of the same subject
+    # doubles (lockout × 2^(n-1), up to max-lockout) while earlier ones are remembered (backoff-memory). Successes reset
+    # the account and session counters. On top of the per-flow rules (5 tries per code / per sign-in attempt).
+    rate-limits:
+      store: ${RATE_LIMIT_STORE:redis}          # redis (Valkey, shared) | memory (one instance: local/test only)
+      backoff-memory: 24h
+      limits:
+        otp-send:                               # SMS and voice codes cost money; every "Send code" counts
+          account: { max: 5, window: 1h, lockout: 1h }
+          ip: { max: 20, window: 1h, lockout: 1h }
+          session: { max: 5, window: 1h, lockout: 1h }
+        otp-verify:
+          account: { max: 10, window: 1h, lockout: 15m }
+          ip: { max: 50, window: 1h, lockout: 15m }
+          session: { max: 10, window: 1h, lockout: 15m }
+        sign-in-lookup:                         # no account scope: typing someone's email must not lock them out
+          ip: { max: 30, window: 10m, lockout: 10m }
+          session: { max: 20, window: 10m, lockout: 10m }
+        totp-verify:
+          account: { max: 10, window: 15m, lockout: 15m }
+          ip: { max: 30, window: 15m, lockout: 15m }
+          session: { max: 10, window: 15m, lockout: 15m }
+        backup-code-verify:
+          account: { max: 10, window: 15m, lockout: 15m }
+          ip: { max: 30, window: 15m, lockout: 15m }
+          session: { max: 10, window: 15m, lockout: 15m }
+        passkey-assertion:
+          account: { max: 10, window: 15m, lockout: 15m }
+          ip: { max: 30, window: 15m, lockout: 15m }
+          session: { max: 10, window: 15m, lockout: 15m }
+        step-up:
+          account: { max: 10, window: 15m, lockout: 15m }
+          ip: { max: 30, window: 15m, lockout: 15m }
+          session: { max: 10, window: 15m, lockout: 15m }
   # BFF client secrets as stored by the auth server: {bcrypt}… in the cloud, {noop}… only for local development.
   # The matching plain secret goes to the BFF (STUDIO_BFF_SECRET). Clients are registered at start-up except under prod.
   clients:
