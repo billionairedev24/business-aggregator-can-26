@@ -1,9 +1,10 @@
 -- schema: messaging · support · owner: Java (java)
+-- 2026-09-29 (backend foundation): Postgres schema is `messaging` — the label "messaging · support" is not a valid identifier. See docs/DECISIONS.md.
 -- Generated from the Northline spec (docs/DATA_MODEL.md). Hand-edit freely; keep column names.
-CREATE SCHEMA IF NOT EXISTS messaging · support;
+CREATE SCHEMA IF NOT EXISTS messaging;
 
 -- Conversation per booking/order/quote/ticket; retained for disputes.
-CREATE TABLE messaging · support.threads (
+CREATE TABLE messaging.threads (
   -- PK
   id text PRIMARY KEY,
   ref_type text,
@@ -14,7 +15,7 @@ CREATE TABLE messaging · support.threads (
 -- TODO indexes/constraints: index(ref_type,ref_id)
 
 -- Messages with attachments; phone numbers masked.
-CREATE TABLE messaging · support.messages (
+CREATE TABLE messaging.messages (
   -- PK
   id text PRIMARY KEY,
   -- FK
@@ -31,7 +32,7 @@ CREATE TABLE messaging · support.messages (
 -- outbox events: message.sent · trust.flagged
 
 -- Every push/SMS/email with locale and delivery result.
-CREATE TABLE messaging · support.notifications (
+CREATE TABLE messaging.notifications (
   -- PK
   id text PRIMARY KEY,
   user_id text,
@@ -46,7 +47,7 @@ CREATE TABLE messaging · support.notifications (
 -- TODO indexes/constraints: index(user_id,sent_at)
 
 -- Per-user channel matrix and quiet hours.
-CREATE TABLE messaging · support.notification_prefs (
+CREATE TABLE messaging.notification_prefs (
   -- PK
   user_id text,
   matrix jsonb,
@@ -55,7 +56,7 @@ CREATE TABLE messaging · support.notification_prefs (
 );
 
 -- Helpdesk cases from any party with SLA.
-CREATE TABLE messaging · support.tickets (
+CREATE TABLE messaging.tickets (
   -- PK
   id text PRIMARY KEY,
   -- customer | merchant | courier
@@ -76,7 +77,7 @@ CREATE TABLE messaging · support.tickets (
 -- outbox events: ticket.opened · ticket.resolved
 
 -- Canned replies per locale.
-CREATE TABLE messaging · support.macros (
+CREATE TABLE messaging.macros (
   -- PK
   id text PRIMARY KEY,
   key text,
@@ -85,8 +86,8 @@ CREATE TABLE messaging · support.macros (
 );
 
 -- Foreign keys (in-module only)
--- logical ref (cross-module, no FK): messaging · support.threads.ref_id → booking.bookings.id
--- logical ref (cross-module, no FK): messaging · support.messages.thread_id → messaging.threads.id
--- logical ref (cross-module, no FK): messaging · support.notifications.user_id → identity.users.id
--- logical ref (cross-module, no FK): messaging · support.notification_prefs.user_id → identity.users.id
--- logical ref (cross-module, no FK): messaging · support.tickets.agent_id → identity.users.id
+-- logical ref (cross-module, no FK): messaging.threads.ref_id → booking.bookings.id
+-- logical ref (cross-module, no FK): messaging.messages.thread_id → messaging.threads.id
+-- logical ref (cross-module, no FK): messaging.notifications.user_id → identity.users.id
+-- logical ref (cross-module, no FK): messaging.notification_prefs.user_id → identity.users.id
+-- logical ref (cross-module, no FK): messaging.tickets.agent_id → identity.users.id

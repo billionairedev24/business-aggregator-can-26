@@ -1,6 +1,7 @@
 package ca.northline.worker;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import java.time.Instant;
+import tools.jackson.databind.JsonNode;
 
-public record EventEnvelope(String id, String type, int version, Instant occurredAt, String aggregateId, String traceId, JsonNode data) {}
+public record EventEnvelope(
+        String id, String type, int version, Instant occurredAt, String aggregateId, String traceId, JsonNode data) {}

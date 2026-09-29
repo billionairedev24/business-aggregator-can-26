@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN" "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+<suppressions>
+  <!-- JUnit/Spring tests may use field injection (@Autowired MockMvc …). -->
+  <suppress checks="IllegalImport" files="[\\/]src[\\/]test[\\/]"/>
+  <!-- Test names may use underscores (whenX_thenY); ArchUnit rules are lower-camel static finals. -->
+  <suppress checks="MethodName|ConstantName" files="[\\/]src[\\/]test[\\/]"/>
+  <suppress checks="." files="[\\/]build[\\/]generated[\\/]"/>
+</suppressions>

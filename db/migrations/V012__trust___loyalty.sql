@@ -1,9 +1,10 @@
 -- schema: trust · loyalty · owner: Java (java)
+-- 2026-09-29 (backend foundation): Postgres schema is `trust` — the label "trust · loyalty" is not a valid identifier. See docs/DECISIONS.md.
 -- Generated from the Northline spec (docs/DATA_MODEL.md). Hand-edit freely; keep column names.
-CREATE SCHEMA IF NOT EXISTS trust · loyalty;
+CREATE SCHEMA IF NOT EXISTS trust;
 
 -- Two-way reviews, only on paid jobs/orders.
-CREATE TABLE trust · loyalty.reviews (
+CREATE TABLE trust.reviews (
   -- PK
   id text PRIMARY KEY,
   ref_type text,
@@ -23,7 +24,7 @@ CREATE TABLE trust · loyalty.reviews (
 -- search projection: merchants.rating · listings.merchant_rating
 
 -- Nightly score components per merchant (from ClickHouse).
-CREATE TABLE trust · loyalty.quality_scores (
+CREATE TABLE trust.quality_scores (
   -- PK part
   merchant_id text,
   -- PK part
@@ -38,7 +39,7 @@ CREATE TABLE trust · loyalty.quality_scores (
 -- search projection: listings.trust_boost
 
 -- Promotions/demotions with reasons.
-CREATE TABLE trust · loyalty.tier_history (
+CREATE TABLE trust.tier_history (
   -- PK
   id text PRIMARY KEY,
   merchant_id text,
@@ -50,7 +51,7 @@ CREATE TABLE trust · loyalty.tier_history (
 -- outbox events: merchant.tier_changed
 
 -- Trust & safety flags with actions taken.
-CREATE TABLE trust · loyalty.flags (
+CREATE TABLE trust.flags (
   -- PK
   id text PRIMARY KEY,
   target_type text,
@@ -66,7 +67,7 @@ CREATE TABLE trust · loyalty.flags (
 -- outbox events: trust.flagged
 
 -- Points earned, redeemed, expired; provider-funded multipliers.
-CREATE TABLE trust · loyalty.points_ledger (
+CREATE TABLE trust.points_ledger (
   -- PK
   id text PRIMARY KEY,
   user_id text,
@@ -80,7 +81,7 @@ CREATE TABLE trust · loyalty.points_ledger (
 -- outbox events: points.credited
 
 -- Merchant-funded multipliers and budgets.
-CREATE TABLE trust · loyalty.merchant_rewards (
+CREATE TABLE trust.merchant_rewards (
   -- PK
   id text PRIMARY KEY,
   merchant_id text,
@@ -95,9 +96,9 @@ CREATE TABLE trust · loyalty.merchant_rewards (
 -- search projection: listings.reward_multiplier
 
 -- Foreign keys (in-module only)
--- logical ref (cross-module, no FK): trust · loyalty.reviews.ref_id → booking.bookings.id
--- logical ref (cross-module, no FK): trust · loyalty.reviews.ref_id → orders.orders.id
--- logical ref (cross-module, no FK): trust · loyalty.quality_scores.merchant_id → merchants.merchants.id
--- logical ref (cross-module, no FK): trust · loyalty.tier_history.merchant_id → merchants.merchants.id
--- logical ref (cross-module, no FK): trust · loyalty.points_ledger.user_id → identity.users.id
--- logical ref (cross-module, no FK): trust · loyalty.merchant_rewards.merchant_id → merchants.merchants.id
+-- logical ref (cross-module, no FK): trust.reviews.ref_id → booking.bookings.id
+-- logical ref (cross-module, no FK): trust.reviews.ref_id → orders.orders.id
+-- logical ref (cross-module, no FK): trust.quality_scores.merchant_id → merchants.merchants.id
+-- logical ref (cross-module, no FK): trust.tier_history.merchant_id → merchants.merchants.id
+-- logical ref (cross-module, no FK): trust.points_ledger.user_id → identity.users.id
+-- logical ref (cross-module, no FK): trust.merchant_rewards.merchant_id → merchants.merchants.id

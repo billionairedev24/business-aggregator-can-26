@@ -52,12 +52,9 @@ CREATE TABLE fulfilment.couriers (
 -- outbox events: courier.offline
 
 -- Live GPS — not in Postgres; 24 h retention, fanned out by the tracking gateway.
-CREATE TABLE fulfilment.positions (
-  courier_id text,
-  lat/lng double precision,
-  at ms,
-  speed double precision
-);
+-- 2026-09-29 (backend foundation): the generated DDL was not valid SQL (`lat/lng`, type `ms`) and DATA_MODEL.md
+-- places this structure in Redis Streams, not Postgres, so no table is created. Shape kept for reference:
+--   fulfilment.positions (courier_id text, lat/lng double precision, at ms, speed double precision)
 -- TODO indexes/constraints: Redis Streams · TTL 24 h
 -- outbox events: position.updated (WebSocket)
 

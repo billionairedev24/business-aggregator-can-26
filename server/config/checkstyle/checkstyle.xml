@@ -1,0 +1,54 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN" "https://checkstyle.org/dtds/configuration_1_3.dtd">
+<!--
+  Lightweight rule set. Formatting is Spotless' job (palantir-java-format); Checkstyle only guards
+  conventions a formatter cannot: no field injection, no System.out, no @Data, no star imports of our own code, etc.
+-->
+<module name="Checker">
+  <property name="charset" value="UTF-8"/>
+  <property name="severity" value="error"/>
+  <module name="SuppressWarningsFilter"/>
+  <module name="SuppressionFilter"><property name="file" value="${config_loc}/suppressions.xml"/></module>
+  <module name="FileTabCharacter"/>
+  <module name="NewlineAtEndOfFile"/>
+
+  <module name="TreeWalker">
+    <module name="SuppressWarningsHolder"/>
+    <module name="OuterTypeFilename"/>
+    <module name="OneTopLevelClass"/>
+    <module name="PackageName"><property name="format" value="^ca\.northline(\.[a-z][a-z0-9]*)*$"/></module>
+    <module name="TypeName"/>
+    <module name="MethodName"/>
+    <module name="ConstantName"/>
+    <module name="RedundantImport"/>
+    <module name="UnusedImports"/>
+    <module name="IllegalImport">
+      <property name="illegalPkgs" value="sun, com.sun.jndi, org.junit.Assert, junit.framework"/>
+      <property name="illegalClasses" value="lombok.Data, lombok.Setter, org.springframework.beans.factory.annotation.Autowired, java.util.Date, java.sql.Timestamp"/>
+    </module>
+    <module name="EqualsHashCode"/>
+    <module name="MissingSwitchDefault"/>
+    <module name="FallThrough"/>
+    <module name="EmptyCatchBlock"/>
+    <module name="EmptyStatement"/>
+    <module name="SimplifyBooleanExpression"/>
+    <module name="SimplifyBooleanReturn"/>
+    <module name="StringLiteralEquality"/>
+    <module name="ModifiedControlVariable"/>
+    <module name="Regexp">
+      <property name="format" value="System\.(out|err)\.print"/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="Use @Slf4j logging, not System.out/err."/>
+    </module>
+    <module name="Regexp">
+      <property name="format" value="new ThreadLocal|ThreadLocal\.withInitial"/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="Use ScopedValue instead of ThreadLocal (ARCHITECTURE.md § Code standards)."/>
+    </module>
+    <module name="Regexp">
+      <property name="format" value="Executors\.new(Fixed|Cached|SingleThread)"/>
+      <property name="illegalPattern" value="true"/>
+      <property name="message" value="Use virtual threads, not hand-rolled pools (ARCHITECTURE.md § Code standards)."/>
+    </module>
+  </module>
+</module>
