@@ -1,37 +1,53 @@
 # studio-bff — the browser holds only an HttpOnly session cookie (NL_STUDIO); tokens stay in the server-side session
-# (Redis). Profiles: `local` (application-local.yml: in-memory session, no Redis), `test`.
+# (Valkey/Redis). Every URL and secret is an environment variable with a local default (docs/runbooks/README.md).
+# Profiles: `local` (application-local.yml: in-memory session, no Redis), `test`, and `dev` | `staging` | `prod`,
+# which also activate `cloud` (application-cloud.yml: required variables checked at start-up).
 spring:
   application.name: northline-studio-bff
   threads.virtual.enabled: true
-  data.redis.host: ${REDIS_HOST:localhost}
+  profiles.group:
+    dev: cloud
+    staging: cloud
+    prod: cloud
+  data.redis:                             # Valkey 8 or Redis 7+ (sessions)
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    username: ${REDIS_USERNAME:}
+    password: ${REDIS_PASSWORD:}
+    ssl.enabled: ${REDIS_SSL:false}
   session:
-    redis.namespace: nl:studio-bff
+    data.redis.namespace: nl:studio-bff   # Boot 4 name (spring.session.redis.* is ignored)
     timeout: 12h                          # "sessions expire after 12 h idle"
   security.oauth2.client:
     registration:
       studio:
         provider: northline
         client-id: studio-bff
-        client-secret: ${STUDIO_BFF_SECRET:dev-studio-bff}
+        client-secret: ${STUDIO_BFF_SECRET:dev-studio-bff}   # plain; northline-auth stores its hash (STUDIO_BFF_SECRET_HASH)
         client-authentication-method: client_secret_basic
         authorization-grant-type: authorization_code
         redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
         scope: openid,profile,merchant
     provider:
       northline:                          # explicit endpoints: no discovery at start-up, no userinfo call
-        authorization-uri: ${AUTH_PUBLIC_URL:http://localhost:9000}/oauth2/authorize
-        token-uri: ${AUTH_INTERNAL_URL:http://localhost:9000}/oauth2/token
-        jwk-set-uri: ${AUTH_INTERNAL_URL:http://localhost:9000}/oauth2/jwks
+        # Browser-facing (public) auth URL, then the in-cluster one for back-channel calls; both default to AUTH_ISSUER.
+        authorization-uri: ${AUTH_PUBLIC_URL:${AUTH_ISSUER:http://localhost:9000}}/oauth2/authorize
+        token-uri: ${AUTH_INTERNAL_URL:${AUTH_ISSUER:http://localhost:9000}}/oauth2/token
+        jwk-set-uri: ${AUTH_INTERNAL_URL:${AUTH_ISSUER:http://localhost:9000}}/oauth2/jwks
         user-name-attribute: sub
 server:
-  port: 8082
+  port: ${SERVER_PORT:8082}
   forward-headers-strategy: native
   servlet.session:
     timeout: 12h
-    cookie: { name: NL_STUDIO, http-only: true, secure: true, same-site: lax }
+    cookie: { name: NL_STUDIO, http-only: true, secure: true, same-site: lax, domain: "${COOKIE_DOMAIN:}" }
 management.endpoints.web.exposure.include: health,info
 northline.bff:
   registration-id: studio
   api-uri: ${API_URL:http://localhost:8080}
-  revocation-uri: ${AUTH_INTERNAL_URL:http://localhost:9000}/oauth2/revoke
+  revocation-uri: ${AUTH_INTERNAL_URL:${AUTH_ISSUER:http://localhost:9000}}/oauth2/revoke
   sign-in-page: /sign-in
+---
+# Local runs read server/.env (or .env next to the jar) — KEY=value lines, see server/.env.example. Never under `test`.
+spring.config.activate.on-profile: "!test"
+spring.config.import: optional:file:.env[.properties],optional:file:../.env[.properties]

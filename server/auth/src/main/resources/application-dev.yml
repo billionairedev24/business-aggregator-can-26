@@ -1,0 +1,3 @@
+# Shared development environment in the cloud (also activates `cloud`, see application-cloud.yml).
+logging.level:
+  ca.northline: debug

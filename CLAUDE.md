@@ -32,7 +32,7 @@ You are implementing the Northline marketplace from a finished design spec. **Do
 - No PII in event payloads. Never store SIN or card numbers.
 
 ## Working order
-1. `docker compose up -d` → `./gradlew :api:flywayMigrate` → seed categories → `scripts/topics.sh`.
+1. `docker compose --profile all up -d` (or only the stand-ins you lack — `docs/runbooks/local.md`) → `./gradlew :api:flywayMigrate` → seed categories (topics are created by the compose `events` profile).
 2. auth (register/sign-in/passkey/MFA, "Not you?", sign-out) → bff → identity → merchants onboarding → catalogue/food → search indexer → booking (quotes) → payments (escrow) → orders/fulfilment → the rest.
 3. `pnpm i && pnpm storybook` — build components in Storybook first, then routes in `apps/consumer`, then studio and console apps.
 4. For each screen open the matching `design/*.dc.html`; reproduce states and copy exactly.

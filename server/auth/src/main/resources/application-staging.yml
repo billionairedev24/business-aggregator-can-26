@@ -1,0 +1,2 @@
+# Pre-production (also activates `cloud`, see application-cloud.yml). Same shape as prod; clients are still registered
+# at start-up (ClientSeeder runs everywhere except prod).

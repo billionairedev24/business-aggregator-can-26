@@ -1,0 +1,5 @@
+org.springframework.context.ApplicationContextInitializer=\
+ca.northline.platform.RequiredEnvironmentCheck
+
+org.springframework.boot.diagnostics.FailureAnalyzer=\
+ca.northline.platform.MissingEnvironmentFailureAnalyzer

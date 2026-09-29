@@ -1,20 +1,32 @@
-# northline-auth — production defaults. Profiles: `local` (application-local.yml: no Redis, dev keys, SMS logged)
-# and `test` (src/test/resources/application-test.yml).
+# northline-auth defaults for every environment: each connection, URL and secret is an environment variable with a
+# local default (docs/runbooks/README.md). Profiles: `local` (application-local.yml: no Redis, dev keys, SMS logged),
+# `test` (src/test/resources/application-test.yml), and `dev` | `staging` | `prod`, which also activate `cloud`
+# (application-cloud.yml: required variables checked at start-up).
 spring:
   application.name: northline-auth
   threads.virtual.enabled: true
+  profiles.group:
+    dev: cloud
+    staging: cloud
+    prod: cloud
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/northline}
     username: ${DB_USER:northline}
     password: ${DB_PASSWORD:northline}
+    hikari.maximum-pool-size: ${DB_POOL_SIZE:10}
     # Spring Authorization Server + WebAuthn JDBC tables are unqualified → schema `auth`; identity.* is always qualified.
     hikari.connection-init-sql: SET search_path TO auth, public
   flyway:
     enabled: false                     # the api owns migrations in prod; local/test turn this on
     default-schema: public             # same history table as the api (public.flyway_schema_history)
     locations: classpath:db/migration
-  data.redis.host: ${REDIS_HOST:localhost}
-  session.redis.namespace: nl:auth
+  data.redis:                          # Valkey 8 or Redis 7+ (sessions)
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    username: ${REDIS_USERNAME:}
+    password: ${REDIS_PASSWORD:}
+    ssl.enabled: ${REDIS_SSL:false}
+  session.data.redis.namespace: nl:auth   # Boot 4 name (spring.session.redis.* is ignored)
   security.oauth2:
     authorizationserver.issuer: ${AUTH_ISSUER:http://localhost:9000}
     # "or continue with" Google / Apple — placeholder client ids until the apps are registered (DECISIONS.md).
@@ -39,32 +51,47 @@ spring:
           jwk-set-uri: https://appleid.apple.com/auth/keys
           user-name-attribute: sub
 server:
-  port: 9000
+  port: ${SERVER_PORT:9000}
   forward-headers-strategy: native
   servlet.session:
     timeout: 12h                       # "sessions expire after 12 h idle"
-    cookie: { name: NL_AUTH, http-only: true, secure: true, same-site: lax }
+    cookie: { name: NL_AUTH, http-only: true, secure: true, same-site: lax, domain: "${COOKIE_DOMAIN:}" }
 management:
   endpoints.web.exposure.include: health,info
 northline:
   auth:
     terms-version: "3.0"               # design/09 Terms of Service · Version 3.0 · Effective 1 October 2026
-    totp-key: ${TOTP_KEY}
-    login-page: ${STUDIO_ORIGIN:https://business.northline.ca}/sign-in
-    allowed-origins: [ "${STUDIO_ORIGIN:https://business.northline.ca}", "${CONSUMER_ORIGIN:https://northline.ca}" ]
+    totp-key: ${TOTP_KEY}              # base64 AES-256; no default outside local/test (secrets manager)
+    login-page: ${STUDIO_ORIGIN:http://localhost:3100}/sign-in
+    allowed-origins: [ "${STUDIO_ORIGIN:http://localhost:3100}", "${CONSUMER_ORIGIN:http://localhost:3000}" ]   # CORS
     webauthn:
-      rp-id: ${WEBAUTHN_RP_ID:northline.ca}
-      origins: [ "${STUDIO_ORIGIN:https://business.northline.ca}", "${CONSUMER_ORIGIN:https://northline.ca}" ]
+      rp-id: ${WEBAUTHN_RP_ID:localhost}
+      origins: [ "${STUDIO_ORIGIN:http://localhost:3100}", "${CONSUMER_ORIGIN:http://localhost:3000}" ]
+  # BFF client secrets as stored by the auth server: {bcrypt}… in the cloud, {noop}… only for local development.
+  # The matching plain secret goes to the BFF (STUDIO_BFF_SECRET). Clients are registered at start-up except under prod.
   clients:
     studio:
-      secret: ${STUDIO_BFF_SECRET:{noop}dev-studio-bff}
-      redirect-uris: [ "${STUDIO_ORIGIN:https://business.northline.ca}/login/oauth2/code/studio" ]
-      post-logout-redirect-uris: [ "${STUDIO_ORIGIN:https://business.northline.ca}/sign-in" ]
+      secret: ${STUDIO_BFF_SECRET_HASH:{noop}dev-studio-bff}
+      redirect-uris: [ "${STUDIO_ORIGIN:http://localhost:3100}/login/oauth2/code/studio" ]
+      post-logout-redirect-uris: [ "${STUDIO_ORIGIN:http://localhost:3100}/sign-in" ]
     consumer:
-      secret: ${CONSUMER_BFF_SECRET:{noop}dev-consumer-bff}
-      redirect-uris: [ "${CONSUMER_ORIGIN:https://northline.ca}/login/oauth2/code/northline" ]
-      post-logout-redirect-uris: [ "${CONSUMER_ORIGIN:https://northline.ca}/" ]
+      secret: ${CONSUMER_BFF_SECRET_HASH:{noop}dev-consumer-bff}
+      redirect-uris: [ "${CONSUMER_ORIGIN:http://localhost:3000}/login/oauth2/code/northline" ]
+      post-logout-redirect-uris: [ "${CONSUMER_ORIGIN:http://localhost:3000}/" ]
     console:
-      secret: ${CONSOLE_BFF_SECRET:{noop}dev-console-bff}
-      redirect-uris: [ "${CONSOLE_ORIGIN:https://console.northline.ca}/login/oauth2/code/console" ]
-      post-logout-redirect-uris: [ "${CONSOLE_ORIGIN:https://console.northline.ca}/" ]
+      secret: ${CONSOLE_BFF_SECRET_HASH:{noop}dev-console-bff}
+      redirect-uris: [ "${CONSOLE_ORIGIN:http://localhost:3200}/login/oauth2/code/console" ]
+      post-logout-redirect-uris: [ "${CONSOLE_ORIGIN:http://localhost:3200}/" ]
+  # Provider switches (ca.northline.platform). Only `local` adapters exist yet — see docs/runbooks/README.md.
+  kms:
+    provider: ${KMS_PROVIDER:local}    # token signing keys (S-7)
+    key-id: ${KMS_KEY_ID:}
+  sms:
+    provider: ${SMS_PROVIDER:local}    # phone codes (S-8)
+    from: ${SMS_FROM:}
+    account-id: ${SMS_ACCOUNT_ID:}
+    auth-token: ${SMS_AUTH_TOKEN:}
+---
+# Local runs read server/.env (or .env next to the jar) — KEY=value lines, see server/.env.example. Never under `test`.
+spring.config.activate.on-profile: "!test"
+spring.config.import: optional:file:.env[.properties],optional:file:../.env[.properties]

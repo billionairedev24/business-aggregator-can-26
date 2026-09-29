@@ -1,0 +1,9 @@
+# Shape shared by the deployed environments. Activated by the `dev`, `staging` and `prod` profiles (profile group in
+# application.yml); never activate it directly. Compared with `local`: Valkey/Redis sessions, Secure cookies.
+northline.required-env:                 # checked before start-up (ca.northline.platform.RequiredEnvironmentCheck)
+  cache: REDIS_HOST
+  public-urls: AUTH_ISSUER, API_URL
+  secrets: STUDIO_BFF_SECRET
+management.endpoint.health.probes.enabled: true
+logging.level:
+  ca.northline: info

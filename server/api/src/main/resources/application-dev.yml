@@ -1,0 +1,4 @@
+# Shared development environment in the cloud (also activates `cloud`, see application-cloud.yml).
+# Stripe is optional here: without STRIPE_SECRET_KEY the payments module uses its fake gateway.
+logging.level:
+  ca.northline: debug

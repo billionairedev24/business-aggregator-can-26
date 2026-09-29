@@ -1,0 +1,45 @@
+# northline-worker — Kafka consumers (search indexer; notifications and partner webhooks to come). Every connection is
+# an environment variable with a local default (docs/runbooks/README.md); locally it needs the `events` and `search`
+# compose profiles plus Postgres. Profiles `dev` | `staging` | `prod` also activate `cloud` (application-cloud.yml).
+spring:
+  application.name: northline-worker
+  threads.virtual.enabled: true
+  profiles.group:
+    dev: cloud
+    staging: cloud
+    prod: cloud
+  datasource:                           # events.processed_events (consumer dedupe)
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/northline}
+    username: ${DB_USER:northline}
+    password: ${DB_PASSWORD:northline}
+    hikari.maximum-pool-size: ${DB_POOL_SIZE:5}
+  data.redis:                           # Valkey 8 or Redis 7+
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    username: ${REDIS_USERNAME:}
+    password: ${REDIS_PASSWORD:}
+    ssl.enabled: ${REDIS_SSL:false}
+  elasticsearch:
+    uris: ${ES_URIS:http://localhost:9200}
+    username: ${ES_USERNAME:}
+    password: ${ES_PASSWORD:}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    security.protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
+    properties:
+      sasl.mechanism: ${KAFKA_SASL_MECHANISM:PLAIN}
+      sasl.jaas.config: ${KAFKA_SASL_JAAS_CONFIG:}
+northline:                              # provider switches (ca.northline.platform); only `local` adapters exist yet
+  email:
+    provider: ${EMAIL_PROVIDER:local}   # notifications (S-13, S-27)
+    from: ${EMAIL_FROM:Northline <no-reply@northline.ca>}
+    smtp: { host: "${SMTP_HOST:localhost}", port: "${SMTP_PORT:1025}", username: "${SMTP_USERNAME:}", password: "${SMTP_PASSWORD:}", starttls: "${SMTP_STARTTLS:false}" }
+  sms:
+    provider: ${SMS_PROVIDER:local}
+    from: ${SMS_FROM:}
+    account-id: ${SMS_ACCOUNT_ID:}
+    auth-token: ${SMS_AUTH_TOKEN:}
+---
+# Local runs read server/.env (or .env next to the jar) — KEY=value lines, see server/.env.example.
+spring.config.activate.on-profile: "!test"
+spring.config.import: optional:file:.env[.properties],optional:file:../.env[.properties]

@@ -1,0 +1,8 @@
+# Shape shared by the deployed environments (activated by `dev`, `staging`, `prod`; see application.yml).
+northline.required-env:                 # checked before start-up (ca.northline.platform.RequiredEnvironmentCheck)
+  database: DB_URL, DB_USER, DB_PASSWORD
+  cache: REDIS_HOST
+  events: KAFKA_BOOTSTRAP
+  search: ES_URIS
+logging.level:
+  ca.northline: info

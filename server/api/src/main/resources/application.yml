@@ -1,12 +1,21 @@
-# Production defaults. Profiles: `local` (application-local.yml — bootRun without Kafka/ES/Redis/auth server, dev
-# seed + dev auth) and `test` (src/test/resources/application-test.yml — Testcontainers Postgres).
+# Defaults for every environment. Every connection and credential is an environment variable with a local default
+# (docs/runbooks/README.md lists them all). Profiles:
+#   local   application-local.yml — Postgres only: no Kafka/ES/Redis/auth server, dev seed + dev auth (X-Dev-User)
+#   test    src/test/resources/application-test.yml — Testcontainers Postgres
+#   dev | staging | prod   each also activates `cloud` (application-cloud.yml): required variables are checked at
+#           start-up (northline.required-env), externalization on, no seed, no dev auth.
 spring:
   application.name: northline-api
   threads.virtual.enabled: true
+  profiles.group:
+    dev: cloud
+    staging: cloud
+    prod: cloud
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/northline}
     username: ${DB_USER:northline}
     password: ${DB_PASSWORD:northline}
+    hikari.maximum-pool-size: ${DB_POOL_SIZE:10}
   flyway:
     # db/migrations is packaged onto the classpath by :api:processResources (see api/build.gradle.kts).
     # Override with SPRING_FLYWAY_LOCATIONS=filesystem:/path/to/db/migrations if you must.
@@ -21,10 +30,22 @@ spring:
     issuer-uri: ${AUTH_ISSUER:http://localhost:9000}
     audiences: northline-api
     jws-algorithms: ES256               # northline-auth signs with ES256 (ARCHITECTURE.md § Identity)
-  data.redis.host: ${REDIS_HOST:localhost}
-  elasticsearch.uris: ${ES_URIS:http://localhost:9200}
+  data.redis:                         # Valkey 8 or Redis 7+ (same protocol)
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    username: ${REDIS_USERNAME:}
+    password: ${REDIS_PASSWORD:}
+    ssl.enabled: ${REDIS_SSL:false}
+  elasticsearch:
+    uris: ${ES_URIS:http://localhost:9200}
+    username: ${ES_USERNAME:}
+    password: ${ES_PASSWORD:}
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    security.protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT}   # SASL_SSL for MSK (SCRAM), GCP Managed Kafka, Event Hubs
+    properties:
+      sasl.mechanism: ${KAFKA_SASL_MECHANISM:PLAIN}          # PLAIN | SCRAM-SHA-512 | …
+      sasl.jaas.config: ${KAFKA_SASL_JAAS_CONFIG:}
     producer:
       acks: all
       properties.enable.idempotence: true
@@ -36,8 +57,43 @@ spring:
       externalization.enabled: true
       republish-outstanding-events-on-restart: true
       completion-mode: archive
-server.port: 8080
+server.port: ${SERVER_PORT:8080}
 management.endpoints.web.exposure.include: health,info,prometheus,modulith
 springdoc:
   api-docs.path: /v3/api-docs
   paths-to-match: /api/**
+northline:
+  studio.base-url: ${STUDIO_ORIGIN:http://localhost:3100}      # invitation links, Stripe return URLs
+  developer.webhook-key: ${WEBHOOK_SECRET_KEY:}                # base64 32 bytes; blank = fixed dev key under local/test
+  payments:                                                    # blank key = fake Stripe gateway (DECISIONS.md, Finance)
+    stripe-secret-key: ${STRIPE_SECRET_KEY:}
+    stripe-publishable-key: ${STRIPE_PUBLISHABLE_KEY:}
+    stripe-api-base: ${STRIPE_API_BASE:}                       # http://localhost:12111 for stripe-mock
+  stripe:                                                      # Stripe Connect (merchants) outside local/test
+    secret-key: ${STRIPE_SECRET_KEY:}
+    api-base: ${STRIPE_API_BASE:}
+  # Provider switches (ca.northline.platform). Only `local` adapters exist yet — see docs/runbooks/README.md.
+  storage:
+    provider: ${STORAGE_PROVIDER:local}
+    bucket: ${STORAGE_BUCKET:northline-local}
+    region: ${STORAGE_REGION:ca-central-1}
+    endpoint: ${STORAGE_ENDPOINT:}
+    access-key: ${STORAGE_ACCESS_KEY:}
+    secret-key: ${STORAGE_SECRET_KEY:}
+    path-style: ${STORAGE_PATH_STYLE:false}
+  kms:
+    provider: ${KMS_PROVIDER:local}
+    key-id: ${KMS_KEY_ID:}
+  email:
+    provider: ${EMAIL_PROVIDER:local}
+    from: ${EMAIL_FROM:Northline <no-reply@northline.ca>}
+    smtp: { host: "${SMTP_HOST:localhost}", port: "${SMTP_PORT:1025}", username: "${SMTP_USERNAME:}", password: "${SMTP_PASSWORD:}", starttls: "${SMTP_STARTTLS:false}" }
+  sms:
+    provider: ${SMS_PROVIDER:local}
+    from: ${SMS_FROM:}
+    account-id: ${SMS_ACCOUNT_ID:}
+    auth-token: ${SMS_AUTH_TOKEN:}
+---
+# Local runs read server/.env (or .env next to the jar) — KEY=value lines, see server/.env.example. Never under `test`.
+spring.config.activate.on-profile: "!test"
+spring.config.import: optional:file:.env[.properties],optional:file:../.env[.properties]
