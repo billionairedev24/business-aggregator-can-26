@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:merchants.team_membership_changed:1",
+  "description": "Someone joined a business's team, changed role or was removed. Topic merchants.member, key = merchant id.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "actorId",
+    "userId",
+    "change"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "merchants.merchants.id (per-business ordering)"
+    },
+    "actorId": {
+      "type": "string"
+    },
+    "userId": {
+      "type": "string",
+      "description": "identity.users.id of the member"
+    },
+    "change": {
+      "type": "string",
+      "enum": [
+        "joined",
+        "role_changed",
+        "removed"
+      ]
+    },
+    "role": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "owner",
+        "technician",
+        "bookkeeper",
+        "cook",
+        null
+      ]
+    }
+  }
+}

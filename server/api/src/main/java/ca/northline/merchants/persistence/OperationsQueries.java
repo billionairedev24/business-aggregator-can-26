@@ -1,9 +1,7 @@
 package ca.northline.merchants.persistence;
 
-import ca.northline.merchants.api.ComplianceStatus;
 import ca.northline.merchants.api.TeamRoster;
 import ca.northline.shared.CodedEnum;
-import ca.northline.shared.JdbcTimes;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.security.MerchantRole;
 import java.util.List;
@@ -12,12 +10,12 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 /**
- * {@link TeamRoster} and {@link ComplianceStatus} for the operations screens (Availability, Dashboard). Added by the
- * operations workstream; the onboarding and compliance workstreams own these tables and may replace this adapter.
+ * {@link TeamRoster} for the operations screens (Availability). Added by the operations workstream; the
+ * {@code ComplianceStatus} part moved to the compliance ledger (settings &amp; compliance workstream).
  */
 @Repository
 @RequiredArgsConstructor
-class OperationsQueries implements TeamRoster, ComplianceStatus {
+class OperationsQueries implements TeamRoster {
 
     private final JdbcClient jdbc;
 
@@ -49,21 +47,5 @@ class OperationsQueries implements TeamRoster, ComplianceStatus {
         if (updated == 0) {
             throw new NotFound("team member", userId);
         }
-    }
-
-    @Override
-    public List<DueItem> dueItems(String merchantId) {
-        return jdbc.sql("""
-                        select check_type, registry, status, expires_at from merchants.verifications
-                         where merchant_id = :merchantId and status in ('expired', 'todo')
-                         order by expires_at nulls last, check_type
-                        """)
-                .param("merchantId", merchantId)
-                .query((rs, _) -> {
-                    var expires = JdbcTimes.instant(rs, "expires_at");
-                    return new DueItem(
-                            rs.getString("check_type"), rs.getString("registry"), rs.getString("status"), expires);
-                })
-                .list();
     }
 }

@@ -1,4 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { ScreenPending } from '../../features/shell/ScreenPending';
+import { ComplianceScreen } from '../../features/compliance/ComplianceScreen';
+import { complianceQuery } from '../../features/compliance/api';
 
-export const Route = createFileRoute('/b/$merchantId/compliance')({ component: () => <ScreenPending title="Stripe & compliance" /> });
+export const Route = createFileRoute('/b/$merchantId/compliance')({
+  loader: ({ context, params }) => { void context.queryClient.prefetchQuery(complianceQuery(params.merchantId)); },
+  component: ComplianceScreen,
+});

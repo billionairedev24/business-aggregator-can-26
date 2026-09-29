@@ -4,3 +4,8 @@ for t in identity.user merchants.merchant merchants.storefront catalogue.listing
   docker compose exec -T kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --if-not-exists --topic $t --partitions 6 --replication-factor 1
   docker compose exec -T kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --if-not-exists --topic $t.dlq --partitions 1 --replication-factor 1
 done
+# Settings & compliance workstream: team changes, verification renewals, API keys, webhook endpoints.
+for t in merchants.member merchants.verification developer.api_key developer.webhook_endpoint; do
+  docker compose exec -T kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --if-not-exists --topic $t --partitions 6 --replication-factor 1
+  docker compose exec -T kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --create --if-not-exists --topic $t.dlq --partitions 1 --replication-factor 1
+done

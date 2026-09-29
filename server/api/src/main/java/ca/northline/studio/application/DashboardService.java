@@ -49,8 +49,6 @@ class DashboardService implements ViewDashboard {
     static final ZoneId ZONE = ZoneId.of("America/Edmonton");
     static final int EARNING_WEEKS = 12;
     static final int COACHING_JOBS = 20;
-    /** Instant book / ordering pauses this long after a required document expired (docs/DECISIONS.md). */
-    static final Duration COMPLIANCE_GRACE = Duration.ofDays(15);
 
     private final BookingInsights bookings;
     private final OrderInsights orders;
@@ -168,11 +166,7 @@ class DashboardService implements ViewDashboard {
                         .toList(),
                 compliance.dueItems(merchantId).stream()
                         .map(d -> new ComplianceItem(
-                                d.checkType(),
-                                d.registry(),
-                                d.status(),
-                                d.expiresAt(),
-                                d.expiresAt() == null ? null : d.expiresAt().plus(COMPLIANCE_GRACE)))
+                                d.checkType(), d.registry(), d.status(), d.expiresAt(), d.pausesAt()))
                         .toList(),
                 new Dashboard.Coaching(
                         photos.jobs(),

@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:merchants.verification_renewal_submitted:1",
+  "description": "An owner uploaded a renewal document; it waits for trust & safety review. Topic merchants.verification, key = verification id.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "actorId",
+    "merchantId",
+    "checkType",
+    "documentId"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "merchants.verifications.id"
+    },
+    "actorId": {
+      "type": "string"
+    },
+    "merchantId": {
+      "type": "string"
+    },
+    "checkType": {
+      "type": "string",
+      "enum": [
+        "kyc",
+        "registry",
+        "licence",
+        "ahs_permit",
+        "food_cert",
+        "inspection",
+        "insurance",
+        "wcb",
+        "attestation",
+        "bank",
+        "mfa",
+        "site_visit"
+      ]
+    },
+    "documentId": {
+      "type": "string",
+      "description": "merchants.documents.id of the uploaded evidence"
+    }
+  }
+}
