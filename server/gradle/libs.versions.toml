@@ -25,6 +25,7 @@ azure-identity = "1.18.6"
 azure-core-http-jdk = "1.1.7"
 gcp-storage = "2.74.0"
 azure-storage-blob = "12.35.1"
+wiremock = "3.13.2"
 
 [libraries]
 springdoc-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
@@ -43,6 +44,8 @@ aws-kms = { module = "software.amazon.awssdk:kms", version.ref = "aws-sdk" }
 aws-s3 = { module = "software.amazon.awssdk:s3", version.ref = "aws-sdk" }
 gcp-storage = { module = "com.google.cloud:google-cloud-storage", version.ref = "gcp-storage" }
 azure-storage-blob = { module = "com.azure:azure-storage-blob", version.ref = "azure-storage-blob" }
+aws-sms-voice = { module = "software.amazon.awssdk:pinpointsmsvoicev2", version.ref = "aws-sdk" }
+wiremock = { module = "org.wiremock:wiremock-standalone", version.ref = "wiremock" }
 gcp-kms = { module = "com.google.cloud:google-cloud-kms", version.ref = "gcp-kms" }
 azure-keyvault-keys = { module = "com.azure:azure-security-keyvault-keys", version.ref = "azure-keyvault-keys" }
 azure-identity = { module = "com.azure:azure-identity", version.ref = "azure-identity" }

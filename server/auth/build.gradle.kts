@@ -19,6 +19,8 @@ dependencies {
     implementation(libs.azure.keyvault.keys) { exclude(group = "com.azure", module = "azure-core-http-netty") }
     implementation(libs.azure.identity) { exclude(group = "com.azure", module = "azure-core-http-netty") }
     implementation(libs.azure.core.http.jdk) // JDK HttpClient instead of Netty for the Azure SDK
+    // SMS / voice codes (S-8): Twilio is plain REST (@HttpExchange); AWS End User Messaging SMS and voice uses the SDK.
+    implementation(libs.aws.sms.voice) { exclude(group = "software.amazon.awssdk", module = "netty-nio-client") }
     runtimeOnly("org.postgresql:postgresql")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
@@ -27,6 +29,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testImplementation("org.testcontainers:testcontainers-junit-jupiter")
     testImplementation("org.testcontainers:testcontainers-postgresql")
+    testImplementation(libs.wiremock)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

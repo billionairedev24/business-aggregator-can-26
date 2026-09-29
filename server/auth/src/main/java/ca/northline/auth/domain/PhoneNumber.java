@@ -30,6 +30,11 @@ public record PhoneNumber(String e164) implements Serializable {
         return national.length() == 10 ? Optional.of(new PhoneNumber("+1" + national)) : Optional.empty();
     }
 
+    /** "+1 403 *** **48" — for logs (PII: never the whole number). */
+    public String masked() {
+        return "+1 %s *** **%s".formatted(e164.substring(2, 5), e164.substring(10));
+    }
+
     /** "+1 403 555 0148" — how the Studio shows a number. */
     public String display() {
         return "+1 %s %s %s".formatted(e164.substring(2, 5), e164.substring(5, 8), e164.substring(8));

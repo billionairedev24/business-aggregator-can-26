@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent, type InputHTMLAttributes } from 'react';
 import { useForm, useStore } from '@tanstack/react-form';
-import { Alert, Button, Checkbox, Field, OptionCard, StepBars, TextInput } from '@northline/ui';
+import { Alert, Button, Checkbox, Field, OptionCard, StepBars, TextInput, useLocale } from '@northline/ui';
 import { visibleError } from '../../lib/forms';
 import { authApi, codeSchema, firstIssue, registerSchema, useAuthMutation, type AuthSession, type RegisterValues, type RegistrationStep, type TotpSetup } from './api';
 import { fieldErrors, flowError, isRestart, retryAfter } from './errors';
@@ -79,7 +79,8 @@ function RegisterForm({ initial, notice, onSignIn, onSent }: { initial: Register
   const [server, setServer] = useState<Record<string, string>>({});
   const [failure, setFailure] = useState('');
   const limit = useRateLimit();
-  const send = useAuthMutation(authApi.register);
+  const { locale } = useLocale();
+  const send = useAuthMutation((v: RegisterValues) => authApi.register(v, locale));
   const form = useForm({
     defaultValues: initial,
     validators: { onChange: schema, onSubmit: schema },
@@ -160,7 +161,8 @@ function PhoneCodeStep({ phone, sent, onResent, onVerified, onBack, onRestart }:
   const [notice, setNotice] = useState<{ tone: 'info' | 'error'; text: string } | null>(null);
   const [calledFor, setCalledFor] = useState<number | null>(null);
   const verify = useAuthMutation(authApi.verifyPhone);
-  const resend = useAuthMutation(authApi.resend);
+  const { locale } = useLocale();
+  const resend = useAuthMutation((channel: 'sms' | 'voice') => authApi.resend(channel, locale));
   const limit = useRateLimit();
   const left = useCountdown(sent.at + sent.info.resendAfterSeconds * 1000);
   const clientError = (touched || tried) ? firstIssue(codeSchema(t), code) : undefined;
@@ -190,7 +192,7 @@ function PhoneCodeStep({ phone, sent, onResent, onVerified, onBack, onRestart }:
       if (limit.hold(err)) return;
       if (isRestart(err)) return onRestart();
       const wait = retryAfter(err);
-      setNotice({ tone: 'error', text: wait ? t('resendIn', { time: mmss(wait) }) : flowError(err, t) ?? '' });
+      setNotice({ tone: 'error', text: wait ? t('resendIn', { time: mmss(wait) }) : flowError(err, t, channel) ?? '' });
     }
   };
   return (

@@ -146,11 +146,14 @@ northline:
     rotate-every: ${SIGNING_KEYS_ROTATE_EVERY:}    # local: automatic rotation, e.g. 90d (empty = by command only)
     region: ${KMS_REGION:}             # AWS only; empty = AWS_REGION / the SDK default chain
     endpoint: ${KMS_ENDPOINT:}         # AWS only; e.g. LocalStack
-  sms:
-    provider: ${SMS_PROVIDER:local}    # phone codes (S-8)
-    from: ${SMS_FROM:}
-    account-id: ${SMS_ACCOUNT_ID:}
-    auth-token: ${SMS_AUTH_TOKEN:}
+  sms:                                 # phone codes (S-8, docs/runbooks/README.md § SMS and voice codes)
+    provider: ${SMS_PROVIDER:local}    # local (logged) | twilio | aws; staging/prod refuse local
+    from: ${SMS_FROM:}                 # +1… sender number (twilio: or a Messaging Service MG…; aws: number id/ARN or pool)
+    voice-from: ${SMS_VOICE_FROM:}     # caller id for voice codes; empty = SMS_FROM
+    account-id: ${SMS_ACCOUNT_ID:}     # twilio: account SID AC…
+    auth-token: ${SMS_AUTH_TOKEN:}     # twilio: auth token (secrets manager)
+    region: ${SMS_REGION:}             # aws: ca-central-1 (empty = SDK default chain)
+    endpoint: ${SMS_ENDPOINT:}         # API base override (tests, LocalStack, VPC endpoint)
 ---
 # Local runs read server/.env (or .env next to the jar) — KEY=value lines, see server/.env.example. Never under `test`.
 spring.config.activate.on-profile: "!test"

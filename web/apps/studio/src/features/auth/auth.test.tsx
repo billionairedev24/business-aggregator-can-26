@@ -10,7 +10,7 @@ import { SignedOutPage, type AuthMode } from './SignedOutPage';
 type Reply = { status: number; body?: unknown };
 type Handler = (body: Record<string, unknown>) => Reply;
 let routes: Record<string, Handler>;
-let calls: { path: string; body: Record<string, unknown> }[];
+let calls: { path: string; body: Record<string, unknown>; headers: Record<string, string> }[];
 
 const user = { id: '01J9ZD3V00000000000000RAV1', firstName: 'Ravi', lastName: 'Sandhu', email: 'ravi@prairiewrench.ca', phone: '+14035550148', initials: 'RS', locale: 'en-CA', memberSince: '2026-01-05' };
 const ok = (body: unknown): Reply => ({ status: 200, body });
@@ -30,7 +30,7 @@ beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
     const path = new URL(url, 'http://localhost').pathname;
     const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : {};
-    calls.push({ path, body });
+    calls.push({ path, body, headers: (init?.headers ?? {}) as Record<string, string> });
     const handler = routes[path];
     const reply = handler ? handler(body) : { status: 404 };
     return new Response(reply.body === undefined ? '' : JSON.stringify(reply.body), { status: reply.status, headers: { 'content-type': 'application/json' } });
@@ -177,6 +177,34 @@ describe('Create account — steps', () => {
 });
 
 // ── Sign in ───────────────────────────────────────────────────────────────────────────────────────────────────────
+
+describe('Create account — code delivery (S-8)', () => {
+  it('sends the UI language, so the code is worded in it', async () => {
+    const { ui } = renderPage();
+    await fillRegistration(ui);
+    await ui.click(screen.getByRole('button', { name: 'Send verification code' }));
+    await screen.findByLabelText(/code/i);
+    expect(calls.find(c => c.path === '/api/auth/register')?.headers['accept-language']).toBe('en-CA');
+  });
+
+  it('the provider could not send the first code: says so, the form stays', async () => {
+    routes['/api/auth/register'] = () => ({ status: 503, body: { code: 'code_not_sent', detail: 'x' } });
+    const { ui } = renderPage();
+    await fillRegistration(ui);
+    await ui.click(screen.getByRole('button', { name: 'Send verification code' }));
+    expect(await screen.findByText("We couldn't send a code to this number right now. Try again in a moment.")).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Send verification code' })).toBeTruthy();
+  });
+
+  it('a call that could not be placed offers the text message instead', async () => {
+    routes['/api/auth/register/resend'] = () => ({ status: 503, body: { code: 'code_not_sent', detail: 'x' } });
+    const { ui } = renderPage();
+    await fillRegistration(ui);
+    await ui.click(screen.getByRole('button', { name: 'Send verification code' }));
+    await ui.click(await screen.findByRole('button', { name: 'Call me instead' }));
+    expect(await screen.findByText("We couldn't call this number. Try again in a moment, or resend the code by text.")).toBeTruthy();
+  });
+});
 
 describe('Sign in', () => {
   it('email → authenticator code → signed in → hand-off to next', async () => {
