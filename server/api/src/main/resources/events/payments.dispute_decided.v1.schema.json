@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:payments.dispute_decided:1",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "merchantId",
+    "escrowId",
+    "decision",
+    "refundCents",
+    "decidedBy"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "payments.disputes.id"
+    },
+    "merchantId": {
+      "type": "string"
+    },
+    "escrowId": {
+      "type": "string"
+    },
+    "decision": {
+      "enum": [
+        "full_refund",
+        "partial",
+        "release",
+        "goodwill"
+      ]
+    },
+    "refundCents": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "decidedBy": {
+      "type": "string",
+      "description": "identity.users id (agent, owner or customer)"
+    }
+  }
+}
