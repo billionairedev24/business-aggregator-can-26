@@ -1,0 +1,187 @@
+/* Data Table — recreated from design/Data Table.dc.html. Tokens only (var(--*)). */
+
+.nl-dt { display: flex; flex-direction: column; gap: 10px; width: 100%; min-width: 0; font-family: var(--font-body); color: var(--color-text); }
+.nl-dt-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.nl-dt-muted { font-size: 13px; color: var(--color-neutral-700); }
+.nl-dt-push { margin-left: auto; }
+.nl-dt-spacer { flex: 1; }
+
+/* Every control keeps the design's visual size but gets a ≥ 44px hit area. */
+.nl-dt button, .nl-dt-dialog button, .nl-dt-chip, .nl-dt-check, .nl-dt-search, .nl-dt-hitwrap { position: relative; }
+.nl-dt button::after, .nl-dt-dialog button::after, .nl-dt-chip::after, .nl-dt-check::after, .nl-dt-search::after, .nl-dt-hitwrap::after {
+  content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%);
+}
+
+/* ── toolbar ── */
+.nl-dt-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-width: 0; }
+.nl-dt-search { display: block; flex: 1 1 200px; min-width: 0; max-width: 340px; }
+.nl-dt-search > svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--color-neutral-700); pointer-events: none; z-index: 1; }
+.nl-dt-search .input { min-height: 40px; padding-left: 36px; font-size: 14px; }
+.nl-dt-count { padding: 1px 8px; }
+.nl-dt-viewonly { cursor: default; }
+.nl-dt-create { margin-left: auto; }
+
+/* ── panels ── */
+.nl-dt-panel { background: var(--color-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
+.nl-dt-filters { padding: 14px 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 14px 24px; }
+.nl-dt-fgroup { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.nl-dt-flabel { font-size: 12px; font-weight: 600; color: var(--color-neutral-700); }
+.nl-dt-range { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
+.nl-dt-range .input { min-height: 38px; font-size: 14px; }
+.nl-dt-colpanel { padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.nl-dt-colpanel .nl-dt-flabel { margin-right: 6px; }
+.nl-dt-small-btn { min-height: 32px; font-size: 13px; }
+
+/* ── chips ── */
+.nl-dt-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.nl-dt-chip {
+  display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 13px; font-weight: 500; line-height: 1.2;
+  padding: 5px 12px; min-height: 34px; border-radius: var(--radius-pill); cursor: pointer;
+  border: 1px solid var(--color-neutral-300); background: var(--color-surface); color: var(--color-text);
+  transition: background .15s, border-color .15s;
+}
+.nl-dt-chip:hover { border-color: var(--color-accent-300); background: var(--color-accent-100); }
+.nl-dt-chip.is-on { font-weight: 600; border-color: var(--color-accent); background: var(--color-accent); color: var(--color-on-accent); }
+.nl-dt-chip.is-on:hover { background: var(--color-accent-600); }
+.nl-dt-chip.is-locked { opacity: .7; cursor: default; }
+.nl-dt-chip.is-disabled { opacity: .45; cursor: not-allowed; }
+.nl-dt-chip-sm { min-height: 32px; padding: 3px 10px; font-size: 12px; }
+.nl-dt-chip-count { opacity: .65; font-weight: 400; }
+.nl-dt-chip input { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
+.nl-dt-chip:has(input:focus-visible) { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+.nl-dt-chiprow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.nl-dt-active-chip { border: 0; cursor: pointer; min-height: 30px; font: inherit; font-size: 12px; font-weight: 600; }
+.nl-dt-active-chip:hover { background: var(--color-accent-200); }
+.nl-dt-chiprow .nl-dt-small-btn { min-height: 30px; }
+
+/* ── selection bar ── */
+.nl-dt-bulk { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 10px 8px 14px; background: var(--color-accent); color: var(--color-on-accent); border-radius: var(--radius-md); font-size: 14px; }
+/* The accent ring would vanish on the accent bar — use the on-accent colour here. */
+.nl-dt-bulk :focus-visible { outline-color: var(--color-on-accent); }
+.nl-dt-link { font: inherit; font-size: 13px; background: transparent; border: 0; color: var(--color-on-accent); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; min-height: 36px; }
+.nl-dt-bulk-btn { min-height: 36px; }
+.nl-dt-bulk-soft { background: color-mix(in oklch, white 16%, transparent); color: var(--color-on-accent); }
+.nl-dt-bulk-soft:hover { background: color-mix(in oklch, white 26%, transparent); }
+.nl-dt-bulk-danger { background: var(--color-accent-2-100); color: var(--color-accent-2-800); }
+.nl-dt-bulk-danger:hover { background: var(--color-accent-2-200); }
+.nl-dt-bulk-x { width: 36px; height: 36px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--color-on-accent); cursor: pointer; display: grid; place-items: center; padding: 0; }
+.nl-dt-bulk-x:hover { background: color-mix(in oklch, white 16%, transparent); }
+
+/* ── checkbox ── */
+.nl-dt-check { width: 36px; height: 36px; display: inline-grid; place-items: center; cursor: pointer; flex: none; }
+.nl-dt-check input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+.nl-dt-check-box { width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center; flex: none; box-shadow: inset 0 0 0 1.5px var(--color-neutral-500); background: var(--color-surface); color: transparent; transition: background .12s, box-shadow .12s; }
+.nl-dt-check:hover .nl-dt-check-box { box-shadow: inset 0 0 0 1.5px var(--color-accent); }
+.nl-dt-check.is-on .nl-dt-check-box { box-shadow: inset 0 0 0 1.5px var(--color-accent); background: var(--color-accent); color: var(--color-on-accent); }
+.nl-dt-check input:focus-visible + .nl-dt-check-box { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.nl-dt-check.has-text { width: auto; min-height: 40px; display: inline-flex; align-items: center; gap: 8px; padding: 0 8px 0 4px; font-size: 13px; color: var(--color-text); }
+
+/* ── table ── */
+.nl-dt-body { display: flex; flex-direction: column; min-width: 0; }
+.nl-dt-table { table-layout: auto; }
+.nl-dt-table th { vertical-align: middle; }
+.nl-dt-table td { vertical-align: middle; overflow-wrap: break-word; }
+.nl-dt-table .is-num { text-align: right; font-feature-settings: "tnum" 1; white-space: nowrap; }
+.nl-dt-table .nl-dt-check-cell { width: 44px; padding: 4px 6px 4px 10px; vertical-align: middle; }
+.nl-dt-sort { font: inherit; color: inherit; background: transparent; border: 0; padding: 2px 0; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; min-height: 32px; text-align: left; }
+.nl-dt-sort:hover { color: var(--color-accent); }
+.nl-dt-sort-icon { opacity: .4; flex: none; }
+.nl-dt-sort-icon.is-on { opacity: 1; color: var(--color-accent); }
+.nl-dt-rank { font-size: 10px; color: var(--color-accent); }
+.nl-dt-actions-head { text-align: right !important; }
+.nl-dt-table .nl-dt-actions-cell { vertical-align: middle; padding: 4px 8px; width: 1%; }
+.nl-dt-table .nl-dt-actions-cell .nl-dt-row-acts { flex-wrap: nowrap; }
+.nl-dt-strong { font-weight: 600; }
+.nl-dt-sub { display: block; font-size: 12px; color: var(--color-neutral-700); overflow-wrap: anywhere; }
+.nl-dt-table tbody tr.is-selected td { background: var(--color-accent-100); }
+.nl-dt-table tbody tr.is-clickable { cursor: pointer; }
+.nl-dt-tag-wrap { white-space: normal; }
+
+.nl-dt-row-acts { display: flex; gap: 2px; justify-content: flex-end; flex-wrap: wrap; }
+.nl-dt-act { min-height: 36px; padding: 4px 8px; font-size: 13px; white-space: nowrap; overflow-wrap: normal; }
+.nl-dt-act.is-labelled { padding: 4px 10px; }
+.nl-dt-act.is-danger { color: var(--color-accent-2-700); }
+.nl-dt-act.is-danger:hover { background: var(--color-accent-2-100); color: var(--color-accent-2-800); }
+.nl-dt-row-acts.is-card { gap: 4px; }
+.nl-dt-row-acts.is-card .nl-dt-act { min-height: 40px; padding: 4px 10px; }
+
+/* ── cards (< 600px) ── */
+.nl-dt-cardmode { display: flex; flex-direction: column; gap: 8px; }
+.nl-dt-cardbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; color: var(--color-neutral-700); }
+.nl-dt-cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.nl-dt-card { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-radius: var(--radius-md); background: var(--color-surface); box-shadow: var(--shadow-sm); }
+.nl-dt-card.is-selected { background: var(--color-accent-100); box-shadow: inset 0 0 0 1.5px var(--color-accent); }
+.nl-dt-card.is-clickable { cursor: pointer; }
+.nl-dt-card-head { display: flex; gap: 8px; align-items: flex-start; }
+.nl-dt-card-check { margin: -6px 0 0 -8px; }
+.nl-dt-card-title { flex: 1; min-width: 0; }
+.nl-dt-card-name { font-weight: 600; font-size: 15px; overflow-wrap: anywhere; }
+.nl-dt-card-fields { margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 130px), 1fr)); gap: 8px 16px; }
+.nl-dt-card-field { min-width: 0; }
+.nl-dt-card-field dt { font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--color-neutral-700); }
+.nl-dt-card-field dd { margin: 0; }
+.nl-dt-field-value { font-size: 14px; overflow-wrap: anywhere; }
+.nl-dt-card-acts { border-top: 1px solid var(--color-divider); padding-top: 6px; }
+.nl-dt-card-acts .nl-dt-row-acts { justify-content: flex-end; }
+
+/* ── states ── */
+.nl-dt-empty { background: var(--color-surface); border-radius: var(--radius-lg); padding: 32px 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.nl-dt-empty > svg { color: var(--color-accent); }
+.nl-dt-empty p { margin: 0; font-size: 15px; }
+.nl-dt-error { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 14px 16px; background: var(--color-surface); border: 1px solid var(--color-accent-2); border-radius: var(--radius-md); color: var(--color-accent-2-700); font-size: 14px; }
+.nl-dt-error > svg { flex: none; }
+.nl-dt-error-text { flex: 1 1 200px; }
+.nl-dt-error-detail { color: var(--color-neutral-800); }
+.nl-dt-sk { display: block; height: 12px; width: 100%; border-radius: var(--radius-pill); background: var(--color-neutral-200); animation: nl-dt-pulse 1.4s ease-in-out infinite; }
+.nl-dt-sk-box { width: 20px; height: 20px; border-radius: 6px; margin: 8px; flex: none; }
+.nl-dt-sk-pill { height: 20px; }
+.nl-dt-table .is-num .nl-dt-sk { margin-left: auto; }
+.nl-dt-th-text { opacity: .8; }
+@keyframes nl-dt-pulse { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .nl-dt-sk { animation: none; } }
+
+/* ── footer ── */
+.nl-dt-foot { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; font-size: 13px; color: var(--color-neutral-700); }
+.nl-dt-pager { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.nl-dt-rows-label { margin-right: 4px; }
+.nl-dt-pager .nl-dt-chips { gap: 4px; }
+.nl-dt-page-btn { margin-left: 8px; }
+.nl-dt-page-btn + span + .nl-dt-page-btn { margin-left: 0; }
+
+/* ── dialogs (native <dialog>) ── */
+.nl-dt-dialog { border: 0; padding: 0; background: transparent; color: var(--color-text); width: calc(100% - 32px); max-width: 520px; max-height: calc(100vh - 32px); overflow: visible; }
+.nl-dt-dialog.is-wide { max-width: 600px; }
+.nl-dt-dialog::backdrop { background: color-mix(in oklch, var(--color-text, black) 40%, transparent); }
+.nl-dt-dialog-inner { background: var(--color-surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: var(--space-6); max-height: calc(100vh - 32px); overflow-y: auto; display: flex; flex-direction: column; gap: 14px; font-family: var(--font-body); }
+.nl-dt-dialog-head { display: flex; align-items: flex-start; gap: 12px; }
+.nl-dt-dialog-head .dialog-title { flex: 1; margin: 0; }
+.nl-dt-dialog .dialog-body { margin: 0; }
+.nl-dt-dialog-actions { margin-top: 4px; flex-wrap: wrap; }
+.nl-dt-icon-btn { flex: none; }
+.nl-dt-view-grid { margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 14px 20px; }
+.nl-dt-view-field { min-width: 0; }
+.nl-dt-view-field dt { font-size: 12px; color: var(--color-neutral-700); }
+.nl-dt-view-field dd { margin: 0; }
+.nl-dt-view-field .nl-dt-field-value { font-size: 15px; }
+.nl-dt-danger-ghost { color: var(--color-accent-2-700); margin-right: auto; }
+.nl-dt-danger-ghost:hover { background: var(--color-accent-2-100); color: var(--color-accent-2-800); }
+.nl-dt-danger { background: var(--color-accent-2); color: var(--color-on-accent); }
+.nl-dt-danger:hover { background: var(--color-accent-2-600); }
+
+.nl-dt-form { display: flex; flex-direction: column; gap: 14px; }
+.nl-dt-form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 14px 16px; }
+.nl-dt-field { min-width: 0; }
+.nl-dt-field-label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: var(--color-neutral-800); }
+.nl-dt-req { color: var(--color-accent-2-700); }
+.nl-dt-input[aria-invalid="true"] { border-color: var(--color-accent-2); }
+.nl-dt-field-error { color: var(--color-accent-2-700); font-size: 13px; margin-top: 6px; }
+.nl-dt-inline-error { font-size: 13px; color: var(--color-accent-2-700); display: flex; gap: 6px; align-items: center; }
+.nl-dt-rep-group { display: flex; flex-direction: column; gap: 6px; }
+.nl-dt-rep-label { font-size: 13px; font-weight: 500; color: var(--color-neutral-800); }
+
+/* ── toast ── */
+.nl-dt-toast-region { position: absolute; }
+.nl-dt-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 60; background: var(--color-text); color: var(--color-bg); padding: 10px 16px; border-radius: var(--radius-md); box-shadow: var(--shadow-lg); font-size: 14px; display: flex; gap: 8px; align-items: center; max-width: calc(100vw - 32px); }
+.nl-dt-toast > svg { flex: none; color: var(--color-highlight); }
+.nl-dt-toast.is-error > svg { color: var(--color-accent-2-300); }
