@@ -17,6 +17,7 @@ spring:
   security.oauth2.resourceserver.jwt:
     issuer-uri: ${AUTH_ISSUER:http://localhost:9000}
     audiences: northline-api
+    jws-algorithms: ES256               # northline-auth signs with ES256 (ARCHITECTURE.md § Identity)
   data.redis.host: ${REDIS_HOST:localhost}
   elasticsearch.uris: ${ES_URIS:http://localhost:9200}
   kafka:
