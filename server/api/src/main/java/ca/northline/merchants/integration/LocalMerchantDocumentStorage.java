@@ -1,6 +1,7 @@
 package ca.northline.merchants.integration;
 
 import ca.northline.merchants.application.DocumentStorage;
+import ca.northline.shared.storage.UsesLocalStorage;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -13,10 +14,11 @@ import org.springframework.stereotype.Component;
 
 /**
  * LOCAL / TEST ONLY. Keeps uploads on local disk under {@code northline.documents.local-dir} (default: a
- * {@code northline-documents} folder in the temp directory). Production stores in S3 ca-central-1 behind the same port.
+ * {@code northline-documents} folder in the temp directory). Other providers: {@link ObjectStoreDocumentStorage}.
  */
 @Component
 @Profile({"local", "test"})
+@UsesLocalStorage
 @EnableConfigurationProperties(LocalMerchantDocumentStorage.Properties.class)
 class LocalMerchantDocumentStorage implements DocumentStorage {
 

@@ -1,6 +1,7 @@
 package ca.northline.payments.infra;
 
 import ca.northline.payments.application.DisputeEvidenceStorage;
+import ca.northline.shared.storage.UsesLocalStorage;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -14,12 +15,13 @@ import org.springframework.stereotype.Component;
 
 /**
  * Dispute evidence on the local disk ({@code local} / {@code test}; {@code northline.payments.evidence-dir}, default
- * {@code $TMPDIR/northline-evidence}). Production needs object storage in ca-central-1, which no workstream has chosen
- * yet — {@link UnconfiguredDisputeEvidenceStorage} fails loudly there.
+ * {@code $TMPDIR/northline-evidence}). Other providers: {@link ObjectStoreDisputeEvidenceStorage}; {@link
+ * UnconfiguredDisputeEvidenceStorage} fails loudly under {@code dev} while {@code STORAGE_PROVIDER=local}.
  */
 @Slf4j
 @Component
 @Profile({"local", "test"})
+@UsesLocalStorage
 class DisputeEvidenceFiles implements DisputeEvidenceStorage {
 
     private final Path root;

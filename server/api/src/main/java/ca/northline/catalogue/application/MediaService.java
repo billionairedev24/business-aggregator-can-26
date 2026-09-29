@@ -9,6 +9,7 @@ import ca.northline.catalogue.domain.ListingMessages;
 import ca.northline.catalogue.domain.MediaAsset;
 import ca.northline.shared.Ids;
 import ca.northline.shared.RuleViolation;
+import ca.northline.shared.storage.ObjectKeys;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -41,8 +42,7 @@ class MediaService implements ManageMedia {
         var asset = new MediaAsset(
                 id,
                 merchantId,
-                "listings/%s/%s.%s"
-                        .formatted(merchantId, id, facts.contentType().endsWith("png") ? "png" : "jpg"),
+                ObjectKeys.merchantObject(merchantId, id, facts.contentType()),
                 facts.contentType(),
                 facts.width(),
                 facts.height(),

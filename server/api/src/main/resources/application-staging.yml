@@ -1,3 +1,4 @@
 # Pre-production (also activates `cloud`, see application-cloud.yml). Same shape as prod, Stripe in test mode.
 northline.required-env:
   payments: STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY
+  storage: STORAGE_PROVIDER, STORAGE_BUCKET   # s3 | gcs | azure; `local` is refused at start-up (S-10)
