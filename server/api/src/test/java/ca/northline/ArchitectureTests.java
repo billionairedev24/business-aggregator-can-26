@@ -65,13 +65,8 @@ class ArchitectureTests {
             .allowEmptyShould(true);
 
     @ArchTest
-    static final ArchRule rowsLiveInPersistence = classes()
-            .that()
-            .areAnnotatedWith(Table.class)
-            .and()
-            .resideOutsideOfPackage("ca.northline.booking") // legacy scaffold, owned by the booking workstream
-            .should()
-            .resideInAPackage("..persistence..");
+    static final ArchRule rowsLiveInPersistence =
+            classes().that().areAnnotatedWith(Table.class).should().resideInAPackage("..persistence..");
 
     @ArchTest
     static final ArchRule constructorInjectionOnly = noFields()
