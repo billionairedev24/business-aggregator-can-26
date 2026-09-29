@@ -100,7 +100,9 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `COOKIE_DOMAIN` | | ✓ | ✓ | | no (host-only cookies) |
 | `TOTP_KEY` | | ✓ | | | yes |
 | `STUDIO_BFF_SECRET` | | | ✓ | | yes |
-| `STUDIO_BFF_SECRET_HASH`, `CONSUMER_BFF_SECRET_HASH`, `CONSOLE_BFF_SECRET_HASH` | | ✓ | | | yes |
+| `STUDIO_BFF_SECRET_HASH` | | ✓ | | | yes |
+| `CONSUMER_BFF_SECRET_HASH`, `CONSOLE_BFF_SECRET_HASH` | | ✓ | | | no — the client is registered only once its hash is set ([OAuth clients](#oauth-clients-s-122)) |
+| `OAUTH_CLIENTS_SYNC_ON_STARTUP` | | ✓ | | | no (`true`; `false` = register only with the Job) |
 | `GOOGLE_CLIENT_ID`/`_SECRET`, `APPLE_CLIENT_ID`/`_SECRET` | | ✓ | | | no (placeholders until S-18) |
 | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` | ✓ | | | | staging and prod |
 | `STRIPE_API_BASE` | ✓ | | | | never in the cloud (stripe-mock only) |
@@ -117,6 +119,81 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 
 Studio build (web): `VITE_NL_AUTH_ORIGIN` (= `AUTH_ISSUER`) is baked into the bundle at build time, so each
 environment needs its own Studio build until runtime configuration exists.
+
+## OAuth clients (S-122)
+
+northline-auth's OAuth clients are **configuration**: `northline.oauth.clients.<client-id>` in
+`server/auth/src/main/resources/application.yml` (+ `application-local.yml` for local values). They are reconciled
+into `auth.oauth2_registered_client` — created when missing, updated when different, **never deleted** (a client in
+the database but not in configuration is logged as `stored but not in configuration (left as is)`):
+
+- **at every start** of northline-auth (all profiles; replicas serialise on a Postgres advisory lock), unless
+  `OAUTH_CLIENTS_SYNC_ON_STARTUP=false`;
+- **by the admin command**, without starting the server — the deploy step "Register OAuth clients" and the
+  Kubernetes Job:
+
+  ```sh
+  ./gradlew :auth:oauthClients --args='list'   # configuration vs database, writes nothing (profile: SPRING_PROFILES_ACTIVE, else local)
+  ./gradlew :auth:oauthClients --args='sync'   # create / update
+  # from the built jar (Job: same image and envFrom as the auth Deployment, args = sync):
+  java -cp northline-auth.jar -Dloader.main=ca.northline.auth.clients.OAuthClientsCommand \
+       org.springframework.boot.loader.launch.PropertiesLauncher sync
+  ```
+
+  It prints one line per client: `create`, `update <fields>` (e.g. `update secret` — values are never printed),
+  `up to date`, or `stored but not in configuration`. It reads exactly the server's configuration, so give it the
+  same environment (the required-variable check applies too).
+
+| client | type | registered when | redirect URI | scopes |
+|---|---|---|---|---|
+| `studio-bff` | confidential (`client_secret_basic`) | always — `STUDIO_BFF_SECRET_HASH` is required | `${STUDIO_ORIGIN}/login/oauth2/code/studio` | openid profile merchant |
+| `consumer-bff` | confidential | `CONSUMER_BFF_SECRET_HASH` set (`optional: true`) | `${CONSUMER_ORIGIN}/login/oauth2/code/northline` | openid profile orders bookings |
+| `console-bff` | confidential | `CONSOLE_BFF_SECRET_HASH` set (`optional: true`) | `${CONSOLE_ORIGIN}/login/oauth2/code/console` | openid profile console |
+| `mobile-consumer`, `courier-app` | public (PKCE, no secret) | `local` only today (S-28, S-87) | `ca.northline.app:/oauth2redirect`, `ca.northline.courier:/oauth2redirect` | openid profile orders/deliveries offline_access |
+
+Defaults for anything not set: grant types `authorization_code` + `refresh_token`, PKCE required, no consent screen,
+access token 10 min, rotating refresh token 12 h (= the session idle limit), ES256 ID tokens.
+
+**Rules, checked before anything is written** (the app or the Job stops with every problem listed):
+
+| | `local`, `test` | `dev` | `staging`, `prod` |
+|---|---|---|---|
+| redirect / post-logout URIs | any absolute URI | `https`, or `http` on `localhost`/`127.0.0.1`/`[::1]` (the local rehearsal) | `https` only |
+| confidential secret | an encoded value: `{bcrypt}…`, `{noop}…` | same; `{noop}` logs a warning | encoded and hashed — `{noop}` refused |
+
+Everywhere: no wildcards or fragments; a public client may also use a reverse-domain private-use scheme
+(`ca.northline.app:/…`, RFC 8252) and has no secret; a confidential client needs `secret-hash` (a plain secret is
+refused; use bcrypt cost ≥ 10, e.g. `htpasswd -bnBC 12`); clients may not share a secret; `authorization_code` needs a redirect URI and PKCE; staging/prod need at
+least one client.
+
+**Rotating a BFF secret** (no code change): generate a new secret, put its bcrypt hash in
+`STUDIO_BFF_SECRET_HASH` and the plain value in the bff's `STUDIO_BFF_SECRET`, run the Job (or restart auth), then
+restart the bff. Between the two the bff's old secret is refused (sign-ins fail for that minute); do it in a quiet
+window. (Spring Authorization Server holds one secret per client, so there is no overlap period.)
+
+**Adding a client later** — mobile apps (S-28 consumer app, S-87 courier app) or partners (S-29): add a block to
+`application.yml` (every environment) or to an environment-only file mounted with
+`SPRING_CONFIG_ADDITIONAL_LOCATION=/config/oauth-clients.yml`, then run the Job:
+
+```yaml
+northline.oauth.clients:
+  mobile-consumer:
+    type: public
+    redirect-uris: [ "ca.northline.app:/oauth2redirect" ]   # or a claimed https App Link / Universal Link
+    scopes: [ openid, profile, orders, offline_access ]
+    refresh-token-ttl: 30d
+    dpop-required: true          # recorded in the client settings; enforcement arrives with the mobile stories
+  partner-acme:                  # S-29: client credentials; private_key_jwt (jwk-set-url) is still to be added
+    type: confidential
+    secret-hash: ${PARTNER_ACME_SECRET_HASH}
+    grant-types: [ client_credentials ]
+    scopes: [ partner.orders.read ]
+```
+
+Keys: `type` (`confidential` | `public`), `optional`, `name`, `secret-hash`, `redirect-uris`,
+`post-logout-redirect-uris`, `scopes`, `grant-types`, `require-pkce`, `require-consent`, `access-token-ttl`,
+`refresh-token-ttl`, `dpop-required`. Retiring a client: remove it from configuration (it is then only reported), and
+delete it by hand (`delete from auth.oauth2_registered_client where client_id = '…'`) once nothing uses it.
 
 ## Rate limits (S-9)
 

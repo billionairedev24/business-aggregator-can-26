@@ -92,6 +92,10 @@ Leave `NL_DEV_USER` empty in `web/apps/studio/.env` and run `cd web && pnpm dev`
 Other personas and factors: README § Local sign-in. "Create account" works end to end: the 6-digit phone code is
 printed in the auth log (`Verification code for …`). Passkeys work on `localhost` (not `127.0.0.1`).
 
+**OAuth clients:** auth registers `studio-bff`, `consumer-bff`, `console-bff`, `mobile-consumer` and `courier-app` in
+its database at every start (local values in `application-local.yml`); `./gradlew :auth:oauthClients --args='list'`
+compares configuration and database without starting the server ([README § OAuth clients](README.md#oauth-clients-s-122)).
+
 **Signing keys:** northline-auth keeps its ES256 key pair in `~/.northline/auth-signing-keys/signing-keys.jwks.json`
 (created on first start; `SIGNING_KEYS_DIR` moves it), so restarting auth keeps you signed in and two auth instances
 pointed at the same directory share tokens. Rotate or inspect it with `./gradlew :auth:signingKeys --args='status'`

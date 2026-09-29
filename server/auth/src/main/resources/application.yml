@@ -106,21 +106,36 @@ northline:
           account: { max: 10, window: 15m, lockout: 15m }
           ip: { max: 30, window: 15m, lockout: 15m }
           session: { max: 10, window: 15m, lockout: 15m }
-  # BFF client secrets as stored by the auth server: {bcrypt}… in the cloud, {noop}… only for local development.
-  # The matching plain secret goes to the BFF (STUDIO_BFF_SECRET). Clients are registered at start-up except under prod.
-  clients:
-    studio:
-      secret: ${STUDIO_BFF_SECRET_HASH:{noop}dev-studio-bff}
-      redirect-uris: [ "${STUDIO_ORIGIN:http://localhost:3100}/login/oauth2/code/studio" ]
-      post-logout-redirect-uris: [ "${STUDIO_ORIGIN:http://localhost:3100}/sign-in" ]
-    consumer:
-      secret: ${CONSUMER_BFF_SECRET_HASH:{noop}dev-consumer-bff}
-      redirect-uris: [ "${CONSUMER_ORIGIN:http://localhost:3000}/login/oauth2/code/northline" ]
-      post-logout-redirect-uris: [ "${CONSUMER_ORIGIN:http://localhost:3000}/" ]
-    console:
-      secret: ${CONSOLE_BFF_SECRET_HASH:{noop}dev-console-bff}
-      redirect-uris: [ "${CONSOLE_ORIGIN:http://localhost:3200}/login/oauth2/code/console" ]
-      post-logout-redirect-uris: [ "${CONSOLE_ORIGIN:http://localhost:3200}/" ]
+  # OAuth clients (S-122, docs/runbooks/README.md § OAuth clients): reconciled into auth.oauth2_registered_client at every
+  # start (create/update, never delete) and by `./gradlew :auth:oauthClients --args='sync'` (Kubernetes Job). Secrets are
+  # the *encoded* values ({bcrypt}…) from the secrets manager; {noop}… only for local development. The matching plain
+  # secret goes to the BFF (STUDIO_BFF_SECRET). Unset properties take the defaults in ClientSpec (authorization_code +
+  # refresh_token, PKCE, no consent, access 10 min, rotating refresh 12 h = session idle, ES256 ID tokens).
+  oauth:
+    sync-on-startup: ${OAUTH_CLIENTS_SYNC_ON_STARTUP:true}
+    clients:
+      studio-bff:
+        type: confidential
+        secret-hash: ${STUDIO_BFF_SECRET_HASH:{noop}dev-studio-bff}
+        redirect-uris: [ "${STUDIO_ORIGIN:http://localhost:3100}/login/oauth2/code/studio" ]
+        post-logout-redirect-uris: [ "${STUDIO_ORIGIN:http://localhost:3100}/sign-in" ]
+        scopes: [ openid, profile, merchant ]
+      consumer-bff:                    # the consumer BFF isn't built yet (E-7): registered only once its hash is set
+        type: confidential
+        optional: true
+        secret-hash: ${CONSUMER_BFF_SECRET_HASH:}
+        redirect-uris: [ "${CONSUMER_ORIGIN:http://localhost:3000}/login/oauth2/code/northline" ]
+        post-logout-redirect-uris: [ "${CONSUMER_ORIGIN:http://localhost:3000}/" ]
+        scopes: [ openid, profile, orders, bookings ]
+      console-bff:                     # the console isn't built yet (E-8): registered only once its hash is set
+        type: confidential
+        optional: true
+        secret-hash: ${CONSOLE_BFF_SECRET_HASH:}
+        redirect-uris: [ "${CONSOLE_ORIGIN:http://localhost:3200}/login/oauth2/code/console" ]
+        post-logout-redirect-uris: [ "${CONSOLE_ORIGIN:http://localhost:3200}/" ]
+        scopes: [ openid, profile, console ]
+      # Mobile (S-28/S-29) and partner clients are added here, or in an environment's extra configuration file
+      # (SPRING_CONFIG_ADDITIONAL_LOCATION) — see the runbook. application-local.yml declares the mobile ones.
   # Provider switches (ca.northline.platform) — see docs/runbooks/README.md.
   kms:
     provider: ${KMS_PROVIDER:local}    # token signing keys (S-7): local | aws | gcp | azure

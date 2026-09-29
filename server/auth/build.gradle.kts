@@ -45,6 +45,16 @@ tasks.register<JavaExec>("signingKeys") {
     mainClass.set("ca.northline.auth.signing.SigningKeysCommand")
 }
 
+// OAuth clients (S-122, docs/runbooks/README.md § OAuth clients): ./gradlew :auth:oauthClients --args='list|sync'
+// Profile: SPRING_PROFILES_ACTIVE, else `local`; database and client settings as for the server (env, server/.env).
+tasks.register<JavaExec>("oauthClients") {
+    group = "northline"
+    description = "list | sync the OAuth clients configured under northline.oauth.clients into the database"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("ca.northline.auth.clients.OAuthClientsCommand")
+    systemProperty("spring.profiles.active", System.getenv("SPRING_PROFILES_ACTIVE") ?: "local")
+}
+
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
     // `./gradlew :auth:bootRun --args='--spring.profiles.active=local'`
     jvmArgs("-Xmx512m")
