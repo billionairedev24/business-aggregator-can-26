@@ -2,6 +2,7 @@
 # payments module would fall back to its fake gateway.
 northline.required-env:
   payments: STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY
+  storage: STORAGE_PROVIDER, STORAGE_BUCKET   # s3 | gcs | azure; `local` is refused at start-up (S-10)
 springdoc:                              # the OpenAPI document and Swagger UI are not published in production
   api-docs.enabled: false
   swagger-ui.enabled: false
