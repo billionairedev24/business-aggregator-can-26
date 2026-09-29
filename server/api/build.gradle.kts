@@ -1,3 +1,5 @@
+import java.util.Properties
+
 // Developer tooling (Flyway CLI wrapper, category seeder). Separate source set so it never ships in the boot jar
 // and is invisible to Spring Modulith's module scan.
 val tools: SourceSet by sourceSets.creating {
@@ -6,6 +8,7 @@ val tools: SourceSet by sourceSets.creating {
 }
 
 dependencies {
+    implementation(project(":platform"))
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
@@ -66,6 +69,14 @@ tasks.processResources {
 
 // ./gradlew :api:flywayMigrate [-Pdb.url=jdbc:postgresql://localhost:5432/northline] [-Pdb.user=…] [-Pdb.password=…] [-Pdb.devSeed=true]
 // ./gradlew :api:seedCategories  (same -Pdb.* properties)
+// Each -Pdb.* falls back to DB_URL / DB_USER / DB_PASSWORD from the environment, then from server/.env, then the default.
+val dotEnv = Properties().apply {
+    val file = rootProject.file(".env")
+    if (file.isFile) file.reader().use { load(it) }
+}
+fun dbSetting(property: String, env: String, default: String): String =
+    providers.gradleProperty(property).orElse(providers.environmentVariable(env)).getOrElse(dotEnv.getProperty(env) ?: default)
+
 fun JavaExec.dbTool(command: String) {
     group = "database"
     classpath = tools.runtimeClasspath + sourceSets.main.get().output
@@ -73,9 +84,9 @@ fun JavaExec.dbTool(command: String) {
     dependsOn(tasks.named("processResources"), tasks.named("toolsClasses"))
     args(command)
     systemProperty("logback.configurationFile", file("src/tools/logback-tools.xml").absolutePath)
-    systemProperty("db.url", providers.gradleProperty("db.url").getOrElse("jdbc:postgresql://localhost:5432/northline"))
-    systemProperty("db.user", providers.gradleProperty("db.user").getOrElse("northline"))
-    systemProperty("db.password", providers.gradleProperty("db.password").getOrElse("northline"))
+    systemProperty("db.url", dbSetting("db.url", "DB_URL", "jdbc:postgresql://localhost:5432/northline"))
+    systemProperty("db.user", dbSetting("db.user", "DB_USER", "northline"))
+    systemProperty("db.password", dbSetting("db.password", "DB_PASSWORD", "northline"))
     systemProperty("db.devSeed", providers.gradleProperty("db.devSeed").getOrElse("false"))
 }
 tasks.register<JavaExec>("flywayMigrate") {

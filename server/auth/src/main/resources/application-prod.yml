@@ -1,0 +1,2 @@
+# Production (also activates `cloud`, see application-cloud.yml). ClientSeeder is off under prod: OAuth clients must
+# already exist in auth.oauth2_registered_client (see docs/runbooks/prod.md, "Blockers").

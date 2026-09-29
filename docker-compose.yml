@@ -1,42 +1,137 @@
-# Local stack. All data stays on your machine; prod runs in AWS ca-central-1.
+# Local stand-ins for the managed services the apps use in the cloud. Every service sits behind a compose profile, so
+# you start only what you don't already run yourself (e.g. your own Postgres + PostGIS and Valkey):
+#
+#   docker compose --profile db --profile cache up -d     # Postgres 17 + PostGIS, Valkey 8
+#   docker compose --profile all up -d                    # everything below except the `tools` UIs
+#   COMPOSE_PROFILES=events,search,mail docker compose up -d   # or set COMPOSE_PROFILES in .env
+#
+# Profiles: db · cache · events · search · mail · storage · payments · all · tools (Kafka UI, Kibana).
+# Ports and credentials come from .env (copy .env.example); the defaults match the apps' defaults
+# (server/.env.example). Full guide: docs/runbooks/local.md. Data stays on your machine.
+name: northline
+
 services:
-  postgres:
+  postgres:                                   # --profile db
+    profiles: [db, all]
     image: postgis/postgis:17-3.5
-    environment: { POSTGRES_DB: northline, POSTGRES_USER: northline, POSTGRES_PASSWORD: northline }
-    ports: ["5432:5432"]
+    environment:
+      POSTGRES_DB: ${PG_DATABASE:-northline}
+      POSTGRES_USER: ${PG_USER:-northline}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-northline}
+    ports: ["${PG_PORT:-5432}:5432"]
     volumes: [pg:/var/lib/postgresql/data]
-    healthcheck: { test: ["CMD-SHELL", "pg_isready -U northline"], interval: 5s, retries: 10 }
-  redis:
-    image: redis:8-alpine
-    ports: ["6379:6379"]
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:9.1.3
-    environment: { discovery.type: single-node, xpack.security.enabled: "false", ES_JAVA_OPTS: "-Xms1g -Xmx1g" }
-    ports: ["9200:9200"]
-    volumes: [es:/usr/share/elasticsearch/data]
-  kibana:
-    image: docker.elastic.co/kibana/kibana:9.1.3
-    environment: { ELASTICSEARCH_HOSTS: http://elasticsearch:9200 }
-    ports: ["5601:5601"]
-    depends_on: [elasticsearch]
-  kafka:
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U ${PG_USER:-northline}"], interval: 5s, retries: 10 }
+
+  valkey:                                     # --profile cache  (Redis-protocol compatible; the apps use REDIS_*)
+    profiles: [cache, all]
+    image: valkey/valkey:8-alpine
+    command: ["valkey-server", "--save", "", "--appendonly", "no"]
+    ports: ["${VALKEY_PORT:-6379}:6379"]
+    healthcheck: { test: ["CMD", "valkey-cli", "ping"], interval: 5s, retries: 10 }
+
+  kafka:                                      # --profile events  (KRaft, single node)
+    profiles: [events, all]
     image: apache/kafka:4.1.0
-    ports: ["9092:9092"]
+    ports: ["${KAFKA_PORT:-9092}:9092"]
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      # HOST = apps on your machine (localhost:$KAFKA_PORT); INTERNAL = other containers (kafka:29092).
+      KAFKA_LISTENERS: HOST://:9092,INTERNAL://:29092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: HOST://localhost:${KAFKA_PORT:-9092},INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: HOST:PLAINTEXT,INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
-  kafka-ui:
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --list >/dev/null"]
+      interval: 10s
+      retries: 12
+
+  kafka-topics:                               # one-shot: creates every topic + .dlq (scripts/topics.sh), then exits
+    profiles: [events, all]
+    image: apache/kafka:4.1.0
+    depends_on: { kafka: { condition: service_healthy } }
+    environment:
+      KAFKA_TOPICS_CMD: /opt/kafka/bin/kafka-topics.sh
+      KAFKA_TOPICS_BOOTSTRAP: kafka:29092
+    volumes: ["./scripts/topics.sh:/topics.sh:ro"]
+    entrypoint: ["sh", "/topics.sh"]
+    restart: "no"
+
+  elasticsearch:                              # --profile search  (security off: local only)
+    profiles: [search, all]
+    image: elasticsearch:9.1.3
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms${ES_HEAP:-1g} -Xmx${ES_HEAP:-1g}"
+    ports: ["${ES_PORT:-9200}:9200"]
+    volumes: [es:/usr/share/elasticsearch/data]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health >/dev/null"]
+      interval: 10s
+      retries: 30
+
+  mailpit:                                    # --profile mail  (SMTP :1025, web UI :8025)
+    profiles: [mail, all]
+    image: axllent/mailpit:v1.29
+    ports: ["${MAILPIT_SMTP_PORT:-1025}:1025", "${MAILPIT_UI_PORT:-8025}:8025"]
+
+  storage:                                    # --profile storage  (S3-compatible; see docs/runbooks/local.md)
+    profiles: [storage, all]
+    # MinIO no longer publishes images on Docker Hub; RustFS speaks the same S3 API. Any S3-compatible server works
+    # (point STORAGE_ENDPOINT in server/.env at it). S3 API on :9100, console on :9101 (northline-auth owns :9000).
+    image: rustfs/rustfs:1.0.0
+    environment:
+      RUSTFS_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-northline}
+      RUSTFS_SECRET_KEY: ${STORAGE_SECRET_KEY:-northline-dev-secret}
+      RUSTFS_CONSOLE_ENABLE: "true"
+    ports: ["${STORAGE_PORT:-9100}:9000", "${STORAGE_CONSOLE_PORT:-9101}:9001"]
+    volumes: [objects:/data]
+
+  storage-bucket:                             # one-shot: creates the bucket, then exits
+    profiles: [storage, all]
+    image: amazon/aws-cli:2.31.0
+    depends_on: [storage]
+    environment:
+      AWS_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY:-northline}
+      AWS_SECRET_ACCESS_KEY: ${STORAGE_SECRET_KEY:-northline-dev-secret}
+      AWS_DEFAULT_REGION: ${STORAGE_REGION:-ca-central-1}
+      BUCKET: ${STORAGE_BUCKET:-northline-local}
+    entrypoint:
+      - sh
+      - -c
+      - |
+        for i in $$(seq 1 30); do
+          aws --endpoint-url http://storage:9000 s3api head-bucket --bucket "$$BUCKET" 2>/dev/null && exit 0
+          aws --endpoint-url http://storage:9000 s3 mb "s3://$$BUCKET" && exit 0
+          sleep 1
+        done
+        exit 1
+    restart: "no"
+
+  stripe-mock:                                # --profile payments  (STRIPE_API_BASE=http://localhost:12111)
+    profiles: [payments, all]
+    image: stripe/stripe-mock:v0.197.0
+    ports: ["${STRIPE_MOCK_PORT:-12111}:12111"]
+
+  kafka-ui:                                   # --profile tools
+    profiles: [tools]
     image: provectuslabs/kafka-ui:latest
-    environment: { KAFKA_CLUSTERS_0_NAME: local, KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092 }
-    ports: ["8090:8080"]
-    depends_on: [kafka]
-  mailpit:
-    image: axllent/mailpit
-    ports: ["8025:8025", "1025:1025"]
-volumes: { pg: {}, es: {} }
+    environment: { KAFKA_CLUSTERS_0_NAME: local, KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "kafka:29092" }
+    ports: ["${KAFKA_UI_PORT:-8190}:8080"]
+    depends_on: { kafka: { condition: service_started, required: false } }
+
+  kibana:                                     # --profile tools
+    profiles: [tools]
+    image: kibana:9.1.3
+    environment: { ELASTICSEARCH_HOSTS: "http://elasticsearch:9200" }
+    ports: ["${KIBANA_PORT:-5601}:5601"]
+    depends_on: { elasticsearch: { condition: service_started, required: false } }
+
+volumes: { pg: {}, es: {}, objects: {} }

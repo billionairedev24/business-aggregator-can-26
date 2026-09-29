@@ -1,0 +1,4 @@
+# Optional add-on to `local`: `--spring.profiles.active=local,valkey` keeps HTTP sessions in your Valkey/Redis
+# (REDIS_HOST, REDIS_PORT, REDIS_PASSWORD…) instead of memory, as in the cloud — sessions then survive restarts.
+spring.autoconfigure.exclude: ""        # undo local's exclusion of the Redis session auto-configuration
+management.health.redis.enabled: true

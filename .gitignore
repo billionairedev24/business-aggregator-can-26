@@ -1,0 +1,4 @@
+# Local configuration with secrets — copy the matching .env.example instead.
+.env
+.env.*
+!.env.example

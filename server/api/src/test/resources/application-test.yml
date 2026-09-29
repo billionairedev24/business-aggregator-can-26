@@ -17,3 +17,6 @@ management:
 logging.level:
   org.testcontainers: warn
   tc: warn
+northline:                               # a STRIPE_SECRET_KEY exported in the shell must never reach Stripe from tests
+  payments.stripe-secret-key: ""
+  stripe.secret-key: ""

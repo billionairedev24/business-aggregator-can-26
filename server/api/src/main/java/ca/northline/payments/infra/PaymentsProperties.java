@@ -10,9 +10,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param stripeSecretKey Stripe platform secret key; when blank the local fake gateway is used
  * @param stripePublishableKey for Stripe.js (Financial Connections in the Studio)
  * @param evidenceDir where dispute evidence is written under local/test
+ * @param stripeApiBase Stripe API base URL override, e.g. {@code http://localhost:12111} for stripe-mock; blank = Stripe
  */
 @ConfigurationProperties("northline.payments")
 record PaymentsProperties(
         @Nullable String stripeSecretKey,
         @Nullable String stripePublishableKey,
-        @Nullable Path evidenceDir) {}
+        @Nullable Path evidenceDir,
+        @Nullable String stripeApiBase) {}

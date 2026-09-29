@@ -33,14 +33,26 @@ import org.springframework.stereotype.Component;
 @EnableConfigurationProperties(StripeConnectAccountGateway.Properties.class)
 class StripeConnectAccountGateway implements ConnectAccountGateway {
 
+    /**
+     * @param secretKey Stripe platform secret key
+     * @param apiBase API base URL override (stripe-mock locally); blank = Stripe
+     */
     @ConfigurationProperties("northline.stripe")
-    record Properties(@Nullable String secretKey) {}
+    record Properties(@Nullable String secretKey, @Nullable String apiBase) {}
 
     private final @Nullable StripeClient client;
 
     StripeConnectAccountGateway(Properties properties) {
         var key = properties.secretKey();
-        this.client = key == null || key.isBlank() ? null : new StripeClient(key);
+        this.client = key == null || key.isBlank() ? null : stripe(key, properties.apiBase());
+    }
+
+    private static StripeClient stripe(String key, @Nullable String apiBase) {
+        var builder = StripeClient.builder().setApiKey(key);
+        if (apiBase != null && !apiBase.isBlank()) {
+            builder.setApiBase(apiBase).setConnectBase(apiBase).setFilesBase(apiBase);
+        }
+        return builder.build();
     }
 
     @Override

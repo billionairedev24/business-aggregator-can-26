@@ -1,0 +1,22 @@
+# Shape shared by the deployed environments. Activated by the `dev`, `staging` and `prod` profiles (profile group in
+# application.yml); never activate it directly. Values come from the environment (Kubernetes Secret / ConfigMap filled
+# from the cloud's secrets manager — docs/runbooks/dev.md, staging.md, prod.md).
+#
+# Compared with `local`: no dev seed (Flyway applies classpath:db/migration only), no dev auth (tokens from
+# northline-auth), Kafka externalization on, Redis/Valkey and Elasticsearch health on. Unconfigured adapters (storage,
+# registries, SMS, …) make the feature fail loudly until their story lands — see the runbooks' "blockers" section.
+northline.required-env:                 # checked before start-up (ca.northline.platform.RequiredEnvironmentCheck)
+  database: DB_URL, DB_USER, DB_PASSWORD
+  cache: REDIS_HOST
+  events: KAFKA_BOOTSTRAP
+  search: ES_URIS
+  public-urls: AUTH_ISSUER, STUDIO_ORIGIN
+  secrets: WEBHOOK_SECRET_KEY
+management:
+  endpoint.health.probes.enabled: true  # /actuator/health/liveness and /readiness for Kubernetes
+  # OpenTelemetry export stays off until a collector exists (S-111); OTEL_EXPORT_ENABLED=true turns it on.
+  logging.export.enabled: ${OTEL_EXPORT_ENABLED:false}
+  otlp.metrics.export.enabled: ${OTEL_EXPORT_ENABLED:false}
+  tracing.export.enabled: ${OTEL_EXPORT_ENABLED:false}
+logging.level:
+  ca.northline: info

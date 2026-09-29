@@ -1,0 +1,166 @@
+# Local runbook — from clone to a signed-in Studio
+
+Everything runs on your machine. You can use **your own Postgres and Valkey** or start **Docker stand-ins** for
+anything you don't have, one service at a time (compose profiles). The Spring profile `local` needs only Postgres.
+
+## 1. Prerequisites
+
+| what | version | notes |
+|---|---|---|
+| git | any | |
+| JDK | **25** | `export JAVA_HOME=/path/to/jdk-25`. Gradle 9.8 comes with the wrapper (`server/gradlew`). |
+| Node.js + pnpm | Node 22+, pnpm 10.17 | `corepack enable` picks the pnpm version from `web/package.json`. |
+| PostgreSQL | **17** with **PostGIS 3.5** | yours, or Docker (`--profile db`). Extensions used: `postgis`, `citext`, `pgcrypto`. |
+| Valkey or Redis | Valkey 8 / Redis 7+ | optional: only for `local,valkey` (sessions in Valkey) and the worker. Yours, or Docker (`--profile cache`). |
+| Docker + Compose v2.20+ | | only for the stand-ins you don't run yourself (Kafka, Elasticsearch, Mailpit, S3 storage, stripe-mock). |
+| An authenticator app or `oathtool` | | to sign in as a seeded persona with real auth (step 5). |
+
+Ports used by default: api **8080**, northline-auth **9000**, studio-bff **8082**, Studio **3100**, Postgres 5432,
+Valkey 6379, Kafka 9092, Elasticsearch 9200, Mailpit 1025/8025, S3 storage 9100/9101, stripe-mock 12111.
+
+## 2. Configure
+
+```sh
+git clone https://github.com/billionairedev24/business-aggregator-can-26.git northline && cd northline
+cp .env.example .env                                   # docker compose: which stand-ins, ports
+cp server/.env.example server/.env                     # api / auth / bff / worker settings
+cp web/apps/studio/.env.example web/apps/studio/.env   # Studio dev server
+```
+
+- `server/.env` is read by the apps at start-up (not by tests) and by the Gradle DB tasks. Every value in the example
+  is already the built-in default, so you only change what differs on your machine — typically `DB_URL`,
+  `DB_USER`, `DB_PASSWORD`, and `REDIS_*` if your Valkey has a password or another port.
+  Format: `KEY=value`, no quotes, no `export`. A real environment variable always wins over the file.
+- All three `.env` files are git-ignored.
+
+## 3. Postgres
+
+**Your own Postgres 17 + PostGIS** — create a role and database once (as a superuser, because `postgis` is not a
+trusted extension):
+
+```sh
+psql -U postgres -c "create role northline login password 'northline'"
+psql -U postgres -c "create database northline owner northline"
+psql -U postgres -d northline -c "create extension if not exists postgis; create extension if not exists citext; create extension if not exists pgcrypto"
+```
+
+Installing PostGIS: macOS `brew install postgresql@17 postgis`; Debian/Ubuntu (PGDG repo)
+`apt install postgresql-17 postgresql-17-postgis-3`. Then set `DB_URL`/`DB_USER`/`DB_PASSWORD` in `server/.env`.
+
+**Or Docker:** `docker compose --profile db up -d` (PostGIS 17-3.5 on `PG_PORT`, default 5432, user/password/db
+`northline`). If 5432 is taken by your own Postgres, set `PG_PORT=5433` in `.env` and
+`DB_URL=jdbc:postgresql://localhost:5433/northline` in `server/.env`.
+
+**Migrate and seed** (from `server/`; the tasks read `DB_*` from `server/.env`, or take `-Pdb.url=… -Pdb.user=…
+-Pdb.password=…`):
+
+```sh
+cd server
+./gradlew :api:flywayMigrate -Pdb.devSeed=true   # db/migrations + db/seed-dev personas (optional: the api and auth also migrate on start under `local`)
+./gradlew :api:seedCategories                    # db/seed/categories.json — required once, nothing else loads categories
+```
+
+## 4. Studio with dev auth (fastest — api + Postgres only)
+
+```sh
+cd server && ./gradlew :api:bootRun --args='--spring.profiles.active=local'   # :8080, accepts X-Dev-User
+curl -H 'X-Dev-User: 01J9ZD3V00000000000000RAV1' localhost:8080/api/v1/me/businesses
+```
+
+In `web/apps/studio/.env` set `NL_DEV_USER=01J9ZD3V00000000000000RAV1` (Ravi Sandhu, owner of the three seeded
+businesses) and `VITE_NL_DEV_STEP_UP=1`, then:
+
+```sh
+cd web && pnpm install && pnpm dev          # http://localhost:3100 — already signed in as Ravi
+```
+
+Dev auth exists only under the `local` profile (`DevAuthFilter`); it logs a banner at start-up. Settings › Security
+needs the auth server (step 5).
+
+## 5. Studio with real sign-in (auth + api + bff, still Postgres only)
+
+```sh
+cd server
+./gradlew :auth:bootRun --args='--spring.profiles.active=local'   # :9000 — migrates + seeds too; SMS codes are logged
+./gradlew :api:bootRun  --args='--spring.profiles.active=local'   # :8080
+./gradlew :bff:bootRun  --args='--spring.profiles.active=local'   # :8082 — in-memory sessions
+```
+
+Leave `NL_DEV_USER` empty in `web/apps/studio/.env` and run `cd web && pnpm dev`. Open http://localhost:3100 →
+**Sign in** → `ravi.sandhu@example.com` → Authenticator app → the code from
+`oathtool --totp -b NORTHLINERAVIDEVTOTPSECRET234567` (or backup code `ravis-00001` … `ravis-00010`, single use).
+Other personas and factors: README § Local sign-in. "Create account" works end to end: the 6-digit phone code is
+printed in the auth log (`Verification code for …`). Passkeys work on `localhost` (not `127.0.0.1`).
+
+**Sessions in your Valkey** (as in the cloud): start auth and bff with `--spring.profiles.active=local,valkey`.
+Sessions are stored under `nl:auth:*` and `nl:studio-bff:*` and survive restarts. Valkey from Docker:
+`docker compose --profile cache up -d`.
+
+## 6. Optional stand-ins
+
+Start any of them with `docker compose --profile <name> up -d`, or list them in `COMPOSE_PROFILES` in `.env` and run
+`docker compose up -d`. `--profile all` starts everything except `tools`.
+
+| profile | service | point the apps at it (`server/.env`) | used by |
+|---|---|---|---|
+| `db` | Postgres 17 + PostGIS | `DB_URL=jdbc:postgresql://localhost:5432/northline` | everything |
+| `cache` | Valkey 8 | `REDIS_HOST=localhost`, `REDIS_PORT=6379` | `local,valkey`, worker, non-`local` runs |
+| `events` | Kafka 4 (KRaft) + one-shot topic creation (`scripts/topics.sh`, takes ~2 min) | `KAFKA_BOOTSTRAP=localhost:9092` | worker; api without `local` |
+| `search` | Elasticsearch 9 (security off) | `ES_URIS=http://localhost:9200` | worker; api without `local` |
+| `mail` | Mailpit — inbox at http://localhost:8025 | `SMTP_HOST=localhost`, `SMTP_PORT=1025` | email adapter (S-13) |
+| `storage` | S3-compatible storage (RustFS) + bucket `northline-local`; console http://localhost:9101 | `STORAGE_ENDPOINT=http://localhost:9100`, `STORAGE_ACCESS_KEY=northline`, `STORAGE_SECRET_KEY=northline-dev-secret`, `STORAGE_PATH_STYLE=true` | storage adapter (S-10) |
+| `payments` | stripe-mock | `STRIPE_SECRET_KEY=sk_test_123`, `STRIPE_API_BASE=http://localhost:12111` | api payments + Stripe Connect instead of the fake |
+| `tools` | Kafka UI :8190, Kibana :5601 | — | you |
+
+Notes:
+- **Storage:** MinIO no longer publishes images on Docker Hub, so the `storage` profile runs RustFS (same S3 API).
+  An existing MinIO or any S3-compatible server works the same way through `STORAGE_ENDPOINT`. Nothing reads these
+  variables yet: under `local` uploads go to folders in the temp directory until S-10.
+- **Mail:** nothing sends email yet (team invitations are logged, S-13); Mailpit is ready for it.
+- **Your own Kafka:** create the topics with
+  `KAFKA_TOPICS_CMD=kafka-topics.sh KAFKA_TOPICS_BOOTSTRAP=localhost:9092 scripts/topics.sh`.
+- **Worker:** `cd server && ./gradlew :worker:bootRun` (no profile) needs Postgres, Kafka (`events`) and
+  Elasticsearch (`search`). The indexer is still a stub (S-43).
+- Stop: `docker compose --profile all down` (add `-v` to delete the data volumes).
+
+## 7. Rehearse the cloud shape locally (optional)
+
+To check a `dev`/`staging`/`prod` configuration before deploying it, run the apps with that profile against the
+stand-ins. Use a separate database — the cloud profiles never load the dev seed:
+
+```sh
+docker compose --profile db --profile cache --profile events --profile search up -d
+docker compose exec postgres psql -U northline -c 'create database northline_dev'
+export SPRING_PROFILES_ACTIVE=dev DB_URL=jdbc:postgresql://localhost:5432/northline_dev DB_USER=northline DB_PASSWORD=northline \
+  REDIS_HOST=localhost KAFKA_BOOTSTRAP=localhost:9092 ES_URIS=http://localhost:9200 \
+  AUTH_ISSUER=http://localhost:9000 API_URL=http://localhost:8080 STUDIO_ORIGIN=http://localhost:3100 \
+  CONSUMER_ORIGIN=http://localhost:3000 CONSOLE_ORIGIN=http://localhost:3200 WEBAUTHN_RP_ID=localhost \
+  TOTP_KEY=$(openssl rand -base64 32) WEBHOOK_SECRET_KEY=$(openssl rand -base64 32) STUDIO_BFF_SECRET=s1 \
+  STUDIO_BFF_SECRET_HASH='{noop}s1' CONSUMER_BFF_SECRET_HASH='{noop}s2' CONSOLE_BFF_SECRET_HASH='{noop}s3'
+cd server && ./gradlew :api:bootRun     # first: the api applies the migrations
+./gradlew :auth:bootRun & ./gradlew :bff:bootRun & ./gradlew :worker:bootRun
+curl localhost:8080/actuator/health/readiness
+```
+
+Leave a variable out and the app stops with the list of what is missing. Under `dev` nobody can sign in yet: there are
+no seeded users and registration needs an SMS provider (S-8). Move `server/.env` aside while you do this, or its
+values fill in what you meant to leave out.
+
+## 8. Troubleshooting
+
+| symptom | fix |
+|---|---|
+| `Bind for 0.0.0.0:5432 failed: port is already allocated` | another Postgres uses the port: change `PG_PORT` in `.env` and `DB_URL` in `server/.env`, or use your own Postgres and drop `db` from the compose profiles. Same for the other ports. |
+| `extension "postgis" is not available` | install PostGIS for your Postgres 17 (step 3). |
+| `permission denied to create extension "postgis"` | create the three extensions once as a superuser (step 3). |
+| Flyway `Validate failed` / checksum mismatch | a local database from an older checkout: drop and recreate it, then migrate again. |
+| `APPLICATION FAILED TO START … need environment variables that are not set` | you started with `dev`/`staging`/`prod`. Use `--spring.profiles.active=local`, or set the listed variables (step 7). |
+| `WRONGPASS` / `NOAUTH` from Valkey | set `REDIS_PASSWORD` (and `REDIS_USERNAME` for an ACL user) in `server/.env`. |
+| A value from `server/.env` has quotes in it | the file is read as Java properties: write `KEY=value` without quotes. |
+| Studio keeps returning to Sign in | the bff (8082) or auth (9000) is not running, or `NL_DEV_USER` is set while you meant real auth. Cookies are `Secure` outside `local`, so run auth and bff with `local` on http. |
+| "Settings › Security" shows an error under dev auth | expected: it needs northline-auth (step 5). |
+| Authenticator code rejected | your clock is off; sync it. Codes are 30 s, ±1 step, and a used code can't be reused. |
+| Passkey prompt fails | use `http://localhost:3100`, not `127.0.0.1` (WebAuthn RP id is `localhost`). |
+| Worker logs `UNKNOWN_TOPIC_OR_PARTITION` | topics missing: wait for the `kafka-topics` one-shot to finish (`docker compose logs kafka-topics`) or run `scripts/topics.sh`. |
+| Elasticsearch exits with code 137 | not enough memory for Docker: lower `ES_HEAP` in `.env` (e.g. `512m`). |
+| `pull access denied for minio/minio` | MinIO images are gone from Docker Hub; the `storage` profile uses RustFS. |

@@ -24,8 +24,12 @@ class PaymentsGatewayConfig {
     @Bean
     @ConditionalOnExpression(HAS_KEY)
     StripeConnectGateway stripeConnectGateway(PaymentsProperties props) {
-        return new StripeConnectGateway(
-                new StripeClient(Objects.requireNonNull(props.stripeSecretKey())), props.stripePublishableKey());
+        var client = StripeClient.builder().setApiKey(Objects.requireNonNull(props.stripeSecretKey()));
+        var base = props.stripeApiBase();
+        if (base != null && !base.isBlank()) {
+            client.setApiBase(base).setConnectBase(base).setFilesBase(base);
+        }
+        return new StripeConnectGateway(client.build(), props.stripePublishableKey());
     }
 
     @Bean

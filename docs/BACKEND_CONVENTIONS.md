@@ -20,8 +20,9 @@ Always `JAVA_HOME=/usr/lib/jvm/java-25-openjdk-amd64` (or any JDK 25). From `ser
 
 `local` profile = Postgres only. No auth server, Kafka, Elasticsearch or Redis needed. It applies `db/seed-dev`
 (V100–V109) on top of the migrations, turns Kafka externalization off and enables **dev auth** (below). Point it at
-another database with `DB_URL=jdbc:postgresql://localhost:5432/<db> DB_USER=… DB_PASSWORD=…`, and change the port
-with `SERVER_PORT`. Categories are not seeded automatically: run `seedCategories` against the same DB once.
+another database with `DB_URL=jdbc:postgresql://localhost:5432/<db> DB_USER=… DB_PASSWORD=…` (environment or
+`server/.env`, see `server/.env.example`), and change the port with `SERVER_PORT`. Profiles `dev`/`staging`/`prod`
+and every variable: `docs/runbooks/README.md`. Categories are not seeded automatically: run `seedCategories` against the same DB once.
 
 ### Dev auth (profile `local` only)
 Send `X-Dev-User: <identity.users id>`. The api mints an in-memory token with `scope=openid profile merchant`,

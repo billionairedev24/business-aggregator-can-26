@@ -6,7 +6,8 @@ Implementation scaffold generated from the design project. Read `CLAUDE.md` firs
 ```
 CLAUDE.md                     agent instructions — spec precedence, stack, non-negotiables
 README.md
-docker-compose.yml            local infra: Postgres 17 + PostGIS, Redis, Kafka, OpenSearch, Keycloak
+docker-compose.yml            local stand-ins behind compose profiles: Postgres 17 + PostGIS, Valkey, Kafka, Elasticsearch, Mailpit, S3 storage, stripe-mock
+.env.example, server/.env.example, web/apps/studio/.env.example   every setting, with local defaults
 db/migrations/V001..V018      Flyway migrations, one schema per module; V016 = spec constraints & triggers
 db/seed/categories.json       grouped taxonomy (~120 services, shop departments, food types) with regulators
 docs/ARCHITECTURE.md          components, connections, end-to-end flows
@@ -15,6 +16,7 @@ docs/spec/legal-details.schema.json   per-structure legal fields (sole … nonpr
 docs/spec/storefront-sections.json    page-builder section library with on/off semantics
 docs/spec/validation-rules.md         every validation rule and its exact message
 docs/DECISIONS.md             log anything the spec didn't decide
+docs/runbooks/                how to run each environment: local, dev, staging, prod (services, variables, secrets per cloud)
 design/                       HTML design references (open in a browser) + design tokens
 ```
 
@@ -33,10 +35,20 @@ design/                       HTML design references (open in a browser) + desig
 
 Design files load `theme/northline.css` and `support.js`; keep the folder structure intact to open them.
 
-## Getting started (backend)
-Needs JDK 25 (`export JAVA_HOME=/path/to/jdk-25`) and Docker. Details: `docs/BACKEND_CONVENTIONS.md`.
+## Getting started
+**Step-by-step guide: [`docs/runbooks/local.md`](docs/runbooks/local.md)** — prerequisites, using your own Postgres +
+PostGIS and Valkey or Docker stand-ins, dev auth and real sign-in, troubleshooting. Cloud environments:
+[`docs/runbooks/`](docs/runbooks/README.md) (dev, staging, prod on AWS, Google Cloud or Azure).
+
+Configuration is environment variables with local defaults: copy `.env.example` → `.env` (docker compose),
+`server/.env.example` → `server/.env` (the apps read it on start-up) and `web/apps/studio/.env.example` →
+`web/apps/studio/.env`. Spring profiles: `local` (fakes, dev seed, dev auth), `dev` / `staging` / `prod` (cloud shape,
+required variables checked at start-up), `test`.
+
+Needs JDK 25 (`export JAVA_HOME=/path/to/jdk-25`), and Docker for any stand-in you don't run yourself. Details:
+`docs/BACKEND_CONVENTIONS.md`.
 ```
-docker compose up -d postgres                     # PostGIS 17 on :5432 (northline/northline)
+docker compose --profile db up -d                 # PostGIS 17 on :5432 (northline/northline) — or use your own
 cd server
 ./gradlew build                                   # compile all 4 apps, Error Prone/NullAway, Checkstyle, Spotless, tests (Testcontainers)
 ./gradlew :api:flywayMigrate                      # db/migrations → localhost:5432/northline (-Pdb.url=… for another DB, -Pdb.devSeed=true for personas)
@@ -45,12 +57,13 @@ cd server
 curl -H 'X-Dev-User: 01J9ZD3V00000000000000RAV1' localhost:8080/api/v1/me/businesses
 ```
 The `local` profile needs only Postgres. It applies the dev personas from `db/seed-dev`, authenticates the
-`X-Dev-User` header without the auth server, and keeps Kafka, Elasticsearch and Redis off. For the full stack, run
-`docker compose up -d` and `scripts/topics.sh`, then start `:auth:bootRun` and `:api:bootRun` without `local`.
+`X-Dev-User` header without the auth server, and keeps Kafka, Elasticsearch and Redis off. Other stand-ins start per
+compose profile (`--profile cache|events|search|mail|storage|payments`, or `--profile all`); Kafka topics are created
+by the `events` profile. See `docs/runbooks/local.md` § 6.
 
 ## Studio without auth (fastest way to click through)
 ```
-# one Postgres (docker compose up -d postgres), then from server/:
+# one Postgres (docker compose --profile db up -d, or your own), then from server/:
 ./gradlew :api:flywayMigrate -Pdb.url=jdbc:postgresql://localhost:5432/northline -Pdb.devSeed=true
 ./gradlew :api:seedCategories -Pdb.url=jdbc:postgresql://localhost:5432/northline
 ./gradlew :api:bootRun --args='--spring.profiles.active=local'          # api :8080, accepts X-Dev-User
