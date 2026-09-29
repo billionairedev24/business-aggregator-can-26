@@ -92,6 +92,11 @@ Leave `NL_DEV_USER` empty in `web/apps/studio/.env` and run `cd web && pnpm dev`
 Other personas and factors: README § Local sign-in. "Create account" works end to end: the 6-digit phone code is
 printed in the auth log (`Verification code for …`). Passkeys work on `localhost` (not `127.0.0.1`).
 
+**Signing keys:** northline-auth keeps its ES256 key pair in `~/.northline/auth-signing-keys/signing-keys.jwks.json`
+(created on first start; `SIGNING_KEYS_DIR` moves it), so restarting auth keeps you signed in and two auth instances
+pointed at the same directory share tokens. Rotate or inspect it with `./gradlew :auth:signingKeys --args='status'`
+([key-rotation.md](key-rotation.md)). Cloud KMS providers aren't needed locally (`KMS_PROVIDER=local`, the default).
+
 **Sessions in your Valkey** (as in the cloud): start auth and bff with `--spring.profiles.active=local,valkey`.
 Sessions are stored under `nl:auth:*` and `nl:studio-bff:*` and survive restarts. Valkey from Docker:
 `docker compose --profile cache up -d`.
@@ -136,6 +141,7 @@ export SPRING_PROFILES_ACTIVE=dev DB_URL=jdbc:postgresql://localhost:5432/northl
   AUTH_ISSUER=http://localhost:9000 API_URL=http://localhost:8080 STUDIO_ORIGIN=http://localhost:3100 \
   CONSUMER_ORIGIN=http://localhost:3000 CONSOLE_ORIGIN=http://localhost:3200 WEBAUTHN_RP_ID=localhost \
   TOTP_KEY=$(openssl rand -base64 32) WEBHOOK_SECRET_KEY=$(openssl rand -base64 32) STUDIO_BFF_SECRET=s1 \
+  KMS_PROVIDER=local SIGNING_KEYS_DIR=/tmp/northline-dev-keys \
   STUDIO_BFF_SECRET_HASH='{noop}s1' CONSUMER_BFF_SECRET_HASH='{noop}s2' CONSOLE_BFF_SECRET_HASH='{noop}s3'
 cd server && ./gradlew :api:bootRun     # first: the api applies the migrations
 ./gradlew :auth:bootRun & ./gradlew :bff:bootRun & ./gradlew :worker:bootRun
@@ -160,6 +166,7 @@ values fill in what you meant to leave out.
 | Studio keeps returning to Sign in | the bff (8082) or auth (9000) is not running, or `NL_DEV_USER` is set while you meant real auth. Cookies are `Secure` outside `local`, so run auth and bff with `local` on http. |
 | "Settings › Security" shows an error under dev auth | expected: it needs northline-auth (step 5). |
 | Authenticator code rejected | your clock is off; sync it. Codes are 30 s, ±1 step, and a used code can't be reused. |
+| `KMS_PROVIDER=local is not allowed under staging/prod` | rehearse `staging`/`prod` with a real KMS key (`KMS_PROVIDER`, `KMS_KEY_ID`; AWS also works against LocalStack with `KMS_ENDPOINT`), or rehearse `dev` |
 | Passkey prompt fails | use `http://localhost:3100`, not `127.0.0.1` (WebAuthn RP id is `localhost`). |
 | Worker logs `UNKNOWN_TOPIC_OR_PARTITION` | topics missing: wait for the `kafka-topics` one-shot to finish (`docker compose logs kafka-topics`) or run `scripts/topics.sh`. |
 | Elasticsearch exits with code 137 | not enough memory for Docker: lower `ES_HEAP` in `.env` (e.g. `512m`). |

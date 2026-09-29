@@ -54,6 +54,15 @@ class TokenClaimsTest extends AuthIntegrationTest {
         assertThat(JsonPath.<String>read(access, "$.scope")).contains("merchant");
         assertThat(JsonPath.<String>read(header(tokens.get("access_token")), "$.alg"))
                 .isEqualTo("ES256");
+        // kid = the published key's thumbprint (S-7): resource servers pick the key from the JWK set by it.
+        String kid = JsonPath.read(header(tokens.get("access_token")), "$.kid");
+        var jwks = mvc.perform(get("/oauth2/jwks"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(JsonPath.<List<String>>read(jwks, "$.keys[*].kid")).contains(kid);
+        assertThat(JsonPath.<List<Object>>read(jwks, "$.keys[*].d")).isEmpty();
 
         var id = payload(tokens.get("id_token"));
         assertThat(JsonPath.<String>read(id, "$.given_name")).isEqualTo("Amara");

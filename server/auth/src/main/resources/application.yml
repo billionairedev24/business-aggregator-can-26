@@ -82,10 +82,16 @@ northline:
       secret: ${CONSOLE_BFF_SECRET_HASH:{noop}dev-console-bff}
       redirect-uris: [ "${CONSOLE_ORIGIN:http://localhost:3200}/login/oauth2/code/console" ]
       post-logout-redirect-uris: [ "${CONSOLE_ORIGIN:http://localhost:3200}/" ]
-  # Provider switches (ca.northline.platform). Only `local` adapters exist yet — see docs/runbooks/README.md.
+  # Provider switches (ca.northline.platform) — see docs/runbooks/README.md.
   kms:
-    provider: ${KMS_PROVIDER:local}    # token signing keys (S-7)
-    key-id: ${KMS_KEY_ID:}
+    provider: ${KMS_PROVIDER:local}    # token signing keys (S-7): local | aws | gcp | azure
+    key-id: ${KMS_KEY_ID:}             # the key that signs (cloud providers): AWS key ARN, GCP key version, Azure key URL
+  auth.signing:                        # docs/runbooks/key-rotation.md
+    local-dir: ${SIGNING_KEYS_DIR:${user.home}/.northline/auth-signing-keys}   # local provider: JWK set file
+    published-key-ids: ${KMS_PUBLISHED_KEY_IDS:}   # cloud: keys published in the JWK set but not signing (rotation)
+    rotate-every: ${SIGNING_KEYS_ROTATE_EVERY:}    # local: automatic rotation, e.g. 90d (empty = by command only)
+    region: ${KMS_REGION:}             # AWS only; empty = AWS_REGION / the SDK default chain
+    endpoint: ${KMS_ENDPOINT:}         # AWS only; e.g. LocalStack
   sms:
     provider: ${SMS_PROVIDER:local}    # phone codes (S-8)
     from: ${SMS_FROM:}

@@ -13,6 +13,12 @@ dependencies {
     implementation("org.springframework.security:spring-security-webauthn") // passkeys (brings webauthn4j-core 0.31.x)
     implementation(libs.totp)
     implementation(libs.ulid)
+    // Token signing keys in a cloud KMS (S-7): only the provider selected by northline.kms.provider is instantiated.
+    implementation(libs.aws.kms) { exclude(group = "software.amazon.awssdk", module = "netty-nio-client") }
+    implementation(libs.gcp.kms)
+    implementation(libs.azure.keyvault.keys) { exclude(group = "com.azure", module = "azure-core-http-netty") }
+    implementation(libs.azure.identity) { exclude(group = "com.azure", module = "azure-core-http-netty") }
+    implementation(libs.azure.core.http.jdk) // JDK HttpClient instead of Netty for the Azure SDK
     runtimeOnly("org.postgresql:postgresql")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
@@ -29,6 +35,14 @@ dependencies {
 tasks.processResources {
     from(rootProject.file("../db/migrations")) { into("db/migration") }
     from(rootProject.file("../db/seed-dev")) { into("db/seed-dev") }
+}
+
+// Local signing keys (docs/runbooks/key-rotation.md): ./gradlew :auth:signingKeys --args='rotate'
+tasks.register<JavaExec>("signingKeys") {
+    group = "northline"
+    description = "status | rotate [--immediately] | retire <kid> for the local signing key file (SIGNING_KEYS_DIR)"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("ca.northline.auth.signing.SigningKeysCommand")
 }
 
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
