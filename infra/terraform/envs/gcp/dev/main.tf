@@ -22,6 +22,9 @@ provider "google-beta" {
   }
 }
 
+# Elastic Cloud: reads EC_API_KEY from the environment.
+provider "ec" {}
+
 # dev: smallest sizes, NAT shared, nothing protected from destroy; can be scaled to zero out of hours.
 module "northline" {
   source = "../../../stacks/gcp"
@@ -42,4 +45,12 @@ module "northline" {
   dns_zone_name       = "dev.northline.ca"
   bucket_name_suffix  = var.bucket_name_suffix
   deletion_protection = false
+
+  data_stores = {
+    postgres = { instance_size = "db-custom-1-3840", storage_gb = 20, high_availability = false, backup_retention_days = 7 }
+    cache    = { node_size = "SHARED_CORE_NANO", replicas = 0 }
+    # Managed Kafka is sized in vCPUs (minimum 3); tier is ignored.
+    kafka  = { tier = "-", capacity = 3, storage_gb = 100 }
+    search = { size = "2g", zone_count = 1 }
+  }
 }

@@ -1,9 +1,10 @@
 # Northline infrastructure (Terraform)
 
 Stories **S-2** (modules: one interface, AWS / Google Cloud / Azure implementations) and **S-3** (managed data
-stores). Everything lives in a Canadian region. **Nothing has been applied yet**: there are no cloud accounts or
-credentials. Every root passes `terraform validate` and a full `terraform plan` against mocked providers
-(`terraform test`), so the first real plan needs only credentials and a state bucket.
+stores: PostgreSQL 17 + PostGIS, Valkey/Redis, Kafka, Elasticsearch). Everything lives in a Canadian region.
+**Nothing has been applied yet**: there are no cloud accounts or credentials. Every root passes `terraform validate`
+and a full `terraform plan` against mocked providers (`terraform test`), so the first real plan needs only
+credentials (plus `EC_API_KEY` for Elastic Cloud) and a state bucket.
 
 How to operate it (accounts, bootstrap, plan/apply, outputs → environment variables, cost, teardown):
 [`docs/runbooks/infrastructure.md`](../../docs/runbooks/infrastructure.md).
@@ -19,7 +20,12 @@ infra/terraform/
 │   ├── registry       ECR / Artifact Registry / ACR
 │   ├── dns            Route 53 / Cloud DNS / Azure DNS public zone
 │   ├── storage        S3 / Cloud Storage / Blob Storage buckets (uploads)
-│   └── secrets        Secrets Manager / Secret Manager / Key Vault (secrets), read by External Secrets Operator
+│   ├── secrets        Secrets Manager / Secret Manager / Key Vault (secrets), read by External Secrets Operator
+│   ├── postgres       RDS / Cloud SQL / Flexible Server — PostgreSQL 17 + PostGIS (S-3)
+│   ├── cache          ElastiCache for Valkey / Memorystore for Valkey / Azure Managed Redis (S-3)
+│   ├── kafka          MSK / Managed Service for Apache Kafka / Event Hubs Kafka endpoint (S-3)
+│   └── search         Elastic Cloud (elastic/ec provider) in the cloud's Canadian region (S-3);
+│                      search/elastic-cloud is the shared implementation
 ├── stacks/{aws,gcp,azure}                  composes the modules for one environment (identical for dev/staging/prod)
 ├── envs/{aws,gcp,azure}/{dev,staging,prod} root modules: providers, backend, sizes; `terraform apply` runs here
 │   └── tests/plan.tftest.hcl               offline plan with mocked providers + region guard
@@ -66,6 +72,15 @@ time before the key exists).
 | dns | `zone_name` | `zone_id`, `zone_name`, `name_servers` |
 | storage | `buckets`, `name_suffix`, `kms_key`, `writers`, `force_destroy` | `storage_provider`, `bucket_names`, `storage_region`, `storage_endpoint` |
 | secrets | `secret_names`, `readers`, `kms_key`, `deletion_protection` | `secrets_provider`, `store`, `secret_refs` |
+| postgres | `network_id`, `subnet_ids`, `allowed_cidrs`, `kms_key`, `secret_store`, `deletion_protection`, `instance_size`, `storage_gb`, `high_availability`, `backup_retention_days`, `database_name`, `app_user`, `postgres_version` | `db_host`, `db_port`, `db_name`, `db_user`, `db_url`, `db_password_secret_ref`, `admin_secret_ref` |
+| cache | `network_id`, `subnet_ids`, `allowed_cidrs`, `kms_key`, `secret_store`, `deletion_protection`, `node_size`, `replicas` | `redis_host`, `redis_port`, `redis_ssl`, `redis_username`, `redis_password_secret_ref` |
+| kafka | `network_id`, `subnet_ids`, `allowed_cidrs`, `kms_key`, `secret_store`, `deletion_protection`, `tier`, `capacity`, `storage_gb` | `kafka_bootstrap`, `kafka_security_protocol`, `kafka_sasl_mechanism`, `kafka_sasl_jaas_config_secret_ref`, `kafka_replication_factor`, `kafka_topic_policy` |
+| search | `network_id`, `subnet_ids`, `allowed_cidrs`, `kms_key`, `secret_store`, `deletion_protection`, `size`, `zone_count`, `elastic_version` | `es_uris`, `es_username`, `es_password_secret_ref` |
+
+The data-store modules generate their credentials (random passwords, SCRAM users, access keys) and write them to the
+environment's secrets store (`secret_store = module.secrets.store`), so External Secrets finds every secret under
+one prefix. Those values do pass through Terraform state: keep state in the bootstrapped, encrypted, access-controlled
+bucket only.
 
 Where a cloud has no use for an input it says so in `main.tf` (`unused_contract_inputs`), for example `zone_count`
 on Google Cloud and Azure (regional subnets) or `kms_key` on ACR (customer-managed keys need Premium).
@@ -79,6 +94,34 @@ on Google Cloud and Azure (regional subnets) or `kms_key` on ACR (customer-manag
 | workload identity → ServiceAccount | `eks.amazonaws.com/role-arn` | `iam.gke.io/gcp-service-account` | `azure.workload.identity/client-id` + pod label `azure.workload.identity/use: "true"` |
 | signing key (`KMS_KEY_ID`) | key ARN, `ECC_NIST_P256` | crypto key name, `EC_SIGN_P256_SHA256` (HSM in prod) | versionless key URL, EC P-256 (HSM in prod) |
 | secrets | `northline/<env>/<name>`, created empty | `northline-<env>-<name>`, user-managed replication in the region only, created empty | one vault per environment; Key Vault has no empty secrets, so the operator creates them |
+| PostgreSQL 17 | RDS in the isolated data subnets, SG limited to the VPC, `rds.force_ssl`, gp3 + KMS, PITR, Multi-AZ when HA, master password managed by RDS | Cloud SQL Enterprise, private IP only (Private Service Access), `ENCRYPTED_ONLY`, CMEK, backups pinned to the region, PITR, REGIONAL when HA | Flexible Server in the delegated subnet + private DNS zone, `azure.extensions=POSTGIS,CITEXT,PGCRYPTO,PG_STAT_STATEMENTS`, zone-redundant HA, geo-redundant backup in prod (paired region is Canadian) |
+| Valkey / Redis | ElastiCache for Valkey 8, cluster mode off, TLS + AUTH token, Multi-AZ failover with replicas | Memorystore for Valkey 8, cluster mode off, PSC endpoint, TLS (server CA to trust), **no password** (IAM auth only; the apps have no IAM client yet) | Azure Managed Redis, `EnterpriseCluster` single endpoint, TLS on port 10000, access key, private endpoint |
+| Kafka | MSK 3.9 (KRaft), SASL/SCRAM-SHA-512 on 9096, `auto.create.topics.enable=false`, RF 3 (2 in dev) | Managed Kafka (vCPU-sized, min 3), SASL/PLAIN on 9092 with a service-account key, PSC | Event Hubs **Premium** (Standard caps at 10 event hubs; Northline has ~50 with `.dlq`), SASL/PLAIN with `$ConnectionString`, private endpoint; topics need the Manage right to create |
+| Elasticsearch 9 | Elastic Cloud `aws-ca-central-1` | Elastic Cloud `gcp-northamerica-northeast1` | Elastic Cloud `azure-canadacentral` |
+
+### Kafka differences that matter
+
+- **Topic auto-creation:** never relied upon. MSK has it switched off in its configuration; Managed Kafka and Event
+  Hubs don't let us set it. Every topic and its `.dlq` are created by `scripts/topics.sh` (S-25) before the apps start
+  (`data_stores.kafka.topic_policy` says how per cloud). On Event Hubs the topic-creating credential needs the
+  *Manage* right: the module writes a separate `kafka-admin-jaas-config` secret for it; the apps get Send + Listen.
+- **SASL:** MSK = `SCRAM-SHA-512` (credentials in a Secrets Manager secret named `AmazonMSK_*`, encrypted with the
+  customer-managed key); Google Cloud = `PLAIN` with username = service-account email and password = its base64 key;
+  Event Hubs = `PLAIN` with username `$ConnectionString` and the connection string as password. All three use
+  `SASL_SSL`; the apps receive the complete JAAS line in `KAFKA_SASL_JAAS_CONFIG`. IAM/OAUTHBEARER options (MSK IAM,
+  Google's login handler, Entra ID) would remove the static credential but need client libraries the apps don't
+  have yet.
+
+### Why Elastic Cloud and not Amazon OpenSearch Service
+
+The apps use the **Elasticsearch 9** Java client (`co.elastic.clients`). OpenSearch is a fork of Elasticsearch 7.10:
+the ES 8/9 client refuses to talk to it (product check on the `X-Elastic-Product` header), and the APIs have diverged
+since (vector/kNN, some query and mapping options, security APIs). Moving to OpenSearch would mean the OpenSearch Java
+client and a re-test of every index mapping and query in the search projection, so Elastic Cloud (in the same
+cloud's Canadian region, through the `elastic/ec` provider) is the portable default on all three clouds. ECK on the
+cluster is the self-managed alternative. The deployment is reachable over HTTPS and, by default, only from the
+cluster's NAT egress IPs (IP traffic filter); PrivateLink / Private Service Connect / Private Link filters are later
+work.
 
 ## Workload identities
 
@@ -112,8 +155,8 @@ only: GitHub **Actions › infra › Run workflow**, GitLab **Run pipeline** wit
 ([ci.md](../../docs/runbooks/ci.md)).
 
 Versions: Terraform `>= 1.9, < 2` (tested with 1.16.4); providers pinned in each env root: `hashicorp/aws ~> 6.66`,
-`hashicorp/google` and `google-beta ~> 8.5`, `hashicorp/azurerm ~> 5.7`, `hashicorp/random ~> 3.9`. Modules state
-only lower/upper bounds.
+`hashicorp/google` and `google-beta ~> 8.5`, `hashicorp/azurerm ~> 5.7`, `hashicorp/random ~> 3.9`,
+`elastic/ec ~> 0.13`. Modules state only lower/upper bounds.
 
 ### Provider lock files
 

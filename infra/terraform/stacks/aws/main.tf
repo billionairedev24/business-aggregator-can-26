@@ -114,3 +114,61 @@ module "secrets" {
   kms_key             = { id = module.kms.key_ids["data"] }
   deletion_protection = var.deletion_protection
 }
+
+# ---- managed data stores (S-3) ------------------------------------------------------------------------------------
+
+module "postgres" {
+  source                = "../../modules/postgres/aws"
+  context               = local.context
+  network_id            = module.network.network_id
+  subnet_ids            = module.network.data_subnet_ids
+  allowed_cidrs         = [module.network.cidr]
+  instance_size         = var.data_stores.postgres.instance_size
+  storage_gb            = var.data_stores.postgres.storage_gb
+  high_availability     = var.data_stores.postgres.high_availability
+  backup_retention_days = var.data_stores.postgres.backup_retention_days
+  kms_key               = { id = module.kms.key_ids["data"] }
+  secret_store          = module.secrets.store
+  deletion_protection   = var.deletion_protection
+}
+
+module "cache" {
+  source              = "../../modules/cache/aws"
+  context             = local.context
+  network_id          = module.network.network_id
+  subnet_ids          = module.network.data_subnet_ids
+  allowed_cidrs       = [module.network.cidr]
+  node_size           = var.data_stores.cache.node_size
+  replicas            = var.data_stores.cache.replicas
+  kms_key             = { id = module.kms.key_ids["data"] }
+  secret_store        = module.secrets.store
+  deletion_protection = var.deletion_protection
+}
+
+module "kafka" {
+  source              = "../../modules/kafka/aws"
+  context             = local.context
+  network_id          = module.network.network_id
+  subnet_ids          = module.network.data_subnet_ids
+  allowed_cidrs       = [module.network.cidr]
+  tier                = var.data_stores.kafka.tier
+  capacity            = var.data_stores.kafka.capacity
+  storage_gb          = var.data_stores.kafka.storage_gb
+  kms_key             = { id = module.kms.key_ids["data"] }
+  secret_store        = module.secrets.store
+  deletion_protection = var.deletion_protection
+}
+
+# Elastic Cloud, reachable only from the cluster's NAT egress IPs.
+module "search" {
+  source              = "../../modules/search/aws"
+  context             = local.context
+  network_id          = module.network.network_id
+  subnet_ids          = module.network.data_subnet_ids
+  allowed_cidrs       = [for ip in module.network.cloud.nat_public_ips : "${ip}/32"]
+  size                = var.data_stores.search.size
+  zone_count          = var.data_stores.search.zone_count
+  kms_key             = { id = module.kms.key_ids["data"] }
+  secret_store        = module.secrets.store
+  deletion_protection = var.deletion_protection
+}

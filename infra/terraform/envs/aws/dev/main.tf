@@ -12,6 +12,9 @@ provider "aws" {
   }
 }
 
+# Elastic Cloud: reads EC_API_KEY from the environment.
+provider "ec" {}
+
 # dev: smallest sizes, NAT shared, nothing protected from destroy; can be scaled to zero out of hours.
 module "northline" {
   source = "../../../stacks/aws"
@@ -31,4 +34,12 @@ module "northline" {
   dns_zone_name       = "dev.northline.ca"
   bucket_name_suffix  = var.bucket_name_suffix
   deletion_protection = false
+
+  data_stores = {
+    postgres = { instance_size = "db.t4g.micro", storage_gb = 20, high_availability = false, backup_retention_days = 7 }
+    cache    = { node_size = "cache.t4g.micro", replicas = 0 }
+    # MSK: brokers must be a multiple of the data subnets (dev: 2 zones).
+    kafka  = { tier = "kafka.t3.small", capacity = 2, storage_gb = 20 }
+    search = { size = "2g", zone_count = 1 }
+  }
 }

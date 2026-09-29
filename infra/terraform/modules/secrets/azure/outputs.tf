@@ -6,9 +6,9 @@ output "secrets_provider" {
 output "store" {
   description = "Handle passed to the data-store modules (S-3): where and how they write generated secrets."
   value = {
-    id         = azurerm_key_vault.this.id
-    prefix     = ""
-    kms_key_id = null
+    id      = azurerm_key_vault.this.id
+    prefix  = ""
+    kms_key = null
   }
 
   depends_on = [azurerm_role_assignment.operator]

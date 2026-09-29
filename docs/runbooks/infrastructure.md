@@ -58,6 +58,22 @@ Tools on the operator's machine: Terraform 1.9 or newer (tested with 1.16.4), `k
   `Microsoft.Cache`, `Microsoft.EventHub`).
 - `kubelogin` for `kubectl` (AKS local accounts are disabled; sign-in is Entra ID).
 
+### Elastic Cloud (search, every cloud)
+- **Account:** an Elastic Cloud organization with billing (or the marketplace subscription of the chosen cloud, so it
+  draws on that cloud's credits). The deployment is created in the Canadian region of the chosen cloud
+  (`aws-ca-central-1`, `gcp-northamerica-northeast1`, `azure-canadacentral`).
+- **Operator credential:** an Elastic Cloud API key (*Organization › API keys*, role *Admin* or *Editor* on
+  deployments), exported as `EC_API_KEY` wherever `terraform plan/apply` runs. Without it, the `ec` provider fails
+  every env root's plan: search is part of the stack.
+
+### Data-store quotas (S-3)
+- **AWS:** RDS DB instances, ElastiCache nodes, MSK brokers per account (defaults are enough for one environment;
+  check before the second).
+- **Google Cloud:** Cloud SQL instances, Memorystore for Valkey nodes, Managed Kafka vCPUs in the region;
+  the Private Service Access range from the network module is shared by every Cloud SQL instance of the network.
+- **Azure:** Event Hubs Premium processing units and Azure Managed Redis are not offered to every subscription type
+  (free/sponsored subscriptions may need a quota request).
+
 ## 2. Bootstrap the state bucket (once per cloud account / subscription)
 
 The bootstrap roots keep their own state locally (keep the `terraform.tfstate` file somewhere safe, or import the
@@ -84,6 +100,7 @@ but still supported, and needed by older Terraform/OpenTofu). GCS and Azure Blob
 ```sh
 cd infra/terraform/envs/<cloud>/<env>
 cp terraform.tfvars.example terraform.tfvars      # git-ignored: project_id / subscription_id, admins, API CIDRs
+export EC_API_KEY=…                                # Elastic Cloud API key (search); never commit it
 terraform init -backend-config=backend.hcl
 terraform plan -out tfplan
 terraform apply tfplan
@@ -100,7 +117,8 @@ terraform apply tfplan
 
 Sizes live in `envs/<cloud>/<env>/main.tf`: dev = smallest, one zone where the service allows it, shared NAT, no
 deletion protection; staging = prod topology (three zones, replicas) at smaller sizes; prod = multi-zone HA with
-deletion protection. Every resource carries `app=northline`, `env=<env>`, `owner`, `data-residency=ca`,
+deletion protection. The data stores are sized by the `data_stores` block in the same file (instance types in each
+cloud's own names; see § 5). Every resource carries `app=northline`, `env=<env>`, `owner`, `data-residency=ca`,
 `managed-by=terraform` (AWS default tags, Google Cloud labels, Azure tags).
 
 Known first-apply hiccups: IAM / Azure role assignments and newly enabled Google APIs take a minute or two to
@@ -136,10 +154,27 @@ terraform output -json secret_env | jq '[to_entries[] | {secretKey: .key, remote
 | `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY` | — | — | empty: workload identity | empty | empty |
 | `KMS_PROVIDER` | `config_env` | `kms.kms_provider` | `aws` | `gcp` | `azure` |
 | `KMS_KEY_ID` | `config_env` | `kms.key_refs["signing"]` | key ARN | `projects/…/cryptoKeys/signing` | `https://<vault>.vault.azure.net/keys/signing` |
+| `DB_URL` | `config_env` | `postgres.db_url` | `jdbc:postgresql://<rds-endpoint>:5432/northline?sslmode=require` | `jdbc:postgresql://<private-ip>:5432/northline?sslmode=require` | `jdbc:postgresql://<server>.postgres.database.azure.com:5432/northline?sslmode=require` |
+| `DB_USER` | `config_env` | `postgres.db_user` | `northline_app` (role created by the bootstrap SQL, § 5.1) | same | same |
+| `DB_PASSWORD` | `secret_env` | `postgres.db_password_secret_ref` | `northline/<env>/db-app-password` | `northline-<env>-db-app-password` | `db-app-password` |
+| `REDIS_HOST` | `config_env` | `cache.redis_host` | ElastiCache primary endpoint | PSC address of the primary endpoint | `<name>.<region>.redis.azure.net` (private endpoint) |
+| `REDIS_PORT` | `config_env` | `cache.redis_port` | `6379` | `6379` | `10000` |
+| `REDIS_SSL` | `config_env` | `cache.redis_ssl` | `true` | `true` (trust the instance CA, § 5.2) | `true` |
+| `REDIS_USERNAME` | — | `cache.redis_username` | empty (default user + AUTH token) | empty | empty (access key) |
+| `REDIS_PASSWORD` | `secret_env` | `cache.redis_password_secret_ref` | `northline/<env>/redis-password` (AUTH token) | **none**: Memorystore for Valkey has no static password (§ 5.2) | `redis-password` (primary access key) |
+| `KAFKA_BOOTSTRAP` | `config_env` | `kafka.kafka_bootstrap` | `b-1.…:9096,b-2.…:9096` (SASL/SCRAM listeners) | `bootstrap.<cluster>.<region>.managedkafka.<project>.cloud.goog:9092` | `<namespace>.servicebus.windows.net:9093` |
+| `KAFKA_SECURITY_PROTOCOL` | `config_env` | `kafka.kafka_security_protocol` | `SASL_SSL` | `SASL_SSL` | `SASL_SSL` |
+| `KAFKA_SASL_MECHANISM` | `config_env` | `kafka.kafka_sasl_mechanism` | `SCRAM-SHA-512` | `PLAIN` | `PLAIN` |
+| `KAFKA_SASL_JAAS_CONFIG` | `secret_env` | `kafka.kafka_sasl_jaas_config_secret_ref` | `northline/<env>/kafka-sasl-jaas-config` (SCRAM user `northline-app`) | `northline-<env>-kafka-sasl-jaas-config` (service-account key) | `kafka-sasl-jaas-config` (Send + Listen connection string) |
+| `ES_URIS` | `config_env` | `search.es_uris` | `https://<deployment>.es.ca-central-1.aws.elastic-cloud.com:443` | `https://<deployment>.es.northamerica-northeast1.gcp.elastic-cloud.com:443` | `https://<deployment>.es.canadacentral.azure.elastic-cloud.com:443` |
+| `ES_USERNAME` | `config_env` | `search.es_username` | `elastic` (deployment superuser until a least-privilege user exists, § 5.4) | same | same |
+| `ES_PASSWORD` | `secret_env` | `search.es_password_secret_ref` | `northline/<env>/es-password` | `northline-<env>-es-password` | `es-password` |
 | `TOTP_KEY`, `WEBHOOK_SECRET_KEY`, `STUDIO_BFF_SECRET`, `STUDIO_BFF_SECRET_HASH`, `CONSUMER_BFF_SECRET_HASH`, `CONSOLE_BFF_SECRET_HASH`, `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `GOOGLE_CLIENT_SECRET`, `APPLE_CLIENT_SECRET`, `SMS_AUTH_TOKEN` | `secret_env` | `secrets.secret_refs` | `northline/<env>/<name>` | `northline-<env>-<name>` | `<name>` in vault `nl-<env>-sec-…` |
 
-The app secrets are created **empty** (AWS, Google Cloud) or not at all (Azure: Key Vault has no empty secrets);
-Terraform never sees their values. Set them as the environment runbook describes (`openssl rand -base64 32`, the
+The data-store secrets (`DB_PASSWORD`, `REDIS_PASSWORD`, `KAFKA_SASL_JAAS_CONFIG`, `ES_PASSWORD`, plus the admin
+ones in § 5) are **generated by Terraform** and written with their values, so they pass through the state: keep
+state only in the bootstrapped bucket. The app secrets are created **empty** (AWS, Google Cloud) or not at all
+(Azure: Key Vault has no empty secrets); Terraform never sees their values. Set them as the environment runbook describes (`openssl rand -base64 32`, the
 bcrypt hash, the Stripe keys):
 
 ```sh
@@ -158,11 +193,106 @@ Other outputs, for the stories that consume them:
 | `dns.name_servers` | delegation (S-17): NS records for `dev.northline.ca` / `staging.northline.ca` in the `northline.ca` zone; the prod zone's servers at the registrar |
 | `network.cloud.nat_public_ips` | allow-lists that need the cluster's egress IPs (Elastic Cloud traffic filters, partners) |
 | `kms.key_ids["data"]` | encryption at rest of Kubernetes Secrets, buckets, registry, secrets |
+| `data_stores.postgres.admin_secret_ref`, `.cloud.admin_username` | the bootstrap SQL (§ 5.1), S-16 migration job, S-114 backups |
+| `data_stores.cache.cloud` | Google Cloud: `server_ca_certs` to trust (§ 5.2); AWS: reader endpoint |
+| `data_stores.kafka.replication_factor`, `.topic_policy`, `.cloud` | topic creation (§ 5.3, S-25); Azure: `admin_jaas_secret_name` |
+| `data_stores.search.cloud.deployment_id` | Elastic Cloud console / API, least-privilege user (§ 5.4) |
 
-## 5. Cost notes for a small dev environment
+## 5. Data stores after the first apply (S-3)
 
-Rough list prices per month before credits (USD, 730 h, September 2026 — check each cloud's calculator). S-2
-resources only; the data stores (S-3) add to this.
+Everything below is private to the network: PostgreSQL, Valkey and Kafka have no public endpoint, so run the
+one-off commands **from inside the cluster** (a throw-away pod in `northline-<env>`), never by opening them to the
+internet. Sizes are the `data_stores` block of `envs/<cloud>/<env>/main.tf`:
+
+| | dev | staging | prod |
+|---|---|---|---|
+| PostgreSQL 17 | smallest burstable, 1 zone, 7-day backups | HA (standby in another zone), 7 days | HA, 35-day backups + PITR, deletion protection, final snapshot; Azure: geo-redundant backup to the paired Canadian region |
+| Valkey / Redis | 1 node | primary + 1 replica, automatic failover | primary + replicas across zones; AWS/Google Cloud keep RDB snapshots |
+| Kafka | MSK 2 × `kafka.t3.small` / Managed Kafka 3 vCPU / Event Hubs Premium 1 PU | MSK 3 brokers / 3 vCPU / 1 PU | MSK 3 × `kafka.m7g.large` / 6 vCPU / 2 PU; RF 3, `min.insync.replicas=2` |
+| Elasticsearch 9 | 2 GB, 1 zone | 2 GB × 2 zones | 4 GB × 2 zones |
+
+### 5.1 PostgreSQL: app role and extensions (once per environment)
+
+Terraform creates the instance, the `northline` database (RDS: at creation; Cloud SQL / Azure: a database resource)
+and the password of the app role, but **not the role itself** (no provider can reach the private database from the
+operator's machine). As the admin role:
+
+```sh
+# admin password: AWS = RDS-managed secret (JSON), Google Cloud / Azure = the db-admin-password secret
+terraform output -json data_stores | jq .postgres        # host, admin_secret_ref, cloud.admin_username
+aws secretsmanager get-secret-value --secret-id "<admin_secret_ref>" --query SecretString --output text | jq -r .password
+gcloud secrets versions access latest --secret northline-<env>-db-admin-password --project <project>
+az keyvault secret show --vault-name <nl-<env>-sec-…> --name db-admin-password --query value -o tsv
+# the app password, same way: northline/<env>/db-app-password · northline-<env>-db-app-password · db-app-password
+
+kubectl -n northline-<env> run psql --rm -it --restart=Never --image=postgres:17 -- \
+  psql "host=<db host> port=5432 dbname=northline user=<admin user> sslmode=require"
+```
+
+```sql
+create role northline_app login password '<db-app-password>';
+grant northline_app to current_user;            -- PG 16+: lets the admin hand the database over
+alter database northline owner to northline_app; -- Flyway (as DB_USER) creates the module schemas
+\c northline
+create extension if not exists postgis;
+create extension if not exists citext;
+create extension if not exists pgcrypto;
+```
+
+Admin users: `northline_admin` (AWS, Azure), `postgres` (Google Cloud, member of `cloudsqlsuperuser`). On Azure the
+three extensions are already allow-listed (`azure.extensions`). If the app password is rotated in the secrets store
+later, run `alter role northline_app password '…'` with the new value.
+
+### 5.2 Valkey / Redis
+
+- The apps use one endpoint and no cluster client: cluster mode is disabled everywhere (Azure Managed Redis:
+  `EnterpriseCluster` policy, which presents a single endpoint). TLS is always on (`REDIS_SSL=true`).
+- **AWS / Azure:** password authentication (AUTH token / primary access key) from `secret_env.REDIS_PASSWORD`.
+- **Google Cloud (open item):** Memorystore for **Valkey** has no static password: it offers IAM authentication (a
+  short-lived token the client must refresh) or none. The module uses *none*, so access is limited to the VPC through
+  Private Service Connect, and `REDIS_PASSWORD` stays empty. Its TLS certificate is signed by a **per-instance CA**
+  that the JVM does not trust: import `data_stores.cache.cloud.server_ca_certs` into a truststore mounted in the pods
+  (`JAVA_TOOL_OPTIONS=-Djavax.net.ssl.trustStore=…`), which belongs to the Helm charts (S-14). Until then Google Cloud
+  cannot serve Valkey to the apps as they are.
+
+### 5.3 Kafka: topics and credentials
+
+Topics are never auto-created (MSK has it switched off; Managed Kafka and Event Hubs don't let us rely on it). Create
+every topic and its `.dlq` before the apps start, from a pod with the Kafka CLI:
+
+```properties
+# client.properties
+security.protocol=SASL_SSL
+sasl.mechanism=<config_env.KAFKA_SASL_MECHANISM>
+sasl.jaas.config=<the JAAS secret, see below>
+```
+
+```sh
+KAFKA_TOPICS_CMD='kafka-topics.sh --command-config client.properties' \
+KAFKA_TOPICS_BOOTSTRAP=<config_env.KAFKA_BOOTSTRAP> \
+KAFKA_REPLICATION_FACTOR=<data_stores.kafka.replication_factor> scripts/topics.sh
+```
+
+| | JAAS secret for topic creation | notes |
+|---|---|---|
+| AWS MSK | `kafka-sasl-jaas-config` (the app's SCRAM user; no ACLs, `allow.everyone.if.no.acl.found=true`) | RF 2 in dev (2 brokers), 3 elsewhere. ACLs per app: S-25 |
+| Google Cloud Managed Kafka | `kafka-sasl-jaas-config` (service account with `roles/managedkafka.client`) | alternatively `google_managed_kafka_topic` resources (S-25). The key needs `iam.disableServiceAccountKeyCreation` **not** enforced on the project — new organizations enforce it by default, and the apply fails on `google_service_account_key` until the owner exempts the project |
+| Azure Event Hubs | `kafka-admin-jaas-config` (the *Manage* rule); the apps' rule is Send + Listen | the replication factor is accepted and ignored; partitions are fixed after creation on Standard; retention ≤ 90 days on Premium |
+
+### 5.4 Elasticsearch (Elastic Cloud)
+
+- The deployment accepts traffic only from the cluster's NAT egress IPs (IP traffic filter from
+  `network.cloud.nat_public_ips`). To call it from a laptop, add a temporary rule in the Elastic Cloud console.
+- `ES_USERNAME` is the deployment's `elastic` superuser for now. Before prod data, create a least-privilege
+  `northline_app` user/role (index privileges on the Northline indices only), store its password in the `es-password`
+  secret and set `ES_USERNAME` (S-42/S-43 own the index layout).
+- Amazon OpenSearch Service is **not** an option for the apps as they are (Elasticsearch 9 Java client; README § Why
+  Elastic Cloud). ECK on the cluster is the self-managed alternative and would replace `modules/search`.
+
+## 6. Cost notes for a small dev environment
+
+Rough list prices per month before credits (USD, 730 h, September 2026 — check each cloud's calculator). Foundation
+(S-2) first, then the data stores (S-3).
 
 | | AWS (`ca-central-1`) | Google Cloud (`northamerica-northeast1`) | Azure (`canadacentral`) |
 |---|---|---|---|
@@ -170,13 +300,23 @@ resources only; the data stores (S-3) add to this.
 | Nodes (dev: 1 node) | 1 × t3.large ≈ 70 | 1 × e2-standard-4 **spot** ≈ 35 | 1 × D4s_v5 ≈ 160 |
 | NAT + public IP | NAT gateway ≈ 35 + data | Cloud NAT + 1 static IP ≈ 10 | NAT gateway ≈ 35 + IP ≈ 4 |
 | Keys, secrets, DNS, registry | KMS 2 keys ≈ 2, Secrets Manager 11 × 0.40 ≈ 5, Route 53 ≈ 1, ECR storage | Cloud KMS ≈ 1, Secret Manager ≈ 1, Cloud DNS ≈ 1 | Key Vault ≈ 1, ACR Standard ≈ 20, DNS ≈ 1 |
-| **≈ total** | **≈ 185** | **≈ 50** | **≈ 220** |
+| **≈ foundation** | **≈ 185** | **≈ 50** | **≈ 220** |
+| PostgreSQL 17 | RDS `db.t4g.micro` + 20 GB gp3 ≈ 18 | Cloud SQL 1 vCPU / 3.75 GB + 20 GB SSD ≈ 55 | Flexible Server `B1ms` + 32 GB ≈ 20 |
+| Valkey / Redis | ElastiCache `cache.t4g.micro` ≈ 10 | Memorystore for Valkey shared-core nano ≈ 25 | Azure Managed Redis `Balanced_B0` ≈ 40 |
+| Kafka | MSK 2 × `kafka.t3.small` + 40 GB ≈ 70 | Managed Kafka 3 vCPU / 12 GiB + 100 GiB ≈ 280 | Event Hubs **Premium** 1 PU ≈ 730 |
+| Elasticsearch | Elastic Cloud 2 GB, 1 zone ≈ 100 | same ≈ 100 | same ≈ 100 |
+| **≈ total with data stores** | **≈ 385** | **≈ 510** | **≈ 1 110** |
+
+Kafka dominates on Google Cloud and Azure. Event Hubs Premium is chosen because Standard allows only 10 event hubs
+per namespace and Northline needs about 50 (topics + `.dlq`); for a cheaper dev on Azure, the options are Confluent
+Cloud (Azure `canadacentral`) or dev on AWS. Managed Kafka's floor is 3 vCPUs.
 
 To spend less in dev: scale node pools to zero out of hours (`min_count = 0` in `envs/<cloud>/dev/main.tf`, then
 scale the pool; the cluster autoscaler brings it back), use spot nodes (`spot = true`; already on in Google Cloud
-dev), keep dev on the cloud with the largest credit balance, and destroy dev when idle (§ 6).
+dev), keep dev on the cloud with the largest credit balance, stop RDS / Cloud SQL / Flexible Server out of hours
+(each restarts on its own after 7 days on AWS and Azure), and destroy dev when idle (§ 7).
 
-## 6. Teardown
+## 7. Teardown
 
 ```sh
 cd infra/terraform/envs/<cloud>/<env> && terraform destroy
@@ -191,4 +331,10 @@ cd infra/terraform/envs/<cloud>/<env> && terraform destroy
   permanent and key versions are destroyed after 24 h (30 days in prod), enabled APIs stay on; **Azure** Key Vaults
   are soft-deleted (the keys vault always has purge protection, so its random name is not reused), the resource
   group is deleted with the environment.
+- Data stores (S-3): with `deletion_protection = true`, RDS, Cloud SQL and Memorystore refuse deletion, Azure
+  PostgreSQL has a `CanNotDelete` lock, and RDS / ElastiCache take a final snapshot (`<name>-final`; delete it by
+  hand when no longer needed: the next destroy of a re-created prod would reuse the name and fail). Cloud SQL
+  instance names are blocked for about a week after deletion (the module adds a random suffix). **The Elastic Cloud deployment and the MSK cluster
+  have no deletion protection**: a prod `destroy` deletes them, so snapshot Elasticsearch first (or rebuild the
+  index from Postgres, the source of truth).
 - The state buckets (bootstrap) have `prevent_destroy`; remove it deliberately if an account is closed.

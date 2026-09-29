@@ -6,9 +6,9 @@ output "secrets_provider" {
 output "store" {
   description = "Handle passed to the data-store modules (S-3): where and how they write generated secrets."
   value = {
-    id         = local.prefix
-    prefix     = local.prefix
-    kms_key_id = try(var.kms_key.id, null)
+    id      = local.prefix
+    prefix  = local.prefix
+    kms_key = var.kms_key
   }
 }
 

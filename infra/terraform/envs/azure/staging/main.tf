@@ -12,6 +12,9 @@ provider "azurerm" {
   }
 }
 
+# Elastic Cloud: reads EC_API_KEY from the environment.
+provider "ec" {}
+
 # staging: prod topology (multi-zone, replicas) at smaller sizes.
 module "northline" {
   source = "../../../stacks/azure"
@@ -32,4 +35,12 @@ module "northline" {
   dns_zone_name       = "staging.northline.ca"
   bucket_name_suffix  = var.bucket_name_suffix
   deletion_protection = false
+
+  data_stores = {
+    postgres = { instance_size = "GP_Standard_D2ds_v5", storage_gb = 64, high_availability = true, backup_retention_days = 7 }
+    cache    = { node_size = "Balanced_B1", replicas = 1 }
+    # Event Hubs: Premium — Standard allows only 10 event hubs, Northline needs about 50 (topics + .dlq).
+    kafka  = { tier = "Premium", capacity = 1, storage_gb = 0 }
+    search = { size = "2g", zone_count = 2 }
+  }
 }

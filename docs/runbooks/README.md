@@ -1,9 +1,9 @@
 # Runbooks
 
 One runbook per environment. Each lists what the environment needs — services, variables, secrets, third-party
-accounts — and how to run, deploy and roll back **with what exists today**. Terraform for the cloud foundation exists (S-2, not
-applied yet); managed data stores in Terraform, container images, Helm charts and GitOps arrive with later stories
-(S-3, S-6, S-14, S-15, S-16, S-17); the runbooks say where a step is still manual or missing.
+accounts — and how to run, deploy and roll back **with what exists today**. Terraform for the cloud foundation and the managed data
+stores exists (S-2, S-3; not applied yet); External Secrets, container images, Helm charts and GitOps arrive with later
+stories (S-6, S-14, S-15, S-16, S-17); the runbooks say where a step is still manual or missing.
 
 | runbook | for |
 |---|---|

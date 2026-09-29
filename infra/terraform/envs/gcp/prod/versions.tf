@@ -10,5 +10,9 @@ terraform {
       source  = "hashicorp/google-beta"
       version = "~> 8.5"
     }
+    ec = {
+      source  = "elastic/ec"
+      version = "~> 0.13"
+    }
   }
 }

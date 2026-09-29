@@ -12,6 +12,9 @@ provider "aws" {
   }
 }
 
+# Elastic Cloud: reads EC_API_KEY from the environment.
+provider "ec" {}
+
 # staging: prod topology (multi-zone, replicas) at smaller sizes.
 module "northline" {
   source = "../../../stacks/aws"
@@ -31,4 +34,12 @@ module "northline" {
   dns_zone_name       = "staging.northline.ca"
   bucket_name_suffix  = var.bucket_name_suffix
   deletion_protection = false
+
+  data_stores = {
+    postgres = { instance_size = "db.t4g.medium", storage_gb = 50, high_availability = true, backup_retention_days = 7 }
+    cache    = { node_size = "cache.t4g.small", replicas = 1 }
+    # MSK: brokers must be a multiple of the data subnets (3 zones here).
+    kafka  = { tier = "kafka.t3.small", capacity = 3, storage_gb = 50 }
+    search = { size = "2g", zone_count = 2 }
+  }
 }

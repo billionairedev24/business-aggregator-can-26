@@ -12,6 +12,9 @@ provider "azurerm" {
   }
 }
 
+# Elastic Cloud: reads EC_API_KEY from the environment.
+provider "ec" {}
+
 # dev: smallest sizes, NAT shared, nothing protected from destroy; can be scaled to zero out of hours.
 module "northline" {
   source = "../../../stacks/azure"
@@ -31,4 +34,12 @@ module "northline" {
   dns_zone_name       = "dev.northline.ca"
   bucket_name_suffix  = var.bucket_name_suffix
   deletion_protection = false
+
+  data_stores = {
+    postgres = { instance_size = "B_Standard_B1ms", storage_gb = 32, high_availability = false, backup_retention_days = 7 }
+    cache    = { node_size = "Balanced_B0", replicas = 0 }
+    # Event Hubs: Premium — Standard allows only 10 event hubs, Northline needs about 50 (topics + .dlq).
+    kafka  = { tier = "Premium", capacity = 1, storage_gb = 0 }
+    search = { size = "2g", zone_count = 1 }
+  }
 }

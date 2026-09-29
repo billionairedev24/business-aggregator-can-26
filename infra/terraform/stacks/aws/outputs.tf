@@ -11,12 +11,31 @@ output "config_env" {
     STORAGE_ENDPOINT = module.storage.storage_endpoint
     KMS_PROVIDER     = module.kms.kms_provider
     KMS_KEY_ID       = module.kms.key_refs["signing"]
+
+    DB_URL                  = module.postgres.db_url
+    DB_USER                 = module.postgres.db_user
+    REDIS_HOST              = module.cache.redis_host
+    REDIS_PORT              = tostring(module.cache.redis_port)
+    REDIS_SSL               = tostring(module.cache.redis_ssl)
+    KAFKA_BOOTSTRAP         = module.kafka.kafka_bootstrap
+    KAFKA_SECURITY_PROTOCOL = module.kafka.kafka_security_protocol
+    KAFKA_SASL_MECHANISM    = module.kafka.kafka_sasl_mechanism
+    ES_URIS                 = module.search.es_uris
+    ES_USERNAME             = module.search.es_username
   }
 }
 
 output "secret_env" {
   description = "Secret environment variables => secret reference in the cloud secrets manager (ExternalSecret remoteRef.key)."
-  value       = { for var_name, secret in local.app_secrets : var_name => module.secrets.secret_refs[secret] }
+  value = merge(
+    { for var_name, secret in local.app_secrets : var_name => module.secrets.secret_refs[secret] },
+    {
+      DB_PASSWORD            = module.postgres.db_password_secret_ref
+      KAFKA_SASL_JAAS_CONFIG = module.kafka.kafka_sasl_jaas_config_secret_ref
+      ES_PASSWORD            = module.search.es_password_secret_ref
+      REDIS_PASSWORD         = module.cache.redis_password_secret_ref
+    },
+  )
 }
 
 output "secrets_provider" {
@@ -73,5 +92,33 @@ output "kms" {
   value = {
     key_ids  = module.kms.key_ids
     key_refs = module.kms.key_refs
+  }
+}
+
+output "data_stores" {
+  description = "Data store details for operators: admin secrets, topic provisioning, TLS notes."
+  value = {
+    postgres = {
+      host             = module.postgres.db_host
+      database         = module.postgres.db_name
+      app_user         = module.postgres.db_user
+      admin_secret_ref = module.postgres.admin_secret_ref
+      cloud            = module.postgres.cloud
+    }
+    cache = {
+      host  = module.cache.redis_host
+      port  = module.cache.redis_port
+      cloud = module.cache.cloud
+    }
+    kafka = {
+      bootstrap          = module.kafka.kafka_bootstrap
+      replication_factor = module.kafka.kafka_replication_factor
+      topic_policy       = module.kafka.kafka_topic_policy
+      cloud              = module.kafka.cloud
+    }
+    search = {
+      es_uris = module.search.es_uris
+      cloud   = module.search.cloud
+    }
   }
 }

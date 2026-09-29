@@ -56,14 +56,23 @@ locals {
     "dns.googleapis.com",
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",
+    "managedkafka.googleapis.com",
+    "memorystore.googleapis.com",
     "networkconnectivity.googleapis.com",
     "secretmanager.googleapis.com",
     "servicenetworking.googleapis.com",
+    "sqladmin.googleapis.com",
     "storage.googleapis.com",
   ]
 
   # Google-managed service agents that encrypt with the data key (CMEK).
-  cmek_service_agents = ["artifactregistry.googleapis.com", "secretmanager.googleapis.com"]
+  cmek_service_agents = [
+    "artifactregistry.googleapis.com",
+    "managedkafka.googleapis.com",
+    "memorystore.googleapis.com",
+    "secretmanager.googleapis.com",
+    "sqladmin.googleapis.com",
+  ]
 }
 
 resource "google_project_service" "this" {
@@ -165,4 +174,65 @@ module "secrets" {
   kms_key             = { id = module.kms.key_ids["data"] }
   deletion_protection = var.deletion_protection
   depends_on          = [module.kms]
+}
+
+# ---- managed data stores (S-3) ------------------------------------------------------------------------------------
+
+module "postgres" {
+  source                = "../../modules/postgres/gcp"
+  context               = local.context
+  network_id            = module.network.network_id
+  subnet_ids            = module.network.data_subnet_ids
+  allowed_cidrs         = [module.network.cidr]
+  instance_size         = var.data_stores.postgres.instance_size
+  storage_gb            = var.data_stores.postgres.storage_gb
+  high_availability     = var.data_stores.postgres.high_availability
+  backup_retention_days = var.data_stores.postgres.backup_retention_days
+  kms_key               = { id = module.kms.key_ids["data"] }
+  secret_store          = module.secrets.store
+  deletion_protection   = var.deletion_protection
+  depends_on            = [module.network, module.kms] # Private Service Access; CMEK grant
+}
+
+module "cache" {
+  source              = "../../modules/cache/gcp"
+  context             = local.context
+  network_id          = module.network.network_id
+  subnet_ids          = module.network.data_subnet_ids
+  allowed_cidrs       = [module.network.cidr]
+  node_size           = var.data_stores.cache.node_size
+  replicas            = var.data_stores.cache.replicas
+  kms_key             = { id = module.kms.key_ids["data"] }
+  secret_store        = module.secrets.store
+  deletion_protection = var.deletion_protection
+  depends_on          = [module.network, module.kms] # PSC policy; CMEK grant
+}
+
+module "kafka" {
+  source              = "../../modules/kafka/gcp"
+  context             = local.context
+  network_id          = module.network.network_id
+  subnet_ids          = module.network.data_subnet_ids
+  allowed_cidrs       = [module.network.cidr]
+  tier                = var.data_stores.kafka.tier
+  capacity            = var.data_stores.kafka.capacity
+  storage_gb          = var.data_stores.kafka.storage_gb
+  kms_key             = { id = module.kms.key_ids["data"] }
+  secret_store        = module.secrets.store
+  deletion_protection = var.deletion_protection
+  depends_on          = [module.kms] # CMEK grant
+}
+
+# Elastic Cloud, reachable only from the cluster's NAT egress IPs.
+module "search" {
+  source              = "../../modules/search/gcp"
+  context             = local.context
+  network_id          = module.network.network_id
+  subnet_ids          = module.network.data_subnet_ids
+  allowed_cidrs       = [for ip in module.network.cloud.nat_public_ips : "${ip}/32"]
+  size                = var.data_stores.search.size
+  zone_count          = var.data_stores.search.zone_count
+  kms_key             = { id = module.kms.key_ids["data"] }
+  secret_store        = module.secrets.store
+  deletion_protection = var.deletion_protection
 }

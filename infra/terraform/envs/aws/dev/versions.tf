@@ -6,5 +6,9 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 6.66"
     }
+    ec = {
+      source  = "elastic/ec"
+      version = "~> 0.13"
+    }
   }
 }

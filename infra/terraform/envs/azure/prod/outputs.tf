@@ -45,3 +45,8 @@ output "kms" {
   description = "KMS keys."
   value       = module.northline.kms
 }
+
+output "data_stores" {
+  description = "Data store details for operators (admin secrets, Kafka topic provisioning)."
+  value       = module.northline.data_stores
+}

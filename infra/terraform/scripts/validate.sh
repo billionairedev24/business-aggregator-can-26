@@ -15,7 +15,7 @@ echo "== module contract"
 scripts/check-contract.sh
 
 case $cloud in
-  all) pattern='aws|gcp|azure' ;;
+  all) pattern='.*' ;; # includes shared helpers such as modules/search/elastic-cloud
   aws | gcp | azure) pattern=$cloud ;;
   *) echo "usage: $0 [all|aws|gcp|azure]" >&2; exit 2 ;;
 esac
