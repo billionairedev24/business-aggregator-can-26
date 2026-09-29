@@ -29,6 +29,7 @@ design/                       HTML design references (open in a browser) + desig
 | 06 Consumer Web | web storefront |
 | 07a–d Onboarding | entry points into the onboarding flow (provider / seller / kitchen / not-signed-in) |
 | 09 Terms of Service, 10 Privacy Policy | legal pages — ship as static content |
+| chats/ | the design conversations (intent and every decision behind the screens) |
 
 Design files load `theme/northline.css` and `support.js`; keep the folder structure intact to open them.
 
