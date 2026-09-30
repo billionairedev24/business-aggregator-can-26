@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import ca.northline.merchants.api.MerchantRenamed;
 import ca.northline.payments.api.PayoutFailed;
+import ca.northline.platform.EventHeaders;
 import ca.northline.shared.DomainEvent;
 import ca.northline.shared.ExternalizedTopicsCatalogueTest;
 import java.lang.reflect.RecordComponent;

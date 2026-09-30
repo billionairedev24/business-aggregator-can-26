@@ -1,4 +1,4 @@
-package ca.northline.shared;
+package ca.northline.platform;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;

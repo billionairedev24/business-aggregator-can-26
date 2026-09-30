@@ -49,7 +49,7 @@ function renderPage(props: { mode?: AuthMode; next?: string; locale?: 'en' | 'fr
       </QueryClientProvider>
     </I18nProvider>,
   );
-  return { navigate, onModeChange, ui: userEvent.setup() };
+  return { navigate, onModeChange, ui: userEvent.setup({ delay: null }) };
 }
 
 async function fillRegistration(ui: ReturnType<typeof userEvent.setup>) {
@@ -331,7 +331,8 @@ describe('Rate limits (429 rate_limited)', () => {
     await ui.click(screen.getByRole('button', { name: 'Verify code' }));
     expect(await screen.findByText('Too many attempts. Try again in 0:01.')).toBeTruthy();
     expect((screen.getByRole('button', { name: 'Verify code' }) as HTMLButtonElement).disabled).toBe(true);
-    await waitFor(() => expect(screen.queryByText(/Too many attempts/)).toBeNull(), { timeout: 3000 });
+    // The 1 s countdown runs on real time; the wait is setup.ts's asyncUtilTimeout.
+    await waitFor(() => expect(screen.queryByText(/Too many attempts/)).toBeNull());
     expect((screen.getByRole('button', { name: 'Verify code' }) as HTMLButtonElement).disabled).toBe(false);
   });
 
@@ -398,7 +399,7 @@ describe('Google and Apple (S-18)', () => {
   });
 
   it('asks for the second factor before linking an existing account, and signs in with it', async () => {
-    const ui = userEvent.setup();
+    const ui = userEvent.setup({ delay: null });
     page({ mode: 'signin', resumeIdentifier: 'ravi@prairiewrench.ca', federation: { provider: 'google', linking: true, relay: false } });
     expect(screen.getByText('Confirm it’s you with your passkey, authenticator app or a backup code to link your Google account.')).toBeTruthy();
     await waitFor(() => expect(calls.some(c => c.path === '/api/auth/sign-in' && c.body.identifier === 'ravi@prairiewrench.ca')).toBe(true));

@@ -14,6 +14,9 @@ vi.mock('@tanstack/react-router', async orig => ({ ...(await orig<typeof import(
 
 import { HelpScreen, type HelpSearch } from './HelpScreen';
 
+/** user-event with no timer between keystrokes: typing costs one pass, not a macrotask per character. */
+const user = () => userEvent.setup({ delay: null });
+
 // Pin the clock (noon in Edmonton) before the fixtures below are built: "today"/"tomorrow" are Edmonton days, so a
 // real clock made the SLA wording depend on whether UTC and Edmonton were on the same calendar day.
 vi.useFakeTimers({ toFake: ['Date'] });
@@ -81,14 +84,14 @@ describe('Help centre', () => {
     expect(await screen.findByText('HD-4471')).toBeTruthy();
     expect(screen.getByText(/Open · agent Dev K\. · replied 2 h ago · Reply by tomorrow 10/)).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Stripe & compliance' })).toBeTruthy();
-    await userEvent.click(screen.getByRole('link', { name: 'Earnings' }));
+    await user().click(screen.getByRole('link', { name: 'Earnings' }));
     expect(shell.navigate).toHaveBeenCalledWith({ to: `/b/${M}/earnings` });
   });
 
   it('search shows the query as the heading and "min read" results', async () => {
     const calls = stubFetch(routes());
     renderScreen(<Harness />);
-    await userEvent.type(await screen.findByRole('searchbox', { name: 'Search help' }), 'payout on hold');
+    await user().type(await screen.findByRole('searchbox', { name: 'Search help' }), 'payout on hold');
     expect(await screen.findByRole('heading', { name: 'payout on hold' })).toBeTruthy();
     expect(await screen.findByText('Why is my payout on hold?')).toBeTruthy();
     expect(screen.getByText('Escrow · 2 min read')).toBeTruthy();
@@ -105,7 +108,7 @@ describe('Help centre', () => {
   it('Request a callback opens Contact support with Phone call chosen', async () => {
     stubFetch(routes());
     renderScreen(<Harness />);
-    await userEvent.click(await screen.findByRole('button', { name: 'Request a callback' }));
+    await user().click(await screen.findByRole('button', { name: 'Request a callback' }));
     expect(screen.getByRole('button', { name: 'Phone call', pressed: true })).toBeTruthy();
   });
 });
@@ -127,16 +130,16 @@ describe('Contact support', () => {
       [`GET ${base}/cases/c9`]: { summary: kase('c9', { code: 'HD-4480', state: 'new' }), messages: [msg('x', 'merchant', 'Payout missing since Friday.')] },
     }));
     renderScreen(<Harness initial={{ tab: 'new' }} />);
-    await userEvent.click(await screen.findByRole('button', { name: 'Send' }));
+    await user().click(await screen.findByRole('button', { name: 'Send' }));
     expect(screen.getByText('2 things need attention.')).toBeTruthy();
     expect(screen.getByText('Choose a topic.')).toBeTruthy();
     expect(screen.getByText("Tell us what's happening.")).toBeTruthy();
-    await userEvent.click(screen.getByRole('button', { name: 'Payouts & fees' }));
-    await userEvent.type(screen.getByRole('textbox', { name: "What's happening?" }), 'Payout missing since Friday.');
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Related to' }), 'Booking BK-7712 · A. Osei');
-    await userEvent.click(screen.getByRole('checkbox', { name: /This is urgent/ }));
+    await user().click(screen.getByRole('button', { name: 'Payouts & fees' }));
+    await user().type(screen.getByRole('textbox', { name: "What's happening?" }), 'Payout missing since Friday.');
+    await user().selectOptions(screen.getByRole('combobox', { name: 'Related to' }), 'Booking BK-7712 · A. Osei');
+    await user().click(screen.getByRole('checkbox', { name: /This is urgent/ }));
     expect(screen.getByText(/Urgent \(safety, payment stuck, live order failing\): a human within 15 min/)).toBeTruthy();
-    await userEvent.click(screen.getByRole('button', { name: 'Send' }));
+    await user().click(screen.getByRole('button', { name: 'Send' }));
     await waitFor(() => expect(calls.find(c => c.key === `POST ${base}/cases`)?.body).toEqual({
       topic: 'payouts', refType: 'booking', refId: 'BK-7712', refLabel: 'Booking BK-7712 · A. Osei', body: 'Payout missing since Friday.', attachmentIds: [], channel: 'chat', urgent: true,
     }));
@@ -149,8 +152,8 @@ describe('Contact support', () => {
   it('maps a server 422 onto the field', async () => {
     stubFetch(routes({ [`POST ${base}/cases`]: () => ({ status: 422, json: { errors: [{ field: 'refId', rule: 'required', message: 'Pick a record from the list.' }] } }) }));
     renderScreen(<Harness initial={{ tab: 'new', topic: 'refunds' }} />);
-    await userEvent.type(await screen.findByRole('textbox', { name: "What's happening?" }), 'Dispute');
-    await userEvent.click(screen.getByRole('button', { name: 'Send' }));
+    await user().type(await screen.findByRole('textbox', { name: "What's happening?" }), 'Dispute');
+    await user().click(screen.getByRole('button', { name: 'Send' }));
     expect(await screen.findByText('Pick a record from the list.')).toBeTruthy();
     expect(screen.getByText('1 thing needs attention.')).toBeTruthy();
   });
@@ -165,8 +168,8 @@ describe('My cases and status', () => {
     expect(await screen.findByRole('heading', { name: 'HD-4471 · conversation' })).toBeTruthy();
     expect(await screen.findByText(/document received and readable/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Attach' })).toBeTruthy();
-    await userEvent.type(screen.getByRole('textbox', { name: 'Reply in case HD-4471' }), 'Thanks!');
-    await userEvent.click(screen.getByRole('button', { name: 'Send' }));
+    await user().type(screen.getByRole('textbox', { name: 'Reply in case HD-4471' }), 'Thanks!');
+    await user().click(screen.getByRole('button', { name: 'Send' }));
     await waitFor(() => expect(calls.find(c => c.key === `POST ${base}/cases/c1/messages`)?.body).toEqual({ body: 'Thanks!', attachmentIds: [] }));
   });
 

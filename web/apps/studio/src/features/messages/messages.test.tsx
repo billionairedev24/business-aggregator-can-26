@@ -15,6 +15,9 @@ vi.mock('@tanstack/react-router', async orig => ({ ...(await orig<typeof import(
 
 import { MessagesScreen } from './MessagesScreen';
 
+/** user-event with no timer between keystrokes: typing costs one pass, not a macrotask per character. */
+const user = () => userEvent.setup({ delay: null });
+
 const base = `/api/v1/merchants/${M}`;
 const thread = (id: string, name: string, over: Record<string, unknown> = {}) => ({
   id, kind: 'customer', counterpartName: name, subject: null, refType: 'booking', refId: `r-${id}`, refCode: null, assigneeId: null,
@@ -63,10 +66,10 @@ describe('MessagesScreen', () => {
       [`POST ${base}/threads/t1/messages`]: (body: unknown) => ({ status: 201, json: msg('m4', 'merchant', (body as { body: string }).body, { templateKey: 'provider.on_my_way' }) }),
     });
     renderScreen(<MessagesScreen onSelect={vi.fn()} />);
-    await userEvent.click(await screen.findByRole('button', { name: 'On my way' }));
+    await user().click(await screen.findByRole('button', { name: 'On my way' }));
     const input = screen.getByRole('textbox', { name: 'Reply to Amara Osei' });
     expect((input as HTMLInputElement).value).toBe('On my way');
-    await userEvent.click(screen.getByRole('button', { name: 'Send' }));
+    await user().click(screen.getByRole('button', { name: 'Send' }));
     await waitFor(() => expect(calls.find(c => c.key === `POST ${base}/threads/t1/messages`)?.body).toEqual({ body: 'On my way', attachmentIds: [], templateKey: 'provider.on_my_way' }));
     await waitFor(() => expect((input as HTMLInputElement).value).toBe(''));
   });
@@ -78,10 +81,10 @@ describe('MessagesScreen', () => {
     });
     renderScreen(<MessagesScreen onSelect={vi.fn()} />);
     await screen.findByRole('button', { name: 'On my way' });
-    await userEvent.click(screen.getByRole('button', { name: 'Send' }));
+    await user().click(screen.getByRole('button', { name: 'Send' }));
     expect((await screen.findByRole('alert')).textContent).toBe('Write a message or attach a file.');
-    await userEvent.type(screen.getByRole('textbox', { name: 'Reply to Amara Osei' }), 'Hello');
-    await userEvent.click(screen.getByRole('button', { name: 'Send' }));
+    await user().type(screen.getByRole('textbox', { name: 'Reply to Amara Osei' }), 'Hello');
+    await user().click(screen.getByRole('button', { name: 'Send' }));
     expect((await screen.findByRole('alert')).textContent).toBe('That file is no longer available. Attach it again.');
     expect((screen.getByRole('textbox', { name: 'Reply to Amara Osei' }) as HTMLInputElement).value).toBe('Hello');
   });
@@ -108,7 +111,7 @@ describe('MessagesScreen', () => {
     renderScreen(<MessagesScreen onSelect={vi.fn()} />);
     expect(await screen.findByText("We couldn't load your messages.")).toBeTruthy();
     fail = false;
-    await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await user().click(screen.getByRole('button', { name: 'Retry' }));
     expect(await screen.findByText('No conversations yet — customers can message you once they book or order.')).toBeTruthy();
   });
 
@@ -116,7 +119,7 @@ describe('MessagesScreen', () => {
     stubFetch({ [`GET ${base}/threads`]: THREADS, [`GET ${base}/threads/t1`]: DETAIL, [`POST ${base}/threads/t1/read`]: () => ({ status: 204 }) });
     const onSelect = vi.fn();
     renderScreen(<MessagesScreen onSelect={onSelect} />);
-    await userEvent.click(await screen.findByRole('button', { name: /M\. Tran/ }));
+    await user().click(await screen.findByRole('button', { name: /M\. Tran/ }));
     expect(onSelect).toHaveBeenCalledWith('t2');
   });
 

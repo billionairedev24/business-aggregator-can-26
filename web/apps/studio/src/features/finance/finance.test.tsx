@@ -99,7 +99,7 @@ afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 function renderScreen(ui: ReactNode, locale: 'en' | 'fr' = 'en') {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   render(<I18nProvider initial={locale}><QueryClientProvider client={qc}>{ui}</QueryClientProvider></I18nProvider>);
-  return userEvent.setup();
+  return userEvent.setup({ delay: null });
 }
 
 describe('Earnings', () => {

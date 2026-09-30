@@ -21,6 +21,9 @@ import { ServiceEditor } from './ServiceEditor';
 import { ProductEditor } from './ProductEditor';
 import { BulkUploadScreen } from './BulkUploadScreen';
 
+/** user-event with no timer between keystrokes: typing costs one pass, not a macrotask per character. */
+const user = () => userEvent.setup({ delay: null });
+
 const base = `/api/v1/merchants/${M}`;
 const item = (over: Record<string, unknown>) => ({ id: 'x', kind: 'product', name: 'X', sku: 'X-1', meta: '', priceCents: 1000, stock: 5, sales30d: 0, vetting: 'approved', status: 'live', vettingFlags: [], submittedAt: null, categoryId: null, pricingMode: null, updatedAt: '2026-09-29T15:00:00Z', ...over });
 const LISTINGS = [
@@ -68,7 +71,7 @@ describe('ListingsScreen', () => {
     renderScreen(<ListingsScreen />);
     await screen.findAllByText('Brake pads · ceramic (front)');
     // first live product in design order is the brake pads (p1)
-    await userEvent.click(screen.getAllByRole('button', { name: /^Hide/ })[0]!);
+    await user().click(screen.getAllByRole('button', { name: /^Hide/ })[0]!);
     await waitFor(() => expect(calls.some(c => c.key === `POST ${base}/listings/p1/hide`)).toBe(true));
   });
 
@@ -92,7 +95,7 @@ describe('ServiceEditor', () => {
     shell.type = 'provider';
     const calls = stubFetch({ [`GET ${base}/catalogue/categories`]: CATEGORIES });
     renderScreen(<ServiceEditor portal="provider" />);
-    await userEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    await user().click(screen.getByRole('button', { name: 'Save draft' }));
     expect(await screen.findByText('2 things need attention.')).toBeTruthy();
     expect(screen.getAllByText('Enter a service name.').length).toBeGreaterThan(0);
     expect(calls.some(c => c.key.startsWith('POST'))).toBe(false);
@@ -106,9 +109,9 @@ describe('ServiceEditor', () => {
       [`POST ${base}/services`]: () => ({ status: 422, json: { errors: [{ field: 'sku', rule: 'taken', message: 'That SKU is already used by another listing.' }] } }),
     });
     renderScreen(<ServiceEditor portal="provider" />);
-    await userEvent.type(screen.getByLabelText('Service name'), 'Brake inspection');
-    await userEvent.type(screen.getByLabelText('Price (incl. travel)'), '89');
-    await userEvent.click(screen.getByRole('button', { name: 'Save draft' }));
+    await user().type(screen.getByLabelText('Service name'), 'Brake inspection');
+    await user().type(screen.getByLabelText('Price (incl. travel)'), '89');
+    await user().click(screen.getByRole('button', { name: 'Save draft' }));
     await waitFor(() => expect(calls.find(c => c.key === `POST ${base}/services`)).toBeTruthy());
     expect(calls.find(c => c.key === `POST ${base}/services`)!.body).toMatchObject({ name: 'Brake inspection', pricingMode: 'fixed', priceCents: 8900, durationMin: 60, bufferMin: 0, instantBook: true });
     expect(await screen.findAllByText('That SKU is already used by another listing.')).not.toHaveLength(0);
@@ -122,8 +125,8 @@ describe('ProductEditor', () => {
       [`GET ${base}/catalogue/products/lookup`]: { id: 'r', ref: 'NL-P-88120', gtin: '028851200226', brand: 'Bosch', title: 'Bosch Icon 22" beam blade', mpn: '22A', categoryId: 'shop.hardware-and-auto.auto-parts', attributes: { partType: 'Wiper blades' }, description: null, bullets: [], images: [], sellerCount: 14, locked: true },
     });
     renderScreen(<ProductEditor portal="seller" />);
-    await userEvent.type(screen.getByRole('textbox', { name: /Product identifier/ }), '028851200226');
-    await userEvent.click(screen.getByRole('button', { name: 'Look up' }));
+    await user().type(screen.getByRole('textbox', { name: /Product identifier/ }), '028851200226');
+    await user().click(screen.getByRole('button', { name: 'Look up' }));
     expect(await screen.findByText('Matched · Northline catalogue NL-P-88120')).toBeTruthy();
     expect(screen.getByText(/14 sellers/)).toBeTruthy();
     expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('Bosch Icon 22" beam blade');
@@ -134,7 +137,7 @@ describe('ProductEditor', () => {
     stubFetch({ [`GET ${base}/catalogue/categories`]: CATEGORIES });
     renderScreen(<ProductEditor portal="seller" />);
     const gtin = screen.getByRole('textbox', { name: /Product identifier/ });
-    await userEvent.type(gtin, '028851200220');
+    await user().type(gtin, '028851200220');
     fireEvent.blur(gtin);
     expect(await screen.findByText('GTIN check digit invalid')).toBeTruthy();
     expect((screen.getByRole('button', { name: 'Submit for vetting' }) as HTMLButtonElement).disabled).toBe(true);
@@ -153,11 +156,11 @@ describe('BulkUploadScreen', () => {
     });
     renderScreen(<BulkUploadScreen />);
     expect(screen.getByRole('heading', { name: 'Add or update hundreds of products at once' })).toBeTruthy();
-    await userEvent.upload(screen.getByTestId('bulk-input'), new File(['sku\n'], 'wipers-sept.xlsx'));
+    await user().upload(screen.getByTestId('bulk-input'), new File(['sku\n'], 'wipers-sept.xlsx'));
     expect(await screen.findByText('Validation · wipers-sept.xlsx')).toBeTruthy();
     expect(screen.getByText('212')).toBeTruthy();
     expect(screen.getAllByText('GTIN check digit invalid').length).toBeGreaterThan(0);
-    await userEvent.click(screen.getByRole('button', { name: 'Import 250 valid rows' }));
+    await user().click(screen.getByRole('button', { name: 'Import 250 valid rows' }));
     expect(await screen.findByText(/Imported · 212 created as drafts, 38 updated/)).toBeTruthy();
     expect(calls.some(c => c.key === `POST ${base}/listings/imports/b1/commit`)).toBe(true);
   });

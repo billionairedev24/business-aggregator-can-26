@@ -1,7 +1,7 @@
 package ca.northline.food.api;
 
+import ca.northline.platform.EventType;
 import ca.northline.shared.DomainEvent;
-import ca.northline.shared.EventType;
 import java.time.Instant;
 import org.springframework.modulith.events.Externalized;
 

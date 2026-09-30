@@ -13,7 +13,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ca.northline.auth.application.SignInLog;
 import ca.northline.auth.support.AuthIntegrationTest;
+import ca.northline.platform.EventHeaders;
 import com.jayway.jsonpath.JsonPath;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,7 +41,8 @@ import org.testcontainers.kafka.KafkaContainer;
 /**
  * S-28: {@code user.registered} is written to northline-auth's outbox ({@code auth.event_publication}) in the
  * registration transaction and externalized to a real Kafka 4 (Testcontainers, the compose image) on topic
- * {@code identity.user}, key = user id, ids only — exactly once per registration; a registration that rolls back leaves
+ * {@code identity.user}, key = user id, ids only, with the {@code nl-event-*} envelope headers — exactly once per
+ * registration; a registration that rolls back leaves
  * neither an account, nor a publication, nor a record.
  */
 class UserRegisteredEventsTest extends AuthIntegrationTest {
@@ -128,6 +131,17 @@ class UserRegisteredEventsTest extends AuthIntegrationTest {
         assertThat(JsonPath.<Map<String, Object>>read(json, "$"))
                 .containsOnlyKeys("eventId", "occurredAt", "aggregateId");
         assertThat(json).doesNotContain(person.email(), person.e164(), person.firstName(), person.lastName());
+        // The envelope headers the worker's consumers require (S-26), as the api sets them.
+        var record = records.getFirst();
+        assertThat(header(record, EventHeaders.ID)).isEqualTo(JsonPath.<String>read(json, "$.eventId"));
+        assertThat(header(record, EventHeaders.TYPE)).isEqualTo("identity.user_registered");
+        assertThat(header(record, EventHeaders.VERSION)).isEqualTo("1");
+    }
+
+    private static String header(ConsumerRecord<String, String> record, String name) {
+        var header = record.headers().lastHeader(name);
+        assertThat(header).as(name).isNotNull();
+        return new String(header.value(), StandardCharsets.UTF_8);
     }
 
     @Test

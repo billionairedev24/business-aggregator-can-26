@@ -21,7 +21,7 @@ describe('Calendar sync (S-32)', () => {
       [`GET ${A}/sync`]: () => sync([cal({ provider: 'google' }), cal({ provider: 'outlook', available: false }), cal({ provider: 'ical' })]),
       [`POST ${A}/calendars/google`]: () => cal({ provider: 'google', authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth?state=s' }),
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<SyncTab />);
     const google = (await screen.findByText('Google Calendar')).closest('li')!;
     const outlook = screen.getByText('Outlook / Microsoft 365').closest('li')!;
@@ -38,7 +38,7 @@ describe('Calendar sync (S-32)', () => {
       [`GET ${A}/sync`]: () => sync([cal({ provider: 'google', connected: true, state: 'reconnect', accountLabel: 'jas@prairiewrench.ca' }), cal({ provider: 'outlook' }), cal({ provider: 'ical' })]),
       [`POST ${A}/calendars/google`]: () => cal({ provider: 'google', connected: true, state: 'reconnect', authorizationUrl: 'https://accounts.google.com/again' }),
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<SyncTab />);
     expect(await screen.findByText('Access expired or was removed · reconnect to keep syncing')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Choose calendars' })).toBeNull();
@@ -51,7 +51,7 @@ describe('Calendar sync (S-32)', () => {
       [`GET ${A}/sync`]: () => sync([cal({ provider: 'google', connected: true, state: 'connected', accountLabel: 'jas@prairiewrench.ca', lastSyncAt: new Date().toISOString(), sources: ['Work', 'Family'] }), cal({ provider: 'outlook' }), cal({ provider: 'ical' })]),
       [`DELETE ${A}/calendars/google`]: () => cal({ provider: 'google' }),
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<SyncTab />);
     expect(await screen.findByText('Google Calendar · jas@prairiewrench.ca')).toBeTruthy();
     expect(screen.getByText('Two-way · last sync just now · Blocks slots from: Work, Family')).toBeTruthy();
@@ -67,7 +67,7 @@ describe('Calendar sync (S-32)', () => {
       [`PUT ${A}/calendars/google/sources`]: (_u, init) => ({ items: JSON.parse(String(init.body)).calendarIds.map((id: string) => ({ id, name: id, primary: false, selected: true })) }),
     });
     const seen = vi.fn();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<SyncTab returned={{ calendar: 'google', result: 'connected', choose: true }} onReturnSeen={seen} />);
     expect(await screen.findByText('Google Calendar is connected. Busy times will block your slots within a few minutes.')).toBeTruthy();
     expect(seen).toHaveBeenCalled();
@@ -88,7 +88,7 @@ describe('Calendar sync (S-32)', () => {
       [`GET ${A}/sync`]: () => sync([cal({ provider: 'google', connected: true, state: 'connected' }), cal({ provider: 'outlook' }), cal({ provider: 'ical' })]),
       [`GET ${A}/calendars/google/sources`]: () => ({ items: [], authorizationUrl: 'https://accounts.google.com/list' }),
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<SyncTab />);
     await user.click(await screen.findByRole('button', { name: 'Choose calendars' }));
     const dialog = await screen.findByRole('dialog');

@@ -5,6 +5,9 @@ import { TAXONOMY, onboarding } from '../../test/fixtures';
 import { mockFetch, renderWithProviders, type Call } from '../../test/render';
 import { BusinessStep } from './BusinessStep';
 
+/** user-event with no timer between keystrokes: typing costs one pass, not a macrotask per character. */
+const user = () => userEvent.setup({ delay: null });
+
 beforeEach(() => vi.unstubAllGlobals());
 
 function setup(respond?: (c: Call) => { status?: number; body?: unknown } | undefined, o = onboarding()) {
@@ -14,12 +17,12 @@ function setup(respond?: (c: Call) => { status?: number; body?: unknown } | unde
   return { calls, onDone };
 }
 
-const type = (label: RegExp | string, text: string) => userEvent.type(screen.getByRole('textbox', { name: label }), text);
+const type = (label: RegExp | string, text: string) => user().type(screen.getByRole('textbox', { name: label }), text);
 
 describe('BusinessStep', () => {
   it('shows every problem and the attention summary on submit (validation-rules.md messages)', async () => {
     const { calls } = setup();
-    await userEvent.click(screen.getByRole('button', { name: 'Continue to verification' }));
+    await user().click(screen.getByRole('button', { name: 'Continue to verification' }));
     expect(screen.getByText('Enter the name customers will see.')).toBeTruthy();
     expect(screen.getByText('Enter the registered legal name.')).toBeTruthy();
     expect(screen.getByText('Pick at least one service.')).toBeTruthy();
@@ -30,8 +33,8 @@ describe('BusinessStep', () => {
 
   it('requires GST for corporations and checks its format', async () => {
     setup();
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Business structure' }), 'corp_ab');
-    await userEvent.click(screen.getByRole('button', { name: 'Continue to verification' }));
+    await user().selectOptions(screen.getByRole('combobox', { name: 'Business structure' }), 'corp_ab');
+    await user().click(screen.getByRole('button', { name: 'Continue to verification' }));
     expect(screen.getByText('Required for corporations, co-ops and non-profits.')).toBeTruthy();
     await type(/GST\/HST number/, '12345');
     expect(screen.getByText('Format is 9 digits + RT0001 (e.g. 123456789 RT0001).')).toBeTruthy();
@@ -41,10 +44,10 @@ describe('BusinessStep', () => {
   it('limits categories per type and offers a suggestion when nothing matches', async () => {
     setup(c => (c.url.startsWith('/api/v1/onboarding/taxonomy') ? { body: { ...TAXONOMY, type: 'kitchen', limit: 3 } } : undefined), onboarding({ type: 'kitchen' }));
     const picker = await screen.findByRole('combobox', { name: 'Type of food business' });
-    await userEvent.click(picker);
-    for (const name of ['Mobile mechanic', 'Detailing', 'Dog walker']) await userEvent.click(screen.getByRole('option', { name: new RegExp(name) }));
+    await user().click(picker);
+    for (const name of ['Mobile mechanic', 'Detailing', 'Dog walker']) await user().click(screen.getByRole('option', { name: new RegExp(name) }));
     expect(screen.getByRole('status').textContent).toContain('Limit reached');
-    await userEvent.type(picker, 'zzz');
+    await user().type(picker, 'zzz');
     expect(screen.queryByRole('button', { name: /Suggest/ })).toBeNull(); // at the limit: no suggestion
     expect(screen.getByText('· 3 of 3 selected')).toBeTruthy();
   });
@@ -58,10 +61,10 @@ describe('BusinessStep', () => {
     await type(/Legal name of owner/, 'Amara Okafor');
     await type(/Home \/ business address/, '12 Glenmore Trail SW, Calgary');
     const picker = await screen.findByRole('combobox', { name: 'Services you offer' });
-    await userEvent.click(picker);
-    await userEvent.click(screen.getByRole('option', { name: /Mobile mechanic/ }));
-    await userEvent.click(within(screen.getByRole('listbox').parentElement!).getByRole('button', { name: 'Done' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Continue to verification' }));
+    await user().click(picker);
+    await user().click(screen.getByRole('option', { name: /Mobile mechanic/ }));
+    await user().click(within(screen.getByRole('listbox').parentElement!).getByRole('button', { name: 'Done' }));
+    await user().click(screen.getByRole('button', { name: 'Continue to verification' }));
 
     await waitFor(() => expect(calls.some(c => c.method === 'PUT')).toBe(true));
     const body = calls.find(c => c.method === 'PUT')!.body as Record<string, unknown>;

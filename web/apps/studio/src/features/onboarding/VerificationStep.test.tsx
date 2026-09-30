@@ -9,6 +9,9 @@ import { IdentityDoneScreen } from './IdentityDoneScreen';
 import { ReviewStep } from './ReviewStep';
 import { VerificationStep } from './VerificationStep';
 
+/** user-event with no timer between keystrokes: typing costs one pass, not a macrotask per character. */
+const user = () => userEvent.setup({ delay: null });
+
 vi.mock('@tanstack/react-router', async orig => ({
   ...(await orig<typeof import('@tanstack/react-router')>()),
   Link: ({ children, className }: { children: React.ReactNode; className?: string }) => <a className={className} href="#">{children}</a>,
@@ -26,7 +29,7 @@ describe('VerificationStep', () => {
     const calls = mockFetch(c => (c.url.endsWith('/verifications/V5/complete') ? { body: done(o, 'bank') } : undefined));
     renderWithProviders(<VerificationStep onboarding={o} onBack={() => {}} onSubmitted={() => {}} />);
     expect(screen.getByText('0 of 6 complete')).toBeTruthy();
-    await userEvent.click(screen.getByRole('button', { name: 'Connect bank' }));
+    await user().click(screen.getByRole('button', { name: 'Connect bank' }));
     await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url.endsWith('/V5/complete'))).toBe(true));
     expect(((screen.getByRole('button', { name: 'Submit for review' })) as HTMLButtonElement).disabled).toBe(true);
   });
@@ -37,9 +40,9 @@ describe('VerificationStep', () => {
     renderWithProviders(<VerificationStep onboarding={o} onBack={() => {}} onSubmitted={() => {}} />);
     expect(screen.getByText('AMVIC licence')).toBeTruthy();
     expect(screen.getByText('Required for automotive services in Alberta.')).toBeTruthy();
-    await userEvent.click(screen.getByRole('button', { name: 'Enter licence #' }));
+    await user().click(screen.getByRole('button', { name: 'Enter licence #' }));
     const dialog = screen.getByRole('dialog', { name: 'AMVIC licence' });
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Verify' }));
+    await user().click(within(dialog).getByRole('button', { name: 'Verify' }));
     expect(await within(dialog).findByText('Enter the licence number.')).toBeTruthy();
   });
 
@@ -51,7 +54,7 @@ describe('VerificationStep', () => {
     renderWithProviders(<VerificationStep onboarding={o} onBack={() => {}} onSubmitted={onSubmitted} />);
     expect(screen.getByText('6 of 6 complete')).toBeTruthy();
     expect(screen.getByText(/Valid to/)).toBeTruthy();
-    await userEvent.click(screen.getByRole('button', { name: 'Submit for review' }));
+    await user().click(screen.getByRole('button', { name: 'Submit for review' }));
     await waitFor(() => expect(onSubmitted).toHaveBeenCalled());
     expect(calls.filter(c => c.method === 'POST')).toHaveLength(1);
   });
@@ -79,7 +82,7 @@ describe('Identity (Stripe KYC) — S-22', () => {
   it('opens the owners list from the checklist instead of completing the row', async () => {
     const calls = mockFetch(c => (c.url.endsWith('/identity-checks') ? { body: { items: owners } } : undefined));
     renderWithProviders(<VerificationStep onboarding={onboarding()} onBack={() => {}} onSubmitted={() => {}} />);
-    await userEvent.click(screen.getByRole('button', { name: 'Start with Stripe' }));
+    await user().click(screen.getByRole('button', { name: 'Start with Stripe' }));
     const dialog = screen.getByRole('dialog', { name: 'Identity (Stripe KYC)' });
     expect(await within(dialog).findByText('Ravi Sandhu')).toBeTruthy();
     expect(within(dialog).getByText('Director · 60 %')).toBeTruthy();
@@ -97,15 +100,15 @@ describe('Identity (Stripe KYC) — S-22', () => {
     });
     renderWithProviders(<IdentityDialog merchantId="M1" title="Identity" onClose={() => {}} navigate={navigate} />);
     const dialog = await screen.findByRole('dialog', { name: 'Identity' });
-    await userEvent.click((await within(dialog).findAllByRole('button', { name: 'This is me · verify now' }))[0]!);
+    await user().click((await within(dialog).findAllByRole('button', { name: 'This is me · verify now' }))[0]!);
     await waitFor(() => expect(navigate).toHaveBeenCalledWith('https://verify.stripe.com/start/test_x'));
     expect(calls.find(c => c.url.endsWith('/P1/session'))?.body).toEqual({ delivery: 'self' });
 
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Send a new link' }));
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Send link' }));
+    await user().click(within(dialog).getByRole('button', { name: 'Send a new link' }));
+    await user().click(within(dialog).getByRole('button', { name: 'Send link' }));
     expect(await within(dialog).findByText("Enter the owner's email address.")).toBeTruthy();
-    await userEvent.type(within(dialog).getByLabelText("Priya Sandhu's email"), 'priya@example.ca');
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Send link' }));
+    await user().type(within(dialog).getByLabelText("Priya Sandhu's email"), 'priya@example.ca');
+    await user().click(within(dialog).getByRole('button', { name: 'Send link' }));
     expect(await within(dialog).findByText(/Link sent to p\*\*\*@example.ca/)).toBeTruthy();
   });
 
@@ -135,7 +138,7 @@ describe('ReviewStep', () => {
     expect(screen.getByText('Under review')).toBeTruthy();
     expect(screen.getByText('No shortcuts for food.')).toBeTruthy();
     expect(screen.getByText(/Submitted today/)).toBeTruthy();
-    await userEvent.click(screen.getByRole('button', { name: 'Simulate approval →' }));
+    await user().click(screen.getByRole('button', { name: 'Simulate approval →' }));
     await waitFor(() => expect(onNext).toHaveBeenCalled());
     expect(calls.map(c => `${c.method} ${c.url}`)).toEqual([
       'POST /api/v1/dev/merchants/01J9ZD3V00000000000000TST1/approve',
