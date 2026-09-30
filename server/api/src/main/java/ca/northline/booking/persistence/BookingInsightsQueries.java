@@ -51,6 +51,32 @@ class BookingInsightsQueries implements BookingCalendar, BookingInsights, NavBad
     }
 
     @Override
+    public List<Job> jobs(String merchantId, String memberUserId, Instant from, Instant to) {
+        return jdbc.sql("""
+                        select id, ref, coalesce(title, 'Job') as title, customer_id, address_line, starts_at,
+                               coalesce(ends_at, starts_at + interval '1 hour') as ends_at
+                          from booking.bookings
+                         where merchant_id = :merchantId and member_user_id = :member
+                           and state not in ('cancelled', 'requested')
+                           and starts_at < :to and coalesce(ends_at, starts_at) > :from
+                         order by starts_at, id
+                        """)
+                .param("merchantId", merchantId)
+                .param("member", memberUserId)
+                .param("from", JdbcTimes.ts(from))
+                .param("to", JdbcTimes.ts(to))
+                .query((rs, _) -> new Job(
+                        rs.getString("id"),
+                        rs.getString("ref"),
+                        rs.getString("title"),
+                        rs.getString("customer_id"),
+                        rs.getString("address_line"),
+                        JdbcTimes.requiredInstant(rs, "starts_at"),
+                        JdbcTimes.requiredInstant(rs, "ends_at")))
+                .list();
+    }
+
+    @Override
     public List<JobAtAGlance> jobs(String merchantId, Instant from, Instant to) {
         return jdbc.sql("""
                         select id, coalesce(title, 'Job') as title, starts_at, state, customer_id, member_user_id, area,

@@ -19,9 +19,12 @@ import ca.northline.availability.application.AvailabilityUseCases.ViewHours;
 import ca.northline.availability.application.AvailabilityUseCases.ViewRules;
 import ca.northline.availability.application.AvailabilityUseCases.ViewSync;
 import ca.northline.availability.application.AvailabilityUseCases.ViewTimeOff;
+import ca.northline.availability.application.CalendarUseCases.ChooseCalendarSources;
+import ca.northline.availability.application.CalendarUseCases.ListCalendarSources;
 import ca.northline.availability.domain.CalendarProvider;
 import ca.northline.availability.web.AvailabilityDtos.BookableBody;
 import ca.northline.availability.web.AvailabilityDtos.CalendarResponse;
+import ca.northline.availability.web.AvailabilityDtos.ChooseSourcesBody;
 import ca.northline.availability.web.AvailabilityDtos.ConflictsResponse;
 import ca.northline.availability.web.AvailabilityDtos.HolidayResponse;
 import ca.northline.availability.web.AvailabilityDtos.HoursResponse;
@@ -32,6 +35,7 @@ import ca.northline.availability.web.AvailabilityDtos.RulesBody;
 import ca.northline.availability.web.AvailabilityDtos.RulesResponse;
 import ca.northline.availability.web.AvailabilityDtos.SaveHoursBody;
 import ca.northline.availability.web.AvailabilityDtos.ServiceResponse;
+import ca.northline.availability.web.AvailabilityDtos.SourcesResponse;
 import ca.northline.availability.web.AvailabilityDtos.SyncResponse;
 import ca.northline.availability.web.AvailabilityDtos.TeamMemberResponse;
 import ca.northline.availability.web.AvailabilityDtos.TimeOffBody;
@@ -82,6 +86,8 @@ class AvailabilityController {
     private final ConnectCalendar connectCalendar;
     private final DisconnectCalendar disconnectCalendar;
     private final SetBookable setBookable;
+    private final ListCalendarSources listSources;
+    private final ChooseCalendarSources chooseSources;
     private final AvailabilityWebMapper mapper;
 
     @GetMapping("/hours")
@@ -194,7 +200,10 @@ class AvailabilityController {
         return mapper.toResponse(viewSync.view(merchantId, member.userId()));
     }
 
-    /** Connect the caller's calendar ({@code google}, {@code outlook}, {@code ical}). */
+    /**
+     * Connect the caller's calendar ({@code google}, {@code outlook}, {@code ical}). Google and Outlook answer with an
+     * {@code authorizationUrl} (OAuth consent); the provider redirects back to {@code /api/v1/calendar/oauth/…}.
+     */
     @PostMapping("/calendars/{provider}")
     @RequiresMerchant(EDIT)
     CalendarResponse connect(@PathVariable String merchantId, @PathVariable String provider, CurrentMember member) {
@@ -205,6 +214,24 @@ class AvailabilityController {
     @RequiresMerchant(EDIT)
     CalendarResponse disconnect(@PathVariable String merchantId, @PathVariable String provider, CurrentMember member) {
         return mapper.toResponse(disconnectCalendar.disconnect(merchantId, member.userId(), provider(provider)));
+    }
+
+    /** "Choose calendars": the caller's calendars at the provider, the ones that block slots marked. */
+    @GetMapping("/calendars/{provider}/sources")
+    @RequiresMerchant(EDIT)
+    SourcesResponse sources(@PathVariable String merchantId, @PathVariable String provider, CurrentMember member) {
+        return mapper.toResponse(listSources.list(merchantId, member.userId(), provider(provider)));
+    }
+
+    @PutMapping("/calendars/{provider}/sources")
+    @RequiresMerchant(EDIT)
+    SourcesResponse chooseSources(
+            @PathVariable String merchantId,
+            @PathVariable String provider,
+            @Valid @RequestBody ChooseSourcesBody body,
+            CurrentMember member) {
+        return mapper.toResponse(
+                chooseSources.choose(merchantId, member.userId(), provider(provider), body.calendarIds()));
     }
 
     /** Show or hide a member on the booking calendar (owner only). */

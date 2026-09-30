@@ -258,21 +258,26 @@ class AvailabilityApiTest extends IntegrationTest {
     @Nested
     class Sync {
 
+        /** iCal connects at once; Google / Outlook start OAuth (S-32 — the flow itself: CalendarSyncApiTest). */
         @Test
-        void connectIcalAndGoogle_thenDisconnect() throws Exception {
+        void connectIcalAtOnce_googleStartsOAuth_thenDisconnect() throws Exception {
             mvc.perform(post(path("/calendars/ical")).with(TestJwt.member(tech)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.connected").value(true))
                     .andExpect(jsonPath("$.feedUrl")
                             .value(org.hamcrest.Matchers.startsWith("webcal://northline.ca/cal/")));
             mvc.perform(post(path("/calendars/google")).with(TestJwt.member(tech)))
-                    .andExpect(jsonPath("$.connected").value(true));
+                    .andExpect(jsonPath("$.connected").value(false))
+                    .andExpect(jsonPath("$.available").value(true))
+                    .andExpect(jsonPath("$.authorizationUrl")
+                            .value(org.hamcrest.Matchers.containsString("/api/v1/calendar/oauth/google/callback")));
             mvc.perform(get(path("/sync")).with(TestJwt.member(tech)))
                     .andExpect(jsonPath("$.calendars[0].provider").value("google"))
-                    .andExpect(jsonPath("$.calendars[0].connected").value(true))
-                    .andExpect(jsonPath("$.calendars[1].connected").value(false))
+                    .andExpect(jsonPath("$.calendars[0].connected").value(false))
+                    .andExpect(jsonPath("$.calendars[2].provider").value("ical"))
+                    .andExpect(jsonPath("$.calendars[2].connected").value(true))
                     .andExpect(jsonPath("$.team", hasSize(2)));
-            mvc.perform(delete(path("/calendars/google")).with(TestJwt.member(tech)))
+            mvc.perform(delete(path("/calendars/ical")).with(TestJwt.member(tech)))
                     .andExpect(jsonPath("$.connected").value(false));
             mvc.perform(post(path("/calendars/myspace")).with(TestJwt.member(tech)))
                     .andExpect(status().isNotFound());

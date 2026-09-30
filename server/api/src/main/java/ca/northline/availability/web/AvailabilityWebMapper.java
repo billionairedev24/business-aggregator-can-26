@@ -10,6 +10,7 @@ import ca.northline.availability.application.AvailabilityUseCases.SyncView;
 import ca.northline.availability.application.AvailabilityUseCases.TeamMemberView;
 import ca.northline.availability.application.AvailabilityUseCases.TimeOffEntry;
 import ca.northline.availability.application.AvailabilityUseCases.TimeOffView;
+import ca.northline.availability.application.CalendarUseCases.SourcesView;
 import ca.northline.availability.domain.BookingRules;
 import ca.northline.availability.domain.SlotPlanner.Slot;
 import ca.northline.availability.domain.TimeRange;
@@ -23,6 +24,7 @@ import ca.northline.availability.web.AvailabilityDtos.RulesBody;
 import ca.northline.availability.web.AvailabilityDtos.RulesResponse;
 import ca.northline.availability.web.AvailabilityDtos.ServiceResponse;
 import ca.northline.availability.web.AvailabilityDtos.SlotResponse;
+import ca.northline.availability.web.AvailabilityDtos.SourcesResponse;
 import ca.northline.availability.web.AvailabilityDtos.SyncResponse;
 import ca.northline.availability.web.AvailabilityDtos.TeamMemberResponse;
 import ca.northline.availability.web.AvailabilityDtos.TimeOffListResponse;
@@ -100,6 +102,8 @@ interface AvailabilityWebMapper {
     HolidayResponse toResponse(HolidayView view);
 
     CalendarResponse toResponse(CalendarView view);
+
+    SourcesResponse toResponse(SourcesView view);
 
     SyncResponse toResponse(SyncView view);
 

@@ -50,6 +50,7 @@ class HoursService implements ViewHours, SaveHours, PreviewSlots, ListPreviewSer
     private final TimeOffRepository timeOff;
     private final Team team;
     private final BookingCalendar calendar;
+    private final CalendarSyncRepository calendarSync;
     private final CatalogueFacts catalogue;
     private final ApplicationEventPublisher events;
     private final Clock clock;
@@ -126,11 +127,20 @@ class HoursService implements ViewHours, SaveHours, PreviewSlots, ListPreviewSer
                 query.memberUserId(),
                 from,
                 day.plusDays(1).atStartOfDay(ZONE).toInstant());
-        var busy = jobs.stream()
-                .map(b -> new SlotPlanner.Busy(minutes(b.startsAt(), day), minutes(b.endsAt(), day)))
+        // S-32: busy times from the member's connected Google / Outlook calendars block slots like jobs do
+        var calendarBusy = calendarSync.busy(
+                query.merchantId(),
+                query.memberUserId(),
+                from,
+                day.plusDays(1).atStartOfDay(ZONE).toInstant());
+        var busy = java.util.stream.Stream.concat(
+                        jobs.stream()
+                                .map(b -> new SlotPlanner.Busy(minutes(b.startsAt(), day), minutes(b.endsAt(), day))),
+                        calendarBusy.stream()
+                                .map(b -> new SlotPlanner.Busy(minutes(b.startsAt(), day), minutes(b.endsAt(), day))))
                 .toList();
         var slots = SlotPlanner.preview(ranges, busy, query.durationMin(), interval, buffer);
-        return new Preview(slots, jobs.size(), interval, buffer, closed);
+        return new Preview(slots, jobs.size(), calendarBusy.size(), interval, buffer, closed);
     }
 
     @Override

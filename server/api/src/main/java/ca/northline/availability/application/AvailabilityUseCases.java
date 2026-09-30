@@ -2,6 +2,7 @@ package ca.northline.availability.application;
 
 import ca.northline.availability.domain.AlbertaHolidays.Holiday;
 import ca.northline.availability.domain.BookingRules;
+import ca.northline.availability.domain.CalendarLinkState;
 import ca.northline.availability.domain.CalendarProvider;
 import ca.northline.availability.domain.SlotPlanner.Slot;
 import ca.northline.availability.domain.TimeOff;
@@ -9,6 +10,7 @@ import ca.northline.availability.domain.TimeRange;
 import ca.northline.availability.domain.WeeklyHours;
 import ca.northline.catalogue.api.CatalogueFacts.ServiceDuration;
 import ca.northline.shared.security.MerchantRole;
+import java.net.URI;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -55,10 +57,14 @@ public final class AvailabilityUseCases {
                 @Nullable Integer intervalMin,
                 @Nullable Integer bufferMin) {}
 
-        /** {@code closed}: {@code time_off} or {@code holiday} when the day is closed, otherwise null. */
+        /**
+         * {@code closed}: {@code time_off} or {@code holiday} when the day is closed, otherwise null. {@code busyBlocks}:
+         * busy times from the member's connected calendars that day (S-32).
+         */
         record Preview(
                 List<Slot> slots,
                 int jobs,
+                int busyBlocks,
                 int intervalMin,
                 int bufferMin,
                 @Nullable String closed) {}
@@ -127,13 +133,25 @@ public final class AvailabilityUseCases {
 
     // ── Calendar sync & team ────────────────────────────────────────────────────
 
-    /** {@code feedUrl} only for iCal. */
+    /**
+     * {@code feedUrl} only for iCal. Google / Outlook: {@code state} once linked ({@code reconnect} = the grant was
+     * revoked), {@code available} = the provider is configured here, {@code sources} = the calendars that block slots,
+     * {@code authorizationUrl} right after "Connect": send the browser there (OAuth consent).
+     */
     public record CalendarView(
             CalendarProvider provider,
             boolean connected,
             @Nullable String accountLabel,
             @Nullable Instant lastSyncAt,
-            @Nullable String feedUrl) {}
+            @Nullable String feedUrl,
+            @Nullable CalendarLinkState state,
+            boolean available,
+            List<String> sources,
+            @Nullable URI authorizationUrl) {
+        public CalendarView {
+            sources = List.copyOf(sources);
+        }
+    }
 
     public record TeamMemberView(Member member, @Nullable WeeklyHours hours) {}
 
@@ -144,6 +162,7 @@ public final class AvailabilityUseCases {
         SyncView view(String merchantId, String userId);
     }
 
+    /** iCal: connects at once. Google / Outlook: starts OAuth — the view carries the consent page URL. */
     public interface ConnectCalendar {
         CalendarView connect(String merchantId, String userId, CalendarProvider provider);
     }
