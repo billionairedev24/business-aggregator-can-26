@@ -2169,7 +2169,8 @@ Built on S-45 (branch `web/s-62-consumer-auth` from `web/s-45-consumer-shell`).
   `sessions_method_check`; no row changes).
 - **`spring.flyway.out-of-order: true` under `local`** (api and auth): V110 is the first migration above the dev-seed
   range (V100–V109); a database migrated without `local` (the shared test database, a developer's) has V110 before the
-  seed files, which Flyway would otherwise refuse ("resolved migration not applied"). Only the `local` profile.
+  seed files, which Flyway would otherwise refuse ("resolved migration not applied"). Only the `local` profile. The api
+  tests (one shared database for `test` and `test,local` contexts) also ignore the seed rows as `missing` migrations.
 - **Shared code (`@northline/auth-kit`, new package):** the Studio's `features/auth/{api,errors,webauthn,useCountdown,
   rateLimit}` moved there (plus the Google/Apple/passkey marks, `safeNext`, `bffLoginUrl`, `appAuthorizationUrl`,
   `authUrl`/`endAuthSession` with `configureAuthOrigin`, and the new consumer calls). The shared copy (validation rules,
