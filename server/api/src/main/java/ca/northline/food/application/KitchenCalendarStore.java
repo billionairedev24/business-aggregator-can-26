@@ -16,6 +16,8 @@ public interface KitchenCalendarStore {
     /**
      * @param week ranges per ISO weekday as stored ({@code [["11:00","21:00"]]})
      * @param menuLive a live menu with at least one approved, published dish
+     * @param radiusKm the delivery radius the kitchen set (Hours › Fulfilment), or null
+     * @param avgItemCents the average price of its orderable dishes (the "24637" price level)
      */
     record CalendarRow(
             String merchantId,
@@ -27,5 +29,8 @@ public interface KitchenCalendarStore {
             Map<Integer, List<List<String>>> week,
             Map<LocalDate, List<List<String>>> holidays,
             int lateOrders,
-            boolean menuLive) {}
+            boolean menuLive,
+            @Nullable Double radiusKm,
+            long avgItemCents,
+            int scheduledDays) {}
 }

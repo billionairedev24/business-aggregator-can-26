@@ -26,8 +26,10 @@ class PublicDirectoryQueries implements PublicDirectory {
                                    order by c.category_id), '{}') as category_ids,
                    coalesce(array(select jsonb_array_elements_text(coalesce(m.profile -> 'cuisines', '[]'))), '{}') as cuisines,
                    coalesce(array(select jsonb_array_elements_text(coalesce(m.profile -> 'dietary', '[]'))), '{}') as dietary,
-                   coalesce(m.profile ->> 'kitchenAddress', m.profile ->> 'pickupAddress') as address
+                   coalesce(m.profile ->> 'kitchenAddress', m.profile ->> 'pickupAddress') as address,
+                   ST_Y(l.geom::geometry) as lat, ST_X(l.geom::geometry) as lng, l.service_radius_km
               from merchants.merchants m
+              left join merchants.locations l on l.merchant_id = m.id
               left join lateral (select slug, brand_color from merchants.storefronts
                                   where merchant_id = m.id and published_at is not null
                                   order by published_at desc limit 1) s on true
@@ -69,7 +71,10 @@ class PublicDirectoryQueries implements PublicDirectory {
                 strings(rs.getArray("category_ids")),
                 strings(rs.getArray("cuisines")),
                 strings(rs.getArray("dietary")),
-                rs.getString("address"));
+                rs.getString("address"),
+                rs.getObject("lat", Double.class),
+                rs.getObject("lng", Double.class),
+                rs.getObject("service_radius_km") == null ? null : rs.getDouble("service_radius_km"));
     }
 
     private static List<String> strings(@Nullable Array array) throws SQLException {
