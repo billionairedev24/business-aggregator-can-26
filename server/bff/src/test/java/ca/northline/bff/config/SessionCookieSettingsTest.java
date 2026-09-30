@@ -2,11 +2,13 @@ package ca.northline.bff.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.env.YamlPropertySourceLoader;
+import org.springframework.core.env.PropertySource;
 import org.springframework.core.env.StandardEnvironment;
 import org.springframework.core.io.ClassPathResource;
 
@@ -22,15 +24,30 @@ class SessionCookieSettingsTest {
                 .bindOrCreate("server.servlet.session.cookie", Bindable.mapOf(String.class, Object.class));
     }
 
+    /** The files of {@code profiles} (last wins, as Boot orders them) over application.yml. */
     private static StandardEnvironment environment(String... profiles) throws Exception {
         var env = new StandardEnvironment();
         var loader = new YamlPropertySourceLoader();
-        for (var profile : profiles) {
-            loader.load(profile, new ClassPathResource("application-" + profile + ".yml"))
+        var active = List.of(profiles);
+        for (var profile : active.reversed()) {
+            loader.load(profile, new ClassPathResource("application-" + profile + ".yml")).stream()
+                    .filter(doc -> applies(doc, active))
                     .forEach(env.getPropertySources()::addLast);
         }
-        loader.load("base", new ClassPathResource("application.yml")).forEach(env.getPropertySources()::addLast);
+        loader.load("base", new ClassPathResource("application.yml")).stream()
+                .filter(doc -> applies(doc, active))
+                .forEach(env.getPropertySources()::addLast);
         return env;
+    }
+
+    /** {@code spring.config.activate.on-profile} of one YAML document: absent, {@code p} or {@code !p}. */
+    private static boolean applies(PropertySource<?> doc, List<String> active) {
+        var value = doc.getProperty("spring.config.activate.on-profile");
+        if (value == null) {
+            return true;
+        }
+        var expr = value.toString();
+        return expr.startsWith("!") ? !active.contains(expr.substring(1)) : active.contains(expr);
     }
 
     private static String csrfCookie(String... profiles) throws Exception {
@@ -63,5 +80,19 @@ class SessionCookieSettingsTest {
     void csrfCookie_isHostPrefixedInTheCloudOnly() throws Exception {
         assertThat(csrfCookie("cloud")).isEqualTo("__Host-XSRF-TOKEN");
         assertThat(csrfCookie("local")).isEqualTo("XSRF-TOKEN");
+        assertThat(csrfCookie("cloud", "consumer")).isEqualTo("__Host-XSRF-TOKEN");
+    }
+
+    @Test
+    void theConsumerBff_hasItsOwnCookie_hostPrefixedInTheCloud() throws Exception {
+        assertThat(cookie("cloud", "consumer"))
+                .containsEntry("name", "__Host-NL_CONSUMER")
+                .containsEntry("secure", true)
+                .containsEntry("http-only", true)
+                .containsEntry("same-site", "lax")
+                .doesNotContainKey("domain");
+        assertThat(cookie("local", "consumer"))
+                .containsEntry("name", "NL_CONSUMER")
+                .containsEntry("secure", false);
     }
 }

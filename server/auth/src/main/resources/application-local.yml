@@ -37,8 +37,12 @@ northline:
         post-logout-redirect-uris: [ "http://localhost:3100/sign-in" ]
       consumer-bff:
         secret-hash: ${CONSUMER_BFF_SECRET_HASH:{noop}dev-consumer-bff}
-        redirect-uris: [ "http://localhost:8081/login/oauth2/code/northline" ]
-        post-logout-redirect-uris: [ "http://localhost:8081/" ]
+        # S-45: the consumer app's dev server (:3000) proxies /login and /oauth2 to the consumer-bff (:8081).
+        redirect-uris:
+          - http://localhost:3000/login/oauth2/code/northline
+          - http://127.0.0.1:3000/login/oauth2/code/northline
+          - http://localhost:8081/login/oauth2/code/northline
+        post-logout-redirect-uris: [ "http://localhost:3000/" ]
       console-bff:
         secret-hash: ${CONSOLE_BFF_SECRET_HASH:{noop}dev-console-bff}
         redirect-uris: [ "http://localhost:8083/login/oauth2/code/console" ]

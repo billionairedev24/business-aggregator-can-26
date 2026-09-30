@@ -3,11 +3,18 @@
 northline.required-env:                 # checked before start-up (ca.northline.platform.RequiredEnvironmentCheck)
   cache: REDIS_HOST
   public-urls: AUTH_ISSUER, API_URL
-  secrets: STUDIO_BFF_SECRET
 management.endpoint.health.probes.enabled: true
 # S-20: __Host- cookies are Secure, path /, without a Domain — a sibling subdomain (pages., the consumer apex) can
 # neither plant nor overwrite them. Locally (http) they keep their plain names.
-server.servlet.session.cookie.name: __Host-NL_STUDIO
 northline.bff.csrf-cookie-name: __Host-XSRF-TOKEN
 logging.level:
   ca.northline: info
+---
+spring.config.activate.on-profile: "!consumer"
+northline.required-env.secrets: STUDIO_BFF_SECRET
+server.servlet.session.cookie.name: __Host-NL_STUDIO
+---
+# S-45 consumer-bff on the consumer host (the apex, pages.): its own client secret and cookie.
+spring.config.activate.on-profile: consumer
+northline.required-env.secrets: CONSUMER_BFF_SECRET
+server.servlet.session.cookie.name: __Host-NL_CONSUMER

@@ -1,9 +1,13 @@
 package ca.northline.bff.web;
 
 import ca.northline.bff.config.BffProperties;
+import ca.northline.bff.config.Guests;
 import ca.northline.bff.config.NextRedirect;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
@@ -25,22 +29,42 @@ import org.springframework.web.servlet.view.RedirectView;
  * POST /bff/logout           → 204 (Spring Security logout; see BffSecurityConfig)
  * GET  /bff/login?next=/path → 302 /oauth2/authorization/studio, back to {@code next} after the callback
  * </pre>
+ *
+ * <p>S-45 consumer-bff ({@code northline.bff.guests}): {@code GET /bff/session} answers 200 for guests too, and every
+ * answer carries the session's {@code guestId} and, when the edge supplies it, the visitor's {@code location.city}
+ * (docs/CONSUMER_WEB_PLAN.md § Session):
+ *
+ * <pre>
+ * GET /bff/session → 200 {user: null | {…}, acr, sid, guestId, location: {city} | absent}
+ * </pre>
  */
 @RestController
 class SessionController {
 
     private final BffProperties props;
+    private final Guests guests;
 
-    SessionController(BffProperties props) {
+    SessionController(BffProperties props, Guests guests) {
         this.props = props;
+        this.guests = guests;
     }
 
     /**
      * The signed-in user, from the ID token northline-auth issued. {@code sid} = the session (sign-in) at northline-auth
      * this BFF session belongs to (S-19): Settings › Security marks it as the current one.
      */
+    @JsonInclude(JsonInclude.Include.NON_ABSENT)
     record SessionResponse(
-            User user, @Nullable String acr, @Nullable String sid) {}
+            @JsonInclude(JsonInclude.Include.ALWAYS) @Nullable
+            User user,
+
+            @Nullable String acr,
+            @Nullable String sid,
+            @Nullable String guestId,
+            @Nullable Location location) {}
+
+    /** The visitor's city from the CDN / ingress header ({@code northline.bff.client-city-header}). */
+    record Location(String city) {}
 
     record User(
             String id,
@@ -53,9 +77,14 @@ class SessionController {
             @Nullable String memberSince) {}
 
     @GetMapping(path = "/bff/session", produces = MediaType.APPLICATION_JSON_VALUE)
-    ResponseEntity<SessionResponse> session(@AuthenticationPrincipal @Nullable OidcUser user) {
+    ResponseEntity<SessionResponse> session(
+            @AuthenticationPrincipal @Nullable OidcUser user, HttpServletRequest request) {
+        var guestId = props.guests() ? guests.ensure(request) : null;
+        var location = props.guests() ? location(request) : null;
         if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            return props.guests()
+                    ? ResponseEntity.ok(new SessionResponse(null, null, null, guestId, location))
+                    : ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         var first = Objects.requireNonNullElse(user.getGivenName(), "");
         var last = Objects.requireNonNullElse(user.getFamilyName(), "");
@@ -71,8 +100,32 @@ class SessionController {
                         Objects.requireNonNullElse(user.getLocale(), "en-CA"),
                         user.getClaimAsString("member_since")),
                 user.getClaimAsString("acr"),
-                user.getClaimAsString("sid"));
+                user.getClaimAsString("sid"),
+                guestId,
+                location);
         return ResponseEntity.ok(body);
+    }
+
+    /** The city the edge put in the configured header (decoded, at most 60 characters), or none. */
+    private @Nullable Location location(HttpServletRequest request) {
+        if (props.clientCityHeader().isBlank()) {
+            return null;
+        }
+        var raw = request.getHeader(props.clientCityHeader());
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String city;
+        try {
+            city = URLDecoder.decode(raw, StandardCharsets.UTF_8).strip();
+        } catch (IllegalArgumentException e) {
+            city = raw.strip();
+        }
+        city = city.codePoints()
+                .filter(c -> !Character.isISOControl(c))
+                .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
+                .toString();
+        return city.isEmpty() ? null : new Location(city.length() > 60 ? city.substring(0, 60) : city);
     }
 
     /**
