@@ -42,6 +42,15 @@ public final class Notifier {
             log.debug("{} v{} is not a notification", event.type(), event.version());
             return;
         }
+        notify(notice);
+    }
+
+    /**
+     * Sends one notice to the business's members in its roles, on the channels the worker owns — for an event, or for
+     * something the worker itself noticed (S-33: a webhook endpoint turned off). Throws the provider outage after the
+     * other members were served; what was sent stays claimed.
+     */
+    public void notify(Notice notice) {
         var business = recipients.businessName(notice.merchantId()).orElse("Northline");
         RuntimeException outage = null;
         for (var member : recipients.of(notice.merchantId(), notice.roles())) {

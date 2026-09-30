@@ -78,7 +78,10 @@ public final class Deliveries {
     }
 
     private Outcome email(Notice notice, Recipient to, String business, String key) {
-        var content = notice.texts().email(business, links.studio(notice.merchantId(), "payouts"));
+        var content = notice.texts()
+                .email(
+                        business,
+                        links.studio(notice.merchantId(), notice.texts().studioPage()));
         if (content == null || to.email() == null || to.email().isBlank()) {
             return Outcome.UNREACHABLE;
         }

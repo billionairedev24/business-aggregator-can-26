@@ -180,8 +180,20 @@ export function useToggleNotification(m: string) {
 // ── API & integrations ──────────────────────────────────────────────────────────────────────────────────────────────
 export const ApiKey = z.object({ id: z.string(), name: z.string(), scopes: z.array(z.string()), prefix: z.string(), rateLimit: z.number(), createdAt: z.string(), lastUsedAt: z.string().nullish() });
 export type ApiKey = z.infer<typeof ApiKey>;
-export const Webhook = z.object({ id: z.string(), url: z.string(), events: z.array(z.string()), active: z.boolean(), signature: z.string(), createdAt: z.string(), lastStatus: z.number().nullish(), lastDeliveryAt: z.string().nullish() });
+export const Webhook = z.object({
+  id: z.string(), url: z.string(), events: z.array(z.string()), active: z.boolean(), signature: z.string(), createdAt: z.string(), lastStatus: z.number().nullish(), lastDeliveryAt: z.string().nullish(),
+  failingSince: z.string().nullish(), disabledAt: z.string().nullish(), previousSecretUntil: z.string().nullish(),
+});
 export type Webhook = z.infer<typeof Webhook>;
+/** S-33 delivery log: one row per event sent to an endpoint (plus resends and test events), newest attempts first. */
+export const WebhookAttempt = z.object({ attempt: z.number(), at: z.string(), statusCode: z.number().nullish(), durationMs: z.number().nullish(), error: z.string().nullish(), responseSnippet: z.string().nullish() });
+export const WebhookDelivery = z.object({
+  id: z.string(), eventId: z.string(), eventType: z.string().nullish(), state: z.enum(['pending', 'succeeded', 'failed']), attempts: z.number(),
+  statusCode: z.number().nullish(), lastAttemptAt: z.string().nullish(), nextAttemptAt: z.string().nullish(), durationMs: z.number().nullish(),
+  error: z.string().nullish(), responseSnippet: z.string().nullish(), test: z.boolean(), resendOf: z.string().nullish(), createdAt: z.string(),
+  history: z.array(WebhookAttempt),
+});
+export type WebhookDelivery = z.infer<typeof WebhookDelivery>;
 export const DeveloperOptions = z.object({ scopes: z.array(z.string()), events: z.array(z.string()) });
 export const AuditEntry = z.object({ id: z.string(), at: z.string(), actorId: z.string().nullish(), actorName: z.string().nullish(), role: z.string().nullish(), action: z.string(), targetType: z.string().nullish(), targetId: z.string().nullish() });
 export type AuditEntry = z.infer<typeof AuditEntry>;
@@ -189,6 +201,7 @@ const items = <T extends z.ZodType>(s: T) => z.object({ items: z.array(s) }).tra
 
 export const apiKeysQuery = (m: string) => queryOptions({ queryKey: settingsKey(m, 'api-keys'), queryFn: () => http(`${base(m)}/api-keys`, {}, items(ApiKey)) });
 export const webhooksQuery = (m: string) => queryOptions({ queryKey: settingsKey(m, 'webhooks'), queryFn: () => http(`${base(m)}/webhooks`, {}, items(Webhook)) });
+export const deliveriesQuery = (m: string, endpointId: string) => queryOptions({ queryKey: settingsKey(m, 'webhooks', endpointId, 'deliveries'), queryFn: () => http(`${base(m)}/webhooks/${endpointId}/deliveries`, {}, items(WebhookDelivery)), refetchInterval: 15_000 });
 export const developerOptionsQuery = (m: string) => queryOptions({ queryKey: settingsKey(m, 'developer-options'), queryFn: () => http(`${base(m)}/developer-options`, {}, DeveloperOptions), staleTime: Infinity });
 export const auditLogQuery = (m: string) => queryOptions({ queryKey: settingsKey(m, 'audit-log'), queryFn: () => http(`${base(m)}/audit-log`, {}, items(AuditEntry)) });
 
@@ -217,8 +230,30 @@ export function useAddWebhook(m: string) {
     onSuccess: ({ endpoint }) => qc.setQueryData<Webhook[]>(settingsKey(m, 'webhooks'), list => [...(list ?? []), endpoint]),
   });
 }
+/** Rotate; the old secret keeps signing for `overlapHours` (0 = stops at once). */
 export function useRotateWebhook(m: string) {
-  return useMutation({ mutationFn: (id: string) => http(`${base(m)}/webhooks/${id}/secret`, { method: 'POST' }, WithSecret) });
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, overlapHours }: { id: string; overlapHours: number }) => http(`${base(m)}/webhooks/${id}/secret`, { method: 'POST', body: { overlapHours } }, WithSecret),
+    onSuccess: ({ endpoint }) => qc.setQueryData<Webhook[]>(settingsKey(m, 'webhooks'), list => list?.map(w => (w.id === endpoint.id ? endpoint : w))),
+  });
+}
+export function useEnableWebhook(m: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => http(`${base(m)}/webhooks/${id}/enable`, { method: 'POST' }, Webhook),
+    onSuccess: endpoint => qc.setQueryData<Webhook[]>(settingsKey(m, 'webhooks'), list => list?.map(w => (w.id === endpoint.id ? endpoint : w))),
+  });
+}
+/** Resend a finished delivery, or queue a `webhook.test` event; the worker sends it within seconds. */
+export function useQueueDelivery(m: string, endpointId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (what: { resend: string } | { test: true }) =>
+      http('resend' in what ? `${base(m)}/webhooks/${endpointId}/deliveries/${what.resend}/resend` : `${base(m)}/webhooks/${endpointId}/test`, { method: 'POST' }, WebhookDelivery),
+    onSuccess: queued => qc.setQueryData<WebhookDelivery[]>(settingsKey(m, 'webhooks', endpointId, 'deliveries'), list => [queued, ...(list ?? [])]),
+    onSettled: () => qc.invalidateQueries({ queryKey: settingsKey(m, 'webhooks', endpointId, 'deliveries') }),
+  });
 }
 export function useRemoveWebhook(m: string) {
   const qc = useQueryClient();

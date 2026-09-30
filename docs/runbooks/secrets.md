@@ -54,7 +54,7 @@ Terraform (AWS, Google Cloud) or not at all (Azure: Key Vault has no empty secre
 | `KAFKA_SASL_JAAS_CONFIG` | `kafka-sasl-jaas-config` | api, auth (S-28), worker | with SASL (always in the cloud; `optionalKeys`) | generated (S-3) |
 | `ES_PASSWORD` | `es-password` | api, worker | with Elastic Cloud (`optionalKeys`) | generated (S-3) |
 | `TOTP_KEY` | `totp-key` | auth | yes | operator: `openssl rand -base64 32` |
-| `WEBHOOK_SECRET_KEY` | `webhook-secret-key` | api | yes | operator: `openssl rand -base64 32` |
+| `WEBHOOK_SECRET_KEY` | `webhook-secret-key` | api, worker (S-33) | yes | operator: `openssl rand -base64 32` |
 | `STUDIO_BFF_SECRET` | `studio-bff-secret` | bff | yes | operator: `openssl rand -base64 32` |
 | `STUDIO_BFF_SECRET_HASH` | `studio-bff-secret-hash` | auth | yes | operator: `{bcrypt}` of `STUDIO_BFF_SECRET` ([dev.md](dev.md#environment-variables)) |
 | `CONSUMER_BFF_SECRET_HASH`, `CONSOLE_BFF_SECRET_HASH` | `consumer-bff-secret-hash`, `console-bff-secret-hash` | auth | no — add to `optionalKeys` once set | operator, when those BFFs exist |

@@ -5,12 +5,16 @@ import static ca.northline.shared.security.MerchantPermission.VIEW;
 
 import ca.northline.developer.application.DeveloperUseCases.Actor;
 import ca.northline.developer.application.DeveloperUseCases.AddWebhookEndpoint;
+import ca.northline.developer.application.DeveloperUseCases.EnableWebhookEndpoint;
 import ca.northline.developer.application.DeveloperUseCases.IssueApiKey;
 import ca.northline.developer.application.DeveloperUseCases.ListApiKeys;
+import ca.northline.developer.application.DeveloperUseCases.ListWebhookDeliveries;
 import ca.northline.developer.application.DeveloperUseCases.ListWebhookEndpoints;
 import ca.northline.developer.application.DeveloperUseCases.RemoveWebhookEndpoint;
+import ca.northline.developer.application.DeveloperUseCases.ResendWebhookDelivery;
 import ca.northline.developer.application.DeveloperUseCases.RevokeApiKey;
 import ca.northline.developer.application.DeveloperUseCases.RotateWebhookSecret;
+import ca.northline.developer.application.DeveloperUseCases.SendTestWebhook;
 import ca.northline.developer.application.DeveloperUseCases.ViewAuditLog;
 import ca.northline.developer.domain.DeveloperRules;
 import ca.northline.developer.web.DeveloperDtos.AddWebhookRequest;
@@ -19,6 +23,8 @@ import ca.northline.developer.web.DeveloperDtos.AuditEntryResponse;
 import ca.northline.developer.web.DeveloperDtos.DeveloperOptionsResponse;
 import ca.northline.developer.web.DeveloperDtos.IssueApiKeyRequest;
 import ca.northline.developer.web.DeveloperDtos.IssuedApiKeyResponse;
+import ca.northline.developer.web.DeveloperDtos.RotateWebhookRequest;
+import ca.northline.developer.web.DeveloperDtos.WebhookDeliveryResponse;
 import ca.northline.developer.web.DeveloperDtos.WebhookResponse;
 import ca.northline.developer.web.DeveloperDtos.WebhookWithSecretResponse;
 import ca.northline.identity.api.PersonDirectory;
@@ -28,6 +34,7 @@ import ca.northline.shared.security.RequiresMerchant;
 import jakarta.validation.Valid;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -48,7 +55,11 @@ import org.springframework.web.bind.annotation.RestController;
  * DELETE /api/v1/merchants/{merchantId}/settings/api-keys/{keyId}       revoke                         (MANAGE)
  * GET    /api/v1/merchants/{merchantId}/settings/webhooks                                              (VIEW)
  * POST   /api/v1/merchants/{merchantId}/settings/webhooks               {url, events} → + secret       (MANAGE)
- * POST   /api/v1/merchants/{merchantId}/settings/webhooks/{id}/secret   rotate → new secret            (MANAGE)
+ * POST   /api/v1/merchants/{merchantId}/settings/webhooks/{id}/secret   {overlapHours?} rotate → secret (MANAGE)
+ * POST   /api/v1/merchants/{merchantId}/settings/webhooks/{id}/enable   back on after auto-disable     (MANAGE)
+ * GET    /api/v1/merchants/{merchantId}/settings/webhooks/{id}/deliveries          delivery log         (VIEW)
+ * POST   /api/v1/merchants/{merchantId}/settings/webhooks/{id}/deliveries/{d}/resend → queued          (MANAGE)
+ * POST   /api/v1/merchants/{merchantId}/settings/webhooks/{id}/test     webhook.test → queued          (MANAGE)
  * DELETE /api/v1/merchants/{merchantId}/settings/webhooks/{id}                                         (MANAGE)
  * GET    /api/v1/merchants/{merchantId}/settings/audit-log              last 90 days                   (MANAGE)
  * </pre>
@@ -65,6 +76,10 @@ class DeveloperSettingsController {
     private final AddWebhookEndpoint addWebhook;
     private final RotateWebhookSecret rotateWebhook;
     private final RemoveWebhookEndpoint removeWebhook;
+    private final EnableWebhookEndpoint enableWebhook;
+    private final ListWebhookDeliveries deliveries;
+    private final ResendWebhookDelivery resend;
+    private final SendTestWebhook sendTest;
     private final ViewAuditLog auditLog;
     private final PersonDirectory people;
     private final DeveloperWebMapper mapper;
@@ -115,9 +130,43 @@ class DeveloperSettingsController {
     @PostMapping("/webhooks/{endpointId}/secret")
     @RequiresMerchant(MANAGE)
     WebhookWithSecretResponse rotate(
-            @PathVariable String merchantId, @PathVariable String endpointId, CurrentMember member) {
-        var rotated = rotateWebhook.rotate(actor(member), endpointId);
+            @PathVariable String merchantId,
+            @PathVariable String endpointId,
+            @RequestBody(required = false) @Nullable RotateWebhookRequest body,
+            CurrentMember member) {
+        var rotated = rotateWebhook.rotate(actor(member), endpointId, body == null ? null : body.overlapHours());
         return new WebhookWithSecretResponse(mapper.toResponse(rotated.endpoint()), rotated.secret());
+    }
+
+    @PostMapping("/webhooks/{endpointId}/enable")
+    @RequiresMerchant(MANAGE)
+    WebhookResponse enable(@PathVariable String merchantId, @PathVariable String endpointId, CurrentMember member) {
+        return mapper.toResponse(enableWebhook.enable(actor(member), endpointId));
+    }
+
+    @GetMapping("/webhooks/{endpointId}/deliveries")
+    @RequiresMerchant(VIEW)
+    ListResponse<WebhookDeliveryResponse> deliveries(@PathVariable String merchantId, @PathVariable String endpointId) {
+        return new ListResponse<>(mapper.toDeliveryResponses(deliveries.deliveries(merchantId, endpointId)));
+    }
+
+    @PostMapping("/webhooks/{endpointId}/deliveries/{deliveryId}/resend")
+    @RequiresMerchant(MANAGE)
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    WebhookDeliveryResponse resend(
+            @PathVariable String merchantId,
+            @PathVariable String endpointId,
+            @PathVariable String deliveryId,
+            CurrentMember member) {
+        return mapper.toResponse(resend.resend(actor(member), endpointId, deliveryId));
+    }
+
+    @PostMapping("/webhooks/{endpointId}/test")
+    @RequiresMerchant(MANAGE)
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    WebhookDeliveryResponse test(
+            @PathVariable String merchantId, @PathVariable String endpointId, CurrentMember member) {
+        return mapper.toResponse(sendTest.sendTest(actor(member), endpointId));
     }
 
     @DeleteMapping("/webhooks/{endpointId}")

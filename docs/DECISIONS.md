@@ -1309,3 +1309,77 @@ Runbook: `docs/runbooks/partners.md`. Built on S-29 (branch based on `auth/s-29-
   tokens; per-partner rate limits (one rule for all); a console UI for partners; merchant consent (businesses are bound
   by operators in configuration, not by the owners in the Studio); partner webhooks (design 05 mentions them — the
   worker's partner webhooks are a separate story).
+
+## 2026-09-30 — S-33 Partner webhook delivery worker (worker `ca.northline.worker.webhooks`, api `developer`, Studio Settings › API)
+
+- **Two stages, per-endpoint scheduling (not per Kafka partition).** A new consumer group `webhooks` (topics `booking.booking`, `payments.escrow`, `payments.refund`; retries 10 s / 60 s / 5 min, then `.dlq`; +9 retry topics → 80 in the catalogue) only maps the event to its public payload and inserts one `developer.webhook_deliveries` row per active subscribed endpoint, in the S-26 dedupe transaction — no HTTP on a partition. A dispatcher (every second, every replica) leases **endpoints** (`lease_owner`/`lease_until` on `webhook_endpoints`, 2 min, renewed per delivery) and drains each on its own virtual thread: one request in flight per endpoint, ≤ 20 deliveries per lease, ≤ 64 endpoints per replica. A slow or dead endpoint delays only its own queue. Chosen over per-endpoint Kafka topics (topic count, Event Hubs limits) and over retry topics per delivery (a 3-day back-off doesn't fit Kafka retry topics). Delivery is **at-least-once and unordered** (a crash between the POST and the record resends; receivers dedupe on the event id).
+- **Public payloads are their own versioned contract**: envelope `{id, type, version, createdAt, merchantId, data}`, JSON Schemas in `docs/spec/webhooks/<type>.v1.schema.json` (packaged into the worker, every outgoing payload validated against them with the S-26 `EventSchemas` validator; a mapping bug is retried then dead-lettered). Internal event versions map explicitly (`WebhookPayloads`); a new internal version isn't delivered until mapped (logged). Breaking change = public `version: 2`.
+- **PII (decided):** `data` carries only what the business already has in its Studio — its own ids (booking, escrow, refund, `RF-` case number, its team members' user ids) and amounts. **No customer ids**, names, contact details or addresses: a customer id is a cross-business identifier the partner has no use for.
+- **Mapped today:** `booking.completed` ← `booking.booking_completed` v1, `payment.released` ← `payments.escrow_released` v1, `refund.issued` ← `payments.refund_issued` v1, plus `webhook.test`. **Not sent yet** (subscribable in Settings, no domain event on Kafka): `booking.confirmed` (quote acceptance creates the booking but no booking event exists; mapping it from `quote.accepted` would expose the quote id, not a booking id, and a customer id), `order.placed`, `order.delivered`, `review.created`. `WebhookPayloadsTest` keeps the subscribable list = mapped ∪ not-yet-published.
+- **Signature = Stripe's scheme**, header `Northline-Signature: t=<unix>,v1=<hex HMAC-SHA256(whole "whsec_…" secret, "<t>.<raw body>")>`, one `v1` per valid secret; 5-minute tolerance recommended to receivers. Also `Northline-Event-Id|Event-Type|Delivery-Id|Delivery-Attempt`. The body is stored as **text** (`webhook_deliveries.payload`), so every attempt and resend sends byte-identical JSON.
+- **Secrets:** the api keeps creating/encrypting (`whsec_…`, AES-256-GCM); the AES code moved to `platform.WebhookSecretBox` so the worker decrypts with the same implementation and `WEBHOOK_SECRET_KEY` (now also a worker variable, required in the cloud; dev key only outside `cloud`). **Rotation overlap:** `POST …/webhooks/{id}/secret {overlapHours}` (default 24, 0–168; "Keep the old secret for 0 to 168 hours.") moves the current ciphertext to `secret_prev_enc` until `secret_prev_until`; the worker signs with both meanwhile. Studio: a dialog with 24 h (recommended) / 7 days / "stop it now (it leaked)".
+- **Retries:** 30 s × 3ⁿ⁻¹ capped at 12 h, ± 10 % jitter, 13 attempts ≈ 2.9 days (`RetrySchedule`), then `failed`. Every non-2xx (3xx included — no redirects), timeout, TLS/connection error or SSRF refusal is a failed attempt.
+- **Auto-disable:** no success for **3 days** (`failing_since`) **and** ≥ 10 failed attempts in a row → `active = false`, `disabled_reason = 'failing'`, pending deliveries → failed, audit row `webhook.disabled` (actor null, role `system`), metric + WARN log. The owners' email goes through the S-27 `Notifier` (made public: `notify(Notice)`; `Notice.Texts.studioPage()` added) as a service notice (email only, owners, whatever the matrix; new `webhook-disabled` template en/fr, TRANSACTIONAL), claimed per owner under `disable_notice_id`; a job retries every minute for 2 days while the provider is down (`disabled_notified_at`). Owners turn it back on (`POST …/enable`, audit `webhook.enabled`, event change `enabled` — an additive enum value in `developer.webhook_endpoint_changed` v1).
+- **SSRF (hard requirement):** https only, no userinfo; the Apache HttpClient 5 `DnsResolver` resolves, refuses the host when **any** address is loopback / 0/8 / RFC 1918 / 100.64/10 / 169.254/16 (metadata) / 192.0.0/24 / documentation / benchmarking / multicast / reserved / broadcast / `::` / `::1` / fe80::/10 / fec0::/10 / fc00::/7 (incl. `fd00:ec2::254`) / ff00::/8 / 2001:db8::/32 / IPv4-mapped, NAT64 or 6to4 embedding a refused IPv4, and returns exactly the checked addresses to the connection (pinning; TLS still verifies the host name). IP literals are checked before the request as well. No redirects, retries, cookies or environment proxies; connect 5 s, read 10 s, total 15 s (cancel); answer read to 64 KiB then the connection is dropped; 1,000-character snippet with control characters removed. `WEBHOOKS_ALLOW_LOCAL=true` (local/tests only; the cloud profiles refuse to start with it) allows http + loopback, never private/metadata. A refusal is retried (DNS may change) and counts toward auto-disable. No port restriction (partners use custom ports).
+- **Delivery log:** `GET …/webhooks/{id}/deliveries` (VIEW; newest 50 with every attempt), `POST …/deliveries/{d}/resend` (MANAGE; same event id and body, new row `resend_of`; 409 `delivery_pending` while still retrying, 409 `webhook_disabled` when off), `POST …/webhooks/{id}/test` (MANAGE; `webhook.test` row the worker fills in). Kept 30 days (nightly purge). Studio: a Deliveries drawer per endpoint (state tag Delivered / Retrying / Queued / Failed, outcome, attempts, next attempt, per-attempt details with response snippet, Resend, Send test event), a "Turned off … after 3 days of failed deliveries" tag with **Turn back on**, "Failing since …" and "Old secret also signs until …" lines. Copy is ours (the design shows only the endpoint line); fr-CA written alongside.
+- **Merchant-scoped** now (endpoints belong to a business; fan-out by `merchant_id`). Partners (S-30) will need an owner column and their own subscription scope.
+- **No provider switch** for the transport: the only adapter is plain HTTPS (`WebhookTransport` port, `HttpWebhookTransport`); `local` differs only by `WEBHOOKS_ALLOW_LOCAL`. `HostResolver` is a port so tests pin made-up names.
+
+### Schema additions (V087, settings range, developer schema)
+- `developer.webhook_endpoints`: `secret_prev_enc`, `secret_prev_until`, `failing_since`, `consecutive_failures`, `disabled_at`, `disabled_reason` (`failing`), `disable_notice_id`, `disabled_notified_at`, `lease_owner`, `lease_until`; partial index on active endpoints by merchant.
+- `developer.webhook_deliveries`: `merchant_id`, `event_type` (public type), `payload` (text), `state` (`pending|succeeded|failed`; null = a pre-S-33 row, read from its status code), `next_attempt_at`, `duration_ms`, `error`, `response_snippet`, `resend_of`, `test`, `created_at`; V015's `attempt` / `status_code` / `at` = attempts so far / latest status / latest attempt. Unique `(endpoint_id, event_id)` for originals (fan-out idempotency); due and log indexes.
+- New `developer.webhook_attempts` (one row per HTTP try; cascades with its delivery).
+
+### Configuration
+Worker: `WEBHOOK_SECRET_KEY` (required in dev/staging/prod; chart `apps.worker.secretEnv`), optional `WEBHOOKS_ALLOW_LOCAL`, `WEBHOOKS_MAX_IN_FLIGHT`, `WEBHOOKS_CONNECT_TIMEOUT`, `WEBHOOKS_RESPONSE_TIMEOUT`, `WEBHOOKS_TOTAL_TIMEOUT`, `WEBHOOKS_DISABLE_AFTER`, `WEBHOOKS_LOG_RETENTION`. Runbooks README / dev / staging / prod / local / secrets / notifications, `server/.env.example`, new [webhooks.md](runbooks/webhooks.md) (payload reference, verification, retries, design, SSRF rules, operations). Terraform unchanged (External Secrets already reads `webhook-secret-key`).
+
+### Tests
+Worker: `WebhookDeliveryTest` (Kafka 4 + PostGIS + WireMock receiver: signed `booking.completed` delivered once to the subscribed endpoint only, verified with the endpoint's secret; 500 → 503 → 200 with the clock moved 31 s / 91 s and every attempt logged; auto-disable after 3 days + the owner's email once, not the technician, nothing queued afterwards; a 2-second endpoint doesn't delay another; metadata / private / credential URLs refused with nothing sent; test event + resend with the same event id and body; both secrets sign during the overlap, only the new one after), `HttpWebhookTransportTest` (WireMock: headers, no redirects, 4 MiB answer cut, timeout, http refused outside local, loopback / metadata / ULA / private-resolving / rebinding names refused before any request, pinned address with the original Host), `EgressPolicyTest`, `WebhookSignerTest`, `RetryScheduleTest`, `WebhookPayloadsTest`. Api: `DeveloperSettingsApiTest.Delivery` (overlap 24 h / 0 / 422 message, delivery log with attempts, resend + 409s, test event, turn back on, 403 `insufficient_role` / `mfa_required` / `not_a_member`, 404 across businesses). Studio: delivery drawer, technician read-only, turned-off endpoint, rotate with overlap.
+
+### Not done / never run for real
+- No real partner endpoint has received a delivery; all HTTP is against WireMock. The system DNS resolver path is exercised only for literals in tests (names use the test resolver).
+- `booking.confirmed`, `order.placed`, `order.delivered`, `review.created` wait for their domain events.
+- Partner-scoped endpoints (S-30), per-endpoint rate limits, `Retry-After` honouring, a manual "retry now" for a pending delivery, and a Studio chart of delivery health.
+- The delivery log keeps the payload for 30 days in the database (ids and amounts only).
+
+## 2026-09-30 — S-34 Event JSON Schemas validated in CI (`server/event-contracts`)
+
+- **Where:** a new Gradle project `server/event-contracts` (no boot jar) that depends on `:api`, `:auth` and `:worker`. It is the only place that can see the api's and northline-auth's event records **and** the worker's `EventSchemas`, which is the only schema validator in the system. It exposes one task, `:event-contracts:eventSchemas` (a JavaExec that prints a report; exit 1 on problems, 2 when `-PeventSchemas.requireBase=true` and the base can't be read), and a test, `EventContractsTest`, which runs the same checks inside `./gradlew build` (about 2 s: no Spring context, no containers).
+- **Check 1: "valid JSON Schema" means valid for the subset the consumers implement.** The worker's `EventSchemas` gains `KEYWORDS` / `FORMATS` (now public), `unsupportedKeywords(schema)` and `of(Map)`, so both sides use the same list. Beyond keywords, the check covers:
+  - `$schema` is draft 2020-12;
+  - `$id` = `northline:<type>:<n>` and matches the file name;
+  - `type` values are valid;
+  - every name in `required` is declared;
+  - `additionalProperties` is boolean only, because schema-valued ones are not implemented;
+  - every `pattern` compiles;
+  - min/max lengths are non-negative integers;
+  - `format` is one the worker checks;
+  - the envelope fields `eventId`, `occurredAt` and `aggregateId` are required.
+
+  I didn't add a full meta-schema validator library: it would bring Jackson 2, and it would accept keywords the worker then silently ignores, which is the real risk.
+- **`format: date` is now implemented by the worker.** `food.item_availability.soldOutOn` used it, and the worker ignored it (the check found this).
+- **Check 2:** every `@Externalized` event, whether nested in a sealed interface or from auth, must have `<EventHeaders.type>.v<version()>.schema.json`. Every schema file must belong to an event type at a version ≤ the event's; older versions stay valid for draining. A schema may also belong to a **module-internal `DomainEvent`**: the check found `catalogue.listing_submitted`, a documented internal event. Such schemas are held to checks 1 and 3 too.
+- **Check 3 (sample payloads):** each record is built reflectively. Values follow the schema where it constrains them: enum, pattern (from a small list of candidate strings: ULID, `RF-…`, `DS-…`, `2026-Q3`, …), format, minimum and lengths. Samples are:
+  - one with every field set;
+  - one with every `@Nullable` component null (JSpecify TYPE_USE, read at run time);
+  - one per Java enum constant.
+
+  Each sample is serialized with a default Jackson 3 `JsonMapper` (the api's `default-property-inclusion: always` is Jackson's default) and validated. A type or pattern the builder can't handle fails with "teach SamplePayloads"; it is never skipped. String fields with a schema `enum` take their value from the schema, so drift in what code *assigns* to such strings is not detectable this way. Only Java enums are fully enumerated.
+- **Check 4 (breaking changes)** compares with the **merge base** of HEAD and the base ref (default `origin/main`, read with the `git` CLI), so schemas added on main since the branch forked don't look deleted. The following are breaking in the same version file:
+  - a removed field, a newly required field, a narrowed or added type or `enum`;
+  - `additionalProperties` → false;
+  - an added or changed `pattern` or `format`;
+  - a raised `minimum` or `minLength`, a lowered or added `maxLength`;
+  - a deleted file.
+
+  The fix is a new `v<n+1>` file plus `version()`. Additive changes pass. In `./gradlew build` check 4 runs when the ref exists locally and is skipped otherwise (a shallow clone). The CI jobs require it.
+- **CI, manual only as always:**
+  - GitHub: `.github/workflows/event-schemas.yml` (`workflow_dispatch`, input `base`, full fetch).
+  - GitLab: `ci/gitlab/events.yml`, job `events:schemas` (`PIPELINE_PART=events`, also part of `all`; `EVENT_SCHEMAS_BASE`, `GIT_DEPTH=0`; git installed in the Temurin image).
+- **Tests:**
+  - `BreakingChangesTest`: 11 breaking and 8 non-breaking cases, plus file deletion and version bumps.
+  - `SchemaRulesTest`.
+  - `SamplePayloadsTest`: made-up records, catching null-vs-non-null, enum, type, closed-schema and required divergences.
+  - `EventContractsTest`: the real repository, plus a scratch git repository where a branch breaks v1 (fails) and then moves the change to v2 (passes).
+- **Found, not fixed here:** northline-auth's `user.registered` goes to Kafka without the `nl-event-*` headers (auth has no `EventHeaders` configuration). The S-26 worker would dead-letter it as poison if a consumer subscribed to `identity.user`. Nothing subscribes yet.
+- **Not done:** checking that consumers handle every schema version (the worker's mappings are per type and version); checking public webhook payload schemas (S-33 validates them at run time and in its own tests).

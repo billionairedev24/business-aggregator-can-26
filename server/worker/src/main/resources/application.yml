@@ -1,4 +1,4 @@
-# northline-worker — Kafka consumers (search indexer, notifications; partner webhooks to come). Every connection is
+# northline-worker — Kafka consumers (search indexer, notifications, partner webhooks). Every connection is
 # an environment variable with a local default (docs/runbooks/README.md); locally it needs the `events` and `search`
 # compose profiles plus Postgres. Profiles `dev` | `staging` | `prod` also activate `cloud` (application-cloud.yml).
 spring:
@@ -85,6 +85,16 @@ northline:
     studio-url: ${STUDIO_ORIGIN:http://localhost:3100}        # links in the payout.failed email
     api-url: ${API_PUBLIC_URL:http://localhost:8080}          # unsubscribe links point at the api
     unsubscribe-key: ${EMAIL_UNSUBSCRIBE_KEY:}                # same key as the api (it verifies the tokens)
+  # Partner webhooks (S-33, docs/runbooks/webhooks.md): queued by the `webhooks` consumer group, delivered per endpoint.
+  webhooks:
+    secret-key: ${WEBHOOK_SECRET_KEY:}                        # the api's key for the endpoints' signing secrets
+    allow-local: ${WEBHOOKS_ALLOW_LOCAL:false}                 # http://localhost endpoints (local development only)
+    max-in-flight: ${WEBHOOKS_MAX_IN_FLIGHT:64}                # endpoints delivered to at once per replica
+    connect-timeout: ${WEBHOOKS_CONNECT_TIMEOUT:5s}
+    response-timeout: ${WEBHOOKS_RESPONSE_TIMEOUT:10s}
+    total-timeout: ${WEBHOOKS_TOTAL_TIMEOUT:15s}
+    disable-after: ${WEBHOOKS_DISABLE_AFTER:3d}                # no success for this long (and ≥ 10 failures) → off
+    log-retention: ${WEBHOOKS_LOG_RETENTION:30d}               # delivery log kept this long
 ---
 # Local runs read server/.env (or .env next to the jar) — KEY=value lines, see server/.env.example.
 spring.config.activate.on-profile: "!test"

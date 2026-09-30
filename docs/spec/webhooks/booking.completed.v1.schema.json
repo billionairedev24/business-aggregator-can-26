@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:webhook.booking.completed:1",
+  "title": "Northline webhook booking.completed v1",
+  "description": "A job was marked complete by a team member. Escrow releases on the customer's sign-off or 48 h later (payment.released).",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "version",
+    "createdAt",
+    "merchantId",
+    "data"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "Event id (ULID). The same event keeps its id on every retry and resend: deduplicate on it."
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "booking.completed"
+      ]
+    },
+    "version": {
+      "type": "integer",
+      "enum": [
+        1
+      ],
+      "description": "Payload version; a breaking change ships as a new version."
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When it happened (UTC)."
+    },
+    "merchantId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "Your business (Studio URL /b/<merchantId>)."
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "bookingId",
+        "completedBy",
+        "photoCount"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "bookingId": {
+          "type": "string",
+          "description": "The booking (Studio › Appointments)."
+        },
+        "completedBy": {
+          "type": "string",
+          "description": "User id of the team member who completed it."
+        },
+        "photoCount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Completion photos attached."
+        }
+      }
+    }
+  }
+}

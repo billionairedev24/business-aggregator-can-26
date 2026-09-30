@@ -3,9 +3,11 @@ package ca.northline.developer.domain;
 import ca.northline.shared.RuleViolation;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Validation rules and messages for Settings › API &amp; integrations (validation-rules.md has no section for them;
@@ -23,6 +25,9 @@ public final class DeveloperRules {
     public static final String URL_HTTPS = "Enter an https:// URL.";
     public static final String EVENTS_REQUIRED = "Pick at least one event.";
     public static final String EVENT_UNKNOWN = "Pick events from the list.";
+    public static final int OVERLAP_MAX_HOURS = 168;
+    public static final int OVERLAP_DEFAULT_HOURS = 24;
+    public static final String OVERLAP_RANGE = "Keep the old secret for 0 to 168 hours.";
 
     /** Scopes a merchant key may carry (design: "storefront:read booking:write", "payouts:read orders:read"). */
     public static final List<String> SCOPES = List.of(
@@ -62,6 +67,18 @@ public final class DeveloperRules {
 
     public static List<String> events(List<String> raw) {
         return subset("events", raw, EVENTS, EVENTS_REQUIRED, EVENT_UNKNOWN);
+    }
+
+    /**
+     * How long the secret being replaced keeps signing next to the new one (S-33): 0 = it stops at once (a leaked
+     * secret), default 24 h, at most 7 days.
+     */
+    public static Duration secretOverlap(@Nullable Integer hours) {
+        var value = hours == null ? OVERLAP_DEFAULT_HOURS : hours;
+        if (value < 0 || value > OVERLAP_MAX_HOURS) {
+            throw RuleViolation.of("overlapHours", "range", OVERLAP_RANGE);
+        }
+        return Duration.ofHours(value);
     }
 
     /** https only, except http://localhost for local development. */
