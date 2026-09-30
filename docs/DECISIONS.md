@@ -2625,3 +2625,47 @@ Branch `web/s-55-booking-wizard`, stacked on `web/s-54-provider-page` (itself on
   (the authorization lapses at Stripe on its own; a sweeper is follow-up work); saved cards, points and promo codes on
   bookings; photo upload in job details; late-cancellation fees; the customer's bookings list (`/account/orders`
   shows orders only).
+
+## 2026-09-30 — S-56 Quotes: request from several providers, compare, accept with an escrow deposit
+
+Branch `web/s-56-quotes`, stacked on `web/s-55-booking-wizard` (and so on S-54, S-53 and S-51).
+
+- **Request** (`POST /api/v1/me/quote-requests`, module `hire` → `booking.api.CustomerQuotes`): the category, 1–3
+  providers (their page slugs), the description (10–1,000 characters), the vehicle for automotive categories, the
+  event date and guests for events, an optional budget, note, area and preferred date. Each provider must be published
+  and offer a live service in that category; only quoteable categories (visits and events, S-53's `quoteable`) take
+  requests. It is one `booking.quote_requests` row with `merchant_ids` — exactly what the Studio "Quote requests"
+  column (S-39/Operations) already lists — `respond_by` = now + 2 h (design: "Master-tier providers answer within 2
+  hours"), `expires_at` = now + 7 days. **Providers see the area only**: the street address, access instructions and
+  the day's phone number are given to the one provider whose quote is accepted, at acceptance (sealed with the booking,
+  S-55's `booking.access_notes`). Validation messages: "Choose 1 to 3 providers.", "Describe the job in at least 10
+  characters.", "Tell us the vehicle year, make and model.", "Pick a date from tomorrow on.", "Enter the number of
+  guests (1 to 2,000).", "One of these providers doesn't offer this service any more. Choose again.", "This service is
+  booked directly — pick a time on a provider's page.".
+- **Compare** (`GET /api/v1/me/quote-requests/{id}`): every provider asked, with its latest sent version (never a
+  draft), cheapest first, then "waiting" / "declined". **Read** (`GET /api/v1/me/quotes/{id}`): every line (kind,
+  description, note, qty, unit, amount), subtotal/GST/total, scope, exclusions, warranty, deposit (kind, rate, amount),
+  proposed time and duration, validity, and every version from that provider; opening it moves `sent` → `viewed` (the
+  provider sees it was read). Someone else's request or quote is 404.
+- **Versioning** is the merchant side's (V040: immutable once sent; a revision is a new row, version + 1, and the prior
+  one becomes `superseded`). A customer on an old version sees "revised — version N replaces it" with a link, and
+  accepting it answers 409 `quote_revised`; an expired quote 409 `quote_expired`.
+- **Accept = pay the escrow deposit** (S-11): `POST /api/v1/me/quotes/{id}/accept` (Idempotency-Key, `X-Step-Up`,
+  the S-51 rule via S-55's `PaymentGate`) opens a manual-capture PaymentIntent for the booking chosen up front — the
+  quote's deposit, or **the whole quote when it asks for none** (as instant bookings hold the whole price). The tax in
+  the held amount is the deposit's share of the quote's GST. `POST …/accept/confirm` (Idempotency-Key) then checks
+  the authorization (`EscrowLifecycle.hold`), accepts the quote (`quote.accepted`, existing v2 schema), and books the
+  proposed time — the quote's `proposedAt`, else the request's preferred date at 9 am — with a free member
+  (`ProviderSlots.freeMember`; 409 `slot_taken` "The provider is no longer free at the proposed time…"), publishing
+  `booking.confirmed` with the `quoteId` (S-55). **V116** `booking.quote_acceptances` keeps the booking id, the
+  PaymentIntent and the amounts between the two calls (one row per quote version; replaced while not accepted).
+- **Decline** (`POST /api/v1/me/quotes/{id}/decline`): the quote becomes `declined`; the request's other quotes stay
+  open.
+- **Screens:** `/services/$category/quote` (the job → where & when → who should quote; `?provider=` pre-ticks the
+  business the customer came from — the provider page's "Not sure?" button, and the main button of event businesses,
+  which are quote-only), `/quotes/requests/$requestId` (new, screen key `quoteCompare`: "N quotes received") and
+  `/quotes/$quoteId` (design 06 `quote`). The request survives the trip to the sign-in page in `sessionStorage`.
+- **Not done:** the balance of a deposit quote ("balance held 48 h before the event") — only the deposit is held at
+  acceptance; messages on a quote ("Ask a question first", the design's thread) — no customer↔provider messaging API
+  yet; notifying providers of a new request (the Studio column polls; push/e-mail are the notifications stories); a
+  `quote.requested` event; photos on a request; the customer's list of requests (`/account/orders` is S-58).

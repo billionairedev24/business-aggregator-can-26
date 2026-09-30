@@ -116,10 +116,11 @@ A feature folder per story area, named after the design: `home`, `location`, `se
 | `/services` | services | S-53 (**built**) | landing page; SSR |
 | `/services/$category` | svcCategory | S-53 (**built**) | SSR + SEO; `$category` = the leaf slug (`mobile-mechanic`) |
 | `/services/$category/providers` | providers | S-53 (**built**) | category SSR, providers by location in the browser |
-| `/services/$category/quote` | book (quote mode, from a category) | S-56 | "Describe the job, get 3 quotes"; guest banner |
+| `/services/$category/quote` | book (quote mode, from a category) | S-56 (**built**) | `?step=job\|where\|who&provider=`; "Describe the job, get 3 quotes"; guest banner |
 | `/providers/$slug` | provider | S-54 (**built**) | public provider page (storefront API + `/api/v1/public/providers/{slug}`); SSR + SEO; JSON-LD is S-63; also served as `pages.<zone>/<slug>` and on merchants' own domains |
 | `/providers/$slug/book` | book | S-55 (**built**) | `?step=details\|location\|schedule\|pay\|done&service=&booking=`; provider SSR, calendar/hold/payment client-side; sign-in from the hold on; guest banner |
-| `/quotes/$quoteId` | quote | S-56 | guest banner |
+| `/quotes/requests/$requestId` | book (quote mode, "N quotes received") | S-56 (**built**) | compare the request's quotes; guest banner |
+| `/quotes/$quoteId` | quote | S-56 (**built**) | every line, versions, accept with the escrow deposit; guest banner |
 | `/account/orders` | orders | S-58 | Orders & bookings — from the account menu only |
 | `/account?tab=` | account | S-58, S-59 | tabs: wallet, payments, profile, addresses, favourites, security, notifications, language, dietary, plus, help |
 | `/sign-in?next=`, `/register?next=` | auth | S-62 (**built**) | no account buttons in the header there; `features/auth` |
@@ -208,7 +209,7 @@ Cookie `nl.locale` = `en` | `fr` (1 year, not HttpOnly). `useLocale().setLocale(
 | public menus / kitchens, food checkout | missing | S-57 |
 | `GET /api/v1/public/services`, `/services/{slug}`, `/services/{slug}/providers?lat&lng&city` | **exists** (S-53, module `hire`) | S-53 |
 | `GET /api/v1/public/providers/{slug}/slots`, `POST/DELETE /api/v1/me/bookings/holds`, `POST /api/v1/me/bookings/checkout` (Idempotency-Key, X-Step-Up), `POST /api/v1/me/bookings/holds/{id}/confirm`, `GET /api/v1/me/bookings/{id}` | **exists** (S-55, module `hire`) | S-55 |
-| quote request / compare / accept (consumer side) | missing (merchant side exists) | S-56 |
+| `POST /api/v1/me/quote-requests`, `GET /api/v1/me/quote-requests/{id}`, `GET /api/v1/me/quotes/{id}`, `POST /api/v1/me/quotes/{id}/decline`, `POST /api/v1/me/quotes/{id}/accept` (Idempotency-Key, X-Step-Up), `POST /api/v1/me/quotes/{id}/accept/confirm` | **exists** (S-56, module `hire`) | S-56 |
 | `GET /api/v1/me/account-summary`, wallet, addresses, payment methods, notifications, favourites | missing | S-45 menu values, S-58, S-59 |
 | refunds / "something's wrong" (consumer side) | missing (merchant side exists) | S-60 |
 
