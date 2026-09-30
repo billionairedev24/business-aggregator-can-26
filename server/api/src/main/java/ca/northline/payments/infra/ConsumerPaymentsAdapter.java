@@ -34,7 +34,8 @@ class ConsumerPaymentsAdapter implements ConsumerPayments {
     private final JsonMapper json;
 
     @Override
-    public Answer idempotent(String scope, @Nullable String key, @Nullable Object request, int status, Supplier<?> action) {
+    public Answer idempotent(
+            String scope, @Nullable String key, @Nullable Object request, int status, Supplier<?> action) {
         if (key == null || key.isBlank() || key.length() > 255) {
             throw RuleViolation.of(HEADER, "required", REQUIRED);
         }

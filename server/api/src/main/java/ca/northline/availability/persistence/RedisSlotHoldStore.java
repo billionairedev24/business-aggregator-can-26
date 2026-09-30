@@ -100,7 +100,8 @@ class RedisSlotHoldStore implements SlotHoldStore {
 
     @Override
     public List<Hold> ofMember(String merchantId, String memberUserId, Instant from, Instant to, Instant now) {
-        var ids = redis.opsForZSet().rangeByScore(memberKey(merchantId, memberUserId), now.toEpochMilli() + 1, Double.MAX_VALUE);
+        var ids = redis.opsForZSet()
+                .rangeByScore(memberKey(merchantId, memberUserId), now.toEpochMilli() + 1, Double.MAX_VALUE);
         if (ids == null) {
             return List.of();
         }
@@ -153,6 +154,8 @@ class RedisSlotHoldStore implements SlotHoldStore {
             return Optional.empty();
         }
         var hold = JSON.readValue(json, Hold.class);
-        return hold.expiresAt().isAfter(now) || Objects.equals(now, Instant.EPOCH) ? Optional.of(hold) : Optional.empty();
+        return hold.expiresAt().isAfter(now) || Objects.equals(now, Instant.EPOCH)
+                ? Optional.of(hold)
+                : Optional.empty();
     }
 }

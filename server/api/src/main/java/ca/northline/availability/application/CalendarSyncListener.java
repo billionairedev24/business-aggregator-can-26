@@ -1,10 +1,9 @@
 package ca.northline.availability.application;
 
-import ca.northline.booking.api.BookingConfirmed;
-
 import ca.northline.availability.application.CalendarSyncEvents.CalendarChanged;
 import ca.northline.availability.application.CalendarSyncEvents.CalendarConnected;
 import ca.northline.availability.application.CalendarSyncEvents.ChannelRenewalRequested;
+import ca.northline.booking.api.BookingConfirmed;
 import lombok.RequiredArgsConstructor;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;

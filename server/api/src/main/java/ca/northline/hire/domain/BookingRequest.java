@@ -184,9 +184,11 @@ public record BookingRequest(
         put(d, "urgency", urgency);
         var v = vehicle;
         if (v != null && !blank(v.make())) {
-            var line = String.join(" ", List.of(nz(v.year()), nz(v.make()), nz(v.model())).stream()
-                    .filter(s -> !s.isBlank())
-                    .toList());
+            var line = String.join(
+                    " ",
+                    List.of(nz(v.year()), nz(v.make()), nz(v.model())).stream()
+                            .filter(s -> !s.isBlank())
+                            .toList());
             d.put("vehicle", blank(v.plate()) ? line : line + " · " + nz(v.plate()));
             put(d, "fuel", v.fuel());
         }

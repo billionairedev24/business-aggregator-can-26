@@ -43,7 +43,10 @@ class CustomerBookingJdbc implements CustomerBookingStore {
 
     @Override
     public String insert(NewBooking b, Instant at) {
-        var ref = "BK-" + jdbc.sql("select nextval('booking.booking_ref_seq')").query(Long.class).single();
+        var ref = "BK-"
+                + jdbc.sql("select nextval('booking.booking_ref_seq')")
+                        .query(Long.class)
+                        .single();
         jdbc.sql("""
                         insert into booking.bookings (id, ref, customer_id, merchant_id, member_user_id, service_id, quote_id,
                                type, state, starts_at, ends_at, title, address_line, area, details, escrow_id, price_cents,
@@ -70,7 +73,10 @@ class CustomerBookingJdbc implements CustomerBookingStore {
                 .param("price", b.priceCents())
                 .param("deposit", b.depositCents())
                 .param("tax", b.taxCents())
-                .param("freeCancel", b.freeCancelUntil() == null ? null : JdbcTimes.ts(b.freeCancelUntil()), Types.TIMESTAMP_WITH_TIMEZONE)
+                .param(
+                        "freeCancel",
+                        b.freeCancelUntil() == null ? null : JdbcTimes.ts(b.freeCancelUntil()),
+                        Types.TIMESTAMP_WITH_TIMEZONE)
                 .param("at", JdbcTimes.ts(at))
                 .update();
         return ref;

@@ -27,7 +27,8 @@ class SlotHoldService implements SlotHolds {
     private final Clock clock;
 
     @Override
-    public Hold hold(String merchantId, @Nullable String serviceId, Instant startsAt, int durationMin, String customerId) {
+    public Hold hold(
+            String merchantId, @Nullable String serviceId, Instant startsAt, int durationMin, String customerId) {
         var now = clock.instant();
         store.ofCustomer(customerId, merchantId, now).forEach(h -> store.remove(h.id()));
         var buffer = Duration.ofMinutes(slots.rules(merchantId).bufferMin());

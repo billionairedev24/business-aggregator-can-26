@@ -53,17 +53,23 @@ class InMemorySlotHoldStore implements SlotHoldStore {
 
     @Override
     public List<Hold> ofMember(String merchantId, String memberUserId, Instant from, Instant to, Instant now) {
-        return read(now, () -> holds.values().stream()
-                .filter(h -> h.merchantId().equals(merchantId) && h.memberUserId().equals(memberUserId))
-                .filter(h -> h.startsAt().isBefore(to) && h.endsAt().isAfter(from))
-                .toList());
+        return read(
+                now,
+                () -> holds.values().stream()
+                        .filter(h -> h.merchantId().equals(merchantId)
+                                && h.memberUserId().equals(memberUserId))
+                        .filter(h -> h.startsAt().isBefore(to) && h.endsAt().isAfter(from))
+                        .toList());
     }
 
     @Override
     public List<Hold> ofCustomer(String customerId, String merchantId, Instant now) {
-        return read(now, () -> holds.values().stream()
-                .filter(h -> h.customerId().equals(customerId) && h.merchantId().equals(merchantId))
-                .toList());
+        return read(
+                now,
+                () -> holds.values().stream()
+                        .filter(h -> h.customerId().equals(customerId)
+                                && h.merchantId().equals(merchantId))
+                        .toList());
     }
 
     @Override

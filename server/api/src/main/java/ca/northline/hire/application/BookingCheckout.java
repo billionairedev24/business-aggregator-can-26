@@ -1,6 +1,7 @@
 package ca.northline.hire.application;
 
 import ca.northline.hire.domain.BookingRequest;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -20,7 +21,7 @@ public final class BookingCheckout {
     }
 
     public interface HoldSlot {
-        HoldView hold(String customerId, String slug, String serviceId, Instant startsAt, @Nullable Integer hours);
+        HoldView hold(String customerId, String slug, String serviceId, Instant startsAt, @Nullable BigDecimal hours);
     }
 
     public interface ReleaseSlot {
@@ -29,7 +30,11 @@ public final class BookingCheckout {
 
     /** Prices the booking and opens the payment for it — or, for a free consultation, books at once. */
     public interface StartCheckout {
-        Checkout start(String customerId, BookingRequest request, @Nullable String clientKey);
+        /**
+         * @param secondFactor the session has {@code acr=mfa} or a valid step-up proof; without it a paid booking is
+         *     refused ({@link SecondFactorRequired})
+         */
+        Checkout start(String customerId, BookingRequest request, @Nullable String clientKey, boolean secondFactor);
     }
 
     /** The card was authorized (Stripe.js): record the escrow hold and write the booking. */

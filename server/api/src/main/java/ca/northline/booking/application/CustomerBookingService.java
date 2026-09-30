@@ -50,7 +50,8 @@ class CustomerBookingService implements CustomerBookings {
             if (booking.contactPhone() != null) {
                 note.put("phone", booking.contactPhone());
             }
-            store.sealAccess(booking.bookingId(), sealer.seal(JSON.writeValueAsString(note), context(booking.bookingId())));
+            store.sealAccess(
+                    booking.bookingId(), sealer.seal(JSON.writeValueAsString(note), context(booking.bookingId())));
         }
         events.publishEvent(new BookingConfirmed(
                 Ids.next(),

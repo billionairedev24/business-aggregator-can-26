@@ -34,7 +34,8 @@ class AccessNotes {
     /**
      * @param legacy the {@code details.access} of bookings written before S-55 (seeded jobs), shown as before
      */
-    @Nullable String forProvider(String bookingId, @Nullable String legacy, Instant startsAt, Instant now) {
+    @Nullable
+    String forProvider(String bookingId, @Nullable String legacy, Instant startsAt, Instant now) {
         if (legacy != null) {
             return legacy;
         }
@@ -42,9 +43,9 @@ class AccessNotes {
             return null;
         }
         return store.accessNote(bookingId)
-                .map(sealed -> {
+                .map(box -> {
                     Map<String, String> note = JSON.readValue(
-                            sealer.open(sealed, CustomerBookingService.context(bookingId)), new TypeReference<>() {});
+                            sealer.open(box, CustomerBookingService.context(bookingId)), new TypeReference<>() {});
                     var parts = new ArrayList<String>();
                     if (note.get("access") != null) {
                         parts.add(note.get("access"));

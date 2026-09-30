@@ -33,5 +33,6 @@ public interface ConsumerPayments {
     boolean hasSecondFactor(String userId, boolean tokenMfa, @Nullable String stepUpProof);
 
     /** Stripe's publishable key, or null with the fake gateway (payments are authorized without a card). */
-    @Nullable String publishableKey();
+    @Nullable
+    String publishableKey();
 }

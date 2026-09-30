@@ -75,7 +75,8 @@ class CustomerSlotService implements ProviderSlots {
     @Override
     public Optional<String> freeMember(
             String merchantId, Instant startsAt, int durationMin, @Nullable String customerId) {
-        return freeMembers(merchantId, startsAt, durationMin, customerId).stream().findFirst();
+        return freeMembers(merchantId, startsAt, durationMin, customerId).stream()
+                .findFirst();
     }
 
     /** Every bookable member free for the job at {@code startsAt}, the least busy that day first. */
@@ -150,7 +151,8 @@ class CustomerSlotService implements ProviderSlots {
             closedReasons.add(day.closed());
             boolean full = day.jobs() >= rules.maxJobsPerDay();
             var busy = busy(day, merchantId, member.userId(), date, now, customerId);
-            for (var slot : SlotPlanner.preview(day.ranges(), busy, durationMin, rules.intervalMin(), rules.bufferMin())) {
+            for (var slot :
+                    SlotPlanner.preview(day.ranges(), busy, durationMin, rules.intervalMin(), rules.bufferMin())) {
                 starts.merge(slot.start(), slot.free() && !full, Boolean::logicalOr);
             }
         }
