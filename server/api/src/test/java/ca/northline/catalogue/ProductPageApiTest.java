@@ -58,7 +58,8 @@ class ProductPageApiTest extends IntegrationTest {
         var elsewhere = shopFixtures.shop("Edmonton", "Elsewhere " + tag, "master");
         shopFixtures.offer(elsewhere, sourdough.productId(), "Sourdough", 400, 9, "approved", "live", "same_day", 0);
 
-        var page = json(mvc.perform(get("/api/v1/public/shop/products/{id}", sourdough.productId()).param("market", MARKET))
+        var page = json(mvc.perform(get("/api/v1/public/shop/products/{id}", sourdough.productId())
+                        .param("market", MARKET))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Country sourdough " + tag))
                 .andExpect(jsonPath("$.unit").value("900 g"))
@@ -90,8 +91,12 @@ class ProductPageApiTest extends IntegrationTest {
         var sameDay = shopFixtures.listing(shop, BAKERY, "Bread " + tag, 500, 5);
         var nextDay = shopFixtures.listing(shop, BAKERY, "Cake " + tag, 3000, 5, "approved", "live", "next_day", 0);
 
-        var run = json(mvc.perform(get("/api/v1/public/shop/products/{id}", sameDay.productId()).param("market", MARKET)))
-                .path("offers").get(0).path("runs").get(0);
+        var run = json(mvc.perform(get("/api/v1/public/shop/products/{id}", sameDay.productId())
+                        .param("market", MARKET)))
+                .path("offers")
+                .get(0)
+                .path("runs")
+                .get(0);
         var orderBy = Instant.parse(run.path("orderBy").asString());
         var packBy = Instant.parse(run.path("packBy").asString());
         var startsAt = Instant.parse(run.path("startsAt").asString());
@@ -102,8 +107,12 @@ class ProductPageApiTest extends IntegrationTest {
         assertThat(local).isIn("18:00", "08:00");
         assertThat(packBy.atZone(ZONE).toLocalTime().toString()).isEqualTo(local.equals("18:00") ? "17:45" : "07:30");
 
-        var later = json(mvc.perform(get("/api/v1/public/shop/products/{id}", nextDay.productId()).param("market", MARKET)))
-                .path("offers").get(0).path("runs").get(0);
+        var later = json(mvc.perform(get("/api/v1/public/shop/products/{id}", nextDay.productId())
+                        .param("market", MARKET)))
+                .path("offers")
+                .get(0)
+                .path("runs")
+                .get(0);
         var day = Instant.parse(later.path("startsAt").asString()).atZone(ZONE).toLocalDate();
         assertThat(day).isAfterOrEqualTo(LocalDate.now(ZONE).plusDays(1));
         assertThat(later.path("day").asString()).isIn("tomorrow", "later");
@@ -114,10 +123,13 @@ class ProductPageApiTest extends IntegrationTest {
         var tag = Ids.next().substring(18);
         var shop = shopFixtures.shop("Edmonton", "Only Edmonton " + tag, "master");
         var loaf = shopFixtures.listing(shop, BAKERY, "Loaf " + tag, 500, 5);
-        jdbc.sql("update catalogue.catalog_products set title_i18n = title_i18n || jsonb_build_object('fr', ?::text) where id = ?")
+        jdbc.sql(
+                        "update catalogue.catalog_products set title_i18n = title_i18n || jsonb_build_object('fr', ?::text) where id = ?")
                 .params("Miche " + tag, loaf.productId())
                 .update();
-        mvc.perform(get("/api/v1/public/shop/products/{id}", loaf.productId()).param("market", MARKET).param("lang", "fr"))
+        mvc.perform(get("/api/v1/public/shop/products/{id}", loaf.productId())
+                        .param("market", MARKET)
+                        .param("lang", "fr"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Miche " + tag))
                 .andExpect(jsonPath("$.departmentName").value("Boulangerie"))
@@ -132,7 +144,8 @@ class ProductPageApiTest extends IntegrationTest {
         var draft = shopFixtures.listing(shop, BAKERY, "Draft " + tag, 500, 5, "draft", "hidden", "same_day", 0);
         var banned = shopFixtures.listing(shop, TOBACCO, "Vape " + tag, 500, 5);
         mvc.perform(get("/api/v1/public/shop/products/{id}", draft.productId())).andExpect(status().isNotFound());
-        mvc.perform(get("/api/v1/public/shop/products/{id}", banned.productId())).andExpect(status().isNotFound());
+        mvc.perform(get("/api/v1/public/shop/products/{id}", banned.productId()))
+                .andExpect(status().isNotFound());
         mvc.perform(get("/api/v1/public/shop/products/{id}", Ids.next())).andExpect(status().isNotFound());
     }
 
