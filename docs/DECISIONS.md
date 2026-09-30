@@ -1845,6 +1845,223 @@ Worker: `WebhookDeliveryTest` (Kafka 4 + PostGIS + WireMock receiver: signed `bo
   photos); Clover item descriptions (Clover has none); Square item options (only variations); a per-dish "don't sync"
   switch; Lightspeed Restaurant (the story names Square, Clover and Toast).
 
+## 2026-09-30 — S-39 Re-vet approved listings when material fields change
+
+- **"Material" (`catalogue.domain.MaterialField`).** These are the inputs of the automated checks and what customers
+  decide on:
+  - **price**: the offer price or any variant's price (keyed by SKU); for a service, the price or the pricing mode.
+    Fixed → quote is a price change.
+  - **category**: the leaf category.
+  - **images**: the images customers see, in order, since the first is the main image. That is the image source
+    (shared / own) plus the record's images when shared, plus the seller's own. Adding, removing, replacing or
+    reordering all count.
+  - **Not material:** title, description, attributes, bullets, stock, SKU, compare-at / cost, fulfilment, handling,
+    returns and compliance fields. The story names price, category and images; the rest don't feed the checks.
+    Content moderation of text is the console's job.
+- **Same rule whoever changes it.** The editor save (`revise`), the bulk price & stock update (`restock` / `reprice`)
+  and the platform sync (`syncStock`) all compare a before/after snapshot.
+- **S-35 sync:** after a draft, Northline's vetted content still wins, and a sync never touches title, description,
+  images or variants of a submitted listing. Price and stock still follow the platform. A **price** change from a sync
+  is material, so an approved listing goes back to pending (actor `system:commerce`). A stock change is not material.
+- **Transition** (`ListingState.revet`):
+  - approved → **pending**, flags cleared, `submitted_at` = now, `revet_reasons` = what changed.
+  - `listing.hidden` is published if customers could see the listing (search drops it); a listing the merchant keeps
+    hidden publishes nothing.
+  - `listing.submitted` is published, so the same `VettingOnSubmit` runs the automated checks.
+  - No new event type; `listing.submitted` is not externalized.
+- **While it is being re-vetted:**
+  - Customers don't see it: only approved + live is visible.
+  - The merchant's **live / hidden choice is kept**. Once the checks pass it returns to that state: `listing.published`
+    again only if it is live. A first-time approval still makes a listing live, as before.
+  - An edit doesn't withdraw it to draft (first submissions still are). A further material change adds its reasons
+    and re-runs the checks.
+  - Flagged → it stays pending with flags for the console, like any submission.
+- **Retried events:** `vet()` now leaves a listing alone unless it is pending, and saves the outcome even when there
+  is no event to publish (a hidden listing approved again).
+- **Studio** (the design shows pending as the "Pending · N min" tag and "Submitted · vetting" / "In review · flagged"
+  in the editor):
+  - A re-vetted listing shows exactly those, since it is pending with a fresh `submittedAt`, and appears under
+    "Pending vetting".
+  - The editor adds a notice "Back in vetting — Changed: price and category. Customers don't see this listing until the
+    automated checks pass, usually within minutes." A flagged re-vet says a reviewer looks at it instead.
+  - An approved listing shows a one-line hint that changing the price, category or images sends it back to vetting.
+  - This copy is ours; the design has none. en + fr-CA.
+- **API (additive):** `revetReasons` (`price|category|images`) on `GET /listings` rows and on the product/service
+  editor responses.
+- **Schema (V054, additive):** `catalogue.offers.revet_reasons` and `catalogue.services.revet_reasons`
+  (`text[] NOT NULL DEFAULT '{}'`). V053 is used by S-123 on its own branch.
+- **Tests:**
+  - `RevettingTest` (domain):
+    - editor price / category / image order changes are material
+    - title and stock are not
+    - a sync price change is material, sync stock alone is not
+    - bulk restock / reprice
+    - a service's pricing mode counts as price
+    - hidden listings re-vet quietly and stay hidden
+    - re-published once approved
+    - edits during a re-vet keep it pending, and reasons add up
+    - drafts and first submissions behave as before
+  - `RevettingApiTest`:
+    - a price change → pending, `listing.hidden` + `listing.submitted`, then approved and live again with
+      `listing.published`
+    - a title change stays approved, while a new image re-vets
+    - a hidden listing re-vets and stays hidden
+    - a service moved to a regulated category is flagged `missing_licence` and shows `revetReasons` in the table
+  - `CommerceSyncApiTest.aSyncedPriceChangeOnAnApprovedListingIsReVetted`
+  - Studio `revet.test.tsx`: the hint, the notice (plain and flagged), no notice on a first submission, fr-CA.
+- **Not done:**
+  - A change to a **shared catalogue record's** images or category by its owner doesn't re-vet the other sellers'
+    offers that inherit it. Only the offer being saved is compared.
+  - No threshold: a 1¢ price change re-vets. The checks run in seconds, so a clean listing is back almost at once.
+
+## 2026-09-30 — S-38 Feed sales_30d on offers and services from orders/bookings
+
+- **What counts, over the last 30 days (a rolling window, not calendar days):**
+  - **Offers:** units on goods orders placed in the window. Orders in state `cancelled` or `refunded`, and lines in
+    state `refunded`, don't count.
+  - **Services:** bookings made in the window (`booking.bookings.created_at`), cancelled ones excluded.
+  - "Sold" means ordered or booked, not delivered or completed. That matches the dashboard's order volume, which is
+    counted by placed date.
+- **Where the counts come from:** two new public queries owned by the modules that own the data:
+  - `orders.api.OfferSales.unitsByOffer(merchant, from, to)`, implemented by `OrdersJdbc`
+  - `booking.api.ServiceSales.bookingsByService(merchant, from, to)`, implemented by `BookingInsightsQueries`
+
+  Catalogue doesn't read `orders.*` / `booking.*` itself. That keeps it consistent with S-37's schema-ownership rule.
+- **How it is kept current:**
+  - `catalogue.application.SalesListener` (`@ApplicationModuleListener`) recounts the merchant's listings on
+    `order.packed`, every `booking.*` progress event, `quote.accepted` and `refund.issued`.
+  - A recount rewrites `sales_30d` for **all** of the merchant's offers and services in one statement per table, so
+    listings with no sales go to 0.
+  - It is derived, so a retried event or a duplicate is harmless.
+  - A nightly job (`SalesScheduler`, 03:10 America/Edmonton, not under `test`) recounts every merchant that still
+    shows a non-zero figure, so old sales age out even when nothing new happens.
+  - Every replica runs the nightly job. A second run costs a few queries and needs no lock.
+- **No `order.placed` or `booking.confirmed` event exists yet:** there is no checkout or booking creation in the api
+  (the consumer workstream). The listener uses the events that do exist.
+  - A newly placed order shows up once the seller packs it, or at the next nightly run.
+  - When checkout starts publishing `order.placed` / `order.cancelled` and booking creation publishes its event, add
+    them to `SalesListener`. That is a one-line handler each.
+- **Local data:** the dev seed's fixed `sales_30d` numbers (31, 28, …) are not linked to any seeded order line or
+  booking (those rows have no `offer_id` / `service_id`). The first recount for a seeded business therefore shows 0.
+  These are the real numbers; the old ones were decoration.
+- **Studio:** no change. The Listings table already shows `sales30d` in its "30-day sales" column.
+- **Schema:** none. `sales_30d` already existed (V050); the existing `merchant_id` indexes serve the per-merchant
+  update. No migration was needed.
+- **Tests:** `SalesThirtyDaysApiTest`:
+  - `order.packed` recounts units per offer: in-window counts; cancelled, refunded orders, refunded lines, older than
+    30 days and other merchants' lines don't
+  - `booking.completed` recounts bookings per service: cancelled and older than 30 days don't count
+  - the nightly run lets a stale figure age out to 0
+
+## 2026-09-30 — S-37 Merchants public query API to replace direct SQL reads in other modules
+
+- **New `merchants.api` queries.** Both are implemented by `merchants.persistence.MerchantDirectoryQueries`:
+  - `MerchantDirectory.profile(id)` returns type, tier, status (`active()`), own take rate and province, as the
+    lower-case column codes.
+  - `MerchantVerifications` has two methods:
+    - `hasVerifiedLicence(id, registry, at)`: a verified licence or registry row, registry matched case-insensitively,
+      not expired at `at`.
+    - `latest(id, checkType)`: a verified row first, then the most recently updated one.
+  - Both queries are the ones the other modules used to run themselves, moved and unchanged.
+- **Replaced cross-module SQL** (each module keeps its own small port; only the adapter changed):
+  - catalogue's licence check: `MerchantLicenceQueries` became `catalogue.adapters.MerchantLicences`, which uses `MerchantVerifications`
+  - messaging's type and tier: `MessagingMerchantProfiles` became `messaging.adapters.DirectoryMerchantProfiles`, which uses `MerchantDirectory`
+  - food's approval and food-safety evidence: `KitchenMerchantFactsJdbc` became `food.adapters.DirectoryKitchenMerchantFacts`
+  - payments' tier and take rate (`MerchantTierQueries`) and the merchant's province (`TaxRepository.merchantProvince`, from S-21): now
+    `payments.infra.MerchantTierLookup`. `MerchantTiers` gained `provinceOf`.
+- **Two reads go the other way, to avoid module cycles** (Modulith `verify()` rejects cycles):
+  - **payments → merchants:** merchants already depends on payments (Connect, payouts, tax summary, bank linking), so
+    payments can't call `merchants.api`. Payments declares what it needs in **`payments.api.MerchantBillingFacts`**
+    (tier, take rate, province). The merchants module implements it in `merchants.integration.PaymentsBillingFacts`
+    over `MerchantDirectory`. The SQL still lives only in merchants, which is the story's aim; only the interface sits
+    on the payments side.
+  - **merchants → catalogue.categories:** merchants' onboarding taxonomy, selected categories and compliance "required
+    for" read `catalogue.categories` by SQL. Catalogue now calls `merchants.api`, so the category query is declared in
+    **`merchants.api.CategorySource`** and implemented by `catalogue.persistence.CategorySourceAdapter`. The former SQL
+    joins became two steps: merchants' own rows, then the categories by id.
+- **The rule:** `SchemaOwnershipTests` is an ArchUnit rule over every class in `ca.northline` except `ca.northline.tools`,
+  the Gradle seeding tasks.
+  - ArchUnit doesn't expose string literals, so the condition reads each class file's constant pool with the JDK
+    class-file API (`java.lang.classfile`). Text blocks and the literal parts of concatenated SQL both land there.
+  - A string counts as SQL when it contains select / insert into / update / delete from / from / join. A class fails
+    when such a string names `<module>.<table>` for a module other than its own.
+  - Event names such as `orders.order_ready` are not SQL and are not flagged.
+  - `events` is the platform outbox and is not a module schema.
+  - `SchemaOwnershipDetectorTest` checks the detector against a fixture: a text block, concatenation, the class's own
+    schema, and a non-SQL string.
+- **Allowed exceptions (listed in the test):** the kitchen live board in `food.persistence` (`KitchenTicketJdbc`,
+  `KitchenOrderLinesJdbc`, `KitchenNavBadges`) joins `orders.*` and `fulfilment.*`.
+  - orders already depends on food, so an `orders.api` call would be a cycle.
+  - Moving it needs its own design: an SPI implemented by orders, or a food-side read model fed by order events.
+  - Left as a follow-up rather than rewriting the live board inside a merchants story.
+- **Outside the api monolith (not covered by the rule):** these are separate deployables that share the database and
+  can't call an in-process Java API. A read model or an HTTP endpoint would be their own stories.
+  - `server/worker` `JdbcRecipients` reads `merchants.merchant_members` / `merchants.merchants` for notification recipients.
+  - `server/auth` `JdbcUserAccounts` reads `merchant_members` for the token's `merchants` claim.
+- **Docs:** BACKEND_CONVENTIONS § 2 describes the rule and the two ways to read another module.
+- **Tests:**
+  - `MerchantQueryApiTest`:
+    - profile fields
+    - the billing facts
+    - paused is not active
+    - a licence must be verified, unexpired and for the right registry (case-insensitive)
+    - a verified evidence row is preferred
+    - `CategorySource` by ids and by roots
+  - `SchemaOwnershipTests`, `SchemaOwnershipDetectorTest`, `ModularityTests`
+  - the existing payments, messaging, food, catalogue and merchants API tests, unchanged.
+- **Schema:** none.
+
+## 2026-09-30 — S-123 Catalogue media: check merchant ownership before serving draft images
+
+- **The bug:** `GET /api/v1/merchants/{merchantId}/media/{mediaId}` checked that the caller was a member of
+  `{merchantId}`, then loaded the image by id alone. A member of business B could read business A's unvetted upload
+  through B's own path if they learned the id.
+- **Rule:** a listing image is served to members of the business that uploaded it (`catalogue.media.merchant_id`) and
+  to anyone else only once it is **approved content**:
+  - (a) an own image (`offers.own_images`) of an **approved** offer of the uploading business, or
+  - (b) an image of a **locked** catalogue record (`catalog_products.image_set` with `locked = true`), meaning brand-owner or
+    platform-curated content, such as the seeded Bosch record.
+  - Approval is read from the listings on every request, not stored on the image. An image that leaves an approved
+    listing, or whose listing goes back to pending (S-39), becomes private again. Customers don't see a pending
+    listing anyway.
+  - It must be the **uploader's own** approved offer. When seller B's listing that inherits A's shared GTIN record is
+    approved, that does not publish A's images. Otherwise anyone who knows a product's GTIN could publish another
+    seller's unvetted photos.
+- **Responses:**
+  - Another business's unapproved image: **403** ProblemDetail `code: forbidden`, detail "This image belongs to another
+    business and hasn't been approved yet." (our copy).
+  - Unknown id: 404, as before.
+  - The owner's path used by an outsider: still 403 `not_a_member`.
+- **Storefront:** there was no public route for listing images, so this adds `GET /api/v1/public/catalogue/media/{mediaId}`,
+  open under the existing `/api/v1/public/**` rule.
+  - It serves approved images only, and anything else is **404** (not 403), so ids can't be probed.
+  - `Cache-Control: public, max-age=3600`, kept short so that an image going private (S-39) drops out of caches within an hour.
+  - Plus `nosniff`, which the Studio route now also sends.
+- **Editor and GTIN lookup:** `GET …/catalogue/products/lookup` and the product editor's shared-record images leave
+  out images the caller may not load, instead of returning URLs that would 403. So a second seller of a new GTIN sees
+  the record's text right away and its photos once the first seller's listing is approved.
+  - `LookupCatalogue.byGtin` now takes the merchant id.
+  - `MediaVisibility` (catalogue application) holds the rule for the endpoint, the lookup and the editor.
+- **Schema (V053, additive):** two partial GIN indexes for the lookup: `offers(own_images) WHERE vetting = 'approved'`
+  and `catalog_products(image_set) WHERE locked`. No new columns.
+- **Other file endpoints checked for the same bug:** none had it. Each already looks the file up by merchant *and* id:
+  - kitchen menu-item photos (`MenuStore.item(merchantId, itemId)`)
+  - message and help-case attachments (`messaging.attachments where merchant_id = :m`)
+  - onboarding / verification documents and storefront logos (`merchants.documents where merchant_id = :m`; a logo must be the merchant's own `logo` document)
+  - dispute evidence (loaded through the merchant's dispute)
+  - booking job photos, which have no download route, and attaching them checks the merchant.
+
+  Regression checks were added for kitchen photos and dispute evidence: another business's own path returns 404. The
+  tests for documents and attachments already covered this.
+- **Tests:** `VettingAndMediaApiTest.Ownership`:
+  - a draft image is 403 for another business (their path) and for an outsider on the owner's path, and 404 publicly
+  - once approved, it is public (with public caching) and visible to other businesses, while the same business's
+    other drafts stay private
+  - locked-record images are approved
+  - the GTIN lookup hides the first seller's unvetted photos until approval
+- **Not done:** the consumer app doesn't render listing images yet, so nothing calls the public route today. There is
+  no signed or CDN URL (S-10's `presignGet` is still unused).
+
 ## 2026-09-30 — S-45 Consumer shell: header, location pill, EN/FR, cart, account menu (consumer-bff, consumer app foundation)
 
 Contracts for the stories that follow: [CONSUMER_WEB_PLAN.md](CONSUMER_WEB_PLAN.md).
@@ -1950,6 +2167,9 @@ Built on S-45 (branch `web/s-62-consumer-auth` from `web/s-45-consumer-shell`).
   factor does, as S-18 decided); a consumer can always continue at the code step.
 - **Schema (V110, consumer range):** `identity.sessions.method` CHECK widened with `phone_otp` (drop + re-add of
   `sessions_method_check`; no row changes).
+- **`spring.flyway.out-of-order: true` under `local`** (api and auth): V110 is the first migration above the dev-seed
+  range (V100–V109); a database migrated without `local` (the shared test database, a developer's) has V110 before the
+  seed files, which Flyway would otherwise refuse ("resolved migration not applied"). Only the `local` profile.
 - **Shared code (`@northline/auth-kit`, new package):** the Studio's `features/auth/{api,errors,webauthn,useCountdown,
   rateLimit}` moved there (plus the Google/Apple/passkey marks, `safeNext`, `bffLoginUrl`, `appAuthorizationUrl`,
   `authUrl`/`endAuthSession` with `configureAuthOrigin`, and the new consumer calls). The shared copy (validation rules,

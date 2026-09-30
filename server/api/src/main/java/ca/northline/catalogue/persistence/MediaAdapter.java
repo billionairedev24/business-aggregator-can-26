@@ -13,6 +13,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -70,6 +71,25 @@ class MediaAdapter implements MediaRepository {
                 .stream()
                 .collect(Collectors.toMap(MediaAsset::id, Function.identity()));
         return ids.stream().map(byId::get).filter(Objects::nonNull).toList();
+    }
+
+    @Override
+    public Set<String> approved(Collection<String> ids) {
+        if (ids.isEmpty()) {
+            return Set.of();
+        }
+        // The uploader's own approved offer, not any offer: approving another seller's listing that inherits a shared
+        // record must not make the record creator's unvetted images public.
+        return Set.copyOf(
+                jdbc.sql("""
+                        select m.id from catalogue.media m
+                         where m.id = any(:ids)
+                           and (exists (select 1 from catalogue.offers o
+                                         where o.merchant_id = m.merchant_id and o.vetting = 'approved'
+                                           and o.own_images @> array[m.id])
+                                or exists (select 1 from catalogue.catalog_products p
+                                            where p.locked and p.image_set @> array[m.id]))
+                        """).param("ids", array(ids)).query(String.class).list());
     }
 
     @Override

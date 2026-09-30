@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,6 +59,7 @@ class BulkImportService implements BulkImport {
     private final CategoryCatalog categories;
     private final EditProduct editProduct;
     private final EditService editService;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     // ── validate ───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -348,7 +350,7 @@ class BulkImportService implements BulkImport {
         var creates = new LinkedHashMap<String, List<ValidRow>>();
         for (var row : batch.pendingRows()) {
             if (row.update()) {
-                applyUpdate(merchantId, row, now);
+                applyUpdate(merchantId, row, actorId, now);
             } else {
                 creates.computeIfAbsent(row.values().getOrDefault("parent_sku", row.sku()), _ -> new ArrayList<>())
                         .add(row);
@@ -365,22 +367,26 @@ class BulkImportService implements BulkImport {
         return done;
     }
 
-    private void applyUpdate(String merchantId, ValidRow row, java.time.Instant now) {
+    /** Existing SKU: price and stock only. A new price on an approved listing sends it back to vetting (S-39). */
+    private void applyUpdate(String merchantId, ValidRow row, String actorId, java.time.Instant now) {
         var listing = listings.bySku(merchantId, row.sku()).orElseThrow(() -> new NotFound("listing", row.sku()));
         var price = row.values().get("price");
         var stock = row.values().get("stock");
         switch (listing) {
             case ProductListing p -> {
-                p.restock(
+                var revet = p.restock(
                         price == null ? p.getDetails().priceCents() : Long.parseLong(price),
                         stock == null ? p.getDetails().stock() : Integer.parseInt(stock),
+                        actorId,
                         now);
                 listings.save(p);
+                revet.forEach(events::publishEvent);
             }
             case ServiceListing s -> {
                 if (price != null) {
-                    s.reprice(Long.parseLong(price), now);
+                    var revet = s.reprice(Long.parseLong(price), actorId, now);
                     listings.save(s);
+                    revet.forEach(events::publishEvent);
                 }
             }
         }

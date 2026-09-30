@@ -32,6 +32,7 @@ class TaxTransactions {
     static final Province DEFAULT_PROVINCE = Province.AB;
 
     private final TaxRepository taxes;
+    private final MerchantTiers merchants;
     private final ApplicationEventPublisher events;
 
     static String saleReference(String escrowId) {
@@ -50,7 +51,7 @@ class TaxTransactions {
         }
         var province = calculation
                 .map(Calculation::province)
-                .or(() -> taxes.merchantProvince(escrow.getMerchantId()))
+                .or(() -> merchants.provinceOf(escrow.getMerchantId()))
                 .orElse(DEFAULT_PROVINCE);
         queue(new Transaction(
                 Ids.next(),

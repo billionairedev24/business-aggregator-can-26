@@ -6,7 +6,7 @@ import { ValidationError } from '../../lib/http';
 import { useMerchant, useMerchantId, useRole } from '../shell/api';
 import { useShellT } from '../shell/messages';
 import { categoriesQuery, useSaveService, useSubmitListing, type PricingMode, type ServiceDetail } from './api';
-import { AttentionSummary, CategoryPicker, CompletenessPanel, EditorHeader, FeesPanel, Side, VettingPanel, draftTag, useEditorForm } from './EditorParts';
+import { AttentionSummary, CategoryPicker, CompletenessPanel, EditorHeader, FeesPanel, RevetNotice, Side, VettingPanel, draftTag, useEditorForm } from './EditorParts';
 import { useCatalogueT } from './messages';
 import { emptyService, permissions, serviceCompleteness, serviceFromDetail, servicePayload, validateServiceDraft, vettingChecks, type Portal, type ServiceForm } from './model';
 import { parseMoney, useMessageT } from './validation';
@@ -80,6 +80,7 @@ export function ServiceEditor({ detail, portal, typePicker }: { detail?: Service
         roleName={shellT(`role_${role}` as Parameters<typeof shellT>[0])} saveLabel={saved?.vetting === 'approved' ? t('saveChanges') : t('saveDraft')}
         saving={save.isPending} submitting={submit.isPending} cannotSubmit={!completeness.complete || !canSubmit} onSave={() => void persist()} onSubmit={() => void onSubmit()} />
       {failure && <div style={{ marginBottom: 16 }}><Alert tone="error">{failure}</Alert></div>}
+      <RevetNotice detail={saved} kind="service" />
       <div style={{ marginBottom: 16 }}><AttentionSummary errors={fm.visible} t={t} /></div>
       <div className="nl-cat-editor">
         <fieldset className="nl-cat-main" disabled={!perms.update}>
