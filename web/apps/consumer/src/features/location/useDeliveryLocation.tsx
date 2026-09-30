@@ -7,8 +7,9 @@ import { DEFAULT_MARKET, nearestMarket } from './markets';
 /**
  * The delivery location every screen reads (docs/CONSUMER_WEB_PLAN.md § Location). In order:
  *   1. saved — chosen on the Location screen (S-47: `save()`), kept in this browser;
- *   2. detected — the browser's geolocation (asked once per visit), named by `GET /api/v1/geo/reverse` when the api
- *      has it, else by the nearest live market; before it answers, the CDN's IP city from the session;
+ *   2. detected — the browser's geolocation (asked once per visit), named by `GET /api/v1/geo/reverse` (S-47:
+ *      "Beltline, Calgary" inside a live or pilot market; a place outside them counts as outside every market), else
+ *      by the nearest live market when the api can't answer; before it answers, the CDN's IP city from the session;
  *   3. fallback — Calgary, when nothing else is known (geolocation refused, unavailable or outside every market).
  * `denied` is never reached on its own: a refusal falls back to Calgary, as the design does.
  */
@@ -21,27 +22,62 @@ export interface DeliveryLocation {
   lat?: number;
   lng?: number;
   source?: 'saved' | 'device' | 'ip' | 'default';
+  /** S-47, when known: two-letter province (tax), the chosen address's parts, its market and delivery zone. */
+  province?: string;
+  street?: string;
+  unit?: string;
+  postalCode?: string;
+  placeId?: string;
+  marketId?: string;
+  zoneId?: string;
+  zone?: string;
 }
 
-export const SavedLocation = z.object({ label: z.string().min(1), city: z.string().min(1), lat: z.number().optional(), lng: z.number().optional(), placeId: z.string().optional() });
+/**
+ * What the Location screen saves (S-47): the pill's label ("1204 17 Ave SW, Calgary"), the market's city, the
+ * coordinates, and — additive since S-47 — the address parts checkout needs (street, unit / buzzer / drop-off note,
+ * province, postal code) and the market / zone it resolved to.
+ */
+export const SavedLocation = z.object({
+  label: z.string().min(1), city: z.string().min(1), lat: z.number().optional(), lng: z.number().optional(), placeId: z.string().optional(),
+  street: z.string().optional(), unit: z.string().optional(), province: z.string().optional(), postalCode: z.string().optional(),
+  marketId: z.string().optional(), zoneId: z.string().optional(), zone: z.string().optional(),
+});
 export type SavedLocation = z.infer<typeof SavedLocation>;
 export const SAVED_KEY = 'nl.location';
 const DETECTED_KEY = 'nl.location.detected';
 
-const Reverse = z.object({ label: z.string(), city: z.string() });
+/** `GET /api/v1/geo/reverse` — `market` (S-47) is null outside every market; absent from older answers. */
+const Reverse = z.object({
+  label: z.string(), city: z.string(), province: z.string().nullish(),
+  market: z.object({ id: z.string(), stage: z.string() }).nullish(),
+  zone: z.object({ id: z.string(), name: z.string() }).nullish(),
+});
 
 function readJson<T>(storage: Storage | undefined, key: string, schema: z.ZodType<T>): T | null {
   try { const raw = storage?.getItem(key); return raw ? schema.parse(JSON.parse(raw)) : null; } catch { return null; }
 }
 const storages = () => (typeof window === 'undefined' ? { local: undefined, session: undefined } : { local: window.localStorage, session: window.sessionStorage });
 
-const Detected = z.object({ label: z.string(), city: z.string(), lat: z.number().optional(), lng: z.number().optional(), source: z.enum(['device', 'ip']) });
+const Detected = z.object({
+  label: z.string(), city: z.string(), lat: z.number().optional(), lng: z.number().optional(), source: z.enum(['device', 'ip']),
+  province: z.string().optional(), marketId: z.string().optional(), zoneId: z.string().optional(), zone: z.string().optional(),
+});
+type Named = { label: string; city: string; province?: string; marketId?: string; zoneId?: string; zone?: string };
 
-async function nameOf(lat: number, lng: number): Promise<{ label: string; city: string } | null> {
-  try { return await http(`/api/v1/geo/reverse?lat=${lat.toFixed(5)}&lng=${lng.toFixed(5)}`, {}, Reverse); } catch {
+/** Where the device is, for the pill: the api's name inside a live / pilot market; null = outside every market. */
+async function nameOf(lat: number, lng: number): Promise<Named | null> {
+  let r: z.infer<typeof Reverse>;
+  try { r = await http(`/api/v1/geo/reverse?lat=${lat.toFixed(5)}&lng=${lng.toFixed(5)}`, {}, Reverse); } catch {
     const market = nearestMarket({ lat, lng });
-    return market ? { label: market.city, city: market.city } : null;
+    return market ? { label: market.city, city: market.city, province: market.province } : null;
   }
+  if (r.market === null || (r.market && r.market.stage !== 'live' && r.market.stage !== 'pilot')) return null;
+  return {
+    label: r.label, city: r.city,
+    ...(r.province ? { province: r.province } : {}), ...(r.market ? { marketId: r.market.id } : {}),
+    ...(r.zone ? { zoneId: r.zone.id, zone: r.zone.name } : {}),
+  };
 }
 
 interface LocationContextValue { location: DeliveryLocation; save: (l: SavedLocation) => void; forget: () => void }
@@ -68,7 +104,7 @@ export function DeliveryLocationProvider({ ipCity, children, geolocation }: Deli
     if (ipCity) setLocation({ status: 'detected', label: ipCity, city: ipCity, source: 'ip' });
     const geo = geolocation === undefined ? (typeof navigator !== 'undefined' ? navigator.geolocation : null) : geolocation;
     let cancelled = false;
-    const fallback = () => { if (!cancelled && !ipCity) setLocation({ status: 'fallback', label: DEFAULT_MARKET.city, city: DEFAULT_MARKET.city, lat: DEFAULT_MARKET.lat, lng: DEFAULT_MARKET.lng, source: 'default' }); };
+    const fallback = () => { if (!cancelled && !ipCity) setLocation({ status: 'fallback', label: DEFAULT_MARKET.city, city: DEFAULT_MARKET.city, lat: DEFAULT_MARKET.lat, lng: DEFAULT_MARKET.lng, province: DEFAULT_MARKET.province, source: 'default' }); };
     if (!geo) { fallback(); return; }
     // The design's 4 s: a prompt left unanswered doesn't keep the pill "Locating…".
     const timer = window.setTimeout(fallback, 4000);
@@ -90,7 +126,7 @@ export function DeliveryLocationProvider({ ipCity, children, geolocation }: Deli
   }, []);
   const forget = useCallback(() => {
     try { storages().local?.removeItem(SAVED_KEY); storages().session?.removeItem(DETECTED_KEY); } catch { /* ignore */ }
-    setLocation({ status: 'fallback', label: DEFAULT_MARKET.city, city: DEFAULT_MARKET.city, source: 'default' });
+    setLocation({ status: 'fallback', label: DEFAULT_MARKET.city, city: DEFAULT_MARKET.city, province: DEFAULT_MARKET.province, source: 'default' });
   }, []);
   const value = useMemo(() => ({ location, save, forget }), [location, save, forget]);
   return <LocationContext.Provider value={value}>{children}</LocationContext.Provider>;

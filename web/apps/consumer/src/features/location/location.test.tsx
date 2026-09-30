@@ -77,6 +77,20 @@ describe('location pill', () => {
     expect(pill()).toHaveAttribute('href', '/location');
   });
 
+  it('treats a place outside every market as unknown, even when the api can name it (S-47)', async () => {
+    mockFetch(c => session()(c) ?? (c.url.startsWith('/api/v1/geo/reverse') ? { body: { label: 'Parkdale, Toronto', city: 'Toronto', province: 'ON', market: null, zone: null } } : undefined));
+    renderApp('/', { geolocation: fakeGeo({ lat: 43.64, lng: -79.43 }) });
+    expect(await screen.findByText('Calgary')).toBeInTheDocument();
+    expect(pill()).not.toHaveTextContent('Detected');
+  });
+
+  it('keeps the market, zone and province the api resolved (S-47)', async () => {
+    mockFetch(c => session()(c) ?? (c.url.startsWith('/api/v1/geo/reverse') ? { body: { label: 'Beltline, Calgary', city: 'Calgary', province: 'AB', market: { id: 'mkt-calgary', stage: 'live' }, zone: { id: 'zone-yyc-beltline', name: 'Beltline' } } } : undefined));
+    renderApp('/', { geolocation: fakeGeo({ lat: 51.038, lng: -114.089 }) });
+    expect(await screen.findByText('Beltline, Calgary')).toBeInTheDocument();
+    expect(JSON.parse(sessionStorage.getItem('nl.location.detected')!)).toMatchObject({ city: 'Calgary', province: 'AB', marketId: 'mkt-calgary', zoneId: 'zone-yyc-beltline', zone: 'Beltline' });
+  });
+
   it('is in French too', async () => {
     mockFetch(session());
     renderApp('/', { locale: 'fr', geolocation: fakeGeo('denied') });
