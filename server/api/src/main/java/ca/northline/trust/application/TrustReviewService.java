@@ -2,6 +2,7 @@ package ca.northline.trust.application;
 
 import ca.northline.shared.Ids;
 import ca.northline.shared.NotFound;
+import ca.northline.trust.api.PublicReviews;
 import ca.northline.trust.api.ReviewReplied;
 import ca.northline.trust.api.ReviewReported;
 import ca.northline.trust.domain.ReportReason;
@@ -20,7 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-class TrustReviewService implements BrowseReviews, RespondToReview {
+class TrustReviewService implements BrowseReviews, RespondToReview, PublicReviews {
 
     static final int PRAISE_TAGS = 3;
 
@@ -41,6 +42,24 @@ class TrustReviewService implements BrowseReviews, RespondToReview {
     public Page reviews(String merchantId, int limit, int offset) {
         var rows = reviews.page(merchantId, limit + 1, offset);
         return rows.size() > limit ? new Page(rows.subList(0, limit), offset + limit) : new Page(rows, null);
+    }
+
+    @Override
+    public ReviewPage newest(String merchantId, int limit, int offset) {
+        var page = reviews(merchantId, limit, offset);
+        return new ReviewPage(
+                page.items().stream()
+                        .map(r -> new PublicReview(
+                                r.id(),
+                                r.rating(),
+                                r.text(),
+                                r.authorName(),
+                                r.jobLabel(),
+                                r.refType(),
+                                r.createdAt(),
+                                r.reply()))
+                        .toList(),
+                page.nextOffset());
     }
 
     @Override
