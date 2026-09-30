@@ -175,6 +175,22 @@ migrations:
     requests: { cpu: 200m, memory: 384Mi }
     limits: { memory: 512Mi }
 
+# Kafka topics as a deploy step (S-25, docs/runbooks/infrastructure.md § 5.3): a pre-install/pre-upgrade hook Job
+# (Argo CD: PreSync) runs TopicsCommand from the worker image against deploy/kafka/topics.yaml (packaged in the image)
+# through the Kafka admin API. Idempotent, never deletes; apply = create missing topics + correct retention/cleanup
+# drift, plan = report only (Azure: Terraform creates the event hubs), verify = report and fail the release on drift.
+kafkaTopics:
+  enabled: true
+  command: apply
+  replicationFactor: ""           # blank = the broker's default.replication.factor (MSK 3 / 2 on two brokers, Managed Kafka 3)
+  minInsyncReplicas: ""           # blank = broker default; prod: 2
+  backoffLimit: 2                 # Kafka briefly unreachable
+  activeDeadlineSeconds: 600
+  ttlSecondsAfterFinished: 604800
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 384Mi }
+
 # Registers the OAuth clients (S-122) after every install/upgrade: the auth image running OAuthClientsCommand sync
 # with the auth Deployment's environment. Idempotent; northline-auth also syncs at start unless
 # apps.auth.env.OAUTH_CLIENTS_SYNC_ON_STARTUP is "false".

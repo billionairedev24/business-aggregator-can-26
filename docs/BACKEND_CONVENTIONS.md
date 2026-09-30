@@ -207,7 +207,8 @@ public record QuoteSent(String eventId, Instant occurredAt, String aggregateId, 
 1. The aggregate method returns the event (`merchant.rename(...)` returns `Optional<MerchantRenamed>`). The
    `@Transactional` service saves it and then calls `ApplicationEventPublisher.publishEvent(event)` **in the same transaction**.
 2. The Modulith JDBC registry (`events.event_publication`, completed rows archived to `…_archive`) is the outbox.
-   After commit, the Kafka externalizer sends to the topic (`scripts/topics.sh` must create it and its `.dlq`).
+   After commit, the Kafka externalizer sends to the topic. The topic must be in `deploy/kafka/topics.yaml`
+   (`ExternalizedTopicsCatalogueTest` fails otherwise); every environment creates it and its `.dlq` from there (S-25).
 3. Other modules react with `@ApplicationModuleListener void on(QuoteSent e)`. It runs async in its own transaction
    and is retried from the registry, so make it idempotent on `eventId`.
 4. Payloads carry ids, never PII. Add `server/api/src/main/resources/events/<module>.<event>.v1.schema.json`. A breaking

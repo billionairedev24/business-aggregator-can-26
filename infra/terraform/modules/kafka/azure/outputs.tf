@@ -19,13 +19,13 @@ output "kafka_sasl_jaas_config_secret_ref" {
 }
 
 output "kafka_replication_factor" {
-  description = "KAFKA_REPLICATION_FACTOR for scripts/topics.sh (Event Hubs manages replication; the value is accepted and ignored)."
+  description = "KAFKA_REPLICATION_FACTOR for the topic provisioning Job and scripts/topics.sh (Event Hubs manages replication; the value is accepted and ignored)."
   value       = 3
 }
 
 output "kafka_topic_policy" {
   description = "How topics come into existence on this service."
-  value       = "Topics are event hubs: create every topic and its .dlq with scripts/topics.sh using the kafka-admin-jaas-config secret (Manage right). Standard allows 10 per namespace — use Premium for the full topic set."
+  value       = "Topics are event hubs created by this module from deploy/kafka/topics.yaml (var.topics, S-25); the provisioning Job only verifies them. Standard allows 10 per namespace — use Premium (100 per processing unit) for the full topic set."
 }
 
 output "cloud" {
@@ -33,5 +33,9 @@ output "cloud" {
   value = {
     namespace_id           = azurerm_eventhub_namespace.this.id
     admin_jaas_secret_name = azurerm_key_vault_secret.admin_jaas.name
+    event_hubs = { for name, hub in azurerm_eventhub.topic : name => {
+      partitions      = hub.partition_count
+      retention_hours = one(hub.retention_description).retention_time_in_hours
+    } }
   }
 }
