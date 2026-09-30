@@ -1883,3 +1883,112 @@ Worker: `WebhookDeliveryTest` (Kafka 4 + PostGIS + WireMock receiver: signed `bo
     30 days and other merchants' lines don't
   - `booking.completed` recounts bookings per service: cancelled and older than 30 days don't count
   - the nightly run lets a stale figure age out to 0
+
+## 2026-09-30 — S-37 Merchants public query API to replace direct SQL reads in other modules
+
+- **New `merchants.api` queries.** Both are implemented by `merchants.persistence.MerchantDirectoryQueries`:
+  - `MerchantDirectory.profile(id)` returns type, tier, status (`active()`), own take rate and province, as the
+    lower-case column codes.
+  - `MerchantVerifications` has two methods:
+    - `hasVerifiedLicence(id, registry, at)`: a verified licence or registry row, registry matched case-insensitively,
+      not expired at `at`.
+    - `latest(id, checkType)`: a verified row first, then the most recently updated one.
+  - Both queries are the ones the other modules used to run themselves, moved and unchanged.
+- **Replaced cross-module SQL** (each module keeps its own small port; only the adapter changed):
+  - catalogue's licence check: `MerchantLicenceQueries` became `catalogue.adapters.MerchantLicences`, which uses `MerchantVerifications`
+  - messaging's type and tier: `MessagingMerchantProfiles` became `messaging.adapters.DirectoryMerchantProfiles`, which uses `MerchantDirectory`
+  - food's approval and food-safety evidence: `KitchenMerchantFactsJdbc` became `food.adapters.DirectoryKitchenMerchantFacts`
+  - payments' tier and take rate (`MerchantTierQueries`) and the merchant's province (`TaxRepository.merchantProvince`, from S-21): now
+    `payments.infra.MerchantTierLookup`. `MerchantTiers` gained `provinceOf`.
+- **Two reads go the other way, to avoid module cycles** (Modulith `verify()` rejects cycles):
+  - **payments → merchants:** merchants already depends on payments (Connect, payouts, tax summary, bank linking), so
+    payments can't call `merchants.api`. Payments declares what it needs in **`payments.api.MerchantBillingFacts`**
+    (tier, take rate, province). The merchants module implements it in `merchants.integration.PaymentsBillingFacts`
+    over `MerchantDirectory`. The SQL still lives only in merchants, which is the story's aim; only the interface sits
+    on the payments side.
+  - **merchants → catalogue.categories:** merchants' onboarding taxonomy, selected categories and compliance "required
+    for" read `catalogue.categories` by SQL. Catalogue now calls `merchants.api`, so the category query is declared in
+    **`merchants.api.CategorySource`** and implemented by `catalogue.persistence.CategorySourceAdapter`. The former SQL
+    joins became two steps: merchants' own rows, then the categories by id.
+- **The rule:** `SchemaOwnershipTests` is an ArchUnit rule over every class in `ca.northline` except `ca.northline.tools`,
+  the Gradle seeding tasks.
+  - ArchUnit doesn't expose string literals, so the condition reads each class file's constant pool with the JDK
+    class-file API (`java.lang.classfile`). Text blocks and the literal parts of concatenated SQL both land there.
+  - A string counts as SQL when it contains select / insert into / update / delete from / from / join. A class fails
+    when such a string names `<module>.<table>` for a module other than its own.
+  - Event names such as `orders.order_ready` are not SQL and are not flagged.
+  - `events` is the platform outbox and is not a module schema.
+  - `SchemaOwnershipDetectorTest` checks the detector against a fixture: a text block, concatenation, the class's own
+    schema, and a non-SQL string.
+- **Allowed exceptions (listed in the test):** the kitchen live board in `food.persistence` (`KitchenTicketJdbc`,
+  `KitchenOrderLinesJdbc`, `KitchenNavBadges`) joins `orders.*` and `fulfilment.*`.
+  - orders already depends on food, so an `orders.api` call would be a cycle.
+  - Moving it needs its own design: an SPI implemented by orders, or a food-side read model fed by order events.
+  - Left as a follow-up rather than rewriting the live board inside a merchants story.
+- **Outside the api monolith (not covered by the rule):** these are separate deployables that share the database and
+  can't call an in-process Java API. A read model or an HTTP endpoint would be their own stories.
+  - `server/worker` `JdbcRecipients` reads `merchants.merchant_members` / `merchants.merchants` for notification recipients.
+  - `server/auth` `JdbcUserAccounts` reads `merchant_members` for the token's `merchants` claim.
+- **Docs:** BACKEND_CONVENTIONS § 2 describes the rule and the two ways to read another module.
+- **Tests:**
+  - `MerchantQueryApiTest`:
+    - profile fields
+    - the billing facts
+    - paused is not active
+    - a licence must be verified, unexpired and for the right registry (case-insensitive)
+    - a verified evidence row is preferred
+    - `CategorySource` by ids and by roots
+  - `SchemaOwnershipTests`, `SchemaOwnershipDetectorTest`, `ModularityTests`
+  - the existing payments, messaging, food, catalogue and merchants API tests, unchanged.
+- **Schema:** none.
+
+## 2026-09-30 — S-123 Catalogue media: check merchant ownership before serving draft images
+
+- **The bug:** `GET /api/v1/merchants/{merchantId}/media/{mediaId}` checked that the caller was a member of
+  `{merchantId}`, then loaded the image by id alone. A member of business B could read business A's unvetted upload
+  through B's own path if they learned the id.
+- **Rule:** a listing image is served to members of the business that uploaded it (`catalogue.media.merchant_id`) and
+  to anyone else only once it is **approved content**:
+  - (a) an own image (`offers.own_images`) of an **approved** offer of the uploading business, or
+  - (b) an image of a **locked** catalogue record (`catalog_products.image_set` with `locked = true`), meaning brand-owner or
+    platform-curated content, such as the seeded Bosch record.
+  - Approval is read from the listings on every request, not stored on the image. An image that leaves an approved
+    listing, or whose listing goes back to pending (S-39), becomes private again. Customers don't see a pending
+    listing anyway.
+  - It must be the **uploader's own** approved offer. When seller B's listing that inherits A's shared GTIN record is
+    approved, that does not publish A's images. Otherwise anyone who knows a product's GTIN could publish another
+    seller's unvetted photos.
+- **Responses:**
+  - Another business's unapproved image: **403** ProblemDetail `code: forbidden`, detail "This image belongs to another
+    business and hasn't been approved yet." (our copy).
+  - Unknown id: 404, as before.
+  - The owner's path used by an outsider: still 403 `not_a_member`.
+- **Storefront:** there was no public route for listing images, so this adds `GET /api/v1/public/catalogue/media/{mediaId}`,
+  open under the existing `/api/v1/public/**` rule.
+  - It serves approved images only, and anything else is **404** (not 403), so ids can't be probed.
+  - `Cache-Control: public, max-age=3600`, kept short so that an image going private (S-39) drops out of caches within an hour.
+  - Plus `nosniff`, which the Studio route now also sends.
+- **Editor and GTIN lookup:** `GET …/catalogue/products/lookup` and the product editor's shared-record images leave
+  out images the caller may not load, instead of returning URLs that would 403. So a second seller of a new GTIN sees
+  the record's text right away and its photos once the first seller's listing is approved.
+  - `LookupCatalogue.byGtin` now takes the merchant id.
+  - `MediaVisibility` (catalogue application) holds the rule for the endpoint, the lookup and the editor.
+- **Schema (V053, additive):** two partial GIN indexes for the lookup: `offers(own_images) WHERE vetting = 'approved'`
+  and `catalog_products(image_set) WHERE locked`. No new columns.
+- **Other file endpoints checked for the same bug:** none had it. Each already looks the file up by merchant *and* id:
+  - kitchen menu-item photos (`MenuStore.item(merchantId, itemId)`)
+  - message and help-case attachments (`messaging.attachments where merchant_id = :m`)
+  - onboarding / verification documents and storefront logos (`merchants.documents where merchant_id = :m`; a logo must be the merchant's own `logo` document)
+  - dispute evidence (loaded through the merchant's dispute)
+  - booking job photos, which have no download route, and attaching them checks the merchant.
+
+  Regression checks were added for kitchen photos and dispute evidence: another business's own path returns 404. The
+  tests for documents and attachments already covered this.
+- **Tests:** `VettingAndMediaApiTest.Ownership`:
+  - a draft image is 403 for another business (their path) and for an outsider on the owner's path, and 404 publicly
+  - once approved, it is public (with public caching) and visible to other businesses, while the same business's
+    other drafts stay private
+  - locked-record images are approved
+  - the GTIN lookup hides the first seller's unvetted photos until approval
+- **Not done:** the consumer app doesn't render listing images yet, so nothing calls the public route today. There is
+  no signed or CDN URL (S-10's `presignGet` is still unused).

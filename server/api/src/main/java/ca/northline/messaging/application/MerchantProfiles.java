@@ -4,8 +4,8 @@ import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Outbound port: what messaging needs to know about a business — its type (portal) and tier (support SLA). The
- * merchants module has no public query for it yet, so the adapter reads {@code merchants.merchants} (DECISIONS.md).
+ * Outbound port: what messaging needs to know about a business — its type (portal) and tier (support SLA), answered by
+ * {@code merchants.api.MerchantDirectory} (S-37).
  */
 public interface MerchantProfiles {
 

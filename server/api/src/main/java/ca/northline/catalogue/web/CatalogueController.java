@@ -60,7 +60,7 @@ class CatalogueController {
     @RequiresMerchant(VIEW)
     CatalogMatchResponse lookup(@PathVariable String merchantId, @RequestParam String gtin) {
         return lookupCatalogue
-                .byGtin(gtin)
+                .byGtin(merchantId, gtin)
                 .map(m -> mapper.toResponse(m, merchantId))
                 .orElseThrow(() -> new NotFound("catalogue product", gtin));
     }
@@ -79,13 +79,15 @@ class CatalogueController {
         }
     }
 
+    /** The business's own images, or another business's approved ones (shared records); 403 otherwise (S-123). */
     @GetMapping("/media/{mediaId}")
     @RequiresMerchant(VIEW)
     ResponseEntity<byte[]> content(@PathVariable String merchantId, @PathVariable String mediaId) {
-        var content = manageMedia.content(mediaId).orElseThrow(() -> new NotFound("media", mediaId));
+        var content = manageMedia.content(merchantId, mediaId).orElseThrow(() -> new NotFound("media", mediaId));
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(content.contentType()))
                 .cacheControl(CacheControl.maxAge(Duration.ofDays(30)).cachePrivate())
+                .header("X-Content-Type-Options", "nosniff")
                 .body(content.bytes());
     }
 }
