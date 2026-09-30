@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { createRootRouteWithContext, HeadContent, Outlet, Scripts } from '@tanstack/react-router';
 import { I18nProvider, SiteLinkProvider } from '@northline/ui';
+import { configureAuthOrigin } from '@northline/auth-kit';
 import tokensCss from '@northline/tokens/tokens.css?url';
 import uiCss from '@northline/ui/styles.css?url';
 import shellCss from '../features/shell/shell.css?url';
@@ -53,10 +54,11 @@ function Document({ children }: { children: ReactNode }) {
 
 function App() {
   const { locale, config } = Route.useRouteContext();
+  configureAuthOrigin(config.authOrigin); // idempotent; server and browser render the same auth links
   return (
     <I18nProvider initial={locale} onChange={persistLocale}>
       <SiteLinkProvider value={RouterSiteLink}>
-        <ConsumerLayout authOrigin={config.authOrigin}>
+        <ConsumerLayout>
           <Outlet />
         </ConsumerLayout>
       </SiteLinkProvider>

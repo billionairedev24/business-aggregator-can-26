@@ -1,6 +1,7 @@
 import { queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { ApiError, http } from '@northline/client';
+import { endAuthSession } from '@northline/auth-kit';
 
 /**
  * The consumer-bff session (docs/CONSUMER_WEB_PLAN.md § Session): `GET /bff/session` answers 200 for everyone —
@@ -49,13 +50,10 @@ export const signInHref = (next?: string, mode: 'sign-in' | 'register' = 'sign-i
  * "Not you?" can't silently sign the same person back in; then reloads the page as a guest. Either call failing still
  * signs out locally.
  */
-export function useSignOut(authOrigin: string) {
+export function useSignOut() {
   const qc = useQueryClient();
   return async (then = '/') => {
-    await Promise.allSettled([
-      http('/bff/logout', { method: 'POST' }),
-      fetch(`${authOrigin}/api/auth/sign-out`, { method: 'POST', credentials: 'include', headers: { accept: 'application/json' } }),
-    ]);
+    await Promise.allSettled([http('/bff/logout', { method: 'POST' }), endAuthSession()]);
     qc.clear();
     window.location.assign(then);
   };

@@ -1,0 +1,45 @@
+/* Consumer sign-in / create account — design 06 `auth` (lines 51–108). Tokens only. */
+.nl-auth {
+  max-width: 1280px; width: 100%; margin: 0 auto; padding: 40px 0 80px; box-sizing: border-box;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 40px clamp(40px, 6vw, 96px); align-items: start;
+}
+.nl-auth-intro { padding-top: 12px; min-width: 0; }
+.nl-auth-kicker { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-neutral-700); }
+.nl-auth-hero { font-size: clamp(36px, 4.5vw, 56px); line-height: 1.06; letter-spacing: -0.025em; margin: 14px 0 0; max-width: 18ch; }
+.nl-auth-lede { font-size: 16px; color: var(--color-neutral-700); max-width: 48ch; margin: 16px 0 0; line-height: 1.55; }
+.nl-auth-points { display: flex; flex-direction: column; gap: 14px; margin: 32px 0 0; padding: 0; list-style: none; max-width: 48ch; }
+.nl-auth-point { display: flex; gap: 12px; align-items: flex-start; font-size: 14px; line-height: 1.5; }
+.nl-auth-point-num { width: 22px; height: 22px; border-radius: 50%; background: var(--color-accent-100); color: var(--color-accent-800); display: grid; place-items: center; font-size: 12px; font-weight: 600; flex: none; margin-top: 2px; }
+.nl-auth-point-body { display: block; color: var(--color-neutral-700); }
+.nl-auth-foot { margin-top: 32px; font-size: 13px; color: var(--color-neutral-700); }
+
+.nl-auth-card { background: var(--color-surface); border-radius: var(--radius-md); padding: 28px; max-width: 460px; width: 100%; justify-self: end; box-sizing: border-box; min-width: 0; }
+@media (max-width: 859px) { .nl-auth-card { justify-self: stretch; max-width: none; } }
+@media (max-width: 400px) { .nl-auth-card { padding: 20px 16px; } }
+.nl-auth-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.nl-auth-title { font-size: 26px; margin: 0; letter-spacing: -0.02em; }
+.nl-auth-cancel { min-height: 44px; font-size: 13px; }
+.nl-auth-card .nl-steps { margin: 14px 0 16px; }
+.nl-auth-sub { font-size: 14px; color: var(--color-neutral-700); margin: 0 0 16px; }
+.nl-auth-fields { display: grid; gap: 12px; }
+.nl-auth-card .input { min-height: 46px; }
+.nl-auth-code { letter-spacing: .3em; font-size: 18px; }
+.nl-auth-terms { margin-top: 12px; font-size: 12px; color: var(--color-neutral-700); }
+.nl-auth-primary { width: 100%; min-height: 46px; margin-top: 14px; }
+.nl-auth-passkey { width: 100%; min-height: 44px; margin-top: 8px; }
+.nl-auth-social { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.nl-auth-social > .btn { flex: 1 1 0; min-height: 44px; gap: 8px; text-decoration: none; }
+.nl-auth-switch { text-align: center; font-size: 13px; margin-top: 14px; color: var(--color-neutral-700); }
+.nl-auth-hint { font-size: 13px; color: var(--color-neutral-700); margin-top: 6px; }
+.nl-auth-link { font: inherit; color: var(--color-accent-700); text-decoration: underline; text-underline-offset: 3px; background: none; border: 0; padding: 0; cursor: pointer; min-height: 24px; }
+.nl-auth-link:hover:not(:disabled) { color: var(--color-accent-800); }
+.nl-auth-link:disabled { color: var(--color-neutral-600); text-decoration: none; cursor: default; }
+.nl-auth-options { display: flex; flex-direction: column; gap: 8px; }
+.nl-auth-qr { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-top: 12px; font-size: 13px; color: var(--color-neutral-700); }
+.nl-auth-qr img { width: 144px; height: 144px; border-radius: var(--radius-sm); border: 1px solid var(--color-divider); background: var(--color-bg); }
+.nl-auth-qr-help { flex: 1 1 160px; min-width: 0; }
+.nl-auth-qr-help p { margin: 0 0 6px; }
+.nl-auth-qr code { overflow-wrap: anywhere; font-size: 12px; }
+.nl-auth-done { padding: 14px 16px; background: var(--color-accent-100); border-radius: var(--radius-md); color: var(--color-accent-900); font-size: 14px; }
+.nl-auth-card .nl-alert { margin-top: 14px; }
+.nl-auth-legal { font-size: 12px; color: var(--color-neutral-700); margin: 18px 0 0; line-height: 1.5; }
