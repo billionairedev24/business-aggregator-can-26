@@ -11,6 +11,7 @@ import ca.northline.searchindex.ListingIndices;
 import ca.northline.searchindex.SearchLanguage;
 import ca.northline.worker.events.EnvelopeParser;
 import ca.northline.worker.support.Events;
+import ca.northline.worker.support.Listeners;
 import ca.northline.worker.support.WorkerContainers;
 import ca.northline.worker.support.WorkerIntegrationTest;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
@@ -28,9 +29,11 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
 import org.springframework.transaction.support.TransactionOperations;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -67,6 +70,9 @@ class SearchReindexTest extends WorkerIntegrationTest {
     @Autowired
     EnvelopeParser parser;
 
+    @Autowired
+    KafkaListenerEndpointRegistry listeners;
+
     @BeforeAll
     static void producer() {
         WorkerContainers.start();
@@ -76,6 +82,11 @@ class SearchReindexTest extends WorkerIntegrationTest {
     @AfterAll
     static void close() {
         producer.close();
+    }
+
+    @BeforeEach
+    void listening() {
+        Listeners.awaitAssigned(listeners, SearchIndexer.GROUP);
     }
 
     SearchReindex reindex(KafkaConsumer<String, byte[]> kafka, SearchReindex.Listener listener) {
@@ -108,7 +119,7 @@ class SearchReindexTest extends WorkerIntegrationTest {
         var kept = fx.service(m, "Brake bleed", null, 5000, "live");
         // indexed live, the normal way
         send("catalogue.listing", "catalogue.listing_published", listing(kept, m.id()));
-        await().atMost(Duration.ofSeconds(5)).until(() -> doc("listings_en", kept), Optional::isPresent);
+        await().atMost(SearchIndexerTest.INDEXED).until(() -> doc("listings_en", kept), Optional::isPresent);
         // a document the index has but Postgres doesn't (drift): the rebuild drops it
         var ghost = Events.id();
         es.index(i -> i.index("listings_en")
@@ -149,7 +160,7 @@ class SearchReindexTest extends WorkerIntegrationTest {
                             var late = fx.service(m, "Clutch adjustment", null, 7000, "live");
                             added.add(late);
                             send("catalogue.listing", "catalogue.listing_published", listing(late, m.id()));
-                            await().atMost(Duration.ofSeconds(5))
+                            await().atMost(SearchIndexerTest.INDEXED)
                                     .until(() -> doc("listings_en", late), Optional::isPresent);
                         }
                     })
@@ -185,7 +196,7 @@ class SearchReindexTest extends WorkerIntegrationTest {
                 .param("id", kept)
                 .update();
         send("catalogue.listing", "catalogue.listing_hidden", listing(kept, m.id()));
-        await().atMost(Duration.ofSeconds(5))
+        await().atMost(SearchIndexerTest.INDEXED)
                 .until(() -> doc("listings_en", kept).isEmpty());
     }
 
