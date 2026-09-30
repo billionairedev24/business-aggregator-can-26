@@ -42,6 +42,7 @@ class EscrowService implements EscrowLifecycle {
     private final PayoutRepository payouts;
     private final MerchantTiers tiers;
     private final PaymentGateway gateway;
+    private final TaxTransactions taxes;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
@@ -281,6 +282,7 @@ class EscrowService implements EscrowLifecycle {
             });
         }
         ledger.post(LedgerEntry.captured(escrow, at));
+        taxes.captured(escrow, at); // reported to Stripe Tax after commit (S-21)
     }
 
     private void transfer(Escrow escrow, Instant now) {

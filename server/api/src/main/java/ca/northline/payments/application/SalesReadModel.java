@@ -49,8 +49,15 @@ public interface SalesReadModel {
     DisputeRate disputeRate(String merchantId, Instant from, Instant to);
 
     /** Monthly totals of a year (tax documents), Edmonton months. */
+    /** {@code taxRefundedCents}: GST/HST given back with refunds paid in the month (S-21). */
     record Month(
-            YearMonth month, long grossCents, long feeCents, long taxCents, long refundedCents, long paidOutCents) {}
+            YearMonth month,
+            long grossCents,
+            long feeCents,
+            long taxCents,
+            long refundedCents,
+            long taxRefundedCents,
+            long paidOutCents) {}
 
     List<Month> months(String merchantId, int year);
 }

@@ -5,6 +5,7 @@ northline.required-env:
   storage: STORAGE_PROVIDER, STORAGE_BUCKET   # s3 | gcs | azure; `local` is refused at start-up (S-10)
   email: EMAIL_PROVIDER, EMAIL_FROM, EMAIL_UNSUBSCRIBE_KEY, API_PUBLIC_URL   # smtp | ses | sendgrid | azure (S-13)
   sms-provider: SMS_PROVIDER, SMS_FROM   # S-27 invitation texts: twilio or aws; `local` is refused here
+  tax: TAX_PROVIDER   # S-21: stripe (Stripe Tax); `local` is refused at start-up
   identity: IDENTITY_PROVIDER             # S-22: stripe; `local` is refused at start-up
 springdoc:                              # the OpenAPI document and Swagger UI are not published in production
   api-docs.enabled: false

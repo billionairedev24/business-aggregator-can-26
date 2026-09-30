@@ -826,6 +826,78 @@ Record anything the spec did not decide. Format: date · decision · why · spec
 - **Custom domains:** `edge.customDomains` (by PR, after S-31 verified the CNAME to `pages.<zone>`) → listener + HTTP-01 Certificate + route to the consumer app. Documented limits: apex domains need ALIAS or a reserved IP; a Gateway holds at most 64 listeners, so beyond the pilot use several Gateways, `ListenerSet`, or CDN on-demand TLS (Cloudflare for SaaS, CloudFront SaaS Manager, Front Door) — to decide with S-31.
 - **Rehearsed on kind** (the S-15 cluster; cert-manager 1.18.2 from the Bitnami builds because quay.io is unreachable here, Envoy Gateway 1.5.1 / Envoy 1.35.3 from Docker Hub, a local CA issuer): Argo CD synced the edge; Issuer and Certificates Ready; `https://auth.kind.northline.test` served the OIDC document over HTTP/2 with the host's certificate, HSTS, `nosniff`, `Referrer-Policy`; TLS 1.2/1.3 accepted, TLS 1.1 refused by the server; HTTP → 301 `https://…`; `/actuator/health` on the api host 404 at the Gateway; unknown SNI → no certificate. Not done: Let's Encrypt, external-dns against a real zone, cloud load balancers and WAFs (no accounts yet); the add-on charts themselves were not rendered offline (their chart repositories are unreachable here — the kind rehearsal used the same versions' release manifests).
 
+## 2026-09-30 — S-21 Stripe Tax sync into payments.tax_jurisdiction_totals (payments)
+
+- **Port:** `payments.application.TaxGateway` (calculate · record a sale from a calculation · partial reversal ·
+  read a transaction's tax), chosen by `northline.tax.provider` (`TAX_PROVIDER`): `local` (default; fixed 2026
+  Canadian rates from `domain.CanadianTax`, stateless — its ids carry the amounts) or `stripe` (`StripeTaxGateway`,
+  stripe-java on the platform account with `STRIPE_SECRET_KEY` / `STRIPE_API_BASE`). `local` is refused at start-up
+  under staging/prod, where `TAX_PROVIDER` joins the required variables (`tax:`) and the Helm values set `stripe`.
+  **Never run against a real Stripe account:** the adapter is written from Stripe's API reference and tested with
+  stripe-mock (`StripeTaxGatewayStripeMockTest`: every call validated against the pinned spec, `nl1:` Idempotency-Key
+  on every POST, pinned `Stripe-Version`).
+- **Where tax is calculated:** at checkout. New `payments.api.TaxCalculations.calculate(merchant, kind, province,
+  postal code?, amount)` returns a quote (tax, lines per tax type, jurisdiction, expiry); `PaymentAuthorizations.Request`
+  gains an optional `taxCalculationId` (amounts must equal the quote's → 422 "The tax doesn't match its calculation.
+  Calculate it again."; a quote prices one job / order line → 409 `tax_calculation_used`; other merchant's quote →
+  422 "Calculate the tax again."). The old 8-argument constructor stays (no calculation). Place of supply = the
+  province the caller passes (job address, delivery address, or the kitchen for pickup); Stripe gets country `CA`,
+  province and (at checkout only) the postal code with `address_source=shipping`. Only the province is stored.
+  Messages ours: "Choose a Canadian province or territory.", "Enter a Canadian postal code, like T2P 1B5.",
+  "Enter an amount.". Nothing calls `TaxCalculations` yet (the consumer checkout doesn't exist — same as S-11's
+  `PaymentAuthorizations`).
+- **At capture (charge):** `EscrowService.capture` stores a `pending` sale in `payments.tax_transactions`
+  (`reference = sale_<escrowId>`, unique) in the capture's transaction and publishes the internal
+  `TaxSyncRequested` (outbox). A sale without a checkout quote (the caller computed `taxCents`) or whose quote expired
+  (Stripe keeps them 90 days; we recalculate 1 h before) is priced again at capture for the same province — the
+  quote's, else `merchants.merchants.province`, else AB — and recorded from that calculation. Escrows with 0 tax and
+  no quote report nothing.
+- **Sync:** `TaxSyncListener` (`@ApplicationModuleListener`) reports right after commit; the payments job `syncTax`
+  (every minute, ≤ 10 attempts) retries `pending`/`failed` rows; each report runs in its own transaction under
+  `SELECT … FOR UPDATE`, so listener, job and reconciliation never report one twice, and Stripe calls use keys derived
+  from the reference (`nl1:tax-transaction:<ref>`, `…tax-reversal…`, `…tax-calculation…`), so a retry after a crash
+  repeats the same call. A reversal first reports its sale (same transaction) and fails (retried) until it can.
+  The Studio's number is **what Northline collected** (`tax_cents` = the escrow's / refund's tax, which the ledger's
+  `tax_payable` follows); Stripe Tax's own figure is stored as `stripe_tax_cents` and a difference is logged.
+- **Read model:** after each report `payments.tax_jurisdiction_totals` is recomputed for (merchant, quarter,
+  jurisdiction) from the recorded transactions — idempotent, under an advisory lock. Quarter = Edmonton calendar
+  quarter of the capture / refund (a refund in a later quarter reduces that later quarter, as a GST credit note
+  does). Jurisdiction codes extend V082's: `<province>_<taxes>` — `ab_gst`, `bc_gst_pst`, `mb_gst_pst`, `nb_hst`,
+  `nl_hst`, `ns_hst`, `nt_gst`, `nu_gst`, `on_hst`, `pe_hst`, `qc_gst_qst`, `sk_gst_pst`, `yt_gst`; handling
+  `remitted_by_northline`. V082's CHECK keeps `collected_cents ≥ 0`, so collected = max(0, base + sales − reversals)
+  and the parts live in the companion table `payments.tax_totals_sync` (V082 sorts after V064, so its table can't be
+  altered from our range). A row that existed before the sync touched it (dev seed V107) keeps its amount as
+  `base_cents`; `platform_fee_gst` and `not_selling` rows are never written by the sync.
+- **Refunds reverse tax** (closes S-41's "refunds don't reverse GST on the original sale"; S-41's PDF statements are
+  still open): `refunds.tax_cents` = the refunded share of the sale's tax (half-up; refunding the whole amount gives
+  back exactly the tax collected), fixed when the case opens. The refund queue refunds `amount + tax` to the card
+  (the transfer reversal from the merchant is unchanged: the merchant only ever funds the pre-tax amount), the ledger
+  posts `tax_payable` debit + merchant/escrow debit = `stripe_balance` credit, and a `refund_<id>` reversal
+  (`mode=partial`, `flat_amount = −(amount + tax)`) goes to Stripe Tax. A **lost chargeback** now debits
+  `tax_payable` for its tax part (up to the sale's tax; `revenue` only for anything beyond) and reports
+  `chargeback_<disputeId>`. Goodwill credits and holds canceled before capture report nothing; refunds of sales
+  captured before S-21 move the ledger but report no reversal (no sale at Stripe Tax), logged.
+- **GST summary CSV** gains "GST/HST refunded"; "Remitted by Northline" is now collected − refunded.
+- **Reconciliation:** `ReconcileTax` — reports everything still pending (whatever its attempts), compares each
+  recorded transaction of the quarter with Stripe Tax's line items (`reconciled_at`, `stripe_tax_cents`, mismatch
+  logged), rebuilds the quarter's rows; returns `{period, reported, checked, mismatched, rows, stillPending}`. Nightly
+  at 03:17 Edmonton for the current and the previous quarter (`TAX_RECONCILE_CRON`), and on demand for staff:
+  `POST /api/v1/console/payments/tax-reconciliations {period?}` (role `staff` via `/api/v1/console/**`, plus
+  `acr=mfa` → else 403 `mfa_required`; bad period → 422 "Use a quarter like 2026-Q3."). It is the first
+  `/console` endpoint; `TestJwt.staff` was added for it.
+- **Studio:** Stripe & compliance names every new jurisdiction (en + fr-CA: TPS/TVH/TVP/TVQ/TVD).
+- **Schema V064:** `payments.tax_calculations`, `payments.tax_transactions`, `payments.tax_totals_sync`,
+  `refunds.tax_cents`. Like V062/V063, V064 sorts before V070–V091: a database migrated before it needs Flyway's
+  `outOfOrder` once (fresh databases and the tests are unaffected).
+- **Config:** `TAX_PROVIDER`, `TAX_CODE_SERVICE` (`txcd_20030000`), `TAX_CODE_GOODS` (`txcd_99999999`),
+  `TAX_CODE_FOOD` (`txcd_40060003`), `TAX_RECONCILE_CRON`; runbooks (README, dev/staging/prod, local, stripe.md § 6),
+  `.env.example`, Helm staging/prod values. No new secret.
+- **Not done:** checkout callers of `TaxCalculations` (consumer app); the product tax codes and registrations need
+  the accountant's confirmation (defaults are Stripe's general codes); Stripe Tax filing/exports; GST on Northline's
+  own fee (`platform_fee_gst`, "charged on invoice" — no invoices exist); refunds made in the Stripe dashboard (still
+  ignored by S-12) report no reversal; no Stripe Tax webhooks (there is nothing to drive from them); nothing has run
+  against a real Stripe account.
+
 ## 2026-09-30 — S-22 Identity verification (Stripe Identity) for owners ≥ 25 %
 
 - **Who verifies:** the principals the structure's `x-principals.kyc_threshold_pct` points at the `kyc` row

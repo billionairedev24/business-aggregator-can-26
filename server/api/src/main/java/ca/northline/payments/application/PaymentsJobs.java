@@ -21,6 +21,12 @@ public interface PaymentsJobs {
     /** The refund queue: approved refunds are paid ({@code refund.issued}). */
     int payRefundQueue();
 
+    /** Tax transactions not reported to Stripe Tax yet (or failed), S-21. */
+    int syncTax();
+
+    /** Nightly: the Stripe Tax reconciliation of the current and previous quarter ({@link ReconcileTax}). */
+    int reconcileTax();
+
     /** Bank accounts whose 24 h hold ended take over. */
     int activatePayoutAccounts();
 

@@ -17,7 +17,9 @@ gets stuck. Code: `ca.northline.payments` (charges, transfers, payouts, refunds)
 | payout | Payout `method=standard` / `instant` | connected (`Stripe-Account`) | 09:00 Edmonton on payout days; instant on request |
 | instant fee | Transfer of the 1 % fee from the connected account to the platform (account debit) | connected → platform | right after an instant payout |
 | refund before capture | PaymentIntent `cancel` | platform | refund queue |
-| refund after capture | Refund (card) + Transfer reversal of the merchant-funded part if already released | platform | refund queue |
+| refund after capture | Refund (card) of the amount **plus its share of the tax** + Transfer reversal of the merchant-funded part if already released | platform | refund queue |
+| tax quote | Stripe Tax calculation (province of supply) | platform | `TaxCalculations.calculate` at checkout (S-21) |
+| tax report | Stripe Tax transaction from the calculation; reversal for each refund / lost chargeback | platform | after capture / refund, § 6 |
 
 - **Separate charges and transfers.** Northline is the merchant of record (it collects and remits GST/HST as
   marketplace facilitator), so charges have no `on_behalf_of` and statements show Northline. The take rate is the
@@ -71,8 +73,8 @@ objects, connected accounts, webhooks and keys don't carry over.
     later (they are cards to Stripe).
 12. **API keys.** Developers → API keys: the *secret key* (`sk_test_…` / `sk_live_…`) and *publishable key*
     (`pk_…`). Prefer a **restricted key** for the api with write access to: PaymentIntents, Customers, Refunds,
-    Transfers, Payouts, Accounts (Connect), Account links, Login links, Tokens, Financial Connections sessions; read
-    access to Balance, Charges, Events. Store them as `STRIPE_SECRET_KEY` / `STRIPE_PUBLISHABLE_KEY` in the secrets
+    Transfers, Payouts, Accounts (Connect), Account links, Login links, Tokens, Financial Connections sessions, Tax
+    calculations and transactions (S-21); read access to Balance, Charges, Events. Store them as `STRIPE_SECRET_KEY` / `STRIPE_PUBLISHABLE_KEY` in the secrets
     manager (see the environment runbooks). Never commit a key; never put a live key in dev or staging.
 13. **Webhooks** — § 5.
 
@@ -170,7 +172,75 @@ charge.dispute.created`, `stripe trigger payout.failed --stripe-account acct_…
 fixtures) are stored and logged as ignored — use objects created through the Studio to see effects. stripe-mock
 doesn't send webhooks; the automated tests sign fixtures themselves (`StripeWebhookApiTest`).
 
-## 6. Identity (S-22)
+## 6. Stripe Tax (S-21)
+
+Northline is the **seller of record and the marketplace facilitator**: it collects GST/HST (and PST/QST where it is
+registered) on every job and order line and remits it; merchants never charge it themselves. Stripe Tax prices the
+tax and keeps the transactions Northline files from. Code: `ca.northline.payments` (`TaxCalculations`,
+`TaxSyncService`, `StripeTaxGateway`); decisions in `docs/DECISIONS.md` § S-21. **Not yet run against a real Stripe
+account** — written against Stripe's documented API and tested with stripe-mock only.
+
+| step | Stripe call | when |
+|---|---|---|
+| quote | `POST /v1/tax/calculations` — one tax-exclusive CAD line, product tax code by kind, customer address = country `CA`, province (+ postal code at checkout), `address_source=shipping` (the place of supply) | checkout (`TaxCalculations.calculate`); again at capture if the quote expired (90 days) or there was none |
+| sale | `POST /v1/tax/transactions/create_from_calculation`, `reference=sale_<escrowId>` | after the capture commits |
+| refund / lost chargeback | `POST /v1/tax/transactions/create_reversal`, `mode=partial`, `flat_amount=−(amount + tax)`, `reference=refund_<id>` / `chargeback_<disputeId>` | after the refund is paid / the dispute is lost |
+| reconciliation | `GET /v1/tax/transactions/{id}/line_items` | nightly 03:17 Edmonton, or on demand |
+
+Every POST has an `Idempotency-Key` (`nl1:tax-transaction:<reference>`, …) and metadata `northline_merchant_id`,
+`northline_escrow_id`, `northline_reference` — no names or contact details. Only the province is stored
+(`payments.tax_calculations`); the postal code goes to Stripe for the calculation and is dropped.
+
+### Set-up (once per mode: test for dev/staging, live for prod)
+
+1. Dashboard → **Tax** → Get started: origin address = Northline's Calgary head office; default tax behaviour
+   **exclusive**; default product tax code *General – Services* (`txcd_20030000`).
+2. **Registrations** (Tax → Registrations): Canada — **GST/HST** (Northline's business number, `RT0001`). Add
+   **British Columbia PST** before the BC pilot sells taxable goods, **Québec QST**, **Saskatchewan PST** and
+   **Manitoba RST** only once Northline registers there. Without a registration Stripe Tax returns no tax for that
+   tax (`taxability_reason: not_collecting`) and the Studio shows what was actually collected.
+3. **Product tax codes** (`TAX_CODE_SERVICE`, `TAX_CODE_GOODS`, `TAX_CODE_FOOD`): defaults are Stripe's general
+   services, general tangible goods and prepared food codes. Confirm them with the accountant for each category
+   (e.g. basic groceries are zero-rated) before prod; changing them is a variable change.
+4. Set `TAX_PROVIDER=stripe` (staging and prod refuse `local`). The restricted key needs write access to *Tax
+   calculations and transactions* (§ 2 step 12).
+5. Check: book a job in staging, complete it, and within a minute the Stripe dashboard (Tax → Transactions) shows
+   `sale_<escrowId>`; Studio › Stripe & compliance shows the quarter's total for the province.
+
+### Local
+
+`TAX_PROVIDER=local` (default) uses fixed 2026 rates (AB/NT/NU/YT GST 5 %, BC GST + PST 7 %, MB GST + RST 7 %, SK GST +
+PST 6 %, QC GST + QST 9.975 %, ON HST 13 %, NS HST 14 %, NB/NL/PE HST 15 %) and reports nothing; its ids
+(`taxcalc_local_…`, `tax_local_…`) carry the amounts. `TAX_PROVIDER=stripe` with the stripe-mock settings of § 3
+exercises the real adapter (stripe-mock answers with fixtures, so its amounts are meaningless).
+
+### What the Studio shows
+
+`payments.tax_jurisdiction_totals` — one row per merchant, quarter (`2026-Q3`, Edmonton) and jurisdiction
+(`ab_gst`, `bc_gst_pst`, `on_hst`, `qc_gst_qst`, …, the province of supply): collected = sales − reversals reported
+to Stripe Tax (never below 0; `payments.tax_totals_sync` keeps both parts). Stripe & compliance › Tax reads it.
+Rows written before the sync (the dev seed's `platform_fee_gst` and `not_selling` rows) are left alone, and an older
+row the sync reaches keeps its amount as a base. The GST summary CSV now has a "GST/HST refunded" column.
+
+### Operations
+
+- **Retries:** each transaction is stored `pending` with the capture / refund, reported by the outbox listener right
+  after commit, and retried by the payments job every minute (up to 10 attempts, `payments.tax_transactions.error`
+  holds the last failure). A reversal waits for its sale.
+- **Reconciliation** (nightly, current and previous quarter; or now):
+  `curl -X POST -H "Authorization: Bearer <staff token with acr=mfa>" -H 'Content-Type: application/json'
+  -d '{"period":"2026-Q3"}' https://<api host>/api/v1/console/payments/tax-reconciliations`. It reports whatever is
+  still pending (whatever its attempts), compares every recorded transaction with Stripe Tax's line items
+  (`stripe_tax_cents`; a difference is logged as `Tax reconciliation: … Northline x ¢, Stripe Tax y ¢`), and
+  rebuilds the quarter's rows. The answer: `{period, reported, checked, mismatched, rows, stillPending}`.
+- **A difference** usually means the checkout tax wasn't a Stripe Tax quote (the caller computed it) or a
+  registration was added mid-quarter; the customer paid what Northline recorded (`tax_cents`, which the ledger's
+  `tax_payable` follows). Correct the filing in Stripe Tax's export, not in the table.
+- **Refunds** give the customer the refunded share of the tax (`refunds.tax_cents`, half-up; a full refund returns
+  all of it) and debit `tax_payable`; a lost chargeback moves its tax part from `tax_payable` too. Goodwill credits
+  and holds canceled before capture report nothing.
+
+## 7. Identity (S-22)
 
 Every owner the business structure requires (the principals at or above the structure's KYC threshold: 25 % for
 partnerships and corporations, everyone for sole proprietors, co-ops and non-profits — `docs/spec/legal-details.schema.json`)

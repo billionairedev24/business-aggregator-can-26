@@ -15,7 +15,7 @@ say where a step is still manual or missing.
 | [prod.md](prod.md) | production (Calgary launch) |
 | [infrastructure.md](infrastructure.md) | Terraform on AWS / Google Cloud / Azure: accounts, state bucket, plan/apply, outputs → variables, cost, teardown (S-2/S-3) |
 | [object-storage.md](object-storage.md) | uploads in S3 / RustFS, Cloud Storage or Azure Blob: variables, buckets, least-privilege access per cloud (S-10) |
-| [stripe.md](stripe.md) | Stripe Connect Express: platform account setup (test/live), money flow, idempotency, local stripe-mock, operations (S-11) |
+| [stripe.md](stripe.md) | Stripe Connect Express: platform account setup (test/live), money flow, idempotency, local stripe-mock, operations (S-11), webhooks (S-12), Stripe Tax (S-21) |
 | [email.md](email.md) | transactional email: Mailpit locally, SES / SendGrid / Azure Communication Services / SMTP set-up, SPF/DKIM/DMARC, CASL (S-13) |
 | [notifications.md](notifications.md) | team notifications: who sends which email / SMS / push (api vs worker), matrix and quiet hours, failures, push stub (S-13/S-27) |
 | [events.md](events.md) | domain events: wire format, the worker's consumer framework (dedupe, retries, DLQ), alerts and metrics, DLQ replay (S-25/S-26) |
@@ -70,7 +70,7 @@ say where a step is still manual or missing.
 
   The lists live under `northline.required-env.<purpose>` in each app's `application-cloud.yml` (and
   `application-staging.yml` / `application-prod.yml` add `payments: STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY,
-  STRIPE_WEBHOOK_SECRET, STRIPE_CONNECT_WEBHOOK_SECRET`).
+  STRIPE_WEBHOOK_SECRET, STRIPE_CONNECT_WEBHOOK_SECRET` and `tax: TAX_PROVIDER`).
   The check is `ca.northline.platform.RequiredEnvironmentCheck` (module `server/platform`).
 - **Providers are chosen by configuration** so that moving between AWS, Google Cloud and Azure is a variable change.
   The property names live in `ca.northline.platform.*Properties` (default `local`); the cloud adapters come with the
@@ -81,7 +81,8 @@ say where a step is still manual or missing.
   | `northline.storage.provider` | `STORAGE_PROVIDER` | `local` · `s3` (AWS S3, MinIO/RustFS, any S3 API) · `gcs` · `azure` | **done** (S-10, api uploads — [object-storage.md](object-storage.md)) |
   | `northline.kms.provider` | `KMS_PROVIDER` | `local` · `aws` · `gcp` · `azure` | **done** (S-7, auth token signing keys — [key-rotation.md](key-rotation.md)) |
   | `northline.email.provider` | `EMAIL_PROVIDER` | `local` (SMTP to Mailpit) · `smtp` · `ses` · `sendgrid` · `azure` | **done** (S-13, api invitations and money notices — [email.md](email.md); S-27 worker: `payout.failed`) |
-  | `northline.identity.provider` | `IDENTITY_PROVIDER` | `local` (fake with an outcome page) · `stripe` (Stripe Identity) | **done** (S-22, owners' identity verification — [stripe.md § Identity](stripe.md#6-identity-s-22)) |
+  | `northline.tax.provider` | `TAX_PROVIDER` | `local` (fixed Canadian rates) · `stripe` (Stripe Tax) | **done** (S-21, api sales tax — [stripe.md § 6](stripe.md#6-stripe-tax-s-21)) |
+  | `northline.identity.provider` | `IDENTITY_PROVIDER` | `local` (fake with an outcome page) · `stripe` (Stripe Identity) | **done** (S-22, owners' identity verification — [stripe.md § Identity](stripe.md#7-identity-s-22)) |
   | `northline.sms.provider` | `SMS_PROVIDER` | `local` · `twilio` · `aws` (End User Messaging SMS and voice) · `azure` (reserved) | **done** (S-8, auth phone codes — [SMS and voice codes](#sms-and-voice-codes-s-8); S-27: shared library `server/sms`, also api invitations and worker notifications — [notifications.md](notifications.md)) |
 
   Secrets reach the apps as environment variables in every cloud (External Secrets from AWS Secrets Manager, Google
@@ -123,7 +124,9 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` | ✓ | | | | staging and prod |
 | `STRIPE_API_BASE` | ✓ | | | | never in the cloud (stripe-mock only) |
 | `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET` | ✓ | | | | staging and prod (S-12; [stripe.md](stripe.md#5-webhooks-s-12)) |
-| `IDENTITY_PROVIDER` | ✓ | | | | staging and prod (`stripe`; `local` refused there — S-22, [stripe.md § Identity](stripe.md#6-identity-s-22)) |
+| `TAX_PROVIDER` | ✓ | | | | staging and prod: `stripe` (`local` refused there — S-21, [stripe.md § 6](stripe.md#6-stripe-tax-s-21)) |
+| `TAX_CODE_SERVICE`, `TAX_CODE_GOODS`, `TAX_CODE_FOOD`, `TAX_RECONCILE_CRON` | ✓ | | | | no (Stripe's general service / goods / prepared-food codes; 03:17 Edmonton) |
+| `IDENTITY_PROVIDER` | ✓ | | | | staging and prod (`stripe`; `local` refused there — S-22, [stripe.md § Identity](stripe.md#7-identity-s-22)) |
 | `WEBHOOK_SECRET_KEY` | ✓ | | | | yes |
 | `STORAGE_PROVIDER`, `STORAGE_BUCKET` | ✓ | | | | staging and prod (`local` refused there — S-10, [object-storage.md](object-storage.md)) |
 | `STORAGE_REGION`, `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`, `STORAGE_PATH_STYLE`, `STORAGE_ENCRYPTION_KEY` | ✓ | | | | no (`STORAGE_ENDPOINT` needed for `azure`) |

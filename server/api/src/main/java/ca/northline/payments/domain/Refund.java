@@ -64,6 +64,9 @@ public class Refund {
     private final String what;
     private final @Nullable String customerName;
     private final long amountCents;
+    /** GST/HST given back on top of {@code amountCents}: the refunded share of the tax the sale collected (S-21). */
+    private final long taxCents;
+
     private final String reason;
     private final ChargedTo chargedTo;
     private final Kind kind;
@@ -97,6 +100,7 @@ public class Refund {
                 .what(what)
                 .customerName(escrow.getCustomerName())
                 .amountCents(amountCents)
+                .taxCents(CanadianTax.refundShare(amountCents, escrow.getAmountCents(), escrow.getTaxCents()))
                 .reason("customer_request")
                 .chargedTo(ChargedTo.MERCHANT)
                 .kind(Kind.REFUND)
@@ -119,6 +123,7 @@ public class Refund {
                 .what(dispute.getSubject())
                 .customerName(dispute.getCustomerName())
                 .amountCents(amountCents)
+                .taxCents(CanadianTax.refundShare(amountCents, escrow.getAmountCents(), escrow.getTaxCents()))
                 .reason("dispute")
                 .chargedTo(ChargedTo.MERCHANT)
                 .kind(Kind.REFUND)
@@ -127,6 +132,11 @@ public class Refund {
                 .createdAt(now)
                 .decidedAt(now)
                 .build();
+    }
+
+    /** What goes back to the customer's card: the amount plus the tax on it (a credit gives back no tax). */
+    public long cardCents() {
+        return amountCents + taxCents;
     }
 
     /** Money the merchant can't pay out while this case is open. */
