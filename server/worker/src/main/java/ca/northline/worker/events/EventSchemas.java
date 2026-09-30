@@ -29,6 +29,7 @@ public final class EventSchemas {
     static final Set<String> KEYWORDS = Set.of(
             "$schema",
             "$id",
+            "title",
             "description",
             "type",
             "required",
