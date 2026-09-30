@@ -3,7 +3,6 @@ package ca.northline.merchants.application;
 import ca.northline.merchants.application.ManageApplication.ViewOnboarding;
 import ca.northline.merchants.application.VerificationGateways.BankLinking;
 import ca.northline.merchants.application.VerificationGateways.Outcome;
-import ca.northline.merchants.application.VerificationGateways.RegistryLookup;
 import ca.northline.merchants.domain.CheckKind;
 import ca.northline.merchants.domain.Document;
 import ca.northline.merchants.domain.GstNumber;
@@ -49,7 +48,7 @@ class OnboardingVerificationService implements CompleteVerification {
     private final ApplicationRepository applications;
     private final VerificationRepository verifications;
     private final DocumentRepository documents;
-    private final RegistryLookup registry;
+    private final RegistryVerificationService registries;
     private final BankLinking bank;
     private final ViewOnboarding viewOnboarding;
     private final Clock clock;
@@ -71,7 +70,7 @@ class OnboardingVerificationService implements CompleteVerification {
                 throw new Conflict(
                         "identity_per_owner",
                         "Each owner verifies with Stripe Identity: start it from the owners list.");
-            case NUMBER -> number(check, kind, command.reference(), now);
+            case NUMBER -> number(application, check, kind, command.reference(), now);
             case UPLOAD -> upload(check, command, now);
             case SIGN -> {
                 if (!"signed".equals(command.choice())) {
@@ -79,7 +78,7 @@ class OnboardingVerificationService implements CompleteVerification {
                 }
                 check.verify("signed", now);
             }
-            case CHOOSE -> choose(check, kind, command, now);
+            case CHOOSE -> choose(application, check, kind, command, now);
             case SLOT -> check.submit(slot(command.reference(), now).toString(), null, null, now);
         }
         verifications.save(check);
@@ -87,14 +86,11 @@ class OnboardingVerificationService implements CompleteVerification {
     }
 
     private void instant(MerchantApplication application, Verification check, CheckKind kind, Instant now) {
+        if (kind == CheckKind.REGISTRY) {
+            registries.business(application, check, now);
+            return;
+        }
         var outcome = switch (kind) {
-            case REGISTRY ->
-                registry.business(
-                        application.getLegalName(),
-                        application.getStructure() == null
-                                ? ""
-                                : application.getStructure().code(),
-                        Objects.requireNonNullElse(application.getRegistryRef(), ""));
             case BANK -> bank.link(application.getId());
             // Every merchant endpoint requires acr=mfa, so reaching this line proves the second factor.
             default -> new Outcome(true, "second_factor");
@@ -102,14 +98,19 @@ class OnboardingVerificationService implements CompleteVerification {
         apply(check, outcome, now);
     }
 
-    private void number(Verification check, CheckKind kind, @Nullable String reference, Instant now) {
+    private void number(
+            MerchantApplication application,
+            Verification check,
+            CheckKind kind,
+            @Nullable String reference,
+            Instant now) {
         if (kind == CheckKind.GST) {
             var gst = new GstNumberInput(reference).value();
             check.verify(gst, now);
             return;
         }
         var ref = required(reference, kind == CheckKind.AHS_PERMIT ? PERMIT_NUMBER : LICENCE_NUMBER);
-        apply(check, registry.licence(Objects.requireNonNullElse(check.getRegistry(), kind.key()), ref), now);
+        registries.licence(application, check, Objects.requireNonNullElse(check.getRegistry(), kind.key()), ref, now);
     }
 
     private void upload(Verification check, Command command, Instant now) {
@@ -131,7 +132,8 @@ class OnboardingVerificationService implements CompleteVerification {
         check.submit(null, docId, expires, now);
     }
 
-    private void choose(Verification check, CheckKind kind, Command command, Instant now) {
+    private void choose(
+            MerchantApplication application, Verification check, CheckKind kind, Command command, Instant now) {
         var choice = command.choice();
         switch (kind) {
             case RETURNS_POLICY -> {
@@ -151,7 +153,7 @@ class OnboardingVerificationService implements CompleteVerification {
                 if ("not_applicable".equals(choice)) {
                     check.verify("not_applicable", now);
                 } else {
-                    apply(check, registry.licence("AGLC", required(command.reference(), ALCOHOL)), now);
+                    registries.licence(application, check, "AGLC", required(command.reference(), ALCOHOL), now);
                 }
             }
             default -> throw new IllegalStateException("No choice for " + kind);

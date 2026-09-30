@@ -63,7 +63,7 @@ class ComplianceLedgerQueries implements ComplianceLedgerStore {
                         select v.id, v.check_type, v.check_key, v.registry, v.reference, v.label, v.status,
                                v.expires_at, v.verified_at, v.submitted_at
                           from merchants.verifications v
-                         where v.merchant_id = :m and v.check_key in ('kyc')
+                         where v.merchant_id = :m and v.check_key in ('kyc', 'registry')
                          order by v.position nulls last, v.id
                         """)
                 .param("m", merchantId)

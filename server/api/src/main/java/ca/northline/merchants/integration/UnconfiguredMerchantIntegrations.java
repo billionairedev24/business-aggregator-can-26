@@ -3,37 +3,20 @@ package ca.northline.merchants.integration;
 import ca.northline.merchants.application.DocumentStorage;
 import ca.northline.merchants.application.VerificationGateways.BankLinking;
 import ca.northline.merchants.application.VerificationGateways.DomainVerifier;
-import ca.northline.merchants.application.VerificationGateways.Outcome;
-import ca.northline.merchants.application.VerificationGateways.RegistryLookup;
 import ca.northline.shared.storage.UsesLocalStorage;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
 /**
- * Placeholders outside {@code local}/{@code test} until the production adapters exist (registry
- * lookups S-23, Financial Connections S-24, custom domains S-31; object storage S-10 when {@code STORAGE_PROVIDER=local}): the application starts in the
+ * Placeholders outside {@code local}/{@code test} until the production adapters exist (Financial
+ * Connections S-24, custom domains S-31; object storage S-10 when {@code STORAGE_PROVIDER=local}): the application starts in the
  * {@code dev}/{@code staging}/{@code prod} profiles, and using the feature fails loudly — the same convention as the
  * other modules' unconfigured adapters.
  */
 @Configuration(proxyBeanMethods = false)
 @Profile("!local & !test")
 class UnconfiguredMerchantIntegrations {
-
-    @Bean
-    RegistryLookup unconfiguredRegistryLookup() {
-        return new RegistryLookup() {
-            @Override
-            public Outcome business(String legalName, String structure, String registryRef) {
-                throw unconfigured("business registry lookups (S-23)");
-            }
-
-            @Override
-            public Outcome licence(String registry, String number) {
-                throw unconfigured("licence registry lookups (S-23)");
-            }
-        };
-    }
 
     @Bean
     BankLinking unconfiguredBankLinking() {

@@ -3,36 +3,20 @@ package ca.northline.merchants.integration;
 import ca.northline.merchants.application.VerificationGateways.BankLinking;
 import ca.northline.merchants.application.VerificationGateways.DomainVerifier;
 import ca.northline.merchants.application.VerificationGateways.Outcome;
-import ca.northline.merchants.application.VerificationGateways.RegistryLookup;
-import java.util.Locale;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
- * LOCAL / TEST ONLY. Deterministic stand-ins for the Alberta registries, Stripe Financial Connections
- * and the CNAME check, so the whole onboarding flow can be clicked through without external accounts:
+ * LOCAL / TEST ONLY. Deterministic stand-ins for Stripe Financial Connections and the CNAME check, so the whole onboarding flow can be clicked through without external accounts:
  *
  * <ul>
- *   <li>Business registry lookups match; licence numbers of 3+ characters match, anything containing
- *       {@code "manual"} goes to a human (submitted).
  *   <li>Bank linking returns the design's "TD ··3391".
  *   <li>Domains containing {@code "pending"} stay pending, {@code "fail"} fail, everything else verifies.
  * </ul>
  */
 @Component
 @Profile({"local", "test"})
-class FakeVerificationGateways implements RegistryLookup, BankLinking, DomainVerifier {
-
-    @Override
-    public Outcome business(String legalName, String structure, String registryRef) {
-        return new Outcome(true, registryRef.isBlank() ? "matched" : registryRef);
-    }
-
-    @Override
-    public Outcome licence(String registry, String number) {
-        var manual = number.toLowerCase(Locale.ROOT).contains("manual") || number.length() < 3;
-        return new Outcome(!manual, number);
-    }
+class FakeVerificationGateways implements BankLinking, DomainVerifier {
 
     @Override
     public Outcome link(String merchantId) {
