@@ -566,19 +566,17 @@ class CheckoutService
 
     /** "GST 5% · $2.47": tax lines added up per tax and rate. */
     private static List<TaxLine> summarize(List<TaxCalculations.Quote> quotes) {
-        var sums = new LinkedHashMap<String, long[]>();
-        var rates = new LinkedHashMap<String, BigDecimal>();
+        var sums = new LinkedHashMap<String, TaxLine>();
         for (var q : quotes) {
             for (var line : q.lines()) {
-                var key = line.taxType() + "|"
-                        + line.percent().stripTrailingZeros().toPlainString();
-                sums.computeIfAbsent(key, _ -> new long[1])[0] += line.taxCents();
-                rates.putIfAbsent(key, line.percent().stripTrailingZeros());
+                var percent = line.percent().stripTrailingZeros();
+                sums.merge(
+                        line.taxType() + "|" + percent.toPlainString(),
+                        new TaxLine(line.taxType(), percent, line.taxCents()),
+                        (x, y) -> new TaxLine(x.type(), x.percent(), x.cents() + y.cents()));
             }
         }
-        return sums.entrySet().stream()
-                .map(e -> new TaxLine(e.getKey().split("\\|")[0], rates.get(e.getKey()), e.getValue()[0]))
-                .toList();
+        return List.copyOf(sums.values());
     }
 
     private String stepUpNeeded(String userId) {
