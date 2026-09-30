@@ -46,7 +46,39 @@ final class DeveloperDtos {
             String signature,
             Instant createdAt,
             @Nullable Integer lastStatus,
-            @Nullable Instant lastDeliveryAt) {}
+            @Nullable Instant lastDeliveryAt,
+            @Nullable Instant failingSince,
+            @Nullable Instant disabledAt,
+            @Nullable Instant previousSecretUntil) {}
+
+    /** Rotate: how long the replaced secret keeps signing (null = 24 h, 0 = stops at once). */
+    record RotateWebhookRequest(@Nullable Integer overlapHours) {}
+
+    /** One row of the delivery log (S-33). */
+    record WebhookDeliveryResponse(
+            String id,
+            String eventId,
+            @Nullable String eventType,
+            String state,
+            int attempts,
+            @Nullable Integer statusCode,
+            @Nullable Instant lastAttemptAt,
+            @Nullable Instant nextAttemptAt,
+            @Nullable Integer durationMs,
+            @Nullable String error,
+            @Nullable String responseSnippet,
+            boolean test,
+            @Nullable String resendOf,
+            Instant createdAt,
+            List<WebhookAttemptResponse> history) {}
+
+    record WebhookAttemptResponse(
+            int attempt,
+            Instant at,
+            @Nullable Integer statusCode,
+            @Nullable Integer durationMs,
+            @Nullable String error,
+            @Nullable String responseSnippet) {}
 
     /** The only time the signing secret is returned. */
     record WebhookWithSecretResponse(WebhookResponse endpoint, String secret) {}

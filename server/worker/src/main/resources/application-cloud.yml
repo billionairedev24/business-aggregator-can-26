@@ -4,5 +4,6 @@ northline.required-env:                 # checked before start-up (ca.northline.
   cache: REDIS_HOST
   events: KAFKA_BOOTSTRAP
   search: ES_URIS
+  webhooks: WEBHOOK_SECRET_KEY          # S-33: decrypts the partner endpoints' signing secrets (same key as the api)
 logging.level:
   ca.northline: info

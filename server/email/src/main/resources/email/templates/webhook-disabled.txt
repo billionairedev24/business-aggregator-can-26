@@ -1,0 +1,11 @@
+[(#{webhook-disabled.heading})]
+
+[(#{webhook-disabled.body(${url}, ${businessName}, ${failingSince})})]
+[# th:if="${hasError}"]
+[(#{webhook-disabled.lastError(${lastError})})]
+[/]
+[(#{webhook-disabled.action})]
+
+[(#{webhook-disabled.cta})]: [(${link})]
+
+[# th:insert="~{footer.txt}" /]

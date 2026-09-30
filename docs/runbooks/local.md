@@ -157,6 +157,11 @@ Notes:
   ([infrastructure.md § 5.3](infrastructure.md#53-kafka-topics-and-credentials)).
 - **Worker:** `cd server && ./gradlew :worker:bootRun` (no profile) needs Postgres, Kafka (`events`) and
   Elasticsearch (`search`). The indexer is still a stub (S-43).
+- **Partner webhooks (S-33):** the worker delivers what Settings › API endpoints subscribe to. To receive them on
+  your machine, set `WEBHOOKS_ALLOW_LOCAL=true` in `server/.env` (allows `http://localhost` endpoints; private,
+  link-local and metadata addresses stay refused) and add an endpoint such as `http://localhost:4000/hooks` — any
+  local HTTP listener works; "Send test event" in the endpoint's Deliveries drawer sends one at once.
+  `WEBHOOK_SECRET_KEY` empty = the fixed development key, the same one the api uses ([webhooks.md](webhooks.md)).
 - Stop: `docker compose --profile all down` (add `-v` to delete the data volumes).
 
 ## 7. Rehearse the cloud shape locally (optional)
