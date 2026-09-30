@@ -1155,3 +1155,96 @@ accepted with rationale (the story's acceptance criterion):
   are unverified.
 - **Not done:** a console UI for the queue; re-checking rows an owner's legal-name change sent back to `submitted`
   (Settings › Business) automatically; a name search when the owner doesn't know the number; Kyckr-style KYB providers.
+
+## 2026-09-30 — S-29 Mobile and courier clients: public PKCE + rotating refresh tokens + DPoP
+
+Runbook for app developers: `docs/runbooks/mobile-auth.md`.
+
+- **Clients in every environment** (`application.yml`, no longer `local` only): `mobile-consumer` ("Northline":
+  `openid profile orders bookings offline_access`, refresh 30 d) and `courier-app` ("Northline Courier":
+  `openid courier deliveries`, refresh **12 h** — design 05's "device-bound, short refresh", read as one shift). Scopes
+  follow design 05 (the old local block had `openid profile deliveries offline_access` for the courier). Public, no
+  secret, PKCE S256, `dpop-required: true`. Redirects: `${CONSUMER_ORIGIN}/app/oauth2redirect` and
+  `…/courier/oauth2redirect` (claimed App Link / Universal Link on the consumer host — the auth host itself can't be
+  used: a Universal Link doesn't open the app for a redirect within the same domain) plus the reverse-domain schemes
+  `ca.northline.app:/oauth2redirect`, `ca.northline.courier:/oauth2redirect` (RFC 8252). Catalogue rule: a public client
+  with `refresh_token` must be `dpop-required` (its refresh tokens are then sender-constrained, RFC 9449 § 5); the
+  "recorded but not enforced" warning is gone.
+- **Spring Authorization Server's DPoP support is used where it exists** (7.1.1): proof verification in the grant
+  providers, `cnf.jkt` on access tokens, `token_type: DPoP`, and the public-client refresh check that the proof's key
+  equals the authorization's access-token `cnf.jkt` (that is what binds the refresh token). What it leaves open, and is
+  added in `ca.northline.auth.dpop`:
+  - **Proof required** for `dpop-required` clients (`DpopTokenEndpointFilter`, a servlet filter on `/oauth2/token`
+    before Spring Security): without it Spring silently issues bearer tokens. 400 `invalid_dpop_proof`.
+  - **Server nonces** (`DPoP-Nonce`, RFC 9449 § 8) — not implemented by Spring. Time windows of `nonce-lifetime` (5 min)
+    with one random nonce each, created with SET NX in Valkey so every instance agrees; the current and previous
+    window's nonce are accepted. Every token-endpoint answer to a DPoP request carries the current one; a missing or
+    stale nonce → 400 `use_dpop_nonce`. Chosen over an HMAC-of-time nonce: no new secret to provision and rotate.
+  - **Single-use `jti` in Valkey:** Spring's `DPoPProofReplayValidator` with a `Cache` adapter over Valkey
+    (`nl:auth-dpop:jti:<sha256>`, SET NX, ≤ 70 s) instead of its per-JVM in-memory cache. Spring then verifies the same
+    proof again with its static in-memory cache (not configurable in `DPoPProofVerifier`) — harmless. `iat` stays at
+    Spring's fixed ±30 s (a looser window here would be undone by Spring's second check); apps correct `iat` with the
+    server's `Date`.
+  - **Refresh tokens for public clients:** Spring never issues them (`OAuth2RefreshTokenGenerator`). The app's
+    `OAuth2TokenGenerator` bean now issues one to a `dpop-required` public client when the request carried a DPoP proof
+    (`DpopTokens.refreshTokens`). Declaring the generator turns off Spring's default claims customizer, so `cnf.jkt` is
+    added by `DpopTokens.confirmation` (same computation) before our claims.
+  - **Public-client client authentication beyond the code exchange** (`AppClientAuthentication`, first in Spring's
+    client-authentication converters/providers): a refresh with `client_id`, no credentials and a `DPoP` header, and
+    `POST /oauth2/revoke` with `client_id` (RFC 7009 § 2.1 — the token is the proof; revoking only ends the holder's
+    own sign-in). Introspection stays closed to public clients.
+- **Store:** `northline.auth.dpop.store` (`DPOP_STORE`): `redis` (default; required under staging/prod) or `memory`
+  (`local`, `test`; the `valkey` add-on profile switches it back to Valkey). **Valkey unreachable = fail closed**:
+  a token request carrying DPoP answers 503 `temporarily_unavailable` (`Retry-After: 30`), whatever
+  `RATE_LIMIT_WHEN_UNAVAILABLE` says — a proof that can't be checked for replay is never accepted. BFF sign-ins are
+  unaffected.
+- **Refresh-token reuse detection (closes S-20's accepted risk for public clients):** refresh tokens already rotated
+  on every use (`reuse-refresh-tokens: false`); Spring keeps only the current one. **V024
+  `auth.issued_refresh_tokens`** (SHA-256 of every refresh token issued to a public client, FK to the authorization with
+  `ON DELETE CASCADE`) remembers the family; `RefreshTokenReuseDetection` wraps the JDBC authorization store: a refresh
+  token the store no longer knows but whose family still exists is reuse → the family is deleted and its sign-in ends
+  (`SignInSessions.end`, new **`revoke_reason = refresh_token_reused`** — V024 widens the V021 CHECK), audit
+  `auth.refresh_token_reused` + `auth.session_revoked`, WARN log; the request fails `invalid_grant`. Strict: no grace
+  period for a retried refresh (documented for app developers). The BFFs are left out: their tokens never leave the
+  server, and two replicas refreshing one browser session at once would look like reuse.
+- **Sessions (S-19):** nothing new was needed — an app's authorization is linked to the sign-in of the phone's browser
+  like the BFF's, listed with the client name while its refresh token lives, revocable from Settings › Security.
+  Signing out of the app (`/oauth2/revoke`) ends the sign-in (S-20 single sign-out).
+- **Sign-in page → back to the app:** an unauthenticated `/oauth2/authorize` still goes to `northline.auth.login-page`
+  (the Studio's page until the consumer web exists), and Spring's request cache keeps the request in the auth session.
+  The JSON sign-in and registration answers now carry `continueTo` = that saved request **only when it is a public
+  client's `/oauth2/authorize`** (`AppAuthorizationResume`, taken once); the Studio navigates there instead of its BFF
+  hand-off, and only to an `/oauth2/authorize` on the auth origin. The Studio's own flow is unchanged.
+- **acr:** consumer tokens don't need `acr=mfa`. Courier tokens: ARCHITECTURE.md requires `acr=mfa` for business and
+  staff tokens only, and couriers are neither (DATA_MODEL: customers, merchant staff, couriers and admins are separate
+  contexts) — so no requirement either; design 05 asks only for device binding and a short refresh. Tokens still carry
+  `acr=mfa` whenever the sign-in used a second factor (today: every sign-in). App tokens can't reach merchant or console
+  endpoints (no `merchant`/`console` scope), whatever their `acr`.
+- **api (resource server):** Spring Security's `.dPoP()` (`Authorization: DPoP` + proof: thumbprint = `cnf.jkt`,
+  `ath`, `htm`, `htu`, `iat`), with the replay cache in Valkey outside `local`/`test` (`nl:api-dpop:jti:*`,
+  `DpopResourceConfig`) and Spring's in-memory cache there. Spring's bearer filter already refuses a DPoP-bound token
+  sent as `Bearer` (a custom filter written for it was removed). **No nonce at the api:** the nonce would need state
+  shared with auth; `iat` ± 30 s + single-use `jti` + `ath` bound a captured proof to one request. Valkey down at the
+  api = the proof fails → 401.
+- **Edge:** the api host now routes all of `/api/v1` (`apps.api.tokenClients: true`, default) — the apps call the api
+  directly; before, only the Stripe webhooks and the unsubscribe link were routed (S-17). `false` restores that.
+- **Configuration:** new variables `DPOP_STORE`, `DPOP_NONCE_LIFETIME` (auth; optional; runbooks README, local, dev,
+  staging, prod, `.env.example`). No secret, so no Helm/External Secrets change beyond the route.
+- **Schema:** V024 (`auth.issued_refresh_tokens`, `identity.sessions.revoke_reason` + `refresh_token_reused`).
+- **Tests:** auth `MobileDpopApiTest` (full flow with a generated P-256 key: `use_dpop_nonce` then tokens with
+  `cnf.jkt`, `token_type DPoP`, rotation under the same key; no proof → 400 and the code isn't spent; refresh without a
+  proof, replayed proof, another key, wrong `htu`/`htm`, made-up and stale nonces refused; reuse → family revoked,
+  sign-in ended, audit, browser session 401, other sign-in intact; only hashes stored; app sign-out via
+  `/oauth2/revoke` ends the sign-in, no introspection; the phone's sign-in listed with "Northline" and revoked from
+  Settings › Security; sign-in page `continueTo` for the app and not for the Studio; courier scopes and 12 h refresh;
+  consumer can't ask for courier scopes; the Studio BFF still gets bearer tokens without a nonce header),
+  `DpopStateTest` (the same contract against Valkey 8 and memory, two instances agree on nonce and ids, TTLs, Valkey
+  unreachable → 503 from the filter, `memory` refused under prod), `OAuthClientCatalogTest` (public refresh client
+  without DPoP refused); api `DpopResourceServerTest` (proof accepted; no proof, bearer downgrade, replay, other key,
+  other token/URL/method, missing `ath` → 401; plain bearer tokens still work; an app token with `acr=mfa` still gets
+  403 on a merchant endpoint); Studio `auth.test.tsx` (`continueTo` followed; a foreign one ignored).
+- **Not done / never run:** no real app, device, Secure Enclave or Android Keystore has used this; the App Link /
+  Universal Link association files (`apple-app-site-association`, `assetlinks.json`) must be served by the consumer
+  web (E-7) — until then only the custom schemes work; no consumer-facing sign-in page (the Studio's is used); no
+  refresh grace window; no DPoP for the BFFs (tokens never leave the server); `dpop_jkt` at the authorization endpoint
+  (RFC 9449 § 10, optional) is not checked.

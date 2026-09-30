@@ -32,8 +32,9 @@ global:
 # API_PUBLIC_URL, WEBAUTHN_RP_ID, the Studio's NL_AUTH_ORIGIN and the ingress hosts.
 urls:
   auth: https://auth.dev.northline.ca
-  # The api's public host serves only the routes that must bypass the BFF: Stripe webhooks (S-12,
-  # /api/v1/webhooks/stripe[/connect]) and the email unsubscribe page (S-13, /api/v1/email/unsubscribe).
+  # The api's public host serves the routes that must bypass the BFF: Stripe webhooks (S-12,
+  # /api/v1/webhooks/stripe[/connect]), the email unsubscribe page (S-13, /api/v1/email/unsubscribe) and — with
+  # apps.api.tokenClients (S-29) — /api/v1 for the mobile apps (DPoP-bound tokens, no BFF).
   api: https://api.dev.northline.ca
   studio: https://studio.dev.northline.ca
   consumer: https://dev.northline.ca
@@ -299,7 +300,10 @@ apps:
       startup: { path: /actuator/health/liveness, periodSeconds: 5, failureThreshold: 60 }
       liveness: { path: /actuator/health/liveness, periodSeconds: 10, failureThreshold: 3 }
       readiness: { path: /actuator/health/readiness, periodSeconds: 5, failureThreshold: 3 }
-    public: true                  # the ingress reaches it for the Stripe webhooks and email unsubscribe only (ingress.yaml)
+    public: true                  # the ingress reaches it for the Stripe webhooks and email unsubscribe (ingress.yaml)
+    # S-29: route all of /api/v1 on the api host, for clients that hold their own tokens (the mobile apps, with DPoP;
+    # partners). false = webhooks and unsubscribe only, as before. Every other endpoint still needs a token.
+    tokenClients: true
     allowFrom: [bff]
     extraVolumes: []
     extraVolumeMounts: []
