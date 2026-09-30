@@ -29,11 +29,15 @@ export type HandlingTime = z.infer<typeof HandlingTime>;
 export const ReturnsPolicy = z.enum(['standard_14', 'final_sale']);
 export type ReturnsPolicy = z.infer<typeof ReturnsPolicy>;
 
+/** S-39: why an approved listing is back in vetting. */
+export const MaterialField = z.enum(['price', 'category', 'images']);
+export type MaterialField = z.infer<typeof MaterialField>;
+
 /** GET /listings — one table row (the onboarding contract + additive fields). */
 export const ListingItem = z.object({
   id: z.string(), kind: ListingKind, name: z.string(), sku: z.string().nullish(), meta: z.string(),
   priceCents: z.number().nullish(), stock: z.number().nullish(), sales30d: z.number(),
-  vetting: Vetting, status: ListingStatus, vettingFlags: z.array(z.string()).default([]),
+  vetting: Vetting, status: ListingStatus, vettingFlags: z.array(z.string()).default([]), revetReasons: z.array(MaterialField).default([]),
   submittedAt: z.string().nullish(), categoryId: z.string().nullish(), pricingMode: PricingMode.nullish(), updatedAt: z.string(),
 });
 export type ListingItem = z.infer<typeof ListingItem>;
@@ -45,7 +49,8 @@ export const Variant = z.object({ id: z.string().nullish(), value: z.string(), s
 export type Variant = z.infer<typeof Variant>;
 
 const lifecycle = {
-  id: z.string(), vetting: Vetting, status: ListingStatus, vettingFlags: z.array(z.string()), submittedAt: z.string().nullish(), updatedAt: z.string(),
+  id: z.string(), vetting: Vetting, status: ListingStatus, vettingFlags: z.array(z.string()), revetReasons: z.array(MaterialField).default([]),
+  submittedAt: z.string().nullish(), updatedAt: z.string(),
   completeness: Completeness,
 };
 
@@ -128,7 +133,7 @@ export async function lookupGtin(m: string, gtin: string): Promise<CatalogMatch 
 }
 
 // ── mutations ───────────────────────────────────────────────────────────────────────────────────────────────────────
-export type ProductPayload = Omit<ProductDetail, 'id' | 'kind' | 'vetting' | 'status' | 'vettingFlags' | 'submittedAt' | 'updatedAt' | 'completeness' | 'catalogRef' | 'catalogTitle' | 'sharedRecord' | 'contentShared' | 'contentLocked' | 'sellerCount' | 'images' | 'catalogueImages'> & { imageIds: string[] };
+export type ProductPayload = Omit<ProductDetail, 'id' | 'kind' | 'vetting' | 'status' | 'vettingFlags' | 'revetReasons' | 'submittedAt' | 'updatedAt' | 'completeness' | 'catalogRef' | 'catalogTitle' | 'sharedRecord' | 'contentShared' | 'contentLocked' | 'sellerCount' | 'images' | 'catalogueImages'> & { imageIds: string[] };
 export type ServicePayload = Pick<ServiceDetail, 'name' | 'pricingMode' | 'durationMin' | 'bufferMin' | 'instantBook'> & { categoryId: string | null; priceCents: number | null; included: string | null; sku: string | null };
 
 function useInvalidateListings(m: string) {

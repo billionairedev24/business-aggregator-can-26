@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { CheckCircle, Circle, XCircle } from '@phosphor-icons/react';
-import { Alert, Button, Select, useFormatters } from '@northline/ui';
+import { Alert, Button, Select, useFormatters, useLocale } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import type { Category, ListingDetail } from './api';
 import { useCatalogueT, type CatalogueT } from './messages';
@@ -84,6 +84,27 @@ export function EditorHeader(props: {
           <Button onClick={props.onSubmit} disabled={props.cannotSubmit || props.saving || props.submitting}>{props.submitting ? t('submitting') : t('submit')}</Button>
         </> : <span className="tag tag-neutral">{t('viewOnly', { role: props.roleName })}</span>}
       </div>
+    </div>
+  );
+}
+
+// ── re-vetting (S-39) ─────────────────────────────────────────────────────────────────────────────────────────────
+/**
+ * The state around re-vetting. An approved listing gets a one-line hint that material changes send it back to
+ * vetting. A listing being re-vetted gets a notice saying what changed and that customers don't see it meanwhile.
+ */
+export function RevetNotice({ detail, kind }: { detail: ListingDetail | undefined; kind: 'product' | 'service' }) {
+  const t = useCatalogueT();
+  const { locale } = useLocale();
+  if (!detail) return null;
+  if (detail.vetting === 'approved') return <p className="nl-cat-note" style={{ marginBottom: 16 }}>{t('materialHint', { kind })}</p>;
+  if (detail.vetting !== 'pending' || !detail.revetReasons.length) return null;
+  const reasons = new Intl.ListFormat(locale, { type: 'conjunction' }).format(detail.revetReasons.map(r => t(`reason_${r}`)));
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <Alert tone="neutral" role="status" title={t('revetTitle')}>
+        {detail.vettingFlags.length ? t('revetFlagged', { reasons }) : t('revetBody', { reasons })}
+      </Alert>
     </div>
   );
 }

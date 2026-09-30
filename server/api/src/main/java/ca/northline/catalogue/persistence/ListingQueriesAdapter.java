@@ -6,6 +6,7 @@ import ca.northline.catalogue.application.ListingQueries;
 import ca.northline.catalogue.application.ListingSummary;
 import ca.northline.catalogue.domain.ListingKind;
 import ca.northline.catalogue.domain.ListingStatus;
+import ca.northline.catalogue.domain.MaterialField;
 import ca.northline.catalogue.domain.PricingMode;
 import ca.northline.catalogue.domain.Vetting;
 import ca.northline.catalogue.domain.VettingFlag;
@@ -30,7 +31,7 @@ class ListingQueriesAdapter implements ListingQueries {
         return jdbc.sql("""
                         select * from (
                           select s.id, 'service' as kind, s.name as name, s.sku, s.price_cents, null::integer as stock,
-                                 s.sales_30d, s.vetting, s.status, s.vetting_flags, s.submitted_at, s.category_id,
+                                 s.sales_30d, s.vetting, s.status, s.vetting_flags, s.revet_reasons, s.submitted_at, s.category_id,
                                  coalesce(c.name_i18n ->> :lang, c.name_i18n ->> 'en') as category_name, s.pricing_mode,
                                  s.duration_min, coalesce(s.instant_book, false) as instant_book, s.created_at, s.updated_at
                             from catalogue.services s
@@ -38,7 +39,7 @@ class ListingQueriesAdapter implements ListingQueries {
                            where s.merchant_id = :m
                           union all
                           select o.id, 'product', o.title, o.sku, o.price_cents, o.stock, o.sales_30d, o.vetting, o.status,
-                                 o.vetting_flags, o.submitted_at, cp.category_id,
+                                 o.vetting_flags, o.revet_reasons, o.submitted_at, cp.category_id,
                                  coalesce(c.name_i18n ->> :lang, c.name_i18n ->> 'en'), null, null, false, o.created_at,
                                  o.updated_at
                             from catalogue.offers o
@@ -65,6 +66,7 @@ class ListingQueriesAdapter implements ListingQueries {
                         Objects.requireNonNullElse(enumOrNull(rs, "vetting", Vetting.class), Vetting.DRAFT),
                         Objects.requireNonNullElse(enumOrNull(rs, "status", ListingStatus.class), ListingStatus.HIDDEN),
                         enums(rs, "vetting_flags", VettingFlag.class),
+                        enums(rs, "revet_reasons", MaterialField.class),
                         instant(rs, "submitted_at"),
                         rs.getString("category_id"),
                         rs.getString("category_name"),

@@ -1845,6 +1845,75 @@ Worker: `WebhookDeliveryTest` (Kafka 4 + PostGIS + WireMock receiver: signed `bo
   photos); Clover item descriptions (Clover has none); Square item options (only variations); a per-dish "don't sync"
   switch; Lightspeed Restaurant (the story names Square, Clover and Toast).
 
+## 2026-09-30 — S-39 Re-vet approved listings when material fields change
+
+- **"Material" (`catalogue.domain.MaterialField`).** These are the inputs of the automated checks and what customers
+  decide on:
+  - **price**: the offer price or any variant's price (keyed by SKU); for a service, the price or the pricing mode.
+    Fixed → quote is a price change.
+  - **category**: the leaf category.
+  - **images**: the images customers see, in order, since the first is the main image. That is the image source
+    (shared / own) plus the record's images when shared, plus the seller's own. Adding, removing, replacing or
+    reordering all count.
+  - **Not material:** title, description, attributes, bullets, stock, SKU, compare-at / cost, fulfilment, handling,
+    returns and compliance fields. The story names price, category and images; the rest don't feed the checks.
+    Content moderation of text is the console's job.
+- **Same rule whoever changes it.** The editor save (`revise`), the bulk price & stock update (`restock` / `reprice`)
+  and the platform sync (`syncStock`) all compare a before/after snapshot.
+- **S-35 sync:** after a draft, Northline's vetted content still wins, and a sync never touches title, description,
+  images or variants of a submitted listing. Price and stock still follow the platform. A **price** change from a sync
+  is material, so an approved listing goes back to pending (actor `system:commerce`). A stock change is not material.
+- **Transition** (`ListingState.revet`):
+  - approved → **pending**, flags cleared, `submitted_at` = now, `revet_reasons` = what changed.
+  - `listing.hidden` is published if customers could see the listing (search drops it); a listing the merchant keeps
+    hidden publishes nothing.
+  - `listing.submitted` is published, so the same `VettingOnSubmit` runs the automated checks.
+  - No new event type; `listing.submitted` is not externalized.
+- **While it is being re-vetted:**
+  - Customers don't see it: only approved + live is visible.
+  - The merchant's **live / hidden choice is kept**. Once the checks pass it returns to that state: `listing.published`
+    again only if it is live. A first-time approval still makes a listing live, as before.
+  - An edit doesn't withdraw it to draft (first submissions still are). A further material change adds its reasons
+    and re-runs the checks.
+  - Flagged → it stays pending with flags for the console, like any submission.
+- **Retried events:** `vet()` now leaves a listing alone unless it is pending, and saves the outcome even when there
+  is no event to publish (a hidden listing approved again).
+- **Studio** (the design shows pending as the "Pending · N min" tag and "Submitted · vetting" / "In review · flagged"
+  in the editor):
+  - A re-vetted listing shows exactly those, since it is pending with a fresh `submittedAt`, and appears under
+    "Pending vetting".
+  - The editor adds a notice "Back in vetting — Changed: price and category. Customers don't see this listing until the
+    automated checks pass, usually within minutes." A flagged re-vet says a reviewer looks at it instead.
+  - An approved listing shows a one-line hint that changing the price, category or images sends it back to vetting.
+  - This copy is ours; the design has none. en + fr-CA.
+- **API (additive):** `revetReasons` (`price|category|images`) on `GET /listings` rows and on the product/service
+  editor responses.
+- **Schema (V054, additive):** `catalogue.offers.revet_reasons` and `catalogue.services.revet_reasons`
+  (`text[] NOT NULL DEFAULT '{}'`). V053 is used by S-123 on its own branch.
+- **Tests:**
+  - `RevettingTest` (domain):
+    - editor price / category / image order changes are material
+    - title and stock are not
+    - a sync price change is material, sync stock alone is not
+    - bulk restock / reprice
+    - a service's pricing mode counts as price
+    - hidden listings re-vet quietly and stay hidden
+    - re-published once approved
+    - edits during a re-vet keep it pending, and reasons add up
+    - drafts and first submissions behave as before
+  - `RevettingApiTest`:
+    - a price change → pending, `listing.hidden` + `listing.submitted`, then approved and live again with
+      `listing.published`
+    - a title change stays approved, while a new image re-vets
+    - a hidden listing re-vets and stays hidden
+    - a service moved to a regulated category is flagged `missing_licence` and shows `revetReasons` in the table
+  - `CommerceSyncApiTest.aSyncedPriceChangeOnAnApprovedListingIsReVetted`
+  - Studio `revet.test.tsx`: the hint, the notice (plain and flagged), no notice on a first submission, fr-CA.
+- **Not done:**
+  - A change to a **shared catalogue record's** images or category by its owner doesn't re-vet the other sellers'
+    offers that inherit it. Only the offer being saved is compared.
+  - No threshold: a 1¢ price change re-vets. The checks run in seconds, so a clean listing is back almost at once.
+
 ## 2026-09-30 — S-38 Feed sales_30d on offers and services from orders/bookings
 
 - **What counts, over the last 30 days (a rolling window, not calendar days):**

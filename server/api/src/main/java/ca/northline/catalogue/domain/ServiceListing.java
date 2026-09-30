@@ -1,6 +1,8 @@
 package ca.northline.catalogue.domain;
 
+import ca.northline.shared.DomainEvent;
 import java.time.Instant;
+import java.util.List;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -28,14 +30,23 @@ public final class ServiceListing implements Listing {
         return new ServiceListing(id, merchantId, details, ListingState.draft(at));
     }
 
-    /** Editor save. A pending listing goes back to draft. */
-    public void revise(ServiceDetails newDetails, Instant at) {
+    /**
+     * Editor save. A pending listing goes back to draft; an approved one whose price or category changed goes back to
+     * vetting (S-39). @return the events to publish
+     */
+    public List<DomainEvent> revise(ServiceDetails newDetails, String actorId, Instant at) {
+        var before = details;
         details = newDetails;
         state.edited(at);
+        return revetIfMaterial(MaterialField.between(before, details), actorId, at);
     }
 
-    /** Bulk quick update of the price only; vetting unaffected. */
-    public void reprice(@Nullable Long newPriceCents, Instant at) {
+    /**
+     * Bulk quick update of the price only: a new price on an approved listing sends it back to vetting (S-39).
+     * @return the events to publish
+     */
+    public List<DomainEvent> reprice(@Nullable Long newPriceCents, String actorId, Instant at) {
+        var before = details;
         details = new ServiceDetails(
                 details.name(),
                 details.categoryId(),
@@ -47,6 +58,7 @@ public final class ServiceListing implements Listing {
                 details.instantBook(),
                 details.sku());
         state.touched(at);
+        return revetIfMaterial(MaterialField.between(before, details), actorId, at);
     }
 
     public Completeness completeness(@Nullable CategoryProfile category) {
