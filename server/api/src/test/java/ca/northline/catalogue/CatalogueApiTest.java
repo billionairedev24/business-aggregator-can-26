@@ -153,7 +153,7 @@ abstract class CatalogueApiTest extends IntegrationTest {
 
     static void await(ThrowingCheck check) {
         Awaitility.await()
-                .atMost(Duration.ofSeconds(10))
+                .atMost(Duration.ofSeconds(30))
                 .pollInterval(Duration.ofMillis(100))
                 .untilAsserted(check::run);
     }

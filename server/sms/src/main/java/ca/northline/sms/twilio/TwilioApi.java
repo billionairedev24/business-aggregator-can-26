@@ -1,4 +1,4 @@
-package ca.northline.auth.sms;
+package ca.northline.sms.twilio;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.jspecify.annotations.Nullable;
@@ -10,14 +10,14 @@ import org.springframework.web.service.annotation.HttpExchange;
 import org.springframework.web.service.annotation.PostExchange;
 
 /**
- * The two Twilio REST calls northline-auth needs (API version 2010-04-01): send an SMS, and place a call that reads a
+ * The two Twilio REST calls Northline needs (API version 2010-04-01): send an SMS, and place a call that reads a
  * TwiML document. Form-encoded requests, JSON answers, HTTP Basic with the account SID and auth token.
  */
 @HttpExchange(
         url = "/2010-04-01/Accounts/{account}",
         contentType = MediaType.APPLICATION_FORM_URLENCODED_VALUE,
         accept = MediaType.APPLICATION_JSON_VALUE)
-interface TwilioApi {
+public interface TwilioApi {
 
     /** {@code To}, {@code Body} and {@code From} or {@code MessagingServiceSid}. */
     @PostExchange("/Messages.json")

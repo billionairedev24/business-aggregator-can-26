@@ -1,6 +1,7 @@
 package ca.northline.food.api;
 
 import ca.northline.shared.DomainEvent;
+import ca.northline.shared.EventType;
 import java.time.Instant;
 import org.jspecify.annotations.Nullable;
 import org.springframework.modulith.events.Externalized;
@@ -13,6 +14,7 @@ import org.springframework.modulith.events.Externalized;
  * @param visible the customer can order it now (published, approved, menu live, not sold out)
  * @param soldOutOn the Edmonton date it is sold out for, when sold out
  */
+@EventType("food.item_availability")
 @Externalized("food.menu::#{aggregateId()}")
 public record MenuItemAvailabilityChanged(
         String eventId,

@@ -80,16 +80,30 @@ class TeamInvitationEmailTest extends IntegrationTest {
     }
 
     @Test
-    void aMobileInvitation_isNotSent_theOwnerSharesTheLink() throws Exception {
-        var team = team("en-CA");
+    void aMobileInvitation_isTextedOnce_inTheInvitersLanguage_andTheLinkIsStillShown() throws Exception {
+        var team = team("fr-CA");
+        var phone = "+140355501" + String.format("%02d", Math.floorMod(System.nanoTime(), 100));
 
-        mvc.perform(post("/api/v1/merchants/{id}/settings/team/invitations", team.merchantId())
+        var body = mvc.perform(post("/api/v1/merchants/{id}/settings/team/invitations", team.merchantId())
                         .with(TestJwt.member(team.owner()))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"phone\":\"+1 403 555 0177\",\"role\":\"bookkeeper\"}"))
+                        .content("{\"phone\":\"" + phone + "\",\"role\":\"bookkeeper\"}"))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.sent").value(false))
-                .andExpect(jsonPath("$.inviteUrl").isNotEmpty());
+                .andExpect(jsonPath("$.sent").value(true))
+                .andExpect(jsonPath("$.inviteUrl").isNotEmpty())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String link = JsonPath.read(body, "$.inviteUrl");
+
+        await().atMost(Duration.ofSeconds(10)).until(() -> texts.to(phone).size() == 1);
+        assertThat(texts.to(phone).getFirst().body())
+                .startsWith("Northline : ")
+                .contains("comme comptable", link)
+                .endsWith(link);
+        await().during(Duration.ofMillis(500))
+                .atMost(Duration.ofSeconds(2))
+                .until(() -> texts.to(phone).size() == 1);
     }
 
     @Test

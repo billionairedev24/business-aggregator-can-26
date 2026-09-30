@@ -213,3 +213,10 @@ mail-tester.com or by viewing the headers of a received email (`spf=pass dkim=pa
 - Bounces/complaints: handled by the provider's suppression list for now (SES account-level suppression,
   SendGrid suppressions, ACS). Feeding them back into Settings is S-27 work.
 - Switching provider = change the variables and restart; templates and behaviour are identical.
+
+## Worker emails (S-27)
+
+The worker's notifications consumer sends one email the api doesn't: `payout-failed` (a returned or canceled payout,
+row `payout`, with an unsubscribe link signed with the same `EMAIL_UNSUBSCRIBE_KEY`). It uses this library with the
+same variables, so the worker needs the email settings too. Which app sends what: [notifications.md](notifications.md).
+

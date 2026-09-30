@@ -6,8 +6,8 @@ import java.time.Instant;
 import java.util.Locale;
 
 /**
- * Outbound port: delivers a team invitation link. Email invitations are sent (S-13); SMS invitations are not yet — the
- * SMS port lives in northline-auth (S-27) — so the owner shares the link from the invite dialog, which always shows it.
+ * Outbound port: delivers a team invitation link — by email (S-13) or, for a mobile number, by SMS (S-27). The invite
+ * dialog still shows the link, so the owner can share it another way too.
  */
 public interface TeamInviteSender {
 

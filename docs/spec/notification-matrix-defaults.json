@@ -1,0 +1,14 @@
+{
+  "$comment": "Settings › Notifications defaults (design 02): which business events reach a team member by push, SMS and email until they change a cell, and the quiet hours (America/Edmonton). The api's messaging NotificationMatrix and the worker's notifications consumer (S-27) both follow this file; NotificationMatrixDefaultsSpecTest keeps the api's copy equal.",
+  "channels": ["push", "sms", "email"],
+  "quietHours": { "from": "21:00", "to": "07:00", "zone": "America/Edmonton" },
+  "rows": {
+    "new_booking":      { "push": true,  "sms": true,  "email": false },
+    "quote_request":    { "push": true,  "sms": true,  "email": true },
+    "customer_message": { "push": true,  "sms": false, "email": false },
+    "payout":           { "push": true,  "sms": false, "email": true },
+    "dispute":          { "push": true,  "sms": true,  "email": true },
+    "low_stock":        { "push": true,  "sms": false, "email": true },
+    "quality":          { "push": false, "sms": false, "email": true }
+  }
+}

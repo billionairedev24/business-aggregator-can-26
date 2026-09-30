@@ -1,10 +1,12 @@
 package ca.northline.worker.topics;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import ca.northline.worker.topics.TopicProvisioner.Finding;
 import ca.northline.worker.topics.TopicProvisioner.Mode;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -107,10 +109,16 @@ class TopicProvisionerTest {
         assertThat(apply.all(Finding.ConfigCorrected.class))
                 .containsExactly(new Finding.ConfigCorrected("identity.user", "retention.ms", "1000000", "604800000"));
         assertThat(apply.hasDrift()).isFalse();
-        assertThat(retention("identity.user")).isEqualTo("604800000");
-        assertThat(retention("payments.refund.dlq")).isEqualTo("2592000000");
+        // Config changes reach the broker's metadata asynchronously (KRaft): read until they show.
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
+            assertThat(retention("identity.user")).isEqualTo("604800000");
+            assertThat(retention("payments.refund.dlq")).isEqualTo("2592000000");
+        });
 
-        var again = provisioner().reconcile(desired, Mode.APPLY);
+        var again = await().atMost(Duration.ofSeconds(10))
+                .until(() -> provisioner().reconcile(desired, Mode.PLAN), r -> !r.hasDrift());
+        assertThat(again.all(Finding.Missing.class)).isEmpty();
+        again = provisioner().reconcile(desired, Mode.APPLY);
         assertThat(again.all(Finding.InSync.class)).hasSize(desired.size());
         assertThat(again.hasDrift()).isFalse();
     }
@@ -131,7 +139,11 @@ class TopicProvisionerTest {
                 .all()
                 .get();
 
-        var verify = provisioner().reconcile(desired, Mode.VERIFY);
+        var verify = await().atMost(Duration.ofSeconds(10))
+                .until(
+                        () -> provisioner().reconcile(desired, Mode.VERIFY),
+                        r -> r.all(Finding.ConfigDrift.class).size() == 1
+                                && r.all(Finding.PartitionDrift.class).size() == 1);
         assertThat(verify.hasDrift()).isTrue();
         assertThat(verify.all(Finding.PartitionDrift.class))
                 .containsExactly(new Finding.PartitionDrift("booking.quote", 8, 6));
@@ -160,7 +172,9 @@ class TopicProvisionerTest {
         assertThat(TopicsCommand.run("plan", bootstrap)).isZero();
         assertThat(TopicsCommand.run("apply", bootstrap, "--northline.topics.min-insync-replicas=1"))
                 .isZero();
-        assertThat(config("payments.payout", "min.insync.replicas")).isEqualTo("1");
+        await().atMost(Duration.ofSeconds(10))
+                .untilAsserted(() -> assertThat(config("payments.payout", "min.insync.replicas"))
+                        .isEqualTo("1"));
     }
 
     private Set<String> topics() throws Exception {

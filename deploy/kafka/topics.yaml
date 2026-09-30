@@ -91,3 +91,6 @@ consumers:
   - group: search-indexer
     topics: [catalogue.listing, food.menu, merchants.storefront]
     retryDelaysSeconds: [10, 60, 300]
+  - group: notifications
+    topics: [payments.payout, payments.payout_account, payments.dispute, payments.refund]
+    retryDelaysSeconds: [10, 60, 300]

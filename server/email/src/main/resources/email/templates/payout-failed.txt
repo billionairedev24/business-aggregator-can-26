@@ -1,0 +1,11 @@
+[(#{__${'payout-failed.heading.' + outcome}__})]
+
+[(#{__${'payout-failed.body.' + outcome}__(${amount}, ${businessName})})]
+[# th:if="${hasCode}"]
+[(#{payout-failed.code(${code})})]
+[/]
+[(#{payout-failed.action})]
+
+[(#{payout-failed.cta})]: [(${link})]
+
+[# th:insert="~{footer.txt}" /]

@@ -10,6 +10,7 @@ val tools: SourceSet by sourceSets.creating {
 dependencies {
     implementation(project(":platform"))
     implementation(project(":email")) // transactional email (S-13)
+    implementation(project(":sms")) // SMS team invitations (S-27)
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
@@ -52,6 +53,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testImplementation("org.testcontainers:testcontainers-junit-jupiter")
     testImplementation("org.testcontainers:testcontainers-postgresql")
+    testImplementation("org.testcontainers:testcontainers-kafka") // S-26: the real wire format of externalized events
     testImplementation(libs.archunit)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

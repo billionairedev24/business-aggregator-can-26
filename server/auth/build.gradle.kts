@@ -1,5 +1,6 @@
 dependencies {
     implementation(project(":platform"))
+    implementation(project(":sms")) // SMS / voice adapters shared with the api and the worker (S-27)
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")

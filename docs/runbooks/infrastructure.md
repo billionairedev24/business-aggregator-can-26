@@ -360,7 +360,7 @@ KAFKA_REPLICATION_FACTOR=<data_stores.kafka.replication_factor>`.
 `terraform state rm 'module.northline.module.kafka.azurerm_eventhub.topic'`, then destroy (the namespace takes the
 event hubs with it).
 
-**Alerts:** DLQ records are the consumers' concern (S-26: DLQ metrics, replay). ACLs per app are not set: MSK runs
+**Alerts:** DLQ records, consumer lag and replay: [events.md](events.md). ACLs per app are not set: MSK runs
 with `allow.everyone.if.no.acl.found=true`, and Managed Kafka / Event Hubs authorize per credential.
 
 ### 5.4 Elasticsearch (Elastic Cloud)

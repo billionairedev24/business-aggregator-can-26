@@ -1,4 +1,4 @@
-# northline-worker — Kafka consumers (search indexer; notifications and partner webhooks to come). Every connection is
+# northline-worker — Kafka consumers (search indexer, notifications; partner webhooks to come). Every connection is
 # an environment variable with a local default (docs/runbooks/README.md); locally it needs the `events` and `search`
 # compose profiles plus Postgres. Profiles `dev` | `staging` | `prod` also activate `cloud` (application-cloud.yml).
 spring:
@@ -12,7 +12,7 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/northline}
     username: ${DB_USER:northline}
     password: ${DB_PASSWORD:northline}
-    hikari.maximum-pool-size: ${DB_POOL_SIZE:5}
+    hikari.maximum-pool-size: ${DB_POOL_SIZE:10}   # handler transaction + separate delivery claims per record (S-27)
   data.redis:                           # Valkey 8 or Redis 7+
     host: ${REDIS_HOST:localhost}
     port: ${REDIS_PORT:6379}
@@ -29,25 +29,62 @@ spring:
     properties:
       sasl.mechanism: ${KAFKA_SASL_MECHANISM:PLAIN}
       sasl.jaas.config: ${KAFKA_SASL_JAAS_CONFIG:}
-server.port: ${SERVER_PORT:8084}         # health only (S-14): the worker serves no API
+    consumer:                           # S-26: records are parsed by ca.northline.worker.events.EnvelopeParser
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.ByteArrayDeserializer
+      auto-offset-reset: earliest       # a new consumer group starts at the oldest retained event
+      max-poll-records: 50
+    producer:                           # retry and .dlq records (the original key, value and headers)
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.ByteArraySerializer
+      acks: all
+      properties.enable.idempotence: true
+    listener:
+      ack-mode: record                  # commit after each record: a restart redelivers at most the one in hand
+      observation-enabled: true         # traceparent → the listener's trace (when tracing is on)
+  lifecycle.timeout-per-shutdown-phase: 30s
+server:
+  port: ${SERVER_PORT:8084}             # health + metrics only (S-14, S-26): the worker serves no API
+  shutdown: graceful
 management:
-  endpoints.web.exposure.include: health
+  endpoints.web.exposure.include: health,prometheus   # prometheus: consumer lag, DLQ and outcome counters (S-26)
   endpoint.health.probes.enabled: true  # /actuator/health/liveness and /readiness for Kubernetes
+logging.pattern.correlation: "[%X{consumer:-}|%X{eventType:-}|%X{eventId:-}|%X{traceId:-}] "   # S-26: every consumer log line names its event
 northline:
+  events:                               # S-26 consumer framework (docs/runbooks/events.md)
+    shutdown-timeout: ${EVENTS_SHUTDOWN_TIMEOUT:20s}      # finish the record in hand on SIGTERM
+    processed-retention: ${EVENTS_PROCESSED_RETENTION:60d} # dedupe claims kept (> DLQ retention 30 d)
   topics:                               # S-25 topic provisioning (TopicsCommand; deploy/kafka/topics.yaml)
     catalogue: ${KAFKA_TOPICS_CATALOGUE:}                 # blank = the packaged classpath:kafka/topics.yaml
     replication-factor: ${KAFKA_REPLICATION_FACTOR:}      # blank = the broker's default.replication.factor
     min-insync-replicas: ${KAFKA_MIN_INSYNC_REPLICAS:}    # blank = not set on the topics (broker default)
-  # provider switches (ca.northline.platform); only `local` adapters exist yet
+  # Notifications (S-27, docs/runbooks/notifications.md): the payout.failed email through the shared email library
+  # (same settings as the api, docs/runbooks/email.md) and SMS through the shared SMS library (same settings as
+  # northline-auth). `local` = Mailpit / the log; staging and prod refuse `local` for both.
   email:
-    provider: ${EMAIL_PROVIDER:local}   # notifications (S-13, S-27)
+    provider: ${EMAIL_PROVIDER:local}
     from: ${EMAIL_FROM:Northline <no-reply@northline.ca>}
+    reply-to: ${EMAIL_REPLY_TO:}
+    mailing-address: ${EMAIL_MAILING_ADDRESS:Northline Marketplace Inc. · 1200 – 8th Avenue SW, Calgary, Alberta T2P 1B5, Canada}
+    contact: ${EMAIL_CONTACT:support@northline.ca}
+    region: ${EMAIL_REGION:}
+    endpoint: ${EMAIL_ENDPOINT:}
+    api-key: ${EMAIL_API_KEY:}
+    configuration-set: ${EMAIL_CONFIGURATION_SET:}
     smtp: { host: "${SMTP_HOST:localhost}", port: "${SMTP_PORT:1025}", username: "${SMTP_USERNAME:}", password: "${SMTP_PASSWORD:}", starttls: "${SMTP_STARTTLS:false}" }
+    retry: { attempts: "${EMAIL_RETRY_ATTEMPTS:2}", backoff: "${EMAIL_RETRY_BACKOFF:1s}" }   # short: Kafka retries on top
   sms:
     provider: ${SMS_PROVIDER:local}
     from: ${SMS_FROM:}
+    voice-from: ${SMS_VOICE_FROM:}
     account-id: ${SMS_ACCOUNT_ID:}
     auth-token: ${SMS_AUTH_TOKEN:}
+    region: ${SMS_REGION:}
+    endpoint: ${SMS_ENDPOINT:}
+  notifications:
+    studio-url: ${STUDIO_ORIGIN:http://localhost:3100}        # links in the payout.failed email
+    api-url: ${API_PUBLIC_URL:http://localhost:8080}          # unsubscribe links point at the api
+    unsubscribe-key: ${EMAIL_UNSUBSCRIBE_KEY:}                # same key as the api (it verifies the tokens)
 ---
 # Local runs read server/.env (or .env next to the jar) — KEY=value lines, see server/.env.example.
 spring.config.activate.on-profile: "!test"

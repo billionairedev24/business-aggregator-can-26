@@ -1,6 +1,7 @@
 package ca.northline.food.api;
 
 import ca.northline.shared.DomainEvent;
+import ca.northline.shared.EventType;
 import java.time.Instant;
 import org.springframework.modulith.events.Externalized;
 
@@ -9,6 +10,7 @@ import org.springframework.modulith.events.Externalized;
  * module moves the order to {@code ready}. {@code late} = after the promised time (counts against the on-time score).
  * Topic {@code orders.order}, key = order id.
  */
+@EventType("orders.order_ready")
 @Externalized("orders.order::#{aggregateId()}")
 public record KitchenOrderReady(
         String eventId, Instant occurredAt, String aggregateId, String merchantId, String actorId, boolean late)

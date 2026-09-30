@@ -35,3 +35,7 @@ apps:
       # S-13 (docs/runbooks/email.md): Azure Communication Services Email with Entra ID (workload identity). Also set
       # EMAIL_ENDPOINT=https://<resource>.canada.communication.azure.com — the api refuses to start without it.
       EMAIL_PROVIDER: azure
+  worker:
+    env:
+      # S-27: the notifications consumer emails payout.failed with the same provider as the api.
+      EMAIL_PROVIDER: azure

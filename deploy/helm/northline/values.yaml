@@ -233,6 +233,7 @@ apps:
       EMAIL_UNSUBSCRIBE_KEY: false  # required under staging/prod (values-staging/prod.yaml)
       EMAIL_API_KEY: false          # sendgrid, or azure with an access key
       SMTP_PASSWORD: false          # EMAIL_PROVIDER=smtp
+      SMS_AUTH_TOKEN: false         # S-27: team invitations by SMS (SMS_PROVIDER=twilio)
     runAsUser: 65532
     probes:
       startup: { path: /actuator/health/liveness, periodSeconds: 5, failureThreshold: 60 }
@@ -333,7 +334,11 @@ apps:
       REDIS_PASSWORD: false
       KAFKA_SASL_JAAS_CONFIG: false
       ES_PASSWORD: false
-      SMTP_PASSWORD: false          # notifications consumer (S-27) reuses the email settings
+      # S-27 notifications consumer: the payout.failed email (same settings as the api) and SMS (same as auth).
+      EMAIL_UNSUBSCRIBE_KEY: false  # required under staging/prod (values-staging/prod.yaml); the api's key
+      EMAIL_API_KEY: false          # sendgrid, or azure with an access key
+      SMTP_PASSWORD: false          # EMAIL_PROVIDER=smtp
+      SMS_AUTH_TOKEN: false         # SMS_PROVIDER=twilio
     runAsUser: 65532
     probes:
       startup: { path: /actuator/health/liveness, periodSeconds: 5, failureThreshold: 60 }

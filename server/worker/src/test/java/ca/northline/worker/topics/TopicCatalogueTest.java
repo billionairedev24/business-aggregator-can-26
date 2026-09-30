@@ -3,11 +3,13 @@ package ca.northline.worker.topics;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import ca.northline.worker.events.PoisonEventException;
 import ca.northline.worker.topics.TopicCatalogue.TopicSpec;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -15,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
+import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.annotation.RetryableTopic;
 import org.springframework.kafka.retrytopic.TopicSuffixingStrategy;
@@ -88,7 +91,8 @@ class TopicCatalogueTest {
         scanner.addIncludeFilter(new AnnotationTypeFilter(Component.class));
         var seen = new HashSet<String>();
         for (var candidate : scanner.findCandidateComponents("ca.northline.worker")) {
-            for (var method : Class.forName(candidate.getBeanClassName()).getDeclaredMethods()) {
+            var type = Class.forName(candidate.getBeanClassName());
+            for (var method : type.getDeclaredMethods()) {
                 var listener = AnnotatedElementUtils.findMergedAnnotation(method, KafkaListener.class);
                 var retry = AnnotatedElementUtils.findMergedAnnotation(method, RetryableTopic.class);
                 if (listener == null) {
@@ -109,6 +113,15 @@ class TopicCatalogueTest {
                 assertThat(retry.topicSuffixingStrategy()).isEqualTo(TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE);
                 assertThat(retry.autoCreateTopics()).isEqualTo("false");
                 assertThat(delaysSeconds(retry)).containsExactlyElementsOf(consumer.retryDelaysSeconds());
+                // A fixed back-off makes Spring name a single retry topic without "-0": keep it exponential.
+                assertThat(multiplier(retry)).as("%s multiplier", method).isGreaterThan(1);
+                // S-26: poison records skip the retries; every consumer answers for its own DLQ records.
+                assertThat(retry.exclude()).contains(PoisonEventException.class);
+                assertThat(retry.traversingCauses()).isEqualTo("true");
+                assertThat(Arrays.stream(type.getDeclaredMethods())
+                                .anyMatch(m -> m.isAnnotationPresent(DltHandler.class)))
+                        .as("%s needs a @DltHandler calling EventProcessing.deadLettered", type)
+                        .isTrue();
             }
         }
         assertThat(seen)
@@ -153,17 +166,34 @@ class TopicCatalogueTest {
                 .orElseThrow();
     }
 
-    /** The delays Spring derives from {@code @BackOff}: delay × multiplier^n, capped at maxDelay. */
+    /**
+     * The delays Spring derives from {@code @BackOff}: delay × multiplier^n, capped at maxDelay. A {@code *String}
+     * attribute (a property, so tests can shorten it) counts with its default ({@code ${name:default}}).
+     */
     private static List<Integer> delaysSeconds(RetryableTopic retry) {
         var backOff = retry.backOff();
         var delays = new ArrayList<Integer>();
-        var delay = (double) backOff.delay();
+        var delay = value(backOff.delayString(), backOff.delay());
+        var multiplier = value(backOff.multiplierString(), backOff.multiplier());
+        var max = value(backOff.maxDelayString(), backOff.maxDelay());
         for (var i = 0; i < Integer.parseInt(retry.attempts()) - 1; i++) {
-            var capped = backOff.maxDelay() > 0 ? Math.min(delay, backOff.maxDelay()) : delay;
+            var capped = max > 0 ? Math.min(delay, max) : delay;
             delays.add((int) (capped / 1000));
-            delay *= backOff.multiplier() > 0 ? backOff.multiplier() : 1;
+            delay *= multiplier > 0 ? multiplier : 1;
         }
         return delays;
+    }
+
+    private static double multiplier(RetryableTopic retry) {
+        return value(retry.backOff().multiplierString(), retry.backOff().multiplier());
+    }
+
+    private static double value(String text, double fallback) {
+        if (text.isBlank()) {
+            return fallback;
+        }
+        var m = java.util.regex.Pattern.compile("\\$\\{[^:}]+:([^}]+)}").matcher(text);
+        return Double.parseDouble(m.matches() ? m.group(1) : text);
     }
 
     @Test

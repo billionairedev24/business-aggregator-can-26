@@ -1,6 +1,7 @@
 package ca.northline.food.api;
 
 import ca.northline.shared.DomainEvent;
+import ca.northline.shared.EventType;
 import java.time.Instant;
 import org.springframework.modulith.events.Externalized;
 
@@ -11,6 +12,7 @@ import org.springframework.modulith.events.Externalized;
  * @param prepMin minutes promised (default prep + busy bump + longest item prep + large-order extra)
  * @param readyBy when the food should be ready; the courier is dispatched to arrive then
  */
+@EventType("orders.order_accepted")
 @Externalized("orders.order::#{aggregateId()}")
 public record KitchenOrderAccepted(
         String eventId,
