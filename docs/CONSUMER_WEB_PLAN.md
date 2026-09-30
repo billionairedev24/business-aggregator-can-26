@@ -102,7 +102,7 @@ A feature folder per story area, named after the design: `home`, `location`, `se
 | route | design 06 state | story | notes |
 |---|---|---|---|
 | `/` | home | S-46 | no search in the header on this page |
-| `/location` | location | S-47 | saves with `useDeliveryLocation().save()` |
+| `/location?next=` | location | S-47 (**built**) | saves with `useDeliveryLocation().save()`, then goes to `next` (local path) or home |
 | `/search?q=&scope=` | search | S-48 | header / hero search lands here; `scope` all \| services \| shop \| food |
 | `/shop` | shop | S-49 | landing page, not results |
 | `/shop/$department` | category | S-49 | SSR + SEO |
@@ -154,13 +154,24 @@ Storefront pages on `pages.<zone>` and merchants' own domains (by `Host`) are S-
 
 ### Location
 
-`useDeliveryLocation()` (`features/location`) → `{ location: { status, label, city, lat?, lng?, source }, save, forget }`.
-Order: saved (`localStorage['nl.location']`, written by `save({ label, city, lat?, lng?, placeId? })` on the Location
-screen) → the device's geolocation, named by `GET /api/v1/geo/reverse?lat&lng → { label, city }` when the api has it
-(S-47), else the nearest live market (Calgary, Edmonton, Airdrie within 40 km) → the IP city → Calgary. Statuses map to
-the pill's copy: `locating`, `detected` ("Detected · deliver to"), `fallback` / `saved` ("Deliver to"). Screens filter
-by `location.city` (and `lat/lng` when present). Server-side the location is unknown: render location-independent
-content or a skeleton.
+`useDeliveryLocation()` (`features/location`) → `{ location: { status, label, city, lat?, lng?, source, province?, street?,
+unit?, postalCode?, placeId?, marketId?, zoneId?, zone? }, save, forget }`.
+Order: saved (`localStorage['nl.location']`, written by `save({ label, city, lat?, lng?, placeId?, street?, unit?,
+province?, postalCode?, marketId?, zoneId?, zone? })` on the Location screen — S-47 added everything after `placeId`,
+all optional) → the device's geolocation, named by `GET /api/v1/geo/reverse?lat&lng → { label, city, province?,
+market?: {id, city, province, stage}, zone?: {id, name, …} }` (S-47; 404 when nothing is known there; a `market` that is
+null or not live/pilot counts as outside every market), else the nearest live market (Calgary, Edmonton, Airdrie within
+40 km) → the IP city → Calgary. Statuses map to the pill's copy: `locating`, `detected` ("Detected · deliver to"),
+`fallback` / `saved` ("Deliver to"). Screens filter by `location.city` (and `lat/lng` when present); checkout reads the
+saved address parts (`street`, `unit`, `postalCode`, `province` — the province is the place of supply for tax, S-21).
+Server-side the location is unknown: render location-independent content or a skeleton. `/location?next=/path` comes
+back to `next` after Save (checkout's "Change").
+
+**Geo api (S-47, public under `/api/v1/geo`, the Google key on the server):** `GET /markets` (provinces → markets with
+stages), `GET /autocomplete?q=&session=&lat=&lng=` (Canada only; ≥ 3 characters; one `session` token per address
+search), `GET /places/{placeId}?session=` (the address + `resolution: { market, zone, waitlist }`), `GET /reverse`,
+`GET /resolve?lat=&lng=`, `POST /waitlist { regionId, email? }` (guests give an email; 201, or 200 when already on it).
+Lookups are limited per browsing session (429 `rate_limited`); Google failures are 503 `places_unavailable`.
 
 ### Account menu
 
@@ -183,8 +194,7 @@ Cookie `nl.locale` = `en` | `fr` (1 year, not HttpOnly). `useLocale().setLocale(
 | `GET /api/v1/storefronts/{slug}`, `/logo`, `GET /api/v1/public/storefronts/by-host?host=` | exists, public | S-54, S-63 |
 | `GET /api/v1/onboarding/taxonomy` | exists (signed in) | S-61 |
 | northline-auth JSON API (`/api/auth/register…`, `/api/auth/sign-in…`, `/api/auth/sign-out`) + S-62's `/api/auth/sign-in/code[/verify]`, `/api/auth/register/complete` | exists | S-62 (built) |
-| `GET /api/v1/geo/reverse` | **missing** (the path is already public in the api) | S-47 (header falls back without it) |
-| markets / zones for an address (`/api/v1/geo/…`) | missing | S-47 |
+| `GET /api/v1/geo/reverse`, `/markets`, `/autocomplete`, `/places/{id}`, `/resolve`, `POST /waitlist` | **exists** (S-47) | pill, Location screen, checkout |
 | `GET /api/v1/search`, suggestions | missing (path public; E-6 S-42…S-44) | S-48, home |
 | categories / departments / landing content (public catalogue reads) | missing | S-46, S-49, S-53 |
 | product detail + offers | missing | S-50 |
