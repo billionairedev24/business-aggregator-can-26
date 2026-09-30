@@ -399,6 +399,7 @@ apps:
       EMAIL_API_KEY: false          # sendgrid, or azure with an access key
       SMTP_PASSWORD: false          # EMAIL_PROVIDER=smtp
       SMS_AUTH_TOKEN: false         # SMS_PROVIDER=twilio
+      WEBHOOK_SECRET_KEY: true      # S-33: decrypts partner webhook signing secrets (the api's key; required in the cloud)
     runAsUser: 65532
     probes:
       startup: { path: /actuator/health/liveness, periodSeconds: 5, failureThreshold: 60 }
