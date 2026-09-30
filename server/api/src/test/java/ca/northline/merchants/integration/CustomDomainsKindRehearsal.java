@@ -12,6 +12,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.IntStream;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
  * Skipped unless {@code NL_KIND_API} is set. {@code NL_KIND_STEP=add} serves {@code NL_KIND_HOSTS} domains on shards of
  * {@code NL_KIND_LISTENERS} listeners and waits until every one is ready; {@code remove} takes them all away again.
  */
+@Slf4j
 @EnabledIfEnvironmentVariable(named = "NL_KIND_API", matches = ".+")
 class CustomDomainsKindRehearsal {
 
@@ -78,11 +80,11 @@ class CustomDomainsKindRehearsal {
             assertThat(kube.list(Kind.GATEWAY, GatewayDomainEdge.SELECTOR)).isEmpty();
             assertThat(kube.list(Kind.CERTIFICATE, GatewayDomainEdge.SELECTOR)).isEmpty();
             assertThat(kube.list(Kind.HTTP_ROUTE, GatewayDomainEdge.SELECTOR)).isEmpty();
-            System.out.println("REHEARSAL removed " + seen.keySet());
+            log.info("REHEARSAL removed {}", seen.keySet());
             return;
         }
         var first = edge.reconcile(hosts, hosts.size());
-        System.out.println("REHEARSAL first reconcile " + first);
+        log.info("REHEARSAL first reconcile {}", first);
         assertThat(kube.list(Kind.GATEWAY, GatewayDomainEdge.SELECTOR))
                 .hasSize((hosts.size() + listeners() - 1) / listeners());
 
@@ -95,9 +97,11 @@ class CustomDomainsKindRehearsal {
             }
             Thread.sleep(3000);
         }
-        System.out.println("REHEARSAL after "
-                + Duration.between(deadline.minus(Duration.ofMinutes(4)), Instant.now())
-                        .toSeconds() + " s: " + seen);
+        log.info(
+                "REHEARSAL after {} s: {}",
+                Duration.between(deadline.minus(Duration.ofMinutes(4)), Instant.now())
+                        .toSeconds(),
+                seen);
         assertThat(seen).hasSize(hosts.size());
         assertThat(seen.values()).containsOnly(EdgeObservation.READY);
     }
