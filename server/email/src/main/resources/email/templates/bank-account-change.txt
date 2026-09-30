@@ -1,0 +1,9 @@
+[(#{__${'bank-account-change.heading.' + phase}__})]
+
+[(#{__${'bank-account-change.body.' + phase}__(${businessName}, ${effectiveAt})})]
+
+[(#{bank-account-change.warning})]
+
+[(#{bank-account-change.cta})]: [(${link})]
+
+[# th:insert="~{footer.txt}" /]

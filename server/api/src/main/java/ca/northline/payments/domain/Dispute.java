@@ -1,6 +1,7 @@
 package ca.northline.payments.domain;
 
 import ca.northline.payments.api.DisputeDecided;
+import ca.northline.payments.api.DisputeUpdated;
 import ca.northline.shared.CodedEnum;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.Ids;
@@ -189,6 +190,22 @@ public class Dispute {
         return false;
     }
 
+    /**
+     * {@code dispute.updated} (the merchant's team is emailed): {@code opened} (with the reply deadline),
+     * {@code offer_declined}, {@code offer_expired}.
+     */
+    public DisputeUpdated updated(String change, Instant now) {
+        return new DisputeUpdated(
+                Ids.next(),
+                now,
+                id,
+                merchantId,
+                caseNumber,
+                change,
+                amountCents,
+                "opened".equals(change) ? respondBy : null);
+    }
+
     /** A Northline agent decides. */
     public DisputeDecided decide(Decision outcome, long refund, String agentId, Instant now) {
         if (state == State.DECIDED) {
@@ -216,7 +233,8 @@ public class Dispute {
         refundCents = refund;
         decidedBy = by;
         decidedAt = now;
-        return new DisputeDecided(Ids.next(), now, id, merchantId, escrowId, outcome.code(), refund, by);
+        return new DisputeDecided(
+                Ids.next(), now, id, merchantId, caseNumber, amountCents, escrowId, outcome.code(), refund, by);
     }
 
     private void requireOpen() {

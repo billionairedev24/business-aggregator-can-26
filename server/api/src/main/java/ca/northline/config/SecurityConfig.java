@@ -31,6 +31,10 @@ class SecurityConfig {
                 .authorizeHttpRequests(
                         a -> a.requestMatchers("/api/v1/search/**", "/api/v1/storefronts/**", "/api/v1/geo/**")
                                 .permitAll()
+                                // Email unsubscribe links: the signed token is the authorisation (S-13). The template
+                                // previews exist only under the `local` profile (404 elsewhere).
+                                .requestMatchers("/api/v1/email/unsubscribe", "/api/v1/dev/emails/**")
+                                .permitAll()
                                 .requestMatchers("/api/v1/console/**")
                                 .hasRole("STAFF")
                                 .requestMatchers("/api/v1/merchants/**")

@@ -121,7 +121,7 @@ Start any of them with `docker compose --profile <name> up -d`, or list them in 
 | `cache` | Valkey 8 | `REDIS_HOST=localhost`, `REDIS_PORT=6379` | `local,valkey`, worker, non-`local` runs |
 | `events` | Kafka 4 (KRaft) + one-shot topic creation (`scripts/topics.sh`, takes ~2 min) | `KAFKA_BOOTSTRAP=localhost:9092` | worker; api without `local` |
 | `search` | Elasticsearch 9 (security off) | `ES_URIS=http://localhost:9200` | worker; api without `local` |
-| `mail` | Mailpit — inbox at http://localhost:8025 | `SMTP_HOST=localhost`, `SMTP_PORT=1025` | email adapter (S-13) |
+| `mail` | Mailpit — inbox at http://localhost:8025 | `SMTP_HOST=localhost`, `SMTP_PORT=1025` (the defaults) | api email (`EMAIL_PROVIDER=local`, S-13) |
 | `storage` | S3-compatible storage (RustFS) + bucket `northline-local`; console http://localhost:9101 | `STORAGE_ENDPOINT=http://localhost:9100`, `STORAGE_ACCESS_KEY=northline`, `STORAGE_SECRET_KEY=northline-dev-secret`, `STORAGE_PATH_STYLE=true` | api with `STORAGE_PROVIDER=s3` (S-10) |
 | `payments` | stripe-mock | `STRIPE_SECRET_KEY=sk_test_123`, `STRIPE_API_BASE=http://localhost:12111` | api payments + Stripe Connect instead of the fake |
 | `tools` | Kafka UI :8190, Kibana :5601 | — | you |
@@ -132,7 +132,9 @@ Notes:
   RustFS under `<module>/<merchantId>/…` ([object-storage.md](object-storage.md#local-rustfs)). MinIO no longer
   publishes images on Docker Hub, so the `storage` profile runs RustFS (same S3 API); an existing MinIO or any
   S3-compatible server works the same way through `STORAGE_ENDPOINT`.
-- **Mail:** nothing sends email yet (team invitations are logged, S-13); Mailpit is ready for it.
+- **Mail:** the api emails team invitations and money notices to Mailpit (`EMAIL_PROVIDER=local`, the default); without
+  Mailpit each email's text is logged instead. Template previews: http://localhost:8080/api/v1/dev/emails
+  ([email.md](email.md#local-mailpit)).
 - **Your own Kafka:** create the topics with
   `KAFKA_TOPICS_CMD=kafka-topics.sh KAFKA_TOPICS_BOOTSTRAP=localhost:9092 scripts/topics.sh`.
 - **Worker:** `cd server && ./gradlew :worker:bootRun` (no profile) needs Postgres, Kafka (`events`) and

@@ -1,9 +1,11 @@
 package ca.northline.merchants.application;
 
+import ca.northline.merchants.api.BusinessNames;
 import ca.northline.merchants.domain.DisplayName;
 import ca.northline.merchants.domain.Merchant;
 import ca.northline.shared.NotFound;
 import java.time.Clock;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -16,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-class MerchantProfileService implements ViewMerchant, RenameMerchant {
+class MerchantProfileService implements ViewMerchant, RenameMerchant, BusinessNames {
 
     private final MerchantRepository merchants;
     private final ApplicationEventPublisher events;
@@ -25,6 +27,11 @@ class MerchantProfileService implements ViewMerchant, RenameMerchant {
     @Override
     public Merchant view(String merchantId) {
         return merchants.findById(merchantId).orElseThrow(() -> new NotFound("merchant", merchantId));
+    }
+
+    @Override
+    public Optional<String> displayName(String merchantId) {
+        return merchants.findById(merchantId).map(m -> m.getDisplayName().value());
     }
 
     @Override
