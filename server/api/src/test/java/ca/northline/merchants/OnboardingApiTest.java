@@ -567,9 +567,10 @@ class OnboardingApiTest extends IntegrationTest {
                             .value("2099-05-31"))
                     .andExpect(jsonPath("$.checklist[?(@.key == 'insurance')].document.fileName")
                             .value("document.pdf"));
+            // AHS has no API: the permit number goes to a Northline agent (S-23)
             flow.complete(id, user, check("ahs_permit"), "{\"reference\":\"FS-2024-88120\"}")
                     .andExpect(jsonPath("$.checklist[?(@.key == 'ahs_permit')].status")
-                            .value("verified"))
+                            .value("submitted"))
                     .andExpect(jsonPath("$.checklist[?(@.key == 'ahs_permit')].reference")
                             .value("FS-2024-88120"));
             flow.complete(id, user, check("gst"), "{\"reference\":\"123456789rt0001\"}")

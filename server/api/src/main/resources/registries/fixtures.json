@@ -1,0 +1,22 @@
+{
+  "$comment": "LOCAL / TEST fixtures for the business registries (S-23; public registry data only, docs/runbooks/registries.md). Keys are the numbers owners enter. Unknown numbers answer 'not found' (→ manual review); numbers containing 'offline' answer 'unavailable'. Statuses use each source's own words.",
+  "corporations_canada": {
+    "1234567": { "name": "Northern Lights Bakery Inc.", "status": "Active" },
+    "7654321": { "name": "Chinook Movers Corporation", "status": "Active" },
+    "1111118": { "name": "Bow River Trading Ltd.", "status": "Dissolved" }
+  },
+  "alberta_corporate_registry": {
+    "2021456789": { "name": "Prairie Wrench Mobile Mechanics Ltd.", "status": "Active" },
+    "2201456789": { "name": "2201456 ALBERTA LTD.", "status": "Active" },
+    "2098765432": { "name": "Northern Lights Bakery Inc.", "status": "Active" },
+    "2011111111": { "name": "Sunalta Snow Removal Ltd.", "status": "Struck" },
+    "TN-2004-118840": { "name": "Pho Dau Bo", "status": "Active" },
+    "PR-1": { "name": "Two Hands", "status": "Active" }
+  },
+  "calgary_business_licences": {
+    "BL 22-118840": { "name": "PHO DAU BO", "status": "RENEWAL LICENSED", "expiresOn": "2027-05-31" },
+    "BL 24-200001": { "name": "Aspen Wrench", "status": "LICENSED", "expiresOn": "2027-01-12" },
+    "BL 19-000042": { "name": "Old Town Diner", "status": "EXPIRED", "expiresOn": "2025-06-30" },
+    "MV-2026-0042": { "name": "Taco Truck Calgary", "status": "LICENSED", "expiresOn": "2027-03-31" }
+  }
+}

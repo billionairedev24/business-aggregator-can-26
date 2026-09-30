@@ -89,6 +89,25 @@ northline:
   # /api/v1/dev/identity-sessions/{id}; refused under staging/prod) | stripe (Stripe Identity with STRIPE_SECRET_KEY).
   identity:
     provider: ${IDENTITY_PROVIDER:local}
+  # Business registry lookups (S-23, docs/runbooks/registries.md). provider per source: fixtures (local/test default;
+  # refused under staging/prod) · manual (every lookup to an agent) · the source's API.
+  registries:
+    corporations-canada:                  # ISED Federal Corporation API (GC API Store)
+      provider: ${REGISTRY_CORPORATIONS_CANADA_PROVIDER:fixtures}   # fixtures | api | manual
+      url: ${REGISTRY_CORPORATIONS_CANADA_URL:}                     # base URL shown by the API Store subscription
+      key: ${REGISTRY_CORPORATIONS_CANADA_KEY:}                     # subscription key (secret)
+      key-header: ${REGISTRY_CORPORATIONS_CANADA_KEY_HEADER:user-key}
+    alberta:                              # Alberta Corporate Registry: no public API
+      provider: ${REGISTRY_ALBERTA_PROVIDER:fixtures}               # fixtures | opencorporates | manual
+      url: ${REGISTRY_ALBERTA_URL:}                                 # default https://api.opencorporates.com
+      key: ${REGISTRY_ALBERTA_KEY:}                                 # OpenCorporates API token (secret)
+    calgary:                              # City of Calgary business licences (Open Calgary, Socrata)
+      provider: ${REGISTRY_CALGARY_PROVIDER:fixtures}               # fixtures | socrata | manual
+      url: ${REGISTRY_CALGARY_URL:https://data.calgary.ca}
+      dataset: ${REGISTRY_CALGARY_DATASET:vdjc-pybd}
+      key: ${REGISTRY_CALGARY_APP_TOKEN:}                           # Socrata app token (optional, secret)
+    recheck-after: ${REGISTRY_RECHECK_AFTER:P30D}
+    recheck-cron: ${REGISTRY_RECHECK_CRON:0 41 3 * * *}             # daily, America/Edmonton
   # Provider switches (ca.northline.platform) — see docs/runbooks/README.md.
   # Object storage (S-10, ca.northline.shared.storage): local (modules' disk fakes; placeholders under dev; refused
   # under staging/prod) | s3 (AWS S3 or RustFS/MinIO: endpoint + path-style) | gcs | azure (endpoint = account URL).
