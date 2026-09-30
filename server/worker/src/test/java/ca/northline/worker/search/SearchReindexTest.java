@@ -17,7 +17,6 @@ import ca.northline.worker.support.WorkerIntegrationTest;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import java.io.IOException;
 import java.time.Clock;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
