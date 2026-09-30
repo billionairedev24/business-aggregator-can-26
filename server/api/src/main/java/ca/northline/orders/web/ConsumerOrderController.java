@@ -4,15 +4,15 @@ import ca.northline.orders.application.TrackOrder;
 import ca.northline.orders.application.TrackOrder.OrderTracking;
 import ca.northline.orders.application.TrackingBus;
 import ca.northline.shared.security.CurrentUser;
+import jakarta.annotation.PreDestroy;
 import java.io.IOException;
 import java.time.Duration;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.time.Instant;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.concurrent.SimpleAsyncTaskScheduler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -39,12 +39,19 @@ class ConsumerOrderController {
 
     private final TrackOrder track;
     private final TrackingBus bus;
-    private final ScheduledExecutorService heartbeats =
-            Executors.newSingleThreadScheduledExecutor(Thread.ofVirtual().factory());
+    /** Spring's scheduler on virtual threads: one timer, each keep-alive on its own virtual thread. */
+    private final SimpleAsyncTaskScheduler heartbeats = new SimpleAsyncTaskScheduler();
 
     ConsumerOrderController(TrackOrder track, TrackingBus bus) {
         this.track = track;
         this.bus = bus;
+        heartbeats.setVirtualThreads(true);
+        heartbeats.setThreadNamePrefix("order-stream-");
+    }
+
+    @PreDestroy
+    void stop() {
+        heartbeats.close();
     }
 
     @GetMapping("/{orderId}")
@@ -66,9 +73,8 @@ class ConsumerOrderController {
                         emitter.complete();
                     }
                 },
-                HEARTBEAT.toSeconds(),
-                HEARTBEAT.toSeconds(),
-                TimeUnit.SECONDS);
+                Instant.now().plus(HEARTBEAT),
+                HEARTBEAT);
         Runnable close = () -> {
             subscription.close();
             beat.cancel(false);
