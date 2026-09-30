@@ -139,7 +139,7 @@ What still stops a complete deployment. Under the `local`/`test` profiles each o
 |---|---|---|---|
 | `IdentityVerification` (merchants) | unconfigured adapter throws | onboarding identity check | S-22 |
 | `RegistryLookup` (merchants) | unconfigured adapter throws | business and licence checks | S-23 |
-| `BankLinking` (merchants) | unconfigured adapter throws | instant bank linking in onboarding | S-24 |
+| `BankLinking` (payments; merchants' onboarding check) | stripe-java Financial Connections when `STRIPE_SECRET_KEY` is set (S-24) | Payouts › Change links a bank through Stripe.js (needs `STRIPE_PUBLISHABLE_KEY`); onboarding's bank check is verified once a bank is linked — [stripe.md § 7](stripe.md#7-bank-linking--stripe-financial-connections-s-24) | — |
 | `DomainVerifier` (merchants) | unconfigured adapter throws | custom storefront domains | S-31 |
 | SMS notices (bank change) and SMS team invitations | not sent by the api (the SMS port is in northline-auth) | bank-change notice by email only; mobile invitations by copied link | S-27 |
 | `CommerceSync` (catalogue) | unconfigured adapter throws | Shopify / Square / Lightspeed connections | S-35 |
