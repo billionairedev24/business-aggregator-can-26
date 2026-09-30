@@ -2263,3 +2263,58 @@ Branch `web/s-53-services-landing` (from main). Contracts: [CONSUMER_WEB_PLAN.md
   ServiceOffers`, `merchants.api.PublicProviders`.
 - **Not done:** search-backed ranking and `next_slot` (E-6); distance; per-category French taxonomy in the database;
   structured data (S-63).
+
+## 2026-09-30 — S-54 Public provider page from the storefront API (sections, reviews, service area)
+
+Branch `web/s-54-provider-page`, **stacked on `web/s-53-services-landing`** (uses its `hire` module, service kinds and
+copy).
+
+- **Two public reads, one page.** The page itself is the storefront API as it was (`GET /api/v1/storefronts/{slug}`:
+  enabled sections in the owner's order, brand colour, logo, tagline, announcement, CTA label, verified facts); new
+  `GET /api/v1/public/providers/{slug}` (module `hire`) adds what Northline holds: rating and review count, the latest
+  quality score's on-time / dispute / re-book figures, the live approved services (with each one's category and
+  booking type), the service-area zones, the next free slot (S-53's `ProviderSlots`) and the three newest reviews;
+  `GET /api/v1/public/providers/{slug}/reviews?offset&limit` pages the rest (10 by default, at most 20). Both
+  `max-age=60, public`. 404 unless the business is an active `provider`/`both` with a published page. The loader
+  fetches both in parallel on the server.
+- **The business's kind** (visit, home, event, appointment, consult — the CTA title, the mode tag and the copy family)
+  comes from the category most of its services are in; a business without services is a visit.
+- **Sections in order** (storefront-sections.json): the hero (design `pv` hero: brand-colour band, logo or initial,
+  name, tagline + "since <year of approval>", "<tier> tier · verified") and the trust figures and credential tags
+  always open the page; then the enabled `about` (the Business-step description), `reviews` (three newest, "Show
+  more reviews", the business's public reply under a review, "New on Northline — verified" before the first), `area`
+  (the zones — "Comes to you in Beltline · Downtown."; appointments and consultations: "You go to them in <city>."),
+  `faq` (the builder's pairs as disclosure widgets) and `policies` in the owner's order. `services` + `cta` are the
+  aside (design): the service menu (name, duration, price or "Quote") only when `services` is enabled, as the spec says
+  ("Only the Book button remains"), the button labelled with the page's CTA label (Book a visit / Request a quote /
+  Order now / Reserve — the owner's choice wins over the design's per-type wording), "Not sure? Request a quote" for
+  quoteable kinds, "Next available: … · <note>". The announcement is a strip above the hero.
+- **Not rendered:** `gallery` (the builder can't add photos yet, S-53 preview shows the same), the map of the area
+  (no map provider; the zones are listed), and `featured`/`catalogue`/`delivery`/`menu`/`hours`/`fulfil`/`permit`
+  (store and menu sections; a `both` page's products belong to the shop pages, S-49/S-50). Credential tags from verified
+  checks: licence → "AMVIC licensed", insurance → "$2M insured" (the insurance check requires ≥ $2M, onboarding
+  decision), ID → "ID verified", site visit → "Site visited"; the design's "Red Seal journeyman" etc. are sample text
+  with no data behind them. The consult variant's "sales · 12 mo" figure has no source; re-book is shown for everyone.
+- **SEO-ready, structured data left to S-63:** server-rendered title ("Prairie Wrench · Mobile mechanic · Calgary ·
+  Northline"), description (the business's description, else its tagline), canonical (the live custom domain when there
+  is one — the owner's own address is the page's home — else `NL_SITE_ORIGIN/providers/<slug>`) and Open Graph tags.
+  No `hreflang`: the language is a cookie, not a URL (S-63 decides).
+- **Other hosts** (plan: "storefront pages on `pages.<zone>` and merchants' own domains are S-54/S-63 work"): the node
+  server (`server/page-hosts.mjs`) classifies the `Host`: the site; `pages.<zone>` (`NL_PAGES_HOST`) where `/<slug>` is
+  that page; any other host = a merchant's domain, resolved with S-31's `GET /api/v1/public/storefronts/by-host`
+  through the consumer-bff (cached 60 s like the endpoint's `Cache-Control`, a failed lookup isn't cached → 503 "Try
+  again in a moment."; unknown host → 404 "No Northline page is connected to this domain."). Only business pages are
+  served; other page kinds and every other path redirect (302) to `NL_SITE_ORIGIN`. The server passes the page as
+  `x-nl-page-mode/host/slug` headers (the browser's are dropped); the router's `rewrite` maps the host's `/` or
+  `/<slug>` onto `/providers/<slug>` and back, so SSR and hydration agree while the address bar keeps the merchant's
+  URL. Sign-in, booking and the cart live on the site (the consumer-bff client has one redirect URI; merchants' domains
+  get no `/api` route), so on those hosts the page's links are absolute to `NL_SITE_ORIGIN` (`siteHref`) and "Show
+  more reviews" becomes "See all reviews" on the site. Local development: the Vite dev server doesn't do host routing;
+  the built server does with `NL_PAGES_HOST` (runbooks/local.md). New variables `NL_SITE_ORIGIN`, `NL_PAGES_HOST`
+  (consumer app, optional, the chart sets them from `urls.consumer` / `urls.pages`); `publicConfig` carries `siteOrigin`
+  and `page`, `useSiteConfig()` reads them.
+- **New public API:** `trust.api.PublicReviews` (newest first; author display name, job label, reply — nothing else
+  about the author).
+- **Not done:** JSON-LD, sitemap, `hreflang` (S-63); the shell on a merchant's own domain still shows the site header,
+  whose links and session/cart calls go to the site or fail quietly (no BFF route there) — a slimmer page chrome for
+  other hosts is left to S-63; the CDN in front of these pages (edge caching) isn't configured.

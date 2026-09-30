@@ -140,6 +140,13 @@ the dev server. Location: the header asks for the browser's position once per vi
 overrides it); `localStorage['nl.location']` holds an address chosen on the Location screen. Language: the FR/EN
 toggle writes the `nl.locale` cookie, so the server renders the next page in French.
 
+Business pages on other hosts (S-54): the built server serves `pages.<zone>/<slug>` and merchants' own domains when
+`NL_PAGES_HOST` is set (the Vite dev server doesn't). Try it with `pnpm --filter @northline/consumer build`, then
+`NL_SITE_ORIGIN=http://localhost:3000 NL_PAGES_HOST=pages.localhost NL_BFF_URL=http://localhost:8080 node
+web/apps/consumer/server/node-server.mjs` and open `http://pages.localhost:3000/prairie-wrench` (browsers resolve
+`*.localhost`). A custom domain needs a host name pointing at your machine and a live domain in the database (S-31's
+"Simulate DNS records →").
+
 ## 6. Optional stand-ins
 
 Start any of them with `docker compose --profile <name> up -d`, or list them in `COMPOSE_PROFILES` in `.env` and run

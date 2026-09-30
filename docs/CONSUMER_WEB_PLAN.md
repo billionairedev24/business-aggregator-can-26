@@ -117,7 +117,7 @@ A feature folder per story area, named after the design: `home`, `location`, `se
 | `/services/$category` | svcCategory | S-53 (**built**) | SSR + SEO; `$category` = the leaf slug (`mobile-mechanic`) |
 | `/services/$category/providers` | providers | S-53 (**built**) | category SSR, providers by location in the browser |
 | `/services/$category/quote` | book (quote mode, from a category) | S-56 | "Describe the job, get 3 quotes"; guest banner |
-| `/providers/$slug` | provider | S-54 | public provider page (storefront API); SSR + SEO + JSON-LD (S-63) |
+| `/providers/$slug` | provider | S-54 (**built**) | public provider page (storefront API + `/api/v1/public/providers/{slug}`); SSR + SEO; JSON-LD is S-63; also served as `pages.<zone>/<slug>` and on merchants' own domains |
 | `/providers/$slug/book` | book | S-55 | guest banner |
 | `/quotes/$quoteId` | quote | S-56 | guest banner |
 | `/account/orders` | orders | S-58 | Orders & bookings — from the account menu only |
@@ -126,7 +126,7 @@ A feature folder per story area, named after the design: `home`, `location`, `se
 | `/sell?type=seller\|provider\|kitchen` | (account › Sell) | S-61 | entry into Studio onboarding |
 | `/legal/terms.html`, `/legal/privacy.html` | — | S-63 | static, verbatim (design 09/10) until S-63's pages |
 
-Storefront pages on `pages.<zone>` and merchants' own domains (by `Host`) are S-54/S-63 work; they share the app.
+Storefront pages on `pages.<zone>` and merchants' own domains (by `Host`) share the app (S-54): `server/page-hosts.mjs` decides per request (`NL_PAGES_HOST`, the S-31 by-host lookup), the router maps the host's path onto `/providers/<slug>` (`src/lib/pages.ts`), and links from there go to `NL_SITE_ORIGIN` (`siteHref`, `useSiteConfig()`). Business pages only; store and menu pages go to the site's home until S-49/S-57 take them.
 
 ## Contracts
 
@@ -182,6 +182,7 @@ Cookie `nl.locale` = `en` | `fr` (1 year, not HttpOnly). `useLocale().setLocale(
 | `GET /bff/session`, `GET /bff/login`, `POST /bff/logout` | **exists** (S-45) | shell, S-62 |
 | `GET /api/v1/me` | exists (any signed-in token) | S-59 |
 | `GET /api/v1/storefronts/{slug}`, `/logo`, `GET /api/v1/public/storefronts/by-host?host=` | exists, public | S-54, S-63 |
+| `GET /api/v1/public/providers/{slug}`, `/providers/{slug}/reviews?offset&limit` | **exists** (S-54, module `hire`) | S-54 |
 | `GET /api/v1/onboarding/taxonomy` | exists (signed in) | S-61 |
 | northline-auth JSON API (`/api/auth/register…`, `/api/auth/sign-in…`, `/api/auth/sign-out`) + S-62's `/api/auth/sign-in/code[/verify]`, `/api/auth/register/complete` | exists | S-62 (built) |
 | `GET /api/v1/geo/reverse` | **missing** (the path is already public in the api) | S-47 (header falls back without it) |
@@ -213,7 +214,7 @@ Additive only; record each addition in `docs/DECISIONS.md` under the story's hea
 
 ## Deploy
 
-- Consumer app: `apps.consumer` (type node, port 3000, `/healthz`), env `NL_BFF_URL`, `NL_AUTH_ORIGIN`, `TRUST_PROXY`.
+- Consumer app: `apps.consumer` (type node, port 3000, `/healthz`), env `NL_BFF_URL`, `NL_AUTH_ORIGIN`, `TRUST_PROXY`, `NL_SITE_ORIGIN` and `NL_PAGES_HOST` (S-54, from `urls.consumer` / `urls.pages`).
 - consumer-bff: `apps.consumer-bff` (the bff image, `profiles: [consumer]`, port 8081, `CONSUMER_BFF_SECRET`);
   routes `/api`, `/bff`, `/oauth2`, `/login` on the consumer host, `/api`, `/bff` on `pages.`; reachable from the
   consumer app for SSR. auth needs `CONSUMER_BFF_SECRET_HASH`. `promote.sh` pins it to the bff digest.
