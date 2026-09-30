@@ -61,6 +61,15 @@ class SearchIndexer {
         events.deadLettered(GROUP, record);
     }
 
+    /** The topics this consumer reads (the reindex catches up from the same ones). */
+    static java.util.List<String> topics(ca.northline.worker.topics.TopicCatalogue catalogue) {
+        return catalogue.consumers().stream()
+                .filter(c -> c.group().equals(GROUP))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(GROUP + " is not in deploy/kafka/topics.yaml"))
+                .topics();
+    }
+
     private void index(EventEnvelope event) {
         var scope = Scope.of(event);
         var outcome = projection.refresh(scope, SearchProjection.Targets.LIVE);
