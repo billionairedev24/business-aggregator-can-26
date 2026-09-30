@@ -1,5 +1,7 @@
 # Implementation plan — Studio (provider · seller · kitchen · both)
 
+> The consumer web app (design 06) has its own plan: [CONSUMER_WEB_PLAN.md](CONSUMER_WEB_PLAN.md) (S-45).
+
 Scope: everything in `design/02 Provider Studio.dc.html` (signed-out auth, onboarding, every Studio screen for all four portals), full stack. Source of truth order is in `CLAUDE.md`. This file fixes the conventions every workstream follows so the pieces fit.
 
 ## Repository layout
@@ -8,7 +10,7 @@ This folder (`project/repo/`) is the project root; it is meant to be lifted into
 ```
 server/api        Spring Modulith monolith — one package + one Postgres schema per module
 server/auth       Spring Authorization Server (OIDC, passkeys, TOTP, OTP registration)
-server/bff        Gateway MVC + OAuth2 client (consumer-bff, studio-bff) — browser holds only a session cookie
+server/bff        Gateway MVC + OAuth2 client (studio-bff; consumer-bff = the `consumer` profile, S-45) — browser holds only a session cookie
 server/worker     Kafka consumers
 db/migrations     Flyway. V001–V017 are the design baseline. New migrations use the version range assigned to the workstream (below).
 web/packages/tokens   the only place colours/fonts/radii live
@@ -43,7 +45,9 @@ See `docs/BACKEND_CONVENTIONS.md` (written by the backend foundation) — layeri
 | V070–V079 | messaging & help |
 | V080–V089 | storefront, settings, compliance |
 | V090–V099 | kitchen / food |
-| V100–V109 | dev seed data (`db/seed-dev/`, only under the `local` profile) |
+| V100–V109 | dev seed data (`db/seed-dev/`, only under the `local` profile; V109 = consumer persona) |
+| V110–V119 | consumer web (CONSUMER_WEB_PLAN.md) |
+| V120–V129 | search |
 
 ## Studio app (`web/apps/studio`) — what exists
 - `pnpm dev` (port 3100). Dev without auth/bff: `NL_DEV_USER=<seeded user id> pnpm dev` → `/api` is proxied to the api (`:8080`) with `X-Dev-User` (accepted only by the api `local` profile) and `/bff/session` is answered by the dev server. Without `NL_DEV_USER`, `/api`, `/bff`, `/oauth2`, `/login` go to the studio BFF (`:8082`).
