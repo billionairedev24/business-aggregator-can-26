@@ -135,7 +135,7 @@ start_one() { # start_one <service> <services being started>
   printf '%s' "$cmd" >"$RUN_DIR/$s.cmd"
   # The service's shell becomes a session (and process-group) leader and records its own pid: the group `down` signals.
   launch "$LOG_DIR/$s.log" "echo \$\$ > '$pidf' && $cmd"
-  local i; for i in $(seq 1 50); do [ -s "$pidf" ] && break; sleep 0.1; done
+  for _ in $(seq 1 50); do [ -s "$pidf" ] && break; sleep 0.1; done
   [ -s "$pidf" ] || die "$s did not start — see .run/logs/$s.log"
   STARTED="$STARTED $s"
   say "${c_dim}… $s starting (log: .run/logs/$s.log)${c_off}"
@@ -154,17 +154,17 @@ wait_healthy() {
 }
 
 stop_one() {
-  local s="$1" pid i port
+  local s="$1" pid port
   running "$s" || { rm -f "$(pid_file "$s")" "$RUN_DIR/$s.cmd"; return 0; }
   pid="$(cat "$(pid_file "$s")")"
   port="$(port_of "$s")"
   kill -TERM -- "-$pid" 2>/dev/null || true
-  for i in $(seq 1 40); do kill -0 -- "-$pid" 2>/dev/null || break; sleep 0.5; done
+  for _ in $(seq 1 40); do kill -0 -- "-$pid" 2>/dev/null || break; sleep 0.5; done
   if kill -0 -- "-$pid" 2>/dev/null; then
     kill -KILL -- "-$pid" 2>/dev/null || true
-    for i in $(seq 1 20); do kill -0 -- "-$pid" 2>/dev/null || break; sleep 0.25; done
+    for _ in $(seq 1 20); do kill -0 -- "-$pid" 2>/dev/null || break; sleep 0.25; done
   fi
-  for i in $(seq 1 40); do port_listening "$port" || break; sleep 0.25; done
+  for _ in $(seq 1 40); do port_listening "$port" || break; sleep 0.25; done
   rm -f "$(pid_file "$s")" "$RUN_DIR/$s.cmd"
   say "${c_dim}■ $s stopped${c_off}"
 }

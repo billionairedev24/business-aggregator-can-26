@@ -2266,5 +2266,9 @@ Built on S-45 (branch `web/s-62-consumer-auth` from `web/s-45-consumer-shell`).
   (`server-events`); GitLab likewise, installing `make` in images that lack it (Temurin, Playwright via apt; Alpine
   helm/terraform/tflint via apk). Kept as they were: the web image job (docker/build-push-action with the GHA cache, a
   buildx matrix on GitLab) and the promotion jobs (PR/MR creation is CI-specific).
+- **Verified here:** `make env`, `make up PROFILES=db` (an isolated compose project: stand-ins healthy, 182 categories
+  seeded, api + Studio up, `/api/v1/me/businesses` through the Studio's proxy as Ravi), `make status`, `make logs`,
+  `make down SERVICES=…`, `make run SERVICES=api` stopped by a signal (app stopped, pid files removed), a failed start
+  reported with the log's last lines, `make help`, and `-n` dry runs of the Gradle/compose/image targets.
 - **Not done:** `OBS=1` (samop's observability flag) waits for S-111/S-112, which bring the telemetry stack; the pipelines
   were not run (manual only, no credits); nothing was run on macOS.
