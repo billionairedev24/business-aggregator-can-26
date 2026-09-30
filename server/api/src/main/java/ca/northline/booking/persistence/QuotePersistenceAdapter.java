@@ -82,6 +82,20 @@ class QuotePersistenceAdapter implements QuoteRepository {
     }
 
     @Override
+    public List<Quote> sentOf(String requestId) {
+        return jdbc.sql("select " + COLUMNS + """
+                          from booking.quotes where request_id = :id and state <> 'draft'
+                         order by merchant_id, version desc
+                        """)
+                .param("id", requestId)
+                .query((rs, _) -> header(rs))
+                .list()
+                .stream()
+                .map(this::withLines)
+                .toList();
+    }
+
+    @Override
     public void insertDraft(Quote quote) {
         var c = quote.getContent();
         var t = quote.getTotals();
