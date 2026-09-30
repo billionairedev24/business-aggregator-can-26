@@ -1,5 +1,6 @@
 package ca.northline.merchants.persistence;
 
+import ca.northline.merchants.api.CategorySource;
 import ca.northline.merchants.application.ApplicationRepository;
 import ca.northline.merchants.domain.BusinessProfile;
 import ca.northline.merchants.domain.BusinessStructure;
@@ -26,6 +27,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -41,6 +43,7 @@ class ApplicationPersistenceAdapter implements ApplicationRepository {
 
     private final JdbcClient jdbc;
     private final MerchantJsonColumns json;
+    private final CategorySource categorySource;
 
     @Override
     public Optional<MerchantApplication> findById(String merchantId) {
@@ -109,29 +112,37 @@ class ApplicationPersistenceAdapter implements ApplicationRepository {
                 .list();
     }
 
+    /** The business's categories; names, root and registry come from the catalogue's taxonomy (S-37). */
     private List<SelectedCategory> categories(String merchantId) {
-        return jdbc.sql("""
-                        select mc.category_id, mc.suggested_name, c.root, c.name_i18n::text as names, c.regulated_registry
-                          from merchants.merchant_categories mc
-                          left join catalogue.categories c on c.id = mc.category_id
-                         where mc.merchant_id = :id
-                         order by mc.suggested_name nulls first, mc.category_id
+        record Chosen(String categoryId, @Nullable String suggestedName) {}
+        var chosen = jdbc.sql("""
+                        select category_id, suggested_name from merchants.merchant_categories where merchant_id = :id
+                         order by suggested_name nulls first, category_id
                         """)
                 .param("id", merchantId)
-                .query((rs, _) -> {
-                    var suggested = rs.getString("suggested_name");
-                    var names = json.map(rs.getString("names"));
+                .query((rs, _) -> new Chosen(rs.getString("category_id"), rs.getString("suggested_name")))
+                .list();
+        var taxonomy = categorySource
+                .byIds(chosen.stream().map(Chosen::categoryId).toList())
+                .stream()
+                .collect(Collectors.toMap(CategorySource.Category::id, c -> c));
+        return chosen.stream()
+                .map(c -> {
+                    var category = taxonomy.get(c.categoryId());
+                    var suggested = c.suggestedName();
                     var name = suggested != null
                             ? suggested
-                            : String.valueOf(names.getOrDefault("en", rs.getString("category_id")));
+                            : category == null
+                                    ? c.categoryId()
+                                    : category.names().getOrDefault("en", c.categoryId());
                     return new SelectedCategory(
-                            rs.getString("category_id"),
+                            c.categoryId(),
                             name,
-                            CodedEnums.fromCode(rs.getString("root"), CategoryRoot.class),
-                            rs.getString("regulated_registry"),
+                            category == null ? null : CodedEnums.fromCode(category.root(), CategoryRoot.class),
+                            category == null ? null : category.regulatedRegistry(),
                             suggested != null);
                 })
-                .list();
+                .toList();
     }
 
     @Override
