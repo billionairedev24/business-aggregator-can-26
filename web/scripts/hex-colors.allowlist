@@ -3,5 +3,5 @@
 # Not listed because never scanned: packages/tokens (the source of colours), tests, test fixtures, public/ assets
 # (e.g. apps/studio/public/favicon.svg), .storybook/ (theme-switcher demo values).
 
-apps/studio/src/features/auth/SocialButtons.tsx  # Google "G" logo: Google's brand colours, must not be themed
+packages/auth-kit/src/marks.tsx  # Google "G" logo: Google's brand colours, must not be themed (S-62: shared by the Studio and the consumer site)
 apps/studio/src/features/storefront/sections.ts  # merchant brand-colour swatches are merchant data, not theme tokens (DECISIONS.md)

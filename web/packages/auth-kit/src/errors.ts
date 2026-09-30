@@ -1,10 +1,10 @@
-import { ApiError, ValidationError } from '../../lib/http';
-import type { AuthKey, AuthT } from './messages';
-import { mmss } from './useCountdown';
+import { ApiError, ValidationError } from '@northline/client';
+import type { AuthKitKey, AuthKitT } from './messages';
+import { mmss } from './countdown';
 import { PasskeyError } from './webauthn';
 
 /** Server rule ids → the same messages the client shows (so French users see French for server-side 422s too). */
-const RULES: Record<string, AuthKey> = {
+const RULES: Record<string, AuthKitKey> = {
   'firstName:required': 'firstNameRequired',
   'lastName:required': 'lastNameRequired',
   'phone:required': 'phoneRequired',
@@ -23,7 +23,7 @@ const RULES: Record<string, AuthKey> = {
 };
 
 /** 422 → { field: message }, translated where the rule is known. `mismatch` depends on the step (see callers). */
-export function fieldErrors(err: unknown, t: AuthT, mismatch: AuthKey = 'codeWrong'): Record<string, string> {
+export function fieldErrors(err: unknown, t: AuthKitT, mismatch: AuthKitKey = 'codeWrong'): Record<string, string> {
   if (!(err instanceof ValidationError)) return {};
   const out: Record<string, string> = {};
   for (const e of err.errors) {
@@ -37,7 +37,7 @@ export function fieldErrors(err: unknown, t: AuthT, mismatch: AuthKey = 'codeWro
  * Anything that isn't a field error: flow restarted, throttled, passkey problems, network, code not sent (`sent` = what
  * was being sent when the SMS/voice provider failed: the form's first code, a text resend or a call).
  */
-export function flowError(err: unknown, t: AuthT, sent: 'form' | 'sms' | 'voice' = 'form'): string | undefined {
+export function flowError(err: unknown, t: AuthKitT, sent: 'form' | 'sms' | 'voice' = 'form'): string | undefined {
   if (err instanceof ValidationError) return undefined;
   if (err instanceof PasskeyError) return t(err.reason === 'unsupported' ? 'passkeyUnsupported' : 'passkeyCancelled');
   if (err instanceof ApiError) {

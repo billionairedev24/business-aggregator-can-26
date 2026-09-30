@@ -1,6 +1,6 @@
 import { authUrl } from '../../lib/auth-server';
 import { ValidationError, type FieldError } from '../../lib/http';
-import { getPasskey, PasskeyError } from '../auth/webauthn';
+import { getPasskey, PasskeyError } from '@northline/auth-kit';
 
 /**
  * Step-up for money moves ("Payouts always require a fresh authentication", design 02): confirm with a passkey — or
