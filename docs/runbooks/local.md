@@ -194,6 +194,10 @@ Notes:
 - **POS menu import (S-36):** `POS_PROVIDER=local` (the default) fakes Square, Clover and Toast: Kitchen › Menu › Import
   › From your POS connects at once (Toast: any GUID but the nil one) and previews the fixture menu
   (`server/api/src/main/resources/pos-fixtures/menu.json`, Pho Dau Bo). [pos-menu-import.md](pos-menu-import.md)
+- **Addresses (S-47):** `PLACES_PROVIDER=local` (the default) answers the consumer Location screen from fixture
+  addresses (design 06's "1204 17 …" in Calgary, one per market, Toronto / Montréal / Vancouver for the waitlist) and
+  names the device's position when it is within 3 km of one. To try Google from a laptop:
+  `PLACES_PROVIDER=google GOOGLE_MAPS_API_KEY=…` in `server/.env` ([google-maps.md](google-maps.md)).
 - **Your own Kafka:** create the topics with
   `KAFKA_TOPICS_CMD=kafka-topics.sh KAFKA_TOPICS_BOOTSTRAP=localhost:9092 scripts/topics.sh`, or with the provisioner
   the deployed environments use: `cd server && ./gradlew :worker:kafkaTopics --args='apply'` (`plan` / `verify` change
