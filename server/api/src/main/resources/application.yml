@@ -49,6 +49,7 @@ spring:
     producer:
       acks: all
       properties.enable.idempotence: true
+    template.observation-enabled: true      # S-26: traceparent header on every externalized event
   modulith:
     events:
       jdbc:

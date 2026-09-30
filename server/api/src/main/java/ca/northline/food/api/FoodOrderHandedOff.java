@@ -1,6 +1,7 @@
 package ca.northline.food.api;
 
 import ca.northline.shared.DomainEvent;
+import ca.northline.shared.EventType;
 import java.time.Instant;
 import org.springframework.modulith.events.Externalized;
 
@@ -12,6 +13,7 @@ import org.springframework.modulith.events.Externalized;
  *
  * @param fulfilmentMode delivery | pickup
  */
+@EventType("orders.order_handed_off")
 @Externalized("orders.order::#{aggregateId()}")
 public record FoodOrderHandedOff(
         String eventId,

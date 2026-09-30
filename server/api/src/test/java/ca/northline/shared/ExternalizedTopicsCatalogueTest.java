@@ -23,7 +23,7 @@ import org.yaml.snakeyaml.constructor.SafeConstructor;
  * the provisioning Job creates it (and its {@code .dlq}) before the api publishes to it. Topics are never auto-created
  * in any environment: a missing one makes the externalizer fail and the outbox retry forever.
  */
-class ExternalizedTopicsCatalogueTest {
+public class ExternalizedTopicsCatalogueTest {
 
     private static final Path CATALOGUE = Path.of("../../deploy/kafka/topics.yaml");
 
@@ -50,7 +50,7 @@ class ExternalizedTopicsCatalogueTest {
     }
 
     /** event class → topic, from {@code @Externalized("topic::key")} on every class under ca.northline. */
-    static Map<String, String> externalizedTopics() {
+    public static Map<String, String> externalizedTopics() {
         var scanner = new ClassPathScanningCandidateComponentProvider(false) {
             @Override
             protected boolean isCandidateComponent(AnnotatedBeanDefinition definition) {
