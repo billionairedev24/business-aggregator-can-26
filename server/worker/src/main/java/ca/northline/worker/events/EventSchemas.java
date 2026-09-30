@@ -26,7 +26,8 @@ public final class EventSchemas {
 
     public static final String LOCATION = "classpath*:events/*.schema.json";
 
-    static final Set<String> KEYWORDS = Set.of(
+    /** The JSON Schema keywords this validator implements; S-34's contract check refuses schemas using others. */
+    public static final Set<String> KEYWORDS = Set.of(
             "$schema",
             "$id",
             "title",
@@ -42,6 +43,9 @@ public final class EventSchemas {
             "minLength",
             "maxLength",
             "items");
+
+    /** Values of {@code format} the validator checks (S-34 refuses others: they would pass unchecked). */
+    public static final Set<String> FORMATS = Set.of("date-time", "date");
 
     private static final Pattern ID = Pattern.compile("northline:([a-z0-9_.]+):(\\d+)");
 
@@ -73,6 +77,48 @@ public final class EventSchemas {
             throw new IllegalStateException("No event schemas on the classpath (" + LOCATION + ")");
         }
         return new EventSchemas(schemas);
+    }
+
+    /**
+     * A validator over schemas read elsewhere — S-34's contract check reads the working tree's files. Same rules as
+     * {@link #fromClasspath}: {@code $id} = {@code northline:<type>:<version>}, only {@link #KEYWORDS}.
+     */
+    public static EventSchemas of(Map<String, JsonNode> schemasByName) {
+        var schemas = new HashMap<String, JsonNode>();
+        schemasByName.forEach((name, schema) -> {
+            var id = ID.matcher(schema.path("$id").asString(""));
+            if (!id.matches()) {
+                throw new IllegalStateException(name + ": $id must be northline:<type>:<version>");
+            }
+            checkKeywords(schema, name + " ");
+            schemas.put(key(id.group(1), Integer.parseInt(id.group(2))), schema);
+        });
+        return new EventSchemas(schemas);
+    }
+
+    /** Keywords of {@code schema} (nested ones as {@code <property>.<keyword>}) outside {@link #KEYWORDS}. */
+    public static List<String> unsupportedKeywords(JsonNode schema) {
+        var found = new ArrayList<String>();
+        collectUnsupported(schema, "", found);
+        return List.copyOf(found);
+    }
+
+    private static void collectUnsupported(JsonNode schema, String where, List<String> found) {
+        for (var name : schema.propertyNames()) {
+            if (!KEYWORDS.contains(name)) {
+                found.add(where + name);
+            }
+        }
+        var properties = schema.get("properties");
+        if (properties != null && properties.isObject()) {
+            for (var name : properties.propertyNames()) {
+                collectUnsupported(properties.get(name), where + name + ".", found);
+            }
+        }
+        var items = schema.get("items");
+        if (items != null && items.isObject()) {
+            collectUnsupported(items, where + "items.", found);
+        }
     }
 
     public boolean knows(String type, int version) {
@@ -139,6 +185,9 @@ public final class EventSchemas {
             if ("date-time".equals(schema.path("format").asString("")) && !isDateTime(text)) {
                 problems.add(path + " must be an RFC 3339 date-time");
             }
+            if ("date".equals(schema.path("format").asString("")) && !isDate(text)) {
+                problems.add(path + " must be an RFC 3339 full-date");
+            }
             var length = text.codePointCount(0, text.length());
             if (schema.has("minLength") && length < schema.get("minLength").asInt()) {
                 problems.add(
@@ -199,6 +248,15 @@ public final class EventSchemas {
             case "null" -> value.isNull();
             default -> throw new IllegalStateException("Unknown JSON Schema type " + type);
         };
+    }
+
+    private static boolean isDate(String text) {
+        try {
+            java.time.LocalDate.parse(text);
+            return true;
+        } catch (DateTimeParseException e) {
+            return false;
+        }
     }
 
     private static boolean isDateTime(String text) {

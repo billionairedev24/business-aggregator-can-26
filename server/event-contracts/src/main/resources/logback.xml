@@ -1,0 +1,8 @@
+<!-- S-34 contract check: plain report lines on the console. -->
+<configuration>
+  <appender name="OUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder><pattern>%msg%n</pattern></encoder>
+  </appender>
+  <root level="WARN"><appender-ref ref="OUT"/></root>
+  <logger name="ca.northline.contracts" level="INFO"/>
+</configuration>

@@ -156,3 +156,33 @@ Handlers that call outside systems claim per recipient and channel on top of the
 `kafka-console-producer.sh --property parse.headers=true` — the three `nl-event-*` headers are required. Tests:
 `./gradlew :worker:test` (Kafka 4 and PostGIS in Testcontainers; `ConsumerFrameworkTest` covers duplicate delivery,
 retry, DLQ + alert, poison, replay, lag metrics and shutdown settings).
+
+## 7. Schema checks (S-34)
+
+The schemas in `server/api/src/main/resources/events` are a contract between the producers (api, northline-auth)
+and the worker, which rejects any payload that breaks its schema (poison → `.dlq`, § 3). Four checks keep it:
+
+| # | check | fails when |
+|---|---|---|
+| 1 | schemas | a file isn't JSON; the name isn't `<module>.<event>.v<n>.schema.json` or `$id` isn't `northline:<type>:<n>`; `$schema` isn't draft 2020-12; a keyword or `format` the worker's `EventSchemas` doesn't implement (it would pass unchecked); a malformed value (`type`, `required` naming an undeclared field, schema-valued `additionalProperties`, bad `pattern`); `eventId`, `occurredAt`, `aggregateId` not required |
+| 2 | events ↔ schemas | an `@Externalized` event (api modules, northline-auth) has no file for its type and `version()`; a file's type has no event, or its version is above the event's |
+| 3 | sample payloads | an event record built with representative values — every `@Nullable` component set and null, every Java enum constant — serialised like the outbox (Jackson 3, nulls included) breaks its schema: an undeclared field in a closed schema, a missing required one, another type, null where the schema says non-null, an enum value outside the list |
+| 4 | breaking changes | compared with the base branch **at the merge base**: a field removed or newly required, a type or `enum` narrowed (or added), `additionalProperties` closed, `pattern` / `format` added or changed, `minimum` / `minLength` raised, `maxLength` lowered or added, or a file deleted — in the **same** version file |
+
+**Changing an event.** Additive (new optional field, wider type or enum, descriptions): edit the file. Breaking: keep
+`v<n>` untouched, add `<type>.v<n+1>.schema.json`, return `n+1` from the event's `version()` (the api's
+`DomainEvent`), and teach the consumers the new version (the worker validates both while old events drain). Old
+version files are never deleted while a topic or DLQ can still hold them.
+
+**Where it runs.** `./gradlew build` runs checks 1–3 (and 4 when `origin/main` — or `-PeventSchemas.base=<ref>` —
+is available locally) through `:event-contracts:test`. By hand, with the report:
+
+```sh
+cd server && ./gradlew :event-contracts:eventSchemas                          # base = origin/main if present
+./gradlew :event-contracts:eventSchemas -PeventSchemas.base=origin/main -PeventSchemas.requireBase=true   # as CI
+```
+
+CI: the manual `event-schemas` workflow / GitLab `events:schemas` job ([ci.md](ci.md)) fetches the base in full and
+requires it (exit 2 without it). The sample builder knows the types events use today (strings, numbers, booleans,
+`Instant`/dates, enums, lists, nested records); another type or a `pattern` none of its sample strings match fails
+check 3 with "teach SamplePayloads" rather than being skipped.

@@ -1,0 +1,33 @@
+# S-34 — event JSON Schemas as a contract. Included from .gitlab-ci.yml.
+# Pipelines only exist when started by hand (see workflow: rules in .gitlab-ci.yml): PIPELINE_PART=events (or all).
+# Compares with EVENT_SCHEMAS_BASE (default main) at the merge base; breaking changes need a version bump.
+
+events:schemas:
+  stage: check
+  needs: []
+  image: eclipse-temurin:25-jdk
+  variables:
+    GIT_DEPTH: "0" # the base branch and the merge base
+    GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle-home
+    GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2
+  rules:
+    - if: $PIPELINE_PART == "all" || $PIPELINE_PART == "events"
+  timeout: 20m
+  interruptible: true
+  cache:
+    key:
+      prefix: gradle
+      files:
+        - server/gradle/libs.versions.toml
+        - server/gradle/wrapper/gradle-wrapper.properties
+    paths:
+      - .gradle-home/wrapper/
+      - .gradle-home/caches/modules-2/
+    policy: pull
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends git > /dev/null
+    - git config --global --add safe.directory "$CI_PROJECT_DIR"
+    - git fetch --no-tags origin "$EVENT_SCHEMAS_BASE"
+  script:
+    - cd server
+    - ./gradlew :event-contracts:eventSchemas -PeventSchemas.base="origin/$EVENT_SCHEMAS_BASE" -PeventSchemas.requireBase=true --init-script ../ci/gradle/maven-mirror.init.gradle.kts --max-workers=2 --console=plain
