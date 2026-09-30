@@ -43,6 +43,13 @@ Code: `server/auth/src/main/java/ca/northline/auth/signing` (`SigningKeys` port,
 
 ### Creating the key (until Terraform does it — S-2)
 
+**With Terraform (S-2):** `infra/terraform/envs/<cloud>/<env>` creates the `signing` key (HSM-backed in prod on
+Google Cloud and Azure), grants only the `northline-auth` workload identity sign + get-public-key on it, and writes
+`KMS_PROVIDER`, `KMS_KEY_ID` (AWS key ARN · Google Cloud key version `…/cryptoKeyVersions/1` · Azure versioned key URL)
+and `KMS_PUBLISHED_KEY_IDS` into `config_env`; rotations set them through `signing_key_ids`
+([infrastructure.md § 4](infrastructure.md#signing-key-rotation-with-terraform-s-7)). The commands below are for an
+environment Terraform doesn't manage, and for the new key of an AWS rotation.
+
 Always in the environment's Canadian region. The workload identity of northline-auth needs **sign** and **read the
 public key** on this key only.
 

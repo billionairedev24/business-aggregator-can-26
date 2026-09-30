@@ -1,0 +1,8 @@
+# S3 bucket + lock, created once per AWS account by bootstrap/aws (README § Bootstrap the state bucket).
+bucket       = "northline-tfstate-<aws-account-id>"
+key          = "aws/staging/terraform.tfstate"
+region       = "ca-central-1"
+encrypt      = true
+use_lockfile = true # S3-native lock (Terraform >= 1.10)
+# DynamoDB lock, the classic setup (deprecated by Terraform 1.11+, still supported; bootstrap/aws creates the table):
+# dynamodb_table = "northline-tfstate-lock"

@@ -1,0 +1,8 @@
+# Copy to terraform.tfvars (git-ignored) and fill in.
+subscription_id = "00000000-0000-0000-0000-000000000000"
+region = "canadacentral"
+owner  = "platform"
+admin_principals  = []  # e.g. ["<entra-group-object-id>"]
+api_allowed_cidrs = []  # set in prod: office/VPN/CI egress CIDRs
+# Token signing key rotation only (docs/runbooks/key-rotation.md); leave unset otherwise.
+# signing_key_ids = { active = "<old key id>", published = ["<new key id>"] }

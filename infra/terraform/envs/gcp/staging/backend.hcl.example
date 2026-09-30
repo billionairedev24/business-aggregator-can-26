@@ -1,0 +1,3 @@
+# GCS bucket created once by bootstrap/gcp (README § Bootstrap the state bucket). GCS locks natively.
+bucket = "<state-project-id>-northline-tfstate"
+prefix = "gcp/staging"

@@ -1,0 +1,13 @@
+# Provider/module downloads and local state (state lives in the remote backend once bootstrapped).
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfplan
+tfplan
+# Per-operator values: copy the .example files.
+terraform.tfvars
+*.auto.tfvars
+backend.hcl
+# .terraform.lock.hcl IS committed once generated for every platform (README § Provider lock files).

@@ -1,9 +1,9 @@
 # Runbooks
 
 One runbook per environment. Each lists what the environment needs — services, variables, secrets, third-party
-accounts — and how to run, deploy and roll back **with what exists today**. Container images, Helm charts,
-Terraform and GitOps arrive with later stories (S-2, S-3, S-6, S-14, S-15, S-16, S-17); the runbooks say where a step
-is still manual or missing.
+accounts — and how to run, deploy and roll back **with what exists today**. Terraform for the cloud foundation and the managed data
+stores exists (S-2, S-3; not applied yet); External Secrets, container images, Helm charts and GitOps arrive with later
+stories (S-6, S-14, S-15, S-16, S-17); the runbooks say where a step is still manual or missing.
 
 | runbook | for |
 |---|---|
@@ -11,8 +11,9 @@ is still manual or missing.
 | [dev.md](dev.md) | the shared cloud development environment |
 | [staging.md](staging.md) | pre-production: prod shape, Stripe test mode |
 | [prod.md](prod.md) | production (Calgary launch) |
+| [infrastructure.md](infrastructure.md) | Terraform on AWS / Google Cloud / Azure: accounts, state bucket, plan/apply, outputs → variables, cost, teardown (S-2/S-3) |
 | [object-storage.md](object-storage.md) | uploads in S3 / RustFS, Cloud Storage or Azure Blob: variables, buckets, least-privilege access per cloud (S-10) |
-| [ci.md](ci.md) | CI pipelines on GitHub Actions and GitLab CI, manual trigger only (S-4/S-5) |
+| [ci.md](ci.md) | CI pipelines on GitHub Actions and GitLab CI, manual trigger only (S-4/S-5, infra checks S-2/S-3) |
 
 ## Environment matrix
 
@@ -301,6 +302,7 @@ per phone code, 45 s resend cool-down, 5 failed factors per sign-in attempt or s
 
 The apps need only standard protocols (JDBC/PostgreSQL, the Redis protocol, the Kafka protocol with SASL/SSL, the
 Elasticsearch HTTP API, S3/GCS/Blob via the storage port), so the same build runs on AWS, Google Cloud or Azure. The
-per-provider service mapping is in each cloud runbook ("Managed services"). Canadian regions only:
+per-provider service mapping is in each cloud runbook ("Managed services"); the Terraform for each cloud is
+`infra/terraform/envs/<aws|gcp|azure>/<env>` ([infrastructure.md](infrastructure.md)). Canadian regions only:
 AWS `ca-central-1` (Montréal) / `ca-west-1` (Calgary), Google Cloud `northamerica-northeast1` (Montréal) /
 `northamerica-northeast2` (Toronto), Azure `canadacentral` (Toronto) / `canadaeast` (Québec City).

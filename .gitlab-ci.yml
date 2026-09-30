@@ -1,4 +1,4 @@
-# Northline CI on GitLab — S-4 (server) and S-5 (web). Runbook: docs/runbooks/ci.md
+# Northline CI on GitLab — S-4 (server), S-5 (web), S-2/S-3 (infra). Runbook: docs/runbooks/ci.md
 #
 # MANUAL ONLY: CI credits are depleted, so pipelines are created only by Build › Pipelines › "Run pipeline"
 # (source "web") or the API/trigger tokens (source "api"). Pushes, merge requests and schedules create nothing.
@@ -17,11 +17,19 @@ workflow:
 variables:
   PIPELINE_PART:
     value: all
-    options: [all, server, web]
+    options: [all, server, web, infra]
     description: Which part to build and test.
   SERVER_GRADLE_ARGS:
     value: build
     description: "Gradle arguments for server/ (e.g. build, :api:build, build -x test, build --rerun-tasks)."
+  INFRA_CLOUD:
+    value: all
+    options: [all, aws, gcp, azure]
+    description: "infra: which cloud's Terraform modules and env roots to validate."
+  RUN_TFLINT:
+    value: "true"
+    options: ["true", "false"]
+    description: "infra: also run tflint (downloads the aws/google/azurerm rulesets from GitHub)."
   RUN_STUDIO_SMOKE:
     value: "false"
     options: ["false", "true"]
@@ -35,6 +43,6 @@ stages:
 default:
   interruptible: true
 
-# One file per part: ci/gitlab/server.yml (S-4), ci/gitlab/web.yml (S-5).
+# One file per part: ci/gitlab/server.yml (S-4), ci/gitlab/web.yml (S-5), ci/gitlab/infra.yml (S-2/S-3).
 include:
   - local: ci/gitlab/*.yml

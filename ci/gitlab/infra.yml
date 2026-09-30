@@ -1,0 +1,42 @@
+# S-2/S-3 — offline checks for infra/terraform on GitLab. Included from .gitlab-ci.yml.
+# Pipelines only exist when started by hand (see workflow: rules in .gitlab-ci.yml). No cloud credentials: nothing
+# is planned against a real account; `terraform test` plans each env root against mocked providers.
+
+.infra:
+  stage: check
+  needs: []
+  rules:
+    - if: $PIPELINE_PART == "all" || $PIPELINE_PART == "infra"
+
+infra:validate:
+  extends: .infra
+  image:
+    name: hashicorp/terraform:1.16.4
+    entrypoint: [""]
+  timeout: 30m
+  variables:
+    TF_IN_AUTOMATION: "1"
+    TF_PLUGIN_CACHE_DIR: $CI_PROJECT_DIR/.terraform-plugins
+  cache:
+    key:
+      prefix: terraform-plugins
+      files: [infra/terraform/envs/aws/dev/versions.tf, infra/terraform/envs/gcp/dev/versions.tf, infra/terraform/envs/azure/dev/versions.tf]
+    paths: [.terraform-plugins/]
+  script:
+    - apk add --no-cache bash findutils diffutils
+    - mkdir -p "$TF_PLUGIN_CACHE_DIR"
+    # terraform fmt -check, scripts/check-contract.sh, init -backend=false + validate everywhere, terraform test.
+    - cd infra/terraform && bash scripts/validate.sh "$INFRA_CLOUD"
+
+infra:tflint:
+  extends: .infra
+  image:
+    name: ghcr.io/terraform-linters/tflint:v0.64.0
+    entrypoint: [""]
+  timeout: 15m
+  rules:
+    - if: ($PIPELINE_PART == "all" || $PIPELINE_PART == "infra") && $RUN_TFLINT == "true"
+  script:
+    - cd infra/terraform
+    - tflint --init --config "$PWD/.tflint.hcl"
+    - tflint --recursive --config "$PWD/.tflint.hcl" --format compact

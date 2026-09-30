@@ -93,6 +93,16 @@ placeholder tile. Tests start RustFS, fake-gcs-server and Azurite themselves (Te
 
 ## Cloud set-up (until Terraform does it — S-2)
 
+**With Terraform (S-2):** `infra/terraform/envs/<cloud>/<env>` creates the bucket (container `uploads` on Azure) with
+the settings below — private, TLS only, versioning, noncurrent versions expire after 30 days, incomplete multipart
+uploads aborted after 7 days, customer-managed `data` key — grants the `northline-api` workload identity exactly the
+least-privilege access listed per cloud, and writes `STORAGE_PROVIDER`, `STORAGE_BUCKET`, `STORAGE_REGION`,
+`STORAGE_ENDPOINT` and `STORAGE_ENCRYPTION_KEY` into `config_env`
+([infrastructure.md § 4](infrastructure.md#4-outputs--the-apps-environment-variables)). Differences from the manual
+set-up: Terraform names the buckets `northline-<env>-uploads` and the Azure account `nl<env>st<suffix>`, and on Azure the
+customer-managed key is set on the whole account (so `STORAGE_ENCRYPTION_KEY` stays empty, no encryption scope). The
+tables below are for an environment Terraform doesn't manage.
+
 One bucket per environment in the environment's Canadian region, private, nothing public. Names below use `<env>` =
 `dev` | `staging` | `prod`.
 
