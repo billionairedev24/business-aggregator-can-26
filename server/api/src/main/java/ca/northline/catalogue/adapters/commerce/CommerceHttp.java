@@ -44,7 +44,9 @@ final class CommerceHttp {
      * each call (shop-specific hosts), so the client has no base URL.
      */
     static <T> T client(Class<T> api) {
+        // HTTP/1.1: no h2c upgrade on plain-http stand-ins (WireMock resets upgraded POSTs); the APIs are small JSON
         var requests = new JdkClientHttpRequestFactory(HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
                 .connectTimeout(Duration.ofSeconds(5))
                 .followRedirects(HttpClient.Redirect.NEVER)
                 .build());

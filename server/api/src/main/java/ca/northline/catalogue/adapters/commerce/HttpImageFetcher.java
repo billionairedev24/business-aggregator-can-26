@@ -23,6 +23,7 @@ class HttpImageFetcher implements ImageFetcher {
     private final List<String> hosts;
     private final boolean allowHttp;
     private final HttpClient http = HttpClient.newBuilder()
+            .version(HttpClient.Version.HTTP_1_1)
             .connectTimeout(Duration.ofSeconds(5))
             .followRedirects(HttpClient.Redirect.NEVER)
             .build();
