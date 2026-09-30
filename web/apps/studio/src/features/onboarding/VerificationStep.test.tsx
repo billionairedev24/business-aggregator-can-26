@@ -57,6 +57,18 @@ describe('VerificationStep', () => {
   });
 });
 
+describe('Business registration labels — S-23', () => {
+  it('shows a registry lookup waiting for an agent, and sole proprietors who need no registration', () => {
+    let o = onboarding();
+    o = { ...o, checklist: o.checklist.map(c => (c.key === 'registry' ? { ...c, status: 'submitted', reference: '2000000001' } : c)) };
+    const { unmount } = renderWithProviders(<VerificationStep onboarding={o} onBack={() => {}} onSubmitted={() => {}} />);
+    expect(screen.getByText('2000000001 · checking')).toBeTruthy();
+    unmount();
+    renderWithProviders(<VerificationStep onboarding={done(onboarding(), 'registry', { reference: 'not_required' })} onBack={() => {}} onSubmitted={() => {}} />, { locale: 'fr' });
+    expect(screen.getByText('Aucun enregistrement requis')).toBeTruthy();
+  });
+});
+
 describe('Identity (Stripe KYC) — S-22', () => {
   const owner = (over: Partial<OwnerIdentity> = {}): OwnerIdentity => ({
     principalId: 'P1', legalName: 'Ravi Sandhu', role: 'director', ownershipPct: 60, you: false, status: 'not_started',
