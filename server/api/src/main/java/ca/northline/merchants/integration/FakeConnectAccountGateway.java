@@ -8,17 +8,13 @@ import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Component;
 
 /**
- * LOCAL / TEST ONLY. Stripe Connect stand-in answering with the design's account (design 02 {@code stripeReqs}): an
+ * LOCAL / TEST ONLY, without a Stripe key (see {@link ConnectGatewayConfig}). Stripe Connect stand-in answering with the design's account (design 02 {@code stripeReqs}): an
  * Express account with charges and payouts enabled, every requirement verified except the annual ID re-verification
  * due in 12 days, TD ··3391, weekly Friday payouts. Account ids containing {@code "missing"} are unknown to it.
  */
 @Slf4j
-@Component
-@Profile({"local", "test"})
 @RequiredArgsConstructor
 class FakeConnectAccountGateway implements ConnectAccountGateway {
 

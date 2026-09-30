@@ -9,6 +9,9 @@ public interface PaymentsJobs {
     /** Escrow whose release time passed → merchant balance ({@code escrow.released}). */
     int releaseDueEscrows();
 
+    /** Card holds about to lapse at Stripe are renewed (see {@code AuthorizationWindow}). */
+    int renewAuthorizations();
+
     /** Refund cases past their contest deadline, and goodwill offers past 72 h. */
     int lapseCases();
 

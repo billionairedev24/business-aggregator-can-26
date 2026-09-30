@@ -78,6 +78,8 @@ public class Refund {
     private @Nullable Instant decidedAt;
     private @Nullable Instant paidAt;
     private @Nullable String stripeRefund;
+    private @Nullable String stripeTransferReversal;
+    private long reversedCents;
     private final @Nullable Integer version;
 
     /** A customer asked for money back on {@code escrow}. */
@@ -194,14 +196,21 @@ public class Refund {
                 state == State.SELLER_REVIEW ? contestBy : null);
     }
 
-    /** The refund queue paid it. */
-    public RefundIssued paid(String stripeRefundId, Instant now) {
+    /**
+     * The refund queue paid it: {@code stripeRefundId} ({@code re_…}) is null when an uncaptured hold was canceled
+     * instead; {@code reversal} is the transfer reversal ({@code trr_…}) that took the money back from the merchant's
+     * connected account when it had already been released.
+     */
+    public RefundIssued paid(
+            @Nullable String stripeRefundId, @Nullable String reversal, long reversedAmountCents, Instant now) {
         if (state != State.APPROVED) {
             throw new Conflict("refund_not_approved", "Only approved refunds are paid.");
         }
         state = State.PAID;
         paidAt = now;
         stripeRefund = stripeRefundId;
+        stripeTransferReversal = reversal;
+        reversedCents = reversedAmountCents;
         return new RefundIssued(Ids.next(), now, id, merchantId, caseNumber, escrowId, amountCents, chargedTo.code());
     }
 

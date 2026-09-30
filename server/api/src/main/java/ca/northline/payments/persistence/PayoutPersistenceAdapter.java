@@ -128,6 +128,17 @@ class PayoutPersistenceAdapter implements PayoutRepository {
     }
 
     @Override
+    public boolean linkConnectedAccount(String merchantId, String stripeAccount) {
+        return jdbc.sql("""
+                        insert into payments.connected_accounts (merchant_id, stripe_account) values (:id, :acct)
+                        on conflict do nothing""")
+                        .param("id", merchantId)
+                        .param("acct", stripeAccount)
+                        .update()
+                > 0;
+    }
+
+    @Override
     public Optional<PayoutAccount> account(String merchantId, String accountId) {
         return accounts.findByIdAndMerchantId(accountId, merchantId).map(mapper::toDomain);
     }

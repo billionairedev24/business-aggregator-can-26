@@ -134,7 +134,7 @@ What still stops a complete deployment. Under the `local`/`test` profiles each o
 | SMS notices (bank change) and SMS team invitations | not sent by the api (the SMS port is in northline-auth) | bank-change notice by email only; mobile invitations by copied link | S-27 |
 | `CommerceSync` (catalogue) | unconfigured adapter throws | Shopify / Square / Lightspeed connections | S-35 |
 | `CalendarSync` (availability) | 409 `calendar_sync_unavailable` | Google / Microsoft calendar sync | S-32 |
-| `PaymentGateway` / `ConnectAccountGateway` (payments, merchants) | stripe-java when `STRIPE_SECRET_KEY` is set | works with keys; end-to-end Connect flows and webhooks still to finish | S-11, S-12 |
+| `PaymentGateway` / `ConnectAccountGateway` (payments, merchants) | stripe-java when `STRIPE_SECRET_KEY` is set | Connect accounts, escrow charges, transfers, payouts and refunds work with keys (S-11, set up per [stripe.md](stripe.md)); webhooks still to finish | S-12 |
 | Google / Apple sign-in (auth) | placeholder client ids | the buttons fail | S-18 |
 | Search indexer (worker) | consumer is a stub (`TODO(implement)`) | nothing reaches Elasticsearch | S-42, S-43 |
 

@@ -1,12 +1,53 @@
 package ca.northline.payments.application;
 
+import ca.northline.payments.application.PaymentGateway.IntentStatus;
 import ca.northline.payments.domain.Escrow;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 
-/** Outbound port for escrows and the Stripe PaymentIntent mirror behind them. */
+/** Outbound port for escrows, the Stripe PaymentIntent mirror behind them, their transfers and Stripe customers. */
 public interface EscrowRepository {
+
+    /** A row of {@code payments.payment_intents}. */
+    record Intent(
+            String id,
+            String stripePaymentIntent,
+            IntentStatus state,
+            @Nullable String customerId,
+            long amountCents,
+            @Nullable String stripeCustomer,
+            @Nullable String paymentMethod,
+            @Nullable String charge,
+            @Nullable String transferGroup,
+            @Nullable String refType,
+            @Nullable String refId,
+            @Nullable String merchantId,
+            @Nullable Instant authorizedAt,
+            @Nullable Instant captureBefore,
+            int reauthorizations,
+            @Nullable Instant reauthFailedAt) {}
+
+    /** What is recorded about a PaymentIntent (insert, or update of the row with the same {@code pi_…}). */
+    record IntentRecord(
+            String stripePaymentIntent,
+            IntentStatus state,
+            String customerId,
+            long amountCents,
+            @Nullable String stripeCustomer,
+            @Nullable String paymentMethod,
+            @Nullable String charge,
+            @Nullable String transferGroup,
+            @Nullable String refType,
+            @Nullable String refId,
+            @Nullable String merchantId,
+            @Nullable Instant authorizedAt,
+            @Nullable Instant captureBefore,
+            int reauthorizations) {}
+
+    /** A transfer to a connected account ({@code payments.transfers}). */
+    record TransferRecord(String id, String stripeTransfer, long netCents, long reversedCents) {}
 
     Optional<Escrow> findById(String id);
 
@@ -15,18 +56,44 @@ public interface EscrowRepository {
     /** Held escrows whose release time has passed, oldest first. */
     List<Escrow> releasable(Instant now, int limit);
 
-    /** Records the authorized PaymentIntent; returns its id. */
-    String recordPaymentIntent(String stripePaymentIntent, String customerId, long amountCents);
+    /** Escrows still only authorized whose hold lapses before {@code before} (renewal candidates). */
+    List<Escrow> authorizationsLapsingBefore(Instant before, int limit);
 
-    void markPaymentIntent(String paymentIntentId, String state);
+    /** Inserts or updates the PaymentIntent row; returns its id. */
+    String recordPaymentIntent(IntentRecord intent);
 
-    /** Stripe PaymentIntent id ({@code pi_…}) of a payment intent row. */
-    Optional<String> stripePaymentIntent(String paymentIntentId);
+    void markPaymentIntent(String paymentIntentId, IntentStatus state);
+
+    /** Captured: the charge transfers will draw on. */
+    void recordCapture(String paymentIntentId, @Nullable String stripeCharge);
+
+    Optional<Intent> intent(String paymentIntentId);
+
+    Optional<Intent> intentByStripeId(String stripePaymentIntent);
+
+    /** The old hold was canceled and replaced by {@code newPaymentIntentId}. */
+    void replacePaymentIntent(String oldPaymentIntentId, String newPaymentIntentId);
+
+    void reauthorizationFailed(String paymentIntentId, Instant at);
+
+    Optional<String> stripeCustomer(String customerId);
+
+    void saveStripeCustomer(String customerId, String stripeCustomer);
 
     void insert(Escrow escrow);
 
     void update(Escrow escrow);
 
     void recordTransfer(
-            String escrowId, String stripeTransfer, long grossCents, long feeCents, long netCents, Instant at);
+            String escrowId,
+            String stripeTransfer,
+            String transferGroup,
+            long grossCents,
+            long feeCents,
+            long netCents,
+            Instant at);
+
+    Optional<TransferRecord> transferOf(String escrowId);
+
+    void addReversal(String transferId, long cents);
 }

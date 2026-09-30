@@ -1,5 +1,6 @@
 package ca.northline.payments.application;
 
+import ca.northline.payments.api.PayoutPlan;
 import ca.northline.payments.domain.Fees;
 import ca.northline.payments.domain.LedgerEntry;
 import ca.northline.payments.domain.Payout;
@@ -9,6 +10,7 @@ import ca.northline.payments.domain.PayoutSchedule;
 import ca.northline.payments.domain.Zones;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.RuleViolation;
+import ca.northline.shared.stripe.StripeIdempotencyKeys;
 import java.text.NumberFormat;
 import java.time.Clock;
 import java.time.Instant;
@@ -16,6 +18,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -28,7 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-class PayoutService implements ViewPayouts, MovePayouts {
+class PayoutService implements ViewPayouts, MovePayouts, PayoutPlan {
 
     private final PayoutRepository payouts;
     private final LedgerRepository ledger;
@@ -102,7 +105,8 @@ class PayoutService implements ViewPayouts, MovePayouts {
                 command.amountCents() - fee,
                 true,
                 account.getExternalRef(),
-                "instant-" + merchantId + "-" + now.toEpochMilli());
+                StripeIdempotencyKeys.fromClient(
+                        "instant-payout", merchantId + ":" + command.userId(), command.idempotencyKey()));
         var itemCount = payouts.releasedSince(
                 merchantId, payouts.lastPayoutAt(merchantId).orElse(null));
         var payout = Payout.sent(
@@ -116,6 +120,11 @@ class PayoutService implements ViewPayouts, MovePayouts {
                 account,
                 command.userId(),
                 now);
+        payout.feeRecovered(gateway.recoverFee(
+                connected.stripeAccount(),
+                fee,
+                sent.payoutId(),
+                StripeIdempotencyKeys.of("instant-payout-fee", sent.payoutId())));
         record(payout);
         return payout;
     }
@@ -123,9 +132,20 @@ class PayoutService implements ViewPayouts, MovePayouts {
     @Override
     @Transactional
     public Overview changeSchedule(String merchantId, PayoutSchedule schedule, String userId) {
+        // Stripe's own schedule stays `manual`: the scheduled run below creates every payout
         payouts.saveSchedule(merchantId, schedule, userId, clock.instant());
-        payouts.connectedAccount(merchantId).ifPresent(a -> gateway.updateSchedule(a.stripeAccount(), schedule));
         return overview(merchantId);
+    }
+
+    @Override
+    public Optional<Plan> of(String merchantId) {
+        return payouts.connectedAccount(merchantId).map(connected -> {
+            var schedule = schedule(merchantId);
+            var weekday = schedule.frequency() == PayoutSchedule.Frequency.WEEKLY && schedule.weekday() != null
+                    ? java.time.DayOfWeek.of(schedule.weekday()).name().toLowerCase(Locale.ROOT)
+                    : null;
+            return new Plan(schedule.frequency().code(), weekday, connected.instantPayouts());
+        });
     }
 
     /** Scheduled payouts whose time came today (idempotent per merchant and day). */
@@ -160,7 +180,7 @@ class PayoutService implements ViewPayouts, MovePayouts {
                     amount,
                     false,
                     account.getExternalRef(),
-                    "scheduled-" + merchantId + "-" + today);
+                    StripeIdempotencyKeys.of("scheduled-payout", merchantId, today.toString()));
             var itemCount = payouts.releasedSince(
                     merchantId, payouts.lastPayoutAt(merchantId).orElse(null));
             record(Payout.sent(
@@ -179,15 +199,28 @@ class PayoutService implements ViewPayouts, MovePayouts {
         return sent;
     }
 
-    /** In-transit payouts whose arrival time passed are paid (Stripe webhooks do this in production). */
+    /**
+     * In-transit payouts whose arrival time passed: asks Stripe (the fake answers "paid") and marks the paid ones. Stripe
+     * webhooks normally get there first; this catches the ones whose event never came.
+     */
     @Transactional
     int settle() {
         var now = clock.instant();
         int n = 0;
         for (var payout : payouts.inTransit(500)) {
-            if (payout.settle(now)) {
+            var stripePayout = payout.getStripePayout();
+            if (payout.getArrivesAt().isAfter(now) || stripePayout == null) {
+                continue;
+            }
+            var connected = payouts.connectedAccount(payout.getMerchantId()).orElse(null);
+            var state = connected == null
+                    ? Payout.State.PAID
+                    : gateway.payoutState(connected.stripeAccount(), stripePayout);
+            if (state == Payout.State.PAID && payout.settle(now)) {
                 payouts.update(payout);
                 n++;
+            } else if (state != Payout.State.PAID && state != Payout.State.IN_TRANSIT) {
+                log.warn("Payout {} is {} at Stripe", payout.getId(), state.code());
             }
         }
         return n;

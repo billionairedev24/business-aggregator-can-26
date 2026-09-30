@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:payments.payment_reauthorization_required:1",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "merchantId",
+    "customerId",
+    "refType",
+    "refId",
+    "lapsesAt"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "payments.escrows.id"
+    },
+    "merchantId": {
+      "type": "string"
+    },
+    "customerId": {
+      "type": "string",
+      "description": "identity.users.id — the notification worker looks up the contact details"
+    },
+    "refType": {
+      "enum": [
+        "booking",
+        "order_line"
+      ]
+    },
+    "refId": {
+      "type": "string"
+    },
+    "lapsesAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "when the current card hold lapses at Stripe"
+    }
+  }
+}

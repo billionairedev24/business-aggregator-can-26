@@ -53,6 +53,7 @@ public class Payout {
     private final @Nullable String payoutAccountId;
     private final @Nullable String destination;
     private final @Nullable String requestedBy;
+    private @Nullable String stripeFeeTransfer;
     private final @Nullable Integer version;
 
     /** What reaches the bank. */
@@ -91,6 +92,11 @@ public class Payout {
 
     public PayoutSent sentEvent() {
         return new PayoutSent(Ids.next(), createdAt, id, merchantId, kind.code(), amountCents, feeCents, arrivesAt);
+    }
+
+    /** Instant payouts: the fee was moved from the connected account to the platform ({@code tr_…}). */
+    public void feeRecovered(String stripeTransfer) {
+        stripeFeeTransfer = stripeTransfer;
     }
 
     /** Arrived at the bank (Stripe {@code payout.paid}; the fake gateway: at {@code arrivesAt}). */
