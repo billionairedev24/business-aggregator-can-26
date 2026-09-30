@@ -7,6 +7,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-elasticsearch")
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-jdbc")
+    // S-33: partner webhook deliveries — a DnsResolver hook to pin the SSRF-checked address, no redirects, timeouts.
+    implementation("org.apache.httpcomponents.client5:httpclient5")
     // S-14: HTTP health for Kubernetes probes (/actuator/health/liveness, /readiness on SERVER_PORT 8084); no other endpoints.
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
@@ -20,6 +22,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testImplementation("org.testcontainers:testcontainers-junit-jupiter")
     testImplementation("org.testcontainers:testcontainers-kafka")
+    testImplementation(libs.wiremock) // S-33: partner endpoints (signature, retries, auto-disable)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
@@ -32,6 +35,8 @@ tasks.processResources {
     from(project(":api").file("src/main/resources/events")) { into("events") }
     // S-27: Settings › Notifications defaults, shared with the api (NotificationMatrixDefaultsSpecTest)
     from(rootProject.file("../docs/spec/notification-matrix-defaults.json")) { into("spec") }
+    // S-33: the public webhook payloads (versioned, partner-facing); every delivery is validated against them.
+    from(rootProject.file("../docs/spec/webhooks")) { into("webhooks") }
 }
 
 tasks.withType<Test>().configureEach {

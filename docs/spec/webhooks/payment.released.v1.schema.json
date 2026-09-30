@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:webhook.payment.released:1",
+  "title": "Northline webhook payment.released v1",
+  "description": "Money held in escrow for a job or an order line moved to your Northline balance, net of the take rate.",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "version",
+    "createdAt",
+    "merchantId",
+    "data"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "Event id (ULID). The same event keeps its id on every retry and resend: deduplicate on it."
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "payment.released"
+      ]
+    },
+    "version": {
+      "type": "integer",
+      "enum": [
+        1
+      ],
+      "description": "Payload version; a breaking change ships as a new version."
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When it happened (UTC)."
+    },
+    "merchantId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "Your business (Studio URL /b/<merchantId>)."
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "escrowId",
+        "reference",
+        "grossCents",
+        "feeCents",
+        "netCents",
+        "currency"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "escrowId": {
+          "type": "string"
+        },
+        "reference": {
+          "type": "object",
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "booking",
+                "order_line"
+              ]
+            },
+            "id": {
+              "type": "string"
+            }
+          }
+        },
+        "grossCents": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "feeCents": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "netCents": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "currency": {
+          "type": "string",
+          "enum": [
+            "CAD"
+          ]
+        }
+      }
+    }
+  }
+}

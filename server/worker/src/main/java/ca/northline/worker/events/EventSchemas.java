@@ -53,9 +53,14 @@ public final class EventSchemas {
     }
 
     public static EventSchemas fromClasspath(JsonMapper json) {
+        return fromClasspath(json, LOCATION);
+    }
+
+    /** Schemas in the same format elsewhere, e.g. the public webhook payloads ({@code classpath*:webhooks/…}, S-33). */
+    public static EventSchemas fromClasspath(JsonMapper json, String location) {
         var schemas = new HashMap<String, JsonNode>();
         try {
-            for (var resource : new PathMatchingResourcePatternResolver().getResources(LOCATION)) {
+            for (var resource : new PathMatchingResourcePatternResolver().getResources(location)) {
                 try (var in = resource.getInputStream()) {
                     var schema = json.readTree(in);
                     var id = ID.matcher(schema.path("$id").asString(""));
@@ -70,7 +75,7 @@ public final class EventSchemas {
             throw new UncheckedIOException(e);
         }
         if (schemas.isEmpty()) {
-            throw new IllegalStateException("No event schemas on the classpath (" + LOCATION + ")");
+            throw new IllegalStateException("No schemas on the classpath (" + location + ")");
         }
         return new EventSchemas(schemas);
     }
