@@ -1,0 +1,157 @@
+{{- /*
+S-16: Flyway migrations as a deploy step. Runs before every install/upgrade (Helm pre-install/pre-upgrade hook; Argo CD
+PreSync), from the api image: step 1 (init container "migrate") applies classpath:db/migration with DbTool — the image
+contains no db/seed-dev and DbTool refuses it under deployed profiles —, step 2 (container "seed-categories") upserts
+db/seed/categories.json. If either fails, the release fails and no Deployment is touched.
+
+The regular ConfigMaps and Secrets don't exist yet before a first install, so the Job gets its own hook-scoped copies:
+ConfigMap northline-migrate (profile + Terraform config_env) and Secret northline-migrate-secrets (DB_PASSWORD only),
+written by a hook ExternalSecret (S-6), a hook Secret (kind), or taken from secrets.existingSecret.
+*/ -}}
+{{- if and .Values.migrations.enabled .Values.apps.api.enabled }}
+{{- $m := .Values.migrations }}
+{{- $app := .Values.apps.api }}
+{{- $ctx := dict "root" . "name" "api" "app" $app }}
+{{- $es := .Values.externalSecrets }}
+{{- $secretName := .Values.secrets.existingSecret }}
+{{- if or $es.enabled .Values.secrets.create }}{{ $secretName = "northline-migrate-secrets" }}{{ end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: northline-migrate
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "migrate") | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-20"
+    helm.sh/hook-delete-policy: before-hook-creation
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-20"
+data:
+  {{- range $key, $value := .Values.configEnv }}
+  {{ $key }}: {{ $value | toString | quote }}
+  {{- end }}
+  SPRING_PROFILES_ACTIVE: {{ include "northline.springProfiles" . | quote }}
+  NORTHLINE_ENVIRONMENT: {{ .Values.global.environment | quote }}
+{{- if $es.enabled }}
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: northline-migrate
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "migrate") | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-20"
+    helm.sh/hook-delete-policy: before-hook-creation
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-20"
+spec:
+  refreshInterval: {{ $es.refreshInterval }}
+  secretStoreRef:
+    kind: {{ $es.store.kind }}
+    name: {{ $es.store.name }}
+  target:
+    name: northline-migrate-secrets
+    creationPolicy: Owner
+  data:
+    - secretKey: DB_PASSWORD
+      remoteRef:
+        key: {{ include "northline.remoteKey" (dict "root" . "key" "DB_PASSWORD") | quote }}
+{{- else if .Values.secrets.create }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: northline-migrate-secrets
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "migrate") | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-20"
+    helm.sh/hook-delete-policy: before-hook-creation
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-20"
+type: Opaque
+stringData:
+  DB_PASSWORD: {{ required "secrets.values.DB_PASSWORD" .Values.secrets.values.DB_PASSWORD | quote }}
+{{- end }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: northline-migrate
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "migrate") | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-10"
+spec:
+  backoffLimit: {{ $m.backoffLimit }}
+  activeDeadlineSeconds: {{ $m.activeDeadlineSeconds }}
+  ttlSecondsAfterFinished: {{ $m.ttlSecondsAfterFinished }}
+  template:
+    metadata:
+      labels:
+        {{- include "northline.selectorLabels" (dict "root" . "app" "migrate") | nindent 8 }}
+        app.kubernetes.io/part-of: northline
+        {{- with .Values.global.podLabels }}{{ toYaml . | nindent 8 }}{{ end }}
+    spec:
+      restartPolicy: Never
+      # The chart's ServiceAccounts don't exist yet before a first install; the Job needs no cloud identity.
+      serviceAccountName: default
+      automountServiceAccountToken: false
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+        runAsUser: {{ $app.runAsUser }}
+        runAsGroup: {{ $app.runAsUser }}
+      {{- $steps := list (dict "name" "migrate" "command" "migrate") }}
+      {{- if $m.seedCategories }}{{ $steps = append $steps (dict "name" "seed-categories" "command" "seed-categories") }}{{ end }}
+      {{- range $i, $step := $steps }}
+      {{- if and (eq $i 0) (gt (len $steps) 1) }}
+      initContainers:
+      {{- else if or (eq (len $steps) 1) (eq $i 1) }}
+      containers:
+      {{- end }}
+        - name: {{ $step.name }}
+          image: {{ include "northline.image" $ctx | quote }}
+          imagePullPolicy: {{ $.Values.global.image.pullPolicy }}
+          # DbTool lives in /app/tools, outside the api's own classpath (server/api/build.gradle.kts, jibTools).
+          command: ["java", "-XX:MaxRAMPercentage=75", "-Dlogback.configurationFile=/app/tools/logback-tools.xml",
+                    "-cp", "/app/tools:/app/resources:/app/classes:/app/libs/*",
+                    "ca.northline.tools.DbTool", {{ $step.command | quote }}]
+          envFrom:
+            - configMapRef:
+                name: {{ include "northline.infraConfigMap" $ }}
+                optional: true
+            - configMapRef:
+                name: northline-migrate
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName }}
+                  key: DB_PASSWORD
+          resources:
+            {{- toYaml $m.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml $.Values.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 64Mi }
+{{- end }}

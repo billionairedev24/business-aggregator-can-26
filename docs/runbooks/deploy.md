@@ -7,7 +7,7 @@ one cloud — the same images and the same chart run on EKS, GKE, AKS or kind; o
 > **Status (2026-09-30):** images build and run; the chart installs on kind with every pod Ready (below). No cloud
 > cluster exists yet (Terraform is unapplied — [infrastructure.md](infrastructure.md)), so nothing has been deployed to
 > EKS/GKE/AKS. Secrets come from the cloud secrets manager through External Secrets (S-6, [secrets.md](secrets.md));
-> the api still migrates at start-up until the migration Job (S-16); GitOps is S-15; TLS, DNS and the ingress
+> database migrations run as a Job before every rollout (S-16); GitOps is S-15; TLS, DNS and the ingress
 > controller are S-17.
 
 Other runbooks: [dev](dev.md) · [staging](staging.md) · [prod](prod.md) · [infrastructure](infrastructure.md) ·
@@ -104,6 +104,7 @@ replica); plus the Ingress or Gateway API HTTPRoutes and the OAuth client Job.
 | rollouts | `maxUnavailable: 0`, `maxSurge: 1`, `preStop` sleep 5 s (Kubernetes ≥ 1.30), 45 s grace period, pods roll when their configuration changes (`checksum/config`), zone and node spread (soft) |
 | network | NetworkPolicies (ingress only): studio, consumer, bff and auth accept the ingress controller (`networkPolicy.ingressFrom`, default any namespace — narrow it per cluster); api accepts the bff (and the ingress for its public paths); auth accepts bff and api; worker accepts nothing. Egress stays open (managed data stores and cloud APIs sit at provider addresses) |
 | routes | `ingress.enabled` (+ `className`, `annotations`, `tls` secret names) or `gateway.enabled` (+ `parentRefs`). Studio host: `/api`, `/bff`, `/oauth2`, `/login` → bff, `/` → studio; auth host → auth; consumer (and console) hosts; api host → only `/api/v1/webhooks/stripe` (S-12) and `/api/v1/email/unsubscribe` (S-13). No certificates or DNS here (S-17) |
+| migrations (S-16) | pre-install/pre-upgrade hook Job `northline-migrate` (Argo CD PreSync) from the api image: Flyway `db/migration`, then the category seed — before any Deployment changes; a failure fails the release ([§ Migrations](#migrations-s-16)) |
 | OAuth clients (S-122) | post-install/post-upgrade hook Job `northline-oauth-clients`: the auth image with the auth environment runs `OAuthClientsCommand sync` (`oauthClientsJob.command: list` to only report). Argo CD runs it as PostSync |
 
 Values files (later `-f` wins): `values.yaml` (defaults) → `values-<env>.yaml` (`dev`, `staging`, `prod`: profile,
@@ -151,16 +152,17 @@ A cluster without External Secrets: add `--set externalSecrets.enabled=false` an
 variable first (`kubectl -n northline-<env> create secret generic northline-secrets --from-env-file=secrets.env`,
 never committed).
 
-- `--wait` matters: Helm then runs the OAuth client Job only after every Deployment is Ready (the api has migrated the
-  schema by then). Without it, the Job may start before the tables exist and retry (`backoffLimit: 2`).
+- Order of one `helm upgrade --install … --wait`: the migration Job (pre-install/pre-upgrade hook) → the Deployments
+  roll → the OAuth client Job (post-install/post-upgrade, after every Deployment is Ready with `--wait`).
 - **Ingress class / TLS** until S-17: add `--set ingress.className=nginx` (or your controller) and, when a
   certificate secret exists, `--set ingress.tls[0].secretName=… --set ingress.tls[0].hosts={…}`.
 - **Pin digests** (what S-15 will do): `--set apps.api.image.digest=sha256:…` per app; the tag is then informational.
 - **Check:** `kubectl -n northline-<env> get pods` (all Ready, `northline-oauth-clients` Completed),
   `kubectl -n northline-<env> logs job/northline-oauth-clients` (`studio-bff: up to date` or `create`), then the
   environment runbook's *Verify* step.
-- **Upgrade** = the same command with the new `IMAGE_TAG`. Pods roll one at a time behind readiness; a pod that never
-  becomes ready stops the rollout and the old pods keep serving (`helm upgrade --wait` fails after the timeout).
+- **Upgrade** = the same command with the new `IMAGE_TAG`. Migrations run first; if they fail, the upgrade stops there
+  and nothing else changes. Pods then roll one at a time behind readiness; a pod that never becomes ready stops the
+  rollout and the old pods keep serving (`helm upgrade --wait` fails after the timeout).
 - **Roll back:** `helm history northline -n northline-<env>` → `helm rollback northline <revision> -n northline-<env>
   --wait`. This restores the previous images and ConfigMaps; it does not undo migrations (Flyway is forward-only, so
   every migration must keep the previous release working — [dev.md § Deploy](dev.md#deploy-migrate-roll-back)) and does
@@ -176,6 +178,41 @@ Per cloud, nothing differs but the overlay and the registry:
 | overlay | `values-aws.yaml` | `values-gcp.yaml` (+ ConfigMap `northline-redis-ca`) | `values-azure.yaml` (+ `EMAIL_ENDPOINT`) |
 | image pulls | node role reads ECR | node service account reads Artifact Registry | kubelet identity has AcrPull |
 | NetworkPolicy enforced by | VPC CNI network policy agent (enable it) | Dataplane V2 | Cilium |
+
+## Migrations (S-16)
+
+`db/migrations` (V001…) are applied by the Job `northline-migrate` **before** every install and upgrade (Helm
+`pre-install,pre-upgrade` hook; Argo CD `PreSync` with sync waves, S-15), never by the pods: the api runs with
+`SPRING_FLYWAY_ENABLED=false` while `migrations.enabled` (default) and northline-auth never migrates outside `local`.
+
+| step | container | what |
+|---|---|---|
+| 1 | `migrate` (init container) | `DbTool migrate` from the api image (`/app/tools`, outside the app's classpath): logs the schema version and the pending migrations, applies them (Flyway, advisory lock, one transaction per migration), logs the new version |
+| 2 | `seed-categories` | `DbTool seed-categories`: upserts `db/seed/categories.json` (idempotent; `migrations.seedCategories: false` skips it) |
+
+- **A failed migration blocks the rollout.** The Job fails (`backoffLimit: 1` → two attempts, `activeDeadlineSeconds:
+  900`), `helm upgrade` fails with `pre-upgrade hooks failed`, and no Deployment, ConfigMap or Secret is changed: the
+  running pods keep serving the old schema (PostgreSQL rolls the failed migration back; nothing is recorded in
+  `flyway_schema_history`). Fix forward with a new image, then upgrade again.
+- **Logs:** `kubectl -n northline-<env> logs job/northline-migrate -c migrate` (and `-c seed-categories`); the Job is
+  kept a week (`ttlSecondsAfterFinished`) or until the next deploy replaces it.
+- **Before a first install** the Job can't use the chart's regular ConfigMaps and Secrets (they don't exist yet), so it
+  gets hook-scoped ones: ConfigMap `northline-migrate` (`SPRING_PROFILES_ACTIVE`, `NORTHLINE_ENVIRONMENT`, Terraform's
+  `configEnv`) and Secret `northline-migrate-secrets` with `DB_PASSWORD` only (a hook ExternalSecret with External
+  Secrets; a hook Secret on kind; or the existing `secrets.existingSecret`). It runs as the namespace's `default`
+  ServiceAccount without a token: it needs no cloud identity.
+- **The dev seed can't get there.** `db/seed-dev` (V1xx personas) is not a main resource any more: it isn't in the boot
+  jars or the images (only `bootRun`, the tests and the Gradle DB tasks see it). DbTool refuses `db.devSeed` under a
+  deployed profile (`dev`, `staging`, `prod`, `cloud`) or for a non-local database host, and the api refuses a Flyway
+  location naming `seed-dev` outside `local`/`test` (`DevSeedGuard`). Prod therefore has no V1xx rows:
+  `select count(*) from flyway_schema_history where version::int >= 100` is 0.
+- **Rules for migrations** (unchanged): forward-only; every migration keeps the previous release working (expand →
+  migrate → contract across releases), because old pods serve against the new schema during the rollout and after a
+  `helm rollback`.
+- Manual run without Helm (from a machine that can reach the database):
+  `DB_URL=… DB_USER=… DB_PASSWORD=… ./gradlew :api:flywayMigrate :api:seedCategories` — never `-Pdb.devSeed=true`
+  (refused anyway outside local).
+- `migrations.enabled: false` returns to migrate-on-start (the api's Flyway on), e.g. for a cluster without hook support.
 
 ## Local: kind
 
@@ -203,8 +240,8 @@ deploy/kind/down.sh        # deletes the cluster and the Postgres container
 - Secrets come from `values-local-kind.yaml` (`secrets.create`, allowed only with `global.environment=local`), with the
   apps' local development values — or, with External Secrets Operator installed in the cluster, add
   `-f deploy/helm/northline/values-local-kind-eso.yaml` (ESO's `fake` provider; [secrets.md](secrets.md#local-development-and-kind)). Token signing uses `KMS_PROVIDER=local` on an `emptyDir` (one auth replica).
-- The first start of northline-auth may restart once: until S-16 the api creates the schema, and auth can come up
-  first. The OAuth client Job runs after everything is Ready.
+- The migration Job migrates the empty database and seeds the categories before any pod starts (no dev seed: this is
+  the cloud shape). The OAuth client Job runs after everything is Ready.
 - kindnet enforces NetworkPolicies only on kernels with nftables queue support; elsewhere the policies are accepted but
   not enforced.
 

@@ -120,6 +120,10 @@ their own variables. (dict "root" $ "name" "<app>" "app" $appValues)
 {{- $_ := set $env "WEBAUTHN_RP_ID" $v.urls.webauthnRpId -}}
 {{- $_ := set $env "API_PUBLIC_URL" $v.urls.api -}}
 {{- $_ := set $env "SERVER_PORT" (toString .app.port) -}}
+{{- if and (eq .name "api") $v.migrations.enabled -}}
+{{- /* S-16: the migration Job owns Flyway; the api only runs against the migrated schema. */ -}}
+{{- $_ := set $env "SPRING_FLYWAY_ENABLED" "false" -}}
+{{- end -}}
 {{- $env = merge (deepCopy (default (dict) .app.env)) (deepCopy (default (dict) $v.env)) $env -}}
 {{- else if eq .app.type "static" -}}
 {{- $_ := set $env "NL_AUTH_ORIGIN" $v.urls.auth -}}

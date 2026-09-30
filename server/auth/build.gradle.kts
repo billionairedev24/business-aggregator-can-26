@@ -37,8 +37,17 @@ dependencies {
 // `test` profiles so the auth server can start (and be tested) on its own; in prod the api owns migrations.
 tasks.processResources {
     from(rootProject.file("../db/migrations")) { into("db/migration") }
-    from(rootProject.file("../db/seed-dev")) { into("db/seed-dev") }
 }
+
+// S-16: the dev seed is not a main resource (never in the boot jar or the image); only bootRun (`local` profile:
+// classpath:db/seed-dev) and the tests see it — same as server/api.
+val devSeedDir = layout.buildDirectory.dir("dev-seed")
+val devSeedResources by tasks.registering(Sync::class) {
+    from(rootProject.file("../db/seed-dev")) { into("db/seed-dev") }
+    into(devSeedDir)
+}
+val devSeedClasspath = files(devSeedDir).builtBy(devSeedResources)
+dependencies { testRuntimeOnly(devSeedClasspath) }
 
 // Local signing keys (docs/runbooks/key-rotation.md): ./gradlew :auth:signingKeys --args='rotate'
 tasks.register<JavaExec>("signingKeys") {

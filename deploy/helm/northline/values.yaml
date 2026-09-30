@@ -161,6 +161,20 @@ networkPolicy:
   # Extra peers allowed to reach every app's port (e.g. Prometheus).
   extraFrom: []
 
+# Database migrations as a deploy step (S-16, docs/runbooks/deploy.md § Migrations): a pre-install/pre-upgrade hook Job
+# (Argo CD: PreSync) runs Flyway from the api image — db/migration only; the image has no db/seed-dev — then seeds the
+# categories (idempotent upsert). A failed migration fails the Helm release before any Deployment changes, so the
+# running pods keep serving. While enabled, the api does not migrate at start-up (SPRING_FLYWAY_ENABLED=false).
+migrations:
+  enabled: true
+  seedCategories: true            # second step: db/seed/categories.json → catalogue.categories
+  backoffLimit: 1                 # one retry (e.g. the database was briefly unreachable); a broken migration fails twice
+  activeDeadlineSeconds: 900
+  ttlSecondsAfterFinished: 604800 # keep the Job (and its logs) a week; the next deploy replaces it anyway
+  resources:
+    requests: { cpu: 200m, memory: 384Mi }
+    limits: { memory: 512Mi }
+
 # Registers the OAuth clients (S-122) after every install/upgrade: the auth image running OAuthClientsCommand sync
 # with the auth Deployment's environment. Idempotent; northline-auth also syncs at start unless
 # apps.auth.env.OAUTH_CLIENTS_SYNC_ON_STARTUP is "false".
