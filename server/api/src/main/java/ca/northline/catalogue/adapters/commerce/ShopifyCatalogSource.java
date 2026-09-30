@@ -3,9 +3,9 @@ package ca.northline.catalogue.adapters.commerce;
 import static ca.northline.catalogue.adapters.commerce.CommerceHttp.JSON;
 import static ca.northline.catalogue.adapters.commerce.CommerceHttp.text;
 
-import ca.northline.catalogue.adapters.commerce.CommerceHttp.Backoff;
 import ca.northline.catalogue.application.CommerceCatalogSource;
 import ca.northline.catalogue.domain.CommerceProvider;
+import ca.northline.shared.integration.Backoff;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;

@@ -1,0 +1,36 @@
+{
+  "sections": [
+    { "externalId": "cat-starters", "name": "Starters", "items": [
+      { "externalId": "item-salad-rolls", "name": "Salad rolls (2)", "description": "Shrimp, vermicelli, herbs, peanut sauce.", "priceCents": 899, "groupIds": [] },
+      { "externalId": "item-spring-rolls", "name": "Crispy spring rolls", "description": "Pork and taro, nuoc cham.", "priceCents": 999, "groupIds": [] }
+    ] },
+    { "externalId": "cat-pho", "name": "Pho", "items": [
+      { "externalId": "item-pho-tai", "name": "Pho tai", "description": "Rare beef, 12-hour bone broth, rice noodles.", "priceCents": 1695, "groupIds": ["grp-size", "grp-extras"] },
+      { "externalId": "item-pho-dac-biet", "name": "Pho dac biet", "description": "The house special: rare beef, brisket, tendon, tripe, meatballs.", "priceCents": 1895, "groupIds": ["grp-size", "grp-extras"] }
+    ] },
+    { "externalId": "cat-banh-mi", "name": "Banh mi", "items": [
+      { "externalId": "item-bm-chicken", "name": "Lemongrass chicken banh mi", "description": null, "priceCents": 1295, "groupIds": [] },
+      { "externalId": "item-bm-tofu", "name": "Tofu banh mi", "description": null, "priceCents": 1195, "groupIds": [] }
+    ] },
+    { "externalId": "cat-drinks", "name": "Drinks", "items": [
+      { "externalId": "item-ca-phe", "name": "Vietnamese iced coffee", "description": "Condensed milk, dark roast.", "priceCents": 595, "groupIds": ["grp-sweetness"] },
+      { "externalId": "item-soup-of-day", "name": "Soup of the day", "description": "Priced at the counter.", "priceCents": null, "groupIds": [] }
+    ] }
+  ],
+  "groups": [
+    { "externalId": "grp-size", "name": "Size", "min": 1, "max": 1, "options": [
+      { "externalId": "opt-regular", "name": "Regular", "priceDeltaCents": 0 },
+      { "externalId": "opt-large", "name": "Large", "priceDeltaCents": 300 }
+    ] },
+    { "externalId": "grp-extras", "name": "Extras", "min": 0, "max": 3, "options": [
+      { "externalId": "opt-noodles", "name": "Extra noodles", "priceDeltaCents": 250 },
+      { "externalId": "opt-beef", "name": "Extra beef", "priceDeltaCents": 400 },
+      { "externalId": "opt-egg", "name": "Soft egg", "priceDeltaCents": 150 }
+    ] },
+    { "externalId": "grp-sweetness", "name": "Sweetness", "min": 1, "max": 1, "options": [
+      { "externalId": "opt-less", "name": "Less sweet", "priceDeltaCents": 0 },
+      { "externalId": "opt-reg-sweet", "name": "Regular", "priceDeltaCents": 0 },
+      { "externalId": "opt-extra-sweet", "name": "Extra sweet", "priceDeltaCents": 0 }
+    ] }
+  ]
+}

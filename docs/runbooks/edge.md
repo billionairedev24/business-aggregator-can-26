@@ -59,7 +59,8 @@ Certificates: cert-manager, Let's Encrypt (HTTP-01 through the Gateway; DNS-01 t
   (S-12, signed), the calendar change notifications (S-32, `/api/v1/webhooks/calendar/…`, verified per channel secret —
   [calendar-sync.md](calendar-sync.md)), the Shopify / Square / Lightspeed webhooks and OAuth redirect URIs (S-35,
   `/api/v1/webhooks/commerce/…` HMAC-verified, `/api/v1/commerce/oauth/…` single-use state —
-  [commerce-sync.md](commerce-sync.md)) and the email unsubscribe link (S-13). Anything outside `/api/v1` (actuator, OpenAPI) answers 404 at
+  [commerce-sync.md](commerce-sync.md); the same callback serves the kitchens' Square / Clover POS import, S-36,
+  [pos-menu-import.md](pos-menu-import.md)) and the email unsubscribe link (S-13). Anything outside `/api/v1` (actuator, OpenAPI) answers 404 at
   the Gateway. Browsers reach the api through the BFF on the Studio host — including the calendar OAuth redirect URIs
   (`https://studio.<zone>/api/v1/calendar/oauth/…`), which need the member's session. `tokenClients: false` narrows the route back
   to `/api/v1/webhooks/stripe` (+ `/connect`), `/api/v1/webhooks/calendar`, `/api/v1/webhooks/commerce`,

@@ -88,8 +88,9 @@ put them in the operator's `configEnv`.
 
 ## Redirect and webhook URLs per environment
 
-All on the **api** host: the platforms' app settings take one fixed redirect URL and one webhook URL per app, the
-callback needs no session (the single-use state identifies the owner and business), and the Gateway routes
+All on the **api** host: the platforms' app settings take one fixed redirect URL and one webhook URL per app (the
+Square app and its redirect URL also serve the kitchens' menu import, S-36: the shared callback hands each state to
+the module that started it — [pos-menu-import.md](pos-menu-import.md)), the callback needs no session (the single-use state identifies the owner and business), and the Gateway routes
 `/api/v1/commerce/oauth` and `/api/v1/webhooks/commerce` there even with `apps.api.tokenClients: false`
 ([edge.md](edge.md)).
 

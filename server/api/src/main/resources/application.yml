@@ -144,6 +144,25 @@ northline:
     lightspeed:
       client-id: ${LIGHTSPEED_CLIENT_ID:}
       client-secret: ${LIGHTSPEED_CLIENT_SECRET:}
+  # POS menu import for kitchens (S-36, docs/runbooks/pos-menu-import.md): local (fake Square / Clover / Toast with a
+  # fixture menu; refused under staging/prod) | oauth (the real APIs, each once its credentials are set).
+  pos:
+    provider: ${POS_PROVIDER:local}
+    api-url: ${API_PUBLIC_URL:http://localhost:8080}      # OAuth redirect: the shared <api>/api/v1/commerce/oauth/<pos>/callback
+    studio-url: ${STUDIO_ORIGIN:http://localhost:3100}
+    square:                                               # the same Square app as the catalogue sync (S-35)
+      client-id: ${SQUARE_CLIENT_ID:}
+      client-secret: ${SQUARE_CLIENT_SECRET:}
+      base-url: ${SQUARE_BASE_URL:https://connect.squareup.com}
+    clover:
+      client-id: ${CLOVER_CLIENT_ID:}
+      client-secret: ${CLOVER_CLIENT_SECRET:}
+      auth-url: ${CLOVER_AUTH_URL:https://www.clover.com}      # sandbox: https://sandbox.dev.clover.com
+      api-url: ${CLOVER_API_URL:https://api.clover.com}        # sandbox: https://apisandbox.dev.clover.com
+    toast:                                                # partner credentials (Toast partner program)
+      client-id: ${TOAST_CLIENT_ID:}
+      client-secret: ${TOAST_CLIENT_SECRET:}
+      api-url: ${TOAST_API_URL:https://ws-api.toasttab.com}    # sandbox: https://ws-sandbox-api.eng.toasttab.com
   # Provider switches (ca.northline.platform) — see docs/runbooks/README.md.
   # Object storage (S-10, ca.northline.shared.storage): local (modules' disk fakes; placeholders under dev; refused
   # under staging/prod) | s3 (AWS S3 or RustFS/MinIO: endpoint + path-style) | gcs | azure (endpoint = account URL).

@@ -165,6 +165,57 @@ export const useImportCsv = (merchantId: string) => useMenuMutation(merchantId, 
   return http(`${m(merchantId)}/menus/${menuId}/import`, { method: 'POST', body: form }, z.object({ itemsCreated: z.number(), sectionsCreated: z.number() }));
 });
 
+// ── S-36 POS import ─────────────────────────────────────────────────────────
+
+export const POS = ['square', 'clover', 'toast'] as const;
+export type Pos = (typeof POS)[number];
+export const PosConnection = z.object({
+  provider: z.enum(POS), kind: z.enum(['oauth', 'restaurant_id']), available: z.boolean(), state: z.enum(['disconnected', 'connected', 'reconnect']),
+  accountLabel: z.string().nullish(), connectedAt: z.string().nullish(), lastImportAt: z.string().nullish(),
+});
+export type PosConnection = z.infer<typeof PosConnection>;
+const ItemChange = z.object({ externalId: z.string(), name: z.string(), section: z.string().nullish(), change: z.enum(['new', 'changed', 'unchanged', 'removed', 'problem']), fields: z.array(z.string()), priceCents: z.number().nullish(), previousPriceCents: z.number().nullish(), problem: z.string().nullish() });
+export type ItemChange = z.infer<typeof ItemChange>;
+export const PosPreview = z.object({
+  id: z.string(), provider: z.enum(POS), menuId: z.string(), status: z.enum(['preview', 'applied', 'discarded']),
+  diff: z.object({
+    sections: z.array(z.object({ externalId: z.string(), name: z.string(), change: z.enum(['new', 'matched']) })),
+    groups: z.array(z.object({ externalId: z.string(), name: z.string(), change: z.enum(['new', 'changed', 'unchanged', 'problem']), problem: z.string().nullish() })),
+    items: z.array(ItemChange),
+    counts: z.object({ newItems: z.number(), changedItems: z.number(), unchangedItems: z.number(), removedItems: z.number(), problems: z.number(), newSections: z.number(), newGroups: z.number(), changedGroups: z.number() }),
+  }),
+});
+export type PosPreview = z.infer<typeof PosPreview>;
+const PosApplied = z.object({ itemsCreated: z.number(), itemsUpdated: z.number(), itemsHidden: z.number(), sectionsCreated: z.number(), groupsCreated: z.number(), groupsUpdated: z.number(), skipped: z.number() });
+const posKey = (merchantId: string) => ['merchant', merchantId, 'pos'] as const;
+export const posConnectionsQuery = (merchantId: string) => queryOptions({ queryKey: posKey(merchantId), queryFn: () => http(`${m(merchantId)}/pos/connections`, {}, items(PosConnection)) });
+
+/** The browser leaves for the POS's consent page (Square / Clover); tests replace it. */
+export const goTo = { assign: (url: string) => window.location.assign(url) };
+
+export function useConnectPos(merchantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ pos, menuId, restaurantId }: { pos: Pos; menuId?: string; restaurantId?: string }) =>
+      http(`${m(merchantId)}/pos/${pos}/connect`, { method: 'POST', body: { menuId, restaurantId } }, z.object({ authorizationUrl: z.string().nullish(), connection: PosConnection.nullish() })),
+    onSuccess: r => { if (r.authorizationUrl) goTo.assign(r.authorizationUrl); else void qc.invalidateQueries({ queryKey: posKey(merchantId) }); },
+  });
+}
+export function useDisconnectPos(merchantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (pos: Pos) => http(`${m(merchantId)}/pos/${pos}/disconnect`, { method: 'POST', body: {} }, PosConnection),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: posKey(merchantId) }),
+  });
+}
+export const usePosPreview = (merchantId: string) => useMutation({
+  mutationFn: ({ menuId, pos }: { menuId: string; pos: Pos }) => http(`${m(merchantId)}/menus/${menuId}/pos-imports`, { method: 'POST', body: { provider: pos } }, PosPreview),
+});
+export const useApplyPosImport = (merchantId: string) => useMenuMutation(merchantId, (id: string) => http(`${m(merchantId)}/pos-imports/${id}/apply`, { method: 'POST', body: {} }, PosApplied));
+export const useDiscardPosImport = (merchantId: string) => useMutation({
+  mutationFn: (id: string) => http(`${m(merchantId)}/pos-imports/${id}/discard`, { method: 'POST', body: {} }, PosPreview),
+});
+
 /** Sold out today — optimistic in the open menu. */
 export function useSoldOut(merchantId: string, menuId: string) {
   const qc = useQueryClient();
