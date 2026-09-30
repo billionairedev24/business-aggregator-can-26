@@ -1187,3 +1187,45 @@ Worker: `WebhookDeliveryTest` (Kafka 4 + PostGIS + WireMock receiver: signed `bo
 - `booking.confirmed`, `order.placed`, `order.delivered`, `review.created` wait for their domain events.
 - Partner-scoped endpoints (S-30), per-endpoint rate limits, `Retry-After` honouring, a manual "retry now" for a pending delivery, and a Studio chart of delivery health.
 - The delivery log keeps the payload for 30 days in the database (ids and amounts only).
+
+## 2026-09-30 — S-34 Event JSON Schemas validated in CI (`server/event-contracts`)
+
+- **Where:** a new Gradle project `server/event-contracts` (no boot jar) that depends on `:api`, `:auth` and `:worker`. It is the only place that can see the api's and northline-auth's event records **and** the worker's `EventSchemas`, which is the only schema validator in the system. It exposes one task, `:event-contracts:eventSchemas` (a JavaExec that prints a report; exit 1 on problems, 2 when `-PeventSchemas.requireBase=true` and the base can't be read), and a test, `EventContractsTest`, which runs the same checks inside `./gradlew build` (about 2 s: no Spring context, no containers).
+- **Check 1: "valid JSON Schema" means valid for the subset the consumers implement.** The worker's `EventSchemas` gains `KEYWORDS` / `FORMATS` (now public), `unsupportedKeywords(schema)` and `of(Map)`, so both sides use the same list. Beyond keywords, the check covers:
+  - `$schema` is draft 2020-12;
+  - `$id` = `northline:<type>:<n>` and matches the file name;
+  - `type` values are valid;
+  - every name in `required` is declared;
+  - `additionalProperties` is boolean only, because schema-valued ones are not implemented;
+  - every `pattern` compiles;
+  - min/max lengths are non-negative integers;
+  - `format` is one the worker checks;
+  - the envelope fields `eventId`, `occurredAt` and `aggregateId` are required.
+
+  I didn't add a full meta-schema validator library: it would bring Jackson 2, and it would accept keywords the worker then silently ignores, which is the real risk.
+- **`format: date` is now implemented by the worker.** `food.item_availability.soldOutOn` used it, and the worker ignored it (the check found this).
+- **Check 2:** every `@Externalized` event, whether nested in a sealed interface or from auth, must have `<EventHeaders.type>.v<version()>.schema.json`. Every schema file must belong to an event type at a version ≤ the event's; older versions stay valid for draining. A schema may also belong to a **module-internal `DomainEvent`**: the check found `catalogue.listing_submitted`, a documented internal event. Such schemas are held to checks 1 and 3 too.
+- **Check 3 (sample payloads):** each record is built reflectively. Values follow the schema where it constrains them: enum, pattern (from a small list of candidate strings: ULID, `RF-…`, `DS-…`, `2026-Q3`, …), format, minimum and lengths. Samples are:
+  - one with every field set;
+  - one with every `@Nullable` component null (JSpecify TYPE_USE, read at run time);
+  - one per Java enum constant.
+
+  Each sample is serialized with a default Jackson 3 `JsonMapper` (the api's `default-property-inclusion: always` is Jackson's default) and validated. A type or pattern the builder can't handle fails with "teach SamplePayloads"; it is never skipped. String fields with a schema `enum` take their value from the schema, so drift in what code *assigns* to such strings is not detectable this way. Only Java enums are fully enumerated.
+- **Check 4 (breaking changes)** compares with the **merge base** of HEAD and the base ref (default `origin/main`, read with the `git` CLI), so schemas added on main since the branch forked don't look deleted. The following are breaking in the same version file:
+  - a removed field, a newly required field, a narrowed or added type or `enum`;
+  - `additionalProperties` → false;
+  - an added or changed `pattern` or `format`;
+  - a raised `minimum` or `minLength`, a lowered or added `maxLength`;
+  - a deleted file.
+
+  The fix is a new `v<n+1>` file plus `version()`. Additive changes pass. In `./gradlew build` check 4 runs when the ref exists locally and is skipped otherwise (a shallow clone). The CI jobs require it.
+- **CI, manual only as always:**
+  - GitHub: `.github/workflows/event-schemas.yml` (`workflow_dispatch`, input `base`, full fetch).
+  - GitLab: `ci/gitlab/events.yml`, job `events:schemas` (`PIPELINE_PART=events`, also part of `all`; `EVENT_SCHEMAS_BASE`, `GIT_DEPTH=0`; git installed in the Temurin image).
+- **Tests:**
+  - `BreakingChangesTest`: 11 breaking and 8 non-breaking cases, plus file deletion and version bumps.
+  - `SchemaRulesTest`.
+  - `SamplePayloadsTest`: made-up records, catching null-vs-non-null, enum, type, closed-schema and required divergences.
+  - `EventContractsTest`: the real repository, plus a scratch git repository where a branch breaks v1 (fails) and then moves the change to v2 (passes).
+- **Found, not fixed here:** northline-auth's `user.registered` goes to Kafka without the `nl-event-*` headers (auth has no `EventHeaders` configuration). The S-26 worker would dead-letter it as poison if a consumer subscribed to `identity.user`. Nothing subscribes yet.
+- **Not done:** checking that consumers handle every schema version (the worker's mappings are per type and version); checking public webhook payload schemas (S-33 validates them at run time and in its own tests).
