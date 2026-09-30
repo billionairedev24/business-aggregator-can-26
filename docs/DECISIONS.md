@@ -2676,7 +2676,7 @@ Branch `web/s-56-quotes`, stacked on `web/s-55-booking-wizard` (and so on S-54, 
   quote's deposit, or **the whole quote when it asks for none** (as instant bookings hold the whole price). The tax in
   the held amount is the deposit's share of the quote's GST. `POST …/accept/confirm` (Idempotency-Key) then checks
   the authorization (`EscrowLifecycle.hold`), accepts the quote (`quote.accepted`, existing v2 schema), and books the
-  proposed time — the quote's `proposedAt`, else the request's preferred date at 9 am — with a free member
+  proposed time — the quote's `proposedAt`, else the request's preferred date at 9 am in the market's time zone (`northline.hire.time-zone`) — with a free member
   (`ProviderSlots.freeMember`; 409 `slot_taken` "The provider is no longer free at the proposed time…"), publishing
   `booking.confirmed` with the `quoteId` (S-55). **V116** `booking.quote_acceptances` keeps the booking id, the
   PaymentIntent and the amounts between the two calls (one row per quote version; replaced while not accepted).
@@ -2686,6 +2686,8 @@ Branch `web/s-56-quotes`, stacked on `web/s-55-booking-wizard` (and so on S-54, 
   business the customer came from — the provider page's "Not sure?" button, and the main button of event businesses,
   which are quote-only), `/quotes/requests/$requestId` (new, screen key `quoteCompare`: "N quotes received") and
   `/quotes/$quoteId` (design 06 `quote`). The request survives the trip to the sign-in page in `sessionStorage`.
+- **Region-neutral:** no place in the code or copy; tax labels read "Tax 5%" (the rate from the quote). Existing
+  literal relied on: `QuoteService.PROVINCE` ("AB", Operations) sets the tax of the quotes providers send (S-134).
 - **Not done:** the balance of a deposit quote ("balance held 48 h before the event") — only the deposit is held at
   acceptance; messages on a quote ("Ask a question first", the design's thread) — no customer↔provider messaging API
   yet; notifying providers of a new request (the Studio column polls; push/e-mail are the notifications stories); a

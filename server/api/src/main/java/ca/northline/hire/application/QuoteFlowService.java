@@ -42,7 +42,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -64,8 +63,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 class QuoteFlowService
         implements RequestQuotes, CompareQuotes, ViewQuote, DeclineQuote, StartAcceptance, ConfirmAcceptance {
-
-    static final ZoneId ZONE = ZoneId.of("America/Edmonton");
 
     /** A requested date means "from 9 am" to the provider (the Studio card shows a time). */
     static final LocalTime PREFERRED_TIME = LocalTime.of(9, 0);
@@ -92,12 +89,13 @@ class QuoteFlowService
     private final ViewBooking bookingViews;
     private final ProviderSlots slots;
     private final PersonDirectory people;
+    private final HireProperties region;
     private final Clock clock;
 
     @Override
     public Requested request(String customerId, QuoteAsk ask) {
         var category = categories.category(ask.category(), "en");
-        var today = LocalDate.now(clock.withZone(ZONE));
+        var today = LocalDate.now(clock.withZone(region.timeZone()));
         ask.validate(category.kind(), category.vehicle(), today);
         var chosen = new ArrayList<String>();
         for (var slug : ask.providers()) {
@@ -118,7 +116,7 @@ class QuoteFlowService
                 ask.title(Objects.requireNonNullElse(category.names().get("en"), category.slug())),
                 ask.text(),
                 blankToNull(ask.area()),
-                day == null ? null : day.atTime(PREFERRED_TIME).atZone(ZONE).toInstant(),
+                day == null ? null : day.atTime(PREFERRED_TIME).atZone(region.timeZone()).toInstant(),
                 ask.details()));
         return new Requested(ref.id(), ref.ref(), ref.respondBy(), ref.expiresAt(), chosen.size());
     }

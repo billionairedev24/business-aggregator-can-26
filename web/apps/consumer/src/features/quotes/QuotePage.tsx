@@ -70,7 +70,7 @@ function QuoteView({ page }: { page: Page }) {
           </div>
           <dl className="nl-qt-totals">
             <div><dt>{t('subtotal')}</dt><dd>{money(q.subtotalCents)}</dd></div>
-            <div><dt>{t('gst', { pct: pct(q.taxBps) })}</dt><dd>{money(q.taxCents)}</dd></div>
+            <div><dt>{t('tax', { pct: pct(q.taxBps) })}</dt><dd>{money(q.taxCents)}</dd></div>
             <div className="nl-qt-total"><dt>{t('total')}</dt><dd>{money(q.totalCents)}</dd></div>
           </dl>
 

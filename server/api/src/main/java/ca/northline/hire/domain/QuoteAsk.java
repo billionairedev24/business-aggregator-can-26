@@ -46,7 +46,7 @@ public record QuoteAsk(
     /**
      * Checks every rule and reports all broken ones at once.
      *
-     * @param today in Calgary
+     * @param today in the market's time zone
      */
     public QuoteAsk validate(ServiceKind kind, boolean vehicleCategory, LocalDate today) {
         var errors = new ArrayList<Violation>();
