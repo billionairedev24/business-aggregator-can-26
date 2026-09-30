@@ -8,6 +8,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testImplementation("org.springframework.boot:spring-boot-starter-security-test")
+    testImplementation(libs.wiremock)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

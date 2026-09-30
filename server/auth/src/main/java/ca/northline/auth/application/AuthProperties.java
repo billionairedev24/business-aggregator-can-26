@@ -2,6 +2,7 @@ package ca.northline.auth.application;
 
 import java.time.Duration;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
@@ -19,6 +20,9 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param webauthn relying party
  * @param trustedProxies CIDRs of the load balancers / ingress allowed to set {@code X-Forwarded-*} (client IP for rate
  *     limits and the sign-in log); anyone else's forwarded headers are ignored
+ * @param clientCityHeader request header in which the load balancer / CDN puts the client's city (for example
+ *     {@code CloudFront-Viewer-City}, or a Google Cloud / Azure Front Door custom header); read only from trusted
+ *     proxies, shown in Settings › Security's session list (S-19). Empty = no city.
  */
 @ConfigurationProperties("northline.auth")
 public record AuthProperties(
@@ -33,7 +37,9 @@ public record AuthProperties(
         WebAuthn webauthn,
 
         @DefaultValue({"127.0.0.0/8", "::1/128", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7"})
-        List<String> trustedProxies) {
+        List<String> trustedProxies,
+
+        @Nullable String clientCityHeader) {
 
     /** WebAuthn relying party: id (registrable domain) and the origins allowed in client data. */
     public record WebAuthn(

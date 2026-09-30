@@ -73,3 +73,8 @@
 
 /* Invitation accept */
 .nl-invite { max-width: 560px; margin: 48px auto; padding: 0 16px; display: flex; flex-direction: column; gap: 14px; }
+
+/* S-19: passkey removal note, session list actions */
+.nl-set-factors > li.nl-set-note { min-height: 0; margin-top: -6px; }
+.nl-set-rows + .nl-set-actions { margin-top: 14px; }
+.nl-set-rows + .nl-set-h3, .nl-set-actions + .nl-set-h3 { margin-top: 24px; }

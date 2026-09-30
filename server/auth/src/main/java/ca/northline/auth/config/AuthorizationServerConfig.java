@@ -1,6 +1,8 @@
 package ca.northline.auth.config;
 
 import ca.northline.auth.application.AuthProperties;
+import ca.northline.auth.application.SessionAuthentication;
+import ca.northline.auth.application.SessionService;
 import ca.northline.auth.application.UserClaimsService;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
@@ -64,9 +66,11 @@ class AuthorizationServerConfig {
         return new JdbcRegisteredClientRepository(jdbc);
     }
 
+    /** JDBC storage, with each authorization linked to the session (sign-in) it came from (S-19). */
     @Bean
-    OAuth2AuthorizationService authorizations(JdbcOperations jdbc, RegisteredClientRepository clients) {
-        return new JdbcOAuth2AuthorizationService(jdbc, clients);
+    OAuth2AuthorizationService authorizations(
+            JdbcOperations jdbc, RegisteredClientRepository clients, SessionService sessions) {
+        return new SessionLinkedAuthorizations(new JdbcOAuth2AuthorizationService(jdbc, clients), sessions);
     }
 
     @Bean
@@ -103,6 +107,9 @@ class AuthorizationServerConfig {
                 ctx.getClaims().claims(c -> c.putAll(claims.accessTokenClaims(user.getName(), factors)));
             } else if (OidcParameterNames.ID_TOKEN.equals(ctx.getTokenType().getValue())) {
                 ctx.getClaims().claims(c -> c.putAll(claims.idTokenClaims(user.getName(), factors)));
+                // OIDC `sid`: the session (sign-in) the tokens belong to — the BFF shows it as the current session.
+                SessionAuthentication.sessionIdOf(user)
+                        .ifPresent(sid -> ctx.getClaims().claim("sid", sid));
             }
         };
     }

@@ -20,7 +20,15 @@ public final class FlowRejected extends RuntimeException {
         /** The SMS/voice provider didn't take the code (S-8) → 503 (detail says which channel failed). */
         CODE_NOT_SENT("code_not_sent"),
         /** Needs a signed-in session with a second factor → 401. */
-        UNAUTHENTICATED("unauthenticated");
+        UNAUTHENTICATED("unauthenticated"),
+        /** S-19: the change needs a second factor from the last few minutes (step-up) → 403. */
+        STEP_UP_REQUIRED("step_up_required"),
+        /** S-19: removing this factor would leave the account without a second factor → 409. */
+        LAST_FACTOR("last_factor"),
+        /** S-19: revoking the session the request comes from (sign out instead) → 409. */
+        CURRENT_SESSION("current_session"),
+        /** S-19: the session or passkey isn't there (any more) for this person → 404. */
+        GONE("not_found");
 
         private final String code;
 

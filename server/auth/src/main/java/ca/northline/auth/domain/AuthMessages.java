@@ -41,6 +41,15 @@ public final class AuthMessages {
     public static final String CALL_NOT_PLACED =
             "We couldn't call this number. Try again in a moment, or resend the code by text.";
 
+    /** S-19: revoking a session / removing a passkey needs a second factor from the last few minutes. */
+    public static final String STEP_UP_REQUIRED = "Confirm it's you to make this change.";
+    /** S-19: the last passkey can't go while no authenticator app is set up (and vice versa). */
+    public static final String LAST_FACTOR = "Add another passkey or an authenticator app before you remove this one.";
+
+    public static final String SESSION_GONE = "That session has already ended.";
+    public static final String PASSKEY_GONE = "That passkey was already removed.";
+    public static final String CURRENT_SESSION = "This is the session you're using now. Sign out instead.";
+
     public static final String SIX_DIGITS = "^\\d{6}$";
 
     private AuthMessages() {}

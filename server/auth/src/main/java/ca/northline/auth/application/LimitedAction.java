@@ -20,7 +20,9 @@ public enum LimitedAction {
     /** A passkey assertion that didn't verify (or belongs to someone else) at sign-in. */
     PASSKEY_ASSERTION(Kind.FAILURES),
     /** A failed step-up confirmation (payouts), passkey or authenticator code. */
-    STEP_UP(Kind.FAILURES);
+    STEP_UP(Kind.FAILURES),
+    /** S-19: revoking sessions or removing a passkey (Settings › Security) — every call counts. */
+    SECURITY_CHANGE(Kind.REQUESTS);
 
     /** Whether every call counts, or only failures. */
     public enum Kind {

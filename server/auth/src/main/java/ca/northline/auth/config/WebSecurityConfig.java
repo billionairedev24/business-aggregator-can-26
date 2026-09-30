@@ -1,6 +1,7 @@
 package ca.northline.auth.config;
 
 import ca.northline.auth.application.AuthProperties;
+import ca.northline.auth.application.SessionService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -9,6 +10,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -67,15 +69,27 @@ class WebSecurityConfig {
     /** Before everything (Spring Session, Spring Security): the rest of the app sees the client's address. */
     @Bean
     FilterRegistrationBean<TrustedProxyFilter> trustedProxyFilter(AuthProperties props) {
-        var registration = new FilterRegistrationBean<>(new TrustedProxyFilter(props.trustedProxies()));
+        var registration =
+                new FilterRegistrationBean<>(new TrustedProxyFilter(props.trustedProxies(), props.clientCityHeader()));
         registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
+        return registration;
+    }
+
+    /**
+     * After Spring Session (which wraps the request), before Spring Security (which reads the session's security
+     * context): sessions whose sign-in ended are dropped here (S-19).
+     */
+    @Bean
+    FilterRegistrationBean<RevokedSessionFilter> revokedSessionFilter(SessionService sessions) {
+        var registration = new FilterRegistrationBean<>(new RevokedSessionFilter(sessions));
+        registration.setOrder(SecurityFilterProperties.DEFAULT_FILTER_ORDER - 1);
         return registration;
     }
 
     private static CorsConfigurationSource cors(AuthProperties props) {
         var config = new CorsConfiguration();
         config.setAllowedOrigins(props.allowedOrigins());
-        config.setAllowedMethods(List.of("GET", "POST"));
+        config.setAllowedMethods(List.of("GET", "POST", "DELETE"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
