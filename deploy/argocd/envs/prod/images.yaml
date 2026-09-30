@@ -1,0 +1,17 @@
+# Images Northline prod runs, pinned by digest — the promotion file (docs/runbooks/gitops.md § Promotion).
+# Written by deploy/argocd/promote.sh (by hand or the manual "gitops promote" CI job) and changed only through a
+# reviewed PR; after the merge a deployer syncs northline-prod in Argo CD.
+# The digest is what runs; the tag only says which commit it was built from. Empty digests = nothing promoted yet
+# (the Application reports a ComparisonError until the first promotion).
+global:
+  image:
+    registry: northline            # <registry/path>, e.g. 123456789012.dkr.ecr.ca-central-1.amazonaws.com/northline
+    tag: ""                        # git sha the images were built from
+    requireDigest: true
+apps:
+  api: { image: { digest: "" } }
+  auth: { image: { digest: "" } }
+  bff: { image: { digest: "" } }
+  worker: { image: { digest: "" } }
+  studio: { image: { digest: "" } }
+  consumer: { image: { digest: "" } }

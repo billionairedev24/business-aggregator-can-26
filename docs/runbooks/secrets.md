@@ -99,7 +99,9 @@ externalSecrets:
    Every required secret of the table needs a value before the apps can start (the ExternalSecret reports
    `SecretSyncedError` and names the missing secret otherwise).
 
-3. **Install External Secrets Operator** (once per cluster, chart `external-secrets` ≥ 0.17, API `external-secrets.io/v1`):
+3. **Install External Secrets Operator** (once per cluster, chart `external-secrets` ≥ 0.17, API `external-secrets.io/v1`).
+   With Argo CD (S-15) it is the add-on `external-secrets-<env>`: put the identity below in
+   `deploy/argocd/envs/<env>/addons/external-secrets.yaml` instead ([gitops.md](gitops.md)). By hand:
 
    ```sh
    helm repo add external-secrets https://charts.external-secrets.io

@@ -20,6 +20,9 @@ global:
     # The git sha the images were built from (IMAGE_TAG). Empty = Chart.appVersion.
     tag: ""
     pullPolicy: IfNotPresent
+    # Refuse to render an enabled app without apps.<app>.image.digest (S-15: GitOps environments pin every image by
+    # digest in deploy/argocd/envs/<env>/images.yaml; a tag alone can be moved).
+    requireDigest: false
   imagePullSecrets: []           # [{ name: regcred }] — not needed when the nodes' identity may pull (ECR/AR/ACR)
   # Extra labels on every pod and annotations on every pod (e.g. a cost-centre label).
   podLabels: {}

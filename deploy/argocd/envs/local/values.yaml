@@ -1,0 +1,5 @@
+# kind rehearsal overrides (deploy/argocd/kind/rehearse.sh). Only the Java images are built for the rehearsal.
+apps:
+  worker: { enabled: false }
+  studio: { enabled: false }
+  consumer: { enabled: false }

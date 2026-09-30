@@ -1,0 +1,7 @@
+# External Secrets Operator (chart external-secrets, S-6) — values shared by every cloud and environment.
+# The ServiceAccount name is the one Terraform binds to the cloud identity (workload identity "external-secrets").
+installCRDs: true
+serviceAccount:
+  create: true
+  name: external-secrets
+# Webhook and cert-controller included (the chart's defaults): the webhook validates ExternalSecrets/SecretStores.

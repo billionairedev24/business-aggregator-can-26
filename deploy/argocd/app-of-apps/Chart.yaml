@@ -1,0 +1,9 @@
+apiVersion: v2
+name: northline-gitops
+description: >-
+  Argo CD app of apps for ONE Northline environment (S-15): the AppProjects, the root Application (which manages
+  itself), the platform add-ons and the northline Application. Rendered from deploy/argocd/envs/<env>/env.yaml.
+  docs/runbooks/gitops.md
+type: application
+version: 0.1.0
+appVersion: "1"

@@ -1,0 +1,3 @@
+# Northline dev — hand-written chart overrides that belong to this environment rather than to the chart
+# (values-dev.yaml) or to Terraform (infra.yaml). Layered after infra.yaml, before images.yaml.
+{}

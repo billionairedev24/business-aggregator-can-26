@@ -1,0 +1,127 @@
+{{- /*
+AppProjects restrict what each group of Applications may touch:
+  northline-<env>-gitops    the root Application and the child Application/AppProject objects, in the argocd namespace
+  northline-<env>-platform  the enabled add-ons: their chart repositories, namespaces and cluster-scoped kinds
+  northline-<env>           the northline chart: this Git repository, namespace northline-<env>, the chart's kinds
+Project roles give the deployer groups sync/rollback; argocd-rbac-cm makes everyone else read-only.
+*/ -}}
+{{- $env := include "gitops.env" . }}
+{{- $ns := include "gitops.namespace" . }}
+{{- $v := .Values }}
+{{- $deployers := $v.project.deployerGroups }}
+{{- $addons := dict }}
+{{- range $name, $a := $v.addons }}{{ if $a.enabled }}{{ $_ := set $addons $name $a }}{{ end }}{{ end }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: {{ include "gitops.project.gitops" . }}
+  namespace: {{ $v.argocdNamespace }}
+  labels: { app.kubernetes.io/part-of: northline, northline.ca/environment: {{ $env | quote }} }
+  annotations:
+    argocd.argoproj.io/sync-wave: "-100"
+spec:
+  description: Northline {{ $env }} — the app of apps (Applications and AppProjects only)
+  sourceRepos: [{{ $v.repoURL | quote }}]
+  destinations:
+    - { server: {{ $v.destination.server }}, namespace: {{ $v.argocdNamespace }} }
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist:
+    - { group: argoproj.io, kind: Application }
+    - { group: argoproj.io, kind: AppProject }
+  {{- with $deployers }}
+  roles:
+    - name: deployer
+      description: May sync the root Application (Application definitions, never workloads)
+      groups: {{ toYaml . | nindent 8 }}
+      policies:
+        - p, proj:{{ include "gitops.project.gitops" $ }}:deployer, applications, get, {{ include "gitops.project.gitops" $ }}/*, allow
+        - p, proj:{{ include "gitops.project.gitops" $ }}:deployer, applications, sync, {{ include "gitops.project.gitops" $ }}/*, allow
+  {{- end }}
+{{- if $addons }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: {{ include "gitops.project.platform" . }}
+  namespace: {{ $v.argocdNamespace }}
+  labels: { app.kubernetes.io/part-of: northline, northline.ca/environment: {{ $env | quote }} }
+  annotations:
+    argocd.argoproj.io/sync-wave: "-100"
+spec:
+  description: Northline {{ $env }} — platform add-ons ({{ keys $addons | sortAlpha | join ", " }})
+  sourceRepos:
+    - {{ $v.repoURL | quote }}
+    {{- range $name := keys $addons | sortAlpha }}
+    - {{ (get $addons $name).repoURL | quote }}
+    {{- end }}
+  destinations:
+    {{- range $name := keys $addons | sortAlpha }}
+    - { server: {{ $v.destination.server }}, namespace: {{ (get $addons $name).namespace }} }
+    {{- end }}
+  clusterResourceWhitelist:
+    - { group: "", kind: Namespace }
+    {{- $seen := dict }}
+    {{- range $name := keys $addons | sortAlpha }}
+    {{- range (get $addons $name).clusterResources }}
+    {{- $key := printf "%s/%s" .group .kind }}
+    {{- if not (hasKey $seen $key) }}{{ $_ := set $seen $key true }}
+    - { group: {{ .group | quote }}, kind: {{ .kind }} }
+    {{- end }}
+    {{- end }}
+    {{- end }}
+  {{- with $v.project.syncWindows }}
+  syncWindows: {{ toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with $deployers }}
+  roles:
+    - name: deployer
+      description: May sync and roll back the platform add-ons of {{ $env }}
+      groups: {{ toYaml . | nindent 8 }}
+      policies:
+        - p, proj:{{ include "gitops.project.platform" $ }}:deployer, applications, get, {{ include "gitops.project.platform" $ }}/*, allow
+        - p, proj:{{ include "gitops.project.platform" $ }}:deployer, applications, sync, {{ include "gitops.project.platform" $ }}/*, allow
+        - p, proj:{{ include "gitops.project.platform" $ }}:deployer, applications, action/*, {{ include "gitops.project.platform" $ }}/*, allow
+  {{- end }}
+{{- end }}
+{{- if $v.northline.enabled }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: {{ include "gitops.project.app" . }}
+  namespace: {{ $v.argocdNamespace }}
+  labels: { app.kubernetes.io/part-of: northline, northline.ca/environment: {{ $env | quote }} }
+  annotations:
+    argocd.argoproj.io/sync-wave: "-100"
+spec:
+  description: Northline {{ $env }} — the apps (chart deploy/helm/northline) in {{ $ns }} only
+  sourceRepos:
+    - {{ $v.repoURL | quote }}
+    {{- range $v.project.extraSourceRepos }}
+    - {{ . | quote }}
+    {{- end }}
+  destinations:
+    - { server: {{ $v.destination.server }}, namespace: {{ $ns }} }
+  # Only the Namespace itself (CreateNamespace=true); the chart has no cluster-scoped resources.
+  clusterResourceWhitelist:
+    - { group: "", kind: Namespace }
+  namespaceResourceWhitelist: {{ toYaml $v.northline.namespaceResources | nindent 4 }}
+  # Report resources in the namespace that Git doesn't know about (hand-made changes).
+  orphanedResources:
+    warn: true
+  {{- with $v.project.syncWindows }}
+  syncWindows: {{ toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with $deployers }}
+  roles:
+    - name: deployer
+      description: May sync, roll back and terminate syncs of Northline {{ $env }} (the approval step)
+      groups: {{ toYaml . | nindent 8 }}
+      policies:
+        - p, proj:{{ include "gitops.project.app" $ }}:deployer, applications, get, {{ include "gitops.project.app" $ }}/*, allow
+        - p, proj:{{ include "gitops.project.app" $ }}:deployer, applications, sync, {{ include "gitops.project.app" $ }}/*, allow
+        - p, proj:{{ include "gitops.project.app" $ }}:deployer, applications, action/*, {{ include "gitops.project.app" $ }}/*, allow
+        - p, proj:{{ include "gitops.project.app" $ }}:deployer, logs, get, {{ include "gitops.project.app" $ }}/*, allow
+  {{- end }}
+{{- end }}

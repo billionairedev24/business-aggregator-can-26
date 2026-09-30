@@ -1,0 +1,13 @@
+# Argo CD for one Northline environment cluster (S-15): the upstream release manifests, pinned, plus Northline's
+# settings. Install / upgrade (docs/runbooks/gitops.md § Install Argo CD):
+#   kubectl create namespace argocd
+#   kubectl apply -n argocd --server-side --force-conflicts -k deploy/argocd/install
+# Upgrading Argo CD = changing the version below in a PR (read the upstream upgrade notes first).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: argocd
+resources:
+  - https://raw.githubusercontent.com/argoproj/argo-cd/v3.1.1/manifests/install.yaml
+patches:
+  - path: argocd-cm.yaml
+  - path: argocd-rbac-cm.yaml

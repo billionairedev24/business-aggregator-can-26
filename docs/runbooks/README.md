@@ -3,8 +3,8 @@
 One runbook per environment. Each lists what the environment needs — services, variables, secrets, third-party
 accounts — and how to run, deploy and roll back **with what exists today**. Terraform for the cloud foundation and the managed data
 stores exists (S-2, S-3; not applied yet); container images and the Helm chart exist (S-14, [deploy.md](deploy.md));
-External Secrets are wired into the chart (S-6, [secrets.md](secrets.md)); migrations run as a Job before each rollout (S-16); GitOps and
-TLS/DNS arrive with later stories (S-15, S-17); the runbooks
+External Secrets are wired into the chart (S-6, [secrets.md](secrets.md)); migrations run as a Job before each rollout (S-16); Argo CD delivery is defined (S-15, [gitops.md](gitops.md));
+TLS/DNS arrives with S-17; the runbooks
 say where a step is still manual or missing.
 
 | runbook | for |
@@ -19,6 +19,7 @@ say where a step is still manual or missing.
 | [email.md](email.md) | transactional email: Mailpit locally, SES / SendGrid / Azure Communication Services / SMTP set-up, SPF/DKIM/DMARC, CASL (S-13) |
 | [ci.md](ci.md) | CI pipelines on GitHub Actions and GitLab CI, manual trigger only (S-4/S-5, infra checks S-2/S-3) |
 | [secrets.md](secrets.md) | secrets in AWS Secrets Manager / Secret Manager / Key Vault through External Secrets Operator: inventory, set-up, rotation (S-6) |
+| [gitops.md](gitops.md) | Argo CD: app of apps per environment, promotion by PR (digests in `images.yaml`), dev auto-sync, staging/prod manual sync by deployers, roll back, kind rehearsal (S-15) |
 | [deploy.md](deploy.md) | container images (Jib, Dockerfile) to any registry, the Helm chart per environment and cloud, install/upgrade/roll back, local rehearsal on kind (S-14) |
 
 ## Environment matrix

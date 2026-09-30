@@ -1,0 +1,105 @@
+# Argo CD app of apps — defaults. One Argo CD per environment cluster; each renders this chart for its own
+# environment from deploy/argocd/envs/<env>/env.yaml (docs/runbooks/gitops.md). Everything here is values: the same
+# templates serve dev, staging and prod on AWS, Google Cloud, Azure or kind.
+
+# dev | staging | prod | local (kind rehearsal). Selects deploy/argocd/envs/<environment>/ and the namespace.
+environment: ""
+# aws | gcp | azure | kind. Selects the chart's values-<cloud>.yaml and each add-on's values-<cloud>.yaml.
+cloud: ""
+
+# The Git repository Argo CD reads: GitHub or GitLab, HTTPS or SSH, e.g.
+#   https://github.com/billionairedev24/business-aggregator-can-26.git
+#   https://gitlab.com/<group>/<project>.git     git@gitlab.com:<group>/<project>.git
+# Private repositories need a repository Secret in the argocd namespace (docs/runbooks/gitops.md § Repository access).
+repoURL: ""
+# Branch (or tag / sha) the root Application and every environment file are read from.
+targetRevision: main
+
+# Namespace Argo CD runs in (Applications and AppProjects live there).
+argocdNamespace: argocd
+# Where the workloads go. One Argo CD per cluster: the cluster it runs in.
+destination:
+  server: https://kubernetes.default.svc
+
+# Sync policy of every Application of the environment. automated = Argo CD applies each new commit by itself (prune +
+# self-heal): dev only. staging/prod: false — Argo CD shows the diff (OutOfSync) and a member of a deployer group
+# starts the sync (docs/runbooks/gitops.md § Promotion).
+sync:
+  automated: false
+  prune: true
+  selfHeal: true
+  retry:
+    limit: 3
+    backoff: { duration: 30s, factor: 2, maxDuration: 5m }
+
+# The Northline chart (deploy/helm/northline).
+northline:
+  enabled: true
+  # Namespace of the release; empty = northline-<environment>.
+  namespace: ""
+  releaseName: northline
+  chartPath: deploy/helm/northline
+  # Chart value files, relative to the chart; empty = [values-<environment>.yaml, values-<cloud>.yaml]. The
+  # environment's own files follow them (later wins): envs/<env>/infra.yaml (Terraform helm_values),
+  # envs/<env>/values.yaml, envs/<env>/images.yaml.
+  valueFiles: []
+  # Order among the Applications of this environment (add-ons first).
+  syncWave: "0"
+  # The only kinds the northline Application may create (AppProject namespaceResourceWhitelist): what the chart
+  # renders, nothing cluster-scoped except its Namespace.
+  namespaceResources:
+    - { group: "", kind: ConfigMap }
+    - { group: "", kind: Secret }                 # kind only (secrets.create) and ESO-written Secrets
+    - { group: "", kind: Service }
+    - { group: "", kind: ServiceAccount }
+    - { group: apps, kind: Deployment }
+    - { group: batch, kind: Job }
+    - { group: autoscaling, kind: HorizontalPodAutoscaler }
+    - { group: policy, kind: PodDisruptionBudget }
+    - { group: networking.k8s.io, kind: NetworkPolicy }
+    - { group: networking.k8s.io, kind: Ingress }
+    - { group: gateway.networking.k8s.io, kind: HTTPRoute }
+    - { group: external-secrets.io, kind: ExternalSecret }
+    - { group: external-secrets.io, kind: SecretStore }
+
+# AppProject of the environment: which repositories, clusters, namespaces and kinds its Applications may use, and who
+# may sync. Argo CD RBAC groups come from its SSO (Dex / OIDC: GitHub teams, GitLab groups, Entra ID, Google groups).
+project:
+  # Groups whose members may sync, roll back and terminate operations in this environment (the approval step for
+  # staging and prod). Everyone else who can log in is read-only (argocd-rbac-cm policy.default).
+  deployerGroups: []
+  # Argo CD sync windows (e.g. no prod syncs on weekends): [{ kind: deny, schedule: "0 0 * * 6", duration: 48h,
+  # applications: ["*"], manualSync: true }]
+  syncWindows: []
+  # Additional source repositories (the Git repository and every enabled add-on chart repository are always allowed).
+  extraSourceRepos: []
+
+# Platform add-ons, one Application each, installed before the northline Application (sync waves). Values: the
+# add-on's defaults below → deploy/argocd/addons/<name>/values.yaml → addons/<name>/values-<cloud>.yaml →
+# envs/<env>/addons/<name>.yaml (identities from Terraform). Enable per environment in env.yaml.
+addons:
+  # External Secrets Operator (S-6, docs/runbooks/secrets.md): cluster-wide, authenticates to the cloud's secrets
+  # manager as the workload identity Terraform binds to external-secrets/external-secrets.
+  external-secrets:
+    enabled: false
+    repoURL: https://charts.external-secrets.io
+    chart: external-secrets
+    targetRevision: 0.20.4
+    namespace: external-secrets
+    syncWave: "-10"
+    # Cluster-scoped kinds the add-on installs (AppProject whitelist).
+    clusterResources:
+      - { group: apiextensions.k8s.io, kind: CustomResourceDefinition }
+      - { group: rbac.authorization.k8s.io, kind: ClusterRole }
+      - { group: rbac.authorization.k8s.io, kind: ClusterRoleBinding }
+      - { group: admissionregistration.k8s.io, kind: ValidatingWebhookConfiguration }
+      - { group: external-secrets.io, kind: ClusterSecretStore }
+      - { group: external-secrets.io, kind: ClusterExternalSecret }
+      - { group: generators.external-secrets.io, kind: ClusterGenerator }
+
+# Argo CD notifications (optional; needs argocd-notifications-controller and a service such as Slack configured in
+# argocd-notifications-cm — docs/runbooks/gitops.md § Notifications). Annotations added to every Application, e.g.
+#   notifications.argoproj.io/subscribe.on-sync-failed.slack: northline-deploys
+#   notifications.argoproj.io/subscribe.on-deployed.slack: northline-deploys
+notifications:
+  subscriptions: {}

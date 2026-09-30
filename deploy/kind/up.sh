@@ -8,7 +8,7 @@
 # (cd server && ./gradlew jibDockerBuild; docker build --target studio|consumer web). Postgres runs next to the
 # cluster (a container on the kind network, reached through a selector-less Service — the shape of a managed
 # database); Valkey runs in the cluster. Variables: KIND_CLUSTER (northline), NAMESPACE (northline-local),
-# IMAGE_TAG (dev), APPS (images to load), PG_IMAGE, VALKEY_IMAGE, HELM_EXTRA_ARGS.
+# IMAGE_TAG (dev), APPS (images to load), PG_IMAGE, VALKEY_IMAGE, HELM_EXTRA_ARGS, SKIP_HELM (stand-ins only).
 set -euo pipefail
 
 CLUSTER=${KIND_CLUSTER:-northline}
@@ -81,6 +81,9 @@ docker image inspect "$VALKEY_IMAGE" >/dev/null 2>&1 || docker pull -q "$VALKEY_
 load_image "$VALKEY_IMAGE"
 kubectl -n "$NS" apply -f "$ROOT/deploy/kind/valkey.yaml" >/dev/null
 for app in $APPS; do load_image "northline/$app:$TAG"; done
+
+# SKIP_HELM=1: stand-ins and images only — Argo CD installs the chart (deploy/argocd/kind/rehearse.sh, S-15).
+if [[ -n ${SKIP_HELM:-} ]]; then echo "stand-ins ready in $NS (SKIP_HELM)"; exit 0; fi
 
 # shellcheck disable=SC2086 # HELM_EXTRA_ARGS holds several arguments
 helm upgrade --install northline "$CHART" -n "$NS" \

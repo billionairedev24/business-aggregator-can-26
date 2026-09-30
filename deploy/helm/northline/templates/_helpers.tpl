@@ -37,7 +37,9 @@ app.kubernetes.io/component: {{ .app }}
 {{- $registry := trimSuffix "/" .root.Values.global.image.registry -}}
 {{- $ref := printf "%s:%s" .app.image.repository (include "northline.imageTag" .) -}}
 {{- if $registry }}{{ $ref = printf "%s/%s" $registry $ref }}{{ end -}}
-{{- if .app.image.digest }}{{ $ref = printf "%s@%s" $ref .app.image.digest }}{{ end -}}
+{{- if .app.image.digest }}{{ $ref = printf "%s@%s" $ref .app.image.digest }}
+{{- else if .root.Values.global.image.requireDigest }}{{ fail (printf "global.image.requireDigest: apps.%s.image.digest is empty — promote the images first (deploy/argocd/promote.sh, docs/runbooks/gitops.md)" .app.image.repository) }}
+{{- end -}}
 {{- $ref -}}
 {{- end }}
 

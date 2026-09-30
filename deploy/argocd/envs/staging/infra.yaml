@@ -1,0 +1,6 @@
+# Terraform's Helm values for staging: configEnv (ConfigMap northline-infra), the apps' workloadIdentities and the
+# External Secrets store settings + remote keys. Nothing secret (names only). Regenerate after every apply that
+# changes outputs, and commit through a PR:
+#   terraform -chdir=infra/terraform/envs/<cloud>/staging output -json helm_values | yq -P > deploy/argocd/envs/staging/infra.yaml
+# Empty until the environment's Terraform is applied.
+{}
