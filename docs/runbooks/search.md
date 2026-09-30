@@ -209,87 +209,9 @@ indices (the worker with `--profile events`, or the reindex), and run the api wi
 
 ## 8. Contract for the consumer web and app
 
-Both endpoints are `GET`, public, JSON, camelCase; money in cents; errors as everywhere in the api (422
-`{"errors":[{"field","rule","message"}]}`, 429 ProblemDetail). OpenAPI: `/v3/api-docs` (tag *Search*).
-
-### `GET /api/v1/search`
-
-| parameter | meaning |
-|---|---|
-| `q` | what was typed (≤ 100 characters); blank = browse by the filters |
-| `market` | province of the location pill: `AB` (default, `SEARCH_DEFAULT_MARKET`), `BC`, `ON`, `QC` |
-| `lang` | `en` \| `fr` — picks the index; default `Accept-Language` (fr* → French), else English |
-| `kind` | `service`, `product`, `food`, `merchant` — repeat or comma-separate (the web's `scope`: services → `service`, shop → `product`, food → `food`) |
-| `category` | a category id at any level (group or leaf) |
-| `minPrice`, `maxPrice` | cents, inclusive ("Under $10" = `maxPrice=999`) |
-| `minRating` | 1–5 |
-| `tier` | `registered`, `trusted`, `master` ("Master sellers", "Master tier") |
-| `instantBook` | `true` = services bookable at once |
-| `openNow` | `true` = inside its weekly hours now (Edmonton), not paused, not sold out today ("Open now", "Available today") |
-| `delivery` | `tonight` = on tonight's pooled run: pooled delivery, before the seller's cut-off, in stock ("On tonight's run") |
-| `dietary` | tags every result has: `halal`, `vegan`, `gluten_free` … ("Halal", "Vegan", "Gluten-free") |
-| `allergenFree` | Health Canada allergen codes no result contains: `peanuts`, `tree_nuts` … ("Nut-free" = `peanuts,tree_nuts`) |
-| `lat`, `lng` | the person's location (both or neither): `distanceKm` on results, nearness boost, distance sort and filter |
-| `radiusKm` | 1–100, needs `lat`/`lng` ("Under 3 km") |
-| `sort` | `relevance` (default), `distance` (needs `lat`/`lng`; results without a location are left out), `price_asc`, `price_desc` (no price last), `rating` |
-| `size` | 1–50, default 24 |
-| `after` | the previous page's `next` (keep the other parameters the same) |
-
-```json
-{
-  "items": [{
-    "id": "01J9…", "kind": "product", "name": "Country sourdough", "description": "…",
-    "merchant": { "id": "01J9…", "name": "Glenmore Bakery", "type": "seller", "slug": "glenmore-bakery", "tier": "master" },
-    "category": { "id": "shop.groceries.bakery", "name": "Bakery" },
-    "priceCents": 750, "pricingMode": "fixed", "rating": 4.8, "reviewCount": 120, "trustTier": "master",
-    "distanceKm": 1.2, "instantBook": false, "fulfilment": ["pooled"],
-    "openNow": false, "soldOut": false, "onTonightsRun": true, "prepMinutes": null,
-    "dietary": [], "allergens": [], "imageKey": "media:01J9…"
-  }],
-  "total": 3,
-  "facets": {
-    "kinds": [{ "value": "product", "label": null, "count": 3 }],
-    "categories": [{ "value": "shop.groceries.bakery", "label": "Bakery", "count": 2 }],
-    "merchants": [{ "value": "01J9…", "label": "Glenmore Bakery", "count": 3 }],
-    "tiers": [{ "value": "master", "label": null, "count": 1 }],
-    "prices": [{ "value": "under_10", "label": null, "count": 2 }],
-    "dietary": []
-  },
-  "next": "relevance.WzEuNDMsMywiMDFKOS4uLiJd"
-}
-```
-
-- `kind = merchant` items are the businesses themselves (shop / provider / kitchen pages: `merchant.slug`); the
-  others link to the listing. `pricingMode = quote` or `priceCents = null` → "Quote"; a merchant's `priceCents` is
-  its cheapest listing ("from $").
-- `facets` only on the first page (empty lists after); `prices` buckets are `under_10`, `10_25`, `25_50`, `50_100`,
-  `100_plus` (dollars). `total` is exact up to 10 000.
-- `next` is null on the last page. A `next` from another sort, or a damaged one, is a 422 on `after`
-  ("This page link no longer works. Start the search again.").
-- `imageKey` is opaque (`media:<id>` catalogue image, `object:<key>` dish photo); no public image URL exists yet.
-
-### `GET /api/v1/search/suggest`
-
-`q` (required, what has been typed), `market`, `lang` / `Accept-Language`, `kind`, `size` (1–10, default 6).
-
-```json
-{ "items": [
-  { "text": "Country sourdough", "type": "product", "id": "01J9…", "merchantId": "01J9…",
-    "merchantName": "Glenmore Bakery", "merchantType": "seller", "merchantSlug": "glenmore-bakery",
-    "priceCents": 750, "trustTier": "master", "rating": 4.8, "highlight": [{ "start": 8, "length": 4 }] },
-  { "text": "Mobile mechanic", "type": "category", "id": "service.automotive.mobile-mechanic",
-    "merchantId": null, "merchantName": null, "merchantType": null, "merchantSlug": null,
-    "priceCents": null, "trustTier": null, "rating": null, "highlight": [{ "start": 7, "length": 3 }] }
-] }
-```
-
-- `type`: `service` | `product` | `food` (a listing: open it), `merchant` (a business page: `merchantSlug`),
-  `category` (a category: search with `category=<id>`).
-- Suggestions start a word with `q` ("sour" → "Country **sour**dough"), ignoring case and accents; heavier ones
-  (trust tier, rating, recent sales) first; categories take at most two places. `highlight` = UTF-16 offsets into
-  `text` to set in bold (empty when the match came from another word form).
-- The design's "Your recent" searches are the client's (not stored by the api); "fr → sourdough" synonym rows are not
-  returned (synonyms apply to `/search`).
+The request parameters, response shapes and how the design's filters map to them are in
+[docs/CONSUMER_WEB_PLAN.md § Contracts › Search](../CONSUMER_WEB_PLAN.md#search-s-44) — the consumer web's single list of
+contracts. OpenAPI: `/v3/api-docs` (tag *Search*).
 
 ## 9. Troubleshooting
 

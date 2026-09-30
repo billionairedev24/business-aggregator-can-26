@@ -2091,6 +2091,130 @@ Worker: `WebhookDeliveryTest` (Kafka 4 + PostGIS + WireMock receiver: signed `bo
 - **Tests:** `SearchIndexerTest` on Kafka 4 + migrated PostGIS + Elasticsearch 9 (Testcontainers), the whole worker: a published service is in both indices within 5 s with every field (French name and categories, tier, rating, location, hours, completion) and gone after `listing.hidden`; a stale event for a live listing still indexes it (rows decide); an older snapshot never overwrites a newer document and a repeated refresh is idempotent; a paused merchant loses every document and gets them back; a vetting rejection removes the listing; a kitchen's dish in both languages with prep time, fulfilment, dietary/allergens and the kitchen radius, sold out kept with its date, the pause recorded, a deleted row removed by a merchant-wide refresh; a price edit and a new review with no event arrive through the sweep. `OpenHoursTest` (week wrap, overnight, merge, completion inputs). api `MenuApiTest`: deleting a live dish publishes `food.item_availability visible=false`.
 - **Not done / never run for real:** nothing has run against Elastic Cloud (no deployment or credentials); no geocoder (locations by hand); `i18n.content_translations` isn't read (no screen writes it); `next_slot` / "available today" for services (needs the booking calendar); pooled-run windows (`orders.delivery_windows`); per-member hours for services (merged per merchant); merchants with more than 10 000 documents (the id lookup of a merchant-wide refresh reads 10 000).
 
+## 2026-09-30 — S-45 Consumer shell: header, location pill, EN/FR, cart, account menu (consumer-bff, consumer app foundation)
+
+Contracts for the stories that follow: [CONSUMER_WEB_PLAN.md](CONSUMER_WEB_PLAN.md).
+
+- **consumer-bff = a profile of server/bff, not new code.** `SPRING_PROFILES_ACTIVE=<env>,consumer` (profile added
+  last; the chart's new per-app `profiles` list does it). The studio client registration and the Studio's cloud cookie /
+  required secret moved into `!consumer` documents so the two never mix; `application-consumer.yml` sets client
+  `consumer-bff` (registration id `northline`, matching the redirect URI S-122 already registered), scopes openid profile
+  orders bookings, cookie `NL_CONSUMER` / `__Host-NL_CONSUMER`, Redis namespace `nl:consumer-bff`, port 8081. Deployed as
+  `northline-consumer-bff` from the bff image (no image of its own; `promote.sh` writes the bff's digest for it).
+- **Guests** (`northline.bff.guests`): `/api/**` is permitted without a session and relayed without a token (the api
+  decides: public paths answer, the rest 401); CSRF still applies to their POSTs. `GET /bff/session` answers 200 with
+  `user: null` instead of 401 — a 401 on every page view for most visitors would be noise, and the page needs the guest id.
+- **Guest id** (the "anonymous session"): 128 random bits (`g_` + base64url) in the BFF session, created by
+  `GET /bff/session` only (an `/api` call never creates a session: bots and the SSR server stay sessionless), kept
+  through sign-in (Spring's session-id change keeps attributes), relayed as `X-Northline-Guest`. It keys the guest's
+  cart (S-51 contract); it is not authentication. The relay now drops the browser's own `Authorization`,
+  `X-Northline-Guest` and `X-Dev-User` for both BFFs (the Studio never sent them).
+- **IP city:** the consumer-bff reuses S-19's `CLIENT_CITY_HEADER`; `/bff/session` returns it (URL-decoded, control
+  characters removed, ≤ 60 chars) as `location.city`. Display-only, same accepted risk as S-19.
+- **No MFA for consumer tokens:** nothing in the BFF checks `acr`; the api already requires `acr=mfa` only on merchant
+  and console endpoints.
+- **`pages.` host:** `/api` and `/bff` go to the consumer-bff (guest browsing), `/oauth2` and `/login` don't — the
+  consumer-bff client has one redirect URI (the apex), so signing in happens on the apex. Merchants' own domains
+  (S-31 reconciler) still route only to the consumer app; they get the relay when S-54/S-63 need it.
+- **auth:** `CONSUMER_BFF_SECRET_HASH` is required in the cloud now (was optional until the BFF existed, S-122); the
+  client is no longer `optional`. Local: the consumer dev server (:3000) is a redirect URI, a CORS origin and a WebAuthn
+  origin. New secret `CONSUMER_BFF_SECRET` (`consumer-bff-secret`): Terraform `secret_env` (three clouds), chart
+  `secretNames`, `apps.consumer-bff.secretEnv`, kind values.
+- **Consumer app: TanStack Start SSR** (CLAUDE.md, SEO for S-63). Server-rendered HTML is identical for every visitor:
+  loaders fetch public data as a guest through the consumer-bff (`NL_BFF_URL`); session, cart, account values and
+  location load in the browser. `@tanstack/react-router-ssr-query` added for dehydration/hydration.
+- **Language:** cookie `nl.locale` (else Accept-Language) read on the server via `createIsomorphicFn`, so French pages
+  are rendered in French; the toggle switches in place (no reload) and writes the cookie.
+- **Location pill logic** (the design's `_locate`): saved address → browser geolocation (asked on load, 3.5 s timeout,
+  a 4 s safety fallback as in the design) → CDN IP city → **Calgary**. The design's fallback label "Beltline, Calgary"
+  is a neighbourhood nobody chose; the fallback says "Calgary" (the story says "fallback to Calgary"). There is no
+  reverse-geocoding endpoint yet: coordinates are named by `GET /api/v1/geo/reverse` when it exists (S-47), else by
+  the nearest live market within 40 km (Calgary, Edmonton, Airdrie — the Location screen's list). A fallback shows the
+  kicker "Deliver to" and the title "Delivery location" (the design reused "Detected from your device…" for its
+  fallback, which would be untrue). The detected place is remembered for the visit (sessionStorage); a chosen address
+  (S-47) in localStorage.
+- **Header details the design leaves open:** the location pill, nav links, cart and menu items are links (crawlable,
+  open in a new tab); the current section's link gets `aria-current="page"` (text colour only); the cart's accessible
+  name carries the count ("Cart, 3 items"); the language button is labelled "Switch language — Français" and shows the
+  current language (EN/FR) as the design does; on the sign-in pages the header keeps brand/location/search/nav/cart but
+  not Sign in / Create account (design: `signedOut` hides them on `auth`). While the session loads, the account slot
+  is a skeleton (no flash of "Sign in"). Phones: the search field takes its own row.
+- **Account menu:** the design's items, sections and order; values ("3 active", "Visa ··4471", …) and the points card
+  come from `GET /api/v1/me/account-summary` (a contract for S-58/S-59; missing → no values). The header line shows
+  "email · reliability 4.9" only when the summary has a reliability. "Add photo" links to Profile (S-59). "Not you?"
+  isn't in design 06's consumer menu, so it isn't there. Sign out = `POST /bff/logout` + northline-auth
+  `POST /api/auth/sign-out`, then a full reload as a guest.
+- **Footer:** design 06 has one, so a placeholder ships: company line, Privacy and Terms (the verbatim design 09/10
+  pages, now also generated into `web/apps/consumer/public/legal` by `scripts/legal-pages.mjs` until S-63), the language
+  switch, "Sell on Northline" / "Offer a service" / "Run a kitchen" → `/sell?type=…` (S-61). The prototype's
+  "← Direction" link is not part of the product.
+- **Routes** for every design-06 state (table in CONSUMER_WEB_PLAN.md), each a `ScreenPending`; home too (S-46 owns its
+  content). Orders & bookings is `/account/orders`; account tabs are `/account?tab=`.
+- **Shared code:** `@northline/client` (new package) holds the Studio's `http.ts`/`forms.ts` (+ `setHttpBase` for SSR,
+  `isNotFound`); the Studio's `lib/` files re-export it. The UI kit's prototype consumer components (SiteHeader,
+  LocationPill, AccountMenu, SearchBar) were rewritten to the design with tokens-only CSS (`styles/site.css`) and
+  en/fr copy; `SiteLink`/`SiteLinkProvider` let the app route kit links; `useGeolocation` moved into the app.
+- **Migration ranges:** V110–V119 consumer, V120–V129 search, consumer dev seed `V109`. S-45 adds no migration.
+- **Not done / not verified:** Storybook browser tests (interaction + a11y) of the new stories were not run here (no
+  Chromium in the sandbox) — `pnpm test-storybook` in CI; the consumer bundle is one ~590 kB chunk (the UI kit barrel
+  pulls DataTable/Chat in) — split when screens land; merchant custom domains get no BFF routes yet; the api has none of
+  the consumer endpoints listed in CONSUMER_WEB_PLAN.md (cart, account summary, geo reverse…), so the header shows no
+  count/values until they land.
+
+## 2026-09-30 — S-62 Consumer auth pages (sign in, register, OTP, MFA) on the auth JSON API
+
+Built on S-45 (branch `web/s-62-consumer-auth` from `web/s-45-consumer-shell`).
+
+- **Screens:** `/sign-in` and `/register` (design 06 `auth`): the pitch (kicker, hero, three numbered points, support
+  line) and the card (title, "Back to browsing" → `next` or home, three progress bars, sub-line, the step, the legal
+  line). Copy is the design's; French from its `T(…)` pairs where they exist, the rest written in fr-CA (points,
+  field labels, second-factor options). Both pages are `noindex`.
+- **Sign in = mobile → 6-digit code → signed in** (the design's `authNext` skips `mfa` for sign-in), or "Sign in with a
+  passkey" (discoverable, `acr=mfa`). New auth endpoints `POST /api/auth/sign-in/code` (send / resend / call) and
+  `/code/verify` after the existing `POST /api/auth/sign-in`; the code goes to the **account's** mobile (so a Google
+  sign-in known by email continues at the code: "Enter the 6-digit code we sent to the mobile number on your
+  account."). Unknown accounts: an unsent code (`PhoneCodes.unsent`) and the same answers. The code sender moved out of
+  `RegistrationService` into `PhoneCodes` (shared). Sessions log `method = phone_otp`, `acr` null.
+- **Register = full name, mobile, email (receipts), terms → code → second factor → done.** "Full name" is one field (the
+  design's): the last word is the last name, the rest the first name; a one-word name answers the rule's own message
+  "Last name is required." "Send code" stays disabled until mobile and terms are filled (design `authIncomplete`); the
+  other rules show after touch/submit with "N things need attention.". Second factor: Passkey (recommended), Authenticator
+  app, or **SMS code · Backup only = no second factor** → new `POST /api/auth/register/complete` (account `mfa_primary =
+  sms`, session without `acr`). Registration's session now records `acr=mfa` only when a second factor was used (it was
+  hard-coded). Done → "Set my address" → the BFF hand-off to `/location`.
+- **Business apps keep requiring a second factor:** `northline.auth.mfa-required-clients` (`studio-bff`, `console-bff`)
+  get no authorization code for a session without one (`MfaRequiredClients` filter → that app's sign-in page, where
+  signing in again with a factor replaces the session). `TokenClaimsTest`'s single-factor token case now uses the
+  consumer-bff (the Studio's client no longer issues one).
+- **Which sign-in page:** `northline.auth.consumer-login-page` (`${CONSUMER_ORIGIN}/sign-in`) for the clients in
+  `consumer-clients` (`consumer-bff`) — unauthenticated authorization requests land there instead of the Studio's. The
+  mobile apps (S-29) still use the Studio's page (their `continueTo` flow); moving them is a follow-up with the apps.
+- **Google / Apple (S-18) on the consumer site:** "Apple" and "Google" buttons (the design's order) open
+  `/oauth2/authorization/<provider>?app=consumer`; the auth server prefixes the provider `state` with `consumer.` (it
+  survives Apple's cross-site form_post, unlike a session attribute) and returns to the consumer's `/sign-in` /
+  `/register` (and `?error=` there). A phone-code sign-in does not complete a pending Google/Apple link (only a second
+  factor does, as S-18 decided); a consumer can always continue at the code step.
+- **Schema (V110, consumer range):** `identity.sessions.method` CHECK widened with `phone_otp` (drop + re-add of
+  `sessions_method_check`; no row changes).
+- **`spring.flyway.out-of-order: true` under `local`** (api and auth): V110 is the first migration above the dev-seed
+  range (V100–V109); a database migrated without `local` (the shared test database, a developer's) has V110 before the
+  seed files, which Flyway would otherwise refuse ("resolved migration not applied"). Only the `local` profile. The api
+  tests (one shared database for `test` and `test,local` contexts) also ignore the seed rows as `missing` migrations.
+- **Shared code (`@northline/auth-kit`, new package):** the Studio's `features/auth/{api,errors,webauthn,useCountdown,
+  rateLimit}` moved there (plus the Google/Apple/passkey marks, `safeNext`, `bffLoginUrl`, `appAuthorizationUrl`,
+  `authUrl`/`endAuthSession` with `configureAuthOrigin`, and the new consumer calls). The shared copy (validation rules,
+  flow errors, federation failures, rate limits) is `KIT_MESSAGES`; each app's `useAuthT` answers its page copy plus
+  those. The Studio sets the origin in `lib/auth-server.ts` (imported by `main.tsx`), the consumer app in its root from
+  `NL_AUTH_ORIGIN`. The Studio's screens are unchanged (253 tests pass); its settings list shows `phone_otp` sessions as
+  "code to phone".
+- **Legal links** (Terms, Privacy Policy) open the verbatim design 09/10 pages in a new tab (`target="_blank"
+  rel="noopener"`, "(opens in a new tab)" for screen readers), in the terms checkbox and the legal line.
+- **Hand-off:** `appAuthorizationUrl(continueTo) ?? /bff/login?next=` — sign-in back to `next` (or home), a new account
+  to `/location`. A signed-in visitor opening `/sign-in` is sent to `next`.
+- **Not done / not verified:** no real SMS, passkey or Google/Apple round trip was exercised in a browser (unit tests
+  mock the auth API; server tests use the recording SMS sender, WireMock providers); step-up for payments on
+  single-factor consumer sessions is S-51's; the security addendum is in docs/security/s-20-auth-review.md.
+
 ## 2026-09-30 — S-44 Search API: query, filters, geo sort, trust/distance boosts, completion suggester
 
 - **Module `search` (api), hexagonal like the others:** `domain` (`SearchQuery`, `SuggestQuery` with every rule checked at once, `Coordinates`, `Highlight`, codes `SearchKind`/`SearchSort`/`TrustTier`), `application` (use cases `SearchListings`, `SuggestListings`; ports `SearchIndex`, `SearchCache`, `SearchRateLimit`; `SearchService` with the hot-query cache), `integration` (`ElasticsearchSearchIndex`, `LocalSearchIndex`, Redis/memory caches, `SearchConfig`), `web` (`SearchController`, `SearchParams`, DTOs, MapStruct `SearchWebMapper`). It reads the read model through the shared `ListingDocument` contract and never writes to Elasticsearch (ARCHITECTURE). No SQL at all (S-37's rule holds trivially).
@@ -2103,7 +2227,7 @@ Worker: `WebhookDeliveryTest` (Kafka 4 + PostGIS + WireMock receiver: signed `bo
 - **Hot-query cache 30 s** (backlog): Redis/Valkey `nl:search:<q|s>:<sha-256 of the canonical parameters>` outside `local`/`test` (memory there); best effort — a cache failure is logged and the index answers. `SEARCH_CACHE_TTL`.
 - **Rate limit:** anonymous callers are welcome, so every client address gets `SEARCH_RATE_LIMIT` (120) requests a minute per api instance (the fixed-window `WebhookRateLimiter` already used for webhooks), then 429 `rate_limited` + `Retry-After: 60`. The address is the right-most public `X-Forwarded-For` hop when the peer is internal (ingress, BFFs, the consumer SSR server), else the peer — the api otherwise sees only the BFF's address and one limit would throttle every consumer. Per instance, not shared through Redis: good enough to stop scraping; a shared limit is a follow-up if needed.
 - **Validation messages** are ours (search has no form in `validation-rules.md`), English like the other API messages until S-40: "Search for 100 characters or fewer.", "Choose a province: AB, BC, ON or QC.", "Choose service, product, food or merchant.", "Choose registered, trusted or master.", "Sort by relevance, distance, price_asc, price_desc or rating.", "Latitude must be between -90 and 90.", "Longitude must be between -180 and 180.", "Send both lat and lng, or neither.", "Choose a distance between 1 and 100 km.", "A distance filter needs your location (lat and lng).", "Sorting by distance needs your location (lat and lng).", "Prices can't be negative.", "The lowest price is above the highest.", "Choose a rating between 1 and 5.", "Ask for 1 to 50 results.", "Ask for 1 to 10 suggestions.", "This page link no longer works. Start the search again.", "Type at least one letter.", "Use delivery=tonight or leave it out.".
-- **Contract** for the consumer web: `docs/CONSUMER_WEB_PLAN.md` isn't on `main` yet (S-45 open), so it is in `docs/runbooks/search.md` § 8, with the mapping of the web's `scope` and the design's chips to parameters; S-45's plan can link it. OpenAPI: springdoc from `@Tag`/`@Operation`/`@Parameter` on the controller and `@ParameterObject SearchParams` (`/v3/api-docs`, tag *Search*).
+- **Contract** for the consumer web in `docs/CONSUMER_WEB_PLAN.md` § Contracts › Search (S-45's list of contracts; the search runbook links it), with the mapping of the web's `scope` and the design's chips to parameters, and the "exists" row in its public API table. OpenAPI: springdoc from `@Tag`/`@Operation`/`@Parameter` on the controller and `@ParameterObject SearchParams` (`/v3/api-docs`, tag *Search*).
 - **Variables (api):** `SEARCH_PROVIDER`, `SEARCH_DEFAULT_MARKET`, `SEARCH_CACHE_TTL`, `SEARCH_RATE_LIMIT` (all optional) — README, dev/staging/prod tables, `.env.example`.
 - **Tests:** `SearchApiTest` (Elasticsearch 9.1 in Testcontainers with the deploy/search layout, documents built with the shared `ListingDocument`, a fixed clock — Wednesday 12:00 in Edmonton, anonymous requests): text ranked by tier and rating, market isolation; `lang` and `Accept-Language` pick the index, French synonyms and accents; the card fields; open now vs sold out vs paused, weekly hours; tonight's run, dietary, allergens, price, rating, tier, instant book, category at any level; distances, distance sort, radius; nearness and tier boosts; `search_after` pages cover everything once in order (unpriced last); facets on the first page only; suggestions with highlights (products, category, merchant, French, kind context); every validation message; the rate limit per address including `X-Forwarded-For` behind a proxy and a spoofed left entry; the 30 s cache; the OpenAPI description; p95 < 150 ms over 60 uncached queries. `SearchLocalProviderTest`: empty results and the rules with `local`, highlight folding.
 - **Not done / never run for real:** nothing has run against Elastic Cloud; "Your recent" searches (client side); next free slot for services; image URLs (`imageKey` is opaque until a public media URL exists); multi-select facets; a shared (Redis) rate limit.

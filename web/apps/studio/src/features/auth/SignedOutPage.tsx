@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Alert, UnderlineTabs } from '@northline/ui';
+import type { RegisterValues } from '@northline/auth-kit';
 import { appAuthorizationUrl, bffLoginUrl } from '../../lib/auth-server';
 import { Brand } from '../shell/StudioLayout';
-import type { RegisterValues } from './api';
 import { useAuthT, type AuthKey } from './messages';
 import type { FederationContext } from './routeSupport';
 import { RegisterFlow } from './RegisterFlow';

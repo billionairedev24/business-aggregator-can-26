@@ -1,11 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Alert, Button, Field, OptionCard, StepBars, TextInput } from '@northline/ui';
-import { authApi, backupCodeSchema, codeSchema, firstIssue, type AuthSession } from './api';
-import { fieldErrors, flowError, isRestart } from './errors';
+import { authApi, backupCodeSchema, codeSchema, firstIssue, type AuthSession, fieldErrors, flowError, isRestart, RateLimitNotice, useRateLimit, getPasskey, PasskeyError, passkeysSupported, type AuthKitKey } from '@northline/auth-kit';
 import { useAuthT, type AuthKey } from './messages';
-import { RateLimitNotice, useRateLimit } from './rateLimit';
 import { SocialButtons } from './SocialButtons';
-import { getPasskey, PasskeyError, passkeysSupported } from './webauthn';
 
 type Step = 'id' | 'factor' | 'done';
 const IDENTIFIER_ID = 'nl-sign-in-identifier';
@@ -42,7 +39,7 @@ export function SignInFlow({ onboarding, resumeIdentifier, recover, onRegister, 
   const [session, setSession] = useState<AuthSession | null>(null);
   const limit = useRateLimit();
 
-  const run = async (fn: () => Promise<void>, mismatch: AuthKey = 'signInCodeWrong') => {
+  const run = async (fn: () => Promise<void>, mismatch: AuthKitKey = 'signInCodeWrong') => {
     setFailure(''); setBusy(true);
     try { await fn(); limit.clear(); } catch (err) {
       if (limit.hold(err)) return;

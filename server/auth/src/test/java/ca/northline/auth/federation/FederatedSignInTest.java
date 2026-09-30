@@ -340,4 +340,79 @@ class FederatedSignInTest extends AuthIntegrationTest {
                             .isEqualTo("http://localhost:3100/sign-in?error=federation"));
         }
     }
+
+    /** S-62: "Apple" / "Google" on the consumer site ({@code ?app=consumer}) come back to the consumer's pages. */
+    @Nested
+    class ConsumerSite {
+
+        private Map<String, String> startOnConsumerSite(MockHttpSession session) throws Exception {
+            var location = mvc.perform(get("/oauth2/authorization/google")
+                            .queryParam("app", "consumer")
+                            .session(session))
+                    .andExpect(status().isFound())
+                    .andReturn()
+                    .getResponse()
+                    .getRedirectedUrl();
+            var params = UriComponentsBuilder.fromUriString(location).build().getQueryParams();
+            return Map.of(
+                    "state", URLDecoder.decode(params.getFirst("state"), StandardCharsets.UTF_8),
+                    "nonce", URLDecoder.decode(params.getFirst("nonce"), StandardCharsets.UTF_8));
+        }
+
+        @Test
+        void aNewPerson_createsTheAccountOnTheConsumerSite() throws Exception {
+            var person = newPerson();
+            var session = new MockHttpSession();
+            var request = startOnConsumerSite(session);
+            assertThat(request.get("state")).startsWith("consumer.");
+            GOOGLE.willIssue(
+                    GOOGLE_CLIENT, request.get("nonce"), googleUser("g-" + UUID.randomUUID(), person.email(), true));
+            var target = mvc.perform(get("/login/oauth2/code/google")
+                            .session(session)
+                            .queryParam("code", "google-code")
+                            .queryParam("state", request.get("state")))
+                    .andExpect(status().isFound())
+                    .andReturn()
+                    .getResponse()
+                    .getRedirectedUrl();
+            assertThat(target).startsWith("http://localhost:3000/register?");
+            assertThat(query(target).get("email")).containsExactly(person.email());
+        }
+
+        @Test
+        void anExistingAccount_continuesAtTheConsumerSignIn() throws Exception {
+            var user = register(newPerson());
+            var session = new MockHttpSession();
+            var request = startOnConsumerSite(session);
+            GOOGLE.willIssue(
+                    GOOGLE_CLIENT,
+                    request.get("nonce"),
+                    googleUser("g-" + UUID.randomUUID(), user.person().email(), true));
+            var target = mvc.perform(get("/login/oauth2/code/google")
+                            .session(session)
+                            .queryParam("code", "google-code")
+                            .queryParam("state", request.get("state")))
+                    .andExpect(status().isFound())
+                    .andReturn()
+                    .getResponse()
+                    .getRedirectedUrl();
+            assertThat(target).startsWith("http://localhost:3000/sign-in?");
+            assertThat(query(target))
+                    .containsEntry("step", List.of("factor"))
+                    .containsEntry("identifier", List.of(user.person().email()));
+        }
+
+        @Test
+        void cancelling_returnsToTheConsumerSite() throws Exception {
+            var session = new MockHttpSession();
+            var request = startOnConsumerSite(session);
+            mvc.perform(get("/login/oauth2/code/google")
+                            .session(session)
+                            .queryParam("error", "access_denied")
+                            .queryParam("state", request.get("state")))
+                    .andExpect(status().isFound())
+                    .andExpect(r -> assertThat(r.getResponse().getRedirectedUrl())
+                            .isEqualTo("http://localhost:3000/sign-in?error=federation_cancelled"));
+        }
+    }
 }

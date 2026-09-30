@@ -1,30 +1,94 @@
-import { Receipt, FileText, Heart, Wallet, MapPinLine, CreditCard, ShieldCheck, Bell, Translate, Lifebuoy, Storefront, SignOut, type Icon } from '@phosphor-icons/react';
-export interface AccountUser { name: string; email: string; initials: string }
-export interface AccountMenuProps { user: AccountUser; activeOrders: number; onNavigate: (to: string) => void; onNotYou: () => void; onSignOut: () => void }
-const items: [Icon, string, string][] = [
-  [Receipt, 'Orders & bookings', '/account/orders'], [FileText, 'Quotes', '/account/quotes'], [Heart, 'Favourites', '/account/favourites'], [Wallet, 'Wallet & points', '/account/wallet'],
-  [MapPinLine, 'Addresses & household', '/account/addresses'], [CreditCard, 'Payment methods', '/account/payments'], [ShieldCheck, 'Security & sign-in', '/account/security'],
-  [Bell, 'Notifications', '/account/notifications'], [Translate, 'Language & region', '/account/language'], [Lifebuoy, 'Help & cases', '/help'], [Storefront, 'Sell or offer a service', '/business'],
-];
-/** Orders live here — never in the top navigation. */
-export function AccountMenu({ user, activeOrders, onNavigate, onNotYou, onSignOut }: AccountMenuProps) {
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { CaretDown, type Icon } from '@phosphor-icons/react';
+import { defineMessages } from './i18n';
+import { SiteLink } from './SiteLink';
+
+const useT = defineMessages({ en: { open: 'Account menu' }, fr: { open: 'Menu du compte' } });
+
+export interface AccountMenuItem {
+  key: string;
+  label: string;
+  icon: Icon;
+  /** Right-hand value ("3 active", "Visa ··4471"). */
+  value?: string;
+  href?: string;
+  onSelect?: () => void;
+}
+export interface AccountMenuSection { heading?: string; items: readonly AccountMenuItem[] }
+export interface AccountMenuProps {
+  user: { name: string; initials: string; detail?: string };
+  /** A button next to the name (the design's "Add photo"). */
+  headerAction?: { label: string; href: string };
+  /** Shown under the name (points and Plus status). */
+  card?: ReactNode;
+  sections: readonly AccountMenuSection[];
+}
+
+/**
+ * The consumer header's account menu (design 06): avatar button → panel with the person, an optional card, grouped
+ * items with a Phosphor duotone icon and a value. Orders & bookings belong here, never in the top navigation.
+ * Arrow keys move between items, Escape closes and returns focus, clicking outside closes.
+ */
+export function AccountMenu({ user, headerAction, card, sections }: AccountMenuProps) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  const id = useId();
+  useEffect(() => {
+    if (!open) return;
+    const outside = (e: MouseEvent) => { if (!wrap.current?.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', outside);
+    wrap.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+    return () => document.removeEventListener('mousedown', outside);
+  }, [open]);
+  const close = () => { setOpen(false); button.current?.focus(); };
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Escape' && open) { e.preventDefault(); close(); return; }
+    if (!open || !['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
+    e.preventDefault();
+    const items = [...(wrap.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])];
+    const i = items.indexOf(document.activeElement as HTMLElement);
+    const next = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : (i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+    items[next]?.focus();
+  };
   return (
-    <div role="menu" style={{ width: 320, background: 'var(--color-surface)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-lg)', padding: 8 }}>
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '10px 10px 12px' }}>
-        <span style={{ width: 44, height: 44, borderRadius: 999, background: 'var(--color-accent)', color: 'var(--color-on-accent)', display: 'grid', placeItems: 'center', fontWeight: 600 }}>{user.initials}</span>
-        <span style={{ display: 'flex', flexDirection: 'column' }}><strong>{user.name}</strong><span style={{ fontSize: 13, color: 'var(--color-neutral-700)' }}>{user.email}</span></span>
-      </div>
-      {items.map(([I, label, to], i) => (
-        <button key={to} role="menuitem" onClick={() => onNavigate(to)} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', minHeight: 42, padding: '9px 10px', border: 0, borderRadius: 'var(--radius-sm)', background: i === 0 ? 'var(--color-accent-100)' : 'transparent', font: 'inherit', fontSize: 14, fontWeight: i === 0 ? 600 : 400, color: 'var(--color-text)', cursor: 'pointer', textAlign: 'left' }}>
-          <I weight="duotone" size={20} color="var(--color-accent)" aria-hidden /><span style={{ flex: 1 }}>{label}</span>
-          {i === 0 && activeOrders > 0 && <span style={{ fontSize: 12, fontWeight: 600, background: 'var(--color-accent)', color: 'var(--color-on-accent)', padding: '2px 8px', borderRadius: 999 }}>{activeOrders} active</span>}
-        </button>
-      ))}
-      <div role="separator" style={{ height: 1, background: 'var(--color-divider)', margin: '6px 8px' }} />
-      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 10px' }}>
-        <button role="menuitem" onClick={onNotYou} className="btn btn-ghost" style={{ minHeight: 36 }}>Not you?</button>
-        <button role="menuitem" onClick={onSignOut} className="btn btn-ghost" style={{ minHeight: 36 }}><SignOut size={16} /> Sign out</button>
-      </div>
+    <div className="nl-account" ref={wrap} onKeyDown={onKeyDown}>
+      <button ref={button} type="button" className="nl-account-button" aria-label={t('open')} aria-haspopup="menu" aria-expanded={open}
+        aria-controls={open ? id : undefined} onClick={() => setOpen(o => !o)}>
+        <span className="nl-account-avatar" aria-hidden>{user.initials}</span>
+        <CaretDown size={13} aria-hidden />
+      </button>
+      {open && (
+        <div id={id} role="menu" aria-label={t('open')} className="nl-account-panel">
+          <div className="nl-account-head" role="none">
+            <span className="nl-account-avatar nl-account-avatar-lg" aria-hidden>{user.initials}</span>
+            <span className="nl-account-who">
+              <span className="nl-account-name">{user.name}</span>
+              {user.detail && <span className="nl-account-detail">{user.detail}</span>}
+            </span>
+            {headerAction && <SiteLink role="menuitem" href={headerAction.href} className="btn btn-ghost nl-account-photo" onClick={() => setOpen(false)}>{headerAction.label}</SiteLink>}
+          </div>
+          {card && <div className="nl-account-card" role="none">{card}</div>}
+          {sections.map((section, s) => (
+            <div key={s} role="group" aria-label={section.heading || undefined}>
+              {section.heading !== undefined && <div className="nl-account-heading" role="presentation">{section.heading}</div>}
+              {section.items.map(item => {
+                const body = (
+                  <>
+                    <span className="nl-account-label"><item.icon weight="duotone" size={20} className="nl-account-icon" aria-hidden />{item.label}</span>
+                    {item.value && <span className="nl-account-value">{item.value}</span>}
+                  </>
+                );
+                const select = () => { setOpen(false); item.onSelect?.(); };
+                return item.href
+                  ? <SiteLink key={item.key} role="menuitem" href={item.href} className="nl-account-item" onClick={select}>{body}</SiteLink>
+                  : <button key={item.key} type="button" role="menuitem" className="nl-account-item" onClick={select}>{body}</button>;
+              })}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -42,6 +42,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * ({@code __Host-XSRF-TOKEN} in the cloud) / header {@code X-XSRF-TOKEN}, 401 (not a redirect) for unauthenticated XHR,
  * {@code POST /bff/logout} → 204, and the S-19 revocation check ({@link SessionRevocationCheck}).
  *
+ * <p>S-45: under the {@code consumer} profile ({@code northline.bff.guests}) {@code /api/**} is open to guests too — the
+ * relay then goes without a token and the api decides (public endpoints answer, the rest 401). CSRF still applies to
+ * every guest's POST.
+ *
  * <p>S-20: the CSRF token is accepted from the header only — never from a {@code _csrf} form field, which a page on a
  * sibling subdomain (same site, so {@code SameSite=Lax} doesn't stop it) could submit after planting its own cookie —
  * and every response forbids framing and carries a CSP that allows nothing (the BFF serves no pages).
@@ -61,11 +65,14 @@ class BffSecurityConfig {
             @Value("${server.servlet.session.cookie.name:NL_STUDIO}") String sessionCookie) {
         var resolver = new DefaultOAuth2AuthorizationRequestResolver(registrations, "/oauth2/authorization");
         resolver.setAuthorizationRequestCustomizer(OAuth2AuthorizationRequestCustomizers.withPkce());
-        return http.authorizeHttpRequests(
-                        a -> a.requestMatchers("/bff/session", "/bff/login", "/actuator/health/**", "/error")
-                                .permitAll()
-                                .anyRequest()
-                                .authenticated())
+        return http.authorizeHttpRequests(a -> {
+                    a.requestMatchers("/bff/session", "/bff/login", "/actuator/health/**", "/error")
+                            .permitAll();
+                    if (props.guests()) {
+                        a.requestMatchers("/api/**").permitAll();
+                    }
+                    a.anyRequest().authenticated();
+                })
                 .oauth2Login(o -> o.authorizationEndpoint(ae -> ae.authorizationRequestResolver(resolver))
                         .successHandler(next)
                         .failureHandler(

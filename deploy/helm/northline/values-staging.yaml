@@ -68,6 +68,8 @@ apps:
     autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 4 }
   bff:
     autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 4 }
+  consumer-bff:
+    autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 4 }
   worker:
     env:
       EMAIL_FROM: "Northline <no-reply@staging.northline.ca>"   # S-27 notifications (payout.failed email)

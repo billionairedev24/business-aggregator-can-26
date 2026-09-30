@@ -32,7 +32,20 @@ import org.springframework.web.util.UriComponentsBuilder;
  */
 class TokenClaimsTest extends AuthIntegrationTest {
 
-    private static final String REDIRECT = "http://localhost:3100/login/oauth2/code/studio";
+    private static final Client STUDIO = new Client(
+            "studio-bff",
+            "dev-studio-bff",
+            "http://localhost:3100/login/oauth2/code/studio",
+            "openid profile merchant");
+    /** S-62: single-factor sign-ins get tokens for consumer clients only (the Studio's needs a second factor). */
+    private static final Client CONSUMER = new Client(
+            "consumer-bff",
+            "dev-consumer-bff",
+            "http://localhost:8081/login/oauth2/code/northline",
+            "openid profile orders");
+
+    private record Client(String id, String secret, String redirect, String scope) {}
+
     private static final String VERIFIER = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk-northline-test";
 
     @Test
@@ -43,7 +56,7 @@ class TokenClaimsTest extends AuthIntegrationTest {
                 .param("u", user.userId())
                 .update();
 
-        var tokens = tokens(authorize().session(user.session()));
+        var tokens = tokens(STUDIO, authorize(STUDIO).session(user.session()));
 
         var access = payload(tokens.get("access_token"));
         assertThat(JsonPath.<String>read(access, "$.sub")).isEqualTo(user.userId());
@@ -86,7 +99,8 @@ class TokenClaimsTest extends AuthIntegrationTest {
                                 .issuedAt(clock.instant())
                                 .build()));
 
-        var tokens = tokens(authorize().session(new MockHttpSession()).with(authentication(singleFactor)));
+        var tokens = tokens(
+                CONSUMER, authorize(CONSUMER).session(new MockHttpSession()).with(authentication(singleFactor)));
 
         var access = payload(tokens.get("access_token"));
         assertThat(JsonPath.<Map<String, Object>>read(access, "$")).doesNotContainKey("acr");
@@ -97,12 +111,12 @@ class TokenClaimsTest extends AuthIntegrationTest {
 
     @Test
     void noSession_authorizeRedirectsToTheStudioSignInPage() throws Exception {
-        mvc.perform(authorize().session(new MockHttpSession()))
+        mvc.perform(authorize(STUDIO).session(new MockHttpSession()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("http://localhost:3100/sign-in"));
     }
 
-    private MockHttpServletRequestBuilder authorize() throws Exception {
+    private MockHttpServletRequestBuilder authorize(Client client) throws Exception {
         var challenge = Base64.getUrlEncoder()
                 .withoutPadding()
                 .encodeToString(
@@ -110,31 +124,31 @@ class TokenClaimsTest extends AuthIntegrationTest {
         return get("/oauth2/authorize")
                 .accept(MediaType.TEXT_HTML)
                 .queryParam("response_type", "code")
-                .queryParam("client_id", "studio-bff")
-                .queryParam("scope", "openid profile merchant")
-                .queryParam("redirect_uri", REDIRECT)
+                .queryParam("client_id", client.id())
+                .queryParam("scope", client.scope())
+                .queryParam("redirect_uri", client.redirect())
                 .queryParam("state", "s1")
                 .queryParam("code_challenge", challenge)
                 .queryParam("code_challenge_method", "S256");
     }
 
-    private Map<String, String> tokens(MockHttpServletRequestBuilder authorize) throws Exception {
+    private Map<String, String> tokens(Client client, MockHttpServletRequestBuilder authorize) throws Exception {
         var location = mvc.perform(authorize)
                 .andExpect(status().is3xxRedirection())
                 .andReturn()
                 .getResponse()
                 .getRedirectedUrl();
-        assertThat(location).startsWith(REDIRECT);
+        assertThat(location).startsWith(client.redirect());
         var code = UriComponentsBuilder.fromUriString(location)
                 .build()
                 .getQueryParams()
                 .getFirst("code");
         assertThat(code).isNotBlank();
         var body = mvc.perform(post("/oauth2/token")
-                        .with(httpBasic("studio-bff", "dev-studio-bff"))
+                        .with(httpBasic(client.id(), client.secret()))
                         .param("grant_type", "authorization_code")
                         .param("code", code)
-                        .param("redirect_uri", REDIRECT)
+                        .param("redirect_uri", client.redirect())
                         .param("code_verifier", VERIFIER))
                 .andExpect(status().isOk())
                 .andReturn()
