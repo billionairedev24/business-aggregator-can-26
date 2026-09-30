@@ -23,6 +23,11 @@ public abstract class WorkerIntegrationTest {
         registry.add("spring.datasource.password", WorkerContainers.POSTGRES::getPassword);
         registry.add("management.health.redis.enabled", () -> "false");
         registry.add("management.health.elasticsearch.enabled", () -> "false");
+        // S-43: Elasticsearch 9 with the listings indices of deploy/search; the reconcile sweep only when a test calls
+        // it
+        registry.add("spring.elasticsearch.uris", WorkerContainers::elasticWithIndices);
+        registry.add("northline.search.reconcile.initial-delay", () -> "1h");
+        registry.add("northline.search.reconcile.every", () -> "1h");
         registry.add("spring.kafka.consumer.properties.metadata.max.age.ms", () -> "1000");
         // Notifications: fast retries (same topics: the suffixes don't depend on the delays), the deferred job only
         // when a test calls it, no in-process email retries.

@@ -85,6 +85,12 @@ northline:
     studio-url: ${STUDIO_ORIGIN:http://localhost:3100}        # links in the payout.failed email
     api-url: ${API_PUBLIC_URL:http://localhost:8080}          # unsubscribe links point at the api
     unsubscribe-key: ${EMAIL_UNSUBSCRIBE_KEY:}                # same key as the api (it verifies the tokens)
+  # Search read model (S-43, docs/runbooks/search.md): events refresh documents at once; the reconcile sweep picks up
+  # edits no event announces (prices, names, hours, reviews) within `every`.
+  search:
+    reconcile:
+      enabled: ${SEARCH_RECONCILE_ENABLED:true}
+      every: ${SEARCH_RECONCILE_EVERY:1m}
   # Partner webhooks (S-33, docs/runbooks/webhooks.md): queued by the `webhooks` consumer group, delivered per endpoint.
   webhooks:
     secret-key: ${WEBHOOK_SECRET_KEY:}                        # the api's key for the endpoints' signing secrets
