@@ -183,9 +183,7 @@ class OAuthClientCatalogTest {
 
     @Test
     void partners_areValidated_everyProblemListed() throws Exception {
-        var ec = new ECKeyGenerator(Curve.P_256)
-                .keyID("k1")
-                .generate();
+        var ec = new ECKeyGenerator(Curve.P_256).keyID("k1").generate();
         var pub = ec.toPublicJWK().toJSONString();
         var ok = Specs.partner(List.of(pub), List.of("api.read"), List.of("01J9ZD3V00000000000000PWM1"));
         var catalog = new OAuthClientCatalog(Specs.withPartners(props(), Map.of("acme", ok)), ClientPolicy.STRICT);
