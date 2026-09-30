@@ -46,21 +46,29 @@ class OrderTrackingApiTest extends IntegrationTest {
         butcher = shopFixtures.shop(MARKET, "Bridgeland Butcher", "trusted");
         bakeryOwner = data.user("Glenmore Owner");
         data.member(bakery, bakeryOwner, MerchantRole.OWNER);
-        var landing = JsonMapper.builder().build().readTree(mvc.perform(get("/api/v1/public/shop").param("market", MARKET))
-                .andReturn().getResponse().getContentAsString());
+        var landing = JsonMapper.builder()
+                .build()
+                .readTree(mvc.perform(get("/api/v1/public/shop").param("market", MARKET))
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString());
         windowId = landing.path("run").path("windowId").asString();
         orderId = Ids.next();
         jdbc.sql("""
                         insert into orders.orders (id, ref, customer_id, type, state, window_id, subtotal_cents, delivery_fee_cents,
                                service_fee_cents, tax_cents, tip_cents, delivery_kind, fulfilment_mode)
                         values (?, ?, ?, 'goods', 'placed', ?, 3350, 299, 0, 182, 0, 'pooled', 'delivery')
-                        """).params(orderId, "NL-9" + orderId.substring(20), amara, windowId).update();
+                        """)
+                .params(orderId, "NL-9" + orderId.substring(20), amara, windowId)
+                .update();
         var bread = shopFixtures.listing(bakery, BAKERY, "Country sourdough", 750, 10);
         for (var line : new Object[][] {{bakery, bread.offerId(), 2, 750}, {butcher, null, 1, 1850}}) {
             jdbc.sql("""
                             insert into orders.order_lines (id, order_id, merchant_id, offer_id, qty, unit_cents, state, title)
                             values (?, ?, ?, ?, ?, ?, 'pending', 'Item')
-                            """).params(Ids.next(), orderId, line[0], line[1], line[2], line[3]).update();
+                            """)
+                    .params(Ids.next(), orderId, line[0], line[1], line[2], line[3])
+                    .update();
         }
     }
 
@@ -98,12 +106,17 @@ class OrderTrackingApiTest extends IntegrationTest {
     @Test
     void theTimelineFollowsTheOrderState() throws Exception {
         for (var step : new String[][] {{"ready", "2"}, {"picked_up", "3"}}) {
-            jdbc.sql("update orders.orders set state = ? where id = ?").params(step[0], orderId).update();
+            jdbc.sql("update orders.orders set state = ? where id = ?")
+                    .params(step[0], orderId)
+                    .update();
             mvc.perform(get("/api/v1/me/orders/{id}", orderId).with(TestJwt.customer(amara)))
                     .andExpect(jsonPath("$.steps[" + step[1] + "].state").value("current"))
-                    .andExpect(jsonPath("$.steps[" + (Integer.parseInt(step[1]) - 1) + "].state").value("done"));
+                    .andExpect(jsonPath("$.steps[" + (Integer.parseInt(step[1]) - 1) + "].state")
+                            .value("done"));
         }
-        jdbc.sql("update orders.orders set state = 'delivered', delivered_at = now() where id = ?").params(orderId).update();
+        jdbc.sql("update orders.orders set state = 'delivered', delivered_at = now() where id = ?")
+                .params(orderId)
+                .update();
         mvc.perform(get("/api/v1/me/orders/{id}", orderId).with(TestJwt.customer(amara)))
                 .andExpect(jsonPath("$.steps[3].state").value("done"))
                 .andExpect(jsonPath("$.deliveredAt").exists());
@@ -117,11 +130,13 @@ class OrderTrackingApiTest extends IntegrationTest {
         var response = stream.getResponse();
         assertThat(response.getContentAsString()).contains("event:order").contains("\"state\":\"placed\"");
 
-        mvc.perform(post("/api/v1/merchants/{m}/orders/{o}/pack", bakery, orderId).with(TestJwt.member(bakeryOwner)))
+        mvc.perform(post("/api/v1/merchants/{m}/orders/{o}/pack", bakery, orderId)
+                        .with(TestJwt.member(bakeryOwner)))
                 .andExpect(status().isOk());
         Awaitility.await()
                 .atMost(Duration.ofSeconds(30))
                 .untilAsserted(() -> assertThat(response.getContentAsString()).contains("\"packed\":true"));
-        assertThat(response.getContentAsString().split("event:order").length - 1).isGreaterThanOrEqualTo(2);
+        assertThat(response.getContentAsString().split("event:order").length - 1)
+                .isGreaterThanOrEqualTo(2);
     }
 }

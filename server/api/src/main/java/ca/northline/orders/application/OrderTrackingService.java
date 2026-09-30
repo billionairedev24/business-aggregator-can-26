@@ -40,12 +40,15 @@ class OrderTrackingService implements TrackOrder {
         var o = orders.order(customerId, orderId).orElseThrow(() -> new NotFound("order", orderId));
         var lines = orders.lines(orderId);
         var perShop = new LinkedHashMap<String, List<TrackingStore.LineState>>();
-        lines.forEach(l -> perShop.computeIfAbsent(l.merchantId(), _ -> new ArrayList<>()).add(l));
+        lines.forEach(l ->
+                perShop.computeIfAbsent(l.merchantId(), _ -> new ArrayList<>()).add(l));
         var shops = perShop.entrySet().stream()
                 .map(e -> new ShopProgress(
                         e.getKey(),
                         names.displayName(e.getKey()).orElse(""),
-                        e.getValue().stream().mapToInt(TrackingStore.LineState::qty).sum(),
+                        e.getValue().stream()
+                                .mapToInt(TrackingStore.LineState::qty)
+                                .sum(),
                         e.getValue().stream().noneMatch(l -> "pending".equals(l.state()))))
                 .toList();
         return new OrderTracking(
@@ -70,12 +73,14 @@ class OrderTrackingService implements TrackOrder {
             var run = runs.run(windowId);
             if (run.isPresent()) {
                 var r = run.get();
-                var days = ChronoUnit.DAYS.between(LocalDate.now(clock.withZone(ZONE)), LocalDate.ofInstant(r.startsAt(), ZONE));
+                var days = ChronoUnit.DAYS.between(
+                        LocalDate.now(clock.withZone(ZONE)), LocalDate.ofInstant(r.startsAt(), ZONE));
                 var day = days <= 0 ? "today" : days == 1 ? "tomorrow" : "later";
                 return new Delivery("pooled", r.label(), day, r.startsAt(), r.endsAt(), r.households(), null);
             }
         }
-        var kind = "pickup".equals(o.fulfilmentMode()) ? "pickup" : o.deliveryKind() == null ? "direct" : o.deliveryKind();
+        var kind =
+                "pickup".equals(o.fulfilmentMode()) ? "pickup" : o.deliveryKind() == null ? "direct" : o.deliveryKind();
         return new Delivery(kind, null, null, null, null, 0, o.scheduledFor());
     }
 
@@ -85,7 +90,8 @@ class OrderTrackingService implements TrackOrder {
             return List.of(new Step("paid", "done"));
         }
         var at = Math.max(0, FLOW.indexOf(state));
-        // index of the current step: placed/accepted/packing → packing (1), ready → pickup (2), picked_up → delivered (3)
+        // index of the current step: placed/accepted/packing → packing (1), ready → pickup (2), picked_up → delivered
+        // (3)
         var current = at <= 2 ? 1 : at == 3 ? 2 : at == 4 ? 3 : 4;
         var keys = List.of("paid", "packing", "pickup", "delivered");
         var out = new ArrayList<Step>();

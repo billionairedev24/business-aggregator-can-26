@@ -86,7 +86,8 @@ class ConsumerOrderController {
 
     private void send(SseEmitter emitter, String userId, String orderId) {
         try {
-            emitter.send(SseEmitter.event().name("order").data(track.view(userId, orderId), MediaType.APPLICATION_JSON));
+            emitter.send(
+                    SseEmitter.event().name("order").data(track.view(userId, orderId), MediaType.APPLICATION_JSON));
         } catch (IOException | IllegalStateException e) {
             log.debug("Tracking stream of {} closed: {}", orderId, e.getMessage());
             emitter.complete();
