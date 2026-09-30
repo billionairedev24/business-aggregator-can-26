@@ -1844,3 +1844,42 @@ Worker: `WebhookDeliveryTest` (Kafka 4 + PostGIS + WireMock receiver: signed `bo
 - **Not done:** scheduled or webhook-driven menu sync; importing POS item photos (the kitchen photo rules need own
   photos); Clover item descriptions (Clover has none); Square item options (only variations); a per-dish "don't sync"
   switch; Lightspeed Restaurant (the story names Square, Clover and Toast).
+
+## 2026-09-30 — S-38 Feed sales_30d on offers and services from orders/bookings
+
+- **What counts, over the last 30 days (a rolling window, not calendar days):**
+  - **Offers:** units on goods orders placed in the window. Orders in state `cancelled` or `refunded`, and lines in
+    state `refunded`, don't count.
+  - **Services:** bookings made in the window (`booking.bookings.created_at`), cancelled ones excluded.
+  - "Sold" means ordered or booked, not delivered or completed. That matches the dashboard's order volume, which is
+    counted by placed date.
+- **Where the counts come from:** two new public queries owned by the modules that own the data:
+  - `orders.api.OfferSales.unitsByOffer(merchant, from, to)`, implemented by `OrdersJdbc`
+  - `booking.api.ServiceSales.bookingsByService(merchant, from, to)`, implemented by `BookingInsightsQueries`
+
+  Catalogue doesn't read `orders.*` / `booking.*` itself. That keeps it consistent with S-37's schema-ownership rule.
+- **How it is kept current:**
+  - `catalogue.application.SalesListener` (`@ApplicationModuleListener`) recounts the merchant's listings on
+    `order.packed`, every `booking.*` progress event, `quote.accepted` and `refund.issued`.
+  - A recount rewrites `sales_30d` for **all** of the merchant's offers and services in one statement per table, so
+    listings with no sales go to 0.
+  - It is derived, so a retried event or a duplicate is harmless.
+  - A nightly job (`SalesScheduler`, 03:10 America/Edmonton, not under `test`) recounts every merchant that still
+    shows a non-zero figure, so old sales age out even when nothing new happens.
+  - Every replica runs the nightly job. A second run costs a few queries and needs no lock.
+- **No `order.placed` or `booking.confirmed` event exists yet:** there is no checkout or booking creation in the api
+  (the consumer workstream). The listener uses the events that do exist.
+  - A newly placed order shows up once the seller packs it, or at the next nightly run.
+  - When checkout starts publishing `order.placed` / `order.cancelled` and booking creation publishes its event, add
+    them to `SalesListener`. That is a one-line handler each.
+- **Local data:** the dev seed's fixed `sales_30d` numbers (31, 28, …) are not linked to any seeded order line or
+  booking (those rows have no `offer_id` / `service_id`). The first recount for a seeded business therefore shows 0.
+  These are the real numbers; the old ones were decoration.
+- **Studio:** no change. The Listings table already shows `sales30d` in its "30-day sales" column.
+- **Schema:** none. `sales_30d` already existed (V050); the existing `merchant_id` indexes serve the per-merchant
+  update. No migration was needed.
+- **Tests:** `SalesThirtyDaysApiTest`:
+  - `order.packed` recounts units per offer: in-window counts; cancelled, refunded orders, refunded lines, older than
+    30 days and other merchants' lines don't
+  - `booking.completed` recounts bookings per service: cancelled and older than 30 days don't count
+  - the nightly run lets a stale figure age out to 0
