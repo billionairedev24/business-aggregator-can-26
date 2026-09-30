@@ -1,11 +1,12 @@
 # Search (Elasticsearch read model)
 
 Elasticsearch 9 holds the **search read model** only: PostgreSQL stays the source of truth, and everything in the
-indices can be rebuilt from it. This runbook covers the indices and their synonyms (S-42).
+indices can be rebuilt from it. This runbook covers the indices and their synonyms (S-42) and the indexer that fills them (S-43).
 
 | story | what | where |
 |---|---|---|
 | S-42 | indices `listings_en` / `listings_fr`, analyzers, synonyms, the bootstrap Job | `deploy/search`, `server/search-index`, `ca.northline.worker.search` |
+| S-43 | the `search-indexer` consumer, the reconcile sweep, `merchants.locations` | `ca.northline.worker.search`, `db/migrations/V120` |
 
 Environments: local uses the compose `search` profile (Elasticsearch 9.1, security off, [local.md](local.md)); dev,
 staging and prod use Elastic Cloud from the S-3 Terraform ([infrastructure.md § 5.4](infrastructure.md#54-elasticsearch-elastic-cloud)).
@@ -118,7 +119,63 @@ Until the deployment and its credentials exist, `ES_USERNAME` is the deployment'
 
 `manage_search_synonyms` is for the bootstrap Job (the synonym sets); `manage` covers aliases and mappings.
 
-## 6. Troubleshooting
+## 6. The indexer (S-43)
+
+The worker's consumer group **`search-indexer`** reads `catalogue.listing`, `food.menu`, `food.kitchen`,
+`merchants.merchant`, `merchants.storefront`, `trust.review` and `availability.availability` (retries 10 s / 60 s /
+5 min, then `<topic>.dlq` — the S-26 framework, [events.md](events.md)). An event only says **what to look at**; the
+document is always rebuilt from the rows as they are now, so duplicates, replays and events out of order do no harm:
+
+| event | scope re-read |
+|---|---|
+| `listing.published` · `listing.hidden` · `listing.deleted` · `listing.flagged` · `listing.submitted` | that service or product offer |
+| `food.item_availability` (sold out / back, visibility, deleted dish) | that dish |
+| everything else: `menu.published`, `kitchen.paused/resumed`, `merchant.*`, `storefront.published`, `custom_domain_changed`, `review.replied/reported`, `availability.changed` | the whole merchant: every listing, dish and its own document |
+
+**What is indexed** (everything else of the scope is deleted from both indices): merchants with `status = active` and
+a province (`market`); services and offers `vetting = approved` and `status = live`; dishes `published`, `approved`,
+on a `live` menu (sold out today stays, with `soldOutOn`); the merchant's own document (`kind = merchant`) once its
+page is published. A paused or suspended merchant, a rejected or hidden listing, a deleted dish or a hidden menu
+disappear with the next event or sweep.
+
+**Where the fields come from** (read-only queries, `DocumentSource`): names and descriptions from `*_i18n->>'<lang>'`
+with the listing's own text as fallback (French index) — categories from `catalogue.categories.name_i18n`;
+`trustTier` = `merchants.tier`; `rating`/`reviewCount` = `trust.reviews` of the merchant; `location` +
+`serviceRadiusKm` = `merchants.locations` (V120; a kitchen without a radius there uses `food.kitchen_settings.radius_km`);
+`openHours` = `food.opening_hours` (dishes, kitchens) or the members' current `availability.availability_rules`
+(services, providers); `deliveryCutoffMinute` = the seller's `profile.sameDayCutoff` for pooled offers; `pausedUntil`,
+`prepMinutes` (default + busy bump + the dish's extra) = `food.kitchen_settings`.
+
+**Versions.** Refreshes of one merchant take a Postgres advisory lock and version every write with Postgres'
+`clock_timestamp()` (µs) taken under it (`version_type=external_gte`, deletes too): an older snapshot can never
+overwrite a newer one, whichever replica, retry or reindex writes last. A `409` on an item in the logs' debug line is
+that protection working.
+
+**The reconcile sweep.** Edits no event announces — a price or a name changed on a live listing, new hours, a new
+review, a location — are found every `SEARCH_RECONCILE_EVERY` (1 min) by `updated_at` (services, offers, catalogue
+records, dishes, menus, kitchen settings and hours, merchants, pages, locations, weekly availability; reviews created,
+replied or reported) and their merchants refreshed. The watermark is `search.sync_state` (`reconcile`); one replica
+sweeps at a time (a 5-minute lease), looking 2 minutes back for late commits, at most 500 merchants per sweep.
+`SEARCH_RECONCILE_ENABLED=false` turns it off (e.g. while a reindex runs, if you want the load gone).
+
+**Locations.** Nothing geocodes addresses yet: onboarding keeps them as text. Until a geocoder exists, set a
+merchant's point by hand (then the sweep picks it up within a minute):
+
+```sql
+insert into merchants.locations (merchant_id, geom, service_radius_km, source)
+values ('<merchant id>', ST_GeogFromText('POINT(<lon> <lat>)'), 25, 'manual')
+on conflict (merchant_id) do update set geom = excluded.geom, service_radius_km = excluded.service_radius_km,
+  source = 'manual', updated_at = now();
+```
+
+Without a location a merchant's documents have no distance: they are left out of distance filters and sort last by
+distance.
+
+**Check a document:** `curl -s "$ES_URIS/listings_en/_doc/<id>?pretty"` (and `listings_fr`). **Replay** what the
+group dead-lettered: `./gradlew :worker:dlqReplay --args='replay --topic=catalogue.listing.dlq --group=search-indexer'`
+([events.md § DLQ](events.md)). **Metrics:** `northline_events_consumed_total{consumer="search-indexer"}` by outcome.
+
+## 7. Troubleshooting
 
 | symptom | cause / fix |
 |---|---|
@@ -126,3 +183,6 @@ Until the deployment and its credentials exist, `ES_USERNAME` is the deployment'
 | Job log `… the alias points at 2 indices` | someone edited aliases by hand; point the alias at one index (`POST _aliases`) |
 | `strict_dynamic_mapping_exception` in a writer | the field isn't in the mapping yet: run the Job (`apply`) |
 | Job fails with `security_exception … manage_search_synonyms` | the app user lacks the cluster privilege (§ 5) |
+| a published listing isn't found | the merchant is not `active`, has no province, the listing isn't `approved` + `live`, or (merchant documents) the page isn't published; check `DEAD-LETTERED consumer=search-indexer` in the worker log |
+| an edit shows up only after a minute | expected: edits without an event arrive with the reconcile sweep (§ 6) |
+| no distance on a merchant's results | no row in `merchants.locations` (§ 6) |
