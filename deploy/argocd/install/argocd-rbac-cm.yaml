@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-rbac-cm
+data:
+  # Everyone who can log in sees everything and changes nothing. Sync rights come from the AppProject "deployer"
+  # roles (deploy/argocd/envs/<env>/env.yaml project.deployerGroups); Argo CD administration from the group below.
+  policy.default: role:readonly
+  scopes: "[groups]"
+  policy.csv: |
+    g, northline:platform-admins, role:admin

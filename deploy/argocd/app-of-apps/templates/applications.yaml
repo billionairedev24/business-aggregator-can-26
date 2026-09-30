@@ -1,0 +1,120 @@
+{{- /*
+The Applications of one environment:
+  northline-<env>-root       this chart itself, from deploy/argocd/envs/<env>/env.yaml (it manages itself, the projects
+                             and the Applications below — definitions only, never workloads)
+  <addon>-<env>              each enabled platform add-on (sync wave < 0: before the apps)
+  northline-<env>            deploy/helm/northline with the environment's values, Terraform values and pinned images
+*/ -}}
+{{- $env := include "gitops.env" . }}
+{{- $ns := include "gitops.namespace" . }}
+{{- $v := .Values }}
+{{- $envDir := printf "deploy/argocd/envs/%s" $env }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: northline-{{ $env }}-root
+  namespace: {{ $v.argocdNamespace }}
+  labels:
+    app.kubernetes.io/part-of: northline
+    northline.ca/environment: {{ $env | quote }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-100"
+spec:
+  project: {{ include "gitops.project.gitops" . }}
+  source:
+    repoURL: {{ $v.repoURL | quote }}
+    targetRevision: {{ $v.targetRevision | quote }}
+    path: deploy/argocd/app-of-apps
+    helm:
+      releaseName: northline-{{ $env }}-root
+      valueFiles:
+        - ../envs/{{ $env }}/env.yaml
+  destination:
+    {{- include "gitops.destination" . | nindent 4 }}
+    namespace: {{ $v.argocdNamespace }}
+  syncPolicy:
+    # Always automated: it only (re)writes Application and AppProject objects from Git. Whether workloads change is
+    # decided by each child Application's own policy. Pruning (removing an Application that left Git) only where the
+    # environment syncs by itself.
+    automated:
+      prune: {{ $v.sync.automated }}
+      selfHeal: true
+    syncOptions: [ServerSideApply=true]
+{{- range $name := keys $v.addons | sortAlpha }}
+{{- $a := get $v.addons $name }}
+{{- if $a.enabled }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ $name }}-{{ $env }}
+  namespace: {{ $v.argocdNamespace }}
+  {{- include "gitops.appMeta" (dict "root" $ "wave" $a.syncWave) | nindent 2 }}
+spec:
+  project: {{ include "gitops.project.platform" $ }}
+  sources:
+    - repoURL: {{ $a.repoURL | quote }}
+      chart: {{ $a.chart }}
+      targetRevision: {{ $a.targetRevision | quote }}
+      helm:
+        releaseName: {{ default $name $a.releaseName }}
+        # Missing files are fine: only some add-ons have per-cloud or per-environment values.
+        ignoreMissingValueFiles: true
+        valueFiles:
+          - $values/deploy/argocd/addons/{{ $name }}/values.yaml
+          - $values/deploy/argocd/addons/{{ $name }}/values-{{ $.Values.cloud }}.yaml
+          - $values/{{ $envDir }}/addons/{{ $name }}.yaml
+        {{- with $a.values }}
+        valuesObject: {{ toYaml . | nindent 10 }}
+        {{- end }}
+    - repoURL: {{ $v.repoURL | quote }}
+      targetRevision: {{ $v.targetRevision | quote }}
+      ref: values
+  destination:
+    {{- include "gitops.destination" $ | nindent 4 }}
+    namespace: {{ $a.namespace }}
+  syncPolicy:
+    {{- include "gitops.syncPolicy" (dict "root" $ "options" (list "CreateNamespace=true" "ServerSideApply=true")) | nindent 4 }}
+{{- end }}
+{{- end }}
+{{- if $v.northline.enabled }}
+{{- $n := $v.northline }}
+{{- $chartFiles := $n.valueFiles }}
+{{- if not $chartFiles }}{{ $chartFiles = list (printf "values-%s.yaml" $env) (printf "values-%s.yaml" $v.cloud) }}{{ end }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: northline-{{ $env }}
+  namespace: {{ $v.argocdNamespace }}
+  {{- /* Server-side diff: fields the API server or a webhook defaults (ExternalSecret remoteRef strategies, HPA
+         behaviour) don't show as drift. */}}
+  {{- include "gitops.appMeta" (dict "root" $ "wave" $n.syncWave "annotations" (dict "argocd.argoproj.io/compare-options" "ServerSideDiff=true")) | nindent 2 }}
+spec:
+  project: {{ include "gitops.project.app" $ }}
+  source:
+    repoURL: {{ $v.repoURL | quote }}
+    targetRevision: {{ $v.targetRevision | quote }}
+    path: {{ $n.chartPath }}
+    helm:
+      releaseName: {{ $n.releaseName }}
+      valueFiles:
+        {{- range $chartFiles }}
+        - {{ . }}
+        {{- end }}
+        # The environment's files (relative to the chart; later wins).
+        - ../../argocd/envs/{{ $env }}/infra.yaml      # terraform output -json helm_values
+        - ../../argocd/envs/{{ $env }}/values.yaml     # hand-written overrides
+        - ../../argocd/envs/{{ $env }}/images.yaml     # registry + digests, promoted by PR
+  destination:
+    {{- include "gitops.destination" $ | nindent 4 }}
+    namespace: {{ $ns }}
+  syncPolicy:
+    {{- include "gitops.syncPolicy" (dict "root" $ "options" (list "CreateNamespace=true" "ServerSideApply=true" "PruneLast=true")) | nindent 4 }}
+    managedNamespaceMetadata:
+      labels:
+        app.kubernetes.io/part-of: northline
+        northline.ca/environment: {{ $env | quote }}
+  revisionHistoryLimit: 10
+{{- end }}

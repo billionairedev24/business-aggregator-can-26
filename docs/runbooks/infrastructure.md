@@ -310,7 +310,7 @@ topic's partitions, 1 day). From it:
 
 | reader | where | what it does |
 |---|---|---|
-| **provisioning Job** `northline-kafka-topics` | Helm pre-install/pre-upgrade hook (Argo CD PreSync), worker image, `TopicsCommand` | Kafka admin API with the app's credentials: `apply` creates missing topics, sets drifted retention / cleanup policy / `min.insync.replicas` back, reports partition drift and unmanaged topics. Never deletes, never changes partition counts. |
+| **provisioning Job** `northline-kafka-topics-<hash>` | Helm pre-install/pre-upgrade hook (Argo CD PreSync), worker image, `TopicsCommand` | Kafka admin API with the app's credentials: `apply` creates missing topics, sets drifted retention / cleanup policy / `min.insync.replicas` back, reports partition drift and unmanaged topics. Never deletes, never changes partition counts. |
 | **Terraform** (Azure only) | `modules/kafka/catalogue` → `modules/kafka/azure` `azurerm_eventhub.topic` | one event hub per topic (partitions, retention in hours, cleanup policy), `prevent_destroy` |
 | **`scripts/topics.sh`** | docker compose `events` profile, your own Kafka | creates what is missing with the Kafka CLI, prints `DRIFT` lines (`KAFKA_TOPICS_STRICT=1`: exit 3) |
 
@@ -342,7 +342,7 @@ change `partition_count`), then update the catalogue so the drift report is clea
 
 ```sh
 # the Job's logs after a deploy
-kubectl -n northline-<env> logs job/northline-kafka-topics
+kubectl -n northline-<env> logs $(kubectl -n northline-<env> get jobs -l app.kubernetes.io/component=kafka-topics -o name --sort-by=.metadata.creationTimestamp | tail -1)
 # the same command, locally or from a debug pod: KAFKA_* as in the worker's environment
 cd server && KAFKA_BOOTSTRAP=… KAFKA_SECURITY_PROTOCOL=SASL_SSL KAFKA_SASL_MECHANISM=… KAFKA_SASL_JAAS_CONFIG='…' \
   ./gradlew :worker:kafkaTopics --args='plan'        # or verify (exit 3 on drift) / apply

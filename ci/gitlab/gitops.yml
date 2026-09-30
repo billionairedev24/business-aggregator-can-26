@@ -1,0 +1,66 @@
+# S-15 — GitOps (Argo CD) on GitLab. Included from .gitlab-ci.yml; pipelines exist only when started by hand.
+# Runbook: docs/runbooks/gitops.md
+#
+#   PIPELINE_PART=gitops (also part of `all`)  deploy/argocd/validate.sh
+#   PIPELINE_PART=promote                      deploy/argocd/promote.sh → a merge request changing
+#                                              deploy/argocd/envs/$PROMOTE_ENV/images.yaml. Needs GITOPS_PUSH_TOKEN
+#                                              (project access token, role Developer, scope write_repository; masked)
+#                                              and, for the digest lookup, REGISTRY_USER / REGISTRY_PASSWORD.
+
+gitops:validate:
+  stage: check
+  needs: []
+  image:
+    name: alpine/helm:3.19.0
+    entrypoint: [""]
+  timeout: 10m
+  interruptible: true
+  rules:
+    - if: $PIPELINE_PART == "all" || $PIPELINE_PART == "gitops"
+  script:
+    - apk add --no-cache bash curl kubectl
+    - curl -sSL https://github.com/yannh/kubeconform/releases/download/v0.7.0/kubeconform-linux-amd64.tar.gz | tar xz -C /usr/local/bin kubeconform
+    - bash deploy/argocd/validate.sh
+
+gitops:promote:
+  stage: build
+  needs: []
+  image: docker:28
+  services:
+    - name: docker:28-dind
+      alias: docker
+      command: ["--tls=false"]
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  timeout: 10m
+  interruptible: false
+  rules:
+    - if: $PIPELINE_PART == "promote"
+  script:
+    - apk add --no-cache bash git
+    - test -n "$GITOPS_PUSH_TOKEN" || { echo "GITOPS_PUSH_TOKEN is not set"; exit 1; }
+    - |
+      args=()
+      [ -n "$PROMOTE_FROM" ] && args+=(--from "$PROMOTE_FROM")
+      [ -n "$IMAGE_REGISTRY" ] && args+=(--registry "$IMAGE_REGISTRY")
+      [ -n "$IMAGE_TAG" ] && args+=(--tag "$IMAGE_TAG")
+      [ -z "$IMAGE_TAG" ] && [ -z "$PROMOTE_FROM" ] && args+=(--tag "$CI_COMMIT_SHORT_SHA")   # images job default
+      if [ -z "$PROMOTE_FROM" ]; then
+        registry="${IMAGE_REGISTRY:-$CI_REGISTRY_IMAGE}"
+        echo "${REGISTRY_PASSWORD:-$CI_REGISTRY_PASSWORD}" | docker login "${registry%%/*}" -u "${REGISTRY_USER:-$CI_REGISTRY_USER}" --password-stdin
+        [ -n "$IMAGE_REGISTRY" ] || args+=(--registry "$CI_REGISTRY_IMAGE")
+      fi
+      bash deploy/argocd/promote.sh "$PROMOTE_ENV" "${args[@]}"
+    - |
+      file="deploy/argocd/envs/$PROMOTE_ENV/images.yaml"
+      if git diff --quiet -- "$file"; then echo "Nothing to promote: $file unchanged"; exit 0; fi
+      tag=$(sed -n 's/^    tag: "\(.*\)"/\1/p' "$file")
+      branch="promote/$PROMOTE_ENV-$tag-$CI_PIPELINE_ID"
+      git config user.name "Northline CI"; git config user.email "ci@northline.invalid"
+      git switch -c "$branch"
+      git commit -m "promote $PROMOTE_ENV: $tag${PROMOTE_FROM:+ (from $PROMOTE_FROM)}" -- "$file"
+      # Push options open the merge request; approval rules (CODEOWNERS) decide who may merge it.
+      git push "https://gitlab-ci-token:${GITOPS_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git" "$branch" \
+        -o merge_request.create -o merge_request.target="$CI_DEFAULT_BRANCH" \
+        -o merge_request.title="promote $PROMOTE_ENV: $tag" -o merge_request.remove_source_branch

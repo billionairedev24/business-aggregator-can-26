@@ -1,0 +1,6 @@
+# kind rehearsal: the locally built images loaded into the node (deploy/argocd/kind/rehearse.sh sets the tag).
+global:
+  image:
+    registry: northline
+    tag: dev
+    requireDigest: false

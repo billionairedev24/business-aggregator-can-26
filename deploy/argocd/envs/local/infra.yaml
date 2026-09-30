@@ -1,0 +1,6 @@
+# Terraform's Helm values for local: configEnv (ConfigMap northline-infra), the apps' workloadIdentities and the
+# External Secrets store settings + remote keys. Nothing secret (names only). Regenerate after every apply that
+# changes outputs, and commit through a PR:
+#   terraform -chdir=infra/terraform/envs/<cloud>/local output -json helm_values | yq -P > deploy/argocd/envs/local/infra.yaml
+# kind: the stand-ins come from values-local-kind.yaml, so nothing here.
+{}

@@ -10,7 +10,9 @@ server, Valkey or KMS). Helm runs post-install hooks once the release's resource
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: northline-oauth-clients
+  # Named after a hash of its inputs, like northline-migrate-<hash> (S-15: Argo CD would otherwise take the previous
+  # sync's finished Job for this sync's hook).
+  name: northline-oauth-clients-{{ list (include "northline.image" $ctx) (include "northline.configChecksum" $ctx) .Values.oauthClientsJob.command | join "\n" | sha256sum | trunc 10 }}
   labels:
     {{- include "northline.labels" (dict "root" . "app" "oauth-clients") | nindent 4 }}
   annotations:

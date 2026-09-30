@@ -18,6 +18,8 @@ Docker executor that allows `docker:dind` (GitLab), plus public images and packa
 | infra | `infra.yml` › `tflint` (on by default) | `infra:tflint` (on by default) | tflint 0.64 with the terraform, aws, google and azurerm rulesets (`infra/terraform/.tflint.hcl`). |
 | deploy | `deploy.yml` › `java`, `web` (images) | `images:java`, `images:web` (`PIPELINE_PART=images` only, never in `all`) | S-14: build and push `api`, `auth`, `bff`, `worker` with Jib and `studio`, `consumer` with `web/Dockerfile` (buildx, amd64 + arm64) to the registry given as input; digests in the run summary / `image-digests.txt` ([deploy.md](deploy.md#build-and-push)) |
 | deploy | `deploy.yml` › `chart` | `chart:validate` (`PIPELINE_PART=chart` or `all`) | S-14: `deploy/helm/validate.sh` — `helm lint --strict` + `helm template \| kubeconform -strict` for dev/staging/prod × aws/gcp/azure, kind and Gateway API |
+| gitops | `gitops.yml` › `validate` (`action=validate`) | `gitops:validate` (`PIPELINE_PART=gitops` or `all`) | S-15: `deploy/argocd/validate.sh` — the app of apps for dev/staging/prod × aws/gcp/azure \| `kubeconform -strict` against the Argo CD CRDs, the sync policy (only dev automated), the chart as each Application renders it, the Argo CD install kustomization ([gitops.md](gitops.md#checks-no-cluster)) |
+| gitops | `gitops.yml` › `promote` (`action=promote`) | `gitops:promote` (`PIPELINE_PART=promote` only) | S-15: `deploy/argocd/promote.sh` writes `deploy/argocd/envs/<env>/images.yaml` (digests looked up in the registry, or copied from another environment) and opens the promotion PR / merge request ([gitops.md § Promotion](gitops.md#promotion-build--digest--pr--sync)) |
 | web | `web.yml` › `studio-smoke` (optional) | `web:studio-smoke` (optional) | `ci/studio-smoke.sh`: PostGIS service → `:api:flywayMigrate -Pdb.devSeed=true` + `:api:seedCategories` → api and auth with the `local` profile → studio dev server (dev auth as Ravi Sandhu) → `scripts/studio-smoke.mjs` (135 screen/width/locale checks). Screenshots and logs in the `studio-smoke` artifact. |
 
 Expected durations (hosted runners; first run in brackets, before caches are warm):
@@ -38,7 +40,8 @@ Expected durations (hosted runners; first run in brackets, before caches are war
 - **CLI:** `gh workflow run server.yml --ref <branch> [-f project=api] [-f skip-tests=true] [-f rerun-tasks=true]`
   or `gh workflow run web.yml --ref <branch> [-f storybook=false] [-f studio-smoke=true]`,
   or `gh workflow run infra.yml --ref <branch> [-f cloud=aws] [-f tflint=false]`,
-  or `gh workflow run deploy.yml --ref <branch> -f registry=<registry/path> [-f image-tag=…] [-f images=java] [-f push=false] [-f login=ghcr]`; follow with `gh run watch`.
+  or `gh workflow run deploy.yml --ref <branch> -f registry=<registry/path> [-f image-tag=…] [-f images=java] [-f push=false] [-f login=ghcr]`,
+  or `gh workflow run gitops.yml -f action=validate` / `-f action=promote -f environment=staging -f from=dev`; follow with `gh run watch`.
 
 | Workflow | Input | Default | Meaning |
 |---|---|---|---|
@@ -56,6 +59,11 @@ Expected durations (hosted runners; first run in brackets, before caches are war
 | deploy | `login` | `password` | `password` (secrets `REGISTRY_USERNAME` / `REGISTRY_PASSWORD`) or `ghcr` (the workflow token) |
 | deploy | `platforms` | `linux/amd64,linux/arm64` | image platforms |
 | deploy | `chart` | `true` | run `deploy/helm/validate.sh` |
+| gitops | `action` | `validate` | `validate` or `promote` |
+| gitops | `environment` | `dev` | promote: target environment |
+| gitops | `from` | — | promote: copy the digests `dev` or `staging` runs |
+| gitops | `registry`, `image-tag` | — | promote without `from`: look up `<registry>/<app>:<image-tag>` |
+| gitops | `login` | `password` | promote: registry login for the lookup (`password`, `ghcr`, `none`) |
 
 A new run on the same branch cancels the previous one of the same workflow (concurrency group per workflow and ref).
 
@@ -66,7 +74,7 @@ A new run on the same branch cancels the previous one of the same workflow (conc
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `PIPELINE_PART` | `all` | `all`, `server`, `web` or `infra` |
+| `PIPELINE_PART` | `all` | `all`, `server`, `web`, `infra`, `chart`, `gitops` (S-15), `images` or `promote` (S-15; the last two never in `all`) |
 | `SERVER_GRADLE_ARGS` | `build` | Gradle arguments for server/, e.g. `:api:build`, `build -x test`, `build --rerun-tasks` |
 | `RUN_STUDIO_SMOKE` | `false` | `true` adds the studio smoke sweep |
 | `INFRA_CLOUD` | `all` | infra: `all`, `aws`, `gcp` or `azure` |
@@ -75,6 +83,8 @@ A new run on the same branch cancels the previous one of the same workflow (conc
 | `IMAGE_TAG` | short sha | images: tag |
 | `IMAGE_APPS` | `all` | images: `all`, `java` or `web` |
 | `IMAGE_PLATFORMS` | `linux/amd64,linux/arm64` | images: platforms |
+| `PROMOTE_ENV` | `dev` | promote: `dev`, `staging` or `prod` (S-15) |
+| `PROMOTE_FROM` | — | promote: copy the digests `dev` or `staging` runs; empty = look up `IMAGE_REGISTRY`/`<app>`:`IMAGE_TAG` |
 
 Runner requirements: `server:build` needs a runner with `privileged = true` for the `docker:dind` service that
 Testcontainers talks to (`DOCKER_HOST=tcp://docker:2375`, `TESTCONTAINERS_HOST_OVERRIDE=docker`, Ryuk disabled).
@@ -89,6 +99,7 @@ Every job is `interruptible`, so a newer pipeline on the same branch cancels the
 | `MAVEN_MIRROR_URL` | GitHub: *Settings › Secrets and variables › Actions › Variables*; GitLab: *Settings › CI/CD › Variables* | Optional. Maven repository that Gradle tries before Maven Central and the Plugin Portal (Maven Central answers bursts with HTTP 429). E.g. `https://maven-central.storage-download.googleapis.com/maven2/`, or an Artifactory/Nexus/GitLab package proxy. Applied by `ci/gradle/maven-mirror.init.gradle.kts`, which does nothing when the variable is empty. |
 | `MAVEN_MIRROR_USERNAME`, `MAVEN_MIRROR_PASSWORD` | GitHub: *Secrets*; GitLab: masked variables | Optional, only for a mirror that needs credentials. |
 | `REGISTRY_USERNAME`, `REGISTRY_PASSWORD` (GitHub) / `REGISTRY_USER`, `REGISTRY_PASSWORD` (GitLab) | Secrets / masked variables | Only for pushing images (S-14) to a registry other than GHCR / the GitLab project registry; per-cloud values in [deploy.md](deploy.md#from-ci-manual). |
+| `GITOPS_PUSH_TOKEN` (GitLab) | masked variable | Only for `PIPELINE_PART=promote` (S-15): project access token, role Developer, scope `write_repository`, to push the promotion branch and open the merge request. GitHub uses the workflow token (enable *Allow GitHub Actions to create and approve pull requests*). |
 
 ## Enabling automatic runs
 **GitHub** — in `.github/workflows/server.yml`, `web.yml` and `infra.yml`, add triggers next to `workflow_dispatch` (inputs then

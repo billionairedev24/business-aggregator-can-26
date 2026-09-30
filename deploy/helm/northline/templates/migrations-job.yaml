@@ -1,11 +1,11 @@
 {{- /*
 S-16: Flyway migrations as a deploy step. Runs before every install/upgrade (Helm pre-install/pre-upgrade hook; Argo CD
-PreSync), from the api image: step 1 (init container "migrate") applies classpath:db/migration with DbTool — the image
+PreSync) — Job northline-migrate-<hash of its inputs>, from the api image: step 1 (init container "migrate") applies classpath:db/migration with DbTool — the image
 contains no db/seed-dev and DbTool refuses it under deployed profiles —, step 2 (container "seed-categories") upserts
 db/seed/categories.json. If either fails, the release fails and no Deployment is touched.
 
 The regular ConfigMaps and Secrets don't exist yet before a first install, so the Job gets its own hook-scoped copies:
-ConfigMap northline-migrate (profile + Terraform config_env) and Secret northline-migrate-secrets (DB_PASSWORD only),
+ConfigMap northline-migrate-<hash> (profile + Terraform config_env) and Secret northline-migrate-<hash> (DB_PASSWORD only),
 written by a hook ExternalSecret (S-6), a hook Secret (kind), or taken from secrets.existingSecret.
 */ -}}
 {{- if and .Values.migrations.enabled .Values.apps.api.enabled }}
@@ -13,12 +13,20 @@ written by a hook ExternalSecret (S-6), a hook Secret (kind), or taken from secr
 {{- $app := .Values.apps.api }}
 {{- $ctx := dict "root" . "name" "api" "app" $app }}
 {{- $es := .Values.externalSecrets }}
+{{- /* Every object of the step is named northline-migrate-<hash of what the Job runs> (S-15): Argo CD judges a hook by
+       the live object of that name and, with server-side apply, re-applies a same-named hook onto the previous sync's
+       object while BeforeHookCreation is still deleting it — the old ConfigMap/Secret then vanish under the new Job,
+       or the old, finished Job counts as this sync's migration. A changed deploy gets new names (nothing to delete, a
+       fresh Job); an unchanged re-sync does not re-run the migration. */}}
+{{- $mode := ternary "external-secrets" (ternary "secret" (printf "existing:%s" .Values.secrets.existingSecret) .Values.secrets.create) $es.enabled }}
+{{- $inputs := list (include "northline.image" $ctx) (include "northline.springProfiles" .) .Values.global.environment (toYaml .Values.configEnv) $mode (toString $m.seedCategories) (include "northline.infraConfigMap" .) }}
+{{- $name := printf "northline-migrate-%s" (join "\n" $inputs | sha256sum | trunc 10) }}
 {{- $secretName := .Values.secrets.existingSecret }}
-{{- if or $es.enabled .Values.secrets.create }}{{ $secretName = "northline-migrate-secrets" }}{{ end }}
+{{- if or $es.enabled .Values.secrets.create }}{{ $secretName = $name }}{{ end }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: northline-migrate
+  name: {{ $name }}
   labels:
     {{- include "northline.labels" (dict "root" . "app" "migrate") | nindent 4 }}
   annotations:
@@ -39,7 +47,7 @@ data:
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
-  name: northline-migrate
+  name: {{ $name }}
   labels:
     {{- include "northline.labels" (dict "root" . "app" "migrate") | nindent 4 }}
   annotations:
@@ -55,7 +63,7 @@ spec:
     kind: {{ $es.store.kind }}
     name: {{ $es.store.name }}
   target:
-    name: northline-migrate-secrets
+    name: {{ $name }}
     creationPolicy: Owner
   data:
     - secretKey: DB_PASSWORD
@@ -66,7 +74,7 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: northline-migrate-secrets
+  name: {{ $name }}
   labels:
     {{- include "northline.labels" (dict "root" . "app" "migrate") | nindent 4 }}
   annotations:
@@ -84,7 +92,7 @@ stringData:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: northline-migrate
+  name: {{ $name }}
   labels:
     {{- include "northline.labels" (dict "root" . "app" "migrate") | nindent 4 }}
   annotations:
@@ -136,7 +144,7 @@ spec:
                 name: {{ include "northline.infraConfigMap" $ }}
                 optional: true
             - configMapRef:
-                name: northline-migrate
+                name: {{ $name }}
           env:
             - name: DB_PASSWORD
               valueFrom:

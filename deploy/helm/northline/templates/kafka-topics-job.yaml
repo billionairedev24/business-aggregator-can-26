@@ -22,12 +22,20 @@ ConfigMap (Terraform config_env: KAFKA_BOOTSTRAP, KAFKA_SECURITY_PROTOCOL, KAFKA
 {{- end }}
 {{- $jaasFromEso := and $es.enabled (has "KAFKA_SASL_JAAS_CONFIG" $es.optionalKeys) }}
 {{- $jaasFromValues := and (not $es.enabled) .Values.secrets.create (hasKey (default (dict) .Values.secrets.values) "KAFKA_SASL_JAAS_CONFIG") }}
+{{- /* Hook objects named northline-kafka-topics-<hash of what the Job runs>, as the migrations Job (S-15): Argo CD
+       re-applies a same-named hook onto the previous sync's object while BeforeHookCreation is still deleting it.
+       The catalogue is inside the worker image, so the image covers topics.yaml changes. */}}
+{{- $mode := ternary "external-secrets" (ternary "values" (printf "existing:%s" .Values.secrets.existingSecret) $jaasFromValues) $jaasFromEso }}
+{{- $kafkaEnv := dict }}
+{{- range $key, $value := .Values.configEnv }}{{ if hasPrefix "KAFKA_" $key }}{{ $_ := set $kafkaEnv $key (toString $value) }}{{ end }}{{ end }}
+{{- $inputs := list (include "northline.image" $ctx) $k.command (toYaml $kafkaEnv) (toString $k.replicationFactor) (toString $k.minInsyncReplicas) $mode (include "northline.infraConfigMap" .) }}
+{{- $name := printf "northline-kafka-topics-%s" (join "\n" $inputs | sha256sum | trunc 10) }}
 {{- $secretName := .Values.secrets.existingSecret }}
-{{- if or $jaasFromEso $jaasFromValues }}{{ $secretName = "northline-kafka-topics-secrets" }}{{ end }}
+{{- if or $jaasFromEso $jaasFromValues }}{{ $secretName = $name }}{{ end }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: northline-kafka-topics
+  name: {{ $name }}
   labels:
     {{- include "northline.labels" (dict "root" . "app" "kafka-topics") | nindent 4 }}
   annotations:
@@ -54,7 +62,7 @@ data:
 apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
-  name: northline-kafka-topics
+  name: {{ $name }}
   labels:
     {{- include "northline.labels" (dict "root" . "app" "kafka-topics") | nindent 4 }}
   annotations:
@@ -70,7 +78,7 @@ spec:
     kind: {{ $es.store.kind }}
     name: {{ $es.store.name }}
   target:
-    name: northline-kafka-topics-secrets
+    name: {{ $name }}
     creationPolicy: Owner
   data:
     - secretKey: KAFKA_SASL_JAAS_CONFIG
@@ -81,7 +89,7 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: northline-kafka-topics-secrets
+  name: {{ $name }}
   labels:
     {{- include "northline.labels" (dict "root" . "app" "kafka-topics") | nindent 4 }}
   annotations:
@@ -99,7 +107,7 @@ stringData:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: northline-kafka-topics
+  name: {{ $name }}
   labels:
     {{- include "northline.labels" (dict "root" . "app" "kafka-topics") | nindent 4 }}
   annotations:
@@ -142,7 +150,7 @@ spec:
                 name: {{ include "northline.infraConfigMap" $ }}
                 optional: true
             - configMapRef:
-                name: northline-kafka-topics
+                name: {{ $name }}
           {{- if $secretName }}
           env:
             - name: KAFKA_SASL_JAAS_CONFIG

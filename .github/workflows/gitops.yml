@@ -1,0 +1,120 @@
+# S-15 — GitOps (Argo CD): check the definitions, or open a promotion PR.
+#
+# MANUAL ONLY: Actions › gitops › Run workflow (or `gh workflow run gitops.yml -f action=…`). Nothing here talks to a
+# cluster: Argo CD in each environment pulls from Git. Runbook: docs/runbooks/gitops.md
+#
+#   action = validate  deploy/argocd/validate.sh (app of apps × env × cloud | kubeconform, policy, chart as rendered
+#                      by each Application, Argo CD install kustomization)
+#   action = promote   deploy/argocd/promote.sh → PR "promote <env>: …" changing deploy/argocd/envs/<env>/images.yaml.
+#                      Needs Settings › Actions › "Allow GitHub Actions to create and approve pull requests", and for
+#                      digest lookup the registry secrets REGISTRY_USERNAME / REGISTRY_PASSWORD (or login = ghcr).
+name: gitops
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: What to do
+        type: choice
+        default: validate
+        options: [validate, promote]
+      environment:
+        description: "promote: target environment"
+        type: choice
+        default: dev
+        options: [dev, staging, prod]
+      from:
+        description: "promote: copy the digests another environment runs (staging → prod); none = look them up in the registry"
+        type: choice
+        default: none
+        options: [none, dev, staging]
+      registry:
+        description: "promote: registry including its path (empty with `from` = the source environment's)"
+        type: string
+        default: ""
+      image-tag:
+        description: "promote: the tag the images were pushed with (the build's short sha)"
+        type: string
+        default: ""
+      login:
+        description: "promote: registry login for the digest lookup"
+        type: choice
+        default: password
+        options: [password, ghcr, none]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gitops-${{ inputs.action }}-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: ${{ inputs.action == 'validate' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: azure/setup-helm@v4
+        with: { version: v3.19.0 }
+      - name: Install kubeconform
+        run: |
+          curl -sSL https://github.com/yannh/kubeconform/releases/download/v0.7.0/kubeconform-linux-amd64.tar.gz \
+            | sudo tar xz -C /usr/local/bin kubeconform
+      - name: deploy/argocd/validate.sh
+        run: deploy/argocd/validate.sh
+
+  promote:
+    if: ${{ inputs.action == 'promote' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+      packages: read
+    env:
+      ENVIRONMENT: ${{ inputs.environment }}
+      FROM: ${{ inputs.from != 'none' && inputs.from || '' }}
+      REGISTRY: ${{ inputs.registry }}
+      TAG: ${{ inputs.image-tag }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Registry login (digest lookup)
+        if: ${{ inputs.from == 'none' && inputs.login != 'none' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ inputs.login == 'ghcr' && 'ghcr.io' || inputs.registry }}
+          username: ${{ inputs.login == 'ghcr' && github.actor || secrets.REGISTRY_USERNAME }}
+          password: ${{ inputs.login == 'ghcr' && secrets.GITHUB_TOKEN || secrets.REGISTRY_PASSWORD }}
+      - name: Write images.yaml
+        run: |
+          if [ "$ENVIRONMENT" = "$FROM" ]; then echo "::error::from and environment are the same"; exit 1; fi
+          args=()
+          [ -n "$FROM" ] && args+=(--from "$FROM")
+          [ -n "$REGISTRY" ] && args+=(--registry "$REGISTRY")
+          [ -n "$TAG" ] && args+=(--tag "$TAG")
+          deploy/argocd/promote.sh "$ENVIRONMENT" "${args[@]}"
+      - name: Open the promotion PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          file="deploy/argocd/envs/$ENVIRONMENT/images.yaml"
+          if git diff --quiet -- "$file"; then echo "Nothing to promote: $file unchanged" >> "$GITHUB_STEP_SUMMARY"; exit 0; fi
+          tag=$(sed -n 's/^    tag: "\(.*\)"/\1/p' "$file")
+          branch="promote/$ENVIRONMENT-$tag-$GITHUB_RUN_ID"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git commit -m "promote $ENVIRONMENT: $tag${FROM:+ (from $FROM)}" -- "$file"
+          git push origin "$branch"
+          {
+            echo "Promotes **$ENVIRONMENT** to images built from \`$tag\`${FROM:+ (the digests $FROM runs)}."
+            echo
+            echo '```diff'; git diff HEAD~1 -- "$file"; echo '```'
+            echo
+            if [ "$ENVIRONMENT" = dev ]; then echo "Argo CD syncs dev by itself once this is merged."
+            else echo "After merging, a deployer syncs \`northline-$ENVIRONMENT\` in Argo CD (docs/runbooks/gitops.md § Promotion)."; fi
+          } > /tmp/body.md
+          gh pr create --base "${GITHUB_REF_NAME}" --head "$branch" --title "promote $ENVIRONMENT: $tag" --body-file /tmp/body.md \
+            | tee -a "$GITHUB_STEP_SUMMARY"

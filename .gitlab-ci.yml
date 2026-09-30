@@ -17,8 +17,8 @@ workflow:
 variables:
   PIPELINE_PART:
     value: all
-    options: [all, server, web, infra, chart, images]
-    description: "Which part to build and test. `images` builds and pushes the container images (S-14, never part of `all`); `chart` = Helm checks (also in `all`)."
+    options: [all, server, web, infra, chart, images, gitops, promote]
+    description: "Which part to build and test. `images` builds and pushes the container images (S-14, never part of `all`); `chart` = Helm checks, `gitops` = Argo CD checks (S-15; both also in `all`); `promote` opens a promotion merge request (S-15, never part of `all`)."
   SERVER_GRADLE_ARGS:
     value: build
     description: "Gradle arguments for server/ (e.g. build, :api:build, build -x test, build --rerun-tasks)."
@@ -43,6 +43,14 @@ variables:
   IMAGE_PLATFORMS:
     value: linux/amd64,linux/arm64
     description: "images: platforms."
+  PROMOTE_ENV:
+    value: dev
+    options: [dev, staging, prod]
+    description: "promote: the environment whose deploy/argocd/envs/<env>/images.yaml changes."
+  PROMOTE_FROM:
+    value: ""
+    options: ["", dev, staging]
+    description: "promote: copy the digests this environment runs (staging → prod); empty = look up IMAGE_REGISTRY/<app>:IMAGE_TAG."
   RUN_STUDIO_SMOKE:
     value: "false"
     options: ["false", "true"]
@@ -57,6 +65,6 @@ default:
   interruptible: true
 
 # One file per part: ci/gitlab/server.yml (S-4), ci/gitlab/web.yml (S-5), ci/gitlab/infra.yml (S-2/S-3),
-# ci/gitlab/deploy.yml (S-14 images and chart).
+# ci/gitlab/deploy.yml (S-14 images and chart), ci/gitlab/gitops.yml (S-15 Argo CD checks and promotion).
 include:
   - local: ci/gitlab/*.yml

@@ -1,0 +1,8 @@
+# Reviews required before a merge (GitHub: branch protection "Require review from Code Owners"; GitLab: protected
+# branch "Code owner approval"). S-15: what Argo CD deploys to staging and prod changes only through these paths, so
+# their reviewers are the promotion approvers (docs/runbooks/gitops.md § Approval). Replace the owner with the
+# platform team (@org/team on GitHub, @group on GitLab) when it exists.
+/deploy/argocd/envs/staging/   @billionairedev24
+/deploy/argocd/envs/prod/      @billionairedev24
+/deploy/argocd/app-of-apps/    @billionairedev24
+/deploy/argocd/install/        @billionairedev24

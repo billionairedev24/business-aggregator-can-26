@@ -7,8 +7,8 @@ one cloud — the same images and the same chart run on EKS, GKE, AKS or kind; o
 > **Status (2026-09-30):** images build and run; the chart installs on kind with every pod Ready (below). No cloud
 > cluster exists yet (Terraform is unapplied — [infrastructure.md](infrastructure.md)), so nothing has been deployed to
 > EKS/GKE/AKS. Secrets come from the cloud secrets manager through External Secrets (S-6, [secrets.md](secrets.md));
-> database migrations run as a Job before every rollout (S-16); GitOps is S-15; TLS, DNS and the ingress
-> controller are S-17.
+> database migrations run as a Job before every rollout (S-16); Argo CD delivers the chart per environment (S-15,
+> [gitops.md](gitops.md)); TLS, DNS and the ingress controller are S-17.
 
 Other runbooks: [dev](dev.md) · [staging](staging.md) · [prod](prod.md) · [infrastructure](infrastructure.md) ·
 [CI](ci.md) · [overview and variables](README.md)
@@ -104,8 +104,8 @@ replica); plus the Ingress or Gateway API HTTPRoutes and the OAuth client Job.
 | rollouts | `maxUnavailable: 0`, `maxSurge: 1`, `preStop` sleep 5 s (Kubernetes ≥ 1.30), 45 s grace period, pods roll when their configuration changes (`checksum/config`), zone and node spread (soft) |
 | network | NetworkPolicies (ingress only): studio, consumer, bff and auth accept the ingress controller (`networkPolicy.ingressFrom`, default any namespace — narrow it per cluster); api accepts the bff (and the ingress for its public paths); auth accepts bff and api; worker accepts nothing. Egress stays open (managed data stores and cloud APIs sit at provider addresses) |
 | routes | `ingress.enabled` (+ `className`, `annotations`, `tls` secret names) or `gateway.enabled` (+ `parentRefs`). Studio host: `/api`, `/bff`, `/oauth2`, `/login` → bff, `/` → studio; auth host → auth; consumer (and console) hosts; api host → only `/api/v1/webhooks/stripe` (S-12) and `/api/v1/email/unsubscribe` (S-13). No certificates or DNS here (S-17) |
-| migrations (S-16) | pre-install/pre-upgrade hook Job `northline-migrate` (Argo CD PreSync) from the api image: Flyway `db/migration`, then the category seed — before any Deployment changes; a failure fails the release ([§ Migrations](#migrations-s-16)) |
-| OAuth clients (S-122) | post-install/post-upgrade hook Job `northline-oauth-clients`: the auth image with the auth environment runs `OAuthClientsCommand sync` (`oauthClientsJob.command: list` to only report). Argo CD runs it as PostSync |
+| migrations (S-16) | pre-install/pre-upgrade hook Job `northline-migrate-<hash>` (Argo CD PreSync; the name carries a hash of its inputs, so each change runs a new Job — S-15) from the api image: Flyway `db/migration`, then the category seed — before any Deployment changes; a failure fails the release ([§ Migrations](#migrations-s-16)) |
+| OAuth clients (S-122) | post-install/post-upgrade hook Job `northline-oauth-clients-<hash>`: the auth image with the auth environment runs `OAuthClientsCommand sync` (`oauthClientsJob.command: list` to only report). Argo CD runs it as PostSync |
 
 Values files (later `-f` wins): `values.yaml` (defaults) → `values-<env>.yaml` (`dev`, `staging`, `prod`: profile,
 hosts, replicas/HPA, sizes, what is required there) → `values-<cloud>.yaml` (`aws`, `gcp`, `azure`: region for the AWS
@@ -124,10 +124,14 @@ terraform output -json registry | jq -r .registry_url             # REGISTRY (ap
 ```
 
 `helm_values` holds no secret (`configEnv` is non-secret by construction; `externalSecrets.remoteKeys` only names the
-secrets), but it is environment-specific: keep it next to the environment's GitOps values (S-15), not in this chart.
+secrets), but it is environment-specific: it goes to `deploy/argocd/envs/<env>/infra.yaml` (S-15, [gitops.md](gitops.md)), not into this chart.
 (The individual outputs `config_env`, `kubernetes.workload_identities`, `secret_env` still exist.)
 
 ## Install, upgrade, roll back
+
+> In dev, staging and prod the chart is installed by **Argo CD** ([gitops.md](gitops.md)): same chart, same order
+> (migrations → Deployments → OAuth clients), but no `helm upgrade` by hand and rollback through Git or `argocd app
+> rollback`. The Helm commands below are for a cluster without Argo CD and for kind.
 
 Prerequisites per environment: the cluster and data stores from Terraform, the Postgres role and extensions
 ([infrastructure.md § 5.1](infrastructure.md#51-postgresql-app-role-and-extensions-once-per-environment)), Kafka topics
@@ -156,9 +160,11 @@ never committed).
   roll → the OAuth client Job (post-install/post-upgrade, after every Deployment is Ready with `--wait`).
 - **Ingress class / TLS** until S-17: add `--set ingress.className=nginx` (or your controller) and, when a
   certificate secret exists, `--set ingress.tls[0].secretName=… --set ingress.tls[0].hosts={…}`.
-- **Pin digests** (what S-15 will do): `--set apps.api.image.digest=sha256:…` per app; the tag is then informational.
-- **Check:** `kubectl -n northline-<env> get pods` (all Ready, `northline-oauth-clients` Completed),
-  `kubectl -n northline-<env> logs job/northline-oauth-clients` (`studio-bff: up to date` or `create`), then the
+- **Pin digests**: `--set apps.api.image.digest=sha256:…` per app; the tag is then informational. Argo CD environments
+  pin every image in `deploy/argocd/envs/<env>/images.yaml` and refuse to render without (`global.image.requireDigest`,
+  [gitops.md § Promotion](gitops.md#promotion-build--digest--pr--sync)).
+- **Check:** `kubectl -n northline-<env> get pods` (all Ready, `northline-oauth-clients-<hash>` Completed),
+  `kubectl -n northline-<env> logs -l app.kubernetes.io/component=oauth-clients --tail=20` (`studio-bff: up to date` or `create`), then the
   environment runbook's *Verify* step.
 - **Upgrade** = the same command with the new `IMAGE_TAG`. Migrations run first; if they fail, the upgrade stops there
   and nothing else changes. Pods then roll one at a time behind readiness; a pod that never becomes ready stops the
@@ -181,7 +187,7 @@ Per cloud, nothing differs but the overlay and the registry:
 
 ## Migrations (S-16)
 
-`db/migrations` (V001…) are applied by the Job `northline-migrate` **before** every install and upgrade (Helm
+`db/migrations` (V001…) are applied by the Job `northline-migrate-<hash>` **before** every install and upgrade (Helm
 `pre-install,pre-upgrade` hook; Argo CD `PreSync` with sync waves, S-15), never by the pods: the api runs with
 `SPRING_FLYWAY_ENABLED=false` while `migrations.enabled` (default) and northline-auth never migrates outside `local`.
 
@@ -194,11 +200,11 @@ Per cloud, nothing differs but the overlay and the registry:
   900`), `helm upgrade` fails with `pre-upgrade hooks failed`, and no Deployment, ConfigMap or Secret is changed: the
   running pods keep serving the old schema (PostgreSQL rolls the failed migration back; nothing is recorded in
   `flyway_schema_history`). Fix forward with a new image, then upgrade again.
-- **Logs:** `kubectl -n northline-<env> logs job/northline-migrate -c migrate` (and `-c seed-categories`); the Job is
-  kept a week (`ttlSecondsAfterFinished`) or until the next deploy replaces it.
+- **Logs:** `kubectl -n northline-<env> logs $(kubectl -n northline-<env> get jobs -l app.kubernetes.io/component=migrate -o name --sort-by=.metadata.creationTimestamp | tail -1) -c migrate` (and `-c seed-categories`). The Job is named `northline-migrate-<hash of image, profile, configEnv, secret source>`: a change runs a new Job, a sync without change doesn't re-run it (S-15). Each Job is
+  kept a week (`ttlSecondsAfterFinished`); a redeploy of the same content replaces it.
 - **Before a first install** the Job can't use the chart's regular ConfigMaps and Secrets (they don't exist yet), so it
-  gets hook-scoped ones: ConfigMap `northline-migrate` (`SPRING_PROFILES_ACTIVE`, `NORTHLINE_ENVIRONMENT`, Terraform's
-  `configEnv`) and Secret `northline-migrate-secrets` with `DB_PASSWORD` only (a hook ExternalSecret with External
+  gets hook-scoped ones: ConfigMap `northline-migrate-<hash>` (`SPRING_PROFILES_ACTIVE`, `NORTHLINE_ENVIRONMENT`, Terraform's
+  `configEnv`) and Secret `northline-migrate-<hash>` with `DB_PASSWORD` only (a hook ExternalSecret with External
   Secrets; a hook Secret on kind; or the existing `secrets.existingSecret`). It runs as the namespace's `default`
   ServiceAccount without a token: it needs no cloud identity.
 - **The dev seed can't get there.** `db/seed-dev` (V1xx personas) is not a main resource any more: it isn't in the boot
@@ -216,7 +222,7 @@ Per cloud, nothing differs but the overlay and the registry:
 
 ## Kafka topics (S-25)
 
-The Job `northline-kafka-topics` runs **before** every install and upgrade (same hook mechanism as the migrations,
+The Job `northline-kafka-topics-<hash>` (hash of its inputs, as the migrations Job — S-15) runs **before** every install and upgrade (same hook mechanism as the migrations,
 hook weight -10, Argo CD `PreSync`), from the **worker** image: `TopicsCommand <kafkaTopics.command>` reads
 `deploy/kafka/topics.yaml` (packaged in the image) and talks to Kafka through the admin API with the worker's
 `KAFKA_*` settings. A release whose api publishes to a new topic or whose worker gains a consumer therefore finds
@@ -226,12 +232,12 @@ the topics (and their `.dlq` / retry topics) before any pod starts.
   cleanup / `min.insync.replicas` drift; `plan` (values-azure.yaml — Terraform creates event hubs) reports only;
   `verify` reports and exits 3 on drift, which fails the release. Partition drift and unmanaged topics are reported,
   never changed; nothing is ever deleted.
-- Inputs: hook ConfigMap `northline-kafka-topics` (the `KAFKA_*` keys of `configEnv`, plus
+- Inputs: hook ConfigMap `northline-kafka-topics-<hash>` (the `KAFKA_*` keys of `configEnv`, plus
   `KAFKA_REPLICATION_FACTOR` / `KAFKA_MIN_INSYNC_REPLICAS` from `kafkaTopics.replicationFactor` /
-  `.minInsyncReplicas`; prod sets min ISR 2) and hook Secret `northline-kafka-topics-secrets` with
+  `.minInsyncReplicas`; prod sets min ISR 2) and hook Secret `northline-kafka-topics-<hash>` with
   `KAFKA_SASL_JAAS_CONFIG` (hook ExternalSecret, or `secrets.values` on kind). No Spring profile: no database,
   Valkey or Elasticsearch needed.
-- Logs: `kubectl -n northline-<env> logs job/northline-kafka-topics` (`CREATED`, `CORRECTED`, `DRIFT`, `UNMANAGED`
+- Logs: `kubectl -n northline-<env> logs $(kubectl -n northline-<env> get jobs -l app.kubernetes.io/component=kafka-topics -o name --sort-by=.metadata.creationTimestamp | tail -1)` (`CREATED`, `CORRECTED`, `DRIFT`, `UNMANAGED`
   lines and a summary). `kafkaTopics.enabled: false` turns it off (the kind rehearsal has no Kafka).
 - Details, per-cloud table and how to change the catalogue: [infrastructure.md § 5.3](infrastructure.md#53-kafka-topics-and-credentials).
 
@@ -286,4 +292,4 @@ CI runs it manually (GitHub **deploy** workflow `chart` input; GitLab `PIPELINE_
 | startup probe fails after 5 min | the app can't reach a data store at start (Postgres, Valkey): check `DB_URL`, `REDIS_*` and egress from the namespace |
 | studio `/config.js` shows the wrong auth origin | `urls.auth` (→ `NL_AUTH_ORIGIN`); the page caches nothing, reload |
 | `ImagePullBackOff` | `global.image.registry` / tag wrong, or the nodes' identity can't read the registry (ECR/AR/ACR grants from Terraform `registry` readers) |
-| `northline-oauth-clients` failed | `kubectl logs job/northline-oauth-clients`: redirect URIs must be `https` outside dev, secret hashes `{bcrypt}` in staging/prod ([README § OAuth clients](README.md#oauth-clients-s-122)) |
+| `northline-oauth-clients-<hash>` failed | `kubectl logs -l app.kubernetes.io/component=oauth-clients`: redirect URIs must be `https` outside dev, secret hashes `{bcrypt}` in staging/prod ([README § OAuth clients](README.md#oauth-clients-s-122)) |
