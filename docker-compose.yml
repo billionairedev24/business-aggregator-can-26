@@ -117,7 +117,7 @@ services:
 
   stripe-mock:                                # --profile payments  (STRIPE_API_BASE=http://localhost:12111)
     profiles: [payments, all]
-    image: stripe/stripe-mock:v0.197.0
+    image: stripe/stripe-mock:v0.205.0
     ports: ["${STRIPE_MOCK_PORT:-12111}:12111"]
 
   kafka-ui:                                   # --profile tools

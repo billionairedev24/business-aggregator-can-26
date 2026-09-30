@@ -30,7 +30,7 @@ public class Escrow {
     @ToString.Include
     private final String id;
 
-    private final @Nullable String paymentIntentId;
+    private @Nullable String paymentIntentId;
     private final String refType;
     private final String refId;
     private final String merchantId;
@@ -156,6 +156,19 @@ public class Escrow {
             throw new Conflict("escrow_released", "This payment was already released.");
         }
         state = EscrowState.REFUNDED;
+    }
+
+    /** Whether the money is still only authorized (not captured) and the authorization must be kept alive. */
+    public boolean awaitingCapture() {
+        return fulfilledAt == null && (state == EscrowState.HELD || state == EscrowState.DISPUTED);
+    }
+
+    /** A renewed authorization replaced the one that was about to lapse ({@link AuthorizationWindow}). */
+    public void reauthorized(String newPaymentIntentId) {
+        if (!awaitingCapture()) {
+            throw new Conflict("escrow_not_authorized", "This payment is no longer waiting for capture.");
+        }
+        paymentIntentId = newPaymentIntentId;
     }
 
     public boolean released() {

@@ -37,6 +37,9 @@ public interface PayoutRepository {
 
     Optional<ConnectedAccount> connectedAccount(String merchantId);
 
+    /** Records the merchant's Connect account; false when it was already recorded. */
+    boolean linkConnectedAccount(String merchantId, String stripeAccount);
+
     Optional<PayoutAccount> account(String merchantId, String accountId);
 
     Optional<PayoutAccount> activeAccount(String merchantId);

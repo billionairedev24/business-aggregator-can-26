@@ -26,4 +26,25 @@ public final class Fees {
     public static long instantFee(long amountCents) {
         return Math.max(INSTANT_MIN_FEE_CENTS, percentOf(amountCents, INSTANT_FEE_BPS));
     }
+
+    /**
+     * Separate charges and transfers: the customer pays {@code amount + tax} to Northline; the merchant's connected
+     * account receives {@code amount − fee}; Northline keeps the fee (its application fee = the take rate) and the tax
+     * (remitted to the CRA).
+     */
+    public static long transferCents(long amountCents, long feeCents) {
+        if (feeCents < 0 || feeCents > amountCents) {
+            throw new IllegalArgumentException("fee " + feeCents + " outside 0.." + amountCents);
+        }
+        return amountCents - feeCents;
+    }
+
+    /**
+     * How much of a refund charged to the merchant is pulled back from their connected account: the refunded amount
+     * (the ledger debits the merchant with all of it; Northline's fee is not refunded), capped at what is still
+     * transferred. Whatever the cap leaves is a negative merchant balance, recovered from later releases.
+     */
+    public static long transferReversalCents(long refundCents, long transferredCents, long alreadyReversedCents) {
+        return Math.max(0, Math.min(refundCents, transferredCents - alreadyReversedCents));
+    }
 }

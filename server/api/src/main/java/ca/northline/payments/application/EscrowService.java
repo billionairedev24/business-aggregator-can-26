@@ -1,26 +1,41 @@
 package ca.northline.payments.application;
 
+import static ca.northline.shared.stripe.StripeIdempotencyKeys.of;
+
 import ca.northline.payments.api.EscrowLifecycle;
+import ca.northline.payments.api.PaymentReauthorizationRequired;
+import ca.northline.payments.application.PaymentGateway.Authorization;
+import ca.northline.payments.application.PaymentGateway.IntentStatus;
+import ca.northline.payments.domain.AuthorizationWindow;
 import ca.northline.payments.domain.Escrow;
+import ca.northline.payments.domain.Fees;
 import ca.northline.payments.domain.LedgerEntry;
+import ca.northline.shared.Conflict;
+import ca.northline.shared.Ids;
 import ca.northline.shared.NotFound;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Escrow lifecycle: hold (authorized, manual capture) → fulfilled (captured; release clock of the kind starts) →
- * released (net to the merchant's balance + Stripe transfer to the connected account, {@code escrow.released}).
+ * Escrow lifecycle: hold (Stripe PaymentIntent authorized, manual capture) → fulfilled (captured; release clock of the
+ * kind starts) → released (net to the merchant's balance + Stripe transfer to the connected account in the
+ * PaymentIntent's transfer group, {@code escrow.released}). Holds still waiting for capture are renewed before Stripe
+ * lets them lapse ({@link AuthorizationWindow}).
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
 class EscrowService implements EscrowLifecycle {
+
+    private static final int BATCH = 200;
 
     private final EscrowRepository escrows;
     private final LedgerRepository ledger;
@@ -36,13 +51,44 @@ class EscrowService implements EscrowLifecycle {
                 .map(Escrow::getId)
                 .orElseGet(() -> {
                     var now = clock.instant();
-                    var intent = escrows.recordPaymentIntent(
-                            hold.stripePaymentIntent(), hold.customerId(), hold.amountCents() + hold.taxCents());
+                    var total = hold.amountCents() + hold.taxCents();
+                    var authorization = requireAuthorized(gateway.authorization(hold.stripePaymentIntent()), total);
+                    var known = escrows.intentByStripeId(hold.stripePaymentIntent());
+                    var intent = escrows.recordPaymentIntent(new EscrowRepository.IntentRecord(
+                            hold.stripePaymentIntent(),
+                            IntentStatus.AUTHORIZED,
+                            hold.customerId(),
+                            total,
+                            authorization.stripeCustomer(),
+                            authorization.paymentMethod(),
+                            authorization.charge(),
+                            Objects.requireNonNullElseGet(
+                                    authorization.transferGroup(),
+                                    () -> known.map(EscrowRepository.Intent::transferGroup)
+                                            .orElseGet(() ->
+                                                    StripeMetadata.defaultTransferGroup(hold.refType(), hold.refId()))),
+                            hold.refType(),
+                            hold.refId(),
+                            hold.merchantId(),
+                            now,
+                            authorization.captureBefore(),
+                            0));
                     var escrow =
                             Escrow.hold(hold, tiers.rateOf(hold.merchantId()).takeRateBps(), intent, now);
                     escrows.insert(escrow);
                     return escrow.getId();
                 });
+    }
+
+    /** Only money Stripe really holds for us becomes escrow. */
+    private static Authorization requireAuthorized(Authorization authorization, long totalCents) {
+        if (authorization.status() != IntentStatus.AUTHORIZED) {
+            throw new Conflict("payment_not_authorized", "The card payment isn't authorized yet.");
+        }
+        if (authorization.amountCapturableCents() > 0 && authorization.amountCapturableCents() < totalCents) {
+            throw new Conflict("payment_amount_mismatch", "The card was authorized for less than the amount due.");
+        }
+        return authorization;
     }
 
     @Override
@@ -80,7 +126,7 @@ class EscrowService implements EscrowLifecycle {
 
     /** Releases every due escrow (the release job). */
     int releaseDue() {
-        var due = escrows.releasable(clock.instant(), 200);
+        var due = escrows.releasable(clock.instant(), BATCH);
         due.forEach(e -> {
             releaseIfDue(e);
             escrows.update(e);
@@ -111,13 +157,128 @@ class EscrowService implements EscrowLifecycle {
         events.publishEvent(released);
     }
 
+    /** The re-authorization job: renews holds about to lapse at Stripe; returns how many were renewed. */
+    int renewAuthorizations() {
+        var now = clock.instant();
+        int renewed = 0;
+        for (var escrow : escrows.authorizationsLapsingBefore(now.plus(AuthorizationWindow.LEAD), BATCH)) {
+            var intentId = escrow.getPaymentIntentId();
+            var intent = intentId == null ? null : escrows.intent(intentId).orElse(null);
+            if (intent == null
+                    || intent.authorizedAt() == null
+                    || !AuthorizationWindow.renewalDue(
+                            intent.captureBefore(), intent.authorizedAt(), intent.reauthFailedAt(), now)) {
+                continue;
+            }
+            if (renew(escrow, intent, now)) {
+                renewed++;
+            }
+        }
+        return renewed;
+    }
+
+    /**
+     * A new manual-capture PaymentIntent for the same amount with the saved card, off-session; only when Stripe
+     * authorizes it is the old hold canceled and the escrow moved over — the money is never unheld in between.
+     */
+    private boolean renew(Escrow escrow, EscrowRepository.Intent intent, Instant now) {
+        var lapsesAt =
+                AuthorizationWindow.lapsesAt(intent.captureBefore(), Objects.requireNonNull(intent.authorizedAt()));
+        var customer = intent.stripeCustomer();
+        var card = intent.paymentMethod();
+        if (customer == null || card == null) {
+            renewalFailed(escrow, intent, lapsesAt, now, "no saved card");
+            return false;
+        }
+        var group = Objects.requireNonNullElseGet(
+                intent.transferGroup(),
+                () -> StripeMetadata.defaultTransferGroup(escrow.getRefType(), escrow.getRefId()));
+        var attempt = String.valueOf(intent.reauthorizations() + 1);
+        Authorization next;
+        try {
+            next = gateway.authorize(new PaymentGateway.Authorize(
+                    intent.amountCents(),
+                    group,
+                    customer,
+                    card,
+                    true,
+                    StripeMetadata.escrow(escrow),
+                    of("reauthorize", escrow.getId(), attempt)));
+        } catch (RuntimeException e) {
+            renewalFailed(escrow, intent, lapsesAt, now, e.getMessage());
+            return false;
+        }
+        if (next.status() != IntentStatus.AUTHORIZED) {
+            // needs the customer (3-D Secure) or was declined: drop the attempt, keep the old hold
+            if (next.status() == IntentStatus.REQUIRES_ACTION) {
+                gateway.cancel(next.paymentIntent(), of("cancel-reauthorization", escrow.getId(), attempt));
+            }
+            renewalFailed(escrow, intent, lapsesAt, now, next.status().code());
+            return false;
+        }
+        var renewedId = escrows.recordPaymentIntent(new EscrowRepository.IntentRecord(
+                next.paymentIntent(),
+                IntentStatus.AUTHORIZED,
+                Objects.requireNonNullElse(intent.customerId(), Objects.requireNonNullElse(escrow.getCustomerId(), "")),
+                intent.amountCents(),
+                customer,
+                card,
+                next.charge(),
+                group,
+                escrow.getRefType(),
+                escrow.getRefId(),
+                escrow.getMerchantId(),
+                now,
+                next.captureBefore(),
+                intent.reauthorizations() + 1));
+        escrow.reauthorized(renewedId);
+        escrows.update(escrow);
+        gateway.cancel(intent.stripePaymentIntent(), of("cancel", intent.id()));
+        escrows.replacePaymentIntent(intent.id(), renewedId);
+        log.info(
+                "Escrow {}: card hold renewed ({} → {})",
+                escrow.getId(),
+                intent.stripePaymentIntent(),
+                next.paymentIntent());
+        return true;
+    }
+
+    private void renewalFailed(
+            Escrow escrow, EscrowRepository.Intent intent, Instant lapsesAt, Instant now, @Nullable String why) {
+        log.warn(
+                "Escrow {}: card hold {} could not be renewed ({}); it lapses at {}",
+                escrow.getId(),
+                intent.stripePaymentIntent(),
+                why,
+                lapsesAt);
+        if (intent.reauthFailedAt() == null) {
+            events.publishEvent(new PaymentReauthorizationRequired(
+                    Ids.next(),
+                    now,
+                    escrow.getId(),
+                    escrow.getMerchantId(),
+                    Objects.requireNonNullElse(
+                            escrow.getCustomerId(), Objects.requireNonNullElse(intent.customerId(), "")),
+                    escrow.getRefType(),
+                    escrow.getRefId(),
+                    lapsesAt));
+        }
+        escrows.reauthorizationFailed(intent.id(), now);
+    }
+
     private void capture(Escrow escrow, Instant at) {
         var intentId = escrow.getPaymentIntentId();
         if (intentId != null) {
-            escrows.stripePaymentIntent(intentId)
-                    .ifPresent(pi -> gateway.capture(
-                            pi, escrow.getAmountCents() + escrow.getTaxCents(), "capture-" + escrow.getId()));
-            escrows.markPaymentIntent(intentId, "captured");
+            escrows.intent(intentId).ifPresent(intent -> {
+                if (intent.state() == IntentStatus.CAPTURED) {
+                    return; // captured by an earlier attempt
+                }
+                var charge = gateway.capture(
+                        intent.stripePaymentIntent(),
+                        escrow.getAmountCents() + escrow.getTaxCents(),
+                        of("capture", escrow.getId(), intent.id()));
+                escrows.recordCapture(intent.id(), charge);
+            });
         }
         ledger.post(LedgerEntry.captured(escrow, at));
     }
@@ -126,17 +287,28 @@ class EscrowService implements EscrowLifecycle {
         payouts.connectedAccount(escrow.getMerchantId())
                 .ifPresentOrElse(
                         account -> {
-                            var transfer = gateway.transfer(
+                            var intent = escrow.getPaymentIntentId() == null
+                                    ? null
+                                    : escrows.intent(escrow.getPaymentIntentId())
+                                            .orElse(null);
+                            var group = intent != null && intent.transferGroup() != null
+                                    ? intent.transferGroup()
+                                    : StripeMetadata.defaultTransferGroup(escrow.getRefType(), escrow.getRefId());
+                            var net = Fees.transferCents(escrow.getAmountCents(), escrow.getFeeCents());
+                            var transfer = gateway.transfer(new PaymentGateway.Transfer(
                                     account.stripeAccount(),
-                                    escrow.netCents(),
-                                    escrow.getId(),
-                                    "transfer-" + escrow.getId());
+                                    net,
+                                    group,
+                                    intent == null ? null : intent.charge(),
+                                    StripeMetadata.escrow(escrow),
+                                    of("transfer", escrow.getId())));
                             escrows.recordTransfer(
                                     escrow.getId(),
                                     transfer,
+                                    group,
                                     escrow.getAmountCents(),
                                     escrow.getFeeCents(),
-                                    escrow.netCents(),
+                                    net,
                                     now);
                         },
                         () -> log.warn(

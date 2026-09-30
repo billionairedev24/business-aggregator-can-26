@@ -17,6 +17,8 @@ import ca.northline.merchants.domain.ComplianceItem;
 import ca.northline.merchants.domain.ComplianceRules;
 import ca.northline.merchants.domain.Document;
 import ca.northline.merchants.domain.VerificationStatus;
+import ca.northline.payments.api.ConnectedAccounts;
+import ca.northline.payments.api.PayoutPlan;
 import ca.northline.payments.api.TaxSummary;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.Ids;
@@ -53,6 +55,8 @@ class ComplianceLedgerService
     private final ComplianceLedgerStore ledger;
     private final ConnectAccountGateway stripe;
     private final TaxSummary tax;
+    private final ConnectedAccounts connectedAccounts;
+    private final PayoutPlan payoutPlan;
     private final UploadDocument uploads;
     private final AuditTrail audit;
     private final ApplicationEventPublisher events;
@@ -75,7 +79,7 @@ class ComplianceLedgerService
                         facts.requiredFor(),
                         facts.ownerName(),
                         facts.takeRateBps()),
-                stripeView(facts.stripeAccountId(), facts.displayName()),
+                stripeView(merchantId, facts.stripeAccountId(), facts.displayName()),
                 period,
                 tax.totals(merchantId, period).stream()
                         .map(t -> new TaxRow(t.jurisdiction(), t.collectedCents(), t.handling()))
@@ -164,6 +168,7 @@ class ComplianceLedgerService
             account = stripe.createExpressAccount(actor.merchantId());
             ledger.linkStripeAccount(actor.merchantId(), account);
         }
+        connectedAccounts.linked(actor.merchantId(), account);
         var back = links.compliance(actor.merchantId());
         return stripe.onboardingLink(account, back, back + "?stripe=refresh");
     }
@@ -183,11 +188,16 @@ class ComplianceLedgerService
                 .toList();
     }
 
-    private StripeView stripeView(@Nullable String accountId, String displayName) {
+    /**
+     * The payout schedule and instant eligibility shown are Northline's (payments runs the payouts; Stripe's own
+     * schedule is always manual), falling back to Stripe's when payments has no record of the account yet.
+     */
+    private StripeView stripeView(String merchantId, @Nullable String accountId, String displayName) {
         if (accountId == null) {
             return new StripeView("not_connected", null, null, false, false, List.of(), null, null, null, null, false);
         }
         try {
+            var plan = payoutPlan.of(merchantId);
             return stripe.account(accountId)
                     .map(a -> new StripeView(
                             "connected",
@@ -198,9 +208,9 @@ class ComplianceLedgerService
                             a.requirements(),
                             a.bankLabel(),
                             Objects.requireNonNullElse(a.statementDescriptor(), descriptor(displayName)),
-                            a.payoutInterval(),
-                            a.payoutWeekday(),
-                            a.instantPayouts()))
+                            plan.map(PayoutPlan.Plan::interval).orElse(a.payoutInterval()),
+                            plan.isPresent() ? plan.get().weekday() : a.payoutWeekday(),
+                            plan.map(PayoutPlan.Plan::instantPayouts).orElse(a.instantPayouts())))
                     .orElseGet(() -> unavailable(accountId));
         } catch (RuntimeException e) {
             log.warn("Stripe account {} could not be read: {}", accountId, e.getMessage());

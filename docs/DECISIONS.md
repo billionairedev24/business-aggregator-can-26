@@ -517,3 +517,74 @@ Record anything the spec did not decide. Format: date · decision · why · spec
 - **OAuth clients (S-122):** nothing to provision; `CONSUMER_BFF_SECRET_HASH` / `CONSOLE_BFF_SECRET_HASH` keep their (empty) secrets but are optional now. `OAUTH_CLIENTS_SYNC_ON_STARTUP` and the registration Job are deployment concerns (S-14).
 - **Runbooks:** dev/staging/prod keep S-3's Terraform column and "from Terraform `config_env`" sources with main's S-7/S-8/S-9/S-10/S-122 variable rows; infrastructure.md § 4 lists the new outputs, the grants and the variables Terraform does not set; key-rotation.md and object-storage.md point to Terraform above their manual set-up sections.
 - **Offline tests** assert the new keys in every env root plus per-cloud values (GCP key version suffix, Azure container/endpoint, empty `STORAGE_ENDPOINT` on S3/GCS), the `signing_key_ids` pass-through and, on AWS, the End User Messaging wiring.
+
+## 2026-09-30 — S-11 Stripe Connect Express live adapter (payments, merchants Connect)
+
+- **Charge model = separate charges and transfers** on the platform account: one manual-capture PaymentIntent per job
+  or order line (a single PaymentIntent can be captured only once without IC+ multicapture, and each line captures and
+  releases on its own clock), CAD, `payment_method_types=[card]`, `setup_future_usage=off_session` on a Stripe Customer
+  that holds only `northline_user_id`; no `on_behalf_of` (Northline is merchant of record and remits GST/HST). Capture
+  at fulfilment (amount + tax); on release a Transfer of `amount − fee` to the connected account with the
+  PaymentIntent's `transfer_group` (`order:<id>` / `booking:<id>` given at checkout, fallback `<refType>:<refId>`) and
+  `source_transaction` = its charge. The **application fee is implicit**: the take rate is what Northline doesn't
+  transfer (`Fees.transferCents`). New `payments.api.PaymentAuthorizations.start` opens the PaymentIntent (checkout —
+  the consumer app / orders / booking call it; nothing does yet) and returns the client secret for Stripe.js.
+- **A hold must be real:** `EscrowLifecycle.hold` reads the PaymentIntent at Stripe and refuses 409
+  `payment_not_authorized` unless it is `requires_capture`, and `payment_amount_mismatch` when less than amount + tax is
+  capturable. It records customer, card, charge, `capture_before`, transfer group and the reference on
+  `payments.payment_intents`. The fake treats unknown `pi_…` as authorized (ids containing `requires_action` are not).
+- **Authorization window policy** (`AuthorizationWindow`): Stripe keeps an online card authorization 7 days
+  (`capture_before` on the charge). 36 h before it lapses the job `renewAuthorizations` places a new manual-capture
+  PaymentIntent off-session with the saved card (key `nl1:reauthorize:<escrow>:<n>`), and only once it is authorized
+  moves the escrow to it and cancels the old one (never unheld, never two captures). Declined / needs 3-D Secure /
+  no saved card → the old hold stays, `payment.reauthorization_required` (new event, topic `payments.payment`, key =
+  escrow id; published once per hold) asks the customer to confirm again, retry every 12 h until it lapses. We don't
+  request extended (30-day) or incremental authorization: IC+ pricing only, some brands only; a larger quote is a new
+  quote version and a new hold.
+- **Refunds at Stripe:** hold never captured (escrow not fulfilled) → cancel the PaymentIntent, no Stripe refund and no
+  ledger posting (nothing was charged); captured → Refund to the card; released and merchant-funded → also a Transfer
+  reversal of `min(refund, transferred − already reversed)` (`Fees.transferReversalCents`). **Northline's fee is not
+  refunded** (it matches the Finance ledger, which debits the merchant with the whole refund); tax still isn't
+  reversed. Goodwill credits (`kind = credit`) move no card money. A shortfall beyond the transfer is a negative merchant
+  balance recovered from later releases; accounts have `debit_negative_balances=true`.
+- **Payouts:** Stripe's schedule on every connected account is `manual` (set at account creation and when payments
+  links the account; `PayoutGateway.updateSchedule` was removed — it set an automatic Stripe schedule that would have
+  paid out beside Northline's run and ignored the reserve, case holds and the 24 h bank-change hold). Scheduled payouts
+  stay Northline's 09:00 run; instant payouts send `amount − 1 %` and then recover the fee from the connected account
+  with an **account debit** (Transfer from the connected account to the platform, `payouts.stripe_fee_transfer`),
+  because Stripe bills Express instant-payout fees to the platform. Step-up and the bank-change hold are unchanged.
+  The in-transit settle job now asks Stripe for the payout's state (reconciler; webhooks in S-12).
+- **Idempotency keys** (`shared.stripe.StripeIdempotencyKeys`) on every mutating call: `nl1:<operation>:<ids>` from
+  domain ids (capture includes the PaymentIntent row so a renewed hold gets its own key; scheduled payouts are keyed
+  per merchant and Edmonton date); for calls a person starts, `nl1:<operation>:<sha256(scope, client Idempotency-Key)>`
+  so the client's retry reaches the same Stripe call and its raw key never leaves Northline (instant payout; checkout
+  when given a key). Keys over 255 characters keep their start plus a digest. Bank tokens use a digest of the typed
+  details, single-use links/sessions a fresh ULID (only stripe-java's own retries share them). stripe-java retries
+  network errors twice (safe with the keys).
+- **API version pinned** to `2026-08-26.dahlia` (stripe-java 33.4.2): `shared.stripe.StripeClients` builds every
+  client, refuses to start if the SDK speaks another version, and sets timeouts (10 s / 30 s) and retries. The merchants
+  gateway uses the same factory.
+- **Adapter selection:** payments unchanged (key set → stripe-java, else fake). Merchants' `ConnectAccountGateway` now
+  also follows the key (`ConnectGatewayConfig`): key set → stripe-java under any profile (so `local` +
+  `STRIPE_API_BASE` exercises the real adapter against stripe-mock); no key → the fake under `local`/`test`, the 409
+  `stripe_unavailable` adapter elsewhere. Tests still force blank keys.
+- **Connect accounts** are created Express, CA, CAD, capabilities `card_payments` + `transfers`, manual payouts,
+  metadata `northline_merchant_id`, key `nl1:connect-account:<merchantId>`; onboarding links collect `eventually_due`.
+  The compliance screen's instant-payout flag comes from the default external account's `available_payout_methods`
+  (was hard-coded true), and `directors_provided` / `executives_provided` count as owners. When the owner opens the
+  onboarding link, merchants calls new `payments.api.ConnectedAccounts.linked` so `payments.connected_accounts` gets the
+  account (before, nothing wrote it outside the seed). Payout schedule / instant eligibility on the compliance screen now
+  come from `payments.api.PayoutPlan` (Northline's schedule; Stripe's is always manual), falling back to Stripe's.
+- **Schema V062:** `payment_intents` + `stripe_customer, stripe_charge, transfer_group, ref_type, ref_id, merchant_id,
+  authorized_at, capture_before, reauthorizations, reauth_failed_at, replaced_by, created_at`, state `canceled`;
+  new `payments.stripe_customers`; `transfers.transfer_group, reversed_cents` + unique `stripe_transfer`;
+  `refunds.stripe_transfer_reversal, reversed_cents`; `payouts.stripe_fee_transfer` + unique `stripe_payout`.
+- **Tests:** stripe-mock (`stripe/stripe-mock:v0.205.0`) in Testcontainers for every adapter call (payments and
+  merchants), recording the headers stripe-java sends — every POST has an `nl1:` Idempotency-Key and every request the
+  pinned Stripe-Version; a Spring test runs checkout → hold → capture → transfer → instant payout + fee → refund with
+  reversal through the real adapter against stripe-mock (only "is it `requires_capture`" is stubbed: stripe-mock is
+  stateless). Unit tests for fee/transfer/reversal math, the authorization window and key derivation; fake-gateway
+  tests for renewal, renewal failure, refund-before-capture and linking. Runbook: `docs/runbooks/stripe.md`.
+- **Not done:** the consumer checkout itself (nothing calls `PaymentAuthorizations` yet), Stripe webhooks (S-12),
+  chargebacks, Stripe Tax (S-21), Identity (S-22), Financial Connections beyond the existing bank-link session (S-24),
+  refunding tax, reconciling Stripe's processing fees into the `stripe_fees` ledger account.

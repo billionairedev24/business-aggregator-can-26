@@ -19,6 +19,11 @@ class PaymentsJobsService implements PaymentsJobs {
     }
 
     @Override
+    public int renewAuthorizations() {
+        return escrows.renewAuthorizations();
+    }
+
+    @Override
     public int lapseCases() {
         return cases.lapse();
     }

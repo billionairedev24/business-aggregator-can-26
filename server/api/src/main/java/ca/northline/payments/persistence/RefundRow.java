@@ -29,4 +29,6 @@ record RefundRow(
         @Nullable Instant decidedAt,
         @Nullable Instant paidAt,
         @Nullable String stripeRefund,
+        @Nullable String stripeTransferReversal,
+        long reversedCents,
         @Version @Nullable Integer version) {}

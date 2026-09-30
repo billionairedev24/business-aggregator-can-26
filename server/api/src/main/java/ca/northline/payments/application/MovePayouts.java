@@ -6,7 +6,8 @@ import ca.northline.payments.domain.PayoutSchedule;
 /** Owner-only payout changes: instant payout (money-moving) and the schedule. */
 public interface MovePayouts {
 
-    record InstantCommand(String merchantId, long amountCents, String userId) {}
+    /** @param idempotencyKey the client's {@code Idempotency-Key}; the Stripe payout's key is derived from it */
+    record InstantCommand(String merchantId, long amountCents, String userId, String idempotencyKey) {}
 
     /** "Instant payout · 1% fee" — arrives in ~30 min. */
     Payout instant(InstantCommand command);
