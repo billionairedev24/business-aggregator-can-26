@@ -48,6 +48,20 @@ public final class ProductListing implements Listing {
         state.touched(at);
     }
 
+    /**
+     * Price and stock from a connected platform (S-35), which is their source of truth; content and vetting are
+     * unaffected. @return whether anything changed
+     */
+    public boolean syncStock(java.util.Map<String, ProductDetails.PriceStock> bySku, Instant at) {
+        var synced = details.withSyncedStock(bySku);
+        if (synced.equals(details)) {
+            return false;
+        }
+        details = synced;
+        state.touched(at);
+        return true;
+    }
+
     public Completeness completeness(@Nullable CategoryProfile category) {
         return details.completeness(category, catalogueImageIds());
     }

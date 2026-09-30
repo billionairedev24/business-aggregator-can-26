@@ -1653,3 +1653,194 @@ Worker: `WebhookDeliveryTest` (Kafka 4 + PostGIS + WireMock receiver: signed `bo
 - **Not done:** the consumer app's host routing (it doesn't exist; the endpoint and contract do); SMS/push notices;
   reserved load-balancer IPs (apex A records are offered only once `edgeAddresses` is set); a Public Suffix List;
   serving behind a merchant's own CDN; a separate reconciler Deployment; Console tools for staff (take-down is SQL).
+
+## 2026-09-30 — S-35 Shopify, Square and Lightspeed catalogue sync
+
+- **Port:** `catalogue.application.CommerceCatalogSource` (the story's name; the backlog said `CommerceSync`) replaces
+  the connect-only `CommerceSync` port and its fake. One adapter per platform in `catalogue.adapters.commerce`:
+  `ShopifyCatalogSource` (Admin GraphQL, version `SHOPIFY_API_VERSION`, default `2026-07`), `SquareCatalogSource`
+  (Catalog + Inventory, `Square-Version: 2025-10-16`), `LightspeedCatalogSource` (X-Series 2.0; 1.0 for token and
+  webhooks), and `FakeCatalogSource` with fixture catalogues (`commerce-fixtures/*.json`). Chosen by
+  `northline.commerce.provider` (`COMMERCE_PROVIDER`): `local` (default; refused under staging/prod) or `oauth`, where a
+  platform is offered once its app id and secret are set (otherwise "Not available yet" and 409
+  `commerce_provider_unavailable`). HTTP clients are `@HttpExchange` interfaces taking the full `URI` per call
+  (shop-specific hosts), over the JDK client pinned to HTTP/1.1 (WireMock resets h2c-upgraded POSTs).
+- **Connect = OAuth, redirect on the api host.** Unlike S-32 (Studio host through the BFF), the redirect URIs are
+  `<API_PUBLIC_URL>/api/v1/commerce/oauth/<platform>/callback` as the story and edge.md ask: the platforms' app settings
+  take one fixed URL. The callback is therefore public (no session): the single-use 256-bit state (stored as SHA-256,
+  10 min, deleted on first use) names the member and business, and the member must **still** be able to manage the
+  business (`MerchantMemberships`, MANAGE) when it comes back; Shopify's callback `hmac` (hex HMAC-SHA256 of the other
+  parameters, sorted) and `shop` must match the store the owner typed; Lightspeed's `domain_prefix` must be letters,
+  digits and dashes before it becomes a host name (SSRF). It answers 303 to `<STUDIO_ORIGIN>/b/<m>/listings/bulk?
+  commerce=…&result=connected|denied|failed|expired` (`no-store`, `no-referrer`). Shopify connect needs the store
+  (`your-store` or `your-store.myshopify.com`; 422 "Enter your Shopify store address (your-store.myshopify.com).").
+  Connect/disconnect are owner-only (MANAGE), sync is EDIT, the list is VIEW — as before. No PKCE: the three are
+  confidential-client code flows and only Square documents PKCE (for public clients).
+- **Tokens at rest:** access + refresh token (+ expiry, account) sealed together as one JSON value with S-32's
+  `SecretSealer`, bound to the new `integrations.id`; opened only for a call. Shopify's offline token doesn't expire;
+  Square's 30-day token is refreshed when < 7 days remain; Lightspeed's short token is refreshed when < 5 min remain and
+  its rotating refresh token is re-sealed. `invalid_grant` / a 401 → `connection_state = 'reconnect'` ("Access expired or
+  was removed · reconnect to keep syncing" + Reconnect).
+- **Import = drafts, as the design says** ("Existing SKUs are updated, new ones are created as drafts", "Draft stays
+  private until you submit"). Each platform product becomes one draft through the editor's own `EditProduct` use case
+  (so SKU generation, GTIN records and every save rule apply) — never submitted automatically: category, fulfilment
+  and the compliance attestations can't come from a platform. A single-variant product whose SKU the merchant already
+  sells is **linked** to that listing and only its price and stock change. Variants: option names pick the theme
+  (Size/Taille → size, Color/Colour/Couleur → colour, both → size_colour, Length → length, else size); values are the
+  option values; missing SKUs are derived from the platform's variant id (`SHO-123`), deduplicated. A barcode with a
+  valid GTIN check digit makes a single-variant offer GTIN-identified (shared catalogue record, like the editor).
+  Offer price = lowest variant price, stock = total. HTML descriptions are reduced to text; titles cut at a word ≤ 80.
+  Images: up to 9, downloaded only over HTTPS from the platforms' image hosts (`northline.commerce.images.hosts`), no
+  redirects, ≤ 15 MB; those failing the image standards (< 1000 px) are skipped. A product the rules refuse is skipped
+  and listed with the editor's message ("N products couldn't be imported"), capped at 50. Each product is applied in
+  its own transaction (`REQUIRES_NEW`), so one refusal doesn't roll the rest back.
+- **Mapping kept by external id** (`commerce_products`: platform product → offer + content hash; `commerce_variants`:
+  platform variant → Northline SKU + the inventory reference webhooks name). Links survive a disconnect so reconnecting
+  re-links instead of duplicating; Shopify `shop/redact` deletes them. A listing the merchant deleted in Northline is
+  not imported again.
+- **Stock is one-way; the platform is the source of truth** (the design shows no two-way stock; the backlog says
+  "stock changes sync hourly"). Price and stock always follow the platform. Northline never writes stock back —
+  merchants record Northline sales in their POS; the next read overwrites Northline's number. A variant the platform no
+  longer has goes to 0 in stock.
+- **Conflicts:** title, description, images and variants follow the platform only while the listing is still a draft
+  (content hash changed); once submitted, Northline's vetted content wins (re-vetting live listings on every platform
+  edit would take them down; re-vetting on edit is the console's, as the catalogue workstream decided).
+- **Removals hide, never delete:** a product deleted, archived or no longer active on the platform (webhook, or
+  missing from a full read) hides its listing (`listing.hidden` when customers could see it) and marks the link
+  `removed_at`. If it comes back, the link is restored but the listing stays hidden until the merchant publishes it.
+- **Incremental sync:** webhooks where the platform has them — Shopify (registered per shop: products create/update/
+  delete, inventory levels, app uninstalled; compliance topics answered), Square (app-level subscription in the
+  Developer Console: `catalog.version.updated`, `inventory.count.updated`, `oauth.authorization.revoked`), Lightspeed
+  (registered per store: `product.update`, `inventory.update`) — only when `API_PUBLIC_URL` is HTTPS. Verified by HMAC
+  (Shopify body + app secret, base64; Square notification URL + body + subscription signature key, base64; Lightspeed
+  `X-Signature` over the raw body with the client secret, hex or base64 accepted because the docs' example is neither),
+  deduplicated in `commerce_webhook_receipts` (Shopify `X-Shopify-Event-Id`, Square `event_id`, Lightspeed SHA-256 of
+  the body — no delivery id is sent), purged after 7 days, rate-limited per address (`WebhookRateLimiter`). A verified
+  delivery publishes internal events (outbox) and answers at once; the named product is read again. Square's catalog
+  notice names nothing → a full read. Uninstall / revocation disconnects at once.
+- **Polling:** a full read (all active products) rather than "changed since" queries, because deletions and stock
+  changes don't show in the platforms' updated-since filters: without webhooks every `COMMERCE_POLL_INTERVAL` (1 h),
+  with webhooks every `COMMERCE_RECONCILE_INTERVAL` (1 day). `CommerceScheduler` checks every 5 minutes; replicas claim
+  a read by moving `last_polled_at` in one conditional UPDATE. Lightspeed's families can span API pages, so its adapter
+  reads the whole catalogue as one page; its single-product read falls back to a full read for families (the 2.0 API
+  has no "variants of" call).
+- **Rate limits:** Shopify's cost-based throttle (`THROTTLED` → wait ⌈(requested − available) / restoreRate⌉, and pace
+  the next call when the bucket can't pay for it); 429 / 502 / 503 / 504 on all three → `Retry-After` (seconds, HTTP
+  date or Lightspeed's ISO instant) else 0.5 s, 1 s, 2 s …, at most 5 retries, each wait ≤ 30 s; after that the read
+  fails and is retried at its next due time.
+- **Disconnect** revokes where possible (Shopify `DELETE /admin/api_permissions/current.json`, Square
+  `/oauth2/revoke`); Lightspeed has no endpoint, so the tokens are destroyed and the runbook tells the merchant to
+  remove the add-on. Imported listings stay.
+- **Studio:** "Or connect" rows show "Not available yet", connected account, "Importing your catalogue…" (polls every
+  3 s), the last sync ("N drafts created · N updated · N hidden (gone from …)"), how updates arrive (as they change /
+  every hour), the products that couldn't be imported, Reconnect, and the callback's outcome once. Shopify opens a
+  "Connect your Shopify store" dialog. Settings › Integrations counts any connected platform.
+- **Schema (V052, additive):** `integrations.id/connection_state/external_account_id/scopes/token_ref/credentials_key/
+  credentials_enc/webhooks/sync_status/last_error/created_count/hidden_count/sync_errors/last_polled_at/
+  state_changed_at` (+ CHECKs); new `commerce_oauth_requests`, `commerce_products`, `commerce_variants`,
+  `commerce_webhook_receipts`.
+- **Configuration:** `COMMERCE_PROVIDER` (required `oauth` in staging/prod), `SHOPIFY_CLIENT_ID`/`_SECRET`/
+  `SHOPIFY_API_VERSION`, `SQUARE_CLIENT_ID`/`_SECRET`/`SQUARE_WEBHOOK_SIGNATURE_KEY`/`SQUARE_BASE_URL`,
+  `LIGHTSPEED_CLIENT_ID`/`_SECRET`, `COMMERCE_POLL_INTERVAL`, `COMMERCE_RECONCILE_INTERVAL`,
+  `COMMERCE_WEBHOOK_RATE_LIMIT`; `API_PUBLIC_URL`/`STUDIO_ORIGIN`/`KMS_ENCRYPTION_KEY_ID` reused. Secrets
+  `shopify-client-secret`, `square-client-secret`, `square-webhook-signature-key`, `lightspeed-client-secret` in
+  Terraform `app_secrets` (AWS, Google Cloud, Azure), the chart's `secretNames` and the api's optional `secretEnv`.
+  The Gateway routes `/api/v1/webhooks/commerce` and `/api/v1/commerce/oauth` on the api host also with
+  `tokenClients: false`. Runbook: docs/runbooks/commerce-sync.md.
+- **Tests:** `CommerceSourcesWireMockTest` (the three adapters through the api: consent URLs, Shopify callback hmac
+  forged/valid, Lightspeed domain prefix, token exchange, Shopify throttling and paging, Square and Lightspeed 429s,
+  webhook registration, import with images filtered by size, incremental updates by webhook, inventory webhooks,
+  deleted product → hidden, full read → hidden, signature checks and duplicates, Square refresh, Lightspeed rotation
+  re-sealed, 401 → reconnect, revocation on disconnect), `CommerceSyncApiTest` (the fakes: callback round trip, drafts
+  with variants and images, existing SKU linked, sealed tokens, errors listed, single-use state, lost MANAGE → failed,
+  webhook forged/verified/duplicate, hourly read restoring a link, disconnect, 403s for technicians / bookkeepers /
+  outsiders / without MFA, 422 messages), `CommerceAdaptersTest`, `CommerceImporterTest`, `CommerceConfigTest`; Studio
+  `commerce.test.tsx` (en + fr-CA).
+- **Never run against the real services:** no Shopify Partner, Square Developer or Lightspeed developer account exists.
+  Unverified live: Shopify's `2026-07` schema (`webhookSubscription.uri`, `media` on products), the uninstall REST
+  endpoint's continued support; Square's `description_html`, sandbox behaviour, the exact signed URL; every Lightspeed
+  X-Series field name (the docs site was unreachable from the build environment: `variant_parent_id`, `has_variants`,
+  `variant_options`, `price_excluding_tax`, `product_codes`, `images[].sizes.original`, inventory paging by `version`,
+  the webhook form fields and `X-Signature` encoding) and whether X-Series now requires OAuth scopes
+  (`northline.commerce.lightspeed.scopes`, empty by default).
+- **Not done:** two-way stock (Northline orders → platform); Shopify multi-location choice (stock is the total); a
+  per-connection default category (the merchant picks one per draft); importing Square item options as variation
+  themes (variation names become the values); compare-at prices and costs; Shopify's App Store listing, Square's
+  production review and Lightspeed's add-on approval (operational, before launch).
+
+## 2026-09-30 — S-36 POS menu import for kitchens
+
+- **Based on S-35** (branch `catalogue/s-35-commerce-sync`, PR #41): the Square app and its OAuth plumbing are shared,
+  so this branch needs S-35's code. Merge S-35 first.
+- **Shared plumbing moved to `ca.northline.shared.integration`** (named interface `integration`): `ProviderHttp`
+  (`@HttpExchange` clients over the JDK client on HTTP/1.1, query/form encoding, HMAC, token-call helpers), `Backoff`
+  (429 / 502–504 with `Retry-After`) and the `OAuthCallback` SPI. S-35's catalogue adapters now use them
+  (`CommerceHttp` delegates; `Backoff` is no longer a bean). **One OAuth callback endpoint**
+  (`shared.web.OAuthCallbackController`, `/api/v1/commerce/oauth/<platform>/callback`, the S-35 path) asks each
+  module's `OAuthCallback` in turn; the one whose single-use state it is completes it. Needed because Square takes
+  **one redirect URL per application** and the same Square app serves the catalogue sync and the kitchens' import.
+  An unknown state still ends at `/?commerce=<platform>&result=expired`.
+- **Port:** `food.application.PosMenuSource`, adapters in `food.adapters.pos`: `SquarePosSource` (Catalog API,
+  `SQUARE_*` of S-35, scopes `ITEMS_READ MERCHANT_PROFILE_READ`), `CloverPosSource` (REST v3, OAuth v2 with expiring
+  tokens), `ToastPosSource` (menus API v2 + machine-client authentication — **partner-gated**, see below) and
+  `FakePosSource` with `pos-fixtures/menu.json`. Chosen by `northline.pos.provider` (`POS_PROVIDER`): `local`
+  (default; refused under staging/prod) or `oauth`, each POS offered once its credentials are set.
+- **Toast is partner-gated:** there is no merchant OAuth. Northline signs in with partner credentials
+  (`TOAST_CLIENT_ID`/`_SECRET`, `userAccessType: TOAST_MACHINE_CLIENT`); the restaurant enables the Northline
+  integration in Toast and the owner enters its restaurant GUID (422 "Enter your Toast restaurant GUID (Toast Web ›
+  Integrations)." when malformed, "Northline can't read this restaurant yet. Turn on the Northline integration in
+  Toast, then try again." when Toast refuses). The adapter follows Toast's published docs as last known
+  (doc.toasttab.com was unreachable from the build environment); **it has never run against Toast** and Northline is
+  not a Toast partner yet.
+- **Mapping:** categories → sections (matched to a section of the menu with the same name, else created at the end);
+  items → dishes with price; modifier lists → modifier groups (kitchen-wide). POS min/max → the builder's rule
+  (min = max → exactly N required; min > 0 → at least N required; else up to max). Square variations (Small / Large)
+  become a required "Size" group priced as the difference to the cheapest; Toast menus are flattened into sections
+  prefixed with the menu's name when there are several. Names/descriptions are cut to the builder's limits. Can't be
+  imported (listed as problems): dishes without a fixed price, groups without options or with an option over $100 (the
+  CHECK's range). Hidden/archived/inactive POS items are skipped.
+- **Allergens are never taken from a POS** (the story: POS data can't be trusted for them). Imported dishes have
+  `allergens` NULL (= not declared) and status draft; the item editor already requires an explicit allergen choice
+  before any save, and the V090 CHECK keeps an undeclared dish from being published. The builder now tags such dishes
+  **"Confirm allergens"**. Dietary tags, photos, prep time and availability are not read either.
+- **Items are created hidden until approval, as today:** drafts (`vetting = draft`); publishing, the photo and the
+  kitchen's approval work as in the kitchen workstream.
+- **Preview and diff:** "Review import" reads the POS menu into `food.pos_imports` (the normalised menu + the diff);
+  nothing is written. "Apply" re-plans from the stored menu against the kitchen's data at that moment and writes it in
+  one transaction; a preview can be applied once, within an hour (409 `import_closed` / `preview_expired`), or
+  discarded. **Re-import rules:** a dish imported before is *changed* only if the POS changed it since the last import
+  (content hash in `food.pos_links`) **and** it differs from Northline — then only name, description, price, modifiers
+  and section are written; the kitchen's allergens, photo, status and tags are kept. A dish deleted in Northline isn't
+  imported again. A dish gone from the POS goes back to draft (hidden, never deleted; `food.item_availability` when it
+  was visible — new `MenuBuilderService.unpublish`).
+- **Connections:** Square / Clover over OAuth with a 256-bit single-use state stored hashed (10 min) and bound to the
+  owner, who must still hold MANAGE when the callback comes back; tokens sealed with `SecretSealer` (S-32) and
+  re-sealed on rotation; a refused refresh → `reconnect` (409 `reconnect_required` until the owner reconnects).
+  Clover's callback `merchant_id` is checked (letters and digits) before it becomes part of a URL. Connect/disconnect
+  are owner-only (MANAGE); preview/apply/discard EDIT (owner, cook); the list VIEW.
+- **CSV:** the existing CSV import stays as it was (all rows or none, no preview) under a "CSV file" tab; the design
+  has no XLSX template, so a CSV template download was added. The old note pointing POS sync to Settings › API is gone.
+- **No webhooks / scheduled sync:** menus change rarely and every import needs a human review (allergens), so imports
+  are on demand; re-import shows the diff.
+- **Schema (V092, additive):** `food.pos_connections`, `pos_oauth_requests`, `pos_links` (section / item / group /
+  option → local id + content hash + removed_at, scoped per menu for sections and items), `pos_imports`.
+- **Configuration:** `POS_PROVIDER` (required `oauth` in staging/prod), `CLOVER_CLIENT_ID`/`_SECRET`/`CLOVER_AUTH_URL`/
+  `CLOVER_API_URL`, `TOAST_CLIENT_ID`/`_SECRET`/`TOAST_API_URL`; Square reuses `SQUARE_*`. Secrets
+  `clover-client-secret`, `toast-client-secret` in Terraform `app_secrets` (three clouds), the chart's `secretNames`
+  and optional `secretEnv`; `POS_PROVIDER: oauth` in values-staging/prod. The callback path was already routed on the
+  api host (S-35). Runbook: docs/runbooks/pos-menu-import.md.
+- **Tests:** `PosSourcesWireMockTest` (Square: consent URL, code exchange, refresh, catalog paging, variations → Size
+  group, variable price and archived items; Clover: forged merchant id, exchange, token refresh with rotation, a 429
+  retried, categories/items/modifier groups; Toast: partner login once, restaurant refused/accepted, menus v2 with
+  nested groups and several menus, reference maps), `PosImportApiTest` (the fakes: callback through the shared
+  endpoint, preview writes nothing, apply, re-import diff with changed/unchanged/removed and the kitchen's own edits
+  kept, Toast GUID messages, Clover connect/disconnect, discard, expiry, single-use state, lost MANAGE, 403s for cooks
+  connecting / bookkeepers / outsiders / without MFA, 422 and 404), `PosImportPlannerTest`, `PosConfigTest`; Studio
+  `pos.test.tsx` (en + fr-CA).
+- **Never run against the real services:** no Square, Clover or Toast account exists. Unverified live: Square's
+  `modifier_list_info` minimums and `categories[]` vs `category_id` on current API versions; Clover's OAuth v2 field
+  names (`access_token_expiration`), the redirect configuration and `merchant_id` on the callback; everything about
+  Toast (partner access, response shapes, `general.name`).
+- **Not done:** scheduled or webhook-driven menu sync; importing POS item photos (the kitchen photo rules need own
+  photos); Clover item descriptions (Clover has none); Square item options (only variations); a per-dish "don't sync"
+  switch; Lightspeed Restaurant (the story names Square, Clover and Toast).

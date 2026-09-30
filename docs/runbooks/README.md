@@ -16,6 +16,8 @@ say where a step is still manual or missing.
 | [infrastructure.md](infrastructure.md) | Terraform on AWS / Google Cloud / Azure: accounts, state bucket, plan/apply, outputs → variables, cost, teardown (S-2/S-3) |
 | [object-storage.md](object-storage.md) | uploads in S3 / RustFS, Cloud Storage or Azure Blob: variables, buckets, least-privilege access per cloud (S-10) |
 | [calendar-sync.md](calendar-sync.md) | Google and Microsoft calendar two-way sync: Google Cloud and Microsoft Entra app registrations, redirect and notification URIs per environment, secrets, KMS envelope key, operations (S-32) |
+| [commerce-sync.md](commerce-sync.md) | Shopify, Square and Lightspeed catalogue sync: app registration per platform, redirect and webhook URLs on the api host, secrets, local fakes, operations (S-35) |
+| [pos-menu-import.md](pos-menu-import.md) | kitchens' POS menu import: Square (shared with S-35), Clover and Toast (partner-gated) set-up, the shared OAuth callback, preview and re-import diff, allergens, local fake (S-36) |
 | [registries.md](registries.md) | business registry lookups: Corporations Canada API, Alberta Corporate Registry (search service or registry-agent searches), City of Calgary licences (Socrata), manual review queue, re-checks (S-23) |
 | [stripe.md](stripe.md) | Stripe Connect Express: platform account setup (test/live), money flow, idempotency, local stripe-mock, operations (S-11), webhooks (S-12), Stripe Tax (S-21) |
 | [email.md](email.md) | transactional email: Mailpit locally, SES / SendGrid / Azure Communication Services / SMTP set-up, SPF/DKIM/DMARC, CASL (S-13) |
@@ -49,6 +51,8 @@ say where a step is still manual or missing.
 | Business registries (`REGISTRY_*_PROVIDER`) | `fixtures` | `fixtures` (warning), `manual` or the APIs | **`manual` / APIs** (`fixtures` refused) | same |
 | Calendar sync (`CALENDAR_PROVIDER`) | `local`: fake Google / Outlook (connects at once, a lunch block tomorrow) | `local`, or `oauth` with the dev app registrations | **`oauth`** (`local` refused) | same |
 | Custom domains (`DOMAINS_DNS_PROVIDER`, `DOMAINS_EDGE_PROVIDER`) | `local`: in-memory DNS zone ("Simulate DNS records →") and edge | `doh` + `kubernetes` (chart), Let's Encrypt **staging** | **`doh`/`jndi` + `kubernetes`** (`local` refused), Let's Encrypt staging | same, Let's Encrypt production |
+| Catalogue sync (`COMMERCE_PROVIDER`) | `local`: fake Shopify / Square / Lightspeed with fixture catalogues | `local`, or `oauth` with the dev apps (Square sandbox) | **`oauth`** (`local` refused) | same |
+| POS menu import (`POS_PROVIDER`) | `local`: fake Square / Clover / Toast with a fixture menu | `local`, or `oauth` with the dev apps (sandboxes) | **`oauth`** (`local` refused) | same |
 | Identity verification (`IDENTITY_PROVIDER`) | `local`: pick the outcome on a page | `local` (owners can't finish) or `stripe` with test keys | **`stripe`**, test mode | **`stripe`**, live mode |
 | SMS / email | logged | *no provider yet (S-8, S-13)* | same | same |
 | Required variables checked at start-up | none | yes | yes (+ Stripe, storage) | yes (+ Stripe, storage) |
@@ -92,6 +96,8 @@ say where a step is still manual or missing.
   | `northline.calendar.provider` | `CALENDAR_PROVIDER` | `local` (fake Google and Outlook) · `oauth` (Google Calendar API, Microsoft Graph; each once its client is set) | **done** (S-32, calendar two-way sync — [calendar-sync.md](calendar-sync.md)) |
   | `northline.domains.dns.provider` | `DOMAINS_DNS_PROVIDER` | `local` (in-memory zone) · `doh` (DNS over HTTPS, RFC 8484) · `jndi` (the JDK's DNS client) | **done** (S-31, custom domain verification — [custom-domains.md](custom-domains.md)) |
   | `northline.domains.edge.provider` | `DOMAINS_EDGE_PROVIDER` | `local` (in memory) · `kubernetes` (shard Gateways, cert-manager Certificates, HTTPRoutes in the app's namespace) | **done** (S-31 — [custom-domains.md](custom-domains.md)) |
+  | `northline.commerce.provider` | `COMMERCE_PROVIDER` | `local` (fake Shopify, Square and Lightspeed) · `oauth` (Shopify Admin GraphQL, Square Catalog + Inventory, Lightspeed X-Series; each once its app is set) | **done** (S-35, catalogue sync — [commerce-sync.md](commerce-sync.md)) |
+  | `northline.pos.provider` | `POS_PROVIDER` | `local` (fake Square, Clover and Toast) · `oauth` (Square Catalog, Clover REST v3, Toast menus v2; each once its credentials are set) | **done** (S-36, kitchens' POS menu import — [pos-menu-import.md](pos-menu-import.md)) |
   | `northline.email.provider` | `EMAIL_PROVIDER` | `local` (SMTP to Mailpit) · `smtp` · `ses` · `sendgrid` · `azure` | **done** (S-13, api invitations and money notices — [email.md](email.md); S-27 worker: `payout.failed`) |
   | `northline.tax.provider` | `TAX_PROVIDER` | `local` (fixed Canadian rates) · `stripe` (Stripe Tax) | **done** (S-21, api sales tax — [stripe.md § 6](stripe.md#6-stripe-tax-s-21)) |
   | `northline.identity.provider` | `IDENTITY_PROVIDER` | `local` (fake with an outcome page) · `stripe` (Stripe Identity) | **done** (S-22, owners' identity verification — [stripe.md § Identity](stripe.md#8-identity-s-22)) |
@@ -156,6 +162,11 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `MICROSOFT_CALENDAR_TENANT`, `CALENDAR_SYNC_INTERVAL`, `CALENDAR_WEBHOOK_RATE_LIMIT` | ✓ | | | | no (`common`, `PT5M`, 600/min) |
 | `DOMAINS_DNS_PROVIDER`, `DOMAINS_EDGE_PROVIDER`, `DOMAINS_TARGET_HOST` | ✓ | | | | staging and prod (`local` refused there; the chart sets all three with `edge.domainReconciler.enabled` — S-31, [custom-domains.md](custom-domains.md#5-configuration)) |
 | `DOMAINS_DOH_URL`, `DOMAINS_DNS_SERVERS`, `DOMAINS_EDGE_ADDRESSES`, `DOMAINS_BLOCKED_SUFFIXES`, `DOMAINS_ISSUE_PER_HOUR`, `DOMAINS_REQUEST_COOLDOWN`, `DOMAINS_MAX`, `DOMAINS_VERIFY_WINDOW`, `DOMAINS_GRACE_PERIOD`, `DOMAINS_CHECK_COOLDOWN`, `DOMAINS_CHECK_INTERVAL`, `DOMAINS_EDGE_INTERVAL`, `DOMAINS_EDGE_*` | ✓ | | | | no (CIRA Canadian Shield, the pod's resolver, none, `northline.ca`, 20, 1 h, 1000, 7 d, 72 h, 15 s, 1 min, 1 min; `DOMAINS_EDGE_*` from the chart) |
+| `COMMERCE_PROVIDER` | ✓ | | | | staging and prod: `oauth` (`local` refused there — S-35, [commerce-sync.md](commerce-sync.md)) |
+| `SHOPIFY_CLIENT_ID`/`_SECRET`, `SHOPIFY_API_VERSION`, `SQUARE_CLIENT_ID`/`_SECRET`, `SQUARE_WEBHOOK_SIGNATURE_KEY`, `SQUARE_BASE_URL`, `LIGHTSPEED_CLIENT_ID`/`_SECRET` | ✓ | | | | no — empty = that platform shows "Not available yet" ([commerce-sync.md](commerce-sync.md#variables-api)) |
+| `COMMERCE_POLL_INTERVAL`, `COMMERCE_RECONCILE_INTERVAL`, `COMMERCE_WEBHOOK_RATE_LIMIT` | ✓ | | | | no (`PT1H`, `P1D`, 600/min) |
+| `POS_PROVIDER` | ✓ | | | | staging and prod: `oauth` (`local` refused there — S-36, [pos-menu-import.md](pos-menu-import.md)) |
+| `CLOVER_CLIENT_ID`/`_SECRET`, `CLOVER_AUTH_URL`, `CLOVER_API_URL`, `TOAST_CLIENT_ID`/`_SECRET`, `TOAST_API_URL` | ✓ | | | | no — empty = that POS shows "Not available yet" ([pos-menu-import.md](pos-menu-import.md#variables-api)) |
 | `EMAIL_PROVIDER`, `EMAIL_FROM` | ✓ | | | ✓ | staging and prod (`local` refused there — S-13, [email.md](email.md)) |
 | `EMAIL_UNSUBSCRIBE_KEY`, `API_PUBLIC_URL` | ✓ | | | ✓ | staging and prod (unsubscribe links; the worker signs them for `payout.failed`, S-27 — [email.md](email.md#variables); S-32 calendar notification URLs) |
 | `EMAIL_REPLY_TO`, `EMAIL_MAILING_ADDRESS`, `EMAIL_CONTACT`, `EMAIL_REGION`, `EMAIL_ENDPOINT`, `EMAIL_API_KEY`, `EMAIL_CONFIGURATION_SET`, `EMAIL_RETRY_*`, `SMTP_*` | ✓ | | | ✓ | per provider: `EMAIL_API_KEY` with `sendgrid`, `EMAIL_ENDPOINT` with `azure`, `SMTP_HOST` with `smtp` ([email.md](email.md#variables)) |

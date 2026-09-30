@@ -68,6 +68,12 @@ class SecurityConfig {
                                 "/api/v1/webhooks/calendar/microsoft",
                                 "/api/v1/webhooks/calendar/microsoft/lifecycle")
                         .permitAll()
+                        // Shopify / Square / Lightspeed (S-35): webhooks verified by the platform's HMAC; the OAuth
+                        // redirect URI is authenticated by its single-use state (and Shopify's hmac)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/webhooks/commerce/*")
+                        .permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/commerce/oauth/*/callback")
+                        .permitAll()
                         // Staff tokens require acr=mfa like business ones (CLAUDE.md; S-20 found only the role checked)
                         .requestMatchers("/api/v1/console/**")
                         .access(AuthorizationManagers.allOf(

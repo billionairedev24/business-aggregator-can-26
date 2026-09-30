@@ -9,4 +9,6 @@ northline.required-env:
   registries: REGISTRY_CORPORATIONS_CANADA_PROVIDER, REGISTRY_ALBERTA_PROVIDER, REGISTRY_CALGARY_PROVIDER   # S-23; `fixtures` refused
   calendar: CALENDAR_PROVIDER, API_PUBLIC_URL   # S-32: oauth; `local` is refused at start-up
   domains: DOMAINS_DNS_PROVIDER, DOMAINS_EDGE_PROVIDER, DOMAINS_TARGET_HOST   # S-31: doh|jndi + kubernetes; `local` refused
+  commerce: COMMERCE_PROVIDER, API_PUBLIC_URL   # S-35: oauth; `local` is refused at start-up
+  pos: POS_PROVIDER   # S-36: oauth; `local` is refused at start-up
   kms-envelope: KMS_PROVIDER, KMS_ENCRYPTION_KEY_ID   # S-32 refresh tokens sealed by the cloud key service; `local` refused

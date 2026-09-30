@@ -164,6 +164,14 @@ Notes:
   and TXT records into the api's in-memory zone and checks them; a published page of an approved business goes live at
   once and `curl 'localhost:8080/api/v1/public/storefronts/by-host?host=<domain>'` returns it. Real DNS from your laptop:
   `DOMAINS_DNS_PROVIDER=doh`. [custom-domains.md](custom-domains.md#9-local-and-tests)
+- **Catalogue sync (S-35):** `COMMERCE_PROVIDER=local` (the default) fakes Shopify, Square and Lightspeed: Products ›
+  Bulk upload › Connect comes straight back connected and imports the fixture catalogue
+  (`server/api/src/main/resources/commerce-fixtures/`) as drafts; stock moves by the hour so "Sync now" shows updates.
+  No webhooks (no public HTTPS); the hourly read does the work. Real platforms from a laptop need a public HTTPS
+  `API_PUBLIC_URL` (a tunnel) for their redirect URL. [commerce-sync.md](commerce-sync.md)
+- **POS menu import (S-36):** `POS_PROVIDER=local` (the default) fakes Square, Clover and Toast: Kitchen › Menu › Import
+  › From your POS connects at once (Toast: any GUID but the nil one) and previews the fixture menu
+  (`server/api/src/main/resources/pos-fixtures/menu.json`, Pho Dau Bo). [pos-menu-import.md](pos-menu-import.md)
 - **Your own Kafka:** create the topics with
   `KAFKA_TOPICS_CMD=kafka-topics.sh KAFKA_TOPICS_BOOTSTRAP=localhost:9092 scripts/topics.sh`, or with the provisioner
   the deployed environments use: `cd server && ./gradlew :worker:kafkaTopics --args='apply'` (`plan` / `verify` change

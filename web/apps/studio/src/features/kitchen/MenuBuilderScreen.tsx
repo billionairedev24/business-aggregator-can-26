@@ -1,11 +1,12 @@
 import { useEffect, useState, type KeyboardEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Dialog, EmptyState, ErrorState, Field, PageSkeleton, Select, Skeleton, TextInput, useFormatters } from '@northline/ui';
+import { Alert, Dialog, EmptyState, ErrorState, Field, PageSkeleton, Select, Skeleton, TextInput, UnderlineTabs, useFormatters } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { useMerchantId, useRole } from '../shell/api';
 import { groupsQuery, menuQuery, menusQuery, useAddSection, useCreateMenu, useImportCsv, useMenuState, useRenameSection, useReorderSections, useSoldOut, type MenuDetail, type MenuItem } from './api';
 import { ItemPhoto } from './ItemPhoto';
 import { MenuItemEditor } from './MenuItemEditor';
+import { PosImportPanel, type PosReturn } from './PosImport';
 import { useKitchenT, type KitchenT } from './messages';
 import { menuOptionText } from './model';
 import './Kitchen.css';
@@ -14,20 +15,21 @@ type Editing = { kind: 'item'; item?: MenuItem; sectionId?: string } | { kind: '
 const NEW_MENU = '__new__';
 
 /** Kitchen · Menu builder (design 02 lines 841–876): menus → sections → items, sold out, editor, import, publish. */
-export function MenuBuilderScreen() {
+export function MenuBuilderScreen({ returned, onReturnSeen }: { returned?: PosReturn; onReturnSeen?: () => void } = {}) {
   const merchantId = useMerchantId();
   const role = useRole();
   const t = useKitchenT();
   const canEdit = role !== 'bookkeeper';
   const menus = useQuery(menusQuery(merchantId));
-  const [menuId, setMenuId] = useState('');
+  const [menuId, setMenuId] = useState(returned?.menu ?? '');
   const current = menuId || menus.data?.[0]?.id || '';
   const menu = useQuery(menuQuery(merchantId, current));
   const groups = useQuery(groupsQuery(merchantId));
   const state = useMenuState(merchantId);
   const [editing, setEditing] = useState<Editing>(null);
   const [newMenu, setNewMenu] = useState(false);
-  const [importing, setImporting] = useState(false);
+  const [importing, setImporting] = useState(!!returned?.pos);
+  useEffect(() => { if (returned?.result) onReturnSeen?.(); }, [returned, onReturnSeen]);
   useEffect(() => setEditing(null), [current]);
 
   if (menus.isPending) return <PageSkeleton kpis={0} rows={6} />;
@@ -89,7 +91,7 @@ export function MenuBuilderScreen() {
         </aside>
       </div>
       <NewMenuDialog open={newMenu} merchantId={merchantId} onClose={id => { setNewMenu(false); if (id) setMenuId(id); }} />
-      <ImportDialog open={importing} merchantId={merchantId} menuId={current} onClose={() => setImporting(false)} />
+      <ImportDialog open={importing} merchantId={merchantId} menuId={current} canManage={role === 'owner'} returned={returned} onClose={() => setImporting(false)} />
     </div>
   );
 }
@@ -135,7 +137,7 @@ function Sections({ merchantId, menu, canEdit, onEdit }: { merchantId: string; m
             <div key={it.id} className="nl-k-item">
               <ItemPhoto merchantId={merchantId} itemId={it.id} hasPhoto={it.hasPhoto} version={it.updatedAt} />
               <div className="nl-k-item-body">
-                <div className="nl-k-item-title"><strong>{it.name}</strong><span>{f.money(it.priceCents)}</span>{it.visibility !== 'live' ? <span className={`tag ${it.visibility === 'draft' ? 'tag-neutral' : 'tag-accent-2'} nl-k-small-tag`}>{t(`vis_${it.visibility}`)}</span> : null}</div>
+                <div className="nl-k-item-title"><strong>{it.name}</strong><span>{f.money(it.priceCents)}</span>{it.visibility !== 'live' ? <span className={`tag ${it.visibility === 'draft' ? 'tag-neutral' : 'tag-accent-2'} nl-k-small-tag`}>{t(`vis_${it.visibility}`)}</span> : null}{it.allergens === null ? <span className="tag tag-highlight nl-k-small-tag">{t('confirmAllergens')}</span> : null}</div>
                 <div className="nl-k-item-desc">{it.description || t('noDesc')}</div>
                 <div className="nl-k-item-meta">{t('modifiers', { list: it.modifierGroups.map(g => g.name).join(', ') || t('none') })}{tags(it, t).length ? ' · ' : ''}{tags(it, t).map(x => <span key={x} className="tag tag-neutral nl-k-mini-tag">{x}</span>)}</div>
               </div>
@@ -196,8 +198,12 @@ function NewMenuDialog({ open, merchantId, onClose }: { open: boolean; merchantI
   );
 }
 
-function ImportDialog({ open, merchantId, menuId, onClose }: { open: boolean; merchantId: string; menuId: string; onClose: () => void }) {
+/** The CSV columns the import reads, with two sample rows. */
+const CSV_TEMPLATE = `data:text/csv;charset=utf-8,${encodeURIComponent('section,name,price,allergens,description,dietary,prep_add_min\r\nMains,Pho tai,16.95,wheat;soy,Rare beef and rice noodles,,5\r\nDrinks,Iced coffee,5.95,milk,,vegetarian,0\r\n')}`;
+
+function ImportDialog({ open, merchantId, menuId, canManage, returned, onClose }: { open: boolean; merchantId: string; menuId: string; canManage: boolean; returned?: PosReturn; onClose: () => void }) {
   const t = useKitchenT();
+  const [tab, setTab] = useState<'pos' | 'csv'>('pos');
   const run = useImportCsv(merchantId);
   const [file, setFile] = useState<File | null>(null);
   const [tried, setTried] = useState(false);
@@ -205,16 +211,19 @@ function ImportDialog({ open, merchantId, menuId, onClose }: { open: boolean; me
     const row = /^rows\[(\d+)\]/.exec(e.field)?.[1];
     return row ? t('importRow', { row, message: e.message }) : e.message;
   }) : [];
-  const close = () => { setFile(null); setTried(false); run.reset(); onClose(); };
+  const close = () => { setFile(null); setTried(false); run.reset(); setTab('pos'); onClose(); };
   return (
-    <Dialog open={open} onClose={close} title={t('importTitle')} width={560}
-      actions={<><button type="button" className="btn btn-ghost" onClick={close}>{run.isSuccess ? t('close') : t('cancel')}</button>{run.isSuccess ? null : <button type="button" className="btn btn-primary" disabled={run.isPending} onClick={() => { setTried(true); if (file) run.mutate({ menuId, file }); }}>{t('importGo')}</button>}</>}>
-      <p className="nl-k-muted">{t('importHelp')}</p>
+    <Dialog open={open} onClose={close} title={t('importTitle')} width={640}
+      actions={<><button type="button" className="btn btn-ghost" onClick={close}>{run.isSuccess || tab === 'pos' ? t('close') : t('cancel')}</button>{run.isSuccess || tab === 'pos' ? null : <button type="button" className="btn btn-primary" disabled={run.isPending} onClick={() => { setTried(true); if (file) run.mutate({ menuId, file }); }}>{t('importGo')}</button>}</>}>
+      <UnderlineTabs aria-label={t('importTitle')} value={tab} onChange={setTab} options={[{ value: 'pos', label: t('tabPos') }, { value: 'csv', label: t('tabCsv') }]} />
+      {tab === 'pos' ? <PosImportPanel merchantId={merchantId} menuId={menuId} canManage={canManage} returned={returned} /> : <>
+      <p className="nl-k-muted">{t('importHelp')} <a href={CSV_TEMPLATE} download="menu-template.csv">{t('csvTemplate')}</a></p>
       <Field label={t('importCsv')} error={tried && !file ? t('chooseFile') : undefined}><input type="file" className="input" accept=".csv,text/csv" onChange={e => { setFile(e.target.files?.[0] ?? null); run.reset(); }} /></Field>
       {rowErrors.length ? <div role="alert" className="nl-error"><ul className="nl-k-errlist">{rowErrors.map((m, i) => <li key={i}>{m}</li>)}</ul></div> : null}
       {run.isError && !rowErrors.length ? <div role="alert" className="nl-error">{t('saveError')}</div> : null}
       {run.isSuccess ? <Alert tone="info" role="status">{t('importDone', { n: run.data.itemsCreated })}</Alert> : null}
       <p className="nl-k-muted">{t('importPos')}</p>
+      </>}
     </Dialog>
   );
 }

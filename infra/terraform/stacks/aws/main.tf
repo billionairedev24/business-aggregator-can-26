@@ -58,6 +58,14 @@ locals {
     # S-32 calendar sync: the Google OAuth client and Microsoft Entra app registration secrets.
     GOOGLE_CALENDAR_CLIENT_SECRET    = "google-calendar-client-secret"
     MICROSOFT_CALENDAR_CLIENT_SECRET = "microsoft-calendar-client-secret"
+    # S-35 catalogue sync: the Shopify / Square / Lightspeed app secrets and the Square webhook signature key.
+    SHOPIFY_CLIENT_SECRET        = "shopify-client-secret"
+    SQUARE_CLIENT_SECRET         = "square-client-secret"
+    SQUARE_WEBHOOK_SIGNATURE_KEY = "square-webhook-signature-key"
+    LIGHTSPEED_CLIENT_SECRET     = "lightspeed-client-secret"
+    # S-36 POS menu import: the Clover app secret and Toast partner credentials (Square reuses S-35's app).
+    CLOVER_CLIENT_SECRET = "clover-client-secret"
+    TOAST_CLIENT_SECRET  = "toast-client-secret"
   }
 }
 

@@ -48,6 +48,11 @@ apps:
       # (GOOGLE_CALENDAR_CLIENT_ID, MICROSOFT_CALENDAR_CLIENT_ID), the secrets in the secrets manager
       # (secretEnv below once set); KMS_ENCRYPTION_KEY_ID comes from Terraform's config_env.
       CALENDAR_PROVIDER: oauth
+      # S-35 catalogue sync: the real platforms; the app ids (SHOPIFY_CLIENT_ID, SQUARE_CLIENT_ID, LIGHTSPEED_CLIENT_ID)
+      # go here once registered, the secrets in the secrets manager (docs/runbooks/commerce-sync.md)
+      COMMERCE_PROVIDER: oauth
+      # S-36 POS menu import: Square (the S-35 app), Clover (CLOVER_CLIENT_ID) and Toast (TOAST_CLIENT_ID, partner)
+      POS_PROVIDER: oauth
       EMAIL_FROM: "Northline <no-reply@staging.northline.ca>"
     autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 4 }
     secretEnv:

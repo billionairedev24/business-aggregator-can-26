@@ -1,13 +1,9 @@
 package ca.northline.catalogue.web;
 
 import static ca.northline.shared.security.MerchantPermission.EDIT;
-import static ca.northline.shared.security.MerchantPermission.MANAGE;
 import static ca.northline.shared.security.MerchantPermission.VIEW;
 
 import ca.northline.catalogue.application.BulkImport;
-import ca.northline.catalogue.application.IntegrationRepository.Connection;
-import ca.northline.catalogue.application.SyncIntegrations;
-import ca.northline.catalogue.domain.CommerceProvider;
 import ca.northline.catalogue.domain.ImportBatch;
 import ca.northline.catalogue.domain.ImportTemplate;
 import ca.northline.shared.CodedEnum;
@@ -34,7 +30,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-/** Bulk upload (validate → import, history) and commerce integrations under {@code /listings}. */
+/** Bulk upload (validate → import, history) under {@code /listings}; commerce integrations: {@link CommerceController}. */
 @RestController
 @RequestMapping("/api/v1/merchants/{merchantId}/listings")
 @RequiredArgsConstructor
@@ -44,7 +40,6 @@ class BulkController {
     static final String TEMPLATE_REQUIRED = "Choose a template.";
 
     private final BulkImport bulkImport;
-    private final SyncIntegrations integrations;
 
     record ImportErrorResponse(int row, @Nullable String sku, String error) {}
 
@@ -77,20 +72,6 @@ class BulkController {
                     b.status(),
                     b.createdAt(),
                     b.importedAt());
-        }
-    }
-
-    record ConnectionResponse(
-            CommerceProvider provider,
-            boolean connected,
-            @Nullable String accountLabel,
-            @Nullable Instant connectedAt,
-            @Nullable Instant lastSyncAt,
-            @Nullable Integer lastSyncCount) {
-
-        static ConnectionResponse of(Connection c) {
-            return new ConnectionResponse(
-                    c.provider(), c.connected(), c.accountLabel(), c.connectedAt(), c.lastSyncAt(), c.lastSyncCount());
         }
     }
 
@@ -133,39 +114,5 @@ class BulkController {
     @RequiresMerchant(EDIT)
     ImportResponse commit(@PathVariable String merchantId, @PathVariable String importId, CurrentMember member) {
         return ImportResponse.of(bulkImport.commit(merchantId, importId, member.userId()));
-    }
-
-    @GetMapping("/integrations")
-    @RequiresMerchant(VIEW)
-    ListResponse<ConnectionResponse> connections(@PathVariable String merchantId) {
-        return new ListResponse<>(integrations.connections(merchantId).stream()
-                .map(ConnectionResponse::of)
-                .toList());
-    }
-
-    @PostMapping("/integrations/{provider}/connect")
-    @RequiresMerchant(MANAGE)
-    ConnectionResponse connect(@PathVariable String merchantId, @PathVariable String provider) {
-        return ConnectionResponse.of(integrations.connect(merchantId, provider(provider)));
-    }
-
-    @PostMapping("/integrations/{provider}/disconnect")
-    @RequiresMerchant(MANAGE)
-    ConnectionResponse disconnect(@PathVariable String merchantId, @PathVariable String provider) {
-        return ConnectionResponse.of(integrations.disconnect(merchantId, provider(provider)));
-    }
-
-    @PostMapping("/integrations/{provider}/sync")
-    @RequiresMerchant(EDIT)
-    ConnectionResponse sync(@PathVariable String merchantId, @PathVariable String provider) {
-        return ConnectionResponse.of(integrations.sync(merchantId, provider(provider)));
-    }
-
-    private static CommerceProvider provider(String code) {
-        try {
-            return CodedEnum.fromCode(CommerceProvider.class, code);
-        } catch (IllegalArgumentException ex) {
-            throw new ca.northline.shared.NotFound("integration", code);
-        }
     }
 }

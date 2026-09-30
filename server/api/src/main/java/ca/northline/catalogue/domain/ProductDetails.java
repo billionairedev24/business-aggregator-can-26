@@ -166,6 +166,66 @@ public record ProductDetails(
     }
 
     /**
+     * Integration sync (S-35): price and stock per SKU from the connected platform, their source of truth. A single
+     * offer takes its SKU's values; with variants, each variant takes its SKU's values, a variant the platform no longer
+     * has goes to 0 in stock, and the offer shows the lowest variant price and the total stock. Same details when
+     * nothing changed.
+     */
+    public ProductDetails withSyncedStock(Map<String, PriceStock> bySku) {
+        if (variants.isEmpty()) {
+            var own = sku == null ? null : bySku.get(sku);
+            return own == null || (own.priceCents() == priceCents && own.stock() == stock)
+                    ? this
+                    : withPriceAndStock(own.priceCents(), own.stock());
+        }
+        var synced = variants.stream()
+                .map(v -> {
+                    var found = bySku.get(v.sku());
+                    return found == null
+                            ? new Variant(v.id(), v.value(), v.sku(), v.gtin(), v.priceCents(), 0)
+                            : new Variant(v.id(), v.value(), v.sku(), v.gtin(), found.priceCents(), found.stock());
+                })
+                .toList();
+        if (synced.equals(variants)) {
+            return this;
+        }
+        var lowest = synced.stream().mapToLong(Variant::priceCents).min().orElse(priceCents);
+        var total = synced.stream().mapToInt(Variant::stock).sum();
+        return new ProductDetails(
+                identifierType,
+                gtin,
+                title,
+                brand,
+                mpn,
+                categoryId,
+                attributes,
+                description,
+                bullets,
+                variantTheme,
+                synced,
+                imageSource,
+                ownImageIds,
+                sku,
+                lowest,
+                compareAtCents,
+                costCents,
+                condition,
+                total,
+                lowStockAt,
+                fulfilment,
+                handlingTime,
+                returnsPolicy,
+                countryOfOrigin,
+                restrictedOk,
+                bilingualOk,
+                warranty,
+                searchKeywords);
+    }
+
+    /** A price and a stock level from a connected platform (S-35). */
+    public record PriceStock(long priceCents, int stock) {}
+
+    /**
      * Rules checked on every save (draft included) that need more than the request shape: promo words, GTIN check
      * digits, the category, cross-field money rules, variants.
      */

@@ -123,6 +123,12 @@ externalSecrets:
     SMTP_PASSWORD: smtp-password
     GOOGLE_CALENDAR_CLIENT_SECRET: google-calendar-client-secret        # S-32 calendar sync (api)
     MICROSOFT_CALENDAR_CLIENT_SECRET: microsoft-calendar-client-secret  # S-32 calendar sync (api)
+    SHOPIFY_CLIENT_SECRET: shopify-client-secret                      # S-35 catalogue sync (api); also signs webhooks
+    SQUARE_CLIENT_SECRET: square-client-secret                        # S-35 catalogue sync (api)
+    SQUARE_WEBHOOK_SIGNATURE_KEY: square-webhook-signature-key        # S-35 Square webhook subscription key (api)
+    LIGHTSPEED_CLIENT_SECRET: lightspeed-client-secret                # S-35 catalogue sync (api); also signs webhooks
+    CLOVER_CLIENT_SECRET: clover-client-secret                        # S-36 POS menu import (api)
+    TOAST_CLIENT_SECRET: toast-client-secret                          # S-36 POS menu import (api), Toast partner credentials
   # Optional variables (secretEnv: false) to map as well. List only those that hold a value in the secrets manager:
   # one empty or missing remote secret fails the app's whole ExternalSecret. Required variables are always mapped.
   optionalKeys: [REDIS_PASSWORD, KAFKA_SASL_JAAS_CONFIG, ES_PASSWORD]
@@ -340,12 +346,18 @@ apps:
       REGISTRY_CALGARY_APP_TOKEN: false        # S-23: optional Socrata app token (higher rate limits)
       GOOGLE_CALENDAR_CLIENT_SECRET: false     # S-32: with GOOGLE_CALENDAR_CLIENT_ID (configEnv); empty = Google not offered
       MICROSOFT_CALENDAR_CLIENT_SECRET: false  # S-32: with MICROSOFT_CALENDAR_CLIENT_ID (configEnv)
+      SHOPIFY_CLIENT_SECRET: false             # S-35: with SHOPIFY_CLIENT_ID (configEnv); empty = Shopify not offered
+      SQUARE_CLIENT_SECRET: false              # S-35: with SQUARE_CLIENT_ID (configEnv)
+      SQUARE_WEBHOOK_SIGNATURE_KEY: false      # S-35: the Square webhook subscription's signature key
+      LIGHTSPEED_CLIENT_SECRET: false          # S-35: with LIGHTSPEED_CLIENT_ID (configEnv)
+      CLOVER_CLIENT_SECRET: false              # S-36: with CLOVER_CLIENT_ID (configEnv); empty = Clover not offered
+      TOAST_CLIENT_SECRET: false               # S-36: with TOAST_CLIENT_ID (configEnv), once Toast admits Northline as a partner
     runAsUser: 65532
     probes:
       startup: { path: /actuator/health/liveness, periodSeconds: 5, failureThreshold: 60 }
       liveness: { path: /actuator/health/liveness, periodSeconds: 10, failureThreshold: 3 }
       readiness: { path: /actuator/health/readiness, periodSeconds: 5, failureThreshold: 3 }
-    public: true                  # the ingress reaches it for the Stripe and calendar webhooks and email unsubscribe (ingress.yaml)
+    public: true                  # the ingress reaches it for the Stripe, calendar and commerce webhooks, the commerce OAuth callback and email unsubscribe (ingress.yaml)
     # S-29: route all of /api/v1 on the api host, for clients that hold their own tokens (the mobile apps, with DPoP;
     # partners). false = webhooks and unsubscribe only, as before. Every other endpoint still needs a token.
     tokenClients: true
