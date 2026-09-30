@@ -36,10 +36,11 @@ server:build:
       - .gradle-home/caches/build-cache-1/
   before_script:
     - rm -f .gradle-home/caches/modules-2/modules-2.lock
+    - command -v make >/dev/null || (apt-get update -qq && apt-get install -y -qq --no-install-recommends make >/dev/null)
   script:
-    - cd server
     # build = Spotless check, Checkstyle, Error Prone + NullAway, tests (Testcontainers, ModularityTests, ArchUnit).
-    - ./gradlew $SERVER_GRADLE_ARGS --init-script ../ci/gradle/maven-mirror.init.gradle.kts --max-workers=2 --continue --console=plain
+    # make server-build = the same ./gradlew call as on a laptop (S-124).
+    - make server-build TASKS="$SERVER_GRADLE_ARGS" GRADLE_FLAGS="--max-workers=2 --continue --console=plain"
   artifacts:
     when: always
     expire_in: 14 days
