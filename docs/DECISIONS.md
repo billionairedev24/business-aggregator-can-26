@@ -2574,3 +2574,54 @@ copy).
 - **Not done:** JSON-LD, sitemap, `hreflang` (S-63); the shell on a merchant's own domain still shows the site header,
   whose links and session/cart calls go to the site or fail quietly (no BFF route there) — a slimmer page chrome for
   other hosts is left to S-63; the CDN in front of these pages (edge caching) isn't configured.
+
+## 2026-09-30 — S-55 Booking wizard (job details → location & access → schedule → payment → confirmed)
+
+Branch `web/s-55-booking-wizard`, stacked on `web/s-54-provider-page` (itself on S-53) and on S-51
+(`web/s-51-cart-checkout`, #56) for the payment step-up, `IdempotentRequests` and `PaymentSettings`.
+
+- **Flow** (module `hire`, `BookingCheckoutService`): `GET /api/v1/public/providers/{slug}/slots?serviceId&from&days`
+  (public, ≤ 14 days) → `POST /api/v1/me/bookings/holds {slug, serviceId, startsAt, hours?}` (201; the slot and a
+  booking id chosen up front) → `POST /api/v1/me/bookings/checkout` (Idempotency-Key, `X-Step-Up`; validates every
+  answer, prices it, opens the manual-capture PaymentIntent for `booking:<id>`) → the Payment Element confirms the card
+  when the provider is Stripe (the fake gateway authorizes at once) → `POST /api/v1/me/bookings/holds/{holdId}/confirm`
+  (201; `EscrowLifecycle.hold` checks the authorization and writes the escrow row, S-11; the booking is written, the hold
+  freed) → `GET /api/v1/me/bookings/{id}`. Sign-in is required from the hold on (the calendar is public); the wizard
+  keeps the answers in `sessionStorage` across the trip to the sign-in page and clears them once booked.
+- **Real availability** = S-53's `ProviderSlots` (hours, time off, holidays, confirmed jobs, S-32 calendar busy blocks,
+  travel buffer, notice, same-day cutoff, horizon) **plus other customers' live holds**. A slot shows free when at least
+  one bookable member is free; the hold picks the first free member.
+- **Slot holds in Valkey** (`availability.api.SlotHolds`, 10 min): a Lua script checks overlap (with the travel buffer)
+  against the member's holds and places the hold atomically; keys share a `{m:<merchant>}` hash tag so the script is
+  cluster-safe. A customer has at most one hold per business (a new one replaces it). Profiles `local`/`test` use an
+  in-memory store with the same rules. At confirm, an advisory lock per member plus an overlap lookup on
+  `booking.bookings` is the last guard (409 `slot_taken`). 409 `hold_expired` ("Your 10-minute hold ended. Pick the
+  time again.") sends the wizard back to the calendar.
+- **Access notes are private**: V115 `booking.access_notes` holds the access instructions and the day's phone number
+  sealed with `SecretSealer` (context `booking.access_notes:<booking id>`); they never enter `bookings.details`, events
+  or webhooks. The provider's Studio job card shows them only from 1 h before to 1 h after the start (design:
+  "shared with the provider only for the two hours around the visit"). Between hold and confirm the answers ride with
+  the hold, sealed too.
+- **Payment step-up = S-51's rule** (`PaymentGate`): an `acr=mfa` sign-in pays directly; a phone-code sign-in sends an
+  `X-Step-Up` proof from `/auth/step-up/*`; an account with neither gets 403 `second_factor_required` and enrols a
+  passkey (the S-51 `StepUpDialog`). A free consultation holds no money and skips it.
+- **Pricing** (`hire.domain.Pricing`): fixed = the service price; hourly = rate × hours (home services ask the hours;
+  cleaning estimates them from bedrooms + add-ons, design 06); consultations free; quote-only services and services
+  without instant book answer 422 ("…ask for a quote instead", S-56). GST from `region.api.TaxRates` (AB). The whole
+  price + tax is held in escrow ("Hold $93.45 in escrow"). Free cancellation until 12 h before is recorded on the
+  booking (`free_cancel_until`) and shown; charging late cancellations is not part of this story.
+- **Validation messages** (422, per field; en in both locales like the other server rules): "Describe the problem in
+  at least 10 characters.", "Tell us the vehicle year, make and model.", "Pick or enter the address.", "Add access
+  instructions (3+ characters).", "Enter a phone number like +1 403 555 0123.", "Accept the cancellation policy to
+  continue.", "Agree to the Northline terms to continue.", "Choose one of the options.", and for the hold "Pick a
+  time.".
+- **`booking.confirmed`** (`booking.api.BookingConfirmed`, schema `booking.booking_confirmed.v1`, topic
+  `booking.booking`): ids, type, times, price, deposit — no names, addresses, notes or phone numbers. The worker maps it
+  to the public webhook `booking.confirmed` (`docs/spec/webhooks/booking.confirmed.v1.schema.json`, without the
+  customer id) for S-33, and `CalendarSyncListener` writes it back to the member's connected calendar (S-32).
+- **Schema (V115, additive):** `booking.access_notes`; `bookings.source` (`studio`|`customer`), `tax_cents`,
+  `free_cancel_until`; index `ix_bookings_member_starts`.
+- **Not done:** cancelling the PaymentIntent when a hold expires after the card was confirmed but before `confirm`
+  (the authorization lapses at Stripe on its own; a sweeper is follow-up work); saved cards, points and promo codes on
+  bookings; photo upload in job details; late-cancellation fees; the customer's bookings list (`/account/orders`
+  shows orders only).

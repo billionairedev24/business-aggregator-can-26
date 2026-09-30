@@ -118,7 +118,7 @@ A feature folder per story area, named after the design: `home`, `location`, `se
 | `/services/$category/providers` | providers | S-53 (**built**) | category SSR, providers by location in the browser |
 | `/services/$category/quote` | book (quote mode, from a category) | S-56 | "Describe the job, get 3 quotes"; guest banner |
 | `/providers/$slug` | provider | S-54 (**built**) | public provider page (storefront API + `/api/v1/public/providers/{slug}`); SSR + SEO; JSON-LD is S-63; also served as `pages.<zone>/<slug>` and on merchants' own domains |
-| `/providers/$slug/book` | book | S-55 | guest banner |
+| `/providers/$slug/book` | book | S-55 (**built**) | `?step=details\|location\|schedule\|pay\|done&service=&booking=`; provider SSR, calendar/hold/payment client-side; sign-in from the hold on; guest banner |
 | `/quotes/$quoteId` | quote | S-56 | guest banner |
 | `/account/orders` | orders | S-58 | Orders & bookings — from the account menu only |
 | `/account?tab=` | account | S-58, S-59 | tabs: wallet, payments, profile, addresses, favourites, security, notifications, language, dietary, plus, help |
@@ -207,7 +207,8 @@ Cookie `nl.locale` = `en` | `fr` (1 year, not HttpOnly). `useLocale().setLocale(
 | consumer orders + tracking SSE | missing (merchant-side only today) | S-52, S-58 |
 | public menus / kitchens, food checkout | missing | S-57 |
 | `GET /api/v1/public/services`, `/services/{slug}`, `/services/{slug}/providers?lat&lng&city` | **exists** (S-53, module `hire`) | S-53 |
-| availability slots, booking create, quote request / accept (consumer side) | missing (merchant side exists) | S-55, S-56 |
+| `GET /api/v1/public/providers/{slug}/slots`, `POST/DELETE /api/v1/me/bookings/holds`, `POST /api/v1/me/bookings/checkout` (Idempotency-Key, X-Step-Up), `POST /api/v1/me/bookings/holds/{id}/confirm`, `GET /api/v1/me/bookings/{id}` | **exists** (S-55, module `hire`) | S-55 |
+| quote request / compare / accept (consumer side) | missing (merchant side exists) | S-56 |
 | `GET /api/v1/me/account-summary`, wallet, addresses, payment methods, notifications, favourites | missing | S-45 menu values, S-58, S-59 |
 | refunds / "something's wrong" (consumer side) | missing (merchant side exists) | S-60 |
 
