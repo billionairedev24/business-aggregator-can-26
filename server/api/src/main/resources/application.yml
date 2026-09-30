@@ -110,11 +110,16 @@ northline:
     studio-url: ${STUDIO_ORIGIN:http://localhost:3100}
     api-url: ${API_PUBLIC_URL:http://localhost:8080}   # unsubscribe links: the api's public URL (not the BFF)
     unsubscribe-key: ${EMAIL_UNSUBSCRIBE_KEY:}         # HMAC key; blank = development key (refused under staging/prod)
+  # SMS (S-27, library server/sms): team invitations to a mobile number. Same settings as northline-auth (S-8):
+  # local (the log; refused under staging/prod) | twilio | aws.
   sms:
     provider: ${SMS_PROVIDER:local}
     from: ${SMS_FROM:}
+    voice-from: ${SMS_VOICE_FROM:}
     account-id: ${SMS_ACCOUNT_ID:}
     auth-token: ${SMS_AUTH_TOKEN:}
+    region: ${SMS_REGION:}
+    endpoint: ${SMS_ENDPOINT:}
 ---
 # Local runs read server/.env (or .env next to the jar) — KEY=value lines, see server/.env.example. Never under `test`.
 spring.config.activate.on-profile: "!test"

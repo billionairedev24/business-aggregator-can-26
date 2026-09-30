@@ -1,5 +1,8 @@
 dependencies {
     implementation(project(":platform"))
+    implementation(project(":email")) // S-27: payout.failed email (templates, providers, once-per-recipient Mailer)
+    implementation(project(":sms")) // S-27: SMS notifications (Twilio / AWS / log)
+    implementation(libs.ulid)
     implementation("org.springframework.boot:spring-boot-starter-kafka")
     implementation("org.springframework.boot:spring-boot-starter-data-elasticsearch")
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
@@ -27,6 +30,8 @@ dependencies {
 tasks.processResources {
     from(rootProject.file("../deploy/kafka/topics.yaml")) { into("kafka") }
     from(project(":api").file("src/main/resources/events")) { into("events") }
+    // S-27: Settings › Notifications defaults, shared with the api (NotificationMatrixDefaultsSpecTest)
+    from(rootProject.file("../docs/spec/notification-matrix-defaults.json")) { into("spec") }
 }
 
 tasks.withType<Test>().configureEach {

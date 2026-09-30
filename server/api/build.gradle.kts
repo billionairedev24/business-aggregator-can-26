@@ -10,6 +10,7 @@ val tools: SourceSet by sourceSets.creating {
 dependencies {
     implementation(project(":platform"))
     implementation(project(":email")) // transactional email (S-13)
+    implementation(project(":sms")) // SMS team invitations (S-27)
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-data-jdbc")

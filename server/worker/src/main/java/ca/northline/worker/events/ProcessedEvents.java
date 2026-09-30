@@ -39,6 +39,14 @@ public class ProcessedEvents {
                 == 1;
     }
 
+    /** Takes a claim back (the send it guarded didn't happen). In the caller's transaction. */
+    public void release(String consumer, String key) {
+        jdbc.sql("delete from events.processed_events where consumer = :c and event_id = :k")
+                .param("c", consumer)
+                .param("k", key)
+                .update();
+    }
+
     public boolean contains(String consumer, String key) {
         return jdbc.sql("select count(*) from events.processed_events where consumer = :c and event_id = :k")
                         .param("c", consumer)

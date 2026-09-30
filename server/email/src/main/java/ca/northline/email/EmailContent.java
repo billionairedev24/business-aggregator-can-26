@@ -191,6 +191,60 @@ public sealed interface EmailContent {
     }
 
     /**
+     * Payouts: the bank returned a payout, or it was canceled ({@code payout.failed}, S-27 — sent by the worker's
+     * notifications consumer). The money is back in the Northline balance; the owner checks the bank details.
+     * Settings › Notifications row {@code payout}.
+     *
+     * @param outcome {@code failed} (returned by the bank) | {@code canceled}
+     * @param failureCode Stripe's code ({@code account_closed}, {@code no_account}, …), null when canceled
+     */
+    record PayoutFailed(
+            String businessName,
+            long amountCents,
+            String outcome,
+            @Nullable String failureCode,
+            URI payoutsLink) implements EmailContent {
+
+        public PayoutFailed {
+            if (!outcome.equals("failed") && !outcome.equals("canceled")) {
+                throw new IllegalArgumentException("outcome must be failed or canceled: " + outcome);
+            }
+        }
+
+        @Override
+        public String template() {
+            return "payout-failed";
+        }
+
+        @Override
+        public String variant() {
+            return outcome;
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.NOTIFICATION;
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            var v = new LinkedHashMap<String, Object>();
+            v.put("businessName", businessName);
+            v.put("outcome", outcome);
+            v.put("amount", format.money(amountCents));
+            v.put("hasCode", failureCode != null && !failureCode.isBlank());
+            v.put("code", failureCode == null ? "" : failureCode);
+            v.put("link", payoutsLink.toString());
+            return v;
+        }
+
+        @Override
+        public List<Object> subjectArgs(EmailFormat format) {
+            return List.of(format.money(amountCents), businessName);
+        }
+    }
+
+    /**
      * Refunds &amp; disputes: a customer's dispute opened, changed hands or was decided. Settings › Notifications row
      * {@code dispute}.
      *
@@ -341,6 +395,8 @@ public sealed interface EmailContent {
         all.put(
                 "payout-sent.scheduled",
                 new PayoutSent(business, 145_000, 0, false, at.plus(Duration.ofDays(1)), payouts));
+        all.put("payout-failed.failed", new PayoutFailed(business, 81_437, "failed", "account_closed", payouts));
+        all.put("payout-failed.canceled", new PayoutFailed(business, 81_437, "canceled", null, payouts));
         for (var change : DisputeUpdate.Change.values()) {
             var decided = change == DisputeUpdate.Change.DECIDED;
             var sample = new DisputeUpdate(

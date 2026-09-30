@@ -114,9 +114,7 @@ class TopicCatalogueTest {
                 assertThat(retry.autoCreateTopics()).isEqualTo("false");
                 assertThat(delaysSeconds(retry)).containsExactlyElementsOf(consumer.retryDelaysSeconds());
                 // A fixed back-off makes Spring name a single retry topic without "-0": keep it exponential.
-                assertThat(retry.backOff().multiplier())
-                        .as("%s multiplier", method)
-                        .isGreaterThan(1);
+                assertThat(multiplier(retry)).as("%s multiplier", method).isGreaterThan(1);
                 // S-26: poison records skip the retries; every consumer answers for its own DLQ records.
                 assertThat(retry.exclude()).contains(PoisonEventException.class);
                 assertThat(retry.traversingCauses()).isEqualTo("true");
@@ -168,17 +166,34 @@ class TopicCatalogueTest {
                 .orElseThrow();
     }
 
-    /** The delays Spring derives from {@code @BackOff}: delay × multiplier^n, capped at maxDelay. */
+    /**
+     * The delays Spring derives from {@code @BackOff}: delay × multiplier^n, capped at maxDelay. A {@code *String}
+     * attribute (a property, so tests can shorten it) counts with its default ({@code ${name:default}}).
+     */
     private static List<Integer> delaysSeconds(RetryableTopic retry) {
         var backOff = retry.backOff();
         var delays = new ArrayList<Integer>();
-        var delay = (double) backOff.delay();
+        var delay = value(backOff.delayString(), backOff.delay());
+        var multiplier = value(backOff.multiplierString(), backOff.multiplier());
+        var max = value(backOff.maxDelayString(), backOff.maxDelay());
         for (var i = 0; i < Integer.parseInt(retry.attempts()) - 1; i++) {
-            var capped = backOff.maxDelay() > 0 ? Math.min(delay, backOff.maxDelay()) : delay;
+            var capped = max > 0 ? Math.min(delay, max) : delay;
             delays.add((int) (capped / 1000));
-            delay *= backOff.multiplier() > 0 ? backOff.multiplier() : 1;
+            delay *= multiplier > 0 ? multiplier : 1;
         }
         return delays;
+    }
+
+    private static double multiplier(RetryableTopic retry) {
+        return value(retry.backOff().multiplierString(), retry.backOff().multiplier());
+    }
+
+    private static double value(String text, double fallback) {
+        if (text.isBlank()) {
+            return fallback;
+        }
+        var m = java.util.regex.Pattern.compile("\\$\\{[^:}]+:([^}]+)}").matcher(text);
+        return Double.parseDouble(m.matches() ? m.group(1) : text);
     }
 
     @Test

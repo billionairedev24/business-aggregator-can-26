@@ -43,6 +43,10 @@ apps:
       requests: { cpu: 250m, memory: 768Mi }
       limits: { memory: 768Mi }
   worker:
+    env:
+      EMAIL_FROM: "Northline <no-reply@northline.ca>"   # S-27 notifications (payout.failed email)
+    secretEnv:
+      EMAIL_UNSUBSCRIBE_KEY: true   # S-27: required under staging/prod (the same key as the api)
     replicas: 2
     resources:
       requests: { cpu: 250m, memory: 768Mi }
