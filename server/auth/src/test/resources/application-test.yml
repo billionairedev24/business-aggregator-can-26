@@ -4,6 +4,9 @@ spring:
   autoconfigure.exclude:
     - org.springframework.boot.session.data.redis.autoconfigure.SessionDataRedisAutoConfiguration
   flyway.enabled: true
+  modulith.events:                      # S-28: no Kafka; UserRegisteredEventsTest turns it on against Testcontainers
+    externalization.enabled: false
+    republish-outstanding-events-on-restart: false
 management.health.redis.enabled: false
 server.servlet.session.cookie.secure: false
 logging.level:

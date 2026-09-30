@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,7 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Create account (design 02, "Create account" tab): form → 6-digit phone code → second factor (passkey or
  * authenticator app; mandatory, SMS never primary) → account created. The {@code identity.users} row is only written
- * once the second factor is confirmed.
+ * once the second factor is confirmed, together with the {@link UserRegistered} event (S-28).
  */
 @Slf4j
 @Service
@@ -50,6 +51,7 @@ public class RegistrationService {
     private final SignInLog signIns;
     private final AttemptLimits limits;
     private final FederatedLinking federation;
+    private final ApplicationEventPublisher events;
     private final AuthProperties props;
     private final Clock clock;
 
@@ -223,6 +225,8 @@ public class RegistrationService {
                 factor.code(),
                 registration.termsVersion(),
                 now));
+        // S-28: in this transaction — the outbox row commits with the account, or neither does.
+        events.publishEvent(new UserRegistered(UlidCreator.getMonotonicUlid().toString(), now, registration.userId()));
         flow.remove(FlowStore.REGISTRATION);
         var sessionId = signIns.succeeded(registration.userId(), "registration", true, client);
         federation.complete(registration.userId(), true); // S-18: created after "Continue with Google/Apple"

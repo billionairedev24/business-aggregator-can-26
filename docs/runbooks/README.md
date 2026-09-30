@@ -98,8 +98,8 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `DB_POOL_SIZE` | ✓ | ✓ | | ✓ | no (10; worker 5) |
 | `REDIS_HOST` | ✓ | ✓ | ✓ | ✓ | yes |
 | `REDIS_PORT`, `REDIS_USERNAME`, `REDIS_PASSWORD`, `REDIS_SSL` | ✓ | ✓ | ✓ | ✓ | no (6379, none, none, false) |
-| `KAFKA_BOOTSTRAP` | ✓ | | | ✓ | yes |
-| `KAFKA_SECURITY_PROTOCOL`, `KAFKA_SASL_MECHANISM`, `KAFKA_SASL_JAAS_CONFIG` | ✓ | | | ✓ | no (PLAINTEXT) — set for managed Kafka |
+| `KAFKA_BOOTSTRAP` | ✓ | ✓ | | ✓ | yes (auth since S-28: user.registered) |
+| `KAFKA_SECURITY_PROTOCOL`, `KAFKA_SASL_MECHANISM`, `KAFKA_SASL_JAAS_CONFIG` | ✓ | ✓ | | ✓ | no (PLAINTEXT) — set for managed Kafka |
 | `ES_URIS` | ✓ | | | ✓ | yes |
 | `ES_USERNAME`, `ES_PASSWORD` | ✓ | | | ✓ | no — set for Elastic Cloud |
 | `AUTH_ISSUER` | ✓ | ✓ | ✓ | | yes |
