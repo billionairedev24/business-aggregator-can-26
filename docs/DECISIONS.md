@@ -825,3 +825,70 @@ Record anything the spec did not decide. Format: date · decision · why · spec
 - **WAF is an option, not a dependency** (documented per cloud in edge.md): Cloudflare in front (any cloud, Full (strict) with our Let's Encrypt origin certificates), CloudFront + AWS WAF (AWS WAF can't attach to an NLB), Cloud Armor via GKE Gateway (`gke-l7-global-external-managed`, since Cloud Armor needs an Application LB), Azure Front Door Premium WAF. Each needs `edge.trustedProxyHops: 1`. Not in Terraform yet.
 - **Custom domains:** `edge.customDomains` (by PR, after S-31 verified the CNAME to `pages.<zone>`) → listener + HTTP-01 Certificate + route to the consumer app. Documented limits: apex domains need ALIAS or a reserved IP; a Gateway holds at most 64 listeners, so beyond the pilot use several Gateways, `ListenerSet`, or CDN on-demand TLS (Cloudflare for SaaS, CloudFront SaaS Manager, Front Door) — to decide with S-31.
 - **Rehearsed on kind** (the S-15 cluster; cert-manager 1.18.2 from the Bitnami builds because quay.io is unreachable here, Envoy Gateway 1.5.1 / Envoy 1.35.3 from Docker Hub, a local CA issuer): Argo CD synced the edge; Issuer and Certificates Ready; `https://auth.kind.northline.test` served the OIDC document over HTTP/2 with the host's certificate, HSTS, `nosniff`, `Referrer-Policy`; TLS 1.2/1.3 accepted, TLS 1.1 refused by the server; HTTP → 301 `https://…`; `/actuator/health` on the api host 404 at the Gateway; unknown SNI → no certificate. Not done: Let's Encrypt, external-dns against a real zone, cloud load balancers and WAFs (no accounts yet); the add-on charts themselves were not rendered offline (their chart repositories are unreachable here — the kind rehearsal used the same versions' release manifests).
+
+## 2026-09-30 — S-22 Identity verification (Stripe Identity) for owners ≥ 25 %
+
+- **Who verifies:** the principals the structure's `x-principals.kyc_threshold_pct` points at the `kyc` row
+  (`merchant_principals.kyc_verification_id`, onboarding's rule): ≥ 25 % for partnerships and corporations, every
+  principal for sole proprietors (the owner), co-ops and non-profits (threshold 0 — board members hold no shares). The
+  story title's "≥ 25 %" is the ownership case of that rule.
+- **Port:** `merchants.application.IdentityVerification` (`start`, `cancel`, `read`) replaces onboarding's
+  `VerificationGateways.IdentityVerification.verifyBusinessOwners` (a single instant "all owners passed"). Selected by
+  `northline.identity.provider` (`IDENTITY_PROVIDER`): `local` (default; refused under staging/prod, a warning under
+  dev) or `stripe` (stripe-java through `StripeClients`, `STRIPE_SECRET_KEY`, `STRIPE_API_BASE` for stripe-mock). The
+  backlog calls the port `IdentityVerification`; kept.
+- **Session:** `type=document`, `require_matching_selfie`, `require_live_capture`, driving licence / passport / ID card,
+  `client_reference_id` = our check id, metadata `northline_merchant_id` / `northline_principal_id`,
+  `provided_details.email` only for emailed links. Idempotency key `nl1:identity-session:<check>:<attempt>`; a new
+  session cancels the previous one (`nl1:identity-cancel:<session>`). The hosted flow (Stripe's `url`) is used, not the
+  Stripe.js modal: the Studio doesn't load Stripe.js anywhere yet, the design only shows "Start with Stripe", and the
+  same URL works for emailed owners on their phones. Return URLs: `STUDIO_ORIGIN/onboarding/verification?m=…&identity=returned`
+  (signed-in owner; the step polls every 5 s until the row moves) and the new public page `/identity/done`.
+- **"This is me":** the signed-in owner picks their principal; `merchant_principals.user_id` (baseline column) records it.
+  One principal per user per business (unique partial index); another member's principal → 409 `identity_not_you`,
+  a second principal → 409 `identity_already_you`. Everyone else gets the link by email (`identity-verification`
+  template, en/fr, transactional, the requesting owner's language). No SMS (not asked; the S-27 SMS path is for team
+  invitations). The Stripe URL is never stored; it travels in the internal `IdentityLinkRequested` event (outbox), the
+  same trade-off as the invitation token (S-13).
+- **Webhooks:** Stripe sends Identity events to the **platform** endpoint, so S-12's `POST /api/v1/webhooks/stripe`
+  (signature, 5-min tolerance, dedupe on event id, retry job) receives them; `StripeEventProcessor` publishes the new
+  in-process `payments.api.IdentitySessionUpdated` (session id, status, `last_error.code`, merchant id — no personal
+  data) and merchants applies it (`StripeIdentityUpdates` → `OwnerIdentityService`). No second endpoint/secret. For
+  `verified` the adapter re-reads the session with `verified_outputs` expanded to compare. Updates apply in Stripe's
+  `created` order; `verified` and `review` are final for webhooks; events for a replaced session are ignored.
+  `StripeObject.PERSONAL` also drops `verified_outputs`, `provided_details`, `first_name`, `last_name` from stored payloads.
+- **Kept data:** status, session id, `last_error` code, `name_match`, `dob_match`, delivery, the owner's email (for
+  "Send a new link"), attempts, times. Never images, ID numbers, the verified name or date of birth.
+- **Matching:** name = every given/family name Stripe read appears in the legal name, or vice versa (accents, case,
+  apostrophes, periods, hyphens ignored). Date of birth: onboarding doesn't collect one, so it is compared with the
+  business's Stripe Connect person of the same name (Connect collects it for payouts) — `unavailable` when there is no
+  Connect account or person yet (typical during onboarding). A mismatch of either → `review` (manual review by an
+  agent); `unavailable` doesn't block.
+- **The `kyc` row** is derived: all owners verified → verified (reference `passed`); all handed in (verified,
+  processing, review) → submitted (counts as complete, the owner can submit); otherwise todo. Recomputed on every
+  webhook, every new session and every Business-step save (an added owner reopens it; a verified row with no owner
+  checks at all — dev seed, approvals before S-22 — is left alone). The row's action is now `identity` (new
+  `CheckKind.Action.IDENTITY`); `POST …/verifications/{kyc}/complete` answers 409 `identity_per_owner`.
+- **ComplianceStatus:** `dueItems` now also returns the `kyc` row while it is todo/rejected (the compliance ledger's list
+  still shows identity under Stripe Connect, as before). The dashboard already had the "Identity verification" label.
+- **Principals keep their ids** across Business-step saves when the legal name is unchanged (case/spacing ignored), so
+  their `user_id` and identity check survive; before, every save deleted and re-inserted all principals.
+- **Schema V032:** `merchants.owner_identity_checks` (one row per principal, unique session id); index on
+  `merchant_principals(merchant_id)`; unique partial index `merchant_principals(merchant_id, user_id)`.
+- **API:** `GET /api/v1/merchants/{id}/identity-checks` and `POST …/identity-checks/{principalId}/session`
+  `{delivery: self|email, email?}` (owner-only, MANAGE). Messages (not in validation-rules.md): "Choose how this owner
+  verifies.", "Enter the owner's email address.", "That doesn't look like an email address." (existing). 409s:
+  `identity_already_verified`, `identity_processing`, `identity_in_review`, `identity_unavailable` ("We couldn't reach
+  Stripe…").
+- **Local:** the fake's "hosted flow" is `GET /api/v1/dev/identity-sessions/{id}` (profile `local`, public like
+  Stripe's page) with one button per outcome; the choice is applied like the webhook, then the browser goes to the
+  return URL.
+- **Studio:** "Start with Stripe" opens an owners dialog (status per owner, "This is me · verify now", "Email a link" /
+  "Send a new link", Stripe's error codes in words, privacy note), en + fr. The design has no drawing of this dialog;
+  copy is ours. `/identity/done` is public.
+- **Never run against the real Stripe Identity** (no account): requests are validated by stripe-mock
+  (`StripeIdentityVerificationStripeMockTest` — create, retrieve with expand, cancel, idempotency keys, pinned
+  version; stripe-mock's fixture has no `url`, so `start` answers 409 there). The persons lookup for the date of
+  birth and the real `verified_outputs` shape are untested against Stripe.
+- **Not done:** the console's review queue for `review` owners (console workstream); annual re-verification (Stripe
+  Connect's own `future_requirements` still shows on the compliance screen); SMS links; a Stripe.js modal.

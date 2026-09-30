@@ -26,6 +26,7 @@ apps:
   api:
     env:
       # S-13: EMAIL_PROVIDER comes from the cloud overlay (ses / sendgrid / azure); the sender is per environment.
+      IDENTITY_PROVIDER: stripe       # S-22: Stripe Identity for owners ≥ 25 % (uses STRIPE_SECRET_KEY)
       EMAIL_FROM: "Northline <no-reply@northline.ca>"
     autoscaling: { enabled: true, minReplicas: 3, maxReplicas: 10 }
     resources:
