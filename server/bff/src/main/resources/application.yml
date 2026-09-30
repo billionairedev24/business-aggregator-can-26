@@ -40,7 +40,8 @@ server:
   forward-headers-strategy: native
   servlet.session:
     timeout: 12h
-    cookie: { name: NL_STUDIO, http-only: true, secure: true, same-site: lax, domain: "${COOKIE_DOMAIN:}" }
+    # Host-only (no Domain): only studio.<zone> ever sees it. The cloud profiles use the __Host- prefix (S-20).
+    cookie: { name: NL_STUDIO, http-only: true, secure: true, same-site: lax }
 management.endpoints.web.exposure.include: health,info
 northline.bff:
   registration-id: studio

@@ -53,7 +53,9 @@ server:
   forward-headers-strategy: none
   servlet.session:
     timeout: 12h                       # "sessions expire after 12 h idle"
-    cookie: { name: NL_AUTH, http-only: true, secure: true, same-site: lax, domain: "${COOKIE_DOMAIN:}" }
+    # Host-only (no Domain): only auth.<zone> ever sees it; the Studio reaches it cross-origin, same site, with
+    # credentials. The cloud profiles use the __Host- prefix (S-20).
+    cookie: { name: NL_AUTH, http-only: true, secure: true, same-site: lax }
 management:
   endpoints.web.exposure.include: health,info
 northline:
@@ -82,6 +84,9 @@ northline:
     # the account and session counters. On top of the per-flow rules (5 tries per code / per sign-in attempt).
     rate-limits:
       store: ${RATE_LIMIT_STORE:redis}          # redis (Valkey, shared) | memory (one instance: local/test only)
+      # S-20: while Valkey is unreachable, codes/OTP and second factors are `open` (allowed, logged) or `closed`
+      # (503 sign_in_unavailable). staging/prod default to closed (application-staging.yml / application-prod.yml).
+      when-unavailable: ${RATE_LIMIT_WHEN_UNAVAILABLE:open}
       backoff-memory: 24h
       limits:
         otp-send:                               # SMS and voice codes cost money; every "Send code" counts

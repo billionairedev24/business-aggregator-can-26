@@ -70,7 +70,6 @@ Every app reads its configuration from environment variables; nothing environmen
 | `CONSUMER_ORIGIN` | auth | **yes** | `https://dev.northline.ca` | hosts (S-17) |
 | `CONSOLE_ORIGIN` | auth | **yes** | `https://console.dev.northline.ca` | hosts (S-17) |
 | `WEBAUTHN_RP_ID` | auth | **yes** | `dev.northline.ca` | registrable domain shared by the Studio and consumer origins; changing it invalidates every passkey |
-| `COOKIE_DOMAIN` | auth, bff | no | empty (host-only cookies — recommended) | deployment manifest |
 | `TOTP_KEY` | auth | **yes** | `openssl rand -base64 32` | secrets manager (secret created empty by Terraform, named in `secret_env`) → External Secrets (S-6, [secrets.md](secrets.md)) → Secret `northline-<app>-secrets`. Never rotate without re-encrypting `auth.totp_secrets`: losing it breaks every authenticator enrolment |
 | `STUDIO_BFF_SECRET` | bff | **yes** | `openssl rand -base64 32` | secrets manager (secret created empty by Terraform, named in `secret_env`) → External Secrets (S-6, [secrets.md](secrets.md)) → Secret `northline-<app>-secrets` |
 | `STUDIO_BFF_SECRET_HASH` | auth | **yes** | `{bcrypt}$2y$12$…` of `STUDIO_BFF_SECRET` | secrets manager (secret created empty by Terraform, named in `secret_env`) → External Secrets (S-6, [secrets.md](secrets.md)) → Secret `northline-<app>-secrets`. The three BFF secrets must differ (the authorization server rejects duplicates) |
@@ -93,6 +92,7 @@ Every app reads its configuration from environment variables; nothing environmen
 | `KMS_REGION`, `KMS_ENDPOINT` | auth | no | AWS only: `ca-central-1`, a VPC endpoint URL | deployment manifest |
 | `TRUSTED_PROXIES` | auth | no (private ranges + loopback) | the ingress / load balancer subnet, e.g. `10.20.0.0/22` (comma-separated CIDRs) | network plan (S-2); only these peers may set `X-Forwarded-For/-Proto/-Host` — the client IP the rate limits and the sign-in log use ([README § Rate limits](README.md#rate-limits-s-9)) |
 | `RATE_LIMIT_STORE` | auth | no (`redis`) | leave unset: `memory` is refused here | — |
+| `RATE_LIMIT_WHEN_UNAVAILABLE` | auth | no (`open`) | leave unset (`open`); `closed` to rehearse the staging/prod behaviour | S-20, [README § Rate limits](README.md#rate-limits-s-9) |
 | `CLIENT_CITY_HEADER` | auth | no (empty) | `CloudFront-Viewer-City`, or the custom header your load balancer / Front Door fills with the client's city | ingress / CDN configuration; believed only from `TRUSTED_PROXIES` ([README § Sessions](README.md#sessions-s-19)) |
 | `SESSION_STEP_UP_MAX_AGE` | auth | no (`10m`) | leave unset | how recent a second factor revoking sessions / removing passkeys needs (S-19) |
 | `SESSION_CHECK_INTERVAL` | bff | no (`60s`) | leave unset | a revoked session's BFF session ends within this (S-19) |
@@ -102,7 +102,7 @@ Every app reads its configuration from environment variables; nothing environmen
 | `EMAIL_REGION`, `EMAIL_ENDPOINT`, `EMAIL_API_KEY`, `EMAIL_CONFIGURATION_SET`, `EMAIL_REPLY_TO`, `SMTP_*` | api, worker | per provider ([email.md § Variables](email.md#variables)) | `ca-central-1` (ses) · ACS endpoint (azure) · `SG.…` (sendgrid) | `EMAIL_API_KEY`, `SMTP_PASSWORD` → secrets manager |
 | `SMS_PROVIDER`, `SMS_FROM`, `SMS_ACCOUNT_ID`, `SMS_AUTH_TOKEN` | auth, api, worker (S-27) | no (`local` = codes in the auth log; set `twilio` to send real ones) | `twilio`, `+15875550100` (or `MG…`), `AC…`, — | Twilio console → ConfigMap, `SMS_AUTH_TOKEN` → secrets manager (secret created empty by Terraform, named in `secret_env`) → External Secrets (S-6, [secrets.md](secrets.md)) → Secret `northline-<app>-secrets`. AWS End User Messaging instead (`aws`): Terraform `config_env` sets `SMS_PROVIDER`, `SMS_FROM`, `SMS_REGION` when `sms_origination_identity` is given ([infrastructure.md § 4](infrastructure.md#4-outputs--the-apps-environment-variables)) |
 | `SMS_VOICE_FROM`, `SMS_REGION`, `SMS_ENDPOINT` | auth, api, worker | no | `+15875550101` (needed when `SMS_FROM` is `MG…`), `ca-central-1` (`aws`), — | [README § SMS and voice codes](README.md#sms-and-voice-codes-s-8) |
-| `IDENTITY_PROVIDER` | api | no (`local` = fake sessions nobody can finish here; a warning) | `stripe` with the test-mode `STRIPE_SECRET_KEY` | Stripe dashboard → Identity activated, platform webhook endpoint with the `identity.verification_session.*` events ([stripe.md § Identity](stripe.md#7-identity-s-22)) → ConfigMap |
+| `IDENTITY_PROVIDER` | api | no (`local` = fake sessions nobody can finish here; a warning) | `stripe` with the test-mode `STRIPE_SECRET_KEY` | Stripe dashboard → Identity activated, platform webhook endpoint with the `identity.verification_session.*` events ([stripe.md § Identity](stripe.md#8-identity-s-22)) → ConfigMap |
 | `REGISTRY_CORPORATIONS_CANADA_PROVIDER`, `REGISTRY_ALBERTA_PROVIDER`, `REGISTRY_CALGARY_PROVIDER` (+ `_URL`, `_KEY`, `REGISTRY_CALGARY_APP_TOKEN`) | api | no (`fixtures`, a warning) | `manual`, `manual`, `socrata` | [registries.md](registries.md#set-up-per-environment); keys → secrets manager |
 | `OTEL_EXPORT_ENABLED` | api | no | `false` until a collector exists (S-111) | deployment manifest |
 | `VITE_NL_AUTH_ORIGIN` (Studio build) | web/apps/studio | no since S-14: the Studio image reads `NL_AUTH_ORIGIN` at start (chart: `urls.auth`); the build-time value is only a fallback | `https://auth.dev.northline.ca` | CI build argument; one Studio build per environment |
@@ -143,7 +143,7 @@ What still stops a complete deployment. Under the `local`/`test` profiles each o
 |---|---|---|---|
 | `IdentityVerification` (merchants) | unconfigured adapter throws | onboarding identity check | S-22 |
 | `RegistryLookup` (merchants) | unconfigured adapter throws | business and licence checks | S-23 |
-| `BankLinking` (merchants) | unconfigured adapter throws | instant bank linking in onboarding | S-24 |
+| `BankLinking` (payments; merchants' onboarding check) | stripe-java Financial Connections when `STRIPE_SECRET_KEY` is set (S-24) | Payouts › Change links a bank through Stripe.js (needs `STRIPE_PUBLISHABLE_KEY`); onboarding's bank check is verified once a bank is linked — [stripe.md § 7](stripe.md#7-bank-linking--stripe-financial-connections-s-24) | — |
 | `DomainVerifier` (merchants) | unconfigured adapter throws | custom storefront domains | S-31 |
 | SMS notices (bank change) and SMS team invitations | not sent by the api (the SMS port is in northline-auth) | bank-change notice by email only; mobile invitations by copied link | S-27 |
 | `CommerceSync` (catalogue) | unconfigured adapter throws | Shopify / Square / Lightspeed connections | S-35 |

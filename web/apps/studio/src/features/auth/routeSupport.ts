@@ -35,8 +35,14 @@ export function validateAuthSearch(raw: Record<string, unknown>): AuthSearch {
   return out;
 }
 
-/** Only same-origin paths may be used as `next` (never `//host` or a URL). */
-export const safeNext = (next?: string) => (next && next.startsWith('/') && !next.startsWith('//') && !next.startsWith('/\\') ? next : undefined);
+/**
+ * Only same-origin paths may be used as `next` (never `//host` or a URL). Control characters are refused anywhere: the
+ * URL parser drops tabs and newlines, so `/\t/evil.example` would become `//evil.example` (S-20). Same rule as the
+ * BFF's `NextRedirect.safe`.
+ */
+// eslint-disable-next-line no-control-regex
+const CONTROL = /[\u0000-\u001f\u007f]/;
+export const safeNext = (next?: string) => (next && next.startsWith('/') && !next.startsWith('//') && !next.startsWith('/\\') && !CONTROL.test(next) ? next : undefined);
 
 /** Already signed in → go where the user was heading. */
 export async function redirectIfSignedIn(queryClient: QueryClient, search: AuthSearch) {

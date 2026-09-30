@@ -116,6 +116,11 @@ class BffSessionTest {
         assertThat(NextRedirect.safe("/\\evil.example")).isEqualTo("/");
         assertThat(NextRedirect.safe(null)).isEqualTo("/");
         assertThat(NextRedirect.safe("/onboarding")).isEqualTo("/onboarding");
+        // S-20: browsers drop tabs and newlines from URLs, so these would become //evil.example
+        assertThat(NextRedirect.safe("/\t/evil.example")).isEqualTo("/");
+        assertThat(NextRedirect.safe("/\n/evil.example")).isEqualTo("/");
+        assertThat(NextRedirect.safe("/\r\n/evil.example")).isEqualTo("/");
+        assertThat(NextRedirect.safe("/a\u007fb")).isEqualTo("/");
     }
 
     @Test

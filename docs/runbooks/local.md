@@ -108,6 +108,8 @@ pointed at the same directory share tokens. Rotate or inspect it with `./gradlew
 MEMORY`), so a restart clears a lockout; with `local,valkey` they live in your Valkey like in the cloud. Limits and
 how to clear them: [README § Rate limits](README.md#rate-limits-s-9). Every request from your browser comes from
 `127.0.0.1`: 30 sign-in lookups in 10 minutes lock the IP for 10 minutes — restart auth (memory) to clear it.
+With `local,valkey`, stopping Valkey lets sign-in through (`RATE_LIMIT_WHEN_UNAVAILABLE=open`, the local default);
+set it to `closed` to see the staging/prod behaviour (codes and second factors answer 503, S-20).
 
 **Sessions in your Valkey** (as in the cloud): start auth and bff with `--spring.profiles.active=local,valkey`.
 Sessions are stored under `nl:auth:*` and `nl:studio-bff:*` and survive restarts; auth's rate limits under `nl:auth-rl:*`. Valkey from Docker:
@@ -142,7 +144,7 @@ Notes:
   Verification opens http://localhost:8080/api/v1/dev/identity-sessions/vs_fake_… where you pick how Stripe Identity
   ends (verified, name mismatch, `document_expired`, …); emailed links land in Mailpit and open the same page. To try
   the real adapter, set `IDENTITY_PROVIDER=stripe` with a test-mode `STRIPE_SECRET_KEY` and forward webhooks with
-  `stripe listen` ([stripe.md § Identity](stripe.md#7-identity-s-22)).
+  `stripe listen` ([stripe.md § Identity](stripe.md#8-identity-s-22)).
 - **Business registries (S-23):** the three sources answer from `server/api/src/main/resources/registries/fixtures.json`
   (e.g. Alberta `2021456789` = Prairie Wrench, Calgary `BL 22-118840` = Pho Dau Bo); unknown numbers go to the manual
   review queue (`GET /api/v1/console/registry-reviews`, staff). To try Calgary's real dataset:

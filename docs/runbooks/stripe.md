@@ -75,6 +75,9 @@ objects, connected accounts, webhooks and keys don't carry over.
     (`pk_…`). Prefer a **restricted key** for the api with write access to: PaymentIntents, Customers, Refunds,
     Transfers, Payouts, Accounts (Connect), Account links, Login links, Tokens, Financial Connections sessions, Tax
     calculations and transactions (S-21); read access to Balance, Charges, Events. Store them as `STRIPE_SECRET_KEY` / `STRIPE_PUBLISHABLE_KEY` in the secrets
+
+    Transfers, Payouts, Accounts (Connect), Account links, Login links, Tokens, Financial Connections sessions; read
+    access to Balance, Charges, Events, Financial Connections accounts (S-24). Store them as `STRIPE_SECRET_KEY` / `STRIPE_PUBLISHABLE_KEY` in the secrets
     manager (see the environment runbooks). Never commit a key; never put a live key in dev or staging.
 13. **Webhooks** — § 5.
 
@@ -123,7 +126,7 @@ Two endpoints, each with its own signing secret:
 
 | endpoint (Stripe dashboard → Developers → Webhooks → Add endpoint) | listen to | events | secret |
 |---|---|---|---|
-| `https://<api host>/api/v1/webhooks/stripe` | **Your account** | `payment_intent.amount_capturable_updated`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.canceled`, `charge.refunded`, `refund.created`, `refund.updated`, `refund.failed`, `charge.dispute.created`, `charge.dispute.updated`, `charge.dispute.closed`, `charge.dispute.funds_withdrawn`, `charge.dispute.funds_reinstated`, `transfer.reversed`, `transfer.updated`, and for Identity (S-22) `identity.verification_session.created`, `.processing`, `.requires_input`, `.verified`, `.canceled` | `STRIPE_WEBHOOK_SECRET` |
+| `https://<api host>/api/v1/webhooks/stripe` | **Your account** | `payment_intent.amount_capturable_updated`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.canceled`, `charge.refunded`, `refund.created`, `refund.updated`, `refund.failed`, `charge.dispute.created`, `charge.dispute.updated`, `charge.dispute.closed`, `charge.dispute.funds_withdrawn`, `charge.dispute.funds_reinstated`, `transfer.reversed`, `transfer.updated`, `financial_connections.account.disconnected`, `financial_connections.account.deactivated` (S-24), and for Identity (S-22) `identity.verification_session.created`, `.processing`, `.requires_input`, `.verified`, `.canceled` | `STRIPE_WEBHOOK_SECRET` |
 | `https://<api host>/api/v1/webhooks/stripe/connect` | **Connected accounts** | `account.updated`, `payout.paid`, `payout.failed`, `payout.canceled` | `STRIPE_CONNECT_WEBHOOK_SECRET` |
 
 - **API version:** create both endpoints with **`2026-08-26.dahlia`** (the pinned version, § 1); an endpoint on
@@ -240,7 +243,44 @@ row the sync reaches keeps its amount as a base. The GST summary CSV now has a "
   all of it) and debit `tax_payable`; a lost chargeback moves its tax part from `tax_payable` too. Goodwill credits
   and holds canceled before capture report nothing.
 
-## 7. Identity (S-22)
+## 7. Bank linking — Stripe Financial Connections (S-24)
+
+How a merchant links the bank account payouts go to (Studio › Payouts › Bank account › Change). Code:
+`payments.application.BankLinking` (port), `StripeBankLinking` / `FakeBankLinking` (adapters), `BankAccountService`;
+decisions in `docs/DECISIONS.md` § S-24. **Not yet run against a real Stripe account** — written against Stripe's
+documented API and tested with stripe-mock only.
+
+| step | Stripe call / Studio | notes |
+|---|---|---|
+| session | `POST /v1/financial_connections/sessions` — `account_holder[type]=account`, `account_holder[account]=acct_…` (the merchant's connected account), `permissions[]=payment_method` | a new session per click; the api returns `{mode: "stripe", clientSecret, publishableKey}` |
+| collect | Stripe.js `stripe.collectBankAccountToken({clientSecret})` in the Studio | Stripe.js is loaded from `js.stripe.com` only now, only in `stripe` mode; the owner signs in to their bank in Stripe's modal |
+| check | `GET /v1/financial_connections/accounts/{fca}` | must be held by the same connected account and `active`, else 422 "We couldn't use that bank link. Connect your bank again." |
+| attach | `POST /v1/accounts/{acct}/external_accounts` with the bank-account token | not the default yet: the 24 h hold |
+| confirm | Studio step-up (passkey / authenticator) → `POST …/bank-accounts/{id}/confirm` with `X-Step-Up` | payouts pause 24 h; owners are emailed and texted (existing) |
+| take over | `POST /v1/accounts/{acct}/external_accounts/{ba}` `default_for_currency=true` | the payouts job, after the hold |
+
+- **Kept:** the institution's name and the last 4 digits (plus Stripe's `ba_…` and `fca_…`). Nothing else — no
+  institution / transit numbers for a linked account, never the account number. Typed details ("Enter details
+  manually", the design's fallback) still work and are tokenized at Stripe (`POST /v1/tokens`).
+- **Audit log** (Settings › Security › Audit log, `developer.audit_log`): `payout_account.linked` (who, institution,
+  last 4), `payout_account.change_confirmed` (step-up, before/after), `payout_account.change_effective` (system),
+  `payout_account.bank_connection_ended` (stripe).
+- **Disconnected:** `financial_connections.account.disconnected` / `…deactivated` (platform endpoint, § 5) mark the
+  account; the bank account stays the connected account's external account, so payouts keep going there, and the
+  Studio shows "Bank connection ended … reconnect to keep it verified" with a Reconnect button. Unknown `fca_…` →
+  stored as ignored.
+- **Onboarding** "Bank account for payouts" (outside `local`/`test`): verified with the linked account's label once one
+  exists (linked in Payouts), otherwise it waits and is verified when the owner confirms a bank account.
+- **Set-up:** Dashboard → Financial Connections → enable it for the platform (Canada: confirm with Stripe that
+  Financial Connections covers the Canadian institutions the merchants use — TD, RBC, Scotiabank, BMO, CIBC, ATB,
+  Desjardins, credit unions; manual entry covers the rest). Settings → Connect → Express dashboard keeps "merchants may
+  update bank accounts" **off** (§ 2 step 8). The restricted key needs Financial Connections sessions (write) and
+  accounts (read). No new variables: `STRIPE_SECRET_KEY` and `STRIPE_PUBLISHABLE_KEY`.
+- **Local:** without a key the session's mode is `fake`: the Studio shows a "Test bank connection" picker (RBC ··8820,
+  TD ··3391, …) instead of Stripe.js and sends a local token (`btok_local_<institution>_<last4>`); nothing leaves the
+  machine. With stripe-mock (§ 3) the real adapter runs, but the Studio can't complete Stripe.js against it.
+
+## 8. Identity (S-22)
 
 Every owner the business structure requires (the principals at or above the structure's KYC threshold: 25 % for
 partnerships and corporations, everyone for sole proprietors, co-ops and non-profits — `docs/spec/legal-details.schema.json`)

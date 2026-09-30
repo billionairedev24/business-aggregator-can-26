@@ -1,7 +1,7 @@
 package ca.northline.payments.web;
 
+import ca.northline.payments.application.BankLinking;
 import ca.northline.payments.application.EarningsReadModel;
-import ca.northline.payments.application.PayoutGateway;
 import ca.northline.payments.application.RespondToCases;
 import ca.northline.payments.application.ViewEarnings;
 import ca.northline.payments.application.ViewPayouts;
@@ -47,7 +47,7 @@ interface PaymentsWebMapper {
 
     PayoutResponses.Preview toResponse(ViewPayouts.Preview preview);
 
-    PayoutResponses.LinkSession toResponse(PayoutGateway.LinkSession session);
+    PayoutResponses.LinkSession toResponse(BankLinking.LinkSession session);
 
     @Mapping(target = "downloadable", expression = "java(evidence.storageKey() != null)")
     CaseResponses.EvidenceItem toResponse(Evidence evidence);

@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Picks the Stripe adapter: stripe-java when {@code northline.payments.stripe-secret-key} is set (env
+ * Picks the Stripe adapters (charges and payouts; bank linking, S-24): stripe-java when {@code northline.payments.stripe-secret-key} is set (env
  * {@code STRIPE_SECRET_KEY}; with {@code STRIPE_API_BASE} it talks to stripe-mock), the local fake otherwise — so
  * local, test and CI never call Stripe unless asked to. Staging and prod require the key (S-1).
  */
@@ -25,13 +25,14 @@ class PaymentsGatewayConfig {
     @Bean
     @ConditionalOnExpression(HAS_KEY)
     StripeConnectGateway stripeConnectGateway(PaymentsProperties props) {
-        var base = props.stripeApiBase();
-        if (base != null && !base.isBlank()) {
-            log.info("Payments: Stripe API base overridden to {} (stripe-mock)", base);
-        }
-        return new StripeConnectGateway(
-                StripeClients.create(Objects.requireNonNull(props.stripeSecretKey()), base),
-                props.stripePublishableKey());
+        return new StripeConnectGateway(client(props));
+    }
+
+    /** S-24: Financial Connections (and typed details) on the connected account. */
+    @Bean
+    @ConditionalOnExpression(HAS_KEY)
+    StripeBankLinking stripeBankLinking(PaymentsProperties props) {
+        return new StripeBankLinking(client(props), props.stripePublishableKey());
     }
 
     @Bean
@@ -39,5 +40,19 @@ class PaymentsGatewayConfig {
     FakeStripeGateway fakeStripeGateway(Clock clock) {
         log.info("Payments: no Stripe key configured — using the fake Stripe gateway (nothing leaves this process).");
         return new FakeStripeGateway(clock);
+    }
+
+    @Bean
+    @ConditionalOnExpression(NO_KEY)
+    FakeBankLinking fakeBankLinking() {
+        return new FakeBankLinking();
+    }
+
+    private static com.stripe.StripeClient client(PaymentsProperties props) {
+        var base = props.stripeApiBase();
+        if (base != null && !base.isBlank()) {
+            log.info("Payments: Stripe API base overridden to {} (stripe-mock)", base);
+        }
+        return StripeClients.create(Objects.requireNonNull(props.stripeSecretKey()), base);
     }
 }

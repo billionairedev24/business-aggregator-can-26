@@ -6,6 +6,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Clock;
+import org.jspecify.annotations.Nullable;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -28,14 +30,21 @@ import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
  * studio-bff security: OAuth2 login (authorization code + PKCE) against northline-auth, a server-side session (HttpOnly
- * cookie {@code NL_STUDIO}), CSRF double-submit with cookie {@code XSRF-TOKEN} / header {@code X-XSRF-TOKEN}, 401 (not
- * a redirect) for unauthenticated XHR, {@code POST /bff/logout} → 204, and the S-19 revocation check
- * ({@link SessionRevocationCheck}).
+ * cookie {@code NL_STUDIO}, {@code __Host-NL_STUDIO} in the cloud), CSRF double-submit with cookie {@code XSRF-TOKEN}
+ * ({@code __Host-XSRF-TOKEN} in the cloud) / header {@code X-XSRF-TOKEN}, 401 (not a redirect) for unauthenticated XHR,
+ * {@code POST /bff/logout} → 204, and the S-19 revocation check ({@link SessionRevocationCheck}).
+ *
+ * <p>S-20: the CSRF token is accepted from the header only — never from a {@code _csrf} form field, which a page on a
+ * sibling subdomain (same site, so {@code SameSite=Lax} doesn't stop it) could submit after planting its own cookie —
+ * and every response forbids framing and carries a CSP that allows nothing (the BFF serves no pages).
  */
 @Configuration(proxyBeanMethods = false)
 class BffSecurityConfig {
@@ -48,7 +57,8 @@ class BffSecurityConfig {
             RevokeTokensOnLogout revoke,
             BffProperties props,
             OAuth2AuthorizedClientRepository authorizedClients,
-            TokenIntrospection introspection) {
+            TokenIntrospection introspection,
+            @Value("${server.servlet.session.cookie.name:NL_STUDIO}") String sessionCookie) {
         var resolver = new DefaultOAuth2AuthorizationRequestResolver(registrations, "/oauth2/authorization");
         resolver.setAuthorizationRequestCustomizer(OAuth2AuthorizationRequestCustomizers.withPkce());
         return http.authorizeHttpRequests(
@@ -61,7 +71,10 @@ class BffSecurityConfig {
                         .failureHandler(
                                 (request, response, _) -> response.sendRedirect(props.signInPage() + "?error=signin")))
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
-                .csrf(c -> c.spa())
+                .csrf(c -> c.csrfTokenRepository(csrfCookie(props.csrfCookieName()))
+                        .csrfTokenRequestHandler(new HeaderOnlyCsrfTokenRequestHandler()))
+                .headers(h -> h.contentSecurityPolicy(csp -> csp.policyDirectives(CSP))
+                        .referrerPolicy(r -> r.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER)))
                 .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
                 .addFilterBefore(
                         new SessionRevocationCheck(authorizedClients, introspection, props, Clock.systemUTC()),
@@ -69,12 +82,38 @@ class BffSecurityConfig {
                 .logout(l -> l.logoutUrl("/bff/logout")
                         .addLogoutHandler(revoke)
                         .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.NO_CONTENT))
-                        .deleteCookies("NL_STUDIO")
+                        .deleteCookies(sessionCookie)
                         .invalidateHttpSession(true)
                         .clearAuthentication(true))
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .build();
+    }
+
+    static final String CSP = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
+
+    /**
+     * Readable by the Studio (not HttpOnly), {@code SameSite=Strict}, path {@code /}; a {@code __Host-} name is always
+     * {@code Secure}, as browsers require (it has no Domain attribute, so it stays on the Studio host).
+     */
+    static CookieCsrfTokenRepository csrfCookie(String name) {
+        var repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        repository.setCookieName(name);
+        repository.setCookieCustomizer(cookie -> {
+            cookie.sameSite("Strict").path("/");
+            if (name.startsWith("__Host-")) {
+                cookie.secure(true);
+            }
+        });
+        return repository;
+    }
+
+    /** The raw token from {@code X-XSRF-TOKEN}; the {@code _csrf} request parameter is ignored (S-20). */
+    static final class HeaderOnlyCsrfTokenRequestHandler extends CsrfTokenRequestAttributeHandler {
+        @Override
+        public @Nullable String resolveCsrfTokenValue(HttpServletRequest request, CsrfToken csrfToken) {
+            return request.getHeader(csrfToken.getHeaderName());
+        }
     }
 
     /** northline-auth signs ID tokens with ES256 (ARCHITECTURE.md § Identity). */

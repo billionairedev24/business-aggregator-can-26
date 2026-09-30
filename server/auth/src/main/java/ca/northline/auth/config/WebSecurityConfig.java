@@ -21,9 +21,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.csrf.CsrfFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -50,6 +52,7 @@ class WebSecurityConfig {
                         .anyRequest()
                         .authenticated())
                 .cors(c -> c.configurationSource(cors(props)))
+                .headers(WebSecurityConfig::lockedDown)
                 .csrf(AbstractHttpConfigurer::disable)
                 .addFilterBefore(new OriginCheck(Set.copyOf(props.allowedOrigins())), CsrfFilter.class)
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
@@ -59,6 +62,17 @@ class WebSecurityConfig {
         federation.configure(http); // Google / Apple (S-18), when configured
         return http.build();
     }
+
+    /**
+     * S-20: nothing here is a page to render or frame — JSON, redirects and error bodies only — so on top of Spring
+     * Security's defaults (nosniff, {@code X-Frame-Options: DENY}, no-store, HSTS over HTTPS) the CSP allows nothing.
+     */
+    static void lockedDown(HeadersConfigurer<HttpSecurity> headers) {
+        headers.contentSecurityPolicy(csp -> csp.policyDirectives(CSP))
+                .referrerPolicy(r -> r.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER));
+    }
+
+    static final String CSP = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
 
     /** Before everything (Spring Session, Spring Security): the rest of the app sees the client's address. */
     @Bean
@@ -92,7 +106,10 @@ class WebSecurityConfig {
         return source;
     }
 
-    /** Rejects state-changing JSON API calls from browser origins that aren't allow-listed. */
+    /**
+     * Rejects state-changing JSON API calls from browser origins that aren't allow-listed. A request without
+     * {@code Origin} is let through (not a browser) unless its Fetch Metadata says a browser sent it cross-site (S-20).
+     */
     static final class OriginCheck extends OncePerRequestFilter {
         private final Set<String> allowed;
 
@@ -111,7 +128,10 @@ class WebSecurityConfig {
         protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
                 throws ServletException, IOException {
             var origin = request.getHeader("Origin");
-            if (origin != null && !allowed.contains(origin) && !origin.equals(ownOrigin(request))) {
+            var refused = origin == null
+                    ? "cross-site".equals(request.getHeader("Sec-Fetch-Site"))
+                    : !allowed.contains(origin) && !origin.equals(ownOrigin(request));
+            if (refused) {
                 response.setStatus(HttpStatus.FORBIDDEN.value());
                 response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
                 response.getWriter().write("""

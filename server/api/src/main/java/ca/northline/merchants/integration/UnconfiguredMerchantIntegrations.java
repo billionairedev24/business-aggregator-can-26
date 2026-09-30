@@ -1,7 +1,6 @@
 package ca.northline.merchants.integration;
 
 import ca.northline.merchants.application.DocumentStorage;
-import ca.northline.merchants.application.VerificationGateways.BankLinking;
 import ca.northline.merchants.application.VerificationGateways.DomainVerifier;
 import ca.northline.shared.storage.UsesLocalStorage;
 import org.springframework.context.annotation.Bean;
@@ -9,21 +8,15 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
 /**
- * Placeholders outside {@code local}/{@code test} until the production adapters exist (Financial
- * Connections S-24, custom domains S-31; object storage S-10 when {@code STORAGE_PROVIDER=local}): the application starts in the
+ * Placeholders outside {@code local}/{@code test} until the production adapters exist (custom
+ * domains S-31 — bank linking is {@link PaymentsBankLinking} since S-24, registries are {@link RegistriesConfig} since
+ * S-23; object storage S-10 when {@code STORAGE_PROVIDER=local}): the application starts in the
  * {@code dev}/{@code staging}/{@code prod} profiles, and using the feature fails loudly — the same convention as the
  * other modules' unconfigured adapters.
  */
 @Configuration(proxyBeanMethods = false)
 @Profile("!local & !test")
 class UnconfiguredMerchantIntegrations {
-
-    @Bean
-    BankLinking unconfiguredBankLinking() {
-        return _ -> {
-            throw unconfigured("bank linking (Stripe Financial Connections, S-24)");
-        };
-    }
 
     @Bean
     DomainVerifier unconfiguredDomainVerifier() {

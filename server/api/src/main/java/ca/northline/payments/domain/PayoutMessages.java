@@ -15,6 +15,9 @@ public final class PayoutMessages {
 
     public static final String METHOD_REQUIRED = "Choose how to add the account.";
     public static final String LINKED_ACCOUNT_REQUIRED = "Connect your bank first.";
+    /** S-24: the linked account can't be used (not this business's, disconnected, expired token). */
+    public static final String LINK_AGAIN = "We couldn't use that bank link. Connect your bank again.";
+
     public static final String INSTITUTION_FORMAT = "Enter the 3-digit institution number.";
     public static final String TRANSIT_FORMAT = "Enter the 5-digit transit number.";
     public static final String ACCOUNT_FORMAT = "Account numbers are 7 to 12 digits.";

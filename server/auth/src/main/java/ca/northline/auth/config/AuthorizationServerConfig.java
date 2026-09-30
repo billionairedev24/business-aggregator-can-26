@@ -54,6 +54,7 @@ class AuthorizationServerConfig {
         return http.securityMatcher(authorizationServer.getEndpointsMatcher())
                 .with(authorizationServer, as -> as.oidc(Customizer.withDefaults()))
                 .authorizeHttpRequests(a -> a.anyRequest().authenticated())
+                .headers(WebSecurityConfig::lockedDown)
                 .exceptionHandling(e -> e.defaultAuthenticationEntryPointFor(
                         new LoginUrlAuthenticationEntryPoint(props.loginPage()),
                         new MediaTypeRequestMatcher(MediaType.TEXT_HTML)))

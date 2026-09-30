@@ -28,7 +28,12 @@ public final class FlowRejected extends RuntimeException {
         /** S-19: revoking the session the request comes from (sign out instead) → 409. */
         CURRENT_SESSION("current_session"),
         /** S-19: the session or passkey isn't there (any more) for this person → 404. */
-        GONE("not_found");
+        GONE("not_found"),
+        /**
+         * S-20: the rate-limit store is unreachable and codes / second factors fail closed → 503 with
+         * retryAfterSeconds.
+         */
+        UNAVAILABLE("sign_in_unavailable");
 
         private final String code;
 

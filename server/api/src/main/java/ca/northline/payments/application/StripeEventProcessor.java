@@ -37,6 +37,7 @@ class StripeEventProcessor {
     private final ConnectedAccountService accounts;
     private final StripeChargeSync charges;
     private final ApplicationEventPublisher events;
+    private final BankAccountService bankAccounts;
     private final TransactionTemplate transactions;
     private final Clock clock;
 
@@ -48,6 +49,7 @@ class StripeEventProcessor {
             ConnectedAccountService accounts,
             StripeChargeSync charges,
             ApplicationEventPublisher events,
+            BankAccountService bankAccounts,
             PlatformTransactionManager transactionManager,
             Clock clock) {
         this.store = store;
@@ -57,6 +59,7 @@ class StripeEventProcessor {
         this.accounts = accounts;
         this.charges = charges;
         this.events = events;
+        this.bankAccounts = bankAccounts;
         this.clock = clock;
         // each event in its own transaction, also when called from the listener's
         this.transactions = new TransactionTemplate(transactionManager);
@@ -130,6 +133,8 @@ class StripeEventProcessor {
                     "identity.verification_session.requires_input",
                     "identity.verification_session.verified",
                     "identity.verification_session.canceled" -> identitySession(event);
+            case "financial_connections.account.disconnected", "financial_connections.account.deactivated" ->
+                bankAccounts.connectionEnded(event);
             default -> false;
         };
     }

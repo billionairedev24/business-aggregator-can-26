@@ -11,4 +11,6 @@ interface PayoutAccountRowRepository extends ListCrudRepository<PayoutAccountRow
     Optional<PayoutAccountRow> findFirstByMerchantIdAndState(String merchantId, String state);
 
     List<PayoutAccountRow> findByStateAndEffectiveAtLessThanEqual(String state, Instant now);
+
+    List<PayoutAccountRow> findByFinancialConnectionsAccount(String financialConnectionsAccount);
 }

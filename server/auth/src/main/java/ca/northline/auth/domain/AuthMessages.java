@@ -50,6 +50,10 @@ public final class AuthMessages {
     public static final String PASSKEY_GONE = "That passkey was already removed.";
     public static final String CURRENT_SESSION = "This is the session you're using now. Sign out instead.";
 
+    /** S-20: the rate-limit store is down and codes / second factors fail closed (staging/prod). */
+    public static final String SIGN_IN_UNAVAILABLE =
+            "Signing in is paused for a few minutes while we fix a problem on our side. Try again shortly.";
+
     public static final String SIX_DIGITS = "^\\d{6}$";
 
     private AuthMessages() {}

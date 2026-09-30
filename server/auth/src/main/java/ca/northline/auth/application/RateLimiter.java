@@ -6,7 +6,8 @@ import java.util.Set;
 
 /**
  * Outbound port: sliding-window attempt counters with lockouts (Redis/Valkey in the cloud, memory for local runs). All
- * limits of one call are checked and recorded atomically.
+ * limits of one call are checked and recorded atomically. {@link #check} and {@link #record} throw {@link Unavailable}
+ * when the store can't answer; {@link AttemptLimits} applies the configured policy (S-20).
  */
 public interface RateLimiter {
 
@@ -18,6 +19,13 @@ public interface RateLimiter {
      * threshold (the decision is then denied too, with {@link Decision#newlyLocked()}).
      */
     Decision record(List<Limit> limits);
+
+    /** The counters can't be read or written right now (e.g. Valkey is down). */
+    final class Unavailable extends RuntimeException {
+        public Unavailable(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
 
     /** Forgets the attempts and earlier lockouts of these subjects (after a success). */
     void reset(List<Limit> limits);
