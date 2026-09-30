@@ -35,6 +35,7 @@ public final class WorkerContainers {
     public static final ElasticsearchContainer ELASTIC = newElastic();
 
     private static boolean started;
+    private static boolean indicesCreated;
 
     private WorkerContainers() {}
 
@@ -71,6 +72,25 @@ public final class WorkerContainers {
             ELASTIC.start();
         }
         return "http://" + ELASTIC.getHttpHostAddress();
+    }
+
+    /** {@link #elastic()} with the synonym sets and the listings indices created (the deploy step, once). */
+    public static synchronized String elasticWithIndices() {
+        var uri = elastic();
+        if (!indicesCreated) {
+            try (var es = co.elastic.clients.elasticsearch.ElasticsearchClient.of(
+                    b -> b.host(uri).jsonMapper(new co.elastic.clients.json.jackson.Jackson3JsonpMapper()))) {
+                new ca.northline.searchindex.IndexBootstrap(
+                                new ca.northline.searchindex.ListingIndices(es),
+                                ca.northline.searchindex.IndexLayout.fromClasspath(),
+                                java.time.Clock.systemUTC())
+                        .reconcile(ca.northline.searchindex.IndexBootstrap.Mode.APPLY);
+            } catch (java.io.IOException e) {
+                throw new java.io.UncheckedIOException(e);
+            }
+            indicesCreated = true;
+        }
+        return uri;
     }
 
     /** The real catalogue plus the test consumers' topic and groups. */
