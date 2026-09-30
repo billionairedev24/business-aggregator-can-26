@@ -1,5 +1,39 @@
-import { createFileRoute } from '@tanstack/react-router';
-import { pending } from '../../../features/shell/pending';
+import { createFileRoute, notFound } from '@tanstack/react-router';
+import { isNotFound } from '@northline/client';
+import servicesCss from '../../../features/services/services.css?url';
+import { serviceCategoryQuery } from '../../../features/services/api';
+import { ServiceCategory, ServiceCategorySkeleton } from '../../../features/services/ServiceCategory';
+import { categoryName } from '../../../features/services/taxonomy';
+import { pageTitle } from '../../../features/shell/messages';
 
-/** Service category (S-53): design 06 `svcCategory` (visit / home / event / appointment / consult). */
-export const Route = createFileRoute('/services/$category/')({ ...pending('svcCategory') });
+/** Service category (S-53): design 06 `svcCategory` (visit / home / event / appointment / consult); server-rendered. */
+export const Route = createFileRoute('/services/$category/')({
+  loader: async ({ context, params }) => {
+    try {
+      return await context.queryClient.ensureQueryData(serviceCategoryQuery(params.category, context.locale));
+    } catch (e) {
+      if (isNotFound(e)) throw notFound();
+      throw e;
+    }
+  },
+  head: ({ match, loaderData }) => {
+    const locale = match.context.locale;
+    const name = loaderData ? categoryName(loaderData.slug, loaderData.names, locale).text : undefined;
+    return {
+      meta: [
+        { title: name ? `${name} · Northline` : pageTitle(locale, 'svcCategory') },
+        ...(name ? [{ name: 'description', content: locale === 'fr'
+          ? `${name} à Calgary : prestataires vérifiés, prix typiques, paiement en fiducie.`
+          : `${name} in Calgary: verified providers, typical prices, every job paid into escrow.` }] : []),
+      ],
+      links: [{ rel: 'stylesheet', href: servicesCss }],
+    };
+  },
+  pendingComponent: ServiceCategorySkeleton,
+  component: CategoryRoute,
+});
+
+function CategoryRoute() {
+  const { category } = Route.useParams();
+  return <ServiceCategory slug={category} />;
+}
