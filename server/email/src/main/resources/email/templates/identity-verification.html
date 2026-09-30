@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout.html :: email(#{identity-verification.preheader}, ~{::content})}">
+<body>
+<div th:fragment="content">
+  <h1 th:style="${s.h1}" th:text="#{identity-verification.heading(${businessName})}">Verify your identity</h1>
+  <p th:style="${s.p}" th:text="#{identity-verification.body(${requesterName}, ${businessName}, ${ownerName})}">Body</p>
+  <p th:style="${s.p}" th:text="#{identity-verification.how}">How</p>
+  <th:block th:replace="~{button.html :: button(#{identity-verification.cta}, ${link})}"/>
+  <p th:style="${s.small}" th:text="#{identity-verification.expires(${requesterName})}">Expires</p>
+  <p th:style="${s.small}" th:text="#{identity-verification.ignore(${businessName})}">Ignore</p>
+</div>
+</body>
+</html>
