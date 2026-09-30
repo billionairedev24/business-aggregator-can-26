@@ -287,6 +287,20 @@ kafkaTopics:
     requests: { cpu: 100m, memory: 256Mi }
     limits: { memory: 384Mi }
 
+# S-42 (docs/runbooks/search.md): before every install/upgrade, the worker image makes Elasticsearch match deploy/search
+# — synonym sets, the aliases listings_en / listings_fr and their versioned indices, new fields in place. Idempotent,
+# never deletes; a change that needs a reindex is reported (REINDEX REQUIRED) and left to the reindex Job (S-71).
+# apply = do it, plan = report only, verify = report and fail the release on anything missing or drifted.
+searchIndices:
+  enabled: true
+  command: apply
+  backoffLimit: 2                 # Elasticsearch briefly unreachable
+  activeDeadlineSeconds: 600
+  ttlSecondsAfterFinished: 604800
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 384Mi }
+
 # Registers the OAuth clients (S-122) after every install/upgrade: the auth image running OAuthClientsCommand sync
 # with the auth Deployment's environment. Idempotent; northline-auth also syncs at start unless
 # apps.auth.env.OAUTH_CLIENTS_SYNC_ON_STARTUP is "false".

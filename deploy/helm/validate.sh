@@ -132,11 +132,23 @@ done
 # S-25: the topics Job applies the catalogue on MSK / Managed Kafka and only reports on Event Hubs (Terraform owns it).
 for cloud in aws gcp azure; do
   expected=apply; [[ $cloud == azure ]] && expected=plan
-  if helm template northline "$CHART" -f "$CHART/values-prod.yaml" -f "$CHART/values-$cloud.yaml" -f "test-values/identities-$cloud.yaml" \
-      --show-only templates/kafka-topics-job.yaml | grep -q "\"ca.northline.worker.topics.TopicsCommand\", \"$expected\""; then
+  # (rendered first: `grep -q` closing the pipe early would fail helm under pipefail)
+  job=$(helm template northline "$CHART" -f "$CHART/values-prod.yaml" -f "$CHART/values-$cloud.yaml" -f "test-values/identities-$cloud.yaml" \
+      --show-only templates/kafka-topics-job.yaml)
+  if grep -q "\"ca.northline.worker.topics.TopicsCommand\", \"$expected\"" <<<"$job"; then
     echo "ok   prod × $cloud: Kafka topics Job runs $expected"
   else echo "FAIL prod × $cloud: Kafka topics Job does not run $expected"; failed=1; fi
 done
+
+# S-42: the search-indices Job runs the command of the worker image before every release, named by what it runs.
+job=$(helm template northline "$CHART" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml \
+    --show-only templates/search-indices-job.yaml)
+if grep -q '"ca.northline.worker.search.SearchIndicesCommand", "apply"' <<<"$job"; then
+  echo "ok   prod × aws: search-indices Job runs apply"
+else echo "FAIL prod × aws: search-indices Job does not run apply"; failed=1; fi
+if helm template northline "$CHART" -f "$CHART/values-local-kind.yaml" --show-only templates/search-indices-job.yaml >/dev/null 2>&1; then
+  echo "FAIL local-kind renders the search-indices Job without Elasticsearch"; failed=1
+else echo "ok   local-kind: no search-indices Job"; fi
 
 rm -f /tmp/helm-lint.$$ /tmp/kubeconform.$$
 exit $failed
