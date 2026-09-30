@@ -27,6 +27,7 @@ gcp-storage = "2.74.0"
 azure-storage-blob = "12.35.1"
 wiremock = "3.13.2"
 greenmail = "2.1.14"
+otel-proto = "1.10.0-alpha"
 
 [libraries]
 springdoc-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
@@ -48,6 +49,7 @@ azure-storage-blob = { module = "com.azure:azure-storage-blob", version.ref = "a
 aws-sesv2 = { module = "software.amazon.awssdk:sesv2", version.ref = "aws-sdk" }
 aws-sms-voice = { module = "software.amazon.awssdk:pinpointsmsvoicev2", version.ref = "aws-sdk" }
 greenmail-junit5 = { module = "com.icegreen:greenmail-junit5", version.ref = "greenmail" }
+otel-proto = { module = "io.opentelemetry.proto:opentelemetry-proto", version.ref = "otel-proto" } # S-111 tests: decode OTLP exports
 wiremock = { module = "org.wiremock:wiremock-standalone", version.ref = "wiremock" }
 gcp-kms = { module = "com.google.cloud:google-cloud-kms", version.ref = "gcp-kms" }
 azure-keyvault-keys = { module = "com.azure:azure-security-keyvault-keys", version.ref = "azure-keyvault-keys" }
