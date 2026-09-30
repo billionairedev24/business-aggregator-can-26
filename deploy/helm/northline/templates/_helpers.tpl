@@ -145,6 +145,10 @@ their own variables. (dict "root" $ "name" "<app>" "app" $appValues)
 {{- /* S-45: server-side rendering fetches public data through the consumer-bff, in-cluster. */ -}}
 {{- $_ := set $env "NL_BFF_URL" (printf "http://%s:%d" (include "northline.appName" "consumer-bff") (int $cbff.port)) -}}
 {{- end -}}
+{{- if eq .name "consumer" -}}
+{{- /* S-45: sign-out (and S-62's sign-in pages) call northline-auth from the browser. */ -}}
+{{- $_ := set $env "NL_AUTH_ORIGIN" $v.urls.auth -}}
+{{- end -}}
 {{- $env = merge (deepCopy (default (dict) .app.env)) $env -}}
 {{- end -}}
 {{- toYaml $env -}}
