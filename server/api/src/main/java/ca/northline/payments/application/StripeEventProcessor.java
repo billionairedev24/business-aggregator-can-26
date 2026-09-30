@@ -33,6 +33,7 @@ class StripeEventProcessor {
     private final RefundCaseService cases;
     private final ConnectedAccountService accounts;
     private final StripeChargeSync charges;
+    private final BankAccountService bankAccounts;
     private final TransactionTemplate transactions;
     private final Clock clock;
 
@@ -43,6 +44,7 @@ class StripeEventProcessor {
             RefundCaseService cases,
             ConnectedAccountService accounts,
             StripeChargeSync charges,
+            BankAccountService bankAccounts,
             PlatformTransactionManager transactionManager,
             Clock clock) {
         this.store = store;
@@ -51,6 +53,7 @@ class StripeEventProcessor {
         this.cases = cases;
         this.accounts = accounts;
         this.charges = charges;
+        this.bankAccounts = bankAccounts;
         this.clock = clock;
         // each event in its own transaction, also when called from the listener's
         this.transactions = new TransactionTemplate(transactionManager);
@@ -119,6 +122,8 @@ class StripeEventProcessor {
             case "charge.refunded" -> charges.chargeRefunded(o);
             case "refund.created", "refund.updated", "refund.failed" -> charges.refund(o);
             case "transfer.reversed", "transfer.updated" -> charges.transferReversed(o);
+            case "financial_connections.account.disconnected", "financial_connections.account.deactivated" ->
+                bankAccounts.connectionEnded(event);
             default -> false;
         };
     }

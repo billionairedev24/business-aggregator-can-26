@@ -898,6 +898,49 @@ Record anything the spec did not decide. Format: date · decision · why · spec
   ignored by S-12) report no reversal; no Stripe Tax webhooks (there is nothing to drive from them); nothing has run
   against a real Stripe account.
 
+## 2026-09-30 — S-24 Bank linking via Stripe Financial Connections (payments; merchants onboarding check; Studio Payouts)
+
+- **Port:** `payments.application.BankLinking` (session · link a Financial Connections pick · typed details), split out
+  of `PayoutGateway` (which keeps payouts and `makeDefault`). Selected like the other Stripe adapters: stripe-java
+  (`StripeBankLinking`) when `STRIPE_SECRET_KEY` is set, `FakeBankLinking` otherwise — so `local` runs with no
+  credentials, and staging/prod (which require the key) always use Stripe. No new variable. **Never run against a real
+  Stripe account:** written from Stripe's API reference and tested with stripe-mock (`StripeBankLinkingStripeMockTest`).
+- **Flow (Connect external account):** the api opens a Financial Connections session whose account holder is the
+  merchant's connected account (`permissions=[payment_method]`) and returns its client secret + the publishable key;
+  the Studio loads Stripe.js (only in `stripe` mode, only then) and calls `collectBankAccountToken`; it sends the
+  bank-account token **and** the Financial Connections account id; the api checks that account is held by the same
+  connected account and `active` (else 422 `linkedAccount` "We couldn't use that bank link. Connect your bank again."
+  — also for a token Stripe refuses), attaches the token as an external account, and keeps a draft. Confirm (step-up,
+  Idempotency-Key, 24 h hold) and the takeover (`default_for_currency`) are unchanged.
+- **What is kept:** for a linked account only the institution's name and last 4 (plus `ba_…` and, new,
+  `financial_connections_account` = `fca_…`); `institution_number` / `transit_number` stay null (before, they were
+  parsed from the routing number). Typed details keep them (they are what the owner typed; never the account number).
+- **Audit trail** (`developer.api.AuditTrail`, in the same transaction; payments now depends on `developer.api`):
+  `payout_account.linked` (owner, `after` = method, institution, last 4, state), `payout_account.change_confirmed`
+  (`before` = the active account, `after` + `stepUp: true`, `effectiveAt` — written only after the step-up proof is
+  verified), `payout_account.change_effective` (actor `system`), `payout_account.bank_connection_ended` (actor
+  `stripe`). Never an account number. `Prepare` / `confirm` carry the caller's team role for the log.
+- **Disconnected:** `financial_connections.account.disconnected` and `…deactivated` (S-12 pipeline: signature, dedupe,
+  async) set `payout_accounts.disconnected_at` once per account and write the audit entry; unknown `fca_…` → `ignored`.
+  Payouts keep going to the bank account (it stays the connected account's external account — the Financial
+  Connections link only gives access to account data); the overview returns `disconnectedAt` and the Studio shows
+  "Bank connection ended {date}. Payouts still go to this account; reconnect to keep it verified." + Reconnect (opens
+  the bank panel). The copy is ours (the design has no such state); fr-CA ours too.
+- **Local fake simulates the flow without Stripe.js:** session mode `fake` → the Studio shows a "Test bank connection"
+  picker (RBC ··8820 — the design's example — TD ··3391, BMO, Scotiabank, CIBC, ATB, Desjardins) and sends
+  `btok_local_<institution>_<last4>` + `fca_local_…`; the fake refuses anything else (so the 422 path is testable).
+- **Manual entry stays** (the design's "Enter details manually" chip) as the fallback, unchanged.
+- **Onboarding:** merchants' `VerificationGateways.BankLinking` outside `local`/`test` is no longer the unconfigured
+  adapter: `PaymentsBankLinking` reads new `payments.api.PayoutBankAccounts.current` — verified with "RBC ··8820" when a
+  bank is linked, otherwise `submitted` (`awaiting_bank_link`); `OnboardingBankListener` verifies it when
+  `payout_account.changed` arrives. The onboarding screen itself does not open Financial Connections (the owner links
+  the bank in Payouts, or Stripe's Express onboarding collects it).
+- **Schema V065:** `payout_accounts.financial_connections_account` (+ partial index), `payout_accounts.disconnected_at`.
+- **Not done:** Stripe's Canadian coverage of Financial Connections must be confirmed with Stripe (manual entry covers
+  the rest); `account.external_account.deleted` (a bank removed in Stripe) is not handled; a Financial Connections
+  refresh / ownership check against the business's legal name is not requested; nothing has run against a real Stripe
+  account or real Stripe.js.
+
 ## 2026-09-30 — S-20 Security review of the JSON sign-in flow and BFF handoff
 
 Full review with every check, its result and the threat model: `docs/security/s-20-auth-review.md`. Findings fixed or

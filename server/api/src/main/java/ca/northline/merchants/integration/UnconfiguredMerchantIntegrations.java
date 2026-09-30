@@ -1,7 +1,6 @@
 package ca.northline.merchants.integration;
 
 import ca.northline.merchants.application.DocumentStorage;
-import ca.northline.merchants.application.VerificationGateways.BankLinking;
 import ca.northline.merchants.application.VerificationGateways.DomainVerifier;
 import ca.northline.merchants.application.VerificationGateways.IdentityVerification;
 import ca.northline.merchants.application.VerificationGateways.Outcome;
@@ -13,7 +12,7 @@ import org.springframework.context.annotation.Profile;
 
 /**
  * Placeholders outside {@code local}/{@code test} until the production adapters exist (Stripe Identity S-22, registry
- * lookups S-23, Financial Connections S-24, custom domains S-31; object storage S-10 when {@code STORAGE_PROVIDER=local}): the application starts in the
+ * lookups S-23, custom domains S-31 — bank linking is {@link PaymentsBankLinking} since S-24; object storage S-10 when {@code STORAGE_PROVIDER=local}): the application starts in the
  * {@code dev}/{@code staging}/{@code prod} profiles, and using the feature fails loudly — the same convention as the
  * other modules' unconfigured adapters.
  */
@@ -40,13 +39,6 @@ class UnconfiguredMerchantIntegrations {
             public Outcome licence(String registry, String number) {
                 throw unconfigured("licence registry lookups (S-23)");
             }
-        };
-    }
-
-    @Bean
-    BankLinking unconfiguredBankLinking() {
-        return _ -> {
-            throw unconfigured("bank linking (Stripe Financial Connections, S-24)");
         };
     }
 

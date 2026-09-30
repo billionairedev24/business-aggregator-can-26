@@ -18,10 +18,12 @@ record PayoutAccountRow(
         String last4,
         String holderName,
         String externalRef,
+        @Nullable String financialConnectionsAccount,
         String state,
         Instant createdAt,
         String createdBy,
         @Nullable Instant confirmedAt,
         @Nullable Instant effectiveAt,
         @Nullable Instant replacedAt,
+        @Nullable Instant disconnectedAt,
         @Version @Nullable Integer version) {}
