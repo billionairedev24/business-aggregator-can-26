@@ -140,6 +140,12 @@ the dev server. Location: the header asks for the browser's position once per vi
 overrides it); `localStorage['nl.location']` holds an address chosen on the Location screen. Language: the FR/EN
 toggle writes the `nl.locale` cookie, so the server renders the next page in French.
 
+Shop (S-49…): the dev seed `db/seed-dev/V113__consumer_shop.sql` adds design 06's Calgary shops (Glenmore Bakery,
+Bridgeland Butcher, Sunnyside Greens, Prairie Pantry, …) with approved, live products — run `seedCategories` too so
+every department has its name. The pages are rendered for `?market=` (default Calgary; Edmonton and Airdrie have no
+seeded shops, so their pages show the empty state). Pooled runs are created on demand from
+`northline.orders.delivery.runs` (application.yml): tonight 6–9 pm, tomorrow 8–11 am.
+
 ## 6. Optional stand-ins
 
 Start any of them with `docker compose --profile <name> up -d`, or list them in `COMPOSE_PROFILES` in `.env` and run
