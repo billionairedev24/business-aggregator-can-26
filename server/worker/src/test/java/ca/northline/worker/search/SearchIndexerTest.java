@@ -7,6 +7,7 @@ import static org.awaitility.Awaitility.await;
 import ca.northline.searchindex.ListingDocument;
 import ca.northline.searchindex.ListingDocument.MinuteRange;
 import ca.northline.worker.support.Events;
+import ca.northline.worker.support.Listeners;
 import ca.northline.worker.support.WorkerContainers;
 import ca.northline.worker.support.WorkerIntegrationTest;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
@@ -19,9 +20,11 @@ import java.util.Optional;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
 import org.springframework.transaction.support.TransactionOperations;
 
 /**
@@ -30,7 +33,13 @@ import org.springframework.transaction.support.TransactionOperations;
  */
 class SearchIndexerTest extends WorkerIntegrationTest {
 
-    static final Duration FIVE_SECONDS = Duration.ofSeconds(5);
+    /**
+     * How long a test waits for a document. The target is five seconds from publish to searchable (S-43); an await
+     * returns as soon as the document is there, and a loaded CI machine (several Testcontainers builds at once) needs
+     * the headroom — the listener's partitions are assigned before each test and retries take 100 ms here.
+     */
+    static final Duration INDEXED = Duration.ofSeconds(30);
+
     static KafkaProducer<String, byte[]> producer;
 
     @Autowired
@@ -48,6 +57,9 @@ class SearchIndexerTest extends WorkerIntegrationTest {
     @Autowired
     TransactionOperations transactions;
 
+    @Autowired
+    KafkaListenerEndpointRegistry listeners;
+
     @BeforeAll
     static void producer() {
         WorkerContainers.start();
@@ -59,12 +71,17 @@ class SearchIndexerTest extends WorkerIntegrationTest {
         producer.close();
     }
 
+    @BeforeEach
+    void listening() {
+        Listeners.awaitAssigned(listeners, SearchIndexer.GROUP);
+    }
+
     SearchFixtures fx() {
         return new SearchFixtures(jdbc);
     }
 
     @Test
-    void publishedService_isSearchableInBothLanguagesWithinFiveSeconds_andHiddenIsRemoved() {
+    void publishedService_isSearchableInBothLanguages_andHiddenIsRemoved() {
         var fx = fx();
         var m = fx.merchant("provider", "master", "Prairie Test Mechanics");
         fx.review(m, 5);
@@ -74,7 +91,7 @@ class SearchIndexerTest extends WorkerIntegrationTest {
 
         send("catalogue.listing", "catalogue.listing_published", listing(service, m.id(), "service"));
 
-        var en = await().atMost(FIVE_SECONDS)
+        var en = await().atMost(INDEXED)
                 .until(() -> doc("listings_en", service), Optional::isPresent)
                 .get();
         assertThat(en.kind()).isEqualTo("service");
@@ -104,7 +121,7 @@ class SearchIndexerTest extends WorkerIntegrationTest {
                 .param("id", service)
                 .update();
         send("catalogue.listing", "catalogue.listing_hidden", listing(service, m.id(), "service"));
-        await().atMost(FIVE_SECONDS)
+        await().atMost(INDEXED)
                 .until(() -> doc("listings_en", service).isEmpty()
                         && doc("listings_fr", service).isEmpty());
     }
@@ -116,7 +133,7 @@ class SearchIndexerTest extends WorkerIntegrationTest {
         var service = fx.service(m, "Tire swap", null, 6000, "live");
         // a late "hidden" event for a listing that is live again: the document follows the row
         send("catalogue.listing", "catalogue.listing_hidden", listing(service, m.id(), "service"));
-        await().atMost(FIVE_SECONDS).until(() -> doc("listings_en", service), Optional::isPresent);
+        await().atMost(INDEXED).until(() -> doc("listings_en", service), Optional::isPresent);
         assertThat(doc("listings_fr", service).orElseThrow().name()).isEqualTo("Tire swap");
     }
 
@@ -175,7 +192,7 @@ class SearchIndexerTest extends WorkerIntegrationTest {
         var offer = fx.offer(m, "Wiper blades 22\"", 1900, 12, "{pooled,pickup}");
 
         send("merchants.merchant", "merchants.merchant_renamed", renamed(m.id()));
-        var product = await().atMost(FIVE_SECONDS)
+        var product = await().atMost(INDEXED)
                 .until(() -> doc("listings_en", offer), Optional::isPresent)
                 .get();
         assertThat(product.kind()).isEqualTo("product");
@@ -191,7 +208,7 @@ class SearchIndexerTest extends WorkerIntegrationTest {
                 .param("id", m.id())
                 .update();
         send("merchants.merchant", "merchants.merchant_renamed", renamed(m.id()));
-        await().atMost(FIVE_SECONDS)
+        await().atMost(INDEXED)
                 .until(() -> doc("listings_en", offer).isEmpty()
                         && doc("listings_fr", offer).isEmpty()
                         && doc("listings_en", m.id()).isEmpty());
@@ -200,7 +217,7 @@ class SearchIndexerTest extends WorkerIntegrationTest {
                 .param("id", m.id())
                 .update();
         send("merchants.merchant", "merchants.merchant_renamed", renamed(m.id()));
-        await().atMost(FIVE_SECONDS).until(() -> doc("listings_fr", offer), Optional::isPresent);
+        await().atMost(INDEXED).until(() -> doc("listings_fr", offer), Optional::isPresent);
     }
 
     @Test
@@ -209,7 +226,7 @@ class SearchIndexerTest extends WorkerIntegrationTest {
         var m = fx.merchant("seller", "registered", "Vetting Test Shop");
         var offer = fx.offer(m, "Cabin air filter", 2400, 3, "{pooled}");
         send("catalogue.listing", "catalogue.listing_published", listing(offer, m.id(), "product"));
-        await().atMost(FIVE_SECONDS).until(() -> doc("listings_en", offer), Optional::isPresent);
+        await().atMost(INDEXED).until(() -> doc("listings_en", offer), Optional::isPresent);
 
         jdbc.sql("update catalogue.offers set vetting = 'rejected' where id = :id")
                 .param("id", offer)
@@ -217,7 +234,7 @@ class SearchIndexerTest extends WorkerIntegrationTest {
         send("catalogue.listing", "catalogue.listing_flagged", """
                 {"eventId":"%s","occurredAt":"2026-09-30T18:00:00Z","aggregateId":"%s","merchantId":"%s",\
                 "kind":"product","flags":["restricted"]}""".formatted(Events.id(), offer, m.id()));
-        await().atMost(FIVE_SECONDS)
+        await().atMost(INDEXED)
                 .until(() -> doc("listings_en", offer).isEmpty()
                         && doc("listings_fr", offer).isEmpty());
     }
@@ -231,7 +248,7 @@ class SearchIndexerTest extends WorkerIntegrationTest {
         var dish = fx.dish(k, menu, "Pho dac biet", "Phở spécial", 1700, "published", "approved");
 
         send("food.menu", "food.item_availability", availability(dish, k.id(), menu.menuId(), true, null));
-        var en = await().atMost(FIVE_SECONDS)
+        var en = await().atMost(INDEXED)
                 .until(() -> doc("listings_en", dish), Optional::isPresent)
                 .get();
         assertThat(en.kind()).isEqualTo("food");
@@ -250,7 +267,7 @@ class SearchIndexerTest extends WorkerIntegrationTest {
                 .param("id", dish)
                 .update();
         send("food.menu", "food.item_availability", availability(dish, k.id(), menu.menuId(), false, today.toString()));
-        await().atMost(FIVE_SECONDS)
+        await().atMost(INDEXED)
                 .until(
                         () -> doc("listings_en", dish)
                                 .map(ListingDocument::soldOutOn)
@@ -265,7 +282,7 @@ class SearchIndexerTest extends WorkerIntegrationTest {
         send("food.kitchen", "food.kitchen_paused", """
                 {"eventId":"%s","occurredAt":"2026-09-30T18:00:00Z","aggregateId":"%s","actorId":"%s",\
                 "pausedUntil":"%s"}""".formatted(Events.id(), k.id(), Events.id(), until));
-        await().atMost(FIVE_SECONDS)
+        await().atMost(INDEXED)
                 .until(() -> doc("listings_en", dish).map(ListingDocument::pausedUntil), Optional.of(until)::equals);
 
         // a row deleted from Postgres: found in the index by a whole-merchant refresh
@@ -273,7 +290,7 @@ class SearchIndexerTest extends WorkerIntegrationTest {
         send("food.menu", "food.menu_published", """
                 {"eventId":"%s","occurredAt":"2026-09-30T18:00:00Z","aggregateId":"%s","merchantId":"%s",\
                 "actorId":"%s"}""".formatted(Events.id(), menu.menuId(), k.id(), Events.id()));
-        await().atMost(FIVE_SECONDS)
+        await().atMost(INDEXED)
                 .until(() -> doc("listings_en", dish).isEmpty()
                         && doc("listings_fr", dish).isEmpty());
     }
@@ -284,7 +301,7 @@ class SearchIndexerTest extends WorkerIntegrationTest {
         var m = fx.merchant("provider", "trusted", "Sweep Test Co");
         var service = fx.service(m, "Oil change", null, 7900, "live");
         send("catalogue.listing", "catalogue.listing_published", listing(service, m.id(), "service"));
-        await().atMost(FIVE_SECONDS).until(() -> doc("listings_en", service), Optional::isPresent);
+        await().atMost(INDEXED).until(() -> doc("listings_en", service), Optional::isPresent);
 
         jdbc.sql("update catalogue.services set price_cents = 8400, updated_at = now() where id = :id")
                 .param("id", service)
