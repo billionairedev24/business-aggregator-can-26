@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout.html :: email(#{custom-domain.preheader}, ~{::content})}">
+<body>
+<div th:fragment="content">
+  <h1 th:style="${s.h1}" th:text="#{__${'custom-domain.heading.' + change}__}">Heading</h1>
+  <p th:style="${s.p}" th:text="#{__${'custom-domain.body.' + change}__(${domain}, ${businessName}, ${deadline})}">Body</p>
+  <p th:style="${s.p}" th:text="#{__${'custom-domain.action.' + change}__(${domain})}">What to do</p>
+  <th:block th:replace="~{button.html :: button(#{custom-domain.cta}, ${link})}"/>
+</div>
+</body>
+</html>

@@ -1,29 +1,21 @@
 package ca.northline.merchants.integration;
 
 import ca.northline.merchants.application.DocumentStorage;
-import ca.northline.merchants.application.VerificationGateways.DomainVerifier;
 import ca.northline.shared.storage.UsesLocalStorage;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
 /**
- * Placeholders outside {@code local}/{@code test} until the production adapters exist (custom
- * domains S-31 — bank linking is {@link PaymentsBankLinking} since S-24, registries are {@link RegistriesConfig} since
- * S-23; object storage S-10 when {@code STORAGE_PROVIDER=local}): the application starts in the
+ * Placeholders outside {@code local}/{@code test} until the production adapters exist (bank linking is
+ * {@link PaymentsBankLinking} since S-24, registries are {@link RegistriesConfig} since S-23, custom domains
+ * {@link DomainsConfig} since S-31; object storage S-10 when {@code STORAGE_PROVIDER=local}): the application starts in the
  * {@code dev}/{@code staging}/{@code prod} profiles, and using the feature fails loudly — the same convention as the
  * other modules' unconfigured adapters.
  */
 @Configuration(proxyBeanMethods = false)
 @Profile("!local & !test")
 class UnconfiguredMerchantIntegrations {
-
-    @Bean
-    DomainVerifier unconfiguredDomainVerifier() {
-        return _ -> {
-            throw unconfigured("custom domain verification (S-31)");
-        };
-    }
 
     /** Only while {@code STORAGE_PROVIDER=local} (dev); s3 | gcs | azure use {@link ObjectStoreDocumentStorage}. */
     @Bean

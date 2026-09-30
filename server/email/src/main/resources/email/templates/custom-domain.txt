@@ -1,0 +1,9 @@
+[(#{__${'custom-domain.heading.' + change}__})]
+
+[(#{__${'custom-domain.body.' + change}__(${domain}, ${businessName}, ${deadline})})]
+
+[(#{__${'custom-domain.action.' + change}__(${domain})})]
+
+[(#{custom-domain.cta})]: [(${link})]
+
+[# th:insert="~{footer.txt}" /]

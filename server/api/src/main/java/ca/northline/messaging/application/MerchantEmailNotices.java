@@ -3,6 +3,7 @@ package ca.northline.messaging.application;
 import ca.northline.email.EmailAddress;
 import ca.northline.email.EmailContent;
 import ca.northline.email.EmailContent.BankAccountChange;
+import ca.northline.email.EmailContent.CustomDomainNotice;
 import ca.northline.email.EmailContent.DisputeUpdate;
 import ca.northline.email.EmailContent.PayoutSent;
 import ca.northline.email.EmailContent.RefundCaseUpdate;
@@ -10,6 +11,7 @@ import ca.northline.email.EmailDeliveryFailed;
 import ca.northline.email.Mailer;
 import ca.northline.identity.api.NotificationContacts;
 import ca.northline.merchants.api.BusinessNames;
+import ca.northline.merchants.api.CustomDomainChanged;
 import ca.northline.merchants.api.TeamRoster;
 import ca.northline.messaging.application.NotificationPreferences.NotificationPrefsStore;
 import ca.northline.messaging.domain.NotificationMatrix;
@@ -30,7 +32,7 @@ import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
 /**
- * S-13: emails the business's team about money events, after the business transaction committed (Modulith
+ * S-13: emails the business's team about money events (and, S-31, its owners about the page's own domain), after the business transaction committed (Modulith
  * {@code @ApplicationModuleListener}: async, own transaction, publication kept until it completes). Each (event,
  * member) is emailed at most once ({@link Mailer} de-duplicates on {@code <eventId>:<userId>}), in the member's
  * language, and only if their Settings › Notifications email cell for that row is on — except the bank-account notice,
@@ -143,6 +145,26 @@ class MerchantEmailNotices {
                 "dispute",
                 business -> new RefundCaseUpdate(
                         business, event.caseNumber(), RefundCaseUpdate.Change.PAID, event.amountCents(), null, cases));
+    }
+
+    /**
+     * S-31: the page's own domain went live, stopped pointing at Northline (grace period), was disconnected, failed its
+     * certificate, expired or was claimed by another business. A service notice to the owners, always sent.
+     */
+    @ApplicationModuleListener
+    void on(CustomDomainChanged event) {
+        var notice = event.notice();
+        if (notice == null) {
+            return;
+        }
+        var change = CustomDomainNotice.Change.valueOf(notice.toUpperCase(Locale.ROOT));
+        var page = links.studio(event.merchantId(), "page");
+        notify(
+                event.eventId(),
+                event.merchantId(),
+                OWNERS,
+                null,
+                business -> new CustomDomainNotice(business, event.domain(), change, event.graceEndsAt(), page));
     }
 
     /**

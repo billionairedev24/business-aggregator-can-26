@@ -55,9 +55,9 @@ public class Storefront {
     private @Nullable String tagline;
     private CtaLabel ctaLabel;
     private @Nullable String announcement;
-    private @Nullable CustomDomain customDomain;
-    private CustomDomain.@Nullable Status customDomainStatus;
-    private @Nullable Instant customDomainVerifiedAt;
+    /** The custom domain and its verification / certificate lifecycle (S-31), if the owner entered one. */
+    private @Nullable DomainClaim domainClaim;
+
     private @Nullable Instant publishedAt;
     private List<StorefrontSection> sections;
     private final Instant createdAt;
@@ -74,8 +74,6 @@ public class Storefront {
                 null,
                 null,
                 CtaLabel.defaultFor(type),
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -137,24 +135,43 @@ public class Storefront {
         updatedAt = at;
     }
 
-    /** Sets or clears the custom domain; a new domain waits for CNAME verification. */
-    public void connectDomain(@Nullable CustomDomain domain, Instant at) {
-        if (domain != null && domain.equals(customDomain)) {
-            return;
-        }
-        customDomain = domain;
-        customDomainStatus = domain == null ? null : CustomDomain.Status.PENDING;
-        customDomainVerifiedAt = null;
-        updatedAt = at;
+    public @Nullable CustomDomain getCustomDomain() {
+        return domainClaim == null ? null : domainClaim.domain();
     }
 
-    public void domainChecked(CustomDomain.Status status, Instant at) {
-        if (customDomain == null) {
-            throw new Conflict("no_custom_domain", "Add a custom domain first.");
+    public CustomDomain.@Nullable Status getCustomDomainStatus() {
+        return domainClaim == null ? null : domainClaim.status();
+    }
+
+    public @Nullable Instant getCustomDomainVerifiedAt() {
+        return domainClaim == null ? null : domainClaim.verifiedAt();
+    }
+
+    /**
+     * Sets or clears the custom domain. A new domain starts a new claim (pending, with {@code token} for its TXT record);
+     * entering the same domain again changes nothing.
+     *
+     * @return whether the domain changed
+     */
+    public boolean connectDomain(@Nullable CustomDomain domain, String token, Instant at) {
+        if (domain == null ? domainClaim == null : domain.equals(getCustomDomain())) {
+            return false;
         }
-        customDomainStatus = status;
-        customDomainVerifiedAt = status == CustomDomain.Status.VERIFIED ? at : null;
+        domainClaim = domain == null ? null : DomainClaim.start(domain, token, at);
         updatedAt = at;
+        return true;
+    }
+
+    /** The next state of the same claim (a DNS check or an edge report). */
+    public void advanceDomain(DomainClaim next) {
+        var current = domainClaim;
+        if (current == null
+                || !current.domain().equals(next.domain())
+                || !current.token().equals(next.token())) {
+            throw new IllegalStateException(
+                    "Not this storefront's claim: " + next.domain().value());
+        }
+        domainClaim = next;
     }
 
     /** One section in a reorder request. {@code settings} null keeps the stored settings. */
@@ -205,7 +222,7 @@ public class Storefront {
         if (!merchantActive) {
             throw new Conflict("not_approved", "Your page goes live once Northline approves your business.");
         }
-        if (customDomain != null && customDomainStatus != CustomDomain.Status.VERIFIED) {
+        if (domainClaim != null && !domainClaim.status().proven()) {
             throw RuleViolation.of(CustomDomain.FIELD, "unverified", CustomDomain.UNVERIFIED);
         }
         publishedAt = at;
@@ -223,7 +240,7 @@ public class Storefront {
                 slug.value(),
                 pageKind.code(),
                 enabled,
-                customDomain == null ? null : customDomain.value());
+                domainClaim == null ? null : domainClaim.domain().value());
     }
 
     private static List<StorefrontSection> defaults(MerchantType type, Instant at) {

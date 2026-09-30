@@ -55,11 +55,20 @@ class StorefrontRulesTest {
     void publishNeedsApprovalAndAVerifiedDomain() {
         var page = Storefront.create("M", MerchantType.PROVIDER, new Slug("aspen"), NOW);
         assertThatThrownBy(() -> page.publish("U", false, NOW)).isInstanceOf(Conflict.class);
-        page.connectDomain(new CustomDomain("Book.Aspen.ca"), NOW);
+        assertThat(page.connectDomain(new CustomDomain("Book.Aspen.ca"), "nl-token", NOW))
+                .isTrue();
+        assertThat(page.connectDomain(new CustomDomain("book.aspen.ca"), "nl-other", NOW))
+                .isFalse();
         assertThat(page.getCustomDomain()).isEqualTo(new CustomDomain("book.aspen.ca"));
         assertThatThrownBy(() -> page.publish("U", true, NOW)).isInstanceOf(RuleViolation.class);
-        page.domainChecked(CustomDomain.Status.VERIFIED, NOW);
+        var claim = page.getDomainClaim();
+        page.advanceDomain(claim.checked(
+                        new DnsFindings(DnsFindings.Txt.FOUND, DnsFindings.Pointing.CNAME), DomainPolicy.DEFAULT, NOW)
+                .claim());
+        assertThat(page.getCustomDomainStatus()).isEqualTo(CustomDomain.Status.VERIFIED);
         assertThat(page.publish("U", true, NOW).customDomain()).isEqualTo("book.aspen.ca");
+        assertThatThrownBy(() -> page.advanceDomain(DomainClaim.start(new CustomDomain("x.aspen.ca"), "t", NOW)))
+                .isInstanceOf(IllegalStateException.class);
     }
 
     @Test

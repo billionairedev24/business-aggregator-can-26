@@ -441,6 +441,66 @@ public sealed interface EmailContent {
         }
     }
 
+    // ── Storefront ───────────────────────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Studio › Business page (S-31): something happened to the page's own domain that the owners must know — it went
+     * live, its DNS records stopped pointing at Northline (it keeps serving until {@code deadline}), it was disconnected
+     * after that, its certificate could not be issued, verification expired, or another business claimed it.
+     * Transactional: a service notice about the owners' own configuration, always sent.
+     *
+     * @param deadline end of the grace period ({@code dns_lost}); null otherwise
+     * @param pageLink Studio › Business page / Store / Menu page
+     */
+    record CustomDomainNotice(
+            String businessName,
+            String domain,
+            CustomDomainNotice.Change change,
+            @Nullable Instant deadline,
+            URI pageLink)
+            implements EmailContent {
+
+        public enum Change {
+            LIVE,
+            DNS_LOST,
+            UNVERIFIED,
+            CERTIFICATE_FAILED,
+            EXPIRED,
+            RELEASED
+        }
+
+        @Override
+        public String template() {
+            return "custom-domain";
+        }
+
+        @Override
+        public String variant() {
+            return code(change);
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.TRANSACTIONAL;
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            var v = new LinkedHashMap<String, Object>();
+            v.put("businessName", businessName);
+            v.put("domain", domain);
+            v.put("change", code(change));
+            v.put("deadline", deadline == null ? "" : format.dateTime(deadline));
+            v.put("link", pageLink.toString());
+            return v;
+        }
+
+        @Override
+        public List<Object> subjectArgs(EmailFormat format) {
+            return List.of(domain, businessName);
+        }
+    }
+
     // ── Samples (preview endpoint, rendering tests) ──────────────────────────────────────────────────────────────
 
     /**
@@ -527,6 +587,16 @@ public sealed interface EmailContent {
                         at.minus(Duration.ofDays(3)),
                         "HTTP 503",
                         URI.create(studio + "/settings?tab=api")));
+        for (var change : CustomDomainNotice.Change.values()) {
+            all.put(
+                    "custom-domain." + code(change),
+                    new CustomDomainNotice(
+                            business,
+                            "book.prairiewrench.ca",
+                            change,
+                            change == CustomDomainNotice.Change.DNS_LOST ? at.plus(Duration.ofDays(3)) : null,
+                            URI.create(studio + "/page")));
+        }
         return java.util.Collections.unmodifiableMap(all);
     }
 
