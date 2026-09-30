@@ -1,0 +1,17 @@
+/* Consumer shell (design 06). Tokens only. */
+body { text-wrap: pretty; }
+a { color: var(--color-accent-700); }
+a:hover { color: var(--color-accent-800); }
+.nl-app { min-height: 100vh; display: flex; flex-direction: column; font-family: var(--font-body); color: var(--color-text); }
+.nl-main { flex: 1; width: 100%; max-width: 1280px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 56px) 80px; box-sizing: border-box; min-width: 0; }
+.nl-main:focus { outline: none; }
+.nl-page { padding-top: 32px; }
+.nl-skip { position: absolute; left: 12px; top: -60px; z-index: 40; padding: 10px 14px; background: var(--color-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-md); }
+.nl-skip:focus { top: 12px; }
+.nl-guest { margin: 12px clamp(16px, 4vw, 56px) 0; padding: 10px 14px; background: var(--color-surface); border-radius: var(--radius-md); font-size: 14px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.nl-guest-text { flex: 1 1 240px; }
+.nl-guest .btn { min-height: 44px; }
+.nl-footer { padding: 24px clamp(16px, 4vw, 56px); font-size: 13px; color: var(--color-neutral-700); display: flex; gap: 8px 20px; flex-wrap: wrap; align-items: center; }
+.nl-footer a, .nl-footer-lang { display: inline-flex; align-items: center; min-height: 44px; }
+.nl-footer-lang { font: inherit; color: var(--color-accent-700); text-decoration: underline; text-underline-offset: 3px; background: none; border: 0; padding: 0; cursor: pointer; }
+.nl-footer-lang:hover { color: var(--color-accent-800); }

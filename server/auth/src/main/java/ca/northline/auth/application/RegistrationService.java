@@ -19,12 +19,10 @@ import dev.samstevens.totp.qr.QrData;
 import dev.samstevens.totp.qr.ZxingPngQrGenerator;
 import dev.samstevens.totp.secret.DefaultSecretGenerator;
 import dev.samstevens.totp.util.Utils;
-import java.security.SecureRandom;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
@@ -32,20 +30,22 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Create account (design 02, "Create account" tab): form → 6-digit phone code → second factor (passkey or
- * authenticator app; mandatory, SMS never primary) → account created. The {@code identity.users} row is only written
- * once the second factor is confirmed, together with the {@link UserRegistered} event (S-28).
+ * authenticator app; SMS never primary) → account created. The {@code identity.users} row is only written once the
+ * account is complete, together with the {@link UserRegistered} event (S-28).
+ *
+ * <p>S-62 (design 06, consumer): a consumer may finish without a second factor ("SMS code · Backup only" →
+ * {@link #completeWithoutSecondFactor}) — the account's sign-ins then carry no {@code acr=mfa}, which business and staff
+ * endpoints require (validation-rules.md: the second factor is mandatory for business accounts, not for consumers).
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RegistrationService {
 
-    private static final SecureRandom RANDOM = new SecureRandom();
     private static final DefaultSecretGenerator SECRETS = new DefaultSecretGenerator(32);
 
     private final UserAccounts accounts;
     private final SecondFactors factors;
-    private final SmsSender sms;
+    private final PhoneCodes codes;
     private final FlowStore flow;
     private final PasskeyService passkeys;
     private final SignInLog signIns;
@@ -100,7 +100,7 @@ public class RegistrationService {
                 phone,
                 email,
                 props.termsVersion(),
-                sendCode(phone, Channel.SMS, true),
+                codes.send(phone, Channel.SMS, true),
                 false,
                 null);
         flow.remove(FlowStore.PASSKEY_CREATION);
@@ -118,7 +118,7 @@ public class RegistrationService {
             throw new FlowRejected(Reason.THROTTLED, "Wait %d s before sending another code.".formatted(wait), wait);
         }
         limits.consume(LimitedAction.OTP_SEND, phoneSubject(registration.phone()));
-        var next = registration.withOtp(sendCode(registration.phone(), channel, false));
+        var next = registration.withOtp(codes.send(registration.phone(), channel, false));
         flow.put(FlowStore.REGISTRATION, next);
         return next;
     }
@@ -207,6 +207,12 @@ public class RegistrationService {
         return created;
     }
 
+    /** S-62, step 3c (consumer): no second factor — the verified phone is the account's only factor for now. */
+    @Transactional
+    public Created completeWithoutSecondFactor(Client client) {
+        return create(verifiedRegistration(), Factor.PHONE_OTP, client);
+    }
+
     private Created create(PendingRegistration registration, Factor factor, Client client) {
         // Re-check: someone may have registered the same email/phone while this flow was open.
         if (accounts.emailInUse(registration.email())
@@ -222,13 +228,13 @@ public class RegistrationService {
                 registration.phone().e164(),
                 registration.email(),
                 requestLocale(),
-                factor.code(),
+                factor == Factor.PHONE_OTP ? "sms" : factor.code(), // identity.users.mfa_primary: passkey | totp | sms
                 registration.termsVersion(),
                 now));
         // S-28: in this transaction — the outbox row commits with the account, or neither does.
         events.publishEvent(new UserRegistered(UlidCreator.getMonotonicUlid().toString(), now, registration.userId()));
         flow.remove(FlowStore.REGISTRATION);
-        var sessionId = signIns.succeeded(registration.userId(), "registration", true, client);
+        var sessionId = signIns.succeeded(registration.userId(), "registration", factor.isSecondFactor(), client);
         federation.complete(registration.userId(), true); // S-18: created after "Continue with Google/Apple"
         var account = accounts.findById(registration.userId()).orElseThrow();
         return new Created(account, factor, sessionId);
@@ -249,29 +255,6 @@ public class RegistrationService {
 
     private static AttemptLimits.Subject phoneSubject(PhoneNumber phone) {
         return AttemptLimits.Subject.identifier(phone.e164(), null);
-    }
-
-    /**
-     * Sends a fresh code in the language of the request (the Studio sends its UI language). A number the provider
-     * refuses on the form step is a field error on the mobile ("Enter a valid Canadian mobile…"); any other failure is
-     * {@code 503 code_not_sent} — the Studio then offers the other channel. Nothing is stored for a code that wasn't
-     * sent (the open registration keeps its previous code).
-     */
-    private OtpChallenge sendCode(PhoneNumber phone, Channel channel, boolean formStep) {
-        var code = "%06d".formatted(RANDOM.nextInt(1_000_000));
-        try {
-            sms.sendCode(phone, code, channel, LocaleContextHolder.getLocale());
-        } catch (SmsDeliveryFailed e) {
-            log.warn("{} code to {} not sent ({}): {}", channel, phone.masked(), e.getKind(), e.getMessage());
-            if (formStep && e.getKind() == SmsDeliveryFailed.Kind.UNDELIVERABLE_NUMBER) {
-                throw InvalidInput.of("phone", "format", AuthMessages.PHONE_FORMAT);
-            }
-            var message = formStep
-                    ? AuthMessages.CODE_NOT_SENT_FORM
-                    : channel == Channel.VOICE ? AuthMessages.CALL_NOT_PLACED : AuthMessages.CODE_NOT_SENT;
-            throw new FlowRejected(Reason.CODE_NOT_SENT, message);
-        }
-        return OtpChallenge.issue(code, channel, clock.instant(), props.otpTtl());
     }
 
     /** Locale for new accounts: fr-CA when the browser asked for French, else en-CA. */

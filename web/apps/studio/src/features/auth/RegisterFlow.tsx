@@ -2,13 +2,9 @@ import { useMemo, useState, type FormEvent, type InputHTMLAttributes } from 'rea
 import { useForm, useStore } from '@tanstack/react-form';
 import { Alert, Button, Checkbox, Field, OptionCard, StepBars, TextInput, useLocale } from '@northline/ui';
 import { visibleError } from '../../lib/forms';
-import { authApi, codeSchema, firstIssue, registerSchema, useAuthMutation, type AuthSession, type RegisterValues, type RegistrationStep, type TotpSetup } from './api';
-import { fieldErrors, flowError, isRestart, retryAfter } from './errors';
+import { authApi, codeSchema, firstIssue, registerSchema, useAuthMutation, type AuthSession, type RegisterValues, type RegistrationStep, type TotpSetup, fieldErrors, flowError, isRestart, retryAfter, RateLimitNotice, useRateLimit, mmss, useCountdown, createPasskey, PasskeyError, passkeysSupported } from '@northline/auth-kit';
 import { useAuthT } from './messages';
-import { RateLimitNotice, useRateLimit } from './rateLimit';
 import { SocialButtons } from './SocialButtons';
-import { mmss, useCountdown } from './useCountdown';
-import { createPasskey, PasskeyError, passkeysSupported } from './webauthn';
 
 type Step = 'form' | 'otp' | 'mfa' | 'done';
 /** Design's progress for the register tab: form and code share the first bar (aStep = ⌊nuStep / 3 × 2⌋). */

@@ -17,5 +17,7 @@ externalSecrets:
       northline/local/totp-key: bm9ydGhsaW5lLWxvY2FsLWRldi10b3RwLWtleS0zMmI=
       northline/local/studio-bff-secret: dev-studio-bff
       northline/local/studio-bff-secret-hash: "{noop}dev-studio-bff"
+      northline/local/consumer-bff-secret: dev-consumer-bff
+      northline/local/consumer-bff-secret-hash: "{noop}dev-consumer-bff"
   # Valkey has no password here; Kafka and Elasticsearch aren't running.
   optionalKeys: []

@@ -80,6 +80,11 @@ apps:
     resources:
       requests: { cpu: 250m, memory: 768Mi }
       limits: { memory: 768Mi }
+  consumer-bff:                     # S-45: consumer traffic (guests included) — scales with the consumer app
+    autoscaling: { enabled: true, minReplicas: 3, maxReplicas: 10 }
+    resources:
+      requests: { cpu: 250m, memory: 768Mi }
+      limits: { memory: 768Mi }
   worker:
     env:
       EMAIL_FROM: "Northline <no-reply@northline.ca>"   # S-27 notifications (payout.failed email)

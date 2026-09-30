@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, DataTable, Dialog, Drawer, ErrorState, Field, PageSkeleton, Tag, TextInput, useFormatters, type DataTableColumn } from '@northline/ui';
 import { useSession } from '../../lib/session';
-import { authApi } from '../auth/api';
-import { createPasskey, getPasskey, PasskeyError } from '../auth/webauthn';
+import { authApi, createPasskey, getPasskey, PasskeyError } from '@northline/auth-kit';
 import { useMerchantId, useRole } from '../shell/api';
 import { StepUpFailed, stepUpWithCode, stepUpWithPasskey } from '../finance/stepUp';
 import {

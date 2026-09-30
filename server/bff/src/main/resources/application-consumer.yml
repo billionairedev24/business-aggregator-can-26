@@ -1,0 +1,34 @@
+# consumer-bff (S-45): the same jar as the studio-bff, for the consumer web app on the consumer host (the apex
+# northline.ca and pages.northline.ca, docs/runbooks/edge.md). Add this profile last: `local,consumer` or
+# `dev,consumer` (the chart does). Differences from the Studio (docs/CONSUMER_WEB_PLAN.md § Session):
+#   - OAuth client consumer-bff (registration `northline`: redirect /login/oauth2/code/northline, as S-122 registers it),
+#     scopes openid profile orders bookings; tokens need no second factor (acr=mfa only when the person used one);
+#   - guests browse: /api/** is relayed without a token when nobody is signed in, and GET /bff/session answers 200 with
+#     a guest id (kept across sign-in, relayed as X-Northline-Guest) instead of 401;
+#   - session cookie NL_CONSUMER (__Host-NL_CONSUMER in the cloud), sessions under nl:consumer-bff, port 8081.
+# CSRF (__Host-XSRF-TOKEN, header only), the S-19 revocation check and sign-out are the Studio's.
+spring:
+  application.name: northline-consumer-bff
+  session.data.redis.namespace: nl:consumer-bff
+  security.oauth2.client.registration:
+    northline:
+      provider: northline
+      client-id: consumer-bff
+      client-secret: ${CONSUMER_BFF_SECRET:dev-consumer-bff}   # plain; northline-auth stores its hash (CONSUMER_BFF_SECRET_HASH)
+      client-authentication-method: client_secret_basic
+      authorization-grant-type: authorization_code
+      redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+      scope: openid,profile,orders,bookings
+server.port: ${SERVER_PORT:8081}
+northline.bff:
+  registration-id: northline
+  sign-in-page: /sign-in
+  guests: true
+  # Header in which the CDN / ingress puts the visitor's city (the location pill's IP guess before the browser's
+  # geolocation answers). Empty = no IP city; the app then falls back to Calgary. Only set it when the edge overwrites
+  # the header on every request (docs/runbooks/README.md § Consumer BFF).
+  client-city-header: ${CLIENT_CITY_HEADER:}
+---
+# Plain name over http (local); the cloud's is __Host-NL_CONSUMER (application-cloud.yml), which this must not override.
+spring.config.activate.on-profile: "!cloud"
+server.servlet.session.cookie.name: NL_CONSUMER

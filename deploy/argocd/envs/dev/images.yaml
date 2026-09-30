@@ -15,3 +15,4 @@ apps:
   worker: { image: { digest: "" } }
   studio: { image: { digest: "" } }
   consumer: { image: { digest: "" } }
+  consumer-bff: { image: { digest: "" } }

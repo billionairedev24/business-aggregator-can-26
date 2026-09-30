@@ -1,7 +1,13 @@
-import { defineMessages } from '@northline/ui';
+import { useCallback } from 'react';
+import { defineMessages, type Translate } from '@northline/ui';
+import { KIT_MESSAGES, useAuthKitT, type AuthKitKey } from '@northline/auth-kit';
 
-/** Signed-out page (design 02 lines 17–96). English copy is the design's; fr-CA from design/i18n-fr.js where it exists. */
-export const useAuthT = defineMessages({
+/**
+ * Signed-out page (design 02 lines 17–96). English copy is the design's; fr-CA from design/i18n-fr.js where it exists.
+ * Validation and error messages shared with the consumer site live in @northline/auth-kit (S-62); `useAuthT` answers
+ * both.
+ */
+const usePageT = defineMessages({
   en: {
     studio: 'Studio',
     signedOut: 'Signed out',
@@ -44,30 +50,15 @@ export const useAuthT = defineMessages({
     alreadyCustomerAfter: ' — your login works for a business too.',
     attention: '{count, plural, one {# thing needs attention.} other {# things need attention.}}',
     // validation (docs/spec/validation-rules.md § Registration)
-    firstNameRequired: 'First name is required.',
-    lastNameRequired: 'Last name is required.',
-    phoneRequired: 'Mobile number is required for verification.',
-    phoneFormat: 'Enter a valid Canadian mobile, e.g. +1 403 555 0148.',
-    emailRequired: 'Email is required.',
-    emailFormat: "That doesn't look like an email address.",
-    termsRequired: 'You need to accept the Terms and Privacy Policy.',
-    emailTaken: 'An account already uses this email. Sign in instead.',
-    phoneTaken: 'An account already uses this mobile number. Sign in instead.',
     // register · code
     codeLabel: 'Enter the 6-digit code sent to {phone}',
     codePh: '······',
-    resendIn: 'Resend in {time}',
     resend: 'Resend code',
     callMe: 'Call me instead',
     calling: 'Calling you now with a new code.',
     resent: 'New code sent.',
     verify: 'Verify',
     back: 'Back',
-    codeRequired: 'Enter the 6-digit code.',
-    codeFormat: 'The code is 6 digits.',
-    codeWrong: "That code doesn't match. Check it and try again.",
-    codeExpired: 'That code has expired. Send a new one.',
-    codeLocked: 'Too many tries. Send a new code.',
     // register · second factor
     mfaLabel: 'Second factor · required for business accounts',
     mfaPasskey: 'Passkey (Face ID / Touch ID / Windows Hello)',
@@ -87,7 +78,6 @@ export const useAuthT = defineMessages({
     // sign in
     signInLede: 'Business accounts require a passkey or authenticator app — you handle customer addresses and payouts.',
     identifier: 'Email or mobile',
-    identifierRequired: 'Enter your email or mobile.',
     continue: 'Continue',
     passkey: 'Passkey',
     newHere: 'New to Northline? ',
@@ -103,9 +93,6 @@ export const useAuthT = defineMessages({
     code6: '6-digit code',
     backupLabel: 'Backup code',
     backupPh: 'abcde-fghij',
-    backupRequired: 'Enter one of your backup codes.',
-    backupWrong: "That backup code didn't work, or it was already used.",
-    signInCodeWrong: "That code didn't work. Check it and try again.",
     usePasskey: 'Use passkey',
     verifyCode: 'Verify code',
     verifyBackup: 'Verify backup code',
@@ -117,23 +104,8 @@ export const useAuthT = defineMessages({
     footerRecover: 'Recover with a backup code',
     footerRest: ' · sessions expire after 12 h idle · every sign-in is logged.',
     // errors
-    passkeyUnsupported: "This browser can't use passkeys. Choose another method.",
-    passkeyCancelled: 'The passkey prompt was closed. Try again or choose another method.',
-    passkeyFailed: "That passkey couldn't be verified. Try again or use another method.",
-    tooMany: 'Too many attempts. Start again in a few minutes.',
-    rateLimited: 'Too many attempts. Try again in {time}.',
-    rateLimitedLater: 'Too many attempts. Wait a moment and try again.',
-    restart: 'That took too long. Start again.',
-    network: "We couldn't reach Northline. Check your connection and try again.",
     // S-8: the SMS / voice provider didn't take the code (503 code_not_sent)
-    codeNotSentForm: "We couldn't send a code to this number right now. Try again in a moment.",
-    codeNotSentSms: "We couldn't send the text message. Try again in a moment, or choose Call me instead.",
-    codeNotSentVoice: "We couldn't call this number. Try again in a moment, or resend the code by text.",
     // S-20: the rate-limit store is down; codes and second factors are paused (503 sign_in_unavailable)
-    signInUnavailable: 'Signing in is paused for a few minutes while we fix a problem on our side. Try again shortly.',
-    federationFailed: "Signing in with Google or Apple didn't work. Try again or use your email.",
-    federationCancelled: 'Signing in with Google or Apple was cancelled. Try again or use your email.',
-    federationUnavailable: "Signing in with Google or Apple isn't available right now. Use your email or mobile instead.",
     federationLink: 'Confirm it’s you with your passkey, authenticator app or a backup code to link your {provider} account.',
     federationRegister: 'You’re signed in with {provider}. Add your mobile number and a second factor to finish creating your account.',
     federationRelay: 'Your email is Apple’s Hide My Email address: messages from Northline reach you through it.',
@@ -178,29 +150,14 @@ export const useAuthT = defineMessages({
     alreadyCustomer: 'Déjà client Northline ? ',
     alreadyCustomerAfter: ' — votre connexion fonctionne aussi pour une entreprise.',
     attention: '{count, plural, one {# élément à corriger.} other {# éléments à corriger.}}',
-    firstNameRequired: 'Le prénom est obligatoire.',
-    lastNameRequired: 'Le nom est obligatoire.',
-    phoneRequired: 'Le numéro de mobile est obligatoire pour la vérification.',
-    phoneFormat: 'Entrez un mobile canadien valide, p. ex. +1 403 555 0148.',
-    emailRequired: 'Le courriel est obligatoire.',
-    emailFormat: 'Cette adresse courriel ne semble pas valide.',
-    termsRequired: 'Vous devez accepter les Conditions et la Politique de confidentialité.',
-    emailTaken: 'Un compte utilise déjà ce courriel. Connectez-vous plutôt.',
-    phoneTaken: 'Un compte utilise déjà ce numéro de mobile. Connectez-vous plutôt.',
     codeLabel: 'Entrez le code à 6 chiffres envoyé au {phone}',
     codePh: '······',
-    resendIn: 'Renvoyer dans {time}',
     resend: 'Renvoyer le code',
     callMe: 'M’appeler plutôt',
     calling: 'Nous vous appelons avec un nouveau code.',
     resent: 'Nouveau code envoyé.',
     verify: 'Vérifier',
     back: 'Retour',
-    codeRequired: 'Entrez le code à 6 chiffres.',
-    codeFormat: 'Le code compte 6 chiffres.',
-    codeWrong: 'Ce code ne correspond pas. Vérifiez-le et réessayez.',
-    codeExpired: 'Ce code a expiré. Demandez-en un nouveau.',
-    codeLocked: 'Trop d’essais. Demandez un nouveau code.',
     mfaLabel: 'Deuxième facteur · obligatoire pour les comptes d’entreprise',
     mfaPasskey: 'Clé d’accès (Face ID / Touch ID / Windows Hello)',
     mfaPasskeyDesc: 'Résiste à l’hameçonnage · recommandé',
@@ -217,7 +174,6 @@ export const useAuthT = defineMessages({
     continueOnboarding: 'Continuer vers l’inscription de l’entreprise',
     signInLede: 'Les comptes d’entreprise exigent une clé d’accès ou une application d’authentification — vous gérez des adresses de clients et des versements.',
     identifier: 'Courriel ou mobile',
-    identifierRequired: 'Entrez votre courriel ou votre mobile.',
     continue: 'Continuer',
     passkey: 'Clé d’accès',
     newHere: 'Nouveau sur Northline ? ',
@@ -233,9 +189,6 @@ export const useAuthT = defineMessages({
     code6: 'Code à 6 chiffres',
     backupLabel: 'Code de secours',
     backupPh: 'abcde-fghij',
-    backupRequired: 'Entrez un de vos codes de secours.',
-    backupWrong: 'Ce code de secours n’a pas fonctionné ou a déjà été utilisé.',
-    signInCodeWrong: 'Ce code n’a pas fonctionné. Vérifiez-le et réessayez.',
     usePasskey: 'Utiliser la clé d’accès',
     verifyCode: 'Vérifier le code',
     verifyBackup: 'Vérifier le code de secours',
@@ -246,26 +199,18 @@ export const useAuthT = defineMessages({
     footerTrouble: 'Problème de connexion ? ',
     footerRecover: 'Récupérer avec un code de secours',
     footerRest: ' · les sessions expirent après 12 h d’inactivité · chaque connexion est journalisée.',
-    passkeyUnsupported: 'Ce navigateur ne prend pas en charge les clés d’accès. Choisissez une autre méthode.',
-    passkeyCancelled: 'La fenêtre de la clé d’accès a été fermée. Réessayez ou choisissez une autre méthode.',
-    passkeyFailed: 'Cette clé d’accès n’a pas pu être vérifiée. Réessayez ou utilisez une autre méthode.',
-    tooMany: 'Trop de tentatives. Recommencez dans quelques minutes.',
-    rateLimited: 'Trop de tentatives. Réessayez dans {time}.',
-    rateLimitedLater: 'Trop de tentatives. Patientez un moment, puis réessayez.',
-    restart: 'Le délai est dépassé. Recommencez.',
-    network: 'Impossible de joindre Northline. Vérifiez votre connexion et réessayez.',
-    codeNotSentForm: 'Impossible d’envoyer un code à ce numéro pour le moment. Réessayez dans un instant.',
-    codeNotSentSms: 'Impossible d’envoyer le texto. Réessayez dans un instant ou choisissez « M’appeler plutôt ».',
-    codeNotSentVoice: 'Impossible d’appeler ce numéro. Réessayez dans un instant ou renvoyez le code par texto.',
-    signInUnavailable: 'La connexion est suspendue quelques minutes, le temps de régler un problème de notre côté. Réessayez sous peu.',
-    federationFailed: 'La connexion avec Google ou Apple n’a pas fonctionné. Réessayez ou utilisez votre courriel.',
-    federationCancelled: 'La connexion avec Google ou Apple a été annulée. Réessayez ou utilisez votre courriel.',
-    federationUnavailable: 'La connexion avec Google ou Apple n’est pas offerte pour le moment. Utilisez plutôt votre courriel ou votre mobile.',
     federationLink: 'Confirmez que c’est vous avec votre clé d’accès, votre application d’authentification ou un code de secours pour lier votre compte {provider}.',
     federationRegister: 'Vous êtes connecté avec {provider}. Ajoutez votre numéro de mobile et un second facteur pour terminer la création de votre compte.',
     federationRelay: 'Votre courriel est une adresse « Masquer mon adresse courriel » d’Apple : les messages de Northline vous parviennent par elle.',
   },
 });
 
-export type AuthT = ReturnType<typeof useAuthT>;
-export type AuthKey = Parameters<AuthT>[0];
+type PageKey = Parameters<ReturnType<typeof usePageT>>[0];
+export type AuthKey = PageKey | AuthKitKey;
+export type AuthT = Translate<AuthKey>;
+
+export function useAuthT(): AuthT {
+  const page = usePageT();
+  const kit = useAuthKitT();
+  return useCallback((key, values) => (key in KIT_MESSAGES.en ? kit(key as AuthKitKey, values) : page(key as PageKey, values)), [page, kit]);
+}

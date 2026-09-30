@@ -5,7 +5,7 @@ export * from './LocationPill';
 export * from './SearchBar';
 export * from './AccountMenu';
 export * from './SiteHeader';
-export * from './useGeolocation';
+export * from './SiteLink';
 export * from './i18n';
 export * from './Field';
 export * from './Choice';

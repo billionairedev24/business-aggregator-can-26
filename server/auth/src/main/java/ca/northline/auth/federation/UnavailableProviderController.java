@@ -1,6 +1,7 @@
 package ca.northline.auth.federation;
 
-import ca.northline.auth.application.AuthProperties;
+import ca.northline.auth.application.LoginPages;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -11,18 +12,20 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 /**
  * "Continue with Google/Apple" for a provider this environment has no client registration for (S-18): back to the
- * Studio's sign-in page with {@code error=federation_unavailable} instead of an error page. Configured providers never
- * get here — Spring's authorization redirect filter answers them first.
+ * sign-in page it came from (the Studio's, or the consumer site's with {@code ?app=consumer} — S-62) with
+ * {@code error=federation_unavailable} instead of an error page. Configured providers never get here — Spring's
+ * authorization redirect filter answers them first.
  */
 @Controller
 @RequiredArgsConstructor
 class UnavailableProviderController {
 
-    private final AuthProperties props;
+    private final LoginPages pages;
 
     @GetMapping(FederationConfig.AUTHORIZATION_BASE + "/{provider}")
-    RedirectView unavailable(@PathVariable String provider) {
-        var view = new RedirectView(UriComponentsBuilder.fromUriString(props.loginPage())
+    RedirectView unavailable(@PathVariable String provider, HttpServletRequest request) {
+        var page = LoginPages.fromConsumer(request) ? pages.consumer() : pages.studio();
+        var view = new RedirectView(UriComponentsBuilder.fromUriString(page)
                 .queryParam("error", "federation_unavailable")
                 .toUriString());
         view.setStatusCode(HttpStatus.FOUND);

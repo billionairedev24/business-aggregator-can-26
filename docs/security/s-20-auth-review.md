@@ -215,3 +215,15 @@ Penetration testing against a deployed environment (none exists); Google/Apple a
 WireMock providers and a software authenticator); load/DoS of the auth endpoints beyond the rate limits; the
 consumer and console apps (not built); the NetworkPolicy change in § 14 was rendered with `helm template` but not
 applied to a cluster.
+
+## Addendum 2026-09-30 — consumer site (S-45, S-62)
+
+What changed since this review and how the controls above still hold:
+
+| change | why the review's conclusions stand | test |
+|---|---|---|
+| consumer-bff (the bff with the `consumer` profile): guests reach `/api/**` without a session | relay without a token (the api decides); CSRF header-only for guests' POSTs too; `__Host-NL_CONSUMER`; the browser's `Authorization` / `X-Northline-Guest` / `X-Dev-User` dropped; same `next`, fixation, revocation code | `ConsumerBffTest`, `SessionCookieSettingsTest` |
+| sign-in with a phone code alone (`/api/auth/sign-in/code…`), registration without a second factor | "the auth session exists only after a second factor" (§ 10) no longer holds for consumers — by design (validation-rules.md: the second factor is mandatory for **business** accounts). Such sessions carry no `acr`; **business and console clients get no code for them** (`mfa-required-clients` → sent to their sign-in page) and the api still requires `acr=mfa` on merchant/staff endpoints | `ConsumerSignInApiTest.Authorization`, `TokenClaimsTest` |
+| enumeration through the code step | an unknown account gets the same answers (unsent code, same cool-down, same "didn't work" 422, same limits); **accepted risk:** the SMS provider call makes a known account's answer slower (as registration's "already in use", which the design requires anyway) | `ConsumerSignInApiTest.SignInByCode` |
+| brute force of sign-in codes | registration's rules: 6 digits, 10 min, 5 tries per code, `otp-send` 5/h and `otp-verify` 10/h per account, IP and session limits, fail closed in staging/prod | `ConsumerSignInApiTest` |
+| Google / Apple from the consumer site (`?app=consumer`) | only picks which of our two configured sign-in pages the browser returns to (a prefix on the unguessable `state`); still never a session by itself; a phone-code sign-in does not complete a pending Google/Apple link (only a second factor does) | `FederatedSignInTest.ConsumerSite`, `FederationUnavailableTest` |
