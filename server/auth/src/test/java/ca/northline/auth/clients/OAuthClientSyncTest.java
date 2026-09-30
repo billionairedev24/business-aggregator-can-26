@@ -58,7 +58,7 @@ class OAuthClientSyncTest extends AuthIntegrationTest {
         assertThat(app).isNotNull();
         assertThat(app.getClientSecret()).isNull();
         assertThat(app.getTokenSettings().getRefreshTokenTimeToLive()).hasDays(30);
-        assertThat(app.getClientSettings().<Boolean>getSetting(ClientSpec.DPOP_REQUIRED))
+        assertThat(app.getClientSettings().<Boolean>getSetting(RegisteredClients.DPOP_REQUIRED))
                 .isTrue();
     }
 

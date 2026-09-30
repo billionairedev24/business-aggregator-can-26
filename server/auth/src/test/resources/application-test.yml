@@ -16,6 +16,7 @@ northline:
   auth:
     # S-9: in memory for the suite (every MockMvc call comes from 127.0.0.1, so the IP scope is effectively off);
     # the rate-limit tests use Valkey (Testcontainers) and their own limits.
+    dpop.store: memory                   # S-29: DpopValkeyTest runs the Valkey store
     rate-limits:
       store: memory
       limits:

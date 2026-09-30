@@ -155,6 +155,29 @@ class OAuthClientCatalogTest {
                 .hasMessageContaining("without wildcards");
     }
 
+    @Test
+    void aPublicClientThatRefreshes_mustRequireDpop() {
+        var withoutDpop = mobile("ca.northline.app:/oauth2redirect");
+        var spec = new ClientSpec(
+                withoutDpop.type(),
+                false,
+                null,
+                null,
+                withoutDpop.redirectUris(),
+                List.of(),
+                withoutDpop.scopes(),
+                withoutDpop.grantTypes(),
+                true,
+                false,
+                withoutDpop.accessTokenTtl(),
+                withoutDpop.refreshTokenTtl(),
+                false);
+        assertThatThrownBy(() -> new OAuthClientCatalog(props("app", spec), ClientPolicy.LOCAL))
+                .hasMessageContaining("app: a public client that refreshes needs dpop-required: true");
+        assertThat(new OAuthClientCatalog(props("app", withoutDpop), ClientPolicy.STRICT).declares("app"))
+                .isTrue();
+    }
+
     private static MockEnvironment env(String... profiles) {
         var env = new MockEnvironment();
         env.setActiveProfiles(profiles);

@@ -55,10 +55,19 @@ final class AuthResponses {
         }
     }
 
-    /** Signed in (auth server session): who, and {@code acr=mfa} when a second factor was used. */
-    record Session(User user, @Nullable String acr) {
+    /**
+     * Signed in (auth server session): who, and {@code acr=mfa} when a second factor was used. {@code continueTo}
+     * (S-29): the authorization request of a mobile app that sent the browser to the sign-in page, to go back to
+     * instead of the Studio's BFF hand-off.
+     */
+    record Session(
+            User user, @Nullable String acr, @Nullable String continueTo) {
         static Session of(UserAccount account, Collection<Factor> factors) {
-            return new Session(User.of(account), Factor.isMfa(factors) ? UserClaimsService.MFA : null);
+            return new Session(User.of(account), Factor.isMfa(factors) ? UserClaimsService.MFA : null, null);
+        }
+
+        Session continuingTo(@Nullable String url) {
+            return new Session(user, acr, url);
         }
     }
 }

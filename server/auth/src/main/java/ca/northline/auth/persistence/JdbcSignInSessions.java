@@ -143,6 +143,13 @@ class JdbcSignInSessions implements SignInSessions {
                 .update();
     }
 
+    @Override
+    public void deleteAuthorization(String authorizationId) {
+        jdbc.sql("DELETE FROM auth.oauth2_authorization WHERE id = :id")
+                .param("id", authorizationId)
+                .update();
+    }
+
     private static List<String> strings(@Nullable Array array) throws SQLException {
         return array == null
                 ? List.of()

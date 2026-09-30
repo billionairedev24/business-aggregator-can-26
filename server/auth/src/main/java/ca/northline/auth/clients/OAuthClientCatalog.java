@@ -49,10 +49,6 @@ final class OAuthClientCatalog {
             throw new InvalidClientConfiguration(problems);
         }
         declared.stream()
-                .filter(d -> d.spec().dpopRequired())
-                .forEach(
-                        d -> log.warn("OAuth client {}: dpop-required is recorded but not enforced yet", d.clientId()));
-        declared.stream()
                 .filter(d ->
                         d.spec().secretHash() != null && d.spec().secretHash().startsWith("{noop}"))
                 .filter(_ -> policy == ClientPolicy.DEV)
