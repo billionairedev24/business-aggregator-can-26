@@ -101,7 +101,7 @@ A feature folder per story area, named after the design: `home`, `location`, `se
 
 | route | design 06 state | story | notes |
 |---|---|---|---|
-| `/` | home | S-46 | no search in the header on this page |
+| `/` | home | S-46 (**built**) | no search in the header on this page; its tiles link to `/shop/<department>` (the leaf slug of the category id, e.g. `bakery`), `/services/<category>` (e.g. `mobile-mechanic`) and `/food?cuisine=<code>` — S-49 / S-53 / S-57 take those parameters |
 | `/location?next=` | location | S-47 (**built**) | saves with `useDeliveryLocation().save()`, then goes to `next` (local path) or home |
 | `/search?q=&scope=` | search | S-48 | header / hero search lands here; `scope` all \| services \| shop \| food |
 | `/shop` | shop | S-49 | landing page, not results |
@@ -181,6 +181,13 @@ openCases?, paymentMethod?: {brand, last4}, addresses?: {count, members}, signIn
 {from, to}, dietary?: string[], province? }` (every field optional; S-58/S-59 provide it). Mutations that change a
 value invalidate `accountSummaryQuery`.
 
+### Your week (home)
+
+The home page's "Your week" (S-46) lists the signed-in person's orders, bookings and quotes of the next seven days from
+`GET /api/v1/me/upcoming` → `{ items: [{ id, title, subtitle?, state, tone: accent|neutral|accent-2, href }] }` — texts
+in the caller's language (`Accept-Language`), `href` a consumer route (`/orders/…`, `/quotes/…`). S-58 provides it;
+until then (404) the section shows its empty line. The points line under it reads `points` of the account summary.
+
 ### Language
 
 Cookie `nl.locale` = `en` | `fr` (1 year, not HttpOnly). `useLocale().setLocale()` switches in place and writes it.
@@ -196,7 +203,8 @@ Cookie `nl.locale` = `en` | `fr` (1 year, not HttpOnly). `useLocale().setLocale(
 | northline-auth JSON API (`/api/auth/register…`, `/api/auth/sign-in…`, `/api/auth/sign-out`) + S-62's `/api/auth/sign-in/code[/verify]`, `/api/auth/register/complete` | exists | S-62 (built) |
 | `GET /api/v1/geo/reverse`, `/markets`, `/autocomplete`, `/places/{id}`, `/resolve`, `POST /waitlist` | **exists** (S-47) | pill, Location screen, checkout |
 | `GET /api/v1/search`, suggestions | missing (path public; E-6 S-42…S-44) | S-48, home |
-| categories / departments / landing content (public catalogue reads) | missing | S-46, S-49, S-53 |
+| `GET /api/v1/public/home?city=` → section counts, businesses per category id, open kitchens per cuisine, trusted providers | **exists** (S-46, module `discovery`) | home |
+| categories / departments / landing content (public catalogue reads) | missing | S-49, S-53 |
 | product detail + offers | missing | S-50 |
 | cart (`/api/v1/cart…`, guest-keyed) + checkout (Stripe Payment Element) | missing | S-51 |
 | consumer orders + tracking SSE | missing (merchant-side only today) | S-52, S-58 |
