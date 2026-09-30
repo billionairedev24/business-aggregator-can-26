@@ -129,6 +129,8 @@ export const useAuthT = defineMessages({
     codeNotSentForm: "We couldn't send a code to this number right now. Try again in a moment.",
     codeNotSentSms: "We couldn't send the text message. Try again in a moment, or choose Call me instead.",
     codeNotSentVoice: "We couldn't call this number. Try again in a moment, or resend the code by text.",
+    // S-20: the rate-limit store is down; codes and second factors are paused (503 sign_in_unavailable)
+    signInUnavailable: 'Signing in is paused for a few minutes while we fix a problem on our side. Try again shortly.',
     federationFailed: "Signing in with Google or Apple didn't work. Try again or use your email.",
     federationCancelled: 'Signing in with Google or Apple was cancelled. Try again or use your email.',
     federationUnavailable: "Signing in with Google or Apple isn't available right now. Use your email or mobile instead.",
@@ -255,6 +257,7 @@ export const useAuthT = defineMessages({
     codeNotSentForm: 'Impossible d’envoyer un code à ce numéro pour le moment. Réessayez dans un instant.',
     codeNotSentSms: 'Impossible d’envoyer le texto. Réessayez dans un instant ou choisissez « M’appeler plutôt ».',
     codeNotSentVoice: 'Impossible d’appeler ce numéro. Réessayez dans un instant ou renvoyez le code par texto.',
+    signInUnavailable: 'La connexion est suspendue quelques minutes, le temps de régler un problème de notre côté. Réessayez sous peu.',
     federationFailed: 'La connexion avec Google ou Apple n’a pas fonctionné. Réessayez ou utilisez votre courriel.',
     federationCancelled: 'La connexion avec Google ou Apple a été annulée. Réessayez ou utilisez votre courriel.',
     federationUnavailable: 'La connexion avec Google ou Apple n’est pas offerte pour le moment. Utilisez plutôt votre courriel ou votre mobile.',

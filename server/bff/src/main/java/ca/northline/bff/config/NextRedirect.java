@@ -17,12 +17,16 @@ public class NextRedirect implements AuthenticationSuccessHandler {
 
     public static final String SESSION_KEY = "nl.bff.next";
 
-    /** {@code next} if it is a local path ({@code /…}, not {@code //…} or {@code /\…}), else {@code /}. */
+    /**
+     * {@code next} if it is a local path ({@code /…}, not {@code //…} or {@code /\…}), else {@code /}. Control
+     * characters are refused anywhere: browsers drop tabs and newlines from URLs, so {@code /\t/evil} would become
+     * {@code //evil} (S-20; the Studio's {@code safeNext} applies the same rule).
+     */
     public static String safe(@Nullable String next) {
         if (next == null || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) {
             return "/";
         }
-        return next.chars().anyMatch(c -> c < 0x20) ? "/" : next;
+        return next.chars().anyMatch(c -> c < 0x20 || c == 0x7f) ? "/" : next;
     }
 
     @Override

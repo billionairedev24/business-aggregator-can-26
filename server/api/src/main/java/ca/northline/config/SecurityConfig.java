@@ -1,5 +1,6 @@
 package ca.northline.config;
 
+import ca.northline.shared.security.Authorities;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -7,10 +8,14 @@ import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.authorization.AuthorityAuthorizationManager;
+import org.springframework.security.authorization.AuthorizationManagers;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -18,7 +23,7 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 /**
  * Resource server: validates JWTs from northline-auth (claims mapped by {@link NorthlineJwtConverter}).
  * Merchant membership + {@code acr=mfa} are enforced per handler by {@code @RequiresMerchant}; this chain only does
- * the coarse, path-level rules. Under the {@code local} profile {@link DevAuthFilter} may authenticate first.
+ * the coarse, path-level rules — including staff role + {@code acr=mfa} for {@code /api/v1/console/**}. Under the {@code local} profile {@link DevAuthFilter} may authenticate first.
  */
 @Configuration(proxyBeanMethods = false)
 @EnableMethodSecurity
@@ -39,8 +44,11 @@ class SecurityConfig {
                         // Stripe webhooks: authenticated by the Stripe-Signature, not a token (S-12)
                         .requestMatchers(HttpMethod.POST, "/api/v1/webhooks/stripe", "/api/v1/webhooks/stripe/connect")
                         .permitAll()
+                        // Staff tokens require acr=mfa like business ones (CLAUDE.md; S-20 found only the role checked)
                         .requestMatchers("/api/v1/console/**")
-                        .hasRole("STAFF")
+                        .access(AuthorizationManagers.allOf(
+                                AuthorityAuthorizationManager.hasRole("STAFF"),
+                                AuthorityAuthorizationManager.hasAuthority(Authorities.MFA)))
                         .requestMatchers("/api/v1/merchants/**")
                         .hasAuthority("SCOPE_merchant")
                         .anyRequest()
@@ -70,14 +78,34 @@ class SecurityConfig {
                 .build();
     }
 
-    /** Filter-level 403s (e.g. missing {@code merchant} scope) in the same ProblemDetail shape as the controller advice. */
+    /**
+     * Filter-level 403s (e.g. missing {@code merchant} scope) in the same ProblemDetail shape as the controller advice.
+     * Staff without a second factor get {@code mfa_required}, like merchant endpoints, so the client knows to step up.
+     */
     private static AccessDeniedHandler problemDenied() {
-        return (_, response, _) -> {
+        return (request, response, _) -> {
             response.setStatus(HttpStatus.FORBIDDEN.value());
             response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+            if (request.getRequestURI().startsWith("/api/v1/console/") && staffWithoutMfa()) {
+                response.getWriter().write("""
+                        {"type":"https://northline.ca/problems/mfa-required","title":"Forbidden","status":403,\
+                        "detail":"Sign in with your second factor to do this.","code":"mfa_required"}""");
+                return;
+            }
             response.getWriter().write("""
                     {"type":"https://northline.ca/problems/forbidden","title":"Forbidden","status":403,\
                     "detail":"Your sign-in doesn't allow this.","code":"forbidden"}""");
         };
+    }
+
+    private static boolean staffWithoutMfa() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) {
+            return false;
+        }
+        var authorities = auth.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList();
+        return authorities.contains(Authorities.ROLE_PREFIX + "STAFF") && !authorities.contains(Authorities.MFA);
     }
 }

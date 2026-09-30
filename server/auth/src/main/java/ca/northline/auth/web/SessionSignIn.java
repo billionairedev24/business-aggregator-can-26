@@ -55,10 +55,14 @@ class SessionSignIn {
 
     /**
      * Step-up succeeded (S-19): the factor counts as used now, so Settings › Security changes that need a recent
-     * second factor go through. Same session, same sign-in.
+     * second factor go through. Same sign-in, but a new session id (S-20): the session just gained privileges, so an id
+     * that leaked before the confirmation is worth nothing after it.
      */
     void refreshFactor(
             Authentication current, Factor factor, HttpServletRequest request, HttpServletResponse response) {
+        if (request.getSession(false) != null) {
+            request.changeSessionId(); // session fixation (S-20)
+        }
         var at = clock.instant();
         List<GrantedAuthority> authorities = new ArrayList<>(current.getAuthorities().stream()
                 .filter(a -> !factor.authority().equals(a.getAuthority()))

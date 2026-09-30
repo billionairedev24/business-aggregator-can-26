@@ -1,6 +1,6 @@
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
-import { ApiError, http, newIdempotencyKey, ValidationError, type FieldError } from '../../lib/http';
+import { ApiError, http, newIdempotencyKey, ValidationError, xsrfToken, type FieldError } from '../../lib/http';
 
 /**
  * Finance screens (Earnings, Reports, Payouts, Refunds & disputes) — payments module of the api.
@@ -157,10 +157,10 @@ export const useUploadEvidence = (m: string) => useCaseMutation(m, (v: { dispute
 
 /** Evidence goes up as the raw file (Content-Type + X-File-Name), not multipart — see RefundCaseController. */
 async function uploadEvidence(m: string, disputeId: string, file: File): Promise<CaseDetail> {
-  const xsrf = document.cookie.split('; ').find(c => c.startsWith('XSRF-TOKEN='))?.slice('XSRF-TOKEN='.length);
+  const xsrf = xsrfToken();
   const res = await fetch(`${base(m)}/disputes/${disputeId}/evidence`, {
     method: 'POST', credentials: 'include', body: file,
-    headers: { accept: 'application/json', 'content-type': file.type || 'application/octet-stream', 'x-file-name': encodeURIComponent(file.name), ...(xsrf ? { 'x-xsrf-token': decodeURIComponent(xsrf) } : {}) },
+    headers: { accept: 'application/json', 'content-type': file.type || 'application/octet-stream', 'x-file-name': encodeURIComponent(file.name), ...(xsrf ? { 'x-xsrf-token': xsrf } : {}) },
   });
   const text = await res.text();
   const data: unknown = text ? JSON.parse(text) : undefined;

@@ -395,3 +395,33 @@ describe('Google and Apple (S-18)', () => {
     expect(screen.getByRole('link', { name: 'Apple' }).getAttribute('href')).toBe('http://localhost:9000/oauth2/authorization/apple');
   });
 });
+
+// ── S-20: limit store down, codes and second factors fail closed (503 sign_in_unavailable) ──────────────────────────
+
+describe('Sign-in paused (503 sign_in_unavailable)', () => {
+  const paused: Reply = { status: 503, body: { code: 'sign_in_unavailable', retryAfterSeconds: 30, detail: 'x' } };
+
+  it('the factor step explains the pause', async () => {
+    routes['/api/auth/sign-in/totp'] = () => paused;
+    const { ui, navigate } = renderPage({ mode: 'signin' });
+    await ui.type(screen.getByLabelText('Email or mobile'), 'ravi@prairiewrench.ca');
+    await ui.click(screen.getByRole('button', { name: 'Continue' }));
+    await ui.click(await screen.findByRole('radio', { name: /Authenticator app/ }));
+    await ui.type(screen.getByLabelText('6-digit code'), '654321');
+    await ui.click(screen.getByRole('button', { name: 'Verify code' }));
+    expect(await screen.findByText('Signing in is paused for a few minutes while we fix a problem on our side. Try again shortly.')).toBeTruthy();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('sending the phone code explains the pause, in French too', async () => {
+    routes['/api/auth/register'] = () => paused;
+    const { ui } = renderPage({ locale: 'fr' });
+    await ui.type(screen.getByLabelText('Prénom'), 'Amara');
+    await ui.type(screen.getByLabelText('Nom'), 'Osei');
+    await ui.type(screen.getByLabelText('Numéro de mobile'), '+1 403 555 0148');
+    await ui.type(screen.getByLabelText('Courriel'), 'amara@example.ca');
+    await ui.click(screen.getByRole('checkbox'));
+    await ui.click(screen.getByRole('button', { name: 'Envoyer le code de vérification' }));
+    expect(await screen.findByText('La connexion est suspendue quelques minutes, le temps de régler un problème de notre côté. Réessayez sous peu.')).toBeTruthy();
+  });
+});
