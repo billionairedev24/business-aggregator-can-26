@@ -1,0 +1,87 @@
+{
+  "$comment": "S-42 — the listings index, one per language (listings_en, listings_fr). Versioned code: ca.northline.worker.search.index.IndexLayout renders it with analysis-<lang>.json into the body of listings_<lang>_v<schema>_<timestamp>, served through the alias listings_<lang>. Additive mapping changes are applied in place by the bootstrap Job; any change to analysis-<lang>.json, to an existing field or to 'settings' needs a reindex (S-71) and a 'schema' bump. Field reference: docs/runbooks/search.md § Documents.",
+  "schema": 1,
+  "settings": {
+    "number_of_shards": 1,
+    "auto_expand_replicas": "0-1",
+    "refresh_interval": "1s"
+  },
+  "mappings": {
+    "dynamic": "strict",
+    "properties": {
+      "id": { "type": "keyword" },
+      "kind": { "type": "keyword" },
+      "market": { "type": "keyword" },
+      "merchantId": { "type": "keyword" },
+      "merchantName": {
+        "type": "text",
+        "analyzer": "nl_text",
+        "search_analyzer": "nl_text_search",
+        "fields": { "keyword": { "type": "keyword" } }
+      },
+      "merchantType": { "type": "keyword" },
+      "merchantStatus": { "type": "keyword" },
+      "merchantSlug": { "type": "keyword", "index": false },
+      "name": {
+        "type": "text",
+        "analyzer": "nl_text",
+        "search_analyzer": "nl_text_search",
+        "fields": {
+          "prefix": { "type": "search_as_you_type", "analyzer": "nl_prefix" },
+          "sort": { "type": "keyword", "normalizer": "nl_keyword" }
+        }
+      },
+      "description": { "type": "text", "analyzer": "nl_text", "search_analyzer": "nl_text_search" },
+      "keywords": { "type": "text", "analyzer": "nl_text", "search_analyzer": "nl_text_search" },
+      "categoryId": { "type": "keyword" },
+      "categoryPath": { "type": "keyword" },
+      "categoryRoot": { "type": "keyword" },
+      "categoryNames": {
+        "type": "text",
+        "analyzer": "nl_text",
+        "search_analyzer": "nl_text_search",
+        "fields": { "keyword": { "type": "keyword" } }
+      },
+      "priceCents": { "type": "long" },
+      "pricingMode": { "type": "keyword" },
+      "rating": { "type": "float" },
+      "reviewCount": { "type": "integer" },
+      "trustTier": { "type": "keyword" },
+      "trustRank": { "type": "byte" },
+      "qualityScore": { "type": "integer" },
+      "vetting": { "type": "keyword" },
+      "status": { "type": "keyword" },
+      "instantBook": { "type": "boolean" },
+      "fulfilment": { "type": "keyword" },
+      "deliveryCutoffMinute": { "type": "short" },
+      "inStock": { "type": "boolean" },
+      "soldOutOn": { "type": "date", "format": "strict_date" },
+      "openHours": { "type": "integer_range" },
+      "pausedUntil": { "type": "date" },
+      "prepMinutes": { "type": "short" },
+      "allergens": { "type": "keyword" },
+      "dietary": { "type": "keyword" },
+      "location": { "type": "geo_point" },
+      "serviceRadiusKm": { "type": "float" },
+      "imageKey": { "type": "keyword", "index": false },
+      "sales30d": { "type": "integer" },
+      "updatedAt": { "type": "date" },
+      "suggest": {
+        "type": "completion",
+        "analyzer": "nl_prefix",
+        "preserve_separators": true,
+        "max_input_length": 80,
+        "contexts": [
+          { "name": "market", "type": "category", "path": "market" },
+          { "name": "kind", "type": "category", "path": "kind" }
+        ]
+      },
+      "suggestCategory": {
+        "type": "completion",
+        "analyzer": "nl_prefix",
+        "max_input_length": 80,
+        "contexts": [{ "name": "market", "type": "category", "path": "market" }]
+      }
+    }
+  }
+}
