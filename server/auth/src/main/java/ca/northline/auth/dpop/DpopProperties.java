@@ -5,10 +5,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
 /**
- * {@code northline.auth.dpop.*} (S-29).
+ * {@code northline.auth.dpop.*} (S-29). Used proof ids and nonces live in the {@code ReplayStore}
+ * ({@code northline.auth.replay.store}).
  *
- * @param store where used proof ids ({@code jti}) and the server nonces live: {@code redis} (Valkey, shared by every
- *     instance; default and required under staging/prod) or {@code memory} (one instance: local runs and tests)
  * @param nonceLifetime how long a {@code DPoP-Nonce} is accepted: each window has one nonce, and the previous window's
  *     is still accepted, so a nonce lives between one and two windows
  */

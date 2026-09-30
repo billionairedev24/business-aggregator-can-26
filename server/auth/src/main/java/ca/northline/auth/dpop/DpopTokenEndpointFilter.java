@@ -1,6 +1,7 @@
 package ca.northline.auth.dpop;
 
 import ca.northline.auth.clients.RegisteredClients;
+import ca.northline.auth.replay.ReplayStore;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -84,8 +85,8 @@ final class DpopTokenEndpointFilter extends OncePerRequestFilter {
             log.debug("DPoP proof refused at the token endpoint (client {}): {}", client, e.error());
             refuse(response, e.error(), e.getMessage());
             return;
-        } catch (DpopState.Unavailable e) {
-            log.error("DPoP state store unavailable (Valkey): token request refused — {}", e.getMessage());
+        } catch (ReplayStore.Unavailable e) {
+            log.error("Replay store unavailable (Valkey): token request refused — {}", e.getMessage());
             response.setHeader(HttpHeaders.RETRY_AFTER, "30");
             write(response, HttpStatus.SERVICE_UNAVAILABLE, "temporarily_unavailable", "Try again in a moment.");
             return;

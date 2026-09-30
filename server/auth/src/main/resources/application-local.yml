@@ -19,7 +19,7 @@ northline:
   auth:
     # S-9: without Valkey the limits live in memory (logged at start-up); `local,valkey` keeps them in your Valkey.
     rate-limits.store: ${RATE_LIMIT_STORE:memory}
-    dpop.store: ${DPOP_STORE:memory}           # S-29: DPoP proof ids and nonces, likewise
+    replay.store: ${REPLAY_STORE:memory}       # S-29: one-time ids and DPoP nonces, likewise
     # Dev-only key: the TOTP secret seeded for the personas in db/seed-dev/V101__auth.sql is encrypted with it.
     totp-key: bm9ydGhsaW5lLWxvY2FsLWRldi10b3RwLWtleS0zMmI=
     login-page: http://localhost:3100/sign-in

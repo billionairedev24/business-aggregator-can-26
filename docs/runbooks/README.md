@@ -146,7 +146,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `TRUSTED_PROXIES` | | ✓ | | | no (private ranges + loopback; narrow it to the ingress subnet) |
 | `RATE_LIMIT_STORE` | | ✓ | | | no (`redis`; `memory` only under `local`/`test`) |
 | `RATE_LIMIT_WHEN_UNAVAILABLE` | | ✓ | | | no (`closed` in staging/prod, `open` elsewhere — S-20, [Rate limits](#rate-limits-s-9)) |
-| `DPOP_STORE`, `DPOP_NONCE_LIFETIME` | | ✓ | | | no (`redis` — `memory` only under `local`/`test`; `5m`) — S-29, [mobile-auth.md](mobile-auth.md) |
+| `REPLAY_STORE`, `DPOP_NONCE_LIFETIME` | | ✓ | | | no (`redis` — `memory` only under `local`/`test`; `5m`) — S-29, [mobile-auth.md](mobile-auth.md) |
 | `CLIENT_CITY_HEADER` | | ✓ | | | no (empty: no city in the session list — S-19) |
 | `SESSION_STEP_UP_MAX_AGE` | | ✓ | | | no (`10m`: how recent a second factor revoking sessions / removing passkeys needs) |
 | `SESSION_CHECK_INTERVAL` | | | ✓ | | no (`60s`: how often the BFF checks its session wasn't revoked) |

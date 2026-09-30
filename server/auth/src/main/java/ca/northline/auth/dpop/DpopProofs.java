@@ -1,5 +1,6 @@
 package ca.northline.auth.dpop;
 
+import ca.northline.auth.replay.ReplayStore;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
@@ -30,7 +31,7 @@ final class DpopProofs {
 
     private final DPoPProofJwtDecoderFactory decoders = new DPoPProofJwtDecoderFactory();
 
-    DpopProofs(DpopState state, DpopNonces nonces) {
+    DpopProofs(ReplayStore state, DpopNonces nonces) {
         var clock = Clock.systemUTC(); // Spring Authorization Server's own DPoP check uses the system clock too
         var issuedAt = new JwtIssuedAtValidator(true);
         issuedAt.setClockSkew(SKEW);
@@ -60,10 +61,10 @@ final class DpopProofs {
             throw new Rejected(
                     nonceMissing ? USE_DPOP_NONCE : OAuth2ErrorCodes.INVALID_DPOP_PROOF,
                     nonceMissing ? "Use the nonce from the DPoP-Nonce header." : "The DPoP proof is not valid.");
-        } catch (DpopState.Unavailable e) {
+        } catch (ReplayStore.Unavailable e) {
             throw e;
         } catch (RuntimeException e) {
-            if (e.getCause() instanceof DpopState.Unavailable unavailable) {
+            if (e.getCause() instanceof ReplayStore.Unavailable unavailable) {
                 throw unavailable;
             }
             throw new Rejected(OAuth2ErrorCodes.INVALID_DPOP_PROOF, "The DPoP proof is not valid.");

@@ -206,7 +206,7 @@ class MobileDpopApiTest extends AuthIntegrationTest {
     }
 
     @Nested
-    class Tokens_ {
+    class DpopBoundTokens {
 
         @Test
         @SuppressWarnings("unchecked")

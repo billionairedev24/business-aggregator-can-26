@@ -5,7 +5,7 @@ PKCE in the phone's browser, tokens bound to a key the app holds (DPoP, RFC 9449
 use and end the sign-in when an old one comes back. For mobile developers first, operators second.
 
 > **Status (2026-09-30):** northline-auth and the api implement everything below and it is tested end to end with
-> generated P-256 keys (`MobileDpopApiTest`, `DpopResourceServerTest`, `DpopStateTest`). No app exists yet (S-28 for
+> generated P-256 keys (`MobileDpopApiTest`, `DpopResourceServerTest`, `ReplayStoreTest`). No app exists yet (S-28 for
 > the consumer app's events, S-87 for the courier MVP): nothing has run on a real iPhone or Android device, and the
 > App Link / Universal Link association files are not served anywhere yet (see [Redirects](#redirects)).
 
@@ -186,11 +186,11 @@ sessions", revokes the app's refresh tokens at once; its current access token ke
 
 ## Operations
 
-- **State:** used proof ids and nonces in Valkey — northline-auth `nl:auth-dpop:jti:<sha256>` (≤ 70 s) and
-  `nl:auth-dpop:nonce:<window>` (15 min), the api `nl:api-dpop:jti:<sha256>`. `DPOP_STORE=redis` (default; `memory`
+- **State:** used proof ids and nonces in Valkey — northline-auth `nl:auth-replay:dpop-jti:<sha256>` (≤ 70 s) and
+  `nl:auth-replay:dpop-nonce:<window>` (15 min), the api `nl:api-dpop:jti:<sha256>`. `REPLAY_STORE=redis` (default; `memory`
   only under `local`/`test`, refused under staging/prod), `DPOP_NONCE_LIFETIME` (default `5m`). Nothing here holds a
   token or a proof.
-- **Valkey down:** fail closed. Token requests carrying DPoP answer `503` (logged `DPoP state store unavailable`);
+- **Valkey down:** fail closed. Token requests carrying DPoP answer `503` (logged `Replay store unavailable`);
   api calls with DPoP tokens answer `401` until Valkey is back. BFF (Studio) sign-ins are not affected.
 - **Refresh-token families:** `auth.issued_refresh_tokens` (V024) keeps the SHA-256 of every refresh token issued to a
   public client, deleted with its authorization. `revoke_reason = refresh_token_reused` in `identity.sessions` counts

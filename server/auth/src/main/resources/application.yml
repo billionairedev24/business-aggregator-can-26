@@ -120,12 +120,11 @@ northline:
           account: { max: 20, window: 1h, lockout: 15m }
           ip: { max: 60, window: 1h, lockout: 15m }
           session: { max: 20, window: 1h, lockout: 15m }
-    # S-29 DPoP (RFC 9449) for the mobile apps: used proof ids (jti) and server nonces (DPoP-Nonce) are shared by every
-    # instance. redis (Valkey; required under staging/prod) | memory (one instance: local/test). Valkey unreachable =
-    # token requests carrying DPoP answer 503 (a proof that can't be checked for replay is never accepted).
-    dpop:
-      store: ${DPOP_STORE:redis}
-      nonce-lifetime: ${DPOP_NONCE_LIFETIME:5m}   # a nonce is accepted for one to two of these
+    # S-29: one-time ids (DPoP proof jti) and DPoP server nonces, shared by every instance. redis (Valkey; required
+    # under staging/prod) | memory (one instance: local/test). Valkey unreachable = requests that need a single-use check
+    # are refused (503): a proof that can't be checked for replay is never accepted.
+    replay.store: ${REPLAY_STORE:redis}
+    dpop.nonce-lifetime: ${DPOP_NONCE_LIFETIME:5m}   # a DPoP-Nonce is accepted for one to two of these
   # "or continue with" Google / Apple (S-18, docs/runbooks/federation.md). A provider without a client id is off (its
   # button answers "not available"); staging/prod require both. Redirect URI = <public auth URL>/login/oauth2/code/<provider>.
   auth.federation:

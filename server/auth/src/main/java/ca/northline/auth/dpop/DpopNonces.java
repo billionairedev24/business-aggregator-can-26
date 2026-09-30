@@ -1,5 +1,6 @@
 package ca.northline.auth.dpop;
 
+import ca.northline.auth.replay.ReplayStore;
 import java.time.Clock;
 import java.time.Duration;
 import org.jspecify.annotations.Nullable;
@@ -11,18 +12,18 @@ import org.jspecify.annotations.Nullable;
  */
 final class DpopNonces {
 
-    private final DpopState state;
+    private final ReplayStore state;
     private final Clock clock;
     private final Duration lifetime;
 
-    DpopNonces(DpopState state, Clock clock, Duration lifetime) {
+    DpopNonces(ReplayStore state, Clock clock, Duration lifetime) {
         this.state = state;
         this.clock = clock;
         this.lifetime = lifetime;
     }
 
     String current() {
-        return state.nonce(window(), lifetime.multipliedBy(3));
+        return state.shared(key(window()), lifetime.multipliedBy(3));
     }
 
     boolean accepts(@Nullable String nonce) {
@@ -30,8 +31,12 @@ final class DpopNonces {
             return false;
         }
         var window = window();
-        return nonce.equals(state.nonce(window, lifetime.multipliedBy(3)))
-                || nonce.equals(state.nonce(window - 1, lifetime.multipliedBy(3)));
+        return nonce.equals(state.shared(key(window), lifetime.multipliedBy(3)))
+                || nonce.equals(state.shared(key(window - 1), lifetime.multipliedBy(3)));
+    }
+
+    private static String key(long window) {
+        return "dpop-nonce:" + window;
     }
 
     private long window() {

@@ -1,5 +1,6 @@
 package ca.northline.auth.dpop;
 
+import ca.northline.auth.replay.ReplayStore;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.concurrent.Callable;
@@ -9,7 +10,7 @@ import org.springframework.cache.support.SimpleValueWrapper;
 import org.springframework.security.oauth2.jwt.DPoPProofReplayValidator;
 
 /**
- * The cache Spring Security's {@link DPoPProofReplayValidator} records used proof ids in, over {@link DpopState}
+ * The cache Spring Security's {@link DPoPProofReplayValidator} records used proof ids in, over {@link ReplayStore}
  * (Valkey): only {@link #putIfAbsent} matters — a non-null answer means "seen before", and the validator refuses the
  * proof. Entries live until the proof could no longer pass the {@code iat} check anyway.
  */
@@ -18,10 +19,10 @@ final class ReplayCache implements Cache {
     private static final SimpleValueWrapper SEEN = new SimpleValueWrapper(true);
     private static final Duration MARGIN = Duration.ofSeconds(10);
 
-    private final DpopState state;
+    private final ReplayStore state;
     private final Clock clock;
 
-    ReplayCache(DpopState state, Clock clock) {
+    ReplayCache(ReplayStore state, Clock clock) {
         this.state = state;
         this.clock = clock;
     }
@@ -33,7 +34,7 @@ final class ReplayCache implements Cache {
             var left = Duration.between(clock.instant(), proof.getExpiresAt());
             ttl = left.isNegative() ? MARGIN : left.plus(MARGIN);
         }
-        return state.firstUse(String.valueOf(key), ttl) ? null : SEEN;
+        return state.firstUse("dpop-jti:" + key, ttl) ? null : SEEN;
     }
 
     @Override

@@ -1181,7 +1181,7 @@ Runbook for app developers: `docs/runbooks/mobile-auth.md`.
     window's nonce are accepted. Every token-endpoint answer to a DPoP request carries the current one; a missing or
     stale nonce → 400 `use_dpop_nonce`. Chosen over an HMAC-of-time nonce: no new secret to provision and rotate.
   - **Single-use `jti` in Valkey:** Spring's `DPoPProofReplayValidator` with a `Cache` adapter over Valkey
-    (`nl:auth-dpop:jti:<sha256>`, SET NX, ≤ 70 s) instead of its per-JVM in-memory cache. Spring then verifies the same
+    (`nl:auth-replay:dpop-jti:<sha256>`, SET NX, ≤ 70 s) instead of its per-JVM in-memory cache. Spring then verifies the same
     proof again with its static in-memory cache (not configurable in `DPoPProofVerifier`) — harmless. `iat` stays at
     Spring's fixed ±30 s (a looser window here would be undone by Spring's second check); apps correct `iat` with the
     server's `Date`.
@@ -1193,8 +1193,9 @@ Runbook for app developers: `docs/runbooks/mobile-auth.md`.
     client-authentication converters/providers): a refresh with `client_id`, no credentials and a `DPoP` header, and
     `POST /oauth2/revoke` with `client_id` (RFC 7009 § 2.1 — the token is the proof; revoking only ends the holder's
     own sign-in). Introspection stays closed to public clients.
-- **Store:** `northline.auth.dpop.store` (`DPOP_STORE`): `redis` (default; required under staging/prod) or `memory`
-  (`local`, `test`; the `valkey` add-on profile switches it back to Valkey). **Valkey unreachable = fail closed**:
+- **Store:** a generic `ReplayStore` (package `ca.northline.auth.replay`: one-time ids + values shared per key, for
+  DPoP now and partner assertions next), `northline.auth.replay.store` (`REPLAY_STORE`): `redis` (default; required
+  under staging/prod) or `memory` (`local`, `test`; the `valkey` add-on profile switches it back to Valkey). **Valkey unreachable = fail closed**:
   a token request carrying DPoP answers 503 `temporarily_unavailable` (`Retry-After: 30`), whatever
   `RATE_LIMIT_WHEN_UNAVAILABLE` says — a proof that can't be checked for replay is never accepted. BFF sign-ins are
   unaffected.
@@ -1228,7 +1229,7 @@ Runbook for app developers: `docs/runbooks/mobile-auth.md`.
   api = the proof fails → 401.
 - **Edge:** the api host now routes all of `/api/v1` (`apps.api.tokenClients: true`, default) — the apps call the api
   directly; before, only the Stripe webhooks and the unsubscribe link were routed (S-17). `false` restores that.
-- **Configuration:** new variables `DPOP_STORE`, `DPOP_NONCE_LIFETIME` (auth; optional; runbooks README, local, dev,
+- **Configuration:** new variables `REPLAY_STORE`, `DPOP_NONCE_LIFETIME` (auth; optional; runbooks README, local, dev,
   staging, prod, `.env.example`). No secret, so no Helm/External Secrets change beyond the route.
 - **Schema:** V024 (`auth.issued_refresh_tokens`, `identity.sessions.revoke_reason` + `refresh_token_reused`).
 - **Tests:** auth `MobileDpopApiTest` (full flow with a generated P-256 key: `use_dpop_nonce` then tokens with
@@ -1238,7 +1239,7 @@ Runbook for app developers: `docs/runbooks/mobile-auth.md`.
   `/oauth2/revoke` ends the sign-in, no introspection; the phone's sign-in listed with "Northline" and revoked from
   Settings › Security; sign-in page `continueTo` for the app and not for the Studio; courier scopes and 12 h refresh;
   consumer can't ask for courier scopes; the Studio BFF still gets bearer tokens without a nonce header),
-  `DpopStateTest` (the same contract against Valkey 8 and memory, two instances agree on nonce and ids, TTLs, Valkey
+  `ReplayStoreTest` (the same contract against Valkey 8 and memory, two instances agree on nonce and ids, TTLs, Valkey
   unreachable → 503 from the filter, `memory` refused under prod), `OAuthClientCatalogTest` (public refresh client
   without DPoP refused); api `DpopResourceServerTest` (proof accepted; no proof, bearer downgrade, replay, other key,
   other token/URL/method, missing `ath` → 401; plain bearer tokens still work; an app token with `acr=mfa` still gets

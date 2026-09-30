@@ -93,7 +93,7 @@ Every app reads its configuration from environment variables; nothing environmen
 | `TRUSTED_PROXIES` | auth | no (private ranges + loopback) | the ingress / load balancer subnet, e.g. `10.20.0.0/22` (comma-separated CIDRs) | network plan (S-2); only these peers may set `X-Forwarded-For/-Proto/-Host` — the client IP the rate limits and the sign-in log use ([README § Rate limits](README.md#rate-limits-s-9)) |
 | `RATE_LIMIT_STORE` | auth | no (`redis`) | leave unset: `memory` is refused here | — |
 | `RATE_LIMIT_WHEN_UNAVAILABLE` | auth | no (`closed`) | leave unset (`closed`: codes and second factors answer 503 while Valkey is down); `open` only as a temporary break-glass | S-20, [README § Rate limits](README.md#rate-limits-s-9) |
-| `DPOP_STORE` | auth | no (`redis`) | leave unset: `memory` is refused here | DPoP proof ids and nonces of the mobile apps in Valkey; Valkey down = token requests with DPoP answer 503 (S-29, [mobile-auth.md](mobile-auth.md)) |
+| `REPLAY_STORE` | auth | no (`redis`) | leave unset: `memory` is refused here | one-time ids (DPoP proofs) and DPoP nonces in Valkey; Valkey down = token requests with DPoP answer 503 (S-29, [mobile-auth.md](mobile-auth.md)) |
 | `DPOP_NONCE_LIFETIME` | auth | no (`5m`) | leave unset | a `DPoP-Nonce` is accepted for one to two of these (S-29) |
 | `CLIENT_CITY_HEADER` | auth | no (empty) | `CloudFront-Viewer-City`, or the custom header your load balancer / Front Door fills with the client's city | ingress / CDN configuration; believed only from `TRUSTED_PROXIES` ([README § Sessions](README.md#sessions-s-19)) |
 | `SESSION_STEP_UP_MAX_AGE` | auth | no (`10m`) | leave unset | how recent a second factor revoking sessions / removing passkeys needs (S-19) |
