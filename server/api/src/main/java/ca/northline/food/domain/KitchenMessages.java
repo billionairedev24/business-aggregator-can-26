@@ -57,4 +57,13 @@ public final class KitchenMessages {
     public static final String CSV_EMPTY = "The file has no items.";
     public static final String CSV_TOO_MANY = "At most 500 items per file.";
     public static final String PHOTO_FILE = "Upload a JPEG, PNG or WebP photo under 10 MB.";
+
+    // S-36 POS import
+    public static final String TOAST_RESTAURANT = "Enter your Toast restaurant GUID (Toast Web › Integrations).";
+    public static final String TOAST_NOT_LINKED =
+            "Northline can't read this restaurant yet. Turn on the Northline integration in Toast, then try again.";
+    public static final String POS_REQUIRED = "Choose your POS.";
+    public static final String POS_NO_PRICE = "No price in your POS — set one there, or add this item by hand.";
+    public static final String POS_NO_OPTIONS = "This modifier group has no options in your POS.";
+    public static final String POS_OPTION_PRICE = "An option costs more than $100 (or less than $0) in your POS.";
 }

@@ -421,6 +421,21 @@ class MenuBuilderService
                 visibility(draft, merchant.approved(merchantId)).vetting());
     }
 
+    /**
+     * S-36: an item gone from the kitchen's POS goes back to draft — hidden from customers ({@code
+     * food.item_availability} when it was visible), never deleted.
+     */
+    @Transactional
+    void unpublish(String merchantId, String itemId) {
+        var before = requireItem(merchantId, itemId);
+        if (before.status() == ItemStatus.DRAFT) {
+            return;
+        }
+        var row = before.toBuilder().status(ItemStatus.DRAFT).vetting("draft").build();
+        menus.updateItem(row);
+        afterWrite(row, visible(before, merchant.approved(merchantId)));
+    }
+
     private ItemView afterWrite(ItemRow row, boolean wasVisible) {
         var approved = merchant.approved(row.merchantId());
         var today = KitchenTime.today(clock);

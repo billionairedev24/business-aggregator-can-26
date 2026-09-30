@@ -1,10 +1,10 @@
 package ca.northline.catalogue.adapters.commerce;
 
-import ca.northline.catalogue.adapters.commerce.CommerceHttp.Backoff;
 import ca.northline.catalogue.application.CommerceCatalogSource;
 import ca.northline.catalogue.application.CommerceSettings;
 import ca.northline.catalogue.application.ImageFetcher;
 import ca.northline.catalogue.domain.CommerceProvider;
+import ca.northline.shared.integration.Backoff;
 import java.time.Clock;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
@@ -29,18 +29,9 @@ class CommerceConfig {
         return new CommerceSettings(p.apiUrl(), p.studioUrl(), p.pollInterval(), p.reconcileInterval());
     }
 
-    @Bean
-    Backoff commerceBackoff(CommerceProperties p, Clock clock) {
-        return new Backoff(p.maxRetries(), p.maxBackoff(), CommerceConfig::sleep, clock);
-    }
-
-    private static void sleep(java.time.Duration d) {
-        try {
-            Thread.sleep(d);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("interrupted while backing off", e);
-        }
+    /** Not a bean: each integration module keeps its own retry settings. */
+    private static Backoff backoff(CommerceProperties p, Clock clock) {
+        return new Backoff(p.maxRetries(), p.maxBackoff(), Backoff.THREAD_SLEEP, clock);
     }
 
     @Bean
@@ -49,29 +40,31 @@ class CommerceConfig {
     }
 
     @Bean
-    CommerceCatalogSource shopifyCatalogSource(CommerceProperties p, Backoff backoff, Clock clock, Environment env) {
+    CommerceCatalogSource shopifyCatalogSource(CommerceProperties p, Clock clock, Environment env) {
         if (local(p, env)) {
             return new FakeCatalogSource(CommerceProvider.SHOPIFY, clock);
         }
         log.info(
                 "Commerce sync: Shopify {}",
                 p.shopify().configured() ? "configured" : "not configured (SHOPIFY_CLIENT_ID)");
-        return new ShopifyCatalogSource(p.shopify(), CommerceHttp.client(ShopifyCatalogSource.Api.class), backoff);
+        return new ShopifyCatalogSource(
+                p.shopify(), CommerceHttp.client(ShopifyCatalogSource.Api.class), backoff(p, clock));
     }
 
     @Bean
-    CommerceCatalogSource squareCatalogSource(CommerceProperties p, Backoff backoff, Clock clock, Environment env) {
+    CommerceCatalogSource squareCatalogSource(CommerceProperties p, Clock clock, Environment env) {
         if (local(p, env)) {
             return new FakeCatalogSource(CommerceProvider.SQUARE, clock);
         }
         log.info(
                 "Commerce sync: Square {}",
                 p.square().configured() ? "configured" : "not configured (SQUARE_CLIENT_ID)");
-        return new SquareCatalogSource(p.square(), CommerceHttp.client(SquareCatalogSource.Api.class), backoff, clock);
+        return new SquareCatalogSource(
+                p.square(), CommerceHttp.client(SquareCatalogSource.Api.class), backoff(p, clock), clock);
     }
 
     @Bean
-    CommerceCatalogSource lightspeedCatalogSource(CommerceProperties p, Backoff backoff, Clock clock, Environment env) {
+    CommerceCatalogSource lightspeedCatalogSource(CommerceProperties p, Clock clock, Environment env) {
         if (local(p, env)) {
             return new FakeCatalogSource(CommerceProvider.LIGHTSPEED, clock);
         }
@@ -79,7 +72,7 @@ class CommerceConfig {
                 "Commerce sync: Lightspeed {}",
                 p.lightspeed().configured() ? "configured" : "not configured (LIGHTSPEED_CLIENT_ID)");
         return new LightspeedCatalogSource(
-                p.lightspeed(), CommerceHttp.client(LightspeedCatalogSource.Api.class), backoff, clock);
+                p.lightspeed(), CommerceHttp.client(LightspeedCatalogSource.Api.class), backoff(p, clock), clock);
     }
 
     static boolean local(CommerceProperties p, Environment env) {
