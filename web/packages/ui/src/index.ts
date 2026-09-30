@@ -6,6 +6,7 @@ export * from './SearchBar';
 export * from './AccountMenu';
 export * from './SiteHeader';
 export * from './SiteLink';
+export * from './BrandMark';
 export * from './i18n';
 export * from './Field';
 export * from './Choice';
