@@ -116,10 +116,13 @@ final class JndiDnsResolver implements DnsResolver {
         }
         var out = new StringBuilder();
         var quoted = false;
-        for (int i = 0; i < s.length(); i++) {
-            var c = s.charAt(i);
-            if (c == '\\' && i + 1 < s.length()) {
-                out.append(s.charAt(++i));
+        var escaped = false;
+        for (var c : s.toCharArray()) {
+            if (escaped) {
+                out.append(c);
+                escaped = false;
+            } else if (c == '\\') {
+                escaped = true;
             } else if (c == '"') {
                 quoted = !quoted;
             } else if (quoted || c != ' ') {
