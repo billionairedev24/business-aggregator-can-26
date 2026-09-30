@@ -21,7 +21,7 @@ export function checkText(c: Check, type: MerchantType, t: OnboardingT, locale: 
     case 'kyc': return { name: t('ck_kyc'), desc: t(food || seller ? 'ckd_kyc_owners' : 'ckd_kyc'), cta: t('cta_kyc'), done: pending ? t('done_kyc_review') : t('done_kyc') };
     case 'registry': return {
       name: t(food ? 'ck_registry_kitchen' : 'ck_registry'), desc: t(food ? 'ckd_registry_kitchen' : seller ? 'ckd_registry_seller' : 'ckd_registry'), cta: t('cta_registry'),
-      done: ref && ref !== 'matched' ? t('done_registry_ref', { ref }) : t('done_registry'),
+      done: pending ? t('done_checking', { ref }) : ref === 'not_required' ? t('done_registry_not_required') : ref && ref !== 'matched' ? t('done_registry_ref', { ref }) : t('done_registry'),
     };
     case 'licence': return {
       name: t('ck_licence', { registry: reg }), desc: reg === 'AMVIC' ? t('ckd_licence_AMVIC') : t('ckd_licence', { registry: reg }), cta: t('cta_licence'),

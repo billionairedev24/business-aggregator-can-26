@@ -52,6 +52,10 @@ locals {
     EMAIL_UNSUBSCRIBE_KEY         = "email-unsubscribe-key"
     EMAIL_API_KEY                 = "email-api-key"
     SMTP_PASSWORD                 = "smtp-password"
+    # S-23 business registries: ISED API Store key, OpenCorporates token, Socrata app token (optional).
+    REGISTRY_CORPORATIONS_CANADA_KEY = "registry-corporations-canada-key"
+    REGISTRY_ALBERTA_KEY             = "registry-alberta-key"
+    REGISTRY_CALGARY_APP_TOKEN       = "registry-calgary-app-token"
   }
 }
 

@@ -55,6 +55,7 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-postgresql")
     testImplementation("org.testcontainers:testcontainers-kafka") // S-26: the real wire format of externalized events
     testImplementation(libs.archunit)
+    testImplementation(libs.wiremock) // S-23: registry adapters against recorded HTTP stand-ins
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

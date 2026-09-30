@@ -64,6 +64,7 @@ Terraform (AWS, Google Cloud) or not at all (Azure: Key Vault has no empty secre
 | `EMAIL_API_KEY` | `email-api-key` | api | with `sendgrid` (or `azure` with an access key) | provider console |
 | `SMTP_PASSWORD` | `smtp-password` | api, worker | with `EMAIL_PROVIDER=smtp` | relay credentials |
 | `GOOGLE_CLIENT_SECRET`, `APPLE_PRIVATE_KEY` | `google-client-secret`, `apple-private-key` | auth | staging, prod (S-18) | Google Cloud console / Apple Developer `.p8` key ([federation.md](federation.md)) |
+| `REGISTRY_CORPORATIONS_CANADA_KEY`, `REGISTRY_ALBERTA_KEY`, `REGISTRY_CALGARY_APP_TOKEN` | `registry-corporations-canada-key`, `registry-alberta-key`, `registry-calgary-app-token` | api | with `api` / `opencorporates` / optional for `socrata` (S-23) | GC API Store subscription / OpenCorporates account / data.calgary.ca developer settings ([registries.md](registries.md)) |
 | `SMS_AUTH_TOKEN` | `sms-auth-token` | auth | with `SMS_PROVIDER=twilio` | Twilio console ([README § SMS](README.md#sms-and-voice-codes-s-8)) |
 
 Which optional variables to map is a per-environment decision in the values, e.g. dev on AWS with Twilio and SendGrid:

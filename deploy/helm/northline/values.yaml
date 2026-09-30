@@ -291,6 +291,9 @@ apps:
       EMAIL_API_KEY: false          # sendgrid, or azure with an access key
       SMTP_PASSWORD: false          # EMAIL_PROVIDER=smtp
       SMS_AUTH_TOKEN: false         # S-27: team invitations by SMS (SMS_PROVIDER=twilio)
+      REGISTRY_CORPORATIONS_CANADA_KEY: false  # S-23: with REGISTRY_CORPORATIONS_CANADA_PROVIDER=api
+      REGISTRY_ALBERTA_KEY: false              # S-23: with REGISTRY_ALBERTA_PROVIDER=opencorporates
+      REGISTRY_CALGARY_APP_TOKEN: false        # S-23: optional Socrata app token (higher rate limits)
     runAsUser: 65532
     probes:
       startup: { path: /actuator/health/liveness, periodSeconds: 5, failureThreshold: 60 }

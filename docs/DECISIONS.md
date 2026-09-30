@@ -1096,3 +1096,62 @@ accepted with rationale (the story's acceptance criterion):
   birth and the real `verified_outputs` shape are untested against Stripe.
 - **Not done:** the console's review queue for `review` owners (console workstream); annual re-verification (Stripe
   Connect's own `future_requirements` still shows on the compliance screen); SMS links; a Stripe.js modal.
+
+## 2026-09-30 — S-23 Business registry lookups (Alberta corporate registry, Corporations Canada, municipal licences)
+
+- **Built on S-22** (branch `merchants/s-22-stripe-identity`, PR #32): both stories change the same onboarding ports,
+  fakes and the `ComplianceStatus` feed (`platformChecks`), and share the V030–V039 range (V032 → V033).
+- **Port:** `merchants.application.BusinessRegistry` (`source()`, `lookup(RegistryQuery)` → `Found | NotFound |
+  Manual | Unavailable`, never throws), one adapter per source, chosen by `northline.registries.<source>.provider`
+  (`REGISTRY_CORPORATIONS_CANADA_PROVIDER` `fixtures|api|manual`, `REGISTRY_ALBERTA_PROVIDER`
+  `fixtures|opencorporates|manual`, `REGISTRY_CALGARY_PROVIDER` `fixtures|socrata|manual`). It replaces onboarding's
+  `VerificationGateways.RegistryLookup` (and its fake "everything matches" rules). The backlog's name `RegistryLookup`
+  became `BusinessRegistry`, as the lead asked. `fixtures` (the local/test default, `registries/fixtures.json`) is refused
+  under staging/prod; Helm sets `manual`/`manual`/`socrata` there until accounts exist.
+- **Research** (docs/runbooks/registries.md; the government doc hosts were unreachable from the build environment, so
+  details come from search results quoting them): Corporations Canada has a keyed Federal Corporation API in the GC
+  API Store (lookup by corporation number or BN; exact path and key header *to confirm* — URL and header are
+  configurable); Alberta has **no public API** (registry agents; Registries Online only for accredited subscribers), so
+  the provider adapter is OpenCorporates' `ca_ab` company API with a manual registry-agent fallback; Calgary's
+  business licences are the Socrata dataset `vdjc-pybd` (free; optional app token). AMVIC, AHS, AGLC and the other
+  regulators have no API → every such licence is a manual review.
+- **What is looked up** (`RegistryPlan`, per legal-details.schema.json structure): Alberta access / registration /
+  trade-name / co-op / society numbers; federal corporations at Corporations Canada **and** their Alberta
+  extra-provincial registration; for kitchens with a city licence number in Calgary, the City licence; licence rows
+  (`licence:<registry>`, `ahs_permit`, `aglc`) → Calgary for "Mobile permit", manual otherwise. A sole proprietor
+  without a trade name has nothing to register: the row is verified with reference `not_required`. Businesses outside
+  Calgary aren't sent to the Calgary dataset (no city yet counts as Calgary, the launch city).
+- **Matching:** a name entered (legal / corporate, operating or trade, display) equals the record's name ignoring case,
+  accents, punctuation, "&"/"and", a leading "The" and legal-form suffixes; active status; licence not expired. Reasons
+  `name`, `status`, `expired`. All matched → row `verified` (reference = the primary number, `expires_at` = the
+  earliest registry expiry as that day in Calgary — the checklist's existing expiry convention); otherwise `submitted`
+  (counts as complete, "{number} · checking" in the Studio) with an open review per unmatched lookup. An unreachable
+  source during onboarding also goes to review (the owner isn't blocked).
+- **Evidence:** every lookup is a `merchants.registry_checks` row (V033): source, subject, regulator, number, expected
+  name, trigger (`initial|recheck`), outcome, reasons, the record's name/number/status/expiry, the provider reference
+  (record URL, search id or dataset query) and `checked_at`, plus the review (state, agent, time, note). Public business
+  data only.
+- **Console verification queue** (no console UI exists; API only): `GET /api/v1/console/registry-reviews`,
+  `POST …/{id}/decision {decision, reference?, expiresOn?, note?}` (role STAFF + MFA). Approve → verified with the
+  agent's reference/expiry once no other review of that row is open; reject → `rejected` (a `ComplianceStatus` due item).
+  Messages not in validation-rules.md: "Choose approve or reject.", "At most 120 characters.", "At most 500 characters.";
+  409 `review_closed`.
+- **Re-checks:** daily job (`REGISTRY_RECHECK_CRON`, 03:41 Calgary; not under `test`) re-runs verified rows backed by an
+  API source whose `verifications.rechecked_at` (baseline column, first use) is older than `REGISTRY_RECHECK_AFTER`
+  (30 days — the design's "re-checked monthly"), 50 per batch, `FOR UPDATE SKIP LOCKED`. Still matching → expiry and
+  check time refreshed; no longer matching → `expires_at = now` (ComplianceStatus: expired, instant book pauses after
+  the 15-day grace) + a review; source down → retried the next day, no review. Rows only an agent can check (AMVIC,
+  AHS, …) aren't re-checked automatically (their expiry comes from the agent or the owner's renewal upload).
+- **ComplianceStatus:** `dueItems` now also includes the `registry` row (with S-22's `kyc`) while due; licence rows
+  were already in the ledger.
+- **Tests changed:** onboarding's AHS permit number now waits for an agent (`submitted`, was the fake's `verified`).
+- **Catalogue:** `MerchantLicenceQueries` (verified, unexpired `licence`/`registry` rows by registry) keeps working
+  unchanged — registry results land in the same rows; a lapsed re-check makes it return false for that registry.
+- **Config:** new secrets `REGISTRY_CORPORATIONS_CANADA_KEY`, `REGISTRY_ALBERTA_KEY`, `REGISTRY_CALGARY_APP_TOKEN`
+  (Terraform creates them empty on all three clouds; Helm `secretEnv` entries off by default); runbooks, secrets.md,
+  `.env.example`.
+- **Never run against the live services:** the three adapters are tested with WireMock stand-ins built from the
+  research; the Corporations Canada record shape, the API Store path and key header, and Calgary's `getbusid` format
+  are unverified.
+- **Not done:** a console UI for the queue; re-checking rows an owner's legal-name change sent back to `submitted`
+  (Settings › Business) automatically; a name search when the owner doesn't know the number; Kyckr-style KYB providers.

@@ -15,7 +15,7 @@ public interface ComplianceLedgerStore {
 
     /**
      * Checklist rows kept outside the ledger's list that still feed {@code ComplianceStatus}: the owners' identity
-     * verification ({@code kyc}, S-22).
+     * verification ({@code kyc}, S-22) and the business registration ({@code registry}, S-23).
      */
     List<ComplianceItem> platformChecks(String merchantId, Instant now);
 

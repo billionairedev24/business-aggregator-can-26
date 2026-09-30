@@ -15,6 +15,7 @@ say where a step is still manual or missing.
 | [prod.md](prod.md) | production (Calgary launch) |
 | [infrastructure.md](infrastructure.md) | Terraform on AWS / Google Cloud / Azure: accounts, state bucket, plan/apply, outputs → variables, cost, teardown (S-2/S-3) |
 | [object-storage.md](object-storage.md) | uploads in S3 / RustFS, Cloud Storage or Azure Blob: variables, buckets, least-privilege access per cloud (S-10) |
+| [registries.md](registries.md) | business registry lookups: Corporations Canada API, Alberta Corporate Registry (search service or registry-agent searches), City of Calgary licences (Socrata), manual review queue, re-checks (S-23) |
 | [stripe.md](stripe.md) | Stripe Connect Express: platform account setup (test/live), money flow, idempotency, local stripe-mock, operations (S-11), webhooks (S-12), Stripe Tax (S-21) |
 | [email.md](email.md) | transactional email: Mailpit locally, SES / SendGrid / Azure Communication Services / SMTP set-up, SPF/DKIM/DMARC, CASL (S-13) |
 | [notifications.md](notifications.md) | team notifications: who sends which email / SMS / push (api vs worker), matrix and quiet hours, failures, push stub (S-13/S-27) |
@@ -40,6 +41,7 @@ say where a step is still manual or missing.
 | Sign-in | dev auth (`X-Dev-User`) or northline-auth with seeded personas | northline-auth | northline-auth | northline-auth |
 | Dev seed (`db/seed-dev`) | yes | **no** (not in the images; refused — S-16) | **no** | **no** |
 | Stripe | fake gateway, or stripe-mock (`--profile payments`) | fake, or test keys | **test keys required** | **live keys required** |
+| Business registries (`REGISTRY_*_PROVIDER`) | `fixtures` | `fixtures` (warning), `manual` or the APIs | **`manual` / APIs** (`fixtures` refused) | same |
 | Identity verification (`IDENTITY_PROVIDER`) | `local`: pick the outcome on a page | `local` (owners can't finish) or `stripe` with test keys | **`stripe`**, test mode | **`stripe`**, live mode |
 | SMS / email | logged | *no provider yet (S-8, S-13)* | same | same |
 | Required variables checked at start-up | none | yes | yes (+ Stripe, storage) | yes (+ Stripe, storage) |
@@ -83,6 +85,7 @@ say where a step is still manual or missing.
   | `northline.email.provider` | `EMAIL_PROVIDER` | `local` (SMTP to Mailpit) · `smtp` · `ses` · `sendgrid` · `azure` | **done** (S-13, api invitations and money notices — [email.md](email.md); S-27 worker: `payout.failed`) |
   | `northline.tax.provider` | `TAX_PROVIDER` | `local` (fixed Canadian rates) · `stripe` (Stripe Tax) | **done** (S-21, api sales tax — [stripe.md § 6](stripe.md#6-stripe-tax-s-21)) |
   | `northline.identity.provider` | `IDENTITY_PROVIDER` | `local` (fake with an outcome page) · `stripe` (Stripe Identity) | **done** (S-22, owners' identity verification — [stripe.md § Identity](stripe.md#8-identity-s-22)) |
+  | `northline.registries.<source>.provider` | `REGISTRY_CORPORATIONS_CANADA_PROVIDER`, `REGISTRY_ALBERTA_PROVIDER`, `REGISTRY_CALGARY_PROVIDER` | `fixtures` · `manual` · `api` (Corporations Canada) / `opencorporates` (Alberta) / `socrata` (Calgary) | **done** (S-23, business registry lookups — [registries.md](registries.md)) |
   | `northline.sms.provider` | `SMS_PROVIDER` | `local` · `twilio` · `aws` (End User Messaging SMS and voice) · `azure` (reserved) | **done** (S-8, auth phone codes — [SMS and voice codes](#sms-and-voice-codes-s-8); S-27: shared library `server/sms`, also api invitations and worker notifications — [notifications.md](notifications.md)) |
 
   Secrets reach the apps as environment variables in every cloud (External Secrets from AWS Secrets Manager, Google
@@ -126,6 +129,8 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `TAX_PROVIDER` | ✓ | | | | staging and prod: `stripe` (`local` refused there — S-21, [stripe.md § 6](stripe.md#6-stripe-tax-s-21)) |
 | `TAX_CODE_SERVICE`, `TAX_CODE_GOODS`, `TAX_CODE_FOOD`, `TAX_RECONCILE_CRON` | ✓ | | | | no (Stripe's general service / goods / prepared-food codes; 03:17 Edmonton) |
 | `IDENTITY_PROVIDER` | ✓ | | | | staging and prod (`stripe`; `local` refused there — S-22, [stripe.md § Identity](stripe.md#8-identity-s-22)) |
+| `REGISTRY_CORPORATIONS_CANADA_PROVIDER`, `REGISTRY_ALBERTA_PROVIDER`, `REGISTRY_CALGARY_PROVIDER` | ✓ | | | | staging and prod (`fixtures` refused there — S-23, [registries.md](registries.md)) |
+| `REGISTRY_CORPORATIONS_CANADA_URL`/`_KEY`/`_KEY_HEADER`, `REGISTRY_ALBERTA_URL`/`_KEY`, `REGISTRY_CALGARY_URL`/`_DATASET`/`_APP_TOKEN`, `REGISTRY_RECHECK_AFTER`, `REGISTRY_RECHECK_CRON` | ✓ | | | | per provider ([registries.md](registries.md#set-up-per-environment)) |
 | `WEBHOOK_SECRET_KEY` | ✓ | | | | yes |
 | `STORAGE_PROVIDER`, `STORAGE_BUCKET` | ✓ | | | | staging and prod (`local` refused there — S-10, [object-storage.md](object-storage.md)) |
 | `STORAGE_REGION`, `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`, `STORAGE_PATH_STYLE`, `STORAGE_ENCRYPTION_KEY` | ✓ | | | | no (`STORAGE_ENDPOINT` needed for `azure`) |
