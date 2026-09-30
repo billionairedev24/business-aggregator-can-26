@@ -191,6 +191,13 @@ function CtaCard({ page, facts, showServices, pageHost, siteOrigin }: { page: St
   const bookLink = (className: string, children: ReactNode) => (pageHost
     ? <a href={siteHref(pageHost, siteOrigin, book)} className={className}>{children}</a>
     : <Link to="/providers/$slug/book" params={{ slug: facts.slug }} className={className}>{children}</Link>);
+  /** S-56: ask this business (pre-ticked) and up to two others for quotes. */
+  const quoteLink = (category: string, className: string, children: ReactNode) => {
+    const path = `/services/${category}/quote?provider=${encodeURIComponent(facts.slug)}`;
+    return pageHost
+      ? <a href={siteHref(pageHost, siteOrigin, path)} className={className}>{children}</a>
+      : <Link to="/services/$category/quote" params={{ category }} search={{ provider: facts.slug }} className={className}>{children}</Link>;
+  };
   const note = dyn(s, keys.note);
   return (
     <aside className="nl-prov-cta" aria-labelledby="prov-cta">
@@ -210,8 +217,10 @@ function CtaCard({ page, facts, showServices, pageHost, siteOrigin }: { page: St
             </ul>
           )
         : null}
-      {bookLink('btn btn-primary nl-prov-book', t(`cta_${page.ctaLabel}`))}
-      {facts.quoteable && facts.kind !== 'event' ? bookLink('btn btn-secondary nl-prov-quote-btn', t('notSure')) : null}
+      {facts.kind === 'event' && facts.category
+        ? quoteLink(facts.category.slug, 'btn btn-primary nl-prov-book', t('cta_request_quote'))
+        : bookLink('btn btn-primary nl-prov-book', t(`cta_${page.ctaLabel}`))}
+      {facts.quoteable && facts.kind !== 'event' && facts.category ? quoteLink(facts.category.slug, 'btn btn-secondary nl-prov-quote-btn', t('notSure')) : null}
       <div className="nl-prov-foot">{[t('nextAvailable', { when: nextAvailable(s, locale, facts.nextAvailable) }), note].filter(Boolean).join(' · ')}</div>
     </aside>
   );

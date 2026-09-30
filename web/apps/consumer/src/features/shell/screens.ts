@@ -8,7 +8,7 @@ export type ScreenKey =
   | 'home' | 'location' | 'search'
   | 'shop' | 'category' | 'product' | 'cart' | 'confirmed'
   | 'food' | 'restaurant' | 'foodCheckout' | 'foodTrack'
-  | 'services' | 'svcCategory' | 'providers' | 'provider' | 'book' | 'quote' | 'quoteRequest'
+  | 'services' | 'svcCategory' | 'providers' | 'provider' | 'book' | 'quote' | 'quoteRequest' | 'quoteCompare'
   | 'orders' | 'account' | 'signIn' | 'register' | 'sell';
 
 export interface Screen {
@@ -45,6 +45,8 @@ export const SCREENS: Record<ScreenKey, Screen> = {
   quote: { path: '/quotes/$quoteId', story: 'S-56', section: 'services', guestBanner: true },
   /** design 06 `book` in quote mode started from a category ("Describe the job, get 3 quotes"), no provider yet. */
   quoteRequest: { path: '/services/$category/quote', story: 'S-56', section: 'services', guestBanner: true },
+  /** design 06 `book` quote mode, "N quotes received": the request's providers and their quotes side by side. */
+  quoteCompare: { path: '/quotes/requests/$requestId', story: 'S-56', section: 'services', guestBanner: true },
   orders: { path: '/account/orders', story: 'S-58', guestBanner: true },
   account: { path: '/account', story: 'S-58 · S-59', guestBanner: true },
   signIn: { path: '/sign-in', story: 'S-62', auth: true },
