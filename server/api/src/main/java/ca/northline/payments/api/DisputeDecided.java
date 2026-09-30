@@ -9,6 +9,8 @@ import org.springframework.modulith.events.Externalized;
  * customer accepted the merchant's offer), {@code partial} or {@code full_refund}. Kafka topic {@code payments.dispute},
  * key = dispute id. Schema {@code events/payments.dispute_decided.v1.schema.json}.
  *
+ * @param caseNumber {@code DS-…} as the Studio shows it (added by S-13 for the notification email; additive)
+ * @param amountCents the disputed amount (added by S-13; additive)
  * @param decidedBy identity.users id of the agent, the merchant owner (full refund) or the customer (accepted offer)
  */
 @Externalized("payments.dispute::#{aggregateId()}")
@@ -17,6 +19,8 @@ public record DisputeDecided(
         Instant occurredAt,
         String aggregateId,
         String merchantId,
+        String caseNumber,
+        long amountCents,
         String escrowId,
         String decision,
         long refundCents,

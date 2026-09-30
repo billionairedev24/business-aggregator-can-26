@@ -35,7 +35,6 @@ import java.util.Base64;
 import java.util.HexFormat;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationEventPublisher;
@@ -47,7 +46,6 @@ import org.springframework.transaction.annotation.Transactional;
  * {@code MerchantAccess} checks on every request, so removal and role changes take effect at once. Every change is
  * audit-logged and published as {@code merchant.team_changed}.
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -133,8 +131,10 @@ class TeamManagementService
         audit.record(entry(actor, "team.invited", "invitation", invitation.id())
                 .withChange(null, Map.of("role", role.code(), "channel", contact.channel())));
         var link = links.invitation(token);
-        var sent = send(contact, merchant, actor, role, link);
-        return new InvitationCreated(view(invitation, now), link, sent);
+        // Sent after commit by TeamInvitationDelivery (S-13); the owner always gets the link to share as well.
+        events.publishEvent(
+                new TeamInvitationIssued(Ids.next(), now, invitation.id(), actor.merchantId(), actor.userId(), token));
+        return new InvitationCreated(view(invitation, now), link, sender.delivers(contact));
     }
 
     @Override
@@ -226,21 +226,6 @@ class TeamManagementService
                 invitation.merchantId(), userId, invitation.role().code(), "team.joined", "member", userId));
         publish(invitation.merchantId(), userId, userId, "joined", invitation.role());
         return new Accepted(invitation.merchantId(), invitation.role().code());
-    }
-
-    private boolean send(
-            TeamRules.Contact contact, Merchant merchant, SettingsActor actor, MerchantRole role, String link) {
-        try {
-            var inviter = accounts.account(actor.userId())
-                    .map(TeamAccounts.Account::displayName)
-                    .orElse("");
-            sender.send(new TeamInviteSender.Invite(
-                    contact, merchant.getDisplayName().value(), inviter, role, link));
-            return true;
-        } catch (RuntimeException e) {
-            log.warn("Team invitation for {} was not delivered: {}", merchant.getId(), e.getMessage());
-            return false;
-        }
     }
 
     private TeamInvitation byToken(String token) {

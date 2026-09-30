@@ -87,10 +87,24 @@ northline:
   kms:
     provider: ${KMS_PROVIDER:local}
     key-id: ${KMS_KEY_ID:}
+  # Transactional email (S-13, library server/email; docs/runbooks/email.md): local (SMTP to Mailpit, only logs when
+  # Mailpit isn't running; refused under staging/prod) | smtp (any relay, e.g. SES SMTP) | ses | sendgrid | azure.
   email:
     provider: ${EMAIL_PROVIDER:local}
     from: ${EMAIL_FROM:Northline <no-reply@northline.ca>}
+    reply-to: ${EMAIL_REPLY_TO:}
+    mailing-address: ${EMAIL_MAILING_ADDRESS:Northline Marketplace Inc. · 1200 – 8th Avenue SW, Calgary, Alberta T2P 1B5, Canada}
+    contact: ${EMAIL_CONTACT:support@northline.ca}
+    region: ${EMAIL_REGION:}                     # ses: ca-central-1
+    endpoint: ${EMAIL_ENDPOINT:}                 # azure: https://<resource>.communication.azure.com; tests/VPC endpoints
+    api-key: ${EMAIL_API_KEY:}                   # sendgrid: SG.…; azure: access key (blank = Entra ID)
+    configuration-set: ${EMAIL_CONFIGURATION_SET:}
     smtp: { host: "${SMTP_HOST:localhost}", port: "${SMTP_PORT:1025}", username: "${SMTP_USERNAME:}", password: "${SMTP_PASSWORD:}", starttls: "${SMTP_STARTTLS:false}" }
+    retry: { attempts: "${EMAIL_RETRY_ATTEMPTS:3}", backoff: "${EMAIL_RETRY_BACKOFF:2s}" }
+  notifications:                                 # links in notification emails (S-13)
+    studio-url: ${STUDIO_ORIGIN:http://localhost:3100}
+    api-url: ${API_PUBLIC_URL:http://localhost:8080}   # unsubscribe links: the api's public URL (not the BFF)
+    unsubscribe-key: ${EMAIL_UNSUBSCRIBE_KEY:}         # HMAC key; blank = development key (refused under staging/prod)
   sms:
     provider: ${SMS_PROVIDER:local}
     from: ${SMS_FROM:}

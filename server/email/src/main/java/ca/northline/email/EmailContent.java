@@ -1,0 +1,390 @@
+package ca.northline.email;
+
+import java.net.URI;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import org.jspecify.annotations.Nullable;
+
+/**
+ * What an email says, independent of language: one record per template in {@code email/templates/<template>.html|txt}
+ * (copy in {@code email/messages[_fr].properties}). Values are raw here and formatted for the recipient's locale by
+ * {@link #variables(EmailFormat)}. No record carries the recipient's address — the {@link Mailer} gets it separately.
+ */
+public sealed interface EmailContent {
+
+    /** CASL class of the message; decides the footer and whether an unsubscribe link is required. */
+    enum Purpose {
+        /**
+         * Facilitates or confirms something the recipient (or someone on their behalf) asked for, or is a security or
+         * account notice (CASL s. 6(6)): no unsubscribe link, but the sender is always identified.
+         */
+        TRANSACTIONAL,
+        /**
+         * An account notification the recipient can turn off in Settings › Notifications: carries a one-click
+         * unsubscribe link that turns that notification's email off.
+         */
+        NOTIFICATION,
+        /** A commercial electronic message (CASL): needs consent and an unsubscribe link. None exist yet. */
+        COMMERCIAL;
+
+        public boolean needsUnsubscribe() {
+            return this != TRANSACTIONAL;
+        }
+    }
+
+    /** Template file name without extension, e.g. {@code team-invitation}. */
+    String template();
+
+    /** Sub-key of the subject for templates with variants ({@code dispute-update.subject.opened}); empty = none. */
+    default String variant() {
+        return "";
+    }
+
+    Purpose purpose();
+
+    String businessName();
+
+    /** Template variables, formatted for the recipient. Keys are the template's names. */
+    Map<String, Object> variables(EmailFormat format);
+
+    /** Arguments of {@code <template>.subject[.<variant>]}. */
+    default List<Object> subjectArgs(EmailFormat format) {
+        return List.of(businessName());
+    }
+
+    /** Arguments of {@code <template>.reason} (the footer line saying why this address got the email). */
+    default List<Object> reasonArgs() {
+        return List.of(businessName());
+    }
+
+    /** Message-key form of an enum constant: {@code OFFER_DECLINED} → {@code offer_declined}. */
+    private static String code(Enum<?> value) {
+        return value.name().toLowerCase(Locale.ROOT);
+    }
+
+    // ── Team ─────────────────────────────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Settings › Team: an owner invited this address. Transactional (sent because of the owner's request, and the
+     * address has no Northline preferences to honour).
+     *
+     * @param role {@code owner | technician | cook | bookkeeper}
+     * @param link {@code <studio>/invite/<token>}
+     */
+    record TeamInvitation(String businessName, String inviterName, String role, URI link, Instant expiresAt)
+            implements EmailContent {
+
+        @Override
+        public String template() {
+            return "team-invitation";
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.TRANSACTIONAL;
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            return Map.of(
+                    "businessName", businessName,
+                    "inviterName", inviterName,
+                    "role", role,
+                    "link", link.toString(),
+                    "expiresAt", format.date(expiresAt));
+        }
+
+        @Override
+        public List<Object> subjectArgs(EmailFormat format) {
+            return List.of(inviterName, businessName);
+        }
+
+        @Override
+        public List<Object> reasonArgs() {
+            return List.of(inviterName, businessName);
+        }
+    }
+
+    // ── Finance ──────────────────────────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Payouts › bank account: the account payouts go to is changing ({@code payout_account.changed}). A security
+     * notice — always sent, never subject to preferences.
+     *
+     * @param effectiveAt when the new account takes over (the end of the 24 h hold)
+     */
+    record BankAccountChange(String businessName, Phase phase, Instant effectiveAt, URI payoutsLink)
+            implements EmailContent {
+
+        public enum Phase {
+            /** Confirmed by the owner; payouts pause until {@code effectiveAt}. */
+            REQUESTED,
+            /** The hold ended; payouts go to the new account. */
+            EFFECTIVE
+        }
+
+        @Override
+        public String template() {
+            return "bank-account-change";
+        }
+
+        @Override
+        public String variant() {
+            return code(phase);
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.TRANSACTIONAL;
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            return Map.of(
+                    "businessName", businessName,
+                    "phase", code(phase),
+                    "effectiveAt", format.dateTime(effectiveAt),
+                    "link", payoutsLink.toString());
+        }
+    }
+
+    /**
+     * Payouts: money left for the bank ({@code payout.sent}) — the receipt. Settings › Notifications row
+     * {@code payout}.
+     */
+    record PayoutSent(
+            String businessName, long amountCents, long feeCents, boolean instant, Instant arrivesAt, URI payoutsLink)
+            implements EmailContent {
+
+        @Override
+        public String template() {
+            return "payout-sent";
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.NOTIFICATION;
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            var v = new LinkedHashMap<String, Object>();
+            v.put("businessName", businessName);
+            v.put("amount", format.money(amountCents));
+            v.put("fee", format.money(feeCents));
+            v.put("hasFee", feeCents > 0);
+            v.put("net", format.money(amountCents - feeCents));
+            v.put("kind", instant ? "instant" : "scheduled");
+            v.put("arrivesAt", instant ? format.dateTime(arrivesAt) : format.date(arrivesAt));
+            v.put("link", payoutsLink.toString());
+            return v;
+        }
+
+        @Override
+        public List<Object> subjectArgs(EmailFormat format) {
+            return List.of(format.money(amountCents - feeCents), businessName);
+        }
+    }
+
+    /**
+     * Refunds &amp; disputes: a customer's dispute opened, changed hands or was decided. Settings › Notifications row
+     * {@code dispute}.
+     *
+     * @param respondBy the merchant's deadline (opened) — null otherwise
+     * @param decision {@code release | goodwill | partial | full_refund} when {@code change = DECIDED}
+     * @param refundCents what the customer gets back when decided
+     */
+    record DisputeUpdate(
+            String businessName,
+            String caseNumber,
+            DisputeUpdate.Change change,
+            long amountCents,
+            @Nullable Instant respondBy,
+            @Nullable String decision,
+            long refundCents,
+            URI casesLink)
+            implements EmailContent {
+
+        public enum Change {
+            OPENED,
+            OFFER_DECLINED,
+            OFFER_EXPIRED,
+            DECIDED
+        }
+
+        @Override
+        public String template() {
+            return "dispute-update";
+        }
+
+        @Override
+        public String variant() {
+            return code(change);
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.NOTIFICATION;
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            var v = new LinkedHashMap<String, Object>();
+            v.put("businessName", businessName);
+            v.put("caseNumber", caseNumber);
+            v.put("change", code(change));
+            v.put("amount", format.money(amountCents));
+            v.put("respondBy", respondBy == null ? "" : format.dateTime(respondBy));
+            v.put("decision", decision == null ? "" : decision);
+            v.put("refund", format.money(refundCents));
+            v.put("link", casesLink.toString());
+            return v;
+        }
+
+        @Override
+        public List<Object> subjectArgs(EmailFormat format) {
+            return List.of(caseNumber, businessName);
+        }
+    }
+
+    /**
+     * Refunds &amp; disputes: a customer's refund request and what happened to it. Settings › Notifications row
+     * {@code dispute} (the design has no separate refunds row).
+     *
+     * @param respondBy the merchant's deadline while the case waits for them (requested) — null otherwise
+     */
+    record RefundCaseUpdate(
+            String businessName,
+            String caseNumber,
+            RefundCaseUpdate.Change change,
+            long amountCents,
+            @Nullable Instant respondBy,
+            URI casesLink)
+            implements EmailContent {
+
+        public enum Change {
+            /** The customer asked; the merchant reviews it (small amounts are approved unless contested). */
+            REQUESTED,
+            /** Approved (by an agent or because the review window lapsed); the refund queue will pay it. */
+            APPROVED,
+            /** The review window lapsed on a larger refund; a Northline agent decides. */
+            AGENT_REVIEW,
+            /** A Northline agent denied it; the held money is released. */
+            DENIED,
+            /** Paid back to the customer's original payment method. */
+            PAID
+        }
+
+        @Override
+        public String template() {
+            return "refund-case-update";
+        }
+
+        @Override
+        public String variant() {
+            return code(change);
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.NOTIFICATION;
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            var v = new LinkedHashMap<String, Object>();
+            v.put("businessName", businessName);
+            v.put("caseNumber", caseNumber);
+            v.put("change", code(change));
+            v.put("amount", format.money(amountCents));
+            v.put("respondBy", respondBy == null ? "" : format.dateTime(respondBy));
+            v.put("link", casesLink.toString());
+            return v;
+        }
+
+        @Override
+        public List<Object> subjectArgs(EmailFormat format) {
+            return List.of(caseNumber, format.money(amountCents), businessName);
+        }
+    }
+
+    // ── Samples (preview endpoint, rendering tests) ──────────────────────────────────────────────────────────────
+
+    /**
+     * One sample per template and variant, keyed {@code <template>[.<variant>]}, with the design's Prairie Wrench
+     * data. Used by the local preview endpoint and the rendering tests.
+     */
+    static Map<String, EmailContent> samples() {
+        var at = Instant.parse("2026-10-02T15:00:00Z");
+        var studio = "http://localhost:3100/b/01J9ZD3V00000000000000PWM1";
+        var business = "Prairie Wrench";
+        var payouts = URI.create(studio + "/payouts");
+        var cases = URI.create(studio + "/refunds");
+        var all = new LinkedHashMap<String, EmailContent>();
+        all.put(
+                "team-invitation",
+                new TeamInvitation(
+                        business,
+                        "Ravi Sandhu",
+                        "technician",
+                        URI.create("http://localhost:3100/invite/sample-token"),
+                        at.plus(Duration.ofDays(7))));
+        for (var phase : BankAccountChange.Phase.values()) {
+            var sample = new BankAccountChange(business, phase, at.plus(Duration.ofHours(24)), payouts);
+            all.put(key(sample), sample);
+        }
+        all.put("payout-sent", new PayoutSent(business, 82_260, 823, true, at.plus(Duration.ofMinutes(30)), payouts));
+        all.put(
+                "payout-sent.scheduled",
+                new PayoutSent(business, 145_000, 0, false, at.plus(Duration.ofDays(1)), payouts));
+        for (var change : DisputeUpdate.Change.values()) {
+            var decided = change == DisputeUpdate.Change.DECIDED;
+            var sample = new DisputeUpdate(
+                    business,
+                    "DS-1188",
+                    change,
+                    38_900,
+                    change == DisputeUpdate.Change.OPENED ? at.plus(Duration.ofDays(3)) : null,
+                    decided ? "partial" : null,
+                    decided ? 19_450 : 0,
+                    cases);
+            all.put(key(sample), sample);
+        }
+        for (var decision : List.of("release", "goodwill", "full_refund")) {
+            all.put(
+                    "dispute-update.decided." + decision,
+                    new DisputeUpdate(
+                            business,
+                            "DS-1188",
+                            DisputeUpdate.Change.DECIDED,
+                            38_900,
+                            null,
+                            decision,
+                            switch (decision) {
+                                case "release" -> 0;
+                                case "goodwill" -> 19_450;
+                                default -> 38_900;
+                            },
+                            cases));
+        }
+        for (var change : RefundCaseUpdate.Change.values()) {
+            var sample = new RefundCaseUpdate(
+                    business,
+                    "RF-2214",
+                    change,
+                    4_500,
+                    change == RefundCaseUpdate.Change.REQUESTED ? at.plus(Duration.ofHours(24)) : null,
+                    cases);
+            all.put(key(sample), sample);
+        }
+        return java.util.Collections.unmodifiableMap(all);
+    }
+
+    private static String key(EmailContent content) {
+        return content.variant().isEmpty() ? content.template() : content.template() + "." + content.variant();
+    }
+}

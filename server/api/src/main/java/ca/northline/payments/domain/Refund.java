@@ -1,5 +1,6 @@
 package ca.northline.payments.domain;
 
+import ca.northline.payments.api.RefundCaseUpdated;
 import ca.northline.payments.api.RefundIssued;
 import ca.northline.shared.CodedEnum;
 import ca.northline.shared.Conflict;
@@ -176,6 +177,23 @@ public class Refund {
         decidedAt = now;
     }
 
+    /**
+     * {@code refund.case_updated} for the case's current state (the merchant's team is emailed): requested (with the
+     * review deadline), approved, agent_review or denied.
+     */
+    public RefundCaseUpdated updated(Instant now) {
+        var change = state == State.SELLER_REVIEW ? "requested" : state.code();
+        return new RefundCaseUpdated(
+                Ids.next(),
+                now,
+                id,
+                merchantId,
+                caseNumber,
+                change,
+                amountCents,
+                state == State.SELLER_REVIEW ? contestBy : null);
+    }
+
     /** The refund queue paid it. */
     public RefundIssued paid(String stripeRefundId, Instant now) {
         if (state != State.APPROVED) {
@@ -184,7 +202,7 @@ public class Refund {
         state = State.PAID;
         paidAt = now;
         stripeRefund = stripeRefundId;
-        return new RefundIssued(Ids.next(), now, id, merchantId, escrowId, amountCents, chargedTo.code());
+        return new RefundIssued(Ids.next(), now, id, merchantId, caseNumber, escrowId, amountCents, chargedTo.code());
     }
 
     private void requireSellerReview() {

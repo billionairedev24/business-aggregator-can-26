@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<!--/* The page behind an email's unsubscribe link (GET = confirm with a button, POST = done). Same look as the
+       emails; served by the api, so it carries its own inline styles. */-->
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${lang}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title th:text="#{page.unsubscribe.title} + ' · ' + #{brand}">Unsubscribe</title>
+</head>
+<body th:style="${s.body}">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" th:style="${s.outer}">
+    <tr>
+      <td align="center" style="padding:48px 16px">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" th:style="${s.frame}">
+          <tr><td th:style="${s.brand}" th:text="#{brand}">Northline</td></tr>
+          <tr>
+            <td th:style="${s.card}" th:switch="${state}">
+              <th:block th:case="'confirm'">
+                <h1 th:style="${s.h1}" th:text="#{page.unsubscribe.confirm(${eventLabel})}">Stop these emails?</h1>
+                <form method="post" th:action="${action}">
+                  <input type="hidden" name="t" th:value="${token}">
+                  <button type="submit" th:style="${s.button} + ';border:0;cursor:pointer'" th:text="#{page.unsubscribe.button}">Unsubscribe</button>
+                </form>
+              </th:block>
+              <th:block th:case="'done'">
+                <h1 th:style="${s.h1}" th:text="#{page.unsubscribe.done(${eventLabel})}">Done</h1>
+                <p th:style="${s.p}" th:text="#{page.unsubscribe.settings}">Settings</p>
+              </th:block>
+              <th:block th:case="*">
+                <h1 th:style="${s.h1}" th:text="#{page.unsubscribe.invalid}">Invalid link</h1>
+              </th:block>
+            </td>
+          </tr>
+          <tr><td th:style="${s.footer}" th:text="#{footer.sender(${mailingAddress}, ${contact})}">Sent by Northline</td></tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
