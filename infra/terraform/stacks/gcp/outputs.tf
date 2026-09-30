@@ -49,6 +49,14 @@ output "secrets_provider" {
   value       = module.secrets.secrets_provider
 }
 
+output "external_secrets" {
+  description = "External Secrets Operator store settings for the Helm chart (externalSecrets.provider and its block, S-6)."
+  value = {
+    provider = "gcp"
+    gcp      = { projectID = var.project_id }
+  }
+}
+
 output "secret_store" {
   description = "Where generated secrets are written."
   value       = module.secrets.store

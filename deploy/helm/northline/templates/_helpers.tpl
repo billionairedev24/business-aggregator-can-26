@@ -56,9 +56,49 @@ app.kubernetes.io/component: {{ .app }}
 {{- default "northline-infra" .Values.existingInfraConfigMap -}}
 {{- end }}
 
-{{/* Name of the Secret an app's secret variables come from. (dict "root" $ "name" "<app>") */}}
+{{/*
+Name of the Secret an app's secret variables come from. (dict "root" $ "name" "<app>")
+With External Secrets (S-6) each app has its own Secret, written by its ExternalSecret; otherwise the shared one.
+*/}}
 {{- define "northline.secretName" -}}
+{{- if .root.Values.externalSecrets.enabled -}}
+northline-{{ .name }}-secrets
+{{- else -}}
 {{- .root.Values.secrets.existingSecret -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+External Secrets: the remote key (name in the secrets manager) of a variable. externalSecrets.remoteKeys (Terraform's
+secret_env) wins; otherwise remoteKeyPrefix ("{env}" = global.environment) + secretNames.<VAR>.
+(dict "root" $ "key" "<VAR>") → the remote key, or "" when unknown.
+*/}}
+{{- define "northline.remoteKey" -}}
+{{- $es := .root.Values.externalSecrets -}}
+{{- $explicit := get (default (dict) $es.remoteKeys) .key -}}
+{{- if $explicit -}}
+{{- $explicit -}}
+{{- else -}}
+{{- $name := get (default (dict) $es.secretNames) .key -}}
+{{- if $name -}}
+{{- printf "%s%s" (replace "{env}" .root.Values.global.environment (default "" $es.remoteKeyPrefix)) $name -}}
+{{- end -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Variables an app's ExternalSecret maps: every required one, and the optional ones listed in
+externalSecrets.optionalKeys (they must hold a value in the secrets manager: an ExternalSecret fails as a whole when
+one remote secret is empty or missing). (dict "root" $ "app" $appValues) → YAML list.
+*/}}
+{{- define "northline.externalKeys" -}}
+{{- $keys := list -}}
+{{- range $key, $required := (default (dict) .app.secretEnv) -}}
+{{- if or $required (has $key $.root.Values.externalSecrets.optionalKeys) -}}
+{{- $keys = append $keys $key -}}
+{{- end -}}
+{{- end -}}
+{{- toYaml $keys -}}
 {{- end }}
 
 {{/*

@@ -54,9 +54,9 @@ spring:
   extraVolumes: []
   extraVolumeMounts: []
 
-# Secrets: plain Kubernetes Secret(s) referenced key by key (each app gets only the keys listed in its secretEnv).
-# Create them before installing (kubectl create secret generic northline-secrets --from-env-file=…) — or let
-# External Secrets Operator create them from the cloud's secrets manager (S-6).
+# Secrets without External Secrets: one plain Kubernetes Secret referenced key by key (each app gets only the keys
+# listed in its secretEnv). Create it before installing (kubectl create secret generic northline-secrets
+# --from-env-file=…). With externalSecrets.enabled (S-6, the default of every cloud overlay) this is not used.
 secrets:
   # Secret that holds every secret variable (keys = variable names).
   existingSecret: northline-secrets
@@ -64,6 +64,60 @@ secrets:
   # values files are not a place for secrets.
   create: false
   values: {}
+
+# External Secrets Operator (S-6, docs/runbooks/secrets.md): the apps' secrets come from AWS Secrets Manager, Google
+# Secret Manager or Azure Key Vault, written by ESO into one Secret per app (northline-<app>-secrets) holding only that
+# app's variables. ESO itself is installed once per cluster (namespace external-secrets) with the workload identity
+# Terraform created for it; the store below authenticates as the ESO controller — no static keys anywhere.
+# The Terraform env roots output all of this: `terraform output -json helm_values`.
+externalSecrets:
+  enabled: false
+  provider: ""                    # aws | gcp | azure | fake (fake: kind only)
+  refreshInterval: 1h             # how often ESO re-reads the secrets manager (rotation: docs/runbooks/secrets.md)
+  store:
+    create: true
+    kind: SecretStore             # or ClusterSecretStore (then create it once, outside the release)
+    name: northline
+  aws:
+    region: ca-central-1
+    auth: {}                      # empty = the ESO controller's identity (IRSA / EKS Pod Identity)
+  gcp:
+    projectID: ""
+    auth: {}                      # empty = the controller's GKE Workload Identity
+  azure:
+    vaultUrl: ""                  # https://nl-<env>-sec-….vault.azure.net/
+    tenantId: ""
+    serviceAccountRef: {}         # empty = the controller's Azure Workload Identity
+  fake:
+    data: {}                      # remote key → value (kind only)
+  # Remote key of each variable: remoteKeys.<VAR> (Terraform secret_env) or remoteKeyPrefix + secretNames.<VAR>.
+  # Prefixes: AWS "northline/{env}/", Google Cloud "northline-{env}-", Azure "" (one vault per environment).
+  remoteKeys: {}
+  remoteKeyPrefix: ""
+  secretNames:
+    DB_PASSWORD: db-app-password
+    REDIS_PASSWORD: redis-password
+    KAFKA_SASL_JAAS_CONFIG: kafka-sasl-jaas-config
+    ES_PASSWORD: es-password
+    TOTP_KEY: totp-key
+    WEBHOOK_SECRET_KEY: webhook-secret-key
+    STUDIO_BFF_SECRET: studio-bff-secret
+    STUDIO_BFF_SECRET_HASH: studio-bff-secret-hash
+    CONSUMER_BFF_SECRET_HASH: consumer-bff-secret-hash
+    CONSOLE_BFF_SECRET_HASH: console-bff-secret-hash
+    STRIPE_SECRET_KEY: stripe-secret-key
+    STRIPE_PUBLISHABLE_KEY: stripe-publishable-key
+    STRIPE_WEBHOOK_SECRET: stripe-webhook-secret
+    STRIPE_CONNECT_WEBHOOK_SECRET: stripe-connect-webhook-secret
+    GOOGLE_CLIENT_SECRET: google-client-secret
+    APPLE_CLIENT_SECRET: apple-client-secret
+    SMS_AUTH_TOKEN: sms-auth-token
+    EMAIL_UNSUBSCRIBE_KEY: email-unsubscribe-key
+    EMAIL_API_KEY: email-api-key
+    SMTP_PASSWORD: smtp-password
+  # Optional variables (secretEnv: false) to map as well. List only those that hold a value in the secrets manager:
+  # one empty or missing remote secret fails the app's whole ExternalSecret. Required variables are always mapped.
+  optionalKeys: [REDIS_PASSWORD, KAFKA_SASL_JAAS_CONFIG, ES_PASSWORD]
 
 # Workload identity per app, in the shape Terraform outputs it
 # (`terraform output -json kubernetes | jq '{workloadIdentities: .workload_identities}'`):

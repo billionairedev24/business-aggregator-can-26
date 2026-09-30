@@ -3,7 +3,8 @@
 One runbook per environment. Each lists what the environment needs — services, variables, secrets, third-party
 accounts — and how to run, deploy and roll back **with what exists today**. Terraform for the cloud foundation and the managed data
 stores exists (S-2, S-3; not applied yet); container images and the Helm chart exist (S-14, [deploy.md](deploy.md));
-External Secrets, the migration Job, GitOps and TLS/DNS arrive with later stories (S-6, S-16, S-15, S-17); the runbooks
+External Secrets are wired into the chart (S-6, [secrets.md](secrets.md)); the migration Job, GitOps and TLS/DNS arrive with
+later stories (S-16, S-15, S-17); the runbooks
 say where a step is still manual or missing.
 
 | runbook | for |
@@ -17,6 +18,7 @@ say where a step is still manual or missing.
 | [stripe.md](stripe.md) | Stripe Connect Express: platform account setup (test/live), money flow, idempotency, local stripe-mock, operations (S-11) |
 | [email.md](email.md) | transactional email: Mailpit locally, SES / SendGrid / Azure Communication Services / SMTP set-up, SPF/DKIM/DMARC, CASL (S-13) |
 | [ci.md](ci.md) | CI pipelines on GitHub Actions and GitLab CI, manual trigger only (S-4/S-5, infra checks S-2/S-3) |
+| [secrets.md](secrets.md) | secrets in AWS Secrets Manager / Secret Manager / Key Vault through External Secrets Operator: inventory, set-up, rotation (S-6) |
 | [deploy.md](deploy.md) | container images (Jib, Dockerfile) to any registry, the Helm chart per environment and cloud, install/upgrade/roll back, local rehearsal on kind (S-14) |
 
 ## Environment matrix
@@ -76,7 +78,7 @@ say where a step is still manual or missing.
   | `northline.sms.provider` | `SMS_PROVIDER` | `local` · `twilio` · `aws` (End User Messaging SMS and voice) · `azure` (reserved) | **done** (S-8, auth phone codes — [SMS and voice codes](#sms-and-voice-codes-s-8)) |
 
   Secrets reach the apps as environment variables in every cloud (External Secrets from AWS Secrets Manager, Google
-  Secret Manager or Azure Key Vault — S-6), so there is no `secrets.provider` switch. Each app logs its choice at
+  Secret Manager or Azure Key Vault — S-6, [secrets.md](secrets.md)), so there is no `secrets.provider` switch. Each app logs its choice at
   start-up: `Providers: storage=local kms=local email=local sms=local`.
 - **Local convenience.** The apps import `server/.env` (or `.env` in the working directory) when it exists, except
   under the `test` profile; real environment variables win. Docker Compose reads the root `.env`; Vite reads

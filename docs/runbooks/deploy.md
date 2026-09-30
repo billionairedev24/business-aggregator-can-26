@@ -6,8 +6,9 @@ one cloud — the same images and the same chart run on EKS, GKE, AKS or kind; o
 
 > **Status (2026-09-30):** images build and run; the chart installs on kind with every pod Ready (below). No cloud
 > cluster exists yet (Terraform is unapplied — [infrastructure.md](infrastructure.md)), so nothing has been deployed to
-> EKS/GKE/AKS. Secrets are plain Kubernetes Secrets until External Secrets (S-6); the api still migrates at start-up
-> until the migration Job (S-16); GitOps is S-15; TLS, DNS and the ingress controller are S-17.
+> EKS/GKE/AKS. Secrets come from the cloud secrets manager through External Secrets (S-6, [secrets.md](secrets.md));
+> the api still migrates at start-up until the migration Job (S-16); GitOps is S-15; TLS, DNS and the ingress
+> controller are S-17.
 
 Other runbooks: [dev](dev.md) · [staging](staging.md) · [prod](prod.md) · [infrastructure](infrastructure.md) ·
 [CI](ci.md) · [overview and variables](README.md)
@@ -96,7 +97,7 @@ replica); plus the Ingress or Gateway API HTTPRoutes and the OAuth client Job.
 | concern | how |
 |---|---|
 | configuration | `envFrom`: ConfigMap `northline-infra` (Terraform `config_env`, rendered from `configEnv` values or an existing ConfigMap) + ConfigMap `northline-<app>` (derived URLs + `env` + `apps.<app>.env`). Derived: `SPRING_PROFILES_ACTIVE` (= `global.environment`), `AUTH_ISSUER`, `STUDIO_ORIGIN`, `CONSUMER_ORIGIN`, `CONSOLE_ORIGIN`, `API_PUBLIC_URL`, `WEBAUTHN_RP_ID` from `urls.*`; `API_URL`, `AUTH_INTERNAL_URL` = the in-cluster Services |
-| secrets | each app reads **only its own keys** (`apps.<app>.secretEnv`: key → required) from the Secret `secrets.existingSecret` (`northline-secrets`). A missing required key keeps the pod from starting (`CreateContainerConfigError`); optional ones fall back to the app default. S-6 replaces the hand-made Secret with External Secrets |
+| secrets | each app reads **only its own keys** (`apps.<app>.secretEnv`: key → required). With `externalSecrets.enabled` (the cloud overlays, S-6) an ExternalSecret per app writes Secret `northline-<app>-secrets` from AWS Secrets Manager / Secret Manager / Key Vault ([secrets.md](secrets.md)); without it, one hand-made Secret `secrets.existingSecret` (`northline-secrets`). A missing required key keeps the pod from starting (`CreateContainerConfigError`); optional ones fall back to the app default |
 | workload identity | `workloadIdentities.<app>.service_account_annotations` on the ServiceAccount and `.pod_labels` on the pods — exactly Terraform's `kubernetes.workload_identities` output (IRSA role ARN, GKE service account, Azure client id + `azure.workload.identity/use`). No cloud logic in the templates |
 | probes | Spring: startup (up to 5 min) + liveness on `/actuator/health/liveness`, readiness on `/actuator/health/readiness` (the S-1 probe groups: they don't include Kafka/Elasticsearch, so a data-store blip doesn't restart pods); web: `/healthz` |
 | security | non-root (65532 / 101), `runAsNonRoot`, `seccompProfile: RuntimeDefault`, no privilege escalation, all capabilities dropped, **read-only root file system** (an `emptyDir` on `/tmp`; nginx also on `/etc/nginx/conf.d`), no ServiceAccount token mounted |
@@ -117,13 +118,13 @@ staging/prod; an unknown environment.
 
 ```sh
 cd infra/terraform/envs/<cloud>/<env>
-terraform output -json config_env | jq '{configEnv: .}' > /tmp/infra-values.json
-terraform output -json kubernetes | jq '{workloadIdentities: .workload_identities}' > /tmp/identities.json
-terraform output -json registry | jq -r .registry_url      # REGISTRY (append /northline on AWS and Azure)
+terraform output -json helm_values > /tmp/northline-values.json   # configEnv + workloadIdentities + externalSecrets (S-6)
+terraform output -json registry | jq -r .registry_url             # REGISTRY (append /northline on AWS and Azure)
 ```
 
-Neither file holds a secret (`config_env` is non-secret by construction; `secret_env` only names the secrets), but they
-are environment-specific: keep them next to the environment's GitOps values (S-15), not in this chart.
+`helm_values` holds no secret (`configEnv` is non-secret by construction; `externalSecrets.remoteKeys` only names the
+secrets), but it is environment-specific: keep it next to the environment's GitOps values (S-15), not in this chart.
+(The individual outputs `config_env`, `kubernetes.workload_identities`, `secret_env` still exist.)
 
 ## Install, upgrade, roll back
 
@@ -133,18 +134,22 @@ Prerequisites per environment: the cluster and data stores from Terraform, the P
 ([dev.md § Environment variables](dev.md#environment-variables)).
 
 ```sh
+# once per cluster: External Secrets Operator with its workload identity — secrets.md § Setting it up
 kubectl create namespace northline-<env>
-# Until S-6: one Secret with every secret variable (names = variable names, see the environment runbook).
-kubectl -n northline-<env> create secret generic northline-secrets --from-env-file=secrets.env   # never commit secrets.env
 # Google Cloud only: the Memorystore CA (values-gcp.yaml)
 kubectl -n northline-<env> create configmap northline-redis-ca --from-file=ca.pem=redis-ca.pem
 
 helm upgrade --install northline deploy/helm/northline -n northline-<env> \
   -f deploy/helm/northline/values-<env>.yaml -f deploy/helm/northline/values-<cloud>.yaml \
-  -f /tmp/infra-values.json -f /tmp/identities.json \
+  -f /tmp/northline-values.json \
   --set global.image.registry="$REGISTRY" --set global.image.tag="$IMAGE_TAG" \
   --wait --timeout 15m
 ```
+
+The secret values must already be in the secrets manager ([secrets.md § Secret inventory](secrets.md#secret-inventory)).
+A cluster without External Secrets: add `--set externalSecrets.enabled=false` and create one Secret with every secret
+variable first (`kubectl -n northline-<env> create secret generic northline-secrets --from-env-file=secrets.env`,
+never committed).
 
 - `--wait` matters: Helm then runs the OAuth client Job only after every Deployment is Ready (the api has migrated the
   schema by then). Without it, the Job may start before the tables exist and retry (`backoffLimit: 2`).
@@ -161,7 +166,7 @@ helm upgrade --install northline deploy/helm/northline -n northline-<env> \
   every migration must keep the previous release working — [dev.md § Deploy](dev.md#deploy-migrate-roll-back)) and does
   not restore Secret values (those live in the secrets manager — restore the previous version there).
 - **Uninstall:** `helm uninstall northline -n northline-<env>` (the Secret, the infra ConfigMap you created by hand
-  and the data stores stay).
+  and the data stores stay; the per-app Secrets go with their ExternalSecrets).
 
 Per cloud, nothing differs but the overlay and the registry:
 
@@ -196,7 +201,8 @@ deploy/kind/down.sh        # deletes the cluster and the Postgres container
   api's event externalization retry in the background and the overall `/actuator/health` is `DOWN` while
   liveness/readiness are `UP`.
 - Secrets come from `values-local-kind.yaml` (`secrets.create`, allowed only with `global.environment=local`), with the
-  apps' local development values. Token signing uses `KMS_PROVIDER=local` on an `emptyDir` (one auth replica).
+  apps' local development values — or, with External Secrets Operator installed in the cluster, add
+  `-f deploy/helm/northline/values-local-kind-eso.yaml` (ESO's `fake` provider; [secrets.md](secrets.md#local-development-and-kind)). Token signing uses `KMS_PROVIDER=local` on an `emptyDir` (one auth replica).
 - The first start of northline-auth may restart once: until S-16 the api creates the schema, and auth can come up
   first. The OAuth client Job runs after everything is Ready.
 - kindnet enforces NetworkPolicies only on kernels with nftables queue support; elsewhere the policies are accepted but
@@ -217,7 +223,7 @@ CI runs it manually (GitHub **deploy** workflow `chart` input; GitLab `PIPELINE_
 
 | symptom | cause / fix |
 |---|---|
-| pod `CreateContainerConfigError`, "couldn't find key X in Secret" | a required secret key is missing from `northline-secrets`: add it (or mark it optional in `apps.<app>.secretEnv` if the app really doesn't need it) |
+| pod `CreateContainerConfigError`, "couldn't find key X in Secret" | a required secret is missing: with External Secrets see the ExternalSecret's status ([secrets.md § Troubleshooting](secrets.md#troubleshooting)); without, add the key to `northline-secrets` |
 | pod `CrashLoopBackOff`, log `APPLICATION FAILED TO START … need environment variables that are not set` | the S-1 check: the listed variables are missing from the ConfigMaps/Secret |
 | startup probe fails after 5 min | the app can't reach a data store at start (Postgres, Valkey): check `DB_URL`, `REDIS_*` and egress from the namespace |
 | studio `/config.js` shows the wrong auth origin | `urls.auth` (→ `NL_AUTH_ORIGIN`); the page caches nothing, reload |

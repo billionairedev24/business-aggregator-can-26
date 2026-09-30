@@ -94,3 +94,22 @@ run "rejects_region_outside_canada" {
 
   expect_failures = [var.region]
 }
+
+run "helm_values" {
+  command = plan
+
+  assert {
+    condition     = output.helm_values.externalSecrets.enabled && contains(["aws", "gcp", "azure"], output.helm_values.externalSecrets.provider)
+    error_message = "helm_values.externalSecrets must enable External Secrets with this cloud's provider (S-6)."
+  }
+
+  assert {
+    condition     = alltrue([for k in ["DB_PASSWORD", "TOTP_KEY", "STUDIO_BFF_SECRET_HASH", "WEBHOOK_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "EMAIL_UNSUBSCRIBE_KEY"] : contains(keys(output.helm_values.externalSecrets.remoteKeys), k)])
+    error_message = "helm_values.externalSecrets.remoteKeys must name the secret behind each secret variable the chart maps."
+  }
+
+  assert {
+    condition     = alltrue([for k in ["api", "auth", "bff", "worker"] : contains(keys(output.helm_values.workloadIdentities), k)]) && !contains(keys(output.helm_values.workloadIdentities), "external-secrets")
+    error_message = "helm_values.workloadIdentities carries the four app ServiceAccounts (the ESO controller's is installed with ESO)."
+  }
+}

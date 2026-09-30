@@ -1,0 +1,21 @@
+# kind + External Secrets Operator with its `fake` provider (S-6 rehearsal): layer on top of values-local-kind.yaml.
+#   helm upgrade --install northline deploy/helm/northline -n northline-local \
+#     -f deploy/helm/northline/values-local-kind.yaml -f deploy/helm/northline/values-local-kind-eso.yaml
+# The fake store stands in for the cloud secrets manager, keyed like AWS (northline/local/<name>); the chart's
+# ExternalSecrets are exactly those of a cloud install. Refused outside global.environment=local.
+secrets:
+  create: false
+externalSecrets:
+  enabled: true
+  provider: fake
+  refreshInterval: 1m
+  remoteKeyPrefix: "northline/{env}/"
+  fake:
+    data:
+      northline/local/db-app-password: northline
+      northline/local/webhook-secret-key: bm9ydGhsaW5lLWtpbmQtd2ViaG9vay1rZXktMzJieXQ=
+      northline/local/totp-key: bm9ydGhsaW5lLWxvY2FsLWRldi10b3RwLWtleS0zMmI=
+      northline/local/studio-bff-secret: dev-studio-bff
+      northline/local/studio-bff-secret-hash: "{noop}dev-studio-bff"
+  # Valkey has no password here; Kafka and Elasticsearch aren't running.
+  optionalKeys: []

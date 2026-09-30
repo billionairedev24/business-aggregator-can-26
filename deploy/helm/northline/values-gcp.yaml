@@ -29,6 +29,15 @@ spring:
 networkPolicy:
   enabled: true                   # Dataplane V2 enforces NetworkPolicy
 
+# S-6: secrets from Secret Manager (northline-<env>-<name>) through External Secrets, authenticated as the ESO
+# controller's GKE Workload Identity. projectID comes from `terraform output -json helm_values`.
+externalSecrets:
+  enabled: true
+  provider: gcp
+  remoteKeyPrefix: "northline-{env}-"
+  # Memorystore for Valkey has no password: REDIS_PASSWORD is not mapped.
+  optionalKeys: [KAFKA_SASL_JAAS_CONFIG, ES_PASSWORD]
+
 apps:
   api:
     env:

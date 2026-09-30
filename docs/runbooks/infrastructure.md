@@ -143,7 +143,13 @@ kubectl -n northline-<env> create configmap northline-infra --from-env-file=infr
 
 # ExternalSecret data entries (S-6 installs External Secrets Operator and the SecretStore):
 terraform output -json secret_env | jq '[to_entries[] | {secretKey: .key, remoteRef: {key: .value}}]'
+
+# S-6: everything the Helm chart needs, as one values file (configEnv, workloadIdentities, externalSecrets):
+terraform output -json helm_values > northline-<env>-values.json
 ```
+
+With the chart (S-14/S-6) the ConfigMap and the ExternalSecrets come from `helm_values` — [deploy.md](deploy.md),
+[secrets.md](secrets.md); the `kubectl create configmap` line above is only for installs without the chart.
 
 | variable | output | module output | AWS | Google Cloud | Azure |
 |---|---|---|---|---|---|
@@ -172,7 +178,7 @@ terraform output -json secret_env | jq '[to_entries[] | {secretKey: .key, remote
 | `ES_URIS` | `config_env` | `search.es_uris` | `https://<deployment>.es.ca-central-1.aws.elastic-cloud.com:443` | `https://<deployment>.es.northamerica-northeast1.gcp.elastic-cloud.com:443` | `https://<deployment>.es.canadacentral.azure.elastic-cloud.com:443` |
 | `ES_USERNAME` | `config_env` | `search.es_username` | `elastic` (deployment superuser until a least-privilege user exists, § 5.4) | same | same |
 | `ES_PASSWORD` | `secret_env` | `search.es_password_secret_ref` | `northline/<env>/es-password` | `northline-<env>-es-password` | `es-password` |
-| `TOTP_KEY`, `WEBHOOK_SECRET_KEY`, `STUDIO_BFF_SECRET`, `STUDIO_BFF_SECRET_HASH`, `CONSUMER_BFF_SECRET_HASH`, `CONSOLE_BFF_SECRET_HASH`, `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `GOOGLE_CLIENT_SECRET`, `APPLE_CLIENT_SECRET`, `SMS_AUTH_TOKEN` | `secret_env` | `secrets.secret_refs` | `northline/<env>/<name>` | `northline-<env>-<name>` | `<name>` in vault `nl-<env>-sec-…` |
+| `TOTP_KEY`, `WEBHOOK_SECRET_KEY`, `STUDIO_BFF_SECRET`, `STUDIO_BFF_SECRET_HASH`, `CONSUMER_BFF_SECRET_HASH`, `CONSOLE_BFF_SECRET_HASH`, `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET`, `GOOGLE_CLIENT_SECRET`, `APPLE_CLIENT_SECRET`, `SMS_AUTH_TOKEN`, `EMAIL_UNSUBSCRIBE_KEY`, `EMAIL_API_KEY`, `SMTP_PASSWORD` (Stripe webhook and email secrets since S-6) | `secret_env` | `secrets.secret_refs` | `northline/<env>/<name>` | `northline-<env>-<name>` | `<name>` in vault `nl-<env>-sec-…` |
 
 What Terraform grants for these (least privilege, [object-storage.md](object-storage.md), [key-rotation.md](key-rotation.md)):
 `northline-api` gets object read/write/delete on the uploads bucket (AWS: `s3:GetObject/PutObject/DeleteObject` on
@@ -227,6 +233,7 @@ Other outputs, for the stories that consume them:
 |---|---|
 | `kubernetes.workload_identities.<name>.service_account_annotations` / `.pod_labels` | Helm charts (S-14): ServiceAccounts `northline-api`, `-auth`, `-bff`, `-worker`, and `external-secrets` |
 | `secrets_provider`, `secret_store` | the External Secrets `SecretStore` (S-6): provider `aws` / `gcpsm` / `azurekv` |
+| `helm_values` (env roots, S-6) | `deploy/helm/northline` values: `configEnv`, `workloadIdentities` (api, auth, bff, worker), `externalSecrets` (provider, region / projectID / vaultUrl from the stack's `external_secrets` output, `remoteKeys` = `secret_env` without empty entries) |
 | `registry.repository_urls`, `registry.login_command` | image builds and pushes (S-14) |
 | `dns.name_servers` | delegation (S-17): NS records for `dev.northline.ca` / `staging.northline.ca` in the `northline.ca` zone; the prod zone's servers at the registrar |
 | `network.cloud.nat_public_ips` | allow-lists that need the cluster's egress IPs (Elastic Cloud traffic filters, partners) |
@@ -338,7 +345,7 @@ Rough list prices per month before credits (USD, 730 h, September 2026 — check
 | Kubernetes control plane | EKS ≈ 73 | GKE: the free tier covers one zonal cluster ≈ 0 | AKS Free tier ≈ 0 |
 | Nodes (dev: 1 node) | 1 × t3.large ≈ 70 | 1 × e2-standard-4 **spot** ≈ 35 | 1 × D4s_v5 ≈ 160 |
 | NAT + public IP | NAT gateway ≈ 35 + data | Cloud NAT + 1 static IP ≈ 10 | NAT gateway ≈ 35 + IP ≈ 4 |
-| Keys, secrets, DNS, registry | KMS 2 keys ≈ 2, Secrets Manager 11 × 0.40 ≈ 5, Route 53 ≈ 1, ECR storage | Cloud KMS ≈ 1, Secret Manager ≈ 1, Cloud DNS ≈ 1 | Key Vault ≈ 1, ACR Standard ≈ 20, DNS ≈ 1 |
+| Keys, secrets, DNS, registry | KMS 2 keys ≈ 2, Secrets Manager 16 × 0.40 ≈ 7, Route 53 ≈ 1, ECR storage | Cloud KMS ≈ 1, Secret Manager ≈ 1, Cloud DNS ≈ 1 | Key Vault ≈ 1, ACR Standard ≈ 20, DNS ≈ 1 |
 | **≈ foundation** | **≈ 185** | **≈ 50** | **≈ 220** |
 | PostgreSQL 17 | RDS `db.t4g.micro` + 20 GB gp3 ≈ 18 | Cloud SQL 1 vCPU / 3.75 GB + 20 GB SSD ≈ 55 | Flexible Server `B1ms` + 32 GB ≈ 20 |
 | Valkey / Redis | ElastiCache `cache.t4g.micro` ≈ 10 | Memorystore for Valkey shared-core nano ≈ 25 | Azure Managed Redis `Balanced_B0` ≈ 40 |

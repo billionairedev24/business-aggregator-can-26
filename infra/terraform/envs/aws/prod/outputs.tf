@@ -50,3 +50,23 @@ output "data_stores" {
   description = "Data store details for operators (admin secrets, Kafka topic provisioning)."
   value       = module.northline.data_stores
 }
+
+# S-6: everything the Helm chart (deploy/helm/northline) needs from this environment, as a values file:
+#   terraform output -json helm_values > northline-values.json   →   helm upgrade … -f northline-values.json
+# Holds no secret: configEnv is non-secret by construction, externalSecrets.remoteKeys only names secrets.
+output "helm_values" {
+  description = "Values for deploy/helm/northline: configEnv, workloadIdentities, externalSecrets (docs/runbooks/deploy.md)."
+  value = {
+    configEnv = module.northline.config_env
+    workloadIdentities = {
+      for name, wi in module.northline.kubernetes.workload_identities : name => {
+        service_account_annotations = wi.service_account_annotations
+        pod_labels                  = wi.pod_labels
+      } if name != "external-secrets"
+    }
+    externalSecrets = merge(module.northline.external_secrets, {
+      enabled    = true
+      remoteKeys = { for name, ref in module.northline.secret_env : name => ref if ref != null && ref != "" }
+    })
+  }
+}
