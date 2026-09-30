@@ -14,6 +14,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-opentelemetry") // S-111: traces, metrics, logs over OTLP
+    implementation(libs.datasource.micrometer) // S-111: a span per SQL statement (no parameter values)
     runtimeOnly("org.postgresql:postgresql")
     runtimeOnly("io.micrometer:micrometer-registry-prometheus") // S-26: /actuator/prometheus (consumer lag, DLQ counts)
     testImplementation("org.springframework.boot:spring-boot-starter-test")

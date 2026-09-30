@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.HexFormat;
 import java.util.List;
@@ -32,6 +33,8 @@ import java.util.zip.GZIPInputStream;
  * }</pre>
  */
 public final class OtlpReceiver implements AutoCloseable {
+
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     private final HttpServer server;
     private final List<ExportedSpan> spans = new CopyOnWriteArrayList<>();
@@ -79,6 +82,13 @@ public final class OtlpReceiver implements AutoCloseable {
     @FunctionalInterface
     public interface PropertySink {
         void add(String name, java.util.function.Supplier<Object> value);
+    }
+
+    /** A random W3C trace id (32 lower-case hex digits) for a test's {@code traceparent}. */
+    public static String newTraceId() {
+        var bytes = new byte[16];
+        RANDOM.nextBytes(bytes);
+        return HexFormat.of().formatHex(bytes);
     }
 
     public List<ExportedSpan> spans() {

@@ -22,6 +22,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-kafka")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-opentelemetry")
+    implementation(libs.datasource.micrometer) // S-111: a span per SQL statement (no parameter values)
     implementation("org.springframework.modulith:spring-modulith-starter-core")
     implementation("org.springframework.modulith:spring-modulith-starter-jdbc")
     implementation("org.springframework.modulith:spring-modulith-events-kafka")

@@ -14,9 +14,6 @@ northline.required-env:                 # checked before start-up (ca.northline.
   secrets: WEBHOOK_SECRET_KEY
 management:
   endpoint.health.probes.enabled: true  # /actuator/health/liveness and /readiness for Kubernetes
-  # OpenTelemetry export stays off until a collector exists (S-111); OTEL_EXPORT_ENABLED=true turns it on.
-  logging.export.enabled: ${OTEL_EXPORT_ENABLED:false}
-  otlp.metrics.export.enabled: ${OTEL_EXPORT_ENABLED:false}
-  tracing.export.enabled: ${OTEL_EXPORT_ENABLED:false}
+  # S-111: OTLP export (OTEL_EXPORT_ENABLED, OTEL_EXPORTER_OTLP_ENDPOINT) comes from the platform observability defaults.
 logging.level:
   ca.northline: info

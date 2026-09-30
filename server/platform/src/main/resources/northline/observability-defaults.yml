@@ -34,6 +34,13 @@ management:
   observations:
     # Spring Security's filter-chain spans double every request's span count and say little; the request span stays.
     enable.spring.security: false
+# JDBC spans (datasource-micrometer; api, auth, worker): one span per statement with the parameterised SQL — never the
+# parameter values (they hold personal data) — and no per-connection / per-row spans.
+jdbc:
+  includes: [query]
+  datasource-proxy:
+    include-parameter-values: false
+    query.enable-logging: false
 spring.kafka:
   template.observation-enabled: true   # traceparent on every record the app produces (outbox externalizer, DLQ)
   listener.observation-enabled: true   # a consumer continues the producer's trace
