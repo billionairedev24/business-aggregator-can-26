@@ -1532,3 +1532,117 @@ Worker: `WebhookDeliveryTest` (Kafka 4 + PostGIS + WireMock receiver: signed `bo
 - **No consumer subscribed to `identity.user`.** Neither the backlog nor the design asks for a welcome message (S-28's "Not done" only noted the possibility; the notification matrix has no such row), so S-27's `notifications` group is unchanged and the topic catalogue gains no consumer.
 - **Studio tests under load:** the flaky tests are whole flows (render → type → submit → mocked server answer). Under a parallel `./gradlew build` they took up to 4.1 s (`BusinessStep` "sends the business…", 2.7–3.8 s for `PageBuilder` "validates the tagline"), against vitest's 5 s `testTimeout`; `findBy*`/`waitFor` gave up after Testing Library's 1 s. Now: `testTimeout`/`hookTimeout` 20 s (`vite.config.ts`), `asyncUtilTimeout` 5 s (`src/test/setup.ts`), and `userEvent.setup({ delay: null })` in every test (files that used the direct API get a local `user()` helper with the same option). No sleeps; the auth countdown test's own 3 s `waitFor` limit now uses the shared 5 s. Measured side by side under the same load, `delay: null` did not make these two tests measurably faster (the time is rendering, not the keystroke timer) — the timeouts are what removes the flake; `delay: null` stays as a cheap guard for the longer typing tests. Other apps/packages keep their defaults (not reported flaky).
 - **Also found:** `DashboardView.test.tsx` failed in the first minute of every hour (the seller run cut-off is now + 2 h; on the hour `clockWithPeriod` prints "4", the regex required minutes). The test accepts both now.
+
+## 2026-09-30 — S-35 Shopify, Square and Lightspeed catalogue sync
+
+- **Port:** `catalogue.application.CommerceCatalogSource` (the story's name; the backlog said `CommerceSync`) replaces
+  the connect-only `CommerceSync` port and its fake. One adapter per platform in `catalogue.adapters.commerce`:
+  `ShopifyCatalogSource` (Admin GraphQL, version `SHOPIFY_API_VERSION`, default `2026-07`), `SquareCatalogSource`
+  (Catalog + Inventory, `Square-Version: 2025-10-16`), `LightspeedCatalogSource` (X-Series 2.0; 1.0 for token and
+  webhooks), and `FakeCatalogSource` with fixture catalogues (`commerce-fixtures/*.json`). Chosen by
+  `northline.commerce.provider` (`COMMERCE_PROVIDER`): `local` (default; refused under staging/prod) or `oauth`, where a
+  platform is offered once its app id and secret are set (otherwise "Not available yet" and 409
+  `commerce_provider_unavailable`). HTTP clients are `@HttpExchange` interfaces taking the full `URI` per call
+  (shop-specific hosts), over the JDK client pinned to HTTP/1.1 (WireMock resets h2c-upgraded POSTs).
+- **Connect = OAuth, redirect on the api host.** Unlike S-32 (Studio host through the BFF), the redirect URIs are
+  `<API_PUBLIC_URL>/api/v1/commerce/oauth/<platform>/callback` as the story and edge.md ask: the platforms' app settings
+  take one fixed URL. The callback is therefore public (no session): the single-use 256-bit state (stored as SHA-256,
+  10 min, deleted on first use) names the member and business, and the member must **still** be able to manage the
+  business (`MerchantMemberships`, MANAGE) when it comes back; Shopify's callback `hmac` (hex HMAC-SHA256 of the other
+  parameters, sorted) and `shop` must match the store the owner typed; Lightspeed's `domain_prefix` must be letters,
+  digits and dashes before it becomes a host name (SSRF). It answers 303 to `<STUDIO_ORIGIN>/b/<m>/listings/bulk?
+  commerce=…&result=connected|denied|failed|expired` (`no-store`, `no-referrer`). Shopify connect needs the store
+  (`your-store` or `your-store.myshopify.com`; 422 "Enter your Shopify store address (your-store.myshopify.com).").
+  Connect/disconnect are owner-only (MANAGE), sync is EDIT, the list is VIEW — as before. No PKCE: the three are
+  confidential-client code flows and only Square documents PKCE (for public clients).
+- **Tokens at rest:** access + refresh token (+ expiry, account) sealed together as one JSON value with S-32's
+  `SecretSealer`, bound to the new `integrations.id`; opened only for a call. Shopify's offline token doesn't expire;
+  Square's 30-day token is refreshed when < 7 days remain; Lightspeed's short token is refreshed when < 5 min remain and
+  its rotating refresh token is re-sealed. `invalid_grant` / a 401 → `connection_state = 'reconnect'` ("Access expired or
+  was removed · reconnect to keep syncing" + Reconnect).
+- **Import = drafts, as the design says** ("Existing SKUs are updated, new ones are created as drafts", "Draft stays
+  private until you submit"). Each platform product becomes one draft through the editor's own `EditProduct` use case
+  (so SKU generation, GTIN records and every save rule apply) — never submitted automatically: category, fulfilment
+  and the compliance attestations can't come from a platform. A single-variant product whose SKU the merchant already
+  sells is **linked** to that listing and only its price and stock change. Variants: option names pick the theme
+  (Size/Taille → size, Color/Colour/Couleur → colour, both → size_colour, Length → length, else size); values are the
+  option values; missing SKUs are derived from the platform's variant id (`SHO-123`), deduplicated. A barcode with a
+  valid GTIN check digit makes a single-variant offer GTIN-identified (shared catalogue record, like the editor).
+  Offer price = lowest variant price, stock = total. HTML descriptions are reduced to text; titles cut at a word ≤ 80.
+  Images: up to 9, downloaded only over HTTPS from the platforms' image hosts (`northline.commerce.images.hosts`), no
+  redirects, ≤ 15 MB; those failing the image standards (< 1000 px) are skipped. A product the rules refuse is skipped
+  and listed with the editor's message ("N products couldn't be imported"), capped at 50. Each product is applied in
+  its own transaction (`REQUIRES_NEW`), so one refusal doesn't roll the rest back.
+- **Mapping kept by external id** (`commerce_products`: platform product → offer + content hash; `commerce_variants`:
+  platform variant → Northline SKU + the inventory reference webhooks name). Links survive a disconnect so reconnecting
+  re-links instead of duplicating; Shopify `shop/redact` deletes them. A listing the merchant deleted in Northline is
+  not imported again.
+- **Stock is one-way; the platform is the source of truth** (the design shows no two-way stock; the backlog says
+  "stock changes sync hourly"). Price and stock always follow the platform. Northline never writes stock back —
+  merchants record Northline sales in their POS; the next read overwrites Northline's number. A variant the platform no
+  longer has goes to 0 in stock.
+- **Conflicts:** title, description, images and variants follow the platform only while the listing is still a draft
+  (content hash changed); once submitted, Northline's vetted content wins (re-vetting live listings on every platform
+  edit would take them down; re-vetting on edit is the console's, as the catalogue workstream decided).
+- **Removals hide, never delete:** a product deleted, archived or no longer active on the platform (webhook, or
+  missing from a full read) hides its listing (`listing.hidden` when customers could see it) and marks the link
+  `removed_at`. If it comes back, the link is restored but the listing stays hidden until the merchant publishes it.
+- **Incremental sync:** webhooks where the platform has them — Shopify (registered per shop: products create/update/
+  delete, inventory levels, app uninstalled; compliance topics answered), Square (app-level subscription in the
+  Developer Console: `catalog.version.updated`, `inventory.count.updated`, `oauth.authorization.revoked`), Lightspeed
+  (registered per store: `product.update`, `inventory.update`) — only when `API_PUBLIC_URL` is HTTPS. Verified by HMAC
+  (Shopify body + app secret, base64; Square notification URL + body + subscription signature key, base64; Lightspeed
+  `X-Signature` over the raw body with the client secret, hex or base64 accepted because the docs' example is neither),
+  deduplicated in `commerce_webhook_receipts` (Shopify `X-Shopify-Event-Id`, Square `event_id`, Lightspeed SHA-256 of
+  the body — no delivery id is sent), purged after 7 days, rate-limited per address (`WebhookRateLimiter`). A verified
+  delivery publishes internal events (outbox) and answers at once; the named product is read again. Square's catalog
+  notice names nothing → a full read. Uninstall / revocation disconnects at once.
+- **Polling:** a full read (all active products) rather than "changed since" queries, because deletions and stock
+  changes don't show in the platforms' updated-since filters: without webhooks every `COMMERCE_POLL_INTERVAL` (1 h),
+  with webhooks every `COMMERCE_RECONCILE_INTERVAL` (1 day). `CommerceScheduler` checks every 5 minutes; replicas claim
+  a read by moving `last_polled_at` in one conditional UPDATE. Lightspeed's families can span API pages, so its adapter
+  reads the whole catalogue as one page; its single-product read falls back to a full read for families (the 2.0 API
+  has no "variants of" call).
+- **Rate limits:** Shopify's cost-based throttle (`THROTTLED` → wait ⌈(requested − available) / restoreRate⌉, and pace
+  the next call when the bucket can't pay for it); 429 / 502 / 503 / 504 on all three → `Retry-After` (seconds, HTTP
+  date or Lightspeed's ISO instant) else 0.5 s, 1 s, 2 s …, at most 5 retries, each wait ≤ 30 s; after that the read
+  fails and is retried at its next due time.
+- **Disconnect** revokes where possible (Shopify `DELETE /admin/api_permissions/current.json`, Square
+  `/oauth2/revoke`); Lightspeed has no endpoint, so the tokens are destroyed and the runbook tells the merchant to
+  remove the add-on. Imported listings stay.
+- **Studio:** "Or connect" rows show "Not available yet", connected account, "Importing your catalogue…" (polls every
+  3 s), the last sync ("N drafts created · N updated · N hidden (gone from …)"), how updates arrive (as they change /
+  every hour), the products that couldn't be imported, Reconnect, and the callback's outcome once. Shopify opens a
+  "Connect your Shopify store" dialog. Settings › Integrations counts any connected platform.
+- **Schema (V052, additive):** `integrations.id/connection_state/external_account_id/scopes/token_ref/credentials_key/
+  credentials_enc/webhooks/sync_status/last_error/created_count/hidden_count/sync_errors/last_polled_at/
+  state_changed_at` (+ CHECKs); new `commerce_oauth_requests`, `commerce_products`, `commerce_variants`,
+  `commerce_webhook_receipts`.
+- **Configuration:** `COMMERCE_PROVIDER` (required `oauth` in staging/prod), `SHOPIFY_CLIENT_ID`/`_SECRET`/
+  `SHOPIFY_API_VERSION`, `SQUARE_CLIENT_ID`/`_SECRET`/`SQUARE_WEBHOOK_SIGNATURE_KEY`/`SQUARE_BASE_URL`,
+  `LIGHTSPEED_CLIENT_ID`/`_SECRET`, `COMMERCE_POLL_INTERVAL`, `COMMERCE_RECONCILE_INTERVAL`,
+  `COMMERCE_WEBHOOK_RATE_LIMIT`; `API_PUBLIC_URL`/`STUDIO_ORIGIN`/`KMS_ENCRYPTION_KEY_ID` reused. Secrets
+  `shopify-client-secret`, `square-client-secret`, `square-webhook-signature-key`, `lightspeed-client-secret` in
+  Terraform `app_secrets` (AWS, Google Cloud, Azure), the chart's `secretNames` and the api's optional `secretEnv`.
+  The Gateway routes `/api/v1/webhooks/commerce` and `/api/v1/commerce/oauth` on the api host also with
+  `tokenClients: false`. Runbook: docs/runbooks/commerce-sync.md.
+- **Tests:** `CommerceSourcesWireMockTest` (the three adapters through the api: consent URLs, Shopify callback hmac
+  forged/valid, Lightspeed domain prefix, token exchange, Shopify throttling and paging, Square and Lightspeed 429s,
+  webhook registration, import with images filtered by size, incremental updates by webhook, inventory webhooks,
+  deleted product → hidden, full read → hidden, signature checks and duplicates, Square refresh, Lightspeed rotation
+  re-sealed, 401 → reconnect, revocation on disconnect), `CommerceSyncApiTest` (the fakes: callback round trip, drafts
+  with variants and images, existing SKU linked, sealed tokens, errors listed, single-use state, lost MANAGE → failed,
+  webhook forged/verified/duplicate, hourly read restoring a link, disconnect, 403s for technicians / bookkeepers /
+  outsiders / without MFA, 422 messages), `CommerceAdaptersTest`, `CommerceImporterTest`, `CommerceConfigTest`; Studio
+  `commerce.test.tsx` (en + fr-CA).
+- **Never run against the real services:** no Shopify Partner, Square Developer or Lightspeed developer account exists.
+  Unverified live: Shopify's `2026-07` schema (`webhookSubscription.uri`, `media` on products), the uninstall REST
+  endpoint's continued support; Square's `description_html`, sandbox behaviour, the exact signed URL; every Lightspeed
+  X-Series field name (the docs site was unreachable from the build environment: `variant_parent_id`, `has_variants`,
+  `variant_options`, `price_excluding_tax`, `product_codes`, `images[].sizes.original`, inventory paging by `version`,
+  the webhook form fields and `X-Signature` encoding) and whether X-Series now requires OAuth scopes
+  (`northline.commerce.lightspeed.scopes`, empty by default).
+- **Not done:** two-way stock (Northline orders → platform); Shopify multi-location choice (stock is the total); a
+  per-connection default category (the merchant picks one per draft); importing Square item options as variation
+  themes (variation names become the values); compare-at prices and costs; Shopify's App Store listing, Square's
+  production review and Lightspeed's add-on approval (operational, before launch).

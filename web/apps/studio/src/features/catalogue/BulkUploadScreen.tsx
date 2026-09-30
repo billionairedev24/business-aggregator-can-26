@@ -1,11 +1,11 @@
 import { useRef, useState, type DragEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from '@tanstack/react-router';
-import { Alert, Button, DataTable, ErrorState, Field, Select, Skeleton, useFormatters, type DataTableColumn, type DataTableTone } from '@northline/ui';
+import { Alert, Button, DataTable, Field, Select, useFormatters, type DataTableColumn, type DataTableTone } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { useMerchant, useMerchantId, useRole } from '../shell/api';
 import { useShellT } from '../shell/messages';
-import { importsQuery, integrationsQuery, useCommitImport, useIntegrationAction, useUploadImport, type CommerceProvider, type Connection, type ImportBatch, type ImportTemplate } from './api';
+import { importsQuery, useCommitImport, useUploadImport, type ImportBatch, type ImportTemplate } from './api';
+import { CommerceIntegrations, type CommerceReturn } from './CommerceIntegrations';
 import { useCatalogueT } from './messages';
 import { permissions, portalOf } from './model';
 import { downloadErrorReport, downloadTemplate, templatesFor } from './templates';
@@ -19,7 +19,7 @@ interface HistoryRow { id: string; file: string; rows: number; result: string; t
  * /b/$merchantId/listings/bulk — design: bulk. Template download, .xlsx/.csv upload validated before anything changes
  * (report with row numbers), import of the valid rows, upload history, Shopify / Square / Lightspeed / API.
  */
-export function BulkUploadScreen() {
+export function BulkUploadScreen({ returned, onReturnSeen }: { returned?: CommerceReturn; onReturnSeen?: () => void } = {}) {
   const t = useCatalogueT();
   const mt = useMessageT();
   const shellT = useShellT();
@@ -88,7 +88,7 @@ export function BulkUploadScreen() {
             {!can.create && <span className="nl-hint">{t('viewOnly', { role: shellT(`role_${role}` as Parameters<typeof shellT>[0]) })}</span>}
             {problem && <div role="alert" className="nl-error">{problem}</div>}
           </div>
-          <Integrations canManage={can.manage} canSync={can.update} />
+          <CommerceIntegrations canManage={can.manage} canSync={can.update} returned={returned} onReturnSeen={onReturnSeen} />
         </div>
         <div>
           {done && <div style={{ marginBottom: 16 }}><Alert tone="info" role="status">{t('imported', { created: done.createCount, updated: done.updateCount })}</Alert></div>}
@@ -124,53 +124,5 @@ export function BulkUploadScreen() {
         </div>
       </div>
     </>
-  );
-}
-
-const PROVIDERS: CommerceProvider[] = ['shopify', 'square', 'lightspeed'];
-
-/** "Or connect": Shopify / Square / Lightspeed sync cards and the API key hint. */
-function Integrations({ canManage, canSync }: { canManage: boolean; canSync: boolean }) {
-  const t = useCatalogueT();
-  const merchantId = useMerchantId();
-  const { date } = useFormatters();
-  const q = useQuery(integrationsQuery(merchantId));
-  const action = useIntegrationAction(merchantId);
-  const [failed, setFailed] = useState<CommerceProvider | null>(null);
-  const run = (provider: CommerceProvider, a: 'connect' | 'disconnect' | 'sync') => {
-    setFailed(null);
-    action.mutate({ provider, action: a }, { onError: () => setFailed(provider) });
-  };
-  const busy = (p: CommerceProvider) => action.isPending && action.variables?.provider === p;
-  return (
-    <div className="nl-field" role="group" aria-labelledby="connect-label">
-      <span className="nl-label" id="connect-label">{t('orConnect')}</span>
-      {q.isPending ? <Skeleton height={120} /> : q.isError ? <ErrorState message={t('integrationsError')} onRetry={() => void q.refetch()} /> : (
-        <ul className="nl-cat-integrations">
-          {PROVIDERS.map(p => {
-            const c: Connection = q.data.find(x => x.provider === p) ?? { provider: p, connected: false };
-            return (
-              <li key={p} className="nl-cat-integration">
-                <div><strong>{t(`int_${p}`)}</strong>
-                  <div className="nl-small nl-muted">{c.connected ? t('connectedAs', { account: c.accountLabel ?? '' }) : t('notConnected')}</div>
-                  {c.connected && <div className="nl-small nl-muted">{c.lastSyncAt ? t('lastSync', { when: date(c.lastSyncAt, 'dateTime'), count: c.lastSyncCount ?? 0 }) : t('neverSynced')}</div>}
-                  {failed === p && <div role="alert" className="nl-error">{t('actionError')}</div>}
-                </div>
-                <div className="nl-cat-row">
-                  {c.connected ? <>
-                    <Button variant="secondary" disabled={!canSync || busy(p)} onClick={() => run(p, 'sync')}>{busy(p) && action.variables?.action === 'sync' ? t('syncing') : t('syncNow')}</Button>
-                    {canManage && <Button variant="ghost" disabled={busy(p)} onClick={() => run(p, 'disconnect')}>{t('disconnect')}</Button>}
-                  </> : <Button variant="secondary" disabled={!canManage || busy(p)} title={canManage ? undefined : t('ownerConnects')} onClick={() => run(p, 'connect')}>{t('connect')}</Button>}
-                </div>
-              </li>
-            );
-          })}
-          <li className="nl-cat-integration">
-            <div><strong>{t('intApi')}</strong><div className="nl-small nl-muted">{t('apiHint')}</div></div>
-            <Link className="btn btn-secondary" to="/b/$merchantId/settings" params={{ merchantId }} search={{ tab: 'api' } as never}>{t('intApi')}</Link>
-          </li>
-        </ul>
-      )}
-    </div>
   );
 }

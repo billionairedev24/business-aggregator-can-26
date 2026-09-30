@@ -59,6 +59,11 @@ locals {
     # S-32 calendar sync: the Google OAuth client and Microsoft Entra app registration secrets.
     GOOGLE_CALENDAR_CLIENT_SECRET    = "google-calendar-client-secret"
     MICROSOFT_CALENDAR_CLIENT_SECRET = "microsoft-calendar-client-secret"
+    # S-35 catalogue sync: the Shopify / Square / Lightspeed app secrets and the Square webhook signature key.
+    SHOPIFY_CLIENT_SECRET        = "shopify-client-secret"
+    SQUARE_CLIENT_SECRET         = "square-client-secret"
+    SQUARE_WEBHOOK_SIGNATURE_KEY = "square-webhook-signature-key"
+    LIGHTSPEED_CLIENT_SECRET     = "lightspeed-client-secret"
   }
 
 

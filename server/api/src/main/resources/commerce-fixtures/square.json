@@ -1,0 +1,33 @@
+[
+  {
+    "id": "SQ-ITEM-HEADLAMP",
+    "title": "LED headlight bulb H11 (pair)",
+    "description": "6000 K, CANbus-ready, plug-and-play.",
+    "vendor": null,
+    "images": ["headlamp-h11.png"],
+    "variants": [
+      { "id": "SQ-VAR-H11", "sku": "LED-H11", "barcode": "062782110469", "title": "Regular", "options": {}, "priceCents": 5999, "stock": 9 }
+    ]
+  },
+  {
+    "id": "SQ-ITEM-MATS",
+    "title": "All-weather floor mats",
+    "description": "Trimmable, deep-channel rubber mats.",
+    "vendor": null,
+    "images": ["floor-mats.png"],
+    "variants": [
+      { "id": "SQ-VAR-MATS-BLK", "sku": "MAT-AW-BLK", "barcode": null, "title": "Black", "options": { "Colour": "Black" }, "priceCents": 8999, "stock": 6 },
+      { "id": "SQ-VAR-MATS-GRY", "sku": "MAT-AW-GRY", "barcode": null, "title": "Grey", "options": { "Colour": "Grey" }, "priceCents": 8999, "stock": 3 }
+    ]
+  },
+  {
+    "id": "SQ-ITEM-COOLANT",
+    "title": "Antifreeze coolant 50/50, 3.78 L",
+    "description": "Pre-diluted, for all makes.",
+    "vendor": null,
+    "images": [],
+    "variants": [
+      { "id": "SQ-VAR-COOLANT", "sku": "COOL-5050", "barcode": "062782110476", "title": "Regular", "options": {}, "priceCents": 2199, "stock": 24 }
+    ]
+  }
+]

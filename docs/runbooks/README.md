@@ -16,6 +16,7 @@ say where a step is still manual or missing.
 | [infrastructure.md](infrastructure.md) | Terraform on AWS / Google Cloud / Azure: accounts, state bucket, plan/apply, outputs → variables, cost, teardown (S-2/S-3) |
 | [object-storage.md](object-storage.md) | uploads in S3 / RustFS, Cloud Storage or Azure Blob: variables, buckets, least-privilege access per cloud (S-10) |
 | [calendar-sync.md](calendar-sync.md) | Google and Microsoft calendar two-way sync: Google Cloud and Microsoft Entra app registrations, redirect and notification URIs per environment, secrets, KMS envelope key, operations (S-32) |
+| [commerce-sync.md](commerce-sync.md) | Shopify, Square and Lightspeed catalogue sync: app registration per platform, redirect and webhook URLs on the api host, secrets, local fakes, operations (S-35) |
 | [registries.md](registries.md) | business registry lookups: Corporations Canada API, Alberta Corporate Registry (search service or registry-agent searches), City of Calgary licences (Socrata), manual review queue, re-checks (S-23) |
 | [stripe.md](stripe.md) | Stripe Connect Express: platform account setup (test/live), money flow, idempotency, local stripe-mock, operations (S-11), webhooks (S-12), Stripe Tax (S-21) |
 | [email.md](email.md) | transactional email: Mailpit locally, SES / SendGrid / Azure Communication Services / SMTP set-up, SPF/DKIM/DMARC, CASL (S-13) |
@@ -47,6 +48,7 @@ say where a step is still manual or missing.
 | Stripe | fake gateway, or stripe-mock (`--profile payments`) | fake, or test keys | **test keys required** | **live keys required** |
 | Business registries (`REGISTRY_*_PROVIDER`) | `fixtures` | `fixtures` (warning), `manual` or the APIs | **`manual` / APIs** (`fixtures` refused) | same |
 | Calendar sync (`CALENDAR_PROVIDER`) | `local`: fake Google / Outlook (connects at once, a lunch block tomorrow) | `local`, or `oauth` with the dev app registrations | **`oauth`** (`local` refused) | same |
+| Catalogue sync (`COMMERCE_PROVIDER`) | `local`: fake Shopify / Square / Lightspeed with fixture catalogues | `local`, or `oauth` with the dev apps (Square sandbox) | **`oauth`** (`local` refused) | same |
 | Identity verification (`IDENTITY_PROVIDER`) | `local`: pick the outcome on a page | `local` (owners can't finish) or `stripe` with test keys | **`stripe`**, test mode | **`stripe`**, live mode |
 | SMS / email | logged | *no provider yet (S-8, S-13)* | same | same |
 | Required variables checked at start-up | none | yes | yes (+ Stripe, storage) | yes (+ Stripe, storage) |
@@ -88,6 +90,7 @@ say where a step is still manual or missing.
   | `northline.storage.provider` | `STORAGE_PROVIDER` | `local` · `s3` (AWS S3, MinIO/RustFS, any S3 API) · `gcs` · `azure` | **done** (S-10, api uploads — [object-storage.md](object-storage.md)) |
   | `northline.kms.provider` | `KMS_PROVIDER` | `local` · `aws` · `gcp` · `azure` | **done** (S-7, auth token signing keys — [key-rotation.md](key-rotation.md); S-32, api envelope encryption of stored secrets with `KMS_ENCRYPTION_KEY_ID` — [calendar-sync.md](calendar-sync.md#the-envelope-key-kms_encryption_key_id)) |
   | `northline.calendar.provider` | `CALENDAR_PROVIDER` | `local` (fake Google and Outlook) · `oauth` (Google Calendar API, Microsoft Graph; each once its client is set) | **done** (S-32, calendar two-way sync — [calendar-sync.md](calendar-sync.md)) |
+  | `northline.commerce.provider` | `COMMERCE_PROVIDER` | `local` (fake Shopify, Square and Lightspeed) · `oauth` (Shopify Admin GraphQL, Square Catalog + Inventory, Lightspeed X-Series; each once its app is set) | **done** (S-35, catalogue sync — [commerce-sync.md](commerce-sync.md)) |
   | `northline.email.provider` | `EMAIL_PROVIDER` | `local` (SMTP to Mailpit) · `smtp` · `ses` · `sendgrid` · `azure` | **done** (S-13, api invitations and money notices — [email.md](email.md); S-27 worker: `payout.failed`) |
   | `northline.tax.provider` | `TAX_PROVIDER` | `local` (fixed Canadian rates) · `stripe` (Stripe Tax) | **done** (S-21, api sales tax — [stripe.md § 6](stripe.md#6-stripe-tax-s-21)) |
   | `northline.identity.provider` | `IDENTITY_PROVIDER` | `local` (fake with an outcome page) · `stripe` (Stripe Identity) | **done** (S-22, owners' identity verification — [stripe.md § Identity](stripe.md#8-identity-s-22)) |
@@ -150,6 +153,9 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `CALENDAR_PROVIDER` | ✓ | | | | staging and prod: `oauth` (`local` refused there — S-32, [calendar-sync.md](calendar-sync.md)) |
 | `GOOGLE_CALENDAR_CLIENT_ID`/`_SECRET`, `MICROSOFT_CALENDAR_CLIENT_ID`/`_SECRET` | ✓ | | | | no — empty = that provider shows "Not available yet" ([calendar-sync.md](calendar-sync.md#set-up-per-environment)) |
 | `MICROSOFT_CALENDAR_TENANT`, `CALENDAR_SYNC_INTERVAL`, `CALENDAR_WEBHOOK_RATE_LIMIT` | ✓ | | | | no (`common`, `PT5M`, 600/min) |
+| `COMMERCE_PROVIDER` | ✓ | | | | staging and prod: `oauth` (`local` refused there — S-35, [commerce-sync.md](commerce-sync.md)) |
+| `SHOPIFY_CLIENT_ID`/`_SECRET`, `SHOPIFY_API_VERSION`, `SQUARE_CLIENT_ID`/`_SECRET`, `SQUARE_WEBHOOK_SIGNATURE_KEY`, `SQUARE_BASE_URL`, `LIGHTSPEED_CLIENT_ID`/`_SECRET` | ✓ | | | | no — empty = that platform shows "Not available yet" ([commerce-sync.md](commerce-sync.md#variables-api)) |
+| `COMMERCE_POLL_INTERVAL`, `COMMERCE_RECONCILE_INTERVAL`, `COMMERCE_WEBHOOK_RATE_LIMIT` | ✓ | | | | no (`PT1H`, `P1D`, 600/min) |
 | `EMAIL_PROVIDER`, `EMAIL_FROM` | ✓ | | | ✓ | staging and prod (`local` refused there — S-13, [email.md](email.md)) |
 | `EMAIL_UNSUBSCRIBE_KEY`, `API_PUBLIC_URL` | ✓ | | | ✓ | staging and prod (unsubscribe links; the worker signs them for `payout.failed`, S-27 — [email.md](email.md#variables); S-32 calendar notification URLs) |
 | `EMAIL_REPLY_TO`, `EMAIL_MAILING_ADDRESS`, `EMAIL_CONTACT`, `EMAIL_REGION`, `EMAIL_ENDPOINT`, `EMAIL_API_KEY`, `EMAIL_CONFIGURATION_SET`, `EMAIL_RETRY_*`, `SMTP_*` | ✓ | | | ✓ | per provider: `EMAIL_API_KEY` with `sendgrid`, `EMAIL_ENDPOINT` with `azure`, `SMTP_HOST` with `smtp` ([email.md](email.md#variables)) |

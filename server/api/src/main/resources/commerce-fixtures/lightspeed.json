@@ -1,0 +1,23 @@
+[
+  {
+    "id": "0a6f6e36-8b0e-11ee-9f1a-000000000001",
+    "title": "Winter tire chains",
+    "description": "Quick-fit diamond pattern chains.",
+    "vendor": "Peerless",
+    "images": ["tire-chains.png"],
+    "variants": [
+      { "id": "0a6f6e36-8b0e-11ee-9f1a-000000000011", "sku": "CHN-15", "barcode": null, "title": "15 in", "options": { "Size": "15 in" }, "priceCents": 11999, "stock": 4 },
+      { "id": "0a6f6e36-8b0e-11ee-9f1a-000000000012", "sku": "CHN-16", "barcode": null, "title": "16 in", "options": { "Size": "16 in" }, "priceCents": 12999, "stock": 2 }
+    ]
+  },
+  {
+    "id": "0a6f6e36-8b0e-11ee-9f1a-000000000002",
+    "title": "Battery booster pack 1000 A",
+    "description": "Lithium jump starter with USB-C charging.",
+    "vendor": "Noco",
+    "images": ["booster.png"],
+    "variants": [
+      { "id": "0a6f6e36-8b0e-11ee-9f1a-000000000002", "sku": "BST-1000", "barcode": "062782110483", "title": "Battery booster pack 1000 A", "options": {}, "priceCents": 14999, "stock": 7 }
+    ]
+  }
+]

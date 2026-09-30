@@ -57,10 +57,13 @@ Certificates: cert-manager, Let's Encrypt (HTTP-01 through the Gateway; DNS-01 t
 - **api:** `/api/v1` (S-29, `apps.api.tokenClients: true`, the default): the mobile apps call it directly with
   DPoP-bound tokens ([mobile-auth.md](mobile-auth.md)); every endpoint still needs a token except the Stripe webhooks
   (S-12, signed), the calendar change notifications (S-32, `/api/v1/webhooks/calendar/…`, verified per channel secret —
-  [calendar-sync.md](calendar-sync.md)) and the email unsubscribe link (S-13). Anything outside `/api/v1` (actuator, OpenAPI) answers 404 at
+  [calendar-sync.md](calendar-sync.md)), the Shopify / Square / Lightspeed webhooks and OAuth redirect URIs (S-35,
+  `/api/v1/webhooks/commerce/…` HMAC-verified, `/api/v1/commerce/oauth/…` single-use state —
+  [commerce-sync.md](commerce-sync.md)) and the email unsubscribe link (S-13). Anything outside `/api/v1` (actuator, OpenAPI) answers 404 at
   the Gateway. Browsers reach the api through the BFF on the Studio host — including the calendar OAuth redirect URIs
   (`https://studio.<zone>/api/v1/calendar/oauth/…`), which need the member's session. `tokenClients: false` narrows the route back
-  to `/api/v1/webhooks/stripe` (+ `/connect`), `/api/v1/webhooks/calendar` and `/api/v1/email/unsubscribe`.
+  to `/api/v1/webhooks/stripe` (+ `/connect`), `/api/v1/webhooks/calendar`, `/api/v1/webhooks/commerce`,
+  `/api/v1/commerce/oauth` and `/api/v1/email/unsubscribe`.
 - **console:** placeholder. No route, certificate or record exists until `apps.console.enabled` (E-8).
 - **pages:** storefronts, served by the consumer app by `Host` (storefront rendering is E-3/E-7 work), plus merchant
   domains (below).

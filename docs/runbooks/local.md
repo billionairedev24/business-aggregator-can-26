@@ -159,6 +159,11 @@ Notes:
   providers from your laptop: `CALENDAR_PROVIDER=oauth` with your own Google / Microsoft test app registrations and
   the redirect URIs `http://localhost:3100/api/v1/calendar/oauth/<google|outlook>/callback`; push notifications stay
   off (they need a public HTTPS `API_PUBLIC_URL`), the 5-minute read does the work. [calendar-sync.md](calendar-sync.md)
+- **Catalogue sync (S-35):** `COMMERCE_PROVIDER=local` (the default) fakes Shopify, Square and Lightspeed: Products ›
+  Bulk upload › Connect comes straight back connected and imports the fixture catalogue
+  (`server/api/src/main/resources/commerce-fixtures/`) as drafts; stock moves by the hour so "Sync now" shows updates.
+  No webhooks (no public HTTPS); the hourly read does the work. Real platforms from a laptop need a public HTTPS
+  `API_PUBLIC_URL` (a tunnel) for their redirect URL. [commerce-sync.md](commerce-sync.md)
 - **Your own Kafka:** create the topics with
   `KAFKA_TOPICS_CMD=kafka-topics.sh KAFKA_TOPICS_BOOTSTRAP=localhost:9092 scripts/topics.sh`, or with the provisioner
   the deployed environments use: `cd server && ./gradlew :worker:kafkaTopics --args='apply'` (`plan` / `verify` change

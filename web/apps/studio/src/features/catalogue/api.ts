@@ -93,7 +93,14 @@ export type ImportBatch = z.infer<typeof ImportBatch>;
 
 export const CommerceProvider = z.enum(['shopify', 'square', 'lightspeed']);
 export type CommerceProvider = z.infer<typeof CommerceProvider>;
-export const Connection = z.object({ provider: CommerceProvider, connected: z.boolean(), accountLabel: z.string().nullish(), connectedAt: z.string().nullish(), lastSyncAt: z.string().nullish(), lastSyncCount: z.number().nullish() });
+/** S-35: `state` reconnect = the platform revoked the grant; `updates` webhooks | hourly; `errors` = products the last sync couldn't import. */
+export const Connection = z.object({
+  provider: CommerceProvider, connected: z.boolean(), available: z.boolean().optional(), state: z.enum(['disconnected', 'connected', 'reconnect']).optional(),
+  accountLabel: z.string().nullish(), connectedAt: z.string().nullish(), lastSyncAt: z.string().nullish(), lastSyncCount: z.number().nullish(),
+  createdCount: z.number().optional(), hiddenCount: z.number().optional(), syncStatus: z.enum(['importing', 'ok', 'failed']).nullish(),
+  updates: z.enum(['webhooks', 'hourly']).optional(), errors: z.array(z.object({ externalId: z.string(), title: z.string(), error: z.string() })).optional(),
+});
+export const ConnectStart = z.object({ authorizationUrl: z.string() });
 export type Connection = z.infer<typeof Connection>;
 
 // ── queries ─────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -200,10 +207,22 @@ export function useCommitImport(m: string) {
   });
 }
 
+/** The browser leaves for the platform's consent page (Shopify / Square / Lightspeed); tests replace it. */
+export const goTo = { assign: (url: string) => window.location.assign(url) };
+
+/** S-35 Connect: OAuth — the api answers the consent page and the browser goes there (back via the api's callback). */
+export function useConnectCommerce(m: string) {
+  return useMutation({
+    mutationFn: ({ provider, shop }: { provider: CommerceProvider; shop?: string }) =>
+      http(`${base(m)}/listings/integrations/${provider}/connect`, { method: 'POST', body: shop ? { shop } : {} }, ConnectStart),
+    onSuccess: r => goTo.assign(r.authorizationUrl),
+  });
+}
+
 export function useIntegrationAction(m: string) {
   const qc = useQueryClient(); const invalidate = useInvalidateListings(m);
   return useMutation({
-    mutationFn: ({ provider, action }: { provider: CommerceProvider; action: 'connect' | 'disconnect' | 'sync' }) =>
+    mutationFn: ({ provider, action }: { provider: CommerceProvider; action: 'disconnect' | 'sync' }) =>
       http(`${base(m)}/listings/integrations/${provider}/${action}`, { method: 'POST' }, Connection),
     onSuccess: async (c, { action }) => {
       qc.setQueryData<Connection[]>(catalogueKeys.integrations(m), list => list?.map(x => x.provider === c.provider ? c : x));

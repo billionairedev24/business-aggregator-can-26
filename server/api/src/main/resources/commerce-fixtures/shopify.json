@@ -1,0 +1,44 @@
+[
+  {
+    "id": "gid://shopify/Product/7001",
+    "title": "Bosch Icon wiper blade",
+    "description": "<p>Beam-style blade with a fluoro-coated rubber edge.</p><ul><li>All-season</li><li>Quick-connect adapter</li></ul>",
+    "vendor": "Bosch",
+    "images": ["wiper-icon-main.png", "wiper-icon-side.png"],
+    "variants": [
+      { "id": "gid://shopify/ProductVariant/7101", "sku": "WB-ICON-22", "barcode": "028851152280", "title": "22 in", "options": { "Length": "22 in" }, "priceCents": 3499, "stock": 12 },
+      { "id": "gid://shopify/ProductVariant/7102", "sku": "WB-ICON-24", "barcode": "028851152297", "title": "24 in", "options": { "Length": "24 in" }, "priceCents": 3499, "stock": 8 },
+      { "id": "gid://shopify/ProductVariant/7103", "sku": "WB-ICON-26", "barcode": "028851152303", "title": "26 in", "options": { "Length": "26 in" }, "priceCents": 3699, "stock": 5 }
+    ]
+  },
+  {
+    "id": "gid://shopify/Product/7002",
+    "title": "Synthetic motor oil 5W-30, 5 L",
+    "description": "Full synthetic, dexos1 Gen 3 approved.",
+    "vendor": "Castrol",
+    "images": ["oil-5w30.png"],
+    "variants": [
+      { "id": "gid://shopify/ProductVariant/7201", "sku": "OIL-5W30-5L", "barcode": "062782110452", "title": "Default Title", "options": {}, "priceCents": 4799, "stock": 20 }
+    ]
+  },
+  {
+    "id": "gid://shopify/Product/7003",
+    "title": "Cabin air filter",
+    "description": "Activated-carbon cabin filter for most Honda and Acura models.",
+    "vendor": "Fram",
+    "images": ["cabin-filter.png"],
+    "variants": [
+      { "id": "gid://shopify/ProductVariant/7301", "sku": "CAF-100", "barcode": null, "title": "Default Title", "options": {}, "priceCents": 2299, "stock": 15 }
+    ]
+  },
+  {
+    "id": "gid://shopify/Product/7004",
+    "title": "Clearance brake cleaner",
+    "description": "Non-chlorinated, 400 g.",
+    "vendor": "CRC",
+    "images": [],
+    "variants": [
+      { "id": "gid://shopify/ProductVariant/7401", "sku": "BRK-CLN-400", "barcode": null, "title": "Default Title", "options": {}, "priceCents": 899, "stock": 40 }
+    ]
+  }
+]
