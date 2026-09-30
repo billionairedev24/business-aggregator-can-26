@@ -1,12 +1,14 @@
 # Search (Elasticsearch read model)
 
 Elasticsearch 9 holds the **search read model** only: PostgreSQL stays the source of truth, and everything in the
-indices can be rebuilt from it. This runbook covers the indices and their synonyms (S-42) and the indexer that fills them (S-43).
+indices can be rebuilt from it. This runbook covers the indices and their synonyms (S-42), the indexer that fills them (S-43) and
+the search API that reads them (S-44).
 
 | story | what | where |
 |---|---|---|
 | S-42 | indices `listings_en` / `listings_fr`, analyzers, synonyms, the bootstrap Job | `deploy/search`, `server/search-index`, `ca.northline.worker.search` |
 | S-43 | the `search-indexer` consumer, the reconcile sweep, `merchants.locations` | `ca.northline.worker.search`, `db/migrations/V120` |
+| S-44 | the public search API `GET /api/v1/search` and `/api/v1/search/suggest` (contract § 8) | api module `ca.northline.search` |
 
 Environments: local uses the compose `search` profile (Elasticsearch 9.1, security off, [local.md](local.md)); dev,
 staging and prod use Elastic Cloud from the S-3 Terraform ([infrastructure.md § 5.4](infrastructure.md#54-elasticsearch-elastic-cloud)).
@@ -175,7 +177,121 @@ distance.
 group dead-lettered: `./gradlew :worker:dlqReplay --args='replay --topic=catalogue.listing.dlq --group=search-indexer'`
 ([events.md § DLQ](events.md)). **Metrics:** `northline_events_consumed_total{consumer="search-indexer"}` by outcome.
 
-## 7. Troubleshooting
+## 7. The search API (S-44)
+
+The api reads the aliases (never writes them) through the port `SearchIndex`:
+
+| `SEARCH_PROVIDER` | where | behaviour |
+|---|---|---|
+| `elasticsearch` | default; dev, staging, prod | `listings_en` / `listings_fr` on `ES_URIS` |
+| `local` | the `local` and `test` profiles' default | no index: every search is empty (the rules still apply); refused under staging and prod |
+
+To search locally: `docker compose --profile search up -d`, `./gradlew :worker:searchIndices --args='apply'`, fill the
+indices (the worker with `--profile events`, or the reindex), and run the api with `SEARCH_PROVIDER=elasticsearch`.
+
+- **Anonymous and rate limited:** `/api/v1/search/**` is open (no token needed; a token changes nothing). Each client
+  address gets `SEARCH_RATE_LIMIT` (120) requests a minute per api instance, then `429` ProblemDetail
+  `code: rate_limited` with `Retry-After: 60`. The address: when the peer is internal (loopback, RFC 1918, 100.64/10,
+  IPv6 ULA — the ingress, a BFF, the consumer SSR server), the right-most public `X-Forwarded-For` hop; otherwise the
+  peer. Entries a client writes itself sit further left and are ignored. The consumer web's SSR server should add the
+  browser's address to `X-Forwarded-For` when it searches for a page view, or every server-rendered search counts
+  against the SSR pod.
+- **Hot-query cache:** an identical request is answered for `SEARCH_CACHE_TTL` (30 s) from Redis/Valkey (`nl:search:*`,
+  shared by the replicas; memory under `local`/`test`). Best effort: when Redis is down the index answers. So an edit
+  shows in search after the indexer (seconds) + at most the TTL.
+- **Relevance:** text match (name ×4, merchant and category names ×2, keywords, description; every word must match;
+  or as a prefix of the name) × (trust tier 1.5 / 1.2 / 1.0 + rating log10(2 + stars) + nearness up to 2 within
+  1 km, half at 6 km, when `lat`/`lng` are sent). Ties: tier, then id.
+- **Only what customers may see:** the market's documents with `vetting=approved`, `status=live`,
+  `merchantStatus=active` (the indexer indexes nothing else; the filters are there too).
+- **Latency:** the API adds the cache and one Elasticsearch request; `SearchApiTest` checks p95 < 150 ms on the
+  seeded index (Testcontainers, security off).
+
+## 8. Contract for the consumer web and app
+
+Both endpoints are `GET`, public, JSON, camelCase; money in cents; errors as everywhere in the api (422
+`{"errors":[{"field","rule","message"}]}`, 429 ProblemDetail). OpenAPI: `/v3/api-docs` (tag *Search*).
+
+### `GET /api/v1/search`
+
+| parameter | meaning |
+|---|---|
+| `q` | what was typed (≤ 100 characters); blank = browse by the filters |
+| `market` | province of the location pill: `AB` (default, `SEARCH_DEFAULT_MARKET`), `BC`, `ON`, `QC` |
+| `lang` | `en` \| `fr` — picks the index; default `Accept-Language` (fr* → French), else English |
+| `kind` | `service`, `product`, `food`, `merchant` — repeat or comma-separate (the web's `scope`: services → `service`, shop → `product`, food → `food`) |
+| `category` | a category id at any level (group or leaf) |
+| `minPrice`, `maxPrice` | cents, inclusive ("Under $10" = `maxPrice=999`) |
+| `minRating` | 1–5 |
+| `tier` | `registered`, `trusted`, `master` ("Master sellers", "Master tier") |
+| `instantBook` | `true` = services bookable at once |
+| `openNow` | `true` = inside its weekly hours now (Edmonton), not paused, not sold out today ("Open now", "Available today") |
+| `delivery` | `tonight` = on tonight's pooled run: pooled delivery, before the seller's cut-off, in stock ("On tonight's run") |
+| `dietary` | tags every result has: `halal`, `vegan`, `gluten_free` … ("Halal", "Vegan", "Gluten-free") |
+| `allergenFree` | Health Canada allergen codes no result contains: `peanuts`, `tree_nuts` … ("Nut-free" = `peanuts,tree_nuts`) |
+| `lat`, `lng` | the person's location (both or neither): `distanceKm` on results, nearness boost, distance sort and filter |
+| `radiusKm` | 1–100, needs `lat`/`lng` ("Under 3 km") |
+| `sort` | `relevance` (default), `distance` (needs `lat`/`lng`; results without a location are left out), `price_asc`, `price_desc` (no price last), `rating` |
+| `size` | 1–50, default 24 |
+| `after` | the previous page's `next` (keep the other parameters the same) |
+
+```json
+{
+  "items": [{
+    "id": "01J9…", "kind": "product", "name": "Country sourdough", "description": "…",
+    "merchant": { "id": "01J9…", "name": "Glenmore Bakery", "type": "seller", "slug": "glenmore-bakery", "tier": "master" },
+    "category": { "id": "shop.groceries.bakery", "name": "Bakery" },
+    "priceCents": 750, "pricingMode": "fixed", "rating": 4.8, "reviewCount": 120, "trustTier": "master",
+    "distanceKm": 1.2, "instantBook": false, "fulfilment": ["pooled"],
+    "openNow": false, "soldOut": false, "onTonightsRun": true, "prepMinutes": null,
+    "dietary": [], "allergens": [], "imageKey": "media:01J9…"
+  }],
+  "total": 3,
+  "facets": {
+    "kinds": [{ "value": "product", "label": null, "count": 3 }],
+    "categories": [{ "value": "shop.groceries.bakery", "label": "Bakery", "count": 2 }],
+    "merchants": [{ "value": "01J9…", "label": "Glenmore Bakery", "count": 3 }],
+    "tiers": [{ "value": "master", "label": null, "count": 1 }],
+    "prices": [{ "value": "under_10", "label": null, "count": 2 }],
+    "dietary": []
+  },
+  "next": "relevance.WzEuNDMsMywiMDFKOS4uLiJd"
+}
+```
+
+- `kind = merchant` items are the businesses themselves (shop / provider / kitchen pages: `merchant.slug`); the
+  others link to the listing. `pricingMode = quote` or `priceCents = null` → "Quote"; a merchant's `priceCents` is
+  its cheapest listing ("from $").
+- `facets` only on the first page (empty lists after); `prices` buckets are `under_10`, `10_25`, `25_50`, `50_100`,
+  `100_plus` (dollars). `total` is exact up to 10 000.
+- `next` is null on the last page. A `next` from another sort, or a damaged one, is a 422 on `after`
+  ("This page link no longer works. Start the search again.").
+- `imageKey` is opaque (`media:<id>` catalogue image, `object:<key>` dish photo); no public image URL exists yet.
+
+### `GET /api/v1/search/suggest`
+
+`q` (required, what has been typed), `market`, `lang` / `Accept-Language`, `kind`, `size` (1–10, default 6).
+
+```json
+{ "items": [
+  { "text": "Country sourdough", "type": "product", "id": "01J9…", "merchantId": "01J9…",
+    "merchantName": "Glenmore Bakery", "merchantType": "seller", "merchantSlug": "glenmore-bakery",
+    "priceCents": 750, "trustTier": "master", "rating": 4.8, "highlight": [{ "start": 8, "length": 4 }] },
+  { "text": "Mobile mechanic", "type": "category", "id": "service.automotive.mobile-mechanic",
+    "merchantId": null, "merchantName": null, "merchantType": null, "merchantSlug": null,
+    "priceCents": null, "trustTier": null, "rating": null, "highlight": [{ "start": 7, "length": 3 }] }
+] }
+```
+
+- `type`: `service` | `product` | `food` (a listing: open it), `merchant` (a business page: `merchantSlug`),
+  `category` (a category: search with `category=<id>`).
+- Suggestions start a word with `q` ("sour" → "Country **sour**dough"), ignoring case and accents; heavier ones
+  (trust tier, rating, recent sales) first; categories take at most two places. `highlight` = UTF-16 offsets into
+  `text` to set in bold (empty when the match came from another word form).
+- The design's "Your recent" searches are the client's (not stored by the api); "fr → sourdough" synonym rows are not
+  returned (synonyms apply to `/search`).
+
+## 9. Troubleshooting
 
 | symptom | cause / fix |
 |---|---|
@@ -186,3 +302,5 @@ group dead-lettered: `./gradlew :worker:dlqReplay --args='replay --topic=catalog
 | a published listing isn't found | the merchant is not `active`, has no province, the listing isn't `approved` + `live`, or (merchant documents) the page isn't published; check `DEAD-LETTERED consumer=search-indexer` in the worker log |
 | an edit shows up only after a minute | expected: edits without an event arrive with the reconcile sweep (§ 6) |
 | no distance on a merchant's results | no row in `merchants.locations` (§ 6) |
+| every search is empty | the api runs with `SEARCH_PROVIDER=local` (the `local` profile's default), or the indices are empty (run the indexer / reindex) |
+| `429 rate_limited` from the consumer web | its requests arrive without the browser's address in `X-Forwarded-For` (the SSR server's own address counts them all): forward it, or raise `SEARCH_RATE_LIMIT` (§ 7) |
