@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { createPageRouter, normalizeHost } from '../../server/page-hosts.mjs';
 import { pageRewrite, siteHref } from './pages';
 
-const byHost = (pages: Record<string, { slug: string; pageKind: string } | 'down'>) => vi.fn(async (url: string) => {
+const byHost = (pages: Record<string, { slug: string; pageKind: string } | 'down'>) => vi.fn(async (input: string | URL | Request) => {
+  const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
   const host = new URL(url).searchParams.get('host')!;
   const hit = pages[host];
   if (hit === 'down') return new Response('', { status: 503 });
