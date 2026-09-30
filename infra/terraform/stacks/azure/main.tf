@@ -41,7 +41,7 @@ locals {
     STRIPE_SECRET_KEY        = "stripe-secret-key"
     STRIPE_PUBLISHABLE_KEY   = "stripe-publishable-key"
     GOOGLE_CLIENT_SECRET     = "google-client-secret"
-    APPLE_CLIENT_SECRET      = "apple-client-secret"
+    APPLE_PRIVATE_KEY        = "apple-private-key"
     SMS_AUTH_TOKEN           = "sms-auth-token"
     # S-12 Stripe webhook signing secrets, S-13 email (unsubscribe HMAC key, SendGrid/Azure key, SMTP relay password).
     STRIPE_WEBHOOK_SECRET         = "stripe-webhook-secret"
@@ -158,6 +158,11 @@ module "cache" {
   deletion_protection = var.deletion_protection
 }
 
+# The topic catalogue deploy/kafka/topics.yaml (S-25): on Azure every topic is an event hub (ARM resource).
+module "kafka_topics" {
+  source = "../../modules/kafka/catalogue"
+}
+
 module "kafka" {
   source              = "../../modules/kafka/azure"
   context             = local.context
@@ -170,6 +175,7 @@ module "kafka" {
   kms_key             = { id = module.kms.key_ids["data"] }
   secret_store        = module.secrets.store
   deletion_protection = var.deletion_protection
+  topics              = module.kafka_topics.topics
 }
 
 # Elastic Cloud, reachable only from the cluster's NAT egress IPs.

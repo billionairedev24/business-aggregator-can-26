@@ -1,0 +1,173 @@
+{{- /*
+S-25: Kafka topics as a deploy step. Before every install/upgrade (Helm pre-install/pre-upgrade hook; Argo CD
+PreSync), the worker image runs TopicsCommand against the environment's Kafka through the admin API: it creates the
+topics of deploy/kafka/topics.yaml that are missing (topic, .dlq, consumer retry topics), corrects retention /
+cleanup-policy drift and reports partition drift and unmanaged topics. It never deletes. So a release whose api
+publishes to a new topic, or whose worker gains a consumer, finds its topics in place before any pod starts.
+
+kafkaTopics.command: apply (MSK, Google Managed Kafka), plan (Azure: Terraform creates the event hubs from the same
+catalogue; the Job only reports), verify (exit 3 on drift — fails the release).
+
+Like the migrations Job, the regular ConfigMaps/Secrets may not exist yet, so the Job has its own hook-scoped
+ConfigMap (Terraform config_env: KAFKA_BOOTSTRAP, KAFKA_SECURITY_PROTOCOL, KAFKA_SASL_MECHANISM) and Secret
+(KAFKA_SASL_JAAS_CONFIG). No Spring profile is active: the command needs no database, Valkey or Elasticsearch.
+*/ -}}
+{{- if and .Values.kafkaTopics.enabled .Values.apps.worker.enabled }}
+{{- $k := .Values.kafkaTopics }}
+{{- $app := .Values.apps.worker }}
+{{- $ctx := dict "root" . "name" "worker" "app" $app }}
+{{- $es := .Values.externalSecrets }}
+{{- if not (has $k.command (list "apply" "plan" "verify")) }}
+{{- fail (printf "kafkaTopics.command must be apply, plan or verify (got %q)" $k.command) }}
+{{- end }}
+{{- $jaasFromEso := and $es.enabled (has "KAFKA_SASL_JAAS_CONFIG" $es.optionalKeys) }}
+{{- $jaasFromValues := and (not $es.enabled) .Values.secrets.create (hasKey (default (dict) .Values.secrets.values) "KAFKA_SASL_JAAS_CONFIG") }}
+{{- /* Hook objects named northline-kafka-topics-<hash of what the Job runs>, as the migrations Job (S-15): Argo CD
+       re-applies a same-named hook onto the previous sync's object while BeforeHookCreation is still deleting it.
+       The catalogue is inside the worker image, so the image covers topics.yaml changes. */}}
+{{- $mode := ternary "external-secrets" (ternary "values" (printf "existing:%s" .Values.secrets.existingSecret) $jaasFromValues) $jaasFromEso }}
+{{- $kafkaEnv := dict }}
+{{- range $key, $value := .Values.configEnv }}{{ if hasPrefix "KAFKA_" $key }}{{ $_ := set $kafkaEnv $key (toString $value) }}{{ end }}{{ end }}
+{{- $inputs := list (include "northline.image" $ctx) $k.command (toYaml $kafkaEnv) (toString $k.replicationFactor) (toString $k.minInsyncReplicas) $mode (include "northline.infraConfigMap" .) }}
+{{- $name := printf "northline-kafka-topics-%s" (join "\n" $inputs | sha256sum | trunc 10) }}
+{{- $secretName := .Values.secrets.existingSecret }}
+{{- if or $jaasFromEso $jaasFromValues }}{{ $secretName = $name }}{{ end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "kafka-topics") | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-20"
+    helm.sh/hook-delete-policy: before-hook-creation
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-20"
+data:
+  {{- range $key, $value := .Values.configEnv }}
+  {{- if hasPrefix "KAFKA_" $key }}
+  {{ $key }}: {{ $value | toString | quote }}
+  {{- end }}
+  {{- end }}
+  {{- with $k.replicationFactor }}
+  KAFKA_REPLICATION_FACTOR: {{ . | toString | quote }}
+  {{- end }}
+  {{- with $k.minInsyncReplicas }}
+  KAFKA_MIN_INSYNC_REPLICAS: {{ . | toString | quote }}
+  {{- end }}
+{{- if $jaasFromEso }}
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "kafka-topics") | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-20"
+    helm.sh/hook-delete-policy: before-hook-creation
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-20"
+spec:
+  refreshInterval: {{ $es.refreshInterval }}
+  secretStoreRef:
+    kind: {{ $es.store.kind }}
+    name: {{ $es.store.name }}
+  target:
+    name: {{ $name }}
+    creationPolicy: Owner
+  data:
+    - secretKey: KAFKA_SASL_JAAS_CONFIG
+      remoteRef:
+        key: {{ include "northline.remoteKey" (dict "root" . "key" "KAFKA_SASL_JAAS_CONFIG") | quote }}
+{{- else if $jaasFromValues }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "kafka-topics") | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-20"
+    helm.sh/hook-delete-policy: before-hook-creation
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-20"
+type: Opaque
+stringData:
+  KAFKA_SASL_JAAS_CONFIG: {{ .Values.secrets.values.KAFKA_SASL_JAAS_CONFIG | quote }}
+{{- end }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "kafka-topics") | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-10"
+spec:
+  backoffLimit: {{ $k.backoffLimit }}
+  activeDeadlineSeconds: {{ $k.activeDeadlineSeconds }}
+  ttlSecondsAfterFinished: {{ $k.ttlSecondsAfterFinished }}
+  template:
+    metadata:
+      labels:
+        {{- include "northline.selectorLabels" (dict "root" . "app" "kafka-topics") | nindent 8 }}
+        app.kubernetes.io/part-of: northline
+        {{- with .Values.global.podLabels }}{{ toYaml . | nindent 8 }}{{ end }}
+    spec:
+      restartPolicy: Never
+      # The chart's ServiceAccounts don't exist yet before a first install; the Job needs no cloud identity.
+      serviceAccountName: default
+      automountServiceAccountToken: false
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+        runAsUser: {{ $app.runAsUser }}
+        runAsGroup: {{ $app.runAsUser }}
+      containers:
+        - name: kafka-topics
+          image: {{ include "northline.image" $ctx | quote }}
+          imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+          command: ["java", "-XX:MaxRAMPercentage=75", "-cp", "@/app/jib-classpath-file",
+                    "ca.northline.worker.topics.TopicsCommand", {{ $k.command | quote }}]
+          envFrom:
+            - configMapRef:
+                name: {{ include "northline.infraConfigMap" $ }}
+                optional: true
+            - configMapRef:
+                name: {{ $name }}
+          {{- if $secretName }}
+          env:
+            - name: KAFKA_SASL_JAAS_CONFIG
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName }}
+                  key: KAFKA_SASL_JAAS_CONFIG
+                  optional: true    # PLAINTEXT Kafka (kind, local) has none
+          {{- end }}
+          resources:
+            {{- toYaml $k.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml $.Values.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 64Mi }
+{{- end }}

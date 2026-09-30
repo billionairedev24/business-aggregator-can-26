@@ -13,6 +13,10 @@ urls:
 ingress:
   enabled: true
 
+# S-25: two in-sync replicas of three before a write is acknowledged (the api produces with acks=all).
+kafkaTopics:
+  minInsyncReplicas: "2"
+
 apps:
   api:
     env:
@@ -29,6 +33,9 @@ apps:
       STRIPE_CONNECT_WEBHOOK_SECRET: true
       EMAIL_UNSUBSCRIBE_KEY: true   # S-13: required under staging/prod
   auth:
+    secretEnv:
+      GOOGLE_CLIENT_SECRET: true    # S-18: Google and Apple sign-in are required here (GOOGLE_CLIENT_ID, APPLE_CLIENT_ID,
+      APPLE_PRIVATE_KEY: true       # APPLE_TEAM_ID, APPLE_KEY_ID go in the operator's configEnv — docs/runbooks/federation.md)
     autoscaling: { enabled: true, minReplicas: 3, maxReplicas: 6 }
     resources:
       requests: { cpu: 500m, memory: 1Gi }
@@ -39,6 +46,10 @@ apps:
       requests: { cpu: 250m, memory: 768Mi }
       limits: { memory: 768Mi }
   worker:
+    env:
+      EMAIL_FROM: "Northline <no-reply@northline.ca>"   # S-27 notifications (payout.failed email)
+    secretEnv:
+      EMAIL_UNSUBSCRIBE_KEY: true   # S-27: required under staging/prod (the same key as the api)
     replicas: 2
     resources:
       requests: { cpu: 250m, memory: 768Mi }

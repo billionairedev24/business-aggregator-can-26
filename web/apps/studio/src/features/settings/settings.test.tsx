@@ -17,7 +17,7 @@ vi.mock('@tanstack/react-router', async orig => ({
   Link: ({ children }: { children: React.ReactNode }) => <a href="#">{children}</a>,
   useNavigate: () => vi.fn(),
 }));
-vi.mock('../../lib/session', async orig => ({ ...(await orig<typeof import('../../lib/session')>()), useSession: () => ({ data: { user: { email: 'ravi@prairiewrench.ca' } } }) }));
+vi.mock('../../lib/session', async orig => ({ ...(await orig<typeof import('../../lib/session')>()), useSession: () => ({ data: { user: { email: 'ravi@prairiewrench.ca' }, sid: 'sess-bff' } }) }));
 
 const S = '/api/v1/merchants/m1/settings';
 const business = { type: 'provider', structure: 'corp_ab', displayName: 'Prairie Wrench', legalName: 'Prairie Wrench Automotive Ltd.', gstNumber: '781234567 RT0001', gstRequired: true, serviceArea: 'Calgary + 40 km', cancellationPolicy: '12h', autoAcceptQuoteCents: 15000, languages: ['en', 'pa'], storeSlug: 'prairie-wrench' };
@@ -193,6 +193,16 @@ describe('Settings › API & integrations', () => {
   });
 });
 
+const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0)';
+const MAC = 'Mozilla/5.0 (Macintosh; Intel Mac OS X)';
+const AUTH = 'http://localhost:9000/api/auth';
+const session = (id: string, device: string, current: boolean) => ({ id, device, city: 'Calgary', ipApprox: '203.0.113.x', method: 'totp', signedInAt: new Date().toISOString(), lastSeenAt: new Date().toISOString(), apps: ['Northline Studio'], current });
+const security = (over: Record<string, unknown> = {}) => ({
+  email: 'ravi@prairiewrench.ca', mfaPrimary: 'passkey', passkeys: [{ id: 'p1', label: 'iPhone 16', createdAt: '2026-01-05T17:00:00Z' }, { id: 'p2', label: 'YubiKey', createdAt: '2026-02-05T17:00:00Z' }],
+  authenticator: false, backupCodesRemaining: 8, signIns: [], sessions: [session('me', MAC, true), session('phone', IPHONE, false), session('tablet', IPHONE, false)], ...over,
+});
+const stepUpRequired = { status: 403, body: { code: 'step_up_required', detail: "Confirm it's you to make this change." } };
+
 describe('Settings › Security', () => {
   it('asks the person to confirm it’s them when the auth server has no second-factor session', async () => {
     mockFetch({ 'GET http://localhost:9000/api/auth/security': () => { throw { status: 401, body: { code: 'unauthenticated' } }; } });
@@ -206,6 +216,7 @@ describe('Settings › Security', () => {
       'GET http://localhost:9000/api/auth/security': () => ({
         email: 'ravi@prairiewrench.ca', mfaPrimary: 'passkey', passkeys: [{ id: 'p1', label: 'iPhone 16', createdAt: '2026-01-05T17:00:00Z' }],
         authenticator: true, backupCodesRemaining: 8, signIns: [{ id: 's1', device: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0)', method: 'passkey', at: new Date().toISOString() }, { id: 's2', device: 'Mozilla/5.0 (Macintosh; Intel Mac OS X)', method: 'totp', at: new Date().toISOString() }],
+        sessions: [session('s1', IPHONE, false), session('s2', MAC, true)],
       }),
       'POST http://localhost:9000/api/auth/backup-codes': () => ({ codes: ['abcde-fghij', 'klmno-pqrst'] }),
       [`GET ${S}/audit-log`]: () => ({ items: [] }),
@@ -219,6 +230,105 @@ describe('Settings › Security', () => {
     expect(screen.getByText('Active sessions · 2 (iPhone, Mac)')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'New codes' }));
     expect(await screen.findByText('abcde-fghij')).toBeTruthy();
+  });
+
+  it('passes the BFF session id so this browser counts as current', async () => {
+    const calls = mockFetch({ [`GET ${AUTH}/security`]: () => security() });
+    renderWithProviders(<SecurityTab />);
+    await screen.findByText('Passkey · iPhone 16');
+    expect(calls[0]!.url).toBe(`${AUTH}/security?current=sess-bff`);
+  });
+
+  it('removes a passkey after confirming, and never offers to remove the last factor', async () => {
+    let passkeys = security().passkeys;
+    const calls = mockFetch({
+      [`GET ${AUTH}/security`]: () => security({ passkeys }),
+      [`DELETE ${AUTH}/security/passkeys/p2`]: () => { passkeys = passkeys.filter(p => p.id !== 'p2'); return { passkeys }; },
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<SecurityTab />);
+    await user.click(await screen.findByRole('button', { name: 'Remove passkey YubiKey' }));
+    const dialog = screen.getByRole('alertdialog', { name: 'Remove this passkey?' });
+    expect(within(dialog).getByText(/You won’t be able to sign in with “YubiKey” any more/)).toBeTruthy();
+    await user.click(within(dialog).getByRole('button', { name: 'Remove' }));
+    expect(await screen.findByText('Passkey removed.')).toBeTruthy();
+    expect(calls.some(c => c.method === 'DELETE' && c.url === `${AUTH}/security/passkeys/p2`)).toBe(true);
+    // One passkey and no authenticator app left: it can't be removed.
+    await waitFor(() => expect((screen.getByRole('button', { name: 'Remove passkey iPhone 16' }) as HTMLButtonElement).disabled).toBe(true));
+    expect(screen.getAllByText('Add another passkey or an authenticator app before you remove this one.').length).toBeGreaterThan(0);
+  });
+
+  it('signs a session out after a step-up with the authenticator code, then retries', async () => {
+    let revokeCalls = 0;
+    let sessions = security().sessions;
+    const calls = mockFetch({
+      [`GET ${AUTH}/security`]: () => security({ sessions }),
+      [`POST ${AUTH}/security/sessions/phone/revoke`]: () => {
+        revokeCalls += 1;
+        if (revokeCalls === 1) throw stepUpRequired;
+        sessions = sessions.filter(s => s.id !== 'phone');
+        return { sessions };
+      },
+      [`POST ${AUTH}/step-up/totp`]: () => ({ proof: 'jwt', expiresAt: new Date().toISOString() }),
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<SecurityTab />);
+    await user.click(await screen.findByRole('button', { name: 'Review' }));
+    const drawer = screen.getByRole('dialog', { name: 'Active sessions' });
+    expect(within(drawer).getByText('This device')).toBeTruthy();
+    expect(within(drawer).getAllByText(/Calgary · 203\.0\.113\.x/).length).toBe(3);
+    await user.click(within(drawer).getAllByRole('button', { name: 'Sign out iPhone' })[0]!);
+    await user.click(within(screen.getByRole('alertdialog', { name: 'Sign out this session?' })).getByRole('button', { name: 'Sign out' }));
+
+    const stepUp = await screen.findByRole('dialog', { name: 'Confirm it’s you' });
+    await user.type(within(stepUp).getByLabelText('Authenticator code'), '123456');
+    await user.click(within(stepUp).getByRole('button', { name: 'Confirm' }));
+
+    expect(await screen.findByText('Session signed out.')).toBeTruthy();
+    expect(revokeCalls).toBe(2);
+    expect(calls.find(c => c.url === `${AUTH}/step-up/totp`)?.body).toEqual({ code: '123456' });
+    expect(calls.filter(c => c.url.endsWith('/revoke')).map(c => c.body)).toEqual([{ current: 'sess-bff' }, { current: 'sess-bff' }]);
+  });
+
+  it('signs out all other sessions and shows how many', async () => {
+    const calls = mockFetch({
+      [`GET ${AUTH}/security`]: () => security(),
+      [`POST ${AUTH}/security/sessions/revoke-others`]: () => ({ revoked: 2 }),
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<SecurityTab />);
+    await user.click(await screen.findByRole('button', { name: 'Review' }));
+    await user.click(screen.getByRole('button', { name: 'Sign out all other sessions' }));
+    const dialog = screen.getByRole('alertdialog', { name: 'Sign out all other sessions?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Sign out all other sessions' }));
+    expect(await screen.findByText('2 sessions signed out.')).toBeTruthy();
+    expect(calls.find(c => c.url.endsWith('/revoke-others'))?.body).toEqual({ current: 'sess-bff' });
+  });
+
+  it('explains a refused change (rate limited) and keeps the dialog open', async () => {
+    mockFetch({
+      [`GET ${AUTH}/security`]: () => security(),
+      [`POST ${AUTH}/security/sessions/phone/revoke`]: () => { throw { status: 429, body: { code: 'rate_limited' } }; },
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<SecurityTab />);
+    await user.click(await screen.findByRole('button', { name: 'Review' }));
+    await user.click(screen.getAllByRole('button', { name: 'Sign out iPhone' })[0]!);
+    const dialog = screen.getByRole('alertdialog', { name: 'Sign out this session?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Sign out' }));
+    expect(await within(dialog).findByText('Too many security changes in a short time. Try again later.')).toBeTruthy();
+  });
+
+  it('speaks French', async () => {
+    mockFetch({ [`GET ${AUTH}/security`]: () => security() });
+    const user = userEvent.setup();
+    renderWithProviders(<SecurityTab />, 'fr');
+    await user.click(await screen.findByRole('button', { name: 'Retirer la clé d’accès YubiKey' }));
+    expect(screen.getByRole('alertdialog', { name: 'Retirer cette clé d’accès?' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Annuler' }));
+    await user.click(screen.getByRole('button', { name: 'Examiner' }));
+    expect(screen.getByRole('button', { name: 'Déconnecter toutes les autres sessions' })).toBeTruthy();
+    expect(screen.getByText('Cet appareil')).toBeTruthy();
   });
 
   it('names devices from the user agent', () => {

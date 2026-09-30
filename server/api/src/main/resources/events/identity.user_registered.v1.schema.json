@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:identity.user_registered:1",
+  "title": "user.registered",
+  "description": "A Northline account was created (phone verified, second factor confirmed). Published by northline-auth (S-28) from its outbox auth.event_publication to Kafka topic identity.user, key = aggregateId. Ids only: no name, email or phone.",
+  "type": "object",
+  "required": ["eventId", "occurredAt", "aggregateId"],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": { "type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$", "description": "ULID; consumers dedupe on it" },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "aggregateId": { "type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$", "description": "identity.users.id of the new account" }
+  }
+}

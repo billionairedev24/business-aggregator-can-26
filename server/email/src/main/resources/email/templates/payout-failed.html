@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout.html :: email(#{payout-failed.preheader}, ~{::content})}">
+<body>
+<div th:fragment="content">
+  <h1 th:style="${s.h1}" th:text="#{__${'payout-failed.heading.' + outcome}__}">Heading</h1>
+  <p th:style="${s.p}" th:text="#{__${'payout-failed.body.' + outcome}__(${amount}, ${businessName})}">Body</p>
+  <p th:if="${hasCode}" th:style="${s.p}" th:text="#{payout-failed.code(${code})}">Bank's reason</p>
+  <p th:style="${s.p}" th:text="#{payout-failed.action}">Check the bank account</p>
+  <th:block th:replace="~{button.html :: button(#{payout-failed.cta}, ${link})}"/>
+</div>
+</body>
+</html>

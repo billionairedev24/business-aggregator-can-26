@@ -34,7 +34,7 @@ class TeamInvitationDelivery {
             return;
         }
         if (!sender.delivers(invitation.contact())) {
-            log.info("Invitation {} goes to a mobile number: the owner shares the link (SMS: S-27)", invitation.id());
+            log.info("Invitation {} can't be delivered automatically: the owner shares the link", invitation.id());
             return;
         }
         var merchant = merchants.findById(event.merchantId()).orElse(null);

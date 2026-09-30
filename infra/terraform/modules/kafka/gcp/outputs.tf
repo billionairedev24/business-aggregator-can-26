@@ -19,13 +19,13 @@ output "kafka_sasl_jaas_config_secret_ref" {
 }
 
 output "kafka_replication_factor" {
-  description = "KAFKA_REPLICATION_FACTOR for scripts/topics.sh."
+  description = "KAFKA_REPLICATION_FACTOR for the topic provisioning Job and scripts/topics.sh."
   value       = 3
 }
 
 output "kafka_topic_policy" {
   description = "How topics come into existence on this service."
-  value       = "Do not rely on auto-creation (not configurable on Managed Kafka): create every topic and its .dlq with scripts/topics.sh (S-25) or google_managed_kafka_topic before the apps start."
+  value       = "Do not rely on auto-creation (not configurable on Managed Kafka): the provisioning Job creates every topic of deploy/kafka/topics.yaml (Kafka admin API, S-25) before the apps start."
 }
 
 output "cloud" {

@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.time.Clock;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -17,11 +18,13 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizedClientManager;
+import org.springframework.security.oauth2.client.web.HttpSessionOAuth2AuthorizedClientRepository;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestCustomizers;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoderFactory;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
@@ -31,7 +34,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 /**
  * studio-bff security: OAuth2 login (authorization code + PKCE) against northline-auth, a server-side session (HttpOnly
  * cookie {@code NL_STUDIO}), CSRF double-submit with cookie {@code XSRF-TOKEN} / header {@code X-XSRF-TOKEN}, 401 (not
- * a redirect) for unauthenticated XHR, and {@code POST /bff/logout} → 204.
+ * a redirect) for unauthenticated XHR, {@code POST /bff/logout} → 204, and the S-19 revocation check
+ * ({@link SessionRevocationCheck}).
  */
 @Configuration(proxyBeanMethods = false)
 class BffSecurityConfig {
@@ -42,7 +46,9 @@ class BffSecurityConfig {
             ClientRegistrationRepository registrations,
             NextRedirect next,
             RevokeTokensOnLogout revoke,
-            BffProperties props) {
+            BffProperties props,
+            OAuth2AuthorizedClientRepository authorizedClients,
+            TokenIntrospection introspection) {
         var resolver = new DefaultOAuth2AuthorizationRequestResolver(registrations, "/oauth2/authorization");
         resolver.setAuthorizationRequestCustomizer(OAuth2AuthorizationRequestCustomizers.withPkce());
         return http.authorizeHttpRequests(
@@ -57,6 +63,9 @@ class BffSecurityConfig {
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .csrf(c -> c.spa())
                 .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
+                .addFilterBefore(
+                        new SessionRevocationCheck(authorizedClients, introspection, props, Clock.systemUTC()),
+                        AuthorizationFilter.class)
                 .logout(l -> l.logoutUrl("/bff/logout")
                         .addLogoutHandler(revoke)
                         .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.NO_CONTENT))
@@ -74,6 +83,15 @@ class BffSecurityConfig {
         var factory = new OidcIdTokenDecoderFactory();
         factory.setJwsAlgorithmResolver(_ -> SignatureAlgorithm.ES256);
         return factory;
+    }
+
+    /**
+     * Tokens live in the HTTP session (Valkey in the cloud), as DECISIONS.md describes — not in Boot's default in-memory
+     * store, which only one replica would see and which outlived an invalidated session (S-19).
+     */
+    @Bean
+    OAuth2AuthorizedClientRepository authorizedClientRepository() {
+        return new HttpSessionOAuth2AuthorizedClientRepository();
     }
 
     /** Used by the gateway's TokenRelay filter: refreshes the access token when it is about to expire. */

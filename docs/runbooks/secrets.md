@@ -51,7 +51,7 @@ Terraform (AWS, Google Cloud) or not at all (Azure: Key Vault has no empty secre
 |---|---|---|---|---|
 | `DB_PASSWORD` | `db-app-password` | api, auth, worker | yes | generated (S-3) |
 | `REDIS_PASSWORD` | `redis-password` | api, auth, bff, worker | AWS / Azure (listed in `optionalKeys`); **none** on Google Cloud (Memorystore has no password) | generated (S-3) |
-| `KAFKA_SASL_JAAS_CONFIG` | `kafka-sasl-jaas-config` | api, worker | with SASL (always in the cloud; `optionalKeys`) | generated (S-3) |
+| `KAFKA_SASL_JAAS_CONFIG` | `kafka-sasl-jaas-config` | api, auth (S-28), worker | with SASL (always in the cloud; `optionalKeys`) | generated (S-3) |
 | `ES_PASSWORD` | `es-password` | api, worker | with Elastic Cloud (`optionalKeys`) | generated (S-3) |
 | `TOTP_KEY` | `totp-key` | auth | yes | operator: `openssl rand -base64 32` |
 | `WEBHOOK_SECRET_KEY` | `webhook-secret-key` | api | yes | operator: `openssl rand -base64 32` |
@@ -63,7 +63,7 @@ Terraform (AWS, Google Cloud) or not at all (Azure: Key Vault has no empty secre
 | `EMAIL_UNSUBSCRIBE_KEY` | `email-unsubscribe-key` | api | staging, prod | operator: `openssl rand -base64 32` ([email.md](email.md)) |
 | `EMAIL_API_KEY` | `email-api-key` | api | with `sendgrid` (or `azure` with an access key) | provider console |
 | `SMTP_PASSWORD` | `smtp-password` | api, worker | with `EMAIL_PROVIDER=smtp` | relay credentials |
-| `GOOGLE_CLIENT_SECRET`, `APPLE_CLIENT_SECRET` | `google-client-secret`, `apple-client-secret` | auth | no (S-18) | Google / Apple developer consoles |
+| `GOOGLE_CLIENT_SECRET`, `APPLE_PRIVATE_KEY` | `google-client-secret`, `apple-private-key` | auth | staging, prod (S-18) | Google Cloud console / Apple Developer `.p8` key ([federation.md](federation.md)) |
 | `SMS_AUTH_TOKEN` | `sms-auth-token` | auth | with `SMS_PROVIDER=twilio` | Twilio console ([README § SMS](README.md#sms-and-voice-codes-s-8)) |
 
 Which optional variables to map is a per-environment decision in the values, e.g. dev on AWS with Twilio and SendGrid:

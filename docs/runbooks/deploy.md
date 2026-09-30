@@ -220,6 +220,27 @@ Per cloud, nothing differs but the overlay and the registry:
   (refused anyway outside local).
 - `migrations.enabled: false` returns to migrate-on-start (the api's Flyway on), e.g. for a cluster without hook support.
 
+## Kafka topics (S-25)
+
+The Job `northline-kafka-topics-<hash>` (hash of its inputs, as the migrations Job — S-15) runs **before** every install and upgrade (same hook mechanism as the migrations,
+hook weight -10, Argo CD `PreSync`), from the **worker** image: `TopicsCommand <kafkaTopics.command>` reads
+`deploy/kafka/topics.yaml` (packaged in the image) and talks to Kafka through the admin API with the worker's
+`KAFKA_*` settings. A release whose api publishes to a new topic or whose worker gains a consumer therefore finds
+the topics (and their `.dlq` / retry topics) before any pod starts.
+
+- `kafkaTopics.command`: `apply` (default; MSK, Managed Kafka) creates missing topics and corrects retention /
+  cleanup / `min.insync.replicas` drift; `plan` (values-azure.yaml — Terraform creates event hubs) reports only;
+  `verify` reports and exits 3 on drift, which fails the release. Partition drift and unmanaged topics are reported,
+  never changed; nothing is ever deleted.
+- Inputs: hook ConfigMap `northline-kafka-topics-<hash>` (the `KAFKA_*` keys of `configEnv`, plus
+  `KAFKA_REPLICATION_FACTOR` / `KAFKA_MIN_INSYNC_REPLICAS` from `kafkaTopics.replicationFactor` /
+  `.minInsyncReplicas`; prod sets min ISR 2) and hook Secret `northline-kafka-topics-<hash>` with
+  `KAFKA_SASL_JAAS_CONFIG` (hook ExternalSecret, or `secrets.values` on kind). No Spring profile: no database,
+  Valkey or Elasticsearch needed.
+- Logs: `kubectl -n northline-<env> logs $(kubectl -n northline-<env> get jobs -l app.kubernetes.io/component=kafka-topics -o name --sort-by=.metadata.creationTimestamp | tail -1)` (`CREATED`, `CORRECTED`, `DRIFT`, `UNMANAGED`
+  lines and a summary). `kafkaTopics.enabled: false` turns it off (the kind rehearsal has no Kafka).
+- Details, per-cloud table and how to change the catalogue: [infrastructure.md § 5.3](infrastructure.md#53-kafka-topics-and-credentials).
+
 ## Local: kind
 
 A full rehearsal on a laptop: kind + the local images + Postgres and Valkey, with the Spring apps in the `dev`
@@ -255,7 +276,7 @@ deploy/kind/down.sh        # deletes the cluster and the Postgres container
 
 ```sh
 deploy/helm/validate.sh     # helm lint --strict + helm template | kubeconform -strict: dev/staging/prod × aws/gcp/azure,
-                            # kind, Gateway API, defaults; plus the render-time refusals
+                            # kind, Gateway API, defaults; plus the render-time refusals and the topics Job's command per cloud
 ```
 
 CI runs it manually (GitHub **deploy** workflow `chart` input; GitLab `PIPELINE_PART=chart` or `all`). It needs

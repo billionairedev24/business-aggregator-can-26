@@ -13,9 +13,21 @@ export interface AuthSearch {
   firstName?: string;
   lastName?: string;
   email?: string;
+  /** S-18: back from Google/Apple — which one, linking an existing account (`link`), Apple private relay (`relay=1`). */
+  provider?: string;
+  link?: string;
+  relay?: string;
 }
 
-const KEYS = ['next', 'step', 'identifier', 'error', 'recover', 'firstName', 'lastName', 'email'] as const;
+/** The Google / Apple context of the signed-out page, from `?provider=` / `?link=` / `?relay=` (S-18). */
+export interface FederationContext { provider: 'google' | 'apple'; linking: boolean; relay: boolean }
+export function federationContext(search: AuthSearch): FederationContext | undefined {
+  const provider = search.link ?? search.provider;
+  if (provider !== 'google' && provider !== 'apple') return undefined;
+  return { provider, linking: !!search.link, relay: search.relay === '1' };
+}
+
+const KEYS = ['next', 'step', 'identifier', 'error', 'recover', 'firstName', 'lastName', 'email', 'provider', 'link', 'relay'] as const;
 
 export function validateAuthSearch(raw: Record<string, unknown>): AuthSearch {
   const out: AuthSearch = {};

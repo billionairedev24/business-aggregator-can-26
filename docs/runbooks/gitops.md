@@ -63,8 +63,8 @@ Inside `northline-<env>` (one sync):
 
 | phase / wave | what | why |
 |---|---|---|
-| PreSync −20 | ConfigMap, ExternalSecret (or Secret) `northline-migrate-<hash>` with `DB_PASSWORD` | the migration's inputs exist before the chart's own ConfigMaps/Secrets (first install) |
-| PreSync −10 | Job `northline-migrate-<hash>` (Flyway `db/migration`, then the category seed) | S-16: **a failed migration fails the sync before anything else changes**; the running pods keep serving |
+| PreSync −20 | ConfigMap, ExternalSecret (or Secret) `northline-migrate-<hash>` with `DB_PASSWORD`; ConfigMap (`KAFKA_*`) and ExternalSecret/Secret (`KAFKA_SASL_JAAS_CONFIG`) `northline-kafka-topics-<hash>` | the migration's inputs exist before the chart's own ConfigMaps/Secrets (first install) |
+| PreSync −10 | Jobs `northline-kafka-topics-<hash>` (S-25: creates missing topics from `deploy/kafka/topics.yaml`) and `northline-migrate-<hash>` (Flyway `db/migration`, then the category seed) | S-16: **a failed migration (or topic provisioning) fails the sync before anything else changes**; the running pods keep serving |
 | Sync −6 | SecretStore `northline` | |
 | Sync −5 | ExternalSecret per app | Argo CD waits until each is Healthy (`SecretSynced`), so the Secrets exist before the Deployments |
 | Sync 0 | ConfigMaps, ServiceAccounts, Services, Deployments, HPAs, PDBs, NetworkPolicies, routes | Deployments roll one pod at a time behind readiness |

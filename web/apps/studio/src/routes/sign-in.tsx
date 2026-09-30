@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { SignedOutPage } from '../features/auth/SignedOutPage';
-import { redirectIfSignedIn, safeNext, tabTarget, validateAuthSearch } from '../features/auth/routeSupport';
+import { federationContext, redirectIfSignedIn, safeNext, tabTarget, validateAuthSearch } from '../features/auth/routeSupport';
 
 export const Route = createFileRoute('/sign-in')({
   validateSearch: validateAuthSearch,
@@ -18,6 +18,7 @@ function SignInRoute() {
       resumeIdentifier={search.step === 'factor' ? search.identifier : undefined}
       recoverOnLoad={search.recover === '1'}
       error={search.error}
+      federation={federationContext(search)}
       onModeChange={(mode, opts) => void navigate(tabTarget(mode, search, opts?.recover) as never)}
     />
   );

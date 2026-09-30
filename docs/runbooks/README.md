@@ -17,7 +17,10 @@ say where a step is still manual or missing.
 | [object-storage.md](object-storage.md) | uploads in S3 / RustFS, Cloud Storage or Azure Blob: variables, buckets, least-privilege access per cloud (S-10) |
 | [stripe.md](stripe.md) | Stripe Connect Express: platform account setup (test/live), money flow, idempotency, local stripe-mock, operations (S-11) |
 | [email.md](email.md) | transactional email: Mailpit locally, SES / SendGrid / Azure Communication Services / SMTP set-up, SPF/DKIM/DMARC, CASL (S-13) |
+| [notifications.md](notifications.md) | team notifications: who sends which email / SMS / push (api vs worker), matrix and quiet hours, failures, push stub (S-13/S-27) |
+| [events.md](events.md) | domain events: wire format, the worker's consumer framework (dedupe, retries, DLQ), alerts and metrics, DLQ replay (S-25/S-26) |
 | [ci.md](ci.md) | CI pipelines on GitHub Actions and GitLab CI, manual trigger only (S-4/S-5, infra checks S-2/S-3) |
+| [federation.md](federation.md) | Google and Apple sign-in: console set-up, redirect URIs per environment, secrets, the Apple client secret (S-18) |
 | [secrets.md](secrets.md) | secrets in AWS Secrets Manager / Secret Manager / Key Vault through External Secrets Operator: inventory, set-up, rotation (S-6) |
 | [gitops.md](gitops.md) | Argo CD: app of apps per environment, promotion by PR (digests in `images.yaml`), dev auto-sync, staging/prod manual sync by deployers, roll back, kind rehearsal (S-15) |
 | [deploy.md](deploy.md) | container images (Jib, Dockerfile) to any registry, the Helm chart per environment and cloud, install/upgrade/roll back, local rehearsal on kind (S-14) |
@@ -75,8 +78,8 @@ say where a step is still manual or missing.
   |---|---|---|---|
   | `northline.storage.provider` | `STORAGE_PROVIDER` | `local` · `s3` (AWS S3, MinIO/RustFS, any S3 API) · `gcs` · `azure` | **done** (S-10, api uploads — [object-storage.md](object-storage.md)) |
   | `northline.kms.provider` | `KMS_PROVIDER` | `local` · `aws` · `gcp` · `azure` | **done** (S-7, auth token signing keys — [key-rotation.md](key-rotation.md)) |
-  | `northline.email.provider` | `EMAIL_PROVIDER` | `local` (SMTP to Mailpit) · `smtp` · `ses` · `sendgrid` · `azure` | **done** (S-13, api invitations and money notices — [email.md](email.md)) |
-  | `northline.sms.provider` | `SMS_PROVIDER` | `local` · `twilio` · `aws` (End User Messaging SMS and voice) · `azure` (reserved) | **done** (S-8, auth phone codes — [SMS and voice codes](#sms-and-voice-codes-s-8)) |
+  | `northline.email.provider` | `EMAIL_PROVIDER` | `local` (SMTP to Mailpit) · `smtp` · `ses` · `sendgrid` · `azure` | **done** (S-13, api invitations and money notices — [email.md](email.md); S-27 worker: `payout.failed`) |
+  | `northline.sms.provider` | `SMS_PROVIDER` | `local` · `twilio` · `aws` (End User Messaging SMS and voice) · `azure` (reserved) | **done** (S-8, auth phone codes — [SMS and voice codes](#sms-and-voice-codes-s-8); S-27: shared library `server/sms`, also api invitations and worker notifications — [notifications.md](notifications.md)) |
 
   Secrets reach the apps as environment variables in every cloud (External Secrets from AWS Secrets Manager, Google
   Secret Manager or Azure Key Vault — S-6, [secrets.md](secrets.md)), so there is no `secrets.provider` switch. Each app logs its choice at
@@ -98,8 +101,8 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `DB_POOL_SIZE` | ✓ | ✓ | | ✓ | no (10; worker 5) |
 | `REDIS_HOST` | ✓ | ✓ | ✓ | ✓ | yes |
 | `REDIS_PORT`, `REDIS_USERNAME`, `REDIS_PASSWORD`, `REDIS_SSL` | ✓ | ✓ | ✓ | ✓ | no (6379, none, none, false) |
-| `KAFKA_BOOTSTRAP` | ✓ | | | ✓ | yes |
-| `KAFKA_SECURITY_PROTOCOL`, `KAFKA_SASL_MECHANISM`, `KAFKA_SASL_JAAS_CONFIG` | ✓ | | | ✓ | no (PLAINTEXT) — set for managed Kafka |
+| `KAFKA_BOOTSTRAP` | ✓ | ✓ | | ✓ | yes (auth since S-28: user.registered) |
+| `KAFKA_SECURITY_PROTOCOL`, `KAFKA_SASL_MECHANISM`, `KAFKA_SASL_JAAS_CONFIG` | ✓ | ✓ | | ✓ | no (PLAINTEXT) — set for managed Kafka |
 | `ES_URIS` | ✓ | | | ✓ | yes |
 | `ES_USERNAME`, `ES_PASSWORD` | ✓ | | | ✓ | no — set for Elastic Cloud |
 | `AUTH_ISSUER` | ✓ | ✓ | ✓ | | yes |
@@ -113,7 +116,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `STUDIO_BFF_SECRET_HASH` | | ✓ | | | yes |
 | `CONSUMER_BFF_SECRET_HASH`, `CONSOLE_BFF_SECRET_HASH` | | ✓ | | | no — the client is registered only once its hash is set ([OAuth clients](#oauth-clients-s-122)) |
 | `OAUTH_CLIENTS_SYNC_ON_STARTUP` | | ✓ | | | no (`true`; `false` = register only with the Job) |
-| `GOOGLE_CLIENT_ID`/`_SECRET`, `APPLE_CLIENT_ID`/`_SECRET` | | ✓ | | | no (placeholders until S-18) |
+| `GOOGLE_CLIENT_ID`/`_SECRET`, `APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` | | ✓ | | | staging, prod (S-18, [federation.md](federation.md)); empty = that provider off |
 | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` | ✓ | | | | staging and prod |
 | `STRIPE_API_BASE` | ✓ | | | | never in the cloud (stripe-mock only) |
 | `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET` | ✓ | | | | staging and prod (S-12; [stripe.md](stripe.md#5-webhooks-s-12)) |
@@ -123,13 +126,16 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `KMS_PROVIDER`, `KMS_KEY_ID` | | ✓ | | | `KMS_PROVIDER` everywhere, `KMS_KEY_ID` in staging and prod (S-7, [key-rotation.md](key-rotation.md)) |
 | `KMS_PUBLISHED_KEY_IDS`, `KMS_REGION`, `KMS_ENDPOINT`, `SIGNING_KEYS_DIR`, `SIGNING_KEYS_ROTATE_EVERY` | | ✓ | | | no |
 | `EMAIL_PROVIDER`, `EMAIL_FROM` | ✓ | | | ✓ | staging and prod (`local` refused there — S-13, [email.md](email.md)) |
-| `EMAIL_UNSUBSCRIBE_KEY`, `API_PUBLIC_URL` | ✓ | | | | staging and prod (unsubscribe links — [email.md](email.md#variables)) |
+| `EMAIL_UNSUBSCRIBE_KEY`, `API_PUBLIC_URL` | ✓ | | | ✓ | staging and prod (unsubscribe links; the worker signs them for `payout.failed`, S-27 — [email.md](email.md#variables)) |
 | `EMAIL_REPLY_TO`, `EMAIL_MAILING_ADDRESS`, `EMAIL_CONTACT`, `EMAIL_REGION`, `EMAIL_ENDPOINT`, `EMAIL_API_KEY`, `EMAIL_CONFIGURATION_SET`, `EMAIL_RETRY_*`, `SMTP_*` | ✓ | | | ✓ | per provider: `EMAIL_API_KEY` with `sendgrid`, `EMAIL_ENDPOINT` with `azure`, `SMTP_HOST` with `smtp` ([email.md](email.md#variables)) |
-| `SMS_PROVIDER`, `SMS_FROM` | | ✓ | | | staging and prod (`local` refused there; `dev` may keep `local`) |
-| `SMS_ACCOUNT_ID`, `SMS_AUTH_TOKEN` | | ✓ | | | with `SMS_PROVIDER=twilio` |
-| `SMS_VOICE_FROM`, `SMS_REGION`, `SMS_ENDPOINT` | | ✓ | | | no (`= SMS_FROM`; SDK default region; provider API) |
+| `SMS_PROVIDER`, `SMS_FROM` | ✓ | ✓ | | ✓ | staging and prod (`local` refused there; `dev` may keep `local`). api: team invitations, worker: notifications (S-27) |
+| `SMS_ACCOUNT_ID`, `SMS_AUTH_TOKEN` | ✓ | ✓ | | ✓ | with `SMS_PROVIDER=twilio` |
+| `SMS_VOICE_FROM`, `SMS_REGION`, `SMS_ENDPOINT` | ✓ | ✓ | | ✓ | no (`= SMS_FROM`; SDK default region; provider API) |
 | `TRUSTED_PROXIES` | | ✓ | | | no (private ranges + loopback; narrow it to the ingress subnet) |
 | `RATE_LIMIT_STORE` | | ✓ | | | no (`redis`; `memory` only under `local`/`test`) |
+| `CLIENT_CITY_HEADER` | | ✓ | | | no (empty: no city in the session list — S-19) |
+| `SESSION_STEP_UP_MAX_AGE` | | ✓ | | | no (`10m`: how recent a second factor revoking sessions / removing passkeys needs) |
+| `SESSION_CHECK_INTERVAL` | | | ✓ | | no (`60s`: how often the BFF checks its session wasn't revoked) |
 | `OTEL_EXPORT_ENABLED` | ✓ | | | | no (false until S-111) |
 | `SERVER_PORT` | ✓ | ✓ | ✓ | | no (8080 / 9000 / 8082) |
 
@@ -292,6 +298,7 @@ per phone code, 45 s resend cool-down, 5 failed factors per sign-in attempt or s
 | email or mobile looked up at sign-in (`sign-in-lookup`) | — (typing someone's email must not lock them out) | 30 / 10 min | 20 / 10 min | 10 min |
 | wrong authenticator code / backup code / failed passkey (`totp-verify`, `backup-code-verify`, `passkey-assertion`) | 10 / 15 min each | 30 / 15 min | 10 / 15 min | 15 min |
 | failed step-up for payouts (`step-up`) | 10 / 15 min | 30 / 15 min | 10 / 15 min | 15 min |
+| revoke a session / sign out others / remove a passkey (`security-change`, S-19, every call counts) | 20 / h | 60 / h | 20 / h | 15 min |
 
 - Sliding windows; a success resets the account and session counters of that action (never the IP's). Lockouts of
   the same subject double while earlier ones are remembered (24 h). All numbers are properties under
@@ -309,6 +316,42 @@ per phone code, 45 s resend cool-down, 5 failed factors per sign-in attempt or s
 - **Unlocking someone** before the lockout ends: delete their keys in Valkey
   (`valkey-cli --scan --pattern 'nl:auth-rl:*' | xargs valkey-cli del` clears everything — keys are hashed, so a
   targeted unlock needs the hash; waiting is usually simpler).
+
+## Sessions (S-19)
+
+A **session** is one successful sign-in (`identity.sessions` row). The auth server's HTTP session carries its id
+(`SESSION_<id>` authority), every OAuth authorization issued from that HTTP session — the BFF's refresh token, an app's
+— is linked to it (`auth.authorization_sessions`), and ID tokens carry it as `sid`. Studio Settings › Security lists
+the open ones (device, city when the ingress provides it, approximate IP, signed in, last active, apps, *This
+device*), and lets the person sign one out, sign out all others, or remove a passkey.
+
+**How fast a revoked session ends** (every step is automatic):
+
+| what | when |
+|---|---|
+| refresh tokens issued from it (BFF, apps) | at once — the authorizations are deleted in the revoking transaction; `/oauth2/token` answers `invalid_grant`, `/oauth2/introspect` `active:false` |
+| the auth server's own HTTP session | on its next request (`RevokedSessionFilter`): no silent `/oauth2/authorize` code, JSON API 401 |
+| the BFF session | at its next request after `SESSION_CHECK_INTERVAL` (default **60 s**): the BFF introspects its refresh token; a refused refresh also ends it |
+| an access token already issued (JWT, api) | stateless: until it expires, **≤ 10 min** — it only ever lives inside the BFF, whose session is gone within a minute |
+
+- **Step-up:** the three changes need a second factor used in this auth session within `SESSION_STEP_UP_MAX_AGE`
+  (default `10m`); otherwise `403 step_up_required` and the Studio asks for the passkey or an authenticator code
+  (`/api/auth/step-up/*`, which renews the session's factor time) and retries. Rate limit: `security-change` above.
+- **Never the last factor:** a passkey can go only if another passkey or the authenticator app remains (backup codes
+  don't count) → `409 last_factor`. Removing the last passkey makes the authenticator the primary factor.
+- **Audit:** `developer.audit_log` `auth.session_revoked` (target the session, `reason` `revoked` | `revoked_others`)
+  and `auth.passkey_removed` (target the credential id, label). Signing out ("Sign out", "Not you?") ends the session
+  the same way (`revoke_reason = signed_out`).
+- **"Current":** the auth server's session plus the BFF's `sid` the Studio passes (`?current=`). After a "Confirm it's
+  you" sign-in the browser has two sessions; both show *This device* and survive "sign out all other sessions".
+- **City:** set `CLIENT_CITY_HEADER` to the header your ingress / CDN fills with the client's city — CloudFront
+  `CloudFront-Viewer-City`; Google Cloud external Application Load Balancer: a custom request header
+  `X-Client-City: {client_city}`; Azure Front Door: a rules-engine header from the client's geo match. Read only from
+  `TRUSTED_PROXIES`; empty = no city (the list shows the approximate IP only: `203.0.113.x`, IPv6 `/48`).
+- **Operator actions:** end every session of a person (lost device, compromised account) with SQL in one transaction:
+  `UPDATE identity.sessions SET revoked_at = now(), revoke_reason = 'revoked' WHERE user_id = :u AND revoked_at IS NULL;
+  DELETE FROM auth.oauth2_authorization WHERE principal_name = :u;` — the same effect as the Studio's buttons.
+- Sessions from before S-19 carry no session id: they aren't listed and end with their 12 h idle timeout.
 
 ## Choosing a cloud
 

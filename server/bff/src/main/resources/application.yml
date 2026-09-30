@@ -46,6 +46,10 @@ northline.bff:
   registration-id: studio
   api-uri: ${API_URL:http://localhost:8080}
   revocation-uri: ${AUTH_INTERNAL_URL:${AUTH_ISSUER:http://localhost:9000}}/oauth2/revoke
+  # S-19: a session whose sign-in was revoked at northline-auth ends within this interval (introspection of its
+  # refresh token); a refused refresh ends it too. docs/runbooks/README.md § Sessions.
+  introspection-uri: ${AUTH_INTERNAL_URL:${AUTH_ISSUER:http://localhost:9000}}/oauth2/introspect
+  session-check-interval: ${SESSION_CHECK_INTERVAL:60s}
   sign-in-page: /sign-in
 ---
 # Local runs read server/.env (or .env next to the jar) — KEY=value lines, see server/.env.example. Never under `test`.

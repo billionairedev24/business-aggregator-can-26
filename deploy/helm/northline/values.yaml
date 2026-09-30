@@ -113,7 +113,7 @@ externalSecrets:
     STRIPE_WEBHOOK_SECRET: stripe-webhook-secret
     STRIPE_CONNECT_WEBHOOK_SECRET: stripe-connect-webhook-secret
     GOOGLE_CLIENT_SECRET: google-client-secret
-    APPLE_CLIENT_SECRET: apple-client-secret
+    APPLE_PRIVATE_KEY: apple-private-key       # S-18: the Sign in with Apple .p8 key (PEM); auth makes the client secret
     SMS_AUTH_TOKEN: sms-auth-token
     EMAIL_UNSUBSCRIBE_KEY: email-unsubscribe-key
     EMAIL_API_KEY: email-api-key
@@ -178,6 +178,22 @@ migrations:
     requests: { cpu: 200m, memory: 384Mi }
     limits: { memory: 512Mi }
 
+# Kafka topics as a deploy step (S-25, docs/runbooks/infrastructure.md § 5.3): a pre-install/pre-upgrade hook Job
+# (Argo CD: PreSync) runs TopicsCommand from the worker image against deploy/kafka/topics.yaml (packaged in the image)
+# through the Kafka admin API. Idempotent, never deletes; apply = create missing topics + correct retention/cleanup
+# drift, plan = report only (Azure: Terraform creates the event hubs), verify = report and fail the release on drift.
+kafkaTopics:
+  enabled: true
+  command: apply
+  replicationFactor: ""           # blank = the broker's default.replication.factor (MSK 3 / 2 on two brokers, Managed Kafka 3)
+  minInsyncReplicas: ""           # blank = broker default; prod: 2
+  backoffLimit: 2                 # Kafka briefly unreachable
+  activeDeadlineSeconds: 600
+  ttlSecondsAfterFinished: 604800
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 384Mi }
+
 # Registers the OAuth clients (S-122) after every install/upgrade: the auth image running OAuthClientsCommand sync
 # with the auth Deployment's environment. Idempotent; northline-auth also syncs at start unless
 # apps.auth.env.OAUTH_CLIENTS_SYNC_ON_STARTUP is "false".
@@ -220,6 +236,7 @@ apps:
       EMAIL_UNSUBSCRIBE_KEY: false  # required under staging/prod (values-staging/prod.yaml)
       EMAIL_API_KEY: false          # sendgrid, or azure with an access key
       SMTP_PASSWORD: false          # EMAIL_PROVIDER=smtp
+      SMS_AUTH_TOKEN: false         # S-27: team invitations by SMS (SMS_PROVIDER=twilio)
     runAsUser: 65532
     probes:
       startup: { path: /actuator/health/liveness, periodSeconds: 5, failureThreshold: 60 }
@@ -255,8 +272,9 @@ apps:
       CONSUMER_BFF_SECRET_HASH: false
       CONSOLE_BFF_SECRET_HASH: false
       REDIS_PASSWORD: false
-      GOOGLE_CLIENT_SECRET: false
-      APPLE_CLIENT_SECRET: false
+      KAFKA_SASL_JAAS_CONFIG: false # S-28: user.registered is externalized to Kafka
+      GOOGLE_CLIENT_SECRET: false   # S-18; required (true) in staging/prod
+      APPLE_PRIVATE_KEY: false      # S-18; required (true) in staging/prod
       SMS_AUTH_TOKEN: false
     runAsUser: 65532
     probes:
@@ -319,7 +337,11 @@ apps:
       REDIS_PASSWORD: false
       KAFKA_SASL_JAAS_CONFIG: false
       ES_PASSWORD: false
-      SMTP_PASSWORD: false          # notifications consumer (S-27) reuses the email settings
+      # S-27 notifications consumer: the payout.failed email (same settings as the api) and SMS (same as auth).
+      EMAIL_UNSUBSCRIBE_KEY: false  # required under staging/prod (values-staging/prod.yaml); the api's key
+      EMAIL_API_KEY: false          # sendgrid, or azure with an access key
+      SMTP_PASSWORD: false          # EMAIL_PROVIDER=smtp
+      SMS_AUTH_TOKEN: false         # SMS_PROVIDER=twilio
     runAsUser: 65532
     probes:
       startup: { path: /actuator/health/liveness, periodSeconds: 5, failureThreshold: 60 }

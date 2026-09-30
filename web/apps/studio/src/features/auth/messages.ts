@@ -130,6 +130,11 @@ export const useAuthT = defineMessages({
     codeNotSentSms: "We couldn't send the text message. Try again in a moment, or choose Call me instead.",
     codeNotSentVoice: "We couldn't call this number. Try again in a moment, or resend the code by text.",
     federationFailed: "Signing in with Google or Apple didn't work. Try again or use your email.",
+    federationCancelled: 'Signing in with Google or Apple was cancelled. Try again or use your email.',
+    federationUnavailable: "Signing in with Google or Apple isn't available right now. Use your email or mobile instead.",
+    federationLink: 'Confirm it’s you with your passkey, authenticator app or a backup code to link your {provider} account.',
+    federationRegister: 'You’re signed in with {provider}. Add your mobile number and a second factor to finish creating your account.',
+    federationRelay: 'Your email is Apple’s Hide My Email address: messages from Northline reach you through it.',
   },
   fr: {
     studio: 'Studio',
@@ -251,6 +256,11 @@ export const useAuthT = defineMessages({
     codeNotSentSms: 'Impossible d’envoyer le texto. Réessayez dans un instant ou choisissez « M’appeler plutôt ».',
     codeNotSentVoice: 'Impossible d’appeler ce numéro. Réessayez dans un instant ou renvoyez le code par texto.',
     federationFailed: 'La connexion avec Google ou Apple n’a pas fonctionné. Réessayez ou utilisez votre courriel.',
+    federationCancelled: 'La connexion avec Google ou Apple a été annulée. Réessayez ou utilisez votre courriel.',
+    federationUnavailable: 'La connexion avec Google ou Apple n’est pas offerte pour le moment. Utilisez plutôt votre courriel ou votre mobile.',
+    federationLink: 'Confirmez que c’est vous avec votre clé d’accès, votre application d’authentification ou un code de secours pour lier votre compte {provider}.',
+    federationRegister: 'Vous êtes connecté avec {provider}. Ajoutez votre numéro de mobile et un second facteur pour terminer la création de votre compte.',
+    federationRelay: 'Votre courriel est une adresse « Masquer mon adresse courriel » d’Apple : les messages de Northline vous parviennent par elle.',
   },
 });
 

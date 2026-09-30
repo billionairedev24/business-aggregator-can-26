@@ -2,6 +2,7 @@ package ca.northline.auth.application;
 
 import ca.northline.auth.domain.Factor;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
@@ -40,8 +41,8 @@ public class UserClaimsService {
 
     public Map<String, Object> accessTokenClaims(String userId, Collection<Factor> factors) {
         var claims = new LinkedHashMap<String, Object>();
-        claims.put("roles", accounts.platformRoles(userId));
-        claims.put("merchants", accounts.merchantIds(userId));
+        claims.put("roles", new ArrayList<>(accounts.platformRoles(userId)));
+        claims.put("merchants", new ArrayList<>(accounts.merchantIds(userId)));
         putAuthenticationContext(claims, factors);
         return claims;
     }
@@ -70,7 +71,10 @@ public class UserClaimsService {
         if (Factor.isMfa(factors)) {
             claims.put("acr", MFA);
         }
-        List<String> amr = factors.stream().map(Factor::amr).distinct().toList();
+        // A mutable ArrayList: the claims are stored with the authorization and read back on refresh, and Spring
+        // Authorization Server's JSON allow-list refuses the JDK's immutable lists (S-19 found refreshes failing).
+        List<String> amr =
+                new ArrayList<>(factors.stream().map(Factor::amr).distinct().toList());
         if (!amr.isEmpty()) {
             claims.put("amr", amr);
         }

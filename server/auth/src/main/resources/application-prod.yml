@@ -4,3 +4,4 @@
 northline.required-env:
   signing-key: KMS_KEY_ID             # + KMS_PROVIDER (application-cloud.yml)
   sms-provider: SMS_PROVIDER, SMS_FROM   # S-8: twilio or aws; `local` is refused here (SmsConfig)
+  federation: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, APPLE_CLIENT_ID, APPLE_TEAM_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY  # S-18
