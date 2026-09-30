@@ -317,13 +317,4 @@ class TaxJdbcRepository implements TaxRepository {
                         rs.getString("merchant_id"), rs.getString("period"), rs.getString("jurisdiction")))
                 .list();
     }
-
-    @Override
-    public Optional<Province> merchantProvince(String merchantId) {
-        return jdbc.sql("select province from merchants.merchants where id = :id and province is not null")
-                .param("id", merchantId)
-                .query(String.class)
-                .optional()
-                .flatMap(Province::of);
-    }
 }
