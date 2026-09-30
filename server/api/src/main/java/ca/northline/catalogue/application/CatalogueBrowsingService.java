@@ -26,6 +26,7 @@ class CatalogueBrowsingService implements BrowseListings, BrowseCategories, Look
     private final CategoryCatalog categories;
     private final CatalogRecords records;
     private final MediaRepository media;
+    private final MediaVisibility visibility;
 
     @Override
     public List<ListingSummary> list(String merchantId, @Nullable ListingKind kind, int limit, Locale locale) {
@@ -38,11 +39,12 @@ class CatalogueBrowsingService implements BrowseListings, BrowseCategories, Look
     }
 
     @Override
-    public Optional<Match> byGtin(String gtin) {
+    public Optional<Match> byGtin(String merchantId, String gtin) {
         Gtin.problem("gtin", gtin).ifPresent(v -> {
             throw new RuleViolation(List.of(v));
         });
-        return records.byGtin(Gtin.normalize(gtin)).map(r -> new Match(r, media.findAll(r.imageIds())));
+        return records.byGtin(Gtin.normalize(gtin))
+                .map(r -> new Match(r, visibility.visibleTo(merchantId, media.findAll(r.imageIds()))));
     }
 
     /** Sidebar badge for the Catalogue › Products / Services & prices / Listings item: the number of listings. */

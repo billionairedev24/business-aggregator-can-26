@@ -37,6 +37,7 @@ class ListingEditingService implements EditProduct, EditService, ViewListing {
     private final CatalogRecords records;
     private final CategoryCatalog categories;
     private final MediaRepository media;
+    private final MediaVisibility visibility;
     private final Clock clock;
 
     @Override
@@ -158,7 +159,7 @@ class ListingEditingService implements EditProduct, EditService, ViewListing {
                 category,
                 p.contentShared(),
                 media.findAll(p.getDetails().ownImageIds()),
-                media.findAll(p.catalogueImageIds()),
+                visibility.visibleTo(p.getMerchantId(), media.findAll(p.catalogueImageIds())),
                 p.completeness(category));
     }
 
