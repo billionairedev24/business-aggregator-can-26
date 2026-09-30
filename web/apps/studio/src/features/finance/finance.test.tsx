@@ -215,12 +215,59 @@ describe('Payouts', () => {
     const ui = renderScreen(<PayoutsScreen />);
     await ui.click(await screen.findByRole('button', { name: 'Change' }));
     await ui.click(screen.getByRole('button', { name: 'Continue' }));
+    // no Stripe key: the simulated Financial Connections picker, never Stripe.js
+    expect(await screen.findByRole('group', { name: 'Test bank connection' })).toBeTruthy();
+    expect(document.querySelector('script[src*="js.stripe.com"]')).toBeNull();
+    await ui.click(screen.getByRole('button', { name: 'Link account' }));
     expect(await screen.findByText(/RBC · ··8820 · Prairie Wrench Mobile Mechanics Ltd\./)).toBeTruthy();
+    const prepared = calls.find(c => c.method === 'POST' && c.path.endsWith('/payouts/bank-accounts'))!;
+    expect(prepared.body).toMatchObject({ method: 'instant', linkedAccount: 'btok_local_003_8820' });
+    expect((prepared.body as { financialConnectionsAccount: string }).financialConnectionsAccount).toMatch(/^fca_local_/);
     await ui.click(screen.getByRole('button', { name: 'Confirm with passkey' }));
     expect(await screen.findByText('Account changed.')).toBeTruthy();
     const confirm = calls.find(c => c.path.endsWith('/a2/confirm'))!;
     expect(confirm.headers['x-step-up']).toBe('dev');
     expect(confirm.headers['idempotency-key']).toBeTruthy();
+  });
+
+  it('bank change: with Stripe configured, Stripe.js collects the token and the Financial Connections account', async () => {
+    const collect = vi.fn(async () => ({ token: { id: 'btok_1' }, financialConnectionsAccount: { id: 'fca_1' } }));
+    vi.stubGlobal('Stripe', vi.fn(() => ({ collectBankAccountToken: collect })));
+    routes['POST /api/v1/merchants/PWM1/payouts/bank-accounts/link-session'] = () => ok({ mode: 'stripe', clientSecret: 'fcsess_secret_x', publishableKey: 'pk_test_fake' });
+    routes['POST /api/v1/merchants/PWM1/payouts/bank-accounts'] = () => ({ status: 201, body: { ...account, id: 'a3', method: 'instant', institutionName: 'BMO', last4: '4417', label: 'BMO ··4417', state: 'draft' } });
+    const ui = renderScreen(<PayoutsScreen />);
+    await ui.click(await screen.findByRole('button', { name: 'Change' }));
+    await ui.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(await screen.findByText(/BMO · ··4417/)).toBeTruthy();
+    expect(collect).toHaveBeenCalledWith({ clientSecret: 'fcsess_secret_x' });
+    expect(calls.find(c => c.method === 'POST' && c.path.endsWith('/payouts/bank-accounts'))!.body)
+      .toMatchObject({ method: 'instant', linkedAccount: 'btok_1', financialConnectionsAccount: 'fca_1' });
+    vi.unstubAllGlobals();
+  });
+
+  it('bank change: a link the server refuses asks to connect again', async () => {
+    routes['POST /api/v1/merchants/PWM1/payouts/bank-accounts/link-session'] = () => ok({ mode: 'fake' });
+    routes['POST /api/v1/merchants/PWM1/payouts/bank-accounts'] = () => ({ status: 422, body: { errors: [{ field: 'linkedAccount', rule: 'format', message: "We couldn't use that bank link. Connect your bank again." }] } });
+    const ui = renderScreen(<PayoutsScreen />);
+    await ui.click(await screen.findByRole('button', { name: 'Change' }));
+    await ui.click(screen.getByRole('button', { name: 'Continue' }));
+    await ui.click(await screen.findByRole('button', { name: 'Link account' }));
+    expect(await screen.findByText("We couldn't use that bank link. Connect your bank again.")).toBeTruthy();
+  });
+
+  it('a bank connection that ended shows a note and Reconnect (en + fr)', async () => {
+    routes['GET /api/v1/merchants/PWM1/payouts/overview'] = () => ok({ ...overview, account: { ...account, method: 'instant', disconnectedAt: '2026-09-28T16:00:00Z' } });
+    const ui = renderScreen(<PayoutsScreen />);
+    expect(await screen.findByText(/^Bank connection ended .*reconnect to keep it verified\.$/)).toBeTruthy();
+    await ui.click(screen.getByRole('button', { name: 'Reconnect' }));
+    expect(screen.getByRole('region', { name: 'Change payout account' })).toBeTruthy();
+  });
+
+  it('a bank connection that ended, in French', async () => {
+    routes['GET /api/v1/merchants/PWM1/payouts/overview'] = () => ok({ ...overview, account: { ...account, method: 'instant', disconnectedAt: '2026-09-28T16:00:00Z' } });
+    renderScreen(<PayoutsScreen />, 'fr');
+    expect(await screen.findByText(/^La connexion bancaire a pris fin le .*reconnectez-le pour qu’il reste vérifié\.$/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Reconnecter' })).toBeTruthy();
   });
 
   it('schedule: previews the next payout and saves', async () => {

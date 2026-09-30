@@ -15,8 +15,9 @@ import org.springframework.data.redis.core.script.RedisScript;
 
 /**
  * Valkey/Redis counters: {@code nl:auth-rl:{<action>}:<scope>:<hash>:events|lock|strikes}. The hash tag keeps one
- * call's keys in one slot. When Valkey is unreachable the limiter lets the attempt through and logs an error: the
- * per-flow limits still apply, and the sessions (also in Valkey) are failing anyway.
+ * call's keys in one slot. When Valkey is unreachable, {@link #check} and {@link #record} throw
+ * {@link RateLimiter.Unavailable} and {@code AttemptLimits} decides (S-20: fail open or closed); a failed reset is only
+ * logged (it can only make the limits stricter).
  */
 @Slf4j
 final class RedisRateLimiter implements RateLimiter {
@@ -76,8 +77,7 @@ final class RedisRateLimiter implements RateLimiter {
         try {
             result = redis.execute(SCRIPT, keys, args.toArray());
         } catch (DataAccessException e) {
-            log.error("Rate limits unavailable (Valkey): attempt allowed — {}", e.getMessage());
-            return Decision.ALLOWED;
+            throw new RateLimiter.Unavailable("Valkey: " + e.getMessage(), e);
         }
         if (result == null || result.size() < 3 || number(result.get(0)) == 1) {
             return Decision.ALLOWED;

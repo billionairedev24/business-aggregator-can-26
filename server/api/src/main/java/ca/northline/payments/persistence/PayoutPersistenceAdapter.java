@@ -214,6 +214,13 @@ class PayoutPersistenceAdapter implements PayoutRepository {
     }
 
     @Override
+    public List<PayoutAccount> accountsLinkedTo(String financialConnectionsAccount) {
+        return accounts.findByFinancialConnectionsAccount(financialConnectionsAccount).stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
+
+    @Override
     public int releasedSince(String merchantId, @Nullable Instant since) {
         return jdbc.sql("""
                         select count(*) from payments.escrows

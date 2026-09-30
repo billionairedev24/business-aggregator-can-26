@@ -54,6 +54,8 @@ public class PayoutAccount {
     private final String last4;
     private final String holderName;
     private final String externalRef;
+    /** Financial Connections account ({@code fca_…}) an instant link came from; null for typed details. */
+    private final @Nullable String financialConnectionsAccount;
 
     @ToString.Include
     private State state;
@@ -63,6 +65,9 @@ public class PayoutAccount {
     private @Nullable Instant confirmedAt;
     private @Nullable Instant effectiveAt;
     private @Nullable Instant replacedAt;
+    /** Stripe says the bank connection ended (the owner revoked it at their bank, or it expired). */
+    private @Nullable Instant disconnectedAt;
+
     private final @Nullable Integer version;
 
     public static PayoutAccount draft(
@@ -74,6 +79,7 @@ public class PayoutAccount {
             String last4,
             String holderName,
             String externalRef,
+            @Nullable String financialConnectionsAccount,
             String createdBy,
             Instant now) {
         return PayoutAccount.builder()
@@ -86,6 +92,7 @@ public class PayoutAccount {
                 .last4(last4)
                 .holderName(holderName)
                 .externalRef(externalRef)
+                .financialConnectionsAccount(financialConnectionsAccount)
                 .state(State.DRAFT)
                 .createdAt(now)
                 .createdBy(createdBy)
@@ -129,6 +136,19 @@ public class PayoutAccount {
     public void replace(Instant now) {
         state = State.REPLACED;
         replacedAt = now;
+    }
+
+    /**
+     * The Financial Connections link ended ({@code financial_connections.account.disconnected}). The bank account stays
+     * the connected account's external account, so payouts keep going to it; the Studio asks the owner to reconnect.
+     * False when it was already recorded.
+     */
+    public boolean connectionEnded(Instant at) {
+        if (disconnectedAt != null || financialConnectionsAccount == null) {
+            return false;
+        }
+        disconnectedAt = at;
+        return true;
     }
 
     public void discard() {

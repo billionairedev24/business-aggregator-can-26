@@ -41,7 +41,7 @@ import org.springframework.web.bind.annotation.RestController;
  * GET  …/payouts/schedule/preview?frequency=&weekday=&monthlyAnchor=&reserve=
  * PUT  …/payouts/schedule                 {frequency, weekday?, monthlyAnchor?, reserve}
  * POST …/payouts/bank-accounts/link-session                Stripe Financial Connections (or the fake)
- * POST …/payouts/bank-accounts            {method, …}      → draft
+ * POST …/payouts/bank-accounts            {method, …}      → draft (instant: linkedAccount + financialConnectionsAccount)
  * POST …/payouts/bank-accounts/{id}/confirm                Idempotency-Key + X-Step-Up → 24 h hold
  * </pre>
  */
@@ -133,11 +133,13 @@ class PayoutController {
                 merchantId,
                 Objects.requireNonNull(body.method()),
                 body.linkedAccount(),
+                body.financialConnectionsAccount(),
                 body.institution(),
                 body.transit(),
                 body.accountNumber(),
                 body.holderName(),
-                member.userId()));
+                member.userId(),
+                member.role().code()));
         return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toResponse(draft));
     }
 
@@ -151,7 +153,8 @@ class PayoutController {
             CurrentMember member) {
         return idempotency.run(scope(member, "bank-account"), key, accountId, HttpStatus.OK, () -> {
             stepUp.verify(member.userId(), proof);
-            PayoutAccount account = bank.confirm(merchantId, accountId, member.userId());
+            PayoutAccount account = bank.confirm(
+                    merchantId, accountId, member.userId(), member.role().code());
             return mapper.toResponse(account);
         });
     }

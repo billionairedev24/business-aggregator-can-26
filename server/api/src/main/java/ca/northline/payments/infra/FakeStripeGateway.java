@@ -20,28 +20,11 @@ import lombok.extern.slf4j.Slf4j;
  * Stand-in for Stripe when no secret key is configured (local, test, CI). Everything succeeds; ids look like Stripe's;
  * a PaymentIntent is authorized as soon as it exists (there is no card to confirm) and any {@code pi_…} it never saw
  * counts as authorized, except ids containing {@code requires_action}; instant payouts arrive in ~30 minutes, scheduled ones the next business morning and are paid
- * once that time passes. Financial Connections always links "RBC ··8820" (the design's example account).
+ * once that time passes. Bank linking is {@link FakeBankLinking}.
  */
 @Slf4j
 @RequiredArgsConstructor
 class FakeStripeGateway implements PaymentGateway, PayoutGateway {
-
-    /** Canadian institution numbers → the names Stripe reports. */
-    static final Map<String, String> INSTITUTIONS = Map.ofEntries(
-            Map.entry("001", "BMO"),
-            Map.entry("002", "Scotiabank"),
-            Map.entry("003", "RBC"),
-            Map.entry("004", "TD Canada Trust"),
-            Map.entry("006", "National Bank"),
-            Map.entry("010", "CIBC"),
-            Map.entry("016", "HSBC"),
-            Map.entry("219", "ATB Financial"),
-            Map.entry("614", "Tangerine"),
-            Map.entry("815", "Desjardins"),
-            Map.entry("809", "Credit union"),
-            Map.entry("828", "Credit union"),
-            Map.entry("869", "Credit union"),
-            Map.entry("899", "Credit union"));
 
     private static final String ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
     private final SecureRandom random = new SecureRandom();
@@ -168,27 +151,6 @@ class FakeStripeGateway implements PaymentGateway, PayoutGateway {
     @Override
     public void useManualPayouts(String connectedAccount) {
         log.debug("FAKE STRIPE manual payouts for {}", connectedAccount);
-    }
-
-    @Override
-    public LinkSession startBankLink(String connectedAccount) {
-        return new LinkSession("fake", null, null);
-    }
-
-    @Override
-    public BankAccount linked(String connectedAccount, String linkedAccountRef) {
-        return new BankAccount(id("ba_", 14), "RBC", "003", null, "8820");
-    }
-
-    @Override
-    public BankAccount manual(
-            String connectedAccount, String institution, String transit, String accountNumber, String holderName) {
-        return new BankAccount(
-                id("ba_", 14),
-                INSTITUTIONS.getOrDefault(institution, "Institution " + institution),
-                institution,
-                transit,
-                accountNumber.substring(accountNumber.length() - 4));
     }
 
     @Override

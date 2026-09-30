@@ -55,6 +55,7 @@ function Money({ o }: { o: PayoutOverview }) {
     : t('scheduledTo', { date: dayDate(o.nextPayoutAt, locale), account: destination });
   const canInstant = owner && o.instant.eligible && !o.pausedUntil && !!account && o.payableCents >= o.instant.minAmountCents;
   const pending = o.pendingAccount;
+  const ended = [pending, account].find(a => a?.disconnectedAt);
   return (
     <>
       <div className="fin-available">
@@ -79,6 +80,12 @@ function Money({ o }: { o: PayoutOverview }) {
             : account ? t('bankLabel', { bank: bankName(account), last4: account.last4, holder: account.holderName }) : t('noAccount')}</span>
           {owner ? <Button variant="ghost" onClick={() => setPanel(p => (p === 'bank' ? null : 'bank'))} aria-expanded={panel === 'bank'}>{t('change')}</Button> : null}
         </div>
+        {ended?.disconnectedAt ? (
+          <div className="fin-row fin-row-44" role="status">
+            <span className="fin-small">{t('connectionEnded', { date: dateTime(ended.disconnectedAt, locale) })}</span>
+            {owner && panel !== 'bank' ? <Button variant="ghost" onClick={() => setPanel('bank')}>{t('reconnect')}</Button> : null}
+          </div>
+        ) : null}
       </div>
       {panel === 'bank' ? <BankPanel o={o} onClose={() => setPanel(null)} /> : null}
     </>
@@ -248,8 +255,13 @@ export function bankErrors(v: BankFields, t: ReturnType<typeof useFinanceT>): Pa
   };
 }
 
-interface StripeJs { collectBankAccountToken: (o: { clientSecret: string }) => Promise<{ token?: { id: string }; error?: { message: string } }> }
-async function stripeBankToken(publishableKey: string, clientSecret: string): Promise<string | undefined> {
+interface StripeJs {
+  collectBankAccountToken: (o: { clientSecret: string }) => Promise<{ token?: { id: string }; financialConnectionsAccount?: { id: string }; error?: { message: string } }>;
+}
+interface BankLink { token: string; financialConnectionsAccount?: string }
+
+/** Stripe.js is loaded only here, only when the api hands out a real Financial Connections session (S-24). */
+async function stripeBankLink(publishableKey: string, clientSecret: string): Promise<BankLink | undefined> {
   const w = window as unknown as { Stripe?: (k: string) => StripeJs };
   if (!w.Stripe) {
     await new Promise<void>((resolve, reject) => {
@@ -261,7 +273,38 @@ async function stripeBankToken(publishableKey: string, clientSecret: string): Pr
     });
   }
   const result = await w.Stripe!(publishableKey).collectBankAccountToken({ clientSecret });
-  return result.token?.id;
+  return result.token ? { token: result.token.id, financialConnectionsAccount: result.financialConnectionsAccount?.id } : undefined;
+}
+
+/**
+ * Without Stripe (local profile, no key) the api's session is `fake`: this stands in for the Financial Connections
+ * modal — pick a bank, get a local token the fake adapter understands. Stripe.js is never loaded.
+ */
+const FAKE_BANKS = [['003', '8820', 'RBC'], ['004', '3391', 'TD Canada Trust'], ['001', '4417', 'BMO'], ['002', '2208', 'Scotiabank'], ['010', '6631', 'CIBC'], ['219', '5102', 'ATB Financial'], ['815', '9034', 'Desjardins']] as const;
+
+function FakeBankPicker({ busy, onLink, onCancel }: { busy: boolean; onLink: (link: BankLink) => void; onCancel: () => void }) {
+  const t = useFinanceT();
+  const [choice, setChoice] = useState(0);
+  const [inst, last4] = FAKE_BANKS[choice]!;
+  return (
+    <div className="fin-dashed" role="group" aria-label={t('fakeTitle')}>
+      <strong>{t('fakeTitle')}</strong>
+      <div className="fin-small" style={{ marginTop: 4 }}>{t('fakeText')}</div>
+      <div style={{ marginTop: 10, textAlign: 'left' }}>
+        <Field label={t('fakeBank')}>
+          <Select value={String(choice)} onChange={e => setChoice(Number(e.target.value))}
+            options={FAKE_BANKS.map(([, l4, name], i) => ({ value: String(i), label: `${name} ··${l4}` }))} />
+        </Field>
+      </div>
+      <div className="fin-actions">
+        <Button type="button" disabled={busy} aria-busy={busy}
+          onClick={() => onLink({ token: `btok_local_${inst}_${last4}`, financialConnectionsAccount: `fca_local_${Date.now().toString(36)}` })}>
+          {busy ? t('working') : t('fakeLink')}
+        </Button>
+        <Button type="button" variant="ghost" onClick={onCancel}>{t('fakeCancel')}</Button>
+      </div>
+    </div>
+  );
 }
 
 function BankPanel({ o, onClose }: { o: PayoutOverview; onClose: () => void }) {
@@ -280,6 +323,7 @@ function BankPanel({ o, onClose }: { o: PayoutOverview; onClose: () => void }) {
   const [submitted, setSubmitted] = useState(false);
   const [server, setServer] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string>();
+  const [picking, setPicking] = useState(false);
   const clientErrors = mode === 'manual' ? bankErrors(values, t) : {};
   const shown = Object.fromEntries(BANK_FIELDS.map(k => [k, server[k] ?? ((touched[k] || submitted) ? clientErrors[k] : undefined)])) as Record<string, string | undefined>;
   const busy = link.isPending || prepare.isPending;
@@ -290,28 +334,35 @@ function BankPanel({ o, onClose }: { o: PayoutOverview; onClose: () => void }) {
     setFormError(undefined);
     if (mode === 'manual' && attentionCount(clientErrors) > 0) return;
     try {
-      let account: Account;
       if (mode === 'instant') {
         const session = await link.mutateAsync();
-        const token = session.mode === 'stripe' && session.clientSecret && session.publishableKey
-          ? await stripeBankToken(session.publishableKey, session.clientSecret)
-          : 'fake';
-        if (!token) { setFormError(t('linkCancelled')); return; }
-        account = await prepare.mutateAsync({ method: 'instant', linkedAccount: token, holderName: values.holderName || undefined });
+        if (session.mode !== 'stripe' || !session.clientSecret || !session.publishableKey) { setPicking(true); return; }
+        const linked = await stripeBankLink(session.publishableKey, session.clientSecret);
+        if (!linked) { setFormError(t('linkCancelled')); return; }
+        await linkAccount(linked);
       } else {
-        account = await prepare.mutateAsync({ method: 'manual', ...Object.fromEntries(BANK_FIELDS.map(k => [k, values[k].trim()])) });
+        prepared(await prepare.mutateAsync({ method: 'manual', ...Object.fromEntries(BANK_FIELDS.map(k => [k, values[k].trim()])) }));
       }
-      setDraft(account);
-      key.current.renew();
-      setStep('confirm');
     } catch (err) {
-      if (err instanceof ValidationError) {
-        const byField = err.byField();
-        setServer(byField);
-        const other = Object.entries(byField).filter(([k]) => !(BANK_FIELDS as readonly string[]).includes(k)).map(([, m]) => m);
-        if (other.length) setFormError(other[0]);
-      } else setFormError(t('loadError'));
+      failed(err);
     }
+  }
+  function prepared(account: Account) {
+    setDraft(account);
+    setPicking(false);
+    key.current.renew();
+    setStep('confirm');
+  }
+  async function linkAccount(linked: BankLink) {
+    prepared(await prepare.mutateAsync({ method: 'instant', linkedAccount: linked.token, financialConnectionsAccount: linked.financialConnectionsAccount, holderName: values.holderName || undefined }));
+  }
+  function failed(err: unknown) {
+    if (err instanceof ValidationError) {
+      const byField = err.byField();
+      setServer(byField);
+      const other = Object.entries(byField).filter(([k]) => !(BANK_FIELDS as readonly string[]).includes(k)).map(([, m]) => m);
+      if (other.length) setFormError(other[0]);
+    } else setFormError(t('loadError'));
   }
   const set = (k: keyof BankFields) => (e: { target: { value: string } }) => { setValues(v => ({ ...v, [k]: e.target.value })); setServer(s => ({ ...s, [k]: undefined as unknown as string })); };
   const attention = submitted ? attentionCount(shown) : 0;
@@ -323,9 +374,11 @@ function BankPanel({ o, onClose }: { o: PayoutOverview; onClose: () => void }) {
         <form onSubmit={next} noValidate>
           <div className="fin-days" style={{ marginTop: 12 }} role="radiogroup" aria-label={t('bankPanelTitle')}>
             <Chip role="radio" aria-checked={mode === 'instant'} selected={mode === 'instant'} onClick={() => setMode('instant')}>{t('connectInstantly')}</Chip>
-            <Chip role="radio" aria-checked={mode === 'manual'} selected={mode === 'manual'} onClick={() => setMode('manual')}>{t('enterManually')}</Chip>
+            <Chip role="radio" aria-checked={mode === 'manual'} selected={mode === 'manual'} onClick={() => { setMode('manual'); setPicking(false); }}>{t('enterManually')}</Chip>
           </div>
-          {mode === 'instant' ? <div className="fin-dashed">{t('fcText')}</div> : (
+          {mode === 'instant' ? (picking
+            ? <FakeBankPicker busy={busy} onCancel={() => setPicking(false)} onLink={l => { setFormError(undefined); linkAccount(l).catch(failed); }} />
+            : <div className="fin-dashed">{t('fcText')}</div>) : (
             <>
               {attention > 0 ? <div role="alert" className="nl-error" style={{ marginTop: 12 }}>{t('attention', { count: attention })}</div> : null}
               <div className="fin-bank-fields">
@@ -338,10 +391,12 @@ function BankPanel({ o, onClose }: { o: PayoutOverview; onClose: () => void }) {
             </>
           )}
           {formError ? <div role="alert" className="nl-error" style={{ marginTop: 10 }}>{formError}</div> : null}
-          <div className="fin-actions">
-            <Button type="submit" disabled={busy} aria-busy={busy}>{busy ? t('working') : t('continue')}</Button>
-            <Button type="button" variant="ghost" onClick={onClose}>{t('cancel')}</Button>
-          </div>
+          {picking ? null : (
+            <div className="fin-actions">
+              <Button type="submit" disabled={busy} aria-busy={busy}>{busy ? t('working') : t('continue')}</Button>
+              <Button type="button" variant="ghost" onClick={onClose}>{t('cancel')}</Button>
+            </div>
+          )}
         </form>
       ) : step === 'confirm' && draft ? (
         <>

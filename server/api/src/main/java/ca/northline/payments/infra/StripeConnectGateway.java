@@ -3,13 +3,11 @@ package ca.northline.payments.infra;
 import ca.northline.payments.application.PaymentGateway;
 import ca.northline.payments.application.PayoutGateway;
 import ca.northline.payments.domain.Payout;
-import ca.northline.shared.Ids;
 import ca.northline.shared.stripe.StripeIdempotencyKeys;
 import com.stripe.StripeClient;
 import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
 import com.stripe.net.RequestOptions;
-import com.stripe.param.AccountExternalAccountCreateParams;
 import com.stripe.param.AccountExternalAccountUpdateParams;
 import com.stripe.param.AccountUpdateParams;
 import com.stripe.param.CustomerCreateParams;
@@ -19,15 +17,9 @@ import com.stripe.param.PaymentIntentCreateParams;
 import com.stripe.param.PaymentIntentRetrieveParams;
 import com.stripe.param.PayoutCreateParams;
 import com.stripe.param.RefundCreateParams;
-import com.stripe.param.TokenCreateParams;
 import com.stripe.param.TransferCreateParams;
 import com.stripe.param.TransferReversalCreateParams;
-import com.stripe.param.financialconnections.SessionCreateParams;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
-import java.util.HexFormat;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
@@ -46,12 +38,10 @@ class StripeConnectGateway implements PaymentGateway, PayoutGateway {
     private static final String CAD = "cad";
 
     private final StripeClient stripe;
-    private final @Nullable String publishableKey;
     private final AtomicReference<@Nullable String> platformAccount = new AtomicReference<>();
 
-    StripeConnectGateway(StripeClient stripe, @Nullable String publishableKey) {
+    StripeConnectGateway(StripeClient stripe) {
         this.stripe = stripe;
-        this.publishableKey = publishableKey;
     }
 
     /** A Stripe call failed; the job / request is retried with the same idempotency key. */
@@ -361,84 +351,7 @@ class StripeConnectGateway implements PaymentGateway, PayoutGateway {
                                 key(StripeIdempotencyKeys.of("manual-payouts", connectedAccount))));
     }
 
-    // ── bank accounts (connected account) ────────────────────────────────────────────────────────────────────────
-
-    @Override
-    public LinkSession startBankLink(String connectedAccount) {
-        var session = call(
-                "financial connections session",
-                () -> stripe.v1()
-                        .financialConnections()
-                        .sessions()
-                        .create(
-                                SessionCreateParams.builder()
-                                        .setAccountHolder(SessionCreateParams.AccountHolder.builder()
-                                                .setType(SessionCreateParams.AccountHolder.Type.ACCOUNT)
-                                                .setAccount(connectedAccount)
-                                                .build())
-                                        .addPermission(SessionCreateParams.Permission.PAYMENT_METHOD)
-                                        .build(),
-                                // every click opens a new session; the key only makes stripe-java's own retries safe
-                                key(StripeIdempotencyKeys.of("bank-link-session", connectedAccount, Ids.next()))));
-        return new LinkSession("stripe", session.getClientSecret(), publishableKey);
-    }
-
-    /** {@code linkedAccountRef} is the bank account token Stripe.js' {@code collectBankAccountToken} returned. */
-    @Override
-    public BankAccount linked(String connectedAccount, String linkedAccountRef) {
-        return attach(connectedAccount, linkedAccountRef);
-    }
-
-    @Override
-    public BankAccount manual(
-            String connectedAccount, String institution, String transit, String accountNumber, String holderName) {
-        // the same typed details give the same token call; the digest keeps the account number out of the key
-        var tokenKey = StripeIdempotencyKeys.of(
-                "bank-token",
-                connectedAccount,
-                digest(institution + '|' + transit + '|' + accountNumber + '|' + holderName));
-        var token = call(
-                "bank account token",
-                () -> stripe.v1()
-                        .tokens()
-                        .create(
-                                TokenCreateParams.builder()
-                                        .setBankAccount(TokenCreateParams.BankAccount.builder()
-                                                .setCountry("CA")
-                                                .setCurrency(CAD)
-                                                .setRoutingNumber(transit + "-" + institution)
-                                                .setAccountNumber(accountNumber)
-                                                .setAccountHolderName(holderName)
-                                                .setAccountHolderType(
-                                                        TokenCreateParams.BankAccount.AccountHolderType.COMPANY)
-                                                .build())
-                                        .build(),
-                                key(tokenKey)));
-        return attach(connectedAccount, token.getId());
-    }
-
-    private BankAccount attach(String connectedAccount, String token) {
-        var external = call(
-                "external account",
-                () -> stripe.v1()
-                        .accounts()
-                        .externalAccounts()
-                        .create(
-                                connectedAccount,
-                                AccountExternalAccountCreateParams.builder()
-                                        .setExternalAccount(token)
-                                        .build(),
-                                key(StripeIdempotencyKeys.of("external-account", connectedAccount, token))));
-        var bank = (com.stripe.model.BankAccount) external;
-        var routing = Objects.requireNonNullElse(bank.getRoutingNumber(), "");
-        var parts = routing.split("-");
-        return new BankAccount(
-                bank.getId(),
-                Objects.requireNonNullElse(bank.getBankName(), "Bank"),
-                parts.length == 2 ? parts[1] : null,
-                parts.length == 2 ? parts[0] : null,
-                bank.getLast4());
-    }
+    // ── bank accounts (connected account; linking them is StripeBankLinking) ──────────────────────────────────────
 
     @Override
     public void makeDefault(String connectedAccount, String externalRef) {
@@ -455,14 +368,5 @@ class StripeConnectGateway implements PaymentGateway, PayoutGateway {
                                         .build(),
                                 key(StripeIdempotencyKeys.of(
                                         "default-external-account", connectedAccount, externalRef))));
-    }
-
-    private static String digest(String value) {
-        try {
-            return HexFormat.of()
-                    .formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException(e);
-        }
     }
 }

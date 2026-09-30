@@ -28,6 +28,13 @@ public class SignInService {
     /** The factors the Studio offers, in the design's order. */
     public static final List<Factor> OFFERED = List.of(Factor.PASSKEY, Factor.TOTP, Factor.BACKUP_CODE);
 
+    /** A user id no account has (ULIDs are 26 characters): the lookups for unknown accounts find nothing. */
+    private static final String NO_ACCOUNT = "-";
+
+    /** Checked when there is no real secret, so every attempt costs the same (RFC 4648 base32, 32 characters). */
+    private static final SecondFactors.StoredTotp DECOY_TOTP =
+            new SecondFactors.StoredTotp("NORTHLINEDECOYSECRETNORTHLINEDEC", Long.MIN_VALUE);
+
     private final UserAccounts accounts;
     private final SecondFactors factors;
     private final PasskeyService passkeys;
@@ -51,12 +58,12 @@ public class SignInService {
     }
 
     /**
-     * Options for {@code navigator.credentials.get()}. Without a started attempt (the "Passkey" button next to
-     * Google/Apple) any discoverable passkey is accepted.
+     * Options for {@code navigator.credentials.get()}: the same for everyone (S-20: no credential ids of the typed
+     * account). Without a started attempt (the "Passkey" button next to Google/Apple) any discoverable passkey is
+     * accepted; with one, the passkey must belong to the typed account.
      */
     public String passkeyOptions() {
-        var userId = flow.get(FlowStore.SIGN_IN).map(SignInAttempt::userId).orElse(null);
-        var options = passkeys.requestOptions(userId);
+        var options = passkeys.signInOptions();
         flow.put(FlowStore.PASSKEY_REQUEST, options);
         return passkeys.toJson(options);
     }
@@ -102,11 +109,13 @@ public class SignInService {
         var who = subject(attempt);
         limits.guard(LimitedAction.TOTP_VERIFY, who);
         var userId = attempt.userId();
-        var stored = userId == null ? Optional.<SecondFactors.StoredTotp>empty() : factors.findTotp(userId);
-        var step = stored.flatMap(t -> {
-            var s = Totp.verify(t.secret(), code.trim(), clock.instant(), t.lastUsedStep());
-            return s.isPresent() ? Optional.of(s.getAsLong()) : Optional.<Long>empty();
-        });
+        // S-20: an unknown account (or one without an authenticator) does the same work — a lookup and a code
+        // check against a decoy secret — so the answer's timing doesn't tell it apart from a wrong code.
+        var stored = factors.findTotp(userId == null ? NO_ACCOUNT : userId);
+        var checked = stored.orElse(DECOY_TOTP);
+        var verified = Totp.verify(checked.secret(), code.trim(), clock.instant(), checked.lastUsedStep());
+        var step =
+                stored.isPresent() && verified.isPresent() ? Optional.of(verified.getAsLong()) : Optional.<Long>empty();
         if (userId == null || step.isEmpty() || !factors.markTotpUsed(userId, step.get())) {
             throw limits.failed(
                     LimitedAction.TOTP_VERIFY,
@@ -128,7 +137,10 @@ public class SignInService {
         var who = subject(attempt);
         limits.guard(LimitedAction.BACKUP_CODE_VERIFY, who);
         var userId = attempt.userId();
-        if (userId == null || !factors.consumeBackupCode(userId, BackupCodes.hash(code), clock.instant())) {
+        // S-20: the same query for an unknown account (it matches nothing), so timing doesn't reveal the account.
+        var consumed = factors.consumeBackupCode(
+                userId == null ? NO_ACCOUNT : userId, BackupCodes.hash(code), clock.instant());
+        if (userId == null || !consumed) {
             throw limits.failed(
                     LimitedAction.BACKUP_CODE_VERIFY,
                     who,

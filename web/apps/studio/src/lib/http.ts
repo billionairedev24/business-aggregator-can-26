@@ -13,8 +13,17 @@ export class ValidationError extends ApiError {
 }
 export const isUnauthorized = (e: unknown) => e instanceof ApiError && e.status === 401;
 
-function xsrf(): string | undefined {
-  return document.cookie.split('; ').find(c => c.startsWith('XSRF-TOKEN='))?.slice('XSRF-TOKEN='.length);
+/**
+ * The BFF's CSRF token, raw. The cloud names the cookie `__Host-XSRF-TOKEN` (S-20: a sibling subdomain can't plant a
+ * `__Host-` cookie); locally it is `XSRF-TOKEN`. Sent back as `X-XSRF-TOKEN` — the BFF accepts it from that header only.
+ */
+export function xsrfToken(): string | undefined {
+  const cookies = document.cookie.split('; ');
+  for (const name of ['__Host-XSRF-TOKEN', 'XSRF-TOKEN']) {
+    const value = cookies.find(c => c.startsWith(`${name}=`))?.slice(name.length + 1);
+    if (value) return decodeURIComponent(value);
+  }
+  return undefined;
 }
 
 export interface RequestOptions { method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; body?: unknown; idempotencyKey?: string; signal?: AbortSignal; headers?: Record<string, string> }
@@ -27,7 +36,7 @@ export async function http<T = unknown>(path: string, opts: RequestOptions = {},
   const method = opts.method ?? 'GET';
   const headers: Record<string, string> = { accept: 'application/json', ...opts.headers };
   if (opts.body !== undefined && !(opts.body instanceof FormData)) headers['content-type'] = 'application/json';
-  if (method !== 'GET') { const t = xsrf(); if (t) headers['x-xsrf-token'] = decodeURIComponent(t); }
+  if (method !== 'GET') { const t = xsrfToken(); if (t) headers['x-xsrf-token'] = t; }
   if (opts.idempotencyKey) headers['idempotency-key'] = opts.idempotencyKey;
   const res = await fetch(path, { method, headers, credentials: 'include', signal: opts.signal, body: opts.body === undefined ? undefined : opts.body instanceof FormData ? opts.body : JSON.stringify(opts.body) });
   const text = await res.text();

@@ -8,21 +8,21 @@ import java.util.Locale;
  */
 public enum LimitedAction {
     /** A phone code sent or re-sent, by SMS or voice (registration). */
-    OTP_SEND(Kind.REQUESTS),
+    OTP_SEND(Kind.REQUESTS, true),
     /** A wrong phone code (registration). */
-    OTP_VERIFY(Kind.FAILURES),
+    OTP_VERIFY(Kind.FAILURES, true),
     /** "Email or mobile" submitted on the sign-in form. */
-    SIGN_IN_LOOKUP(Kind.REQUESTS),
+    SIGN_IN_LOOKUP(Kind.REQUESTS, false),
     /** A wrong authenticator code at sign-in. */
-    TOTP_VERIFY(Kind.FAILURES),
+    TOTP_VERIFY(Kind.FAILURES, true),
     /** A wrong or used backup code at sign-in. */
-    BACKUP_CODE_VERIFY(Kind.FAILURES),
+    BACKUP_CODE_VERIFY(Kind.FAILURES, true),
     /** A passkey assertion that didn't verify (or belongs to someone else) at sign-in. */
-    PASSKEY_ASSERTION(Kind.FAILURES),
+    PASSKEY_ASSERTION(Kind.FAILURES, true),
     /** A failed step-up confirmation (payouts), passkey or authenticator code. */
-    STEP_UP(Kind.FAILURES),
+    STEP_UP(Kind.FAILURES, true),
     /** S-19: revoking sessions or removing a passkey (Settings › Security) — every call counts. */
-    SECURITY_CHANGE(Kind.REQUESTS);
+    SECURITY_CHANGE(Kind.REQUESTS, false);
 
     /** Whether every call counts, or only failures. */
     public enum Kind {
@@ -31,13 +31,24 @@ public enum LimitedAction {
     }
 
     private final Kind kind;
+    private final boolean guardsSecret;
 
-    LimitedAction(Kind kind) {
+    LimitedAction(Kind kind, boolean guardsSecret) {
         this.kind = kind;
+        this.guardsSecret = guardsSecret;
     }
 
     public Kind kind() {
         return kind;
+    }
+
+    /**
+     * S-20: a code/OTP or factor path — something that can be guessed. These are refused (503) while the limit store is
+     * unreachable and {@code northline.auth.rate-limits.when-unavailable} is {@code closed}; the identifier lookup and
+     * the signed-in Security changes (which already need a recent second factor) keep going.
+     */
+    public boolean guardsSecret() {
+        return guardsSecret;
     }
 
     /** {@code otp_send} — used in keys, logs and the audit log. */

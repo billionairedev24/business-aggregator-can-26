@@ -335,7 +335,7 @@ class PayoutApiTest extends IntegrationTest {
                     .andExpect(jsonPath("$.mode").value("fake"));
             mvc.perform(post("/api/v1/merchants/{id}/payouts/bank-accounts", shop.merchantId())
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"method\":\"instant\",\"linkedAccount\":\"btok_fake\"}")
+                            .content("{\"method\":\"instant\",\"linkedAccount\":\"btok_local_003_8820\"}")
                             .with(TestJwt.member(shop.ownerId())))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.method").value("instant"))

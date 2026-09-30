@@ -77,6 +77,9 @@ public interface PayoutRepository {
 
     void updateAccount(PayoutAccount account);
 
+    /** Payout accounts linked from a Financial Connections account ({@code fca_…}), any state. */
+    List<PayoutAccount> accountsLinkedTo(String financialConnectionsAccount);
+
     /** Escrows released since the previous payout (the "Jobs" column), after {@code since}. */
     int releasedSince(String merchantId, @Nullable Instant since);
 

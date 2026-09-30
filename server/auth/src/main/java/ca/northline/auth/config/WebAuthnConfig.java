@@ -17,7 +17,12 @@ import org.springframework.security.web.webauthn.management.UserCredentialReposi
 import org.springframework.security.web.webauthn.management.WebAuthnRelyingPartyOperations;
 import org.springframework.security.web.webauthn.management.Webauthn4JRelyingPartyOperations;
 
-/** Passkeys: Spring Security's WebAuthn relying party on the JDBC tables from V017 ({@code auth.user_*}). */
+/**
+ * Passkeys: Spring Security's WebAuthn relying party on the JDBC tables from V017 ({@code auth.user_*}). Origins and the
+ * RP id come from configuration ({@code STUDIO_ORIGIN}, {@code CONSUMER_ORIGIN}, {@code WEBAUTHN_RP_ID}); user
+ * verification (PIN / biometric) is required at registration and at every assertion (S-20), because a passkey alone
+ * signs in with {@code acr=mfa}.
+ */
 @Configuration(proxyBeanMethods = false)
 class WebAuthnConfig {
 
@@ -44,12 +49,13 @@ class WebAuthnConfig {
             // Discoverable credential so the "Passkey" button works without typing an email first.
             options.authenticatorSelection(AuthenticatorSelectionCriteria.builder()
                     .residentKey(ResidentKeyRequirement.REQUIRED)
-                    .userVerification(UserVerificationRequirement.PREFERRED)
+                    .userVerification(UserVerificationRequirement.REQUIRED)
                     .build());
             if (PasskeyService.PRESENTED_USER.isBound()) {
                 options.user(PasskeyService.PRESENTED_USER.get());
             }
         });
+        ops.setCustomizeRequestOptions(options -> options.userVerification(UserVerificationRequirement.REQUIRED));
         return ops;
     }
 }

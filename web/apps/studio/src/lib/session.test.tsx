@@ -45,4 +45,21 @@ describe('useSignOut ("Sign out", onboarding "Not you? Sign out")', () => {
     await result.current();
     expect(assign).toHaveBeenCalledWith('/sign-in');
   });
+
+  it('sends the __Host-XSRF-TOKEN cookie of the cloud (S-20) when there is one', async () => {
+    const fetch = vi.fn(async (_url: string, _init?: RequestInit) => new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', fetch);
+    Object.defineProperty(window, 'location', { value: { ...realLocation, assign: vi.fn() }, configurable: true, writable: true });
+    Object.defineProperty(document, 'cookie', { configurable: true, get: () => 'other=1; __Host-XSRF-TOKEN=host%3Dtoken; XSRF-TOKEN=plain' });
+    try {
+      const qc = new QueryClient();
+      const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+      const { result } = renderHook(() => useSignOut(), { wrapper });
+      await result.current();
+    } finally {
+      delete (document as { cookie?: string }).cookie; // back to the prototype's accessor
+    }
+    const bff = fetch.mock.calls.find(([u]) => u === '/bff/logout') as unknown as [string, RequestInit];
+    expect((bff[1].headers as Record<string, string>)['x-xsrf-token']).toBe('host=token');
+  });
 });
