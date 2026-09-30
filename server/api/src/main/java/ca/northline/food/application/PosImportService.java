@@ -28,6 +28,7 @@ import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
 import ca.northline.shared.crypto.SecretSealer;
 import ca.northline.shared.integration.OAuthCallback;
+import ca.northline.shared.integration.ProviderHttp;
 import ca.northline.shared.security.MerchantMemberships;
 import ca.northline.shared.security.MerchantPermission;
 import java.net.URI;
@@ -54,7 +55,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.util.UriComponentsBuilder;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -221,13 +221,15 @@ class PosImportService implements ManagePosConnections, ImportFromPos, OAuthCall
     }
 
     private Optional<URI> back(OAuthRequest request, String result) {
-        var target = UriComponentsBuilder.fromUriString(settings.studio("/b/" + request.merchantId() + "/kitchen/menu"))
-                .queryParam("pos", request.provider().code())
-                .queryParam("result", result);
+        var q = ProviderHttp.params();
+        q.put("pos", request.provider().code());
+        q.put("result", result);
         if (request.menuId() != null) {
-            target.queryParam("menu", request.menuId());
+            q.put("menu", request.menuId());
         }
-        return Optional.of(URI.create(target.build().encode().toUriString()));
+        return Optional.of(
+                URI.create(settings.studio("/b/" + ProviderHttp.encode(request.merchantId()) + "/kitchen/menu")
+                        + ProviderHttp.query(q)));
     }
 
     @Override
