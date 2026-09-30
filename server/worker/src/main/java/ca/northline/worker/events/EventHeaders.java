@@ -6,14 +6,14 @@ import org.apache.kafka.common.header.Headers;
 import org.springframework.kafka.support.KafkaHeaders;
 
 /**
- * Kafka header names of the event envelope (written by the api's {@code ca.northline.config.EventHeaders}) and the
- * ones Spring Kafka adds on the way to a {@code .dlq}.
+ * Kafka header names of the event envelope (written by the producers — api and northline-auth — through
+ * {@link ca.northline.platform.EventHeaders}) and the ones Spring Kafka adds on the way to a {@code .dlq}.
  */
 public final class EventHeaders {
 
-    public static final String ID = "nl-event-id";
-    public static final String TYPE = "nl-event-type";
-    public static final String VERSION = "nl-event-version";
+    public static final String ID = ca.northline.platform.EventHeaders.ID;
+    public static final String TYPE = ca.northline.platform.EventHeaders.TYPE;
+    public static final String VERSION = ca.northline.platform.EventHeaders.VERSION;
     /** W3C trace context, added by the producer's Kafka observation. */
     public static final String TRACEPARENT = "traceparent";
     /** Set by the DLQ replay tool on the republished record: {@code <dlq topic>:<partition>:<offset>}. */

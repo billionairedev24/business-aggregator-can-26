@@ -12,6 +12,9 @@ vi.mock('../shell/api', () => ({
 
 import { ReviewsScreen } from './ReviewsScreen';
 
+/** user-event with no timer between keystrokes: typing costs one pass, not a macrotask per character. */
+const user = () => userEvent.setup({ delay: null });
+
 const base = `/api/v1/merchants/${M}/reviews`;
 const SUMMARY = {
   average: 4.9, count: 312,
@@ -47,10 +50,10 @@ describe('ReviewsScreen', () => {
     renderScreen(<ReviewsScreen />);
     const box = await screen.findByRole('textbox', { name: 'Public reply to M. Tran' });
     const form = box.closest('form')!;
-    await userEvent.click(within(form).getByRole('button', { name: 'Reply' }));
+    await user().click(within(form).getByRole('button', { name: 'Reply' }));
     expect(within(form).getByRole('alert').textContent).toBe('Write a reply before sending.');
-    await userEvent.type(box, 'Sorry about the wait — thanks for the patience.');
-    await userEvent.click(within(form).getByRole('button', { name: 'Reply' }));
+    await user().type(box, 'Sorry about the wait — thanks for the patience.');
+    await user().click(within(form).getByRole('button', { name: 'Reply' }));
     expect(await screen.findByText('You replied: “Sorry about the wait — thanks for the patience.”')).toBeTruthy();
     expect(calls.find(c => c.key === `POST ${base}/r2/reply`)?.body).toEqual({ text: 'Sorry about the wait — thanks for the patience.' });
   });
@@ -59,15 +62,15 @@ describe('ReviewsScreen', () => {
     const calls = stubFetch(routes({ [`POST ${base}/r3/report`]: () => ({ json: { ...BOUCHARD, reportedAt: ago(0), reportReason: 'other' } }) }));
     renderScreen(<ReviewsScreen />);
     await screen.findByText(/S\. Bouchard/);
-    await userEvent.click(screen.getAllByRole('button', { name: 'Report' })[2]!);
+    await user().click(screen.getAllByRole('button', { name: 'Report' })[2]!);
     const dialog = await screen.findByRole('dialog');
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Send report' }));
+    await user().click(within(dialog).getByRole('button', { name: 'Send report' }));
     expect(within(dialog).getByText('1 thing needs attention.')).toBeTruthy();
     expect(within(dialog).getByText('Choose a reason.')).toBeTruthy();
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Something else' }));
+    await user().click(within(dialog).getByRole('button', { name: 'Something else' }));
     expect(within(dialog).getByText("Tell us what's wrong with this review.")).toBeTruthy();
-    await userEvent.type(within(dialog).getByRole('textbox'), 'This customer never booked us.');
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Send report' }));
+    await user().type(within(dialog).getByRole('textbox'), 'This customer never booked us.');
+    await user().click(within(dialog).getByRole('button', { name: 'Send report' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(screen.getByText('Reported · under review')).toBeTruthy();
     expect(calls.find(c => c.key === `POST ${base}/r3/report`)?.body).toEqual({ reason: 'other', note: 'This customer never booked us.' });

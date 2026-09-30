@@ -35,6 +35,13 @@ export default defineConfig(({ mode }) => {
       port: 3100,
       proxy,
     },
-    test: { environment: 'jsdom', globals: true, setupFiles: ['./src/test/setup.ts'], css: false },
+    test: {
+      environment: 'jsdom', globals: true, setupFiles: ['./src/test/setup.ts'], css: false,
+      // A whole screen flow (render → type → submit → server answer) takes ~1 s alone and several times that when the
+      // machine is busy (a Gradle build, parallel workers). Vitest's 5 s default made those runs fail intermittently;
+      // a real hang still fails, just later. Testing Library's own wait is set in src/test/setup.ts.
+      testTimeout: 20_000,
+      hookTimeout: 20_000,
+    },
   };
 });

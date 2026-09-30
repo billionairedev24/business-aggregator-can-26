@@ -15,7 +15,7 @@ describe('Team invitation', () => {
 
   it('joins the team and opens the business', async () => {
     mockFetch({ 'GET /api/v1/team-invitations/tok': () => preview(), 'POST /api/v1/team-invitations/tok/accept': () => ({ merchantId: 'm1', role: 'technician' }) });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<InviteAcceptScreen token="tok" />);
     expect(await screen.findByRole('heading', { name: 'Join Prairie Wrench on Northline' })).toBeTruthy();
     expect(screen.getByText(/invited as a technician/)).toBeTruthy();

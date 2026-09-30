@@ -23,7 +23,7 @@ describe('Orders · products', () => {
       'GET /api/v1/merchants/m1/orders': () => { const b = board(); if (packed) b.items[0] = order('o1', 'NL-48213', 'awaiting_pickup'); return b; },
       'POST /api/v1/merchants/m1/orders/o1/pack': () => { packed = true; return order('o1', 'NL-48213', 'awaiting_pickup'); },
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<OrdersScreen />);
     expect(await screen.findByText('To pack · 1')).toBeTruthy();
     expect(screen.getByText('Delivered today · 6')).toBeTruthy();

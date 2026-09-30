@@ -44,7 +44,8 @@ describe('Dashboard', () => {
 
   it('seller: orders headline, tonight’s run and low stock', () => {
     renderWithProviders(<DashboardView data={{ ...data, cases: [{ kind: 'refund', customerName: 'P. Nguyen', subject: 'Wiper blades wrong size' }] }} kind="seller" city="Calgary" merchantId="m1" />);
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toMatch(/^Four orders to pack by \d+:\d\d, one refund case, \$2,140 releasing Friday\.$/);
+    // runCutoff is now + 2 h: on the hour it reads "by 4" (clockWithPeriod drops ":00"), so the minutes are optional.
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toMatch(/^Four orders to pack by \d+(:\d\d)?, one refund case, \$2,140 releasing Friday\.$/);
     expect(screen.getByText('orders this month · 112 items')).toBeTruthy();
     expect(screen.getByText('Wiper blades ×2 · NL-48213')).toBeTruthy();
     expect(screen.getByRole('button', { name: /4 orders to pack · run R-611 closes/ })).toBeTruthy();

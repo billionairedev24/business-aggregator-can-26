@@ -8,6 +8,9 @@ import { PageBuilder } from './PageBuilder';
 import { storefrontQuery, type Storefront } from './api';
 import { DEFAULT_ORDER } from './sections';
 
+/** user-event with no timer between keystrokes: typing costs one pass, not a macrotask per character. */
+const user = () => userEvent.setup({ delay: null });
+
 beforeEach(() => vi.unstubAllGlobals());
 
 function renderBuilder(s: Storefront = storefront(), canEdit = true) {
@@ -35,7 +38,7 @@ describe('SectionList', () => {
   it('moves a section down with the arrow and emits the full ordered list', async () => {
     const onChange = vi.fn();
     renderWithProviders(<SectionList sections={sections} selected="hero" onSelect={() => {}} onChange={onChange} />);
-    await userEvent.click(screen.getByRole('button', { name: 'Move down · About' }));
+    await user().click(screen.getByRole('button', { name: 'Move down · About' }));
     expect(onChange).toHaveBeenCalledWith(
       ['hero', 'services', 'about', 'reviews', 'area', 'gallery', 'faq', 'cta'].map(kind => ({ kind, enabled: true })),
       { kind: 'about', to: 2 },
@@ -47,7 +50,7 @@ describe('SectionList', () => {
     renderWithProviders(<SectionList sections={sections} selected="hero" onSelect={() => {}} onChange={onChange} />);
     expect((screen.getByRole('switch', { name: 'Header & verified badges' }) as HTMLButtonElement).disabled).toBe(true);
     expect((screen.getByRole('switch', { name: 'Book / order button' }) as HTMLButtonElement).disabled).toBe(true);
-    await userEvent.click(screen.getByRole('switch', { name: 'Work photos' }));
+    await user().click(screen.getByRole('switch', { name: 'Work photos' }));
     expect(onChange.mock.calls[0]![0].find((s: { kind: string }) => s.kind === 'gallery')).toEqual({ kind: 'gallery', enabled: false });
   });
 
@@ -72,7 +75,7 @@ describe('SectionList', () => {
 describe('PageBuilder', () => {
   it('shows the spec texts of the selected section and the CTA label options', async () => {
     renderBuilder();
-    await userEvent.click(screen.getByRole('button', { name: /^Book \/ order button/ }));
+    await user().click(screen.getByRole('button', { name: /^Book \/ order button/ }));
     expect(screen.getByText('A single primary button that follows the customer as they scroll.')).toBeTruthy();
     const labels = screen.getByRole('radiogroup', { name: 'Button label' });
     expect(within(labels).getAllByRole('radio').map(r => r.textContent)).toEqual(['Book a visit', 'Request a quote', 'Order now', 'Reserve']);
@@ -81,13 +84,13 @@ describe('PageBuilder', () => {
   it('saves a swatch at once and reports the contrast', async () => {
     const { calls } = renderBuilder();
     expect(screen.getByText('White text contrast 7.6:1 · passes AA')).toBeTruthy();
-    await userEvent.click(screen.getByRole('radio', { name: 'Rust' }));
+    await user().click(screen.getByRole('radio', { name: 'Rust' }));
     await waitFor(() => expect(calls.find(c => c.method === 'PATCH')?.body).toEqual({ brandColor: '#9a4a1f' }));
   });
 
   it('reorders with one PATCH of the full list, and resets to the recommended order', async () => {
     const { calls } = renderBuilder(storefront({ sections: storefront().sections.map(s => (s.kind === 'faq' ? { ...s, enabled: false } : s)) }));
-    await userEvent.click(screen.getByRole('button', { name: 'Reset to recommended order' }));
+    await user().click(screen.getByRole('button', { name: 'Reset to recommended order' }));
     await waitFor(() => expect(calls.some(c => c.url.endsWith('/storefront/sections'))).toBe(true));
     const body = calls.find(c => c.url.endsWith('/storefront/sections'))!.body as { sections: { kind: string; enabled: boolean }[] };
     expect(body.sections).toEqual(DEFAULT_ORDER.provider.map(kind => ({ kind, enabled: true })));
@@ -96,8 +99,8 @@ describe('PageBuilder', () => {
   it('validates the tagline (≤ 80) before saving', async () => {
     const { calls } = renderBuilder();
     const input = screen.getByRole('textbox', { name: /Tagline/ });
-    await userEvent.clear(input);
-    await userEvent.type(input, 'x'.repeat(81));
+    await user().clear(input);
+    await user().type(input, 'x'.repeat(81));
     fireEvent.blur(input);
     expect(screen.getByRole('alert').textContent).toContain('At most 80 characters.');
     expect(calls.filter(c => c.method === 'PATCH')).toHaveLength(0);
@@ -106,7 +109,7 @@ describe('PageBuilder', () => {
   it('maps a server 422 onto the custom domain field', async () => {
     renderBuilder();
     const input = screen.getByRole('textbox', { name: 'Custom domain (optional)' });
-    await userEvent.type(input, 'taken.example.ca');
+    await user().type(input, 'taken.example.ca');
     fireEvent.blur(input);
     expect(await screen.findByText('That domain is already connected to another page.')).toBeTruthy();
   });
