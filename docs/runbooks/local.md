@@ -3,6 +3,12 @@
 Everything runs on your machine. You can use **your own Postgres and Valkey** or start **Docker stand-ins** for
 anything you don't have, one service at a time (compose profiles). The Spring profile `local` needs only Postgres.
 
+**The short version (S-124):** `make setup up run` — toolchain check, `.env` files and `pnpm install`; Postgres in
+Docker, migrations and seed; the api and the Studio (dev auth as Ravi Sandhu) on http://localhost:3100. Every
+workflow as a make target, and the app runner behind it: [LOCAL_DEVELOPMENT.md](../LOCAL_DEVELOPMENT.md); `make help`
+lists them all. This page explains what those targets do underneath and how to configure each piece; the plain
+Gradle/pnpm/compose commands still work and are shown next to each target.
+
 ## 1. Prerequisites
 
 | what | version | notes |
@@ -14,6 +20,7 @@ anything you don't have, one service at a time (compose profiles). The Spring pr
 | Valkey or Redis | Valkey 8 / Redis 7+ | optional: only for `local,valkey` (sessions in Valkey) and the worker. Yours, or Docker (`--profile cache`). |
 | Docker + Compose v2.20+ | | only for the stand-ins you don't run yourself (Kafka, Elasticsearch, Mailpit, S3 storage, stripe-mock). |
 | An authenticator app or `oathtool` | | to sign in as a seeded persona with real auth (step 5). |
+| GNU make | 3.81+ | every `make` target (macOS's `/usr/bin/make` is 3.81). `make doctor` checks all of the above. |
 
 Ports used by default: api **8080**, northline-auth **9000**, studio-bff **8082**, Studio **3100**, Postgres 5432,
 Valkey 6379, Kafka 9092, Elasticsearch 9200, Mailpit 1025/8025, S3 storage 9100/9101, stripe-mock 12111.
@@ -22,9 +29,12 @@ Valkey 6379, Kafka 9092, Elasticsearch 9200, Mailpit 1025/8025, S3 storage 9100/
 
 ```sh
 git clone https://github.com/billionairedev24/business-aggregator-can-26.git northline && cd northline
+make setup                                             # toolchain check, the four .env files below, pnpm install
+# which is:
 cp .env.example .env                                   # docker compose: which stand-ins, ports
 cp server/.env.example server/.env                     # api / auth / bff / worker settings
 cp web/apps/studio/.env.example web/apps/studio/.env   # Studio dev server
+cp web/apps/consumer/.env.example web/apps/consumer/.env   # consumer web dev server
 ```
 
 - `server/.env` is read by the apps at start-up (not by tests) and by the Gradle DB tasks. Every value in the example
@@ -47,12 +57,14 @@ psql -U postgres -d northline -c "create extension if not exists postgis; create
 Installing PostGIS: macOS `brew install postgresql@17 postgis`; Debian/Ubuntu (PGDG repo)
 `apt install postgresql-17 postgresql-17-postgis-3`. Then set `DB_URL`/`DB_USER`/`DB_PASSWORD` in `server/.env`.
 
-**Or Docker:** `docker compose --profile db up -d` (PostGIS 17-3.5 on `PG_PORT`, default 5432, user/password/db
+**Or Docker:** `make standins-up PROFILES=db` (= `docker compose --profile db up -d --wait`; `make up` does it too) (PostGIS 17-3.5 on `PG_PORT`, default 5432, user/password/db
 `northline`). If 5432 is taken by your own Postgres, set `PG_PORT=5433` in `.env` and
 `DB_URL=jdbc:postgresql://localhost:5433/northline` in `server/.env`.
 
 **Migrate and seed** (from `server/`; the tasks read `DB_*` from `server/.env`, or take `-Pdb.url=… -Pdb.user=…
 -Pdb.password=…`):
+
+`make db-migrate db-seed` (part of `make up`; `make db-reset` drops and recreates a local database first):
 
 ```sh
 cd server
@@ -64,6 +76,8 @@ cd server
 ```
 
 ## 4. Studio with dev auth (fastest — api + Postgres only)
+
+`make up` (default `SERVICES="api studio"`) runs exactly this in the background; `make run` in the foreground. By hand:
 
 ```sh
 cd server && ./gradlew :api:bootRun --args='--spring.profiles.active=local'   # :8080, accepts X-Dev-User
@@ -81,6 +95,8 @@ Dev auth exists only under the `local` profile (`DevAuthFilter`); it logs a bann
 needs the auth server (step 5).
 
 ## 5. Studio with real sign-in (auth + api + bff, still Postgres only)
+
+`make up SERVICES="auth api bff studio"` — the Studio then goes through the studio-bff (no `NL_DEV_USER`). By hand:
 
 ```sh
 cd server
@@ -121,7 +137,8 @@ Sessions are stored under `nl:auth:*` and `nl:studio-bff:*` and survive restarts
 ## 5b. Consumer web (S-45)
 
 `web/apps/consumer` is TanStack Start with server-side rendering on :3000 ([CONSUMER_WEB_PLAN.md](../CONSUMER_WEB_PLAN.md)).
-Its BFF is the same bff jar with the `consumer` profile, on :8081:
+Its BFF is the same bff jar with the `consumer` profile, on :8081 — `make up SERVICES="auth api bff-consumer consumer"`,
+or with dev auth as Amara Osei and no BFF `make up SERVICES="api consumer"`. By hand:
 
 ```sh
 cd server
@@ -148,8 +165,9 @@ seeded shops, so their pages show the empty state). Pooled runs are created on d
 
 ## 6. Optional stand-ins
 
-Start any of them with `docker compose --profile <name> up -d`, or list them in `COMPOSE_PROFILES` in `.env` and run
-`docker compose up -d`. `--profile all` starts everything except `tools`.
+Start any of them with `make up PROFILES=<name>,…` (or `make standins-up PROFILES=…` without the apps; = `docker
+compose --profile <name> up -d --wait`), or list them in `COMPOSE_PROFILES` in `.env` and run `make up`. `all` starts
+everything except `tools` (`make kafka-ui`, `make kibana`).
 
 | profile | service | point the apps at it (`server/.env`) | used by |
 |---|---|---|---|
@@ -200,16 +218,17 @@ Notes:
 - **POS menu import (S-36):** `POS_PROVIDER=local` (the default) fakes Square, Clover and Toast: Kitchen › Menu › Import
   › From your POS connects at once (Toast: any GUID but the nil one) and previews the fixture menu
   (`server/api/src/main/resources/pos-fixtures/menu.json`, Pho Dau Bo). [pos-menu-import.md](pos-menu-import.md)
-- **Your own Kafka:** create the topics with
+- **Your own Kafka:** create the topics with `make kafka-topics` (`-plan`, `-verify`; `make kafka-topics-list` prints
+  them), or
   `KAFKA_TOPICS_CMD=kafka-topics.sh KAFKA_TOPICS_BOOTSTRAP=localhost:9092 scripts/topics.sh`, or with the provisioner
   the deployed environments use: `cd server && ./gradlew :worker:kafkaTopics --args='apply'` (`plan` / `verify` change
   nothing). Both read `deploy/kafka/topics.yaml`; `scripts/topics.sh --list` prints every derived topic. Topics are
   never auto-created (`KAFKA_AUTO_CREATE_TOPICS_ENABLE=false`), so a new topic goes into the catalogue first
   ([infrastructure.md § 5.3](infrastructure.md#53-kafka-topics-and-credentials)).
 - **Elasticsearch (S-42):** after `--profile search`, create the synonym sets and the indices the way the deploy Job
-  does: `cd server && ./gradlew :worker:searchIndices --args='apply'` (`plan` / `verify` change nothing). Run it again
+  does: `make search-indices` (= `cd server && ./gradlew :worker:searchIndices --args='apply'`) (`plan` / `verify` change nothing). Run it again
   after editing `deploy/search/synonyms-*.txt` — the change is live at once ([search.md](search.md)).
-- **Worker:** `cd server && ./gradlew :worker:bootRun` (no profile) needs Postgres, Kafka (`events`) and
+- **Worker:** `make up SERVICES=worker PROFILES=db,events,search` (= `cd server && ./gradlew :worker:bootRun`, no profile) needs Postgres, Kafka (`events`) and
   Elasticsearch (`search`) with the indices created (`:worker:searchIndices`). The search indexer (S-43) then fills them from
   the events the api publishes (only when the api runs without `local`, which turns Kafka off) and, every minute, from
   rows changed without an event; the dev seed's businesses have locations (`db/seed-dev/V121`) ([search.md § 6](search.md#6-the-indexer-s-43)).
@@ -218,7 +237,8 @@ Notes:
   link-local and metadata addresses stay refused) and add an endpoint such as `http://localhost:4000/hooks` — any
   local HTTP listener works; "Send test event" in the endpoint's Deliveries drawer sends one at once.
   `WEBHOOK_SECRET_KEY` empty = the fixed development key, the same one the api uses ([webhooks.md](webhooks.md)).
-- Stop: `docker compose --profile all down` (add `-v` to delete the data volumes).
+- Stop: `make down` stops the apps make started and every stand-in (`VOLUMES=1` also deletes the data volumes; =
+  `docker compose --profile all down [-v]`).
 
 ## 7. Rehearse the cloud shape locally (optional)
 
@@ -245,7 +265,7 @@ the Studio — `SMS_PROVIDER` defaults to `local`, so the phone code is in the a
 values fill in what you meant to leave out.
 
 **On Kubernetes:** the same rehearsal with the real images and Helm chart runs on a local kind cluster —
-`deploy/kind/up.sh` ([deploy.md § Local: kind](deploy.md#local-kind), S-14).
+`make images kind-up` (`deploy/kind/up.sh`) ([deploy.md § Local: kind](deploy.md#local-kind), S-14).
 
 ## 8. Troubleshooting
 
@@ -267,3 +287,4 @@ values fill in what you meant to leave out.
 | Worker logs `UNKNOWN_TOPIC_OR_PARTITION` | topics missing: wait for the `kafka-topics` one-shot to finish (`docker compose logs kafka-topics`) or run `scripts/topics.sh`. |
 | Elasticsearch exits with code 137 | not enough memory for Docker: lower `ES_HEAP` in `.env` (e.g. `512m`). |
 | `pull access denied for minio/minio` | MinIO images are gone from Docker Hub; the `storage` profile uses RustFS. |
+| `make up`: `port 8080 (api) is taken by …` | an app started outside `make` (or from another checkout) holds the port: stop it first. `make status` lists what `make` started; logs are in `.run/logs/`. |
