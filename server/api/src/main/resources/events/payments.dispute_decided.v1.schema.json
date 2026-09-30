@@ -55,7 +55,7 @@
     },
     "decidedBy": {
       "type": "string",
-      "description": "identity.users id (agent, owner or customer)"
+      "description": "identity.users id (agent, owner or customer), or \"stripe\" when the card issuer decided a card dispute"
     }
   }
 }

@@ -13,6 +13,7 @@ stories (S-6, S-14, S-15, S-16, S-17); the runbooks say where a step is still ma
 | [prod.md](prod.md) | production (Calgary launch) |
 | [infrastructure.md](infrastructure.md) | Terraform on AWS / Google Cloud / Azure: accounts, state bucket, plan/apply, outputs → variables, cost, teardown (S-2/S-3) |
 | [object-storage.md](object-storage.md) | uploads in S3 / RustFS, Cloud Storage or Azure Blob: variables, buckets, least-privilege access per cloud (S-10) |
+| [stripe.md](stripe.md) | Stripe Connect Express: platform account setup (test/live), money flow, idempotency, local stripe-mock, operations (S-11) |
 | [email.md](email.md) | transactional email: Mailpit locally, SES / SendGrid / Azure Communication Services / SMTP set-up, SPF/DKIM/DMARC, CASL (S-13) |
 | [ci.md](ci.md) | CI pipelines on GitHub Actions and GitLab CI, manual trigger only (S-4/S-5, infra checks S-2/S-3) |
 
@@ -58,7 +59,8 @@ stories (S-6, S-14, S-15, S-16, S-17); the runbooks say where a step is still ma
   ```
 
   The lists live under `northline.required-env.<purpose>` in each app's `application-cloud.yml` (and
-  `application-staging.yml` / `application-prod.yml` add `payments: STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY`).
+  `application-staging.yml` / `application-prod.yml` add `payments: STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY,
+  STRIPE_WEBHOOK_SECRET, STRIPE_CONNECT_WEBHOOK_SECRET`).
   The check is `ca.northline.platform.RequiredEnvironmentCheck` (module `server/platform`).
 - **Providers are chosen by configuration** so that moving between AWS, Google Cloud and Azure is a variable change.
   The property names live in `ca.northline.platform.*Properties` (default `local`); the cloud adapters come with the
@@ -109,6 +111,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `GOOGLE_CLIENT_ID`/`_SECRET`, `APPLE_CLIENT_ID`/`_SECRET` | | ✓ | | | no (placeholders until S-18) |
 | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` | ✓ | | | | staging and prod |
 | `STRIPE_API_BASE` | ✓ | | | | never in the cloud (stripe-mock only) |
+| `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET` | ✓ | | | | staging and prod (S-12; [stripe.md](stripe.md#5-webhooks-s-12)) |
 | `WEBHOOK_SECRET_KEY` | ✓ | | | | yes |
 | `STORAGE_PROVIDER`, `STORAGE_BUCKET` | ✓ | | | | staging and prod (`local` refused there — S-10, [object-storage.md](object-storage.md)) |
 | `STORAGE_REGION`, `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`, `STORAGE_PATH_STYLE`, `STORAGE_ENCRYPTION_KEY` | ✓ | | | | no (`STORAGE_ENDPOINT` needed for `azure`) |

@@ -3,11 +3,14 @@ package ca.northline.payments.application;
 import ca.northline.payments.api.CustomerCases;
 import ca.northline.payments.api.DisputeDecided;
 import ca.northline.payments.api.DisputeDecisions;
+import ca.northline.payments.application.PaymentGateway.IntentStatus;
 import ca.northline.payments.domain.CaseMessages;
+import ca.northline.payments.domain.ChargedTo;
 import ca.northline.payments.domain.Dispute;
 import ca.northline.payments.domain.Escrow;
 import ca.northline.payments.domain.EscrowState;
 import ca.northline.payments.domain.Evidence;
+import ca.northline.payments.domain.Fees;
 import ca.northline.payments.domain.LedgerEntry;
 import ca.northline.payments.domain.Refund;
 import ca.northline.shared.Conflict;
@@ -15,10 +18,13 @@ import ca.northline.shared.Ids;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
 import ca.northline.shared.storage.ObjectKeys;
+import ca.northline.shared.stripe.StripeIdempotencyKeys;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
  * and the refund queue. Money under review is held: the escrow goes on hold, or — when it was already released — the
  * amount is held back from payouts until the case closes.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -246,7 +253,11 @@ class RefundCaseService implements RespondToCases, CustomerCases, DisputeDecisio
         return n;
     }
 
-    /** The refund queue: approved refunds are paid back to the customer. */
+    /**
+     * The refund queue: approved refunds are paid back to the customer. At Stripe: a hold that was never captured is
+     * canceled (nothing was charged, nothing is posted); a captured charge is refunded to the card; when the money had
+     * already been transferred to the merchant, the merchant-funded part is reversed from that transfer.
+     */
     int payQueue() {
         var now = clock.instant();
         var queue = cases.approvedRefunds(100);
@@ -268,13 +279,182 @@ class RefundCaseService implements RespondToCases, CustomerCases, DisputeDecisio
             } else if (escrow != null) {
                 fromReleased = escrow.released();
             }
-            var stripeRefund = refundAtStripe(refund);
-            var issued = refund.paid(stripeRefund, now);
+            var paid = payAtStripe(refund, escrow, fromReleased);
+            var issued = refund.paid(paid.refund(), paid.reversal(), paid.reversedCents(), now);
             cases.update(refund);
-            ledger.post(LedgerEntry.refunded(refund, fromReleased, now));
+            if (!paid.holdCanceled()) {
+                ledger.post(LedgerEntry.refunded(refund, fromReleased, now));
+            }
             events.publishEvent(issued);
         }
         return queue.size();
+    }
+
+    /** What the refund queue did at Stripe. */
+    private record StripeRefund(
+            @Nullable String refund, @Nullable String reversal, long reversedCents, boolean holdCanceled) {}
+
+    private StripeRefund payAtStripe(Refund refund, @Nullable Escrow escrow, boolean fromReleased) {
+        if (refund.getKind() == Refund.Kind.CREDIT) {
+            return new StripeRefund(null, null, 0, false); // Northline credit: no card money moves
+        }
+        var intentId = escrow != null && escrow.getPaymentIntentId() != null
+                ? escrow.getPaymentIntentId()
+                : refund.getPaymentIntentId();
+        var intent = intentId == null ? null : escrows.intent(intentId).orElse(null);
+        if (intent == null) {
+            return new StripeRefund("re_none_" + refund.getId(), null, 0, false);
+        }
+        if (intent.state() == IntentStatus.AUTHORIZED && escrow != null && escrow.getFulfilledAt() == null) {
+            // refund before capture: release the hold instead of charging and refunding
+            gateway.cancel(intent.stripePaymentIntent(), StripeIdempotencyKeys.of("cancel", intent.id()));
+            escrows.markPaymentIntent(intent.id(), IntentStatus.CANCELED);
+            return new StripeRefund(null, null, 0, true);
+        }
+        var metadata = StripeMetadata.refund(refund, escrow);
+        var stripeRefund = gateway.refund(
+                intent.stripePaymentIntent(),
+                refund.getAmountCents(),
+                metadata,
+                StripeIdempotencyKeys.of("refund", refund.getId()));
+        if (!fromReleased || escrow == null || refund.getChargedTo() != ChargedTo.MERCHANT) {
+            return new StripeRefund(stripeRefund, null, 0, false);
+        }
+        var transfer = escrows.transferOf(escrow.getId()).orElse(null);
+        if (transfer == null) {
+            return new StripeRefund(stripeRefund, null, 0, false);
+        }
+        var reverse =
+                Fees.transferReversalCents(refund.getAmountCents(), transfer.netCents(), transfer.reversedCents());
+        if (reverse == 0) {
+            return new StripeRefund(stripeRefund, null, 0, false);
+        }
+        var reversal = gateway.reverseTransfer(
+                transfer.stripeTransfer(),
+                reverse,
+                metadata,
+                StripeIdempotencyKeys.of("reverse-transfer", refund.getId()));
+        escrows.addReversal(transfer.id(), reverse);
+        return new StripeRefund(stripeRefund, reversal, reverse, false);
+    }
+
+    // ── Stripe card disputes (chargebacks) ────────────────────────────────────────────────────────────────────────
+
+    /**
+     * A {@code charge.dispute.*} webhook. The first event for a Stripe dispute opens a case in the disputes flow (or
+     * turns the customer's open case into a card dispute) and puts the escrow on hold; later ones update Stripe's
+     * status and deadline — an event older than the last one applied is ignored, and one for a dispute not seen yet
+     * opens it first, so any order of arrival ends in the same state. When the bank decides: won → the money stays
+     * with the merchant (the escrow's normal release resumes); lost → the merchant carries the amount taken back (from
+     * escrow, or from their balance and a transfer reversal when it was released).
+     */
+    boolean chargeback(StripeEvent event) {
+        var o = event.object();
+        var stripeDispute = o.id();
+        var status = java.util.Objects.requireNonNullElse(o.text("status"), "needs_response");
+        var reason = java.util.Objects.requireNonNullElse(o.text("reason"), "general");
+        var amount = java.util.Objects.requireNonNullElse(o.number("amount"), 0L);
+        var deadline = o.time("evidence_details", "due_by");
+        var now = clock.instant();
+        if (stripeDispute == null) {
+            return false;
+        }
+        var dispute = cases.disputeByStripeId(stripeDispute).orElse(null);
+        Escrow escrow;
+        boolean opened = false;
+        boolean attached = false;
+        if (dispute == null) {
+            var pi = o.text("payment_intent");
+            var intent = pi == null ? null : escrows.intentByStripeId(pi).orElse(null);
+            escrow = intent == null
+                    ? null
+                    : escrows.findByPaymentIntentId(intent.id()).orElse(null);
+            if (escrow == null) {
+                log.warn("Stripe dispute {} is on a payment Northline doesn't hold ({})", stripeDispute, pi);
+                return false;
+            }
+            var open = cases.openDisputeOn(escrow.getId()).orElse(null);
+            if (open != null) {
+                open.attachChargeback(stripeDispute, reason);
+                dispute = open;
+                attached = true;
+            } else {
+                dispute = Dispute.chargeback(
+                        cases.nextCaseNumber("DS"),
+                        escrow,
+                        stripeDispute,
+                        reason,
+                        amount,
+                        deadline,
+                        event.created(),
+                        now);
+                opened = true;
+            }
+            dispute.chargebackUpdated(status, deadline, event.created(), now);
+        } else {
+            var escrowId = dispute.getEscrowId();
+            escrow = escrows.findById(escrowId).orElseThrow(() -> new NotFound("escrow", escrowId));
+            if (!dispute.chargebackUpdated(status, deadline, event.created(), now)) {
+                return true; // older than what we already applied
+            }
+        }
+        var decided = switch (status) {
+            case "won", "warning_closed" -> dispute.chargebackClosed(true, now);
+            case "lost" -> dispute.chargebackClosed(false, now);
+            default -> Optional.<DisputeDecided>empty();
+        };
+        if (opened) {
+            cases.insert(dispute);
+            if (decided.isPresent()) {
+                cases.update(dispute); // insert writes an open case; the decision goes in with the update
+            }
+        } else {
+            cases.update(dispute);
+        }
+        if (opened || attached) {
+            escrow.putOnHold();
+        }
+        if (opened && decided.isEmpty()) {
+            events.publishEvent(dispute.updated("opened", now)); // the merchant's team is emailed (S-13)
+        }
+        var closedDispute = dispute;
+        decided.ifPresent(d -> {
+            if (d.refundCents() == 0) {
+                escrow.resume();
+            } else {
+                chargebackLost(escrow, closedDispute, amount, now);
+            }
+            events.publishEvent(d);
+        });
+        escrows.update(escrow);
+        return true;
+    }
+
+    /** The bank took {@code stripeAmount} (amount + tax) back: charge the merchant up to the escrow amount. */
+    private void chargebackLost(Escrow escrow, Dispute dispute, long stripeAmount, java.time.Instant now) {
+        var total = stripeAmount > 0 ? stripeAmount : escrow.getAmountCents() + escrow.getTaxCents();
+        var merchantPart = Math.min(total, escrow.getAmountCents());
+        var released = escrow.released();
+        if (released) {
+            escrows.transferOf(escrow.getId()).ifPresent(transfer -> {
+                var reverse = Fees.transferReversalCents(merchantPart, transfer.netCents(), transfer.reversedCents());
+                if (reverse > 0) {
+                    gateway.reverseTransfer(
+                            transfer.stripeTransfer(),
+                            reverse,
+                            java.util.Map.of(
+                                    "northline_escrow_id", escrow.getId(),
+                                    "northline_merchant_id", escrow.getMerchantId(),
+                                    "northline_dispute_id", dispute.getId()),
+                            StripeIdempotencyKeys.of("chargeback-reversal", dispute.getId()));
+                    escrows.addReversal(transfer.id(), reverse);
+                }
+            });
+        } else if (escrow.getState() != EscrowState.REFUNDED) {
+            escrow.refundInFull();
+        }
+        ledger.post(
+                LedgerEntry.chargedBack(escrow, dispute.getId(), merchantPart, total - merchantPart, released, now));
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -294,13 +474,6 @@ class RefundCaseService implements RespondToCases, CustomerCases, DisputeDecisio
             cases.insert(Refund.fromDispute(cases.nextCaseNumber("RF"), dispute, escrow, refundCents, clock.instant()));
         }
         events.publishEvent(decided);
-    }
-
-    private String refundAtStripe(Refund refund) {
-        var intent = refund.getPaymentIntentId();
-        var stripePi = intent == null ? Optional.<String>empty() : escrows.stripePaymentIntent(intent);
-        return stripePi.map(pi -> gateway.refund(pi, refund.getAmountCents(), "refund-" + refund.getId()))
-                .orElse("re_none_" + refund.getId());
     }
 
     private Dispute dispute(String merchantId, String disputeId) {

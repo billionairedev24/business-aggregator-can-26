@@ -82,7 +82,13 @@ public class Dispute {
     private @Nullable Decision decision;
     private @Nullable String decidedBy;
     private @Nullable Long refundCents;
-    private final @Nullable Instant respondBy;
+    private @Nullable Instant respondBy;
+    /** Card disputes (chargebacks): Stripe's dispute, its status and reason, and when the last event was applied. */
+    private @Nullable String stripeDispute;
+
+    private @Nullable String stripeStatus;
+    private @Nullable String stripeReason;
+    private @Nullable Instant stripeUpdatedAt;
     private final Instant openedAt;
     private @Nullable Instant decidedAt;
     private final @Nullable Integer version;
@@ -104,6 +110,85 @@ public class Dispute {
                 .respondBy(now.plus(REPLY_WINDOW))
                 .openedAt(now)
                 .build();
+    }
+
+    /** Northline answers a card dispute this long before the issuer's deadline, so an agent can submit the evidence. */
+    public static final Duration CHARGEBACK_LEAD = Duration.ofDays(2);
+
+    public static final String CARD_DISPUTE = "The card issuer decides this dispute. Send your response and evidence.";
+
+    /**
+     * The customer's bank disputed the card payment (Stripe {@code charge.dispute.created}): a case in the same flow,
+     * which the merchant answers with a response and evidence. Stripe has already taken the money back from Northline;
+     * the escrow is put on hold until the bank decides.
+     */
+    public static Dispute chargeback(
+            String caseNumber,
+            Escrow escrow,
+            String stripeDispute,
+            String reason,
+            long amountCents,
+            @Nullable Instant issuerDeadline,
+            Instant eventAt,
+            Instant now) {
+        var respondBy = issuerDeadline == null ? now.plus(REPLY_WINDOW) : issuerDeadline.minus(CHARGEBACK_LEAD);
+        return Dispute.builder()
+                .id(Ids.next())
+                .escrowId(escrow.getId())
+                .merchantId(escrow.getMerchantId())
+                .caseNumber(caseNumber)
+                .subject("Card dispute · " + reason.replace('_', ' '))
+                .amountCents(Math.min(amountCents, escrow.getAmountCents()))
+                .customerName(escrow.getCustomerName())
+                .customerStatement("The customer's bank disputed the card payment (" + reason.replace('_', ' ') + ").")
+                .openedBy(escrow.getCustomerId())
+                .evidence(new ArrayList<>())
+                .state(State.OPEN)
+                .respondBy(respondBy.isBefore(now) ? now : respondBy)
+                .openedAt(now)
+                .stripeDispute(stripeDispute)
+                .stripeReason(reason)
+                .stripeUpdatedAt(eventAt)
+                .build();
+    }
+
+    public boolean isChargeback() {
+        return stripeDispute != null;
+    }
+
+    /** A case the customer opened turned into a card dispute too. */
+    public void attachChargeback(String dispute, String reason) {
+        stripeDispute = dispute;
+        stripeReason = reason;
+    }
+
+    /**
+     * Stripe's status changed. Events can arrive out of order: one older than the last applied is ignored. Returns
+     * false when ignored.
+     */
+    public boolean chargebackUpdated(String status, @Nullable Instant issuerDeadline, Instant eventAt, Instant now) {
+        if (stripeUpdatedAt != null && eventAt.isBefore(stripeUpdatedAt)) {
+            return false;
+        }
+        stripeStatus = status;
+        stripeUpdatedAt = eventAt;
+        if (issuerDeadline != null && state != State.DECIDED) {
+            var by = issuerDeadline.minus(CHARGEBACK_LEAD);
+            respondBy = by.isBefore(now) ? now : by;
+        }
+        return true;
+    }
+
+    /** The bank decided: won keeps the money with the merchant, lost refunds it all. Once only. */
+    public java.util.Optional<DisputeDecided> chargebackClosed(boolean won, Instant now) {
+        if (state == State.DECIDED) {
+            return java.util.Optional.empty();
+        }
+        if (offerState == OfferState.PENDING) {
+            offerState = OfferState.EXPIRED;
+        }
+        return java.util.Optional.of(
+                close(won ? Decision.RELEASE : Decision.FULL_REFUND, won ? 0 : amountCents, "stripe", now));
     }
 
     public List<Evidence> getEvidence() {
@@ -143,6 +228,7 @@ public class Dispute {
     /** "Send 50% goodwill offer": the customer has 72 h to accept. */
     public void offerGoodwill(long cents, Instant now) {
         requireOpen();
+        requireNotChargeback();
         if (cents <= 0 || cents >= amountCents) {
             throw RuleViolation.of("amountCents", "range", CaseMessages.OFFER_RANGE);
         }
@@ -155,6 +241,7 @@ public class Dispute {
     /** "Full refund": the merchant gives the whole amount back; the case closes. */
     public DisputeDecided refundInFull(String ownerId, Instant now) {
         requireOpen();
+        requireNotChargeback();
         return close(Decision.FULL_REFUND, amountCents, ownerId, now);
     }
 
@@ -242,6 +329,13 @@ public class Dispute {
             throw new Conflict(
                     state == State.DECIDED ? "case_closed" : "case_in_review",
                     state == State.DECIDED ? CaseMessages.CASE_CLOSED : "You already answered this dispute.");
+        }
+    }
+
+    /** A disputed card payment can't be refunded or settled by Northline: the issuer decides. */
+    private void requireNotChargeback() {
+        if (isChargeback()) {
+            throw new Conflict("card_dispute", CARD_DISPUTE);
         }
     }
 

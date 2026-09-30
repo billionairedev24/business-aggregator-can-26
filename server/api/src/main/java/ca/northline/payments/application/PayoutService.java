@@ -1,5 +1,6 @@
 package ca.northline.payments.application;
 
+import ca.northline.payments.api.PayoutPlan;
 import ca.northline.payments.domain.Fees;
 import ca.northline.payments.domain.LedgerEntry;
 import ca.northline.payments.domain.Payout;
@@ -9,6 +10,7 @@ import ca.northline.payments.domain.PayoutSchedule;
 import ca.northline.payments.domain.Zones;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.RuleViolation;
+import ca.northline.shared.stripe.StripeIdempotencyKeys;
 import java.text.NumberFormat;
 import java.time.Clock;
 import java.time.Instant;
@@ -16,6 +18,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -28,12 +31,16 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-class PayoutService implements ViewPayouts, MovePayouts {
+class PayoutService implements ViewPayouts, MovePayouts, PayoutPlan {
+
+    static final String PAYOUTS_DISABLED =
+            "Stripe has paused payouts on this account. Finish the steps in Settings › Stripe & compliance.";
 
     private final PayoutRepository payouts;
     private final LedgerRepository ledger;
     private final MerchantBalances balances;
     private final PayoutGateway gateway;
+    private final PaymentGateway charges;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
@@ -85,6 +92,9 @@ class PayoutService implements ViewPayouts, MovePayouts {
                 .filter(PayoutRepository.ConnectedAccount::instantPayouts)
                 .orElseThrow(() -> new Conflict(
                         "instant_unavailable", "Instant payouts need an eligible Canadian debit-linked account."));
+        if (!connected.payoutsEnabled()) {
+            throw new Conflict("payouts_disabled", PAYOUTS_DISABLED);
+        }
         requireNotPaused(merchantId, now);
         var account = payouts.activeAccount(merchantId)
                 .orElseThrow(() -> new Conflict("no_payout_account", "Add a bank account first."));
@@ -102,7 +112,8 @@ class PayoutService implements ViewPayouts, MovePayouts {
                 command.amountCents() - fee,
                 true,
                 account.getExternalRef(),
-                "instant-" + merchantId + "-" + now.toEpochMilli());
+                StripeIdempotencyKeys.fromClient(
+                        "instant-payout", merchantId + ":" + command.userId(), command.idempotencyKey()));
         var itemCount = payouts.releasedSince(
                 merchantId, payouts.lastPayoutAt(merchantId).orElse(null));
         var payout = Payout.sent(
@@ -116,6 +127,11 @@ class PayoutService implements ViewPayouts, MovePayouts {
                 account,
                 command.userId(),
                 now);
+        payout.feeRecovered(gateway.recoverFee(
+                connected.stripeAccount(),
+                fee,
+                sent.payoutId(),
+                StripeIdempotencyKeys.of("instant-payout-fee", sent.payoutId())));
         record(payout);
         return payout;
     }
@@ -123,9 +139,20 @@ class PayoutService implements ViewPayouts, MovePayouts {
     @Override
     @Transactional
     public Overview changeSchedule(String merchantId, PayoutSchedule schedule, String userId) {
+        // Stripe's own schedule stays `manual`: the scheduled run below creates every payout
         payouts.saveSchedule(merchantId, schedule, userId, clock.instant());
-        payouts.connectedAccount(merchantId).ifPresent(a -> gateway.updateSchedule(a.stripeAccount(), schedule));
         return overview(merchantId);
+    }
+
+    @Override
+    public Optional<Plan> of(String merchantId) {
+        return payouts.connectedAccount(merchantId).map(connected -> {
+            var schedule = schedule(merchantId);
+            var weekday = schedule.frequency() == PayoutSchedule.Frequency.WEEKLY && schedule.weekday() != null
+                    ? java.time.DayOfWeek.of(schedule.weekday()).name().toLowerCase(Locale.ROOT)
+                    : null;
+            return new Plan(schedule.frequency().code(), weekday, connected.instantPayouts());
+        });
     }
 
     /** Scheduled payouts whose time came today (idempotent per merchant and day). */
@@ -152,7 +179,7 @@ class PayoutService implements ViewPayouts, MovePayouts {
             var connected = payouts.connectedAccount(merchantId).orElse(null);
             var account = payouts.activeAccount(merchantId).orElse(null);
             var amount = overview(merchantId).payableCents();
-            if (connected == null || account == null || amount <= 0) {
+            if (connected == null || !connected.payoutsEnabled() || account == null || amount <= 0) {
                 continue;
             }
             var result = gateway.payout(
@@ -160,7 +187,7 @@ class PayoutService implements ViewPayouts, MovePayouts {
                     amount,
                     false,
                     account.getExternalRef(),
-                    "scheduled-" + merchantId + "-" + today);
+                    StripeIdempotencyKeys.of("scheduled-payout", merchantId, today.toString()));
             var itemCount = payouts.releasedSince(
                     merchantId, payouts.lastPayoutAt(merchantId).orElse(null));
             record(Payout.sent(
@@ -179,18 +206,97 @@ class PayoutService implements ViewPayouts, MovePayouts {
         return sent;
     }
 
-    /** In-transit payouts whose arrival time passed are paid (Stripe webhooks do this in production). */
+    /**
+     * The fallback reconciler: in-transit payouts whose arrival time passed by {@link #RECONCILE_AFTER} (the fake:
+     * at once) are looked up at Stripe and settled like a webhook would. Stripe's {@code payout.*} webhooks normally
+     * get there first; this catches the ones whose event never came.
+     */
     @Transactional
     int settle() {
         var now = clock.instant();
         int n = 0;
         for (var payout : payouts.inTransit(500)) {
-            if (payout.settle(now)) {
-                payouts.update(payout);
+            var stripePayout = payout.getStripePayout();
+            if (payout.getArrivesAt().plus(reconcileAfter()).isAfter(now) || stripePayout == null) {
+                continue;
+            }
+            var connected = payouts.connectedAccount(payout.getMerchantId()).orElse(null);
+            var state = connected == null
+                    ? Payout.State.PAID
+                    : gateway.payoutState(connected.stripeAccount(), stripePayout);
+            if (apply(payout, state, null, now)) {
                 n++;
             }
         }
         return n;
+    }
+
+    /** Payouts reported by Stripe webhooks this long after their arrival date are left to the webhook. */
+    static final java.time.Duration RECONCILE_AFTER = java.time.Duration.ofHours(24);
+
+    private java.time.Duration reconcileAfter() {
+        return gateway.webhooksDeliver() ? RECONCILE_AFTER : java.time.Duration.ZERO;
+    }
+
+    /** A {@code payout.paid} / {@code payout.failed} / {@code payout.canceled} webhook; false for unknown payouts. */
+    @Transactional
+    boolean stripePayout(StripeEvent event, Payout.State outcome) {
+        var id = event.object().id();
+        var payout = id == null ? null : payouts.byStripePayout(id).orElse(null);
+        if (payout == null) {
+            log.warn("Stripe payout {} isn't one of Northline's", id);
+            return false;
+        }
+        apply(payout, outcome, event.object().text("failure_code"), event.created());
+        return true;
+    }
+
+    /** Paid → paid; failed / canceled → returned to the merchant's balance (once), instant fee given back. */
+    private boolean apply(Payout payout, Payout.State state, @Nullable String failureCode, Instant at) {
+        return switch (state) {
+            case PAID -> {
+                if (payout.paid()) {
+                    payouts.update(payout);
+                    yield true;
+                }
+                yield false;
+            }
+            case FAILED, CANCELED ->
+                payout.returned(state, failureCode, at)
+                        .map(failed -> {
+                            giveInstantFeeBack(payout);
+                            payouts.update(payout);
+                            ledger.post(LedgerEntry.payoutReturned(payout, at));
+                            events.publishEvent(failed);
+                            log.warn(
+                                    "Payout {} of merchant {} was {} by Stripe ({})",
+                                    payout.getId(),
+                                    payout.getMerchantId(),
+                                    state.code(),
+                                    failureCode);
+                            return true;
+                        })
+                        .orElse(false);
+            case PENDING, IN_TRANSIT -> false;
+        };
+    }
+
+    /** The fee recovered for a returned instant payout goes back to the connected account. */
+    private void giveInstantFeeBack(Payout payout) {
+        if (payout.getStripeFeeTransfer() == null || payout.getFeeCents() == 0) {
+            return;
+        }
+        payouts.connectedAccount(payout.getMerchantId())
+                .ifPresent(connected -> payout.feeReturned(charges.transfer(new PaymentGateway.Transfer(
+                        connected.stripeAccount(),
+                        payout.getFeeCents(),
+                        "payout:" + payout.getId(),
+                        null,
+                        java.util.Map.of(
+                                "northline_kind", "instant_payout_fee_returned",
+                                "northline_payout_id", payout.getId(),
+                                "northline_merchant_id", payout.getMerchantId()),
+                        StripeIdempotencyKeys.of("instant-payout-fee-return", payout.getId())))));
     }
 
     private void record(Payout payout) {

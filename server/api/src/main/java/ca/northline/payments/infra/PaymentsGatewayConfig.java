@@ -1,6 +1,6 @@
 package ca.northline.payments.infra;
 
-import com.stripe.StripeClient;
+import ca.northline.shared.stripe.StripeClients;
 import java.time.Clock;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
@@ -11,7 +11,8 @@ import org.springframework.context.annotation.Configuration;
 
 /**
  * Picks the Stripe adapter: stripe-java when {@code northline.payments.stripe-secret-key} is set (env
- * {@code NORTHLINE_PAYMENTS_STRIPE_SECRET_KEY}), the local fake otherwise — so local, test and CI never call Stripe.
+ * {@code STRIPE_SECRET_KEY}; with {@code STRIPE_API_BASE} it talks to stripe-mock), the local fake otherwise — so
+ * local, test and CI never call Stripe unless asked to. Staging and prod require the key (S-1).
  */
 @Slf4j
 @Configuration(proxyBeanMethods = false)
@@ -24,12 +25,13 @@ class PaymentsGatewayConfig {
     @Bean
     @ConditionalOnExpression(HAS_KEY)
     StripeConnectGateway stripeConnectGateway(PaymentsProperties props) {
-        var client = StripeClient.builder().setApiKey(Objects.requireNonNull(props.stripeSecretKey()));
         var base = props.stripeApiBase();
         if (base != null && !base.isBlank()) {
-            client.setApiBase(base).setConnectBase(base).setFilesBase(base);
+            log.info("Payments: Stripe API base overridden to {} (stripe-mock)", base);
         }
-        return new StripeConnectGateway(client.build(), props.stripePublishableKey());
+        return new StripeConnectGateway(
+                StripeClients.create(Objects.requireNonNull(props.stripeSecretKey()), base),
+                props.stripePublishableKey());
     }
 
     @Bean

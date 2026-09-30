@@ -75,6 +75,7 @@ Every app reads its configuration from environment variables; nothing environmen
 | `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET` | auth | no (S-18) | Services ID / signed client-secret JWT | Apple Developer → Sign in with Apple; redirect `https://auth.northline.ca/login/oauth2/code/apple` |
 | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` | api | **yes** | `sk_live_…` / `pk_live_…` | Stripe dashboard (Connect platform account) → secrets manager (secret created empty by Terraform, named in `secret_env`) → External Secrets (S-6) → Kubernetes Secret; until then `kubectl create secret` |
 | `STRIPE_API_BASE` | api | never | — | stripe-mock only (local) |
+| `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET` | api | **yes** | `whsec_…` | the two webhook endpoints in the Stripe dashboard ([stripe.md](stripe.md#5-webhooks-s-12)) → secrets manager → External Secrets (S-6) → Kubernetes Secret |
 | `WEBHOOK_SECRET_KEY` | api | **yes** | `openssl rand -base64 32` | secrets manager (secret created empty by Terraform, named in `secret_env`) → External Secrets (S-6) → Kubernetes Secret; until then `kubectl create secret`. Encrypts partner webhook signing secrets; keep it stable |
 | `STORAGE_PROVIDER`, `STORAGE_BUCKET` | api | **yes** (`local` is refused) | `s3` / `gcs` / `azure`, `northline-prod-uploads` (Azure: the container, e.g. `uploads`) | Terraform `config_env` (module `storage`, [infrastructure.md § 4](infrastructure.md#4-outputs--the-apps-environment-variables)) → ConfigMap; without Terraform from the cloud console ([object-storage.md](object-storage.md)) |
 | `STORAGE_REGION`, `STORAGE_ENDPOINT` | api | no (Azure: `STORAGE_ENDPOINT` yes) | `ca-central-1` (S3); `https://nlprodst<suffix>.blob.core.windows.net` (Azure: the account's blob endpoint); empty otherwise | Terraform `config_env` (module `storage`, [infrastructure.md § 4](infrastructure.md#4-outputs--the-apps-environment-variables)) → ConfigMap |
@@ -134,7 +135,7 @@ What still stops a complete deployment. Under the `local`/`test` profiles each o
 | SMS notices (bank change) and SMS team invitations | not sent by the api (the SMS port is in northline-auth) | bank-change notice by email only; mobile invitations by copied link | S-27 |
 | `CommerceSync` (catalogue) | unconfigured adapter throws | Shopify / Square / Lightspeed connections | S-35 |
 | `CalendarSync` (availability) | 409 `calendar_sync_unavailable` | Google / Microsoft calendar sync | S-32 |
-| `PaymentGateway` / `ConnectAccountGateway` (payments, merchants) | stripe-java when `STRIPE_SECRET_KEY` is set | works with keys; end-to-end Connect flows and webhooks still to finish | S-11, S-12 |
+| `PaymentGateway` / `ConnectAccountGateway` (payments, merchants) | stripe-java when `STRIPE_SECRET_KEY` is set | Connect accounts, escrow charges, transfers, payouts, refunds (S-11) and webhooks (S-12) work with keys and signing secrets, set up per [stripe.md](stripe.md) | — |
 | Google / Apple sign-in (auth) | placeholder client ids | the buttons fail | S-18 |
 | Search indexer (worker) | consumer is a stub (`TODO(implement)`) | nothing reaches Elasticsearch | S-42, S-43 |
 
@@ -189,7 +190,7 @@ api and bff (drops their JWK set caches). Nobody is signed out: refresh tokens a
 - [ ] DNS and TLS for `https://business.northline.ca` and `https://auth.northline.ca`; ingress routes `/api`, `/bff`, `/oauth2`, `/login` on the Studio host to the bff
 - [ ] Studio built with `VITE_NL_AUTH_ORIGIN=https://auth.northline.ca`
 - [ ] Token signing key created in the KMS, `KMS_PROVIDER` / `KMS_KEY_ID` set, workload identity may sign with it; JWK set checked ([key-rotation.md](key-rotation.md)); rotation date in the calendar
-- [ ] Stripe keys (live mode) set; webhooks (S-12) configured
+- [ ] Stripe keys (live mode) set; both webhook endpoints registered in live mode with API version `2026-08-26.dahlia` and `STRIPE_WEBHOOK_SECRET` / `STRIPE_CONNECT_WEBHOOK_SECRET` set ([stripe.md](stripe.md#5-webhooks-s-12))
 - [ ] Point-in-time restore enabled on Postgres; restore tested (S-114)
 - [ ] Alerts on readiness, error rate and DLQ depth (S-111–S-113)
 - [ ] SMS provider set (`SMS_PROVIDER=twilio`/`aws`), a real registration received its code by SMS and by voice

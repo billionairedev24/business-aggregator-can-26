@@ -1,7 +1,7 @@
 # Production (also activates `cloud`, see application-cloud.yml). Stripe live keys are mandatory: without them the
 # payments module would fall back to its fake gateway.
 northline.required-env:
-  payments: STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY
+  payments: STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_CONNECT_WEBHOOK_SECRET
   storage: STORAGE_PROVIDER, STORAGE_BUCKET   # s3 | gcs | azure; `local` is refused at start-up (S-10)
   email: EMAIL_PROVIDER, EMAIL_FROM, EMAIL_UNSUBSCRIBE_KEY, API_PUBLIC_URL   # smtp | ses | sendgrid | azure (S-13)
 springdoc:                              # the OpenAPI document and Swagger UI are not published in production

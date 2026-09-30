@@ -75,6 +75,7 @@ Every app reads its configuration from environment variables; nothing environmen
 | `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET` | auth | no (S-18) | Services ID / signed client-secret JWT | Apple Developer → Sign in with Apple; redirect `https://auth.dev.northline.ca/login/oauth2/code/apple` |
 | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` | api | no | `sk_test_…` / `pk_test_…` | Stripe dashboard (Connect platform account) → secrets manager (secret created empty by Terraform, named in `secret_env`) → External Secrets (S-6) → Kubernetes Secret; until then `kubectl create secret` |
 | `STRIPE_API_BASE` | api | never | — | stripe-mock only (local) |
+| `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET` | api | no | `whsec_…` | the two webhook endpoints in the Stripe dashboard ([stripe.md](stripe.md#5-webhooks-s-12)) → secrets manager → External Secrets (S-6) → Kubernetes Secret |
 | `WEBHOOK_SECRET_KEY` | api | **yes** | `openssl rand -base64 32` | secrets manager (secret created empty by Terraform, named in `secret_env`) → External Secrets (S-6) → Kubernetes Secret; until then `kubectl create secret`. Encrypts partner webhook signing secrets; keep it stable |
 | `STORAGE_PROVIDER`, `STORAGE_BUCKET` | api | no (`local` = uploads fail) | `s3` / `gcs` / `azure`, `northline-dev-uploads` (Azure: the container, e.g. `uploads`) | Terraform `config_env` (module `storage`, [infrastructure.md § 4](infrastructure.md#4-outputs--the-apps-environment-variables)) → ConfigMap; without Terraform from the cloud console ([object-storage.md](object-storage.md)) |
 | `STORAGE_REGION`, `STORAGE_ENDPOINT` | api | no (Azure: `STORAGE_ENDPOINT` yes) | `ca-central-1` (S3); `https://nldevst<suffix>.blob.core.windows.net` (Azure: the account's blob endpoint); empty otherwise | Terraform `config_env` (module `storage`, [infrastructure.md § 4](infrastructure.md#4-outputs--the-apps-environment-variables)) → ConfigMap |
@@ -135,7 +136,7 @@ What still stops a complete deployment. Under the `local`/`test` profiles each o
 | SMS notices (bank change) and SMS team invitations | not sent by the api (the SMS port is in northline-auth) | bank-change notice by email only; mobile invitations by copied link | S-27 |
 | `CommerceSync` (catalogue) | unconfigured adapter throws | Shopify / Square / Lightspeed connections | S-35 |
 | `CalendarSync` (availability) | 409 `calendar_sync_unavailable` | Google / Microsoft calendar sync | S-32 |
-| `PaymentGateway` / `ConnectAccountGateway` (payments, merchants) | stripe-java when `STRIPE_SECRET_KEY` is set | works with keys; end-to-end Connect flows and webhooks still to finish | S-11, S-12 |
+| `PaymentGateway` / `ConnectAccountGateway` (payments, merchants) | stripe-java when `STRIPE_SECRET_KEY` is set | Connect accounts, escrow charges, transfers, payouts, refunds (S-11) and webhooks (S-12) work with keys and signing secrets, set up per [stripe.md](stripe.md) | — |
 | Google / Apple sign-in (auth) | placeholder client ids | the buttons fail | S-18 |
 | Search indexer (worker) | consumer is a stub (`TODO(implement)`) | nothing reaches Elasticsearch | S-42, S-43 |
 

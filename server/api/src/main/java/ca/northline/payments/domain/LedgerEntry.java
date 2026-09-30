@@ -61,6 +61,27 @@ public record LedgerEntry(
                 credit(STRIPE_FEES, p.getFeeCents(), "payout", p.getId(), p.getCreatedAt()));
     }
 
+    /** Stripe returned a payout (failed or canceled): the exact reverse of {@link #paidOut}. */
+    public static List<LedgerEntry> payoutReturned(Payout p, Instant at) {
+        return nonZero(
+                debit(STRIPE_BALANCE, p.netCents(), "payout", p.getId(), at),
+                debit(STRIPE_FEES, p.getFeeCents(), "payout", p.getId(), at),
+                credit(merchant(p.getMerchantId()), p.getAmountCents(), "payout", p.getId(), at));
+    }
+
+    /**
+     * A card dispute was lost: the bank took {@code merchantCents} + {@code platformCents} back from Stripe. The merchant
+     * carries up to the escrow amount — from their balance when the money was released, else from escrow — and
+     * Northline the rest (the tax part).
+     */
+    public static List<LedgerEntry> chargedBack(
+            Escrow e, String disputeId, long merchantCents, long platformCents, boolean released, Instant at) {
+        return nonZero(
+                debit(released ? merchant(e.getMerchantId()) : ESCROW, merchantCents, "dispute", disputeId, at),
+                debit(REVENUE, platformCents, "dispute", disputeId, at),
+                credit(STRIPE_BALANCE, merchantCents + platformCents, "dispute", disputeId, at));
+    }
+
     /**
      * A refund is paid back to the customer. Who funds it: the platform (goodwill credits), the escrow (money that never
      * reached the merchant) or the merchant's balance (money already released).

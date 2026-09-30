@@ -22,4 +22,7 @@ record PayoutRow(
         @Nullable String payoutAccountId,
         @Nullable String destination,
         @Nullable String requestedBy,
+        @Nullable String stripeFeeTransfer,
+        @Nullable String failureCode,
+        @Nullable String returnedFeeTransfer,
         @Version @Nullable Integer version) {}

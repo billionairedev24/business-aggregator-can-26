@@ -12,11 +12,30 @@ import org.jspecify.annotations.Nullable;
 public interface PayoutRepository {
 
     /** The merchant's Stripe Connect Express account. */
-    record ConnectedAccount(String merchantId, String stripeAccount, boolean instantPayouts) {}
+    /**
+     * The merchant's Stripe Connect Express account.
+     *
+     * @param payoutsEnabled false only when Stripe said so ({@code account.updated}); unknown counts as enabled
+     */
+    record ConnectedAccount(String merchantId, String stripeAccount, boolean instantPayouts, boolean payoutsEnabled) {}
+
+    /** What {@code account.updated} says about a connected account. */
+    record AccountStatus(
+            String stripeAccount,
+            @Nullable String merchantId,
+            boolean chargesEnabled,
+            boolean payoutsEnabled,
+            @Nullable Boolean instantPayouts,
+            int requirementsDue,
+            int requirementsPastDue,
+            @Nullable String disabledReason,
+            Instant at) {}
 
     void insert(Payout payout);
 
     void update(Payout payout);
+
+    Optional<Payout> byStripePayout(String stripePayout);
 
     /** Newest first. */
     List<Payout> history(String merchantId, int limit);
@@ -36,6 +55,15 @@ public interface PayoutRepository {
     void bankChanged(String merchantId, Instant at);
 
     Optional<ConnectedAccount> connectedAccount(String merchantId);
+
+    /** Records the merchant's Connect account; false when it was already recorded. */
+    boolean linkConnectedAccount(String merchantId, String stripeAccount);
+
+    /**
+     * Applies an {@code account.updated} (unless a newer one was applied already); records the account first when
+     * Stripe's metadata names the merchant. Returns the merchant id when applied.
+     */
+    Optional<String> updateConnectedAccount(AccountStatus status);
 
     Optional<PayoutAccount> account(String merchantId, String accountId);
 
