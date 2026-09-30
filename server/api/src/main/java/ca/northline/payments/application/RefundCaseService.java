@@ -161,6 +161,7 @@ class RefundCaseService implements RespondToCases, CustomerCases, DisputeDecisio
         cases.insert(refund);
         escrow.putOnHold();
         escrows.update(escrow);
+        events.publishEvent(refund.updated(clock.instant()));
         return refund.getId();
     }
 
@@ -174,6 +175,7 @@ class RefundCaseService implements RespondToCases, CustomerCases, DisputeDecisio
         cases.insert(dispute);
         escrow.putOnHold();
         escrows.update(escrow);
+        events.publishEvent(dispute.updated("opened", clock.instant()));
         return dispute.getId();
     }
 
@@ -196,6 +198,7 @@ class RefundCaseService implements RespondToCases, CustomerCases, DisputeDecisio
         }
         dispute.declineOffer(clock.instant());
         cases.update(dispute);
+        events.publishEvent(dispute.updated("offer_declined", clock.instant()));
     }
 
     @Override
@@ -216,6 +219,7 @@ class RefundCaseService implements RespondToCases, CustomerCases, DisputeDecisio
         var refund = cases.refund(refundId).orElseThrow(() -> new NotFound("refund", refundId));
         refund.decide(approve, clock.instant());
         cases.update(refund);
+        events.publishEvent(refund.updated(clock.instant()));
         if (!approve && refund.getEscrowId() != null) {
             escrows.findById(refund.getEscrowId()).ifPresent(escrow -> {
                 escrow.resume();
@@ -233,12 +237,14 @@ class RefundCaseService implements RespondToCases, CustomerCases, DisputeDecisio
         for (var refund : cases.lapsedRefunds(now, 200)) {
             if (refund.lapse(now)) {
                 cases.update(refund);
+                events.publishEvent(refund.updated(now));
                 n++;
             }
         }
         for (var dispute : cases.expiredOffers(now, 200)) {
             if (dispute.expireOffer(now)) {
                 cases.update(dispute);
+                events.publishEvent(dispute.updated("offer_expired", now));
                 n++;
             }
         }

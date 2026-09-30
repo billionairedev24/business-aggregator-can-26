@@ -1,0 +1,10 @@
+[(#{__${'refund-case-update.heading.' + change}__})]
+
+[(#{__${'refund-case-update.body.' + change}__(${businessName}, ${amount}, ${respondBy})})]
+
+[(#{refund-case-update.case})]: [(${caseNumber})]
+[(#{refund-case-update.amount})]: [(${amount})]
+
+[(#{refund-case-update.cta})]: [(${link})]
+
+[# th:insert="~{footer.txt}" /]

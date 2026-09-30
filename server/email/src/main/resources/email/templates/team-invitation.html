@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout.html :: email(#{team-invitation.preheader}, ~{::content})}">
+<body>
+<div th:fragment="content" th:with="roleLabel=#{__${'role.' + role}__}">
+  <h1 th:style="${s.h1}" th:text="#{team-invitation.heading(${businessName})}">Join the team</h1>
+  <p th:style="${s.p}" th:text="#{team-invitation.body(${inviterName}, ${businessName}, ${roleLabel})}">Body</p>
+  <p th:style="${s.p}" th:text="#{team-invitation.signIn}">Sign in</p>
+  <th:block th:replace="~{button.html :: button(#{team-invitation.cta}, ${link})}"/>
+  <p th:style="${s.small}" th:text="#{team-invitation.expires(${expiresAt})}">Expires</p>
+  <p th:style="${s.small}" th:text="#{team-invitation.ignore}">Ignore</p>
+</div>
+</body>
+</html>

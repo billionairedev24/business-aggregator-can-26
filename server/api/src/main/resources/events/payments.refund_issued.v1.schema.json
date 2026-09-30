@@ -28,6 +28,10 @@
     "merchantId": {
       "type": "string"
     },
+    "caseNumber": {
+      "type": "string",
+      "description": "RF-… case number (added by S-13; optional for older events)"
+    },
     "escrowId": {
       "type": [
         "string",

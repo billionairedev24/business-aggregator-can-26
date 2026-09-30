@@ -1,5 +1,6 @@
 package ca.northline.payments.domain;
 
+import ca.northline.payments.api.RefundCaseUpdated;
 import ca.northline.payments.api.RefundIssued;
 import ca.northline.shared.CodedEnum;
 import ca.northline.shared.Conflict;
@@ -179,6 +180,23 @@ public class Refund {
     }
 
     /**
+     * {@code refund.case_updated} for the case's current state (the merchant's team is emailed): requested (with the
+     * review deadline), approved, agent_review or denied.
+     */
+    public RefundCaseUpdated updated(Instant now) {
+        var change = state == State.SELLER_REVIEW ? "requested" : state.code();
+        return new RefundCaseUpdated(
+                Ids.next(),
+                now,
+                id,
+                merchantId,
+                caseNumber,
+                change,
+                amountCents,
+                state == State.SELLER_REVIEW ? contestBy : null);
+    }
+
+    /**
      * The refund queue paid it: {@code stripeRefundId} ({@code re_…}) is null when an uncaptured hold was canceled
      * instead; {@code reversal} is the transfer reversal ({@code trr_…}) that took the money back from the merchant's
      * connected account when it had already been released.
@@ -193,7 +211,7 @@ public class Refund {
         stripeRefund = stripeRefundId;
         stripeTransferReversal = reversal;
         reversedCents = reversedAmountCents;
-        return new RefundIssued(Ids.next(), now, id, merchantId, escrowId, amountCents, chargedTo.code());
+        return new RefundIssued(Ids.next(), now, id, merchantId, caseNumber, escrowId, amountCents, chargedTo.code());
     }
 
     private void requireSellerReview() {

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<!--/* Shared frame of every HTML email: table layout (Outlook), inline styles from EmailBrand (s.*), preheader,
+       wordmark, the content card, then the CASL footer: sender identification, why this address got the email and,
+       for notifications, the one-click unsubscribe link. */-->
+<html xmlns:th="http://www.thymeleaf.org" th:fragment="email(preheader, content)" th:lang="${lang}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title th:text="${subject}">Northline</title>
+</head>
+<body th:style="${s.body}">
+  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all" th:text="${preheader}">Preheader</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" th:style="${s.outer}">
+    <tr>
+      <td align="center" style="padding:24px 12px">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" th:style="${s.frame}">
+          <tr><td th:style="${s.brand}" th:text="#{brand}">Northline</td></tr>
+          <tr><td th:style="${s.card}"><th:block th:replace="${content}"/></td></tr>
+          <tr>
+            <td th:style="${s.footer}">
+              <p style="margin:0 0 6px" th:text="${reason}">Why you got this</p>
+              <p style="margin:0 0 6px" th:if="${purpose == 'transactional'}" th:text="#{footer.transactional}">Service message</p>
+              <p style="margin:0 0 6px" th:if="${!#strings.isEmpty(unsubscribe)}">
+                <span th:text="#{footer.unsubscribe}">Don’t want these?</span>
+                <a th:href="${unsubscribe}" th:style="${s.footerLink}" th:text="#{footer.unsubscribeLink}">Unsubscribe</a>.
+                <span th:text="#{footer.unsubscribeHint}">Settings hint</span>
+              </p>
+              <p style="margin:0" th:text="#{footer.sender(${mailingAddress}, ${contact})}">Sent by Northline</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
