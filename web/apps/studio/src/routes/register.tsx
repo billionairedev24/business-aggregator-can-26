@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { SignedOutPage } from '../features/auth/SignedOutPage';
-import { redirectIfSignedIn, safeNext, tabTarget, validateAuthSearch } from '../features/auth/routeSupport';
+import { federationContext, redirectIfSignedIn, safeNext, tabTarget, validateAuthSearch } from '../features/auth/routeSupport';
 
 /** /register opens the signed-out page on the "Create account" tab (pre-filled when coming back from Google/Apple). */
 export const Route = createFileRoute('/register')({
@@ -18,6 +18,7 @@ function RegisterRoute() {
       next={safeNext(search.next)}
       prefill={{ firstName: search.firstName, lastName: search.lastName, email: search.email }}
       error={search.error}
+      federation={federationContext(search)}
       onModeChange={(mode, opts) => void navigate(tabTarget(mode, search, opts?.recover) as never)}
     />
   );

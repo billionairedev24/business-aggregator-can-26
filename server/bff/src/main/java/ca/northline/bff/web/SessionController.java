@@ -21,7 +21,7 @@ import org.springframework.web.servlet.view.RedirectView;
  * The Studio's session contract (IMPLEMENTATION_PLAN.md § Contracts):
  *
  * <pre>
- * GET  /bff/session          → 200 {user:{id, firstName, lastName, email, phone, initials, locale, memberSince}, acr} | 401
+ * GET  /bff/session          → 200 {user:{id, firstName, lastName, email, phone, initials, locale, memberSince}, acr, sid} | 401
  * POST /bff/logout           → 204 (Spring Security logout; see BffSecurityConfig)
  * GET  /bff/login?next=/path → 302 /oauth2/authorization/studio, back to {@code next} after the callback
  * </pre>
@@ -35,8 +35,12 @@ class SessionController {
         this.props = props;
     }
 
-    /** The signed-in user, from the ID token northline-auth issued. */
-    record SessionResponse(User user, @Nullable String acr) {}
+    /**
+     * The signed-in user, from the ID token northline-auth issued. {@code sid} = the session (sign-in) at northline-auth
+     * this BFF session belongs to (S-19): Settings › Security marks it as the current one.
+     */
+    record SessionResponse(
+            User user, @Nullable String acr, @Nullable String sid) {}
 
     record User(
             String id,
@@ -66,7 +70,8 @@ class SessionController {
                         initials.isEmpty() ? "NL" : initials,
                         Objects.requireNonNullElse(user.getLocale(), "en-CA"),
                         user.getClaimAsString("member_since")),
-                user.getClaimAsString("acr"));
+                user.getClaimAsString("acr"),
+                user.getClaimAsString("sid"));
         return ResponseEntity.ok(body);
     }
 

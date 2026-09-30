@@ -4,6 +4,9 @@ spring:
   autoconfigure.exclude:
     - org.springframework.boot.session.data.redis.autoconfigure.SessionDataRedisAutoConfiguration
   flyway.enabled: true
+  modulith.events:                      # S-28: no Kafka; UserRegisteredEventsTest turns it on against Testcontainers
+    externalization.enabled: false
+    republish-outstanding-events-on-restart: false
 management.health.redis.enabled: false
 server.servlet.session.cookie.secure: false
 logging.level:
@@ -23,6 +26,7 @@ northline:
         backup-code-verify.ip.max: 100000
         passkey-assertion.ip.max: 100000
         step-up.ip.max: 100000
+        security-change.ip.max: 100000
     signing:
       local-dir: ${java.io.tmpdir}/northline-auth-test-signing-keys
     totp-key: bm9ydGhsaW5lLWxvY2FsLWRldi10b3RwLWtleS0zMmI=

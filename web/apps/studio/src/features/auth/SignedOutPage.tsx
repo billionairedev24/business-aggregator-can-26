@@ -3,7 +3,8 @@ import { Alert, UnderlineTabs } from '@northline/ui';
 import { bffLoginUrl } from '../../lib/auth-server';
 import { Brand } from '../shell/StudioLayout';
 import type { RegisterValues } from './api';
-import { useAuthT } from './messages';
+import { useAuthT, type AuthKey } from './messages';
+import type { FederationContext } from './routeSupport';
 import { RegisterFlow } from './RegisterFlow';
 import { SignInFlow } from './SignInFlow';
 import './auth.css';
@@ -21,8 +22,10 @@ export interface SignedOutPageProps {
   /** Back from Google/Apple: known email → factor step; unknown → pre-filled registration. */
   resumeIdentifier?: string;
   prefill?: Partial<Pick<RegisterValues, 'firstName' | 'lastName' | 'email'>>;
-  /** `?error=federation|signin|rate_limited` from the auth server / BFF. */
+  /** `?error=federation|federation_cancelled|federation_unavailable|signin|rate_limited` from the auth server / BFF. */
   error?: string;
+  /** Back from Google / Apple (S-18): linking an existing account at the factor step, or creating one. */
+  federation?: FederationContext;
   /** Navigates to the BFF hand-off (tests replace it). */
   navigate?: (url: string) => void;
 }
@@ -32,7 +35,12 @@ export interface SignedOutPageProps {
  * Sign in / Create account card. The Studio renders its own sign-in UI against northline-auth's JSON API, then hands
  * off to the BFF (`/bff/login?next=`), which gets its tokens without showing another page.
  */
-export function SignedOutPage({ mode, onModeChange, recoverOnLoad, next, resumeIdentifier, prefill, error, navigate = url => window.location.assign(url) }: SignedOutPageProps) {
+const ERRORS: Record<string, AuthKey> = {
+  rate_limited: 'rateLimitedLater', federation_cancelled: 'federationCancelled', federation_unavailable: 'federationUnavailable',
+};
+const PROVIDER_NAMES = { google: 'Google', apple: 'Apple' } as const;
+
+export function SignedOutPage({ mode, onModeChange, recoverOnLoad, next, resumeIdentifier, prefill, error, federation, navigate = url => window.location.assign(url) }: SignedOutPageProps) {
   const t = useAuthT();
   const [recover, setRecover] = useState(recoverOnLoad ? 1 : 0);
   const onboarding = (next ?? '').startsWith('/onboarding');
@@ -64,7 +72,13 @@ export function SignedOutPage({ mode, onModeChange, recoverOnLoad, next, resumeI
           <UnderlineTabs aria-label={t('tabs')} value={mode} onChange={onModeChange}
             options={[{ value: 'signin', label: t('tabSignIn') }, { value: 'register', label: t('tabRegister') }]} />
           <h2 className="nl-auth-title" id="nl-auth-title">{title}</h2>
-          {error && <Alert tone="error">{t(error === 'rate_limited' ? 'rateLimitedLater' : 'federationFailed')}</Alert>}
+          {error && <Alert tone="error">{t(ERRORS[error] ?? 'federationFailed')}</Alert>}
+          {!error && federation && (mode === 'register' || federation.linking) && (
+            <Alert tone="neutral" role="status">
+              {t(mode === 'register' ? 'federationRegister' : 'federationLink', { provider: PROVIDER_NAMES[federation.provider] })}
+              {mode === 'register' && federation.relay ? <> {t('federationRelay')}</> : null}
+            </Alert>
+          )}
           {mode === 'register'
             ? <RegisterFlow prefill={prefill} onSignIn={() => onModeChange('signin')} onFinished={() => navigate(bffLoginUrl(onboarding && next ? next : '/onboarding'))} />
             : <SignInFlow onboarding={onboarding} resumeIdentifier={resumeIdentifier} recover={recover}

@@ -11,6 +11,11 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql")
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-session-data-redis")
+    // S-28: transactional outbox (Spring Modulith JDBC registry in the auth schema) → Kafka, like the api.
+    implementation("org.springframework.boot:spring-boot-starter-kafka")
+    implementation("org.springframework.modulith:spring-modulith-starter-jdbc")
+    implementation("org.springframework.modulith:spring-modulith-events-kafka")
+    implementation("org.springframework.modulith:spring-modulith-events-jackson")
     implementation("org.springframework.security:spring-security-webauthn") // passkeys (brings webauthn4j-core 0.31.x)
     implementation(libs.totp)
     implementation(libs.ulid)
@@ -30,6 +35,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testImplementation("org.testcontainers:testcontainers-junit-jupiter")
     testImplementation("org.testcontainers:testcontainers-postgresql")
+    testImplementation("org.testcontainers:testcontainers-kafka")
     testImplementation(libs.wiremock)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

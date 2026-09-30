@@ -10,13 +10,27 @@ import org.jspecify.annotations.Nullable;
  */
 public interface SignInLog {
 
-    void succeeded(String userId, String method, boolean mfa, Client client);
+    /** Logs the sign-in and returns its id: the session the Studio lists and can revoke (S-19). */
+    String succeeded(String userId, String method, boolean mfa, Client client);
 
     void failed(@Nullable String userId, Factor factor, String reason, Client client);
 
     /** A rate limit locked (S-9): {@code auth.rate_limited} in the audit log, whether or not the account exists. */
     void lockedOut(@Nullable String userId, String action, List<String> scopes, long seconds, Client client);
 
-    /** Where the request came from. */
-    record Client(@Nullable String ip, @Nullable String userAgent) {}
+    /**
+     * Where the request came from.
+     *
+     * @param city approximate city from the ingress / CDN geo header ({@code northline.auth.client-city-header}), only
+     *     believed from a trusted proxy
+     */
+    record Client(
+            @Nullable String ip,
+            @Nullable String userAgent,
+            @Nullable String city) {
+
+        public Client(@Nullable String ip, @Nullable String userAgent) {
+            this(ip, userAgent, null);
+        }
+    }
 }

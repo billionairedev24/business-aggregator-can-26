@@ -4,6 +4,10 @@
 spring:
   autoconfigure.exclude:
     - org.springframework.boot.session.data.redis.autoconfigure.SessionDataRedisAutoConfiguration
+  # S-28: no Kafka locally — user.registered isn't sent (like the api's local; turn it on with the compose `events`).
+  modulith.events:
+    externalization.enabled: false
+    republish-outstanding-events-on-restart: false
   flyway:
     enabled: true
     locations: classpath:db/migration,classpath:db/seed-dev

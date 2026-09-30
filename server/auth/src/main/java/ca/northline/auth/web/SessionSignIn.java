@@ -1,5 +1,6 @@
 package ca.northline.auth.web;
 
+import ca.northline.auth.application.SessionAuthentication;
 import ca.northline.auth.domain.Factor;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -9,6 +10,7 @@ import java.util.Collection;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.FactorGrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -33,15 +35,44 @@ class SessionSignIn {
     private final SecurityContextRepository contexts = new HttpSessionSecurityContextRepository();
     private final SecurityContextHolderStrategy holder = SecurityContextHolder.getContextHolderStrategy();
 
-    void signIn(String userId, Collection<Factor> factors, HttpServletRequest request, HttpServletResponse response) {
+    /** {@code sessionId}: the sign-in's {@code identity.sessions} id (S-19), kept as a {@code SESSION_} authority. */
+    void signIn(
+            String userId,
+            Collection<Factor> factors,
+            String sessionId,
+            HttpServletRequest request,
+            HttpServletResponse response) {
         request.getSession(true);
         request.changeSessionId(); // session fixation
         List<GrantedAuthority> authorities = new ArrayList<>();
         authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+        authorities.add(SessionAuthentication.sessionAuthority(sessionId));
         var at = clock.instant();
         factors.forEach(f -> authorities.add(
                 FactorGrantedAuthority.withAuthority(f.authority()).issuedAt(at).build()));
-        var authentication = UsernamePasswordAuthenticationToken.authenticated(userId, null, authorities);
+        save(UsernamePasswordAuthenticationToken.authenticated(userId, null, authorities), request, response);
+    }
+
+    /**
+     * Step-up succeeded (S-19): the factor counts as used now, so Settings › Security changes that need a recent
+     * second factor go through. Same session, same sign-in.
+     */
+    void refreshFactor(
+            Authentication current, Factor factor, HttpServletRequest request, HttpServletResponse response) {
+        var at = clock.instant();
+        List<GrantedAuthority> authorities = new ArrayList<>(current.getAuthorities().stream()
+                .filter(a -> !factor.authority().equals(a.getAuthority()))
+                .toList());
+        authorities.add(FactorGrantedAuthority.withAuthority(factor.authority())
+                .issuedAt(at)
+                .build());
+        save(
+                UsernamePasswordAuthenticationToken.authenticated(current.getName(), null, authorities),
+                request,
+                response);
+    }
+
+    private void save(Authentication authentication, HttpServletRequest request, HttpServletResponse response) {
         var context = holder.createEmptyContext();
         context.setAuthentication(authentication);
         holder.setContext(context);

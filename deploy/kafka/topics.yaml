@@ -37,7 +37,7 @@ retry:
 
 topics:
   - name: identity.user
-    owner: identity
+    owner: identity            # user.registered, published by northline-auth from its own outbox (S-28)
   - name: merchants.merchant
     owner: merchants
   - name: merchants.storefront

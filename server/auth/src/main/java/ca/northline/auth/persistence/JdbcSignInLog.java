@@ -35,22 +35,25 @@ class JdbcSignInLog implements SignInLog {
     private final JsonMapper json;
 
     @Override
-    public void succeeded(String userId, String method, boolean mfa, Client client) {
+    public String succeeded(String userId, String method, boolean mfa, Client client) {
         var now = clock.instant().atOffset(ZoneOffset.UTC);
+        var id = UlidCreator.getMonotonicUlid().toString();
         jdbc.sql("""
-                        INSERT INTO identity.sessions (id, user_id, device, ip, created_at, last_seen_at, method, acr)
-                        VALUES (:id, :user, :device, CAST(:ip AS inet), :at, :at, :method, :acr)
+                        INSERT INTO identity.sessions (id, user_id, device, ip, city, created_at, last_seen_at, method, acr)
+                        VALUES (:id, :user, :device, CAST(:ip AS inet), :city, :at, :at, :method, :acr)
                         """)
-                .param("id", UlidCreator.getMonotonicUlid().toString())
+                .param("id", id)
                 .param("user", userId)
                 .param("device", device(client.userAgent()))
                 .param("ip", client.ip())
+                .param("city", client.city())
                 .param("at", now)
                 .param("method", method)
                 .param("acr", mfa ? "mfa" : null)
                 .update();
         audit(userId, "auth.sign_in", "{\"method\":\"%s\",\"mfa\":%s}".formatted(method, mfa));
-        log.info("Sign-in: user={} method={} mfa={}", userId, method, mfa);
+        log.info("Sign-in: user={} method={} mfa={} session={}", userId, method, mfa, id);
+        return id;
     }
 
     @Override

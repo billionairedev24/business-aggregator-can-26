@@ -27,29 +27,26 @@ spring:
     password: ${REDIS_PASSWORD:}
     ssl.enabled: ${REDIS_SSL:false}
   session.data.redis.namespace: nl:auth   # Boot 4 name (spring.session.redis.* is ignored)
+  # S-28: events (user.registered) through a transactional outbox — Spring Modulith's JDBC registry in the auth schema
+  # (V023; not the api's events.* tables) — externalized to Kafka after commit, like the api.
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    security.protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
+    properties:
+      sasl.mechanism: ${KAFKA_SASL_MECHANISM:PLAIN}
+      sasl.jaas.config: ${KAFKA_SASL_JAAS_CONFIG:}
+    producer:
+      acks: all
+      properties.enable.idempotence: true
+  modulith.events:
+    jdbc:
+      schema: auth
+      schema-initialization.enabled: false
+    externalization.enabled: true
+    republish-outstanding-events-on-restart: true
+    completion-mode: archive
   security.oauth2:
     authorizationserver.issuer: ${AUTH_ISSUER:http://localhost:9000}
-    # "or continue with" Google / Apple — placeholder client ids until the apps are registered (DECISIONS.md).
-    client:
-      registration:
-        google:
-          client-id: ${GOOGLE_CLIENT_ID:placeholder-google-client-id}
-          client-secret: ${GOOGLE_CLIENT_SECRET:placeholder}
-          scope: openid,email,profile
-        apple:
-          provider: apple
-          client-id: ${APPLE_CLIENT_ID:placeholder-apple-service-id}
-          client-secret: ${APPLE_CLIENT_SECRET:placeholder}   # Apple wants a signed JWT here
-          authorization-grant-type: authorization_code
-          client-authentication-method: client_secret_post
-          redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
-          scope: openid,email,name
-      provider:
-        apple:                         # explicit endpoints: no discovery call at start-up
-          authorization-uri: https://appleid.apple.com/auth/authorize?response_mode=form_post
-          token-uri: https://appleid.apple.com/auth/token
-          jwk-set-uri: https://appleid.apple.com/auth/keys
-          user-name-attribute: sub
 server:
   port: ${SERVER_PORT:9000}
   # X-Forwarded-* are applied by TrustedProxyFilter, only from northline.auth.trusted-proxies (S-9), not by Tomcat.
@@ -71,6 +68,14 @@ northline:
     # Load balancer / ingress CIDRs whose X-Forwarded-For/-Proto/-Host are believed (client IP for the rate limits and
     # the sign-in log). Narrow it to the ingress subnet in the cloud; anyone else's forwarded headers are dropped.
     trusted-proxies: ${TRUSTED_PROXIES:127.0.0.0/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7}
+    # S-19: header in which the ingress / CDN puts the client's city (e.g. CloudFront-Viewer-City, or a custom header
+    # filled from {client_city} on Google Cloud); only believed from trusted-proxies. Empty = no city in the session list.
+    client-city-header: ${CLIENT_CITY_HEADER:}
+    # S-19 session management (docs/runbooks/README.md § Sessions).
+    sessions:
+      idle-timeout: 12h                         # = server.servlet.session.timeout: listed as active while seen since
+      step-up-max-age: ${SESSION_STEP_UP_MAX_AGE:10m}   # revoke / remove passkey need a second factor this recent
+      touch-interval: 1m                        # "last seen" is written at most this often
     # S-9 rate limits (docs/runbooks/README.md § Rate limits). A REQUESTS action (otp-send, sign-in-lookup) allows `max`
     # calls per sliding `window`; a FAILURES action locks at the `max`-th failure. Each lockout of the same subject
     # doubles (lockout × 2^(n-1), up to max-lockout) while earlier ones are remembered (backoff-memory). Successes reset
@@ -106,6 +111,22 @@ northline:
           account: { max: 10, window: 15m, lockout: 15m }
           ip: { max: 30, window: 15m, lockout: 15m }
           session: { max: 10, window: 15m, lockout: 15m }
+        security-change:                        # S-19: revoke sessions, remove passkeys — every call counts
+          account: { max: 20, window: 1h, lockout: 15m }
+          ip: { max: 60, window: 1h, lockout: 15m }
+          session: { max: 20, window: 1h, lockout: 15m }
+  # "or continue with" Google / Apple (S-18, docs/runbooks/federation.md). A provider without a client id is off (its
+  # button answers "not available"); staging/prod require both. Redirect URI = <public auth URL>/login/oauth2/code/<provider>.
+  auth.federation:
+    google:
+      client-id: ${GOOGLE_CLIENT_ID:}
+      client-secret: ${GOOGLE_CLIENT_SECRET:}
+    apple:
+      client-id: ${APPLE_CLIENT_ID:}          # the Services ID, e.g. ca.northline.auth
+      team-id: ${APPLE_TEAM_ID:}
+      key-id: ${APPLE_KEY_ID:}                # Sign in with Apple key
+      private-key: ${APPLE_PRIVATE_KEY:}      # its .p8 file (PEM); the client secret JWT is generated from it
+      client-secret-ttl: ${APPLE_CLIENT_SECRET_TTL:30d}   # renewed automatically at 3/4 of its life (Apple max 180d)
   # OAuth clients (S-122, docs/runbooks/README.md § OAuth clients): reconciled into auth.oauth2_registered_client at every
   # start (create/update, never delete) and by `./gradlew :auth:oauthClients --args='sync'` (Kubernetes Job). Secrets are
   # the *encoded* values ({bcrypt}…) from the secrets manager; {noop}… only for local development. The matching plain

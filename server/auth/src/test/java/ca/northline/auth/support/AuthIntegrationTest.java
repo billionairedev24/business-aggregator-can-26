@@ -118,7 +118,11 @@ public abstract class AuthIntegrationTest {
 
     /** Registers through the API with an authenticator app; the returned session is signed in with acr=mfa. */
     protected Registered register(Person person) throws Exception {
-        var session = new MockHttpSession();
+        return register(person, new MockHttpSession());
+    }
+
+    /** Registers in this auth session (e.g. one that came back from Google / Apple). */
+    protected Registered register(Person person, MockHttpSession session) throws Exception {
         mvc.perform(client(post("/api/auth/register"))
                         .session(session)
                         .contentType(MediaType.APPLICATION_JSON)

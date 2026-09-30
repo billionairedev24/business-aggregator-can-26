@@ -1,6 +1,8 @@
 package ca.northline.auth.config;
 
 import ca.northline.auth.application.AuthProperties;
+import ca.northline.auth.application.SessionService;
+import ca.northline.auth.federation.FederationConfig;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -8,7 +10,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
-import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,7 +21,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.csrf.CsrfFilter;
@@ -42,12 +43,9 @@ class WebSecurityConfig {
 
     @Bean
     @Order(2)
-    SecurityFilterChain web(
-            HttpSecurity http,
-            AuthProperties props,
-            ObjectProvider<ClientRegistrationRepository> federation,
-            FederatedSignIn federatedSignIn) {
-        http.authorizeHttpRequests(a -> a.requestMatchers("/api/auth/**", "/actuator/health/**", "/error")
+    SecurityFilterChain web(HttpSecurity http, AuthProperties props, FederationConfig.FederationLogin federation) {
+        http.authorizeHttpRequests(a -> a.requestMatchers(
+                                "/api/auth/**", "/actuator/health/**", "/error", "/oauth2/authorization/**")
                         .permitAll()
                         .anyRequest()
                         .authenticated())
@@ -58,24 +56,34 @@ class WebSecurityConfig {
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable);
-        if (federation.getIfAvailable() != null) {
-            http.oauth2Login(o -> o.successHandler(federatedSignIn).failureHandler(federatedSignIn));
-        }
+        federation.configure(http); // Google / Apple (S-18), when configured
         return http.build();
     }
 
     /** Before everything (Spring Session, Spring Security): the rest of the app sees the client's address. */
     @Bean
     FilterRegistrationBean<TrustedProxyFilter> trustedProxyFilter(AuthProperties props) {
-        var registration = new FilterRegistrationBean<>(new TrustedProxyFilter(props.trustedProxies()));
+        var registration =
+                new FilterRegistrationBean<>(new TrustedProxyFilter(props.trustedProxies(), props.clientCityHeader()));
         registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
+        return registration;
+    }
+
+    /**
+     * After Spring Session (which wraps the request), before Spring Security (which reads the session's security
+     * context): sessions whose sign-in ended are dropped here (S-19).
+     */
+    @Bean
+    FilterRegistrationBean<RevokedSessionFilter> revokedSessionFilter(SessionService sessions) {
+        var registration = new FilterRegistrationBean<>(new RevokedSessionFilter(sessions));
+        registration.setOrder(SecurityFilterProperties.DEFAULT_FILTER_ORDER - 1);
         return registration;
     }
 
     private static CorsConfigurationSource cors(AuthProperties props) {
         var config = new CorsConfiguration();
         config.setAllowedOrigins(props.allowedOrigins());
-        config.setAllowedMethods(List.of("GET", "POST"));
+        config.setAllowedMethods(List.of("GET", "POST", "DELETE"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);

@@ -1,6 +1,7 @@
 package ca.northline.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -49,6 +50,9 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
             "northline.auth.rate-limits.limits.passkey-assertion.ip.max=50",
             "northline.auth.rate-limits.limits.step-up.account.max=3",
             "northline.auth.rate-limits.limits.step-up.ip.max=50",
+            "northline.auth.rate-limits.limits.security-change.account.max=3",
+            "northline.auth.rate-limits.limits.security-change.ip.max=50",
+            "northline.auth.client-city-header=X-Client-City",
         })
 class RateLimitApiTest extends AuthIntegrationTest {
 
@@ -375,6 +379,62 @@ class RateLimitApiTest extends AuthIntegrationTest {
             postJson("/api/auth/step-up/totp", second, newIp(), json(Map.of("code", totpNow(user.totpSecret()))))
                     .andExpect(rateLimited());
             assertThat(auditRows(user.userId())).isEqualTo(1);
+        }
+    }
+
+    @Nested
+    class SecurityChanges {
+
+        @Test
+        void revokingAndRemoving_areLimitedPerUser() throws Exception {
+            var user = register(newPerson());
+            for (int i = 0; i < 3; i++) {
+                postJson("/api/auth/security/sessions/01J9ZD3V00000000000000NONE/revoke", user.session(), newIp(), "{}")
+                        .andExpect(status().isNotFound());
+            }
+            postJson("/api/auth/security/sessions/revoke-others", user.session(), newIp(), "{}")
+                    .andExpect(rateLimited());
+            mvc.perform(from(delete("/api/auth/security/passkeys/{id}", "x"), newIp())
+                            .session(user.session()))
+                    .andExpect(rateLimited());
+        }
+    }
+
+    @Nested
+    class ClientCity {
+
+        private String cityOfLastSignIn(String userId) {
+            return jdbc.sql(
+                            "SELECT coalesce(city, '') FROM identity.sessions WHERE user_id = :u ORDER BY id DESC LIMIT 1")
+                    .param("u", userId)
+                    .query(String.class)
+                    .single();
+        }
+
+        private void signIn(Registered user, String peer) throws Exception {
+            clock.advanceSeconds(30);
+            var session = new MockHttpSession();
+            postJson(
+                            "/api/auth/sign-in",
+                            session,
+                            newIp(),
+                            json(Map.of("identifier", user.person().email())))
+                    .andExpect(status().isOk());
+            mvc.perform(from(post("/api/auth/sign-in/totp"), peer)
+                            .header("X-Client-City", "Montr%C3%A9al")
+                            .session(session)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json(Map.of("code", totpNow(user.totpSecret())))))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        void theCityHeader_isBelievedFromTrustedProxiesOnly() throws Exception {
+            var user = register(newPerson());
+            signIn(user, "10.1.2.3");
+            assertThat(cityOfLastSignIn(user.userId())).isEqualTo("Montréal");
+            signIn(user, newIp());
+            assertThat(cityOfLastSignIn(user.userId())).isEmpty();
         }
     }
 

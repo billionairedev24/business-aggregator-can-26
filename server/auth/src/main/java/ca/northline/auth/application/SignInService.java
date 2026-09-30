@@ -34,10 +34,11 @@ public class SignInService {
     private final FlowStore flow;
     private final SignInLog signIns;
     private final AttemptLimits limits;
+    private final FederatedLinking federation;
     private final Clock clock;
 
-    /** Signed in: who, and with which second factor. */
-    public record SignedIn(UserAccount account, Factor factor) {}
+    /** Signed in: who, with which second factor, and the new session's id ({@code identity.sessions}). */
+    public record SignedIn(UserAccount account, Factor factor, String sessionId) {}
 
     public SignInAttempt start(String identifier) {
         var id = identifier.trim();
@@ -179,8 +180,9 @@ public class SignInService {
 
     private SignedIn succeed(UserAccount account, Factor factor, Client client) {
         flow.remove(FlowStore.SIGN_IN);
-        signIns.succeeded(account.id(), factor.code(), factor.isSecondFactor(), client);
-        return new SignedIn(account, factor);
+        var sessionId = signIns.succeeded(account.id(), factor.code(), factor.isSecondFactor(), client);
+        federation.complete(account.id(), false); // S-18: "Continue with Google/Apple" waiting for this factor
+        return new SignedIn(account, factor, sessionId);
     }
 
     /** The account as typed on the form (unknown accounts count the same); nobody for a passkey without a form. */
