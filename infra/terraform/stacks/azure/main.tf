@@ -28,6 +28,9 @@ locals {
     bff              = { namespace = local.namespace, service_account = "northline-bff" }
     worker           = { namespace = local.namespace, service_account = "northline-worker" }
     external-secrets = { namespace = "external-secrets", service_account = "external-secrets" }
+    # S-17 edge add-ons: DNS records for the public hosts, and DNS-01 challenges.
+    external-dns = { namespace = "external-dns", service_account = "external-dns" }
+    cert-manager = { namespace = "cert-manager", service_account = "cert-manager" }
   }
 
   # Application secrets created empty; an operator sets the values (docs/runbooks/<env>.md § Environment variables).
@@ -107,6 +110,11 @@ module "dns" {
   source    = "../../modules/dns/azure"
   context   = local.context
   zone_name = var.dns_zone_name
+  # S-17: only these two identities may write records in the zone.
+  record_writers = {
+    external-dns = module.kubernetes.workload_identities["external-dns"].principal
+    cert-manager = module.kubernetes.workload_identities["cert-manager"].principal
+  }
 }
 
 module "storage" {

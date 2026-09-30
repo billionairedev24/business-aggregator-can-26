@@ -112,3 +112,22 @@ run "helm_values" {
     error_message = "helm_values.workloadIdentities carries the four app ServiceAccounts (the ESO controller's is installed with ESO)."
   }
 }
+
+run "edge" {
+  command = plan
+
+  assert {
+    condition     = contains(keys(output.helm_values.edge.certManager.issuer.dns01), "cloudDNS")
+    error_message = "helm_values.edge must carry this cloud's cert-manager DNS-01 solver (S-17)."
+  }
+
+  assert {
+    condition     = output.gitops_addon_values["external-dns"].provider.name == "google" && output.gitops_addon_values["external-dns"].txtOwnerId == "northline-dev"
+    error_message = "external-dns must use this cloud's provider and own its records as northline-dev (S-17)."
+  }
+
+  assert {
+    condition     = alltrue([for k in ["external-secrets", "external-dns", "cert-manager"] : contains(keys(output.gitops_addon_values), k)])
+    error_message = "gitops_addon_values must hold the identity of every platform add-on (S-6, S-17)."
+  }
+}

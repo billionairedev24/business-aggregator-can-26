@@ -29,6 +29,10 @@ spec:
   namespaceResourceWhitelist:
     - { group: argoproj.io, kind: Application }
     - { group: argoproj.io, kind: AppProject }
+    {{- $oci := false }}{{ range $a := $addons }}{{ if $a.oci }}{{ $oci = true }}{{ end }}{{ end }}
+    {{- if $oci }}
+    - { group: "", kind: Secret }        # OCI Helm repository entries (no credentials) for the add-ons
+    {{- end }}
   {{- with $deployers }}
   roles:
     - name: deployer

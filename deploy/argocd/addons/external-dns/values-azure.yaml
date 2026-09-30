@@ -1,0 +1,4 @@
+provider:
+  name: azure
+podLabels:
+  azure.workload.identity/use: "true"

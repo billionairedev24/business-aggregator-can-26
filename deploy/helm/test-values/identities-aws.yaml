@@ -11,3 +11,7 @@ configEnv:
   REDIS_HOST: master.northline-dev.example.cache.amazonaws.com
   KMS_PROVIDER: aws
   STORAGE_PROVIDER: s3
+edge:
+  certManager:
+    issuer:
+      dns01: { route53: { region: ca-central-1, hostedZoneID: Z0000000000000000000 } }

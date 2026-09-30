@@ -1,0 +1,6 @@
+# cert-manager identity in staging (DNS-01 challenges in the environment's zone), from Terraform:
+#   terraform -chdir=infra/terraform/envs/<cloud>/staging output -json gitops_addon_values | jq '.["cert-manager"]' | yq -P
+# AWS eks.amazonaws.com/role-arn · Google Cloud iam.gke.io/gcp-service-account · Azure azure.workload.identity/client-id
+# Not needed while the Issuer uses HTTP-01 only (edge.certManager.issuer.solver: http01, the default).
+serviceAccount:
+  annotations: {}

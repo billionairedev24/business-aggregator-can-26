@@ -1,0 +1,8 @@
+# external-dns in prod: provider settings, the zone filter and the identity, from Terraform:
+#   terraform -chdir=infra/terraform/envs/<cloud>/prod output -json gitops_addon_values | jq '.["external-dns"]' | yq -P
+# Until then it runs with no zone (domainFilters empty = it would manage every zone the identity can see, which is
+# none: the identity only exists once Terraform is applied).
+txtOwnerId: northline-prod
+domainFilters: []
+serviceAccount:
+  annotations: {}

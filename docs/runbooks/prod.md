@@ -4,7 +4,7 @@ Production for the Calgary launch. Live Stripe keys, high availability, backups 
 
 Spring profile **`prod`** (it activates `cloud` automatically). Shape: `ca.northline` at info, OpenAPI/Swagger UI **off**, no dev seed, no dev auth, Kafka externalization on, `Secure` cookies, required variables checked at start-up. Sizing: multi-zone HA for every data service, at least 2 replicas of api/auth/bff/worker. Data: real customer and merchant data (PIPEDA, Alberta PIPA; Law 25 before Québec). Stripe: **required** (live mode): the api refuses to start without it.
 
-> **Status (2026-09-29): not deployable end to end yet.** The apps start under this profile (checked against local stand-ins), and the Terraform for the cloud foundation and the managed data stores exists but has not been applied yet — no cloud account exists ([infrastructure.md](infrastructure.md), S-2, S-3). Container images and the Helm chart exist (S-14, [deploy.md](deploy.md); rehearsed on kind, never installed on a cloud cluster); External Secrets are wired (S-6, [secrets.md](secrets.md)); migrations run as a Job before each rollout (S-16); Argo CD delivery is defined (S-15, [gitops.md](gitops.md); rehearsed on kind, not installed anywhere); TLS/DNS (S-17) doesn't exist yet, and several features only have local fakes — see [Blockers](#blockers). Nothing below claims more than exists.
+> **Status (2026-09-29): not deployable end to end yet.** The apps start under this profile (checked against local stand-ins), and the Terraform for the cloud foundation and the managed data stores exists but has not been applied yet — no cloud account exists ([infrastructure.md](infrastructure.md), S-2, S-3). Container images and the Helm chart exist (S-14, [deploy.md](deploy.md); rehearsed on kind, never installed on a cloud cluster); External Secrets are wired (S-6, [secrets.md](secrets.md)); migrations run as a Job before each rollout (S-16); Argo CD delivery is defined (S-15, [gitops.md](gitops.md); rehearsed on kind, not installed anywhere); the edge — Gateway, Let's Encrypt certificates, DNS records — is defined (S-17, [edge.md](edge.md); rehearsed on kind with a local CA, no public zone yet), and several features only have local fakes — see [Blockers](#blockers). Nothing below claims more than exists.
 
 Other environments: [dev](dev.md), [staging](staging.md) · [local](local.md) · [overview and variable matrix](README.md)
 
@@ -21,21 +21,26 @@ Pick **one** provider per environment; `infra/terraform/envs/<aws|gcp|azure>/pro
 | Object storage (S-10) | Amazon S3 | Cloud Storage | Azure Blob Storage | one private bucket (container on Azure) per environment in the Canadian region, created by Terraform with encryption, versioning, lifecycle and least-privilege access for `northline-api`; settings per cloud and the manual set-up without Terraform: [object-storage.md](object-storage.md#cloud-set-up-until-terraform-does-it--s-2) | `storage` (S-2; `STORAGE_*` of S-10) |
 | Keys / KMS (S-7) | AWS KMS (`ECC_NIST_P256`, `SIGN_VERIFY`) | Cloud KMS (`EC_SIGN_P256_SHA256`, HSM) | Azure Key Vault keys (`EC-HSM`, P-256) | token signing keys, signed inside the KMS; Terraform creates the `signing` key (HSM in prod on Google Cloud and Azure) and lets only `northline-auth` sign and read its public key; set-up and rotation: [key-rotation.md](key-rotation.md) | `kms` (S-2; `KMS_*` of S-7) |
 | Secrets manager (S-6) | AWS Secrets Manager | Secret Manager | Azure Key Vault (secrets) | synced into one Kubernetes Secret per app by External Secrets Operator (chart `externalSecrets`, [secrets.md](secrets.md)); the apps only see environment variables | `secrets` (S-2) |
-| Email (S-13) | Amazon SES (`ca-central-1`, `EMAIL_PROVIDER=ses`) | SendGrid (`sendgrid`) or any SMTP relay (`smtp`) — no first-party service | Azure Communication Services Email (`azure`, data location Canada) | verified sending domain with SPF/DKIM/DMARC; set-up per cloud: [email.md](email.md) | — (DNS records by hand until S-17) |
+| Email (S-13) | Amazon SES (`ca-central-1`, `EMAIL_PROVIDER=ses`) | SendGrid (`sendgrid`) or any SMTP relay (`smtp`) — no first-party service | Azure Communication Services Email (`azure`, data location Canada) | verified sending domain with SPF/DKIM/DMARC; set-up per cloud: [email.md](email.md) | — (SPF/DKIM/DMARC records by hand in the zone; external-dns only manages the hosts' A/AAAA records, S-17) |
 | SMS / voice (S-8, S-27) | Twilio (`SMS_PROVIDER=twilio`) or AWS End User Messaging SMS and voice (`aws`) | Twilio (no first-party SMS service) | Twilio (Azure Communication Services: reserved, not implemented) | Canadian sender number (long code, or verified toll-free); set-up: [README § SMS and voice codes](README.md#sms-and-voice-codes-s-8) | — (AWS: optional `sms_origination_identity` grants `northline-auth` `sms-voice:Send*` on the number and fills `SMS_*`) |
-| DNS + TLS (S-17) | Route 53 + ACM (or cert-manager) | Cloud DNS + Certificate Manager (or cert-manager) | Azure DNS + cert-manager | hosts listed under "Public URLs" below | `dns` zone (S-2); records/TLS S-17 |
+| DNS + TLS + edge (S-17) | Route 53 | Cloud DNS | Azure DNS | the zone `northline.ca` from Terraform; records by external-dns, Let's Encrypt certificates by cert-manager, TLS at Envoy Gateway behind the cloud's layer-4 load balancer; WAF options per cloud or Cloudflare ([edge.md](edge.md)) | `dns` zone + record writers (S-2, S-17) |
 | Container registry (S-14) | Amazon ECR | Artifact Registry | Azure Container Registry | in the same Canadian region; images `<registry>/<app>:<git sha>` ([deploy.md](deploy.md)) | `registry` (S-2) |
 | Kubernetes (S-14, S-15) | Amazon EKS | GKE | AKS | Helm chart `deploy/helm/northline` with `values-prod.yaml` + `values-<cloud>.yaml` ([deploy.md](deploy.md)), delivered by Argo CD ([gitops.md](gitops.md), S-15) | `network` + `kubernetes` (S-2) |
 
-### Public URLs (proposed — S-17 decides)
+### Public URLs (S-17, [edge.md](edge.md))
+
+Every host serves HTTPS only (HTTP answers 301), TLS 1.2 or newer, HSTS (two years, `includeSubDomains`), a Let's
+Encrypt certificate per host renewed 30 days before expiry, and a DNS record in the `northline.ca` zone published by
+external-dns.
 
 | host | serves |
 |---|---|
-| `https://business.northline.ca` | Studio static files (`web/apps/studio` build) **and**, on the same origin, the studio-bff for `/api/**`, `/bff/**`, `/oauth2/**`, `/login/**` (path routing at the ingress) |
+| `https://studio.northline.ca` | Studio static files (`web/apps/studio` build) **and**, on the same origin, the studio-bff for `/api/**`, `/bff/**`, `/oauth2/**`, `/login/**` (path routing at the Gateway) |
 | `https://auth.northline.ca` | northline-auth (OIDC issuer, sign-in JSON API) |
 | `https://northline.ca` | consumer web (not built yet, E-7) |
-| `https://console.northline.ca` | platform console (not built yet, E-8) |
-| api | internal only (`ClusterIP`): browsers reach it through the BFF |
+| `https://pages.northline.ca` | storefronts (consumer app); merchants' own domains point here with a CNAME (verification S-31) |
+| `https://console.northline.ca` | platform console (placeholder until E-8: no route while `apps.console` is disabled) |
+| `https://api.northline.ca` | only `/api/v1/webhooks/stripe` (+ `/connect`) and `/api/v1/email/unsubscribe`; the rest of the api is reached through the BFF |
 
 ## Environment variables
 
@@ -58,12 +63,12 @@ Every app reads its configuration from environment variables; nothing environmen
 | `KAFKA_SASL_JAAS_CONFIG` | api, auth, worker | with SASL | `org.apache.kafka.common.security.scram.ScramLoginModule required username="…" password="…";` | generated by Terraform into the secrets manager, named by `secret_env` (S-3) → External Secrets (S-6, [secrets.md](secrets.md)) → Secret `northline-<app>-secrets` |
 | `ES_URIS` | api, worker | **yes** | `https://<deployment>.es.<region>.<cloud>.elastic-cloud.com:443` | Terraform `config_env` (S-3, [infrastructure.md § 4](infrastructure.md#4-outputs--the-apps-environment-variables)) → ConfigMap |
 | `ES_USERNAME`, `ES_PASSWORD` | api, worker | with security on | `elastic` (superuser until a `northline_app` user exists, [infrastructure.md § 5.4](infrastructure.md#54-elasticsearch-elastic-cloud)) / — | `ES_USERNAME`: Terraform `config_env` (S-3, [infrastructure.md § 4](infrastructure.md#4-outputs--the-apps-environment-variables)) → ConfigMap; `ES_PASSWORD`: generated by Terraform into the secrets manager, named by `secret_env` (S-3) → External Secrets (S-6, [secrets.md](secrets.md)) → Secret `northline-<app>-secrets` |
-| `AUTH_ISSUER` | api, auth, bff | **yes** | `https://auth.northline.ca` | DNS plan (S-17) |
+| `AUTH_ISSUER` | api, auth, bff | **yes** | `https://auth.northline.ca` | hosts (S-17) |
 | `AUTH_INTERNAL_URL` | bff | no (= `AUTH_ISSUER`) | `http://northline-auth.northline-prod.svc:9000` | Kubernetes service name |
 | `API_URL` | bff | **yes** | `http://northline-api.northline-prod.svc:8080` | Kubernetes service name |
-| `STUDIO_ORIGIN` | api, auth | **yes** | `https://business.northline.ca` | DNS plan (S-17) |
-| `CONSUMER_ORIGIN` | auth | **yes** | `https://northline.ca` | DNS plan (S-17) |
-| `CONSOLE_ORIGIN` | auth | **yes** | `https://console.northline.ca` | DNS plan (S-17) |
+| `STUDIO_ORIGIN` | api, auth | **yes** | `https://studio.northline.ca` | hosts (S-17) |
+| `CONSUMER_ORIGIN` | auth | **yes** | `https://northline.ca` | hosts (S-17) |
+| `CONSOLE_ORIGIN` | auth | **yes** | `https://console.northline.ca` | hosts (S-17) |
 | `WEBAUTHN_RP_ID` | auth | **yes** | `northline.ca` | registrable domain shared by the Studio and consumer origins; changing it invalidates every passkey |
 | `COOKIE_DOMAIN` | auth, bff | no | empty (host-only cookies — recommended) | deployment manifest |
 | `TOTP_KEY` | auth | **yes** | `openssl rand -base64 32` | secrets manager (secret created empty by Terraform, named in `secret_env`) → External Secrets (S-6, [secrets.md](secrets.md)) → Secret `northline-<app>-secrets`. Never rotate without re-encrypting `auth.totp_secrets`: losing it breaks every authenticator enrolment |
@@ -115,7 +120,7 @@ docker run --rm httpd:2.4-alpine htpasswd -bnBC 12 "" "$SECRET" | tr -d ':\n' | 
 | Email provider (SES / SendGrid / Azure Communication Services, or an SMTP relay) | invitations and money notices, with SPF/DKIM/DMARC on the sending domain | required; set-up in [email.md](email.md) (SES: production access out of the sandbox) |
 | Elastic Cloud (unless ECK) | search | subscription (or the cloud marketplace's) + an API key exported as `EC_API_KEY` for Terraform; the deployment is created in the chosen cloud's Canadian region |
 | Cloud account with startup credits (AWS / Google Cloud / Azure) | everything else | one provider per environment |
-| Domain registrar for `northline.ca` | DNS delegation to the cloud's DNS | S-17 |
+| Domain registrar for `northline.ca` | DNS delegation to the cloud's DNS (NS records from `terraform output dns`, [edge.md](edge.md#dns-delegation)) | S-17 |
 
 ## Canadian data residency
 
@@ -142,7 +147,7 @@ What still stops a complete deployment. Under the `local`/`test` profiles each o
 | Google / Apple sign-in (auth) | real registrations from `GOOGLE_*` / `APPLE_*` (S-18) | without them the buttons say "not available"; staging/prod refuse to start | — ([federation.md](federation.md)) |
 | Search indexer (worker) | consumer is a stub (`TODO(implement)`) | nothing reaches Elasticsearch | S-42, S-43 |
 
-Terraform for the cloud foundation exists but is unapplied (S-2, [infrastructure.md](infrastructure.md)). The managed data stores are in the same Terraform, also unapplied (S-3). Delivery pieces that don't exist yet: DNS/TLS (S-17), observability (S-111–S-113), backups and DR drill (S-114). Container images and the Helm chart exist since S-14 ([deploy.md](deploy.md)), Kafka topic provisioning since S-25 ([infrastructure.md § 5.3](infrastructure.md#53-kafka-topics-and-credentials)), Argo CD definitions since S-15 ([gitops.md](gitops.md), not installed in any cloud yet); the worker now has a health-only HTTP port (8084).
+Terraform for the cloud foundation exists but is unapplied (S-2, [infrastructure.md](infrastructure.md)). The managed data stores are in the same Terraform, also unapplied (S-3). Delivery pieces that don't exist yet: observability (S-111–S-113), backups and DR drill (S-114). Container images and the Helm chart exist since S-14 ([deploy.md](deploy.md)), Kafka topic provisioning since S-25 ([infrastructure.md § 5.3](infrastructure.md#53-kafka-topics-and-credentials)), Argo CD definitions since S-15 ([gitops.md](gitops.md), not installed in any cloud yet), the edge since S-17 ([edge.md](edge.md): Envoy Gateway, cert-manager, external-dns); the worker now has a health-only HTTP port (8084).
 
 ## Deploy, migrate, roll back
 
@@ -153,7 +158,7 @@ Terraform for the cloud foundation exists but is unapplied (S-2, [infrastructure
 5. **Migrate** (S-16, [deploy.md § Migrations](deploy.md#migrations-s-16)): the chart's `northline-migrate-<hash>` Job applies `db/migrations` and seeds the categories **before** the pods roll (Helm pre-install/pre-upgrade hook, Argo CD PreSync); a failed migration fails the release and the running pods keep serving. The images don't contain `db/seed-dev`, and the dev seed is refused under this profile. Logs: `kubectl -n northline-prod logs $(kubectl -n northline-prod get jobs -l app.kubernetes.io/component=migrate -o name --sort-by=.metadata.creationTimestamp | tail -1) -c migrate`. Without Helm, from a machine that can reach the database: `./gradlew :api:flywayMigrate :api:seedCategories -Pdb.url=… -Pdb.user=… -Pdb.password=…`.
 6. **Register OAuth clients** (S-122): once the schema is migrated (step 5) — the chart's post-install/upgrade hook Job `northline-oauth-clients-<hash>` (S-14) with the auth image and the auth Deployment's environment running `OAuthClientsCommand sync` ([README § OAuth clients](README.md#oauth-clients-s-122)); from a machine that can reach the database: `SPRING_PROFILES_ACTIVE=prod <auth variables> ./gradlew :auth:oauthClients --args='sync'`. Idempotent; northline-auth also reconciles at every start (`OAUTH_CLIENTS_SYNC_ON_STARTUP`), so the Job matters when that is off and to see drift (`list`). Redirect URIs must be `https`, and secrets `{bcrypt}` hashes (`{noop}` is refused).
 7. **Install or upgrade with Helm** ([deploy.md § Install, upgrade, roll back](deploy.md#install-upgrade-roll-back)): `helm upgrade --install northline deploy/helm/northline -n northline-prod -f values-prod.yaml -f values-<cloud>.yaml -f <config_env + workload identities from Terraform> --set global.image.registry=… --set global.image.tag=… --wait`. Secrets: the cloud overlay turns on External Secrets — every secret variable is read from the secrets manager into one Secret per app ([secrets.md](secrets.md)); install External Secrets Operator once per cluster first. The chart runs the OAuth client Job (step 6) after the pods are Ready. The migration Job runs first (step 5); the api doesn't migrate at start. Probes: `/actuator/health/liveness` and `/actuator/health/readiness` on api (8080), auth (9000), bff (8082) and worker (8084); `/healthz` on studio and consumer.
-8. **Verify**: `curl https://auth.northline.ca/.well-known/openid-configuration` shows the issuer `https://auth.northline.ca`; the readiness probes answer `UP`, and the api's `/actuator/health` (Postgres, Valkey, Elasticsearch) is `UP`; the Studio loads at `https://business.northline.ca` and **Sign in** reaches the auth server and the sign-in hands off to the studio-bff (the `studio-bff` client exists).
+8. **Verify**: `curl https://auth.northline.ca/.well-known/openid-configuration` shows the issuer `https://auth.northline.ca`; the readiness probes answer `UP`, and the api's `/actuator/health` (Postgres, Valkey, Elasticsearch) is `UP`; the Studio loads at `https://studio.northline.ca` and **Sign in** reaches the auth server and the sign-in hands off to the studio-bff (the `studio-bff` client exists).
 
 **Roll back**: `helm rollback northline <revision> -n northline-prod --wait` (previous images and ConfigMaps; `helm history` lists the revisions) — [deploy.md](deploy.md#install-upgrade-roll-back). Flyway is forward-only, so every migration must keep the previous release working (expand → migrate → contract across releases). A bad migration is fixed forward with a new migration, or by restoring the point-in-time backup taken before the release into a new instance and pointing `DB_URL` at it (S-114 sets up and drills this). A configuration rollback is the previous secret/ConfigMap version plus a restart.
 
@@ -190,7 +195,12 @@ api and bff (drops their JWK set caches). Nobody is signed out: refresh tokens a
 - [ ] `TOTP_KEY`, `WEBHOOK_SECRET_KEY` and the BFF secrets generated, stored in the secrets manager and backed up
 - [ ] Three distinct BFF client secrets; the bff's `STUDIO_BFF_SECRET` matches auth's `STUDIO_BFF_SECRET_HASH`
 - [ ] OAuth clients registered: `oauthClients list` shows `studio-bff: up to date` (step "Register OAuth clients")
-- [ ] DNS and TLS for `https://business.northline.ca` and `https://auth.northline.ca`; ingress routes `/api`, `/bff`, `/oauth2`, `/login` on the Studio host to the bff
+- [ ] `northline.ca` delegated from the registrar to the cloud zone (`terraform output dns` name servers; `dig NS northline.ca` answers the cloud's servers) and `dev.`/`staging.` delegated from it ([edge.md § DNS delegation](edge.md#dns-delegation))
+- [ ] Edge add-ons Synced/Healthy in Argo CD: `envoy-gateway-prod`, `cert-manager-prod`, `external-dns-prod` (identities from `terraform output gitops_addon_values`)
+- [ ] Every host resolves to the Gateway's load balancer and serves a valid Let's Encrypt certificate: `northline.ca`, `studio.`, `auth.`, `api.`, `pages.` (`kubectl -n northline-prod get certificates` all `Ready`); `console.` once E-8 ships
+- [ ] `curl -sI http://studio.northline.ca` → 301 to https; `curl -sI https://studio.northline.ca` shows `strict-transport-security: max-age=63072000; includeSubDomains`; TLS 1.1 refused (`openssl s_client -tls1_1` fails)
+- [ ] Gateway routes `/api`, `/bff`, `/oauth2`, `/login` on the Studio host to the bff; the api host answers only the Stripe webhooks and the unsubscribe page (anything else 404)
+- [ ] WAF in front, one of: AWS WAF on CloudFront, Cloud Armor, Azure Front Door WAF, or Cloudflare — managed OWASP rules in blocking mode, rate limit on `auth.` sign-in paths, `edge.trustedProxyHops: 1` ([edge.md § WAF](edge.md#waf-and-ddos-protection)); CAA record for `letsencrypt.org`
 - [ ] Studio image deployed with `urls.auth` = `https://auth.northline.ca` (served as `/config.js`; one image for every environment, S-14)
 - [ ] Token signing key created in the KMS, `KMS_PROVIDER` / `KMS_KEY_ID` set, workload identity may sign with it; JWK set checked ([key-rotation.md](key-rotation.md)); rotation date in the calendar
 - [ ] Stripe keys (live mode) set; both webhook endpoints registered in live mode with API version `2026-08-26.dahlia` and `STRIPE_WEBHOOK_SECRET` / `STRIPE_CONNECT_WEBHOOK_SECRET` set ([stripe.md](stripe.md#5-webhooks-s-12))

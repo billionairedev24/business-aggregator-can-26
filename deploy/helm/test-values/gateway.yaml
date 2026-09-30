@@ -1,5 +1,6 @@
-# Gateway API routes instead of the Ingress (deploy/helm/validate.sh only).
+# Gateway API routes attached to an existing, shared Gateway instead of the chart's own (deploy/helm/validate.sh only).
 ingress: { enabled: false }
 gateway:
   enabled: true
   parentRefs: [{ name: northline, namespace: gateway-system, sectionName: https }]
+edge: { enabled: false }

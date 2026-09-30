@@ -29,3 +29,9 @@ variable "zone_name" {
     error_message = "zone_name must be a lower-case domain without a trailing dot."
   }
 }
+
+variable "record_writers" {
+  description = "Principals that may create, change and delete records in this zone: { label => principal } (the external-dns and cert-manager workload identities, S-17). Static labels; the principal is what kubernetes.workload_identities[*].principal returns."
+  type        = map(string)
+  default     = {}
+}

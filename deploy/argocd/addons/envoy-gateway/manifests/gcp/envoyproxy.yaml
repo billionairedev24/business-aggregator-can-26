@@ -1,0 +1,17 @@
+# Envoy proxies of the northline Gateway on Google Cloud (GKE): two replicas (one per zone when the cluster has several), a public
+# layer-4 load balancer in front, client addresses kept (externalTrafficPolicy: Local).
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: northline
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        replicas: 2
+      envoyService:
+        externalTrafficPolicy: Local
+        # GKE's default for type LoadBalancer: an external passthrough Network Load Balancer (regional).
+        annotations: {}

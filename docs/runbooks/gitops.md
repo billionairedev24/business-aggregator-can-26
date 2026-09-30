@@ -19,7 +19,8 @@ Other runbooks: [deploy](deploy.md) (images and the chart) · [secrets](secrets.
 deploy/argocd/
 ├── install/                       Argo CD itself: upstream v3.1.1 manifests + Northline settings (kustomize)
 ├── app-of-apps/                   Helm chart → the AppProjects and Applications of ONE environment
-├── addons/<name>/values[-<cloud>].yaml   platform add-on values (External Secrets Operator; S-17 adds the edge)
+├── addons/<name>/values[-<cloud>].yaml   platform add-on values: External Secrets Operator (S-6), Envoy Gateway,
+│                                  cert-manager, external-dns (S-17, [edge.md](edge.md))
 ├── envs/<env>/                    one directory per environment: dev, staging, prod (+ local = kind rehearsal)
 │   ├── env.yaml                   cloud, repository URL, branch, sync policy, deployer groups, add-ons
 │   ├── images.yaml                registry + tag + one digest per image — THE promotion file
@@ -45,6 +46,7 @@ deploy/argocd/
 |---|---|---|---|
 | `northline-<env>-root` | `northline-<env>-gitops` | `deploy/argocd/app-of-apps` + `envs/<env>/env.yaml` | automated always (it only writes Application/AppProject objects); prunes only in dev |
 | `external-secrets-<env>` | `northline-<env>-platform` | chart `external-secrets` 0.20.4 + `addons/external-secrets/…` + `envs/<env>/addons/external-secrets.yaml` | dev: automated; staging/prod: manual |
+| `envoy-gateway-<env>`, `cert-manager-<env>` (wave −10), `external-dns-<env>` (wave −5) | `northline-<env>-platform` | charts `gateway-helm` v1.5.1 (OCI, Docker Hub), `cert-manager` v1.18.2, `external-dns` 1.18.0 + `addons/<name>/…` (+ `addons/envoy-gateway/manifests/{common,<cloud>}`) + `envs/<env>/addons/<name>.yaml` — S-17, [edge.md](edge.md) | same |
 | `northline-<env>` | `northline-<env>` | `deploy/helm/northline` with `values-<env>.yaml`, `values-<cloud>.yaml`, then `envs/<env>/infra.yaml`, `values.yaml`, `images.yaml` (later wins) | dev: automated (prune + self-heal); staging/prod: manual |
 
 The northline Application has one source: the chart directory, with the environment's files as value files relative
@@ -78,9 +80,9 @@ Helm hooks become Argo CD hooks (`pre-install/pre-upgrade` → PreSync, `post-*`
 
 | project | repositories | destinations | cluster-scoped kinds | namespaced kinds |
 |---|---|---|---|---|
-| `northline-<env>-gitops` | this repository | namespace `argocd` | none | `Application`, `AppProject` |
+| `northline-<env>-gitops` | this repository | namespace `argocd` | none | `Application`, `AppProject` (+ `Secret` for the OCI Helm repository entries of the add-ons, no credentials) |
 | `northline-<env>-platform` | this repository + each enabled add-on's chart repository | each add-on's namespace | `Namespace` + what each add-on declares (`addons.<name>.clusterResources`: CRDs, ClusterRoles, webhooks…) | any |
-| `northline-<env>` | this repository | namespace `northline-<env>` only | `Namespace` | the kinds the chart renders (`northline.namespaceResources`): ConfigMap, Secret, Service, ServiceAccount, Deployment, Job, HPA, PDB, NetworkPolicy, Ingress, HTTPRoute, ExternalSecret, SecretStore |
+| `northline-<env>` | this repository | namespace `northline-<env>` only | `Namespace` | the kinds the chart renders (`northline.namespaceResources`): ConfigMap, Secret, Service, ServiceAccount, Deployment, Job, HPA, PDB, NetworkPolicy, Ingress, HTTPRoute, Gateway, ClientTrafficPolicy, Issuer, Certificate, ExternalSecret, SecretStore |
 
 Anything else — another namespace, a ClusterRole from the app chart, a repository nobody listed — is refused by Argo
 CD at sync time. `orphanedResources.warn` flags objects in `northline-<env>` that Git doesn't know (hand-made fixes).

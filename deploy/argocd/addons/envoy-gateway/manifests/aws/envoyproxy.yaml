@@ -1,0 +1,21 @@
+# Envoy proxies of the northline Gateway on AWS (EKS): two replicas (one per zone when the cluster has several), a public
+# layer-4 load balancer in front, client addresses kept (externalTrafficPolicy: Local).
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: northline
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        replicas: 2
+      envoyService:
+        externalTrafficPolicy: Local
+        # A Network Load Balancer from EKS's built-in service controller (public subnets are tagged
+        # kubernetes.io/role/elb). With the AWS Load Balancer Controller installed, use
+        # aws-load-balancer-type: external + aws-load-balancer-nlb-target-type: ip instead.
+        annotations:
+          service.beta.kubernetes.io/aws-load-balancer-type: nlb
+          service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"

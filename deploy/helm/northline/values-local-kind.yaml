@@ -17,6 +17,7 @@ urls:
   studio: http://localhost:18080
   consumer: http://localhost:13000
   console: http://localhost:13200
+  pages: ""
   webauthnRpId: localhost
 
 # What Terraform's config_env would hold, for the in-cluster stand-ins.

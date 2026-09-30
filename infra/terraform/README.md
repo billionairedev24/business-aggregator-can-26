@@ -69,7 +69,7 @@ time before the key exists).
 | kubernetes | `network_id`, `subnet_ids`, `kubernetes_version`, `node_pools`, `kms_key`, `api_allowed_cidrs`, `admin_principals`, `workload_identities`, `deletion_protection` | `cluster_name`, `cluster_endpoint`, `cluster_ca_certificate`, `oidc_issuer_url`, `node_identity`, `workload_identities`, `kubeconfig_command` |
 | kms | `keys`, `key_users`, `deletion_protection` | `kms_provider`, `key_ids`, `key_refs` |
 | registry | `repositories`, `kms_key`, `readers`, `keep_images` | `registry_url`, `repository_urls` |
-| dns | `zone_name` | `zone_id`, `zone_name`, `name_servers` |
+| dns | `zone_name`, `record_writers` | `zone_id`, `zone_name`, `name_servers`, `cert_manager_dns01`, `external_dns` |
 | storage | `buckets`, `name_suffix`, `kms_key`, `writers`, `force_destroy` | `storage_provider`, `bucket_names`, `storage_region`, `storage_endpoint`, `storage_encryption_key` |
 | secrets | `secret_names`, `readers`, `kms_key`, `deletion_protection` | `secrets_provider`, `store`, `secret_refs` |
 | postgres | `network_id`, `subnet_ids`, `allowed_cidrs`, `kms_key`, `secret_store`, `deletion_protection`, `instance_size`, `storage_gb`, `high_availability`, `backup_retention_days`, `database_name`, `app_user`, `postgres_version` | `db_host`, `db_port`, `db_name`, `db_user`, `db_url`, `db_password_secret_ref`, `admin_secret_ref` |
@@ -138,6 +138,8 @@ The stacks create one cloud identity per Kubernetes service account below (names
 | `bff` | `northline-bff` | — |
 | `worker` | `northline-worker` | — |
 | `external-secrets` | `external-secrets/external-secrets` | read every secret of the environment |
+| `external-dns` | `external-dns/external-dns` | change records in the environment's DNS zone only (S-17): Route 53 `ChangeResourceRecordSets` on the zone + zone listing, Cloud DNS `roles/dns.admin` on the zone + `roles/dns.reader` on the project, Azure "DNS Zone Contributor" on the zone |
+| `cert-manager` | `cert-manager/cert-manager` | the same, for DNS-01 challenges (TXT records) when the Issuer uses DNS-01 (S-17) |
 
 The api needs no KMS access (it verifies tokens through the JWK set), so only `auth` is a user of the signing key.
 Rotation of the signing key goes through the env root variable `signing_key_ids` (`active` → `KMS_KEY_ID`,
@@ -148,8 +150,10 @@ ServiceAccounts and `pod_labels` on the pods; the apps then need no static cloud
 (`STORAGE_ACCESS_KEY`/`STORAGE_SECRET_KEY` stay empty).
 
 Every env root also outputs `helm_values` (S-6): `configEnv`, the four app `workloadIdentities` and `externalSecrets`
-(store settings from the stack's `external_secrets` output + `remoteKeys` = `secret_env`) — one values file for
-`deploy/helm/northline` (docs/runbooks/deploy.md, docs/runbooks/secrets.md).
+(store settings from the stack's `external_secrets` output + `remoteKeys` = `secret_env`) and `edge` (S-17: the
+cert-manager DNS-01 solver) — one values file for `deploy/helm/northline` (docs/runbooks/deploy.md,
+docs/runbooks/secrets.md) — and `gitops_addon_values` (S-17): the add-ons' identities and external-dns's zone
+settings (docs/runbooks/edge.md).
 
 ## Checks
 

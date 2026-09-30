@@ -1,0 +1,5 @@
+# S-17 with an Ingress controller instead of Gateway API (deploy/helm/validate.sh only).
+gateway: { enabled: false }
+ingress:
+  enabled: true
+  className: nginx

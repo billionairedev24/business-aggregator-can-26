@@ -11,3 +11,7 @@ configEnv:
   STORAGE_PROVIDER: azure
 externalSecrets:
   azure: { vaultUrl: "https://nl-dev-sec-abc123.vault.azure.net/" }
+edge:
+  certManager:
+    issuer:
+      dns01: { azureDNS: { subscriptionID: 00000000-0000-0000-0000-000000000000, resourceGroupName: northline-dev, hostedZoneName: dev.northline.ca, environment: AzurePublicCloud } }

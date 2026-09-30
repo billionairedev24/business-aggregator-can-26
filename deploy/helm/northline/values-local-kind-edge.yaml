@@ -1,0 +1,21 @@
+# kind + the S-17 edge (docs/runbooks/edge.md § Local rehearsal): layer on top of values-local-kind.yaml once
+# cert-manager and Envoy Gateway run in the cluster (deploy/argocd/kind/rehearse.sh edge). Hosts under
+# kind.northline.test (resolve them to the Envoy Service yourself, e.g. curl --resolve); certificates from a local CA
+# (Secret northline-local-ca) instead of Let's Encrypt, which can't reach a laptop.
+urls:
+  auth: https://auth.kind.northline.test
+  api: https://api.kind.northline.test
+  studio: https://studio.kind.northline.test
+  consumer: https://kind.northline.test
+  console: https://console.kind.northline.test
+  pages: https://pages.kind.northline.test
+  webauthnRpId: kind.northline.test
+
+gateway:
+  enabled: true
+edge:
+  enabled: true
+  certManager:
+    issuer:
+      type: ca
+      caSecretName: northline-local-ca
