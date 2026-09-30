@@ -204,8 +204,13 @@ Notes:
   nothing). Both read `deploy/kafka/topics.yaml`; `scripts/topics.sh --list` prints every derived topic. Topics are
   never auto-created (`KAFKA_AUTO_CREATE_TOPICS_ENABLE=false`), so a new topic goes into the catalogue first
   ([infrastructure.md § 5.3](infrastructure.md#53-kafka-topics-and-credentials)).
+- **Elasticsearch (S-42):** after `--profile search`, create the synonym sets and the indices the way the deploy Job
+  does: `cd server && ./gradlew :worker:searchIndices --args='apply'` (`plan` / `verify` change nothing). Run it again
+  after editing `deploy/search/synonyms-*.txt` — the change is live at once ([search.md](search.md)).
 - **Worker:** `cd server && ./gradlew :worker:bootRun` (no profile) needs Postgres, Kafka (`events`) and
-  Elasticsearch (`search`). The indexer is still a stub (S-43).
+  Elasticsearch (`search`) with the indices created (`:worker:searchIndices`). The search indexer (S-43) then fills them from
+  the events the api publishes (only when the api runs without `local`, which turns Kafka off) and, every minute, from
+  rows changed without an event; the dev seed's businesses have locations (`db/seed-dev/V121`) ([search.md § 6](search.md#6-the-indexer-s-43)).
 - **Partner webhooks (S-33):** the worker delivers what Settings › API endpoints subscribe to. To receive them on
   your machine, set `WEBHOOKS_ALLOW_LOCAL=true` in `server/.env` (allows `http://localhost` endpoints; private,
   link-local and metadata addresses stay refused) and add an endpoint such as `http://localhost:4000/hooks` — any

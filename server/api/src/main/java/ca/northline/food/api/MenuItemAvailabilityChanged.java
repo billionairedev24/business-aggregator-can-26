@@ -8,8 +8,8 @@ import org.springframework.modulith.events.Externalized;
 
 /**
  * {@code food.item_availability} — an item was sold out for the day or came back ("Available" / "Sold out today"), or
- * its customer visibility changed (published, approved, hidden). Search updates the dish. Topic {@code food.menu},
- * key = item id.
+ * its customer visibility changed (published, approved, hidden, deleted). Search updates or drops the dish. Topic
+ * {@code food.menu}, key = item id.
  *
  * @param visible the customer can order it now (published, approved, menu live, not sold out)
  * @param soldOutOn the Edmonton date it is sold out for, when sold out

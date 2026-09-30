@@ -2,6 +2,7 @@ dependencies {
     implementation(project(":platform"))
     implementation(project(":email")) // S-27: payout.failed email (templates, providers, once-per-recipient Mailer)
     implementation(project(":sms")) // S-27: SMS notifications (Twilio / AWS / log)
+    implementation(project(":search-index")) // S-42: listings index layout, synonym sets, bootstrap
     implementation(libs.ulid)
     implementation("org.springframework.boot:spring-boot-starter-kafka")
     implementation("org.springframework.boot:spring-boot-starter-data-elasticsearch")
@@ -22,6 +23,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testImplementation("org.testcontainers:testcontainers-junit-jupiter")
     testImplementation("org.testcontainers:testcontainers-kafka")
+    testImplementation("org.testcontainers:testcontainers-elasticsearch") // S-42: the search indices on Elasticsearch 9
     testImplementation(libs.wiremock) // S-33: partner endpoints (signature, retries, auto-disable)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
@@ -52,6 +54,15 @@ tasks.register<JavaExec>("kafkaTopics") {
     description = "plan | verify | apply the Kafka topics of deploy/kafka/topics.yaml (never deletes)"
     classpath = sourceSets["main"].runtimeClasspath
     mainClass.set("ca.northline.worker.topics.TopicsCommand")
+}
+
+// ./gradlew :worker:searchIndices --args='plan|verify|apply' — ES_* from the environment or server/.env
+// (docs/runbooks/search.md). S-42: synonym sets + the listings_en / listings_fr aliases and their versioned indices.
+tasks.register<JavaExec>("searchIndices") {
+    group = "northline"
+    description = "plan | verify | apply the Elasticsearch listings indices and synonym sets of deploy/search"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("ca.northline.worker.search.SearchIndicesCommand")
 }
 
 // ./gradlew :worker:dlqReplay --args='list|replay --topic=<topic>.dlq --group=<consumer group> [--event=<id>] [--force]'
