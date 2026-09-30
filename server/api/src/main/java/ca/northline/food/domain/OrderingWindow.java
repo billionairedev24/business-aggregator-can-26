@@ -32,7 +32,8 @@ public final class OrderingWindow {
      * @param mode {@code open_hours} | {@code window} | {@code quote} (the menu editor's schedule)
      * @param days ISO weekdays of a window (empty = every day)
      */
-    public static boolean menu(String mode, List<Integer> days, @Nullable String from, @Nullable String to, LocalDateTime at) {
+    public static boolean menu(
+            String mode, List<Integer> days, @Nullable String from, @Nullable String to, LocalDateTime at) {
         return switch (mode) {
             case "quote" -> false;
             case "window" -> {
@@ -40,7 +41,8 @@ public final class OrderingWindow {
                     yield false;
                 }
                 var t = at.toLocalTime();
-                yield (from == null || !t.isBefore(LocalTime.parse(from))) && (to == null || t.isBefore(LocalTime.parse(to)));
+                yield (from == null || !t.isBefore(LocalTime.parse(from)))
+                        && (to == null || t.isBefore(LocalTime.parse(to)));
             }
             default -> true;
         };

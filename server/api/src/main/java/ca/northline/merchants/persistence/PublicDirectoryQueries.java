@@ -58,6 +58,14 @@ class PublicDirectoryQueries implements PublicDirectory {
                 .optional();
     }
 
+    @Override
+    public Optional<PublicBusiness> byId(String merchantId) {
+        return jdbc.sql(SELECT + " and m.id = :id")
+                .param("id", merchantId)
+                .query((rs, _) -> row(rs))
+                .optional();
+    }
+
     private static PublicBusiness row(ResultSet rs) throws SQLException {
         return new PublicBusiness(
                 rs.getString("id"),

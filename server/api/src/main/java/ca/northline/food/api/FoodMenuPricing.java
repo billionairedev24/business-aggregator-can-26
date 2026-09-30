@@ -23,7 +23,11 @@ public interface FoodMenuPricing {
     }
 
     /** @param note special instructions ("sauce on the side"), ≤ 140 characters */
-    record ItemLine(String itemId, int qty, List<String> optionIds, @Nullable String note) {
+    record ItemLine(
+            String itemId,
+            int qty,
+            List<String> optionIds,
+            @Nullable String note) {
         public ItemLine {
             optionIds = List.copyOf(optionIds);
         }
@@ -65,5 +69,10 @@ public interface FoodMenuPricing {
     }
 
     /** A chosen option ("Large", +300) or, in a combo, a chosen dish ({@code group} = the slot's label). */
-    record Choice(@Nullable String groupId, @Nullable String group, @Nullable String optionId, String name, long deltaCents) {}
+    record Choice(
+            @Nullable String groupId,
+            @Nullable String group,
+            @Nullable String optionId,
+            String name,
+            long deltaCents) {}
 }

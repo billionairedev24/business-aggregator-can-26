@@ -44,7 +44,9 @@ class OrderableMenu {
             List<ComboRow> combos) {
 
         List<ItemRow> itemsOf(String sectionId) {
-            return items.values().stream().filter(i -> i.sectionId().equals(sectionId)).toList();
+            return items.values().stream()
+                    .filter(i -> i.sectionId().equals(sectionId))
+                    .toList();
         }
 
         Optional<ItemRow> item(String id) {
@@ -66,7 +68,11 @@ class OrderableMenu {
                     && !soldOut(i, today)
                     && OrderingWindow.item(i.availability(), local)
                     && OrderingWindow.menu(
-                            menu.schedule().mode(), menu.schedule().days(), menu.schedule().from(), menu.schedule().to(), local);
+                            menu.schedule().mode(),
+                            menu.schedule().days(),
+                            menu.schedule().from(),
+                            menu.schedule().to(),
+                            local);
         }
 
         /** A live combo, or a scheduled one inside its window. */
@@ -80,11 +86,15 @@ class OrderableMenu {
         private static boolean window(ComboRow c, Instant at) {
             var w = c.schedule();
             return w == null
-                    || OrderingWindow.menu("window", w.days(), w.from(), w.to(), LocalDateTime.ofInstant(at, KitchenTime.ZONE));
+                    || OrderingWindow.menu(
+                            "window", w.days(), w.from(), w.to(), LocalDateTime.ofInstant(at, KitchenTime.ZONE));
         }
 
         List<ModifierGroup> groupsOf(ItemRow i) {
-            return i.modifierGroupIds().stream().map(groups::get).filter(java.util.Objects::nonNull).toList();
+            return i.modifierGroupIds().stream()
+                    .map(groups::get)
+                    .filter(java.util.Objects::nonNull)
+                    .toList();
         }
 
         static List<PickCheck.Group> pickGroups(List<ModifierGroup> groups) {
@@ -121,7 +131,8 @@ class OrderableMenu {
                 .collect(Collectors.toMap(MenuRow::id, Function.identity(), (a, _) -> a, LinkedHashMap::new));
         var sections = menus.sections(merchantId, null).stream()
                 .filter(s -> live.containsKey(s.menuId()))
-                .sorted(java.util.Comparator.<SectionRow>comparingInt(s -> List.copyOf(live.keySet()).indexOf(s.menuId()))
+                .sorted(java.util.Comparator.<SectionRow>comparingInt(
+                                s -> List.copyOf(live.keySet()).indexOf(s.menuId()))
                         .thenComparingInt(SectionRow::sort))
                 .toList();
         var items = menus.items(merchantId, null).stream()

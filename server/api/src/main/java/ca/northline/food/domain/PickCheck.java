@@ -18,7 +18,13 @@ public final class PickCheck {
     public record Option(String id, String name, boolean soldOut) {}
 
     public record Group(
-            String id, String name, PickRule rule, int count, boolean required, Set<String> showForOptionIds, List<Option> options) {
+            String id,
+            String name,
+            PickRule rule,
+            int count,
+            boolean required,
+            Set<String> showForOptionIds,
+            List<Option> options) {
         public Group {
             showForOptionIds = Set.copyOf(showForOptionIds);
             options = List.copyOf(options);
@@ -34,7 +40,8 @@ public final class PickCheck {
             return out;
         }
         var visible = groups.stream()
-                .filter(g -> g.showForOptionIds().isEmpty() || g.showForOptionIds().stream().anyMatch(picked::contains))
+                .filter(g -> g.showForOptionIds().isEmpty()
+                        || g.showForOptionIds().stream().anyMatch(picked::contains))
                 .toList();
         var known = new HashSet<String>();
         visible.forEach(g -> g.options().forEach(o -> known.add(o.id())));
@@ -43,7 +50,8 @@ public final class PickCheck {
             return out;
         }
         for (var g : visible) {
-            var n = (int) g.options().stream().filter(o -> picked.contains(o.id())).count();
+            var n = (int)
+                    g.options().stream().filter(o -> picked.contains(o.id())).count();
             var ok = switch (g.rule()) {
                 case EXACTLY -> n == g.count() || (!g.required() && n == 0);
                 case AT_LEAST -> n >= g.count() || (!g.required() && n == 0);

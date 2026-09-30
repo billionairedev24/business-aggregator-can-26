@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:orders.order_placed:1",
+  "description": "order.placed — an order was paid (escrow held) and handed to its merchants; food (S-57) and goods (S-51) — topic orders.order, key = order id. No PII.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "orderType",
+    "customerId",
+    "merchantIds",
+    "lineCount",
+    "totalCents"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "orders.orders.id"
+    },
+    "orderType": {
+      "enum": [
+        "food",
+        "goods"
+      ]
+    },
+    "customerId": {
+      "type": "string",
+      "description": "identity.users.id"
+    },
+    "merchantIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "description": "merchants.merchants.id"
+      },
+      "minItems": 1
+    },
+    "fulfilmentMode": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "delivery",
+        "pickup",
+        null
+      ]
+    },
+    "scheduledFor": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "lineCount": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "totalCents": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

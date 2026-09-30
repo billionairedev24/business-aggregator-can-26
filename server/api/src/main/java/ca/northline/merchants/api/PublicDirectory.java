@@ -20,6 +20,9 @@ public interface PublicDirectory {
     /** An active business by its storefront slug. */
     Optional<PublicBusiness> bySlug(String slug);
 
+    /** An active business by id. */
+    Optional<PublicBusiness> byId(String merchantId);
+
     /**
      * @param slug the storefront's slug ({@code /providers/<slug>}, {@code /food/<slug>}), or null without a storefront
      * @param categoryIds approved categories, the one chosen first leading

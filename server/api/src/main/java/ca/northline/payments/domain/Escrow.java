@@ -39,6 +39,11 @@ public class Escrow {
     private final long feeCents;
     private final int takeRateBps;
     private final long taxCents;
+    /** S-57: Northline's own charges captured with this escrow (fees, their tax, the courier's tip); 0 elsewhere. */
+    private final long platformFeeCents;
+
+    private final long platformTaxCents;
+    private final long tipCents;
     private final String label;
     private final @Nullable String orderNumber;
     private final @Nullable String customerId;
@@ -70,6 +75,9 @@ public class Escrow {
                 .takeRateBps(takeRateBps)
                 .feeCents(Fees.percentOf(hold.amountCents(), takeRateBps))
                 .taxCents(hold.taxCents())
+                .platformFeeCents(hold.platform() == null ? 0 : hold.platform().feeCents())
+                .platformTaxCents(hold.platform() == null ? 0 : hold.platform().feeTaxCents())
+                .tipCents(hold.platform() == null ? 0 : hold.platform().tipCents())
                 .label(hold.label())
                 .orderNumber(hold.orderNumber())
                 .customerId(hold.customerId())
@@ -81,6 +89,11 @@ public class Escrow {
                 .state(EscrowState.HELD)
                 .createdAt(now)
                 .build();
+    }
+
+    /** What the card is charged at capture: the merchant's amount, its tax and Northline's own charges. */
+    public long capturedCents() {
+        return amountCents + taxCents + platformFeeCents + platformTaxCents + tipCents;
     }
 
     public long netCents() {
