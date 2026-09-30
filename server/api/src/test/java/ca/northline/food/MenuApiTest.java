@@ -225,6 +225,14 @@ class MenuApiTest extends IntegrationTest {
         badges.forEach(b -> all.putAll(b.badges(
                 new NavBadgeContributor.Context(k.merchantId(), k.ownerId(), MerchantRole.OWNER, Locale.CANADA))));
         assertThat(all).containsEntry("menu", "2 sections");
+
+        // S-43: deleting a live dish tells search to drop it
+        mvc.perform(delete(k.base() + "/menu-items/{id}", itemId).with(owner)).andExpect(status().isNoContent());
+        assertThat(events.stream(MenuItemAvailabilityChanged.class)).anySatisfy(e -> {
+            assertThat(e.aggregateId()).isEqualTo(itemId);
+            assertThat(e.visible()).isFalse();
+            assertThat(e.soldOutOn()).isNull();
+        });
     }
 
     @Test
