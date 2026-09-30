@@ -21,7 +21,8 @@ public final class SharedPostgres {
                 .withDatabaseName("northline")
                 .withUsername("northline")
                 .withPassword("northline")
-                // every cached Spring test context keeps its own pool (10): leave room for all of them (S-32)
+                // Every cached Spring test context keeps its own Hikari pool (10); the default 100 connections ran out
+                // once the suite passed ~10 contexts ("too many clients already").
                 .withCommand("postgres", "-c", "fsync=off", "-c", "max_connections=300");
         container.start();
         return container;

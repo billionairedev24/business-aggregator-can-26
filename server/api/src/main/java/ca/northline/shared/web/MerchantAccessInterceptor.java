@@ -3,6 +3,7 @@ package ca.northline.shared.web;
 import ca.northline.shared.security.CurrentMember;
 import ca.northline.shared.security.MerchantAccess;
 import ca.northline.shared.security.MerchantAccessDenied;
+import ca.northline.shared.security.PartnerAccess;
 import ca.northline.shared.security.RequiresMerchant;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -47,6 +48,15 @@ class MerchantAccessInterceptor implements HandlerInterceptor {
             log.error("Handler {} is under {{merchantId}} but has no @RequiresMerchant — denying.", method);
             throw new MerchantAccessDenied(
                     MerchantAccessDenied.Reason.UNGUARDED_ENDPOINT, "This endpoint is not available.");
+        }
+        if (access.isPartner()) { // S-30: partner clients only where a handler opts in
+            var partner = AnnotatedElementUtils.findMergedAnnotation(method.getMethod(), PartnerAccess.class);
+            if (partner == null) {
+                throw new MerchantAccessDenied(
+                        MerchantAccessDenied.Reason.PARTNER_NOT_ALLOWED, "This endpoint isn't open to partners.");
+            }
+            access.requirePartner(merchantId, partner);
+            return true;
         }
         request.setAttribute(CURRENT_MEMBER, access.require(merchantId, required.value()));
         return true;

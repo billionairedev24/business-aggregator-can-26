@@ -3,3 +3,4 @@
 spring.autoconfigure.exclude: ""        # undo local's exclusion of the Redis session auto-configuration
 management.health.redis.enabled: true
 northline.auth.rate-limits.store: redis   # S-9 rate limits in Valkey too (shared by every instance, survive restarts)
+northline.auth.replay.store: redis        # S-29 one-time ids and DPoP nonces in Valkey too

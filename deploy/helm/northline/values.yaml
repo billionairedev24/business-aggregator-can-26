@@ -32,9 +32,9 @@ global:
 # API_PUBLIC_URL, WEBAUTHN_RP_ID, the Studio's NL_AUTH_ORIGIN and the ingress hosts.
 urls:
   auth: https://auth.dev.northline.ca
-  # The api's public host serves only the routes that must bypass the BFF: Stripe webhooks (S-12,
-  # /api/v1/webhooks/stripe[/connect]), calendar change notifications (S-32, /api/v1/webhooks/calendar/…) and the
-  # email unsubscribe page (S-13, /api/v1/email/unsubscribe).
+  # The api's public host serves the routes that must bypass the BFF: Stripe webhooks (S-12,
+  # /api/v1/webhooks/stripe[/connect]), calendar change notifications (S-32, /api/v1/webhooks/calendar/…), the email unsubscribe page (S-13, /api/v1/email/unsubscribe) and — with
+  # apps.api.tokenClients (S-29) — /api/v1 for the mobile apps (DPoP-bound tokens, no BFF).
   api: https://api.dev.northline.ca
   studio: https://studio.dev.northline.ca
   consumer: https://dev.northline.ca
@@ -254,6 +254,18 @@ kafkaTopics:
 # Registers the OAuth clients (S-122) after every install/upgrade: the auth image running OAuthClientsCommand sync
 # with the auth Deployment's environment. Idempotent; northline-auth also syncs at start unless
 # apps.auth.env.OAUTH_CLIENTS_SYNC_ON_STARTUP is "false".
+# S-30 partner API clients (docs/runbooks/partners.md): northline.oauth.partners.<name> → OAuth client partner:<name>
+# (client_credentials + private_key_jwt). Rendered into the ConfigMap northline-auth-partners, read by auth and the
+# oauth-clients Job. Example:
+#   partners:
+#     acme:
+#       name: Acme Books
+#       jwk-set-url: https://acme.example/.well-known/jwks.json   # or public-keys: ['{"kty":"EC","crv":"P-256",…,"kid":"k1"}']
+#       scopes: [api.read]
+#       merchants: [01J9ZD3V00000000000000PWM1]
+#       revoked: false
+partners: {}
+
 oauthClientsJob:
   enabled: true
   command: sync                   # sync | list
@@ -304,7 +316,10 @@ apps:
       startup: { path: /actuator/health/liveness, periodSeconds: 5, failureThreshold: 60 }
       liveness: { path: /actuator/health/liveness, periodSeconds: 10, failureThreshold: 3 }
       readiness: { path: /actuator/health/readiness, periodSeconds: 5, failureThreshold: 3 }
-    public: true                  # the ingress reaches it for the Stripe and calendar webhooks and email unsubscribe only (ingress.yaml)
+    public: true                  # the ingress reaches it for the Stripe and calendar webhooks and email unsubscribe (ingress.yaml)
+    # S-29: route all of /api/v1 on the api host, for clients that hold their own tokens (the mobile apps, with DPoP;
+    # partners). false = webhooks and unsubscribe only, as before. Every other endpoint still needs a token.
+    tokenClients: true
     allowFrom: [bff]
     extraVolumes: []
     extraVolumeMounts: []

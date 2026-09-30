@@ -32,6 +32,7 @@ class SignInController {
 
     private final SignInService signIn;
     private final SessionSignIn sessions;
+    private final AppAuthorizationResume apps;
 
     @PostMapping
     AuthResponses.SignInStarted start(@Valid @RequestBody AuthRequests.Identifier body) {
@@ -74,6 +75,6 @@ class SignInController {
             SignInService.SignedIn done, HttpServletRequest request, HttpServletResponse response) {
         var factors = List.of(done.factor());
         sessions.signIn(done.account().id(), factors, done.sessionId(), request, response);
-        return AuthResponses.Session.of(done.account(), factors);
+        return AuthResponses.Session.of(done.account(), factors).continuingTo(apps.resume(request));
     }
 }

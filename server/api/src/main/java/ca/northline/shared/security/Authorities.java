@@ -7,6 +7,8 @@ public final class Authorities {
     public static final String MERCHANT_PREFIX = "MERCHANT_";
     /** Present when the token has {@code acr=mfa} (passkey or TOTP second factor). */
     public static final String MFA = "FACTOR_MFA";
+    /** S-30: a partner client's token ({@code roles: [partner]}). */
+    public static final String PARTNER = ROLE_PREFIX + "PARTNER";
 
     private Authorities() {}
 }

@@ -18,6 +18,7 @@ import ca.northline.shared.CodedEnum;
 import ca.northline.shared.ListResponse;
 import ca.northline.shared.RuleViolation;
 import ca.northline.shared.security.CurrentMember;
+import ca.northline.shared.security.PartnerAccess;
 import ca.northline.shared.security.RequiresMerchant;
 import jakarta.validation.Valid;
 import java.util.Locale;
@@ -53,6 +54,8 @@ class ListingController {
 
     @GetMapping("/listings")
     @RequiresMerchant(VIEW)
+    @PartnerAccess(
+            PartnerAccess.READ) // S-30: partners (inventory/accounting sync) read the listings of their businesses
     ListResponse<ListingItem> list(
             @PathVariable String merchantId,
             @RequestParam(required = false) @Nullable String kind,
@@ -71,6 +74,7 @@ class ListingController {
 
     @GetMapping("/listings/{listingId}")
     @RequiresMerchant(VIEW)
+    @PartnerAccess(PartnerAccess.READ)
     ListingDetail get(@PathVariable String merchantId, @PathVariable String listingId) {
         return mapper.toDetail(viewListing.view(merchantId, listingId), merchantId);
     }

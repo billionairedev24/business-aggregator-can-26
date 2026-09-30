@@ -41,6 +41,7 @@ class RegistrationController {
 
     private final RegistrationService registration;
     private final SessionSignIn sessions;
+    private final AppAuthorizationResume apps;
     private final AuthProperties props;
     private final Clock clock;
 
@@ -101,7 +102,7 @@ class RegistrationController {
             RegistrationService.Created created, HttpServletRequest request, HttpServletResponse response) {
         var factors = List.of(Factor.PHONE_OTP, created.secondFactor());
         sessions.signIn(created.account().id(), factors, created.sessionId(), request, response);
-        return AuthResponses.Session.of(created.account(), factors);
+        return AuthResponses.Session.of(created.account(), factors).continuingTo(apps.resume(request));
     }
 
     private AuthResponses.RegistrationStep step(String step, PendingRegistration pending) {

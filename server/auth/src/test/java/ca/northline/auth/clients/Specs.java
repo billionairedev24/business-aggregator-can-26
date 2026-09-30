@@ -50,6 +50,16 @@ final class Specs {
         for (var i = 0; i < idsAndSpecs.length; i += 2) {
             clients.put((String) idsAndSpecs[i], (ClientSpec) idsAndSpecs[i + 1]);
         }
-        return new OAuthClientProperties(true, Map.copyOf(clients));
+        return new OAuthClientProperties(true, Map.copyOf(clients), Map.of());
+    }
+
+    /** A partner (S-30) with registered public keys (JWK JSON). */
+    static PartnerSpec partner(List<String> publicKeys, List<String> scopes, List<String> merchants) {
+        return new PartnerSpec(null, null, publicKeys, scopes, merchants, Duration.ofMinutes(15), false);
+    }
+
+    /** Clients and partners together. */
+    static OAuthClientProperties withPartners(OAuthClientProperties clients, Map<String, PartnerSpec> partners) {
+        return new OAuthClientProperties(true, clients.clients(), Map.copyOf(partners));
     }
 }

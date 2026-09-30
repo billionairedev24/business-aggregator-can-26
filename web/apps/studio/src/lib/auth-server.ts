@@ -25,3 +25,19 @@ export async function endAuthSession(): Promise<void> {
 export function bffLoginUrl(next: string): string {
   return `/bff/login?next=${encodeURIComponent(next)}`;
 }
+
+/**
+ * S-29: a mobile app (Northline, Northline Courier) opened northline-auth's authorization endpoint in the phone's
+ * browser, which came here to sign in. The sign-in answer then names that request (`continueTo`) and the browser goes
+ * back to it — the app gets its code — instead of the Studio's BFF hand-off. Only an authorization request on
+ * northline-auth itself is followed.
+ */
+export function appAuthorizationUrl(continueTo: string | null | undefined): string | null {
+  if (!continueTo) return null;
+  try {
+    const url = new URL(continueTo);
+    return url.origin === new URL(AUTH_ORIGIN).origin && url.pathname === '/oauth2/authorize' ? url.href : null;
+  } catch {
+    return null;
+  }
+}

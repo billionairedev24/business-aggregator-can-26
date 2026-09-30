@@ -98,6 +98,9 @@ printed in the auth log (`Verification code for …`). Passkeys work on `localho
 **OAuth clients:** auth registers `studio-bff`, `consumer-bff`, `console-bff`, `mobile-consumer` and `courier-app` in
 its database at every start (local values in `application-local.yml`); `./gradlew :auth:oauthClients --args='list'`
 compares configuration and database without starting the server ([README § OAuth clients](README.md#oauth-clients-s-122)).
+The mobile apps (DPoP, S-29) sign in against a local auth too — redirect `http://localhost:3000/app/oauth2redirect` or
+the custom scheme; their DPoP proof ids and nonces are kept in memory under `local` (`local,valkey`: in Valkey). Walk
+through the flow with curl: [mobile-auth.md § Try it locally](mobile-auth.md#try-it-locally).
 
 **Signing keys:** northline-auth keeps its ES256 key pair in `~/.northline/auth-signing-keys/signing-keys.jwks.json`
 (created on first start; `SIGNING_KEYS_DIR` moves it), so restarting auth keeps you signed in and two auth instances

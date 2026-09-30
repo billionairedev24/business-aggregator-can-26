@@ -33,6 +33,7 @@ for env in dev staging prod; do
     check "$env × $cloud" -f "$CHART/values-$env.yaml" -f "$CHART/values-$cloud.yaml" -f "test-values/identities-$cloud.yaml"
   done
 done
+check "prod × aws + partners (S-30)" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml -f test-values/partners.yaml
 check "local-kind" -f "$CHART/values-local-kind.yaml"
 check "local-kind + External Secrets (fake)" -f "$CHART/values-local-kind.yaml" -f "$CHART/values-local-kind-eso.yaml"
 check "local-kind + edge (local CA)" -f "$CHART/values-local-kind.yaml" -f "$CHART/values-local-kind-edge.yaml"

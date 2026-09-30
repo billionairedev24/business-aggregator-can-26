@@ -3,6 +3,8 @@ package ca.northline.shared.security;
 import static ca.northline.shared.security.MerchantAccessDenied.Reason.INSUFFICIENT_ROLE;
 import static ca.northline.shared.security.MerchantAccessDenied.Reason.MFA_REQUIRED;
 import static ca.northline.shared.security.MerchantAccessDenied.Reason.NOT_A_MEMBER;
+import static ca.northline.shared.security.MerchantAccessDenied.Reason.NOT_BOUND;
+import static ca.northline.shared.security.MerchantAccessDenied.Reason.PARTNER_NOT_ALLOWED;
 
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -54,6 +56,34 @@ public class MerchantAccess {
             throw new MerchantAccessDenied(INSUFFICIENT_ROLE, "Your role (%s) can't do this.".formatted(role.code()));
         }
         return new CurrentMember(merchantId, user.userId(), role);
+    }
+
+    /** Whether the caller is a partner client (S-30) rather than a person. */
+    public boolean isPartner() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null
+                && auth.getAuthorities().stream().anyMatch(a -> Authorities.PARTNER.equals(a.getAuthority()));
+    }
+
+    /**
+     * S-30: authorizes a partner for {@code merchantId} on an endpoint marked {@link PartnerAccess}: the business must be
+     * in the token's {@code merchants} claim (the partner's binding) and the token must carry the scope. Partners have
+     * no membership and never get a {@link CurrentMember}.
+     */
+    public void requirePartner(String merchantId, PartnerAccess access) {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        var authorities = auth == null
+                ? Set.<String>of()
+                : auth.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .collect(Collectors.toSet());
+        if (!authorities.contains(Authorities.SCOPE_PREFIX + access.value())) {
+            throw new MerchantAccessDenied(
+                    PARTNER_NOT_ALLOWED, "This partner token lacks the %s scope.".formatted(access.value()));
+        }
+        if (!authorities.contains(Authorities.MERCHANT_PREFIX + merchantId)) {
+            throw new MerchantAccessDenied(NOT_BOUND, "This partner doesn't act for this business.");
+        }
     }
 
     /** Boolean form for SpEL ({@code @PreAuthorize("@merchantAccess.has(#merchantId, 'EDIT')")}). */

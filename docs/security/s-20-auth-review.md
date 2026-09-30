@@ -146,9 +146,9 @@ concurrent requests (`SignInApiTest.totpCode_cannotBeReplayed`, `StepUpApiTest.u
 | item | result |
 |---|---|
 | PKCE | **OK** — required for every client (the catalogue refuses `require-pkce: false` for public clients and under staging/prod); only S256 (a missing challenge or `plain` gets no code — `SecurityReviewApiTest.OAuth.pkceIsRequired_andOnlyS256`); the BFF sends `code_verifier` (`BffHardeningTest`). |
-| lifetimes | **OK** — authorization code 5 min, access token 10 min (asserted), ID token 30 min, refresh token 12 h (BFFs) = session idle; mobile 30 days (local only today). |
+| lifetimes | **OK** — authorization code 5 min, access token 10 min (asserted), ID token 30 min, refresh token 12 h (BFFs) = session idle; mobile 30 days, courier 12 h, both DPoP-bound (S-29). |
 | refresh rotation | **OK** — a new refresh token on every refresh; the previous one answers `invalid_grant` (`tokensLiveTenMinutes_andRefreshTokensRotate`). |
-| refresh token reuse detection (revoke the family on replay) | **accepted risk** — Spring Authorization Server doesn't do it; the only cloud clients are confidential BFFs whose tokens never leave the server. To revisit with the mobile apps (S-28/S-87, with DPoP). |
+| refresh token reuse detection (revoke the family on replay) | **accepted risk** — Spring Authorization Server doesn't do it; the only cloud clients are confidential BFFs whose tokens never leave the server. To revisit with the mobile apps (S-28/S-87, with DPoP). **Closed for public clients by S-29:** a rotated refresh token of a mobile app presented again revokes the family and ends the sign-in (`MobileDpopApiTest.ReuseDetection`); the BFFs keep the accepted risk (their tokens never leave the server, and replicas refreshing together would look like reuse). |
 
 ### 12. Tokens or PII in logs
 
