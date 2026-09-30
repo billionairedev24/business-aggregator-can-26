@@ -93,6 +93,7 @@ public final class ShopViews {
      *
      * @param day {@code today} | {@code tomorrow} | {@code later}, in America/Edmonton
      * @param orderBy the customer's cut-off
+     * @param packBy when the shops have it packed for the courier (S-50: "Glenmore packs at 5:45")
      */
     public record Run(
             String windowId,
@@ -101,6 +102,78 @@ public final class ShopViews {
             Instant startsAt,
             Instant endsAt,
             Instant orderBy,
+            Instant packBy,
             long feeCents,
             int households) {}
+
+    /**
+     * The product page (S-50, design 06 {@code product}): the catalogue record and every shop of the market selling it,
+     * best first — in stock, then the earliest run it makes, then price.
+     *
+     * @param unit the record's size / volume attribute ("900 g")
+     */
+    public record ProductPage(
+            String productId,
+            String name,
+            @Nullable String brand,
+            @Nullable String description,
+            List<String> bullets,
+            @Nullable String unit,
+            String departmentSlug,
+            String departmentName,
+            String market,
+            boolean served,
+            List<Offer> offers,
+            @Nullable Direct direct) {
+
+        public ProductPage {
+            bullets = List.copyOf(bullets);
+            offers = List.copyOf(offers);
+        }
+    }
+
+    /**
+     * One shop's offer.
+     *
+     * @param priceCents the price of the cheapest variant in stock (the offer's price without variants)
+     * @param stock units available (all variants together)
+     * @param lowStock at or under the shop's low-stock mark
+     * @param variantTheme {@code none} | {@code size} | {@code colour} | {@code size_colour} | {@code length} | …
+     * @param runs the next two pooled runs it can go on (empty when out of stock or not delivered pooled)
+     * @param images approved images, main first
+     * @param more other products of the same shop ("Also from Glenmore")
+     */
+    public record Offer(
+            String offerId,
+            String merchantId,
+            String shopName,
+            String tier,
+            double rating,
+            int ratingCount,
+            long priceCents,
+            @Nullable Long compareAtCents,
+            @Nullable String condition,
+            int stock,
+            boolean lowStock,
+            @Nullable String returnsPolicy,
+            String variantTheme,
+            List<Variant> variants,
+            List<Run> runs,
+            List<String> images,
+            List<MoreItem> more) {
+
+        public Offer {
+            variants = List.copyOf(variants);
+            runs = List.copyOf(runs);
+            images = List.copyOf(images);
+            more = List.copyOf(more);
+        }
+    }
+
+    public record Variant(String variantId, String value, long priceCents, int stock) {}
+
+    public record MoreItem(String productId, String name, long priceCents) {}
+
+    /** The direct courier ("direct courier in 45 min", $9.99). */
+    public record Direct(int etaMinutes, long feeCents) {}
 }

@@ -2,6 +2,7 @@ package ca.northline.catalogue.application;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -37,6 +38,53 @@ public interface ShopCatalogue {
 
     /** Distinct products live in {@code categoryId}. */
     int productCount(Collection<String> merchantIds, String categoryId);
+
+    /** A shop product's record, if some shop sells it (approved and live) anywhere. */
+    Optional<ProductRecord> product(String productId, String lang);
+
+    /** Live offers of the product by the given merchants. */
+    List<OfferRow> offers(String productId, Collection<String> merchantIds);
+
+    /** Variants of the offers, by position. */
+    List<VariantRow> variants(Collection<String> offerIds);
+
+    /** Up to {@code perShop} other live products of each merchant, most popular first. */
+    List<MoreRow> moreFrom(Collection<String> merchantIds, String exceptProductId, String lang, int perShop);
+
+    /**
+     * @param imageIds the record's images (shared catalogue images), main first
+     */
+    record ProductRecord(
+            String productId,
+            String name,
+            @Nullable String brand,
+            @Nullable String description,
+            List<String> bullets,
+            @Nullable String unit,
+            String categoryId,
+            List<String> imageIds) {}
+
+    /**
+     * @param stock the offer's stock, or the sum of its variants'
+     * @param handlingDays as in {@link ShopStats}
+     * @param imageIds own images when the offer uses its own, else empty (the record's apply)
+     */
+    record OfferRow(
+            String offerId,
+            String merchantId,
+            long priceCents,
+            @Nullable Long compareAtCents,
+            @Nullable String condition,
+            int stock,
+            @Nullable Integer lowStockAt,
+            @Nullable String returnsPolicy,
+            String variantTheme,
+            @Nullable Integer handlingDays,
+            List<String> imageIds) {}
+
+    record VariantRow(String offerId, String variantId, String value, long priceCents, int stock) {}
+
+    record MoreRow(String merchantId, String productId, String name, long priceCents) {}
 
     record Category(String id, @Nullable String parentId, String name) {
 

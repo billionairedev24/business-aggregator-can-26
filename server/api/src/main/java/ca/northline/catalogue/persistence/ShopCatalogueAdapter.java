@@ -3,6 +3,8 @@ package ca.northline.catalogue.persistence;
 import ca.northline.catalogue.application.ShopCatalogue;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -121,6 +123,105 @@ class ShopCatalogueAdapter implements ShopCatalogue {
                         rs.getString("image_id"),
                         Sql.intOrNull(rs, "handling"),
                         rs.getInt("sellers")))
+                .list();
+    }
+
+    @Override
+    public Optional<ProductRecord> product(String productId, String lang) {
+        return jdbc.sql("""
+                        select cp.id, coalesce(cp.title_i18n ->> :lang, cp.title, '') as name, cp.brand, cp.description,
+                               cp.bullets, coalesce(cp.attributes ->> 'volume', cp.attributes ->> 'size') as unit,
+                               cp.category_id, cp.image_set
+                          from catalogue.catalog_products cp
+                         where cp.id = :id and cp.category_id like 'shop.%'
+                           and exists (select 1 from catalogue.offers o where o.product_id = cp.id
+                                          and o.vetting = 'approved' and o.status = 'live')
+                        """)
+                .param("id", productId)
+                .param("lang", lang)
+                .query((rs, _) -> new ProductRecord(
+                        rs.getString("id"),
+                        rs.getString("name"),
+                        rs.getString("brand"),
+                        rs.getString("description"),
+                        Sql.strings(rs, "bullets"),
+                        rs.getString("unit"),
+                        rs.getString("category_id"),
+                        Sql.strings(rs, "image_set")))
+                .optional();
+    }
+
+    @Override
+    public List<OfferRow> offers(String productId, Collection<String> merchantIds) {
+        if (merchantIds.isEmpty()) {
+            return List.of();
+        }
+        return jdbc.sql("""
+                        select o.id, o.merchant_id, o.price_cents, o.compare_at_cents, o.condition, o.low_stock_at,
+                               o.returns_policy, o.variant_theme, o.image_source, o.own_images,
+                               coalesce((select sum(v.stock) from catalogue.variants v where v.offer_id = o.id),
+                                        o.stock, 0) as available,
+                        """ + HANDLING + " as handling " + LIVE + " and o.product_id = :product")
+                .param("merchants", Sql.array(merchantIds))
+                .param("excluded", new String[0])
+                .param("category", null)
+                .param("product", productId)
+                .query((rs, _) -> new OfferRow(
+                        rs.getString("id"),
+                        rs.getString("merchant_id"),
+                        rs.getLong("price_cents"),
+                        Sql.longOrNull(rs, "compare_at_cents"),
+                        rs.getString("condition"),
+                        rs.getInt("available"),
+                        Sql.intOrNull(rs, "low_stock_at"),
+                        rs.getString("returns_policy"),
+                        Objects.requireNonNullElse(rs.getString("variant_theme"), "none"),
+                        Sql.intOrNull(rs, "handling"),
+                        "own".equals(rs.getString("image_source")) ? Sql.strings(rs, "own_images") : List.of()))
+                .list();
+    }
+
+    @Override
+    public List<VariantRow> variants(Collection<String> offerIds) {
+        return jdbc.sql("""
+                        select offer_id, id, coalesce(attrs ->> 'value', sku, '') as value,
+                               coalesce(price_cents, 0) as price_cents, coalesce(stock, 0) as stock
+                          from catalogue.variants where offer_id = any(:ids) order by offer_id, position, sku
+                        """)
+                .param("ids", Sql.array(offerIds))
+                .query((rs, _) -> new VariantRow(
+                        rs.getString("offer_id"),
+                        rs.getString("id"),
+                        rs.getString("value"),
+                        rs.getLong("price_cents"),
+                        rs.getInt("stock")))
+                .list();
+    }
+
+    @Override
+    public List<MoreRow> moreFrom(Collection<String> merchantIds, String exceptProductId, String lang, int perShop) {
+        return jdbc.sql("""
+                        select merchant_id, product_id, name, price from (
+                          select o.merchant_id, o.product_id,
+                                 coalesce(cp.title_i18n ->> :lang, cp.title, o.title, '') as name,
+                                 coalesce((select min(v.price_cents) from catalogue.variants v where v.offer_id = o.id),
+                                          o.price_cents, 0) as price,
+                                 row_number() over (partition by o.merchant_id
+                                                    order by o.sales_30d desc, o.created_at desc, o.id) as rn
+                            from catalogue.offers o join catalogue.catalog_products cp on cp.id = o.product_id
+                           where o.vetting = 'approved' and o.status = 'live' and o.merchant_id = any(:merchants)
+                             and o.product_id <> :except and cp.category_id like 'shop.%') ranked
+                         where rn <= :per order by merchant_id, rn
+                        """)
+                .param("merchants", Sql.array(merchantIds))
+                .param("except", exceptProductId)
+                .param("lang", lang)
+                .param("per", perShop)
+                .query((rs, _) -> new MoreRow(
+                        rs.getString("merchant_id"),
+                        rs.getString("product_id"),
+                        rs.getString("name"),
+                        rs.getLong("price")))
                 .list();
     }
 
