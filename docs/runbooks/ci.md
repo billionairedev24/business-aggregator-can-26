@@ -123,6 +123,21 @@ Add `paths: [server/**, ci/**, .github/workflows/server.yml]` (or `web/**, scrip
 To limit jobs to what changed, add `changes: [server/**/*, ci/**/*]` (or the web paths) to the job rules in `ci/gitlab/*.yml`.
 
 ## Running the same checks locally
+The jobs call make targets (S-124), so the same targets run them on a laptop:
+
+| Job | Target |
+|---|---|
+| server build | `make server-build` (`PROJECT=api`, `TASKS=':api:build -x test'`) |
+| web checks | `make web-check` (= `web-lint` + `web-test` + `web-build-studio`) |
+| web storybook | `make web-storybook-test` |
+| studio smoke | `make e2e` (disposable database!) |
+| infra validate / tflint | `make tf-validate CLOUD=…` / `make tf-lint` |
+| chart / gitops validate | `make helm-validate` / `make argocd-validate` |
+| event schemas | `make server-events BASE=origin/main REQUIRE_BASE=1` |
+| java images | `make images-java` (`PUSH=1 REGISTRY=… IMAGE_TAG=…`) |
+
+GitLab jobs whose image lacks make install it first (`apt-get install make` / `apk add make`). The web image build
+(buildx with the GitHub Actions cache) and the promotion job keep their own steps. The underlying commands:
 ```
 # server (Docker running; Testcontainers starts its own PostGIS)
 cd server && ./gradlew build --init-script ../ci/gradle/maven-mirror.init.gradle.kts --max-workers=2
