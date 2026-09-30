@@ -13,13 +13,13 @@ E-4,,Epic,"Worker, events and notifications","Worker, events and notifications",
 Phase 1. 5 stories, 27 points.",High,,phase-1,events,,worker,,2026-11-16,2026-12-25
 E-5,,Epic,Studio follow-ups and polish,Studio follow-ups and polish,"Gaps and deviations left in the Studio after the first full build (docs/DECISIONS.md), plus cross-module API cleanups.
 
-Phase 2. 18 stories, 64 points.",High,,phase-2,studio,,studio,,2026-12-14,2027-04-02
+Phase 2. 19 stories, 66 points.",High,,phase-2,studio,,studio,,2026-12-14,2027-04-02
 E-6,,Epic,Search (Elasticsearch read model),Search (Elasticsearch read model),"listings_en / listings_fr indices, geo sort, completion suggester, synonyms, search API used by consumer web and app.
 
 Phase 2. 4 stories, 24 points.",High,,phase-2,search,,search,,2026-12-28,2027-03-19
 E-7,,Epic,Consumer web (06 Consumer Web),Consumer web (06 Consumer Web),"Build web/apps/consumer from design/06 Consumer Web.dc.html: every screen in docs/SCREENS.md with loading/empty/error states, en/fr, no horizontal scroll.
 
-Phase 2. 19 stories, 134 points.",High,,phase-2,web,,consumer-web,,2026-12-28,2027-03-05
+Phase 2. 19 stories, 134 points.",High,,phase-2,web,,consumer-web,,2027-01-11,2027-03-05
 E-8,,Epic,Platform console (03 Platform Console),Platform console (03 Platform Console),"web/apps/console from design/03 Platform Console.dc.html: role-gated ops, trust & safety, finance and rollout tools.
 
 Phase 3. 14 stories, 91 points.",High,,phase-3,console,,console,,2027-03-22,2027-05-14
@@ -332,6 +332,14 @@ Acceptance criteria:
 - refund ledger reverses tax correctly.
 
 Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-2,finance,tax,studio,Sprint 7,2026-12-28,2027-01-08
+S-123,E-5,Story,Catalogue media: check merchant ownership before serving draft images,,"The catalogue media endpoint serves an uploaded image by key without confirming the key belongs to the caller's merchant, so a member of one business could fetch another business's draft (unvetted) listing images if they learn the key.
+
+Acceptance criteria:
+- Draft/unapproved media is served only to members of the owning merchant (403 otherwise)
+- approved media stays public via the storefront
+- integration test covers cross-merchant access.
+
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,2,phase-2,catalogue,security,studio,Sprint 7,2026-12-28,2027-01-08
 S-42,E-6,Story,Elasticsearch indices listings_en / listings_fr with analyzers and synonyms,,"service, product, dish, merchant documents; fr/en analyzers; synonym sets (e.g. pain au levain → sourdough).
 
 Acceptance criteria:
@@ -361,7 +369,7 @@ Acceptance criteria:
 - no horizontal scroll ≥ 320 px
 - a11y checks pass.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-2,consumer-web,,consumer-web,Sprint 7,2026-12-28,2027-01-08
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-2,consumer-web,,consumer-web,Sprint 8,2027-01-11,2027-01-22
 S-46,E-7,Story,Home: search-first hero and Services/Shop/Food entry points,,"Design 06 home.
 
 Acceptance criteria:

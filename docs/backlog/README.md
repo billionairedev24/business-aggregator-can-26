@@ -1,6 +1,6 @@
 # Backlog
 
-`northline-backlog.csv` is the full remaining-work backlog after the Studio build: 13 epics, 122 stories, 721 story points, laid out over 20 two-week sprints (5 Oct 2026 → 9 Jul 2027).
+`northline-backlog.csv` is the full remaining-work backlog after the Studio build: 13 epics, 123 stories, 723 story points, laid out over 20 two-week sprints (5 Oct 2026 → 9 Jul 2027).
 
 ## Importing into Jira
 Jira → *Settings › System › External system import › CSV* (Cloud: *Import issues from CSV*). Map the columns:
@@ -27,7 +27,7 @@ Jira → *Settings › System › External system import › CSV* (Cloud: *Impor
   4. Mobile app.
   5. Security and observability.
   6. Pilot and Calgary launch.
-- **Stable ids:** regenerating keeps every existing Issue Id; new stories get the next free number (e.g. S-122).
+- **Stable ids:** regenerating keeps every existing Issue Id; new stories get the next free number (e.g. S-123).
 - **Holidays:** no allowance is made for holidays. Expect the late-December sprint to slip.
 - **Sources:** stories come from the gaps recorded in `docs/DECISIONS.md`, the screen inventory in `docs/SCREENS.md` (consumer web, mobile app, console) and the architecture in `docs/ARCHITECTURE.md`.
 
