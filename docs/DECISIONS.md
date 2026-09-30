@@ -1844,3 +1844,61 @@ Worker: `WebhookDeliveryTest` (Kafka 4 + PostGIS + WireMock receiver: signed `bo
 - **Not done:** scheduled or webhook-driven menu sync; importing POS item photos (the kitchen photo rules need own
   photos); Clover item descriptions (Clover has none); Square item options (only variations); a per-dish "don't sync"
   switch; Lightspeed Restaurant (the story names Square, Clover and Toast).
+
+## 2026-09-30 — S-37 Merchants public query API to replace direct SQL reads in other modules
+
+- **New `merchants.api` queries.** Both are implemented by `merchants.persistence.MerchantDirectoryQueries`:
+  - `MerchantDirectory.profile(id)` returns type, tier, status (`active()`), own take rate and province, as the
+    lower-case column codes.
+  - `MerchantVerifications` has two methods:
+    - `hasVerifiedLicence(id, registry, at)`: a verified licence or registry row, registry matched case-insensitively,
+      not expired at `at`.
+    - `latest(id, checkType)`: a verified row first, then the most recently updated one.
+  - Both queries are the ones the other modules used to run themselves, moved and unchanged.
+- **Replaced cross-module SQL** (each module keeps its own small port; only the adapter changed):
+  - catalogue's licence check: `MerchantLicenceQueries` became `catalogue.adapters.MerchantLicences`, which uses `MerchantVerifications`
+  - messaging's type and tier: `MessagingMerchantProfiles` became `messaging.adapters.DirectoryMerchantProfiles`, which uses `MerchantDirectory`
+  - food's approval and food-safety evidence: `KitchenMerchantFactsJdbc` became `food.adapters.DirectoryKitchenMerchantFacts`
+  - payments' tier and take rate (`MerchantTierQueries`) and the merchant's province (`TaxRepository.merchantProvince`, from S-21): now
+    `payments.infra.MerchantTierLookup`. `MerchantTiers` gained `provinceOf`.
+- **Two reads go the other way, to avoid module cycles** (Modulith `verify()` rejects cycles):
+  - **payments → merchants:** merchants already depends on payments (Connect, payouts, tax summary, bank linking), so
+    payments can't call `merchants.api`. Payments declares what it needs in **`payments.api.MerchantBillingFacts`**
+    (tier, take rate, province). The merchants module implements it in `merchants.integration.PaymentsBillingFacts`
+    over `MerchantDirectory`. The SQL still lives only in merchants, which is the story's aim; only the interface sits
+    on the payments side.
+  - **merchants → catalogue.categories:** merchants' onboarding taxonomy, selected categories and compliance "required
+    for" read `catalogue.categories` by SQL. Catalogue now calls `merchants.api`, so the category query is declared in
+    **`merchants.api.CategorySource`** and implemented by `catalogue.persistence.CategorySourceAdapter`. The former SQL
+    joins became two steps: merchants' own rows, then the categories by id.
+- **The rule:** `SchemaOwnershipTests` is an ArchUnit rule over every class in `ca.northline` except `ca.northline.tools`,
+  the Gradle seeding tasks.
+  - ArchUnit doesn't expose string literals, so the condition reads each class file's constant pool with the JDK
+    class-file API (`java.lang.classfile`). Text blocks and the literal parts of concatenated SQL both land there.
+  - A string counts as SQL when it contains select / insert into / update / delete from / from / join. A class fails
+    when such a string names `<module>.<table>` for a module other than its own.
+  - Event names such as `orders.order_ready` are not SQL and are not flagged.
+  - `events` is the platform outbox and is not a module schema.
+  - `SchemaOwnershipDetectorTest` checks the detector against a fixture: a text block, concatenation, the class's own
+    schema, and a non-SQL string.
+- **Allowed exceptions (listed in the test):** the kitchen live board in `food.persistence` (`KitchenTicketJdbc`,
+  `KitchenOrderLinesJdbc`, `KitchenNavBadges`) joins `orders.*` and `fulfilment.*`.
+  - orders already depends on food, so an `orders.api` call would be a cycle.
+  - Moving it needs its own design: an SPI implemented by orders, or a food-side read model fed by order events.
+  - Left as a follow-up rather than rewriting the live board inside a merchants story.
+- **Outside the api monolith (not covered by the rule):** these are separate deployables that share the database and
+  can't call an in-process Java API. A read model or an HTTP endpoint would be their own stories.
+  - `server/worker` `JdbcRecipients` reads `merchants.merchant_members` / `merchants.merchants` for notification recipients.
+  - `server/auth` `JdbcUserAccounts` reads `merchant_members` for the token's `merchants` claim.
+- **Docs:** BACKEND_CONVENTIONS § 2 describes the rule and the two ways to read another module.
+- **Tests:**
+  - `MerchantQueryApiTest`:
+    - profile fields
+    - the billing facts
+    - paused is not active
+    - a licence must be verified, unexpired and for the right registry (case-insensitive)
+    - a verified evidence row is preferred
+    - `CategorySource` by ids and by roots
+  - `SchemaOwnershipTests`, `SchemaOwnershipDetectorTest`, `ModularityTests`
+  - the existing payments, messaging, food, catalogue and merchants API tests, unchanged.
+- **Schema:** none.

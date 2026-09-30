@@ -63,6 +63,11 @@ ca.northline.<module>
   (`ModularityTests`). Cross-module reactions go through events (`@ApplicationModuleListener`), not calls into internals.
 - ArchUnit (`ArchitectureTests`) enforces: domain has no Spring/adapter deps; application doesn't see web/persistence;
   controllers never touch repositories; `@RestController` only in `web`, `@Table` only in `persistence`; no `@Autowired` fields.
+- `SchemaOwnershipTests` (S-37) fails any class whose SQL strings name another module's schema (`merchants.…` outside
+  `ca.northline.merchants`). Read other modules through their `api` package. For merchants that means `MerchantDirectory`,
+  `MerchantVerifications` and `TeamRoster`. When the module you need already depends on yours, declare the query in your
+  `api` package and let that module implement it (`payments.api.MerchantBillingFacts`, `merchants.api.CategorySource`).
+  Allowed exceptions are listed in the test, each with its reason.
 - Every package has a `package-info.java` with `@NullMarked`. NullAway treats `ca.northline` as non-null by default —
   mark nullable things `@org.jspecify.annotations.Nullable`.
 - Shared kernel `ca.northline.shared`: `Ids` (ULID), `Money`, `CodedEnum`/`CodedEnums`, `DomainEvent`, `ListResponse`,
