@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 import org.apache.kafka.clients.admin.Admin;
 import org.flywaydb.core.Flyway;
+import org.testcontainers.elasticsearch.ElasticsearchContainer;
 import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
@@ -30,6 +31,9 @@ public final class WorkerContainers {
             .withUsername("northline")
             .withPassword("northline");
 
+    /** Elasticsearch 9 (the compose image, security off), started only by the tests that need it ({@link #elastic}). */
+    public static final ElasticsearchContainer ELASTIC = newElastic();
+
     private static boolean started;
 
     private WorkerContainers() {}
@@ -50,6 +54,23 @@ public final class WorkerContainers {
                     .reconcile(catalogue().desired(), TopicProvisioner.Mode.APPLY);
         }
         started = true;
+    }
+
+    /** A new Elasticsearch 9 container like the compose one: HTTP, security off, a small heap. */
+    public static ElasticsearchContainer newElastic() {
+        return new ElasticsearchContainer(DockerImageName.parse("elasticsearch:9.1.3")
+                        .asCompatibleSubstituteFor("docker.elastic.co/elasticsearch/elasticsearch"))
+                .withEnv("xpack.security.enabled", "false")
+                .withEnv("ES_JAVA_OPTS", "-Xms512m -Xmx512m")
+                .withStartupTimeout(java.time.Duration.ofMinutes(4)); // slow under a full parallel build
+    }
+
+    /** Starts Elasticsearch once per test JVM; returns its {@code http://host:port}. */
+    public static synchronized String elastic() {
+        if (!ELASTIC.isRunning()) {
+            ELASTIC.start();
+        }
+        return "http://" + ELASTIC.getHttpHostAddress();
     }
 
     /** The real catalogue plus the test consumers' topic and groups. */
