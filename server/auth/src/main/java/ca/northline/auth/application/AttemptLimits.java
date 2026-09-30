@@ -14,6 +14,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -26,11 +27,18 @@ import org.springframework.stereotype.Service;
  * <p>Answers {@code 429 rate_limited} with {@code Retry-After}. The account scope uses what was typed (normalised) and
  * behaves the same for unknown accounts, so the answer never reveals whether an account exists. Lockouts are written to
  * the audit log ({@code auth.rate_limited}).
+ *
+ * <p>S-20: when the store can't be reached, {@code northline.auth.rate-limits.when-unavailable} decides — {@code open}
+ * lets the attempt through (logged), {@code closed} answers {@code 503 sign_in_unavailable} on the code/OTP and factor
+ * paths ({@link LimitedAction#guardsSecret()}), so nobody can guess codes without a limit while Valkey is down.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AttemptLimits {
+
+    /** How long the Studio waits before trying again while the limit store is unreachable. */
+    static final long UNAVAILABLE_RETRY_SECONDS = 30;
 
     private final RateLimiter limiter;
     private final RateLimitProperties props;
@@ -74,7 +82,7 @@ public class AttemptLimits {
     public void consume(LimitedAction action, Subject who) {
         var limits = limits(action, who);
         if (!limits.isEmpty()) {
-            enforce(action, who, limiter.record(limits));
+            enforce(action, who, decide(action, () -> limiter.record(limits)));
         }
     }
 
@@ -82,7 +90,7 @@ public class AttemptLimits {
     public void guard(LimitedAction action, Subject who) {
         var limits = limits(action, who);
         if (!limits.isEmpty()) {
-            enforce(action, who, limiter.check(limits));
+            enforce(action, who, decide(action, () -> limiter.check(limits)));
         }
     }
 
@@ -92,7 +100,12 @@ public class AttemptLimits {
         if (limits.isEmpty()) {
             return error;
         }
-        var decision = limiter.record(limits);
+        Decision decision;
+        try {
+            decision = decide(action, () -> limiter.record(limits));
+        } catch (FlowRejected unavailable) {
+            return unavailable; // fail closed: not even "wrong code" is revealed while nothing is counted
+        }
         return decision.allowed() ? error : rejection(action, who, decision);
     }
 
@@ -103,6 +116,20 @@ public class AttemptLimits {
                 .toList();
         if (!limits.isEmpty()) {
             limiter.reset(limits);
+        }
+    }
+
+    /** The limiter's answer, or the S-20 policy when the store can't give one. */
+    private Decision decide(LimitedAction action, Supplier<Decision> call) {
+        try {
+            return call.get();
+        } catch (RateLimiter.Unavailable e) {
+            if (action.guardsSecret() && props.whenUnavailable() == RateLimitProperties.WhenUnavailable.CLOSED) {
+                log.error("Rate limits unavailable: {} refused (fail closed) — {}", action.code(), e.getMessage());
+                throw new FlowRejected(Reason.UNAVAILABLE, AuthMessages.SIGN_IN_UNAVAILABLE, UNAVAILABLE_RETRY_SECONDS);
+            }
+            log.error("Rate limits unavailable: {} allowed (fail open) — {}", action.code(), e.getMessage());
+            return Decision.ALLOWED;
         }
     }
 

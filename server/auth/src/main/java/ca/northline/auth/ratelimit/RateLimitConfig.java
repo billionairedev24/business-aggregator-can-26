@@ -3,6 +3,7 @@ package ca.northline.auth.ratelimit;
 import ca.northline.auth.application.RateLimitProperties;
 import ca.northline.auth.application.RateLimiter;
 import java.time.Clock;
+import java.util.Locale;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -25,11 +26,17 @@ class RateLimitConfig {
 
     @Bean
     @ConditionalOnProperty(name = STORE, havingValue = "redis", matchIfMissing = true)
-    RateLimiter redisRateLimiter(RedisConnectionFactory redis, Environment environment) {
+    RateLimiter redisRateLimiter(RedisConnectionFactory redis, Environment environment, RateLimitProperties props) {
         log.info(
-                "Rate limits (S-9) in Valkey/Redis at {}:{}",
+                "Rate limits (S-9) in Valkey/Redis at {}:{}; while unreachable, codes and second factors fail {}",
                 environment.getProperty("spring.data.redis.host"),
-                environment.getProperty("spring.data.redis.port"));
+                environment.getProperty("spring.data.redis.port"),
+                props.whenUnavailable().name().toLowerCase(Locale.ROOT));
+        if (props.whenUnavailable() == RateLimitProperties.WhenUnavailable.OPEN
+                && environment.matchesProfiles("staging | prod")) {
+            log.warn("RATE_LIMIT_WHEN_UNAVAILABLE=open under staging/prod: while Valkey is down, codes and second"
+                    + " factors can be guessed without a limit (S-20). Use it only as a temporary break-glass.");
+        }
         return new RedisRateLimiter(new StringRedisTemplate(redis));
     }
 

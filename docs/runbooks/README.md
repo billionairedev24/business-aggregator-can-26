@@ -112,7 +112,6 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `API_URL` | | | ✓ | | yes |
 | `STUDIO_ORIGIN` | ✓ | ✓ | | | yes |
 | `CONSUMER_ORIGIN`, `CONSOLE_ORIGIN`, `WEBAUTHN_RP_ID` | | ✓ | | | yes |
-| `COOKIE_DOMAIN` | | ✓ | ✓ | | no (host-only cookies) |
 | `TOTP_KEY` | | ✓ | | | yes |
 | `STUDIO_BFF_SECRET` | | | ✓ | | yes |
 | `STUDIO_BFF_SECRET_HASH` | | ✓ | | | yes |
@@ -137,6 +136,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `SMS_VOICE_FROM`, `SMS_REGION`, `SMS_ENDPOINT` | ✓ | ✓ | | ✓ | no (`= SMS_FROM`; SDK default region; provider API) |
 | `TRUSTED_PROXIES` | | ✓ | | | no (private ranges + loopback; narrow it to the ingress subnet) |
 | `RATE_LIMIT_STORE` | | ✓ | | | no (`redis`; `memory` only under `local`/`test`) |
+| `RATE_LIMIT_WHEN_UNAVAILABLE` | | ✓ | | | no (`closed` in staging/prod, `open` elsewhere — S-20, [Rate limits](#rate-limits-s-9)) |
 | `CLIENT_CITY_HEADER` | | ✓ | | | no (empty: no city in the session list — S-19) |
 | `SESSION_STEP_UP_MAX_AGE` | | ✓ | | | no (`10m`: how recent a second factor revoking sessions / removing passkeys needs) |
 | `SESSION_CHECK_INTERVAL` | | | ✓ | | no (`60s`: how often the BFF checks its session wasn't revoked) |
@@ -312,14 +312,44 @@ per phone code, 45 s resend cool-down, 5 failed factors per sign-in attempt or s
 - **Store:** Valkey/Redis (`REDIS_*`, keys `nl:auth-rl:{<action>}:<scope>:<hash>:…`, no email or IP in clear, TTLs
   on everything), shared by every replica. `local` keeps them in memory and logs
   `Rate limits (S-9) are kept IN MEMORY …`; `--spring.profiles.active=local,valkey` uses your Valkey. `memory` is
-  refused under `staging`/`prod`. If Valkey is unreachable the attempt is allowed and an error is logged (the
-  per-flow rules still apply).
+  refused under `staging`/`prod`.
+- **Valkey unreachable (S-20):** `RATE_LIMIT_WHEN_UNAVAILABLE` decides for the guessable steps — sending and checking
+  phone codes, authenticator and backup codes, passkey assertions, step-up. `closed` (the **staging/prod default**)
+  answers `503` `{"code":"sign_in_unavailable","retryAfterSeconds":30}` with `Retry-After: 30`; the Studio shows
+  "Signing in is paused for a few minutes while we fix a problem on our side. Try again shortly." (en/fr). `open` (the
+  default everywhere else) lets the attempt through and logs `Rate limits unavailable: <action> allowed (fail open)`;
+  the per-flow rules still apply. Typing the email/mobile and the signed-in Security changes always stay open (no
+  secret is checked there; the latter already need a recent second factor). Setting `open` under staging/prod is a
+  break-glass for a long Valkey outage — the auth log warns at start-up; remove it once Valkey is back. Alert on
+  `Rate limits unavailable` in the auth log (ERROR) — it means sign-in is paused (closed) or unguarded (open).
 - **Client IP:** `X-Forwarded-For` (and `-Proto`, `-Host`) are believed only from `TRUSTED_PROXIES` (CIDRs, default
   loopback + private ranges); the client is the right-most address that isn't a trusted proxy. Set it to the ingress
   / load-balancer subnet in every cloud environment, or anyone inside the private network can pick their own IP.
+  Behind Envoy Gateway the proxies' addresses are pod addresses, so staging/prod also narrow the NetworkPolicy of
+  the public apps to the `envoy-gateway-system` namespace (S-20, `networkPolicy.ingressFrom` in
+  `values-staging.yaml` / `values-prod.yaml`) — nothing else in the cluster can reach auth or the bff with forged
+  headers.
 - **Unlocking someone** before the lockout ends: delete their keys in Valkey
   (`valkey-cli --scan --pattern 'nl:auth-rl:*' | xargs valkey-cli del` clears everything — keys are hashed, so a
   targeted unlock needs the hash; waiting is usually simpler).
+
+## Cookies and CSRF (S-20)
+
+| cookie | app | local | dev / staging / prod | attributes |
+|---|---|---|---|---|
+| auth server session | auth | `NL_AUTH` | `__Host-NL_AUTH` | HttpOnly, SameSite=Lax, Secure (not under `local`), host-only (`auth.<zone>`), 12 h idle |
+| BFF session | bff | `NL_STUDIO` | `__Host-NL_STUDIO` | HttpOnly, SameSite=Lax, Secure, host-only (`studio.<zone>`), 12 h idle |
+| CSRF token | bff | `XSRF-TOKEN` | `__Host-XSRF-TOKEN` | readable by the Studio, SameSite=Strict, Secure in the cloud, path `/` |
+
+- `__Host-` cookies are Secure, path `/` and carry no Domain, so a sibling subdomain (the consumer apex, `pages.`
+  storefronts) can neither plant nor overwrite them. `COOKIE_DOMAIN` was removed: nothing needs a shared cookie (the
+  Studio calls auth cross-origin, same site, with credentials).
+- CSRF: the BFF accepts the token only in `X-XSRF-TOKEN` (never a `_csrf` form field); the auth JSON API accepts
+  state-changing calls only from `STUDIO_ORIGIN` / `CONSUMER_ORIGIN` (CORS + an Origin check; a request without
+  `Origin` that Fetch Metadata marks `cross-site` is refused).
+- Signing out of the Studio revokes the BFF's refresh token, which ends the whole sign-in at northline-auth too — the
+  auth server's session is dropped on its next request even if the browser's own `POST /api/auth/sign-out` was lost.
+- Changing the cookie names signs everyone out once (the old cookies are simply ignored).
 
 ## Sessions (S-19)
 

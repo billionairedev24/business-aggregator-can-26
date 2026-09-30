@@ -13,6 +13,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param signInPage where a failed OAuth callback lands (the SPA's sign-in page, relative to the app origin)
  * @param introspectionUri the auth server's token introspection endpoint (S-19: is the session's sign-in revoked?)
  * @param sessionCheckInterval how often, at most, a session's refresh token is introspected (S-19)
+ * @param csrfCookieName the CSRF token cookie the Studio reads ({@code XSRF-TOKEN} locally; {@code __Host-XSRF-TOKEN} in
+ *     the cloud, S-20: a sibling subdomain can't plant or overwrite a {@code __Host-} cookie)
  */
 @ConfigurationProperties("northline.bff")
 public record BffProperties(
@@ -24,4 +26,5 @@ public record BffProperties(
         @DefaultValue("http://localhost:9000/oauth2/introspect")
         String introspectionUri,
 
-        @DefaultValue("60s") Duration sessionCheckInterval) {}
+        @DefaultValue("60s") Duration sessionCheckInterval,
+        @DefaultValue("XSRF-TOKEN") String csrfCookieName) {}

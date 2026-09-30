@@ -29,8 +29,17 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 @RestControllerAdvice(basePackages = "ca.northline.auth.web")
 class AuthExceptionHandler extends ResponseEntityExceptionHandler {
 
-    private static final Map<String, String> RULES =
-            Map.of("NotNull", "required", "NotBlank", "required", "AssertTrue", "required", "Pattern", "format");
+    private static final Map<String, String> RULES = Map.of(
+            "NotNull",
+            "required",
+            "NotBlank",
+            "required",
+            "AssertTrue",
+            "required",
+            "Pattern",
+            "format",
+            "Size",
+            "length");
     private static final List<String> PRIORITY = List.of("required", "format");
 
     /** The 422 body. */
@@ -63,7 +72,7 @@ class AuthExceptionHandler extends ResponseEntityExceptionHandler {
             case STEP_UP_REQUIRED -> HttpStatus.FORBIDDEN;
             case LAST_FACTOR, CURRENT_SESSION -> HttpStatus.CONFLICT;
             case GONE -> HttpStatus.NOT_FOUND;
-            case CODE_NOT_SENT -> HttpStatus.SERVICE_UNAVAILABLE;
+            case CODE_NOT_SENT, UNAVAILABLE -> HttpStatus.SERVICE_UNAVAILABLE;
         };
         var problem = problem(status, ex.getReason().code(), ex.getMessage());
         var response = ResponseEntity.status(status);

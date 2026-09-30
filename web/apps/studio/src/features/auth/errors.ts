@@ -43,6 +43,7 @@ export function flowError(err: unknown, t: AuthT, sent: 'form' | 'sms' | 'voice'
   if (err instanceof ApiError) {
     const code = err.body && typeof err.body === 'object' && 'code' in err.body ? String((err.body as { code: unknown }).code) : '';
     if (code === 'too_many_attempts') return t('tooMany');
+    if (code === 'sign_in_unavailable') return t('signInUnavailable');
     if (code === 'code_not_sent') return t(sent === 'voice' ? 'codeNotSentVoice' : sent === 'sms' ? 'codeNotSentSms' : 'codeNotSentForm');
     if (code === 'rate_limited') {
       const s = rateLimitedFor(err);

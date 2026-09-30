@@ -1,6 +1,7 @@
 package ca.northline.auth.web;
 
 import static ca.northline.auth.domain.AuthMessages.BACKUP_CODE_REQUIRED;
+import static ca.northline.auth.domain.AuthMessages.BACKUP_CODE_WRONG;
 import static ca.northline.auth.domain.AuthMessages.CODE_FORMAT;
 import static ca.northline.auth.domain.AuthMessages.CODE_REQUIRED;
 import static ca.northline.auth.domain.AuthMessages.EMAIL_FORMAT;
@@ -18,6 +19,7 @@ import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
@@ -64,7 +66,7 @@ final class AuthRequests {
 
     /** A printed backup code ({@code abcde-fghij}; spaces, dashes and case are ignored). */
     record BackupCode(
-            @NotBlank(message = BACKUP_CODE_REQUIRED) @Nullable
+            @NotBlank(message = BACKUP_CODE_REQUIRED) @Size(max = 64, message = BACKUP_CODE_WRONG) @Nullable
             String code) {}
 
     /** "Resend" ({@code sms}, default) or "Call me instead" ({@code voice}). */
@@ -72,7 +74,7 @@ final class AuthRequests {
 
     /** Sign in, step 1: email or mobile. */
     record Identifier(
-            @NotBlank(message = IDENTIFIER_REQUIRED) @Nullable
+            @NotBlank(message = IDENTIFIER_REQUIRED) @Size(max = 320, message = IDENTIFIER_REQUIRED) @Nullable
             String identifier) {}
 
     /** A WebAuthn credential as produced by {@code PublicKeyCredential.toJSON()}. */

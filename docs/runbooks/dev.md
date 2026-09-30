@@ -70,7 +70,6 @@ Every app reads its configuration from environment variables; nothing environmen
 | `CONSUMER_ORIGIN` | auth | **yes** | `https://dev.northline.ca` | hosts (S-17) |
 | `CONSOLE_ORIGIN` | auth | **yes** | `https://console.dev.northline.ca` | hosts (S-17) |
 | `WEBAUTHN_RP_ID` | auth | **yes** | `dev.northline.ca` | registrable domain shared by the Studio and consumer origins; changing it invalidates every passkey |
-| `COOKIE_DOMAIN` | auth, bff | no | empty (host-only cookies — recommended) | deployment manifest |
 | `TOTP_KEY` | auth | **yes** | `openssl rand -base64 32` | secrets manager (secret created empty by Terraform, named in `secret_env`) → External Secrets (S-6, [secrets.md](secrets.md)) → Secret `northline-<app>-secrets`. Never rotate without re-encrypting `auth.totp_secrets`: losing it breaks every authenticator enrolment |
 | `STUDIO_BFF_SECRET` | bff | **yes** | `openssl rand -base64 32` | secrets manager (secret created empty by Terraform, named in `secret_env`) → External Secrets (S-6, [secrets.md](secrets.md)) → Secret `northline-<app>-secrets` |
 | `STUDIO_BFF_SECRET_HASH` | auth | **yes** | `{bcrypt}$2y$12$…` of `STUDIO_BFF_SECRET` | secrets manager (secret created empty by Terraform, named in `secret_env`) → External Secrets (S-6, [secrets.md](secrets.md)) → Secret `northline-<app>-secrets`. The three BFF secrets must differ (the authorization server rejects duplicates) |
@@ -93,6 +92,7 @@ Every app reads its configuration from environment variables; nothing environmen
 | `KMS_REGION`, `KMS_ENDPOINT` | auth | no | AWS only: `ca-central-1`, a VPC endpoint URL | deployment manifest |
 | `TRUSTED_PROXIES` | auth | no (private ranges + loopback) | the ingress / load balancer subnet, e.g. `10.20.0.0/22` (comma-separated CIDRs) | network plan (S-2); only these peers may set `X-Forwarded-For/-Proto/-Host` — the client IP the rate limits and the sign-in log use ([README § Rate limits](README.md#rate-limits-s-9)) |
 | `RATE_LIMIT_STORE` | auth | no (`redis`) | leave unset: `memory` is refused here | — |
+| `RATE_LIMIT_WHEN_UNAVAILABLE` | auth | no (`open`) | leave unset (`open`); `closed` to rehearse the staging/prod behaviour | S-20, [README § Rate limits](README.md#rate-limits-s-9) |
 | `CLIENT_CITY_HEADER` | auth | no (empty) | `CloudFront-Viewer-City`, or the custom header your load balancer / Front Door fills with the client's city | ingress / CDN configuration; believed only from `TRUSTED_PROXIES` ([README § Sessions](README.md#sessions-s-19)) |
 | `SESSION_STEP_UP_MAX_AGE` | auth | no (`10m`) | leave unset | how recent a second factor revoking sessions / removing passkeys needs (S-19) |
 | `SESSION_CHECK_INTERVAL` | bff | no (`60s`) | leave unset | a revoked session's BFF session ends within this (S-19) |
