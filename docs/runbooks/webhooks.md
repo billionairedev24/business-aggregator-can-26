@@ -33,7 +33,8 @@ Body (version 1; the JSON Schemas are the contract: [`docs/spec/webhooks/<type>.
 | `payment.released` | escrow for a job / order line moved to your balance | `escrowId`, `reference {type: booking\|order_line, id}`, `grossCents`, `feeCents`, `netCents`, `currency` (`CAD`) |
 | `refund.issued` | a refund was paid back to the customer | `refundId`, `caseNumber` (`RF-…` or null), `escrowId` (or null), `amountCents`, `currency`, `chargedTo` (`merchant`\|`platform`) |
 | `webhook.test` | "Send test event" in the endpoint's Deliveries drawer | `endpointId` |
-| `booking.confirmed`, `order.placed`, `order.delivered`, `review.created` | subscribable, **not sent yet**: their domain events aren't published on Kafka yet (see DECISIONS § S-33) | — |
+| `order.placed` | a customer placed an order with your shop (one event per shop, your lines only) | `orderId`, `orderRef` (`NL-…`), `orderType` (`goods`), `delivery` (`pooled`\|`direct`), `windowId` (or null), `lines [{lineId, offerId, variantId, qty, amountCents}]`, `subtotalCents`, `taxCents`, `currency` |
+| `booking.confirmed`, `order.delivered`, `review.created` | subscribable, **not sent yet**: their domain events aren't published on Kafka yet (see DECISIONS § S-33) | — |
 
 Payloads carry ids and amounts your business already sees in the Studio — never customer names, contact details,
 addresses or customer ids. Look details up through the API with a key (Settings › API keys).

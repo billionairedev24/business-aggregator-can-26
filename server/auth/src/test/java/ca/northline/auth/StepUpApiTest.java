@@ -120,4 +120,94 @@ class StepUpApiTest extends AuthIntegrationTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("flow_not_started"));
     }
+
+    // ── S-51: consumer payments on a phone-code sign-in ─────────────────────────────────────────────────────────
+
+    /** A consumer signed in with a code to the phone only (no second factor in the session). */
+    private MockHttpSession signInByCode(Registered user) throws Exception {
+        var session = new MockHttpSession();
+        postJson(
+                        "/api/auth/sign-in",
+                        session,
+                        json(Map.of("identifier", user.person().phone())))
+                .andExpect(status().isOk());
+        postJson("/api/auth/sign-in/code", session, "{}").andExpect(status().isOk());
+        postJson(
+                        "/api/auth/sign-in/code/verify",
+                        session,
+                        json(Map.of("code", sms.lastCodeTo(user.person().e164()))))
+                .andExpect(status().isOk());
+        return session;
+    }
+
+    @Test
+    void phoneCodeSession_stepsUpWithTheAccountsAuthenticator() throws Exception {
+        var user = register(newPerson());
+        var session = signInByCode(user);
+        clock.advanceSeconds(Totp.PERIOD_SECONDS);
+        var body = postJson("/api/auth/step-up/totp", session, json(Map.of("code", totpNow(user.totpSecret()))))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(decoder.decode(JsonPath.read(body, "$.proof")).getClaimAsString("acr"))
+                .isEqualTo("mfa");
+        // the account has a factor: it steps up with it rather than enrolling another
+        mvc.perform(post("/api/auth/step-up/enrol/passkey/options").session(session))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("step_up_required"));
+    }
+
+    @Test
+    void accountWithoutASecondFactor_enrolsAPasskeyAndGetsTheProof() throws Exception {
+        var person = newPerson();
+        var session = new MockHttpSession();
+        postJson("/api/auth/register", session, person.json()).andExpect(status().isOk());
+        postJson("/api/auth/register/verify", session, json(Map.of("code", sms.lastCodeTo(person.e164()))))
+                .andExpect(status().isOk());
+        postJson("/api/auth/register/complete", session, "{}").andExpect(status().isCreated());
+
+        var options = mvc.perform(
+                        post("/api/auth/step-up/enrol/passkey/options").session(session))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        var key = new SoftAuthenticator(ORIGIN);
+        var body = postJson(
+                        "/api/auth/step-up/enrol/passkey",
+                        session,
+                        "{\"credential\":" + key.create(options) + ",\"label\":\"Phone\"}")
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        var jwt = decoder.decode(JsonPath.read(body, "$.proof"));
+        assertThat(jwt.getClaimAsString("acr")).isEqualTo("mfa");
+        assertThat(jwt.getClaimAsStringList("amr")).containsExactly("hwk");
+        // the passkey is the account's now: the next payment steps up with it
+        var request = mvc.perform(post("/api/auth/step-up/passkey/options").session(session))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        postJson("/api/auth/step-up/passkey", session, "{\"credential\":" + key.get(request) + "}")
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void enrolling_needsARecentSignIn() throws Exception {
+        var person = newPerson();
+        var session = new MockHttpSession();
+        postJson("/api/auth/register", session, person.json()).andExpect(status().isOk());
+        postJson("/api/auth/register/verify", session, json(Map.of("code", sms.lastCodeTo(person.e164()))))
+                .andExpect(status().isOk());
+        postJson("/api/auth/register/complete", session, "{}").andExpect(status().isCreated());
+        clock.advanceSeconds(16 * 60);
+        mvc.perform(post("/api/auth/step-up/enrol/passkey/options").session(session))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("unauthenticated"));
+        mvc.perform(post("/api/auth/step-up/enrol/passkey/options").session(new MockHttpSession()))
+                .andExpect(status().isUnauthorized());
+    }
 }
