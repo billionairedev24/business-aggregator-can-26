@@ -8,8 +8,8 @@ gets stuck. Code: `ca.northline.payments` (charges, transfers, payouts, refunds)
 
 | step | Stripe object | on which account | Northline trigger |
 |---|---|---|---|
-| checkout | PaymentIntent `capture_method=manual`, CAD, `setup_future_usage=off_session`, `transfer_group=order:<id>` / `booking:<id>` | platform | `PaymentAuthorizations.start` (one per job / order line) |
-| customer confirms | Stripe.js `confirmCardPayment(client_secret)` → `requires_capture` | platform | consumer app |
+| checkout | PaymentIntent `capture_method=manual`, CAD, `setup_future_usage=off_session`, `transfer_group=order:<id>` / `booking:<id>` | platform | `PaymentAuthorizations.start` (one per job / order line; one more for an order's delivery fee under the platform, `order_delivery`) |
+| customer confirms | Stripe.js Payment Element `confirmPayment` for the first PaymentIntent, then `confirmCardPayment(client_secret, {payment_method})` for the order's others → `requires_capture` | platform | consumer app `/cart` (S-51) |
 | hold | — (Northline checks the PaymentIntent is `requires_capture` for at least the amount) | | `EscrowLifecycle.hold` |
 | hold renewed | new PaymentIntent, off-session, same card; old one canceled | platform | re-authorization job, 36 h before `capture_before` |
 | fulfilment | `capture` (amount + GST/HST) | platform | job completed / delivered / handed off |

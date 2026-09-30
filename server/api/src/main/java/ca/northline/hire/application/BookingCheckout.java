@@ -31,10 +31,15 @@ public final class BookingCheckout {
     /** Prices the booking and opens the payment for it — or, for a free consultation, books at once. */
     public interface StartCheckout {
         /**
-         * @param secondFactor the session has {@code acr=mfa} or a valid step-up proof; without it a paid booking is
-         *     refused ({@link SecondFactorRequired})
+         * @param mfa the session has {@code acr=mfa}; otherwise a paid booking needs {@code stepUpProof}
+         *     ({@link SecondFactorRequired})
          */
-        Checkout start(String customerId, BookingRequest request, @Nullable String clientKey, boolean secondFactor);
+        Checkout start(
+                String customerId,
+                BookingRequest request,
+                @Nullable String clientKey,
+                boolean mfa,
+                @Nullable String stepUpProof);
     }
 
     /** The card was authorized (Stripe.js): record the escrow hold and write the booking. */
@@ -57,7 +62,7 @@ public final class BookingCheckout {
     /**
      * @param status {@code requires_action} (Stripe.js confirms the card with {@code clientSecret}), {@code authorized}
      *     (the fake gateway, or a saved card that needed nothing), or {@code confirmed} (nothing to pay: booked)
-     * @param publishableKey for Stripe.js; null with the fake gateway
+     * @param provider {@code stripe} (Stripe.js with {@code publishableKey}) or {@code fake} (local: nothing to confirm)
      */
     public record Checkout(
             String holdId,
@@ -68,6 +73,7 @@ public final class BookingCheckout {
             String status,
             @Nullable String paymentIntent,
             @Nullable String clientSecret,
+            String provider,
             @Nullable String publishableKey,
             @Nullable Confirmation booking) {}
 

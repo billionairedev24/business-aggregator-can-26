@@ -151,7 +151,10 @@ Storefront pages on `pages.<zone>` and merchants' own domains (by `Host`) share 
 - `GET /api/v1/cart` → `{ itemCount, … }` — the cart of the signed-in person, else of the guest id. Guests must be
   allowed (open the path in the api's `SecurityConfig` and key it by the header). The header reads `itemCount`
   (`cartQuery`, key `['cart']`); every cart mutation invalidates it. On sign-in the api merges the guest's cart into the
-  person's (the guest id arrives with the first signed-in call). Until the endpoint exists the header shows 0.
+  person's (the guest id arrives with the first signed-in call).
+- Paying needs a second factor: `stepUp` in `GET /api/v1/me/checkout` says whether the session must step up
+  (`features/cart/stepUp.ts`, `X-Step-Up`) or enrol a passkey first (DECISIONS § S-51). Other money-moving consumer
+  screens (food checkout, booking deposits) should reuse it.
 
 ### Location
 
@@ -171,6 +174,15 @@ openCases?, paymentMethod?: {brand, last4}, addresses?: {count, members}, signIn
 {from, to}, dietary?: string[], province? }` (every field optional; S-58/S-59 provide it). Mutations that change a
 value invalidate `accountSummaryQuery`.
 
+### Market (S-49)
+
+The Shop pages are rendered for the market in their URL, `?market=<city>` (default **Calgary**, the fallback market),
+so the server's HTML stays the same for everyone and is cacheable. `features/shop/market.ts`
+`useMarketFollowsLocation()` switches a page without `?market=` to the visitor's city once `useDeliveryLocation()`
+knows it (history replace); links between Shop pages keep an explicit market (`withMarket`). A city without pooled
+delivery answers `served: false` and the page shows its empty state. The api's markets are
+`northline.orders.delivery.markets` (Calgary, Edmonton, Airdrie); runs and cut-offs come from `orders.api.DeliveryRuns`.
+
 ### Language
 
 Cookie `nl.locale` = `en` | `fr` (1 year, not HttpOnly). `useLocale().setLocale()` switches in place and writes it.
@@ -188,9 +200,10 @@ Cookie `nl.locale` = `en` | `fr` (1 year, not HttpOnly). `useLocale().setLocale(
 | `GET /api/v1/geo/reverse` | **missing** (the path is already public in the api) | S-47 (header falls back without it) |
 | markets / zones for an address (`/api/v1/geo/…`) | missing | S-47 |
 | `GET /api/v1/search`, suggestions | missing (path public; E-6 S-42…S-44) | S-48, home |
-| categories / departments / landing content (public catalogue reads) | missing | S-46, S-49, S-53 |
-| product detail + offers | missing | S-50 |
-| cart (`/api/v1/cart…`, guest-keyed) + checkout (Stripe Payment Element) | missing | S-51 |
+| Shop landing + departments: `GET /api/v1/public/shop?market=&lang=`, `GET /api/v1/public/shop/departments/{slug}?market=&lang=` | **exists** (S-49) | S-49 (S-46 may reuse the landing's departments) |
+| service categories / home landing content (public catalogue reads) | missing | S-46, S-53 |
+| product detail + offers: `GET /api/v1/public/shop/products/{id}?market=&lang=` | **exists** (S-50) | S-50 |
+| cart: `GET /api/v1/cart`, `POST /api/v1/cart/items`, `PATCH`/`DELETE /api/v1/cart/items/{id}` (guest-keyed by `X-Northline-Guest`); checkout: `GET /api/v1/me/checkout?market=`, `POST /api/v1/me/checkout/quote`, `POST /api/v1/me/checkouts` (Idempotency-Key, X-Step-Up), `POST /api/v1/me/checkouts/{id}/place` (Idempotency-Key) | **exists** (S-51) | S-51 (S-57 food checkout may reuse the step-up and payment parts) |
 | consumer orders + tracking SSE | missing (merchant-side only today) | S-52, S-58 |
 | public menus / kitchens, food checkout | missing | S-57 |
 | `GET /api/v1/public/services`, `/services/{slug}`, `/services/{slug}/providers?lat&lng&city` | **exists** (S-53, module `hire`) | S-53 |

@@ -34,7 +34,7 @@ export default defineConfig(({ mode }) => {
   const bff = env.NL_BFF ?? 'http://localhost:8081';
   const api = env.NL_API ?? 'http://localhost:8080';
   const proxy: Record<string, string | ProxyOptions> = env.NL_DEV_USER || env.NL_DEV_GUEST
-    ? { '/api': { target: api, headers: env.NL_DEV_USER ? { 'X-Dev-User': env.NL_DEV_USER, 'X-Dev-Acr': 'none' } : {} } }
+    ? { '/api': { target: api, headers: env.NL_DEV_USER ? { 'X-Dev-User': env.NL_DEV_USER, 'X-Dev-Acr': 'none' } : { 'X-Northline-Guest': 'g_devguest_0000000000000' } } }
     : { '/api': bff, '/bff': bff, '/oauth2': bff, '/login': bff };
   return {
     plugins: [tanstackStart(), react(), devAuth(env)],

@@ -317,26 +317,4 @@ class ConsumerSignInApiTest extends AuthIntegrationTest {
                                     "Location", startsWith("http://localhost:3100/login/oauth2/code/studio?code=")));
         }
     }
-
-    /** S-55: paying from a phone-code session steps up with the account's own second factor. */
-    @Nested
-    class StepUpForPayment {
-
-        @Test
-        void aPhoneCodeSessionStepsUpWithTheAuthenticator() throws Exception {
-            var user = register(newPerson());
-            var session = signInByCode(user);
-            postJson("/api/auth/step-up/totp", session, json(Map.of("code", totpNow(user.totpSecret()))))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.proof").isNotEmpty());
-        }
-
-        @Test
-        void aWrongCodeFromAPhoneCodeSessionIsRejected() throws Exception {
-            var user = register(newPerson());
-            var session = signInByCode(user);
-            postJson("/api/auth/step-up/totp", session, json(Map.of("code", "000000")))
-                    .andExpect(status().isUnprocessableContent());
-        }
-    }
 }

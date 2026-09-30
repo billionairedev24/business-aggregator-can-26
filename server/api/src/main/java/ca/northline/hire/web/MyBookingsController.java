@@ -10,7 +10,7 @@ import ca.northline.hire.application.BookingCheckout.StartCheckout;
 import ca.northline.hire.application.BookingCheckout.ViewBooking;
 import ca.northline.hire.application.BookingCheckout.ViewCalendar;
 import ca.northline.hire.domain.BookingRequest;
-import ca.northline.payments.api.ConsumerPayments;
+import ca.northline.payments.api.IdempotentRequests;
 import ca.northline.shared.security.CurrentUser;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -36,7 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * The booking wizard (S-55). The provider's calendar is public; holding a slot, paying and the confirmation need a
- * signed-in customer (any consumer token — a second factor only for paying, see {@link StartCheckout}). Paying and
+ * signed-in customer (any consumer token; paying follows the S-51 step-up rule, see {@link StartCheckout}). Paying and
  * confirming are money-moving: {@code Idempotency-Key} required (CLAUDE.md), the answer kept 24 h.
  */
 @RestController
@@ -52,7 +52,7 @@ class MyBookingsController {
     private final StartCheckout checkouts;
     private final ConfirmBooking confirmations;
     private final ViewBooking bookings;
-    private final ConsumerPayments payments;
+    private final IdempotentRequests idempotent;
 
     record HoldRequest(
             @NotBlank(message = SERVICE_REQUIRED) String slug,
@@ -91,13 +91,12 @@ class MyBookingsController {
             @RequestHeader(value = "Idempotency-Key", required = false) @Nullable String key,
             @RequestHeader(value = "X-Step-Up", required = false) @Nullable String stepUp,
             CurrentUser user) {
-        var answer = payments.idempotent(
-                "customer:%s:booking-checkout".formatted(user.userId()),
+        var answer = idempotent.run(
+                "consumer:%s:booking-checkout".formatted(user.userId()),
                 key,
                 body,
                 HttpStatus.OK.value(),
-                () -> checkouts.start(
-                        user.userId(), body, key, payments.hasSecondFactor(user.userId(), user.mfa(), stepUp)));
+                () -> checkouts.start(user.userId(), body, key, user.mfa(), stepUp));
         return json(answer);
     }
 
@@ -107,8 +106,8 @@ class MyBookingsController {
             @PathVariable String holdId,
             @RequestHeader(value = "Idempotency-Key", required = false) @Nullable String key,
             CurrentUser user) {
-        var answer = payments.idempotent(
-                "customer:%s:booking-confirm".formatted(user.userId()),
+        var answer = idempotent.run(
+                "consumer:%s:booking-confirm".formatted(user.userId()),
                 key,
                 holdId,
                 HttpStatus.CREATED.value(),
@@ -121,7 +120,7 @@ class MyBookingsController {
         return bookings.booking(user.userId(), bookingId);
     }
 
-    static ResponseEntity<String> json(ConsumerPayments.Answer answer) {
+    static ResponseEntity<String> json(IdempotentRequests.Outcome answer) {
         var response = ResponseEntity.status(answer.status()).contentType(MediaType.APPLICATION_JSON);
         if (answer.replayed()) {
             response.header("Idempotent-Replayed", "true");

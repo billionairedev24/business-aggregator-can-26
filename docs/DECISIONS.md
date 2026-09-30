@@ -2062,6 +2062,35 @@ Worker: `WebhookDeliveryTest` (Kafka 4 + PostGIS + WireMock receiver: signed `bo
 - **Not done:** the consumer app doesn't render listing images yet, so nothing calls the public route today. There is
   no signed or CDN URL (S-10's `presignGet` is still unused).
 
+## 2026-09-30 — S-42 Elasticsearch indices listings_en / listings_fr with analyzers and synonyms
+
+- **Layout as versioned files, not code:** `deploy/search/listings.json` (a `schema` version, settings, mappings), `analysis-<lang>.json`, `synonyms-<lang>.txt` — the same place and style as `deploy/kafka/topics.yaml`. A new plain library **`server/search-index`** (package `ca.northline.searchindex`, outside the api's `search` module so Modulith doesn't mix them) packages them as `classpath:search/` and holds `IndexLayout` (renders one definition per language), `ListingIndices` (alias/index/mapping/synonym operations on the official Elasticsearch 9 Java client from the Spring Boot BOM) and `IndexBootstrap`. The worker (bootstrap Job, S-43 indexer, S-71 reindex) and the api (S-44) share it, so the writer, the reader and the tests use one copy.
+- **One index per language, same fields and analyzer names** (`nl_text`, `nl_text_search`, `nl_prefix`, `nl_keyword`): only the analysis differs, so every query works on either index. English: possessive, lowercase, ASCII folding, English stop words, Porter stemmer (`light_english`/KStem left `mechanics` unstemmed, so "mechanic" missed "Mechanics"). French: elision (`l'`, `d'`, `qu'`, `jusqu'` …, case-insensitive), lowercase, **ASCII folding before stop words and the light French stemmer** — accents never decide a match, at the cost of a few accented stop words (`à`, `été`) being indexed; synonyms sit after folding so rules may be written with or without accents.
+- **Aliases + versioned indices:** readers and writers use only `listings_en` / `listings_fr`; each points at `listings_<lang>_v<schema>_<yyyyMMddHHmmss>`. Each index records `_meta.northline` (schema, SHA-256 of the canonical analysis and of the mappings); the bootstrap compares hashes rather than reading settings back (Elasticsearch normalises them). New fields are added in place (`PUT _mapping`); a changed analysis, schema bump or incompatible mapping is **"reindex required"**, reported and never done by the bootstrap (S-71 does it). `dynamic: strict` so a writer can't silently invent fields. `auto_expand_replicas: 0-1` (one node locally, a replica on Elastic Cloud's two zones), one shard (the catalogue is small; revisit past a few million documents).
+- **Synonyms through the Synonyms API, not files on the nodes:** Elastic Cloud has no access to the nodes' config directory, so the repository files are loaded into the synonym sets `listings-synonyms-en|fr` (`PUT _synonyms/<set>`), which `synonym_graph` filters reference with `updateable: true` in the search analyzers only; replacing a set reloads them at once — "a file you can reload" without a reindex or restart. French ↔ English pairs live in both files. `i18n.synonyms` (DATA_MODEL) isn't read yet: no screen writes it; the files are the source until a console editor exists.
+- **Document fields** fixed now for S-43/S-44 (runbook § 1): kinds `service | product | food | merchant` (ARCHITECTURE's "dish" is `food`, as the backlog's kind filter says), `categoryPath` (root → leaf ids), money in cents, `trustTier` + numeric `trustRank` (for boosts), `openHours` as `integer_range`s of minutes in the Edmonton week and `deliveryCutoffMinute` / `soldOutOn` / `pausedUntil`, so "open now", "on tonight's run" and "sold out today" are evaluated at query time (no nightly re-index for the clock); `location` + `serviceRadiusKm` for distance and service area; `vetting` / `status` / `merchantStatus` kept as fields although only approved, live, active listings are ever indexed (filters stay explicit). Two completion fields: `suggest` (listing and merchant names, contexts `market` + `kind`) and `suggestCategory` (category names, context `market`); `name.prefix` is `search_as_you_type`.
+- **Bootstrap Job** `northline-search-indices-<hash>` (hash-named hook objects as S-15, pre-install/pre-upgrade, weight/wave −9 right after the Kafka topics Job), worker image, `SearchIndicesCommand apply|plan|verify` (exit 3 = drift under `verify`); hook ConfigMap with the `ES_*` keys of `configEnv`, hook ExternalSecret/Secret with `ES_PASSWORD`. `apply` exits 0 when a reindex is required (logged `REINDEX REQUIRED`): additive changes must not block releases, and a reindex is an operator's decision. Disabled on the kind rehearsal (no Elasticsearch). `./gradlew :worker:searchIndices` for local runs. No new variables.
+- **validate.sh:** the two Job checks render first and grep the result; `helm template | grep -q` under `pipefail` failed at random when grep closed the pipe early (the existing Kafka topics check flaked the same way and is fixed too).
+- **Least-privilege role** documented (search.md § 5: `monitor`, `manage_search_synonyms`, `listings_*` create/manage/read/write): the S-3 `elastic` superuser stays until the Elastic Cloud deployment exists.
+- **Tests:** `IndexLayoutTest` (both languages, names, hashes, synonym parsing, create body); `IndexBootstrapTest` on Testcontainers Elasticsearch 9.1 (the compose image): empty cluster → plan reports all missing and changes nothing; apply creates the sets, then versioned indices behind the aliases; second run in sync; French elision/folding/stemming and English possessives through `_analyze`; cross-language synonyms (`pain au levain` ↔ `sourdough`, `mobile mechanic` → `Mécanicien mobile`) in both indices; a changed synonym file is live at once without a reindex; a new field is added in place; a changed analyzer or an incompatible field type → reindex required, nothing touched. Worker `SearchIndicesCommandTest` (exit codes against its own empty cluster).
+- **Not done / never run for real:** no Elastic Cloud deployment or credentials exist (known open item) — nothing has run against Elastic Cloud, only against local/Testcontainers Elasticsearch 9.1 with security off; the `northline_app` role is documented, not created; the reindex itself (S-71); `i18n.synonyms` and a console synonym editor.
+
+## 2026-09-30 — S-43 Search indexer consumer (catalogue, food, merchants, trust events)
+
+- **Documents are built from the read side by direct read-only queries in the worker** (`DocumentSource`), not from an api endpoint: the worker already shares the database with the api and reads its tables for notifications (S-27 `JdbcRecipients`), there are no service-to-service credentials, it saves a hop per event, and the reindex (S-71) can stream whole merchants through the same queries. Module boundaries: the worker writes nothing in the api's schemas (only `search.sync_state`); the queries are the only place that knows those columns, reviewed against V004/V030/V050/V090/V091/V041/V073.
+- **Against S-37's rule?** S-37 now forbids SQL on another module's schema *inside the api* (`SchemaOwnershipTests`). The worker is a separate deployable with its own precedent (S-27 `JdbcRecipients`), its queries are read-only, and a read endpoint would put a synchronous api call (and service credentials) in every event's path. If the api's schemas are to become private to it, the follow-up is a projection feed from the api (an internal `GET /internal/search/documents?merchant=` built from the modules' `api` packages) that `DocumentSource` would call instead — the rest of the indexer is unchanged.
+- **Events name a scope; the rows decide.** `listing.*` → that listing, `food.item_availability` → that dish, everything else (menu published, kitchen paused/resumed, `merchant.*`, storefront, custom domain, review, availability) → the whole merchant. The payload's content is never trusted for the document, so duplicates, DLQ replays and events out of order converge on Postgres. A merchant-wide refresh also asks the index for the merchant's ids, so rows deleted from Postgres (a dish) disappear.
+- **Idempotent by version:** each refresh takes `pg_advisory_xact_lock('search:<merchant>')`, then a version = Postgres `clock_timestamp()` in µs, and writes with `version_type=external_gte` — deletes included. Refreshes of one merchant are serialised across replicas, the sweep and the reindex, so a later version never carries older data; Elasticsearch refuses an older snapshot (409 counted as `stale`, not an error). Chosen over per-document compare-and-set (`if_seq_no`), which needs tombstone documents for "hidden" to be safe.
+- **Visibility = what customers see:** active merchant with a province (the market), `approved` + `live` listings, `published` + `approved` dishes on a `live` menu, the merchant's own document once its page is published. **Merchant paused/suspended, vetting rejection, hidden or deleted listings and hidden menus delete documents; a kitchen pause does not** — it is minutes to hours, customers still browse the menu ("Not accepting orders right now"), so it is `pausedUntil` on the documents and the search API's "open now" excludes it. Sold out today stays indexed with `soldOutOn` (it comes back tomorrow without an event).
+- **Topics:** consumer `search-indexer` now also reads `food.kitchen`, `merchants.merchant`, `trust.review`, `availability.availability` (+12 retry topics → 92 topics, within one Event Hubs Premium processing unit's 100). The listener moved to `ca.northline.worker.search`.
+- **The reconcile sweep** (new): the catalogue has no `listing.updated` event on the wire, reviews have no "created" event, and hours, locations and merchant status changes raise none either, so every minute the worker refreshes the merchants whose rows changed (`updated_at` of services, offers, catalogue records, dishes, menus, kitchen settings, opening hours, merchants, storefronts, locations, availability rules; reviews created/replied/reported). Watermark and a 5-minute lease in **`search.sync_state`** (V120, new `search` schema), 2 minutes of overlap for late commits, 500 merchants per sweep. Chosen over adding `listing.updated` to the seven catalogue save paths and new food/trust/merchant events owned by other workstreams: one mechanism covers them all within a minute; publishes, hides and deletions stay event-driven (< 5 s). `SEARCH_RECONCILE_ENABLED`, `SEARCH_RECONCILE_EVERY` (worker, optional).
+- **One producer change (food):** deleting a visible menu item now publishes `food.item_availability` (`visible=false`) — a deleted row is the one thing the sweep can't see. Nothing else in the api changed.
+- **Schema additions (V120, search range):** `merchants.locations` (merchant_id PK/FK, `geom geography(Point,4326)`, `service_radius_km`, `source manual|geocoder|seed`, `updated_at`) — no geocoder exists (addresses are text in the onboarding profile), so rows come from the console/SQL until one does; a kitchen without a radius uses `food.kitchen_settings.radius_km`; `search.sync_state`; `updated_at` indexes the sweep uses. Dev seed **`db/seed-dev/V121__search_locations.sql`** (points for the three V100 businesses) — V121 rather than V109 so the file stays in the search range.
+- **Flyway and the dev seed:** V120 is the first migration above the dev seed's numbers (V100–V108), so on a database that has one without the other Flyway now sees the seed as "missing" (migrated first) or "out of order" (seeded first). The `local` profile and `DbTool -Pdb.devSeed=true` apply the seed **out of order**; `DbTool` without the seed on a *local* database and the `test` profile (one database for the `test` and `local` contexts) ignore `*:missing` besides Flyway's default `*:future`. Deployed databases (a deployed profile or a non-local host) keep strict validation. The consumer range (V110–V119) needs the same, so it is fixed once here.
+- **Document contract** `ca.northline.searchindex.ListingDocument` (record with a Lombok builder) in the shared library: written by the worker, read back by the api (S-44). Text per language: `*_i18n->>'<lang>'`, falling back to the default-language column; category names French → English fallback. Food documents carry the kitchen's approved categories (cuisines). `openHours`: minute-of-week `integer_range`s in Edmonton time, members' ranges merged, past midnight carried into the next day. `deliveryCutoffMinute` from the seller's onboarding answer `sameDayCutoff` for `pooled` offers (the design's "On tonight's run"; `orders.delivery_windows` is empty until fulfilment exists). `imageKey` is opaque (`media:<id>` / `object:<key>`): no public media URL exists yet. Completion inputs start at every word ("sour" finds "Country sourdough"); weight = trust rank × 100 + rating × 10 + recent sales (≤ 50).
+- **Tests:** `SearchIndexerTest` on Kafka 4 + migrated PostGIS + Elasticsearch 9 (Testcontainers), the whole worker: a published service is in both indices within 5 s with every field (French name and categories, tier, rating, location, hours, completion) and gone after `listing.hidden`; a stale event for a live listing still indexes it (rows decide); an older snapshot never overwrites a newer document and a repeated refresh is idempotent; a paused merchant loses every document and gets them back; a vetting rejection removes the listing; a kitchen's dish in both languages with prep time, fulfilment, dietary/allergens and the kitchen radius, sold out kept with its date, the pause recorded, a deleted row removed by a merchant-wide refresh; a price edit and a new review with no event arrive through the sweep. `OpenHoursTest` (week wrap, overnight, merge, completion inputs). api `MenuApiTest`: deleting a live dish publishes `food.item_availability visible=false`.
+- **Not done / never run for real:** nothing has run against Elastic Cloud (no deployment or credentials); no geocoder (locations by hand); `i18n.content_translations` isn't read (no screen writes it); `next_slot` / "available today" for services (needs the booking calendar); pooled-run windows (`orders.delivery_windows`); per-member hours for services (merged per merchant); merchants with more than 10 000 documents (the id lookup of a merchant-wide refresh reads 10 000).
+
 ## 2026-09-30 — S-45 Consumer shell: header, location pill, EN/FR, cart, account menu (consumer-bff, consumer app foundation)
 
 Contracts for the stories that follow: [CONSUMER_WEB_PLAN.md](CONSUMER_WEB_PLAN.md).
@@ -2185,6 +2214,233 @@ Built on S-45 (branch `web/s-62-consumer-auth` from `web/s-45-consumer-shell`).
 - **Not done / not verified:** no real SMS, passkey or Google/Apple round trip was exercised in a browser (unit tests
   mock the auth API; server tests use the recording SMS sender, WireMock providers); step-up for payments on
   single-factor consumer sessions is S-51's; the security addendum is in docs/security/s-20-auth-review.md.
+
+## 2026-09-30 — S-49 Shop landing, department/category pages
+
+- **Public browse endpoints** (catalogue, open under `/api/v1/public/**`, guests allowed):
+  `GET /api/v1/public/shop?market=&lang=` (landing) and `GET /api/v1/public/shop/departments/{slug}?market=&lang=`
+  (404 for an unknown slug, a group or a banned leaf). The pages are server-rendered and identical for everyone, so the
+  market and the language are **query parameters** (`lang` wins over Accept-Language), not the session;
+  `Cache-Control: public, max-age=60`. The read models (`catalogue.application.ShopViews`) are purpose-built for these
+  pages and serialized as they are (as the studio dashboard does). Bad market (blank / > 60 characters) → 422
+  "Choose a city." (our copy).
+- **What is shown:** offers with `vetting = approved` and `status = live`, of merchants that are `active` sellers
+  (`seller` | `both`) whose `city` is the market, in `shop.*` categories other than the banned leaves
+  (`northline.catalogue.banned-categories`). Merchants are read through the new **`merchants.api.ShopDirectory`**
+  (`shopsIn(market)`, `shops(ids)`); catalogue never joins the merchants schema (S-37 rule). One product card per
+  catalogue product: its cheapest offer in the market, with the number of sellers ("from $6.50", "+ 1 more shop").
+  Popular = 30-day sales of all its offers, then newest. Images: the offer's main image when it is **approved** (S-123
+  rule via `MediaRepository.approved`), served from `/api/v1/public/catalogue/media/{id}`; otherwise the design's
+  halftone placeholder.
+- **Market = city.** `region.zones` has no rows and addresses aren't geocoded to zones yet, so a market is one of
+  `northline.orders.delivery.markets` (Calgary, Edmonton, Airdrie — design 06's live markets) matched against
+  `merchants.merchants.city` ignoring case. Another city answers `served: false` with empty lists and the page says
+  "Northline Shop doesn't deliver to {city} yet." with **Change location**. The consumer app renders the market in
+  the URL (default Calgary) and follows the visitor's location after hydration (CONSUMER_WEB_PLAN.md § Market).
+- **Pooled runs** (design 06 "Tonight's pooled run leaves 6:00 pm · order by 5:19"): new **`orders.api.DeliveryRuns`**,
+  implemented by the orders module from `northline.orders.delivery` (application.yml): every market gets an evening
+  run 6–9 pm (shops pack by 5:45, $2.99) and a morning run 8–11 am (pack by 7:30, $1.99) each day, plus the direct
+  courier (45 min, $9.99) — the design's three windows and prices. A run is an `orders.delivery_windows` row created
+  the first time someone asks (today and the next two days; `insert … on conflict do nothing`, in its own
+  transaction so read-only callers can ask); windows without a market (the V103 dev seed's R-611/R-612) count as every
+  market's. **Cut-off:** `cutoff_at` stays what the Studio shows sellers (pack by); customers must order
+  `order-lead` (25 min) before it — "order by 5:20 pm" for a 5:45 pack-by (the design's 5:19 is a mock-up value).
+  "N neighbours in" = distinct customers with a non-cancelled order on the run. Plus prices don't exist yet (no
+  membership), so everyone pays the standard fee.
+- **On the run:** a shop / product is on the first run it can make — it has an in-stock offer (a variant in stock
+  when it has variants) whose fulfilment includes `pooled` (or is empty), and its handling time allows it: same day →
+  the next run, next day → a run from tomorrow, two days → from the day after. Shop tags: "Order by {time}" for the
+  next run, "Tomorrow" / a weekday for a later one, "Not on a run" otherwise (ours; the design has no such shop).
+- **Departments are the taxonomy's leaves** (`/shop/bakery`), as the design's tiles are (Groceries, Butcher, Bakery,
+  …). The design's sub-aisle chips ("All · Bread · Pastry · Cakes · Gluten-free") have no data behind them — the
+  taxonomy stops at leaves — so the chips are the **other departments of the same group** that have shops in the
+  market, the current one selected (`aria-current`), each a link. "Sorted by popular ▾" shows without the ▾: there is
+  no other order yet.
+- **Copy the design doesn't give:** run words for other days ("Today's / Tomorrow's / Tuesday's pooled run leaves …",
+  "All shops on tomorrow's run", "On today's run"), the empty and not-served states, plural forms, "from $6.50",
+  "+ N more shops", page descriptions — en + fr-CA (glossary: tournée groupée, Maître / Fiable / Inscrit, Sur la
+  tournée de ce soir, Populaire dans …). The landing's "3× points" shop tag and the product page's "points" need
+  merchant rewards (`trust.merchant_rewards`), which nothing fills: not shown. Distances ("0.8 km") need merchant
+  locations, which don't exist: not shown.
+- **Links:** department tiles and landing shop cards → `/shop/<department>`; department-page shop cards → search
+  (`/search?scope=shop&q=<shop>`, the design's `go.search`); product cards → `/products/<id>` (S-50). An explicit
+  `?market=` is kept on links between Shop pages.
+- **French category names:** `db/seed/categories.json` is English only and `seedCategories` rewrites `name_i18n` on
+  every run, so the translations live in the new `catalogue.category_labels` (V111) and the browse queries prefer
+  them. Only the shop taxonomy is translated (services and food belong to S-53 / S-57).
+- **UI kit:** `ProductTile`, `ShopTile` (department and landing looks), `DepartmentTile`, `TileGrid` (+ stories) in
+  `@northline/ui`; shops without a logo get one of six token swatches picked from their id (no hex). `messagesFor()`
+  gives a feature's catalogue outside React (route `head()`). The consumer test harness now uses the app's
+  `RouteError` / `NotFound` as the router's defaults.
+- **Schema (V111, consumer range):** `orders.delivery_windows.market`, `.slot` + unique `(market, starts_at)` where a
+  market is set; `orders.run_label_seq` (R-700…); `ix_orders_window`; partial indexes `ix_offers_live` /
+  `ix_offers_live_product`; `catalogue.category_labels` with the French shop taxonomy. **Dev seed V113**
+  (`db/seed-dev/V113__consumer_shop.sql`, local only): design 06's Calgary shops and products (Country sourdough with
+  Whole / Sliced, free-run eggs from two shops). V111–V113 sort after the dev seed's V100–V110, as S-62's V110 does.
+- **Tests:** `PublicShopApiTest` (market filter: drafts, pending, hidden, paused merchants, providers, other cities
+  and banned categories left out; cheapest offer + seller count; popularity order; handling time / stock / pickup-only
+  vs the run; households on the run; French names by `lang` and by Accept-Language; unserved city; 404s; 422 message),
+  in its own test market (application-test.yml lists `Shopville` & co.). vitest: `features/shop/shop.test.tsx` (design
+  copy en + fr-CA, market follows the location and stays on links, explicit market kept, not-served and empty
+  states, skeleton, error + Retry, department page).
+- **Not done:** SEO structured data, canonical/hreflang and the sitemap (S-63); department pages for other markets'
+  dedicated URLs (`/shop/bakery?market=Edmonton` is the URL); a shop's own page (sellers have no public storefront
+  route — S-54 builds providers'); sorting other than popular; the Storybook a11y run of the new stories (no Chromium
+  in the sandbox — `pnpm test-storybook` in CI).
+
+## 2026-09-30 — S-50 Product detail with offers, variants, stock and delivery cut-off
+
+Built on S-49 (branch `web/s-50-product-detail` from `web/s-49-shop-landing`).
+
+- **Endpoint:** `GET /api/v1/public/shop/products/{productId}?market=&lang=` (public, server-rendered page, cached 60 s).
+  404 when the id isn't a shop product, is in a banned category, or **no shop anywhere** has an approved, live offer
+  for it — an unvetted catalogue record never becomes public. A product sold only in other markets answers 200 with
+  no offers, and the page says "No shop in {city} sells this right now." with Back to Shop.
+- **Several sellers per catalogue product** (Amazon-ASIN model, DECISIONS "Catalogue"): every active seller of the
+  market with an approved, live offer on the record. Order ("best first"): in stock, then the earliest run it can
+  make, then price, then tier (Master, Trusted, Registered). The first is shown in the design's layout; the others
+  are listed under **"Also sold by"** (ours — design 06 shows one shop) with tier, run and price, and **Choose** opens
+  the same page with `?offer=<id>`. "Also from {shop}" = up to 3 of that shop's other live products, most popular
+  first (the design's "Also from Glenmore").
+- **Price and stock:** an offer with variants shows the cheapest variant in stock (a variant's own price); its stock is
+  the variants' total. Variants are the design's "Options" chips (one value per variant, as the Studio editor stores
+  them); out-of-stock options are disabled. "Only N left" (rosehip tag) at or under the shop's low-stock mark or ≤ 3;
+  "Out of stock" disables Add. The quantity stepper stops at the stock. Compare-at price shows as "Was $…".
+- **Delivery cut-off, server-side in America/Edmonton:** each offer carries the next two pooled runs it can make
+  (same `DeliveryRuns` and handling-time rule as S-49), each with `orderBy` (customer cut-off) and `packBy` (the shop
+  packs). The panel reads, e.g., "Order by 5:20 p.m. for tonight 6–9 p.m. pooled ($2.99), tomorrow 8–11 a.m., or direct
+  courier in 45 min. Glenmore Bakery packs at 5:45 p.m.; the shop is paid only after you confirm delivery." — the
+  design's sentence with the order-by time in front (the story asks for the cut-off). Pickup-only or out of stock have
+  their own sentences. The tag reads "On tonight's / today's / tomorrow's / <weekday>'s run".
+- **Rating:** `trust.api.RatingQuery` ("★ 4.8 (211 verified)"), hidden when a shop has no reviews. The design's
+  "3× points this week" and "Baked today" tags have no data (no merchant rewards, no bake dates): not shown.
+- **Add to cart** posts `POST /api/v1/cart/items {offerId, variantId?, qty}` (the S-51 contract) and goes to `/cart`,
+  as the design's `addToCart` does; any failure shows "We couldn't add it to your cart. Try again." **Until S-51 is
+  merged the endpoint doesn't exist**, so Add answers with that error.
+- **Images:** the offer's own approved images (or the record's, for shared-image listings), main + up to 3
+  thumbnails that switch the main photo; without images, the design's halftone placeholders.
+- **Copy the design doesn't give** (en + fr-CA): the order-by sentence variants, "Also sold by", "Choose", "Only N
+  left", "Was …", returns tags ("Returns within 14 days" / "Final sale"), empty states. Glossary: Niveau Maître,
+  TPS, tournée groupée, livreur direct.
+- **Schema:** none (S-49's indexes serve the product query).
+- **Tests:** `ProductPageApiTest` (best-first order with pending / other-market / sold-out offers, cheapest variant in
+  stock, variants and stock, "Also from", runs by handling time with order-by = pack-by − 25 min and the configured
+  Edmonton times, French title and department, market without sellers, 404 for drafts / banned / unknown);
+  vitest `features/product/product.test.tsx` (design copy, cut-off sentence, option + quantity to the cart request,
+  stock limit, other sellers + Choose, out of stock, cart failure, French, empty state, skeleton).
+- **Not done:** Product JSON-LD and canonical URLs (S-63); per-variant images (the editor has none).
+
+## 2026-09-30 — AI provider and data residency (user decision)
+
+- **In-product AI uses OpenRouter**, behind an `LlmClient` port on the Spring AI stack, following billionairedev24/samop-inv-ship-26 (S-129–S-133). MCP (S-127) uses springdoc's OpenAPI-to-MCP tools on Spring AI's MCP server.
+- **OpenRouter as a US processor is accepted by the product owner (2026-09-30).** The reason: Northline's data at rest stays in Canada (Postgres, object storage, search, backups in Canadian regions), and only per-request prompts go to OpenRouter.
+- **Conditions that still apply to every AI feature:**
+  - Send the model the minimum the feature needs, redacted on the port. Never SINs, card or bank numbers, or another merchant's data.
+  - Prefer models and providers that don't retain or train on prompts, using OpenRouter's data-policy and provider-routing settings.
+  - Disclose the processor in the Privacy Policy and in the PIPEDA / Law 25 assessment (SEC stories), together with the other processors.
+- **Pending:** an OpenRouter API key per environment. Until it exists, `northline.ai.provider=fake` locally, and AI features answer `503 ai_unavailable` in the cloud.
+
+## 2026-09-30 — S-51 Cart and checkout (server-side cart, step-up, tax, manual-capture payments, order.placed)
+
+- **Cart (orders, `/api/v1/cart`, open to guests):** `GET`, `POST /items` `{offerId, variantId?, qty}`,
+  `PATCH /items/{id}` `{qty}`, `DELETE /items/{id}`. A signed-in person's cart is keyed by their user id. A guest's
+  cart is keyed by the SHA-256 of the consumer-bff's `X-Northline-Guest` (the raw id is never stored). It is never
+  keyed by an identity, and it expires 30 days after its last change. On the first signed-in call that still carries
+  the guest id, the guest's lines are merged into the person's cart (quantities add, capped at 99) and the guest cart
+  is deleted. Every read checks each line against the catalogue (new `orders.api.SellableOffers`, implemented by
+  catalogue: only approved and live offers, variants and stock) and against the shops (`ShopDirectory`). A hidden
+  listing, a paused shop or sold-out stock therefore shows up at once as "This item isn't available any more." /
+  "This item is sold out." / "Only N left.". Lines are grouped by shop in the order the shops were first added (the
+  design's multi-shop cart). `orders.carts` (V009) is kept. The lines move from the `lines` jsonb to
+  `orders.cart_items`.
+- **Checkout needs a person** (`/api/v1/me/…`):
+  - `GET /checkout?market=` returns the saved addresses, the delivery options and `stepUp`.
+  - `POST /checkout/quote` returns totals with GST/HST.
+  - `POST /checkouts` (Idempotency-Key, X-Step-Up) takes the stock and opens the PaymentIntents.
+  - `POST /checkouts/{id}/place` (Idempotency-Key) checks the authorizations, holds escrow and creates the order.
+  - A guest who presses Pay is sent to `/sign-in?next=/cart`, and the cart follows them through the merge.
+- **Step-up rule (decided here):**
+  - A sign-in with a second factor (`acr=mfa`) pays directly.
+  - A phone-code sign-in (single factor) must send `X-Step-Up`: a fresh proof (≤ 5 minutes, single use) from
+    northline-auth's step-up with the account's passkey or authenticator (`identity.api.SecondFactors`: `mfa_primary`
+    is `passkey` | `totp`).
+  - An account with neither gets 403 `second_factor_required` ("Add a passkey to pay: payments sit behind a second
+    factor."). It then enrols a passkey at checkout. The new `POST /auth/step-up/enrol/passkey/options` +
+    `/enrol/passkey` are allowed only within 15 minutes of sign-in, and they issue the proof along with the new
+    passkey.
+  - The step-up endpoints now accept any signed-in session, not just MFA ones, because that is what they are for.
+  - Browsing and the cart stay single-factor.
+- **Delivery options:**
+  - Pooled runs come from `DeliveryRuns` (S-49): the next two the whole cart can make. The slowest handling time
+    decides, and a line that can't go pooled rules pooled runs out.
+  - The direct courier is offered when everything can go the same day.
+  - The address's city must be a served market, and every shop must be in it ("{shop} doesn't deliver to {city}.").
+  - Addresses are `identity.addresses`, read and written through the new `identity.api.DeliveryAddresses`. A new one
+    is saved when the checkout starts.
+- **Tax:** `TaxCalculations.calculate` (S-21) runs once per order line (the shop sells) and once for the delivery fee
+  (Northline sells). The province and postal code come from the delivery address. The quote shows GST/HST per rate
+  as the design's "GST (5%)".
+- **Payments (S-11 escrow model, unchanged):**
+  - One manual-capture PaymentIntent per order line (`order_line`) and one for the delivery fee (`order_delivery`,
+    merchant `PaymentAuthorizations.PLATFORM = "northline"`). They share `transfer_group=order:<id>`.
+  - The consumer app mounts the Stripe Payment Element for the first PaymentIntent and confirms the others with the
+    same PaymentMethod. It does this only when the api says `provider: stripe` (a secret key is set:
+    `payments.api.PaymentSettings`, publishable key `STRIPE_PUBLISHABLE_KEY`, an existing variable). Otherwise it
+    shows the local fake: a simulated card form ("Test payments · nothing is charged") whose intents are
+    already `requires_capture`.
+  - `place` checks each PaymentIntent (`PaymentAuthorizations.authorized`: `requires_capture` for at least the amount
+    plus tax), then `EscrowLifecycle.hold` for each line. Card data never reaches Northline.
+- **Stock:** `POST /checkouts` takes stock with conditional decrements (`stock >= qty`) in one transaction. If any line
+  can't be taken, nothing is taken: 409 "Something in your cart just sold out…". The checkout holds stock and
+  PaymentIntents for 30 minutes. `CheckoutJobs` (every minute, not under `test`) abandons expired checkouts, gives the
+  stock back and cancels the PaymentIntents. A new checkout by the same person abandons their previous open one.
+- **Idempotency:** both POSTs require `Idempotency-Key` (422 "Idempotency-Key header is required." when it is
+  missing). A replay returns the stored answer with `Idempotent-Replayed: true`. A different body with the same key
+  gets 409 `idempotency_key_reused`. The store is `payments.api.IdempotentRequests`
+  (the S-11 request guard, now shared; `PaymentsIdempotency` delegates to it). The key also goes to Stripe
+  (`nl1:…` keys, folded with the client key).
+- **`order.placed`:** placing publishes `orders.api.OrderPlaced` **once per shop** with that shop's lines
+  (`@Externalized` to `orders.order`; schema `events/orders.order_placed.v1.schema.json`, checked by S-34). It carries
+  ids and amounts only. The customer id is in the internal event, like other orders events, and is never in the
+  partner payload. The S-33 webhooks consumer now subscribes to `orders.order` (`deploy/kafka/topics.yaml`) and maps
+  it to public `order.placed` (`docs/spec/webhooks/order.placed.v1.schema.json`), so `order.placed` leaves
+  `NOT_YET_PUBLISHED`. S-38's `SalesListener` counts sales from it at once.
+- **Order rows:** `orders.orders` gets `checkout_id` (unique) and `delivery_kind`, and one `order_lines` row per line
+  (state `pending`). The reference comes from `orders.order_ref_seq` (NL-50000…, clear of the seed's NL-481xx).
+  `orders.checkouts` holds the snapshot (ids, amounts, PaymentIntent ids; no personal data).
+- **Not done / gaps:**
+  - The delivery-fee PaymentIntent is authorized but **nothing captures it yet**. Capture happens on delivery, and
+    the delivery flow (courier, "delivered") is a later story. Until then it lapses after 7 days like any
+    uncaptured authorization.
+  - The "points" line and "Plus" prices are not shown (no loyalty ledger writer, no membership).
+  - Substitution preference is stored on the checkout, but nothing uses it yet.
+  - No receipt email is claimed on screen.
+  - Apple Pay / Google Pay are not enabled (cards only, stripe.md § 11).
+- **Never exercised against real Stripe (only the local fake gateway and stripe-mock-shaped unit tests):**
+  - the Payment Element mount;
+  - `confirmPayment` / `confirmCardPayment` of several PaymentIntents with one PaymentMethod, including
+    `setup_future_usage` on the first;
+  - 3-D Secure on the second and later PaymentIntents;
+  - Stripe Tax calculations for the delivery fee under the platform;
+  - canceling PaymentIntents when a checkout expires.
+- **Schema (V112, consumer range):** `orders.carts` timestamps + unique keys, `orders.cart_items`, `orders.checkouts`,
+  `orders.orders.checkout_id` / `delivery_kind`, `orders.order_ref_seq`; the `ref_type` checks of
+  `payments.payment_intents` and `payments.tax_calculations` widened to allow `order_delivery` (the delivery fee's
+  PaymentIntent and tax calculation, referenced by the order id).
+- **Tests:**
+  - `CartCheckoutApiTest` covers:
+    - the cart: guest keyed by header, validation messages, quantity changes, merge at sign-in, unavailable lines;
+    - checkout: setup (runs, direct, step-up need), GST on items and delivery, address/choice validation, phone-code
+      sign-in needs step-up;
+    - idempotency: key required, replay, conflicting body;
+    - placing: escrow held per line, `order.placed` per shop, cart emptied; an unauthorized payment doesn't place;
+      an abandoned checkout returns stock and can't be placed; empty cart;
+    - a stock race: two checkouts for the last unit, exactly one wins.
+  - `StepUpApiTest` (auth, 3 new): a phone-code session steps up with TOTP, and passkey enrolment issues the proof
+    and needs a recent sign-in.
+  - `WebhookPayloadsTest.orderPlaced_theShopsLinesWithoutTheCustomer`.
+  - vitest `features/cart/cart.test.tsx`: design copy, guest banner and sign-in, multi-shop groups, quantity and
+    remove, delivery windows, tax lines, step-up dialog, fake card, errors, French.
 
 ## 2026-09-30 — S-53 Services landing, service category, provider list
 

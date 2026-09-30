@@ -22,7 +22,7 @@ import ca.northline.hire.domain.Pricing;
 import ca.northline.hire.domain.ServiceKind;
 import ca.northline.identity.api.PersonDirectory;
 import ca.northline.merchants.api.PublicProviders;
-import ca.northline.payments.api.ConsumerPayments;
+import ca.northline.payments.api.PaymentSettings;
 import ca.northline.payments.api.EscrowKind;
 import ca.northline.payments.api.EscrowLifecycle;
 import ca.northline.payments.api.PaymentAuthorizations;
@@ -74,7 +74,8 @@ class BookingCheckoutService
     private final SlotHolds holds;
     private final PaymentAuthorizations payments;
     private final EscrowLifecycle escrow;
-    private final ConsumerPayments consumerPayments;
+    private final PaymentSettings paymentSettings;
+    private final PaymentGate gate;
     private final CustomerBookings bookings;
     private final PersonDirectory people;
     private final TaxRates taxRates;
@@ -127,7 +128,12 @@ class BookingCheckoutService
     }
 
     @Override
-    public Checkout start(String customerId, BookingRequest request, @Nullable String clientKey, boolean secondFactor) {
+    public Checkout start(
+            String customerId,
+            BookingRequest request,
+            @Nullable String clientKey,
+            boolean mfa,
+            @Nullable String stepUpProof) {
         if (request.holdId() == null || request.serviceId() == null) {
             throw RuleViolation.of("holdId", "required", "Pick the time again.");
         }
@@ -145,11 +151,10 @@ class BookingCheckoutService
         if (pricing.free()) {
             var booked = book(hold, request, offer, kind, pricing.priceCents(), pricing.taxCents(), null);
             holds.release(hold.id());
-            return new Checkout(hold.id(), hold.bookingId(), 0, 0, 0, "confirmed", null, null, null, booked);
+            return new Checkout(
+                    hold.id(), hold.bookingId(), 0, 0, 0, "confirmed", null, null, paymentSettings.provider(), null, booked);
         }
-        if (!secondFactor) {
-            throw new SecondFactorRequired();
-        }
+        gate.require(customerId, mfa, stepUpProof);
         var started = payments.start(new PaymentAuthorizations.Request(
                 hold.merchantId(),
                 "booking",
@@ -169,7 +174,8 @@ class BookingCheckoutService
                 started.status(),
                 started.paymentIntent(),
                 started.clientSecret(),
-                consumerPayments.publishableKey(),
+                paymentSettings.provider(),
+                paymentSettings.publishableKey(),
                 null);
     }
 

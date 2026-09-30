@@ -140,6 +140,12 @@ the dev server. Location: the header asks for the browser's position once per vi
 overrides it); `localStorage['nl.location']` holds an address chosen on the Location screen. Language: the FR/EN
 toggle writes the `nl.locale` cookie, so the server renders the next page in French.
 
+Shop (S-49…): the dev seed `db/seed-dev/V113__consumer_shop.sql` adds design 06's Calgary shops (Glenmore Bakery,
+Bridgeland Butcher, Sunnyside Greens, Prairie Pantry, …) with approved, live products — run `seedCategories` too so
+every department has its name. The pages are rendered for `?market=` (default Calgary; Edmonton and Airdrie have no
+seeded shops, so their pages show the empty state). Pooled runs are created on demand from
+`northline.orders.delivery.runs` (application.yml): tonight 6–9 pm, tomorrow 8–11 am.
+
 Business pages on other hosts (S-54): the built server serves `pages.<zone>/<slug>` and merchants' own domains when
 `NL_PAGES_HOST` is set (the Vite dev server doesn't). Try it with `pnpm --filter @northline/consumer build`, then
 `NL_SITE_ORIGIN=http://localhost:3000 NL_PAGES_HOST=pages.localhost NL_BFF_URL=http://localhost:8080 node
@@ -207,8 +213,13 @@ Notes:
   nothing). Both read `deploy/kafka/topics.yaml`; `scripts/topics.sh --list` prints every derived topic. Topics are
   never auto-created (`KAFKA_AUTO_CREATE_TOPICS_ENABLE=false`), so a new topic goes into the catalogue first
   ([infrastructure.md § 5.3](infrastructure.md#53-kafka-topics-and-credentials)).
+- **Elasticsearch (S-42):** after `--profile search`, create the synonym sets and the indices the way the deploy Job
+  does: `cd server && ./gradlew :worker:searchIndices --args='apply'` (`plan` / `verify` change nothing). Run it again
+  after editing `deploy/search/synonyms-*.txt` — the change is live at once ([search.md](search.md)).
 - **Worker:** `cd server && ./gradlew :worker:bootRun` (no profile) needs Postgres, Kafka (`events`) and
-  Elasticsearch (`search`). The indexer is still a stub (S-43).
+  Elasticsearch (`search`) with the indices created (`:worker:searchIndices`). The search indexer (S-43) then fills them from
+  the events the api publishes (only when the api runs without `local`, which turns Kafka off) and, every minute, from
+  rows changed without an event; the dev seed's businesses have locations (`db/seed-dev/V121`) ([search.md § 6](search.md#6-the-indexer-s-43)).
 - **Partner webhooks (S-33):** the worker delivers what Settings › API endpoints subscribe to. To receive them on
   your machine, set `WEBHOOKS_ALLOW_LOCAL=true` in `server/.env` (allows `http://localhost` endpoints; private,
   link-local and metadata addresses stay refused) and add an endpoint such as `http://localhost:4000/hooks` — any

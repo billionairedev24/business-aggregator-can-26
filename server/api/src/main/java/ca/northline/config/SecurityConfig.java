@@ -48,6 +48,9 @@ class SecurityConfig {
                 .authorizeHttpRequests(a -> a.requestMatchers(
                                 "/api/v1/search/**", "/api/v1/storefronts/**", "/api/v1/geo/**")
                         .permitAll()
+                        // The consumer cart (S-51): guests have one too, keyed by the consumer-bff's guest id
+                        .requestMatchers("/api/v1/cart", "/api/v1/cart/**")
+                        .permitAll()
                         // Public reads for the consumer app, e.g. the page a merchant's own domain serves (S-31)
                         .requestMatchers(HttpMethod.GET, "/api/v1/public/**")
                         .permitAll()

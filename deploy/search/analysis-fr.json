@@ -1,0 +1,33 @@
+{
+  "$comment": "S-42 — French analysis of listings_fr: elision (l'épicerie → épicerie), ASCII folding (café = cafe, so accents never decide a match), French stop words and the light stemmer. nl_text_search adds the reloadable synonym set listings-synonyms-fr (synonyms-fr.txt). nl_prefix (search-as-you-type, completion) folds and drops elided articles without stemming. Changing anything here needs a reindex (S-71) and a schema bump in listings.json.",
+  "filter": {
+    "nl_elision": {
+      "type": "elision",
+      "articles_case": true,
+      "articles": ["l", "m", "t", "qu", "n", "s", "j", "d", "c", "jusqu", "quoiqu", "lorsqu", "puisqu"]
+    },
+    "nl_stop": { "type": "stop", "stopwords": "_french_" },
+    "nl_stemmer": { "type": "stemmer", "language": "light_french" },
+    "nl_synonyms": { "type": "synonym_graph", "synonyms_set": "listings-synonyms-fr", "updateable": true }
+  },
+  "analyzer": {
+    "nl_text": {
+      "type": "custom",
+      "tokenizer": "standard",
+      "filter": ["nl_elision", "lowercase", "asciifolding", "nl_stop", "nl_stemmer"]
+    },
+    "nl_text_search": {
+      "type": "custom",
+      "tokenizer": "standard",
+      "filter": ["nl_elision", "lowercase", "asciifolding", "nl_synonyms", "nl_stop", "nl_stemmer"]
+    },
+    "nl_prefix": {
+      "type": "custom",
+      "tokenizer": "standard",
+      "filter": ["nl_elision", "lowercase", "asciifolding"]
+    }
+  },
+  "normalizer": {
+    "nl_keyword": { "type": "custom", "filter": ["lowercase", "asciifolding"] }
+  }
+}

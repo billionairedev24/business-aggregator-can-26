@@ -298,8 +298,17 @@ class BookingCheckoutApiTest extends IntegrationTest {
         }
 
         @Test
-        void aPhoneCodeSessionStepsUpBeforePaying() throws Exception {
+        void aPhoneCodeSessionStepsUpBeforePaying_theS51Rule() throws Exception {
             var holdId = hold(customer, tomorrowAt(12));
+            // no second factor on the account at all: enrol a passkey first
+            mvc.perform(post("/api/v1/me/bookings/checkout")
+                            .with(TestJwt.customer(customer))
+                            .header("Idempotency-Key", "e-" + holdId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(JSON.writeValueAsString(request(holdId))))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value("second_factor_required"));
+            jdbc.sql("update identity.users set mfa_primary = 'totp' where id = ?").params(customer).update();
             mvc.perform(post("/api/v1/me/bookings/checkout")
                             .with(TestJwt.customer(customer))
                             .header("Idempotency-Key", "s-" + holdId)

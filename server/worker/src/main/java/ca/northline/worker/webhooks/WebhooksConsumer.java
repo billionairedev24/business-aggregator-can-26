@@ -35,7 +35,7 @@ class WebhooksConsumer {
             exclude = PoisonEventException.class,
             traversingCauses = "true")
     @KafkaListener(
-            topics = {"booking.booking", "payments.escrow", "payments.refund"},
+            topics = {"booking.booking", "payments.escrow", "payments.refund", "orders.order"},
             groupId = GROUP)
     void on(ConsumerRecord<String, byte[]> record) {
         events.process(GROUP, record, fanOut::on);
