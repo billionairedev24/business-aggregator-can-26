@@ -2,12 +2,13 @@
 
 Elasticsearch 9 holds the **search read model** only: PostgreSQL stays the source of truth, and everything in the
 indices can be rebuilt from it. This runbook covers the indices and their synonyms (S-42), the indexer that fills them (S-43) and
-the search API that reads them (S-44).
+the search API that reads them (S-44), and how to rebuild everything (S-71).
 
 | story | what | where |
 |---|---|---|
 | S-42 | indices `listings_en` / `listings_fr`, analyzers, synonyms, the bootstrap Job | `deploy/search`, `server/search-index`, `ca.northline.worker.search` |
 | S-43 | the `search-indexer` consumer, the reconcile sweep, `merchants.locations` | `ca.northline.worker.search`, `db/migrations/V120` |
+| S-71 | the full reindex from Postgres with an alias swap (§ 9) | `SearchReindex`, chart `searchReindex` |
 | S-44 | the public search API `GET /api/v1/search` and `/api/v1/search/suggest` (contract § 8) | api module `ca.northline.search` |
 
 Environments: local uses the compose `search` profile (Elasticsearch 9.1, security off, [local.md](local.md)); dev,
@@ -100,7 +101,7 @@ query. `i18n.synonyms` (DATA_MODEL) is not read yet: the files are the source.
 |---|---|
 | a new field or sub-field in `listings.json` | the Job adds it in place (`UPDATED`); no reindex |
 | a synonym rule | the Job replaces the set; live at once |
-| an analyzer, a filter, a setting, a field's type or analyzer | bump `schema` in `listings.json`; the Job reports `REINDEX REQUIRED`; run the reindex (S-71) |
+| an analyzer, a filter, a setting, a field's type or analyzer | bump `schema` in `listings.json`; the Job reports `REINDEX REQUIRED`; run the reindex (§ 9) |
 
 The indices are `dynamic: strict`: a document with a field the mapping doesn't have is refused, so a new field must
 reach the mapping (the Job runs before the pods) before any writer sends it.
@@ -291,11 +292,66 @@ Both endpoints are `GET`, public, JSON, camelCase; money in cents; errors as eve
 - The design's "Your recent" searches are the client's (not stored by the api); "fr → sourdough" synonym rows are not
   returned (synonyms apply to `/search`).
 
-## 9. Troubleshooting
+## 9. Reindex (S-71)
+
+Rebuilds both indices from Postgres into new versioned indices and swaps the aliases — searches keep being answered
+by the old indices until the new ones are complete, and by the new ones from the swap on. Run it:
+
+- after a layout change that needs it (the search-indices Job logs `REINDEX REQUIRED`: a new analyzer, a changed field,
+  a `schema` bump in `deploy/search/listings.json`);
+- when the index has drifted from Postgres (lost events, a restore of the database, a new environment filled from a
+  dump), or to repair documents after a bug fix in the indexer.
+
+**What it does** (`SearchReindex`, one run at a time — a Postgres advisory lock):
+
+1. notes the end of every topic `search-indexer` consumes;
+2. creates `listings_<lang>_v<schema>_<now>` for both languages (no refresh, no replica while loading);
+3. **backfill:** every merchant, 200 at a time, through the indexer's own projection (same documents, same
+   per-merchant lock and versions);
+4. **catch-up:** applies the events published since step 1 to the new indices, pass after pass until nothing is new;
+5. restores refresh and replicas, waits for the indices (yellow), then **swaps both aliases in one request**;
+6. catches up once more (events the live indexer wrote to the old index during the swap) and re-reads the merchants
+   whose rows changed since step 1 without an event (the reconcile sweep's work of that time);
+7. deletes the old indices (`--keep-old` keeps them).
+
+A failure before the swap deletes the half-built indices; searches never noticed. After the swap the new indices are
+live even if step 6 fails — the live indexer and the next sweep keep them current; run the reindex again to be sure.
+
+**Run it in a cluster** (the worker image, the worker's environment): set a run id in the environment's values and
+sync —
+
+```yaml
+# deploy/argocd/envs/<env>/values.yaml (or helm upgrade … --set searchReindex.runId=…)
+searchReindex:
+  runId: "2026-10-01"            # any new DNS label; a finished Job with the same id won't run again
+  keepOld: false
+```
+
+```sh
+kubectl -n northline-<env> logs -f job/northline-search-reindex-2026-10-01
+```
+
+Remove `runId` afterwards (or leave it: the Job is deleted by its TTL after a week and is never re-run with the same id).
+Exit codes: 0 done, 1 failed (see the log; before the swap nothing changed), 2 another reindex was running.
+
+**By hand** (a machine that reaches the database, Kafka and Elasticsearch; the worker's `DB_*`, `KAFKA_*`, `ES_*`):
+
+```sh
+cd server && ./gradlew :worker:searchReindex                     # or --args='--keep-old' / --args='--batch=500'
+java -cp @/app/jib-classpath-file ca.northline.worker.search.SearchReindexCommand   # inside the worker image
+```
+
+**Check:** `curl -s "$ES_URIS/_cat/aliases/listings_*?v"` shows each alias on the new index;
+`curl -s "$ES_URIS/_cat/indices/listings_*?v"` the document counts (the two languages hold the same number).
+**Go back** (with `--keep-old`): `POST _aliases` with a `remove` of the new index and an `add` of the old one per
+language, then delete the new ones. **Duration:** about one merchant per few milliseconds plus Elasticsearch's bulk
+time; the catch-up is seconds. Nothing needs to be stopped: the indexer, the sweep and the API keep running.
+
+## 10. Troubleshooting
 
 | symptom | cause / fix |
 |---|---|
-| Job log `REINDEX REQUIRED … settings or analyzers changed` | the analysis in `deploy/search` differs from the live index's: run the reindex (S-71) |
+| Job log `REINDEX REQUIRED … settings or analyzers changed` | the analysis in `deploy/search` differs from the live index's: run the reindex (§ 9) |
 | Job log `… the alias points at 2 indices` | someone edited aliases by hand; point the alias at one index (`POST _aliases`) |
 | `strict_dynamic_mapping_exception` in a writer | the field isn't in the mapping yet: run the Job (`apply`) |
 | Job fails with `security_exception … manage_search_synonyms` | the app user lacks the cluster privilege (§ 5) |
