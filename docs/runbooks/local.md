@@ -159,6 +159,11 @@ Notes:
   providers from your laptop: `CALENDAR_PROVIDER=oauth` with your own Google / Microsoft test app registrations and
   the redirect URIs `http://localhost:3100/api/v1/calendar/oauth/<google|outlook>/callback`; push notifications stay
   off (they need a public HTTPS `API_PUBLIC_URL`), the 5-minute read does the work. [calendar-sync.md](calendar-sync.md)
+- **Custom domains (S-31):** `DOMAINS_DNS_PROVIDER=local` and `DOMAINS_EDGE_PROVIDER=local` (the defaults): enter a
+  domain in Studio › Business page › Custom domain, then **Simulate DNS records →** (dev builds only) writes its CNAME
+  and TXT records into the api's in-memory zone and checks them; a published page of an approved business goes live at
+  once and `curl 'localhost:8080/api/v1/public/storefronts/by-host?host=<domain>'` returns it. Real DNS from your laptop:
+  `DOMAINS_DNS_PROVIDER=doh`. [custom-domains.md](custom-domains.md#9-local-and-tests)
 - **Your own Kafka:** create the topics with
   `KAFKA_TOPICS_CMD=kafka-topics.sh KAFKA_TOPICS_BOOTSTRAP=localhost:9092 scripts/topics.sh`, or with the provisioner
   the deployed environments use: `cd server && ./gradlew :worker:kafkaTopics --args='apply'` (`plan` / `verify` change
