@@ -2635,7 +2635,7 @@ Branch `web/s-56-quotes`, stacked on `web/s-55-booking-wizard` (and so on S-54, 
   event date and guests for events, an optional budget, note, area and preferred date. Each provider must be published
   and offer a live service in that category; only quoteable categories (visits and events, S-53's `quoteable`) take
   requests. It is one `booking.quote_requests` row with `merchant_ids` — exactly what the Studio "Quote requests"
-  column (S-39/Operations) already lists — `respond_by` = now + 2 h (design: "Master-tier providers answer within 2
+  column (Operations) already lists — `respond_by` = now + 2 h (design: "Master-tier providers answer within 2
   hours"), `expires_at` = now + 7 days. **Providers see the area only**: the street address, access instructions and
   the day's phone number are given to the one provider whose quote is accepted, at acceptance (sealed with the booking,
   S-55's `booking.access_notes`). Validation messages: "Choose 1 to 3 providers.", "Describe the job in at least 10
