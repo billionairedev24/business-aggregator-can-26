@@ -177,6 +177,15 @@ The home page's "Your week" (S-46) lists the signed-in person's orders, bookings
 in the caller's language (`Accept-Language`), `href` a consumer route (`/orders/…`, `/quotes/…`). S-58 provides it;
 until then (404) the section shows its empty line. The points line under it reads `points` of the account summary.
 
+### Market (S-49)
+
+The Shop pages are rendered for the market in their URL, `?market=<city>` (default **Calgary**, the fallback market),
+so the server's HTML stays the same for everyone and is cacheable. `features/shop/market.ts`
+`useMarketFollowsLocation()` switches a page without `?market=` to the visitor's city once `useDeliveryLocation()`
+knows it (history replace); links between Shop pages keep an explicit market (`withMarket`). A city without pooled
+delivery answers `served: false` and the page shows its empty state. The api's markets are
+`northline.orders.delivery.markets` (Calgary, Edmonton, Airdrie); runs and cut-offs come from `orders.api.DeliveryRuns`.
+
 ### Language
 
 Cookie `nl.locale` = `en` | `fr` (1 year, not HttpOnly). `useLocale().setLocale()` switches in place and writes it.
@@ -194,8 +203,9 @@ Cookie `nl.locale` = `en` | `fr` (1 year, not HttpOnly). `useLocale().setLocale(
 | markets / zones for an address (`/api/v1/geo/…`) | missing | S-47 |
 | `GET /api/v1/search`, suggestions | missing (path public; E-6 S-42…S-44) | S-48, home |
 | `GET /api/v1/public/home?city=` → section counts, businesses per category id, open kitchens per cuisine, trusted providers | **exists** (S-46, module `discovery`) | home |
-| categories / departments / landing content (public catalogue reads) | missing | S-49, S-53 |
-| product detail + offers | missing | S-50 |
+| Shop landing + departments: `GET /api/v1/public/shop?market=&lang=`, `GET /api/v1/public/shop/departments/{slug}?market=&lang=` | **exists** (S-49) | S-49 (S-46 may reuse the landing's departments) |
+| service categories landing content (public catalogue reads) | missing | S-53 |
+| product detail + offers: `GET /api/v1/public/shop/products/{id}?market=&lang=` | **exists** (S-50) | S-50 |
 | cart (`/api/v1/cart…`, guest-keyed) + checkout (Stripe Payment Element) | missing | S-51 |
 | consumer orders + tracking SSE | missing (merchant-side only today) | S-52, S-58 |
 | public menus / kitchens, food checkout | missing | S-57 |
