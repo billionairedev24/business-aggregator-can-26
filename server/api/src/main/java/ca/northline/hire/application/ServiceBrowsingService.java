@@ -23,6 +23,7 @@ import ca.northline.shared.NotFound;
 import ca.northline.trust.api.QualityQuery;
 import ca.northline.trust.api.RatingQuery;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -79,9 +80,8 @@ class ServiceBrowsingService implements ListCategories, ViewCategory, ListProvid
                 .flatMap(g -> g.items().stream())
                 .filter(i -> i.providers() > 0)
                 .count();
-        int providerCount =
-                (int) live.stream().map(Offer::merchantId).distinct().count();
-        return new Landing(liveCategories, providerCount, groups);
+        var merchantIds = merchants(live);
+        return new Landing(liveCategories, merchantIds.size(), provinces(merchantIds, lang), groups);
     }
 
     @Override
@@ -100,6 +100,7 @@ class ServiceBrowsingService implements ListCategories, ViewCategory, ListProvid
                 ServiceKind.vehicle(leaf.id()),
                 leaf.regulatedRegistry(),
                 merchants(live).size(),
+                provinces(merchants(live), lang),
                 kind.quoteable(),
                 jobs(live));
     }
@@ -118,7 +119,7 @@ class ServiceBrowsingService implements ListCategories, ViewCategory, ListProvid
         if (!kind.comesToCustomer()) {
             // the customer goes to them: a shop or office in the customer's city counts too
             published.values().stream()
-                    .filter(p -> p.city() != null && p.city().equalsIgnoreCase(place.cityOrFallback()))
+                    .filter(p -> p.city() != null && p.city().equalsIgnoreCase(place.city()))
                     .forEach(p -> covering.add(p.merchantId()));
         }
         var cards = published.values().stream()
@@ -130,7 +131,17 @@ class ServiceBrowsingService implements ListCategories, ViewCategory, ListProvid
                 .sorted(TrustRank.by(c -> new TrustRank.Signals(
                         c.tier(), c.onTimePct(), c.disputePct(), c.rebookPct(), c.rating(), c.name())))
                 .toList();
-        return new Providers(slug, kind, areas.zoneAt(place).orElse(null), place.cityOrFallback(), cards);
+        return new Providers(slug, kind, areas.zoneAt(place).orElse(null), place.city(), cards);
+    }
+
+    /** Where the live providers are (province codes from their businesses, sorted): the pages name no place of their own. */
+    private List<String> provinces(Collection<String> merchantIds, String lang) {
+        return providers.published(merchantIds, lang).stream()
+                .map(PublicProviders.Provider::province)
+                .filter(Objects::nonNull)
+                .distinct()
+                .sorted()
+                .toList();
     }
 
     private ProviderCard card(PublicProviders.Provider p, List<Offer> offered, List<String> zones) {

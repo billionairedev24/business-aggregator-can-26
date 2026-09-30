@@ -21,7 +21,7 @@ import org.springframework.stereotype.Repository;
 class PublicProviderQueries implements PublicProviders {
 
     private static final String SELECT = """
-            select m.id, s.slug, m.display_name, m.type, coalesce(m.tier, 'registered') as tier, m.city,
+            select m.id, s.slug, m.display_name, m.type, coalesce(m.tier, 'registered') as tier, m.city, m.province,
                    s.brand_color, coalesce(s.tagline_i18n ->> :lang, s.tagline_i18n ->> 'en') as tagline,
                    m.profile ->> 'description' as about, s.logo_media_id,
                    coalesce(m.approved_at, m.created_at) as since,
@@ -66,6 +66,7 @@ class PublicProviderQueries implements PublicProviders {
                 rs.getString("type"),
                 rs.getString("tier"),
                 rs.getString("city"),
+                rs.getString("province"),
                 Objects.requireNonNullElse(rs.getString("brand_color"), "#1e4d36"),
                 rs.getString("tagline"),
                 rs.getString("about"),

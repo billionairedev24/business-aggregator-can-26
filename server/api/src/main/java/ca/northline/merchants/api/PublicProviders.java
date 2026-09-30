@@ -14,6 +14,7 @@ public interface PublicProviders {
 
     /**
      * @param tier {@code registered | trusted | master}
+     * @param province the business's province code ({@code AB}), null when onboarding didn't record it
      * @param tagline the page's tagline in the reader's language (English fallback)
      * @param about the business's own description (Business step)
      * @param verifiedFacts verified checks the page may name: {@code kyc}, {@code insurance}, {@code site_visit},
@@ -27,6 +28,7 @@ public interface PublicProviders {
             String type,
             String tier,
             @Nullable String city,
+            @Nullable String province,
             String brandColor,
             @Nullable String tagline,
             @Nullable String about,

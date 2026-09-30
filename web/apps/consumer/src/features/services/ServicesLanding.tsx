@@ -4,6 +4,7 @@ import { EmptyState, Skeleton, useLocale } from '@northline/ui';
 import { servicesLandingQuery, type ServiceGroup } from './api';
 import { useServicesT } from './messages';
 import { categoryName } from './taxonomy';
+import { regionNames } from './region';
 import { dyn } from './text';
 
 /** design 06 `services`: every service group with its categories, each opening the category page. */
@@ -14,7 +15,7 @@ export function ServicesLanding() {
   return (
     <div className="nl-page nl-svc">
       <h1 className="nl-svc-title">{t('landingTitle')}</h1>
-      <p className="nl-svc-sub">{t('landingSub', { count: data.liveCategories })}</p>
+      <p className="nl-svc-sub">{data.provinces.length > 0 ? t('landingSub', { count: data.liveCategories, region: regionNames(data.provinces, locale) }) : t('landingSubNoRegion', { count: data.liveCategories })}</p>
       {data.groups.length === 0
         ? <EmptyState>{t('landingEmpty')}</EmptyState>
         : <div className="nl-svc-groups">{data.groups.map(g => <Group key={g.id} group={g} />)}</div>}

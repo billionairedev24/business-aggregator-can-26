@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import { BrandMark, EmptyState, ErrorState, Skeleton, useLocale, type Locale } from '@northline/ui';
+import { BrandMark, EmptyState, ErrorState, Skeleton, TIME_ZONE, useLocale, type Locale } from '@northline/ui';
 import { useDeliveryLocation, type DeliveryLocation } from '../location/useDeliveryLocation';
 import { providersQuery, serviceCategoryQuery, type ProviderCard, type ProviderPlace, type ServiceKind } from './api';
 import { nextAvailable, percent, price, rating } from './format';
@@ -12,7 +12,7 @@ export type ProviderFilter = 'master' | 'instant' | 'today' | 'under80';
 export const FILTERS: readonly ProviderFilter[] = ['master', 'instant', 'today', 'under80'];
 
 /**
- * Where to look: device (or saved) coordinates when there are some, else the city. The Calgary fallback and the CDN's
+ * Where to look: device (or saved) coordinates when there are some, else the city. The default market and the CDN's
  * IP guess are a city, not a place, so they never pin the list to one neighbourhood.
  */
 export function placeOf(location: DeliveryLocation): ProviderPlace | null {
@@ -22,8 +22,8 @@ export function placeOf(location: DeliveryLocation): ProviderPlace | null {
 }
 
 const sameDay = (iso: string | null | undefined, now: Date) =>
-  !!iso && new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Edmonton' }).format(new Date(iso))
-    === new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Edmonton' }).format(now);
+  !!iso && new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE }).format(new Date(iso))
+    === new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE }).format(now);
 
 export function applyFilters(items: ProviderCard[], filters: ReadonlySet<ProviderFilter>, now = new Date()): ProviderCard[] {
   return items.filter(p => (!filters.has('master') || p.tier === 'master')
