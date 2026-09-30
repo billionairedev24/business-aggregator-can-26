@@ -112,7 +112,7 @@ their own variables. (dict "root" $ "name" "<app>" "app" $appValues)
 {{- $v := $root.Values -}}
 {{- $env := dict -}}
 {{- if eq .app.type "spring" -}}
-{{- $_ := set $env "SPRING_PROFILES_ACTIVE" (include "northline.springProfiles" $root) -}}
+{{- $_ := set $env "SPRING_PROFILES_ACTIVE" (join "," (concat (list (include "northline.springProfiles" $root)) (default (list) .app.profiles))) -}}
 {{- $_ := set $env "AUTH_ISSUER" $v.urls.auth -}}
 {{- $_ := set $env "AUTH_INTERNAL_URL" (printf "http://%s:%d" (include "northline.appName" "auth") (int $v.apps.auth.port)) -}}
 {{- $_ := set $env "API_URL" (printf "http://%s:%d" (include "northline.appName" "api") (int $v.apps.api.port)) -}}
@@ -140,6 +140,11 @@ their own variables. (dict "root" $ "name" "<app>" "app" $appValues)
 {{- $env = merge (deepCopy (default (dict) .app.env)) $env -}}
 {{- else -}}
 {{- $_ := set $env "PORT" (toString .app.port) -}}
+{{- $cbff := get $v.apps "consumer-bff" -}}
+{{- if and (eq .name "consumer") $cbff $cbff.enabled -}}
+{{- /* S-45: server-side rendering fetches public data through the consumer-bff, in-cluster. */ -}}
+{{- $_ := set $env "NL_BFF_URL" (printf "http://%s:%d" (include "northline.appName" "consumer-bff") (int $cbff.port)) -}}
+{{- end -}}
 {{- $env = merge (deepCopy (default (dict) .app.env)) $env -}}
 {{- end -}}
 {{- toYaml $env -}}

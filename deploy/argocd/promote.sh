@@ -97,6 +97,8 @@ done
   echo "    requireDigest: true"
   echo "apps:"
   for app in $ALL_APPS; do echo "  $app: { image: { digest: \"${digest[$app]:-}\" } }"; done
+  # S-45: the consumer-bff is the bff image under another Spring profile — always the bff's digest.
+  echo "  consumer-bff: { image: { digest: \"${digest[bff]:-}\" } }"
 } >"$target.tmp"
 mv "$target.tmp" "$target"
 echo "wrote ${target#"$ROOT"/}"
