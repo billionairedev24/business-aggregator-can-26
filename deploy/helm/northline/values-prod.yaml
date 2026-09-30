@@ -101,3 +101,15 @@ apps:
     resources:
       requests: { cpu: 200m, memory: 256Mi }
       limits: { memory: 512Mi }
+
+# S-111 (docs/runbooks/observability.md): one trace in ten (the same ten percent in every app), two Collectors.
+observability:
+  tracesSampleRatio: "0.1"
+  collector:
+    enabled: true
+    replicas: 2
+    autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 4, targetCPUUtilizationPercentage: 70 }
+    resources:
+      requests: { cpu: 200m, memory: 512Mi }
+      limits: { memory: 768Mi }
+    memoryLimitMiB: 600

@@ -48,3 +48,17 @@ apps:
     env:
       # S-27: the notifications consumer emails payout.failed with the same provider as the api.
       EMAIL_PROVIDER: sendgrid
+
+# S-111 (docs/runbooks/observability.md § Google Cloud): traces → Cloud Trace, logs → Cloud Logging, metrics → Managed
+# Service for Prometheus, in the environment's project (from the metadata server), as the Collector's Workload
+# Identity (Terraform: cloudtrace.agent, monitoring.metricWriter, logging.logWriter).
+observability:
+  collector:
+    exporters:
+      googlecloud:
+        log: { default_log_name: northline }
+      googlemanagedprometheus: {}
+    pipelines:
+      traces: [googlecloud]
+      metrics: [googlemanagedprometheus]
+      logs: [googlecloud]

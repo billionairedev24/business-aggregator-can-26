@@ -17,7 +17,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  *   <li>{@code northline.checkouts} — escrow holds opened at checkout, by {@code ref_type} (order line, booking deposit…)
  *       and {@code status} (authorized, requires_action, failed…);
  *   <li>{@code northline.payouts} — payouts sent or failed, by {@code kind} / {@code outcome}; the amounts as the
- *       distribution {@code northline.payouts.amount} (CAD, dollars).
+ *       distribution {@code northline.payouts.amount} (CAD dollars).
  * </ul>
  *
  * Counted only once the transaction commits (a rolled-back checkout never happened). Plain {@code @EventListener}: no
@@ -50,7 +50,7 @@ class PaymentMetrics {
     private void record(String outcome, String kind, long amountCents) {
         meters.counter(PAYOUTS, "outcome", outcome, "kind", kind).increment();
         DistributionSummary.builder(PAYOUTS + ".amount")
-                .baseUnit("CAD")
+                .baseUnit("dollars") // CAD; Prometheus: northline_payouts_amount_dollars_*
                 .tag("outcome", outcome)
                 .register(meters)
                 .record(amountCents / 100.0);

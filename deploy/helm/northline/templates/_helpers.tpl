@@ -122,6 +122,13 @@ their own variables. (dict "root" $ "name" "<app>" "app" $appValues)
 {{- $_ := set $env "WEBAUTHN_RP_ID" $v.urls.webauthnRpId -}}
 {{- $_ := set $env "API_PUBLIC_URL" $v.urls.api -}}
 {{- $_ := set $env "SERVER_PORT" (toString .app.port) -}}
+{{- /* S-111: OTLP to the environment's Collector; one sampling ratio for every app (ConsistentSampling). */ -}}
+{{- $_ := set $env "OTEL_TRACES_SAMPLER_ARG" (toString $v.observability.tracesSampleRatio) -}}
+{{- $_ := set $env "OTEL_RESOURCE_ATTRIBUTES" (printf "deployment.environment.name=%s,service.version=%s" $v.global.environment (include "northline.imageTag" (dict "root" $root "app" .app))) -}}
+{{- if $v.observability.collector.enabled -}}
+{{- $_ := set $env "OTEL_EXPORT_ENABLED" "true" -}}
+{{- $_ := set $env "OTEL_EXPORTER_OTLP_ENDPOINT" (printf "http://%s:4318" (include "northline.appName" "otel-collector")) -}}
+{{- end -}}
 {{- if and (eq .name "auth") $v.partners -}}
 {{- /* S-30: northline.oauth.partners from the ConfigMap northline-auth-partners (templates/auth-partners.yaml). */ -}}
 {{- $_ := set $env "SPRING_CONFIG_ADDITIONAL_LOCATION" "optional:file:/config/partners/" -}}
@@ -291,4 +298,50 @@ https://acme-v02.api.letsencrypt.org/directory
 {{- else -}}
 https://acme-staging-v02.api.letsencrypt.org/directory
 {{- end -}}
+{{- end }}
+
+{{/*
+S-111: the OpenTelemetry Collector's configuration (templates/otel-collector.yaml). Fixed processors — memory limit,
+environment stamp, the scrub of personal data and secrets (S-112 adds the log redaction), batch — then the
+environment's exporters (observability.collector.exporters / pipelines).
+*/}}
+{{- define "northline.collectorConfig" -}}
+{{- $c := .Values.observability.collector -}}
+{{- $processors := dict
+  "memory_limiter" (dict "check_interval" "1s" "limit_mib" (int $c.memoryLimitMiB) "spike_limit_mib" (div (int $c.memoryLimitMiB) 5))
+  "resource" (dict "attributes" (list (dict "key" "deployment.environment.name" "value" "${env:NORTHLINE_ENVIRONMENT}" "action" "upsert")))
+  "attributes/scrub" (dict "actions" (list
+      (dict "pattern" "^jdbc\\.params.*" "action" "delete")
+      (dict "pattern" "^http\\.request\\.header\\.(authorization|cookie|x-xsrf-token|x-dev-user)$" "action" "delete")
+      (dict "pattern" "^http\\.response\\.header\\.set-cookie$" "action" "delete")
+      (dict "key" "enduser.id" "action" "delete")
+      (dict "key" "user.email" "action" "delete")))
+  "batch" (dict "send_batch_size" 1024 "timeout" "5s")
+-}}
+{{- $processors = merge $processors (include "northline.collectorExtraProcessors" . | fromYaml) (deepCopy $c.extraProcessors) -}}
+{{- $pipelines := dict -}}
+{{- range $signal := list "traces" "metrics" "logs" -}}
+{{- $chain := list "memory_limiter" "resource" -}}
+{{- if ne $signal "metrics" }}{{ $chain = append $chain "attributes/scrub" }}{{ end -}}
+{{- $chain = concat $chain (get (include "northline.collectorSignalProcessors" $ | fromYaml) $signal | default list) (get $c.extraProcessorsIn $signal | default list) (list "batch") -}}
+{{- $_ := set $pipelines $signal (dict "receivers" (list "otlp") "processors" $chain "exporters" (get $c.pipelines $signal)) -}}
+{{- end -}}
+{{- $config := dict
+  "receivers" (dict "otlp" (dict "protocols" (dict "grpc" (dict "endpoint" "0.0.0.0:4317") "http" (dict "endpoint" "0.0.0.0:4318"))))
+  "processors" $processors
+  "exporters" $c.exporters
+  "extensions" (dict "health_check" (dict "endpoint" "0.0.0.0:13133"))
+  "service" (dict "extensions" (list "health_check") "pipelines" $pipelines "telemetry" (dict "logs" (dict "level" "info")))
+-}}
+{{- toYaml $config -}}
+{{- end }}
+
+{{/* Processors the chart adds for one signal only (S-112 fills this). YAML map signal → list. */}}
+{{- define "northline.collectorSignalProcessors" -}}
+{}
+{{- end }}
+
+{{/* Definitions of those processors. */}}
+{{- define "northline.collectorExtraProcessors" -}}
+{}
 {{- end }}

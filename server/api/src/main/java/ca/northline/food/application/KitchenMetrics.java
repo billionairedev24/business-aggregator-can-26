@@ -1,6 +1,7 @@
 package ca.northline.food.application;
 
 import ca.northline.food.domain.KitchenTicket;
+import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.time.Duration;
@@ -37,7 +38,10 @@ class KitchenMetrics {
     void accepted(KitchenTicket ticket) {
         var promised = ticket.getPrepMin();
         if (promised != null) {
-            afterCommit(() -> meters.summary(PROMISED).record(promised));
+            afterCommit(() -> DistributionSummary.builder(PROMISED)
+                    .baseUnit("minutes")
+                    .register(meters)
+                    .record(promised));
         }
     }
 

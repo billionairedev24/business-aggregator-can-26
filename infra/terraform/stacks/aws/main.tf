@@ -30,6 +30,9 @@ locals {
     # S-17 edge add-ons: DNS records for the public hosts, and DNS-01 challenges.
     external-dns = { namespace = "external-dns", service_account = "external-dns" }
     cert-manager = { namespace = "cert-manager", service_account = "cert-manager" }
+    # S-111: the OpenTelemetry Collector (chart: observability.collector) writes traces, metrics and logs to the
+    # cloud's own backend with this identity (docs/runbooks/observability.md).
+    otel-collector = { namespace = local.namespace, service_account = "northline-otel-collector" }
   }
 
   # Application secrets created empty; an operator sets the values (docs/runbooks/<env>.md § Environment variables).
@@ -67,6 +70,8 @@ locals {
     # S-36 POS menu import: the Clover app secret and Toast partner credentials (Square reuses S-35's app).
     CLOVER_CLIENT_SECRET = "clover-client-secret"
     TOAST_CLIENT_SECRET  = "toast-client-secret"
+    # S-111: an OTLP backend's credentials (e.g. Grafana Cloud "Basic <base64 instance:token>"); empty = the cloud's own.
+    OTEL_BACKEND_AUTH = "otel-backend-auth"
   }
 }
 
@@ -226,4 +231,13 @@ resource "aws_iam_role_policy" "auth_sms" {
       Resource = var.sms_origination_identity
     }]
   })
+}
+
+# ---- Observability (S-111) --------------------------------------------------------------------------------------
+# The OpenTelemetry Collector sends traces to X-Ray, metrics to CloudWatch (EMF) and logs to CloudWatch Logs with its
+# IRSA role — AWS managed write-only policies, nothing to read back (docs/runbooks/observability.md § AWS).
+resource "aws_iam_role_policy_attachment" "otel_collector" {
+  for_each   = toset(["AWSXrayWriteOnlyAccess", "CloudWatchAgentServerPolicy"])
+  role       = element(split("/", module.kubernetes.workload_identities["otel-collector"].principal), length(split("/", module.kubernetes.workload_identities["otel-collector"].principal)) - 1)
+  policy_arn = "arn:aws:iam::aws:policy/${each.value}"
 }

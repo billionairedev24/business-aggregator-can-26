@@ -80,3 +80,9 @@ apps:
     autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 3 }
   consumer:
     autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 4 }
+
+# S-111 (docs/runbooks/observability.md): half the traces; exporters from the cloud overlay.
+observability:
+  tracesSampleRatio: "0.5"
+  collector:
+    enabled: true

@@ -31,6 +31,9 @@ locals {
     # S-17 edge add-ons: DNS records for the public hosts, and DNS-01 challenges.
     external-dns = { namespace = "external-dns", service_account = "external-dns" }
     cert-manager = { namespace = "cert-manager", service_account = "cert-manager" }
+    # S-111: the OpenTelemetry Collector (chart: observability.collector) writes traces, metrics and logs to the
+    # cloud's own backend with this identity (docs/runbooks/observability.md).
+    otel-collector = { namespace = local.namespace, service_account = "northline-otel-collector" }
   }
 
   # Application secrets created empty; an operator sets the values (docs/runbooks/<env>.md § Environment variables).
@@ -68,6 +71,8 @@ locals {
     # S-36 POS menu import: the Clover app secret and Toast partner credentials (Square reuses S-35's app).
     CLOVER_CLIENT_SECRET = "clover-client-secret"
     TOAST_CLIENT_SECRET  = "toast-client-secret"
+    # S-111: an OTLP backend's credentials (e.g. Grafana Cloud "Basic <base64 instance:token>"); empty = the cloud's own.
+    OTEL_BACKEND_AUTH = "otel-backend-auth"
   }
 
 
@@ -88,6 +93,10 @@ locals {
     "servicenetworking.googleapis.com",
     "sqladmin.googleapis.com",
     "storage.googleapis.com",
+    # S-111: the Collector's backends (Cloud Trace, Cloud Monitoring incl. Managed Service for Prometheus, Logging).
+    "cloudtrace.googleapis.com",
+    "monitoring.googleapis.com",
+    "logging.googleapis.com",
   ]
 
   # Google-managed service agents that encrypt with the data key (CMEK).
@@ -271,4 +280,14 @@ module "search" {
   kms_key             = { id = module.kms.key_ids["data"] }
   secret_store        = module.secrets.store
   deletion_protection = var.deletion_protection
+}
+
+# ---- Observability (S-111) --------------------------------------------------------------------------------------
+# The OpenTelemetry Collector writes to Cloud Trace, Cloud Monitoring (Managed Service for Prometheus) and Cloud
+# Logging with its Workload Identity — writer roles only (docs/runbooks/observability.md § Google Cloud).
+resource "google_project_iam_member" "otel_collector" {
+  for_each = toset(["roles/cloudtrace.agent", "roles/monitoring.metricWriter", "roles/logging.logWriter"])
+  project  = var.project_id
+  role     = each.value
+  member   = module.kubernetes.workload_identities["otel-collector"].principal
 }

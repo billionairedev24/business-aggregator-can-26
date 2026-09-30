@@ -1,0 +1,46 @@
+# The local OpenTelemetry Collector (docker compose --profile observability, S-111): the same processors as the chart's
+# Collector (deploy/helm/northline/templates/_helpers.tpl → northline.collectorConfig), exporting to the local
+# Grafana LGTM stack (Tempo, Mimir/Prometheus, Loki). Apps on your machine send to localhost:4318 (OTLP/HTTP).
+receivers:
+  otlp:
+    protocols:
+      grpc: { endpoint: "0.0.0.0:4317" }
+      http: { endpoint: "0.0.0.0:4318" }
+
+processors:
+  memory_limiter: { check_interval: 1s, limit_mib: 400, spike_limit_mib: 80 }
+  resource:
+    attributes:
+      - { key: deployment.environment.name, value: local, action: upsert }
+  attributes/scrub:
+    actions:
+      - { pattern: "^jdbc\\.params.*", action: delete }
+      - { pattern: "^http\\.request\\.header\\.(authorization|cookie|x-xsrf-token|x-dev-user)$", action: delete }
+      - { pattern: "^http\\.response\\.header\\.set-cookie$", action: delete }
+      - { key: enduser.id, action: delete }
+      - { key: user.email, action: delete }
+  batch: { send_batch_size: 1024, timeout: 2s }
+
+exporters:
+  otlphttp/lgtm:
+    endpoint: http://lgtm:4318
+  debug: { verbosity: basic }
+
+extensions:
+  health_check: { endpoint: "0.0.0.0:13133" }
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, attributes/scrub, batch]
+      exporters: [otlphttp/lgtm]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlphttp/lgtm]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, attributes/scrub, batch]
+      exporters: [otlphttp/lgtm]
