@@ -113,9 +113,10 @@ A feature folder per story area, named after the design: `home`, `location`, `se
 | `/food/$kitchen` | restaurant | S-57 | SSR + SEO |
 | `/food/checkout` | foodCheckout | S-57 | guest banner |
 | `/food/orders/$orderId` | foodTrack | S-57 | |
-| `/services` | services | S-53 | landing page |
-| `/services/$category` | svcCategory | S-53 | SSR + SEO |
-| `/services/$category/providers` | providers | S-53 | |
+| `/services` | services | S-53 (**built**) | landing page; SSR |
+| `/services/$category` | svcCategory | S-53 (**built**) | SSR + SEO; `$category` = the leaf slug (`mobile-mechanic`) |
+| `/services/$category/providers` | providers | S-53 (**built**) | category SSR, providers by location in the browser |
+| `/services/$category/quote` | book (quote mode, from a category) | S-56 | "Describe the job, get 3 quotes"; guest banner |
 | `/providers/$slug` | provider | S-54 | public provider page (storefront API); SSR + SEO + JSON-LD (S-63) |
 | `/providers/$slug/book` | book | S-55 | guest banner |
 | `/quotes/$quoteId` | quote | S-56 | guest banner |
@@ -191,7 +192,8 @@ Cookie `nl.locale` = `en` | `fr` (1 year, not HttpOnly). `useLocale().setLocale(
 | cart (`/api/v1/cart…`, guest-keyed) + checkout (Stripe Payment Element) | missing | S-51 |
 | consumer orders + tracking SSE | missing (merchant-side only today) | S-52, S-58 |
 | public menus / kitchens, food checkout | missing | S-57 |
-| providers by category, availability slots, booking create, quote request / accept (consumer side) | missing (merchant side exists) | S-53, S-55, S-56 |
+| `GET /api/v1/public/services`, `/services/{slug}`, `/services/{slug}/providers?lat&lng&city` | **exists** (S-53, module `hire`) | S-53 |
+| availability slots, booking create, quote request / accept (consumer side) | missing (merchant side exists) | S-55, S-56 |
 | `GET /api/v1/me/account-summary`, wallet, addresses, payment methods, notifications, favourites | missing | S-45 menu values, S-58, S-59 |
 | refunds / "something's wrong" (consumer side) | missing (merchant side exists) | S-60 |
 
