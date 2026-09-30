@@ -1,6 +1,6 @@
 package ca.northline.contracts;
 
-import ca.northline.config.EventHeaders;
+import ca.northline.platform.EventHeaders;
 import ca.northline.shared.DomainEvent;
 import java.util.Comparator;
 import java.util.List;
@@ -13,8 +13,8 @@ import org.springframework.modulith.events.Externalized;
 
 /**
  * Every {@code @Externalized} event on the classpath under {@code ca.northline} — the api's modules and northline-auth
- * (records nested in sealed interfaces included) — with its wire type ({@link EventHeaders#type}, the api's rule that
- * names the schema files) and version ({@code version()} for the api's {@code DomainEvent}s, 1 otherwise).
+ * (records nested in sealed interfaces included) — with its wire type ({@link EventHeaders#type}, the producers' shared
+ * rule that names the schema files) and version ({@code version()} for the api's {@code DomainEvent}s, 1 otherwise).
  */
 public final class PublishedEvents {
 

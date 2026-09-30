@@ -6,17 +6,22 @@ alerted, and how to replay a dead-lettered event. Topics and their provisioning:
 ## 1. The path of an event
 
 1. A module publishes a `DomainEvent` inside its transaction; the Modulith registry (`events.event_publication`) is
-   the outbox. After commit, `@Externalized("<module>.<aggregate>::…")` events go to Kafka.
+   the outbox. After commit, `@Externalized("<module>.<aggregate>::…")` events go to Kafka. northline-auth does the
+   same for `user.registered` (outbox `auth.event_publication`, topic `identity.user`, S-28).
 2. **Wire format** (ARCHITECTURE.md § Event management): key = aggregate id (per-aggregate ordering); value = the
    event record's JSON (ids only, no personal data), valid against
    `server/api/src/main/resources/events/<type>.v<version>.schema.json`; headers:
 
    | header | example | from |
    |---|---|---|
-   | `nl-event-id` | `01J9ZD3V…` (ULID, = payload `eventId`) | api `config.EventHeaders` |
+   | `nl-event-id` | `01J9ZD3V…` (ULID, = payload `eventId`) | platform `EventHeaders`, used by the api and northline-auth |
    | `nl-event-type` | `payments.payout_failed` (`<topic module>.<snake_case record>`, or `@EventType`) | same |
-   | `nl-event-version` | `1` (`DomainEvent.version()`) | same |
-   | `traceparent` | W3C trace context | the api's Kafka template observation, when tracing is on |
+   | `nl-event-version` | `1` (`EnvelopedEvent.version()`; the api's `DomainEvent` extends it) | same |
+   | `traceparent` | W3C trace context | the api's Kafka template observation, when tracing is on (not set by northline-auth) |
+
+   Each producer declares `EventHeaders.externalization("<base package>")` as its `EventExternalizationConfiguration`
+   bean, and its externalized events implement `EnvelopedEvent`. `:event-contracts`' `EnvelopeContractTest` parses
+   every producer's `@Externalized` events through the worker's `EnvelopeParser`.
 
    A breaking payload change = a new version and a new schema file; consumers handle each version they know.
 3. The worker's consumer groups (`deploy/kafka/topics.yaml` § consumers) read the topic. Each listener hands the

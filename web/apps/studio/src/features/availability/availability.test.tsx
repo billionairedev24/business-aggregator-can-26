@@ -38,7 +38,7 @@ describe('Weekly hours', () => {
       'POST /api/v1/merchants/m1/availability/preview': () => ({ slots: [{ start: '07:00', free: true }, { start: '07:30', free: false }], jobs: 1, intervalMin: 30, bufferMin: 20 }),
       'PUT /api/v1/merchants/m1/availability/hours': (_u, init) => { const b = JSON.parse(String(init.body)); return { members: b.members.map((m: { memberUserId: string; days: Days }) => ({ userId: m.memberUserId, name: m.memberUserId, role: 'owner', bookable: true, effectiveFrom: b.effectiveFrom, days: m.days })), lastSavedAt: '2026-09-29T16:00:00Z' }; },
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onState = vi.fn();
     renderWithProviders(<HoursTab onState={onState} />);
     expect(await screen.findByRole('button', { name: 'Ravi Sandhu', pressed: true })).toBeTruthy();
@@ -63,7 +63,7 @@ describe('Weekly hours', () => {
       'GET /api/v1/merchants/m1/availability/services': () => ({ items: [] }),
       'POST /api/v1/merchants/m1/availability/preview': () => ({ slots: [], jobs: 0, intervalMin: 30, bufferMin: 20 }),
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<HoursTab onState={() => {}} />);
     await user.selectOptions(await screen.findByRole('combobox', { name: 'Mon Until' }), '06:30');
     await user.click(screen.getByRole('button', { name: 'Save hours' }));

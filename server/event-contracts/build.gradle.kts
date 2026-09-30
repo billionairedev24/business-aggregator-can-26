@@ -3,7 +3,8 @@
 //   ./gradlew :event-contracts:eventSchemas [-PeventSchemas.base=origin/main] [-PeventSchemas.requireBase=true]
 // and, cheaply, inside `./gradlew build` through its tests (docs/runbooks/events.md § Schema checks).
 dependencies {
-    implementation(project(":api")) // @Externalized events, EventHeaders.type (the wire type)
+    implementation(project(":platform")) // EventHeaders: the wire type and the producers' externalization
+    implementation(project(":api")) // @Externalized events
     implementation(project(":auth")) // user.registered
     implementation(project(":worker")) // EventSchemas: the keywords the consumers implement, the validator
     implementation("org.springframework.boot:spring-boot-starter")
@@ -11,6 +12,7 @@ dependencies {
     implementation("tools.jackson.core:jackson-databind")
     implementation(libs.jspecify) // @Nullable at run time: nullable record components get a null sample too
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.apache.kafka:kafka-clients") // EnvelopeContractTest: records as the worker receives them
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

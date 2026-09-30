@@ -42,7 +42,7 @@ afterEach(() => { vi.unstubAllGlobals(); role = 'owner'; type = 'provider'; });
 describe('Settings › Business', () => {
   it('validates on submit with the exact messages and the attention summary', async () => {
     mockFetch({ [`GET ${S}/business`]: () => business, 'GET /api/v1/merchants/m1/compliance': () => compliance });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<BusinessTab />);
     const name = await screen.findByLabelText('Business name');
     await user.clear(name);
@@ -63,7 +63,7 @@ describe('Settings › Business', () => {
         return business;
       },
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<BusinessTab />);
     await screen.findByLabelText('Business name');
     expect(await screen.findByText('Verified · renews 2027-01')).toBeTruthy();
@@ -94,7 +94,7 @@ describe('Settings › Team & roles', () => {
       [`GET ${S}/team`]: () => team,
       [`POST ${S}/team/invitations`]: () => ({ invitation: { id: 'i1', role: 'technician', email: 'sam@example.com', state: 'pending', createdAt: new Date().toISOString(), expiresAt: new Date().toISOString() }, inviteUrl: 'http://localhost:3100/invite/tok', sent: true }),
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<TeamTab />);
     expect((await screen.findAllByText('Jas Gill')).length).toBeGreaterThan(0);
     expect(screen.getAllByText('SMS only').length).toBeGreaterThan(0);
@@ -116,7 +116,7 @@ describe('Settings › Team & roles', () => {
       [`GET ${S}/team`]: () => team,
       [`POST ${S}/team/invitations`]: () => { throw { status: 422, body: { errors: [{ field: 'email', rule: 'unique', message: 'An invitation is already pending for this contact.' }] } }; },
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<TeamTab />);
     await user.click(await screen.findByRole('button', { name: 'Invite member' }));
     await user.type(screen.getByRole('textbox', { name: 'Email' }), 'sam@example.com');
@@ -140,7 +140,7 @@ describe('Settings › Notifications', () => {
       [`GET ${S}/notifications`]: () => ({ matrix, quietFrom: '21:00:00', quietTo: '07:00:00' }),
       [`PUT ${S}/notifications`]: () => ({ matrix: { ...matrix, new_booking: { ...matrix.new_booking, email: true } }, quietFrom: '21:00:00', quietTo: '07:00:00' }),
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<NotificationsTab />);
     const cell = await screen.findByRole('button', { name: 'New booking / order by Email' });
     expect(cell.getAttribute('aria-pressed')).toBe('false');
@@ -169,7 +169,7 @@ describe('Settings › API & integrations', () => {
       'GET /api/v1/merchants/m1/availability/sync': () => ({ calendars: [{ provider: 'google', connected: true }], team: [] }),
       'GET /api/v1/merchants/m1/listings/integrations': () => ({ items: [] }),
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<ApiTab />);
     expect((await screen.findAllByText('Website embed')).length).toBeGreaterThan(0);
     expect(screen.getByText(/booking.confirmed · HMAC-SHA256 · last delivery 200 OK/)).toBeTruthy();
@@ -223,7 +223,7 @@ describe('Settings › API & integrations', () => {
       [`POST ${S}/webhooks/w1/deliveries/d1/resend`]: () => queued,
       [`POST ${S}/webhooks/w1/test`]: () => ({ ...queued, id: 'd4', eventType: 'webhook.test', test: true, resendOf: null }),
     }));
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<ApiTab />);
     await user.click(await screen.findByRole('button', { name: 'Deliveries to https://prairiewrench.ca/hooks/northline' }));
     const drawer = await screen.findByRole('dialog', { name: 'Deliveries' });
@@ -245,7 +245,7 @@ describe('Settings › API & integrations', () => {
   it('a technician reads the log but can’t resend or test', async () => {
     role = 'technician';
     mockFetch(apiRoutes({}, { [`GET ${S}/webhooks/w1/deliveries`]: () => deliveries }));
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<ApiTab />);
     await user.click(await screen.findByRole('button', { name: 'Deliveries to https://prairiewrench.ca/hooks/northline' }));
     const drawer = await screen.findByRole('dialog', { name: 'Deliveries' });
@@ -259,7 +259,7 @@ describe('Settings › API & integrations', () => {
     const calls = mockFetch(apiRoutes({ active: false, disabledAt: '2026-09-30T18:00:00Z', failingSince: '2026-09-27T18:00:00Z' }, {
       [`POST ${S}/webhooks/w1/enable`]: () => ({ id: 'w1', url: 'https://prairiewrench.ca/hooks/northline', events: ['booking.completed'], active: true, signature: 'HMAC-SHA256', createdAt: '2026-02-02T17:00:00Z', lastStatus: 503 }),
     }));
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<ApiTab />);
     expect(await screen.findByText('Turned off Sep 30, 2026 after 3 days of failed deliveries')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Turn https://prairiewrench.ca/hooks/northline back on' }));
@@ -271,7 +271,7 @@ describe('Settings › API & integrations', () => {
     const calls = mockFetch(apiRoutes({}, {
       [`POST ${S}/webhooks/w1/secret`]: () => ({ endpoint: { id: 'w1', url: 'https://prairiewrench.ca/hooks/northline', events: ['booking.completed'], active: true, signature: 'HMAC-SHA256', createdAt: '2026-02-02T17:00:00Z', previousSecretUntil: null }, secret: 'whsec_test_new' }),
     }));
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<ApiTab />);
     await user.click(await screen.findByRole('button', { name: 'Rotate the signing secret of https://prairiewrench.ca/hooks/northline' }));
     const dialog = await screen.findByRole('dialog', { name: 'Rotate the signing secret' });
@@ -319,7 +319,7 @@ describe('Settings › Security', () => {
       'POST http://localhost:9000/api/auth/backup-codes': () => ({ codes: ['abcde-fghij', 'klmno-pqrst'] }),
       [`GET ${S}/audit-log`]: () => ({ items: [] }),
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<SecurityTab />);
     expect(await screen.findByText('Passkey · iPhone 16')).toBeTruthy();
     expect(screen.getByText('Primary')).toBeTruthy();
@@ -343,7 +343,7 @@ describe('Settings › Security', () => {
       [`GET ${AUTH}/security`]: () => security({ passkeys }),
       [`DELETE ${AUTH}/security/passkeys/p2`]: () => { passkeys = passkeys.filter(p => p.id !== 'p2'); return { passkeys }; },
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<SecurityTab />);
     await user.click(await screen.findByRole('button', { name: 'Remove passkey YubiKey' }));
     const dialog = screen.getByRole('alertdialog', { name: 'Remove this passkey?' });
@@ -369,7 +369,7 @@ describe('Settings › Security', () => {
       },
       [`POST ${AUTH}/step-up/totp`]: () => ({ proof: 'jwt', expiresAt: new Date().toISOString() }),
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<SecurityTab />);
     await user.click(await screen.findByRole('button', { name: 'Review' }));
     const drawer = screen.getByRole('dialog', { name: 'Active sessions' });
@@ -393,7 +393,7 @@ describe('Settings › Security', () => {
       [`GET ${AUTH}/security`]: () => security(),
       [`POST ${AUTH}/security/sessions/revoke-others`]: () => ({ revoked: 2 }),
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<SecurityTab />);
     await user.click(await screen.findByRole('button', { name: 'Review' }));
     await user.click(screen.getByRole('button', { name: 'Sign out all other sessions' }));
@@ -408,7 +408,7 @@ describe('Settings › Security', () => {
       [`GET ${AUTH}/security`]: () => security(),
       [`POST ${AUTH}/security/sessions/phone/revoke`]: () => { throw { status: 429, body: { code: 'rate_limited' } }; },
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<SecurityTab />);
     await user.click(await screen.findByRole('button', { name: 'Review' }));
     await user.click(screen.getAllByRole('button', { name: 'Sign out iPhone' })[0]!);
@@ -419,7 +419,7 @@ describe('Settings › Security', () => {
 
   it('speaks French', async () => {
     mockFetch({ [`GET ${AUTH}/security`]: () => security() });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<SecurityTab />, 'fr');
     await user.click(await screen.findByRole('button', { name: 'Retirer la clé d’accès YubiKey' }));
     expect(screen.getByRole('alertdialog', { name: 'Retirer cette clé d’accès?' })).toBeTruthy();
