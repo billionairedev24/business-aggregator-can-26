@@ -59,6 +59,26 @@ class WebhookPayloadsTest {
     }
 
     @Test
+    void orderPlaced_theShopsLinesWithoutTheCustomer() {
+        var out = payloads.of(event("orders.order_placed", 1, """
+                        {"eventId":"01J9ZD3V000000000000000EV9","occurredAt":"2026-09-30T18:00:00Z","aggregateId":"ord_1",
+                         "merchantId":"%s","customerId":"u_customer","orderRef":"NL-50001","orderType":"goods",
+                         "delivery":"pooled","windowId":"win_1","subtotalCents":1500,"taxCents":75,
+                         "lines":[{"lineId":"ln_1","offerId":"of_1","variantId":null,"qty":2,"amountCents":1500}]}"""
+                        .formatted(MERCHANT)))
+                .orElseThrow();
+
+        assertThat(out.type()).isEqualTo("order.placed");
+        assertThat(out.merchantId()).isEqualTo(MERCHANT);
+        assertThat(out.payload().path("data").toString())
+                .isEqualTo("{\"orderId\":\"ord_1\",\"orderRef\":\"NL-50001\",\"orderType\":\"goods\","
+                        + "\"delivery\":\"pooled\",\"windowId\":\"win_1\",\"lines\":[{\"lineId\":\"ln_1\","
+                        + "\"offerId\":\"of_1\",\"variantId\":null,\"qty\":2,\"amountCents\":1500}],"
+                        + "\"subtotalCents\":1500,\"taxCents\":75,\"currency\":\"CAD\"}");
+        assertThat(out.payload().toString()).doesNotContain("u_customer");
+    }
+
+    @Test
     void customerIdsNeverLeave() {
         var quote = payloads.of(event("booking.quote_accepted", 2, """
                 {"eventId":"01J9ZD3V000000000000000EV4","occurredAt":"2026-09-30T18:00:00Z","aggregateId":"q_1",

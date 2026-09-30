@@ -2300,3 +2300,103 @@ Built on S-49 (branch `web/s-50-product-detail` from `web/s-49-shop-landing`).
   vitest `features/product/product.test.tsx` (design copy, cut-off sentence, option + quantity to the cart request,
   stock limit, other sellers + Choose, out of stock, cart failure, French, empty state, skeleton).
 - **Not done:** Product JSON-LD and canonical URLs (S-63); per-variant images (the editor has none).
+
+## 2026-09-30 — S-51 Cart and checkout (server-side cart, step-up, tax, manual-capture payments, order.placed)
+
+- **Cart (orders, `/api/v1/cart`, open to guests):** `GET`, `POST /items` `{offerId, variantId?, qty}`,
+  `PATCH /items/{id}` `{qty}`, `DELETE /items/{id}`. A signed-in person's cart is keyed by their user id. A guest's
+  cart is keyed by the SHA-256 of the consumer-bff's `X-Northline-Guest` (the raw id is never stored). It is never
+  keyed by an identity, and it expires 30 days after its last change. On the first signed-in call that still carries
+  the guest id, the guest's lines are merged into the person's cart (quantities add, capped at 99) and the guest cart
+  is deleted. Every read checks each line against the catalogue (new `orders.api.SellableOffers`, implemented by
+  catalogue: only approved and live offers, variants and stock) and against the shops (`ShopDirectory`). A hidden
+  listing, a paused shop or sold-out stock therefore shows up at once as "This item isn't available any more." /
+  "This item is sold out." / "Only N left.". Lines are grouped by shop in the order the shops were first added (the
+  design's multi-shop cart). `orders.carts` (V009) is kept. The lines move from the `lines` jsonb to
+  `orders.cart_items`.
+- **Checkout needs a person** (`/api/v1/me/…`):
+  - `GET /checkout?market=` returns the saved addresses, the delivery options and `stepUp`.
+  - `POST /checkout/quote` returns totals with GST/HST.
+  - `POST /checkouts` (Idempotency-Key, X-Step-Up) takes the stock and opens the PaymentIntents.
+  - `POST /checkouts/{id}/place` (Idempotency-Key) checks the authorizations, holds escrow and creates the order.
+  - A guest who presses Pay is sent to `/sign-in?next=/cart`, and the cart follows them through the merge.
+- **Step-up rule (decided here):**
+  - A sign-in with a second factor (`acr=mfa`) pays directly.
+  - A phone-code sign-in (single factor) must send `X-Step-Up`: a fresh proof (≤ 5 minutes, single use) from
+    northline-auth's step-up with the account's passkey or authenticator (`identity.api.SecondFactors`: `mfa_primary`
+    is `passkey` | `totp`).
+  - An account with neither gets 403 `second_factor_required` ("Add a passkey to pay: payments sit behind a second
+    factor."). It then enrols a passkey at checkout. The new `POST /auth/step-up/enrol/passkey/options` +
+    `/enrol/passkey` are allowed only within 15 minutes of sign-in, and they issue the proof along with the new
+    passkey.
+  - The step-up endpoints now accept any signed-in session, not just MFA ones, because that is what they are for.
+  - Browsing and the cart stay single-factor.
+- **Delivery options:**
+  - Pooled runs come from `DeliveryRuns` (S-49): the next two the whole cart can make. The slowest handling time
+    decides, and a line that can't go pooled rules pooled runs out.
+  - The direct courier is offered when everything can go the same day.
+  - The address's city must be a served market, and every shop must be in it ("{shop} doesn't deliver to {city}.").
+  - Addresses are `identity.addresses`, read and written through the new `identity.api.DeliveryAddresses`. A new one
+    is saved when the checkout starts.
+- **Tax:** `TaxCalculations.calculate` (S-21) runs once per order line (the shop sells) and once for the delivery fee
+  (Northline sells). The province and postal code come from the delivery address. The quote shows GST/HST per rate
+  as the design's "GST (5%)".
+- **Payments (S-11 escrow model, unchanged):**
+  - One manual-capture PaymentIntent per order line (`order_line`) and one for the delivery fee (`order_delivery`,
+    merchant `PaymentAuthorizations.PLATFORM = "northline"`). They share `transfer_group=order:<id>`.
+  - The consumer app mounts the Stripe Payment Element for the first PaymentIntent and confirms the others with the
+    same PaymentMethod. It does this only when the api says `provider: stripe` (a secret key is set:
+    `payments.api.PaymentSettings`, publishable key `STRIPE_PUBLISHABLE_KEY`, an existing variable). Otherwise it
+    shows the local fake: a simulated card form ("Test payments · nothing is charged") whose intents are
+    already `requires_capture`.
+  - `place` checks each PaymentIntent (`PaymentAuthorizations.authorized`: `requires_capture` for at least the amount
+    plus tax), then `EscrowLifecycle.hold` for each line. Card data never reaches Northline.
+- **Stock:** `POST /checkouts` takes stock with conditional decrements (`stock >= qty`) in one transaction. If any line
+  can't be taken, nothing is taken: 409 "Something in your cart just sold out…". The checkout holds stock and
+  PaymentIntents for 30 minutes. `CheckoutJobs` (every minute, not under `test`) abandons expired checkouts, gives the
+  stock back and cancels the PaymentIntents. A new checkout by the same person abandons their previous open one.
+- **Idempotency:** both POSTs require `Idempotency-Key` (422 "Idempotency-Key header is required." when it is
+  missing). A replay returns the stored answer with `Idempotent-Replayed: true`. A different body with the same key
+  gets 409 `idempotency_key_reused`. The store is `payments.api.IdempotentRequests`
+  (the S-11 request guard, now shared; `PaymentsIdempotency` delegates to it). The key also goes to Stripe
+  (`nl1:…` keys, folded with the client key).
+- **`order.placed`:** placing publishes `orders.api.OrderPlaced` **once per shop** with that shop's lines
+  (`@Externalized` to `orders.order`; schema `events/orders.order_placed.v1.schema.json`, checked by S-34). It carries
+  ids and amounts only. The customer id is in the internal event, like other orders events, and is never in the
+  partner payload. The S-33 webhooks consumer now subscribes to `orders.order` (`deploy/kafka/topics.yaml`) and maps
+  it to public `order.placed` (`docs/spec/webhooks/order.placed.v1.schema.json`), so `order.placed` leaves
+  `NOT_YET_PUBLISHED`. S-38's `SalesListener` counts sales from it at once.
+- **Order rows:** `orders.orders` gets `checkout_id` (unique) and `delivery_kind`, and one `order_lines` row per line
+  (state `pending`). The reference comes from `orders.order_ref_seq` (NL-50000…, clear of the seed's NL-481xx).
+  `orders.checkouts` holds the snapshot (ids, amounts, PaymentIntent ids; no personal data).
+- **Not done / gaps:**
+  - The delivery-fee PaymentIntent is authorized but **nothing captures it yet**. Capture happens on delivery, and
+    the delivery flow (courier, "delivered") is a later story. Until then it lapses after 7 days like any
+    uncaptured authorization.
+  - The "points" line and "Plus" prices are not shown (no loyalty ledger writer, no membership).
+  - Substitution preference is stored on the checkout, but nothing uses it yet.
+  - No receipt email is claimed on screen.
+  - Apple Pay / Google Pay are not enabled (cards only, stripe.md § 11).
+- **Never exercised against real Stripe (only the local fake gateway and stripe-mock-shaped unit tests):**
+  - the Payment Element mount;
+  - `confirmPayment` / `confirmCardPayment` of several PaymentIntents with one PaymentMethod, including
+    `setup_future_usage` on the first;
+  - 3-D Secure on the second and later PaymentIntents;
+  - Stripe Tax calculations for the delivery fee under the platform;
+  - canceling PaymentIntents when a checkout expires.
+- **Schema (V112, consumer range):** `orders.carts` timestamps + unique keys, `orders.cart_items`, `orders.checkouts`,
+  `orders.orders.checkout_id` / `delivery_kind`, `orders.order_ref_seq`.
+- **Tests:**
+  - `CartCheckoutApiTest` covers:
+    - the cart: guest keyed by header, validation messages, quantity changes, merge at sign-in, unavailable lines;
+    - checkout: setup (runs, direct, step-up need), GST on items and delivery, address/choice validation, phone-code
+      sign-in needs step-up;
+    - idempotency: key required, replay, conflicting body;
+    - placing: escrow held per line, `order.placed` per shop, cart emptied; an unauthorized payment doesn't place;
+      an abandoned checkout returns stock and can't be placed; empty cart;
+    - a stock race: two checkouts for the last unit, exactly one wins.
+  - `StepUpApiTest` (auth, 3 new): a phone-code session steps up with TOTP, and passkey enrolment issues the proof
+    and needs a recent sign-in.
+  - `WebhookPayloadsTest.orderPlaced_theShopsLinesWithoutTheCustomer`.
+  - vitest `features/cart/cart.test.tsx`: design copy, guest banner and sign-in, multi-shop groups, quantity and
+    remove, delivery windows, tax lines, step-up dialog, fake card, errors, French.
