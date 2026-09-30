@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ca.northline.platform.EventHeaders;
 import ca.northline.shared.security.MerchantRole;
 import ca.northline.support.IntegrationTest;
 import ca.northline.support.TestJwt;

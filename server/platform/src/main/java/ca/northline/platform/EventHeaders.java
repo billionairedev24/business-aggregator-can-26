@@ -1,16 +1,16 @@
-package ca.northline.config;
+package ca.northline.platform;
 
-import ca.northline.shared.DomainEvent;
-import ca.northline.shared.EventType;
 import java.util.Locale;
 import java.util.Map;
+import org.springframework.modulith.events.EventExternalizationConfiguration;
 import org.springframework.modulith.events.Externalized;
 
 /**
- * The event envelope on Kafka (ARCHITECTURE.md § Event management, S-26): the record value is the event's own JSON
- * (ids only, validated against {@code events/<type>.v<version>.schema.json}), the record key is the aggregate id, and
- * the envelope fields that aren't in the payload travel as headers. {@code traceparent} (W3C) is added by the Kafka
- * template's observation. The worker's {@code EnvelopeParser} reads the same names.
+ * The event envelope on Kafka (ARCHITECTURE.md § Event management, S-26), shared by every producer (the api and
+ * northline-auth): the record value is the event's own JSON (ids only, validated against
+ * {@code events/<type>.v<version>.schema.json}), the record key is the aggregate id, and the envelope fields that
+ * aren't in the payload travel as headers. {@code traceparent} (W3C) is added by the Kafka template's observation where
+ * tracing is on. The worker's {@code EnvelopeParser} reads the same names.
  */
 public final class EventHeaders {
 
@@ -20,8 +20,19 @@ public final class EventHeaders {
 
     private EventHeaders() {}
 
+    /**
+     * Modulith's default externalization of the {@code @Externalized} events under {@code basePackage}
+     * ({@code "<topic>::<key>"} on the event) plus these headers on every {@link EnvelopedEvent}. Each producing app
+     * declares it as its {@code EventExternalizationConfiguration} bean.
+     */
+    public static EventExternalizationConfiguration externalization(String basePackage) {
+        return EventExternalizationConfiguration.defaults(basePackage)
+                .headers(EnvelopedEvent.class, EventHeaders::of)
+                .build();
+    }
+
     /** Kafka headers of an externalized event. */
-    public static Map<String, Object> of(DomainEvent event) {
+    public static Map<String, Object> of(EnvelopedEvent event) {
         return Map.of(ID, event.eventId(), TYPE, type(event.getClass()), VERSION, Integer.toString(event.version()));
     }
 
