@@ -231,11 +231,12 @@ Other outputs, for the stories that consume them:
 
 | output | used by |
 |---|---|
-| `kubernetes.workload_identities.<name>.service_account_annotations` / `.pod_labels` | Helm charts (S-14): ServiceAccounts `northline-api`, `-auth`, `-bff`, `-worker`, and `external-secrets` |
+| `kubernetes.workload_identities.<name>.service_account_annotations` / `.pod_labels` | Helm charts (S-14): ServiceAccounts `northline-api`, `-auth`, `-bff`, `-worker`, and `external-secrets`, `external-dns`, `cert-manager` (S-17) |
 | `secrets_provider`, `secret_store` | the External Secrets `SecretStore` (S-6): provider `aws` / `gcpsm` / `azurekv` |
-| `helm_values` (env roots, S-6) | `deploy/helm/northline` values: `configEnv`, `workloadIdentities` (api, auth, bff, worker), `externalSecrets` (provider, region / projectID / vaultUrl from the stack's `external_secrets` output, `remoteKeys` = `secret_env` without empty entries) |
+| `helm_values` (env roots, S-6) | `deploy/helm/northline` values: `configEnv`, `workloadIdentities` (api, auth, bff, worker), `externalSecrets` (provider, region / projectID / vaultUrl from the stack's `external_secrets` output, `remoteKeys` = `secret_env` without empty entries), `edge.certManager.issuer.dns01` (S-17: the cloud's cert-manager DNS-01 solver for the zone) — goes to `deploy/argocd/envs/<env>/infra.yaml` |
+| `gitops_addon_values` (env roots, S-17) | the Argo CD add-ons' per-environment values (`deploy/argocd/envs/<env>/addons/<name>.yaml`): the workload identity of `external-secrets`, `external-dns`, `cert-manager`; external-dns's provider, zone filter (`domainFilters`), zone id / project / `azure.json` and `txtOwnerId` ([edge.md](edge.md#setting-it-up-per-environment)) |
 | `registry.repository_urls`, `registry.login_command` | image builds and pushes (S-14) |
-| `dns.name_servers` | delegation (S-17): NS records for `dev.northline.ca` / `staging.northline.ca` in the `northline.ca` zone; the prod zone's servers at the registrar |
+| `dns.name_servers` | delegation (S-17, [edge.md § DNS delegation](edge.md#dns-delegation)): NS records for `dev.northline.ca` / `staging.northline.ca` in the `northline.ca` zone; the prod zone's servers at the registrar. Only the `external-dns` and `cert-manager` identities may change records in the zone (`module.dns` `record_writers`) |
 | `network.cloud.nat_public_ips` | allow-lists that need the cluster's egress IPs (Elastic Cloud traffic filters, partners) |
 | `kms.key_ids["data"]` | encryption at rest of Kubernetes Secrets, buckets, registry, secrets |
 | `kms.key_refs["signing"]` | the signing key id Terraform created (`KMS_KEY_ID` unless `signing_key_ids.active` overrides it) |

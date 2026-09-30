@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Offline checks of the Northline chart (S-14): helm lint + helm template | kubeconform -strict for every
-# environment × cloud, the kind values and the Gateway API variant. No cluster needed. CI runs this
+# environment × cloud, the kind values, the Gateway API and edge (S-17) variants. No cluster needed. CI runs this
 # (.github/workflows/deploy.yml, ci/gitlab/deploy.yml); locally: deploy/helm/validate.sh
 #
 # Needs helm (3.14+) and kubeconform (0.6+). KUBE_VERSION is the Kubernetes version the schemas are checked
 # against (default 1.33.0, the oldest the clusters run); KUBECONFORM_SCHEMAS adds schema locations (air-gapped
-# mirrors); the CRD catalog covers Gateway API (and External Secrets, S-6).
+# mirrors); the CRD catalog covers Gateway API, External Secrets (S-6), cert-manager and Envoy Gateway (S-17).
 set -euo pipefail
 
 cd "$(dirname "$0")"
@@ -35,8 +35,14 @@ for env in dev staging prod; do
 done
 check "local-kind" -f "$CHART/values-local-kind.yaml"
 check "local-kind + External Secrets (fake)" -f "$CHART/values-local-kind.yaml" -f "$CHART/values-local-kind-eso.yaml"
+check "local-kind + edge (local CA)" -f "$CHART/values-local-kind.yaml" -f "$CHART/values-local-kind-edge.yaml"
 check "dev × aws, plain Secret (no ESO)" -f "$CHART/values-dev.yaml" -f "$CHART/values-aws.yaml" --set externalSecrets.enabled=false
-check "dev × gcp, Gateway API" -f "$CHART/values-dev.yaml" -f "$CHART/values-gcp.yaml" -f test-values/identities-gcp.yaml -f test-values/gateway.yaml
+check "dev × gcp, existing Gateway (no edge)" -f "$CHART/values-dev.yaml" -f "$CHART/values-gcp.yaml" -f test-values/identities-gcp.yaml -f test-values/gateway.yaml
+# S-17: the edge variants.
+for cloud in aws gcp azure; do
+  check "prod × $cloud, wildcard DNS-01 + custom domain" -f "$CHART/values-prod.yaml" -f "$CHART/values-$cloud.yaml" -f "test-values/identities-$cloud.yaml" -f test-values/edge-wildcard.yaml
+done
+check "staging × aws, Ingress + cert-manager" -f "$CHART/values-staging.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml -f test-values/edge-ingress.yaml
 check "defaults" 
 
 # Refusals the chart must keep: secrets from values outside local, http URLs in prod.
@@ -55,6 +61,30 @@ for cloud in aws gcp azure; do
       | grep -qE '^kind: Secret$'; then echo "FAIL prod × $cloud renders a Secret"; failed=1
   else echo "ok   prod × $cloud renders no Secret (External Secrets only)"; fi
 done
+
+# S-17: every deployed environment serves every host over TLS with HSTS, plain HTTP only redirects, and the refusals.
+for env in dev staging prod; do
+  for cloud in aws gcp azure; do
+    out=$(helm template northline "$CHART" -f "$CHART/values-$env.yaml" -f "$CHART/values-$cloud.yaml" -f "test-values/identities-$cloud.yaml")
+    hosts=$(grep -E '^  hostnames: \[' <<<"$out" | sed -E 's/.*\["(.*)"\]/\1/' | sort)
+    certs=$(awk '/^kind: Certificate$/{c=1} c && /^    - /{print $2; c=0}' <<<"$out" | sort)
+    listeners=$(grep -cE '^      protocol: HTTPS$' <<<"$out")
+    hsts=$(grep -c 'name: Strict-Transport-Security' <<<"$out")
+    rules=$(grep -cE '^    - matches:$' <<<"$out")
+    redirect=$(grep -c 'requestRedirect: { scheme: https, port: 443, statusCode: 301 }' <<<"$out")
+    if [[ -n $hosts && $hosts == "$certs" && $listeners -eq $(wc -l <<<"$hosts") && $hsts -eq $rules && $redirect -eq 1 ]]; then
+      echo "ok   $env × $cloud: $(wc -l <<<"$hosts") hosts, each with a certificate, an HTTPS listener and HSTS; HTTP redirects"
+    else echo "FAIL $env × $cloud edge: hosts [$hosts] certs [$certs] listeners $listeners hsts $hsts/$rules redirect $redirect"; failed=1; fi
+  done
+done
+refuse() {
+  local label=$1; shift
+  if helm template northline "$CHART" "$@" >/dev/null 2>&1; then echo "FAIL $label accepted"; failed=1; else echo "ok   $label refused"; fi
+}
+refuse "wildcard without DNS-01" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" --set edge.certManager.wildcard=true
+refuse "DNS-01 without the cloud's solver" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" --set edge.certManager.issuer.solver=dns01
+refuse "a CA issuer in prod" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" --set edge.certManager.issuer.type=ca --set edge.certManager.issuer.caSecretName=x
+refuse "edge without routes" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" --set gateway.enabled=false
 
 # S-16: the migration Job never names the dev seed in any deployed render.
 for env in dev staging prod; do

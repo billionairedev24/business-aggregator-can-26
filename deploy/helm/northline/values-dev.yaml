@@ -7,13 +7,18 @@ global:
 urls:
   auth: https://auth.dev.northline.ca
   api: https://api.dev.northline.ca
-  studio: https://business.dev.northline.ca
+  studio: https://studio.dev.northline.ca
   consumer: https://dev.northline.ca
   console: https://console.dev.northline.ca
+  pages: https://pages.dev.northline.ca
   webauthnRpId: dev.northline.ca
 
-ingress:
-  enabled: true                   # routes only; TLS and the controller come with S-17
+# S-17: Gateway API with the chart's Gateway (Envoy Gateway), Let's Encrypt certificates per host over HTTP-01,
+# records published by external-dns in the dev.northline.ca zone (docs/runbooks/edge.md).
+gateway:
+  enabled: true
+edge:
+  enabled: true
 
 apps:
   auth:

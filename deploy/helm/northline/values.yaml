@@ -28,16 +28,18 @@ global:
   podLabels: {}
   podAnnotations: {}
 
-# Public URLs (S-17 decides the hosts). They become AUTH_ISSUER, STUDIO_ORIGIN, CONSUMER_ORIGIN, CONSOLE_ORIGIN,
+# Public URLs (hosts decided in S-17, docs/runbooks/edge.md). They become AUTH_ISSUER, STUDIO_ORIGIN, CONSUMER_ORIGIN, CONSOLE_ORIGIN,
 # API_PUBLIC_URL, WEBAUTHN_RP_ID, the Studio's NL_AUTH_ORIGIN and the ingress hosts.
 urls:
   auth: https://auth.dev.northline.ca
   # The api's public host serves only the routes that must bypass the BFF: Stripe webhooks (S-12,
   # /api/v1/webhooks/stripe[/connect]) and the email unsubscribe page (S-13, /api/v1/email/unsubscribe).
   api: https://api.dev.northline.ca
-  studio: https://business.dev.northline.ca
+  studio: https://studio.dev.northline.ca
   consumer: https://dev.northline.ca
   console: https://console.dev.northline.ca
+  # Storefronts (the consumer app); merchants point their own domains here with a CNAME (edge.customDomains, S-31).
+  pages: https://pages.dev.northline.ca
   # Registrable domain shared by the Studio and consumer origins (passkeys). Changing it invalidates every passkey.
   webauthnRpId: dev.northline.ca
 
@@ -142,25 +144,77 @@ containerSecurityContext:
 # Spread replicas over zones and nodes when there are several (soft: never blocks scheduling).
 topologySpread: true
 
+# Routes, two ways. The default in dev/staging/prod is Gateway API with the chart's own Gateway (edge.gateway, S-17);
+# the Ingress stays for clusters whose controller is Ingress-only (AWS Load Balancer Controller, GKE Ingress, AKS
+# application routing). docs/runbooks/edge.md
 ingress:
-  # S-17 owns TLS, DNS and the controller; this only routes hosts and paths. className/annotations per cloud or
-  # controller (ingress-nginx, AWS Load Balancer Controller, GKE, AKS application routing).
   enabled: false
   className: ""
   annotations: {}
-  # [{ secretName: northline-tls, hosts: [business.dev.northline.ca, …] }] — secrets created elsewhere (cert-manager, S-17)
+  # Empty with edge.enabled + edge.certManager.enabled = one entry per host with the Secret its Certificate writes.
   tls: []
 
-# Gateway API instead of (or next to) Ingress: HTTPRoutes attached to an existing Gateway.
+# Gateway API: HTTPRoutes attached to the chart's Gateway (edge.gateway.create) or to an existing one (parentRefs).
 gateway:
   enabled: false
-  parentRefs: []                  # [{ name: northline, namespace: gateway-system, sectionName: https }]
+  parentRefs: []                  # existing Gateway: [{ name: shared, namespace: gateway-system, sectionName: https }]
+
+# S-17: TLS, DNS and the edge (templates/edge.yaml, docs/runbooks/edge.md). Cloud-neutral: a Gateway (Envoy Gateway by
+# default) behind the cloud's layer-4 load balancer, certificates from Let's Encrypt through cert-manager, DNS records
+# from external-dns — the last two are cluster add-ons (deploy/argocd/addons/), this chart only declares what it needs.
+edge:
+  enabled: false
+  # DNS zone of the public hosts; empty = urls.webauthnRpId (dev.northline.ca, staging.northline.ca, northline.ca).
+  zone: ""
+  gateway:
+    create: true
+    name: northline
+    className: envoy              # Envoy Gateway (addons/envoy-gateway); gke-l7-global-external-managed etc. also work
+    annotations: {}
+    clientTimeout: ""             # e.g. 30s — Envoy Gateway request-received timeout
+  # Envoy Gateway ClientTrafficPolicy: minimum TLS version for clients.
+  tls:
+    minVersion: "1.2"
+  # Proxies in front that append X-Forwarded-For (Cloudflare, Azure Front Door, CloudFront): 1. 0 = clients connect
+  # to the load balancer directly.
+  trustedProxyHops: 0
+  # Strict-Transport-Security on every route. preload only once every subdomain is HTTPS for good (hstspreload.org).
+  hsts:
+    enabled: true
+    maxAge: 63072000              # two years
+    includeSubDomains: true
+    preload: false
+  # Other response headers set on every route. Content-Security-Policy and frame options stay with each app (the
+  # Studio's nginx sets its own).
+  responseHeaders:
+    X-Content-Type-Options: nosniff
+    Referrer-Policy: strict-origin-when-cross-origin
+  certManager:
+    enabled: true
+    # One wildcard certificate for the zone (DNS-01 only) instead of one per host (HTTP-01).
+    wildcard: false
+    renewBefore: 720h             # 30 days (Let's Encrypt issues 90-day certificates)
+    issuer:
+      create: true
+      kind: Issuer                # namespaced; cert-manager runs with --issuer-ambient-credentials for DNS-01
+      name: northline-acme
+      type: acme                  # acme | ca | selfSigned (ca/selfSigned: kind only)
+      server: https://acme-v02.api.letsencrypt.org/directory   # staging: https://acme-staging-v02.api.letsencrypt.org/directory
+      email: platform@northline.ca
+      solver: http01              # http01 | dns01 (dns01: wildcards; needs the dns01 block below)
+      # The cloud's DNS-01 solver block — terraform output helm_values (edge.certManager.issuer.dns01):
+      #   { route53: { region, hostedZoneID } } | { cloudDNS: { project, hostedZoneName } } | { azureDNS: { … } }
+      dns01: {}
+      caSecretName: ""            # type ca
+  # Merchant domains serving storefronts (S-31 verifies the CNAME to pages.<zone>; S-17 serves them): each gets a
+  # listener, a certificate over HTTP-01 and a route to the consumer app. [{ host: book.example.ca }]
+  customDomains: []
 
 networkPolicy:
   enabled: true
   # Where the ingress controller / gateway pods run; they may reach studio, consumer, bff and auth.
   ingressFrom:
-    - namespaceSelector: {}       # default: any namespace (tighten per cluster, e.g. kubernetes.io/metadata.name: ingress-nginx)
+    - namespaceSelector: {}       # default: any namespace (tighten per cluster, e.g. kubernetes.io/metadata.name: envoy-gateway-system)
   # Extra peers allowed to reach every app's port (e.g. Prometheus).
   extraFrom: []
 

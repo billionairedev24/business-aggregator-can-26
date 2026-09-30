@@ -6,6 +6,7 @@
 #   deploy/argocd/kind/rehearse.sh up      cluster + Postgres/Valkey stand-ins + Argo CD + bootstrap (≈ 5 min)
 #   deploy/argocd/kind/rehearse.sh push    commit the working tree as it is now to the rehearsal repository — the
 #                                          equivalent of merging a PR; Argo CD picks it up (or: argocd app refresh)
+#   deploy/argocd/kind/rehearse.sh edge    S-17: cert-manager + Envoy Gateway + a local CA, and the edge switched on
 #   deploy/argocd/kind/rehearse.sh down    delete the cluster, the Postgres container and the rehearsal repository
 #
 # Needs docker, kind, kubectl, helm, git and the images built locally as northline/<app>:$IMAGE_TAG (deploy.md § kind).
@@ -134,6 +135,57 @@ YAML
   kubectl -n northline-local get pods,jobs
 }
 
+# S-17: cert-manager and Envoy Gateway from their release manifests (the add-on versions), a local CA, and envs/local
+# switched to values-local-kind-edge.yaml — Certificates become Ready and the Gateway serves TLS
+# (docs/runbooks/edge.md § Local rehearsal). CERT_MANAGER_IMAGES / ENVOY_IMAGES: "upstream=replacement …" pairs for
+# registries the machine can't reach; every image is loaded into the node from the local Docker.
+edge() {
+  local cm_version=v1.18.2 eg_version=v1.5.1 pair
+  kubectl config use-context "kind-$CLUSTER" >/dev/null
+  curl -fsSL "https://github.com/cert-manager/cert-manager/releases/download/$cm_version/cert-manager.yaml" >"$STATE/cert-manager.yaml"
+  curl -fsSL "https://github.com/envoyproxy/gateway/releases/download/$eg_version/install.yaml" >"$STATE/envoy-gateway.yaml"
+  for pair in ${CERT_MANAGER_IMAGES:-} ${ENVOY_IMAGES:-}; do
+    sed -i "s#${pair%%=*}#${pair#*=}#g" "$STATE/cert-manager.yaml" "$STATE/envoy-gateway.yaml"
+  done
+  for image in $(grep -hoE 'image: "?[^" ]+' "$STATE/cert-manager.yaml" "$STATE/envoy-gateway.yaml" | awk '{print $2}' | tr -d '"' | sort -u) ${ENVOY_PROXY_IMAGE:-}; do
+    if docker image inspect "$image" >/dev/null 2>&1; then
+      docker save "$image" | docker exec -i "$CLUSTER-control-plane" ctr --namespace=k8s.io images import - >/dev/null && echo "loaded $image"
+    fi
+  done
+  kubectl apply --server-side --force-conflicts -f "$STATE/cert-manager.yaml" >/dev/null
+  kubectl apply --server-side --force-conflicts -f "$STATE/envoy-gateway.yaml" >/dev/null
+  kubectl -n cert-manager rollout status deploy --timeout 5m
+  kubectl -n envoy-gateway-system rollout status deploy --timeout 5m
+  kubectl apply -f "$ROOT/deploy/argocd/addons/envoy-gateway/manifests/common" -f "$ROOT/deploy/argocd/addons/envoy-gateway/manifests/kind"
+  if [[ -n ${ENVOY_PROXY_IMAGE:-} ]]; then
+    kubectl -n envoy-gateway-system patch envoyproxy northline --type merge \
+      -p "{\"spec\":{\"provider\":{\"kubernetes\":{\"envoyDeployment\":{\"container\":{\"image\":\"$ENVOY_PROXY_IMAGE\"}}}}}}"
+  fi
+  # A local CA for the chart's Issuer (type ca): self-signed root in Secret northline-local-ca.
+  kubectl apply -f - <<'YAML'
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata: { name: rehearsal-selfsigned }
+spec: { selfSigned: {} }
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata: { name: northline-local-ca, namespace: northline-local }
+spec:
+  isCA: true
+  commonName: Northline kind rehearsal CA
+  secretName: northline-local-ca
+  privateKey: { algorithm: ECDSA, size: 256 }
+  issuerRef: { name: rehearsal-selfsigned, kind: ClusterIssuer }
+YAML
+  kubectl -n northline-local wait certificate/northline-local-ca --for condition=Ready --timeout 2m
+  kubectl -n northline-local get secret northline-local-ca -o jsonpath='{.data.ca\.crt}' | base64 -d >"$STATE/ca.crt"
+  # The local environment now renders the edge too.
+  sed -i 's|^  valueFiles: \[values-local-kind.yaml\]|  valueFiles: [values-local-kind.yaml, values-local-kind-edge.yaml]|' "$WORK/deploy/argocd/envs/local/env.yaml"
+  git -C "$WORK" commit -qam "rehearsal: edge on" && git -C "$WORK" push -q origin HEAD:main
+  echo "pushed: envs/local with values-local-kind-edge.yaml; CA in $STATE/ca.crt"
+}
+
 down() {
   kind delete cluster --name "$CLUSTER"
   docker rm -f "${CLUSTER}-postgres" >/dev/null 2>&1 || true
@@ -143,6 +195,7 @@ down() {
 case $cmd in
   up) up ;;
   push) push ;;
+  edge) edge ;;
   down) down ;;
-  *) sed -n '2,17p' "$0"; exit 2 ;;
+  *) sed -n '2,20p' "$0"; exit 2 ;;
 esac

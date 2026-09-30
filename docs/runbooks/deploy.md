@@ -8,7 +8,7 @@ one cloud — the same images and the same chart run on EKS, GKE, AKS or kind; o
 > cluster exists yet (Terraform is unapplied — [infrastructure.md](infrastructure.md)), so nothing has been deployed to
 > EKS/GKE/AKS. Secrets come from the cloud secrets manager through External Secrets (S-6, [secrets.md](secrets.md));
 > database migrations run as a Job before every rollout (S-16); Argo CD delivers the chart per environment (S-15,
-> [gitops.md](gitops.md)); TLS, DNS and the ingress controller are S-17.
+> [gitops.md](gitops.md)); TLS, DNS and the Gateway are S-17 ([edge.md](edge.md)).
 
 Other runbooks: [dev](dev.md) · [staging](staging.md) · [prod](prod.md) · [infrastructure](infrastructure.md) ·
 [CI](ci.md) · [overview and variables](README.md)
@@ -103,7 +103,7 @@ replica); plus the Ingress or Gateway API HTTPRoutes and the OAuth client Job.
 | security | non-root (65532 / 101), `runAsNonRoot`, `seccompProfile: RuntimeDefault`, no privilege escalation, all capabilities dropped, **read-only root file system** (an `emptyDir` on `/tmp`; nginx also on `/etc/nginx/conf.d`), no ServiceAccount token mounted |
 | rollouts | `maxUnavailable: 0`, `maxSurge: 1`, `preStop` sleep 5 s (Kubernetes ≥ 1.30), 45 s grace period, pods roll when their configuration changes (`checksum/config`), zone and node spread (soft) |
 | network | NetworkPolicies (ingress only): studio, consumer, bff and auth accept the ingress controller (`networkPolicy.ingressFrom`, default any namespace — narrow it per cluster); api accepts the bff (and the ingress for its public paths); auth accepts bff and api; worker accepts nothing. Egress stays open (managed data stores and cloud APIs sit at provider addresses) |
-| routes | `ingress.enabled` (+ `className`, `annotations`, `tls` secret names) or `gateway.enabled` (+ `parentRefs`). Studio host: `/api`, `/bff`, `/oauth2`, `/login` → bff, `/` → studio; auth host → auth; consumer (and console) hosts; api host → only `/api/v1/webhooks/stripe` (S-12) and `/api/v1/email/unsubscribe` (S-13). No certificates or DNS here (S-17) |
+| routes and edge (S-17) | default (dev/staging/prod): `gateway.enabled` + `edge.enabled` — the chart's Gateway `northline` (Envoy Gateway) with an HTTPS listener per host, HTTP → 301, HSTS and headers on every route, TLS 1.2+, a cert-manager Issuer and a Certificate per host ([edge.md](edge.md)); or `ingress.enabled` (+ `className`) with the same certificates; or HTTPRoutes on an existing Gateway (`gateway.parentRefs`). Studio host: `/api`, `/bff`, `/oauth2`, `/login` → bff, `/` → studio; auth host → auth; consumer, pages (+ `edge.customDomains`) → consumer; console host once enabled; api host → only `/api/v1/webhooks/stripe` (S-12) and `/api/v1/email/unsubscribe` (S-13) |
 | migrations (S-16) | pre-install/pre-upgrade hook Job `northline-migrate-<hash>` (Argo CD PreSync; the name carries a hash of its inputs, so each change runs a new Job — S-15) from the api image: Flyway `db/migration`, then the category seed — before any Deployment changes; a failure fails the release ([§ Migrations](#migrations-s-16)) |
 | OAuth clients (S-122) | post-install/post-upgrade hook Job `northline-oauth-clients-<hash>`: the auth image with the auth environment runs `OAuthClientsCommand sync` (`oauthClientsJob.command: list` to only report). Argo CD runs it as PostSync |
 
@@ -158,8 +158,9 @@ never committed).
 
 - Order of one `helm upgrade --install … --wait`: the migration Job (pre-install/pre-upgrade hook) → the Deployments
   roll → the OAuth client Job (post-install/post-upgrade, after every Deployment is Ready with `--wait`).
-- **Ingress class / TLS** until S-17: add `--set ingress.className=nginx` (or your controller) and, when a
-  certificate secret exists, `--set ingress.tls[0].secretName=… --set ingress.tls[0].hosts={…}`.
+- **Edge** (S-17): the environment files turn on the chart's Gateway, certificates and headers; the cluster needs
+  Envoy Gateway, cert-manager and external-dns first ([edge.md § Setting it up](edge.md#setting-it-up-per-environment)).
+  For an Ingress controller instead: `--set gateway.enabled=false --set ingress.enabled=true --set ingress.className=<class>`.
 - **Pin digests**: `--set apps.api.image.digest=sha256:…` per app; the tag is then informational. Argo CD environments
   pin every image in `deploy/argocd/envs/<env>/images.yaml` and refuse to render without (`global.image.requireDigest`,
   [gitops.md § Promotion](gitops.md#promotion-build--digest--pr--sync)).

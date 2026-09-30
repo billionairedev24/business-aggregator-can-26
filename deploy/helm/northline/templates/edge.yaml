@@ -1,0 +1,197 @@
+{{- /*
+S-17: the edge of one environment (docs/runbooks/edge.md) — cloud-neutral, all in the app namespace:
+  Gateway northline        (Gateway API; class from edge.gateway.className, Envoy Gateway by default): an HTTP
+                           listener (ACME HTTP-01 + redirect to HTTPS) and one HTTPS listener per public host
+  HTTPRoute …-http-redirect  301 to https:// for every host on port 80
+  ClientTrafficPolicy      (Envoy Gateway only) TLS 1.2+, trusted proxy hops in front (Cloudflare, Front Door)
+  Issuer northline-acme    cert-manager: Let's Encrypt with HTTP-01 on the Gateway (or the Ingress), DNS-01 through
+                           the cloud's DNS when edge.certManager.issuer.solver = dns01 (wildcards); or a CA (kind)
+  Certificate per host     (or one wildcard for the zone) + one per merchant domain (edge.customDomains)
+external-dns (an Argo CD add-on) publishes the HTTPRoute hostnames at the Gateway's address; HSTS and the other
+response headers are filters on the routes (templates/ingress.yaml).
+*/ -}}
+{{- $e := .Values.edge }}
+{{- if $e.enabled }}
+{{- $routes := (include "northline.routes" . | fromYaml).routes }}
+{{- $zone := include "northline.edgeZone" . }}
+{{- $cm := $e.certManager }}
+{{- $iss := $cm.issuer }}
+{{- $useGateway := and .Values.gateway.enabled $e.gateway.create }}
+{{- if and (not $useGateway) (not .Values.ingress.enabled) }}
+{{- fail "edge.enabled needs gateway.enabled with edge.gateway.create, or ingress.enabled" }}
+{{- end }}
+{{- if and $cm.wildcard (eq $iss.type "acme") (ne $iss.solver "dns01") }}
+{{- fail "edge.certManager.wildcard needs edge.certManager.issuer.solver=dns01 (Let's Encrypt issues wildcards over DNS-01 only)" }}
+{{- end }}
+{{- if and (eq $iss.solver "dns01") (eq $iss.type "acme") (not $iss.dns01) }}
+{{- fail "edge.certManager.issuer.solver=dns01 needs edge.certManager.issuer.dns01 (terraform output helm_values: edge.certManager.issuer.dns01)" }}
+{{- end }}
+{{- if and (has .Values.global.environment (list "staging" "prod")) (ne $iss.type "acme") }}
+{{- fail "edge.certManager.issuer.type must be acme in staging and prod" }}
+{{- end }}
+{{- $issuerKind := default "Issuer" $iss.kind }}
+{{- if $useGateway }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: {{ $e.gateway.name }}
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "edge") | nindent 4 }}
+  {{- with $e.gateway.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  gatewayClassName: {{ $e.gateway.className }}
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces: { from: Same }
+    {{- range $routes }}
+    - name: {{ include "northline.listenerName" .host }}
+      hostname: {{ .host | quote }}
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: {{ include "northline.tlsSecret" (dict "root" $ "host" .host "custom" .custom) }}
+      allowedRoutes:
+        namespaces: { from: Same }
+    {{- end }}
+---
+# Everything on port 80 answers 301 to https://; cert-manager's HTTP-01 challenge routes (exact paths under
+# /.well-known/acme-challenge/) take precedence while a certificate is being issued.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: northline-http-redirect
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "edge") | nindent 4 }}
+  annotations:
+    external-dns.alpha.kubernetes.io/controller: none
+spec:
+  parentRefs:
+    - name: {{ $e.gateway.name }}
+      sectionName: http
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect: { scheme: https, port: 443, statusCode: 301 }
+{{- if eq $e.gateway.className "envoy" }}
+---
+# Envoy Gateway: TLS 1.2 or newer (Envoy's default ciphers: ECDHE + AES-GCM/ChaCha20), HTTP/2, the real client
+# address behind a CDN/WAF in front (edge.trustedProxyHops: Cloudflare, Azure Front Door, CloudFront = 1).
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: {{ $e.gateway.name }}
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "edge") | nindent 4 }}
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: {{ $e.gateway.name }}
+  tls:
+    minVersion: {{ $e.tls.minVersion | quote }}
+    alpnProtocols: [h2, http/1.1]
+  {{- if gt (int $e.trustedProxyHops) 0 }}
+  clientIPDetection:
+    xForwardedFor:
+      numTrustedHops: {{ int $e.trustedProxyHops }}
+  {{- end }}
+  {{- with $e.gateway.clientTimeout }}
+  timeout:
+    http:
+      requestReceivedTimeout: {{ . }}
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- if $cm.enabled }}
+{{- if $iss.create }}
+---
+apiVersion: cert-manager.io/v1
+kind: {{ $issuerKind }}
+metadata:
+  name: {{ $iss.name }}
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "edge") | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-4"
+spec:
+  {{- if eq $iss.type "acme" }}
+  acme:
+    server: {{ $iss.server }}
+    email: {{ required "edge.certManager.issuer.email (Let's Encrypt expiry notices)" $iss.email }}
+    privateKeySecretRef:
+      name: {{ $iss.name }}-account-key
+    solvers:
+      {{- if eq $iss.solver "dns01" }}
+      # Names in the zone (incl. the wildcard): DNS-01 through the cloud's DNS, as cert-manager's workload identity.
+      - selector:
+          dnsZones: [{{ $zone | quote }}]
+        dns01:
+          {{- toYaml $iss.dns01 | nindent 10 }}
+      {{- end }}
+      # Everything else (and everything, with solver=http01): HTTP-01 on port 80.
+      - http01:
+          {{- if $useGateway }}
+          gatewayHTTPRoute:
+            parentRefs:
+              - name: {{ $e.gateway.name }}
+                namespace: {{ .Release.Namespace }}
+                kind: Gateway
+                sectionName: http
+          {{- else }}
+          ingress:
+            ingressClassName: {{ required "ingress.className (HTTP-01 through the Ingress)" .Values.ingress.className }}
+          {{- end }}
+  {{- else if eq $iss.type "ca" }}
+  # Local only: certificates signed by a CA whose key pair is in this Secret (kind rehearsal).
+  ca:
+    secretName: {{ required "edge.certManager.issuer.caSecretName" $iss.caSecretName }}
+  {{- else if eq $iss.type "selfSigned" }}
+  selfSigned: {}
+  {{- else }}
+  {{- fail (printf "edge.certManager.issuer.type must be acme, ca or selfSigned (got %q)" $iss.type) }}
+  {{- end }}
+{{- end }}
+{{- $certs := list }}
+{{- if $cm.wildcard }}
+{{- $certs = append $certs (dict "name" "northline-tls-wildcard" "secret" "northline-tls-wildcard" "dnsNames" (list $zone (printf "*.%s" $zone))) }}
+{{- end }}
+{{- range $routes }}
+{{- if or .custom (not $cm.wildcard) }}
+{{- $secret := include "northline.tlsSecret" (dict "root" $ "host" .host "custom" .custom) }}
+{{- $certs = append $certs (dict "name" $secret "secret" $secret "dnsNames" (list .host)) }}
+{{- end }}
+{{- end }}
+{{- range $certs }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ .name }}
+  labels:
+    {{- include "northline.labels" (dict "root" $ "app" "edge") | nindent 4 }}
+spec:
+  secretName: {{ .secret }}
+  dnsNames:
+    {{- toYaml .dnsNames | nindent 4 }}
+  issuerRef:
+    name: {{ $iss.name }}
+    kind: {{ $issuerKind }}
+    group: cert-manager.io
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  renewBefore: {{ $cm.renewBefore }}
+{{- end }}
+{{- end }}
+{{- end }}

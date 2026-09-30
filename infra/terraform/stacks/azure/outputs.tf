@@ -137,3 +137,20 @@ output "data_stores" {
     }
   }
 }
+
+# S-17: the edge add-ons' values for this environment (deploy/argocd/envs/<env>/addons/*.yaml via the env root's
+# gitops_addon_values) and the cert-manager DNS-01 solver for the chart's Issuer.
+output "edge" {
+  description = "DNS zone details for external-dns and cert-manager, with their workload identities."
+  value = {
+    zone_name          = module.dns.zone_name
+    cert_manager_dns01 = module.dns.cert_manager_dns01
+    external_dns       = module.dns.external_dns
+    identities = {
+      for name in ["external-dns", "cert-manager"] : name => {
+        service_account_annotations = module.kubernetes.workload_identities[name].service_account_annotations
+        pod_labels                  = module.kubernetes.workload_identities[name].pod_labels
+      }
+    }
+  }
+}

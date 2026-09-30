@@ -180,3 +180,44 @@ env:
 {{- if .root.Values.secrets.create }}{{ $parts = append $parts (toYaml .root.Values.secrets.values) }}{{ end -}}
 {{- join "\n" $parts | sha256sum -}}
 {{- end }}
+
+{{/* S-17 edge. The DNS zone the public hosts live in: edge.zone, else the passkey RP id (dev.northline.ca, …). */}}
+{{- define "northline.edgeZone" -}}
+{{- default .Values.urls.webauthnRpId .Values.edge.zone -}}
+{{- end }}
+
+{{/* Gateway listener of a host: https-<host with dashes>. */}}
+{{- define "northline.listenerName" -}}
+{{- printf "https-%s" (. | replace "." "-") | trunc 63 | trimSuffix "-" -}}
+{{- end }}
+
+{{/*
+TLS Secret of a host: one per host (HTTP-01), or the zone's wildcard Secret when edge.certManager.wildcard is on and
+the host is in the zone (a merchant's own domain always gets its own). (dict "root" $ "host" "<host>" "custom" bool)
+*/}}
+{{- define "northline.tlsSecret" -}}
+{{- $cm := .root.Values.edge.certManager -}}
+{{- if and $cm.wildcard (not .custom) -}}
+northline-tls-wildcard
+{{- else -}}
+{{- printf "northline-tls-%s" (.host | replace "." "-") | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end }}
+
+{{/* Response headers the edge sets on every route (HSTS and friends), as YAML name/value pairs; empty when off. */}}
+{{- define "northline.responseHeaders" -}}
+{{- $e := .Values.edge -}}
+{{- if $e.enabled -}}
+{{- $h := list -}}
+{{- if $e.hsts.enabled -}}
+{{- $v := printf "max-age=%d" (int $e.hsts.maxAge) -}}
+{{- if $e.hsts.includeSubDomains }}{{ $v = printf "%s; includeSubDomains" $v }}{{ end -}}
+{{- if $e.hsts.preload }}{{ $v = printf "%s; preload" $v }}{{ end -}}
+{{- $h = append $h (dict "name" "Strict-Transport-Security" "value" $v) -}}
+{{- end -}}
+{{- range $name, $value := $e.responseHeaders -}}
+{{- $h = append $h (dict "name" $name "value" $value) -}}
+{{- end -}}
+{{- if $h }}{{ toYaml $h }}{{ end -}}
+{{- end -}}
+{{- end }}

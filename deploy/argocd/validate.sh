@@ -103,6 +103,11 @@ for env in dev staging prod local; do
   done
 done
 
+# Plain manifests the add-ons carry (GatewayClass, EnvoyProxy per cloud, S-17).
+if kubeconform -strict -summary -kubernetes-version "$KUBE_VERSION" "${schema_args[@]}" addons/*/manifests >"$tmp/kc" 2>&1; then
+  ok "add-on manifests  ($(tail -1 "$tmp/kc"))"
+else fail "add-on manifests"; cat "$tmp/kc"; fi
+
 # Refusals.
 if helm template root "$AOA" -f envs/prod/env.yaml --set sync.automated=true >/dev/null 2>&1; then
   fail "automated sync accepted for prod"; else ok "automated sync refused for prod"; fi

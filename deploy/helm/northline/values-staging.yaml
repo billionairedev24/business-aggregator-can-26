@@ -6,12 +6,17 @@ global:
 urls:
   auth: https://auth.staging.northline.ca
   api: https://api.staging.northline.ca
-  studio: https://business.staging.northline.ca
+  studio: https://studio.staging.northline.ca
   consumer: https://staging.northline.ca
   console: https://console.staging.northline.ca
+  pages: https://pages.staging.northline.ca
   webauthnRpId: staging.northline.ca
 
-ingress:
+# S-17: Gateway API with the chart's Gateway (Envoy Gateway), Let's Encrypt certificates per host over HTTP-01,
+# records published by external-dns in the staging.northline.ca zone (docs/runbooks/edge.md).
+gateway:
+  enabled: true
+edge:
   enabled: true
 
 apps:

@@ -5,12 +5,17 @@ global:
 urls:
   auth: https://auth.northline.ca
   api: https://api.northline.ca
-  studio: https://business.northline.ca
+  studio: https://studio.northline.ca
   consumer: https://northline.ca
   console: https://console.northline.ca
+  pages: https://pages.northline.ca
   webauthnRpId: northline.ca
 
-ingress:
+# S-17: Gateway API with the chart's Gateway (Envoy Gateway), Let's Encrypt certificates per host over HTTP-01,
+# records published by external-dns in the northline.ca zone (docs/runbooks/edge.md).
+gateway:
+  enabled: true
+edge:
   enabled: true
 
 # S-25: two in-sync replicas of three before a write is acknowledged (the api produces with acks=all).

@@ -1,0 +1,12 @@
+# external-dns (S-17, docs/runbooks/edge.md) — values shared by every cloud and environment. The provider, zone filter
+# and identity are per environment: deploy/argocd/envs/<env>/addons/external-dns.yaml (terraform output
+# gitops_addon_values). It publishes the HTTPRoute hostnames of the northline Gateway (A/AAAA to the load balancer)
+# and owns them through TXT records (txtOwnerId = northline-<env>); records it didn't create are never touched.
+sources: [gateway-httproute]
+policy: sync                      # deletes the records of routes that are gone (its own records only)
+registry: txt
+txtPrefix: "_extdns."             # TXT ownership records beside, not on, the host (an apex can't hold both)
+interval: 1m
+serviceAccount:
+  create: true
+  name: external-dns

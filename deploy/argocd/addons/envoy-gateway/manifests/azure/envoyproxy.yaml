@@ -1,0 +1,18 @@
+# Envoy proxies of the northline Gateway on Azure (AKS): two replicas (one per zone when the cluster has several), a public
+# layer-4 load balancer in front, client addresses kept (externalTrafficPolicy: Local).
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: northline
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        replicas: 2
+      envoyService:
+        externalTrafficPolicy: Local
+        # The AKS Standard Load Balancer; with externalTrafficPolicy: Local it probes kube-proxy's health node port,
+        # so only nodes running a proxy receive traffic.
+        annotations: {}

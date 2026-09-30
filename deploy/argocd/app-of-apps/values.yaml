@@ -61,6 +61,10 @@ northline:
     - { group: gateway.networking.k8s.io, kind: HTTPRoute }
     - { group: external-secrets.io, kind: ExternalSecret }
     - { group: external-secrets.io, kind: SecretStore }
+    - { group: gateway.networking.k8s.io, kind: Gateway }          # S-17: the environment's Gateway
+    - { group: gateway.envoyproxy.io, kind: ClientTrafficPolicy }   # S-17: TLS 1.2+, trusted proxy hops
+    - { group: cert-manager.io, kind: Issuer }                      # S-17: Let's Encrypt account per environment
+    - { group: cert-manager.io, kind: Certificate }
 
 # AppProject of the environment: which repositories, clusters, namespaces and kinds its Applications may use, and who
 # may sync. Argo CD RBAC groups come from its SSO (Dex / OIDC: GitHub teams, GitLab groups, Entra ID, Google groups).
@@ -96,6 +100,52 @@ addons:
       - { group: external-secrets.io, kind: ClusterSecretStore }
       - { group: external-secrets.io, kind: ClusterExternalSecret }
       - { group: generators.external-secrets.io, kind: ClusterGenerator }
+
+  # S-17 (docs/runbooks/edge.md): certificates from Let's Encrypt. Identity for DNS-01 per environment
+  # (envs/<env>/addons/cert-manager.yaml).
+  cert-manager:
+    enabled: false
+    repoURL: https://charts.jetstack.io
+    chart: cert-manager
+    targetRevision: v1.18.2
+    namespace: cert-manager
+    syncWave: "-10"
+    clusterResources:
+      - { group: apiextensions.k8s.io, kind: CustomResourceDefinition }
+      - { group: rbac.authorization.k8s.io, kind: ClusterRole }
+      - { group: rbac.authorization.k8s.io, kind: ClusterRoleBinding }
+      - { group: admissionregistration.k8s.io, kind: ValidatingWebhookConfiguration }
+      - { group: admissionregistration.k8s.io, kind: MutatingWebhookConfiguration }
+  # S-17: the Gateway API implementation (and the Gateway API CRDs). Chart from Docker Hub (OCI); the GatewayClass and
+  # the per-cloud EnvoyProxy come from addons/envoy-gateway/manifests/{common,<cloud>}.
+  envoy-gateway:
+    enabled: false
+    repoURL: registry-1.docker.io/envoyproxy
+    oci: true
+    chart: gateway-helm
+    targetRevision: v1.5.1
+    namespace: envoy-gateway-system
+    syncWave: "-10"
+    manifests: [deploy/argocd/addons/envoy-gateway/manifests/common, "deploy/argocd/addons/envoy-gateway/manifests/{cloud}"]
+    clusterResources:
+      - { group: apiextensions.k8s.io, kind: CustomResourceDefinition }
+      - { group: rbac.authorization.k8s.io, kind: ClusterRole }
+      - { group: rbac.authorization.k8s.io, kind: ClusterRoleBinding }
+      - { group: admissionregistration.k8s.io, kind: ValidatingWebhookConfiguration }
+      - { group: admissionregistration.k8s.io, kind: MutatingWebhookConfiguration }
+      - { group: gateway.networking.k8s.io, kind: GatewayClass }
+  # S-17: DNS records for the public hosts in the environment's zone (provider, zone and identity per environment:
+  # envs/<env>/addons/external-dns.yaml, from terraform output gitops_addon_values).
+  external-dns:
+    enabled: false
+    repoURL: https://kubernetes-sigs.github.io/external-dns/
+    chart: external-dns
+    targetRevision: 1.18.0
+    namespace: external-dns
+    syncWave: "-5"                # after envoy-gateway: it watches Gateway API routes
+    clusterResources:
+      - { group: rbac.authorization.k8s.io, kind: ClusterRole }
+      - { group: rbac.authorization.k8s.io, kind: ClusterRoleBinding }
 
 # Argo CD notifications (optional; needs argocd-notifications-controller and a service such as Slack configured in
 # argocd-notifications-cm — docs/runbooks/gitops.md § Notifications). Annotations added to every Application, e.g.

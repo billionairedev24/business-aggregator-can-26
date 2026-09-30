@@ -1,0 +1,7 @@
+# S-17: one wildcard certificate over DNS-01 + a merchant domain over HTTP-01 (deploy/helm/validate.sh only).
+edge:
+  certManager:
+    wildcard: true
+    issuer: { solver: dns01 }
+  customDomains:
+    - host: book.example.ca

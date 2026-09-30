@@ -1,0 +1,13 @@
+# The class the chart's Gateway uses (edge.gateway.className: envoy); the proxies are shaped by EnvoyProxy northline
+# (manifests/<cloud>/envoyproxy.yaml).
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: envoy
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: northline
+    namespace: envoy-gateway-system

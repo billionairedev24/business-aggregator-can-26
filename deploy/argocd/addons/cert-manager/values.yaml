@@ -1,0 +1,22 @@
+# cert-manager (S-17, docs/runbooks/edge.md) — values shared by every cloud and environment.
+crds:
+  enabled: true
+  keep: true                      # uninstalling the add-on never deletes Certificates
+# The ServiceAccount Terraform binds to the cloud identity (workload identity "cert-manager") for DNS-01.
+serviceAccount:
+  create: true
+  name: cert-manager
+# The chart's Issuer (deploy/helm/northline templates/edge.yaml) is namespaced: let it use the controller's
+# workload identity for DNS-01 (one environment per cluster, so no other tenant can borrow it).
+extraArgs:
+  - --issuer-ambient-credentials
+# HTTP-01 challenges answered through Gateway API HTTPRoutes on the northline Gateway.
+config:
+  apiVersion: controller.config.cert-manager.io/v1alpha1
+  kind: ControllerConfiguration
+  enableGatewayAPI: true
+# Two replicas of the webhook: a cert-manager outage must not block every apply of a Certificate.
+webhook:
+  replicaCount: 2
+podDisruptionBudget:
+  enabled: true

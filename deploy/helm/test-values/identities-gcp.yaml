@@ -11,3 +11,7 @@ configEnv:
   STORAGE_PROVIDER: gcs
 externalSecrets:
   gcp: { projectID: northline-dev }
+edge:
+  certManager:
+    issuer:
+      dns01: { cloudDNS: { project: northline-dev, hostedZoneName: northline-dev } }

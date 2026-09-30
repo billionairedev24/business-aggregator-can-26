@@ -1,0 +1,4 @@
+# Azure Workload Identity: the webhook injects the federated token only into labelled pods; the client id annotation
+# is per environment (deploy/argocd/envs/<env>/addons/cert-manager.yaml).
+podLabels:
+  azure.workload.identity/use: "true"

@@ -71,11 +71,37 @@ spec:
     - repoURL: {{ $v.repoURL | quote }}
       targetRevision: {{ $v.targetRevision | quote }}
       ref: values
+    {{- range $a.manifests }}
+    # Plain manifests of the add-on from this repository ({cloud} = this environment's cloud).
+    - repoURL: {{ $v.repoURL | quote }}
+      targetRevision: {{ $v.targetRevision | quote }}
+      path: {{ replace "{cloud}" $.Values.cloud . }}
+    {{- end }}
   destination:
     {{- include "gitops.destination" $ | nindent 4 }}
     namespace: {{ $a.namespace }}
   syncPolicy:
     {{- include "gitops.syncPolicy" (dict "root" $ "options" (list "CreateNamespace=true" "ServerSideApply=true")) | nindent 4 }}
+{{- end }}
+{{- end }}
+{{- range $name := keys $v.addons | sortAlpha }}
+{{- $a := get $v.addons $name }}
+{{- if and $a.enabled $a.oci }}
+---
+# A Helm chart in an OCI registry: Argo CD needs a repository entry marked enableOCI (public, no credentials).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: helm-oci-{{ $name }}
+  namespace: {{ $v.argocdNamespace }}
+  labels:
+    argocd.argoproj.io/secret-type: repository
+    app.kubernetes.io/part-of: northline
+stringData:
+  name: {{ $name }}
+  type: helm
+  url: {{ $a.repoURL | quote }}
+  enableOCI: "true"
 {{- end }}
 {{- end }}
 {{- if $v.northline.enabled }}

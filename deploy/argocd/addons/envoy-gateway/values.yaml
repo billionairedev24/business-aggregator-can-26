@@ -1,0 +1,5 @@
+# Envoy Gateway (S-17, docs/runbooks/edge.md): the Gateway API implementation behind the northline Gateway on every
+# cloud. The controller installs the Gateway API CRDs; the GatewayClass "envoy" and its EnvoyProxy (the proxies'
+# Service per cloud) come from manifests/ in this directory.
+deployment:
+  replicas: 2

@@ -68,5 +68,29 @@ output "helm_values" {
       enabled    = true
       remoteKeys = { for name, ref in module.northline.secret_env : name => ref if ref != null && ref != "" }
     })
+    # S-17: the DNS-01 solver for this environment's zone (used when edge.certManager.issuer.solver = dns01).
+    edge = { certManager = { issuer = { dns01 = module.northline.edge.cert_manager_dns01 } } }
+  }
+}
+
+# S-17 (and S-6's External Secrets Operator): values for the platform add-ons Argo CD installs, one object per add-on
+# (docs/runbooks/gitops.md, docs/runbooks/edge.md):
+#   terraform output -json gitops_addon_values | jq '.["external-dns"]' | yq -P > deploy/argocd/envs/<env>/addons/external-dns.yaml
+output "gitops_addon_values" {
+  description = "Per add-on Helm values: the workload identity of external-secrets, external-dns and cert-manager, and external-dns's zone settings."
+  value = {
+    external-secrets = {
+      serviceAccount = { annotations = module.northline.kubernetes.workload_identities["external-secrets"].service_account_annotations }
+      podLabels      = module.northline.kubernetes.workload_identities["external-secrets"].pod_labels
+    }
+    external-dns = merge(module.northline.edge.external_dns, {
+      serviceAccount = { annotations = module.northline.edge.identities["external-dns"].service_account_annotations }
+      podLabels      = module.northline.edge.identities["external-dns"].pod_labels
+      txtOwnerId     = "northline-dev"
+    })
+    cert-manager = {
+      serviceAccount = { annotations = module.northline.edge.identities["cert-manager"].service_account_annotations }
+      podLabels      = module.northline.edge.identities["cert-manager"].pod_labels
+    }
   }
 }
