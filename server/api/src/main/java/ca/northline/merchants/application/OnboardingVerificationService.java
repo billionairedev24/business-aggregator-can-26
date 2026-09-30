@@ -2,7 +2,6 @@ package ca.northline.merchants.application;
 
 import ca.northline.merchants.application.ManageApplication.ViewOnboarding;
 import ca.northline.merchants.application.VerificationGateways.BankLinking;
-import ca.northline.merchants.application.VerificationGateways.IdentityVerification;
 import ca.northline.merchants.application.VerificationGateways.Outcome;
 import ca.northline.merchants.application.VerificationGateways.RegistryLookup;
 import ca.northline.merchants.domain.CheckKind;
@@ -10,6 +9,7 @@ import ca.northline.merchants.domain.Document;
 import ca.northline.merchants.domain.GstNumber;
 import ca.northline.merchants.domain.MerchantApplication;
 import ca.northline.merchants.domain.Verification;
+import ca.northline.shared.Conflict;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
 import java.time.Clock;
@@ -49,7 +49,6 @@ class OnboardingVerificationService implements CompleteVerification {
     private final ApplicationRepository applications;
     private final VerificationRepository verifications;
     private final DocumentRepository documents;
-    private final IdentityVerification identity;
     private final RegistryLookup registry;
     private final BankLinking bank;
     private final ViewOnboarding viewOnboarding;
@@ -68,6 +67,10 @@ class OnboardingVerificationService implements CompleteVerification {
         switch (kind.action()) {
             case null -> throw new IllegalStateException("No action for " + kind);
             case INSTANT -> instant(application, check, kind, now);
+            case IDENTITY ->
+                throw new Conflict(
+                        "identity_per_owner",
+                        "Each owner verifies with Stripe Identity: start it from the owners list.");
             case NUMBER -> number(check, kind, command.reference(), now);
             case UPLOAD -> upload(check, command, now);
             case SIGN -> {
@@ -85,7 +88,6 @@ class OnboardingVerificationService implements CompleteVerification {
 
     private void instant(MerchantApplication application, Verification check, CheckKind kind, Instant now) {
         var outcome = switch (kind) {
-            case KYC -> identity.verifyBusinessOwners(application.getId());
             case REGISTRY ->
                 registry.business(
                         application.getLegalName(),

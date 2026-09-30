@@ -69,6 +69,7 @@ class OnboardingService
     private final Taxonomy taxonomy;
     private final LegalDetailsSchema legalSchema;
     private final StorefrontSync storefronts;
+    private final OwnerIdentityService ownerIdentity;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
@@ -244,6 +245,8 @@ class OnboardingService
                         application.getStructure() == null
                                 ? 0
                                 : application.getStructure().kycThresholdPct()));
+        // owners may have been added or removed: the kyc row follows their Stripe Identity checks (S-22)
+        ownerIdentity.rollup(application.getId());
     }
 
     private List<Principal> principalsFor(

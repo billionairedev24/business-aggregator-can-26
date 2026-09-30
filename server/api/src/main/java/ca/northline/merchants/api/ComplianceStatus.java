@@ -13,7 +13,9 @@ public interface ComplianceStatus {
 
     /**
      * Verifications that are expired (including verified rows past their expiry), rejected or still to do, most
-     * urgent (earliest expiry) first. Rows handed in for review ({@code submitted}) are not due.
+     * urgent (earliest expiry) first. Rows handed in for review ({@code submitted}) are not due. Besides the ledger's
+     * licences, insurance and policies this includes the owners' identity verification ({@code kyc}, S-22): it is due
+     * while an owner still has to verify or must try again.
      */
     List<DueItem> dueItems(String merchantId);
 

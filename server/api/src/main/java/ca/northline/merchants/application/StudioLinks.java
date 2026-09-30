@@ -5,7 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * Where the Studio lives ({@code northline.studio.base-url}, default {@code http://localhost:3100}): team invitation
- * links ({@code /invite/<token>}) and the Stripe onboarding return URL.
+ * links ({@code /invite/<token>}), the Stripe onboarding return URL and the Stripe Identity return URLs (S-22).
  */
 @ConfigurationProperties("northline.studio")
 public record StudioLinks(@Nullable String baseUrl) {
@@ -21,5 +21,15 @@ public record StudioLinks(@Nullable String baseUrl) {
 
     public String compliance(String merchantId) {
         return origin() + "/b/" + merchantId + "/compliance";
+    }
+
+    /** The onboarding wizard's Verification step of a business (Stripe Identity sends the signed-in owner back here). */
+    public String onboardingVerification(String merchantId) {
+        return origin() + "/onboarding/verification?m=" + merchantId;
+    }
+
+    /** Public "thanks, you're done" page for owners who verified from an emailed link (they may have no account). */
+    public String identityDone() {
+        return origin() + "/identity/done";
     }
 }
