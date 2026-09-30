@@ -6,6 +6,7 @@ Implementation scaffold generated from the design project. Read `CLAUDE.md` firs
 ```
 CLAUDE.md                     agent instructions — spec precedence, stack, non-negotiables
 README.md
+Makefile, make/*.mk           every developer and operator workflow (`make help`); scripts/stack.sh runs the apps (S-124)
 docker-compose.yml            local stand-ins behind compose profiles: Postgres 17 + PostGIS, Valkey, Kafka, Elasticsearch, Mailpit, S3 storage, stripe-mock
 .env.example, server/.env.example, web/apps/studio/.env.example   every setting, with local defaults
 db/migrations/V001..V018      Flyway migrations, one schema per module; V016 = spec constraints & triggers
@@ -45,41 +46,39 @@ Configuration is environment variables with local defaults: copy `.env.example` 
 `web/apps/studio/.env`. Spring profiles: `local` (fakes, dev seed, dev auth), `dev` / `staging` / `prod` (cloud shape,
 required variables checked at start-up), `test`.
 
-Needs JDK 25 (`export JAVA_HOME=/path/to/jdk-25`), and Docker for any stand-in you don't run yourself. Details:
-`docs/BACKEND_CONVENTIONS.md`.
+Needs JDK 25, Node 22 + pnpm, and Docker for any stand-in you don't run yourself. **Everything goes through `make`**
+(S-124; `make help` lists every target, [`docs/LOCAL_DEVELOPMENT.md`](docs/LOCAL_DEVELOPMENT.md) explains them):
 ```
-docker compose --profile db up -d                 # PostGIS 17 on :5432 (northline/northline) — or use your own
-cd server
-./gradlew build                                   # compile all 4 apps, Error Prone/NullAway, Checkstyle, Spotless, tests (Testcontainers)
-./gradlew :api:flywayMigrate                      # db/migrations → localhost:5432/northline (-Pdb.url=… for another DB, -Pdb.devSeed=true for personas)
-./gradlew :api:seedCategories                     # db/seed/categories.json → catalogue.categories (idempotent)
-./gradlew :api:bootRun --args='--spring.profiles.active=local'
+make setup          # toolchain check (make doctor), .env files from the examples, pnpm install
+make up             # Postgres 17 + PostGIS in Docker, migrations + dev personas + categories, api :8080 + Studio :3100
+make run            # the same apps in the foreground with merged logs (Ctrl-C) — or: make status, make logs, make down
+make all            # what CI checks: ./gradlew build (Error Prone/NullAway, Checkstyle, Spotless, tests) + web checks
 curl -H 'X-Dev-User: 01J9ZD3V00000000000000RAV1' localhost:8080/api/v1/me/businesses
 ```
 The `local` profile needs only Postgres. It applies the dev personas from `db/seed-dev`, authenticates the
 `X-Dev-User` header without the auth server, and keeps Kafka, Elasticsearch and Redis off. Other stand-ins start per
-compose profile (`--profile cache|events|search|mail|storage|payments`, or `--profile all`); Kafka topics are created
-by the `events` profile. See `docs/runbooks/local.md` § 6.
+compose profile (`make up PROFILES=db,cache,events,search,mail,storage,payments`, or `PROFILES=all`); Kafka topics are
+created by the `events` profile. See `docs/runbooks/local.md` § 6. The plain commands (`./gradlew :api:bootRun
+--args='--spring.profiles.active=local'`, `pnpm dev`, `docker compose --profile db up -d`) keep working; each make target
+is a thin wrapper around them.
 
 ## Studio without auth (fastest way to click through)
 ```
-# one Postgres (docker compose --profile db up -d, or your own), then from server/:
-./gradlew :api:flywayMigrate -Pdb.url=jdbc:postgresql://localhost:5432/northline -Pdb.devSeed=true
-./gradlew :api:seedCategories -Pdb.url=jdbc:postgresql://localhost:5432/northline
-./gradlew :api:bootRun --args='--spring.profiles.active=local'          # api :8080, accepts X-Dev-User
-cd ../web && NL_DEV_USER=01J9ZD3V00000000000000RAV1 VITE_NL_DEV_STEP_UP=1 pnpm dev   # studio :3100 as Ravi Sandhu
+make up             # = the default SERVICES="api studio"; PROFILES=none with your own Postgres
 ```
+It runs `:api:flywayMigrate -Pdb.devSeed=true`, `:api:seedCategories`, `:api:bootRun --args='--spring.profiles.active=local'`
+(api :8080, accepts X-Dev-User) and the Studio dev server with `NL_DEV_USER=01J9ZD3V00000000000000RAV1
+VITE_NL_DEV_STEP_UP=1` (studio :3100 as Ravi Sandhu).
 Ravi owns the three seeded businesses (Switch business in the account menu): **Prairie Wrench** (provider), **Prairie Wrench Parts** (seller) and **Pho Dau Bo** (kitchen). Settings › Security needs the auth server (see Local sign-in below).
-Smoke sweep of every screen (migrates + seeds a disposable database, starts api, auth and the studio, then checks 135 screens): `ci/studio-smoke.sh` — ports, database and Chromium are set by environment variables, see `docs/runbooks/ci.md`.
+Smoke sweep of every screen (migrates + seeds a disposable database, starts api, auth and the studio, then checks 135 screens): `make e2e` (`ci/studio-smoke.sh`) — ports, database and Chromium are set by environment variables, see `docs/runbooks/ci.md`.
 
 ## Local sign-in (Studio → auth → BFF → api, Postgres only)
 ```
-cd server
-./gradlew :auth:bootRun --args='--spring.profiles.active=local'   # northline-auth :9000 (migrates + seeds the DB too; SMS codes are logged)
-./gradlew :api:bootRun  --args='--spring.profiles.active=local'   # api :8080
-./gradlew :bff:bootRun  --args='--spring.profiles.active=local'   # studio-bff :8082 (in-memory session, no Redis)
-cd ../web && pnpm --filter @northline/studio dev                   # http://localhost:3100 (no NL_DEV_USER → goes through the BFF)
+make up SERVICES="auth api bff studio"
 ```
+= northline-auth :9000 (`:auth:bootRun`, migrates + seeds the DB too; SMS codes are in `.run/logs/auth.log`), api :8080,
+studio-bff :8082 (in-memory session, no Redis) and the Studio on http://localhost:3100 without `NL_DEV_USER` (it goes
+through the BFF).
 Open http://localhost:3100 → Sign in. Seeded credentials (`db/seed-dev/V101__auth.sql`, local only):
 
 | persona | email / mobile | second factor |
@@ -100,4 +99,4 @@ passkeys work in any browser on `localhost` (WebAuthn RP id `localhost`). Google
 - `db/seed-dev` — dev-only seed (V100–V109), applied under the `local` profile
 - `docs/BACKEND_CONVENTIONS.md` — how to add a module, endpoint, migration, event, test
 
-Frontend: `cd web && pnpm i && pnpm storybook`.
+Frontend: `make web-storybook` (or `make up SERVICES=storybook`); `make web-check` runs what CI's web job runs.

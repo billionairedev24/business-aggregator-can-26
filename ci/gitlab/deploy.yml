@@ -39,10 +39,9 @@ images:java:
     # Jib pushes without a Docker daemon; it reads the credentials from ~/.docker/config.json.
     - mkdir -p ~/.docker
     - printf '{"auths":{"%s":{"auth":"%s"}}}' "$REGISTRY_HOST" "$(printf '%s:%s' "$REGISTRY_USER" "$REGISTRY_PASSWORD" | base64 -w0)" > ~/.docker/config.json
-    - cd server
-    - ./gradlew jib -x test -Pimage.registry="$REGISTRY" -Pimage.tag="$IMAGE_TAG" -Pimage.platforms="$IMAGE_PLATFORMS"
-        --init-script ../ci/gradle/maven-mirror.init.gradle.kts --max-workers=2 --console=plain
-    - for app in api auth bff worker; do echo "$app $(cat $app/build/jib-image.digest)"; done | tee ../image-digests.txt
+    - command -v make >/dev/null || (apt-get update -qq && apt-get install -y -qq --no-install-recommends make >/dev/null)
+    - make images-java PUSH=1 REGISTRY="$REGISTRY" IMAGE_TAG="$IMAGE_TAG" IMAGE_PLATFORMS="$IMAGE_PLATFORMS" GRADLE_FLAGS="--max-workers=2 --console=plain"
+    - for app in api auth bff worker; do echo "$app $(cat server/$app/build/jib-image.digest)"; done | tee image-digests.txt
   artifacts:
     paths: [image-digests.txt]
     expire_in: 30 days
@@ -81,7 +80,7 @@ chart:validate:
   rules:
     - if: $PIPELINE_PART == "all" || $PIPELINE_PART == "chart"
   script:
-    - apk add --no-cache bash curl
+    - apk add --no-cache bash curl make
     - curl -sSL https://github.com/yannh/kubeconform/releases/download/v0.7.0/kubeconform-linux-amd64.tar.gz | tar xz -C /usr/local/bin kubeconform
     # helm lint + helm template | kubeconform -strict for dev/staging/prod × aws/gcp/azure, kind and Gateway API.
-    - bash deploy/helm/validate.sh
+    - make helm-validate
