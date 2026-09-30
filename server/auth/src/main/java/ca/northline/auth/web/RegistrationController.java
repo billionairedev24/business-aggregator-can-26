@@ -32,6 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
  * POST /api/auth/register/passkey           {credential}                     → 201 session (account created)
  * POST /api/auth/register/totp              → {secret, otpauthUri, qrCode}
  * POST /api/auth/register/totp/verify       {code}                           → 201 session (account created)
+ * POST /api/auth/register/complete                                           → 201 session (S-62: no second factor)
  * </pre>
  */
 @RestController
@@ -98,9 +99,18 @@ class RegistrationController {
         return signIn(created, request, response);
     }
 
+    /** S-62 (consumer, design 06 "SMS code · Backup only"): the account without a second factor. */
+    @PostMapping("/complete")
+    @ResponseStatus(HttpStatus.CREATED)
+    AuthResponses.Session complete(HttpServletRequest request, HttpServletResponse response) {
+        return signIn(registration.completeWithoutSecondFactor(Clients.of(request)), request, response);
+    }
+
     private AuthResponses.Session signIn(
             RegistrationService.Created created, HttpServletRequest request, HttpServletResponse response) {
-        var factors = List.of(Factor.PHONE_OTP, created.secondFactor());
+        var factors = created.secondFactor() == Factor.PHONE_OTP
+                ? List.of(Factor.PHONE_OTP)
+                : List.of(Factor.PHONE_OTP, created.secondFactor());
         sessions.signIn(created.account().id(), factors, created.sessionId(), request, response);
         return AuthResponses.Session.of(created.account(), factors).continuingTo(apps.resume(request));
     }

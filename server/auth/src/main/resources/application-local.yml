@@ -23,6 +23,7 @@ northline:
     # Dev-only key: the TOTP secret seeded for the personas in db/seed-dev/V101__auth.sql is encrypted with it.
     totp-key: bm9ydGhsaW5lLWxvY2FsLWRldi10b3RwLWtleS0zMmI=
     login-page: http://localhost:3100/sign-in
+    consumer-login-page: http://localhost:3000/sign-in
     # S-45: the consumer app's dev server (:3000) calls the JSON API too (sign-out; S-62's sign-in pages).
     allowed-origins: [ "http://localhost:3100", "http://127.0.0.1:3100", "http://localhost:8082", "http://localhost:3000", "http://127.0.0.1:3000" ]
     webauthn:

@@ -19,4 +19,11 @@ class FederationUnavailableTest extends AuthIntegrationTest {
                 .andExpect(status().isFound())
                 .andExpect(redirectedUrl("http://localhost:3100/sign-in?error=federation_unavailable"));
     }
+
+    @Test
+    void onTheConsumerSite_goesBackToItsSignIn() throws Exception {
+        mvc.perform(get("/oauth2/authorization/apple").queryParam("app", "consumer"))
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl("http://localhost:3000/sign-in?error=federation_unavailable"));
+    }
 }

@@ -23,6 +23,11 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param clientCityHeader request header in which the load balancer / CDN puts the client's city (for example
  *     {@code CloudFront-Viewer-City}, or a Google Cloud / Azure Front Door custom header); read only from trusted
  *     proxies, shown in Settings › Security's session list (S-19). Empty = no city.
+ * @param consumerLoginPage S-62: the consumer web app's sign-in page — where an unauthenticated authorization request of
+ *     a {@code consumerClients} client, and a Google / Apple sign-in started there, land (empty = {@code loginPage})
+ * @param consumerClients S-62: OAuth clients whose people sign in on the consumer site ({@code consumer-bff})
+ * @param mfaRequiredClients S-62: OAuth clients that get a code only for a sign-in with a second factor (the Studio's and
+ *     the console's BFFs) — a consumer's phone-code sign-in is sent to their sign-in page instead
  */
 @ConfigurationProperties("northline.auth")
 public record AuthProperties(
@@ -39,7 +44,10 @@ public record AuthProperties(
         @DefaultValue({"127.0.0.0/8", "::1/128", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7"})
         List<String> trustedProxies,
 
-        @Nullable String clientCityHeader) {
+        @Nullable String clientCityHeader,
+        @Nullable String consumerLoginPage,
+        @DefaultValue("consumer-bff") List<String> consumerClients,
+        @DefaultValue({"studio-bff", "console-bff"}) List<String> mfaRequiredClients) {
 
     /** WebAuthn relying party: id (registrable domain) and the origins allowed in client data. */
     public record WebAuthn(
