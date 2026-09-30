@@ -46,14 +46,14 @@ class KitchenMetrics {
         var readyBy = ticket.getReadyBy();
         var late = readyAt != null && readyBy != null && readyAt.isAfter(readyBy);
         between(ticket.getAcceptedAt(), readyAt)
-                .ifPresent(d -> afterCommit(() -> timer(PREP, "late", Boolean.toString(late))
-                        .record(d)));
+                .ifPresent(d -> afterCommit(
+                        () -> timer(PREP, "late", Boolean.toString(late)).record(d)));
     }
 
     void handedOff(KitchenTicket ticket) {
         between(ticket.getReadyAt(), ticket.getHandedOffAt())
-                .ifPresent(d -> afterCommit(
-                        () -> timer(HANDOFF_WAIT, "mode", ticket.getFulfilmentMode()).record(d)));
+                .ifPresent(d -> afterCommit(() ->
+                        timer(HANDOFF_WAIT, "mode", ticket.getFulfilmentMode()).record(d)));
     }
 
     private Timer timer(String name, String tag, String value) {

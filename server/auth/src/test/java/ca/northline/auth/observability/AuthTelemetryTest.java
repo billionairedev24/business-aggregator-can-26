@@ -58,8 +58,9 @@ class AuthTelemetryTest extends AuthIntegrationTest {
         assertThat(server.service()).isEqualTo("northline-auth");
         var sql = OTLP.awaitSpans(
                 s -> s.traceId().equals(trace) && s.attributes().containsKey("jdbc.query[0]"), Duration.ofSeconds(20));
-        assertThat(sql).noneSatisfy(s -> assertThat(String.join(" ", s.attributes().values()))
-                .contains(user.person().email()));
+        assertThat(sql)
+                .noneSatisfy(s -> assertThat(String.join(" ", s.attributes().values()))
+                        .contains(user.person().email()));
         OTLP.awaitMetrics(
                 m -> m.service().equals("northline-auth") && m.name().equals("northline.auth.sign_ins"),
                 Duration.ofSeconds(20));

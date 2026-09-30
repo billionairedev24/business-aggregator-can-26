@@ -61,7 +61,9 @@ class BffTracingTest {
     @Test
     void theBrowsersTraceReachesTheApiThroughTheRelay() throws Exception {
         API.stubFor(WireMock.any(anyUrl())
-                .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody("{\"items\":[]}")));
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("{\"items\":[]}")));
         var trace = OtlpReceiver.newTraceId();
         var session = new MockHttpSession();
         mvc.perform(get("/bff/session").session(session));

@@ -33,8 +33,8 @@ class PaymentMetrics {
     private final MeterRegistry meters;
 
     void checkoutStarted(String refType, String status) {
-        afterCommit(() -> meters.counter(CHECKOUTS, "ref_type", refType, "status", status)
-                .increment());
+        afterCommit(() ->
+                meters.counter(CHECKOUTS, "ref_type", refType, "status", status).increment());
     }
 
     @EventListener

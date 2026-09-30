@@ -79,8 +79,9 @@ class TracingTest extends IntegrationTest {
         // DB: one span per statement, the SQL without its parameter values.
         var sql = OTLP.awaitSpans(
                 s -> s.traceId().equals(trace) && s.attributes().containsKey("jdbc.query[0]"), Duration.ofSeconds(20));
-        assertThat(sql).allSatisfy(s -> assertThat(s.attributes()).noneSatisfy((k, _) -> assertThat(k)
-                .startsWith("jdbc.params")));
+        assertThat(sql)
+                .allSatisfy(s -> assertThat(s.attributes())
+                        .noneSatisfy((k, _) -> assertThat(k).startsWith("jdbc.params")));
         assertThat(sql).noneSatisfy(s -> assertThat(s.attributes().values()).contains("Prairie Wrench Traced"));
 
         // Kafka: the outbox externalizer produces with the request's trace.
