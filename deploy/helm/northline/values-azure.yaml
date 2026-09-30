@@ -15,6 +15,13 @@
 networkPolicy:
   enabled: true                   # Cilium (network_policy = cilium in the AKS module) enforces NetworkPolicy
 
+# S-6: secrets from the environment's Key Vault (secret names without prefix) through External Secrets, authenticated
+# as the ESO controller's Azure Workload Identity. vaultUrl comes from `terraform output -json helm_values`.
+externalSecrets:
+  enabled: true
+  provider: azure
+  remoteKeyPrefix: ""
+
 apps:
   api:
     env:

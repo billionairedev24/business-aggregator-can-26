@@ -144,6 +144,10 @@ The Helm charts (S-14) put `kubernetes.workload_identities[<name>].service_accou
 ServiceAccounts and `pod_labels` on the pods; the apps then need no static cloud credentials
 (`STORAGE_ACCESS_KEY`/`STORAGE_SECRET_KEY` stay empty).
 
+Every env root also outputs `helm_values` (S-6): `configEnv`, the four app `workloadIdentities` and `externalSecrets`
+(store settings from the stack's `external_secrets` output + `remoteKeys` = `secret_env`) — one values file for
+`deploy/helm/northline` (docs/runbooks/deploy.md, docs/runbooks/secrets.md).
+
 ## Checks
 
 ```sh
