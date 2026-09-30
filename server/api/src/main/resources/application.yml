@@ -65,6 +65,15 @@ springdoc:
   paths-to-match: /api/**
 northline:
   studio.base-url: ${STUDIO_ORIGIN:http://localhost:3100}      # invitation links, Stripe return URLs
+  # Pooled delivery runs per market (S-49; DeliveryProperties). Times are America/Edmonton; `cutoff` = shops pack by,
+  # customers order by cutoff − order-lead. A cut-off after the start belongs to the day before.
+  orders.delivery:
+    markets: [Calgary, Edmonton, Airdrie]
+    order-lead: 25m
+    runs:
+      - { name: evening, starts: "18:00", ends: "21:00", cutoff: "17:45", fee-cents: 299, capacity: 40 }
+      - { name: morning, starts: "08:00", ends: "11:00", cutoff: "07:30", fee-cents: 199, capacity: 40 }
+    direct: { eta: 45m, fee-cents: 999 }
   developer.webhook-key: ${WEBHOOK_SECRET_KEY:}                # base64 32 bytes; blank = fixed dev key under local/test
   payments:                                                    # blank key = fake Stripe gateway (DECISIONS.md, Finance)
     stripe-secret-key: ${STRIPE_SECRET_KEY:}

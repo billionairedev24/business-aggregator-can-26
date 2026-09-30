@@ -28,6 +28,10 @@ public abstract class WorkerIntegrationTest {
         registry.add("spring.elasticsearch.uris", WorkerContainers::elasticWithIndices);
         registry.add("northline.search.reconcile.initial-delay", () -> "1h");
         registry.add("northline.search.reconcile.every", () -> "1h");
+        // a transient failure under load is retried in 100 ms, not 10 s (same retry topics)
+        registry.add("northline.search.retry.delay", () -> "100");
+        registry.add("northline.search.retry.multiplier", () -> "2");
+        registry.add("northline.search.retry.max-delay", () -> "1000");
         registry.add("spring.kafka.consumer.properties.metadata.max.age.ms", () -> "1000");
         // Notifications: fast retries (same topics: the suffixes don't depend on the delays), the deferred job only
         // when a test calls it, no in-process email retries.
