@@ -94,4 +94,23 @@ class KitchenCalendarTest {
         assertThat(state.open()).isFalse();
         assertThat(state.opensAt()).isNull();
     }
+
+    @Test
+    void scheduledWindowsAreWholeHalfHoursInsideTheHoursAfterTheLead() {
+        // Wednesday 20:05 + 45 min = 20:50: nothing left today; Thursday 11:00–21:00 has 20 windows
+        var late = open().slots(at(WED, "20:05"), java.time.Duration.ofMinutes(45), 2);
+        assertThat(late).first().isEqualTo(at(WED.plusDays(1), "11:00"));
+        assertThat(late).last().isEqualTo(at(WED.plusDays(1), "20:30"));
+        assertThat(late).hasSize(20);
+        // 18:10 + 45 min = 18:55 → 19:00, 19:30, 20:00, 20:30 today
+        var evening = open().slots(at(WED, "18:10"), java.time.Duration.ofMinutes(45), 1);
+        assertThat(evening)
+                .containsExactly(at(WED, "19:00"), at(WED, "19:30"), at(WED, "20:00"), at(WED, "20:30"));
+    }
+
+    @Test
+    void noWindowsWithoutALiveMenu() {
+        assertThat(calendar(Map.of(), null, null, 0, false).slots(at(WED, "09:00"), java.time.Duration.ZERO, 2))
+                .isEmpty();
+    }
 }
