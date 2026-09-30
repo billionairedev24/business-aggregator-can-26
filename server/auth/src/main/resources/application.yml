@@ -82,6 +82,9 @@ northline:
     # the account and session counters. On top of the per-flow rules (5 tries per code / per sign-in attempt).
     rate-limits:
       store: ${RATE_LIMIT_STORE:redis}          # redis (Valkey, shared) | memory (one instance: local/test only)
+      # S-20: while Valkey is unreachable, codes/OTP and second factors are `open` (allowed, logged) or `closed`
+      # (503 sign_in_unavailable). staging/prod default to closed (application-staging.yml / application-prod.yml).
+      when-unavailable: ${RATE_LIMIT_WHEN_UNAVAILABLE:open}
       backoff-memory: 24h
       limits:
         otp-send:                               # SMS and voice codes cost money; every "Send code" counts

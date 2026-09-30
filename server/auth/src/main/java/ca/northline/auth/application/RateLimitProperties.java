@@ -12,12 +12,16 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * not limited.
  *
  * @param store {@code redis} (Valkey/Redis, shared by every instance) or {@code memory} (one instance; local/test only)
+ * @param whenUnavailable S-20: what the code/OTP and factor paths ({@link LimitedAction#guardsSecret()}) do while the
+ *     store can't be reached — {@code open} lets the attempt through (logged; local/dev), {@code closed} answers
+ *     {@code 503 sign_in_unavailable} (staging/prod)
  * @param backoffMemory how long earlier lockouts count towards the next one's length
  * @param limits action → scope → rule
  */
 @ConfigurationProperties("northline.auth.rate-limits")
 public record RateLimitProperties(
         @DefaultValue("redis") Store store,
+        @DefaultValue("open") WhenUnavailable whenUnavailable,
         @DefaultValue("24h") Duration backoffMemory,
         @DefaultValue Map<LimitedAction, Map<LimitScope, Rule>> limits) {
 
@@ -25,6 +29,14 @@ public record RateLimitProperties(
     public enum Store {
         REDIS,
         MEMORY
+    }
+
+    /** S-20: policy while the limit store (Valkey) is unreachable. */
+    public enum WhenUnavailable {
+        /** Allow the attempt and log an error: the per-flow limits (5 tries per code / attempt) still hold. */
+        OPEN,
+        /** Refuse guessable attempts with 503 until the store is back. */
+        CLOSED
     }
 
     /**

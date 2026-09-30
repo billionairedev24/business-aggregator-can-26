@@ -63,7 +63,7 @@ class AuthExceptionHandler extends ResponseEntityExceptionHandler {
             case STEP_UP_REQUIRED -> HttpStatus.FORBIDDEN;
             case LAST_FACTOR, CURRENT_SESSION -> HttpStatus.CONFLICT;
             case GONE -> HttpStatus.NOT_FOUND;
-            case CODE_NOT_SENT -> HttpStatus.SERVICE_UNAVAILABLE;
+            case CODE_NOT_SENT, UNAVAILABLE -> HttpStatus.SERVICE_UNAVAILABLE;
         };
         var problem = problem(status, ex.getReason().code(), ex.getMessage());
         var response = ResponseEntity.status(status);
