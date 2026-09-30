@@ -55,6 +55,7 @@ class ProviderPageApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.kind").value("visit"))
                 .andExpect(jsonPath("$.vehicle").value(true))
                 .andExpect(jsonPath("$.quoteable").value(true))
+                .andExpect(jsonPath("$.taxBps").value(500))
                 .andExpect(jsonPath("$.category.slug").value("mobile-mechanic"))
                 .andExpect(jsonPath("$.rating").value(5.0))
                 .andExpect(jsonPath("$.reviewCount").value(4))

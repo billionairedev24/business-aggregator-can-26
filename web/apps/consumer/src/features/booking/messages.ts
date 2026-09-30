@@ -91,7 +91,7 @@ export const useBookingT = defineMessages({
     // summary
     sumService: 'Service', sumProblem: 'Problem', sumWhere: 'Where', sumWhen: 'When',
     sum_visit: 'Vehicle', sum_home: 'Home', sum_event: 'Event', sum_appointment: 'Stylist', sum_consult: 'Looking to',
-    travel: 'Travel', included: 'Included', gst: 'GST 5%', heldInEscrow: 'Held in escrow', nothingToPay: 'Nothing to pay',
+    travel: 'Travel', included: 'Included', tax: 'Tax {pct}', heldInEscrow: 'Held in escrow', nothingToPay: 'Nothing to pay',
     releasedAfter: 'Released to the provider only after your sign-off.', dash: '—',
     quoteRequest: 'Quote request',
     loadError: "We couldn't load this booking.",
@@ -175,7 +175,7 @@ export const useBookingT = defineMessages({
     seeBookings: 'Voir les réservations', bookElse: 'Réserver autre chose',
     sumService: 'Service', sumProblem: 'Problème', sumWhere: 'Où', sumWhen: 'Quand',
     sum_visit: 'Véhicule', sum_home: 'Logement', sum_event: 'Événement', sum_appointment: 'Coiffeur', sum_consult: 'Je souhaite',
-    travel: 'Déplacement', included: 'Inclus', gst: 'TPS 5 %', heldInEscrow: 'Retenu en fiducie', nothingToPay: 'Rien à payer',
+    travel: 'Déplacement', included: 'Inclus', tax: 'Taxes {pct}', heldInEscrow: 'Retenu en fiducie', nothingToPay: 'Rien à payer',
     releasedAfter: 'Versé au prestataire seulement après votre approbation.', dash: '—',
     quoteRequest: 'Demande de devis',
     loadError: 'Impossible de charger cette réservation.',

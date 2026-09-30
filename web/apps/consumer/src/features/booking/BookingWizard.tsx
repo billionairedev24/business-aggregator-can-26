@@ -2,7 +2,7 @@ import { useRef, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
 import { ApiError, newIdempotencyKey, ValidationError } from '@northline/client';
-import { BrandMark, EmptyState, ErrorState, Field, Skeleton, TextArea, TextInput, useFormatters, useLocale, type Locale } from '@northline/ui';
+import { BrandMark, EmptyState, ErrorState, Field, Skeleton, TextArea, TextInput, TIME_ZONE, useFormatters, useLocale } from '@northline/ui';
 import { StepUpDialog } from '../cart/StepUpDialog';
 import { providerQuery, storefrontQuery, type ProviderFacts, type ProviderService } from '../provider/api';
 import { signInHref, useViewer } from '../session/api';
@@ -15,7 +15,6 @@ import { useBookingT } from './messages';
 import { StripeCard } from './StripeCard';
 
 export type Step = 'details' | 'location' | 'schedule' | 'pay' | 'done';
-const ZONE = 'America/Edmonton';
 const CLEANING = new Set(['house-cleaning', 'move-in-move-out-clean', 'carpet-and-upholstery', 'window-cleaning', 'duct-cleaning']);
 
 /** The steps of a service's booking type (design 06 `stepKeys`): appointments have no location step. */
@@ -23,7 +22,7 @@ export function stepsFor(kind: string): Step[] {
   return kind === 'appointment' ? ['details', 'schedule', 'pay', 'done'] : ['details', 'location', 'schedule', 'pay', 'done'];
 }
 
-const dayKey = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: ZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+const dayKey = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
 const addDays = (iso: string, n: number) => { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const mondayOf = (iso: string) => { const d = new Date(`${iso}T12:00:00Z`); return addDays(iso, -((d.getUTCDay() + 6) % 7)); };
 
@@ -305,7 +304,7 @@ function Schedule({ slug, facts, service, draft, update, notice, onNext, onBack,
                   const off = d.free === 0;
                   return (
                     <button key={d.date} type="button" className="nl-bk-day" aria-pressed={draft.day === d.date} disabled={off} onClick={() => update({ day: d.date, startsAt: undefined })}>
-                      <span className="nl-bk-dow">{new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { weekday: 'short', timeZone: ZONE }).format(at)}</span>
+                      <span className="nl-bk-dow">{new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { weekday: 'short', timeZone: TIME_ZONE }).format(at)}</span>
                       <span className="nl-bk-dnum">{Number(d.date.slice(8))}</span>
                       <span className="nl-bk-dfree">{d.closed ? t('dayClosed') : t('dayFree', { count: d.free })}</span>
                     </button>
@@ -354,7 +353,7 @@ function Pay({ facts, service, draft, update, kind, vehicle, cleaning, onBack, o
   const hold = draft.hold;
   const free = kind === 'consult';
   const estimate = estimateOf(service, draft, cleaning);
-  const total = free ? 0 : estimate + Math.round(estimate * 0.05);
+  const total = free ? 0 : estimate + taxOf(estimate, facts.taxBps);
   const cancelBy = hold ? new Date(new Date(hold.startsAt).getTime() - 12 * 3_600_000) : null;
 
   const finish = async (checkout: Checkout) => {
@@ -422,6 +421,9 @@ function Pay({ facts, service, draft, update, kind, vehicle, cleaning, onBack, o
   );
 }
 
+/** The provider's sales tax on the estimate (its province's rate, from the api), half-up as the server rounds it. */
+const taxOf = (cents: number, bps: number) => Math.round((cents * bps) / 10_000);
+
 function estimateOf(service: ProviderService, draft: Draft, cleaning: boolean): number {
   if (service.pricingMode === 'quote') return 0;
   const price = service.priceCents ?? 0;
@@ -436,7 +438,7 @@ function Summary({ facts, brand, service, draft, kind, vehicle, cleaning }: { fa
   const { locale } = useLocale();
   const estimate = service ? estimateOf(service, draft, cleaning) : 0;
   const free = kind === 'consult';
-  const tax = Math.round(estimate * 0.05);
+  const tax = taxOf(estimate, facts.taxBps);
   const row = (label: ReactNode, value: ReactNode) => <div className="nl-bk-sum-row"><dt>{label}</dt><dd>{value}</dd></div>;
   const vehicleText = [draft.vehicle.year, draft.vehicle.make, draft.vehicle.model].filter(Boolean).join(' ') + (draft.vehicle.plate ? ` · ${draft.vehicle.plate}` : '');
   const second = kind === 'visit' ? (vehicle ? vehicleText : '') : kind === 'home' ? (draft.home.type ? `${draft.home.type} · ${draft.home.beds || '?'}` : '') : kind === 'consult' && draft.consult.goal !== undefined ? t(`goal_${draft.consult.goal}` as 'goal_0') : '';
@@ -456,7 +458,7 @@ function Summary({ facts, brand, service, draft, kind, vehicle, cleaning }: { fa
       <dl className="nl-bk-sum">
         {row(service?.name ?? t('sumService'), free ? s('priceFree') : estimate ? money(estimate) : t('dash'))}
         {kind === 'visit' || kind === 'home' ? row(t('travel'), t('included')) : null}
-        {!free ? row(t('gst'), money(tax)) : null}
+        {!free ? row(t('tax', { pct: percent(facts.taxBps / 100, locale) }), money(tax)) : null}
         <div className="nl-bk-sum-row nl-bk-total"><dt>{free ? t('nothingToPay') : t('heldInEscrow')}</dt><dd>{money(free ? 0 : estimate + tax)}</dd></div>
       </dl>
       {!free ? <p className="nl-bk-muted">{t('releasedAfter')}</p> : null}

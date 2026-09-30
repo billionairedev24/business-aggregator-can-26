@@ -23,8 +23,8 @@ export const Route = createFileRoute('/services/$category/')({
       meta: [
         { title: name ? `${name} · Northline` : pageTitle(locale, 'svcCategory') },
         ...(name ? [{ name: 'description', content: locale === 'fr'
-          ? `${name} à Calgary : prestataires vérifiés, prix typiques, paiement en fiducie.`
-          : `${name} in Calgary: verified providers, typical prices, every job paid into escrow.` }] : []),
+          ? `${name} : prestataires vérifiés, prix typiques, paiement en fiducie.`
+          : `${name}: verified providers, typical prices, every job paid into escrow.` }] : []),
       ],
       links: [{ rel: 'stylesheet', href: servicesCss }],
     };

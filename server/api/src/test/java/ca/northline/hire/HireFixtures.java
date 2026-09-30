@@ -27,8 +27,8 @@ public record HireFixtures(JdbcClient jdbc) {
                 .update();
         jdbc.sql("""
                         insert into merchants.merchants (id, type, display_name, legal_name, structure, tier, status, city,
-                               profile, approved_at)
-                        values (?, 'provider', ?, ?, 'sole', ?, 'active', 'Calgary',
+                               province, profile, approved_at)
+                        values (?, 'provider', ?, ?, 'sole', ?, 'active', 'Calgary', 'AB',
                                 '{"description":"We come to you."}'::jsonb, now() - interval '400 days')
                         """).params(merchantId, name, name + " Ltd.", tier).update();
         jdbc.sql(
