@@ -95,5 +95,5 @@ consumers:
     topics: [payments.payout, payments.payout_account, payments.dispute, payments.refund]
     retryDelaysSeconds: [10, 60, 300]
   - group: webhooks            # S-33: queues partner webhook deliveries (the dispatcher sends them per endpoint)
-    topics: [booking.booking, payments.escrow, payments.refund]
+    topics: [booking.booking, payments.escrow, payments.refund, orders.order]
     retryDelaysSeconds: [10, 60, 300]

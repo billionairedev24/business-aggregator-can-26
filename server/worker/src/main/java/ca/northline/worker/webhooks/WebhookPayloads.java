@@ -36,11 +36,12 @@ public final class WebhookPayloads {
     public static final Map<String, String> SOURCES = Map.of(
             "booking.completed", "booking.booking_completed:1",
             "payment.released", "payments.escrow_released:1",
-            "refund.issued", "payments.refund_issued:1");
+            "refund.issued", "payments.refund_issued:1",
+            "order.placed", "orders.order_placed:1");
 
     /** Types endpoints can subscribe to (Settings › API) whose domain event isn't published on Kafka yet. */
     public static final List<String> NOT_YET_PUBLISHED =
-            List.of("booking.confirmed", "order.placed", "order.delivered", "review.created");
+            List.of("booking.confirmed", "order.delivered", "review.created");
 
     /** A payload ready to send. */
     public record PublicEvent(String eventId, String type, String merchantId, ObjectNode payload) {}
@@ -86,6 +87,30 @@ public final class WebhookPayloads {
                 data.put("currency", "CAD");
                 data.put("chargedTo", event.text("chargedTo"));
                 yield envelope(event, "refund.issued", merchant, data);
+            }
+            case "orders.order_placed:1" -> {
+                // S-51: one event per shop, that shop's lines only; the customer id stays out (see class comment)
+                var data = json.createObjectNode();
+                data.put("orderId", event.aggregateId());
+                data.put("orderRef", event.text("orderRef"));
+                data.put("orderType", event.text("orderType"));
+                data.put("delivery", event.text("delivery"));
+                data.put("windowId", event.optionalText("windowId"));
+                var lines = data.putArray("lines");
+                for (var line : d.path("lines")) {
+                    var out = lines.addObject();
+                    out.put("lineId", line.path("lineId").asString());
+                    out.put("offerId", line.path("offerId").asString());
+                    out.put("variantId", line.path("variantId").isNull() || line.path("variantId").isMissingNode()
+                            ? null
+                            : line.path("variantId").asString());
+                    out.put("qty", line.path("qty").asInt());
+                    out.put("amountCents", line.path("amountCents").asLong());
+                }
+                data.put("subtotalCents", d.path("subtotalCents").asLong());
+                data.put("taxCents", d.path("taxCents").asLong());
+                data.put("currency", "CAD");
+                yield envelope(event, "order.placed", merchant, data);
             }
             default -> null;
         };

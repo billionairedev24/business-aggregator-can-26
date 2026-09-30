@@ -55,8 +55,7 @@ public final class CheckoutUseCases {
      * @param windowId the pooled run chosen
      * @param substitution {@code similar} | {@code refund} | {@code ask} (design: "Similar item · Refund it · Text me")
      */
-    public record Request(
-            String kind, @Nullable String windowId, AddressInput address, String substitution) {}
+    public record Request(String kind, @Nullable String windowId, AddressInput address, String substitution) {}
 
     /** A saved address ({@code addressId}) or a new one. */
     public record AddressInput(

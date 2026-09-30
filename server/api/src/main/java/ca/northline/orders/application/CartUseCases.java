@@ -15,7 +15,8 @@ public final class CartUseCases {
      * Whose cart: {@code userId} when signed in, {@code guestKey} = SHA-256 of the guest id when there is one. Both
      * null → nobody (an empty cart; changes are refused).
      */
-    public record CartOwner(@Nullable String userId, @Nullable String guestKey) {}
+    public record CartOwner(
+            @Nullable String userId, @Nullable String guestKey) {}
 
     public interface ViewCart {
         CartView view(CartOwner owner, String lang);

@@ -53,16 +53,21 @@ class CartController {
 
     record AddItemRequest(
             @NotBlank(message = CheckoutMessages.UNAVAILABLE) @Size(max = 40, message = CheckoutMessages.UNAVAILABLE)
-                    String offerId,
-            @Nullable @Size(max = 40, message = CheckoutMessages.CHOOSE_OPTION) String variantId,
-            @NotNull(message = CheckoutMessages.QTY) @Min(value = 1, message = CheckoutMessages.QTY)
-                    @Max(value = 99, message = CheckoutMessages.QTY)
-                    Integer qty) {}
+            String offerId,
+
+            @Nullable @Size(max = 40, message = CheckoutMessages.CHOOSE_OPTION)
+            String variantId,
+
+            @NotNull(message = CheckoutMessages.QTY)
+            @Min(value = 1, message = CheckoutMessages.QTY)
+            @Max(value = 99, message = CheckoutMessages.QTY)
+            Integer qty) {}
 
     record ChangeItemRequest(
-            @NotNull(message = CheckoutMessages.QTY) @Min(value = 0, message = CheckoutMessages.QTY)
-                    @Max(value = 99, message = CheckoutMessages.QTY)
-                    Integer qty) {}
+            @NotNull(message = CheckoutMessages.QTY)
+            @Min(value = 0, message = CheckoutMessages.QTY)
+            @Max(value = 99, message = CheckoutMessages.QTY)
+            Integer qty) {}
 
     @GetMapping
     ResponseEntity<CartView> cart(
@@ -84,7 +89,9 @@ class CartController {
         return changeCart.add(
                 callers.owner(guest),
                 body.offerId().strip(),
-                body.variantId() == null || body.variantId().isBlank() ? null : body.variantId().strip(),
+                body.variantId() == null || body.variantId().isBlank()
+                        ? null
+                        : body.variantId().strip(),
                 Objects.requireNonNull(body.qty()),
                 ConsumerCallers.lang(lang, locale));
     }

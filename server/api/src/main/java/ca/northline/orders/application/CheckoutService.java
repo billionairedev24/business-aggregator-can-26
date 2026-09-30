@@ -208,8 +208,19 @@ class CheckoutService
                     taxQuote.calculationId()));
             intents.add(new Intent(
                     started.paymentIntent(), started.clientSecret(), started.status(), amount + taxQuote.taxCents()));
-            lines.add(new Line(lineId, l.offerId(), l.variantId(), l.productId(), l.merchantId(), l.name(), l.option(),
-                    l.qty(), l.unitCents(), amount, taxQuote.taxCents(), taxQuote.calculationId(),
+            lines.add(new Line(
+                    lineId,
+                    l.offerId(),
+                    l.variantId(),
+                    l.productId(),
+                    l.merchantId(),
+                    l.name(),
+                    l.option(),
+                    l.qty(),
+                    l.unitCents(),
+                    amount,
+                    taxQuote.taxCents(),
+                    taxQuote.calculationId(),
                     started.paymentIntent()));
         }
         var fee = plan.option().feeCents();
@@ -310,7 +321,10 @@ class CheckoutService
         if (!checkouts.placed(checkoutId, now)) {
             throw new Conflict("checkout_expired", EXPIRED);
         }
-        var area = addresses.find(userId, checkout.addressId()).map(DeliveryAddresses.Address::city).orElse(null);
+        var area = addresses
+                .find(userId, checkout.addressId())
+                .map(DeliveryAddresses.Address::city)
+                .orElse(null);
         var scheduled = DIRECT.equals(checkout.kind()) ? now.plus(runs.direct().eta()) : null;
         checkouts.createOrder(checkout, area, scheduled, now);
         publishPlaced(checkout, now);
@@ -341,7 +355,8 @@ class CheckoutService
                 lines.stream().mapToLong(Line::amountCents).sum(),
                 lines.stream().mapToLong(Line::taxCents).sum(),
                 lines.stream()
-                        .map(l -> new OrderPlaced.Line(l.lineId(), l.offerId(), l.variantId(), l.qty(), l.amountCents()))
+                        .map(l ->
+                                new OrderPlaced.Line(l.lineId(), l.offerId(), l.variantId(), l.qty(), l.amountCents()))
                         .toList())));
     }
 
@@ -397,37 +412,38 @@ class CheckoutService
         var market = runs.market(address.city())
                 .orElseThrow(() -> RuleViolation.of("address.city", "served", NOT_SERVED.formatted(address.city())));
         var merchantIds = lines.stream().map(CartLine::merchantId).distinct().toList();
-        var sellers = shops.shops(merchantIds).stream()
-                .collect(Collectors.toMap(ShopDirectory.Shop::merchantId, s -> s));
+        var sellers =
+                shops.shops(merchantIds).stream().collect(Collectors.toMap(ShopDirectory.Shop::merchantId, s -> s));
         for (var merchantId : merchantIds) {
             var shop = sellers.get(merchantId);
             if (shop == null) {
                 throw new Conflict("out_of_stock", OUT_OF_STOCK);
             }
             if (!shop.city().equalsIgnoreCase(market)) {
-                throw RuleViolation.of(
-                        "items", "market", SHOP_ELSEWHERE.formatted(shop.displayName(), address.city()));
+                throw RuleViolation.of("items", "market", SHOP_ELSEWHERE.formatted(shop.displayName(), address.city()));
             }
         }
         var option = options(view, market, clock.instant()).stream()
                 .filter(o -> Objects.equals(o.kind(), request.kind())
                         && (DIRECT.equals(o.kind()) || Objects.equals(o.windowId(), request.windowId())))
                 .findFirst()
-                .orElseThrow(() -> request.kind().isBlank()
-                                || !(POOLED.equals(request.kind()) || DIRECT.equals(request.kind()))
-                        ? RuleViolation.of("windowId", "required", WINDOW)
-                        : new Conflict("window_closed", WINDOW_CLOSED));
+                .orElseThrow(() ->
+                        request.kind().isBlank() || !(POOLED.equals(request.kind()) || DIRECT.equals(request.kind()))
+                                ? RuleViolation.of("windowId", "required", WINDOW)
+                                : new Conflict("window_closed", WINDOW_CLOSED));
         var planned = lines.stream()
-                .map(l -> new PlannedLine(l.offerId(), l.variantId(), l.productId(), l.merchantId(), l.name(),
-                        l.option(), l.qty(), l.unitCents(), l.lineCents()))
+                .map(l -> new PlannedLine(
+                        l.offerId(),
+                        l.variantId(),
+                        l.productId(),
+                        l.merchantId(),
+                        l.name(),
+                        l.option(),
+                        l.qty(),
+                        l.unitCents(),
+                        l.lineCents()))
                 .toList();
-        return new Plan(
-                planned,
-                view.subtotalCents(),
-                option,
-                address,
-                market,
-                request.substitution());
+        return new Plan(planned, view.subtotalCents(), option, address, market, request.substitution());
     }
 
     /**
@@ -461,9 +477,8 @@ class CheckoutService
                             null)));
             if (days == 0) {
                 var direct = runs.direct();
-                out.add(new Option(
-                        DIRECT, DIRECT, null, null, null, null, null, null, direct.feeCents(), 0,
-                        (int) direct.eta().toMinutes()));
+                out.add(new Option(DIRECT, DIRECT, null, null, null, null, null, null, direct.feeCents(), 0, (int)
+                        direct.eta().toMinutes()));
             }
         }
         return out;
@@ -477,7 +492,8 @@ class CheckoutService
     private DeliveryAddresses.Address address(String userId, AddressInput input, boolean save) {
         var addressId = input.addressId();
         if (addressId != null && !addressId.isBlank()) {
-            return addresses.find(userId, addressId)
+            return addresses
+                    .find(userId, addressId)
                     .orElseThrow(() -> RuleViolation.of("address.addressId", "required", ADDRESS));
         }
         var violations = new ArrayList<Violation>();
@@ -513,13 +529,17 @@ class CheckoutService
         var normalized = Objects.requireNonNull(postalCode).replace(" ", "");
         var formatted = normalized.substring(0, 3) + " " + normalized.substring(3);
         var fresh = new DeliveryAddresses.NewAddress(
-                Objects.requireNonNull(street), unit, Objects.requireNonNull(city), Objects.requireNonNull(provinceCode),
-                formatted, note);
+                Objects.requireNonNull(street),
+                unit,
+                Objects.requireNonNull(city),
+                Objects.requireNonNull(provinceCode),
+                formatted,
+                note);
         if (save) {
             return addresses.save(userId, fresh);
         }
-        return new DeliveryAddresses.Address("", fresh.street(), fresh.unit(), fresh.city(), fresh.province(),
-                fresh.postal(), fresh.note(), false);
+        return new DeliveryAddresses.Address(
+                "", fresh.street(), fresh.unit(), fresh.city(), fresh.province(), fresh.postal(), fresh.note(), false);
     }
 
     private static @Nullable String trim(@Nullable String value) {
@@ -536,7 +556,11 @@ class CheckoutService
         }
         if (plan.option().feeCents() > 0) {
             out.add(taxes.calculate(new TaxCalculations.Request(
-                    PaymentAuthorizations.PLATFORM, EscrowKind.GOODS, province, postal, plan.option().feeCents())));
+                    PaymentAuthorizations.PLATFORM,
+                    EscrowKind.GOODS,
+                    province,
+                    postal,
+                    plan.option().feeCents())));
         }
         return out;
     }
@@ -547,7 +571,8 @@ class CheckoutService
         var rates = new LinkedHashMap<String, BigDecimal>();
         for (var q : quotes) {
             for (var line : q.lines()) {
-                var key = line.taxType() + "|" + line.percent().stripTrailingZeros().toPlainString();
+                var key = line.taxType() + "|"
+                        + line.percent().stripTrailingZeros().toPlainString();
                 sums.computeIfAbsent(key, _ -> new long[1])[0] += line.taxCents();
                 rates.putIfAbsent(key, line.percent().stripTrailingZeros());
             }

@@ -1,10 +1,10 @@
 package ca.northline.orders.web;
 
 import ca.northline.orders.application.CartUseCases.CartOwner;
+import ca.northline.orders.domain.CheckoutMessages;
 import ca.northline.shared.RuleViolation;
 import ca.northline.shared.security.CurrentUser;
 import ca.northline.shared.security.MerchantAccess;
-import ca.northline.orders.domain.CheckoutMessages;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;

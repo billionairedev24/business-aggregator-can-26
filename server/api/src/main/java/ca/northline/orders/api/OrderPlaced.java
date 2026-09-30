@@ -38,5 +38,6 @@ public record OrderPlaced(
     }
 
     /** One order line of this shop. */
-    public record Line(String lineId, String offerId, @Nullable String variantId, int qty, long amountCents) {}
+    public record Line(
+            String lineId, String offerId, @Nullable String variantId, int qty, long amountCents) {}
 }

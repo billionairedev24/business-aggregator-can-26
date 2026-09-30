@@ -37,21 +37,16 @@ class CartJdbc implements CartStore {
         return jdbc.sql("""
                         select id from orders.carts where customer_id is null and device_key = :k
                            and (expires_at is null or expires_at > now())
-                        """)
-                .param("k", owner.guestKey())
-                .query(String.class)
-                .optional();
+                        """).param("k", owner.guestKey()).query(String.class).optional();
     }
 
     @Override
     public String ensure(CartOwner owner, Instant now) {
         var userId = owner.userId();
-        jdbc.sql(userId != null
-                        ? """
+        jdbc.sql(userId != null ? """
                           insert into orders.carts (id, customer_id, created_at, updated_at)
                           values (:id, :u, :now, :now) on conflict (customer_id) where customer_id is not null do nothing
-                          """
-                        : """
+                          """ : """
                           insert into orders.carts (id, device_key, expires_at, created_at, updated_at)
                           values (:id, :k, :expires, :now, :now)
                           on conflict (device_key) where customer_id is null and device_key is not null
@@ -133,11 +128,10 @@ class CartJdbc implements CartStore {
                           from orders.cart_items g where g.cart_id = :guest
                         on conflict (cart_id, offer_id, coalesce(variant_id, ''))
                         do update set qty = least(99, orders.cart_items.qty + excluded.qty)
-                        """)
-                .param("mine", mine)
-                .param("guest", guest.get())
+                        """).param("mine", mine).param("guest", guest.get()).update();
+        jdbc.sql("delete from orders.carts where id = :g")
+                .param("g", guest.get())
                 .update();
-        jdbc.sql("delete from orders.carts where id = :g").param("g", guest.get()).update();
         touch(mine, now);
     }
 

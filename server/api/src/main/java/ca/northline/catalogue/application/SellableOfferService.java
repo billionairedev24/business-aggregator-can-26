@@ -27,7 +27,10 @@ class SellableOfferService implements SellableOffers {
             return List.of();
         }
         var rows = stock.rows(items, lang);
-        var images = rows.stream().map(StockStore.Row::imageId).filter(Objects::nonNull).toList();
+        var images = rows.stream()
+                .map(StockStore.Row::imageId)
+                .filter(Objects::nonNull)
+                .toList();
         var approved = images.isEmpty() ? Set.<String>of() : media.approved(images);
         return rows.stream()
                 .map(r -> new Sellable(

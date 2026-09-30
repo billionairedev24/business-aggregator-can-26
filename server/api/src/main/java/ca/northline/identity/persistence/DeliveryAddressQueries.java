@@ -30,7 +30,8 @@ class DeliveryAddressQueries implements DeliveryAddresses, SecondFactors {
 
     @Override
     public List<Address> of(String userId) {
-        return jdbc.sql(COLUMNS + " where user_id = :u and street is not null order by is_default desc nulls last, id desc")
+        return jdbc.sql(COLUMNS
+                        + " where user_id = :u and street is not null order by is_default desc nulls last, id desc")
                 .param("u", userId)
                 .query((rs, _) -> address(rs))
                 .list();
@@ -60,7 +61,8 @@ class DeliveryAddressQueries implements DeliveryAddresses, SecondFactors {
                 .query((rs, _) -> address(rs))
                 .optional();
         if (existing.isPresent()) {
-            jdbc.sql("update identity.addresses set access_note = :note, city = :city, province = :province where id = :id")
+            jdbc.sql(
+                            "update identity.addresses set access_note = :note, city = :city, province = :province where id = :id")
                     .param("note", a.note())
                     .param("city", a.city())
                     .param("province", a.province())
@@ -89,12 +91,10 @@ class DeliveryAddressQueries implements DeliveryAddresses, SecondFactors {
 
     @Override
     public boolean hasSecondFactor(String userId) {
-        return Boolean.TRUE.equals(jdbc.sql("""
+        return Boolean.TRUE.equals(
+                jdbc.sql("""
                         select exists (select 1 from identity.users where id = :u and mfa_primary in ('passkey', 'totp'))
-                        """)
-                .param("u", userId)
-                .query(Boolean.class)
-                .single());
+                        """).param("u", userId).query(Boolean.class).single());
     }
 
     private static Address address(ResultSet rs) throws SQLException {

@@ -21,8 +21,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Optional;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -57,7 +57,8 @@ class CartService implements CartUseCases.ViewCart, CartUseCases.ChangeCart {
         requireQty(qty, 1);
         var cartId = ensure(owner);
         var sellable = offers.find(List.of(new SellableOffers.Item(offerId, variantId)), lang);
-        if (sellable.isEmpty() || shops.shops(List.of(sellable.getFirst().merchantId())).isEmpty()) {
+        if (sellable.isEmpty()
+                || shops.shops(List.of(sellable.getFirst().merchantId())).isEmpty()) {
             throw RuleViolation.of("offerId", "available", UNAVAILABLE);
         }
         var line = sellable.stream()
@@ -132,7 +133,8 @@ class CartService implements CartUseCases.ViewCart, CartUseCases.ChangeCart {
         if (items.isEmpty()) {
             return CartView.empty();
         }
-        var sellable = offers.find(
+        var sellable = offers
+                .find(
                         items.stream()
                                 .map(i -> new SellableOffers.Item(i.offerId(), i.variantId()))
                                 .toList(),
@@ -143,22 +145,54 @@ class CartService implements CartUseCases.ViewCart, CartUseCases.ChangeCart {
                         Function.identity(),
                         (a, _) -> a));
         var names = shops
-                .shops(sellable.values().stream().map(Sellable::merchantId).distinct().toList())
+                .shops(sellable.values().stream()
+                        .map(Sellable::merchantId)
+                        .distinct()
+                        .toList())
                 .stream()
                 .collect(Collectors.toMap(ShopDirectory.Shop::merchantId, ShopDirectory.Shop::displayName));
         var groups = new LinkedHashMap<String, List<CartLine>>();
         var unknown = new ArrayList<CartLine>();
-        for (var item : items.stream().sorted(Comparator.comparing(CartStore.Item::addedAt)).toList()) {
+        for (var item : items.stream()
+                .sorted(Comparator.comparing(CartStore.Item::addedAt))
+                .toList()) {
             var s = sellable.get(item.offerId() + "|" + Objects.requireNonNullElse(item.variantId(), ""));
             if (s == null) {
-                unknown.add(new CartLine(item.id(), "", item.offerId(), item.variantId(), "", "", null, null, null, 0,
-                        item.qty(), 0, 0, false, null));
+                unknown.add(new CartLine(
+                        item.id(),
+                        "",
+                        item.offerId(),
+                        item.variantId(),
+                        "",
+                        "",
+                        null,
+                        null,
+                        null,
+                        0,
+                        item.qty(),
+                        0,
+                        0,
+                        false,
+                        null));
                 continue;
             }
             var open = names.containsKey(s.merchantId());
-            var line = new CartLine(item.id(), s.merchantId(), item.offerId(), item.variantId(), s.productId(), s.name(), s.option(),
-                    s.unit(), s.imageUrl(), s.unitCents(), item.qty(), s.unitCents() * item.qty(), s.stock(),
-                    open && s.stock() >= item.qty(), s.handlingDays());
+            var line = new CartLine(
+                    item.id(),
+                    s.merchantId(),
+                    item.offerId(),
+                    item.variantId(),
+                    s.productId(),
+                    s.name(),
+                    s.option(),
+                    s.unit(),
+                    s.imageUrl(),
+                    s.unitCents(),
+                    item.qty(),
+                    s.unitCents() * item.qty(),
+                    s.stock(),
+                    open && s.stock() >= item.qty(),
+                    s.handlingDays());
             groups.computeIfAbsent(s.merchantId(), _ -> new ArrayList<>()).add(line);
         }
         var shopGroups = new ArrayList<ShopGroup>();
@@ -171,7 +205,10 @@ class CartService implements CartUseCases.ViewCart, CartUseCases.ChangeCart {
         return new CartView(
                 all.stream().mapToInt(CartLine::qty).sum(),
                 groups.size(),
-                all.stream().filter(CartLine::available).mapToLong(CartLine::lineCents).sum(),
+                all.stream()
+                        .filter(CartLine::available)
+                        .mapToLong(CartLine::lineCents)
+                        .sum(),
                 shopGroups);
     }
 
@@ -189,5 +226,4 @@ class CartService implements CartUseCases.ViewCart, CartUseCases.ChangeCart {
             throw RuleViolation.of("qty", "stock", ONLY_LEFT.formatted(line.stock()));
         }
     }
-
 }

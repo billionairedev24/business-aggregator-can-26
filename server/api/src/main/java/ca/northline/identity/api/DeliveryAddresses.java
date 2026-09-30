@@ -34,5 +34,10 @@ public interface DeliveryAddresses {
             boolean isDefault) {}
 
     record NewAddress(
-            String street, @Nullable String unit, String city, String province, String postal, @Nullable String note) {}
+            String street,
+            @Nullable String unit,
+            String city,
+            String province,
+            String postal,
+            @Nullable String note) {}
 }

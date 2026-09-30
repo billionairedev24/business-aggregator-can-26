@@ -24,7 +24,10 @@ class CheckoutJdbc implements CheckoutStore {
 
     @Override
     public String nextRef() {
-        return "NL-" + jdbc.sql("select nextval('orders.order_ref_seq')").query(Long.class).single();
+        return "NL-"
+                + jdbc.sql("select nextval('orders.order_ref_seq')")
+                        .query(Long.class)
+                        .single();
     }
 
     @Override
@@ -99,7 +102,8 @@ class CheckoutJdbc implements CheckoutStore {
 
     @Override
     public boolean placed(String checkoutId, Instant at) {
-        return jdbc.sql("update orders.checkouts set state = 'placed', placed_at = :at where id = :id and state = 'open'")
+        return jdbc.sql(
+                                "update orders.checkouts set state = 'placed', placed_at = :at where id = :id and state = 'open'")
                         .param("id", checkoutId)
                         .param("at", JdbcTimes.ts(at))
                         .update()
@@ -175,5 +179,4 @@ class CheckoutJdbc implements CheckoutStore {
                 JdbcTimes.requiredInstant(rs, "created_at"),
                 JdbcTimes.requiredInstant(rs, "expires_at"));
     }
-
 }
