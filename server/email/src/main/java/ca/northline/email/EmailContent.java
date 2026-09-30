@@ -412,8 +412,11 @@ public sealed interface EmailContent {
      * @param lastError the latest attempt's outcome ("HTTP 503", "timed out"), null when unknown
      */
     record WebhookDisabled(
-            String businessName, String url, Instant failingSince, @Nullable String lastError, URI settingsLink)
-            implements EmailContent {
+            String businessName,
+            String url,
+            Instant failingSince,
+            @Nullable String lastError,
+            URI settingsLink) implements EmailContent {
 
         @Override
         public String template() {

@@ -42,7 +42,8 @@ public final class WebhookSecretBox {
     /** The configured key, else the development key when {@code devKeyAllowed}, else empty (webhooks unavailable). */
     public static Optional<WebhookSecretBox> of(@Nullable String base64Key, boolean devKeyAllowed) {
         var encoded = base64Key != null && !base64Key.isBlank() ? base64Key.strip() : devKeyAllowed ? DEV_KEY : null;
-        return Optional.ofNullable(encoded).map(k -> new WebhookSecretBox(Base64.getDecoder().decode(k)));
+        return Optional.ofNullable(encoded)
+                .map(k -> new WebhookSecretBox(Base64.getDecoder().decode(k)));
     }
 
     public byte[] encrypt(String secret) {
@@ -52,7 +53,10 @@ public final class WebhookSecretBox {
             var cipher = Cipher.getInstance("AES/GCM/NoPadding");
             cipher.init(Cipher.ENCRYPT_MODE, key, new GCMParameterSpec(TAG_BITS, nonce));
             var sealed = cipher.doFinal(secret.getBytes(StandardCharsets.UTF_8));
-            return ByteBuffer.allocate(NONCE + sealed.length).put(nonce).put(sealed).array();
+            return ByteBuffer.allocate(NONCE + sealed.length)
+                    .put(nonce)
+                    .put(sealed)
+                    .array();
         } catch (GeneralSecurityException e) {
             throw new IllegalStateException("Cannot encrypt the webhook secret", e);
         }
