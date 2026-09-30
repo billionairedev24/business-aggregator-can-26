@@ -28,7 +28,7 @@ export function shortTime(at: Date, locale: Locale): string {
 
 type AvailKeys = 'availToday' | 'availTomorrow' | 'availDay' | 'noOpenings';
 
-/** "Today 3 pm" · "Tomorrow 9 am" · "Thu 9 am" (Calgary time), relative to `now`. */
+/** "Today 3 pm" · "Tomorrow 9 am" · "Thu 9 am" (in the market's time zone), relative to `now`. */
 export function nextAvailable(t: Translate<AvailKeys>, locale: Locale, iso: string | null | undefined, now = new Date()): string {
   if (!iso) return t('noOpenings');
   const at = new Date(iso);

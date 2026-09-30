@@ -14,21 +14,14 @@ import org.jspecify.annotations.Nullable;
  */
 public interface ServiceAreas {
 
-    /** A customer's location: coordinates when the device gave them, else the city of the location pill. */
-    record Place(
-            @Nullable Double lat,
-            @Nullable Double lng,
-            @Nullable String city) {
-
-        /** No location at all: the site falls back to Calgary (docs/CONSUMER_WEB_PLAN.md § Location). */
-        public static final String FALLBACK_CITY = "Calgary";
+    /**
+     * A customer's location: coordinates when the device gave them, and the city of the location pill (the caller's
+     * default market when the customer has none — never a city chosen here).
+     */
+    record Place(@Nullable Double lat, @Nullable Double lng, String city) {
 
         public boolean hasPoint() {
             return lat != null && lng != null;
-        }
-
-        public String cityOrFallback() {
-            return city == null || city.isBlank() ? FALLBACK_CITY : city.strip();
         }
     }
 

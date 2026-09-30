@@ -17,7 +17,7 @@ const Providers = () => { const { category } = useParams({ strict: false }) as {
 const routes = { services: () => <ServicesLanding />, svcCategory: Category, providers: Providers };
 
 const landing = {
-  liveCategories: 4, providers: 1,
+  liveCategories: 4, providers: 1, provinces: ['AB'],
   groups: [
     { id: 'service.automotive', key: 'automotive', names: { en: 'Automotive' }, note: 'AMVIC licence checked', items: [
       { slug: 'mobile-mechanic', names: { en: 'Mobile mechanic' }, kind: 'visit', providers: 1 },
@@ -79,8 +79,8 @@ describe('services landing (design 06 services)', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Services' })).toBeInTheDocument();
     expect(screen.getByText('4 categories live in Alberta · every provider verified, every job paid into escrow')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Automotive' })).toBeInTheDocument();
-    expect(screen.getByText('Mobile visits · fixed prices · licence checked (AMVIC)')).toBeInTheDocument();
-    expect(screen.getByText('Free consultation · licensed (RECA, notaries) · written agreement')).toBeInTheDocument();
+    expect(screen.getByText('Mobile visits · fixed prices · licence checked')).toBeInTheDocument();
+    expect(screen.getByText('Free consultation · licensed professionals · written agreement')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Mobile mechanic' })).toHaveAttribute('href', '/services/mobile-mechanic');
     expect(calls.some(c => c.url === '/api/v1/public/services?lang=en')).toBe(true);
   });
@@ -136,7 +136,7 @@ describe('service category (design 06 svcCategory)', () => {
     await router.navigate({ to: '/services/$category', params: { category: 'real-estate-agent' } });
     expect(await screen.findByText('Free consultation · licensed')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Describe the job, get 3 quotes' })).not.toBeInTheDocument();
-    expect(screen.getByText(/^Licensed Alberta realtors, verified against RECA\./)).toBeInTheDocument();
+    expect(screen.getByText(/^Licensed realtors, verified against RECA\./)).toBeInTheDocument();
   });
 
   it('reads in French', async () => {

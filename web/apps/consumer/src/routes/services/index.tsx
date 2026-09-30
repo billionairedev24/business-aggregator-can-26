@@ -11,8 +11,8 @@ export const Route = createFileRoute('/services/')({
     meta: [
       { title: pageTitle(match.context.locale, 'services') },
       { name: 'description', content: match.context.locale === 'fr'
-        ? 'Prestataires vérifiés en Alberta — réservation instantanée, devis ou consultation, paiement en fiducie.'
-        : 'Verified service providers in Alberta — instant book, quotes or consultations, every job paid into escrow.' },
+        ? 'Prestataires vérifiés — réservation instantanée, devis ou consultation, paiement en fiducie.'
+        : 'Verified service providers — instant book, quotes or consultations, every job paid into escrow.' },
     ],
     links: [{ rel: 'stylesheet', href: servicesCss }],
   }),

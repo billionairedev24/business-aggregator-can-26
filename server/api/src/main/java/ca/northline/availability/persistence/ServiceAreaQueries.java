@@ -55,7 +55,7 @@ class ServiceAreaQueries implements ServiceAreas {
                                 select distinct a.merchant_id from availability.service_areas a
                                   join availability.service_zones z on z.name = a.zone
                                  where a.merchant_id in (:ids) and lower(z.city) = lower(:city)
-                                """).param("city", place.cityOrFallback());
+                                """).param("city", place.city());
         return new HashSet<>(query.param("ids", List.copyOf(merchantIds))
                 .query((rs, _) -> rs.getString(1))
                 .list());

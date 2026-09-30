@@ -25,7 +25,7 @@ public final class ProviderPages {
 
     /**
      * @param kind how the business is booked (from the category of most of its services); visits when it has none
-     * @param category the category most of its services are in (the page's "Mobile mechanic · Calgary"), if any
+     * @param category the category most of its services are in (the page's "Mobile mechanic · {city}"), if any
      * @param vehicle that category is about vehicles
      * @param since when Northline approved the business
      */

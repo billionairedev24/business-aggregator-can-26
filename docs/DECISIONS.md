@@ -2340,6 +2340,14 @@ Built on S-49 (branch `web/s-50-product-detail` from `web/s-49-shop-landing`).
   - Disclose the processor in the Privacy Policy and in the PIPEDA / Law 25 assessment (SEC stories), together with the other processors.
 - **Pending:** an OpenRouter API key per environment. Until it exists, `northline.ai.provider=fake` locally, and AI features answer `503 ai_unavailable` in the cloud.
 
+## 2026-09-30 — Region-neutral by design (user direction)
+
+- Northline **starts** in Alberta (Calgary first) but is built for every province.
+- Code must not hardcode a province, city or time zone. That covers messages, defaults, holiday calendars, time zones, service zones and legal copy. All of it comes from the region configuration: the provinces (time zones, statutory holidays, tax, privacy law, registries, launch status) and the markets (city, province, time zone, zones, live flag).
+- A message that names a place takes it as a parameter ({province}, {city}), in English and French.
+- Province-specific integrations, such as the Alberta corporate registry or the City of Calgary licences, stay as adapters. They are selected by the business's province and city, never by default.
+- S-134 moves the existing literals into that configuration and adds a lint rule. Until it lands, new code must not add region literals.
+
 ## 2026-09-30 — S-53 Services landing, service category, provider list
 
 Branch `web/s-53-services-landing` (from main). Contracts: [CONSUMER_WEB_PLAN.md](CONSUMER_WEB_PLAN.md).
@@ -2376,7 +2384,7 @@ Branch `web/s-53-services-landing` (from main). Contracts: [CONSUMER_WEB_PLAN.md
   (Beltline 1.2 km … SE Calgary 10 km, Airdrie/Cochrane/Okotoks the towns) — reference data, the same everywhere, until
   `region.zones` has Calgary polygons. A business covers the customer when one of its zones contains the device's
   point, or, with only a city (the IP guess, the Calgary fallback, a saved address without coordinates), when one of
-  its zones is in that city; no location at all = Calgary. Appointments and consultations (the customer goes to them)
+  its zones is in that city; no location at all = the configured default market (`northline.hire.default-city`). Appointments and consultations (the customer goes to them)
   also match the business's own city. The heading's area is the zone the point is in (nearest centre when two
   overlap), else the city. `availability.api.ServiceAreas`.
 - **Trust order** (design: "Sorted by trust · tier, on-time rate, dispute rate and re-book rate"): tier, then on-time
@@ -2417,6 +2425,14 @@ Branch `web/s-53-services-landing` (from main). Contracts: [CONSUMER_WEB_PLAN.md
   ServiceOffers`, `merchants.api.PublicProviders`.
 - **Not done:** search-backed ranking and `next_slot` (E-6); distance; per-category French taxonomy in the database;
   structured data (S-63).
+- **Region-neutral** (the decision above): no province, city or time zone in this story's code or copy. The default
+  market, the fallback province and the time zone are configuration (`northline.hire`: `default-city`,
+  `default-province`, `time-zone`; HireProperties) until S-134's region configuration; the landing and a category
+  return `provinces` (their live providers' `merchants.province`) and the copy names them as a parameter ("4 categories
+  live in {region}"); registry names in the copy come from the category (`regulatedRegistry`). Existing literals still
+  relied on (S-134): the web's shared `TIME_ZONE` (`@northline/ui`), `DEFAULT_MARKET` (`features/location/markets.ts`),
+  `AlbertaHolidays` and `Team.ZONE` in the availability planner (moved into `DaySchedule`, unchanged), and the zone rows
+  of V114 (reference data).
 
 ## 2026-09-30 — S-54 Public provider page from the storefront API (sections, reviews, service area)
 
