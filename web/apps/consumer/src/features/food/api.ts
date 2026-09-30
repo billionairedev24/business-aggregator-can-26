@@ -109,7 +109,7 @@ export interface OrderBody {
 
 export const quoteFood = (body: OrderBody) => http('/api/v1/me/food-orders/quote', { method: 'POST', body }, Totals);
 export const startFood = (body: OrderBody, key: string, proof?: string) =>
-  http('/api/v1/me/food-orders', { method: 'POST', body, idempotencyKey: key, headers: proof ? { 'X-Step-Up': proof } : {} }, FoodStarted);
+  http('/api/v1/me/food-orders', { method: 'POST', body, idempotencyKey: key, headers: proof ? { 'x-step-up': proof } : undefined }, FoodStarted);
 export const confirmFood = (orderId: string, key: string) =>
   http(`/api/v1/me/food-orders/${encodeURIComponent(orderId)}/confirm`, { method: 'POST', idempotencyKey: key }, Placed);
 
