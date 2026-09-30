@@ -17,7 +17,8 @@ class PosConfigTest {
     @Test
     void local_isTheDefault() {
         runner.withPropertyValues("spring.profiles.active=test")
-                .run(context -> assertThat(context.getBeansOfType(PosMenuSource.class).values())
+                .run(context -> assertThat(
+                                context.getBeansOfType(PosMenuSource.class).values())
                         .hasSize(3)
                         .allSatisfy(s -> assertThat(s).isInstanceOf(FakePosSource.class)));
     }
