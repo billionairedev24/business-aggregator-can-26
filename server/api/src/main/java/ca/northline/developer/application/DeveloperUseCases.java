@@ -2,8 +2,10 @@ package ca.northline.developer.application;
 
 import ca.northline.developer.domain.ApiKey;
 import ca.northline.developer.domain.AuditRecord;
+import ca.northline.developer.domain.WebhookDelivery;
 import ca.northline.developer.domain.WebhookEndpoint;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 
 /** Inbound ports of Settings › API &amp; integrations and the audit log (one small interface each). */
 public final class DeveloperUseCases {
@@ -38,7 +40,34 @@ public final class DeveloperUseCases {
     }
 
     public interface RotateWebhookSecret {
-        WebhookEndpoint.WithSecret rotate(Actor actor, String endpointId);
+        /**
+         * @param overlapHours how long the replaced secret keeps signing next to the new one (null = 24 h, 0 = stops
+         *     at once)
+         */
+        WebhookEndpoint.WithSecret rotate(Actor actor, String endpointId, @Nullable Integer overlapHours);
+    }
+
+    /** Turns an endpoint the worker disabled after sustained failure back on (S-33). */
+    public interface EnableWebhookEndpoint {
+        WebhookEndpoint enable(Actor actor, String endpointId);
+    }
+
+    /** The endpoint's delivery log (S-33). */
+    public interface ListWebhookDeliveries {
+        int LIMIT = 50;
+
+        /** The newest {@link #LIMIT} deliveries, newest first, each with its attempts. */
+        List<WebhookDelivery> deliveries(String merchantId, String endpointId);
+    }
+
+    /** Sends a finished delivery again, same event id and payload (S-33). */
+    public interface ResendWebhookDelivery {
+        WebhookDelivery resend(Actor actor, String endpointId, String deliveryId);
+    }
+
+    /** Queues a {@code webhook.test} event for the endpoint (S-33). */
+    public interface SendTestWebhook {
+        WebhookDelivery sendTest(Actor actor, String endpointId);
     }
 
     public interface RemoveWebhookEndpoint {

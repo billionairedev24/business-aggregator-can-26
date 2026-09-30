@@ -403,6 +403,41 @@ public sealed interface EmailContent {
         }
     }
 
+    // ── Developer ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Settings › API &amp; integrations: the webhook worker turned an endpoint off after sustained failure (S-33).
+     * Transactional (an account notice about the owner's own integration; owners only, whatever the matrix).
+     *
+     * @param lastError the latest attempt's outcome ("HTTP 503", "timed out"), null when unknown
+     */
+    record WebhookDisabled(
+            String businessName, String url, Instant failingSince, @Nullable String lastError, URI settingsLink)
+            implements EmailContent {
+
+        @Override
+        public String template() {
+            return "webhook-disabled";
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.TRANSACTIONAL;
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            var v = new LinkedHashMap<String, Object>();
+            v.put("businessName", businessName);
+            v.put("url", url);
+            v.put("failingSince", format.date(failingSince));
+            v.put("hasError", lastError != null && !lastError.isBlank());
+            v.put("lastError", lastError == null ? "" : lastError);
+            v.put("link", settingsLink.toString());
+            return v;
+        }
+    }
+
     // ── Samples (preview endpoint, rendering tests) ──────────────────────────────────────────────────────────────
 
     /**
@@ -481,6 +516,14 @@ public sealed interface EmailContent {
                     cases);
             all.put(key(sample), sample);
         }
+        all.put(
+                "webhook-disabled",
+                new WebhookDisabled(
+                        business,
+                        "https://prairiewrench.ca/hooks/northline",
+                        at.minus(Duration.ofDays(3)),
+                        "HTTP 503",
+                        URI.create(studio + "/settings?tab=api")));
         return java.util.Collections.unmodifiableMap(all);
     }
 

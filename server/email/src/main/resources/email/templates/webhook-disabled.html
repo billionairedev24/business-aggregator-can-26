@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout.html :: email(#{webhook-disabled.preheader}, ~{::content})}">
+<body>
+<div th:fragment="content">
+  <h1 th:style="${s.h1}" th:text="#{webhook-disabled.heading}">Heading</h1>
+  <p th:style="${s.p}" th:text="#{webhook-disabled.body(${url}, ${businessName}, ${failingSince})}">Body</p>
+  <p th:if="${hasError}" th:style="${s.p}" th:text="#{webhook-disabled.lastError(${lastError})}">Last error</p>
+  <p th:style="${s.p}" th:text="#{webhook-disabled.action}">What to do</p>
+  <th:block th:replace="~{button.html :: button(#{webhook-disabled.cta}, ${link})}"/>
+</div>
+</body>
+</html>
