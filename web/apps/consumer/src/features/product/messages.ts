@@ -1,0 +1,58 @@
+import { defineMessages, messagesFor, type Locale } from '@northline/ui';
+
+/** Product page copy — design 06 `product` (the prototype's Country sourdough page) and design/i18n-fr.js. */
+const PRODUCT = {
+  en: {
+    crumbs: 'Breadcrumb', shop: 'Shop',
+    meta: '{tier} tier', rating: '★ {average} ({count} verified)',
+    lowStock: 'Only {count} left', outOfStock: 'Out of stock',
+    priceNote: '{unit} · GST included at checkout', priceNoteNoUnit: 'GST included at checkout',
+    wasPrice: 'Was {price}',
+    options: 'Options',
+    qty: 'Quantity', dec: 'One less', inc: 'One more',
+    add: 'Add {qty} to cart · {total}', adding: 'Adding…', addFailed: 'We couldn’t add it to your cart. Try again.',
+    deliveryLabel: 'Delivery.',
+    delivery: 'Order by {orderBy} for {first} pooled ({fee}){second, select, none {} other {, {second}}}{eta, select, none {.} other {, or direct courier in {eta} min.}} {shop} packs at {packBy}; the shop is paid only after you confirm delivery.',
+    deliveryNoRun: '{eta, select, none {Not on a pooled run right now.} other {Not on a pooled run — direct courier in {eta} min.}} The shop is paid only after you confirm delivery.',
+    deliveryOut: 'Out of stock at {shop} right now.',
+    free: 'free',
+    win_tonight: 'tonight {range}', win_today: 'today {range}', win_tomorrow: 'tomorrow {range}', win_later: '{weekday} {range}',
+    tag_tonight: 'On tonight’s run', tag_today: 'On today’s run', tag_tomorrow: 'On tomorrow’s run', tag_later: 'On {weekday}’s run',
+    alsoFrom: 'Also from {shop}', moreItem: '{name} · {price}',
+    sellers: 'Also sold by', choose: 'Choose', chosen: 'Selected', sellerRow: '{tier} · {when}', notOnRunShort: 'not on a run',
+    returns_standard_14: 'Returns within 14 days', returns_final_sale: 'Final sale',
+    unavailable: 'No shop in {city} sells this right now.', notServed: 'Northline Shop doesn’t deliver to {city} yet.',
+    backToShop: 'Back to Shop', changeLocation: 'Change location',
+    gallery: 'Photos', showImage: 'Show photo {n}',
+    title: '{name} · {shop} · Northline', titleNoShop: '{name} · Northline', loading: 'Loading the product…',
+    tier_master: 'Master', tier_trusted: 'Trusted', tier_registered: 'Registered',
+  },
+  fr: {
+    crumbs: 'Fil d’Ariane', shop: 'Boutique',
+    meta: 'Niveau {tier}', rating: '★ {average} ({count} vérifiés)',
+    lowStock: 'Plus que {count}', outOfStock: 'Épuisé',
+    priceNote: '{unit} · TPS calculée au paiement', priceNoteNoUnit: 'TPS calculée au paiement',
+    wasPrice: 'Avant {price}',
+    options: 'Options',
+    qty: 'Quantité', dec: 'Un de moins', inc: 'Un de plus',
+    add: 'Ajouter {qty} au panier · {total}', adding: 'Ajout…', addFailed: 'Impossible de l’ajouter au panier. Réessayez.',
+    deliveryLabel: 'Livraison.',
+    delivery: 'Commandez avant {orderBy} pour {first} en tournée groupée ({fee}){second, select, none {} other {, {second}}}{eta, select, none {.} other {, ou livreur direct en {eta} min.}} {shop} prépare la commande à {packBy}; le commerce n’est payé qu’après votre confirmation de livraison.',
+    deliveryNoRun: '{eta, select, none {Hors tournée groupée pour le moment.} other {Hors tournée groupée — livreur direct en {eta} min.}} Le commerce n’est payé qu’après votre confirmation de livraison.',
+    deliveryOut: 'Épuisé chez {shop} pour le moment.',
+    free: 'gratuit',
+    win_tonight: 'ce soir {range}', win_today: 'aujourd’hui {range}', win_tomorrow: 'demain {range}', win_later: '{weekday} {range}',
+    tag_tonight: 'Sur la tournée de ce soir', tag_today: 'Sur la tournée d’aujourd’hui', tag_tomorrow: 'Sur la tournée de demain', tag_later: 'Sur la tournée de {weekday}',
+    alsoFrom: 'Aussi chez {shop}', moreItem: '{name} · {price}',
+    sellers: 'Aussi vendu par', choose: 'Choisir', chosen: 'Choisi', sellerRow: '{tier} · {when}', notOnRunShort: 'hors tournée',
+    returns_standard_14: 'Retours sous 14 jours', returns_final_sale: 'Vente finale',
+    unavailable: 'Aucun commerce de {city} ne vend ce produit pour le moment.', notServed: 'La Boutique Northline ne livre pas encore à {city}.',
+    backToShop: 'Retour à la Boutique', changeLocation: 'Changer de lieu',
+    gallery: 'Photos', showImage: 'Afficher la photo {n}',
+    title: '{name} · {shop} · Northline', titleNoShop: '{name} · Northline', loading: 'Chargement du produit…',
+    tier_master: 'Maître', tier_trusted: 'Fiable', tier_registered: 'Inscrit',
+  },
+};
+
+export const useProductT = defineMessages(PRODUCT);
+export const productText = (locale: Locale) => messagesFor(PRODUCT, locale);
