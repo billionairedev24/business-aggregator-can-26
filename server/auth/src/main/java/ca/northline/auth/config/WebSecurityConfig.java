@@ -2,6 +2,7 @@ package ca.northline.auth.config;
 
 import ca.northline.auth.application.AuthProperties;
 import ca.northline.auth.application.SessionService;
+import ca.northline.auth.federation.FederationConfig;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -9,7 +10,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -21,7 +21,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.csrf.CsrfFilter;
@@ -44,12 +43,9 @@ class WebSecurityConfig {
 
     @Bean
     @Order(2)
-    SecurityFilterChain web(
-            HttpSecurity http,
-            AuthProperties props,
-            ObjectProvider<ClientRegistrationRepository> federation,
-            FederatedSignIn federatedSignIn) {
-        http.authorizeHttpRequests(a -> a.requestMatchers("/api/auth/**", "/actuator/health/**", "/error")
+    SecurityFilterChain web(HttpSecurity http, AuthProperties props, FederationConfig.FederationLogin federation) {
+        http.authorizeHttpRequests(a -> a.requestMatchers(
+                                "/api/auth/**", "/actuator/health/**", "/error", "/oauth2/authorization/**")
                         .permitAll()
                         .anyRequest()
                         .authenticated())
@@ -60,9 +56,7 @@ class WebSecurityConfig {
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable);
-        if (federation.getIfAvailable() != null) {
-            http.oauth2Login(o -> o.successHandler(federatedSignIn).failureHandler(federatedSignIn));
-        }
+        federation.configure(http); // Google / Apple (S-18), when configured
         return http.build();
     }
 

@@ -49,6 +49,7 @@ public class RegistrationService {
     private final PasskeyService passkeys;
     private final SignInLog signIns;
     private final AttemptLimits limits;
+    private final FederatedLinking federation;
     private final AuthProperties props;
     private final Clock clock;
 
@@ -224,6 +225,7 @@ public class RegistrationService {
                 now));
         flow.remove(FlowStore.REGISTRATION);
         var sessionId = signIns.succeeded(registration.userId(), "registration", true, client);
+        federation.complete(registration.userId(), true); // S-18: created after "Continue with Google/Apple"
         var account = accounts.findById(registration.userId()).orElseThrow();
         return new Created(account, factor, sessionId);
     }

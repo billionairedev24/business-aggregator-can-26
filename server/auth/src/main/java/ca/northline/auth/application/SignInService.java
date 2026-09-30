@@ -34,6 +34,7 @@ public class SignInService {
     private final FlowStore flow;
     private final SignInLog signIns;
     private final AttemptLimits limits;
+    private final FederatedLinking federation;
     private final Clock clock;
 
     /** Signed in: who, with which second factor, and the new session's id ({@code identity.sessions}). */
@@ -180,6 +181,7 @@ public class SignInService {
     private SignedIn succeed(UserAccount account, Factor factor, Client client) {
         flow.remove(FlowStore.SIGN_IN);
         var sessionId = signIns.succeeded(account.id(), factor.code(), factor.isSecondFactor(), client);
+        federation.complete(account.id(), false); // S-18: "Continue with Google/Apple" waiting for this factor
         return new SignedIn(account, factor, sessionId);
     }
 

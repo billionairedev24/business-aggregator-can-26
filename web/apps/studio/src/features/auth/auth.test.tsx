@@ -350,3 +350,48 @@ describe('Rate limits (429 rate_limited)', () => {
     expect(screen.getByText('Too many attempts. Wait a moment and try again.')).toBeTruthy();
   });
 });
+
+describe('Google and Apple (S-18)', () => {
+  const page = (props: Partial<Parameters<typeof SignedOutPage>[0]> & { mode: AuthMode }, locale: 'en' | 'fr' = 'en') => render(
+    <I18nProvider initial={locale}>
+      <QueryClientProvider client={new QueryClient()}>
+        <SignedOutPage onModeChange={vi.fn()} navigate={vi.fn()} {...props} />
+      </QueryClientProvider>
+    </I18nProvider>,
+  );
+
+  it('explains a cancelled or unavailable provider', () => {
+    page({ mode: 'signin', error: 'federation_cancelled' });
+    expect(screen.getByText('Signing in with Google or Apple was cancelled. Try again or use your email.')).toBeTruthy();
+  });
+
+  it('says when the provider is not available here, in French too', () => {
+    page({ mode: 'signin', error: 'federation_unavailable' }, 'fr');
+    expect(screen.getByText('La connexion avec Google ou Apple n’est pas offerte pour le moment. Utilisez plutôt votre courriel ou votre mobile.')).toBeTruthy();
+  });
+
+  it('asks for the second factor before linking an existing account, and signs in with it', async () => {
+    const ui = userEvent.setup();
+    page({ mode: 'signin', resumeIdentifier: 'ravi@prairiewrench.ca', federation: { provider: 'google', linking: true, relay: false } });
+    expect(screen.getByText('Confirm it’s you with your passkey, authenticator app or a backup code to link your Google account.')).toBeTruthy();
+    await waitFor(() => expect(calls.some(c => c.path === '/api/auth/sign-in' && c.body.identifier === 'ravi@prairiewrench.ca')).toBe(true));
+    await ui.click(await screen.findByText('Authenticator app'));
+    await ui.type(await screen.findByLabelText('6-digit code'), '654321');
+    await ui.click(screen.getByRole('button', { name: /verify/i }));
+    await waitFor(() => expect(calls.some(c => c.path === '/api/auth/sign-in/totp')).toBe(true));
+  });
+
+  it('continues a new Apple account with the private relay email pre-filled', () => {
+    page({ mode: 'register', prefill: { firstName: 'Élodie', lastName: 'Tremblay', email: 'x1y2@privaterelay.appleid.com' }, federation: { provider: 'apple', linking: false, relay: true } });
+    expect(screen.getByText(/You’re signed in with Apple\. Add your mobile number and a second factor/)).toBeTruthy();
+    expect(screen.getByText(/Hide My Email/)).toBeTruthy();
+    expect((screen.getByLabelText('Email') as HTMLInputElement).value).toBe('x1y2@privaterelay.appleid.com');
+    expect((screen.getByLabelText('First name') as HTMLInputElement).value).toBe('Élodie');
+  });
+
+  it('points the buttons at the auth server', () => {
+    page({ mode: 'signin' });
+    expect(screen.getByRole('link', { name: 'Google' }).getAttribute('href')).toBe('http://localhost:9000/oauth2/authorization/google');
+    expect(screen.getByRole('link', { name: 'Apple' }).getAttribute('href')).toBe('http://localhost:9000/oauth2/authorization/apple');
+  });
+});

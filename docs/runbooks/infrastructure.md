@@ -178,7 +178,7 @@ With the chart (S-14/S-6) the ConfigMap and the ExternalSecrets come from `helm_
 | `ES_URIS` | `config_env` | `search.es_uris` | `https://<deployment>.es.ca-central-1.aws.elastic-cloud.com:443` | `https://<deployment>.es.northamerica-northeast1.gcp.elastic-cloud.com:443` | `https://<deployment>.es.canadacentral.azure.elastic-cloud.com:443` |
 | `ES_USERNAME` | `config_env` | `search.es_username` | `elastic` (deployment superuser until a least-privilege user exists, § 5.4) | same | same |
 | `ES_PASSWORD` | `secret_env` | `search.es_password_secret_ref` | `northline/<env>/es-password` | `northline-<env>-es-password` | `es-password` |
-| `TOTP_KEY`, `WEBHOOK_SECRET_KEY`, `STUDIO_BFF_SECRET`, `STUDIO_BFF_SECRET_HASH`, `CONSUMER_BFF_SECRET_HASH`, `CONSOLE_BFF_SECRET_HASH`, `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET`, `GOOGLE_CLIENT_SECRET`, `APPLE_CLIENT_SECRET`, `SMS_AUTH_TOKEN`, `EMAIL_UNSUBSCRIBE_KEY`, `EMAIL_API_KEY`, `SMTP_PASSWORD` (Stripe webhook and email secrets since S-6) | `secret_env` | `secrets.secret_refs` | `northline/<env>/<name>` | `northline-<env>-<name>` | `<name>` in vault `nl-<env>-sec-…` |
+| `TOTP_KEY`, `WEBHOOK_SECRET_KEY`, `STUDIO_BFF_SECRET`, `STUDIO_BFF_SECRET_HASH`, `CONSUMER_BFF_SECRET_HASH`, `CONSOLE_BFF_SECRET_HASH`, `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET`, `GOOGLE_CLIENT_SECRET`, `APPLE_PRIVATE_KEY`, `SMS_AUTH_TOKEN`, `EMAIL_UNSUBSCRIBE_KEY`, `EMAIL_API_KEY`, `SMTP_PASSWORD` (Stripe webhook and email secrets since S-6) | `secret_env` | `secrets.secret_refs` | `northline/<env>/<name>` | `northline-<env>-<name>` | `<name>` in vault `nl-<env>-sec-…` |
 
 What Terraform grants for these (least privilege, [object-storage.md](object-storage.md), [key-rotation.md](key-rotation.md)):
 `northline-api` gets object read/write/delete on the uploads bucket (AWS: `s3:GetObject/PutObject/DeleteObject` on
@@ -193,8 +193,8 @@ Variables the apps need that Terraform does **not** set — add them to the Conf
 the environment runbooks): `SPRING_PROFILES_ACTIVE`, `AUTH_ISSUER`, `AUTH_INTERNAL_URL`, `API_URL`, the `*_ORIGIN`s,
 `WEBAUTHN_RP_ID`, `TRUSTED_PROXIES`, the SMS provider (S-8: `SMS_PROVIDER=twilio`, `SMS_FROM`, `SMS_ACCOUNT_ID`,
 `SMS_VOICE_FROM` — only `SMS_AUTH_TOKEN` has a secret in `secret_env`; on AWS, End User Messaging can be wired instead
-with `sms_origination_identity`), `OAUTH_CLIENTS_SYNC_ON_STARTUP` (S-122; default `true`), and the Google/Apple client
-ids (S-18). `CONSUMER_BFF_SECRET_HASH` / `CONSOLE_BFF_SECRET_HASH` are optional since S-122: leave their secrets
+with `sms_origination_identity`), `OAUTH_CLIENTS_SYNC_ON_STARTUP` (S-122; default `true`), and the Google/Apple ids
+(S-18: `GOOGLE_CLIENT_ID`, `APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`; the two secrets are in `secret_env`). `CONSUMER_BFF_SECRET_HASH` / `CONSOLE_BFF_SECRET_HASH` are optional since S-122: leave their secrets
 without a value until those BFFs exist (map them in the ExternalSecret only once set).
 
 ### Signing key rotation with Terraform (S-7)

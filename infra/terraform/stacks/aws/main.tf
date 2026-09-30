@@ -40,7 +40,7 @@ locals {
     STRIPE_SECRET_KEY        = "stripe-secret-key"
     STRIPE_PUBLISHABLE_KEY   = "stripe-publishable-key"
     GOOGLE_CLIENT_SECRET     = "google-client-secret"
-    APPLE_CLIENT_SECRET      = "apple-client-secret"
+    APPLE_PRIVATE_KEY        = "apple-private-key"
     SMS_AUTH_TOKEN           = "sms-auth-token"
     # S-12 Stripe webhook signing secrets, S-13 email (unsubscribe HMAC key, SendGrid/Azure key, SMTP relay password).
     STRIPE_WEBHOOK_SECRET         = "stripe-webhook-secret"
