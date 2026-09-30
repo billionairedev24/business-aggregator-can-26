@@ -50,12 +50,18 @@ final class PayoutRequests {
     }
 
     /**
-     * {@code POST /payouts/bank-accounts}. {@code instant}: {@code linkedAccount} from Stripe Financial Connections;
+     * {@code POST /payouts/bank-accounts}. {@code instant}: {@code linkedAccount} = the bank-account token
+     * Stripe.js' {@code collectBankAccountToken} returned and {@code financialConnectionsAccount} ({@code fca_…});
      * {@code manual}: institution (3 digits), transit (5), account (7–12) and holder.
      */
     record BankAccount(
             @NotNull(message = METHOD_REQUIRED) PayoutAccount.@Nullable Method method,
-            @Nullable String linkedAccount,
+
+            @Size(max = 255, message = PayoutMessages.LINK_AGAIN) @Nullable
+            String linkedAccount,
+
+            @Size(max = 255, message = PayoutMessages.LINK_AGAIN) @Nullable
+            String financialConnectionsAccount,
 
             @Pattern(regexp = INSTITUTION_PATTERN, message = INSTITUTION_FORMAT) @Nullable
             String institution,

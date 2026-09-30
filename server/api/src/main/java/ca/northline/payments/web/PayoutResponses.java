@@ -16,7 +16,10 @@ final class PayoutResponses {
             PayoutSchedule.@Nullable MonthlyAnchor monthlyAnchor,
             PayoutSchedule.Reserve reserve) {}
 
-    /** A bank account; {@code label} = "TD ··3391". Never the account number. */
+    /**
+     * A bank account; {@code label} = "TD ··3391". Never the account number. {@code disconnectedAt}: an instantly
+     * linked account whose Financial Connections link ended (payouts still go there; the Studio offers to reconnect).
+     */
     record Account(
             String id,
             PayoutAccount.Method method,
@@ -25,7 +28,8 @@ final class PayoutResponses {
             String holderName,
             String label,
             PayoutAccount.State state,
-            @Nullable Instant effectiveAt) {}
+            @Nullable Instant effectiveAt,
+            @Nullable Instant disconnectedAt) {}
 
     /** Instant payout terms: 1 % (min $0.50), from $1.00. */
     record InstantTerms(boolean eligible, int feeBps, long minFeeCents, long minAmountCents) {}
