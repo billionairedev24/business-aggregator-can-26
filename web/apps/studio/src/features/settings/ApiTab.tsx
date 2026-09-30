@@ -219,7 +219,7 @@ function Integrations({ keys, owner, onQuickBooks }: { keys: ApiKey[]; owner: bo
   const googleCal = sync.data?.calendars.find(c => c.provider === 'google');
   const google = googleCal?.connected && googleCal.state !== 'reconnect';
   const toSync = () => void navigate({ to: screenHref(merchantId, 'availability') });
-  const shop = commerce.data?.some(c => (c.provider === 'shopify' || c.provider === 'square') && c.connected);
+  const shop = commerce.data?.some(c => c.connected);
   const quickbooks = keys.some(k => /quickbooks/i.test(k.name));
   const row = (label: string, connected: boolean | undefined, onConnect: () => void) => (
     <li className="nl-set-row"><span>{label}</span>{connected ? <Tag tone="accent">{t('connected')}</Tag> : owner ? <Button variant="ghost" onClick={onConnect}>{t('connect')}</Button> : <Tag tone="neutral">{t('notConnected')}</Tag>}</li>
