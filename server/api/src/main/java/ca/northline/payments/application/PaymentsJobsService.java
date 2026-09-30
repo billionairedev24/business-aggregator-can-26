@@ -13,6 +13,7 @@ class PaymentsJobsService implements PaymentsJobs {
     private final BankAccountService bankAccounts;
     private final PayoutService payouts;
     private final StripeEventProcessor stripeEvents;
+    private final TaxSyncService tax;
 
     @Override
     public int releaseDueEscrows() {
@@ -37,6 +38,16 @@ class PaymentsJobsService implements PaymentsJobs {
     @Override
     public int payRefundQueue() {
         return cases.payQueue();
+    }
+
+    @Override
+    public int syncTax() {
+        return tax.syncPending();
+    }
+
+    @Override
+    public int reconcileTax() {
+        return tax.reconcileRecent();
     }
 
     @Override

@@ -71,20 +71,24 @@ public record LedgerEntry(
 
     /**
      * A card dispute was lost: the bank took {@code merchantCents} + {@code platformCents} back from Stripe. The merchant
-     * carries up to the escrow amount — from their balance when the money was released, else from escrow — and
-     * Northline the rest (the tax part).
+     * carries up to the escrow amount — from their balance when the money was released, else from escrow — and the
+     * rest (the tax part) is tax no longer owed ({@code tax_payable}, up to what the sale collected, S-21); anything
+     * beyond that Northline carries.
      */
     public static List<LedgerEntry> chargedBack(
             Escrow e, String disputeId, long merchantCents, long platformCents, boolean released, Instant at) {
+        var tax = Math.min(platformCents, e.getTaxCents());
         return nonZero(
                 debit(released ? merchant(e.getMerchantId()) : ESCROW, merchantCents, "dispute", disputeId, at),
-                debit(REVENUE, platformCents, "dispute", disputeId, at),
+                debit(TAX_PAYABLE, tax, "dispute", disputeId, at),
+                debit(REVENUE, platformCents - tax, "dispute", disputeId, at),
                 credit(STRIPE_BALANCE, merchantCents + platformCents, "dispute", disputeId, at));
     }
 
     /**
      * A refund is paid back to the customer. Who funds it: the platform (goodwill credits), the escrow (money that never
-     * reached the merchant) or the merchant's balance (money already released).
+     * reached the merchant) or the merchant's balance (money already released). The GST/HST on the refunded part goes
+     * back too and is no longer owed to the CRA ({@code tax_payable}, S-21).
      */
     public static List<LedgerEntry> refunded(Refund r, boolean escrowReleased, Instant at) {
         String from;
@@ -97,6 +101,7 @@ public record LedgerEntry(
         }
         return nonZero(
                 debit(from, r.getAmountCents(), "refund", r.getId(), at),
-                credit(STRIPE_BALANCE, r.getAmountCents(), "refund", r.getId(), at));
+                debit(TAX_PAYABLE, r.getTaxCents(), "refund", r.getId(), at),
+                credit(STRIPE_BALANCE, r.cardCents(), "refund", r.getId(), at));
     }
 }
