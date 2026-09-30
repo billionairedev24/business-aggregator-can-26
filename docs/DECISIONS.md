@@ -909,6 +909,6 @@ accepted with rationale (the story's acceptance criterion):
   `routeSupport.test.ts`, `session.test.tsx` (`__Host-XSRF-TOKEN`), `auth.test.tsx` (503 message en/fr). The new
   auth tests (step-up fixation, passkeys, headers, Fetch Metadata, revocation) and the BFF `_csrf` test were also run
   against the pre-fix code and failed there.
-- **Not done:** backup-code HMAC; refresh-token family revocation; a GeoIP city fallback; rendering the Helm change
-  (no Helm binary in this environment — reviewed as YAML); anything against real Google/Apple, real authenticators or
+- **Not done:** backup-code HMAC; refresh-token family revocation; a GeoIP city fallback; applying the NetworkPolicy
+  change to a real cluster (rendered with `helm template` for staging/prod only); anything against real Google/Apple, real authenticators or
   a deployed environment.

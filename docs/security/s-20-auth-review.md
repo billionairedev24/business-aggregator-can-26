@@ -203,7 +203,7 @@ characters, 422 `length`.
 | 8 | Rate limits failed open when Valkey was down | M | `RATE_LIMIT_WHEN_UNAVAILABLE`, closed in staging/prod | `RateLimitStoreDownApiTest`, `AttemptLimitsTest`, `RateLimitConfigTest`, Studio |
 | 9 | Studio sign-out left the auth session alive if the browser's call failed | M | revoked refresh token ends the sign-in | `SecurityReviewApiTest.OAuth` |
 | 10 | Staff (console) tokens didn't need `acr=mfa` | M | role + MFA on `/api/v1/console/**` | `ConsoleAccessTest` |
-| 11 | Any pod could reach auth/bff with forged forwarded headers | M | staging/prod NetworkPolicy: Envoy Gateway only | values files (not rendered here) |
+| 11 | Any pod could reach auth/bff with forged forwarded headers | M | staging/prod NetworkPolicy: Envoy Gateway only | `helm template` of staging/prod (rendered policies checked) |
 | 12 | Timing difference for unknown accounts | L | same lookups + decoy TOTP check | `SignInServiceTest` |
 | 13 | Missing-Origin requests always allowed | L | Fetch Metadata `cross-site` refused | `SecurityReviewApiTest.CrossSiteRequests` |
 | 14 | Unbounded identifier / backup code | L | 320 / 64 characters | `SecurityReviewApiTest.ErrorBodies` |
@@ -213,5 +213,5 @@ characters, 422 `length`.
 
 Penetration testing against a deployed environment (none exists); Google/Apple and real authenticators (tests use
 WireMock providers and a software authenticator); load/DoS of the auth endpoints beyond the rate limits; the
-consumer and console apps (not built); the Helm change in § 14 was not rendered (no Helm binary here) and was
-reviewed as YAML only.
+consumer and console apps (not built); the NetworkPolicy change in § 14 was rendered with `helm template` but not
+applied to a cluster.
