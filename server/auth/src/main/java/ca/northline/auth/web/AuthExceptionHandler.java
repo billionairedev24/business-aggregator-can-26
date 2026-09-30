@@ -29,8 +29,17 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 @RestControllerAdvice(basePackages = "ca.northline.auth.web")
 class AuthExceptionHandler extends ResponseEntityExceptionHandler {
 
-    private static final Map<String, String> RULES =
-            Map.of("NotNull", "required", "NotBlank", "required", "AssertTrue", "required", "Pattern", "format");
+    private static final Map<String, String> RULES = Map.of(
+            "NotNull",
+            "required",
+            "NotBlank",
+            "required",
+            "AssertTrue",
+            "required",
+            "Pattern",
+            "format",
+            "Size",
+            "length");
     private static final List<String> PRIORITY = List.of("required", "format");
 
     /** The 422 body. */

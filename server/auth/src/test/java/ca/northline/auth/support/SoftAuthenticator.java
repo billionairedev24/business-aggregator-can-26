@@ -32,11 +32,13 @@ public final class SoftAuthenticator {
     private static final byte UV = 0x04;
     private static final byte AT = 0x40;
 
-    private final String origin;
+    private String origin;
     private final KeyPair keys;
     private final byte[] credentialId = new byte[16];
     private byte[] userHandle = new byte[0];
     private int counter;
+    private boolean userVerification = true;
+    private boolean counting = true;
 
     public SoftAuthenticator(String origin) throws Exception {
         this.origin = origin;
@@ -44,6 +46,30 @@ public final class SoftAuthenticator {
         generator.initialize(new ECGenParameterSpec("secp256r1"));
         this.keys = generator.generateKeyPair();
         new SecureRandom().nextBytes(credentialId);
+    }
+
+    /** S-20: an authenticator that only checks presence (no PIN / biometric) — the UV flag stays off. */
+    public SoftAuthenticator withoutUserVerification() {
+        userVerification = false;
+        return this;
+    }
+
+    /** S-20: the same credential used from another web origin (a phishing page on another host). */
+    public SoftAuthenticator fromOrigin(String otherOrigin) {
+        origin = otherOrigin;
+        return this;
+    }
+
+    /** An authenticator that doesn't count (synced passkeys): every assertion carries counter 0. */
+    public SoftAuthenticator notCounting() {
+        counting = false;
+        return this;
+    }
+
+    /** S-20: a clone of this authenticator that is behind: the next assertion carries {@code value + 1}. */
+    public SoftAuthenticator counterAt(int value) {
+        counter = value;
+        return this;
     }
 
     public String credentialId() {
@@ -59,7 +85,7 @@ public final class SoftAuthenticator {
         var cose = EC2COSEKey.create(keys, COSEAlgorithmIdentifier.ES256);
         var authData = new AuthenticatorData<RegistrationExtensionAuthenticatorOutput>(
                 sha256(rpId.getBytes(StandardCharsets.UTF_8)),
-                (byte) (UP | UV | AT),
+                (byte) (UP | (userVerification ? UV : 0) | AT),
                 0L,
                 new AttestedCredentialData(AAGUID.ZERO, credentialId, cose));
         var attestation = new AttestationObjectConverter(new ObjectConverter())
@@ -82,8 +108,8 @@ public final class SoftAuthenticator {
         var clientData = clientData("webauthn.get", challenge);
         var authData = ByteBuffer.allocate(37)
                 .put(sha256(rpId.getBytes(StandardCharsets.UTF_8)))
-                .put((byte) (UP | UV))
-                .putInt(++counter)
+                .put((byte) (UP | (userVerification ? UV : 0)))
+                .putInt(counting ? ++counter : 0)
                 .array();
         var signer = Signature.getInstance("SHA256withECDSA");
         signer.initSign(keys.getPrivate());

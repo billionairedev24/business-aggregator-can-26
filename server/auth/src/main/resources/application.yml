@@ -53,7 +53,9 @@ server:
   forward-headers-strategy: none
   servlet.session:
     timeout: 12h                       # "sessions expire after 12 h idle"
-    cookie: { name: NL_AUTH, http-only: true, secure: true, same-site: lax, domain: "${COOKIE_DOMAIN:}" }
+    # Host-only (no Domain): only auth.<zone> ever sees it; the Studio reaches it cross-origin, same site, with
+    # credentials. The cloud profiles use the __Host- prefix (S-20).
+    cookie: { name: NL_AUTH, http-only: true, secure: true, same-site: lax }
 management:
   endpoints.web.exposure.include: health,info
 northline:
