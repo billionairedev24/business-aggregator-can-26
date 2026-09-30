@@ -1,0 +1,8 @@
+# Included by every location of studio.conf (nginx drops server-level add_header in a location that sets its own).
+# Rendered at start: NL_AUTH_ORIGIN is the northline-auth origin the Studio calls (sign-in JSON API, form posts).
+add_header X-Content-Type-Options "nosniff" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+add_header X-Frame-Options "DENY" always;
+add_header Permissions-Policy "camera=(), microphone=(), geolocation=(self), payment=(self)" always;
+add_header Cross-Origin-Opener-Policy "same-origin" always;
+add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://js.stripe.com https://connect-js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' ${NL_AUTH_ORIGIN} https://api.stripe.com https://*.stripe.com; frame-src https://js.stripe.com https://connect-js.stripe.com https://*.stripe.com; form-action 'self' ${NL_AUTH_ORIGIN}; frame-ancestors 'none'; base-uri 'self'; object-src 'none'" always;

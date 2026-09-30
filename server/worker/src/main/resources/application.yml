@@ -29,6 +29,10 @@ spring:
     properties:
       sasl.mechanism: ${KAFKA_SASL_MECHANISM:PLAIN}
       sasl.jaas.config: ${KAFKA_SASL_JAAS_CONFIG:}
+server.port: ${SERVER_PORT:8084}         # health only (S-14): the worker serves no API
+management:
+  endpoints.web.exposure.include: health
+  endpoint.health.probes.enabled: true  # /actuator/health/liveness and /readiness for Kubernetes
 northline:                              # provider switches (ca.northline.platform); only `local` adapters exist yet
   email:
     provider: ${EMAIL_PROVIDER:local}   # notifications (S-13, S-27)

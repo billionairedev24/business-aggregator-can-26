@@ -1,0 +1,71 @@
+# Local rehearsal on kind (docs/runbooks/deploy.md § Local: kind). The Spring apps run the `dev` profile (the cloud
+# shape: required variables checked, Valkey sessions, Secure cookies off only because the URLs are http://localhost)
+# against Postgres + Valkey that deploy/kind/up.sh provides. Kafka and Elasticsearch are not started: their variables
+# point at nothing, so the worker's consumers and the api's event externalization log connection errors — health and
+# sign-in don't need them. Images are the local builds (northline/<app>:dev) loaded into the cluster.
+global:
+  environment: local
+  springProfiles: dev
+  image:
+    registry: northline
+    tag: dev
+    pullPolicy: Never
+
+urls:
+  auth: http://localhost:19000
+  studio: http://localhost:18080
+  consumer: http://localhost:13000
+  console: http://localhost:13200
+  webauthnRpId: localhost
+
+# What Terraform's config_env would hold, for the in-cluster stand-ins.
+configEnv:
+  DB_URL: jdbc:postgresql://postgres:5432/northline
+  DB_USER: northline
+  REDIS_HOST: valkey
+  REDIS_PORT: "6379"
+  REDIS_SSL: "false"
+  KAFKA_BOOTSTRAP: kafka:9092              # a Service with no endpoints (deploy/kind/up.sh)
+  ES_URIS: http://elasticsearch:9200       # same
+  KMS_PROVIDER: local
+  STORAGE_PROVIDER: local
+
+# Local-only secrets (secrets.create is refused unless global.environment=local). Same values as the apps' local
+# defaults (server/.env.example); never reuse them anywhere else.
+secrets:
+  create: true
+  values:
+    DB_PASSWORD: northline
+    WEBHOOK_SECRET_KEY: bm9ydGhsaW5lLWtpbmQtd2ViaG9vay1rZXktMzJieXQ=
+    TOTP_KEY: bm9ydGhsaW5lLWxvY2FsLWRldi10b3RwLWtleS0zMmI=
+    STUDIO_BFF_SECRET: dev-studio-bff
+    STUDIO_BFF_SECRET_HASH: "{noop}dev-studio-bff"
+
+apps:
+  api:
+    resources:
+      requests: { cpu: 100m, memory: 768Mi }
+      limits: { memory: 768Mi }
+  auth:
+    env:
+      # KMS_PROVIDER=local: the signing keys live in a file; one replica, on an emptyDir.
+      SIGNING_KEYS_DIR: /var/lib/northline/auth-keys
+    extraVolumes:
+      - name: signing-keys
+        emptyDir: { sizeLimit: 1Mi }
+    extraVolumeMounts:
+      - name: signing-keys
+        mountPath: /var/lib/northline/auth-keys
+    resources:
+      requests: { cpu: 100m, memory: 512Mi }
+      limits: { memory: 512Mi }
+  bff:
+    resources:
+      requests: { cpu: 50m, memory: 384Mi }
+      limits: { memory: 384Mi }
+  worker:
+    resources:
+      requests: { cpu: 50m, memory: 384Mi }
+      limits: { memory: 384Mi }
+
+preStopSleepSeconds: 0

@@ -1,0 +1,142 @@
+{{- range $name, $app := .Values.apps }}
+{{- if $app.enabled }}
+{{- $ctx := dict "root" $ "name" $name "app" $app }}
+{{- $labels := dict "root" $ "app" $name }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "northline.appName" $name }}
+  labels:
+    {{- include "northline.labels" $labels | nindent 4 }}
+spec:
+  {{- if not $app.autoscaling.enabled }}
+  replicas: {{ $app.replicas }}
+  {{- end }}
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      {{- include "northline.selectorLabels" $labels | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "northline.selectorLabels" $labels | nindent 8 }}
+        app.kubernetes.io/part-of: northline
+        {{- with $.Values.global.podLabels }}{{ toYaml . | nindent 8 }}{{ end }}
+        {{- with $app.podLabels }}{{ toYaml . | nindent 8 }}{{ end }}
+        {{- with (include "northline.identityPodLabels" $ctx) }}{{ . | nindent 8 }}{{ end }}
+      annotations:
+        checksum/config: {{ include "northline.configChecksum" $ctx }}
+        {{- with $.Values.global.podAnnotations }}{{ toYaml . | nindent 8 }}{{ end }}
+        {{- with $app.podAnnotations }}{{ toYaml . | nindent 8 }}{{ end }}
+    spec:
+      serviceAccountName: {{ include "northline.appName" $name }}
+      automountServiceAccountToken: false
+      {{- with $.Values.global.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: {{ $.Values.terminationGracePeriodSeconds }}
+      securityContext:
+        {{- toYaml $.Values.podSecurityContext | nindent 8 }}
+        runAsUser: {{ $app.runAsUser }}
+        runAsGroup: {{ $app.runAsUser }}
+        fsGroup: {{ $app.runAsUser }}
+      {{- if $.Values.topologySpread }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: {{- include "northline.selectorLabels" $labels | nindent 14 }}
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: {{- include "northline.selectorLabels" $labels | nindent 14 }}
+      {{- end }}
+      {{- with $app.nodeSelector }}
+      nodeSelector: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $app.tolerations }}
+      tolerations: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $app.affinity }}
+      affinity: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ $name }}
+          image: {{ include "northline.image" $ctx | quote }}
+          imagePullPolicy: {{ $.Values.global.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ $app.port }}
+              protocol: TCP
+          {{- if eq $app.type "spring" }}
+          {{- include "northline.springEnv" $ctx | nindent 10 }}
+          {{- else }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "northline.appName" $name }}
+          {{- end }}
+          {{- with $app.probes.startup }}
+          startupProbe:
+            httpGet: { path: {{ .path }}, port: http }
+            periodSeconds: {{ .periodSeconds }}
+            failureThreshold: {{ .failureThreshold }}
+            timeoutSeconds: 3
+          {{- end }}
+          {{- with $app.probes.liveness }}
+          livenessProbe:
+            httpGet: { path: {{ .path }}, port: http }
+            periodSeconds: {{ .periodSeconds }}
+            failureThreshold: {{ .failureThreshold }}
+            timeoutSeconds: 3
+          {{- end }}
+          {{- with $app.probes.readiness }}
+          readinessProbe:
+            httpGet: { path: {{ .path }}, port: http }
+            periodSeconds: {{ .periodSeconds }}
+            failureThreshold: {{ .failureThreshold }}
+            timeoutSeconds: 3
+          {{- end }}
+          {{- if gt (int $.Values.preStopSleepSeconds) 0 }}
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: {{ $.Values.preStopSleepSeconds }}
+          {{- end }}
+          resources:
+            {{- toYaml $app.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml $.Values.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            {{- if $app.writableDirs }}
+            {{- range $i, $dir := $app.writableDirs }}
+            - name: writable-{{ $i }}
+              mountPath: {{ $dir }}
+            {{- end }}
+            {{- else }}
+            - name: tmp
+              mountPath: /tmp
+            {{- end }}
+            {{- if eq $app.type "spring" }}{{ with $.Values.spring.extraVolumeMounts }}{{ toYaml . | nindent 12 }}{{ end }}{{ end }}
+            {{- with $app.extraVolumeMounts }}{{ toYaml . | nindent 12 }}{{ end }}
+      volumes:
+        {{- if $app.writableDirs }}
+        {{- range $i, $dir := $app.writableDirs }}
+        - name: writable-{{ $i }}
+          emptyDir: { sizeLimit: 64Mi }
+        {{- end }}
+        {{- else }}
+        - name: tmp
+          emptyDir: { sizeLimit: 256Mi }
+        {{- end }}
+        {{- if eq $app.type "spring" }}{{ with $.Values.spring.extraVolumes }}{{ toYaml . | nindent 8 }}{{ end }}{{ end }}
+        {{- with $app.extraVolumes }}{{ toYaml . | nindent 8 }}{{ end }}
+{{- end }}
+{{- end }}

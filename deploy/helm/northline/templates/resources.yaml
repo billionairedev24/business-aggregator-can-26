@@ -1,0 +1,120 @@
+{{- /* Per app: ServiceAccount, ConfigMap, Service, HPA, PDB. */ -}}
+{{- range $name, $app := .Values.apps }}
+{{- if $app.enabled }}
+{{- $ctx := dict "root" $ "name" $name "app" $app }}
+{{- $labels := dict "root" $ "app" $name }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "northline.appName" $name }}
+  labels:
+    {{- include "northline.labels" $labels | nindent 4 }}
+  {{- with (include "northline.identityAnnotations" $ctx) }}
+  annotations:
+    {{- . | nindent 4 }}
+  {{- end }}
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "northline.appName" $name }}
+  labels:
+    {{- include "northline.labels" $labels | nindent 4 }}
+data:
+  {{- range $key, $value := (include "northline.appEnv" $ctx | fromYaml) }}
+  {{ $key }}: {{ $value | toString | quote }}
+  {{- end }}
+{{- if $app.service }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "northline.appName" $name }}
+  labels:
+    {{- include "northline.labels" $labels | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "northline.selectorLabels" $labels | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ $app.port }}
+      targetPort: http
+      protocol: TCP
+{{- end }}
+{{- if $app.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "northline.appName" $name }}
+  labels:
+    {{- include "northline.labels" $labels | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "northline.appName" $name }}
+  minReplicas: {{ $app.autoscaling.minReplicas }}
+  maxReplicas: {{ $app.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $app.autoscaling.targetCPUUtilizationPercentage }}
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+{{- end }}
+{{- /* A disruption budget only makes sense with more than one replica; with one it would block node drains. */}}
+{{- if or (and $app.autoscaling.enabled (gt (int $app.autoscaling.minReplicas) 1)) (and (not $app.autoscaling.enabled) (gt (int $app.replicas) 1)) }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "northline.appName" $name }}
+  labels:
+    {{- include "northline.labels" $labels | nindent 4 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      {{- include "northline.selectorLabels" $labels | nindent 6 }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- if .Values.configEnv }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "northline.infraConfigMap" . }}
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "infra") | nindent 4 }}
+  annotations:
+    northline.ca/source: "terraform output config_env"
+data:
+  {{- range $key, $value := .Values.configEnv }}
+  {{ $key }}: {{ $value | toString | quote }}
+  {{- end }}
+{{- end }}
+{{- if .Values.secrets.create }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Values.secrets.existingSecret }}
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "secrets") | nindent 4 }}
+  annotations:
+    northline.ca/warning: "rendered from Helm values: local clusters only"
+type: Opaque
+stringData:
+  {{- range $key, $value := .Values.secrets.values }}
+  {{ $key }}: {{ $value | toString | quote }}
+  {{- end }}
+{{- end }}

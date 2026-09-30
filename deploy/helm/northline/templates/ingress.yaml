@@ -1,0 +1,83 @@
+{{- /*
+Routes (S-17 adds TLS, DNS and the controller): the Studio host serves the Studio and, on the same origin, the
+studio-bff for /api, /bff, /oauth2 and /login; auth, consumer and console have their own hosts. api stays internal.
+*/ -}}
+{{- define "northline.routes" -}}
+{{- $v := .Values -}}
+{{- $routes := list -}}
+{{- if and $v.apps.studio.enabled $v.apps.bff.enabled -}}
+{{- $routes = append $routes (dict "host" (include "northline.host" $v.urls.studio) "paths" (list
+      (dict "path" "/api" "app" "bff") (dict "path" "/bff" "app" "bff") (dict "path" "/oauth2" "app" "bff")
+      (dict "path" "/login" "app" "bff") (dict "path" "/" "app" "studio"))) -}}
+{{- end -}}
+{{- if $v.apps.auth.enabled -}}
+{{- $routes = append $routes (dict "host" (include "northline.host" $v.urls.auth) "paths" (list (dict "path" "/" "app" "auth"))) -}}
+{{- end -}}
+{{- if $v.apps.consumer.enabled -}}
+{{- $routes = append $routes (dict "host" (include "northline.host" $v.urls.consumer) "paths" (list (dict "path" "/" "app" "consumer"))) -}}
+{{- end -}}
+{{- if $v.apps.console.enabled -}}
+{{- $routes = append $routes (dict "host" (include "northline.host" $v.urls.console) "paths" (list (dict "path" "/" "app" "console"))) -}}
+{{- end -}}
+{{- toYaml (dict "routes" $routes) -}}
+{{- end }}
+{{- $routes := (include "northline.routes" . | fromYaml).routes }}
+{{- if .Values.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: northline
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "ingress") | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- with .Values.ingress.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- range $routes }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "northline.appName" .app }}
+                port:
+                  name: http
+          {{- end }}
+    {{- end }}
+{{- end }}
+{{- if .Values.gateway.enabled }}
+{{- range $routes }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ printf "northline-%s" (.host | replace "." "-") | trunc 63 | trimSuffix "-" }}
+  labels:
+    {{- include "northline.labels" (dict "root" $ "app" "gateway") | nindent 4 }}
+spec:
+  parentRefs:
+    {{- toYaml $.Values.gateway.parentRefs | nindent 4 }}
+  hostnames: [{{ .host | quote }}]
+  rules:
+    {{- range .paths }}
+    - matches:
+        - path: { type: PathPrefix, value: {{ .path }} }
+      backendRefs:
+        - name: {{ include "northline.appName" .app }}
+          port: {{ (get $.Values.apps .app).port }}
+    {{- end }}
+{{- end }}
+{{- end }}

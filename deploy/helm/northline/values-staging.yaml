@@ -1,0 +1,31 @@
+# staging — prod shape at smaller sizes (docs/runbooks/staging.md): two replicas or more behind HPAs and disruption
+# budgets, Stripe test keys and the SMS provider required.
+global:
+  environment: staging
+
+urls:
+  auth: https://auth.staging.northline.ca
+  studio: https://business.staging.northline.ca
+  consumer: https://staging.northline.ca
+  console: https://console.staging.northline.ca
+  webauthnRpId: staging.northline.ca
+
+ingress:
+  enabled: true
+
+apps:
+  api:
+    autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 4 }
+    secretEnv:
+      STRIPE_SECRET_KEY: true       # staging and prod refuse to start without Stripe keys
+      STRIPE_PUBLISHABLE_KEY: true
+  auth:
+    autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 4 }
+  bff:
+    autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 4 }
+  worker:
+    replicas: 2
+  studio:
+    autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 3 }
+  consumer:
+    autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 4 }

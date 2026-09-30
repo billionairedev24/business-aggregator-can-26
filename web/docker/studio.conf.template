@@ -1,0 +1,50 @@
+# Northline Studio (S-14): static Vite build behind an unprivileged nginx. Rendered at container start by the image's
+# envsubst step (only NL_* variables are substituted — NGINX_ENVSUBST_FILTER): NL_AUTH_ORIGIN is the northline-auth
+# origin the browser talks to (also allowed in the Content-Security-Policy, security-headers.inc.template). The BFF routes (/api, /bff, /oauth2,
+# /login) are sent to studio-bff by the ingress (Helm chart), never by this server.
+server {
+    listen 8080;
+    server_name _;
+    root /usr/share/nginx/html;
+    server_tokens off;
+    absolute_redirect off;
+    charset utf-8;
+
+    gzip on;
+    gzip_static on;                       # the image ships .gz next to every text asset
+    gzip_vary on;
+    gzip_comp_level 6;
+    gzip_min_length 1024;
+    gzip_types text/css application/javascript text/javascript application/json image/svg+xml text/plain;
+
+    include /etc/nginx/conf.d/security-headers.inc;
+
+    # Kubernetes probes.
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    # Runtime configuration read by src/lib/auth-server.ts before the app starts.
+    location = /config.js {
+        default_type application/javascript;
+        add_header Cache-Control "no-store" always;
+        include /etc/nginx/conf.d/security-headers.inc;
+        return 200 'window.__NL_CONFIG__ = { authOrigin: "${NL_AUTH_ORIGIN}" };\n';
+    }
+
+    # Hashed, immutable build output.
+    location /assets/ {
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        include /etc/nginx/conf.d/security-headers.inc;
+        try_files $uri =404;
+    }
+
+    # Terms / Privacy pages and other public files are served as they are; everything else is the SPA (client routes).
+    location / {
+        add_header Cache-Control "no-cache" always;
+        include /etc/nginx/conf.d/security-headers.inc;
+        try_files $uri $uri/ /index.html;
+    }
+}

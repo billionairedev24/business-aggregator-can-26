@@ -1,0 +1,20 @@
+# AWS (EKS) overlay. Only values: the templates have no cloud logic.
+#
+# Workload identity: IRSA (what Terraform sets up) — the ServiceAccounts carry eks.amazonaws.com/role-arn from
+#   terraform output -json kubernetes | jq '{workloadIdentities: .workload_identities}' > identities.json
+# EKS Pod Identity instead: no annotation; create a pod identity association per ServiceAccount (northline-api, …).
+#
+# Images: <account>.dkr.ecr.<region>.amazonaws.com/northline (terraform output registry.registry_url + /northline);
+# the node role may pull (registry readers), so no imagePullSecrets.
+#
+# Ingress (S-17 decides): AWS Load Balancer Controller → ingress.className: alb with
+#   alb.ingress.kubernetes.io/scheme: internet-facing, alb.ingress.kubernetes.io/target-type: ip, one group.name;
+# or ingress-nginx behind an NLB → className: nginx.
+
+env:
+  # The AWS SDKs (KMS, S3, End User Messaging) take the region from here when the identity webhook doesn't set it.
+  AWS_REGION: ca-central-1
+
+networkPolicy:
+  # VPC CNI enforces NetworkPolicy when its network policy agent is enabled (enableNetworkPolicy=true).
+  enabled: true

@@ -1,0 +1,15 @@
+apiVersion: v2
+name: northline
+description: >-
+  Northline marketplace on any Kubernetes (EKS, GKE, AKS, kind): api, auth, studio-bff, worker, studio, consumer
+  (console when it exists). One chart, per-app values; environment files (values-<env>.yaml) and cloud overlays
+  (values-<cloud>.yaml) only change values. docs/runbooks/deploy.md
+type: application
+version: 0.1.0
+# Default image tag when global.image.tag is empty; deployments set IMAGE_TAG (the git sha) instead.
+appVersion: "dev"
+kubeVersion: ">=1.30.0-0"
+home: https://github.com/billionairedev24/business-aggregator-can-26
+keywords: [northline, spring-boot, marketplace]
+maintainers:
+  - name: Northline platform
