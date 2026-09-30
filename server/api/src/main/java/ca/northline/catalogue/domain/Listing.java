@@ -11,6 +11,7 @@ import ca.northline.shared.RuleViolation;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -48,17 +49,38 @@ public sealed interface Listing permits ProductListing, ServiceListing {
         return new ListingSubmitted(Ids.next(), at, getId(), getMerchantId(), kind().code(), actorId);
     }
 
-    /** Outcome of the automated checks: approved and published, or flagged for manual review. */
+    /**
+     * Outcome of the automated checks on a pending listing: approved (published when customers can now see it; a
+     * re-vetted listing the merchant keeps hidden publishes nothing), or flagged for manual review.
+     */
     default Optional<DomainEvent> vetted(List<VettingFlag> flags, Instant at) {
         var state = getState();
         if (state.getVetting() != Vetting.PENDING) {
             return Optional.empty();
         }
         if (state.vetted(flags, at)) {
-            return Optional.of(new ListingPublished(Ids.next(), at, getId(), getMerchantId(), kind().code()));
+            return state.isCustomerVisible()
+                    ? Optional.of(new ListingPublished(Ids.next(), at, getId(), getMerchantId(), kind().code()))
+                    : Optional.empty();
         }
         var codes = flags.stream().map(VettingFlag::code).toList();
         return Optional.of(new ListingFlagged(Ids.next(), at, getId(), getMerchantId(), kind().code(), codes));
+    }
+
+    /**
+     * S-39: after a change, an approved listing whose {@link MaterialField material fields} changed goes back to
+     * vetting: {@code listing.hidden} when customers could see it, then {@code listing.submitted} so the automated
+     * checks run. @return the events to publish, in order (none when nothing material changed or it isn't approved)
+     */
+    default List<DomainEvent> revetIfMaterial(Set<MaterialField> changed, String actorId, Instant at) {
+        var wasVisible = getState().isCustomerVisible();
+        if (!getState().revet(changed, at)) {
+            return List.of();
+        }
+        var submitted = new ListingSubmitted(Ids.next(), at, getId(), getMerchantId(), kind().code(), actorId);
+        return wasVisible
+                ? List.of(new ListingHidden(Ids.next(), at, getId(), getMerchantId(), kind().code()), submitted)
+                : List.of(submitted);
     }
 
     default Optional<ListingPublished> publish(Instant at) {

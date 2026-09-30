@@ -7,7 +7,7 @@ import { useMerchant, useMerchantId, useRole } from '../shell/api';
 import { tierTag } from '../shell/StudioLayout';
 import { useShellT } from '../shell/messages';
 import { categoriesQuery, lookupGtin, useSaveProduct, useSubmitListing, useUploadImage, type Category, type Fulfilment, type IdentifierType, type Media, type ProductDetail, type VariantTheme } from './api';
-import { AttentionSummary, CategoryPicker, CompletenessPanel, EditorHeader, EditorTabs, FeesPanel, Side, VettingPanel, draftTag, useEditorForm } from './EditorParts';
+import { AttentionSummary, CategoryPicker, CompletenessPanel, EditorHeader, EditorTabs, FeesPanel, RevetNotice, Side, VettingPanel, draftTag, useEditorForm } from './EditorParts';
 import { imageProblem } from './imageFile';
 import { useCatalogueT } from './messages';
 import { SECTIONS, applyMatch, emptyProduct, linkFromDetail, linkFromMatch, permissions, productCompleteness, productFromDetail, productPayload, rowKey, validateProductDraft, variantReady, variantSku, vettingChecks, type CatalogueLink, type Portal, type ProductForm, type Section, type VariantRow } from './model';
@@ -110,6 +110,7 @@ export function ProductEditor({ detail, portal, typePicker }: { detail?: Product
         cannotSubmit={!completeness.complete || !canSubmit} onSave={() => void persist()} onSubmit={() => void onSubmit()} />
       <EditorTabs tabs={tabs} value={tab} onChange={setTab} label={t('editorTabs')} />
       {failure && <div style={{ marginBottom: 16 }}><Alert tone="error">{failure}</Alert></div>}
+      <RevetNotice detail={saved} kind="product" />
       <div style={{ marginBottom: 16 }}><AttentionSummary errors={fm.visible} t={t} /></div>
       <div className="nl-cat-editor">
         <fieldset className="nl-cat-main" disabled={!perms.update} role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
