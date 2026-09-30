@@ -44,7 +44,7 @@ describe('Live orders', () => {
       [`GET ${B}/kitchen/live`]: () => board([ticket('o1', 'FD-9931', accepted ? 'cooking' : 'new'), ticket('o2', 'FD-9925', 'ready', { handoff: { party: 'courier', state: 'waiting', name: 'Sam', eta: null } })]),
       [`POST ${B}/kitchen/live/o1/accept`]: () => { accepted = true; return board([ticket('o1', 'FD-9931', 'cooking'), ticket('o2', 'FD-9925', 'ready')]); },
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<LiveOrdersScreen />);
     expect(await screen.findByText('FD-9931')).toBeTruthy();
     expect(screen.getByRole('heading', { level: 1 }).textContent).toMatch(/· 2 open$/);
@@ -63,7 +63,7 @@ describe('Live orders', () => {
       [`POST ${B}/kitchen/prep-bump`]: () => board([], { prep: { defaultPrepMin: 25, bumpMin: 5, shownMin: 30 } }),
       [`POST ${B}/kitchen/pause`]: () => board([], { pausedUntil: inMin(30) }),
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<LiveOrdersScreen />);
     expect(await screen.findByText(/No open orders right now/)).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Busy · +5 min' }));
@@ -105,7 +105,7 @@ describe('Menu builder', () => {
       [`GET ${B}/modifier-groups`]: () => ({ items: [group] }),
       [`POST ${B}/menu-items/i1/sold-out`]: () => item('i1', 'Pho dac biet', { soldOut: true }),
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<MenuBuilderScreen />);
     expect(await screen.findByText('Pho dac biet')).toBeTruthy();
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Dinner menu · live');
@@ -128,7 +128,7 @@ describe('Menu builder', () => {
         return item('i9', 'Com tam');
       },
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<MenuBuilderScreen />);
     await user.click(await screen.findByRole('button', { name: 'Add item to Drinks' }));
     expect(screen.getByRole('heading', { name: 'New item' })).toBeTruthy();
@@ -168,7 +168,7 @@ describe('Modifiers & combos', () => {
       [`GET ${B}/kitchen/promos`]: () => ({ items: [{ promo: 'points_3x', enabled: true }, { promo: 'first_order_5', enabled: false }] }),
       [`PUT ${B}/kitchen/promos/first_order_5`]: () => ({ promo: 'first_order_5', enabled: true }),
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<CombosScreen />);
     expect(await screen.findByText('Pick exactly 1 · required')).toBeTruthy();
     expect(screen.getByText('Used by 3 items')).toBeTruthy();
@@ -182,7 +182,7 @@ describe('Modifiers & combos', () => {
 
   it('validates a new modifier group', async () => {
     mockFetch({ [`GET ${B}/modifier-groups`]: () => ({ items: [] }), [`GET ${B}/combos`]: () => ({ items: [] }), [`GET ${B}/kitchen/promos`]: () => ({ items: [] }) });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<CombosScreen />);
     await user.click((await screen.findAllByRole('button', { name: 'New group' }))[0]!);
     const dialog = screen.getByRole('dialog');
@@ -213,7 +213,7 @@ describe('Hours, prep & capacity', () => {
   });
   it('shows hours, schedules, fulfilment and food safety; saves prep on change', async () => {
     const calls = mockFetch({ [`GET ${B}/kitchen/setup`]: () => setup(), [`PUT ${B}/kitchen/prep`]: () => setup() });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<HoursScreen />);
     expect(await screen.findByText('Closed')).toBeTruthy();
     expect(screen.getAllByText('11:00 am – 9:00 pm')).toHaveLength(6);
@@ -229,7 +229,7 @@ describe('Hours, prep & capacity', () => {
 
   it('validates opening hours before saving', async () => {
     mockFetch({ [`GET ${B}/kitchen/setup`]: () => setup() });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<HoursScreen />);
     await user.click(await screen.findByRole('button', { name: 'Edit hours' }));
     const dialog = screen.getByRole('dialog');

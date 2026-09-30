@@ -32,7 +32,7 @@ describe('Quote requests + composer', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it('opens the draft, shows inline errors + summary on send, then sends the fixed quote', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<QuoteRequests />);
     expect(await screen.findByText('Quote requests · 1')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Continue draft' }));
@@ -69,7 +69,7 @@ describe('Quote requests + composer', () => {
       'GET /api/v1/merchants/m1/quote-requests': () => ({ items: [request(draftQuote)] }),
       'POST /api/v1/merchants/m1/quote-requests/r1/quotes': () => { throw { status: 422, body: { errors: [{ field: 'lines[0].unitCents', rule: 'positive_unless_discount', message: 'Enter an amount.' }] } }; },
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<QuoteRequests />);
     await user.click(await screen.findByRole('button', { name: 'Continue draft' }));
     await user.click(screen.getByRole('button', { name: /^Send quote/ }));

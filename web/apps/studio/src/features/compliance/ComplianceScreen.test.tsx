@@ -76,7 +76,7 @@ describe('Stripe & compliance', () => {
       },
       'POST /api/v1/merchants/m1/compliance/verifications/wcb/renewal': () => { uploaded = true; return { ...data().documents[1], status: 'submitted', due: false, pausesAt: null }; },
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { container } = renderWithProviders(<ComplianceScreen />);
     await screen.findByText(/^Expired Aug 31/);
     const input = container.querySelector('input[type=file]') as HTMLInputElement;
@@ -101,7 +101,7 @@ describe('Stripe & compliance', () => {
       'GET /api/v1/merchants/m1/compliance': () => data({ obligations: { currentVersion: '2.4', acceptedVersion: '2.3', acceptedAt: '2026-03-14T17:00:00Z', upToDate: false } }),
       'POST /api/v1/merchants/m1/compliance/obligations': () => ({ currentVersion: '2.4', acceptedVersion: '2.4', acceptedAt: new Date().toISOString(), upToDate: true }),
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<ComplianceScreen />);
     await user.click(await screen.findByRole('button', { name: 'Accept v2.4' }));
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Accept v2.4' })).toBeNull());

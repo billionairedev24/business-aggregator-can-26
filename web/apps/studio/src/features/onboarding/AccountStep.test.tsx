@@ -8,6 +8,9 @@ import { mockFetch, renderWithProviders } from '../../test/render';
 import { AccountStep } from './AccountStep';
 import { OnboardingLayout } from './OnboardingLayout';
 
+/** user-event with no timer between keystrokes: typing costs one pass, not a macrotask per character. */
+const user = () => userEvent.setup({ delay: null });
+
 beforeEach(() => vi.unstubAllGlobals());
 
 const SESSION = { user: { id: 'U', firstName: 'Ravi', lastName: 'Sandhu', email: 'ravi@prairiewrench.ca', phone: '+1 (403) 555-0192', initials: 'RS', locale: 'en-CA', memberSince: '2026-05-02' }, acr: 'mfa' };
@@ -23,7 +26,7 @@ describe('AccountStep', () => {
     renderWithProviders(<Harness />);
     expect(screen.getByRole('heading', { name: 'Set up your business.' })).toBeTruthy();
     expect((screen.getByRole('button', { name: /Continue as/ }) as HTMLButtonElement).disabled).toBe(true);
-    await userEvent.click(screen.getByRole('radio', { name: /Food · kitchen/ }));
+    await user().click(screen.getByRole('radio', { name: /Food · kitchen/ }));
     expect(onTypeChange).toHaveBeenCalledWith('kitchen');
     expect(screen.getByText('Kitchen · food')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Change' })).toBeTruthy();
@@ -40,12 +43,12 @@ describe('AccountStep', () => {
     renderWithProviders(<AccountStep type="provider" onboarding={undefined} isNew={false} onTypeChange={() => {}} onDone={onDone} />);
     expect(await screen.findByText(/ravi@prairiewrench.ca/)).toBeTruthy();
     expect(screen.getByText('Security step-up.')).toBeTruthy();
-    await userEvent.type(screen.getByRole('textbox', { name: /Work email/ }), 'nope');
-    await userEvent.click(screen.getByRole('button', { name: 'Continue as Ravi → business details' }));
+    await user().type(screen.getByRole('textbox', { name: /Work email/ }), 'nope');
+    await user().click(screen.getByRole('button', { name: 'Continue as Ravi → business details' }));
     expect(screen.getByText("That doesn't look like an email address.")).toBeTruthy();
-    await userEvent.clear(screen.getByRole('textbox', { name: /Work email/ }));
-    await userEvent.type(screen.getByRole('textbox', { name: /Work email/ }), 'ravi@prairiewrench.ca');
-    await userEvent.click(screen.getByRole('button', { name: 'Continue as Ravi → business details' }));
+    await user().clear(screen.getByRole('textbox', { name: /Work email/ }));
+    await user().type(screen.getByRole('textbox', { name: /Work email/ }), 'ravi@prairiewrench.ca');
+    await user().click(screen.getByRole('button', { name: 'Continue as Ravi → business details' }));
     await waitFor(() => expect(onDone).toHaveBeenCalledWith('01J9ZD3V00000000000000TST1', 'provider'));
     expect(calls.find(c => c.method === 'POST')!.body).toEqual({ type: 'provider', province: 'AB', workEmail: 'ravi@prairiewrench.ca' });
   });
@@ -54,7 +57,7 @@ describe('AccountStep', () => {
     mockFetch(c => (c.url === '/bff/session' ? { body: SESSION } : undefined));
     renderWithProviders(<AccountStep type="provider" onboarding={undefined} isNew onTypeChange={() => {}} onDone={() => {}} />);
     expect(screen.getByRole('option', { name: 'Ontario (waitlist)' })).toBeTruthy();
-    await userEvent.click(screen.getByRole('button', { name: /Continue as/ }));
+    await user().click(screen.getByRole('button', { name: /Continue as/ }));
     expect(screen.getByText('You need to accept the Business Terms.')).toBeTruthy();
     expect((screen.getByRole('link', { name: 'Business Terms' }) as HTMLAnchorElement).target).toBe('_blank');
   });
