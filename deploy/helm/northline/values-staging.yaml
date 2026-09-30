@@ -53,6 +53,9 @@ apps:
       COMMERCE_PROVIDER: oauth
       # S-36 POS menu import: Square (the S-35 app), Clover (CLOVER_CLIENT_ID) and Toast (TOAST_CLIENT_ID, partner)
       POS_PROVIDER: oauth
+      # S-129 AI: OpenRouter (`fake` is refused here). Until OPENROUTER_API_KEY exists AI features answer 503; then set
+      # secretEnv.OPENROUTER_API_KEY: true and add it to externalSecrets.optionalKeys (docs/runbooks/ai.md).
+      AI_PROVIDER: openrouter
       EMAIL_FROM: "Northline <no-reply@staging.northline.ca>"
     autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 4 }
     secretEnv:

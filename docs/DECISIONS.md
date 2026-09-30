@@ -2339,3 +2339,70 @@ Built on S-49 (branch `web/s-50-product-detail` from `web/s-49-shop-landing`).
   - Prefer models and providers that don't retain or train on prompts, using OpenRouter's data-policy and provider-routing settings.
   - Disclose the processor in the Privacy Policy and in the PIPEDA / Law 25 assessment (SEC stories), together with the other processors.
 - **Pending:** an OpenRouter API key per environment. Until it exists, `northline.ai.provider=fake` locally, and AI features answer `503 ai_unavailable` in the cloud.
+
+## 2026-09-30 — S-129 AI platform: LlmClient port, OpenRouter, fake, budgets, metrics and evals
+
+Follows billionairedev24/samop-inv-ship-26 (`ai/LlmClient`, `adapter/openrouter`, `adapter/fake`, `DefaultAiService`,
+`ObservabilityProxies`, `MockOpenRouter`, `AiEval`/`SimulatedModel`/`AiEvalLiveTest`), translated to Northline's
+conventions, under the conditions of "AI provider and data residency" above.
+
+- **Module `ca.northline.ai`, a platform with no business dependency.** `ai.api` holds the port (`LlmClient`,
+  OpenAI chat-completions shape with tool calling, `complete` / `stream`, `configured()`, `model()`), `AiCompletions`
+  (what features call), the tool SPI `AssistantTool`, `Prompts`, `AiFeature` and the errors. It depends only on
+  `shared` (security). Features live in the module that owns their data and depend on `ai.api` alone (acceptance:
+  "every AI feature depends only on the port"); the other direction would make cycles (payments → ai → merchants →
+  payments). Tools are contributed the same way `NavBadgeContributor` badges are: beans in each module, over that
+  module's own use cases.
+- **Spring AI: not inside the adapter.** Spring AI 2.0 (GA 2026-06-12) supports Boot 4.0/4.1, and its OpenAI model now
+  wraps the OpenAI Java SDK. The OpenRouter adapter stays a thin RestClient over `POST /chat/completions`, as in samop:
+  OpenRouter's `usage.cost` and `provider` routing fields (`data_collection`, `zdr`) are first-class here, the tool loop
+  must stay ours (tools run as the caller with our permission checks, writes stop for confirmation; Spring AI executes
+  tools itself unless told not to), and streaming needs no reactive stack. Both sit behind the same port, so switching
+  later is one adapter. MCP (S-127) uses Spring AI's MCP server separately. `@HttpExchange` (code standards) is not
+  used: a streamed body can't be returned through the proxy; one `RestClient` serves both calls.
+- **Provider selection** `northline.ai.provider` = `fake` (default) | `openrouter`; staging/prod refuse `fake` at
+  start-up (`AiConfiguration`, same pattern as tax/calendar/POS) and require `AI_PROVIDER`. `OPENROUTER_API_KEY` is
+  **not** required: until a key exists every AI call answers 503 `ai_unavailable` (the pending item of the residency
+  decision); `GET /api/v1/ai/status` lets the apps hide AI actions.
+- **Models (researched 2026-09-30, OpenRouter prices):** standard tier `google/gemini-3.7-flash` ($0.75 / $3.75 per M
+  in/out), light tier `google/gemini-3.5-flash-lite` ($0.30 / $2.50). Each `AiFeature` has a tier; any feature can be
+  overridden with `OPENROUTER_MODEL_<FEATURE>`. Cheaper than Claude Haiku 4.5 ($1 / $5) with tool calling and good
+  French; to be confirmed by the live eval once a key exists.
+- **Data policy on every request:** `provider: {data_collection: "deny", zdr: true}` (configurable, default on), usage
+  accounting on, attribution headers `HTTP-Referer` (Studio origin) and `X-Title: Northline`. Account settings
+  (logging off, ZDR guardrail) are in docs/runbooks/ai.md.
+- **Redaction on the port:** the only `LlmClient` bean is `ObservedLlmClient` around the chosen adapter. It masks card
+  numbers and SINs (Luhn), bank accounts (cheque format, "account …", IBAN), emails, phones and API keys in every
+  message, then records an observation `northline.ai.completion` (span + timer; tags provider, model, feature, outcome,
+  streamed) and counters `northline.ai.tokens`, `northline.ai.cost` (USD) and the per-call summary
+  `northline.ai.call.cost`. The feature reaches the port through a `ScopedValue`, not a parameter. samop used a
+  BeanPostProcessor; a plain wrapper in the configuration is enough here since there is one bean.
+- **Budgets:** per person requests/minute (20) and tokens/day (200k), per business tokens/day (1M), America/Edmonton
+  days. Valkey keys `nl:ai:{p:<user>}:rpm:<minute>`, `…:tok:<day>`, `nl:ai:{m:<merchant>}:tok:<day>`; memory under
+  local/test (like the DPoP replay cache). Checked before a request, charged after; Valkey down = 503 (fail closed: AI
+  costs money). Over budget = 429 `ai_rate_limited` with `Retry-After` and `limit`. A person is a user id; a signed-out
+  visitor (S-132) will be a hashed key.
+- **Errors:** `AiUnavailable` → 503 `ai_unavailable`, `AiRateLimited` → 429 `ai_rate_limited` (ProblemDetail with
+  `code`, global `AiWebAdvice`). Provider 429 → 429 `limit=provider`; 402/404/5xx, timeouts and broken streams → 503.
+- **Tool loop:** at most `AI_MAX_TOOL_ROUNDS` (4) tool rounds, the last round offers no tools. Tools are offered only
+  to roles that hold the tool's permission and `MerchantAccess.require` runs again before every run (fresh membership,
+  `acr=mfa`). Domain errors and refusals go back to the model as `{error, detail}`. A `write()` tool is never run by
+  the loop: it returns a `PendingAction` for the UI to confirm (S-130). Tool results are cut at 12k characters.
+- **Schema (V125):** schema `ai`, table `ai.usage` — one row per request (feature, person, business, provider, model,
+  prompt version, calls, tokens, cost in micro-USD, latency, tool runs, outcome). No content. `ai` added to
+  `SchemaOwnershipTests`.
+- **Prompts** are versioned files `ai/prompts/<name>.v<N>.md`; the highest version is served and `name@vN` is recorded.
+- **Evals:** `ca.northline.ai.eval` — `LabelledSet` (JSON sets in `src/test/resources/ai-eval/`), `SimulatedModel`
+  (replays each case's `mock` through the mock OpenRouter and the real adapter), `EvalReport` (pass rate,
+  precision/recall per label, tokens, cost; `build/ai-eval/*.md|json`), `EvalSuites` (every feature registers its
+  suite), `AiEvalLiveTest` (only with `OPENROUTER_API_KEY`; each suite's gate, 0.8 by default). S-129's own set,
+  `platform.json`, checks tool choice and grounding with stub tools (10 cases, en/fr, one "no tool covers it").
+- **Config everywhere (S-23/S-32 pattern):** `server/.env.example`, runbooks README/local/dev/staging/prod,
+  secrets.md, infrastructure.md, Helm (`secretNames.OPENROUTER_API_KEY`, `secretEnv` false, `AI_PROVIDER: openrouter`
+  in staging/prod values), Terraform `secret_env` in the AWS, Google Cloud and Azure stacks (`openrouter-api-key`),
+  new runbook `docs/runbooks/ai.md`, Grafana dashboard `deploy/observability/dashboards/northline-ai.json` (S-111 may
+  move it next to its own dashboards).
+- **Not done / never exercised:** no call has ever reached openrouter.ai (blocked from the build sandbox; the adapter
+  is tested against a stand-in built from OpenRouter's documented API); the live eval has never run; the dashboard
+  JSON was not loaded into a Grafana; the Valkey budget store is tested against a Valkey container, not a managed one.
+  The Privacy Policy / PIA disclosure of OpenRouter is for the SEC stories.

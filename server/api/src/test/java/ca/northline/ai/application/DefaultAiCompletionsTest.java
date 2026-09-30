@@ -273,7 +273,7 @@ class DefaultAiCompletionsTest {
                                 .withKey("sk-or-v1-FAKE-test"),
                         tools.jackson.databind.json.JsonMapper.builder().build()),
                 AiProperties.Provider.OPENROUTER,
-                3) {};
+                3);
         var budgets = new ca.northline.ai.adapters.budget.InMemoryAiBudgets(
                 new AiProperties.Budget(1_000, 1_000_000, 20), java.time.Clock.systemUTC());
         var completions = new DefaultAiCompletions(

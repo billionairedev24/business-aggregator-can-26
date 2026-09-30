@@ -130,6 +130,7 @@ externalSecrets:
     LIGHTSPEED_CLIENT_SECRET: lightspeed-client-secret                # S-35 catalogue sync (api); also signs webhooks
     CLOVER_CLIENT_SECRET: clover-client-secret                        # S-36 POS menu import (api)
     TOAST_CLIENT_SECRET: toast-client-secret                          # S-36 POS menu import (api), Toast partner credentials
+    OPENROUTER_API_KEY: openrouter-api-key                            # S-129 AI platform (api)
   # Optional variables (secretEnv: false) to map as well. List only those that hold a value in the secrets manager:
   # one empty or missing remote secret fails the app's whole ExternalSecret. Required variables are always mapped.
   optionalKeys: [REDIS_PASSWORD, KAFKA_SASL_JAAS_CONFIG, ES_PASSWORD]
@@ -368,6 +369,7 @@ apps:
       LIGHTSPEED_CLIENT_SECRET: false          # S-35: with LIGHTSPEED_CLIENT_ID (configEnv)
       CLOVER_CLIENT_SECRET: false              # S-36: with CLOVER_CLIENT_ID (configEnv); empty = Clover not offered
       TOAST_CLIENT_SECRET: false               # S-36: with TOAST_CLIENT_ID (configEnv), once Toast admits Northline as a partner
+      OPENROUTER_API_KEY: false                # S-129: empty = every AI feature answers 503; add to optionalKeys once the key exists
     runAsUser: 65532
     probes:
       startup: { path: /actuator/health/liveness, periodSeconds: 5, failureThreshold: 60 }

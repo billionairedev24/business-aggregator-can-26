@@ -197,6 +197,9 @@ Notes:
   (`server/api/src/main/resources/commerce-fixtures/`) as drafts; stock moves by the hour so "Sync now" shows updates.
   No webhooks (no public HTTPS); the hourly read does the work. Real platforms from a laptop need a public HTTPS
   `API_PUBLIC_URL` (a tunnel) for their redirect URL. [commerce-sync.md](commerce-sync.md)
+- **AI (S-129):** `AI_PROVIDER=fake` (the default) answers every AI feature offline and deterministically ("(fake
+  model) …", JSON drafts from each prompt's example). To try a real model: `AI_PROVIDER=openrouter` and your own
+  `OPENROUTER_API_KEY` in `server/.env`. Budgets are in memory under `local`. [ai.md](ai.md)
 - **POS menu import (S-36):** `POS_PROVIDER=local` (the default) fakes Square, Clover and Toast: Kitchen › Menu › Import
   › From your POS connects at once (Toast: any GUID but the nil one) and previews the fixture menu
   (`server/api/src/main/resources/pos-fixtures/menu.json`, Pho Dau Bo). [pos-menu-import.md](pos-menu-import.md)

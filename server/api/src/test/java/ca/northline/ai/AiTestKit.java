@@ -10,6 +10,7 @@ import ca.northline.ai.application.AiUsageLog;
 import ca.northline.ai.application.DefaultAiCompletions;
 import ca.northline.ai.application.ObservedLlmClient;
 import ca.northline.shared.security.MerchantAccess;
+import io.micrometer.core.instrument.observation.DefaultMeterObservationHandler;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.observation.ObservationRegistry;
 import java.time.Clock;
@@ -36,7 +37,9 @@ public final class AiTestKit {
     public final DefaultAiCompletions completions;
 
     public AiTestKit(LlmClient adapter, AiProperties.Provider provider, int maxToolRounds) {
-        this.client = new ObservedLlmClient(adapter, ObservationRegistry.NOOP, meters);
+        var observations = ObservationRegistry.create();
+        observations.observationConfig().observationHandler(new DefaultMeterObservationHandler(meters));
+        this.client = new ObservedLlmClient(adapter, observations, meters);
         this.props = properties(provider, maxToolRounds, "");
         this.budgets =
                 new InMemoryAiBudgets(new AiProperties.Budget(10_000_000, 10_000_000, 10_000), Clock.systemUTC());
