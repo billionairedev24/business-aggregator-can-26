@@ -97,7 +97,7 @@ describe('quote request (design 06 book, quote mode)', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Describe the job, get up to 3 quotes' })).toBeInTheDocument();
     const next = screen.getByRole('button', { name: 'Continue' });
     expect(next).toBeDisabled();
-    await u.type(screen.getByLabelText(/Describe the job/), 'Battery light on, car died twice.');
+    await u.type(screen.getByLabelText(/^Describe the job ·/), 'Battery light on, car died twice.');
     await u.selectOptions(screen.getByLabelText('Year'), '2018');
     await u.selectOptions(screen.getByLabelText('Make'), 'Honda');
     await u.type(screen.getByLabelText('Model'), 'Civic');
