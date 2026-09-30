@@ -2400,3 +2400,53 @@ Built on S-49 (branch `web/s-50-product-detail` from `web/s-49-shop-landing`).
   - `WebhookPayloadsTest.orderPlaced_theShopsLinesWithoutTheCustomer`.
   - vitest `features/cart/cart.test.tsx`: design copy, guest banner and sign-in, multi-shop groups, quantity and
     remove, delivery windows, tax lines, step-up dialog, fake card, errors, French.
+
+## 2026-09-30 — S-52 Order confirmed and tracking (design 06 confirmed)
+
+- **Endpoints (orders, `/api/v1/me/orders`, single-factor sessions allowed):**
+  - `GET /{orderId}` returns the order (ref, state, totals), its delivery (the pooled run's label, window and
+    households, or the direct courier's estimated time), one entry per shop (name, items, packed) and the timeline.
+    It is `Cache-Control: no-store`. Anyone other than the order's customer gets 404, not 403, so order ids can't be
+    probed.
+  - `GET /{orderId}/events` is `text/event-stream`: an `order` event with the same JSON at once and again on every
+    change. It sends a keep-alive comment every 25 s and ends after 30 minutes (the browser's EventSource
+    reconnects). The ownership check runs before the stream opens.
+- **The timeline follows the order's state**, since there are no courier or fulfilment events yet:
+  - Paid → Shops packing (`placed` / `accepted` / `packing`) → Courier picks up (`ready`) → Delivered (`picked_up`
+    is current, `delivered` / `confirmed` is done).
+  - A cancelled or refunded order shows only Paid plus the state sentence.
+  - "N of M packed" counts the shops whose lines have all left `pending`, which is the Studio's "Mark packed"
+    (`POST /api/v1/merchants/{m}/orders/{o}/pack`).
+  - The design's copy ("Shops packing · 1 of 3 packed", "Courier picks up · scan at each shop", "Delivered · photo
+    proof · you confirm, shops paid") is used as it stands, even though courier scans and photo proof don't exist
+    yet. That is the flow the design describes, and the steps advance when the order's state does.
+- **Live updates:** `OrderTrackingEvents` turns every event that changes what the customer sees (`OrderPlaced`,
+  `OrderPacked`, kitchen accepted/ready, food handed off) into a "changed" on the new `TrackingBus`.
+  - Under `local` / `test` the bus is in memory.
+  - Everywhere else it is Redis pub/sub (channel `nl:order:<id>`, message = the order id, nothing stored; CLAUDE.md
+    names Redis for order tracking). Every replica wakes its own open streams, and each stream re-reads the order,
+    so a message carries no data. No new configuration is needed (the existing `REDIS_*` variables).
+  - The page also refetches every 30 s, in case a stream is dropped by a proxy.
+- **Screen (`/orders/$orderId`):** checkout lands here after placing.
+  - The title comes from the delivery: "Order placed. Arriving tonight 6–9 pm." / "… by about 7:10 pm". It then
+    becomes "On the way…" and "Delivered.".
+  - The subtitle is "{ref} · {total} · N shops packing now…".
+  - The run card ("Pooled run R-701 · leaves 6:00 pm", households) and View orders / Back to home.
+  - Signed out: "Sign in to see your order." with Sign in (next = this page). An unknown order: "We couldn't find
+    this order.". en + fr-CA.
+- **Not done / gaps:**
+  - The design's map is a placeholder panel (no courier positions exist).
+  - "Receipt sent to …" and points earned are not shown (no receipt email, no loyalty ledger).
+  - "View orders" links to `/account/orders` (S-58).
+  - SSE through the consumer-bff (Spring Cloud Gateway MVC relay) and the TanStack Start server hasn't been run end
+    to end here. The api's stream is tested with MockMvc. If a proxy buffers it, the 30-second refetch still keeps
+    the page current.
+- **Schema:** none (reads `orders.orders` / `order_lines` and `orders.delivery_windows` through `DeliveryRuns`).
+- **Tests:**
+  - `OrderTrackingApiTest` (own market "Trackville"):
+    - the view and its timeline;
+    - only the customer sees it (401 / 404 for others, stream included);
+    - the timeline follows the state through delivered;
+    - the stream sends the order at once and again when a shop packs.
+  - vitest `features/orders/orders.test.tsx`: design copy for pooled and direct, packed count, live update from the
+    stream, delivered, sign-in prompt, not found, French.
