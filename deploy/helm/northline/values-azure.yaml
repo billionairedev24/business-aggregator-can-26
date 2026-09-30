@@ -14,3 +14,10 @@
 
 networkPolicy:
   enabled: true                   # Cilium (network_policy = cilium in the AKS module) enforces NetworkPolicy
+
+apps:
+  api:
+    env:
+      # S-13 (docs/runbooks/email.md): Azure Communication Services Email with Entra ID (workload identity). Also set
+      # EMAIL_ENDPOINT=https://<resource>.canada.communication.azure.com — the api refuses to start without it.
+      EMAIL_PROVIDER: azure

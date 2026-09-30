@@ -4,6 +4,7 @@ global:
 
 urls:
   auth: https://auth.northline.ca
+  api: https://api.northline.ca
   studio: https://business.northline.ca
   consumer: https://northline.ca
   console: https://console.northline.ca
@@ -14,6 +15,9 @@ ingress:
 
 apps:
   api:
+    env:
+      # S-13: EMAIL_PROVIDER comes from the cloud overlay (ses / sendgrid / azure); the sender is per environment.
+      EMAIL_FROM: "Northline <no-reply@northline.ca>"
     autoscaling: { enabled: true, minReplicas: 3, maxReplicas: 10 }
     resources:
       requests: { cpu: "1", memory: 2Gi }
@@ -21,6 +25,7 @@ apps:
     secretEnv:
       STRIPE_SECRET_KEY: true
       STRIPE_PUBLISHABLE_KEY: true
+      EMAIL_UNSUBSCRIBE_KEY: true   # S-13: required under staging/prod
   auth:
     autoscaling: { enabled: true, minReplicas: 3, maxReplicas: 6 }
     resources:

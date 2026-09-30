@@ -18,7 +18,9 @@ ARG NODE_RUNTIME_IMAGE=gcr.io/distroless/nodejs22-debian13:nonroot
 # ---- dependencies (cached on the lockfile) ------------------------------------------------------------------------
 # Behind a TLS-intercepting proxy: pass HTTPS_PROXY as a build argument and the proxy's CA as the build secret
 # `extra_ca` (docker build --secret id=extra_ca,src=ca.pem); neither ends up in an image.
-FROM ${NODE_IMAGE} AS deps
+# Build stages run on the builder's own platform (the output is platform-independent JavaScript), so multi-platform
+# images (--platform linux/amd64,linux/arm64) need no emulation.
+FROM --platform=$BUILDPLATFORM ${NODE_IMAGE} AS deps
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH CI=true
 RUN --mount=type=secret,id=extra_ca,required=false \
     if [ -s /run/secrets/extra_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/extra_ca; fi \

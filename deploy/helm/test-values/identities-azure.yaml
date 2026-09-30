@@ -1,0 +1,11 @@
+# Shape of the Terraform workload identity output on Azure (dummy values; deploy/helm/validate.sh only).
+workloadIdentities:
+  api: { service_account_annotations: { azure.workload.identity/client-id: "00000000-0000-0000-0000-000000000001" }, pod_labels: { azure.workload.identity/use: "true" } }
+  auth: { service_account_annotations: { azure.workload.identity/client-id: "00000000-0000-0000-0000-000000000002" }, pod_labels: { azure.workload.identity/use: "true" } }
+  bff: { service_account_annotations: { azure.workload.identity/client-id: "00000000-0000-0000-0000-000000000003" }, pod_labels: { azure.workload.identity/use: "true" } }
+  worker: { service_account_annotations: { azure.workload.identity/client-id: "00000000-0000-0000-0000-000000000004" }, pod_labels: { azure.workload.identity/use: "true" } }
+configEnv:
+  DB_URL: jdbc:postgresql://northline-dev.postgres.database.azure.com:5432/northline?sslmode=require
+  DB_USER: northline_app
+  KMS_PROVIDER: azure
+  STORAGE_PROVIDER: azure

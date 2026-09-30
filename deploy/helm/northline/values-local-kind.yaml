@@ -13,6 +13,7 @@ global:
 
 urls:
   auth: http://localhost:19000
+  api: http://localhost:18081
   studio: http://localhost:18080
   consumer: http://localhost:13000
   console: http://localhost:13200

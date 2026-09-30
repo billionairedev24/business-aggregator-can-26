@@ -28,3 +28,10 @@ spring:
 
 networkPolicy:
   enabled: true                   # Dataplane V2 enforces NetworkPolicy
+
+apps:
+  api:
+    env:
+      # S-13 (docs/runbooks/email.md): Google Cloud has no first-party email service; SendGrid with EMAIL_API_KEY
+      # (secret) — or EMAIL_PROVIDER=smtp with any relay.
+      EMAIL_PROVIDER: sendgrid

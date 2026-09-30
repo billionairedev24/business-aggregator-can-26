@@ -78,6 +78,7 @@ their own variables. (dict "root" $ "name" "<app>" "app" $appValues)
 {{- $_ := set $env "CONSUMER_ORIGIN" $v.urls.consumer -}}
 {{- $_ := set $env "CONSOLE_ORIGIN" $v.urls.console -}}
 {{- $_ := set $env "WEBAUTHN_RP_ID" $v.urls.webauthnRpId -}}
+{{- $_ := set $env "API_PUBLIC_URL" $v.urls.api -}}
 {{- $_ := set $env "SERVER_PORT" (toString .app.port) -}}
 {{- $env = merge (deepCopy (default (dict) .app.env)) (deepCopy (default (dict) $v.env)) $env -}}
 {{- else if eq .app.type "static" -}}

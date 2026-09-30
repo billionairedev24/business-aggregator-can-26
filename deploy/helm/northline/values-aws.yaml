@@ -18,3 +18,10 @@ env:
 networkPolicy:
   # VPC CNI enforces NetworkPolicy when its network policy agent is enabled (enableNetworkPolicy=true).
   enabled: true
+
+apps:
+  api:
+    env:
+      # S-13 (docs/runbooks/email.md): Amazon SES API v2 in the Canadian region, credentials from workload identity.
+      EMAIL_PROVIDER: ses
+      EMAIL_REGION: ca-central-1

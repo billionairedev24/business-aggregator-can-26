@@ -6,6 +6,7 @@ global:
 
 urls:
   auth: https://auth.dev.northline.ca
+  api: https://api.dev.northline.ca
   studio: https://business.dev.northline.ca
   consumer: https://dev.northline.ca
   console: https://console.dev.northline.ca

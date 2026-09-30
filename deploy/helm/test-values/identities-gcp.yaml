@@ -1,0 +1,11 @@
+# Shape of the Terraform workload identity output on Google Cloud (dummy values; deploy/helm/validate.sh only).
+workloadIdentities:
+  api: { service_account_annotations: { iam.gke.io/gcp-service-account: "northline-dev-api@example.iam.gserviceaccount.com" }, pod_labels: {} }
+  auth: { service_account_annotations: { iam.gke.io/gcp-service-account: "northline-dev-auth@example.iam.gserviceaccount.com" }, pod_labels: {} }
+  bff: { service_account_annotations: { iam.gke.io/gcp-service-account: "northline-dev-bff@example.iam.gserviceaccount.com" }, pod_labels: {} }
+  worker: { service_account_annotations: { iam.gke.io/gcp-service-account: "northline-dev-worker@example.iam.gserviceaccount.com" }, pod_labels: {} }
+configEnv:
+  DB_URL: jdbc:postgresql://10.10.0.3:5432/northline?sslmode=require
+  DB_USER: northline_app
+  KMS_PROVIDER: gcp
+  STORAGE_PROVIDER: gcs
