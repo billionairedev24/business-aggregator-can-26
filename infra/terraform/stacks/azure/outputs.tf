@@ -18,6 +18,8 @@ output "config_env" {
     KMS_PROVIDER          = module.kms.kms_provider
     KMS_KEY_ID            = coalesce(var.signing_key_ids.active, module.kms.key_refs["signing"])
     KMS_PUBLISHED_KEY_IDS = join(",", var.signing_key_ids.published)
+    # api, envelope encryption of stored secrets (S-32, docs/runbooks/calendar-sync.md).
+    KMS_ENCRYPTION_KEY_ID = module.kms.key_refs["tokens"]
 
     DB_URL                  = module.postgres.db_url
     DB_USER                 = module.postgres.db_user
