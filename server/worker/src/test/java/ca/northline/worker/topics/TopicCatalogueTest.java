@@ -3,11 +3,13 @@ package ca.northline.worker.topics;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import ca.northline.worker.events.PoisonEventException;
 import ca.northline.worker.topics.TopicCatalogue.TopicSpec;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -15,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
+import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.annotation.RetryableTopic;
 import org.springframework.kafka.retrytopic.TopicSuffixingStrategy;
@@ -88,7 +91,8 @@ class TopicCatalogueTest {
         scanner.addIncludeFilter(new AnnotationTypeFilter(Component.class));
         var seen = new HashSet<String>();
         for (var candidate : scanner.findCandidateComponents("ca.northline.worker")) {
-            for (var method : Class.forName(candidate.getBeanClassName()).getDeclaredMethods()) {
+            var type = Class.forName(candidate.getBeanClassName());
+            for (var method : type.getDeclaredMethods()) {
                 var listener = AnnotatedElementUtils.findMergedAnnotation(method, KafkaListener.class);
                 var retry = AnnotatedElementUtils.findMergedAnnotation(method, RetryableTopic.class);
                 if (listener == null) {
@@ -109,6 +113,17 @@ class TopicCatalogueTest {
                 assertThat(retry.topicSuffixingStrategy()).isEqualTo(TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE);
                 assertThat(retry.autoCreateTopics()).isEqualTo("false");
                 assertThat(delaysSeconds(retry)).containsExactlyElementsOf(consumer.retryDelaysSeconds());
+                // A fixed back-off makes Spring name a single retry topic without "-0": keep it exponential.
+                assertThat(retry.backOff().multiplier())
+                        .as("%s multiplier", method)
+                        .isGreaterThan(1);
+                // S-26: poison records skip the retries; every consumer answers for its own DLQ records.
+                assertThat(retry.exclude()).contains(PoisonEventException.class);
+                assertThat(retry.traversingCauses()).isEqualTo("true");
+                assertThat(Arrays.stream(type.getDeclaredMethods())
+                                .anyMatch(m -> m.isAnnotationPresent(DltHandler.class)))
+                        .as("%s needs a @DltHandler calling EventProcessing.deadLettered", type)
+                        .isTrue();
             }
         }
         assertThat(seen)

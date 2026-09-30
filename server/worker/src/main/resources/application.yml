@@ -29,11 +29,31 @@ spring:
     properties:
       sasl.mechanism: ${KAFKA_SASL_MECHANISM:PLAIN}
       sasl.jaas.config: ${KAFKA_SASL_JAAS_CONFIG:}
-server.port: ${SERVER_PORT:8084}         # health only (S-14): the worker serves no API
+    consumer:                           # S-26: records are parsed by ca.northline.worker.events.EnvelopeParser
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.ByteArrayDeserializer
+      auto-offset-reset: earliest       # a new consumer group starts at the oldest retained event
+      max-poll-records: 50
+    producer:                           # retry and .dlq records (the original key, value and headers)
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.ByteArraySerializer
+      acks: all
+      properties.enable.idempotence: true
+    listener:
+      ack-mode: record                  # commit after each record: a restart redelivers at most the one in hand
+      observation-enabled: true         # traceparent → the listener's trace (when tracing is on)
+  lifecycle.timeout-per-shutdown-phase: 30s
+server:
+  port: ${SERVER_PORT:8084}             # health + metrics only (S-14, S-26): the worker serves no API
+  shutdown: graceful
 management:
-  endpoints.web.exposure.include: health
+  endpoints.web.exposure.include: health,prometheus   # prometheus: consumer lag, DLQ and outcome counters (S-26)
   endpoint.health.probes.enabled: true  # /actuator/health/liveness and /readiness for Kubernetes
+logging.pattern.correlation: "[%X{consumer:-}|%X{eventType:-}|%X{eventId:-}|%X{traceId:-}] "   # S-26: every consumer log line names its event
 northline:
+  events:                               # S-26 consumer framework (docs/runbooks/events.md)
+    shutdown-timeout: ${EVENTS_SHUTDOWN_TIMEOUT:20s}      # finish the record in hand on SIGTERM
+    processed-retention: ${EVENTS_PROCESSED_RETENTION:60d} # dedupe claims kept (> DLQ retention 30 d)
   topics:                               # S-25 topic provisioning (TopicsCommand; deploy/kafka/topics.yaml)
     catalogue: ${KAFKA_TOPICS_CATALOGUE:}                 # blank = the packaged classpath:kafka/topics.yaml
     replication-factor: ${KAFKA_REPLICATION_FACTOR:}      # blank = the broker's default.replication.factor
