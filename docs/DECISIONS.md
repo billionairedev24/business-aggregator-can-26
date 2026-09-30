@@ -2330,6 +2330,16 @@ Built on S-49 (branch `web/s-50-product-detail` from `web/s-49-shop-landing`).
   stock limit, other sellers + Choose, out of stock, cart failure, French, empty state, skeleton).
 - **Not done:** Product JSON-LD and canonical URLs (S-63); per-variant images (the editor has none).
 
+## 2026-09-30 — AI provider and data residency (user decision)
+
+- **In-product AI uses OpenRouter**, behind an `LlmClient` port on the Spring AI stack, following billionairedev24/samop-inv-ship-26 (S-129–S-133). MCP (S-127) uses springdoc's OpenAPI-to-MCP tools on Spring AI's MCP server.
+- **OpenRouter as a US processor is accepted by the product owner (2026-09-30).** The reason: Northline's data at rest stays in Canada (Postgres, object storage, search, backups in Canadian regions), and only per-request prompts go to OpenRouter.
+- **Conditions that still apply to every AI feature:**
+  - Send the model the minimum the feature needs, redacted on the port. Never SINs, card or bank numbers, or another merchant's data.
+  - Prefer models and providers that don't retain or train on prompts, using OpenRouter's data-policy and provider-routing settings.
+  - Disclose the processor in the Privacy Policy and in the PIPEDA / Law 25 assessment (SEC stories), together with the other processors.
+- **Pending:** an OpenRouter API key per environment. Until it exists, `northline.ai.provider=fake` locally, and AI features answer `503 ai_unavailable` in the cloud.
+
 ## 2026-09-30 — S-51 Cart and checkout (server-side cart, step-up, tax, manual-capture payments, order.placed)
 
 - **Cart (orders, `/api/v1/cart`, open to guests):** `GET`, `POST /items` `{offerId, variantId?, qty}`,
