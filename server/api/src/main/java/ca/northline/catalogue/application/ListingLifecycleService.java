@@ -6,6 +6,7 @@ import ca.northline.catalogue.domain.ImageSource;
 import ca.northline.catalogue.domain.Listing;
 import ca.northline.catalogue.domain.ProductListing;
 import ca.northline.catalogue.domain.ServiceListing;
+import ca.northline.catalogue.domain.Vetting;
 import ca.northline.shared.NotFound;
 import java.time.Clock;
 import lombok.RequiredArgsConstructor;
@@ -76,8 +77,8 @@ class ListingLifecycleService implements ManageListing, VetListing {
     @Override
     public void vet(String listingId) {
         var found = listings.find(listingId);
-        if (found.isEmpty()) {
-            return; // deleted meanwhile
+        if (found.isEmpty() || found.get().getState().getVetting() != Vetting.PENDING) {
+            return; // deleted or withdrawn meanwhile, or already vetted (a retried event)
         }
         var listing = found.get();
         var category = profile(listing.categoryId());
@@ -98,11 +99,10 @@ class ListingLifecycleService implements ManageListing, VetListing {
         }
         var flags = AutomatedVetting.check(new AutomatedVetting.Subject(
                 listing.kind(), category, listing.priceCents(), licenceOk, duplicate, mainOnWhite));
-        listing.vetted(flags, clock.instant()).ifPresent(event -> {
-            save(listing);
-            events.publishEvent(event);
-            log.debug("Vetted listing {}: {}", listingId, flags.isEmpty() ? "approved" : flags);
-        });
+        var outcome = listing.vetted(flags, clock.instant());
+        save(listing);
+        outcome.ifPresent(events::publishEvent);
+        log.debug("Vetted listing {}: {}", listingId, flags.isEmpty() ? "approved" : flags);
     }
 
     private Listing load(String merchantId, String listingId) {

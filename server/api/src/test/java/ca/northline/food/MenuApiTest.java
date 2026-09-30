@@ -205,6 +205,10 @@ class MenuApiTest extends IntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
                         .contentType("image/png"));
+        // S-123: another kitchen can't read the photo through its own path, even knowing the item id
+        var stranger = fx.kitchen();
+        mvc.perform(get(stranger.base() + "/menu-items/{id}/photo", itemId).with(TestJwt.member(stranger.ownerId())))
+                .andExpect(status().isNotFound());
 
         var cook = fx.member(k, MerchantRole.COOK);
         mvc.perform(post(k.base() + "/menu-items/{id}/sold-out", itemId)

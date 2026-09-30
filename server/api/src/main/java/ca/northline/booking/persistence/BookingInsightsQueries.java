@@ -2,6 +2,7 @@ package ca.northline.booking.persistence;
 
 import ca.northline.booking.api.BookingCalendar;
 import ca.northline.booking.api.BookingInsights;
+import ca.northline.booking.api.ServiceSales;
 import ca.northline.shared.JdbcTimes;
 import ca.northline.shared.NavBadgeContributor;
 import java.time.Clock;
@@ -22,7 +23,7 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 @RequiredArgsConstructor
-class BookingInsightsQueries implements BookingCalendar, BookingInsights, NavBadgeContributor {
+class BookingInsightsQueries implements BookingCalendar, BookingInsights, ServiceSales, NavBadgeContributor {
 
     static final ZoneId ZONE = ZoneId.of("America/Edmonton");
 
@@ -176,5 +177,23 @@ class BookingInsightsQueries implements BookingCalendar, BookingInsights, NavBad
                 today.atStartOfDay(ZONE).toInstant(),
                 today.plusDays(1).atStartOfDay(ZONE).toInstant());
         return count == 0 ? Map.of() : Map.of("appointments", Long.toString(count));
+    }
+
+    @Override
+    public Map<String, Long> bookingsByService(String merchantId, Instant from, Instant to) {
+        return jdbc
+                .sql("""
+                        select service_id, count(*) as n from booking.bookings
+                         where merchant_id = :m and service_id is not null and state <> 'cancelled'
+                           and created_at >= :from and created_at < :to
+                         group by service_id
+                        """)
+                .param("m", merchantId)
+                .param("from", JdbcTimes.ts(from))
+                .param("to", JdbcTimes.ts(to))
+                .query((rs, _) -> Map.entry(rs.getString("service_id"), rs.getLong("n")))
+                .list()
+                .stream()
+                .collect(java.util.stream.Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 }

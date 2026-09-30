@@ -7,6 +7,7 @@ import ca.northline.catalogue.domain.ImageSource;
 import ca.northline.catalogue.domain.ItemCondition;
 import ca.northline.catalogue.domain.ListingKind;
 import ca.northline.catalogue.domain.ListingStatus;
+import ca.northline.catalogue.domain.MaterialField;
 import ca.northline.catalogue.domain.PricingMode;
 import ca.northline.catalogue.domain.ReturnsPolicy;
 import ca.northline.catalogue.domain.VariantTheme;
@@ -37,6 +38,7 @@ final class ListingResponses {
             Vetting vetting,
             ListingStatus status,
             List<VettingFlag> vettingFlags,
+            List<MaterialField> revetReasons,
             @Nullable Instant submittedAt,
             @Nullable String categoryId,
             @Nullable PricingMode pricingMode,
@@ -66,6 +68,7 @@ final class ListingResponses {
             Vetting vetting,
             ListingStatus status,
             List<VettingFlag> vettingFlags,
+            List<MaterialField> revetReasons,
             @Nullable Instant submittedAt,
             Instant updatedAt,
             // catalogue record
@@ -118,6 +121,7 @@ final class ListingResponses {
             Vetting vetting,
             ListingStatus status,
             List<VettingFlag> vettingFlags,
+            List<MaterialField> revetReasons,
             @Nullable Instant submittedAt,
             Instant updatedAt,
             String name,

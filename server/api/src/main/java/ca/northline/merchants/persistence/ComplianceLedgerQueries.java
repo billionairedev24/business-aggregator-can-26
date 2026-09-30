@@ -4,6 +4,7 @@ import static ca.northline.shared.JdbcTimes.instant;
 import static ca.northline.shared.JdbcTimes.requiredInstant;
 import static ca.northline.shared.JdbcTimes.ts;
 
+import ca.northline.merchants.api.CategorySource;
 import ca.northline.merchants.application.ComplianceLedgerStore;
 import ca.northline.merchants.domain.CheckType;
 import ca.northline.merchants.domain.ComplianceItem;
@@ -16,6 +17,7 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -47,6 +49,7 @@ class ComplianceLedgerQueries implements ComplianceLedgerStore {
             """;
 
     private final JdbcClient jdbc;
+    private final CategorySource categories;
     private final OnboardingTaxonomyQueries.SeedOrder seed = OnboardingTaxonomyQueries.SeedOrder.load();
 
     @Override
@@ -154,20 +157,26 @@ class ComplianceLedgerQueries implements ComplianceLedgerStore {
 
     /** The approved category the licences are for: regulated ones first, then in taxonomy order ("Mobile mechanic"). */
     private @Nullable String requiredFor(String merchantId) {
+        record Chosen(String categoryId, @Nullable String suggestedName) {}
         record Category(String id, @Nullable String name, boolean regulated) {}
-        return jdbc
-                .sql("""
-                        select mc.category_id, coalesce(c.name_i18n ->> 'en', mc.suggested_name) as name,
-                               c.regulated_registry is not null as regulated
-                          from merchants.merchant_categories mc
-                          left join catalogue.categories c on c.id = mc.category_id
-                         where mc.merchant_id = :m and mc.status = 'approved'
+        var chosen = jdbc.sql("""
+                        select category_id, suggested_name from merchants.merchant_categories
+                         where merchant_id = :m and status = 'approved'
                         """)
                 .param("m", merchantId)
-                .query((rs, _) ->
-                        new Category(rs.getString("category_id"), rs.getString("name"), rs.getBoolean("regulated")))
-                .list()
-                .stream()
+                .query((rs, _) -> new Chosen(rs.getString("category_id"), rs.getString("suggested_name")))
+                .list();
+        var taxonomy = categories.byIds(chosen.stream().map(Chosen::categoryId).toList()).stream()
+                .collect(Collectors.toMap(CategorySource.Category::id, c -> c));
+        return chosen.stream()
+                .map(c -> {
+                    var category = taxonomy.get(c.categoryId());
+                    var name = category == null ? null : category.names().get("en");
+                    return new Category(
+                            c.categoryId(),
+                            name != null ? name : c.suggestedName(),
+                            category != null && category.regulatedRegistry() != null);
+                })
                 .filter(c -> c.name() != null)
                 .sorted(Comparator.comparing((Category c) -> !c.regulated())
                         .thenComparingInt(c -> seed.ordinal(c.id())))

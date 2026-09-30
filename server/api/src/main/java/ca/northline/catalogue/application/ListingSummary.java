@@ -2,6 +2,7 @@ package ca.northline.catalogue.application;
 
 import ca.northline.catalogue.domain.ListingKind;
 import ca.northline.catalogue.domain.ListingStatus;
+import ca.northline.catalogue.domain.MaterialField;
 import ca.northline.catalogue.domain.PricingMode;
 import ca.northline.catalogue.domain.Vetting;
 import ca.northline.catalogue.domain.VettingFlag;
@@ -15,6 +16,7 @@ import org.jspecify.annotations.Nullable;
  * @param categoryName localised leaf name
  * @param pricingMode services only
  * @param stock products only (null for services)
+ * @param revetReasons S-39: why an approved listing is back in vetting (empty otherwise)
  */
 public record ListingSummary(
         String id,
@@ -27,6 +29,7 @@ public record ListingSummary(
         Vetting vetting,
         ListingStatus status,
         List<VettingFlag> flags,
+        List<MaterialField> revetReasons,
         @Nullable Instant submittedAt,
         @Nullable String categoryId,
         @Nullable String categoryName,
@@ -37,5 +40,6 @@ public record ListingSummary(
 
     public ListingSummary {
         flags = List.copyOf(flags);
+        revetReasons = List.copyOf(revetReasons);
     }
 }

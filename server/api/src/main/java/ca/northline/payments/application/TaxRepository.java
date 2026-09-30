@@ -118,7 +118,4 @@ public interface TaxRepository {
 
     /** Every row the recorded transactions of a quarter feed. */
     List<TotalsKey> totalsOf(String period);
-
-    /** The province the merchant operates in ({@code merchants.merchants.province}, read-only). */
-    Optional<Province> merchantProvince(String merchantId);
 }

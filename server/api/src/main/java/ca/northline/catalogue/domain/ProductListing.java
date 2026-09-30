@@ -1,6 +1,10 @@
 package ca.northline.catalogue.domain;
 
+import ca.northline.shared.DomainEvent;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -35,31 +39,68 @@ public final class ProductListing implements Listing {
         return new ProductListing(id, merchantId, details, record, ListingState.draft(at));
     }
 
-    /** Editor save. A pending listing goes back to draft. */
-    public void revise(ProductDetails newDetails, CatalogRecord newRecord, Instant at) {
+    /**
+     * Editor save. A pending listing goes back to draft; an approved one whose price, category or images changed goes
+     * back to vetting (S-39). @return the events to publish
+     */
+    public List<DomainEvent> revise(ProductDetails newDetails, CatalogRecord newRecord, String actorId, Instant at) {
+        var before = snapshot();
         details = newDetails;
         record = newRecord;
         state.edited(at);
-    }
-
-    /** Bulk quick update (price & stock template, integration sync): no content change, vetting unaffected. */
-    public void restock(long newPriceCents, int newStock, Instant at) {
-        details = details.withPriceAndStock(newPriceCents, newStock);
-        state.touched(at);
+        return revetIfMaterial(MaterialField.between(before, snapshot()), actorId, at);
     }
 
     /**
-     * Price and stock from a connected platform (S-35), which is their source of truth; content and vetting are
-     * unaffected. @return whether anything changed
+     * Bulk quick update (price &amp; stock template): a new price on an approved listing sends it back to vetting (S-39),
+     * stock alone doesn't. @return the events to publish
      */
-    public boolean syncStock(java.util.Map<String, ProductDetails.PriceStock> bySku, Instant at) {
+    public List<DomainEvent> restock(long newPriceCents, int newStock, String actorId, Instant at) {
+        var before = snapshot();
+        details = details.withPriceAndStock(newPriceCents, newStock);
+        state.touched(at);
+        return revetIfMaterial(MaterialField.between(before, snapshot()), actorId, at);
+    }
+
+    /**
+     * Price and stock from a connected platform (S-35), which is their source of truth. A price change on an approved
+     * listing still sends it back to vetting (S-39); stock alone doesn't. @return empty when nothing changed, else the
+     * events to publish (possibly none)
+     */
+    public Optional<List<DomainEvent>> syncStock(
+            java.util.Map<String, ProductDetails.PriceStock> bySku, String actorId, Instant at) {
         var synced = details.withSyncedStock(bySku);
         if (synced.equals(details)) {
-            return false;
+            return Optional.empty();
         }
+        var before = snapshot();
         details = synced;
         state.touched(at);
-        return true;
+        return Optional.of(revetIfMaterial(MaterialField.between(before, snapshot()), actorId, at));
+    }
+
+    /**
+     * What vetting and customers look at (S-39): every price (offer and variants by SKU), the category, and the images
+     * customers see, in order.
+     */
+    public Snapshot snapshot() {
+        var prices = new ArrayList<String>();
+        prices.add("offer:" + details.priceCents());
+        details.variants().forEach(v -> prices.add(v.sku() + ":" + v.priceCents()));
+        var images = new ArrayList<String>();
+        images.add(details.imageSource().code());
+        if (details.imageSource() == ImageSource.SHARED) {
+            images.addAll(catalogueImageIds());
+        }
+        images.addAll(details.ownImageIds());
+        return new Snapshot(prices, details.categoryId(), images);
+    }
+
+    public record Snapshot(List<String> prices, @Nullable String categoryId, List<String> images) {
+        public Snapshot {
+            prices = List.copyOf(prices);
+            images = List.copyOf(images);
+        }
     }
 
     public Completeness completeness(@Nullable CategoryProfile category) {

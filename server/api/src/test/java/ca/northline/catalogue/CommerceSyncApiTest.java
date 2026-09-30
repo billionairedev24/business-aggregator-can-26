@@ -184,6 +184,36 @@ class CommerceSyncApiTest extends CatalogueApiTest {
                 .isEqualTo(1);
     }
 
+    /** S-39: price follows the platform, and a new price on an approved listing still sends it back to vetting. */
+    @Test
+    void aSyncedPriceChangeOnAnApprovedListingIsReVetted() throws Exception {
+        var biz = seller(MerchantRole.OWNER);
+        var listingId = json(mvc.perform(postJson(
+                                        "/api/v1/merchants/{m}/products",
+                                        completeProduct("Motor oil 5W-30", "OIL-5W30-5L", 3999),
+                                        biz.merchantId())
+                                .with(TestJwt.member(biz.userId())))
+                        .andExpect(status().isCreated()))
+                .path("id")
+                .asString();
+        jdbc.sql("update catalogue.offers set vetting = 'approved', status = 'live' where id = ?")
+                .params(listingId)
+                .update();
+
+        connectShopify(biz);
+
+        assertThat(offerColumn(listingId, "price_cents")).isEqualTo("4799");
+        assertThat(offerColumn(listingId, "title")).isEqualTo("Motor oil 5W-30");
+        assertThat(captured.of(ca.northline.catalogue.api.ListingHidden.class, listingId))
+                .hasSize(1);
+        assertThat(captured.of(ca.northline.catalogue.api.ListingSubmitted.class, listingId))
+                .singleElement()
+                .satisfies(e -> assertThat(e.actorId()).isEqualTo("system:commerce"));
+        // the automated checks then run as for any submission (approved or flagged, depending on the category median)
+        await(() -> assertThat(offerColumn(listingId, "vetting_flags") + offerColumn(listingId, "vetting"))
+                .matches(".*(approved|price_outlier.*pending).*"));
+    }
+
     @Test
     void verifiedWebhookHidesARemovedProductOnceAndForgedOnesAreRefused() throws Exception {
         var biz = seller(MerchantRole.OWNER);
