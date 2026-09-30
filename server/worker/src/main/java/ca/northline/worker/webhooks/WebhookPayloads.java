@@ -101,9 +101,12 @@ public final class WebhookPayloads {
                     var out = lines.addObject();
                     out.put("lineId", line.path("lineId").asString());
                     out.put("offerId", line.path("offerId").asString());
-                    out.put("variantId", line.path("variantId").isNull() || line.path("variantId").isMissingNode()
-                            ? null
-                            : line.path("variantId").asString());
+                    out.put(
+                            "variantId",
+                            line.path("variantId").isNull()
+                                            || line.path("variantId").isMissingNode()
+                                    ? null
+                                    : line.path("variantId").asString());
                     out.put("qty", line.path("qty").asInt());
                     out.put("amountCents", line.path("amountCents").asLong());
                 }

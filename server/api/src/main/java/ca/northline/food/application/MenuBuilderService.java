@@ -269,8 +269,14 @@ class MenuBuilderService
     @Override
     @Transactional
     public void delete(String merchantId, String itemId) {
-        requireItem(merchantId, itemId);
+        var before = requireItem(merchantId, itemId);
+        var wasVisible = visible(before, merchant.approved(merchantId));
         menus.deleteItem(merchantId, itemId);
+        if (wasVisible) {
+            // S-43: search drops the dish (a deleted row raises nothing else the indexer could see)
+            events.publishEvent(new MenuItemAvailabilityChanged(
+                    Ids.next(), clock.instant(), itemId, merchantId, before.menuId(), false, null));
+        }
     }
 
     @Override

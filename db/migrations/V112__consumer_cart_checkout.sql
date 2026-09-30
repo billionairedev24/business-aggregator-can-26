@@ -60,3 +60,14 @@ ALTER TABLE orders.orders
 CREATE UNIQUE INDEX ux_orders_checkout ON orders.orders (checkout_id) WHERE checkout_id IS NOT NULL;
 -- Order references for consumer orders ("NL-50000"…); the dev seed uses NL-481xx / NL-482xx.
 CREATE SEQUENCE orders.order_ref_seq START 50000;
+
+-- ── Payments: the order's delivery fee ───────────────────────────────────────────────────────────────────────────
+-- The delivery fee is Northline's sale (merchant "northline"), authorized with its own manual-capture PaymentIntent
+-- and taxed with its own Stripe Tax calculation, referenced as ('order_delivery', <order id>). Widening the checks
+-- only: every existing value stays valid.
+ALTER TABLE payments.payment_intents DROP CONSTRAINT payment_intents_ref_type_check;
+ALTER TABLE payments.payment_intents
+  ADD CONSTRAINT payment_intents_ref_type_check CHECK (ref_type IN ('booking', 'order_line', 'order_delivery'));
+ALTER TABLE payments.tax_calculations DROP CONSTRAINT tax_calculations_ref_type_check;
+ALTER TABLE payments.tax_calculations
+  ADD CONSTRAINT tax_calculations_ref_type_check CHECK (ref_type IN ('booking', 'order_line', 'order_delivery'));

@@ -12,7 +12,7 @@ import org.jspecify.annotations.Nullable;
 public interface PaymentAuthorizations {
 
     /**
-     * @param refType {@code booking} | {@code order_line}
+     * @param refType {@code booking} | {@code order_line} | {@code order_delivery} (an order's delivery fee, merchant {@link #PLATFORM})
      * @param amountCents the merchant's amount before tax
      * @param taxCents GST/HST collected on top
      * @param transferGroup {@code order:<orderId>} or {@code booking:<bookingId>}

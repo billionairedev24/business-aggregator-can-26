@@ -64,8 +64,7 @@ class WebhookPayloadsTest {
                         {"eventId":"01J9ZD3V000000000000000EV9","occurredAt":"2026-09-30T18:00:00Z","aggregateId":"ord_1",
                          "merchantId":"%s","customerId":"u_customer","orderRef":"NL-50001","orderType":"goods",
                          "delivery":"pooled","windowId":"win_1","subtotalCents":1500,"taxCents":75,
-                         "lines":[{"lineId":"ln_1","offerId":"of_1","variantId":null,"qty":2,"amountCents":1500}]}"""
-                        .formatted(MERCHANT)))
+                         "lines":[{"lineId":"ln_1","offerId":"of_1","variantId":null,"qty":2,"amountCents":1500}]}""".formatted(MERCHANT)))
                 .orElseThrow();
 
         assertThat(out.type()).isEqualTo("order.placed");

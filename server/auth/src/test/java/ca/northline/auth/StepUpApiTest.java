@@ -126,10 +126,16 @@ class StepUpApiTest extends AuthIntegrationTest {
     /** A consumer signed in with a code to the phone only (no second factor in the session). */
     private MockHttpSession signInByCode(Registered user) throws Exception {
         var session = new MockHttpSession();
-        postJson("/api/auth/sign-in", session, json(Map.of("identifier", user.person().phone())))
+        postJson(
+                        "/api/auth/sign-in",
+                        session,
+                        json(Map.of("identifier", user.person().phone())))
                 .andExpect(status().isOk());
         postJson("/api/auth/sign-in/code", session, "{}").andExpect(status().isOk());
-        postJson("/api/auth/sign-in/code/verify", session, json(Map.of("code", sms.lastCodeTo(user.person().e164()))))
+        postJson(
+                        "/api/auth/sign-in/code/verify",
+                        session,
+                        json(Map.of("code", sms.lastCodeTo(user.person().e164()))))
                 .andExpect(status().isOk());
         return session;
     }
@@ -144,7 +150,8 @@ class StepUpApiTest extends AuthIntegrationTest {
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
-        assertThat(decoder.decode(JsonPath.read(body, "$.proof")).getClaimAsString("acr")).isEqualTo("mfa");
+        assertThat(decoder.decode(JsonPath.read(body, "$.proof")).getClaimAsString("acr"))
+                .isEqualTo("mfa");
         // the account has a factor: it steps up with it rather than enrolling another
         mvc.perform(post("/api/auth/step-up/enrol/passkey/options").session(session))
                 .andExpect(status().isForbidden())
@@ -160,7 +167,8 @@ class StepUpApiTest extends AuthIntegrationTest {
                 .andExpect(status().isOk());
         postJson("/api/auth/register/complete", session, "{}").andExpect(status().isCreated());
 
-        var options = mvc.perform(post("/api/auth/step-up/enrol/passkey/options").session(session))
+        var options = mvc.perform(
+                        post("/api/auth/step-up/enrol/passkey/options").session(session))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()

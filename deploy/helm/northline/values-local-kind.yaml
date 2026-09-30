@@ -79,5 +79,8 @@ apps:
 # No Kafka in the kind rehearsal (KAFKA_BOOTSTRAP points at a Service without endpoints): skip the topics Job.
 kafkaTopics:
   enabled: false
+# No Elasticsearch either (ES_URIS points at a Service without endpoints): skip the search-indices Job (S-42).
+searchIndices:
+  enabled: false
 
 preStopSleepSeconds: 0

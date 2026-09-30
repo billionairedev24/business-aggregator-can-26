@@ -1,0 +1,29 @@
+{
+  "$comment": "S-42 — English analysis of listings_en. nl_text indexes, nl_text_search queries (adds the reloadable synonym set listings-synonyms-en, managed from synonyms-en.txt), nl_prefix feeds search-as-you-type and the completion suggester, nl_keyword normalises sort keys. Changing anything here needs a reindex (S-71) and a schema bump in listings.json.",
+  "filter": {
+    "nl_possessive": { "type": "stemmer", "language": "possessive_english" },
+    "nl_stop": { "type": "stop", "stopwords": "_english_" },
+    "nl_stemmer": { "type": "stemmer", "language": "english" },
+    "nl_synonyms": { "type": "synonym_graph", "synonyms_set": "listings-synonyms-en", "updateable": true }
+  },
+  "analyzer": {
+    "nl_text": {
+      "type": "custom",
+      "tokenizer": "standard",
+      "filter": ["nl_possessive", "lowercase", "asciifolding", "nl_stop", "nl_stemmer"]
+    },
+    "nl_text_search": {
+      "type": "custom",
+      "tokenizer": "standard",
+      "filter": ["nl_possessive", "lowercase", "asciifolding", "nl_synonyms", "nl_stop", "nl_stemmer"]
+    },
+    "nl_prefix": {
+      "type": "custom",
+      "tokenizer": "standard",
+      "filter": ["lowercase", "asciifolding"]
+    }
+  },
+  "normalizer": {
+    "nl_keyword": { "type": "custom", "filter": ["lowercase", "asciifolding"] }
+  }
+}
