@@ -66,8 +66,11 @@ class ConsumerCallers {
 
     /** {@code lang=fr|en} wins over Accept-Language. */
     static String lang(@Nullable String lang, Locale locale) {
-        if ("fr".equals(lang) || "en".equals(lang)) {
-            return lang;
+        if ("fr".equals(lang)) {
+            return "fr";
+        }
+        if ("en".equals(lang)) {
+            return "en";
         }
         return "fr".equals(locale.getLanguage()) ? "fr" : "en";
     }
