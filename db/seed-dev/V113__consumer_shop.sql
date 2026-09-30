@@ -18,14 +18,14 @@ INSERT INTO catalogue.categories (id, parent_id, root, name_i18n) VALUES
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO merchants.merchants (id, type, display_name, legal_name, structure, tier, take_rate_bps, status, city, province, languages, created_at, updated_at) VALUES
-  ('01J9ZD3V000000000000SHPM01', 'seller', 'Glenmore Bakery', 'Glenmore Bakery Ltd.', 'corp_ab', 'master', 900, 'active', 'Calgary', 'AB', '{en}', '2026-02-01T17:00:00Z', '2026-02-01T17:00:00Z'),
-  ('01J9ZD3V000000000000SHPM02', 'seller', 'Bridgeland Butcher', 'Bridgeland Butcher Ltd.', 'corp_ab', 'master', 900, 'active', 'Calgary', 'AB', '{en}', '2026-02-02T17:00:00Z', '2026-02-02T17:00:00Z'),
-  ('01J9ZD3V000000000000SHPM03', 'seller', 'Sunnyside Greens', 'Sunnyside Greens Ltd.', 'corp_ab', 'master', 900, 'active', 'Calgary', 'AB', '{en}', '2026-02-03T17:00:00Z', '2026-02-03T17:00:00Z'),
-  ('01J9ZD3V000000000000SHPM04', 'seller', 'Prairie Pantry', 'Prairie Pantry Ltd.', 'corp_ab', 'trusted', 1200, 'active', 'Calgary', 'AB', '{en}', '2026-02-04T17:00:00Z', '2026-02-04T17:00:00Z'),
-  ('01J9ZD3V000000000000SHPM05', 'seller', 'Kensington Apothecary', 'Kensington Apothecary Ltd.', 'corp_ab', 'trusted', 1200, 'active', 'Calgary', 'AB', '{en}', '2026-02-05T17:00:00Z', '2026-02-05T17:00:00Z'),
-  ('01J9ZD3V000000000000SHPM06', 'seller', 'Little Sprouts', 'Little Sprouts Ltd.', 'corp_ab', 'trusted', 1200, 'active', 'Calgary', 'AB', '{en}', '2026-02-06T17:00:00Z', '2026-02-06T17:00:00Z'),
-  ('01J9ZD3V000000000000SHPM07', 'seller', 'Sidewalk Citizen', 'Sidewalk Citizen Ltd.', 'corp_ab', 'trusted', 1200, 'active', 'Calgary', 'AB', '{en}', '2026-02-07T17:00:00Z', '2026-02-07T17:00:00Z'),
-  ('01J9ZD3V000000000000SHPM08', 'seller', 'Bow Valley Dairy', 'Bow Valley Dairy Ltd.', 'corp_ab', 'master', 900, 'active', 'Calgary', 'AB', '{en}', '2026-02-08T17:00:00Z', '2026-02-08T17:00:00Z');
+  ('01J9ZD3V000000000000SHPM01', 'seller', 'Glenmore Bakery', 'Glenmore Bakery Ltd.', 'sole', 'master', 900, 'active', 'Calgary', 'AB', '{en}', '2026-02-01T17:00:00Z', '2026-02-01T17:00:00Z'),
+  ('01J9ZD3V000000000000SHPM02', 'seller', 'Bridgeland Butcher', 'Bridgeland Butcher Ltd.', 'sole', 'master', 900, 'active', 'Calgary', 'AB', '{en}', '2026-02-02T17:00:00Z', '2026-02-02T17:00:00Z'),
+  ('01J9ZD3V000000000000SHPM03', 'seller', 'Sunnyside Greens', 'Sunnyside Greens Ltd.', 'sole', 'master', 900, 'active', 'Calgary', 'AB', '{en}', '2026-02-03T17:00:00Z', '2026-02-03T17:00:00Z'),
+  ('01J9ZD3V000000000000SHPM04', 'seller', 'Prairie Pantry', 'Prairie Pantry Ltd.', 'sole', 'trusted', 1200, 'active', 'Calgary', 'AB', '{en}', '2026-02-04T17:00:00Z', '2026-02-04T17:00:00Z'),
+  ('01J9ZD3V000000000000SHPM05', 'seller', 'Kensington Apothecary', 'Kensington Apothecary Ltd.', 'sole', 'trusted', 1200, 'active', 'Calgary', 'AB', '{en}', '2026-02-05T17:00:00Z', '2026-02-05T17:00:00Z'),
+  ('01J9ZD3V000000000000SHPM06', 'seller', 'Little Sprouts', 'Little Sprouts Ltd.', 'sole', 'trusted', 1200, 'active', 'Calgary', 'AB', '{en}', '2026-02-06T17:00:00Z', '2026-02-06T17:00:00Z'),
+  ('01J9ZD3V000000000000SHPM07', 'seller', 'Sidewalk Citizen', 'Sidewalk Citizen Ltd.', 'sole', 'trusted', 1200, 'active', 'Calgary', 'AB', '{en}', '2026-02-07T17:00:00Z', '2026-02-07T17:00:00Z'),
+  ('01J9ZD3V000000000000SHPM08', 'seller', 'Bow Valley Dairy', 'Bow Valley Dairy Ltd.', 'sole', 'master', 900, 'active', 'Calgary', 'AB', '{en}', '2026-02-08T17:00:00Z', '2026-02-08T17:00:00Z');
 
 INSERT INTO catalogue.catalog_products (id, ref, identifier_type, title, title_i18n, category_id, attributes, description, bullets, owner_merchant_id, created_by_merchant_id, locked, created_at, updated_at) VALUES
   ('01J9ZD3V000000000000SPRD01', 'NL-P-89001', 'none', 'Country sourdough', '{"en": "Country sourdough", "fr": "Pain au levain de campagne"}', 'shop.food-and-grocery.bakery', '{"volume": "900 g"}', 'Naturally leavened, 36-hour ferment, Alberta hard red wheat. Sliced on request.', '{}', '01J9ZD3V000000000000SHPM01', '01J9ZD3V000000000000SHPM01', false, '2026-03-01T17:00:00Z', '2026-03-01T17:00:00Z'),
