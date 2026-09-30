@@ -28,6 +28,11 @@ public final class TestJwt {
         return token(userId, "openid profile", null);
     }
 
+    /** S-55: a customer who signed in with a passkey or authenticator ({@code acr=mfa}). */
+    public static JwtRequestPostProcessor customerWithMfa(String userId) {
+        return token(userId, "openid profile", "mfa");
+    }
+
     /** Northline staff (platform console: role {@code staff}, {@code acr=mfa}). */
     public static JwtRequestPostProcessor staff(String userId) {
         return staffToken(userId, "mfa");

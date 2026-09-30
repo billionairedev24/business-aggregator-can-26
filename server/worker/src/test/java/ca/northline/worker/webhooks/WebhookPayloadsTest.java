@@ -33,6 +33,24 @@ class WebhookPayloadsTest {
     }
 
     @Test
+    void bookingConfirmed_withoutTheCustomer() {
+        var out = payloads.of(event("booking.booking_confirmed", 1, """
+                        {"eventId":"01J9ZD3V000000000000000EV4","occurredAt":"2026-09-30T18:00:00Z","aggregateId":"bk_2",
+                         "merchantId":"%s","customerId":"u_customer","memberUserId":"u_tech","serviceId":"svc_1",
+                         "quoteId":null,"bookingType":"visit","startsAt":"2026-10-02T15:00:00Z",
+                         "endsAt":"2026-10-02T16:00:00Z","priceCents":8900,"depositCents":8900}""".formatted(MERCHANT)))
+                .orElseThrow();
+
+        assertThat(out.type()).isEqualTo("booking.confirmed");
+        assertThat(out.payload().path("data").toString())
+                .isEqualTo("{\"bookingId\":\"bk_2\",\"memberUserId\":\"u_tech\",\"serviceId\":\"svc_1\","
+                        + "\"quoteId\":null,\"bookingType\":\"visit\",\"startsAt\":\"2026-10-02T15:00:00Z\","
+                        + "\"endsAt\":\"2026-10-02T16:00:00Z\",\"priceCents\":8900,\"depositCents\":8900,"
+                        + "\"currency\":\"CAD\"}");
+        assertThat(out.payload().toString()).doesNotContain("u_customer");
+    }
+
+    @Test
     void escrowReleasedIsPaymentReleased() {
         var out = payloads.of(event("payments.escrow_released", 1, """
                         {"eventId":"01J9ZD3V000000000000000EV2","occurredAt":"2026-09-30T18:00:00Z","aggregateId":"esc_1",

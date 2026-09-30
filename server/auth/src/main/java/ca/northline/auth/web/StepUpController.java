@@ -3,7 +3,6 @@ package ca.northline.auth.web;
 import ca.northline.auth.application.FlowRejected;
 import ca.northline.auth.application.StepUpProofs;
 import ca.northline.auth.application.StepUpService;
-import ca.northline.auth.application.UserClaimsService;
 import ca.northline.auth.domain.Factor;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -22,8 +21,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Step-up for payouts and bank account changes (Finance workstream). Needs the auth session of someone signed in with a
- * second factor; the factor used here must be theirs.
+ * Step-up for payouts and bank account changes (Finance workstream) and, since S-55, for consumer payments. Needs a
+ * signed-in auth session; the factor used here must be theirs. A consumer signed in with a phone code alone (S-62)
+ * steps up with their passkey or authenticator: the phone code was the first factor, this is the second.
  *
  * <pre>
  * POST /api/auth/step-up/passkey/options  → PublicKeyCredentialRequestOptions (JSON)
@@ -84,9 +84,8 @@ class StepUpController {
     }
 
     private static String signedIn(@Nullable Authentication authentication) {
-        if (!(authentication instanceof UsernamePasswordAuthenticationToken user)
-                || !Factor.isMfa(UserClaimsService.factorsOf(user))) {
-            throw new FlowRejected(FlowRejected.Reason.UNAUTHENTICATED, "Sign in with a second factor first.");
+        if (!(authentication instanceof UsernamePasswordAuthenticationToken user) || !user.isAuthenticated()) {
+            throw new FlowRejected(FlowRejected.Reason.UNAUTHENTICATED, "Sign in first.");
         }
         return user.getName();
     }
