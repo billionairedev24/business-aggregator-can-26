@@ -75,3 +75,13 @@ variable "storage_gb" {
   type        = number
   default     = 100
 }
+
+variable "topics" {
+  description = "Topics to create as cloud resources where the service needs that (Azure Event Hubs): the `topics` output of modules/kafka/catalogue, name => { partitions, retention_hours, cleanup_policy }. MSK and Google Managed Kafka get their topics through the Kafka admin API (the provisioning Job, S-25) and ignore this."
+  type = map(object({
+    partitions      = number
+    retention_hours = number
+    cleanup_policy  = string
+  }))
+  default = {}
+}

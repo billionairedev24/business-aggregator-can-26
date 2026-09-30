@@ -89,5 +89,5 @@ resource "google_secret_manager_secret_version" "jaas" {
 # Contract inputs this implementation does not need (README § Module contract); referenced so the omission is explicit.
 locals {
   # tflint-ignore: terraform_unused_declarations
-  unused_contract_inputs = [var.network_id, var.allowed_cidrs, var.tier] # PSC endpoints in subnet_ids; sized by capacity
+  unused_contract_inputs = [var.network_id, var.allowed_cidrs, var.tier, var.topics] # PSC endpoints in subnet_ids; sized by capacity; topics via the Kafka admin API (S-25)
 }

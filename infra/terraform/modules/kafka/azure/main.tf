@@ -5,10 +5,12 @@
 # Differences from Apache Kafka that matter here:
 # - Topics are event hubs. Standard allows only 10 per namespace; Northline has about 50 (topics + .dlq), so staging
 #   and prod need Premium (100 per processing unit) — or Confluent Cloud on Azure.
-# - Create topics explicitly (scripts/topics.sh with the admin connection string: CreateTopics needs the Manage
-#   right); don't rely on auto-creation. Partition count is fixed on Standard; retention is at most 7 days on
-#   Standard, 90 on Premium. No compacted topics on Standard.
-# - The apps get a Send+Listen rule; the Manage rule is only for topic provisioning.
+# - Topics are created HERE, as azurerm_eventhub resources from the topic catalogue (var.topics = modules/kafka/catalogue,
+#   S-25), not through Kafka's CreateTopics: an event hub is an ARM resource, so Terraform owns it like the namespace,
+#   and no pod needs the Manage right. The provisioning Job runs in `verify` mode on Azure (reports drift only).
+#   Partition count is fixed after creation on Standard; retention is at most 7 days on Standard, 90 on Premium.
+#   No compacted topics on Standard.
+# - The apps get a Send+Listen rule; the Manage rule remains for manual repairs (scripts/topics.sh) only.
 # Encryption at rest: service-managed keys (customer-managed keys need Premium + an identity — later).
 
 resource "random_string" "suffix" {
@@ -111,6 +113,32 @@ resource "azurerm_key_vault_secret" "admin_jaas" {
   key_vault_id = var.secret_store.id
   content_type = "JAAS line with the Manage right, for scripts/topics.sh only"
   tags         = var.context.tags
+}
+
+# One event hub per catalogue topic (topic, .dlq, consumer retry topics). prevent_destroy: removing a topic from the
+# catalogue must never delete the event hub and its events (S-25: topics are never deleted by automation). Tearing
+# down a whole environment: `terraform state rm 'module.northline.module.kafka.azurerm_eventhub.topic'` first
+# (docs/runbooks/infrastructure.md § 5.3).
+resource "azurerm_eventhub" "topic" {
+  for_each = var.topics
+
+  name            = each.key
+  namespace_id    = azurerm_eventhub_namespace.this.id
+  partition_count = each.value.partitions
+
+  retention_description {
+    cleanup_policy          = title(each.value.cleanup_policy) # Delete | Compact (Premium only)
+    retention_time_in_hours = each.value.retention_hours
+  }
+
+  lifecycle {
+    prevent_destroy = true
+
+    precondition {
+      condition     = var.tier == "Premium" || each.value.retention_hours <= 168
+      error_message = "Event Hubs Standard keeps events at most 7 days; use Premium (retention up to 90 days)."
+    }
+  }
 }
 
 # Contract inputs this implementation does not need (README § Module contract); referenced so the omission is explicit.

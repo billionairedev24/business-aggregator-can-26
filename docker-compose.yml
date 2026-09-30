@@ -52,14 +52,15 @@ services:
       interval: 10s
       retries: 12
 
-  kafka-topics:                               # one-shot: creates every topic + .dlq (scripts/topics.sh), then exits
+  kafka-topics:                               # one-shot: creates the topics of deploy/kafka/topics.yaml (scripts/topics.sh), then exits
     profiles: [events, all]
     image: apache/kafka:4.1.0
     depends_on: { kafka: { condition: service_healthy } }
     environment:
       KAFKA_TOPICS_CMD: /opt/kafka/bin/kafka-topics.sh
       KAFKA_TOPICS_BOOTSTRAP: kafka:29092
-    volumes: ["./scripts/topics.sh:/topics.sh:ro"]
+      KAFKA_TOPICS_CATALOGUE: /topics.yaml
+    volumes: ["./scripts/topics.sh:/topics.sh:ro", "./deploy/kafka/topics.yaml:/topics.yaml:ro"]
     entrypoint: ["sh", "/topics.sh"]
     restart: "no"
 

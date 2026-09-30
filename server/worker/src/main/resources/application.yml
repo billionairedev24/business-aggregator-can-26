@@ -33,7 +33,12 @@ server.port: ${SERVER_PORT:8084}         # health only (S-14): the worker serves
 management:
   endpoints.web.exposure.include: health
   endpoint.health.probes.enabled: true  # /actuator/health/liveness and /readiness for Kubernetes
-northline:                              # provider switches (ca.northline.platform); only `local` adapters exist yet
+northline:
+  topics:                               # S-25 topic provisioning (TopicsCommand; deploy/kafka/topics.yaml)
+    catalogue: ${KAFKA_TOPICS_CATALOGUE:}                 # blank = the packaged classpath:kafka/topics.yaml
+    replication-factor: ${KAFKA_REPLICATION_FACTOR:}      # blank = the broker's default.replication.factor
+    min-insync-replicas: ${KAFKA_MIN_INSYNC_REPLICAS:}    # blank = not set on the topics (broker default)
+  # provider switches (ca.northline.platform); only `local` adapters exist yet
   email:
     provider: ${EMAIL_PROVIDER:local}   # notifications (S-13, S-27)
     from: ${EMAIL_FROM:Northline <no-reply@northline.ca>}

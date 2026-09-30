@@ -241,7 +241,7 @@ Other outputs, for the stories that consume them:
 | `kms.key_refs["signing"]` | the signing key id Terraform created (`KMS_KEY_ID` unless `signing_key_ids.active` overrides it) |
 | `data_stores.postgres.admin_secret_ref`, `.cloud.admin_username` | the bootstrap SQL (§ 5.1), S-16 migration job, S-114 backups |
 | `data_stores.cache.cloud` | Google Cloud: `server_ca_certs` to trust (§ 5.2); AWS: reader endpoint |
-| `data_stores.kafka.replication_factor`, `.topic_policy`, `.cloud` | topic creation (§ 5.3, S-25); Azure: `admin_jaas_secret_name` |
+| `data_stores.kafka.replication_factor`, `.topic_policy`, `.cloud` | topic creation (§ 5.3, S-25); Azure: `admin_jaas_secret_name`, `event_hubs` (the event hubs created from the catalogue) |
 | `data_stores.search.cloud.deployment_id` | Elastic Cloud console / API, least-privilege user (§ 5.4) |
 
 ## 5. Data stores after the first apply (S-3)
@@ -303,27 +303,65 @@ later, run `alter role northline_app password '…'` with the new value.
 
 ### 5.3 Kafka: topics and credentials
 
-Topics are never auto-created (MSK has it switched off; Managed Kafka and Event Hubs don't let us rely on it). Create
-every topic and its `.dlq` before the apps start, from a pod with the Kafka CLI:
+**One catalogue, three readers (S-25).** `deploy/kafka/topics.yaml` lists every topic (`<module>.<aggregate>`, key =
+aggregate id), the defaults (6 partitions, 7 days, `delete`), the DLQ policy (`<topic>.dlq`: 1 partition, 30 days)
+and the worker's consumer groups with their retry delays (`<topic>.<group>.retry-<n>`, one per delay, the source
+topic's partitions, 1 day). From it:
 
-```properties
-# client.properties
-security.protocol=SASL_SSL
-sasl.mechanism=<config_env.KAFKA_SASL_MECHANISM>
-sasl.jaas.config=<the JAAS secret, see below>
-```
+| reader | where | what it does |
+|---|---|---|
+| **provisioning Job** `northline-kafka-topics` | Helm pre-install/pre-upgrade hook (Argo CD PreSync), worker image, `TopicsCommand` | Kafka admin API with the app's credentials: `apply` creates missing topics, sets drifted retention / cleanup policy / `min.insync.replicas` back, reports partition drift and unmanaged topics. Never deletes, never changes partition counts. |
+| **Terraform** (Azure only) | `modules/kafka/catalogue` → `modules/kafka/azure` `azurerm_eventhub.topic` | one event hub per topic (partitions, retention in hours, cleanup policy), `prevent_destroy` |
+| **`scripts/topics.sh`** | docker compose `events` profile, your own Kafka | creates what is missing with the Kafka CLI, prints `DRIFT` lines (`KAFKA_TOPICS_STRICT=1`: exit 3) |
+
+Tests keep them together: the api fails when an `@Externalized` topic is missing from the catalogue
+(`ExternalizedTopicsCatalogueTest`); the worker fails when `topics.sh --list` and the Java derivation differ, when a
+`@RetryableTopic` listener's policy differs from its consumer entry, or when the catalogue outgrows one Event Hubs
+Premium processing unit (100 event hubs) (`TopicCatalogueTest`); `TopicProvisionerTest` runs both the script and the
+provisioner against Kafka 4 in Testcontainers; `modules/kafka/catalogue/tests` and the Azure env test check the
+Terraform derivation.
+
+Per cloud:
+
+| | who creates topics | credential | `kafkaTopics` (chart) | notes |
+|---|---|---|---|---|
+| AWS MSK | the Job (`apply`) | `kafka-sasl-jaas-config` (the app's SCRAM user; no ACLs, `allow.everyone.if.no.acl.found=true`) | `command: apply`; prod `minInsyncReplicas: "2"` | replication = the cluster's `default.replication.factor` (3; 2 on the two-broker dev) unless `kafkaTopics.replicationFactor` |
+| Google Cloud Managed Kafka | the Job (`apply`) | `kafka-sasl-jaas-config` (service account with `roles/managedkafka.client`) | `command: apply` | replication 3 (service default). The key needs `iam.disableServiceAccountKeyCreation` **not** enforced on the project — new organizations enforce it by default, and the apply fails on `google_service_account_key` until the owner exempts the project |
+| Azure Event Hubs | **Terraform** (`terraform apply` of the env root) | — (ARM); the Job reads with the app's Send + Listen key | `command: plan` (report only) | Premium: 100 event hubs per PU, retention ≤ 90 days; replication is the service's. The `kafka-admin-jaas-config` (Manage) secret stays for manual repairs only |
+
+**Changing the catalogue.** Add a topic when a module gets a new `@Externalized` aggregate (the api test tells you),
+and a consumer entry with its `retryDelaysSeconds` when the worker gets a listener (the worker test tells you). The
+next deploy's Job (or `terraform apply` on Azure) creates them before any pod starts. Changing retention or cleanup
+policy: edit the entry; `apply` corrects it everywhere. **Never** remove or rename an entry and expect a delete:
+nothing deletes topics; a retired topic is removed by hand once no producer, consumer or DLQ record needs it.
+**Partitions** are only ever raised by hand, knowingly: more partitions remap keys, so per-aggregate ordering breaks
+for keys in flight — drain producers first, then `kafka-topics.sh --alter --partitions N` (Event Hubs Premium:
+change `partition_count`), then update the catalogue so the drift report is clean again.
+
+**Running it by hand** (from a pod in the cluster, or anywhere that reaches Kafka):
 
 ```sh
-KAFKA_TOPICS_CMD='kafka-topics.sh --command-config client.properties' \
-KAFKA_TOPICS_BOOTSTRAP=<config_env.KAFKA_BOOTSTRAP> \
-KAFKA_REPLICATION_FACTOR=<data_stores.kafka.replication_factor> scripts/topics.sh
+# the Job's logs after a deploy
+kubectl -n northline-<env> logs job/northline-kafka-topics
+# the same command, locally or from a debug pod: KAFKA_* as in the worker's environment
+cd server && KAFKA_BOOTSTRAP=… KAFKA_SECURITY_PROTOCOL=SASL_SSL KAFKA_SASL_MECHANISM=… KAFKA_SASL_JAAS_CONFIG='…' \
+  ./gradlew :worker:kafkaTopics --args='plan'        # or verify (exit 3 on drift) / apply
+java -cp @/app/jib-classpath-file ca.northline.worker.topics.TopicsCommand plan   # inside the worker image
 ```
 
-| | JAAS secret for topic creation | notes |
-|---|---|---|
-| AWS MSK | `kafka-sasl-jaas-config` (the app's SCRAM user; no ACLs, `allow.everyone.if.no.acl.found=true`) | RF 2 in dev (2 brokers), 3 elsewhere. ACLs per app: S-25 |
-| Google Cloud Managed Kafka | `kafka-sasl-jaas-config` (service account with `roles/managedkafka.client`) | alternatively `google_managed_kafka_topic` resources (S-25). The key needs `iam.disableServiceAccountKeyCreation` **not** enforced on the project — new organizations enforce it by default, and the apply fails on `google_service_account_key` until the owner exempts the project |
-| Azure Event Hubs | `kafka-admin-jaas-config` (the *Manage* rule); the apps' rule is Send + Listen | the replication factor is accepted and ignored; partitions are fixed after creation on Standard; retention ≤ 90 days on Premium |
+Output lines: `CREATED`, `CORRECTED` (config set back), `MISSING` / `DRIFT` (plan/verify, or partition drift after
+apply), `UNMANAGED` (exists, not in the catalogue — left alone), `UNREAD` (the service doesn't return that topic's
+configs, e.g. Event Hubs with a Send/Listen key), then a summary. With `scripts/topics.sh` against a cloud cluster
+(repairs only), put the SASL settings in a `client.properties` and pass
+`KAFKA_TOPICS_CMD='kafka-topics.sh --command-config client.properties' KAFKA_TOPICS_BOOTSTRAP=<bootstrap>
+KAFKA_REPLICATION_FACTOR=<data_stores.kafka.replication_factor>`.
+
+**Tearing down an Azure environment:** the event hubs carry `prevent_destroy`, so first
+`terraform state rm 'module.northline.module.kafka.azurerm_eventhub.topic'`, then destroy (the namespace takes the
+event hubs with it).
+
+**Alerts:** DLQ records are the consumers' concern (S-26: DLQ metrics, replay). ACLs per app are not set: MSK runs
+with `allow.everyone.if.no.acl.found=true`, and Managed Kafka / Event Hubs authorize per credential.
 
 ### 5.4 Elasticsearch (Elastic Cloud)
 
