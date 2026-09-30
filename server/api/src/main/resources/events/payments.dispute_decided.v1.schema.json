@@ -29,6 +29,15 @@
     "merchantId": {
       "type": "string"
     },
+    "caseNumber": {
+      "type": "string",
+      "description": "DS-… case number (added by S-13; optional for older events)"
+    },
+    "amountCents": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "disputed amount (added by S-13; optional for older events)"
+    },
     "escrowId": {
       "type": "string"
     },

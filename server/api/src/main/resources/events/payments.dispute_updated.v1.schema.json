@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:payments.dispute_updated:1",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "merchantId",
+    "caseNumber",
+    "change",
+    "amountCents"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "payments.disputes.id"
+    },
+    "merchantId": {
+      "type": "string"
+    },
+    "caseNumber": {
+      "type": "string"
+    },
+    "change": {
+      "enum": [
+        "opened",
+        "offer_declined",
+        "offer_expired"
+      ]
+    },
+    "amountCents": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "respondBy": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time",
+      "description": "the merchant's reply deadline when change = opened"
+    }
+  }
+}

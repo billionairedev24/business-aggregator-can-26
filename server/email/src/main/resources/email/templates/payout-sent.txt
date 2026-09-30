@@ -1,0 +1,12 @@
+[(#{payout-sent.heading})]
+
+[(#{__${'payout-sent.body.' + kind}__(${businessName})})]
+
+[# th:if="${hasFee}"][(#{payout-sent.amount})]: [(${amount})]
+[(#{payout-sent.fee})]: −[(${fee})]
+[/][(#{payout-sent.net})]: [(${net})]
+[(#{payout-sent.arrives})]: [(${arrivesAt})]
+
+[(#{payout-sent.cta})]: [(${link})]
+
+[# th:insert="~{footer.txt}" /]

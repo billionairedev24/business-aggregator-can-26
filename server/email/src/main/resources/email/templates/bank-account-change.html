@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout.html :: email(#{__${'bank-account-change.preheader.' + phase}__}, ~{::content})}">
+<body>
+<div th:fragment="content">
+  <h1 th:style="${s.h1}" th:text="#{__${'bank-account-change.heading.' + phase}__}">Heading</h1>
+  <p th:style="${s.p}" th:text="#{__${'bank-account-change.body.' + phase}__(${businessName}, ${effectiveAt})}">Body</p>
+  <p th:style="${s.warning}" th:text="#{bank-account-change.warning}">Warning</p>
+  <th:block th:replace="~{button.html :: button(#{bank-account-change.cta}, ${link})}"/>
+</div>
+</body>
+</html>

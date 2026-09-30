@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout.html :: email(#{refund-case-update.preheader}, ~{::content})}">
+<body>
+<div th:fragment="content">
+  <h1 th:style="${s.h1}" th:text="#{__${'refund-case-update.heading.' + change}__}">Heading</h1>
+  <p th:style="${change == 'requested' ? s.notice : s.p}" th:text="#{__${'refund-case-update.body.' + change}__(${businessName}, ${amount}, ${respondBy})}">Body</p>
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" th:style="${s.facts}">
+    <tr><td th:style="${s.factLabel}" th:text="#{refund-case-update.case}">Case</td><td th:style="${s.factValue}" th:text="${caseNumber}">RF-0000</td></tr>
+    <tr><td th:style="${s.factLabel}" th:text="#{refund-case-update.amount}">Amount</td><td th:style="${s.factValue}" th:text="${amount}">$0.00</td></tr>
+  </table>
+  <th:block th:replace="~{button.html :: button(#{refund-case-update.cta}, ${link})}"/>
+</div>
+</body>
+</html>

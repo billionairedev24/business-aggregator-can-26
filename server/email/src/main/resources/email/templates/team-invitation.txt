@@ -1,0 +1,12 @@
+[# th:with="roleLabel=#{__${'role.' + role}__}"][(#{team-invitation.heading(${businessName})})]
+
+[(#{team-invitation.body(${inviterName}, ${businessName}, ${roleLabel})})]
+
+[(#{team-invitation.signIn})]
+
+[(#{team-invitation.cta})]: [(${link})]
+
+[(#{team-invitation.expires(${expiresAt})})]
+[(#{team-invitation.ignore})]
+[/]
+[# th:insert="~{footer.txt}" /]

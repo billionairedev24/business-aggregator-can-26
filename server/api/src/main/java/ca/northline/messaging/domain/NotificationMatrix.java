@@ -52,6 +52,11 @@ public record NotificationMatrix(Map<String, Map<String, Boolean>> matrix, Local
         return new NotificationMatrix(out, quietFrom, quietTo);
     }
 
+    /** Whether the member gets {@code event} on {@code channel} (unknown events and channels: no). */
+    public boolean wants(String event, String channel) {
+        return matrix.getOrDefault(event, Map.of()).getOrDefault(channel, false);
+    }
+
     /** Validates an edit (every event and channel must be known) and fills what was left out. */
     public static NotificationMatrix edit(Map<String, Map<String, Boolean>> requested, NotificationMatrix current) {
         requested.forEach((event, channels) -> {

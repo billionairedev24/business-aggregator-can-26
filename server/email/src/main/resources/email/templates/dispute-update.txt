@@ -1,0 +1,13 @@
+[# th:with="bodyKey=${change == 'decided' ? 'dispute-update.body.decided.' + decision : 'dispute-update.body.' + change}"][(#{__${'dispute-update.heading.' + change}__})]
+
+[(#{__${bodyKey}__(${amount}, ${refund})})]
+[# th:if="${change == 'opened'}"]
+[(#{dispute-update.respondBy(${respondBy})})]
+[/]
+[(#{dispute-update.case})]: [(${caseNumber})]
+[(#{dispute-update.amount})]: [(${amount})]
+[# th:if="${change == 'decided'}"][(#{dispute-update.refund})]: [(${refund})]
+[/]
+[(#{dispute-update.cta})]: [(${link})]
+[/]
+[# th:insert="~{footer.txt}" /]

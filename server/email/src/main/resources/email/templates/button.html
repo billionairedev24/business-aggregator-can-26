@@ -1,0 +1,8 @@
+<!--/* Bulletproof-ish button (a padded link inside a rounded cell) plus the raw link for clients that block it. */-->
+<th:block th:fragment="button(label, href)">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0 16px">
+    <tr><td th:style="${s.buttonCell}"><a th:href="${href}" th:style="${s.button}" th:text="${label}">Open</a></td></tr>
+  </table>
+  <p th:style="${s.small}"><span th:text="#{button.fallback}">Paste this link</span><br>
+    <a th:href="${href}" th:style="${s.link}" th:text="${href}">https://…</a></p>
+</th:block>

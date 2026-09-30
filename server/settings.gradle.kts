@@ -1,2 +1,2 @@
 rootProject.name = "northline-server"
-include("platform", "api", "auth", "bff", "worker")
+include("platform", "email", "api", "auth", "bff", "worker")
