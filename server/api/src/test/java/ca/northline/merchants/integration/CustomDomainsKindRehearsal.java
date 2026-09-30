@@ -34,7 +34,10 @@ class CustomDomainsKindRehearsal {
 
     static KubeApi kube() {
         return new HttpKubeApi(
-                URI.create(env("NL_KIND_API")), env("NL_KIND_NAMESPACE"), Path.of(env("NL_KIND_TOKEN")), Path.of(env("NL_KIND_CA")));
+                URI.create(env("NL_KIND_API")),
+                env("NL_KIND_NAMESPACE"),
+                Path.of(env("NL_KIND_TOKEN")),
+                Path.of(env("NL_KIND_CA")));
     }
 
     static GatewayDomainEdge edge(KubeApi kube) {
@@ -92,8 +95,9 @@ class CustomDomainsKindRehearsal {
             }
             Thread.sleep(3000);
         }
-        System.out.println("REHEARSAL after " + Duration.between(deadline.minus(Duration.ofMinutes(4)), Instant.now())
-                .toSeconds() + " s: " + seen);
+        System.out.println("REHEARSAL after "
+                + Duration.between(deadline.minus(Duration.ofMinutes(4)), Instant.now())
+                        .toSeconds() + " s: " + seen);
         assertThat(seen).hasSize(hosts.size());
         assertThat(seen.values()).containsOnly(EdgeObservation.READY);
     }
