@@ -54,8 +54,11 @@ Certificates: cert-manager, Let's Encrypt (HTTP-01 through the Gateway; DNS-01 t
 
 - **Studio: `studio.`** (the backlog's name; earlier drafts said `business.`, nothing was ever deployed there).
   The passkey RP id stays the zone (`urls.webauthnRpId`), shared by the Studio and the consumer origins.
-- **api:** only `/api/v1/webhooks/stripe` (+ `/connect`, S-12) and `/api/v1/email/unsubscribe` (S-13); everything
-  else answers 404 at the Gateway. Browsers reach the api through the BFF on the Studio host.
+- **api:** only `/api/v1/webhooks/stripe` (+ `/connect`, S-12), `/api/v1/webhooks/calendar/…` (S-32: Google push
+  channels and Microsoft Graph change / lifecycle notifications, verified per channel secret — [calendar-sync.md](calendar-sync.md))
+  and `/api/v1/email/unsubscribe` (S-13); everything else answers 404 at the Gateway. Browsers reach the api through
+  the BFF on the Studio host — including the calendar OAuth redirect URIs (`https://studio.<zone>/api/v1/calendar/oauth/…`),
+  which need the member's session.
 - **console:** placeholder. No route, certificate or record exists until `apps.console.enabled` (E-8).
 - **pages:** storefronts, served by the consumer app by `Host` (storefront rendering is E-3/E-7 work), plus merchant
   domains (below).

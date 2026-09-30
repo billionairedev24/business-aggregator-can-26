@@ -1155,3 +1155,140 @@ accepted with rationale (the story's acceptance criterion):
   are unverified.
 - **Not done:** a console UI for the queue; re-checking rows an owner's legal-name change sent back to `submitted`
   (Settings › Business) automatically; a name search when the owner doesn't know the number; Kyckr-style KYB providers.
+
+## 2026-09-30 — S-32 Google and Microsoft calendar two-way sync
+
+- **Port:** `availability.application.CalendarGateway` (one per provider: OAuth authorization URL / code exchange /
+  refresh / revoke, calendar list, incremental busy reads, notification channels, event create/update/delete) replaces
+  the connect-only `CalendarSync` port. Adapters in `availability.integration`: `GoogleCalendarGateway` (Calendar API
+  v3), `MicrosoftCalendarGateway` (Graph v1.0) and `FakeCalendarGateway`, chosen by `northline.calendar.provider`
+  (`CALENDAR_PROVIDER`): `local` (default; refused under staging/prod) or `oauth`. With `oauth` a provider is offered
+  once its client id and secret are set; otherwise the Studio shows "Not available yet" and connect answers 409
+  `calendar_provider_unavailable`. The old 409 `calendar_sync_unavailable` placeholder is gone. HTTP clients are
+  `@HttpExchange` interfaces over the JDK client that return Jackson trees (like S-23).
+- **Per member, as the design shows:** each member connects their own Google and/or Outlook calendar (link = merchant
+  + member + provider, V041's unique key). Only that member's jobs are written and only their busy times block their
+  slots. iCal stays the read-only feed token it was (no feed endpoint yet).
+- **OAuth:** authorization code + PKCE (S256) for both providers, `state` and verifier random 256-bit values; the
+  request is stored server-side (`calendar_oauth_requests`, state as SHA-256, 10 min, single use — deleted on first
+  use, even a refused one). The **redirect URI is on the Studio host** (`<STUDIO_ORIGIN>/api/v1/calendar/oauth/
+  <google|outlook>/callback`), so the browser comes back through the studio-bff with the member's session: the
+  callback is an authenticated endpoint, the state must belong to the signed-in member (else `result=failed`) and
+  `MerchantAccess.require(merchant, EDIT)` is re-checked; it answers 303 to `/b/<merchant>/availability?calendar=…&
+  result=connected|denied|failed|scopes|expired[&choose=1]` (relative Location, `Cache-Control: no-store`,
+  `Referrer-Policy: no-referrer`). The ID token from the token endpoint is read without checking its signature (OIDC
+  Core 3.1.3.7 rule 6: direct TLS response) — only `sub`/`oid` and the email/username label are used.
+- **Minimal scopes and incremental consent:** Google: `openid email calendar.events.owned` on Connect (read and write
+  events on calendars the member owns — busy reads, watch and write-back in one scope), `calendar.calendarlist.
+  readonly` only when the member opens "Choose calendars" (`include_granted_scopes=true`; the list endpoint answers
+  `{items: [], authorizationUrl}` until then). Every Google consent uses `prompt=consent` so a refresh token always
+  comes back. Microsoft: `openid profile offline_access Calendars.ReadWrite` (nothing narrower can write events;
+  `Calendars.ReadWrite` also lists calendars, so no second step). A grant missing the requested scopes (Google lets
+  people untick) → `result=scopes`, and a grant without events is revoked at once. Reconnecting with another account
+  replaces the link (old channels stopped, old grant revoked); the same account keeps the link id and adds scopes.
+- **Refresh tokens at rest — new shared port:** the api had no symmetric KMS port (S-7's is signing-only in auth;
+  S-10 passes a key to the storage provider). `ca.northline.shared.crypto.SecretSealer` (named interface `crypto`):
+  envelope encryption, a fresh AES-256-GCM data key per value with the row id as additional data, the data key
+  wrapped by the key service chosen with **the existing `KMS_PROVIDER` switch** — `local` (`KMS_LOCAL_KEY`, fixed dev
+  key under local/test, 409 `encryption_unavailable` under dev without it, refused under staging/prod), `aws` (KMS
+  Encrypt/Decrypt with encryption context), `gcp` (Cloud KMS encrypt/decrypt with AAD), `azure` (Key Vault
+  wrapKey/unwrapKey RSA-OAEP-256; the versioned key id is stored). New variable `KMS_ENCRYPTION_KEY_ID` (required in
+  staging/prod) = a **new Terraform key `tokens`** per environment that only the api's workload identity may use
+  (AWS policy, `roles/cloudkms.cryptoKeyEncrypterDecrypter`, "Key Vault Crypto User"), output in `config_env`. A
+  separate key rather than the `data` key: the api would otherwise gain decrypt on disks, buckets and secrets.
+  `token_ref` holds the wrapping key reference (the data model's "KMS" column); `refresh_token_key` / `_enc` the
+  wrapped key and ciphertext. Access tokens are only kept in memory per api instance.
+- **Revoked grant → "reconnect":** `invalid_grant` on refresh (or a 401 again right after a refresh) sets
+  `calendar_links.state = 'reconnect'` (+ `last_error`, `state_changed_at`); reads, writes and channel renewals stop;
+  Availability shows "Access expired or was removed · reconnect to keep syncing" with **Reconnect** (starts OAuth
+  again, same link), Settings › Integrations shows Reconnect for Google Calendar. Busy blocks already read **keep
+  blocking** slots meanwhile (conservative: a double booking is worse than a missed slot); disconnect removes them.
+  Microsoft rotates refresh tokens: a new one is re-sealed on every refresh.
+- **Disconnect revokes the grant:** channels/subscriptions stopped, the member's upcoming Northline events deleted from
+  their calendar, the grant revoked (Google `oauth2.googleapis.com/revoke`), the link and everything under it deleted
+  (FK cascades). **Microsoft has no endpoint an app can call to revoke one user's consent** (deleting an
+  `oauth2PermissionGrant` needs admin permissions; `revokeSignInSessions` signs the user out of every app), so for
+  Outlook the token is destroyed and the runbook tells the member where to remove the app. Past events stay.
+- **Inbound — busy times only:** `calendar_busy_blocks` holds the provider event id, start and end; never title,
+  attendees, place or description (a test asserts the table's columns). Not busy: cancelled, free/transparent,
+  declined by the member, and Northline's own events (by the stored mirror ids, and Google's private extended
+  property / Graph `transactionId` prefix). All-day events count as busy for the Calgary day unless marked free.
+  Google: `events.list` with `singleEvents=true` and a sync token (a first read has no time bounds because Google
+  gives no sync token for a bounded list; only yesterday…+180 days is kept); 410 → full re-read. Graph:
+  `calendarView/delta` over yesterday…+180 days (Graph expands recurrences in the window), UTC through `Prefer:
+  outlook.timezone`, the delta link as cursor; the window is re-read from scratch weekly so it slides; `syncStateNotFound`
+  /410 → full re-read. Sources = the calendars the member chose (primary / default on connect); a full read replaces
+  the calendar's blocks, an incremental one upserts/removes. The preview subtracts busy blocks like jobs (travel buffer
+  on both sides) and reports `busyBlocks`; `availability.changed` (`what = calendar`, schema enum widened, additive)
+  is published when a read changed something so the search projection can recompute `next_slot`.
+- **Change notifications:** one channel per chosen calendar (`calendar_channels`), opened after connect and by the hourly
+  job for any calendar without one, only when `API_PUBLIC_URL` is HTTPS (providers call HTTPS only; a laptop polls).
+  Google: `events.watch` with a per-channel random token (stored as SHA-256), up to 6 days, replaced (new channel +
+  `channels.stop`) within a day of expiry. Graph: subscription on `me/calendars/{id}/events` with `clientState`
+  (hashed), up to 6 days (< the 7-day maximum), `PATCH`ed within a day of expiry; lifecycle notifications:
+  `reauthorizationRequired` → renew, `subscriptionRemoved` → recreate, `missed` → read. Endpoints `POST
+  /api/v1/webhooks/calendar/google`, `/microsoft`, `/microsoft/lifecycle`: public in `SecurityConfig` (POST only) and
+  routed on the api host by the Gateway (S-17 `ingress.yaml`, edge.md); rate-limited per client address
+  (`WebhookRateLimiter`, moved from payments to the shared kernel for both). **Verification:** Google — the channel
+  must exist, the token must match its hash (constant time), the resource id must be the one Google gave; `sync`
+  messages are acknowledged. Graph — each entry's subscription must be ours and its `clientState` match; a batch where
+  nothing verifies is 403, unknown entries in a mixed batch are skipped. Graph's `validationToken` handshake is echoed
+  (text/plain, `nosniff`, ≤ 1024 chars) **only while one of our subscriptions is being created** (a pending channel row
+  committed before the create call, 2-minute window); otherwise 403. **Dedupe:** `calendar_notifications` (Google:
+  channel + `X-Goog-Message-Number`; Graph: SHA-256 of channel, lifecycle event, change type, resource id and etag),
+  purged after 7 days. Verified notifications publish an internal `CalendarChanged` in the receiving transaction; the
+  read runs after commit through the Modulith outbox (answers at once, retried after a crash).
+- **Safety net:** `CalendarScheduler` (not under `test`) reads every chosen calendar not read for
+  `CALENDAR_SYNC_INTERVAL` (5 min, the design's "two-way, every 5 min") and writes bookings back, and hourly renews
+  channels and purges. Replicas share it: a calendar is locked `FOR NO KEY UPDATE SKIP LOCKED` (not `FOR UPDATE`, which
+  blocks the foreign-key check of a channel inserted in its own transaction — found as a self-deadlock in the tests),
+  skipped when another replica read it within half an interval; a member's write-back locks their link the same way.
+- **Outbound — write-back:** the member's confirmed-and-later jobs from yesterday to +180 days (new
+  `booking.api.BookingCalendar.jobs(merchant, member, from, to)`; requested and cancelled excluded) are written to
+  their main calendar (Google `primary`, Graph default calendar); a content hash of text + times (`calendar_event_mirrors`)
+  decides whether to `PATCH`; a mirror whose booking is gone (cancelled, reassigned, back to requested) is deleted
+  unless it is already past. An event the member deleted comes back on the next change (Northline's bookings win, as
+  the design says for paid bookings). Creates are idempotent: Google event id derived from the booking (a retried insert
+  is 409 → update), Graph `transactionId`. No invitations or notifications are sent (`sendUpdates=none`, no attendees).
+  **Why a reconciliation and not events:** the booking module publishes no `booking.confirmed`/`rescheduled`/
+  `cancelled` events yet (bookings are created by the seed only), so the write-back compares the member's jobs with
+  what was written, after connect and every 5 minutes. When those events exist, a listener should call the same
+  write-back for the member at once.
+- **Event text (PII):** the design says bookings are written "with the customer's first name and address", which is
+  the ceiling: summary "<service title> · <first name>", location = the job's address line snapshot, description
+  "Northline booking <ref> · réservation Northline" + a link to Studio › Appointments. Never the last name, phone,
+  email, customer notes, access codes, vehicle or price. The text is fixed bilingual (no per-member locale is known).
+- **Studio:** Connect → the browser goes to the consent page (`authorizationUrl` on the calendar response); the
+  callback's outcome opens the Calendar sync tab with a notice (then leaves the address); connected calendars show
+  "Two-way · last sync … · Blocks slots from: <calendars>" and **Choose calendars** (dialog, at least one — "Choose at
+  least one calendar." in both locales like the other server rules); the preview note adds "N busy times from your
+  calendar". The design's "Conflicts are resolved in Northline's favour…; you're alerted" alert is not built.
+- **Schema (V043, additive):** `calendar_links.state/external_account_id/scopes/refresh_token_enc/refresh_token_key/
+  write_calendar_id/last_error/state_changed_at` (+ CHECKs); new tables `calendar_sources`, `calendar_busy_blocks`,
+  `calendar_channels`, `calendar_notifications`, `calendar_event_mirrors`, `calendar_oauth_requests`.
+- **Configuration:** `CALENDAR_PROVIDER` (required `oauth` in staging/prod), `GOOGLE_CALENDAR_CLIENT_ID`/`_SECRET`,
+  `MICROSOFT_CALENDAR_CLIENT_ID`/`_SECRET`/`_TENANT` (`common`), `CALENDAR_SYNC_INTERVAL`, `CALENDAR_WEBHOOK_RATE_LIMIT`,
+  `KMS_ENCRYPTION_KEY_ID` (required in staging/prod), `KMS_LOCAL_KEY`; `KMS_REGION`/`KMS_ENDPOINT` now also read by
+  the api; `API_PUBLIC_URL` required in staging/prod already. Secrets `google-calendar-client-secret`,
+  `microsoft-calendar-client-secret` in Terraform's `app_secrets` (three clouds), the chart's `secretNames` and the
+  api's optional `secretEnv`. A separate Google OAuth client from S-18's sign-in client (other redirect URI, keeps
+  calendar scopes off the sign-in consent screen). Runbook: docs/runbooks/calendar-sync.md.
+- **Tests:** `CalendarProvidersWireMockTest` (Google and Microsoft through the api: consent URL parameters, PKCE
+  verifier ↔ challenge, token exchange, busy filtering, channel and subscription creation, verified/forged/duplicate
+  notifications, Graph validation handshake, lifecycle renewal, 410 re-read, 401 → refresh with Microsoft's rotation
+  re-sealed, `invalid_grant` → reconnect, write-back create / reschedule / cancel / recreate after a deleted event,
+  incremental consent for the calendar list, disconnect with Google revocation), `CalendarSyncApiTest` (the fake:
+  callback round trip, sealed token, busy block in the preview, state bound to the member and single use, denied,
+  401/404, choose calendars with 422 messages, 403 for outsiders / without MFA / bookkeepers, public webhooks refusing
+  forgeries), `EnvelopeSealerTest` + `AwsKmsSealerLocalStackTest` (real KMS API in LocalStack) +
+  `CryptoConfigurationTest`, `CalendarConfigTest`, `BookingEventTextTest`; Studio `sync.test.tsx` (en + fr-CA) and a
+  Settings reconnect test.
+- **Never run against the real services:** no Google Cloud project or Entra registration exists. Unverified against
+  the live APIs: Google's acceptance of `calendar.events.owned` for `events.watch`, the untimed first `events.list`
+  size on long histories, all-day and floating-time events; Graph's all-day times under `outlook.timezone="UTC"`,
+  `transactionId` dedupe window, lifecycle payloads; both providers' error bodies. GCP and Azure key wrapping are
+  tested with SDK mocks only (no emulator implements them); AWS against LocalStack.
+- **Not done:** booking events → immediate write-back (see above); the "you're alerted" conflict notice; choosing the
+  calendar bookings are written to (always the main one); a bulk re-seal command after changing
+  `KMS_ENCRYPTION_KEY_ID`; the iCal feed endpoint; showing busy blocks in the Appointments week; Google app
+  verification and Microsoft publisher verification (operational, before launch).

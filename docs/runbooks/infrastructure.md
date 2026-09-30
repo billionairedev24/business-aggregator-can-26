@@ -162,6 +162,7 @@ With the chart (S-14/S-6) the ConfigMap and the ExternalSecrets come from `helm_
 | `KMS_PROVIDER` | `config_env` | `kms.kms_provider` | `aws` | `gcp` | `azure` |
 | `KMS_KEY_ID` | `config_env` | `kms.key_refs["signing"]`, or `signing_key_ids.active` | key ARN | key **version** `projects/…/cryptoKeys/signing/cryptoKeyVersions/1` | **versioned** key URL `https://<vault>.vault.azure.net/keys/signing/<version>` |
 | `KMS_PUBLISHED_KEY_IDS` | `config_env` | `signing_key_ids.published` (comma-joined) | empty outside a rotation | same | same |
+| `KMS_ENCRYPTION_KEY_ID` | `config_env` | `kms.key_refs["tokens"]` (S-32) | key ARN | crypto key name `projects/…/cryptoKeys/tokens` | **versioned** key URL `https://<vault>.vault.azure.net/keys/tokens/<version>` (RSA wrap) |
 | `SMS_PROVIDER`, `SMS_FROM`, `SMS_REGION` | `config_env` (AWS, only with `sms_origination_identity`) | env root variable | `aws`, the number/pool ARN, region | — (Twilio: set by the operator) | — (Twilio: set by the operator) |
 | `DB_URL` | `config_env` | `postgres.db_url` | `jdbc:postgresql://<rds-endpoint>:5432/northline?sslmode=require` | `jdbc:postgresql://<private-ip>:5432/northline?sslmode=require` | `jdbc:postgresql://<server>.postgres.database.azure.com:5432/northline?sslmode=require` |
 | `DB_USER` | `config_env` | `postgres.db_user` | `northline_app` (role created by the bootstrap SQL, § 5.1) | same | same |
@@ -178,7 +179,7 @@ With the chart (S-14/S-6) the ConfigMap and the ExternalSecrets come from `helm_
 | `ES_URIS` | `config_env` | `search.es_uris` | `https://<deployment>.es.ca-central-1.aws.elastic-cloud.com:443` | `https://<deployment>.es.northamerica-northeast1.gcp.elastic-cloud.com:443` | `https://<deployment>.es.canadacentral.azure.elastic-cloud.com:443` |
 | `ES_USERNAME` | `config_env` | `search.es_username` | `elastic` (deployment superuser until a least-privilege user exists, § 5.4) | same | same |
 | `ES_PASSWORD` | `secret_env` | `search.es_password_secret_ref` | `northline/<env>/es-password` | `northline-<env>-es-password` | `es-password` |
-| `TOTP_KEY`, `WEBHOOK_SECRET_KEY`, `STUDIO_BFF_SECRET`, `STUDIO_BFF_SECRET_HASH`, `CONSUMER_BFF_SECRET_HASH`, `CONSOLE_BFF_SECRET_HASH`, `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET`, `GOOGLE_CLIENT_SECRET`, `APPLE_PRIVATE_KEY`, `SMS_AUTH_TOKEN`, `EMAIL_UNSUBSCRIBE_KEY`, `EMAIL_API_KEY`, `SMTP_PASSWORD` (Stripe webhook and email secrets since S-6) | `secret_env` | `secrets.secret_refs` | `northline/<env>/<name>` | `northline-<env>-<name>` | `<name>` in vault `nl-<env>-sec-…` |
+| `TOTP_KEY`, `WEBHOOK_SECRET_KEY`, `STUDIO_BFF_SECRET`, `STUDIO_BFF_SECRET_HASH`, `CONSUMER_BFF_SECRET_HASH`, `CONSOLE_BFF_SECRET_HASH`, `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET`, `GOOGLE_CLIENT_SECRET`, `APPLE_PRIVATE_KEY`, `SMS_AUTH_TOKEN`, `EMAIL_UNSUBSCRIBE_KEY`, `EMAIL_API_KEY`, `SMTP_PASSWORD` (Stripe webhook and email secrets since S-6), the S-23 registry keys, `GOOGLE_CALENDAR_CLIENT_SECRET`, `MICROSOFT_CALENDAR_CLIENT_SECRET` (S-32) | `secret_env` | `secrets.secret_refs` | `northline/<env>/<name>` | `northline-<env>-<name>` | `<name>` in vault `nl-<env>-sec-…` |
 
 What Terraform grants for these (least privilege, [object-storage.md](object-storage.md), [key-rotation.md](key-rotation.md)):
 `northline-api` gets object read/write/delete on the uploads bucket (AWS: `s3:GetObject/PutObject/DeleteObject` on
@@ -186,8 +187,10 @@ What Terraform grants for these (least privilege, [object-storage.md](object-sto
 `roles/storage.objectUser` on the bucket; Azure: "Storage Blob Data Contributor" on the container). No presigned-URL
 permissions (`signBlob`, "Storage Blob Delegator") until something uses them. `northline-auth` gets sign + read the
 public key on the `signing` key only (AWS `kms:Sign`, `kms:GetPublicKey`; Google Cloud `roles/cloudkms.signer` +
-`roles/cloudkms.publicKeyViewer`; Azure "Key Vault Crypto User" on the key). The api has no KMS access: it verifies
-tokens through the JWK set.
+`roles/cloudkms.publicKeyViewer`; Azure "Key Vault Crypto User" on the key). The api verifies tokens through the JWK
+set; since S-32 it may encrypt and decrypt with the `tokens` key only (AWS `kms:Encrypt`/`Decrypt`/`GenerateDataKey*`;
+Google Cloud `roles/cloudkms.cryptoKeyEncrypterDecrypter`; Azure "Key Vault Crypto User" on the key — wrapKey/unwrapKey),
+to seal calendar refresh tokens ([calendar-sync.md](calendar-sync.md#the-envelope-key-kms_encryption_key_id)).
 
 Variables the apps need that Terraform does **not** set — add them to the ConfigMap / secrets yourself (values in
 the environment runbooks): `SPRING_PROFILES_ACTIVE`, `AUTH_ISSUER`, `AUTH_INTERNAL_URL`, `API_URL`, the `*_ORIGIN`s,

@@ -40,7 +40,7 @@ external-dns.
 | `https://dev.northline.ca` | consumer web (not built yet, E-7) |
 | `https://pages.dev.northline.ca` | storefronts (consumer app); merchants' own domains point here with a CNAME (verification S-31) |
 | `https://console.dev.northline.ca` | platform console (placeholder until E-8: no route while `apps.console` is disabled) |
-| `https://api.dev.northline.ca` | only `/api/v1/webhooks/stripe` (+ `/connect`) and `/api/v1/email/unsubscribe`; the rest of the api is reached through the BFF |
+| `https://api.dev.northline.ca` | only `/api/v1/webhooks/stripe` (+ `/connect`), `/api/v1/webhooks/calendar/…` (S-32 Google / Microsoft change notifications) and `/api/v1/email/unsubscribe`; the rest of the api is reached through the BFF |
 
 ## Environment variables
 
@@ -89,7 +89,8 @@ Every app reads its configuration from environment variables; nothing environmen
 | `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`, `STORAGE_PATH_STYLE` | api | no | empty / `false` in the cloud (workload identity: EKS Pod Identity or IRSA, GKE / AKS Workload Identity) | — (Terraform grants the `northline-api` workload identity least-privilege access to the bucket / container, [object-storage.md](object-storage.md)) |
 | `KMS_PROVIDER`, `KMS_KEY_ID` | auth | `KMS_PROVIDER` **yes** | `aws` + key ARN / `gcp` + key **version** name / `azure` + versioned key URL | Terraform `config_env` (module `kms`, key `signing`: key ARN / `…/cryptoKeyVersions/1` / versioned key URL, [infrastructure.md § 4](infrastructure.md#4-outputs--the-apps-environment-variables)) → ConfigMap; without Terraform created by hand ([key-rotation.md](key-rotation.md#creating-the-key-until-terraform-does-it--s-2)). `dev` may also run `local` with `SIGNING_KEYS_DIR` on a volume every auth replica mounts. |
 | `KMS_PUBLISHED_KEY_IDS` | auth | no | empty; the next or previous key during a rotation | Terraform `config_env` from `signing_key_ids` in the env root (empty by default); during a rotation [key-rotation.md](key-rotation.md#rotating--cloud-providers) |
-| `KMS_REGION`, `KMS_ENDPOINT` | auth | no | AWS only: `ca-central-1`, a VPC endpoint URL | deployment manifest |
+| `KMS_REGION`, `KMS_ENDPOINT` | auth, api (S-32) | no | AWS only: `ca-central-1`, a VPC endpoint URL | deployment manifest |
+| `KMS_ENCRYPTION_KEY_ID` | api (S-32) | no (`KMS_PROVIDER=local` + `KMS_LOCAL_KEY` works here; without either, calendars can't be connected) | key ARN (AWS) / crypto key name (Google Cloud) / versioned key URL (Azure) of the `tokens` key | Terraform `config_env` (module `kms`, key `tokens`; only the api's workload identity may encrypt/decrypt with it) → ConfigMap. Wraps the data keys that seal calendar refresh tokens ([calendar-sync.md](calendar-sync.md#the-envelope-key-kms_encryption_key_id)); never delete a key version that sealed live tokens |
 | `TRUSTED_PROXIES` | auth | no (private ranges + loopback) | the ingress / load balancer subnet, e.g. `10.20.0.0/22` (comma-separated CIDRs) | network plan (S-2); only these peers may set `X-Forwarded-For/-Proto/-Host` — the client IP the rate limits and the sign-in log use ([README § Rate limits](README.md#rate-limits-s-9)) |
 | `RATE_LIMIT_STORE` | auth | no (`redis`) | leave unset: `memory` is refused here | — |
 | `RATE_LIMIT_WHEN_UNAVAILABLE` | auth | no (`open`) | leave unset (`open`); `closed` to rehearse the staging/prod behaviour | S-20, [README § Rate limits](README.md#rate-limits-s-9) |
@@ -104,6 +105,10 @@ Every app reads its configuration from environment variables; nothing environmen
 | `SMS_VOICE_FROM`, `SMS_REGION`, `SMS_ENDPOINT` | auth, api, worker | no | `+15875550101` (needed when `SMS_FROM` is `MG…`), `ca-central-1` (`aws`), — | [README § SMS and voice codes](README.md#sms-and-voice-codes-s-8) |
 | `IDENTITY_PROVIDER` | api | no (`local` = fake sessions nobody can finish here; a warning) | `stripe` with the test-mode `STRIPE_SECRET_KEY` | Stripe dashboard → Identity activated, platform webhook endpoint with the `identity.verification_session.*` events ([stripe.md § Identity](stripe.md#8-identity-s-22)) → ConfigMap |
 | `REGISTRY_CORPORATIONS_CANADA_PROVIDER`, `REGISTRY_ALBERTA_PROVIDER`, `REGISTRY_CALGARY_PROVIDER` (+ `_URL`, `_KEY`, `REGISTRY_CALGARY_APP_TOKEN`) | api | no (`fixtures`, a warning) | `manual`, `manual`, `socrata` | [registries.md](registries.md#set-up-per-environment); keys → secrets manager |
+| `CALENDAR_PROVIDER` | api (S-32) | no (`local` = fake Google / Outlook) | `oauth` | ConfigMap ([calendar-sync.md](calendar-sync.md)) |
+| `GOOGLE_CALENDAR_CLIENT_ID`, `GOOGLE_CALENDAR_CLIENT_SECRET` | api (S-32) | no (empty = Google Calendar "Not available yet") | `…apps.googleusercontent.com` / `GOCSPX-…` | Google Cloud console → OAuth client (Web), redirect `https://studio.dev.northline.ca/api/v1/calendar/oauth/google/callback` ([calendar-sync.md](calendar-sync.md#google-cloud)); id → ConfigMap, secret → secrets manager `google-calendar-client-secret` |
+| `MICROSOFT_CALENDAR_CLIENT_ID`, `MICROSOFT_CALENDAR_CLIENT_SECRET`, `MICROSOFT_CALENDAR_TENANT` | api (S-32) | no (empty = Outlook "Not available yet") | application (client) id / client secret value / `common` | Microsoft Entra admin center → App registration, redirect `https://studio.dev.northline.ca/api/v1/calendar/oauth/outlook/callback` ([calendar-sync.md](calendar-sync.md#microsoft-entra)); id and tenant → ConfigMap, secret → secrets manager `microsoft-calendar-client-secret` |
+| `CALENDAR_SYNC_INTERVAL`, `CALENDAR_WEBHOOK_RATE_LIMIT` | api (S-32) | no | `PT5M`, `600` | leave unset |
 | `OTEL_EXPORT_ENABLED` | api | no | `false` until a collector exists (S-111) | deployment manifest |
 | `VITE_NL_AUTH_ORIGIN` (Studio build) | web/apps/studio | no since S-14: the Studio image reads `NL_AUTH_ORIGIN` at start (chart: `urls.auth`); the build-time value is only a fallback | `https://auth.dev.northline.ca` | CI build argument; one Studio build per environment |
 
@@ -147,7 +152,7 @@ What still stops a complete deployment. Under the `local`/`test` profiles each o
 | `DomainVerifier` (merchants) | unconfigured adapter throws | custom storefront domains | S-31 |
 | SMS notices (bank change) and SMS team invitations | not sent by the api (the SMS port is in northline-auth) | bank-change notice by email only; mobile invitations by copied link | S-27 |
 | `CommerceSync` (catalogue) | unconfigured adapter throws | Shopify / Square / Lightspeed connections | S-35 |
-| `CalendarSync` (availability) | 409 `calendar_sync_unavailable` | Google / Microsoft calendar sync | S-32 |
+| Calendar sync (availability, S-32) | Google Calendar API and Microsoft Graph with `CALENDAR_PROVIDER=oauth` | work once the app registrations exist and their ids/secrets are set ([calendar-sync.md](calendar-sync.md)); never run against the real providers yet | — |
 | `PaymentGateway` / `ConnectAccountGateway` (payments, merchants) | stripe-java when `STRIPE_SECRET_KEY` is set | Connect accounts, escrow charges, transfers, payouts, refunds (S-11) and webhooks (S-12) work with keys and signing secrets, set up per [stripe.md](stripe.md) | — |
 | Google / Apple sign-in (auth) | real registrations from `GOOGLE_*` / `APPLE_*` (S-18) | without them the buttons say "not available" | — ([federation.md](federation.md)) |
 | Search indexer (worker) | consumer is a stub (`TODO(implement)`) | nothing reaches Elasticsearch | S-42, S-43 |
@@ -203,4 +208,5 @@ api and bff (drops their JWK set caches). Nobody is signed out: refresh tokens a
 - [ ] `dev.northline.ca` delegated from the `northline.ca` zone (NS records, [edge.md § DNS delegation](edge.md#dns-delegation)); edge add-ons Synced in Argo CD; every host serves a valid certificate and HSTS, HTTP redirects; Gateway routes `/api`, `/bff`, `/oauth2`, `/login` on the Studio host to the bff
 - [ ] Studio image deployed with `urls.auth` = `https://auth.dev.northline.ca` (served as `/config.js`; one image for every environment, S-14)
 - [ ] Token signing key created in the KMS, `KMS_PROVIDER` / `KMS_KEY_ID` set, workload identity may sign with it; JWK set checked ([key-rotation.md](key-rotation.md)); rotation date in the calendar
+- [ ] Calendar sync (S-32): Google OAuth client and Microsoft app registration with this environment's redirect URIs, `CALENDAR_PROVIDER=oauth`, the `tokens` key in `KMS_ENCRYPTION_KEY_ID`, `/api/v1/webhooks/calendar` reachable on the api host ([calendar-sync.md](calendar-sync.md#checklist))
 - [ ] Stripe keys (test mode) — optional
