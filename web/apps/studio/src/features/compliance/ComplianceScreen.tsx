@@ -129,6 +129,9 @@ function PaymentSettings({ data }: { data: Compliance }) {
 
 interface TaxLine { id: string; name: string; amt: number; note: string }
 
+/** Jurisdiction codes the Stripe Tax sync writes (S-21): `<province>_<taxes>`. */
+const TAX_JURISDICTIONS = new Set(['ab_gst', 'bc_gst_pst', 'mb_gst_pst', 'nb_hst', 'nl_hst', 'ns_hst', 'nt_gst', 'nu_gst', 'on_hst', 'pe_hst', 'qc_gst_qst', 'sk_gst_pst', 'yt_gst']);
+
 function TaxTable({ rows, period, takeRateBps }: { rows: TaxRow[]; period: string; takeRateBps: number | null }) {
   const t = useComplianceT();
   const role = useRole();
@@ -137,7 +140,7 @@ function TaxTable({ rows, period, takeRateBps }: { rows: TaxRow[]; period: strin
     id: r.jurisdiction,
     name: r.jurisdiction === 'platform_fee_gst'
       ? (takeRateBps ? t('tax_platform_fee_gst', { pct: takeRateBps / 100 }) : t('tax_platform_fee_gst_plain'))
-      : r.jurisdiction === 'ab_gst' || r.jurisdiction === 'bc_gst_pst' ? t(`tax_${r.jurisdiction}`) : r.jurisdiction,
+      : TAX_JURISDICTIONS.has(r.jurisdiction) ? t(`tax_${r.jurisdiction}` as Parameters<ComplianceT>[0]) : r.jurisdiction,
     amt: r.collectedCents,
     note: r.handling === 'not_selling' && r.jurisdiction.startsWith('bc_') ? t('handling_not_selling_bc') : t(`handling_${r.handling}`),
   }));

@@ -10,8 +10,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 
 /**
- * Runs the payments jobs every minute (not under {@code test}: tests call {@link PaymentsJobs} themselves). One failing
- * step is logged and retried on the next run; it never blocks the others.
+ * Runs the payments jobs every minute and the Stripe Tax reconciliation nightly (not under {@code test}: tests call
+ * {@link PaymentsJobs} themselves). One failing step is logged and retried on the next run; it never blocks the others.
  */
 @Slf4j
 @Configuration(proxyBeanMethods = false)
@@ -29,8 +29,15 @@ class PaymentsScheduler {
         step("renew card holds", jobs::renewAuthorizations);
         step("lapse cases", jobs::lapseCases);
         step("refund queue", jobs::payRefundQueue);
+        step("stripe tax", jobs::syncTax);
         step("payout accounts", jobs::activatePayoutAccounts);
         step("payouts", jobs::runPayouts);
+    }
+
+    /** Nightly at 03:17 Edmonton: the Stripe Tax reconciliation (S-21). */
+    @Scheduled(cron = "${northline.tax.reconcile-cron:0 17 3 * * *}", zone = "America/Edmonton")
+    void reconcileTax() {
+        step("stripe tax reconciliation", jobs::reconcileTax);
     }
 
     private static void step(String name, IntSupplier job) {

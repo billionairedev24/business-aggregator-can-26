@@ -18,6 +18,9 @@ public interface PaymentAuthorizations {
      * @param transferGroup {@code order:<orderId>} or {@code booking:<bookingId>}
      * @param clientKey the customer's {@code Idempotency-Key}, when a request started this; null = the reference alone
      *     identifies the call
+     * @param taxCalculationId the {@link TaxCalculations} quote the tax comes from ({@code amountCents} and
+     *     {@code taxCents} must match it); null = the caller computed the tax, and the sale is reported to Stripe Tax
+     *     with a calculation made at capture for the merchant's province
      */
     record Request(
             String merchantId,
@@ -27,7 +30,22 @@ public interface PaymentAuthorizations {
             long amountCents,
             long taxCents,
             String transferGroup,
-            @Nullable String clientKey) {}
+            @Nullable String clientKey,
+            @Nullable String taxCalculationId) {
+
+        /** Without a tax calculation (the tax was worked out by the caller). */
+        public Request(
+                String merchantId,
+                String refType,
+                String refId,
+                String customerId,
+                long amountCents,
+                long taxCents,
+                String transferGroup,
+                @Nullable String clientKey) {
+            this(merchantId, refType, refId, customerId, amountCents, taxCents, transferGroup, clientKey, null);
+        }
+    }
 
     /**
      * @param status {@code requires_action} (Stripe.js must confirm), {@code authorized}, …

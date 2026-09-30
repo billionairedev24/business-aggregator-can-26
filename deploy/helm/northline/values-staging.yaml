@@ -23,6 +23,7 @@ apps:
   api:
     env:
       # S-13: EMAIL_PROVIDER comes from the cloud overlay (ses / sendgrid / azure); the sender is per environment.
+      TAX_PROVIDER: stripe          # S-21: Stripe Tax (with STRIPE_SECRET_KEY); `local` is refused here
       EMAIL_FROM: "Northline <no-reply@staging.northline.ca>"
     autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 4 }
     secretEnv:

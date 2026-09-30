@@ -52,6 +52,21 @@ describe('Stripe & compliance', () => {
     expect(screen.getByText(/last accepted v2.3 on/)).toBeTruthy();
   });
 
+  it('names every jurisdiction the Stripe Tax sync writes, in English and French', async () => {
+    const tax = [
+      { jurisdiction: 'on_hst', collectedCents: 1300, handling: 'remitted_by_northline' },
+      { jurisdiction: 'qc_gst_qst', collectedCents: 1498, handling: 'remitted_by_northline' },
+    ];
+    mockFetch({ 'GET /api/v1/merchants/m1/compliance': () => data({ tax }) });
+    const en = renderWithProviders(<ComplianceScreen />);
+    expect((await screen.findAllByText('Ontario · HST 13%')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Québec · GST 5% + QST 9.975%').length).toBeGreaterThan(0);
+    en.unmount();
+    renderWithProviders(<ComplianceScreen />, 'fr');
+    expect((await screen.findAllByText('Ontario · TVH 13 %')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Québec · TPS 5 % + TVQ 9,975 %').length).toBeGreaterThan(0);
+  });
+
   it('uploads a renewal and the row turns "in review"', async () => {
     let uploaded = false;
     const calls = mockFetch({
