@@ -103,9 +103,12 @@ on Google Cloud and Azure (regional subnets) or `kms_key` on ACR (customer-manag
 ### Kafka differences that matter
 
 - **Topic auto-creation:** never relied upon. MSK has it switched off in its configuration; Managed Kafka and Event
-  Hubs don't let us set it. Every topic and its `.dlq` are created by `scripts/topics.sh` (S-25) before the apps start
-  (`data_stores.kafka.topic_policy` says how per cloud). On Event Hubs the topic-creating credential needs the
-  *Manage* right: the module writes a separate `kafka-admin-jaas-config` secret for it; the apps get Send + Listen.
+  Hubs don't let us set it. Every topic of `deploy/kafka/topics.yaml` (with its `.dlq` and the consumers' retry
+  topics) is created before the apps start (S-25; `data_stores.kafka.topic_policy` says how per cloud): on MSK and
+  Managed Kafka by the chart's provisioning Job (Kafka admin API); on Event Hubs by this Terraform —
+  `modules/kafka/catalogue` reads the same file and `modules/kafka/azure` creates one `azurerm_eventhub` per topic
+  (`prevent_destroy`), so no pod needs the *Manage* right (the `kafka-admin-jaas-config` secret stays for repairs).
+  The kafka modules share a `topics` input for this; AWS and Google Cloud ignore it.
 - **SASL:** MSK = `SCRAM-SHA-512` (credentials in a Secrets Manager secret named `AmazonMSK_*`, encrypted with the
   customer-managed key); Google Cloud = `PLAIN` with username = service-account email and password = its base64 key;
   Event Hubs = `PLAIN` with username `$ConnectionString` and the connection string as password. All three use

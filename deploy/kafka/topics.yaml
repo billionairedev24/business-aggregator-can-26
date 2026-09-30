@@ -1,0 +1,93 @@
+# Kafka topic catalogue (S-25) — the ONE list of Northline topics, read by:
+#   - the provisioning Job / command  ca.northline.worker.topics.TopicsCommand (Kafka admin API; every environment;
+#     packaged into the worker image as classpath:kafka/topics.yaml)
+#   - scripts/topics.sh              (local Kafka / docker compose `events` profile, same derivation)
+#   - Terraform (Azure Event Hubs)   infra/terraform/stacks/azure: yamldecode(file(...)) → azurerm_eventhub
+# and checked by:
+#   - api   TopicCatalogueTest       every @Externalized("<topic>::…") target is listed here
+#   - worker TopicCatalogueTest       derivation, limits (Event Hubs Premium: 100 event hubs per processing unit),
+#                                     topics.sh --list == the Java derivation
+# Runbook: docs/runbooks/infrastructure.md § 5.3.
+#
+# Format (kept deliberately flat so a POSIX awk in scripts/topics.sh can read it; no anchors, no multi-line values,
+# lists only as [a, b]):
+#   defaults   partitions / retentionHours / cleanupPolicy for every topic that doesn't override them
+#   dlq        every topic gets "<topic>.dlq" (shared by all consumer groups; the record's headers name the group)
+#   retry      every consumer gets "<topic>.<group>.retry-<n>" for each delay in retryDelaysSeconds (non-blocking
+#              retries, Spring Kafka @RetryableTopic); retry topics have the source topic's partition count
+#   topics     name = <module>.<aggregate> (key = aggregate id); owner = the module that publishes
+#   consumers  group = Kafka consumer group of server/worker; topics it subscribes to; its retry delays
+#
+# Rules: never delete or rename an entry (the provisioner never deletes topics; a topic no longer produced stays
+# until a human removes it — runbook). Never lower `partitions`, and raising it changes which partition a key maps to
+# (per-aggregate ordering breaks for in-flight keys): the provisioner reports partition drift, it never changes it.
+# Retention and cleanup policy are applied (and drift corrected) by `apply`.
+
+defaults:
+  partitions: 6
+  retentionHours: 168          # 7 days
+  cleanupPolicy: delete
+
+dlq:
+  partitions: 1
+  retentionHours: 720          # 30 days to investigate and replay (Event Hubs Premium allows up to 90)
+
+retry:
+  retentionHours: 24
+
+topics:
+  - name: identity.user
+    owner: identity
+  - name: merchants.merchant
+    owner: merchants
+  - name: merchants.storefront
+    owner: merchants
+  - name: merchants.member
+    owner: merchants
+  - name: merchants.verification
+    owner: merchants
+  - name: catalogue.listing
+    owner: catalogue
+  - name: food.menu
+    owner: food
+  - name: food.kitchen
+    owner: food
+  - name: booking.quote
+    owner: booking
+  - name: booking.booking
+    owner: booking
+  - name: availability.availability
+    owner: availability
+  - name: orders.order
+    owner: orders
+  - name: fulfilment.delivery
+    owner: fulfilment
+  - name: payments.payment
+    owner: payments
+  - name: payments.escrow
+    owner: payments
+  - name: payments.refund
+    owner: payments
+  - name: payments.dispute
+    owner: payments
+  - name: payments.payout
+    owner: payments
+  - name: payments.payout_account
+    owner: payments
+  - name: trust.dispute
+    owner: trust
+  - name: trust.review
+    owner: trust
+  - name: messaging.message
+    owner: messaging
+  - name: messaging.ticket
+    owner: messaging
+  - name: developer.api_key
+    owner: developer
+  - name: developer.webhook_endpoint
+    owner: developer
+
+consumers:
+  - group: search-indexer
+    topics: [catalogue.listing, food.menu, merchants.storefront]
+    retryDelaysSeconds: [10, 60, 300]

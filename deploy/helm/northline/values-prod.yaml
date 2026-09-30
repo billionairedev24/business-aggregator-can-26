@@ -13,6 +13,10 @@ urls:
 ingress:
   enabled: true
 
+# S-25: two in-sync replicas of three before a write is acknowledged (the api produces with acks=all).
+kafkaTopics:
+  minInsyncReplicas: "2"
+
 apps:
   api:
     env:
