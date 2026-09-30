@@ -5,6 +5,7 @@
 northline.required-env:                 # checked before start-up (ca.northline.platform.RequiredEnvironmentCheck)
   database: DB_URL, DB_USER, DB_PASSWORD
   cache: REDIS_HOST
+  events: KAFKA_BOOTSTRAP                # S-28: user.registered is externalized to Kafka
   public-urls: AUTH_ISSUER, STUDIO_ORIGIN, CONSUMER_ORIGIN, CONSOLE_ORIGIN, WEBAUTHN_RP_ID
   secrets: TOTP_KEY, STUDIO_BFF_SECRET_HASH  # CONSUMER_/CONSOLE_BFF_SECRET_HASH: optional until those BFFs exist (S-122)
   signing-provider: KMS_PROVIDER      # dev may use `local` + SIGNING_KEYS_DIR on a shared volume; staging/prod a KMS

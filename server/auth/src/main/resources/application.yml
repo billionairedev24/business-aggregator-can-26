@@ -27,6 +27,24 @@ spring:
     password: ${REDIS_PASSWORD:}
     ssl.enabled: ${REDIS_SSL:false}
   session.data.redis.namespace: nl:auth   # Boot 4 name (spring.session.redis.* is ignored)
+  # S-28: events (user.registered) through a transactional outbox — Spring Modulith's JDBC registry in the auth schema
+  # (V023; not the api's events.* tables) — externalized to Kafka after commit, like the api.
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    security.protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
+    properties:
+      sasl.mechanism: ${KAFKA_SASL_MECHANISM:PLAIN}
+      sasl.jaas.config: ${KAFKA_SASL_JAAS_CONFIG:}
+    producer:
+      acks: all
+      properties.enable.idempotence: true
+  modulith.events:
+    jdbc:
+      schema: auth
+      schema-initialization.enabled: false
+    externalization.enabled: true
+    republish-outstanding-events-on-restart: true
+    completion-mode: archive
   security.oauth2:
     authorizationserver.issuer: ${AUTH_ISSUER:http://localhost:9000}
 server:
