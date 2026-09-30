@@ -33,8 +33,11 @@ class SecurityConfig {
                                 "/api/v1/search/**", "/api/v1/storefronts/**", "/api/v1/geo/**")
                         .permitAll()
                         // Email unsubscribe links: the signed token is the authorisation (S-13). The template
-                        // previews exist only under the `local` profile (404 elsewhere).
-                        .requestMatchers("/api/v1/email/unsubscribe", "/api/v1/dev/emails/**")
+                        // previews and the fake Stripe Identity page (S-22) exist only under `local` (404 elsewhere).
+                        .requestMatchers(
+                                "/api/v1/email/unsubscribe",
+                                "/api/v1/dev/emails/**",
+                                "/api/v1/dev/identity-sessions/**")
                         .permitAll()
                         // Stripe webhooks: authenticated by the Stripe-Signature, not a token (S-12)
                         .requestMatchers(HttpMethod.POST, "/api/v1/webhooks/stripe", "/api/v1/webhooks/stripe/connect")

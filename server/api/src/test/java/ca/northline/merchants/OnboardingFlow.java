@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ca.northline.merchants.application.DevIdentityOutcomes;
 import ca.northline.support.TestJwt;
 import com.jayway.jsonpath.JsonPath;
 import java.security.SecureRandom;
@@ -13,7 +14,10 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
+import javax.sql.DataSource;
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -25,9 +29,50 @@ final class OnboardingFlow {
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final MockMvc mvc;
+    private final @Nullable JdbcClient jdbc;
+    private final @Nullable DevIdentityOutcomes identity;
 
     OnboardingFlow(MockMvc mvc) {
+        this(mvc, null, null);
+    }
+
+    /** With the fake Stripe Identity, so {@link #completeAll} can verify the owners too (S-22). */
+    OnboardingFlow(MockMvc mvc, @Nullable DataSource dataSource, @Nullable DevIdentityOutcomes identity) {
         this.mvc = mvc;
+        this.jdbc = dataSource == null ? null : JdbcClient.create(dataSource);
+        this.identity = identity;
+    }
+
+    /** Every owner who needs it gets an emailed Stripe Identity link and finishes with {@code outcome}. */
+    void verifyOwners(String merchantId, String userId, String outcome) throws Exception {
+        if (jdbc == null || identity == null) {
+            throw new IllegalStateException("new OnboardingFlow(mvc, dataSource, identity) to verify owners");
+        }
+        var body = mvc.perform(get("/api/v1/merchants/{id}/identity-checks", merchantId)
+                        .with(TestJwt.member(userId)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        List<String> owners = JsonPath.read(body, "$.items[?(@.status != 'verified')].principalId");
+        for (var owner : owners) {
+            startSession(merchantId, userId, owner, "{\"delivery\":\"email\",\"email\":\"owner@example.test\"}")
+                    .andExpect(status().isOk());
+            var session =
+                    jdbc.sql("""
+                            select stripe_session from merchants.owner_identity_checks
+                             where merchant_id = ? and principal_id = ?""").params(merchantId, owner).query(String.class).single();
+            if (identity.finish(session, outcome).isEmpty()) {
+                throw new IllegalStateException("unknown fake session " + session);
+            }
+        }
+    }
+
+    ResultActions startSession(String merchantId, String userId, String principalId, String json) throws Exception {
+        return mvc.perform(post("/api/v1/merchants/{id}/identity-checks/{p}/session", merchantId, principalId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .with(TestJwt.member(userId)));
     }
 
     /** Account step → the new applicant's id. */
@@ -86,6 +131,10 @@ final class OnboardingFlow {
                 continue;
             }
             var key = String.valueOf(check.get("key"));
+            if ("identity".equals(check.get("action"))) {
+                verifyOwners(merchantId, userId, "verified");
+                continue;
+            }
             var body = switch (String.valueOf(check.get("action"))) {
                 case "number" ->
                     key.equals("gst") ? "{\"reference\":\"123456789 RT0001\"}" : "{\"reference\":\"44812\"}";

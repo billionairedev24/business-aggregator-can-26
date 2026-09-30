@@ -15,6 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ca.northline.merchants.api.MerchantSubmitted;
+import ca.northline.merchants.application.DevIdentityOutcomes;
 import ca.northline.shared.security.MerchantRole;
 import ca.northline.support.IntegrationTest;
 import ca.northline.support.TestJwt;
@@ -48,6 +49,9 @@ class OnboardingApiTest extends IntegrationTest {
     @Autowired
     JdbcClient jdbc;
 
+    @Autowired
+    DevIdentityOutcomes identity;
+
     OnboardingFlow flow;
 
     @BeforeEach
@@ -56,7 +60,7 @@ class OnboardingApiTest extends IntegrationTest {
             new CategorySeeder(dataSource).seed();
             seeded = true;
         }
-        flow = new OnboardingFlow(mvc);
+        flow = new OnboardingFlow(mvc, dataSource, identity);
     }
 
     @Nested
@@ -254,7 +258,7 @@ class OnboardingApiTest extends IntegrationTest {
             flow.business(id, user, soleBusiness("Pipes Co", "service.home-trades.plumber"))
                     .andExpect(status().isOk());
             String kycId = JsonPath.read(flow.onboarding(id, user), "$.checklist[0].id");
-            flow.complete(id, user, kycId, "{}").andExpect(status().isOk());
+            flow.verifyOwners(id, user, "verified");
 
             flow.business(id, user, soleBusiness("Pipes Co", "service.pets.dog-walker"))
                     .andExpect(status().isOk())
@@ -500,19 +504,20 @@ class OnboardingApiTest extends IntegrationTest {
         @Test
         void instantChecksVerifyThroughTheFakes() throws Exception {
             flow.complete(id, user, check("kyc"), "{}")
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.checklist[0].status").value("verified"))
-                    .andExpect(jsonPath("$.checksComplete").value(1));
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.code").value("identity_per_owner"));
             flow.complete(id, user, check("bank"), "{}")
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.checksComplete").value(1))
                     .andExpect(jsonPath("$.checklist[?(@.key == 'bank')].reference")
                             .value("TD ··3391"));
         }
 
         @Test
         void verifiedChecksCannotBeRedone() throws Exception {
-            var kyc = check("kyc");
-            flow.complete(id, user, kyc, "{}").andExpect(status().isOk());
-            flow.complete(id, user, kyc, "{}")
+            var bank = check("bank");
+            flow.complete(id, user, bank, "{}").andExpect(status().isOk());
+            flow.complete(id, user, bank, "{}")
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.code").value("already_verified"));
         }
