@@ -1,12 +1,17 @@
 package ca.northline.auth.config;
 
 import ca.northline.auth.application.AuthProperties;
+import ca.northline.auth.application.PartnerTokens;
 import ca.northline.auth.application.RefreshTokenReuse;
 import ca.northline.auth.application.SessionAuthentication;
 import ca.northline.auth.application.SessionService;
 import ca.northline.auth.application.UserClaimsService;
 import ca.northline.auth.dpop.AppClientAuthentication;
 import ca.northline.auth.dpop.DpopTokens;
+import ca.northline.auth.partners.PartnerAssertions;
+import ca.northline.auth.partners.PartnerClaims;
+import ca.northline.auth.partners.PartnerTokenErrors;
+import ca.northline.auth.partners.PartnerTokenProvider;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 import java.time.Clock;
@@ -31,6 +36,8 @@ import org.springframework.security.oauth2.server.authorization.JdbcOAuth2Author
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationConsentService;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
+import org.springframework.security.oauth2.server.authorization.authentication.JwtClientAssertionAuthenticationProvider;
+import org.springframework.security.oauth2.server.authorization.authentication.OAuth2ClientCredentialsAuthenticationProvider;
 import org.springframework.security.oauth2.server.authorization.client.JdbcRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.token.DelegatingOAuth2TokenGenerator;
@@ -63,7 +70,11 @@ class AuthorizationServerConfig {
     @Bean
     @Order(1)
     SecurityFilterChain authorizationServer(
-            HttpSecurity http, AuthProperties props, RegisteredClientRepository clients) {
+            HttpSecurity http,
+            AuthProperties props,
+            RegisteredClientRepository clients,
+            PartnerAssertions partnerAssertions,
+            PartnerTokens partnerTokens) {
         var authorizationServer = new OAuth2AuthorizationServerConfigurer();
         return http.securityMatcher(authorizationServer.getEndpointsMatcher())
                 .with(
@@ -73,8 +84,21 @@ class AuthorizationServerConfig {
                                 // (/oauth2/revoke) without a secret.
                                 .clientAuthentication(c -> c.authenticationConverters(
                                                 l -> l.addFirst(AppClientAuthentication.converter()))
-                                        .authenticationProviders(
-                                                l -> l.addFirst(AppClientAuthentication.provider(clients)))))
+                                        .authenticationProviders(l -> {
+                                            l.addFirst(AppClientAuthentication.provider(clients));
+                                            // S-30: partners' private_key_jwt assertions (keys, lifetime, jti).
+                                            l.forEach(p -> {
+                                                if (p instanceof JwtClientAssertionAuthenticationProvider assertions) {
+                                                    assertions.setJwtDecoderFactory(partnerAssertions);
+                                                }
+                                            });
+                                        }))
+                                // S-30: partner tokens are rate limited and audited; over the limit = 429.
+                                .tokenEndpoint(t -> t.authenticationProviders(l -> l.replaceAll(
+                                                p -> p instanceof OAuth2ClientCredentialsAuthenticationProvider
+                                                        ? new PartnerTokenProvider(p, partnerTokens)
+                                                        : p))
+                                        .errorResponseHandler(new PartnerTokenErrors())))
                 .authorizeHttpRequests(a -> a.anyRequest().authenticated())
                 .headers(WebSecurityConfig::lockedDown)
                 .exceptionHandling(e -> e.defaultAuthenticationEntryPointFor(
@@ -141,7 +165,8 @@ class AuthorizationServerConfig {
         return ctx -> {
             ctx.getJwsHeader().algorithm(SignatureAlgorithm.ES256);
             if (!(ctx.getPrincipal() instanceof UsernamePasswordAuthenticationToken user)) {
-                return; // client_credentials (partners): no user claims
+                PartnerClaims.add(ctx, API_AUDIENCE); // client_credentials (partners, S-30): no user claims
+                return;
             }
             var factors = UserClaimsService.factorsOf(user);
             if (OAuth2TokenType.ACCESS_TOKEN.equals(ctx.getTokenType())) {

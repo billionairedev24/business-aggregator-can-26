@@ -10,8 +10,10 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param syncOnStartup reconcile {@link #clients} at every start ({@code OAUTH_CLIENTS_SYNC_ON_STARTUP}, default true);
  *     turn it off to register only through the admin command / Kubernetes Job
  * @param clients by OAuth {@code client_id}
+ * @param partners by partner name; each is registered as client {@code partner:<name>} (S-30)
  */
 @ConfigurationProperties("northline.oauth")
 record OAuthClientProperties(
         @DefaultValue("true") boolean syncOnStartup,
-        @DefaultValue Map<String, ClientSpec> clients) {}
+        @DefaultValue Map<String, ClientSpec> clients,
+        @DefaultValue Map<String, PartnerSpec> partners) {}

@@ -120,6 +120,9 @@ northline:
           account: { max: 20, window: 1h, lockout: 15m }
           ip: { max: 60, window: 1h, lockout: 15m }
           session: { max: 20, window: 1h, lockout: 15m }
+        partner-token:                          # S-30: access tokens issued per partner (account = the partner)
+          account: { max: 60, window: 1h, lockout: 15m }
+          ip: { max: 600, window: 1h, lockout: 15m }
     # S-29: one-time ids (DPoP proof jti) and DPoP server nonces, shared by every instance. redis (Valkey; required
     # under staging/prod) | memory (one instance: local/test). Valkey unreachable = requests that need a single-use check
     # are refused (503): a proof that can't be checked for replay is never accepted.
@@ -188,8 +191,16 @@ northline:
         scopes: [ openid, courier, deliveries ]
         refresh-token-ttl: 12h               # design 05: "device-bound, short refresh" — one shift
         dpop-required: true
-      # Partner clients are added here, or in an environment's extra configuration file
-      # (SPRING_CONFIG_ADDITIONAL_LOCATION) — see the runbook.
+    # S-30 partner API clients (docs/runbooks/partners.md): northline.oauth.partners.<name> → client partner:<name>,
+    # client_credentials with private_key_jwt (RFC 7523). None by default; declare them in an environment's extra
+    # configuration file (SPRING_CONFIG_ADDITIONAL_LOCATION) and run the oauthClients Job:
+    #   partners:
+    #     acme:
+    #       name: Acme Books
+    #       jwk-set-url: https://acme.example/.well-known/jwks.json   # or public-keys: [ '{"kty":"EC",…,"kid":"k1"}' ]
+    #       scopes: [ api.read ]                                        # api.read | api.write
+    #       merchants: [ 01J9ZD3V00000000000000PWM1 ]                   # the businesses it acts for
+    #       revoked: false                                              # true = no new token
   # Provider switches (ca.northline.platform) — see docs/runbooks/README.md.
   kms:
     provider: ${KMS_PROVIDER:local}    # token signing keys (S-7): local | aws | gcp | azure

@@ -7,8 +7,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import ca.northline.auth.clients.OAuthClientCatalog.InvalidClientConfiguration;
+import com.nimbusds.jose.jwk.Curve;
+import com.nimbusds.jose.jwk.gen.ECKeyGenerator;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.env.MockEnvironment;
 
@@ -176,6 +179,43 @@ class OAuthClientCatalogTest {
                 .hasMessageContaining("app: a public client that refreshes needs dpop-required: true");
         assertThat(new OAuthClientCatalog(props("app", withoutDpop), ClientPolicy.STRICT).declares("app"))
                 .isTrue();
+    }
+
+    @Test
+    void partners_areValidated_everyProblemListed() throws Exception {
+        var ec = new ECKeyGenerator(Curve.P_256)
+                .keyID("k1")
+                .generate();
+        var pub = ec.toPublicJWK().toJSONString();
+        var ok = Specs.partner(List.of(pub), List.of("api.read"), List.of("01J9ZD3V00000000000000PWM1"));
+        var catalog = new OAuthClientCatalog(Specs.withPartners(props(), Map.of("acme", ok)), ClientPolicy.STRICT);
+        assertThat(catalog.declares("partner:acme")).isTrue();
+
+        var bad = new PartnerSpec(
+                null,
+                "http://keys.acme.example/jwks.json",
+                List.of(ec.toJSONString(), pub),
+                List.of("api.read", "merchant"),
+                List.of("not-a-ulid"),
+                Duration.ofHours(2),
+                false);
+        assertThatThrownBy(() ->
+                        new OAuthClientCatalog(Specs.withPartners(props(), Map.of("Acme!", bad)), ClientPolicy.STRICT))
+                .isInstanceOf(InvalidClientConfiguration.class)
+                .hasMessageContaining("partner:Acme!: partner name must be")
+                .hasMessageContaining("set exactly one of jwk-set-url and public-keys")
+                .hasMessageContaining("jwk-set-url http://keys.acme.example/jwks.json must use https")
+                .hasMessageContaining("public-keys[0] contains a private key")
+                .hasMessageContaining("scope merchant is not a partner scope")
+                .hasMessageContaining("merchant not-a-ulid is not a business id")
+                .hasMessageContaining("access-token-ttl must be between 1 s and 1 h");
+        assertThatThrownBy(() -> new OAuthClientCatalog(
+                        Specs.withPartners(
+                                props(),
+                                Map.of("acme", Specs.partner(List.of(pub, pub), List.of("api.read"), List.of()))),
+                        ClientPolicy.LOCAL))
+                .hasMessageContaining("public-keys[1] needs its own kid")
+                .hasMessageContaining("merchants is empty");
     }
 
     private static MockEnvironment env(String... profiles) {

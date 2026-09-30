@@ -2,6 +2,7 @@ package ca.northline.auth.clients;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -14,10 +15,25 @@ import org.springframework.security.oauth2.server.authorization.client.Registere
 @Slf4j
 final class OAuthClientCatalog {
 
-    /** One declared client. */
-    record Declared(String clientId, ClientSpec spec) {
+    /** One declared client: an app/BFF ({@link ClientSpec}) or a partner ({@link PartnerSpec}, S-30). */
+    record Declared(
+            String clientId,
+            @Nullable ClientSpec spec,
+            @Nullable PartnerSpec partner) {
+        Declared(String clientId, ClientSpec spec) {
+            this(clientId, spec, null);
+        }
+
         RegisteredClient registration(@Nullable RegisteredClient existing) {
-            return spec.toRegisteredClient(clientId, existing);
+            if (partner != null) {
+                return partner.toRegisteredClient(clientId.substring(PartnerSpec.CLIENT_ID_PREFIX.length()), existing);
+            }
+            return Objects.requireNonNull(spec, "a client or a partner").toRegisteredClient(clientId, existing);
+        }
+
+        @Nullable
+        String secretHash() {
+            return spec == null ? null : spec.secretHash();
         }
     }
 
@@ -34,10 +50,19 @@ final class OAuthClientCatalog {
             spec.problems(clientId, policy).forEach(p -> problems.add(clientId + ": " + p));
             declared.add(new Declared(clientId, spec));
         });
+        props.partners().forEach((name, partner) -> {
+            var clientId = PartnerSpec.clientId(name);
+            partner.problems(name, policy).forEach(p -> problems.add(clientId + ": " + p));
+            if (props.clients().containsKey(clientId)) {
+                problems.add(clientId + ": declared both as a client and as a partner");
+            }
+            declared.add(new Declared(clientId, null, partner));
+        });
         declared.stream()
-                .filter(d -> d.spec().secretHash() != null)
+                .filter(d -> d.secretHash() != null)
                 .collect(Collectors.groupingBy(
-                        d -> d.spec().secretHash(), Collectors.mapping(Declared::clientId, Collectors.toList())))
+                        d -> String.valueOf(d.secretHash()),
+                        Collectors.mapping(Declared::clientId, Collectors.toList())))
                 .values()
                 .stream()
                 .filter(ids -> ids.size() > 1)
@@ -49,8 +74,7 @@ final class OAuthClientCatalog {
             throw new InvalidClientConfiguration(problems);
         }
         declared.stream()
-                .filter(d ->
-                        d.spec().secretHash() != null && d.spec().secretHash().startsWith("{noop}"))
+                .filter(d -> String.valueOf(d.secretHash()).startsWith("{noop}"))
                 .filter(_ -> policy == ClientPolicy.DEV)
                 .forEach(d -> log.warn(
                         "OAuth client {} has an unhashed {noop} secret: use {bcrypt} outside a rehearsal",
