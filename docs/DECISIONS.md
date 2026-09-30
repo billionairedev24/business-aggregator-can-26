@@ -1914,3 +1914,53 @@ Contracts for the stories that follow: [CONSUMER_WEB_PLAN.md](CONSUMER_WEB_PLAN.
   pulls DataTable/Chat in) — split when screens land; merchant custom domains get no BFF routes yet; the api has none of
   the consumer endpoints listed in CONSUMER_WEB_PLAN.md (cart, account summary, geo reverse…), so the header shows no
   count/values until they land.
+
+## 2026-09-30 — S-62 Consumer auth pages (sign in, register, OTP, MFA) on the auth JSON API
+
+Built on S-45 (branch `web/s-62-consumer-auth` from `web/s-45-consumer-shell`).
+
+- **Screens:** `/sign-in` and `/register` (design 06 `auth`): the pitch (kicker, hero, three numbered points, support
+  line) and the card (title, "Back to browsing" → `next` or home, three progress bars, sub-line, the step, the legal
+  line). Copy is the design's; French from its `T(…)` pairs where they exist, the rest written in fr-CA (points,
+  field labels, second-factor options). Both pages are `noindex`.
+- **Sign in = mobile → 6-digit code → signed in** (the design's `authNext` skips `mfa` for sign-in), or "Sign in with a
+  passkey" (discoverable, `acr=mfa`). New auth endpoints `POST /api/auth/sign-in/code` (send / resend / call) and
+  `/code/verify` after the existing `POST /api/auth/sign-in`; the code goes to the **account's** mobile (so a Google
+  sign-in known by email continues at the code: "Enter the 6-digit code we sent to the mobile number on your
+  account."). Unknown accounts: an unsent code (`PhoneCodes.unsent`) and the same answers. The code sender moved out of
+  `RegistrationService` into `PhoneCodes` (shared). Sessions log `method = phone_otp`, `acr` null.
+- **Register = full name, mobile, email (receipts), terms → code → second factor → done.** "Full name" is one field (the
+  design's): the last word is the last name, the rest the first name; a one-word name answers the rule's own message
+  "Last name is required." "Send code" stays disabled until mobile and terms are filled (design `authIncomplete`); the
+  other rules show after touch/submit with "N things need attention.". Second factor: Passkey (recommended), Authenticator
+  app, or **SMS code · Backup only = no second factor** → new `POST /api/auth/register/complete` (account `mfa_primary =
+  sms`, session without `acr`). Registration's session now records `acr=mfa` only when a second factor was used (it was
+  hard-coded). Done → "Set my address" → the BFF hand-off to `/location`.
+- **Business apps keep requiring a second factor:** `northline.auth.mfa-required-clients` (`studio-bff`, `console-bff`)
+  get no authorization code for a session without one (`MfaRequiredClients` filter → that app's sign-in page, where
+  signing in again with a factor replaces the session). `TokenClaimsTest`'s single-factor token case now uses the
+  consumer-bff (the Studio's client no longer issues one).
+- **Which sign-in page:** `northline.auth.consumer-login-page` (`${CONSUMER_ORIGIN}/sign-in`) for the clients in
+  `consumer-clients` (`consumer-bff`) — unauthenticated authorization requests land there instead of the Studio's. The
+  mobile apps (S-29) still use the Studio's page (their `continueTo` flow); moving them is a follow-up with the apps.
+- **Google / Apple (S-18) on the consumer site:** "Apple" and "Google" buttons (the design's order) open
+  `/oauth2/authorization/<provider>?app=consumer`; the auth server prefixes the provider `state` with `consumer.` (it
+  survives Apple's cross-site form_post, unlike a session attribute) and returns to the consumer's `/sign-in` /
+  `/register` (and `?error=` there). A phone-code sign-in does not complete a pending Google/Apple link (only a second
+  factor does, as S-18 decided); a consumer can always continue at the code step.
+- **Schema (V110, consumer range):** `identity.sessions.method` CHECK widened with `phone_otp` (drop + re-add of
+  `sessions_method_check`; no row changes).
+- **Shared code (`@northline/auth-kit`, new package):** the Studio's `features/auth/{api,errors,webauthn,useCountdown,
+  rateLimit}` moved there (plus the Google/Apple/passkey marks, `safeNext`, `bffLoginUrl`, `appAuthorizationUrl`,
+  `authUrl`/`endAuthSession` with `configureAuthOrigin`, and the new consumer calls). The shared copy (validation rules,
+  flow errors, federation failures, rate limits) is `KIT_MESSAGES`; each app's `useAuthT` answers its page copy plus
+  those. The Studio sets the origin in `lib/auth-server.ts` (imported by `main.tsx`), the consumer app in its root from
+  `NL_AUTH_ORIGIN`. The Studio's screens are unchanged (253 tests pass); its settings list shows `phone_otp` sessions as
+  "code to phone".
+- **Legal links** (Terms, Privacy Policy) open the verbatim design 09/10 pages in a new tab (`target="_blank"
+  rel="noopener"`, "(opens in a new tab)" for screen readers), in the terms checkbox and the legal line.
+- **Hand-off:** `appAuthorizationUrl(continueTo) ?? /bff/login?next=` — sign-in back to `next` (or home), a new account
+  to `/location`. A signed-in visitor opening `/sign-in` is sent to `next`.
+- **Not done / not verified:** no real SMS, passkey or Google/Apple round trip was exercised in a browser (unit tests
+  mock the auth API; server tests use the recording SMS sender, WireMock providers); step-up for payments on
+  single-factor consumer sessions is S-51's; the security addendum is in docs/security/s-20-auth-review.md.
