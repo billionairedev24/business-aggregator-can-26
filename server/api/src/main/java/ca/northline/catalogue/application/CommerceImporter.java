@@ -36,6 +36,7 @@ import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 /**
@@ -64,6 +65,7 @@ class CommerceImporter {
         SKIPPED
     }
 
+    static final String SYNC_ACTOR = "system:commerce";
     private static final Pattern TAGS = Pattern.compile("<[^>]*>");
     private static final Pattern BLOCK_END = Pattern.compile("(?i)</(p|div|li|h[1-6])>|<br\\s*/?>");
 
@@ -73,6 +75,7 @@ class CommerceImporter {
     private final ImageInspector inspector;
     private final ImageFetcher images;
     private final CommerceLinkRepository links;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     Result apply(Connection connection, ExternalProduct product, @Nullable ProductLink link, Set<String> linkedOffers) {
@@ -89,7 +92,7 @@ class CommerceImporter {
                         merchantId,
                         listing.getId(),
                         details(connection.provider(), product, listing.getDetails(), imageIds(merchantId, product)),
-                        "system:commerce"));
+                        SYNC_ACTOR));
                 save(connection, product, view.listing(), hash);
                 return Result.UPDATED;
             }
@@ -99,10 +102,7 @@ class CommerceImporter {
         }
         var existing = existingBySku(merchantId, product, linkedOffers);
         if (existing != null) {
-            var changed = existing.syncStock(bySku(connection.provider(), product, existing), clock.instant());
-            if (changed) {
-                listings.save(existing);
-            }
+            syncStock(connection.provider(), product, existing);
             save(connection, product, existing, hash);
             return Result.UPDATED;
         }
@@ -116,18 +116,22 @@ class CommerceImporter {
                 merchantId,
                 null,
                 details(connection.provider(), product, null, imageIds(merchantId, product)),
-                "system:commerce"));
+                SYNC_ACTOR));
         save(connection, product, view.listing(), hash);
         return Result.CREATED;
     }
 
-    /** Price and stock per SKU from the platform; @return whether the listing changed (it is saved then). */
+    /**
+     * Price and stock per SKU from the platform; @return whether the listing changed (it is saved then). A price
+     * change on an approved listing sends it back to vetting (S-39).
+     */
     private boolean syncStock(CommerceProvider provider, ExternalProduct product, ProductListing listing) {
-        var changed = listing.syncStock(bySku(provider, product, listing), clock.instant());
-        if (changed) {
+        var revet = listing.syncStock(bySku(provider, product, listing), SYNC_ACTOR, clock.instant());
+        revet.ifPresent(published -> {
             listings.save(listing);
-        }
-        return changed;
+            published.forEach(events::publishEvent);
+        });
+        return revet.isPresent();
     }
 
     /** The platform's price and stock keyed by the Northline SKU each variant maps to. */
