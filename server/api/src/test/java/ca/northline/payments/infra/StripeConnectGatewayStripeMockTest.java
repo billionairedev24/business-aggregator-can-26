@@ -15,13 +15,13 @@ import org.junit.jupiter.api.Test;
 /**
  * Every call path of the payments Stripe adapter against stripe-mock (which validates each request against Stripe's
  * OpenAPI spec for the pinned version): the escrow flow hold → capture → transfer → payout, cancel, refund + transfer
- * reversal, instant payout + fee recovery, payout reconciliation and bank accounts. Every mutating call must carry an
+ * reversal, instant payout + fee recovery, payout reconciliation and the default bank account. Every mutating call must carry an
  * {@code Idempotency-Key} and every call the pinned {@code Stripe-Version}.
  */
 class StripeConnectGatewayStripeMockTest {
 
     private final StripeMock.Recorder recorder = new StripeMock.Recorder();
-    private final StripeConnectGateway gateway = new StripeConnectGateway(StripeMock.client(recorder), "pk_test_fake");
+    private final StripeConnectGateway gateway = new StripeConnectGateway(StripeMock.client(recorder));
 
     private static final Map<String, String> IDS =
             Map.of("northline_escrow_id", "01J9ZD3V00000000000000ESC1", "northline_merchant_id", "PWM1");
@@ -138,22 +138,10 @@ class StripeConnectGatewayStripeMockTest {
     }
 
     @Test
-    void connectedAccount_manualPayouts_andBankAccounts() {
+    void connectedAccount_manualPayouts_andDefaultBankAccount() {
         gateway.useManualPayouts("acct_1");
         assertThat(recorder.sent().getLast().path()).isEqualTo("/v1/accounts/acct_1");
-        var session = gateway.startBankLink("acct_1");
-        assertThat(session.mode()).isEqualTo("stripe");
-        assertThat(session.clientSecret()).isNotBlank();
-        assertThat(session.publishableKey()).isEqualTo("pk_test_fake");
-        var manual = gateway.manual("acct_1", "004", "12345", "1234567", "Prairie Wrench Mobile Mechanics Ltd.");
-        assertThat(manual.externalRef()).startsWith("ba_");
-        assertThat(manual.last4()).hasSize(4);
-        // the account number never appears in a key
-        assertThat(recorder.sent())
-                .allSatisfy(
-                        s -> assertThat(String.join(",", s.idempotencyKeys())).doesNotContain("1234567"));
-        var linked = gateway.linked("acct_1", "btok_123");
-        assertThat(linked.externalRef()).startsWith("ba_");
-        gateway.makeDefault("acct_1", linked.externalRef());
+        gateway.makeDefault("acct_1", "ba_123"); // linking itself: StripeBankLinkingStripeMockTest
+        assertThat(recorder.sent().getLast().path()).isEqualTo("/v1/accounts/acct_1/external_accounts/ba_123");
     }
 }
