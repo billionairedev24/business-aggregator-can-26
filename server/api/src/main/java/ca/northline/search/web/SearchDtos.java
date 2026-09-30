@@ -48,7 +48,7 @@ final class SearchDtos {
             boolean instantBook,
             List<String> fulfilment,
 
-            @Schema(description = "Inside its hours now (Edmonton), not paused, not sold out today")
+            @Schema(description = "Inside its hours now (the market's local time), not paused, not sold out today")
             boolean openNow,
 
             @Schema(description = "A dish sold out today") boolean soldOut,

@@ -20,7 +20,7 @@ public record SearchResults(
      * A result and what is true of it now.
      *
      * @param distanceKm from the person's location, when both are known
-     * @param openNow inside its weekly hours at this minute (Edmonton), not paused, not sold out today
+     * @param openNow inside its weekly hours at this minute (the market's local time), not paused, not sold out today
      * @param soldOut a dish sold out today
      * @param onTonightsRun pooled delivery still before today's cut-off, in stock
      */

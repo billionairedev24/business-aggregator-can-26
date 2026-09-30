@@ -90,7 +90,10 @@ northline:
   # (no index: every search is empty; the `local` profile's default, refused under staging/prod).
   search:
     provider: ${SEARCH_PROVIDER:elasticsearch}
-    default-market: ${SEARCH_DEFAULT_MARKET:AB}      # province searched when the request names none
+    # Region configuration until S-134 (DECISIONS "Region-neutral by design"): the markets search serves and the time
+    # zone each keeps its listings' hours / cut-offs / "sold out today" in; the market searched when a request names none
+    markets: ${SEARCH_MARKETS:AB=America/Edmonton,BC=America/Vancouver,ON=America/Toronto,QC=America/Toronto}
+    default-market: ${SEARCH_DEFAULT_MARKET:AB}
     cache-ttl: ${SEARCH_CACHE_TTL:30s}              # identical searches answered from Redis/Valkey for this long
     rate-limit: ${SEARCH_RATE_LIMIT:120}            # requests per minute and client address (anonymous included)
   # Sales tax (S-21; docs/runbooks/stripe.md § 6): local (fixed Canadian rates, nothing reported; refused under

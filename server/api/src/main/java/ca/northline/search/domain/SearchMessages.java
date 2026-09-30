@@ -9,7 +9,8 @@ public final class SearchMessages {
     public static final double MAX_RADIUS_KM = 100;
 
     public static final String QUERY_TOO_LONG = "Search for 100 characters or fewer.";
-    public static final String MARKET = "Choose a province: AB, BC, ON or QC.";
+    public static final String MARKET = "Use a two-letter province or territory code.";
+    public static final String MARKET_REQUIRED = "Send the province or territory to search in (market).";
     public static final String KIND = "Choose service, product, food or merchant.";
     public static final String TIER = "Choose registered, trusted or master.";
     public static final String SORT = "Sort by relevance, distance, price_asc, price_desc or rating.";
@@ -26,6 +27,10 @@ public final class SearchMessages {
     public static final String SUGGEST_SIZE = "Ask for 1 to 10 suggestions.";
     public static final String AFTER = "This page link no longer works. Start the search again.";
     public static final String PREFIX_REQUIRED = "Type at least one letter.";
+
+    public static String marketNotServed(String market) {
+        return "Search isn't available in " + market + " yet.";
+    }
 
     private SearchMessages() {}
 }

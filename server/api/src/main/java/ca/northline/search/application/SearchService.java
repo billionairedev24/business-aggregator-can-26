@@ -35,6 +35,7 @@ class SearchService implements SearchListings, SuggestListings {
     private final JsonMapper json;
     private final Clock clock;
     private final Duration ttl;
+    private final SearchSettings settings;
 
     SearchService(SearchIndex index, SearchCache cache, JsonMapper json, Clock clock, SearchSettings settings) {
         this.index = index;
@@ -42,6 +43,7 @@ class SearchService implements SearchListings, SuggestListings {
         this.json = json;
         this.clock = clock;
         this.ttl = settings.cacheTtl();
+        this.settings = settings;
     }
 
     @Override
@@ -67,7 +69,8 @@ class SearchService implements SearchListings, SuggestListings {
                 q.sort(),
                 q.size(),
                 q.after());
-        return cached(key, SearchResults.class, () -> index.search(q, SearchMoment.now(clock)));
+        return cached(
+                key, SearchResults.class, () -> index.search(q, SearchMoment.now(clock, settings.zone(q.market()))));
     }
 
     @Override

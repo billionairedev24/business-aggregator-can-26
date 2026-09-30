@@ -15,7 +15,7 @@ import org.jspecify.annotations.Nullable;
  * the market filter keeps a search inside the person's province.
  *
  * @param text what was typed (blank = browse everything that matches the filters)
- * @param market province code of the person's location (AB, BC, ON, QC)
+ * @param market province/territory code of the person's location (which markets are served is configuration)
  * @param categoryId a category id at any level (group or leaf)
  * @param openNow open at this minute (weekly hours), not paused, not sold out today
  * @param deliveryTonight on tonight's pooled run: pooled delivery, before the seller's same-day cut-off, in stock
@@ -47,7 +47,7 @@ public record SearchQuery(
         @Nullable String after) {
 
     public static final int DEFAULT_SIZE = 24;
-    static final Pattern MARKET = Pattern.compile("AB|BC|ON|QC");
+    public static final Pattern MARKET = Pattern.compile("[A-Z]{2}");
 
     public SearchQuery {
         text = text == null || text.isBlank() ? null : text.strip();
