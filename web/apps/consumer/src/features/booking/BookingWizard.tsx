@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
-import { Link, useNavigate } from '@tanstack/react-router';
+import { Link, useLocation, useNavigate } from '@tanstack/react-router';
 import { ApiError, newIdempotencyKey, ValidationError } from '@northline/client';
 import { BrandMark, EmptyState, ErrorState, Field, Skeleton, TextArea, TextInput, useFormatters, useLocale, type Locale } from '@northline/ui';
 import { StepUpDialog } from '../cart/StepUpDialog';
@@ -55,17 +55,19 @@ export function BookingWizard({ slug, step, serviceId, bookingId, onStep }: {
   const { locale } = useLocale();
   const { data: facts } = useSuspenseQuery(providerQuery(slug, locale));
   const { data: page } = useSuspenseQuery(storefrontQuery(slug));
-  const { draft, update, clear, loaded } = useDraft(slug);
+  const { draft: stored, update, clear } = useDraft(slug);
+  const [notice, setNotice] = useState<string>();
   const bookable = facts.services.filter(s => s.pricingMode !== 'quote' || s.kind === 'consult');
-  const chosen = facts.services.find(s => s.id === (draft.serviceId ?? serviceId)) ?? bookable[0];
+  const chosen = facts.services.find(s => s.id === (stored.serviceId ?? serviceId)) ?? bookable[0];
+  /** Until the customer picks one, the service from `?service=` (or the first bookable one) is the choice. */
+  const draft: Draft = stored.serviceId || !chosen ? stored : { ...stored, serviceId: chosen.id };
   const kind: Kind = chosen?.kind ?? facts.kind;
-  const vehicle = kind === 'visit' && facts.vehicle && (chosen?.categorySlug ? true : true);
+  const vehicle = kind === 'visit' && facts.vehicle;
   const cleaning = kind === 'home' && CLEANING.has(chosen?.categorySlug ?? '');
   const steps = stepsFor(kind);
   const current = step === 'done' || steps.includes(step) ? step : 'details';
 
-  if (loaded && !draft.serviceId && chosen && current !== 'done') update({ serviceId: chosen.id });
-  if (current === 'done' && bookingId) return <Done slug={slug} facts={facts} bookingId={bookingId} onAgain={() => { clear(); onStep('details'); }} />;
+  if (current === 'done' && bookingId) return <Done slug={slug} bookingId={bookingId} onAgain={clear} />;
   if (facts.services.length === 0) {
     return <div className="nl-page"><EmptyState action={<Link to="/providers/$slug" params={{ slug }} className="btn btn-secondary">{facts.name}</Link>}>{t('loadError')}</EmptyState></div>;
   }
@@ -92,8 +94,8 @@ export function BookingWizard({ slug, step, serviceId, bookingId, onStep }: {
           </ol>
           {current === 'details' ? <Details facts={facts} draft={draft} update={update} kind={kind} vehicle={vehicle} cleaning={cleaning} services={bookable} onNext={next} categoryHref={facts.category?.slug} /> : null}
           {current === 'location' ? <Location draft={draft} update={update} kind={kind} vehicle={vehicle} onNext={next} onBack={back} /> : null}
-          {current === 'schedule' && chosen ? <Schedule slug={slug} facts={facts} service={chosen} draft={draft} update={update} onNext={next} onBack={back} hoursValue={kind === 'home' ? hoursOf(draft, cleaning) : undefined} /> : null}
-          {current === 'pay' && chosen ? <Pay facts={facts} service={chosen} draft={draft} update={update} kind={kind} vehicle={vehicle} cleaning={cleaning} onBack={back} onBooked={b => { clear(); onStep('done', { booking: b.bookingId }); }} onHoldGone={() => { update({ hold: undefined, startsAt: undefined }); onStep('schedule'); }} /> : null}
+          {current === 'schedule' && chosen ? <Schedule slug={slug} facts={facts} service={chosen} draft={draft} update={update} notice={notice} onNext={() => { setNotice(undefined); next(); }} onBack={back} hoursValue={kind === 'home' ? hoursOf(draft, cleaning) : undefined} /> : null}
+          {current === 'pay' && chosen ? <Pay facts={facts} service={chosen} draft={draft} update={update} kind={kind} vehicle={vehicle} cleaning={cleaning} onBack={back} onBooked={b => { clear(); onStep('done', { booking: b.bookingId }); }} onHoldGone={() => { setNotice(t('holdExpired')); update({ hold: undefined, startsAt: undefined }); onStep('schedule'); }} /> : null}
         </div>
         <Summary facts={facts} brand={page.brandColor} service={chosen} draft={draft} kind={kind} vehicle={vehicle} cleaning={cleaning} />
       </div>
@@ -217,7 +219,6 @@ function Details({ facts, draft, update, kind, vehicle, cleaning, services, onNe
         <button type="button" className="btn btn-primary nl-bk-primary" disabled={!ok} onClick={onNext}>{kind === 'appointment' ? t('detailsCta_appointment') : t('detailsCta')}</button>
         {hint ? <span className="nl-bk-hint" aria-live="polite">{hint}</span> : null}
       </div>
-      <span hidden>{percent(0, locale)}{rating(0, locale)}</span>
     </section>
   );
 }
@@ -252,8 +253,8 @@ function Location({ draft, update, kind, vehicle, onNext, onBack }: { draft: Dra
   );
 }
 
-function Schedule({ slug, facts, service, draft, update, onNext, onBack, hoursValue }: {
-  slug: string; facts: ProviderFacts; service: ProviderService; draft: Draft; update: (p: Partial<Draft>) => void; onNext: () => void; onBack: () => void; hoursValue?: number;
+function Schedule({ slug, facts, service, draft, update, notice, onNext, onBack, hoursValue }: {
+  slug: string; facts: ProviderFacts; service: ProviderService; draft: Draft; update: (p: Partial<Draft>) => void; notice?: string; onNext: () => void; onBack: () => void; hoursValue?: number;
 }) {
   const t = useBookingT();
   const { locale } = useLocale();
@@ -263,11 +264,11 @@ function Schedule({ slug, facts, service, draft, update, onNext, onBack, hoursVa
   const today = dayKey(new Date());
   const [week, setWeek] = useState(() => mondayOf(draft.day ?? today));
   const cal = useQuery(calendarQuery(slug, service.id, week, 7));
-  const [error, setError] = useState<string>();
+  const [error, setError] = useState<string | undefined>(notice);
   const [holding, setHolding] = useState(false);
   const selectedDay = cal.data?.days.find(d => d.date === draft.day);
   const range = `${date(`${week}T18:00:00Z`)}–${date(`${addDays(week, 6)}T18:00:00Z`)}`;
-  const here = typeof window === 'undefined' ? `/providers/${slug}/book` : `${window.location.pathname}${window.location.search}`;
+  const here = useLocation({ select: l => l.href });
 
   const cont = async () => {
     if (!draft.startsAt) return;
@@ -345,7 +346,6 @@ function Pay({ facts, service, draft, update, kind, vehicle, cleaning, onBack, o
 }) {
   const t = useBookingT();
   const { money, date } = useFormatters();
-  const { locale } = useLocale();
   const [phase, setPhase] = useState<PayPhase>({ step: 'form' });
   const [error, setError] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -364,7 +364,7 @@ function Pay({ facts, service, draft, update, kind, vehicle, cleaning, onBack, o
     } catch (e) { fail(e); }
   };
   const fail = (e: unknown) => {
-    if (e instanceof ApiError && e.status === 409 && (e.body as { code?: string } | undefined)?.code === 'hold_expired') { setError(t('holdExpired')); onHoldGone(); return; }
+    if (e instanceof ApiError && e.status === 409 && (e.body as { code?: string } | undefined)?.code === 'hold_expired') { onHoldGone(); return; }
     if (e instanceof ValidationError) { setFieldErrors(e.byField()); setError(e.errors[0]?.message); return; }
     const code = e instanceof ApiError ? (e.body as { code?: string } | undefined)?.code : undefined;
     if (code === 'step_up_required' || code === 'second_factor_required') { setPhase({ step: 'stepUp', mode: code === 'step_up_required' ? 'required' : 'enrol' }); return; }
@@ -397,10 +397,7 @@ function Pay({ facts, service, draft, update, kind, vehicle, cleaning, onBack, o
             <StripeCard clientSecret={phase.checkout.clientSecret!} publishableKey={phase.checkout.publishableKey!} label={t('confirmCard', { total: money(phase.checkout.totalCents) })}
               onAuthorized={() => void finish(phase.checkout)} onError={setError} />
           ) : (
-            <div className="nl-bk-card">
-              <div className="nl-bk-card-head"><span className="nl-bk-kicker">{t('fakeKicker')}</span><span className="nl-bk-muted">{t('fakeNote')}</span></div>
-              <p className="nl-bk-muted">{t('stripeNote')}</p>
-            </div>
+            <p className="nl-bk-card nl-bk-muted">{t('cardNext')}</p>
           )}
           <h2 className="nl-bk-h2">{t('policies')}</h2>
           <div className="nl-bk-policies">
@@ -421,7 +418,6 @@ function Pay({ facts, service, draft, update, kind, vehicle, cleaning, onBack, o
         </div>
       ) : null}
       {phase.step === 'stepUp' ? <StepUpDialog mode={phase.mode} onClose={() => setPhase({ step: 'form' })} onProof={proof => { setPhase({ step: 'form' }); void pay(proof); }} /> : null}
-      <span hidden lang={locale}>{null}</span>
     </section>
   );
 }
@@ -468,7 +464,7 @@ function Summary({ facts, brand, service, draft, kind, vehicle, cleaning }: { fa
   );
 }
 
-function Done({ slug, facts, bookingId, onAgain }: { slug: string; facts: ProviderFacts; bookingId: string; onAgain: () => void }) {
+function Done({ slug, bookingId, onAgain }: { slug: string; bookingId: string; onAgain: () => void }) {
   const t = useBookingT();
   const { money, date } = useFormatters();
   const navigate = useNavigate();
@@ -487,7 +483,6 @@ function Done({ slug, facts, bookingId, onAgain }: { slug: string; facts: Provid
             <Link to="/account/orders" className="btn btn-primary">{t('seeBookings')}</Link>
             <button type="button" className="btn btn-ghost" onClick={() => { onAgain(); void navigate({ to: '/providers/$slug', params: { slug } }); }}>{t('bookElse')}</button>
           </div>
-          <span hidden>{facts.slug}</span>
         </section>
       )}
     </div>
@@ -506,4 +501,3 @@ export function BookingSkeleton() {
   );
 }
 
-export const _internal = { useMemo };
