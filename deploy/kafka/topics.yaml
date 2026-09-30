@@ -88,8 +88,8 @@ topics:
     owner: developer
 
 consumers:
-  - group: search-indexer
-    topics: [catalogue.listing, food.menu, merchants.storefront]
+  - group: search-indexer      # S-43: listings, dishes, kitchens, merchants, pages, reviews, weekly hours → Elasticsearch
+    topics: [catalogue.listing, food.menu, food.kitchen, merchants.merchant, merchants.storefront, trust.review, availability.availability]
     retryDelaysSeconds: [10, 60, 300]
   - group: notifications
     topics: [payments.payout, payments.payout_account, payments.dispute, payments.refund]

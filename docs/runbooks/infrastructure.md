@@ -373,7 +373,8 @@ with `allow.everyone.if.no.acl.found=true`, and Managed Kafka / Event Hubs autho
   `network.cloud.nat_public_ips`). To call it from a laptop, add a temporary rule in the Elastic Cloud console.
 - `ES_USERNAME` is the deployment's `elastic` superuser for now. Before prod data, create a least-privilege
   `northline_app` user/role (index privileges on the Northline indices only), store its password in the `es-password`
-  secret and set `ES_USERNAME` (S-42/S-43 own the index layout).
+  secret and set `ES_USERNAME`. The role's privileges (the `listings_*` indices and the synonym sets):
+  [search.md § 5](search.md#5-elastic-cloud-access-least-privilege).
 - Amazon OpenSearch Service is **not** an option for the apps as they are (Elasticsearch 9 Java client; README § Why
   Elastic Cloud). ECK on the cluster is the self-managed alternative and would replace `modules/search`.
 

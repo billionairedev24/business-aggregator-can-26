@@ -1,0 +1,46 @@
+# S-42 — synonymes de recherche de listings_fr (format Solr : « a, b, c » = termes équivalents ; « a => b » = a devient b).
+# Chargés dans l'ensemble Elasticsearch listings-synonyms-fr par le Job d'amorçage / `:worker:searchIndices apply`
+# (ca.northline.worker.search.index.IndexBootstrap) ; un ensemble modifié est rechargé aussitôt par les analyseurs de
+# recherche, sans réindexation (docs/runbooks/search.md § Synonyms). En minuscules ; les accents sont repliés. Les paires
+# français ↔ anglais figurent dans les deux fichiers : l'index français sert le contenu anglais faute de traduction.
+
+# Alimentation et boulangerie
+pain au levain, levain, sourdough
+baguette, french stick
+viennoiserie, croissant
+phở, soupe tonkinoise, beef noodle soup
+bánh mì, sandwich vietnamien
+poutine, frites sauce
+à emporter, pour emporter, takeout, take-out
+sans gluten, gluten free, gluten-free
+sans lactose, dairy free, dairy-free
+végétalien, végane, vegan
+
+# Automobile
+mécanicien, garagiste, mechanic, auto repair
+mécanicien mobile, mobile mechanic
+vidange, changement d'huile, oil change
+pneu, pneus, tire, tyre
+pneus d'hiver, winter tires, pneus à neige
+plaquettes de frein, brake pads
+essuie-glace, wiper blades
+pare-brise, windshield
+survoltage, boost, battery boost
+
+# Services à domicile
+plombier, plomberie, plumber
+électricien, electrician
+ménage, entretien ménager, femme de ménage, cleaning, house cleaning
+homme à tout faire, bricoleur, handyman
+fournaise, chauffage, furnace, hvac
+gouttière, eavestrough
+déneigement, snow removal
+déménagement, déménageurs, movers
+
+# Événements et soins
+traiteur, caterer, catering
+dj, disc jockey
+cocktail sans alcool, mocktail
+coiffeur, coiffeuse, barbier, hairdresser, barber
+massothérapeute, massage therapist, rmt
+courtier immobilier, agent immobilier, realtor
