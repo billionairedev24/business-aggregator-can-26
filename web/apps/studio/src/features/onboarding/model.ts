@@ -13,13 +13,14 @@ export const stepIndex = (s: ServerStep) => (s === 'done' ? STEPS.length - 1 : S
 export const PICKER_TYPES: readonly MerchantType[] = ['seller', 'provider', 'both', 'kitchen'];
 export const isMerchantType = (s: unknown): s is MerchantType => s === 'provider' || s === 'seller' || s === 'kitchen' || s === 'both';
 
-export interface OnboardingSearch { type?: MerchantType; m?: string; new?: boolean }
+export interface OnboardingSearch { type?: MerchantType; m?: string; new?: boolean; identity?: 'returned' }
 
 export function validateOnboardingSearch(search: Record<string, unknown>): OnboardingSearch {
   return {
     type: isMerchantType(search.type) ? search.type : undefined,
     m: typeof search.m === 'string' && /^[0-9A-HJKMNP-TV-Z]{26}$/.test(search.m) ? search.m : undefined,
     new: search.new === true || search.new === '1' || search.new === 1 ? true : undefined,
+    identity: search.identity === 'returned' ? 'returned' : undefined,
   };
 }
 
