@@ -41,13 +41,18 @@ cd "$repo/server"
 ./gradlew :api:flywayMigrate -Pdb.devSeed=true "${gradle_args[@]}"
 ./gradlew :api:seedCategories :api:bootJar :auth:bootJar "${gradle_args[@]}"
 
+# The boot jars don't contain db/seed-dev (S-16): the local profile reads it from the repository instead.
+seed_locations="classpath:db/migration,filesystem:$repo/db/seed-dev"
+
 echo "--- api (local profile) on :$API_PORT"
 DB_URL="$jdbc" DB_USER="$DB_USER" DB_PASSWORD="$DB_PASSWORD" SERVER_PORT="$API_PORT" SPRING_PROFILES_ACTIVE=local \
+  SPRING_FLYWAY_LOCATIONS="$seed_locations" \
   setsid java -Xmx768m -jar api/build/libs/api.jar >"$SMOKE_OUT/api.log" 2>&1 &
 pids+=($!)
 
 echo "--- northline-auth (local profile) on :$AUTH_PORT — Settings › Security talks to it"
 DB_URL="$jdbc" DB_USER="$DB_USER" DB_PASSWORD="$DB_PASSWORD" SERVER_PORT="$AUTH_PORT" AUTH_ISSUER="http://localhost:$AUTH_PORT" SPRING_PROFILES_ACTIVE=local \
+  SPRING_FLYWAY_LOCATIONS="$seed_locations" \
   NORTHLINE_AUTH_ALLOWED_ORIGINS="http://localhost:$STUDIO_PORT" \
   setsid java -Xmx512m -jar auth/build/libs/auth.jar >"$SMOKE_OUT/auth.log" 2>&1 &
 pids+=($!)

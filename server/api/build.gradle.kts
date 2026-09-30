@@ -64,15 +64,25 @@ tasks.named<JavaCompile>("compileJava") {
     ))
 }
 
-// Migrations live in /db (shared with ops tooling); package them on the classpath so bootRun, tests and the
-// boot jar all use `classpath:db/migration` (+ `classpath:db/seed-dev` under the `local` profile).
+// Migrations live in /db (shared with ops tooling); package them on the classpath so bootRun, tests, the boot jar and
+// the image all use `classpath:db/migration`.
 tasks.processResources {
     from(rootProject.file("../db/migrations")) { into("db/migration") }
-    from(rootProject.file("../db/seed-dev")) { into("db/seed-dev") }
     from(rootProject.file("../db/seed")) { into("db/seed") }
     // Machine-readable rules (legal-details.schema.json, storefront-sections.json) are validated against at runtime.
     from(rootProject.file("../docs/spec")) { into("spec") }
 }
+
+// S-16: the dev seed (db/seed-dev, V1xx personas) is NOT a main resource, so it can't reach the boot jar or the image.
+// It sits in its own directory that only local runs see: bootRun (`classpath:db/seed-dev` under the `local` profile),
+// the tests and the Gradle DB tools (-Pdb.devSeed=true). DevSeedPackagingTest and DbToolTest keep it that way.
+val devSeedDir = layout.buildDirectory.dir("dev-seed")
+val devSeedResources by tasks.registering(Sync::class) {
+    from(rootProject.file("../db/seed-dev")) { into("db/seed-dev") }
+    into(devSeedDir)
+}
+val devSeedClasspath = files(devSeedDir).builtBy(devSeedResources)
+dependencies { testRuntimeOnly(devSeedClasspath) }
 
 // ./gradlew :api:flywayMigrate [-Pdb.url=jdbc:postgresql://localhost:5432/northline] [-Pdb.user=…] [-Pdb.password=…] [-Pdb.devSeed=true]
 // ./gradlew :api:seedCategories  (same -Pdb.* properties)
@@ -86,7 +96,7 @@ fun dbSetting(property: String, env: String, default: String): String =
 
 fun JavaExec.dbTool(command: String) {
     group = "database"
-    classpath = tools.runtimeClasspath + sourceSets.main.get().output
+    classpath = tools.runtimeClasspath + sourceSets.main.get().output + devSeedClasspath
     mainClass.set("ca.northline.tools.DbTool")
     dependsOn(tasks.named("processResources"), tasks.named("toolsClasses"))
     args(command)
@@ -112,4 +122,26 @@ tasks.register<JavaExec>("seedCategories") {
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
     // `./gradlew :api:bootRun --args='--spring.profiles.active=local'`
     jvmArgs("-Xmx768m")
+    classpath(devSeedClasspath) // the `local` profile applies classpath:db/seed-dev
 }
+
+// S-16: the migration Job runs DbTool from the api image. The tools classes and their logging configuration go to
+// /app/tools — outside the application's classpath (/app/resources, /app/classes, /app/libs), so the api never scans
+// them; the Job puts /app/tools first: java -cp /app/tools:/app/resources:/app/classes:/app/libs/* ca.northline.tools.DbTool migrate
+val jibToolsDir = layout.buildDirectory.dir("jib-tools")
+val jibTools by tasks.registering(Sync::class) {
+    from(tools.output.classesDirs) { into("app/tools") }
+    from("src/tools/logback-tools.xml") { into("app/tools") }
+    into(jibToolsDir)
+}
+extensions.configure<com.google.cloud.tools.jib.gradle.JibExtension> {
+    extraDirectories {
+        paths {
+            path {
+                setFrom(jibToolsDir.get().asFile)
+                into = "/"
+            }
+        }
+    }
+}
+tasks.matching { it.name.startsWith("jib") && it.name != "jibTools" }.configureEach { dependsOn(jibTools) }

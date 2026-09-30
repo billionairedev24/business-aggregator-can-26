@@ -56,5 +56,12 @@ for cloud in aws gcp azure; do
   else echo "ok   prod × $cloud renders no Secret (External Secrets only)"; fi
 done
 
+# S-16: the migration Job never names the dev seed in any deployed render.
+for env in dev staging prod; do
+  if helm template northline "$CHART" -f "$CHART/values-$env.yaml" -f "$CHART/values-aws.yaml" | grep -q 'seed-dev\|devSeed'; then
+    echo "FAIL $env render mentions the dev seed"; failed=1
+  else echo "ok   $env: no dev seed in the migration Job"; fi
+done
+
 rm -f /tmp/helm-lint.$$ /tmp/kubeconform.$$
 exit $failed

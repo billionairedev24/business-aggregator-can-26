@@ -3,8 +3,8 @@
 One runbook per environment. Each lists what the environment needs — services, variables, secrets, third-party
 accounts — and how to run, deploy and roll back **with what exists today**. Terraform for the cloud foundation and the managed data
 stores exists (S-2, S-3; not applied yet); container images and the Helm chart exist (S-14, [deploy.md](deploy.md));
-External Secrets are wired into the chart (S-6, [secrets.md](secrets.md)); the migration Job, GitOps and TLS/DNS arrive with
-later stories (S-16, S-15, S-17); the runbooks
+External Secrets are wired into the chart (S-6, [secrets.md](secrets.md)); migrations run as a Job before each rollout (S-16); GitOps and
+TLS/DNS arrive with later stories (S-15, S-17); the runbooks
 say where a step is still manual or missing.
 
 | runbook | for |
@@ -33,7 +33,7 @@ say where a step is still manual or missing.
 | Elasticsearch | off (`--profile search` for the worker) | Elastic Cloud / ECK | same | same |
 | Object storage (`STORAGE_PROVIDER`) | `local` folders, or `s3` + RustFS (`--profile storage`) | `s3` / `gcs` / `azure` (`local` = uploads fail) | `s3` / `gcs` / `azure` **required** | same |
 | Sign-in | dev auth (`X-Dev-User`) or northline-auth with seeded personas | northline-auth | northline-auth | northline-auth |
-| Dev seed (`db/seed-dev`) | yes | **no** | **no** | **no** |
+| Dev seed (`db/seed-dev`) | yes | **no** (not in the images; refused — S-16) | **no** | **no** |
 | Stripe | fake gateway, or stripe-mock (`--profile payments`) | fake, or test keys | **test keys required** | **live keys required** |
 | SMS / email | logged | *no provider yet (S-8, S-13)* | same | same |
 | Required variables checked at start-up | none | yes | yes (+ Stripe, storage) | yes (+ Stripe, storage) |
