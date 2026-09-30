@@ -23,6 +23,7 @@ class CheckoutPaymentService implements PaymentAuthorizations {
     private final PaymentGateway gateway;
     private final TaxCalculationService taxCalculations;
     private final Clock clock;
+    private final PaymentMetrics metrics;
 
     @Override
     public Started start(Request request) {
@@ -68,6 +69,7 @@ class CheckoutPaymentService implements PaymentAuthorizations {
                 authorized ? clock.instant() : null,
                 authorization.captureBefore(),
                 0));
+        metrics.checkoutStarted(request.refType(), authorization.status().code());
         return new Started(
                 authorization.paymentIntent(),
                 authorization.clientSecret(),

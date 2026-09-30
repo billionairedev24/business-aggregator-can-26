@@ -3,6 +3,7 @@ package ca.northline.auth.persistence;
 import ca.northline.auth.application.SignInLog;
 import ca.northline.auth.domain.Factor;
 import com.github.f4b6a3.ulid.UlidCreator;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
 import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
@@ -21,18 +22,22 @@ import tools.jackson.databind.json.JsonMapper;
  * Sign-in log. A success adds an {@code identity.sessions} row (the device list in Settings → Security) and an
  * {@code developer.audit_log} row ({@code auth.sign_in}); a failure only the audit row ({@code auth.sign_in_failed}).
  * Failures and rate-limit lockouts ({@code auth.rate_limited}) are written in their own transaction so they survive the
- * caller's rollback.
+ * caller's rollback. S-111: each outcome is also counted ({@code northline.auth.sign_ins} by method, second factor and
+ * outcome; {@code northline.auth.lockouts} by action) for the sign-in dashboard — never with a user id or an address.
  */
 @Slf4j
 @Repository
 @RequiredArgsConstructor
 class JdbcSignInLog implements SignInLog {
 
+    static final String SIGN_INS = "northline.auth.sign_ins";
+    static final String LOCKOUTS = "northline.auth.lockouts";
     private static final int MAX_DEVICE = 200;
 
     private final JdbcClient jdbc;
     private final Clock clock;
     private final JsonMapper json;
+    private final MeterRegistry meters;
 
     @Override
     public String succeeded(String userId, String method, boolean mfa, Client client) {
@@ -53,6 +58,8 @@ class JdbcSignInLog implements SignInLog {
                 .update();
         audit(userId, "auth.sign_in", "{\"method\":\"%s\",\"mfa\":%s}".formatted(method, mfa));
         log.info("Sign-in: user={} method={} mfa={} session={}", userId, method, mfa, id);
+        meters.counter(SIGN_INS, "method", method, "mfa", Boolean.toString(mfa), "outcome", "succeeded")
+                .increment();
         return id;
     }
 
@@ -61,6 +68,8 @@ class JdbcSignInLog implements SignInLog {
     public void failed(@Nullable String userId, Factor factor, String reason, Client client) {
         audit(userId, "auth.sign_in_failed", "{\"method\":\"%s\",\"reason\":\"%s\"}".formatted(factor.code(), reason));
         log.info("Sign-in failed: user={} method={} reason={}", userId, factor.code(), reason);
+        meters.counter(SIGN_INS, "method", factor.code(), "mfa", "false", "outcome", "failed")
+                .increment();
     }
 
     @Override
@@ -74,6 +83,7 @@ class JdbcSignInLog implements SignInLog {
             after.put("ip", client.ip());
         }
         audit(userId, "auth.rate_limited", json.writeValueAsString(after));
+        meters.counter(LOCKOUTS, "action", action).increment();
     }
 
     private void audit(@Nullable String userId, String action, String after) {

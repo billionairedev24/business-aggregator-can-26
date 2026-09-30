@@ -1,1 +1,2 @@
 ca.northline.platform.PlatformAutoConfiguration
+ca.northline.platform.observability.ObservabilityAutoConfiguration

@@ -1,0 +1,39 @@
+# S-111 observability defaults for api, auth, bff and worker (docs/runbooks/observability.md). Loaded by
+# ca.northline.platform.observability.ObservabilityDefaults with the LOWEST precedence: each app's application*.yml,
+# the environment and the standard OTEL_* variables (Spring Boot maps OTEL_EXPORTER_OTLP_ENDPOINT, _HEADERS,
+# OTEL_SERVICE_NAME, OTEL_RESOURCE_ATTRIBUTES, OTEL_TRACES_SAMPLER_ARG, …) override anything here.
+management:
+  tracing:
+    # Share of traces kept (ConsistentSampling: decided on the trace id, the same in every service). Everything
+    # locally; the chart sets OTEL_TRACES_SAMPLER_ARG per environment (dev 1.0, staging 0.5, prod 0.1).
+    sampling.probability: 1.0
+    export.enabled: ${OTEL_EXPORT_ENABLED:false}
+    propagation:
+      produce: [W3C]                   # traceparent / tracestate on HTTP calls and Kafka records
+      consume: [W3C]
+  # Where to send: the local observability stack (docker compose --profile observability). Deployed, the chart sets
+  # OTEL_EXPORTER_OTLP_ENDPOINT to the in-cluster OpenTelemetry Collector, which Spring Boot maps onto these three.
+  opentelemetry:
+    logging.export.otlp.endpoint: http://localhost:4318/v1/logs
+    tracing.export.otlp.endpoint: http://localhost:4318/v1/traces
+    resource-attributes:
+      service.namespace: northline
+  otlp.metrics.export:
+    enabled: ${OTEL_EXPORT_ENABLED:false}
+    url: http://localhost:4318/v1/metrics
+    step: 30s
+    base-time-unit: seconds            # Prometheus conventions in every backend: http_server_requests_seconds_*
+  logging.export.enabled: ${OTEL_EXPORT_ENABLED:false}
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution.percentiles-histogram:  # buckets, so every backend can compute p50/p95/p99 (dashboards)
+      http.server.requests: true
+      http.client.requests: true
+      northline: true
+  observations:
+    # Spring Security's filter-chain spans double every request's span count and say little; the request span stays.
+    enable.spring.security: false
+spring.kafka:
+  template.observation-enabled: true   # traceparent on every record the app produces (outbox externalizer, DLQ)
+  listener.observation-enabled: true   # a consumer continues the producer's trace
