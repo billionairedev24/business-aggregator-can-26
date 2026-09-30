@@ -215,9 +215,38 @@ edge:
       #   { route53: { region, hostedZoneID } } | { cloudDNS: { project, hostedZoneName } } | { azureDNS: { … } }
       dns01: {}
       caSecretName: ""            # type ca
-  # Merchant domains serving storefronts (S-31 verifies the CNAME to pages.<zone>; S-17 serves them): each gets a
-  # listener, a certificate over HTTP-01 and a route to the consumer app. [{ host: book.example.ca }]
+  # Merchant domains pinned by hand (S-17; GitOps PR): each gets a listener on the environment's Gateway, a certificate
+  # over HTTP-01 and a route to the consumer app. [{ host: book.example.ca }]. Merchants' own domains are normally
+  # served by the reconciler below (S-31) instead; keep this list for exceptions (at most 64 listeners per Gateway).
   customDomains: []
+  # S-31 (docs/runbooks/custom-domains.md): the api verifies merchants' domains (TXT + CNAME/A, DNS over HTTPS) and
+  # reconciles them onto the edge itself — shard Gateways "<gatewayPrefix>-N" (one HTTPS listener per domain, at most
+  # listenersPerGateway), one cert-manager Certificate and one HTTPRoute per domain — in this namespace only (Role
+  # below, bound to the api's ServiceAccount). The shards share the environment's Envoy fleet and load balancer
+  # (EnvoyProxy mergeGateways, deploy/argocd/addons/envoy-gateway), so pages.<zone> is the one target.
+  domainReconciler:
+    enabled: false
+    gatewayPrefix: northline-custom
+    listenersPerGateway: 64       # Gateway API maximum
+    maxDomains: 1000              # custom domains served at most; the rest wait as "capacity"
+    issuePerHour: 20              # certificate requests per hour (Let's Encrypt: 300 orders / 3 h per account)
+    # Issuer of merchants' certificates (HTTP-01 on the Gateway's port 80). Empty server = Let's Encrypt production in
+    # prod, Let's Encrypt STAGING everywhere else (untrusted certificates, on purpose: dev/staging tests must not use
+    # up the production rate limits). type/caSecretName follow edge.certManager.issuer (ca on kind).
+    issuer:
+      create: true
+      name: northline-acme-custom
+      server: ""
+    # DNS the api asks: doh (DNS over HTTPS) | jndi (UDP/TCP 53 to `servers`, or the pod's resolver).
+    dns:
+      provider: doh
+      dohUrl: ""                  # empty = CIRA Canadian Shield (Private)
+      servers: []
+    # Fixed public addresses of the load balancer (a reserved IP) for merchants' apex A records; empty = apex domains
+    # need ALIAS/ANAME/CNAME flattening at their DNS host.
+    edgeAddresses: []
+    # Zones no merchant may claim, besides northline.ca and this environment's zone.
+    blockedSuffixes: []
 
 networkPolicy:
   enabled: true

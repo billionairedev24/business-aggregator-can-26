@@ -99,6 +99,12 @@ for env in dev staging prod local; do
       if [[ ${#extra[@]} -gt 0 ]] && grep -E '^\s+image: ' "$tmp/chart.yaml" | grep -qv '@sha256:'; then
         fail "  an image without digest in $label"
       fi
+      # Every kind the chart renders is whitelisted by the environment's project (else Argo CD refuses the sync).
+      allowed=$(awk '/namespaceResourceWhitelist:/{w=1; next} w && /^  [a-zA-Z]/{w=0} w && /kind:/{print $NF}' "$out" | sort -u)
+      rendered=$(grep -E '^kind: ' "$tmp/chart.yaml" | awk '{print $2}' | sort -u | grep -vx Namespace || true)
+      missing=$(comm -23 <(echo "$rendered") <(echo "$allowed"))
+      if [[ -z $missing ]]; then ok "  every kind the chart renders is whitelisted in the project"
+      else fail "  kinds not whitelisted in the project: ${missing//$'\n'/ }"; fi
     else fail "  chart render $label"; cat "$tmp/err" "$tmp/kc" 2>/dev/null; fi
   done
 done

@@ -195,3 +195,123 @@ spec:
 {{- end }}
 {{- end }}
 {{- end }}
+{{- /*
+S-31: merchants' own domains, reconciled by the api (docs/runbooks/custom-domains.md). The chart provides what the api
+may not create itself: the Issuer of their certificates (Let's Encrypt staging outside prod), the TLS policy of the
+shard Gateways, and a Role limited to Gateways, HTTPRoutes and Certificates in this namespace, bound to the api's
+ServiceAccount (whose token is then mounted, templates/deployment.yaml).
+*/ -}}
+{{- $r := $e.domainReconciler }}
+{{- if and $e.enabled $r.enabled }}
+{{- $cm := $e.certManager }}
+{{- $iss := $cm.issuer }}
+{{- $useGateway := and .Values.gateway.enabled $e.gateway.create }}
+{{- if not $useGateway }}
+{{- fail "edge.domainReconciler needs the chart's Gateway (gateway.enabled with edge.gateway.create): merchants' domains get listeners on shard Gateways of the same class" }}
+{{- end }}
+{{- if not $cm.enabled }}
+{{- fail "edge.domainReconciler needs edge.certManager.enabled (one Certificate per merchant domain)" }}
+{{- end }}
+{{- if not .Values.apps.consumer.enabled }}
+{{- fail "edge.domainReconciler needs apps.consumer.enabled (merchant domains are served by the consumer app)" }}
+{{- end }}
+{{- if or (lt (int $r.listenersPerGateway) 1) (gt (int $r.listenersPerGateway) 64) }}
+{{- fail "edge.domainReconciler.listenersPerGateway must be 1–64 (Gateway API allows 64 listeners per Gateway)" }}
+{{- end }}
+{{- $customServer := include "northline.customIssuerServer" . }}
+{{- if and (ne .Values.global.environment "prod") (eq $iss.type "acme") (contains "acme-v02.api.letsencrypt.org" $customServer) }}
+{{- fail "edge.domainReconciler.issuer.server: Let's Encrypt production is for prod only — dev and staging use the staging endpoint (rate limits are per account)" }}
+{{- end }}
+{{- if not (has $r.dns.provider (list "doh" "jndi")) }}
+{{- fail (printf "edge.domainReconciler.dns.provider must be doh or jndi (got %q)" $r.dns.provider) }}
+{{- end }}
+{{- if $r.issuer.create }}
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ $r.issuer.name }}
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "edge") | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-4"
+spec:
+  {{- if eq $iss.type "acme" }}
+  acme:
+    server: {{ $customServer }}
+    email: {{ required "edge.certManager.issuer.email (Let's Encrypt expiry notices)" $iss.email }}
+    privateKeySecretRef:
+      name: {{ $r.issuer.name }}-account-key
+    solvers:
+      # Merchants' domains are not in our DNS zone: HTTP-01 only, through the Gateway's port-80 listener (it has no
+      # hostname, so it takes every merchant host; the redirect route yields to the challenge's exact path).
+      - http01:
+          gatewayHTTPRoute:
+            parentRefs:
+              - name: {{ $e.gateway.name }}
+                namespace: {{ .Release.Namespace }}
+                kind: Gateway
+                sectionName: http
+  {{- else if eq $iss.type "ca" }}
+  ca:
+    secretName: {{ required "edge.certManager.issuer.caSecretName" $iss.caSecretName }}
+  {{- else }}
+  selfSigned: {}
+  {{- end }}
+{{- end }}
+{{- if eq $e.gateway.className "envoy" }}
+---
+# The shard Gateways the api creates (label northline.ca/custom-domain=true) get the same client TLS policy as ours.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: {{ $r.gatewayPrefix }}
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "edge") | nindent 4 }}
+spec:
+  targetSelectors:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      matchLabels:
+        northline.ca/custom-domain: "true"
+  tls:
+    minVersion: {{ $e.tls.minVersion | quote }}
+    alpnProtocols: [h2, http/1.1]
+  {{- if gt (int $e.trustedProxyHops) 0 }}
+  clientIPDetection:
+    xForwardedFor:
+      numTrustedHops: {{ int $e.trustedProxyHops }}
+  {{- end }}
+{{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: northline-domain-reconciler
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "api") | nindent 4 }}
+rules:
+  # Only what the reconciler writes, only in this namespace. No Secrets: cert-manager owns the TLS Secrets (and deletes
+  # them with their Certificate: enableCertificateOwnerRef in the cert-manager add-on).
+  - apiGroups: [gateway.networking.k8s.io]
+    resources: [gateways, httproutes]
+    verbs: [get, list, watch, create, patch, update, delete]
+  - apiGroups: [cert-manager.io]
+    resources: [certificates]
+    verbs: [get, list, watch, create, patch, update, delete]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: northline-domain-reconciler
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "api") | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: northline-domain-reconciler
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "northline.appName" "api" }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

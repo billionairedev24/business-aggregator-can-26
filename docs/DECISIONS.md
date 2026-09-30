@@ -1533,6 +1533,127 @@ Worker: `WebhookDeliveryTest` (Kafka 4 + PostGIS + WireMock receiver: signed `bo
 - **Studio tests under load:** the flaky tests are whole flows (render → type → submit → mocked server answer). Under a parallel `./gradlew build` they took up to 4.1 s (`BusinessStep` "sends the business…", 2.7–3.8 s for `PageBuilder` "validates the tagline"), against vitest's 5 s `testTimeout`; `findBy*`/`waitFor` gave up after Testing Library's 1 s. Now: `testTimeout`/`hookTimeout` 20 s (`vite.config.ts`), `asyncUtilTimeout` 5 s (`src/test/setup.ts`), and `userEvent.setup({ delay: null })` in every test (files that used the direct API get a local `user()` helper with the same option). No sleeps; the auth countdown test's own 3 s `waitFor` limit now uses the shared 5 s. Measured side by side under the same load, `delay: null` did not make these two tests measurably faster (the time is rendering, not the keystroke timer) — the timeouts are what removes the flake; `delay: null` stays as a cheap guard for the longer typing tests. Other apps/packages keep their defaults (not reported flaky).
 - **Also found:** `DashboardView.test.tsx` failed in the first minute of every hour (the seller run cut-off is now + 2 h; on the hour `clockWithPeriod` prints "4", the regex required minutes). The test accepts both now.
 
+## 2026-09-30 — S-31 Custom domain verification and certificates for storefronts
+
+- **Serving design: an in-cluster reconciler in the api, with shard Gateways** (option (a) of the brief, scaled like
+  (b)). The api writes, in its own namespace only, one HTTPS listener per merchant domain on shard Gateways
+  `northline-custom-N` (≤ 64 listeners, Gateway API's limit), one cert-manager Certificate (`nl-cd-<sha256(host)[:20]>`,
+  HTTP-01) and one HTTPRoute to the consumer app. Envoy Gateway's `EnvoyProxy.spec.mergeGateways: true` serves every
+  Gateway of the class from one proxy fleet behind one load balancer, so the CNAME target `pages.<zone>` never
+  changes however many shards exist. Nothing cloud-specific: the same objects on EKS, GKE, AKS and kind. Rejected: a
+  GitOps PR per domain (option (c): human review + manual sync in staging/prod, repository write access for the api —
+  `edge.customDomains` stays for hand-pinned exceptions); on-demand TLS at a CDN (vendor-specific); a separate
+  controller Deployment/Go app (another image and pipeline for ~500 lines; noted as the way to take RBAC away from the
+  internet-facing api). `ListenerSet` replaces the shards once stable.
+- **The backlog's "ACM certificate issuance" is not used:** ACM is AWS-only and can't give certificates to an
+  in-cluster Envoy; cert-manager + Let's Encrypt (S-17) works on every cloud.
+- **RBAC:** Role `northline-domain-reconciler` (gateways, httproutes, certificates; get/list/watch/create/patch/update/
+  delete) bound to ServiceAccount `northline-api`, whose token is mounted only when `edge.domainReconciler.enabled`
+  (projected token re-read on every call). No Secret access: cert-manager's `enableCertificateOwnerRef` makes deleting a
+  Certificate delete its key. Accepted risk: RBAC can't restrict create/list by name, so the api could also modify the
+  environment's own Gateway; Argo CD shows that as drift. Argo CD ignores the reconciler's objects as orphans
+  (`northline.runtimeResources`); the project whitelists Role/RoleBinding (and `deploy/argocd/validate.sh` now checks
+  every rendered kind is whitelisted).
+- **Kubernetes client:** no library — an `@HttpExchange` client over the JDK HTTP client (list by label, server-side
+  apply with field manager `northline-domains` and `force=true`, delete; 404 ignored), trusting the mounted cluster CA.
+  Objects carry a spec hash annotation and are applied only when it changes; one replica reconciles at a time
+  (`pg_try_advisory_xact_lock`), claim rows locked `FOR UPDATE`, DNS checks shared with `FOR UPDATE SKIP LOCKED`.
+- **Verification:** TXT `_northline-verify.<domain>` = the claim's token (`nl-` + 32 base32 chars, 160 bits, new for
+  every new domain) **and** the name points at us: its CNAME chain (≤ 8 hops) reaches `pages.<zone>`, or every A/AAAA
+  address it resolves to is one of `pages.<zone>`'s or `DOMAINS_EDGE_ADDRESSES` (ALIAS/ANAME/flattening, apex A
+  records). A stray extra address or a proxy in front = `not_pointing`. Resolver failures are "inconclusive" and never
+  demote a domain. The TXT record must stay (re-checked every 6 h and on conflicts). Apex detection by name (2 labels,
+  or 3 under a list of second-level suffixes incl. the Canadian provincial ones) — no Public Suffix List.
+- **DNS resolver port** `merchants.application.DnsResolver` (replaces the onboarding workstream's `DomainVerifier`
+  and its "pending"/"fail" fake rules): `local` in-memory zone (local/test; `pages.<zone>` → 192.0.2.10), `doh` (RFC 8484
+  wire format POSTed as `application/dns-message` — mandatory for every DoH server; default endpoint CIRA Canadian
+  Shield "Private", Canadian and unfiltered) and `jndi` (the JDK's `com.sun.jndi.dns`, one record type per query because
+  several make it ask ANY, which resolvers answer minimally per RFC 8482; follows CNAMEs itself; `BanJNDI` suppressed:
+  DNS provider only, validated names, string attributes). Our own wire codec (`DnsWire`, ~150 lines) instead of a DNS
+  library.
+- **States** (V085 widens V030's CHECK): `pending → verified → issuing → live`, `failed`, `expired`. `verified` = DNS
+  proven but not on the edge (page unpublished, business not active, or waiting: `rate_limited`/`capacity`). Timing:
+  pending checks every 5 min (first hour), 30 min (first day), 2 h, expired after 7 days (checks stop; "Check now"
+  starts a new window); proven re-checked every 6 h; `failed` removes the Certificate and is retried every 6 h up to 3
+  failures in a row, then only on "Check now". **Grace period** 72 h: a proven domain whose records stop pointing at us
+  keeps serving, is checked every 30 min, owners are told the deadline; afterwards back to `pending` ("unverified")
+  and off the edge. All values configurable (`DOMAINS_*`).
+- **Publishing** still requires a proven domain (spec: "custom_domain requires CNAME verification before
+  published_at"; `verified`, `issuing` and `live` count). A page whose domain fell back to `pending` can't be
+  re-published until it is re-verified or removed — the literal reading of the rule, not relaxed.
+- **Certificates only for pages that may serve** (active business, published page, proven domain). Let's Encrypt
+  limits: `DOMAINS_ISSUE_PER_HOUR` (20) new certificates per hour across merchants, one request per page per hour
+  (`custom_domain_requested_at`), certificates requested only after DNS proved the routing, a failed one removed so
+  cert-manager's own retries stop. **Let's Encrypt staging outside prod** for merchants' certificates (Issuer
+  `northline-acme-custom`, separate ACME account); the chart refuses the production endpoint in dev/staging.
+- **Claim conflicts** (one page per domain, V016's unique index kept): when a page asks for a domain another page holds,
+  the holder is re-verified in its own transaction (`REQUIRES_NEW`, committed even when the claimant's request fails):
+  an unproven holder (pending/expired/failed) without its TXT record is released (owners emailed `released`); a
+  proven holder keeps it, but its records are checked at once, so a DNS owner who removed its TXT starts its grace
+  period; the claimant gets "That domain is already connected to another page." meanwhile. Resolver errors never
+  release anything.
+- **Blocklist:** `northline.ca` and below stay a format error (existing message); the environment's zone and
+  `DOMAINS_BLOCKED_SUFFIXES` → new message "That domain can't be connected to a Northline page." (English only, like
+  the other server messages; not in validation-rules.md). International names are stored as punycode.
+- **HSTS for merchants' domains without `includeSubDomains`/`preload`** (their other subdomains aren't ours); also
+  applied to the S-17 hand-pinned `edge.customDomains` routes, which previously got the full header.
+- **Notifications:** new event `custom_domain.changed` (merchants.api `CustomDomainChanged`, topic
+  `merchants.storefront`, key storefront id, schema `merchants.custom_domain_changed.v1`; the domain name is public
+  business data, not PII) on every connect/disconnect/state/problem/grace change; a `notice`
+  (`live | dns_lost | unverified | certificate_failed | expired | released`) makes the api email the owners (new
+  template `custom-domain`, en/fr, TRANSACTIONAL service notice — sent whatever the Settings matrix says, like
+  `webhook-disabled`), through `MerchantEmailNotices` (messaging). No SMS/push.
+- **Routing contract:** `GET /api/v1/public/storefronts/by-host?host=` (GET open in SecurityConfig under
+  `/api/v1/public/**`): the `GET /api/v1/storefronts/{slug}` body for a live custom domain of a published page of an
+  active business, else 404; host case/port/trailing dot/Unicode normalised; `Cache-Control: max-age=60, public`;
+  consumers evict on `custom_domain.changed`. The public storefront body now shows `customDomain` only when `live`
+  (was: verified).
+- **Studio:** the design's field and hint (the hint's target comes from the api, so it reads `pages.northline.ca` in
+  prod as designed and `pages.<zone>` elsewhere), plus what the design leaves open: status line per state with the
+  current problem, the records to add (CNAME / ALIAS / A + TXT, each with Copy), root-domain guidance, the grace
+  deadline, last check, "Check now" (at most every 15 s server-side) and, in dev builds only, "Simulate DNS records →"
+  (`POST /api/v1/dev/merchants/{id}/storefront/domain/dns`, `local` profile; publishes into the in-memory zone, checks,
+  reconciles the local edge). Copy is ours, en + fr-CA. The domain field moved into `CustomDomainField`.
+- **Schema additions (V085):** `merchants.storefronts.custom_domain_status` CHECK widened (drop + re-add, as V062 did);
+  new `custom_domain_token`, `custom_domain_status_at`, `custom_domain_checked_at`, `custom_domain_next_check_at`,
+  `custom_domain_problem` (CHECK), `custom_domain_dns_lost_at`, `custom_domain_live_at`, `custom_domain_requested_at`,
+  `custom_domain_failures`; CHECKs that token and status_at exist iff a domain does; partial indexes for due checks
+  and proven domains. Existing domains (dev databases) get a token and are re-checked (a previously "verified" one
+  becomes pending: the old fake never checked anything). V086 unused.
+- **Configuration:** `DOMAINS_DNS_PROVIDER`, `DOMAINS_EDGE_PROVIDER`, `DOMAINS_TARGET_HOST` (required in staging/prod;
+  `local` refused there) and the optional `DOMAINS_*` of custom-domains.md § 5; chart `edge.domainReconciler.*` (on in
+  dev/staging/prod) sets them. No new secret. Runbook: docs/runbooks/custom-domains.md; edge.md, README, local/dev/
+  staging/prod.md, notifications.md, `server/.env.example` updated.
+- **Operational change:** `mergeGateways` moves Envoy's proxies to a Service named after the GatewayClass, so syncing
+  the add-on replaces the environment's load balancer once (new address; external-dns follows). Harmless before
+  launch; do it before offering apex A records.
+- **Tests:** `DomainClaimTest`, `DnsInspectorTest`, `DnsResolversTest` (DoH against WireMock speaking the wire format;
+  JNDI against a UDP server), `GatewayDomainEdgeTest` (in-memory Kubernetes: shards past 64, removal and reuse,
+  rationing, capacity, Ready/Failed mapping, idempotent reconcile, stable names), `HttpKubeApiWireMockTest`,
+  `CustomDomainApiTest` (instructions, verification, scheduler, live + email + by-host, paused business, grace period
+  with both emails, three claim-conflict cases, 403s/409/422), `DevOnboardingTest` (simulation), updated
+  `StorefrontApiTest`/`StorefrontRulesTest`; email templates render in both languages; Studio
+  `CustomDomainField.test.tsx`; `deploy/helm/validate.sh` (reconciler RBAC and token per environment, issuer per
+  environment, five refusals, HSTS without includeSubDomains) and `deploy/argocd/validate.sh` (kinds whitelisted);
+  the kind rehearsal below.
+- **Rehearsed on kind** (`deploy/kind/custom-domains.sh` + `CustomDomainsKindRehearsal`, skipped unless
+  `NL_KIND_API` is set; kind 1.34 with a runc wrapper node image, cert-manager 1.18.2 Bitnami builds, Envoy Gateway
+  1.5.1, a local CA): the reconciler, authenticated with a token of the chart's `northline-api` ServiceAccount, wrote
+  5 domains on 3 shards and 70 domains on 2 shards of 64 (the Gateway CRD accepted 64 listeners); certificates Ready
+  and listeners Programmed within 6 s / 61 s; every domain served 200 over HTTP/2 through the one merged Envoy Service
+  with HSTS without includeSubDomains; `targetSelectors` ClientTrafficPolicy Accepted on every shard; unknown SNI and
+  TLS 1.1 refused; RBAC allowed exactly Gateways/HTTPRoutes/Certificates in the namespace (no Secrets, no Roles, no other
+  namespace); removal deleted every object and cert-manager deleted the TLS Secrets. `rehearse.sh edge` now passes
+  cert-manager the add-on's `--enable-certificate-owner-ref` and `--enable-gateway-api`.
+- **Never run against the real services:** no public DoH resolver or name server (DoH is a WireMock stand-in built
+  from RFC 8484, JNDI a local UDP server), no Let's Encrypt (a local CA on kind), no cloud load balancer, and the api
+  never ran as a pod (the kind rehearsal used the ServiceAccount's token from the host). Unverified: CIRA's DoH
+  endpoint behaviour; cert-manager's status on a real failed ACME order (`lastFailureTime` + `Issuing=False`, mapped to
+  `failed`); HTTP-01 through the merged Gateways from the internet.
+- **Not done:** the consumer app's host routing (it doesn't exist; the endpoint and contract do); SMS/push notices;
+  reserved load-balancer IPs (apex A records are offered only once `edgeAddresses` is set); a Public Suffix List;
+  serving behind a merchant's own CDN; a separate reconciler Deployment; Console tools for staff (take-down is SQL).
+
 ## 2026-09-30 — S-35 Shopify, Square and Lightspeed catalogue sync
 
 - **Port:** `catalogue.application.CommerceCatalogSource` (the story's name; the backlog said `CommerceSync`) replaces

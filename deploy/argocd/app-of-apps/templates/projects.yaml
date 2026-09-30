@@ -114,6 +114,9 @@ spec:
   # Report resources in the namespace that Git doesn't know about (hand-made changes).
   orphanedResources:
     warn: true
+    {{- with $v.northline.runtimeResources }}
+    ignore: {{ toYaml . | nindent 6 }}
+    {{- end }}
   {{- with $v.project.syncWindows }}
   syncWindows: {{ toYaml . | nindent 4 }}
   {{- end }}

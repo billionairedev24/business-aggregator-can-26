@@ -7,6 +7,7 @@
 #   deploy/argocd/kind/rehearse.sh push    commit the working tree as it is now to the rehearsal repository — the
 #                                          equivalent of merging a PR; Argo CD picks it up (or: argocd app refresh)
 #   deploy/argocd/kind/rehearse.sh edge    S-17: cert-manager + Envoy Gateway + a local CA, and the edge switched on
+#                                          (then deploy/kind/custom-domains.sh rehearses S-31's merchant domains)
 #   deploy/argocd/kind/rehearse.sh down    delete the cluster, the Postgres container and the rehearsal repository
 #
 # Needs docker, kind, kubectl, helm, git and the images built locally as northline/<app>:$IMAGE_TAG (deploy.md § kind).
@@ -147,6 +148,8 @@ edge() {
   for pair in ${CERT_MANAGER_IMAGES:-} ${ENVOY_IMAGES:-}; do
     sed -i "s#${pair%%=*}#${pair#*=}#g" "$STATE/cert-manager.yaml" "$STATE/envoy-gateway.yaml"
   done
+  # As the add-on's values: Gateway API support and Secrets owned by their Certificate (S-31 removes merchants' keys so).
+  sed -i 's#^          - --max-concurrent-challenges=60#&\n          - --enable-certificate-owner-ref=true\n          - --enable-gateway-api#' "$STATE/cert-manager.yaml"
   for image in $(grep -hoE 'image: "?[^" ]+' "$STATE/cert-manager.yaml" "$STATE/envoy-gateway.yaml" | awk '{print $2}' | tr -d '"' | sort -u) ${ENVOY_PROXY_IMAGE:-}; do
     if docker image inspect "$image" >/dev/null 2>&1; then
       docker save "$image" | docker exec -i "$CLUSTER-control-plane" ctr --namespace=k8s.io images import - >/dev/null && echo "loaded $image"

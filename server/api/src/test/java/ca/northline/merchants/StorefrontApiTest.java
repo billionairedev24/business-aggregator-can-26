@@ -14,6 +14,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ca.northline.merchants.api.StorefrontPublished;
+import ca.northline.merchants.application.DnsResolver;
+import ca.northline.merchants.integration.FakeDnsResolver;
 import ca.northline.shared.security.MerchantRole;
 import ca.northline.support.IntegrationTest;
 import ca.northline.support.TestJwt;
@@ -47,6 +49,9 @@ class StorefrontApiTest extends IntegrationTest {
 
     @Autowired
     JdbcClient jdbc;
+
+    @Autowired
+    FakeDnsResolver dns;
 
     OnboardingFlow flow;
     String owner;
@@ -249,6 +254,15 @@ class StorefrontApiTest extends IntegrationTest {
             patchPage("{\"slug\":\"sf-%s\",\"customDomain\":\"%s\"}".formatted(merchantId.toLowerCase(), domain))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.customDomainStatus").value("pending"));
+            // S-31: a pending holder keeps the domain only while its ownership record is there (else it is released)
+            dns.publish(
+                    "_northline-verify." + domain,
+                    DnsResolver.Type.TXT,
+                    java.util.List.of(
+                            jdbc.sql("select custom_domain_token from merchants.storefronts where merchant_id = ?")
+                                    .param(merchantId)
+                                    .query(String.class)
+                                    .single()));
             mvc.perform(patch("/api/v1/merchants/{id}/storefront", other)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"slug\":\"sf-%s\",\"customDomain\":\"%s\"}"
@@ -429,7 +443,17 @@ class StorefrontApiTest extends IntegrationTest {
                             .with(TestJwt.member(owner)))
                     .andExpect(jsonPath("$.customDomainStatus").value("pending"));
 
-            patchPage("{\"customDomain\":\"book-%s.example.ca\"}".formatted(merchantId.toLowerCase()));
+            var domain = "book-%s.example.ca".formatted(merchantId.toLowerCase());
+            patchPage("{\"customDomain\":\"%s\"}".formatted(domain));
+            dns.publish(domain, DnsResolver.Type.CNAME, java.util.List.of("pages.test.northline.ca"));
+            dns.publish(
+                    "_northline-verify." + domain,
+                    DnsResolver.Type.TXT,
+                    java.util.List.of(
+                            jdbc.sql("select custom_domain_token from merchants.storefronts where merchant_id = ?")
+                                    .param(merchantId)
+                                    .query(String.class)
+                                    .single()));
             mvc.perform(post("/api/v1/merchants/{id}/storefront/domain/verify", merchantId)
                             .with(TestJwt.member(owner)))
                     .andExpect(jsonPath("$.customDomainStatus").value("verified"));

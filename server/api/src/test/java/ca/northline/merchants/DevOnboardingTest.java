@@ -96,4 +96,32 @@ class DevOnboardingTest extends IntegrationTest {
         mvc.perform(get("/api/v1/merchants/{id}/onboarding", PHO_DAU_BO).header("X-Dev-User", RAVI))
                 .andExpect(jsonPath("$.checklist", hasSize(12)));
     }
+
+    /** S-31 "Simulate DNS records →": the local zone gets the records, the page's domain goes live on the local edge. */
+    @Test
+    void simulateDnsRecords_liveOnTheLocalEdge() throws Exception {
+        var domain = "book-" + ca.northline.shared.Ids.next().toLowerCase(java.util.Locale.ROOT) + ".prairiewrench.ca";
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch(
+                                "/api/v1/merchants/{id}/storefront", PRAIRIE_WRENCH)
+                        .header("X-Dev-User", RAVI)
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content("{\"customDomain\":\"%s\"}".formatted(domain)))
+                .andExpect(jsonPath("$.customDomainStatus").value("pending"));
+        try {
+            mvc.perform(post("/api/v1/dev/merchants/{id}/storefront/domain/dns", PRAIRIE_WRENCH)
+                            .header("X-Dev-User", RAVI))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.customDomainStatus").value("live"));
+            mvc.perform(get("/api/v1/public/storefronts/by-host").param("host", domain))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.slug").value("prairie-wrench"));
+        } finally {
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch(
+                                    "/api/v1/merchants/{id}/storefront", PRAIRIE_WRENCH)
+                            .header("X-Dev-User", RAVI)
+                            .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                            .content("{\"customDomain\":\"\"}"))
+                    .andExpect(status().isOk());
+        }
+    }
 }

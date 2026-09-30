@@ -36,7 +36,8 @@ spec:
         {{- with $app.podAnnotations }}{{ toYaml . | nindent 8 }}{{ end }}
     spec:
       serviceAccountName: {{ include "northline.appName" $name }}
-      automountServiceAccountToken: false
+      {{- /* S-31: the api's custom-domain reconciler talks to the Kubernetes API (Role northline-domain-reconciler). */}}
+      automountServiceAccountToken: {{ and (eq $name "api") $.Values.edge.enabled $.Values.edge.domainReconciler.enabled }}
       {{- with $.Values.global.imagePullSecrets }}
       imagePullSecrets: {{ toYaml . | nindent 8 }}
       {{- end }}

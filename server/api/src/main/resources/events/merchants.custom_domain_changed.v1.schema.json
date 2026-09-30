@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:merchants.custom_domain_changed:1",
+  "type": "object",
+  "required": ["eventId", "occurredAt", "aggregateId", "merchantId", "domain"],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": { "type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$" },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "aggregateId": { "type": "string", "description": "merchants.storefronts.id" },
+    "merchantId": { "type": "string" },
+    "domain": { "type": "string", "description": "the custom domain, lower-case ASCII (punycode for international names)" },
+    "status": {
+      "enum": ["pending", "verified", "issuing", "live", "failed", "expired", null],
+      "description": "null = the domain is no longer connected to this page"
+    },
+    "previousStatus": { "enum": ["pending", "verified", "issuing", "live", "failed", "expired", null] },
+    "problem": {
+      "enum": ["txt_missing", "txt_mismatch", "no_record", "not_pointing", "dns_error", "certificate", "capacity", "rate_limited", null]
+    },
+    "notice": {
+      "enum": ["live", "dns_lost", "unverified", "certificate_failed", "expired", "released", null],
+      "description": "set when the owners are emailed about it"
+    },
+    "graceEndsAt": { "type": ["string", "null"], "format": "date-time", "description": "while DNS no longer points at Northline: when serving stops" }
+  }
+}

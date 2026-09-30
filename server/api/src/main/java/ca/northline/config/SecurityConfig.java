@@ -48,6 +48,9 @@ class SecurityConfig {
                 .authorizeHttpRequests(a -> a.requestMatchers(
                                 "/api/v1/search/**", "/api/v1/storefronts/**", "/api/v1/geo/**")
                         .permitAll()
+                        // Public reads for the consumer app, e.g. the page a merchant's own domain serves (S-31)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/public/**")
+                        .permitAll()
                         // Email unsubscribe links: the signed token is the authorisation (S-13). The template
                         // previews and the fake Stripe Identity page (S-22) exist only under `local` (404 elsewhere).
                         .requestMatchers(

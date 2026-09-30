@@ -10,6 +10,8 @@ import ca.northline.merchants.domain.StorefrontSection;
 import ca.northline.merchants.domain.Verification;
 import ca.northline.merchants.domain.VerificationStatus;
 import ca.northline.merchants.web.StorefrontDtos.BusinessCard;
+import ca.northline.merchants.web.StorefrontDtos.DnsRecordResponse;
+import ca.northline.merchants.web.StorefrontDtos.DomainSetupResponse;
 import ca.northline.merchants.web.StorefrontDtos.LogoResponse;
 import ca.northline.merchants.web.StorefrontDtos.PublicSection;
 import ca.northline.merchants.web.StorefrontDtos.PublicStorefrontResponse;
@@ -19,6 +21,7 @@ import ca.northline.merchants.web.StorefrontDtos.StorefrontResponse;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 import org.mapstruct.Mapper;
 
 @Mapper
@@ -50,6 +53,8 @@ interface StorefrontWebMapper {
                 s.getAnnouncement(),
                 domain(s.getCustomDomain()),
                 s.getCustomDomainStatus(),
+                view.domainTarget(),
+                setup(view),
                 s.getPublishedAt(),
                 s.sections().stream().map(this::toSection).toList(),
                 card(view.merchant(), view.verifications()));
@@ -68,7 +73,7 @@ interface StorefrontWebMapper {
                 s.getTagline(),
                 s.getCtaLabel(),
                 s.getAnnouncement(),
-                s.getCustomDomainStatus() == CustomDomain.Status.VERIFIED ? domain(s.getCustomDomain()) : null,
+                s.getCustomDomainStatus() == CustomDomain.Status.LIVE ? domain(s.getCustomDomain()) : null,
                 Objects.requireNonNull(s.getPublishedAt()),
                 s.sections().stream()
                         .filter(StorefrontSection::isEnabled)
@@ -112,7 +117,27 @@ interface StorefrontWebMapper {
 
     List<Storefront.SectionState> toStates(List<SectionRequest> requests);
 
-    default @org.jspecify.annotations.Nullable String domain(@org.jspecify.annotations.Nullable CustomDomain domain) {
+    default @Nullable String domain(@Nullable CustomDomain domain) {
         return domain == null ? null : domain.value();
+    }
+
+    default @Nullable DomainSetupResponse setup(StorefrontView view) {
+        var setup = view.domainSetup();
+        var claim = view.storefront().getDomainClaim();
+        if (setup == null || claim == null) {
+            return null;
+        }
+        return new DomainSetupResponse(
+                setup.target(),
+                setup.apex(),
+                setup.records().stream()
+                        .map(r -> new DnsRecordResponse(r.type(), r.name(), r.value()))
+                        .toList(),
+                claim.problem(),
+                claim.checkedAt(),
+                claim.nextCheckAt(),
+                claim.verifiedAt(),
+                claim.liveAt(),
+                setup.graceEndsAt());
     }
 }

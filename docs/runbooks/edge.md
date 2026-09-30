@@ -20,12 +20,13 @@ browser ──▶ [optional WAF/CDN: Cloudflare · CloudFront+AWS WAF · Cloud A
         ──▶ HTTPRoutes (+ HSTS and other response headers) ──▶ Services studio, bff, auth, api, consumer
 DNS: external-dns writes A/ALIAS records for every HTTPRoute hostname into the environment's zone
 Certificates: cert-manager, Let's Encrypt (HTTP-01 through the Gateway; DNS-01 through the cloud's DNS as an option)
+Merchants' domains (S-31): shard Gateways northline-custom-N + Certificates + HTTPRoutes written by the api (custom-domains.md)
 ```
 
 | piece | where | notes |
 |---|---|---|
 | Gateway, HTTPRoutes, Issuer, Certificates, ClientTrafficPolicy | chart `deploy/helm/northline` (`templates/edge.yaml`, `templates/ingress.yaml`), values `edge.*`, `gateway.*` | on in `values-dev/staging/prod.yaml`; no cloud logic |
-| Envoy Gateway v1.5.1 (+ Gateway API CRDs), GatewayClass `envoy`, EnvoyProxy per cloud | Argo CD add-on `envoy-gateway-<env>`: `deploy/argocd/addons/envoy-gateway/` | the per-cloud part is the load balancer Service (`manifests/<cloud>/envoyproxy.yaml`) |
+| Envoy Gateway v1.5.1 (+ Gateway API CRDs), GatewayClass `envoy`, EnvoyProxy per cloud | Argo CD add-on `envoy-gateway-<env>`: `deploy/argocd/addons/envoy-gateway/` | the per-cloud part is the load balancer Service (`manifests/<cloud>/envoyproxy.yaml`); `mergeGateways: true` (S-31) puts the environment's Gateway and the custom-domain shards on one proxy fleet and load balancer |
 | cert-manager v1.18.2 | add-on `cert-manager-<env>`: `deploy/argocd/addons/cert-manager/` | Gateway API support on; `--issuer-ambient-credentials` for DNS-01 with its workload identity |
 | external-dns (chart 1.18.0) | add-on `external-dns-<env>`: `deploy/argocd/addons/external-dns/` + `envs/<env>/addons/external-dns.yaml` | provider, zone filter and identity from Terraform |
 | DNS zone, identities, record permissions | Terraform `modules/dns/*` (`record_writers`), stacks (identities `external-dns`, `cert-manager`) | env-root outputs `gitops_addon_values`, `helm_values.edge` |
@@ -165,31 +166,23 @@ The WAF itself (accounts, policies, DNS cut-over) is not in Terraform yet; each 
 
 ## Storefront custom domains (`pages.`)
 
-A merchant who owns `book.example.ca` points it at us with a **CNAME to `pages.northline.ca`** (Studio › Storefront
-shows this). S-31 verifies the CNAME and records `verified_at`. S-17 serves a verified domain:
+Merchants' own domains are verified and served by the api itself since S-31 — **[custom-domains.md](custom-domains.md)**:
+the merchant adds a **CNAME to `pages.<zone>`** (apex: ALIAS/ANAME or A records) and a TXT record
+`_northline-verify.<domain>`; once both check out and the page is published, the api's reconciler writes a listener on
+a shard Gateway `northline-custom-N` (≤ 64 listeners each), a Certificate over HTTP-01 from Issuer
+`northline-acme-custom` (Let's Encrypt staging outside prod) and a route to the consumer app, in the app's namespace
+only (Role `northline-domain-reconciler`). Envoy Gateway merges every Gateway of the class onto one proxy fleet and one
+load balancer (`mergeGateways` in `addons/envoy-gateway/manifests/<cloud>`), so `pages.<zone>` stays the only target;
+switching it on replaces the load balancer once (new address). external-dns leaves merchants' DNS alone (outside
+`domainFilters`, routes annotated `controller: none`), and their routes send HSTS without `includeSubDomains`.
 
-1. Add it to the environment's chart values by PR (GitOps; the S-31 automation can open the PR):
-   ```yaml
-   # deploy/argocd/envs/prod/values.yaml
-   edge:
-     customDomains:
-       - host: book.example.ca
-   ```
-2. After the sync: a Gateway listener for the host, a Certificate over **HTTP-01** (the CNAME already sends the
-   challenge to us), and an HTTPRoute to the consumer app, with the same TLS policy and HSTS. external-dns leaves the
-   merchant's DNS alone.
-3. `kubectl -n northline-prod get certificate northline-tls-book-example-ca` → Ready in a minute or two.
+`edge.customDomains` (a list in the environment's values, by PR) still pins a domain on the environment's Gateway by
+hand — for exceptions; it counts against that Gateway's 64 listeners.
 
-Limits and alternatives:
-
-- **Apex domains** (`example.ca` without `www`) can't be CNAMEs. The merchant needs ALIAS/ANAME support at their DNS
-  host, or A records to the load balancer's address (fixed only with a reserved IP: an Elastic IP on the NLB, a
-  reserved regional IP on Google Cloud, a static public IP on Azure — not set up yet).
-- **Scale:** a Gateway holds at most 64 listeners (Gateway API limit), so this handles the pilot's handful of domains.
-  Beyond that: several Gateways, `ListenerSet` once Gateway API and Envoy Gateway ship it as stable, or on-demand TLS
-  at a CDN (Cloudflare for SaaS custom hostnames, CloudFront SaaS Manager, Front Door custom domains), which issues
-  certificates per merchant without cluster changes. Decide before the storefront launch (S-31).
-- Removing a domain from the list removes its listener, route and certificate (the Secret stays until deleted).
+- **Apex domains** can't be CNAMEs: ALIAS/ANAME/CNAME flattening at the merchant's DNS host, or A records to a reserved
+  load-balancer address (`edge.domainReconciler.edgeAddresses`; not reserved yet).
+- **Scale:** shards of 64 listeners, `edge.domainReconciler.maxDomains` (1000) in total; `ListenerSet` can replace the
+  shards once Gateway API and Envoy Gateway ship it as stable.
 
 ## Setting it up (per environment)
 

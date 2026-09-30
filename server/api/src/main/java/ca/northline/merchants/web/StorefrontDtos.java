@@ -2,6 +2,7 @@ package ca.northline.merchants.web;
 
 import ca.northline.merchants.domain.CtaLabel;
 import ca.northline.merchants.domain.CustomDomain;
+import ca.northline.merchants.domain.DomainProblem;
 import ca.northline.merchants.domain.MerchantStatus;
 import ca.northline.merchants.domain.MerchantTier;
 import ca.northline.merchants.domain.MerchantType;
@@ -57,9 +58,32 @@ final class StorefrontDtos {
             @Nullable String announcement,
             @Nullable String customDomain,
             CustomDomain.@Nullable Status customDomainStatus,
+            String customDomainTarget,
+            @Nullable DomainSetupResponse customDomainSetup,
             @Nullable Instant publishedAt,
             List<SectionResponse> sections,
             BusinessCard business) {}
+
+    /**
+     * What the owner puts in DNS for the custom domain and where it stands (S-31).
+     *
+     * @param records {@code CNAME} (subdomains), {@code ALIAS} or {@code A}/{@code AAAA} (apex), and the ownership
+     *     {@code TXT}
+     * @param problem what keeps it from the next state ({@code txt_missing}, {@code not_pointing}, …)
+     * @param graceEndsAt while the records don't point at Northline: when the domain stops being served
+     */
+    record DomainSetupResponse(
+            String target,
+            boolean apex,
+            List<DnsRecordResponse> records,
+            @Nullable DomainProblem problem,
+            @Nullable Instant checkedAt,
+            @Nullable Instant nextCheckAt,
+            @Nullable Instant verifiedAt,
+            @Nullable Instant liveAt,
+            @Nullable Instant graceEndsAt) {}
+
+    record DnsRecordResponse(String type, String name, String value) {}
 
     record LogoResponse(String id, String fileName, String url) {}
 
@@ -88,7 +112,10 @@ final class StorefrontDtos {
             List<String> cuisines,
             List<String> verifiedFacts) {}
 
-    /** {@code GET /api/v1/storefronts/{slug}} — public, enabled sections only. */
+    /**
+     * {@code GET /api/v1/storefronts/{slug}} and {@code GET /api/v1/public/storefronts/by-host?host=} — public, enabled
+     * sections only. {@code customDomain}: only once it is live.
+     */
     record PublicStorefrontResponse(
             String slug,
             String url,
