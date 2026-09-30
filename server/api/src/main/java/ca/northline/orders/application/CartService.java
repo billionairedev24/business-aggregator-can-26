@@ -151,12 +151,12 @@ class CartService implements CartUseCases.ViewCart, CartUseCases.ChangeCart {
         for (var item : items.stream().sorted(Comparator.comparing(CartStore.Item::addedAt)).toList()) {
             var s = sellable.get(item.offerId() + "|" + Objects.requireNonNullElse(item.variantId(), ""));
             if (s == null) {
-                unknown.add(new CartLine(item.id(), item.offerId(), item.variantId(), "", "", null, null, null, 0,
+                unknown.add(new CartLine(item.id(), "", item.offerId(), item.variantId(), "", "", null, null, null, 0,
                         item.qty(), 0, 0, false, null));
                 continue;
             }
             var open = names.containsKey(s.merchantId());
-            var line = new CartLine(item.id(), item.offerId(), item.variantId(), s.productId(), s.name(), s.option(),
+            var line = new CartLine(item.id(), s.merchantId(), item.offerId(), item.variantId(), s.productId(), s.name(), s.option(),
                     s.unit(), s.imageUrl(), s.unitCents(), item.qty(), s.unitCents() * item.qty(), s.stock(),
                     open && s.stock() >= item.qty(), s.handlingDays());
             groups.computeIfAbsent(s.merchantId(), _ -> new ArrayList<>()).add(line);

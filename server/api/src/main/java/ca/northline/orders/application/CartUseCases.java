@@ -56,6 +56,7 @@ public final class CartUseCases {
      */
     public record CartLine(
             String itemId,
+            String merchantId,
             String offerId,
             @Nullable String variantId,
             String productId,
