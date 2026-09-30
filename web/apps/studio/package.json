@@ -12,6 +12,7 @@
     "prebuild": "pnpm --filter @northline/tokens build"
   },
   "dependencies": {
+    "@northline/client": "workspace:*",
     "@northline/tokens": "workspace:*",
     "@northline/ui": "workspace:*",
     "@phosphor-icons/react": "^2.1.7",
