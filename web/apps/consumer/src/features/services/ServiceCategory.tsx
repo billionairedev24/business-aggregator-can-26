@@ -36,7 +36,7 @@ export function CategoryView({ category: c }: { category: Category }) {
             <Tag tone="neutral">{t('verifiedProviders', { count: c.providers })}</Tag>
             {c.regulatedRegistry ? <Tag tone="accent-2">{t('licenceChecked', { registry: c.regulatedRegistry })}</Tag> : null}
           </div>
-          <p className="nl-svc-blurb">{dyn(t, keys.blurb)}</p>
+          <p className="nl-svc-blurb">{dyn(t, keys.blurb, '', { registry: c.regulatedRegistry ?? 'none' })}</p>
 
           <h2 className="nl-svc-h2">{t('commonJobs')}</h2>
           {c.jobs.length === 0

@@ -8,7 +8,7 @@ anything you don't have, one service at a time (compose profiles). The Spring pr
 | what | version | notes |
 |---|---|---|
 | git | any | |
-| JDK | **25** | `export JAVA_HOME=/path/to/jdk-25`. Gradle 9.8 comes with the wrapper (`server/gradlew`). |
+| JDK | **25** | `export JAVA_HOME=/path/to/jdk-25`. Gradle 9.8 comes with the wrapper (`server/gradlew`). The Gradle daemon itself must run on JDK 25 too (`server/gradle/gradle-daemon-jvm.properties` picks an installed one): in IntelliJ set *Settings › Build Tools › Gradle › Gradle JVM* to JDK 25, otherwise Spotless fails on `_` (unnamed variables). |
 | Node.js + pnpm | Node 22+, pnpm 10.17 | `corepack enable` picks the pnpm version from `web/package.json`. |
 | PostgreSQL | **17** with **PostGIS 3.5** | yours, or Docker (`--profile db`). Extensions used: `postgis`, `citext`, `pgcrypto`. |
 | Valkey or Redis | Valkey 8 / Redis 7+ | optional: only for `local,valkey` (sessions in Valkey) and the worker. Yours, or Docker (`--profile cache`). |

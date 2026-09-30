@@ -23,7 +23,7 @@ export const ServiceGroup = z.object({
 });
 export type ServiceGroup = z.infer<typeof ServiceGroup>;
 
-export const ServicesLanding = z.object({ liveCategories: z.number().int(), providers: z.number().int(), groups: z.array(ServiceGroup) });
+export const ServicesLanding = z.object({ liveCategories: z.number().int(), providers: z.number().int(), provinces: z.array(z.string()).catch([]), groups: z.array(ServiceGroup) });
 export type ServicesLanding = z.infer<typeof ServicesLanding>;
 
 export const PricingMode = z.enum(['fixed', 'hourly', 'quote']);
@@ -36,7 +36,7 @@ export type Job = z.infer<typeof Job>;
 
 export const ServiceCategory = z.object({
   id: z.string(), slug: z.string(), names: Names, group: ServiceGroup, kind: ServiceKind, vehicle: z.boolean(),
-  regulatedRegistry: z.string().nullish(), providers: z.number().int(), quoteable: z.boolean(), jobs: z.array(Job),
+  regulatedRegistry: z.string().nullish(), providers: z.number().int(), provinces: z.array(z.string()).catch([]), quoteable: z.boolean(), jobs: z.array(Job),
 });
 export type ServiceCategory = z.infer<typeof ServiceCategory>;
 

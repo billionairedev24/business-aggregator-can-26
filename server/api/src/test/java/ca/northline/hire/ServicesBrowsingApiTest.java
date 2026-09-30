@@ -58,7 +58,8 @@ class ServicesBrowsingApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.groups[0].items[0].kind").value("visit"))
                 .andExpect(jsonPath(
                         "$.groups[*].key", containsInRelativeOrder("automotive", "home-trades", "professional")))
-                .andExpect(jsonPath("$.liveCategories").value(org.hamcrest.Matchers.greaterThanOrEqualTo(1)));
+                .andExpect(jsonPath("$.liveCategories").value(org.hamcrest.Matchers.greaterThanOrEqualTo(1)))
+                .andExpect(jsonPath("$.provinces[0]").value("AB"));
     }
 
     @Test

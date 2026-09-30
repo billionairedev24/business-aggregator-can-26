@@ -74,6 +74,12 @@ northline:
       - { name: evening, starts: "18:00", ends: "21:00", cutoff: "17:45", fee-cents: 299, capacity: 40 }
       - { name: morning, starts: "08:00", ends: "11:00", cutoff: "07:30", fee-cents: 199, capacity: 40 }
     direct: { eta: 45m, fee-cents: 999 }
+  # Region defaults of the consumer Services journey (S-53…S-56; HireProperties) until S-134's region configuration:
+  # the market shown to a visitor without a location, the province of a business without one, the market's time zone.
+  hire:
+    default-city: Calgary
+    default-province: AB
+    time-zone: America/Edmonton
   developer.webhook-key: ${WEBHOOK_SECRET_KEY:}                # base64 32 bytes; blank = fixed dev key under local/test
   payments:                                                    # blank key = fake Stripe gateway (DECISIONS.md, Finance)
     stripe-secret-key: ${STRIPE_SECRET_KEY:}

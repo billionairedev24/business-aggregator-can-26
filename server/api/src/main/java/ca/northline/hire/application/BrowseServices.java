@@ -26,7 +26,8 @@ public final class BrowseServices {
         Providers providers(String slug, Place place, String lang);
     }
 
-    public record Landing(int liveCategories, int providers, List<Group> groups) {}
+    /** @param provinces where the live providers are (province codes, sorted) */
+    public record Landing(int liveCategories, int providers, List<String> provinces, List<Group> groups) {}
 
     /** @param key the group slug ({@code automotive}); the web app words its line from it */
     public record Group(
@@ -52,6 +53,7 @@ public final class BrowseServices {
             boolean vehicle,
             @Nullable String regulatedRegistry,
             int providers,
+            List<String> provinces,
             boolean quoteable,
             List<Job> jobs) {}
 

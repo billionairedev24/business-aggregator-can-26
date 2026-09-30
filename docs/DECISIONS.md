@@ -2340,6 +2340,155 @@ Built on S-49 (branch `web/s-50-product-detail` from `web/s-49-shop-landing`).
   - Disclose the processor in the Privacy Policy and in the PIPEDA / Law 25 assessment (SEC stories), together with the other processors.
 - **Pending:** an OpenRouter API key per environment. Until it exists, `northline.ai.provider=fake` locally, and AI features answer `503 ai_unavailable` in the cloud.
 
+## 2026-09-30 — Region-neutral by design (user direction)
+
+- Northline **starts** in Alberta (Calgary first) but is built for every province.
+- Code must not hardcode a province, city or time zone. That covers messages, defaults, holiday calendars, time zones, service zones and legal copy. All of it comes from the region configuration: the provinces (time zones, statutory holidays, tax, privacy law, registries, launch status) and the markets (city, province, time zone, zones, live flag).
+- A message that names a place takes it as a parameter ({province}, {city}), in English and French.
+- Province-specific integrations, such as the Alberta corporate registry or the City of Calgary licences, stay as adapters. They are selected by the business's province and city, never by default.
+- S-134 moves the existing literals into that configuration and adds a lint rule. Until it lands, new code must not add region literals.
+
+## 2026-09-30 — S-53 Services landing, service category, provider list
+
+Branch `web/s-53-services-landing` (from main). Contracts: [CONSUMER_WEB_PLAN.md](CONSUMER_WEB_PLAN.md).
+
+- **New api module `hire`** (consumer side of the Services journey, S-53 … S-56): a composition module like `studio`
+  — no tables, only other modules' `api` packages (availability, catalogue, merchants, trust; booking and payments
+  from S-55), nothing depends on it. Chosen over putting the reads in `booking` (it can't depend on availability or
+  payments without a cycle: availability → booking, payments → booking) or `search` (projection only). Its read models
+  are serialized as they are (as the Studio dashboard does): they exist only for these screens.
+- **Public endpoints** (`GET /api/v1/public/**`, open since S-31; `?lang=en|fr`, default en):
+  `GET /api/v1/public/services` → `{liveCategories, providers, groups: [{id, key, names, note, items: [{slug, names,
+  kind, providers}]}]}` · `GET /api/v1/public/services/{slug}` → `{id, slug, names, group, kind, vehicle,
+  regulatedRegistry, providers, quoteable, jobs: [{name, included, pricingMode, priceCents, durationMin}]}` (404 for an
+  unknown slug) · `GET /api/v1/public/services/{slug}/providers?lat&lng&city` → `{categorySlug, kind, area, city,
+  items: [{merchantId, slug, name, tier, brandColor, blurb, rating, reviewCount, onTimePct, disputePct, rebookPct,
+  fromCents, pricingMode, instantBook, nextAvailable, zones}]}`. Landing and category: `Cache-Control: max-age=60,
+  public`; providers 30 s. The category `slug` is the leaf part of the CategorySeeder id (`mobile-mechanic`; unique
+  across the service root, checked). Validation (messages not in validation-rules.md, English in both locales like the
+  other server rules): one of `lat`/`lng` alone → 422 "Send both lat and lng, or neither."; out of range → "That
+  location is outside the map."; `city` over 60 → "At most 60 characters.".
+- **A category's providers** = active `provider`/`both` businesses with a published business page and at least one
+  live, approved service (`catalogue.services`) in that leaf. Counts on the landing and the category page are these,
+  not filtered by location (server-rendered pages are the same for everyone); "live categories" = leaves with at least
+  one. The design's "62 categories · 1,204 providers" are sample numbers.
+- **Booking type per category** (`hire.domain.ServiceKind`): `catalogue.categories.booking_type` wins when set, but
+  the seed sets none (and `seedCategories` owns the rows), so it comes from the group — automotive, home trades,
+  tech: visit · cleaning & property, pets, education, childcare: home · events: event · personal care: appointment ·
+  professional: consult — with leaf exceptions (movers → event as in the design; property management, career/life
+  coach, web design, photo editing → consult; mobile hair & makeup, home care aide → home; dog grooming →
+  appointment). `vehicle` (the wizard's vehicle questions) = the automotive group. Quotes for visits and events only
+  (the design's `quoteable`), events are quote-only.
+- **Service area = zones** (`availability.service_areas`, V041, names from Booking rules). **V114** adds
+  `availability.service_zones`: each of the nine names with its city, a centre and an approximate circular area
+  (Beltline 1.2 km … SE Calgary 10 km, Airdrie/Cochrane/Okotoks the towns) — reference data, the same everywhere, until
+  `region.zones` has Calgary polygons. A business covers the customer when one of its zones contains the device's
+  point, or, with only a city (the IP guess, the Calgary fallback, a saved address without coordinates), when one of
+  its zones is in that city; no location at all = the configured default market (`northline.hire.default-city`). Appointments and consultations (the customer goes to them)
+  also match the business's own city. The heading's area is the zone the point is in (nearest centre when two
+  overlap), else the city. `availability.api.ServiceAreas`.
+- **Trust order** (design: "Sorted by trust · tier, on-time rate, dispute rate and re-book rate"): tier, then on-time
+  (higher), disputes (lower), re-book (higher), rating, name; a business without a nightly quality score yet sorts after
+  scored ones of its tier (`hire.domain.TrustRank`). The consult variant's "Sorted by recent sales…" isn't used: there
+  is no sales ranking, and the note must say what the list does.
+- **Next available** is computed live: `availability.api.ProviderSlots` (new, used again by S-55's calendar) = the
+  Studio preview's `SlotPlanner` over every bookable member (hours, time off, closed holidays, confirmed jobs, S-32
+  calendar busy blocks, travel buffer), merged, then minimum notice, "same day by 9 am", horizon and jobs per day. The
+  per-day part of `HoursService.preview` moved into `DaySchedule` so both use it (Studio behaviour unchanged). "Next
+  available" looks at most 14 days ahead. Cost: a few queries per member-day per provider — fine for a city's providers
+  in one category; the search projection's `next_slot` (E-6) should replace it on the list later.
+- **Not shown / not built from the design's list:** the distance ("1.2 km") — businesses have no base location, only
+  zones, so the filter "Under 3 km" isn't offered; "EV certified" (no such attribute). Filters kept: Master tier,
+  Instant book, Available today, Under $80 — applied in the browser to the covering providers (none on by default;
+  the prototype's pre-ticked "Master tier" is demo state). Rows show "★ rating (reviews) · on-time" or "New on
+  Northline", "from $79" / "from $45/h" / "Quote", and "Today 3 pm" / "Tomorrow 9 am" / "Thu 9 am" / "No openings in
+  the next 2 weeks".
+- **Copy:** the design details one category per booking type (mobile mechanic, cleaning, bar, barber, real estate).
+  Its text is used for that family (automotive; the cleaning leaves; cocktail bar and bartender; barber & hair;
+  real-estate agent) exactly; the other categories of a type get generic wording in the same shape (ours: blurb, "where",
+  CTA hint, first two steps of visits) — e.g. a plumber isn't "Licensed technicians who bring the shop to you". The
+  CTA noun ("See 14 mechanics") and the list heading noun ("Mobile mechanics · 14 come to Beltline") come from the
+  design's `nounBy` for those families, "providers" / the category name otherwise. Group lines: the design's for its
+  five groups, ours for pets, education, tech, childcare.
+- **French category names** live in the consumer app (`features/services/taxonomy.ts`, all 10 groups and 108 leaves):
+  `catalogue.categories.name_i18n` is English-only and `seedCategories` rewrites it, so a migration couldn't keep them.
+  The API still returns `names` so a translated table takes over by itself; names without French are marked
+  `lang="en"`.
+- **Pages:** landing and category render on the server (loader → `ensureQueryData`, the screen `useSuspenseQuery`,
+  title + description meta, 404 → the not-found screen); the provider list renders the category on the server and
+  loads the covering providers in the browser once the location is known (device/saved coordinates are sent; the
+  Calgary fallback and the IP city only as a city). Loading skeletons, empty ("No verified providers cover Beltline for
+  this service yet." + See all services; "No providers match these filters." + Clear filters) and error (Retry) states.
+- **Shared-contract changes (additive):** new route `/services/$category/quote` (screen key `quoteRequest`, S-56 —
+  the category's "Describe the job, get 3 quotes"; `ScreenPending` until then); UI kit `BrandMark` (a business's
+  initial on its brand colour, with a story); `availability.api.ServiceAreas`/`ProviderSlots`, `catalogue.api.
+  ServiceOffers`, `merchants.api.PublicProviders`.
+- **Not done:** search-backed ranking and `next_slot` (E-6); distance; per-category French taxonomy in the database;
+  structured data (S-63).
+- **Region-neutral** (the decision above): no province, city or time zone in this story's code or copy. The default
+  market, the fallback province and the time zone are configuration (`northline.hire`: `default-city`,
+  `default-province`, `time-zone`; HireProperties) until S-134's region configuration; the landing and a category
+  return `provinces` (their live providers' `merchants.province`) and the copy names them as a parameter ("4 categories
+  live in {region}"); registry names in the copy come from the category (`regulatedRegistry`). Existing literals still
+  relied on (S-134): the web's shared `TIME_ZONE` (`@northline/ui`), `DEFAULT_MARKET` (`features/location/markets.ts`),
+  `AlbertaHolidays` and `Team.ZONE` in the availability planner (moved into `DaySchedule`, unchanged), and the zone rows
+  of V114 (reference data).
+
+## 2026-09-30 — S-54 Public provider page from the storefront API (sections, reviews, service area)
+
+Branch `web/s-54-provider-page`, **stacked on `web/s-53-services-landing`** (uses its `hire` module, service kinds and
+copy).
+
+- **Two public reads, one page.** The page itself is the storefront API as it was (`GET /api/v1/storefronts/{slug}`:
+  enabled sections in the owner's order, brand colour, logo, tagline, announcement, CTA label, verified facts); new
+  `GET /api/v1/public/providers/{slug}` (module `hire`) adds what Northline holds: rating and review count, the latest
+  quality score's on-time / dispute / re-book figures, the live approved services (with each one's category and
+  booking type), the service-area zones, the next free slot (S-53's `ProviderSlots`) and the three newest reviews;
+  `GET /api/v1/public/providers/{slug}/reviews?offset&limit` pages the rest (10 by default, at most 20). Both
+  `max-age=60, public`. 404 unless the business is an active `provider`/`both` with a published page. The loader
+  fetches both in parallel on the server.
+- **The business's kind** (visit, home, event, appointment, consult — the CTA title, the mode tag and the copy family)
+  comes from the category most of its services are in; a business without services is a visit.
+- **Sections in order** (storefront-sections.json): the hero (design `pv` hero: brand-colour band, logo or initial,
+  name, tagline + "since <year of approval>", "<tier> tier · verified") and the trust figures and credential tags
+  always open the page; then the enabled `about` (the Business-step description), `reviews` (three newest, "Show
+  more reviews", the business's public reply under a review, "New on Northline — verified" before the first), `area`
+  (the zones — "Comes to you in Beltline · Downtown."; appointments and consultations: "You go to them in <city>."),
+  `faq` (the builder's pairs as disclosure widgets) and `policies` in the owner's order. `services` + `cta` are the
+  aside (design): the service menu (name, duration, price or "Quote") only when `services` is enabled, as the spec says
+  ("Only the Book button remains"), the button labelled with the page's CTA label (Book a visit / Request a quote /
+  Order now / Reserve — the owner's choice wins over the design's per-type wording), "Not sure? Request a quote" for
+  quoteable kinds, "Next available: … · <note>". The announcement is a strip above the hero.
+- **Not rendered:** `gallery` (the builder can't add photos yet, S-53 preview shows the same), the map of the area
+  (no map provider; the zones are listed), and `featured`/`catalogue`/`delivery`/`menu`/`hours`/`fulfil`/`permit`
+  (store and menu sections; a `both` page's products belong to the shop pages, S-49/S-50). Credential tags from verified
+  checks: licence → "AMVIC licensed", insurance → "$2M insured" (the insurance check requires ≥ $2M, onboarding
+  decision), ID → "ID verified", site visit → "Site visited"; the design's "Red Seal journeyman" etc. are sample text
+  with no data behind them. The consult variant's "sales · 12 mo" figure has no source; re-book is shown for everyone.
+- **SEO-ready, structured data left to S-63:** server-rendered title ("Prairie Wrench · Mobile mechanic · Calgary ·
+  Northline"), description (the business's description, else its tagline), canonical (the live custom domain when there
+  is one — the owner's own address is the page's home — else `NL_SITE_ORIGIN/providers/<slug>`) and Open Graph tags.
+  No `hreflang`: the language is a cookie, not a URL (S-63 decides).
+- **Other hosts** (plan: "storefront pages on `pages.<zone>` and merchants' own domains are S-54/S-63 work"): the node
+  server (`server/page-hosts.mjs`) classifies the `Host`: the site; `pages.<zone>` (`NL_PAGES_HOST`) where `/<slug>` is
+  that page; any other host = a merchant's domain, resolved with S-31's `GET /api/v1/public/storefronts/by-host`
+  through the consumer-bff (cached 60 s like the endpoint's `Cache-Control`, a failed lookup isn't cached → 503 "Try
+  again in a moment."; unknown host → 404 "No Northline page is connected to this domain."). Only business pages are
+  served; other page kinds and every other path redirect (302) to `NL_SITE_ORIGIN`. The server passes the page as
+  `x-nl-page-mode/host/slug` headers (the browser's are dropped); the router's `rewrite` maps the host's `/` or
+  `/<slug>` onto `/providers/<slug>` and back, so SSR and hydration agree while the address bar keeps the merchant's
+  URL. Sign-in, booking and the cart live on the site (the consumer-bff client has one redirect URI; merchants' domains
+  get no `/api` route), so on those hosts the page's links are absolute to `NL_SITE_ORIGIN` (`siteHref`) and "Show
+  more reviews" becomes "See all reviews" on the site. Local development: the Vite dev server doesn't do host routing;
+  the built server does with `NL_PAGES_HOST` (runbooks/local.md). New variables `NL_SITE_ORIGIN`, `NL_PAGES_HOST`
+  (consumer app, optional, the chart sets them from `urls.consumer` / `urls.pages`); `publicConfig` carries `siteOrigin`
+  and `page`, `useSiteConfig()` reads them.
+- **New public API:** `trust.api.PublicReviews` (newest first; author display name, job label, reply — nothing else
+  about the author).
+- **Not done:** JSON-LD, sitemap, `hreflang` (S-63); the shell on a merchant's own domain still shows the site header,
+  whose links and session/cart calls go to the site or fail quietly (no BFF route there) — a slimmer page chrome for
+  other hosts is left to S-63; the CDN in front of these pages (edge caching) isn't configured.
+
 ## 2026-09-30 — S-51 Cart and checkout (server-side cart, step-up, tax, manual-capture payments, order.placed)
 
 - **Cart (orders, `/api/v1/cart`, open to guests):** `GET`, `POST /items` `{offerId, variantId?, qty}`,
@@ -2441,139 +2590,6 @@ Built on S-49 (branch `web/s-50-product-detail` from `web/s-49-shop-landing`).
   - `WebhookPayloadsTest.orderPlaced_theShopsLinesWithoutTheCustomer`.
   - vitest `features/cart/cart.test.tsx`: design copy, guest banner and sign-in, multi-shop groups, quantity and
     remove, delivery windows, tax lines, step-up dialog, fake card, errors, French.
-
-## 2026-09-30 — S-53 Services landing, service category, provider list
-
-Branch `web/s-53-services-landing` (from main). Contracts: [CONSUMER_WEB_PLAN.md](CONSUMER_WEB_PLAN.md).
-
-- **New api module `hire`** (consumer side of the Services journey, S-53 … S-56): a composition module like `studio`
-  — no tables, only other modules' `api` packages (availability, catalogue, merchants, trust; booking and payments
-  from S-55), nothing depends on it. Chosen over putting the reads in `booking` (it can't depend on availability or
-  payments without a cycle: availability → booking, payments → booking) or `search` (projection only). Its read models
-  are serialized as they are (as the Studio dashboard does): they exist only for these screens.
-- **Public endpoints** (`GET /api/v1/public/**`, open since S-31; `?lang=en|fr`, default en):
-  `GET /api/v1/public/services` → `{liveCategories, providers, groups: [{id, key, names, note, items: [{slug, names,
-  kind, providers}]}]}` · `GET /api/v1/public/services/{slug}` → `{id, slug, names, group, kind, vehicle,
-  regulatedRegistry, providers, quoteable, jobs: [{name, included, pricingMode, priceCents, durationMin}]}` (404 for an
-  unknown slug) · `GET /api/v1/public/services/{slug}/providers?lat&lng&city` → `{categorySlug, kind, area, city,
-  items: [{merchantId, slug, name, tier, brandColor, blurb, rating, reviewCount, onTimePct, disputePct, rebookPct,
-  fromCents, pricingMode, instantBook, nextAvailable, zones}]}`. Landing and category: `Cache-Control: max-age=60,
-  public`; providers 30 s. The category `slug` is the leaf part of the CategorySeeder id (`mobile-mechanic`; unique
-  across the service root, checked). Validation (messages not in validation-rules.md, English in both locales like the
-  other server rules): one of `lat`/`lng` alone → 422 "Send both lat and lng, or neither."; out of range → "That
-  location is outside the map."; `city` over 60 → "At most 60 characters.".
-- **A category's providers** = active `provider`/`both` businesses with a published business page and at least one
-  live, approved service (`catalogue.services`) in that leaf. Counts on the landing and the category page are these,
-  not filtered by location (server-rendered pages are the same for everyone); "live categories" = leaves with at least
-  one. The design's "62 categories · 1,204 providers" are sample numbers.
-- **Booking type per category** (`hire.domain.ServiceKind`): `catalogue.categories.booking_type` wins when set, but
-  the seed sets none (and `seedCategories` owns the rows), so it comes from the group — automotive, home trades,
-  tech: visit · cleaning & property, pets, education, childcare: home · events: event · personal care: appointment ·
-  professional: consult — with leaf exceptions (movers → event as in the design; property management, career/life
-  coach, web design, photo editing → consult; mobile hair & makeup, home care aide → home; dog grooming →
-  appointment). `vehicle` (the wizard's vehicle questions) = the automotive group. Quotes for visits and events only
-  (the design's `quoteable`), events are quote-only.
-- **Service area = zones** (`availability.service_areas`, V041, names from Booking rules). **V114** adds
-  `availability.service_zones`: each of the nine names with its city, a centre and an approximate circular area
-  (Beltline 1.2 km … SE Calgary 10 km, Airdrie/Cochrane/Okotoks the towns) — reference data, the same everywhere, until
-  `region.zones` has Calgary polygons. A business covers the customer when one of its zones contains the device's
-  point, or, with only a city (the IP guess, the Calgary fallback, a saved address without coordinates), when one of
-  its zones is in that city; no location at all = Calgary. Appointments and consultations (the customer goes to them)
-  also match the business's own city. The heading's area is the zone the point is in (nearest centre when two
-  overlap), else the city. `availability.api.ServiceAreas`.
-- **Trust order** (design: "Sorted by trust · tier, on-time rate, dispute rate and re-book rate"): tier, then on-time
-  (higher), disputes (lower), re-book (higher), rating, name; a business without a nightly quality score yet sorts after
-  scored ones of its tier (`hire.domain.TrustRank`). The consult variant's "Sorted by recent sales…" isn't used: there
-  is no sales ranking, and the note must say what the list does.
-- **Next available** is computed live: `availability.api.ProviderSlots` (new, used again by S-55's calendar) = the
-  Studio preview's `SlotPlanner` over every bookable member (hours, time off, closed holidays, confirmed jobs, S-32
-  calendar busy blocks, travel buffer), merged, then minimum notice, "same day by 9 am", horizon and jobs per day. The
-  per-day part of `HoursService.preview` moved into `DaySchedule` so both use it (Studio behaviour unchanged). "Next
-  available" looks at most 14 days ahead. Cost: a few queries per member-day per provider — fine for a city's providers
-  in one category; the search projection's `next_slot` (E-6) should replace it on the list later.
-- **Not shown / not built from the design's list:** the distance ("1.2 km") — businesses have no base location, only
-  zones, so the filter "Under 3 km" isn't offered; "EV certified" (no such attribute). Filters kept: Master tier,
-  Instant book, Available today, Under $80 — applied in the browser to the covering providers (none on by default;
-  the prototype's pre-ticked "Master tier" is demo state). Rows show "★ rating (reviews) · on-time" or "New on
-  Northline", "from $79" / "from $45/h" / "Quote", and "Today 3 pm" / "Tomorrow 9 am" / "Thu 9 am" / "No openings in
-  the next 2 weeks".
-- **Copy:** the design details one category per booking type (mobile mechanic, cleaning, bar, barber, real estate).
-  Its text is used for that family (automotive; the cleaning leaves; cocktail bar and bartender; barber & hair;
-  real-estate agent) exactly; the other categories of a type get generic wording in the same shape (ours: blurb, "where",
-  CTA hint, first two steps of visits) — e.g. a plumber isn't "Licensed technicians who bring the shop to you". The
-  CTA noun ("See 14 mechanics") and the list heading noun ("Mobile mechanics · 14 come to Beltline") come from the
-  design's `nounBy` for those families, "providers" / the category name otherwise. Group lines: the design's for its
-  five groups, ours for pets, education, tech, childcare.
-- **French category names** live in the consumer app (`features/services/taxonomy.ts`, all 10 groups and 108 leaves):
-  `catalogue.categories.name_i18n` is English-only and `seedCategories` rewrites it, so a migration couldn't keep them.
-  The API still returns `names` so a translated table takes over by itself; names without French are marked
-  `lang="en"`.
-- **Pages:** landing and category render on the server (loader → `ensureQueryData`, the screen `useSuspenseQuery`,
-  title + description meta, 404 → the not-found screen); the provider list renders the category on the server and
-  loads the covering providers in the browser once the location is known (device/saved coordinates are sent; the
-  Calgary fallback and the IP city only as a city). Loading skeletons, empty ("No verified providers cover Beltline for
-  this service yet." + See all services; "No providers match these filters." + Clear filters) and error (Retry) states.
-- **Shared-contract changes (additive):** new route `/services/$category/quote` (screen key `quoteRequest`, S-56 —
-  the category's "Describe the job, get 3 quotes"; `ScreenPending` until then); UI kit `BrandMark` (a business's
-  initial on its brand colour, with a story); `availability.api.ServiceAreas`/`ProviderSlots`, `catalogue.api.
-  ServiceOffers`, `merchants.api.PublicProviders`.
-- **Not done:** search-backed ranking and `next_slot` (E-6); distance; per-category French taxonomy in the database;
-  structured data (S-63).
-
-## 2026-09-30 — S-54 Public provider page from the storefront API (sections, reviews, service area)
-
-Branch `web/s-54-provider-page`, **stacked on `web/s-53-services-landing`** (uses its `hire` module, service kinds and
-copy).
-
-- **Two public reads, one page.** The page itself is the storefront API as it was (`GET /api/v1/storefronts/{slug}`:
-  enabled sections in the owner's order, brand colour, logo, tagline, announcement, CTA label, verified facts); new
-  `GET /api/v1/public/providers/{slug}` (module `hire`) adds what Northline holds: rating and review count, the latest
-  quality score's on-time / dispute / re-book figures, the live approved services (with each one's category and
-  booking type), the service-area zones, the next free slot (S-53's `ProviderSlots`) and the three newest reviews;
-  `GET /api/v1/public/providers/{slug}/reviews?offset&limit` pages the rest (10 by default, at most 20). Both
-  `max-age=60, public`. 404 unless the business is an active `provider`/`both` with a published page. The loader
-  fetches both in parallel on the server.
-- **The business's kind** (visit, home, event, appointment, consult — the CTA title, the mode tag and the copy family)
-  comes from the category most of its services are in; a business without services is a visit.
-- **Sections in order** (storefront-sections.json): the hero (design `pv` hero: brand-colour band, logo or initial,
-  name, tagline + "since <year of approval>", "<tier> tier · verified") and the trust figures and credential tags
-  always open the page; then the enabled `about` (the Business-step description), `reviews` (three newest, "Show
-  more reviews", the business's public reply under a review, "New on Northline — verified" before the first), `area`
-  (the zones — "Comes to you in Beltline · Downtown."; appointments and consultations: "You go to them in <city>."),
-  `faq` (the builder's pairs as disclosure widgets) and `policies` in the owner's order. `services` + `cta` are the
-  aside (design): the service menu (name, duration, price or "Quote") only when `services` is enabled, as the spec says
-  ("Only the Book button remains"), the button labelled with the page's CTA label (Book a visit / Request a quote /
-  Order now / Reserve — the owner's choice wins over the design's per-type wording), "Not sure? Request a quote" for
-  quoteable kinds, "Next available: … · <note>". The announcement is a strip above the hero.
-- **Not rendered:** `gallery` (the builder can't add photos yet, S-53 preview shows the same), the map of the area
-  (no map provider; the zones are listed), and `featured`/`catalogue`/`delivery`/`menu`/`hours`/`fulfil`/`permit`
-  (store and menu sections; a `both` page's products belong to the shop pages, S-49/S-50). Credential tags from verified
-  checks: licence → "AMVIC licensed", insurance → "$2M insured" (the insurance check requires ≥ $2M, onboarding
-  decision), ID → "ID verified", site visit → "Site visited"; the design's "Red Seal journeyman" etc. are sample text
-  with no data behind them. The consult variant's "sales · 12 mo" figure has no source; re-book is shown for everyone.
-- **SEO-ready, structured data left to S-63:** server-rendered title ("Prairie Wrench · Mobile mechanic · Calgary ·
-  Northline"), description (the business's description, else its tagline), canonical (the live custom domain when there
-  is one — the owner's own address is the page's home — else `NL_SITE_ORIGIN/providers/<slug>`) and Open Graph tags.
-  No `hreflang`: the language is a cookie, not a URL (S-63 decides).
-- **Other hosts** (plan: "storefront pages on `pages.<zone>` and merchants' own domains are S-54/S-63 work"): the node
-  server (`server/page-hosts.mjs`) classifies the `Host`: the site; `pages.<zone>` (`NL_PAGES_HOST`) where `/<slug>` is
-  that page; any other host = a merchant's domain, resolved with S-31's `GET /api/v1/public/storefronts/by-host`
-  through the consumer-bff (cached 60 s like the endpoint's `Cache-Control`, a failed lookup isn't cached → 503 "Try
-  again in a moment."; unknown host → 404 "No Northline page is connected to this domain."). Only business pages are
-  served; other page kinds and every other path redirect (302) to `NL_SITE_ORIGIN`. The server passes the page as
-  `x-nl-page-mode/host/slug` headers (the browser's are dropped); the router's `rewrite` maps the host's `/` or
-  `/<slug>` onto `/providers/<slug>` and back, so SSR and hydration agree while the address bar keeps the merchant's
-  URL. Sign-in, booking and the cart live on the site (the consumer-bff client has one redirect URI; merchants' domains
-  get no `/api` route), so on those hosts the page's links are absolute to `NL_SITE_ORIGIN` (`siteHref`) and "Show
-  more reviews" becomes "See all reviews" on the site. Local development: the Vite dev server doesn't do host routing;
-  the built server does with `NL_PAGES_HOST` (runbooks/local.md). New variables `NL_SITE_ORIGIN`, `NL_PAGES_HOST`
-  (consumer app, optional, the chart sets them from `urls.consumer` / `urls.pages`); `publicConfig` carries `siteOrigin`
-  and `page`, `useSiteConfig()` reads them.
-- **New public API:** `trust.api.PublicReviews` (newest first; author display name, job label, reply — nothing else
-  about the author).
-- **Not done:** JSON-LD, sitemap, `hreflang` (S-63); the shell on a merchant's own domain still shows the site header,
-  whose links and session/cart calls go to the site or fail quietly (no BFF route there) — a slimmer page chrome for
-  other hosts is left to S-63; the CDN in front of these pages (edge caching) isn't configured.
 
 ## 2026-09-30 — S-55 Booking wizard (job details → location & access → schedule → payment → confirmed)
 
