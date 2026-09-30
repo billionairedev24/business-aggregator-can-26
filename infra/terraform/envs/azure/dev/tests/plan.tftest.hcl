@@ -117,3 +117,22 @@ run "helm_values" {
     error_message = "helm_values.workloadIdentities carries the four app ServiceAccounts (the ESO controller's is installed with ESO)."
   }
 }
+
+run "s25_event_hubs_from_the_topic_catalogue" {
+  command = plan
+
+  assert {
+    condition     = output.data_stores.kafka.cloud.event_hubs["payments.payout.dlq"].partitions == 1
+    error_message = "Every catalogue topic's .dlq is an event hub (deploy/kafka/topics.yaml, dlq partitions)."
+  }
+
+  assert {
+    condition     = output.data_stores.kafka.cloud.event_hubs["catalogue.listing.search-indexer.retry-0"].partitions == 6
+    error_message = "Consumer retry topics are event hubs with the source topic's partitions."
+  }
+
+  assert {
+    condition     = output.data_stores.kafka.cloud.event_hubs["payments.payout"].retention_hours == 168
+    error_message = "Retention comes from the catalogue."
+  }
+}

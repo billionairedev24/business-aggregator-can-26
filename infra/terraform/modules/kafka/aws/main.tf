@@ -132,3 +132,9 @@ resource "aws_secretsmanager_secret_version" "jaas" {
   secret_id     = aws_secretsmanager_secret.jaas.id
   secret_string = local.jaas_config
 }
+
+# Contract inputs this implementation does not need (README § Module contract); referenced so the omission is explicit.
+locals {
+  # tflint-ignore: terraform_unused_declarations
+  unused_contract_inputs = [var.topics] # MSK topics come from the provisioning Job (Kafka admin API, S-25)
+}

@@ -19,13 +19,13 @@ output "kafka_sasl_jaas_config_secret_ref" {
 }
 
 output "kafka_replication_factor" {
-  description = "KAFKA_REPLICATION_FACTOR for scripts/topics.sh."
+  description = "KAFKA_REPLICATION_FACTOR for the topic provisioning Job and scripts/topics.sh."
   value       = local.rf
 }
 
 output "kafka_topic_policy" {
   description = "How topics come into existence on this service."
-  value       = "auto.create.topics.enable=false (MSK configuration): create every topic and its .dlq with scripts/topics.sh (S-25) before the apps start."
+  value       = "auto.create.topics.enable=false (MSK configuration): the provisioning Job creates every topic of deploy/kafka/topics.yaml (Kafka admin API, S-25) before the apps start."
 }
 
 output "cloud" {

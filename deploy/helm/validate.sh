@@ -63,5 +63,14 @@ for env in dev staging prod; do
   else echo "ok   $env: no dev seed in the migration Job"; fi
 done
 
+# S-25: the topics Job applies the catalogue on MSK / Managed Kafka and only reports on Event Hubs (Terraform owns it).
+for cloud in aws gcp azure; do
+  expected=apply; [[ $cloud == azure ]] && expected=plan
+  if helm template northline "$CHART" -f "$CHART/values-prod.yaml" -f "$CHART/values-$cloud.yaml" -f "test-values/identities-$cloud.yaml" \
+      --show-only templates/kafka-topics-job.yaml | grep -q "\"ca.northline.worker.topics.TopicsCommand\", \"$expected\""; then
+    echo "ok   prod × $cloud: Kafka topics Job runs $expected"
+  else echo "FAIL prod × $cloud: Kafka topics Job does not run $expected"; failed=1; fi
+done
+
 rm -f /tmp/helm-lint.$$ /tmp/kubeconform.$$
 exit $failed
