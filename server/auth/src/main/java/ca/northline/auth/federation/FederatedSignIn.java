@@ -1,11 +1,11 @@
 package ca.northline.auth.federation;
 
-import ca.northline.auth.application.AuthProperties;
 import ca.northline.auth.application.FederatedProfile;
 import ca.northline.auth.application.FederatedSignInService;
 import ca.northline.auth.application.FederatedSignInService.ContinueSignIn;
 import ca.northline.auth.application.FederatedSignInService.CreateAccount;
 import ca.northline.auth.application.FlowRejected;
+import ca.northline.auth.application.LoginPages;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -30,7 +30,8 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Back from Google / Apple (S-18). The federated login never becomes the session (a second factor is still required):
- * the profile goes to {@link FederatedSignInService}, and the browser continues in the Studio — the factor step
+ * the profile goes to {@link FederatedSignInService}, and the browser continues in the Studio (or, S-62, on the
+ * consumer site when it started there — {@link LoginPages#forFederationCallback}) — the factor step
  * ({@code /sign-in?step=factor&identifier=…[&link=google]}) or "Create account" pre-filled
  * ({@code /register?firstName=…&lastName=…&email=…&provider=apple[&relay=1]}). Failures land on
  * {@code /sign-in?error=federation_cancelled | federation_unavailable | federation | rate_limited}.
@@ -43,7 +44,7 @@ final class FederatedSignIn implements AuthenticationSuccessHandler, Authenticat
     static final String APPLE_USER_PARAMETER = "user";
 
     private final FederatedSignInService federation;
-    private final AuthProperties props;
+    private final LoginPages pages;
     private final HttpSessionSecurityContextRepository contexts = new HttpSessionSecurityContextRepository();
     private final JsonMapper json = JsonMapper.builder().build();
 
@@ -56,20 +57,21 @@ final class FederatedSignIn implements AuthenticationSuccessHandler, Authenticat
         contexts.saveContext(empty, request, response);
 
         var profile = profile(auth, request);
+        var page = pages.forFederationCallback(request); // S-62: the Studio's or the consumer site's
         if (profile == null) {
-            response.sendRedirect(error("federation"));
+            response.sendRedirect(error(page, "federation"));
             return;
         }
         FederatedSignInService.Next next;
         try {
             next = federation.signedIn(profile);
         } catch (FlowRejected e) {
-            response.sendRedirect(error(e.getReason().code()));
+            response.sendRedirect(error(page, e.getReason().code()));
             return;
         }
         var target = switch (next) {
             case ContinueSignIn(var identifier, var linking) -> {
-                var uri = UriComponentsBuilder.fromUriString(props.loginPage())
+                var uri = UriComponentsBuilder.fromUriString(page)
                         .queryParam("step", "factor")
                         .queryParam("identifier", identifier);
                 yield (linking ? uri.queryParam("link", profile.provider()) : uri)
@@ -77,7 +79,7 @@ final class FederatedSignIn implements AuthenticationSuccessHandler, Authenticat
                         .toUriString();
             }
             case CreateAccount(var first, var last, var email, var relay) -> {
-                var uri = UriComponentsBuilder.fromUriString(props.loginPage().replace("/sign-in", "/register"))
+                var uri = UriComponentsBuilder.fromUriString(LoginPages.registerPage(page))
                         .queryParam("firstName", first)
                         .queryParam("lastName", last)
                         .queryParam("email", email == null ? "" : email)
@@ -97,6 +99,7 @@ final class FederatedSignIn implements AuthenticationSuccessHandler, Authenticat
                 : "";
         log.info("Federated sign-in failed ({}): {}", code, exception.getMessage());
         response.sendRedirect(error(
+                pages.forFederationCallback(request),
                 switch (code) {
                     // The person pressed Cancel (Google: access_denied; Apple: user_cancelled_authorize).
                     case "access_denied", "user_cancelled_authorize" -> "federation_cancelled";
@@ -111,8 +114,8 @@ final class FederatedSignIn implements AuthenticationSuccessHandler, Authenticat
                 }));
     }
 
-    private String error(String code) {
-        return UriComponentsBuilder.fromUriString(props.loginPage())
+    private static String error(String page, String code) {
+        return UriComponentsBuilder.fromUriString(page)
                 .queryParam("error", code)
                 .toUriString();
     }

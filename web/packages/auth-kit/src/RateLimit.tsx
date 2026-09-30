@@ -1,8 +1,8 @@
 import { useCallback, useState } from 'react';
 import { Alert } from '@northline/ui';
 import { rateLimitedFor } from './errors';
-import { useAuthT } from './messages';
-import { mmss, useCountdown } from './useCountdown';
+import { useAuthKitT } from './messages';
+import { mmss, useCountdown } from './countdown';
 
 /**
  * 429 `rate_limited` from northline-auth (S-9: too many codes, lookups or wrong factors per account, IP or session):
@@ -24,7 +24,7 @@ export function useRateLimit() {
 
 /** "Too many attempts. Try again in 4:59." — counts down, disappears at 0. */
 export function RateLimitNotice({ left }: { left: number }) {
-  const t = useAuthT();
+  const t = useAuthKitT();
   if (left <= 0) return null;
   return (
     <Alert tone="error" role="alert">

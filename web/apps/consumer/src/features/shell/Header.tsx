@@ -12,7 +12,7 @@ import { SCREENS, screenFor } from './screens';
  * The consumer header (design 06): brand · location pill · search (off-home) · Services / Shop / Food · FR/EN ·
  * cart (count) · account (menu, or Sign in + Create account). Orders & bookings are in the account menu only.
  */
-export function Header({ authOrigin }: { authOrigin: string }) {
+export function Header() {
   const t = useShellT();
   const { locale, setLocale } = useLocale();
   const navigate = useNavigate();
@@ -22,7 +22,7 @@ export function Header({ authOrigin }: { authOrigin: string }) {
   const { user, loading } = useViewer();
   const cartCount = useCartCount(!loading);
   const { location } = useDeliveryLocation();
-  const signOut = useSignOut(authOrigin);
+  const signOut = useSignOut();
   const [query, setQuery] = useState('');
   const section = screen ? SCREENS[screen].section : undefined;
   const links = (['services', 'shop', 'food'] as const).map(key => ({ key, label: t(key), href: `/${key}`, current: section === key }));

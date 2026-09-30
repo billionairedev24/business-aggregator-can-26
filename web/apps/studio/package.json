@@ -12,6 +12,7 @@
     "prebuild": "pnpm --filter @northline/tokens build"
   },
   "dependencies": {
+    "@northline/auth-kit": "workspace:*",
     "@northline/client": "workspace:*",
     "@northline/tokens": "workspace:*",
     "@northline/ui": "workspace:*",

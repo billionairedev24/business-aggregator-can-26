@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@northline/auth-kit": "workspace:*",
     "@northline/client": "workspace:*",
     "@northline/tokens": "workspace:*",
     "@northline/ui": "workspace:*",

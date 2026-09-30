@@ -54,6 +54,7 @@ public class SignInService {
         var attempt = new SignInAttempt(id, userId, 0);
         flow.put(FlowStore.SIGN_IN, attempt);
         flow.remove(FlowStore.PASSKEY_REQUEST);
+        flow.remove(FlowStore.SIGN_IN_CODE); // S-62: a code sent for an earlier identifier no longer counts
         return attempt;
     }
 

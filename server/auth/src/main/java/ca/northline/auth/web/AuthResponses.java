@@ -24,6 +24,9 @@ final class AuthResponses {
 
     record TotpSetup(String secret, String otpauthUri, String qrCode) {}
 
+    /** S-62: a sign-in code is on its way (the same answer whether or not an account matched). */
+    record CodeSent(long resendAfterSeconds, String channel) {}
+
     record BackupCodes(List<String> codes) {}
 
     /** Same shape as the BFF's {@code GET /bff/session} user. */

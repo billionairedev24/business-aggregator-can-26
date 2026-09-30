@@ -40,6 +40,8 @@ web/apps/consumer/
   src/lib/                      locale.ts (cookie), request.ts (isomorphic: locale, public config), SiteLinkAdapter.tsx
   src/test/                     setup.ts, render.tsx (renderApp(path): the shell + every route in a memory router; mockFetch)
 web/packages/client             @northline/client — http(), ApiError/ValidationError, forms helpers (shared with the Studio)
+web/packages/auth-kit           @northline/auth-kit (S-62) — northline-auth JSON API client + schemas, error mapping, passkeys,
+                                countdown / rate-limit notice, Google/Apple/passkey marks, safeNext + BFF hand-off, shared copy
 web/packages/ui                 @northline/ui — SiteHeader, LocationPill, AccountMenu, SearchBar, SiteLink (+ everything the Studio uses)
 ```
 
@@ -119,7 +121,7 @@ A feature folder per story area, named after the design: `home`, `location`, `se
 | `/quotes/$quoteId` | quote | S-56 | guest banner |
 | `/account/orders` | orders | S-58 | Orders & bookings — from the account menu only |
 | `/account?tab=` | account | S-58, S-59 | tabs: wallet, payments, profile, addresses, favourites, security, notifications, language, dietary, plus, help |
-| `/sign-in?next=`, `/register?next=` | auth | S-62 | no account buttons in the header there |
+| `/sign-in?next=`, `/register?next=` | auth | S-62 (**built**) | no account buttons in the header there; `features/auth` |
 | `/sell?type=seller\|provider\|kitchen` | (account › Sell) | S-61 | entry into Studio onboarding |
 | `/legal/terms.html`, `/legal/privacy.html` | — | S-63 | static, verbatim (design 09/10) until S-63's pages |
 
@@ -134,7 +136,9 @@ Storefront pages on `pages.<zone>` and merchants' own domains (by `Host`) are S-
   `location.city` = the CDN's guess from the IP (only when `CLIENT_CITY_HEADER` is configured).
   Client: `sessionQuery` / `useViewer()` in `features/session/api.ts` (browser only).
 - `GET /bff/login?next=/path` → the sign-in hand-off (authorization code + PKCE with client `consumer-bff`); lands on
-  `next` (local paths only). S-62's pages call it after the auth JSON API signed the person in.
+  `next` (local paths only). The sign-in pages (S-62) call it after the auth JSON API signed the person in: a
+  sign-in lands back on `next`, a new account on `/location`. A person may be signed in with a phone code only (no
+  `acr`); screens that need more (saved cards, S-51) ask for a step-up there.
 - `POST /bff/logout` → 204 (CSRF header). `useSignOut(authOrigin)` also ends northline-auth's session.
 - CSRF: cookie `__Host-XSRF-TOKEN` (`XSRF-TOKEN` locally), header `X-XSRF-TOKEN` only — for guests' POSTs too.
 - `signInHref(next, 'sign-in' | 'register')` builds `/sign-in?next=…`.
@@ -178,7 +182,7 @@ Cookie `nl.locale` = `en` | `fr` (1 year, not HttpOnly). `useLocale().setLocale(
 | `GET /api/v1/me` | exists (any signed-in token) | S-59 |
 | `GET /api/v1/storefronts/{slug}`, `/logo`, `GET /api/v1/public/storefronts/by-host?host=` | exists, public | S-54, S-63 |
 | `GET /api/v1/onboarding/taxonomy` | exists (signed in) | S-61 |
-| northline-auth JSON API (`/api/auth/register…`, `/api/auth/sign-in…`, `/api/auth/sign-out`) | exists; consumer additions in S-62 | S-62 |
+| northline-auth JSON API (`/api/auth/register…`, `/api/auth/sign-in…`, `/api/auth/sign-out`) + S-62's `/api/auth/sign-in/code[/verify]`, `/api/auth/register/complete` | exists | S-62 (built) |
 | `GET /api/v1/geo/reverse` | **missing** (the path is already public in the api) | S-47 (header falls back without it) |
 | markets / zones for an address (`/api/v1/geo/…`) | missing | S-47 |
 | `GET /api/v1/search`, suggestions | missing (path public; E-6 S-42…S-44) | S-48, home |

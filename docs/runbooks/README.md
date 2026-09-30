@@ -408,6 +408,27 @@ per phone code, 45 s resend cool-down, 5 failed factors per sign-in attempt or s
   (`valkey-cli --scan --pattern 'nl:auth-rl:*' | xargs valkey-cli del` clears everything — keys are hashed, so a
   targeted unlock needs the hash; waiting is usually simpler).
 
+## Consumer sign-in (S-62)
+
+The consumer site (`/sign-in`, `/register`, design 06) uses northline-auth's JSON API like the Studio, plus:
+
+| endpoint | what |
+|---|---|
+| `POST /api/auth/sign-in` `{identifier}` | as the Studio (email or mobile; unknown accounts continue identically) |
+| `POST /api/auth/sign-in/code` `{channel?: sms\|voice}` | a 6-digit code to the account's mobile → `{resendAfterSeconds, channel}`; resend after 45 s, voice once per SMS code; an unknown account gets the same answer and nothing is sent |
+| `POST /api/auth/sign-in/code/verify` `{code}` | signed in with the phone only (`identity.sessions.method = phone_otp`, no `acr`) |
+| `POST /api/auth/register/complete` | after the phone code: the account without a second factor ("SMS code · Backup only"; `mfa_primary = sms`) |
+
+Limits: the registration's `otp-send` / `otp-verify` (above), 5 tries per code, 10 min per code.
+
+**Business apps still need a second factor.** A session without one (phone code only) gets no code for the clients in
+`northline.auth.mfa-required-clients` (default `studio-bff`, `console-bff`): the browser is sent to that app's
+sign-in page, where signing in with a passkey / authenticator / backup code replaces the session. The api refuses
+merchant and staff endpoints without `acr=mfa` anyway. Unauthenticated authorization requests of the clients in
+`northline.auth.consumer-clients` (default `consumer-bff`) go to `northline.auth.consumer-login-page`
+(`${CONSUMER_ORIGIN}/sign-in`); every other client to `login-page` (the Studio's). No new variables: both pages come
+from `STUDIO_ORIGIN` / `CONSUMER_ORIGIN`.
+
 ## Cookies and CSRF (S-20)
 
 | cookie | app | local | dev / staging / prod | attributes |

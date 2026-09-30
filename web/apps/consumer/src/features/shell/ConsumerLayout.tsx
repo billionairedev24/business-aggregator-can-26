@@ -9,7 +9,7 @@ import { useShellT } from './messages';
 import { SCREENS, screenFor } from './screens';
 
 /** Header, guest banner, the screen, footer. Every consumer route renders inside it (routes/__root.tsx). */
-export function ConsumerLayout({ authOrigin, children, geolocation }: { authOrigin: string; children: ReactNode; geolocation?: Geolocation | null }) {
+export function ConsumerLayout({ children, geolocation }: { children: ReactNode; geolocation?: Geolocation | null }) {
   const t = useShellT();
   const { user, loading, session } = useViewer();
   const pathname = useRouterState({ select: s => s.location.pathname });
@@ -19,7 +19,7 @@ export function ConsumerLayout({ authOrigin, children, geolocation }: { authOrig
     <DeliveryLocationProvider ipCity={session?.location?.city} geolocation={geolocation}>
       <div className="nl-app">
         <a href="#main" className="nl-skip">{t('skip')}</a>
-        <Header authOrigin={authOrigin} />
+        <Header />
         {banner && <GuestBanner />}
         <main id="main" tabIndex={-1} className="nl-main">{children}</main>
         <Footer />

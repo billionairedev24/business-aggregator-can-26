@@ -20,6 +20,9 @@ importers:
 
   apps/consumer:
     dependencies:
+      '@northline/auth-kit':
+        specifier: workspace:*
+        version: link:../../packages/auth-kit
       '@northline/client':
         specifier: workspace:*
         version: link:../../packages/client
@@ -108,6 +111,9 @@ importers:
 
   apps/studio:
     dependencies:
+      '@northline/auth-kit':
+        specifier: workspace:*
+        version: link:../../packages/auth-kit
       '@northline/client':
         specifier: workspace:*
         version: link:../../packages/client
@@ -181,6 +187,34 @@ importers:
       vite:
         specifier: ^7.0.0
         version: 7.3.6(@types/node@22.20.4)(jiti@2.7.0)(lightningcss@1.33.0)
+      vitest:
+        specifier: ^3.2.0
+        version: 3.2.7(@types/node@22.20.4)(@vitest/browser@3.2.7)(jiti@2.7.0)(jsdom@26.1.0)(lightningcss@1.33.0)
+
+  packages/auth-kit:
+    dependencies:
+      '@northline/client':
+        specifier: workspace:*
+        version: link:../client
+      '@northline/ui':
+        specifier: workspace:*
+        version: link:../ui
+      '@tanstack/react-query':
+        specifier: ^5.85.0
+        version: 5.104.0(react@19.3.0)
+      react:
+        specifier: ^19.1.0
+        version: 19.3.0
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+    devDependencies:
+      '@types/react':
+        specifier: ^19.1.0
+        version: 19.3.0
+      typescript:
+        specifier: ^5.9.0
+        version: 5.9.3
       vitest:
         specifier: ^3.2.0
         version: 3.2.7(@types/node@22.20.4)(@vitest/browser@3.2.7)(jiti@2.7.0)(jsdom@26.1.0)(lightningcss@1.33.0)
