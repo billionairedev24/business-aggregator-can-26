@@ -2340,6 +2340,14 @@ Built on S-49 (branch `web/s-50-product-detail` from `web/s-49-shop-landing`).
   - Disclose the processor in the Privacy Policy and in the PIPEDA / Law 25 assessment (SEC stories), together with the other processors.
 - **Pending:** an OpenRouter API key per environment. Until it exists, `northline.ai.provider=fake` locally, and AI features answer `503 ai_unavailable` in the cloud.
 
+## 2026-09-30 — Region-neutral by design (user direction)
+
+- Northline **starts** in Alberta (Calgary first) but is built for every province.
+- Code must not hardcode a province, city or time zone. That covers messages, defaults, holiday calendars, time zones, service zones and legal copy. All of it comes from the region configuration: the provinces (time zones, statutory holidays, tax, privacy law, registries, launch status) and the markets (city, province, time zone, zones, live flag).
+- A message that names a place takes it as a parameter ({province}, {city}), in English and French.
+- Province-specific integrations, such as the Alberta corporate registry or the City of Calgary licences, stay as adapters. They are selected by the business's province and city, never by default.
+- S-134 moves the existing literals into that configuration and adds a lint rule. Until it lands, new code must not add region literals.
+
 ## 2026-09-30 — S-53 Services landing, service category, provider list
 
 Branch `web/s-53-services-landing` (from main). Contracts: [CONSUMER_WEB_PLAN.md](CONSUMER_WEB_PLAN.md).
