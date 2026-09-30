@@ -224,14 +224,20 @@ class SalesReportService implements ViewSalesReport {
 
     @Override
     public String gstSummaryCsv(String merchantId, int year) {
-        var csv = new Csv("Month", "Taxable sales", "GST/HST collected", "Remitted by Northline");
-        long sales = 0, tax = 0;
+        var csv = new Csv("Month", "Taxable sales", "GST/HST collected", "GST/HST refunded", "Remitted by Northline");
+        long sales = 0, tax = 0, refunded = 0;
         for (var m : months(merchantId, year)) {
-            csv.row(m.month().toString(), dollars(m.grossCents()), dollars(m.taxCents()), dollars(m.taxCents()));
+            csv.row(
+                    m.month().toString(),
+                    dollars(m.grossCents()),
+                    dollars(m.taxCents()),
+                    dollars(m.taxRefundedCents()),
+                    dollars(m.taxCents() - m.taxRefundedCents()));
             sales += m.grossCents();
             tax += m.taxCents();
+            refunded += m.taxRefundedCents();
         }
-        csv.row("Total " + year, dollars(sales), dollars(tax), dollars(tax));
+        csv.row("Total " + year, dollars(sales), dollars(tax), dollars(refunded), dollars(tax - refunded));
         csv.note(
                 "Northline collects and remits GST/HST on your sales as the marketplace facilitator; keep this summary with your records.");
         return csv.toString();
@@ -269,7 +275,7 @@ class SalesReportService implements ViewSalesReport {
             if (ym.isAfter(current)) {
                 break;
             }
-            out.add(found.getOrDefault(ym, new SalesReadModel.Month(ym, 0, 0, 0, 0, 0)));
+            out.add(found.getOrDefault(ym, new SalesReadModel.Month(ym, 0, 0, 0, 0, 0, 0)));
         }
         return out;
     }
