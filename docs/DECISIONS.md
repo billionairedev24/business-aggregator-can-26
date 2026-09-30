@@ -2491,3 +2491,11 @@ Built on S-49 (branch `web/s-50-product-detail` from `web/s-49-shop-landing`).
     - the stream sends the order at once and again when a shop packs.
   - vitest `features/orders/orders.test.tsx`: design copy for pooled and direct, packed count and the run, live update
     from the stream, sign-in prompt, not found, skeleton, error + Retry, French.
+
+## 2026-09-30 — Region-neutral by design (user direction)
+
+- Northline **starts** in Alberta (Calgary first) but is built for every province.
+- Code must not hardcode a province, city or time zone. That covers messages, defaults, holiday calendars, time zones, service zones and legal copy. All of it comes from the region configuration: the provinces (time zones, statutory holidays, tax, privacy law, registries, launch status) and the markets (city, province, time zone, zones, live flag).
+- A message that names a place takes it as a parameter ({province}, {city}), in English and French.
+- Province-specific integrations, such as the Alberta corporate registry or the City of Calgary licences, stay as adapters. They are selected by the business's province and city, never by default.
+- S-134 moves the existing literals into that configuration and adds a lint rule. Until it lands, new code must not add region literals.
