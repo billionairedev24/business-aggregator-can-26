@@ -12,6 +12,7 @@ class PaymentsJobsService implements PaymentsJobs {
     private final RefundCaseService cases;
     private final BankAccountService bankAccounts;
     private final PayoutService payouts;
+    private final StripeEventProcessor stripeEvents;
 
     @Override
     public int releaseDueEscrows() {
@@ -21,6 +22,11 @@ class PaymentsJobsService implements PaymentsJobs {
     @Override
     public int renewAuthorizations() {
         return escrows.renewAuthorizations();
+    }
+
+    @Override
+    public int processStripeEvents() {
+        return stripeEvents.processPending();
     }
 
     @Override

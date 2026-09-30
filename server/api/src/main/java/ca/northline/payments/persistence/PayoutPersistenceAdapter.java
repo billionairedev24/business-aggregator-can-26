@@ -34,6 +34,11 @@ class PayoutPersistenceAdapter implements PayoutRepository {
     }
 
     @Override
+    public Optional<Payout> byStripePayout(String stripePayout) {
+        return payouts.findByStripePayout(stripePayout).map(mapper::toDomain);
+    }
+
+    @Override
     public List<Payout> history(String merchantId, int limit) {
         return payouts.history(merchantId, limit).stream().map(mapper::toDomain).toList();
     }
@@ -119,11 +124,14 @@ class PayoutPersistenceAdapter implements PayoutRepository {
     @Override
     public Optional<ConnectedAccount> connectedAccount(String merchantId) {
         return jdbc.sql("""
-                        select merchant_id, stripe_account, instant_payouts
+                        select merchant_id, stripe_account, instant_payouts, coalesce(payouts_enabled, true) payouts_enabled
                           from payments.connected_accounts where merchant_id = :id""")
                 .param("id", merchantId)
                 .query((rs, _) -> new ConnectedAccount(
-                        rs.getString("merchant_id"), rs.getString("stripe_account"), rs.getBoolean("instant_payouts")))
+                        rs.getString("merchant_id"),
+                        rs.getString("stripe_account"),
+                        rs.getBoolean("instant_payouts"),
+                        rs.getBoolean("payouts_enabled")))
                 .optional();
     }
 
@@ -136,6 +144,37 @@ class PayoutPersistenceAdapter implements PayoutRepository {
                         .param("acct", stripeAccount)
                         .update()
                 > 0;
+    }
+
+    @Override
+    public Optional<String> updateConnectedAccount(AccountStatus status) {
+        var merchantId = status.merchantId();
+        if (merchantId != null) {
+            jdbc.sql("""
+                            insert into payments.connected_accounts (merchant_id, stripe_account) values (:id, :acct)
+                            on conflict do nothing""")
+                    .param("id", merchantId)
+                    .param("acct", status.stripeAccount())
+                    .update();
+        }
+        return jdbc.sql("""
+                        update payments.connected_accounts
+                           set charges_enabled = :charges, payouts_enabled = :payouts,
+                               instant_payouts = coalesce(cast(:instant as boolean), instant_payouts),
+                               requirements_due = :due, requirements_past_due = :pastDue,
+                               disabled_reason = cast(:disabled as text), stripe_updated_at = :at
+                         where stripe_account = :acct and (stripe_updated_at is null or stripe_updated_at <= :at)
+                        returning merchant_id""")
+                .param("charges", status.chargesEnabled())
+                .param("payouts", status.payoutsEnabled())
+                .param("instant", status.instantPayouts())
+                .param("due", status.requirementsDue())
+                .param("pastDue", status.requirementsPastDue())
+                .param("disabled", status.disabledReason())
+                .param("at", status.at().atOffset(java.time.ZoneOffset.UTC))
+                .param("acct", status.stripeAccount())
+                .query(String.class)
+                .optional();
     }
 
     @Override

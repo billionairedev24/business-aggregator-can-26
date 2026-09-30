@@ -19,4 +19,6 @@ logging.level:
   tc: warn
 northline:                               # a STRIPE_SECRET_KEY exported in the shell must never reach Stripe from tests
   payments.stripe-secret-key: ""
+  payments.stripe-webhook-secret: whsec_test_platform_fake    # obviously fake: S-12 tests sign with these
+  payments.stripe-connect-webhook-secret: whsec_test_connect_fake
   stripe.secret-key: ""

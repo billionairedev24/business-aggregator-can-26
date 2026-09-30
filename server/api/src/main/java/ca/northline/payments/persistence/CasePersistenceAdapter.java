@@ -33,7 +33,8 @@ class CasePersistenceAdapter implements CaseRepository {
     private static final String DISPUTE_COLUMNS = """
             id, ref_id, merchant_id, case_number, subject, amount_cents, customer_name, customer_statement, opened_by,
             evidence, response, response_updated_at, offer_cents, offer_state, offer_expires_at, state, decision,
-            decided_by, refund_cents, respond_by, opened_at, decided_at, version""";
+            decided_by, refund_cents, respond_by, opened_at, decided_at, stripe_dispute, stripe_status, stripe_reason,
+            stripe_updated_at, version""";
 
     private final RefundRowRepository refunds;
     private final PaymentsRowMapper mapper;
@@ -104,9 +105,15 @@ class CasePersistenceAdapter implements CaseRepository {
         jdbc.sql("""
                         insert into payments.disputes
                                (id, ref_type, ref_id, merchant_id, case_number, subject, amount_cents, customer_name,
-                                customer_statement, opened_by, evidence, state, respond_by, opened_at, version)
+                                customer_statement, opened_by, evidence, state, respond_by, opened_at, stripe_dispute,
+                                stripe_status, stripe_reason, stripe_updated_at, version)
                         values (:id, 'escrow', :escrow, :merchant, :case, :subject, :amount, :customer,
-                                :statement, :openedBy, cast(:evidence as jsonb), :state, :respondBy, :openedAt, 0)""")
+                                :statement, :openedBy, cast(:evidence as jsonb), :state, :respondBy, :openedAt,
+                                :stripeDispute, :stripeStatus, :stripeReason, :stripeUpdatedAt, 0)""")
+                .param("stripeDispute", d.getStripeDispute())
+                .param("stripeStatus", d.getStripeStatus())
+                .param("stripeReason", d.getStripeReason())
+                .param("stripeUpdatedAt", ts(d.getStripeUpdatedAt()))
                 .param("id", d.getId())
                 .param("escrow", d.getEscrowId())
                 .param("merchant", d.getMerchantId())
@@ -132,6 +139,8 @@ class CasePersistenceAdapter implements CaseRepository {
                                response_updated_at = :responseAt, offer_cents = :offer, offer_state = :offerState,
                                offer_expires_at = :offerExpires, state = :state, decision = :decision,
                                decided_by = :decidedBy, refund_cents = :refund, decided_at = :decidedAt,
+                               respond_by = :respondBy, stripe_dispute = :stripeDispute, stripe_status = :stripeStatus,
+                               stripe_reason = :stripeReason, stripe_updated_at = :stripeUpdatedAt,
                                version = version + 1
                          where id = :id and version = :version""")
                 .param("evidence", JSON.writeValueAsString(d.getEvidence()))
@@ -145,12 +154,44 @@ class CasePersistenceAdapter implements CaseRepository {
                 .param("decidedBy", d.getDecidedBy())
                 .param("refund", d.getRefundCents())
                 .param("decidedAt", ts(d.getDecidedAt()))
+                .param("respondBy", ts(d.getRespondBy()))
+                .param("stripeDispute", d.getStripeDispute())
+                .param("stripeStatus", d.getStripeStatus())
+                .param("stripeReason", d.getStripeReason())
+                .param("stripeUpdatedAt", ts(d.getStripeUpdatedAt()))
                 .param("id", d.getId())
                 .param("version", version)
                 .update();
         if (updated != 1) {
             throw new OptimisticLockingFailureException("dispute " + d.getId() + " changed concurrently");
         }
+    }
+
+    @Override
+    public Optional<Dispute> disputeByStripeId(String stripeDispute) {
+        return jdbc.sql("select " + DISPUTE_COLUMNS + " from payments.disputes where stripe_dispute = :sd")
+                .param("sd", stripeDispute)
+                .query(CasePersistenceAdapter::dispute)
+                .optional();
+    }
+
+    @Override
+    public Optional<Dispute> openDisputeOn(String escrowId) {
+        return jdbc.sql("select " + DISPUTE_COLUMNS
+                        + " from payments.disputes where ref_id = :escrow and state <> 'decided'"
+                        + " and stripe_dispute is null order by opened_at desc limit 1")
+                .param("escrow", escrowId)
+                .query(CasePersistenceAdapter::dispute)
+                .optional();
+    }
+
+    @Override
+    public boolean refundStripeStatus(String stripeRefund, String status) {
+        return jdbc.sql("update payments.refunds set stripe_status = :status where stripe_refund = :re")
+                        .param("status", status)
+                        .param("re", stripeRefund)
+                        .update()
+                > 0;
     }
 
     @Override
@@ -209,6 +250,10 @@ class CasePersistenceAdapter implements CaseRepository {
                 .respondBy(instant(rs, "respond_by"))
                 .openedAt(java.util.Objects.requireNonNull(instant(rs, "opened_at")))
                 .decidedAt(instant(rs, "decided_at"))
+                .stripeDispute(rs.getString("stripe_dispute"))
+                .stripeStatus(rs.getString("stripe_status"))
+                .stripeReason(rs.getString("stripe_reason"))
+                .stripeUpdatedAt(instant(rs, "stripe_updated_at"))
                 .version(rs.getInt("version"))
                 .build();
     }

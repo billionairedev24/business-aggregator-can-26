@@ -1,5 +1,6 @@
 package ca.northline.payments.domain;
 
+import ca.northline.payments.api.PayoutFailed;
 import ca.northline.payments.api.PayoutSent;
 import ca.northline.shared.CodedEnum;
 import ca.northline.shared.Ids;
@@ -54,6 +55,8 @@ public class Payout {
     private final @Nullable String destination;
     private final @Nullable String requestedBy;
     private @Nullable String stripeFeeTransfer;
+    private @Nullable String failureCode;
+    private @Nullable String returnedFeeTransfer;
     private final @Nullable Integer version;
 
     /** What reaches the bank. */
@@ -97,6 +100,37 @@ public class Payout {
     /** Instant payouts: the fee was moved from the connected account to the platform ({@code tr_…}). */
     public void feeRecovered(String stripeTransfer) {
         stripeFeeTransfer = stripeTransfer;
+    }
+
+    /** Stripe says it arrived ({@code payout.paid}); a payout Stripe already returned stays returned. */
+    public boolean paid() {
+        if (state == State.PENDING || state == State.IN_TRANSIT) {
+            state = State.PAID;
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Stripe returned it ({@code payout.failed}, even after {@code payout.paid}) or it was canceled: the money goes back
+     * to the merchant's balance. Once only — a returned payout never changes again, whatever order events come in.
+     */
+    public java.util.Optional<PayoutFailed> returned(State outcome, @Nullable String code, Instant at) {
+        if (outcome != State.FAILED && outcome != State.CANCELED) {
+            throw new IllegalArgumentException("not a return: " + outcome);
+        }
+        if (state == State.FAILED || state == State.CANCELED) {
+            return java.util.Optional.empty();
+        }
+        state = outcome;
+        failureCode = code;
+        return java.util.Optional.of(
+                new PayoutFailed(Ids.next(), at, id, merchantId, outcome.code(), amountCents, code));
+    }
+
+    /** The instant fee recovered from the connected account was given back after the payout was returned. */
+    public void feeReturned(String stripeTransfer) {
+        returnedFeeTransfer = stripeTransfer;
     }
 
     /** Arrived at the bank (Stripe {@code payout.paid}; the fake gateway: at {@code arrivesAt}). */

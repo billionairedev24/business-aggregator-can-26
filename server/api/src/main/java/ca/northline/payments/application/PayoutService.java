@@ -33,10 +33,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 class PayoutService implements ViewPayouts, MovePayouts, PayoutPlan {
 
+    static final String PAYOUTS_DISABLED =
+            "Stripe has paused payouts on this account. Finish the steps in Settings › Stripe & compliance.";
+
     private final PayoutRepository payouts;
     private final LedgerRepository ledger;
     private final MerchantBalances balances;
     private final PayoutGateway gateway;
+    private final PaymentGateway charges;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
@@ -88,6 +92,9 @@ class PayoutService implements ViewPayouts, MovePayouts, PayoutPlan {
                 .filter(PayoutRepository.ConnectedAccount::instantPayouts)
                 .orElseThrow(() -> new Conflict(
                         "instant_unavailable", "Instant payouts need an eligible Canadian debit-linked account."));
+        if (!connected.payoutsEnabled()) {
+            throw new Conflict("payouts_disabled", PAYOUTS_DISABLED);
+        }
         requireNotPaused(merchantId, now);
         var account = payouts.activeAccount(merchantId)
                 .orElseThrow(() -> new Conflict("no_payout_account", "Add a bank account first."));
@@ -172,7 +179,7 @@ class PayoutService implements ViewPayouts, MovePayouts, PayoutPlan {
             var connected = payouts.connectedAccount(merchantId).orElse(null);
             var account = payouts.activeAccount(merchantId).orElse(null);
             var amount = overview(merchantId).payableCents();
-            if (connected == null || account == null || amount <= 0) {
+            if (connected == null || !connected.payoutsEnabled() || account == null || amount <= 0) {
                 continue;
             }
             var result = gateway.payout(
@@ -200,8 +207,9 @@ class PayoutService implements ViewPayouts, MovePayouts, PayoutPlan {
     }
 
     /**
-     * In-transit payouts whose arrival time passed: asks Stripe (the fake answers "paid") and marks the paid ones. Stripe
-     * webhooks normally get there first; this catches the ones whose event never came.
+     * The fallback reconciler: in-transit payouts whose arrival time passed by {@link #RECONCILE_AFTER} (the fake:
+     * at once) are looked up at Stripe and settled like a webhook would. Stripe's {@code payout.*} webhooks normally
+     * get there first; this catches the ones whose event never came.
      */
     @Transactional
     int settle() {
@@ -209,21 +217,86 @@ class PayoutService implements ViewPayouts, MovePayouts, PayoutPlan {
         int n = 0;
         for (var payout : payouts.inTransit(500)) {
             var stripePayout = payout.getStripePayout();
-            if (payout.getArrivesAt().isAfter(now) || stripePayout == null) {
+            if (payout.getArrivesAt().plus(reconcileAfter()).isAfter(now) || stripePayout == null) {
                 continue;
             }
             var connected = payouts.connectedAccount(payout.getMerchantId()).orElse(null);
             var state = connected == null
                     ? Payout.State.PAID
                     : gateway.payoutState(connected.stripeAccount(), stripePayout);
-            if (state == Payout.State.PAID && payout.settle(now)) {
-                payouts.update(payout);
+            if (apply(payout, state, null, now)) {
                 n++;
-            } else if (state != Payout.State.PAID && state != Payout.State.IN_TRANSIT) {
-                log.warn("Payout {} is {} at Stripe", payout.getId(), state.code());
             }
         }
         return n;
+    }
+
+    /** Payouts reported by Stripe webhooks this long after their arrival date are left to the webhook. */
+    static final java.time.Duration RECONCILE_AFTER = java.time.Duration.ofHours(24);
+
+    private java.time.Duration reconcileAfter() {
+        return gateway.webhooksDeliver() ? RECONCILE_AFTER : java.time.Duration.ZERO;
+    }
+
+    /** A {@code payout.paid} / {@code payout.failed} / {@code payout.canceled} webhook; false for unknown payouts. */
+    @Transactional
+    boolean stripePayout(StripeEvent event, Payout.State outcome) {
+        var id = event.object().id();
+        var payout = id == null ? null : payouts.byStripePayout(id).orElse(null);
+        if (payout == null) {
+            log.warn("Stripe payout {} isn't one of Northline's", id);
+            return false;
+        }
+        apply(payout, outcome, event.object().text("failure_code"), event.created());
+        return true;
+    }
+
+    /** Paid → paid; failed / canceled → returned to the merchant's balance (once), instant fee given back. */
+    private boolean apply(Payout payout, Payout.State state, @Nullable String failureCode, Instant at) {
+        return switch (state) {
+            case PAID -> {
+                if (payout.paid()) {
+                    payouts.update(payout);
+                    yield true;
+                }
+                yield false;
+            }
+            case FAILED, CANCELED ->
+                payout.returned(state, failureCode, at)
+                        .map(failed -> {
+                            giveInstantFeeBack(payout);
+                            payouts.update(payout);
+                            ledger.post(LedgerEntry.payoutReturned(payout, at));
+                            events.publishEvent(failed);
+                            log.warn(
+                                    "Payout {} of merchant {} was {} by Stripe ({})",
+                                    payout.getId(),
+                                    payout.getMerchantId(),
+                                    state.code(),
+                                    failureCode);
+                            return true;
+                        })
+                        .orElse(false);
+            case PENDING, IN_TRANSIT -> false;
+        };
+    }
+
+    /** The fee recovered for a returned instant payout goes back to the connected account. */
+    private void giveInstantFeeBack(Payout payout) {
+        if (payout.getStripeFeeTransfer() == null || payout.getFeeCents() == 0) {
+            return;
+        }
+        payouts.connectedAccount(payout.getMerchantId())
+                .ifPresent(connected -> payout.feeReturned(charges.transfer(new PaymentGateway.Transfer(
+                        connected.stripeAccount(),
+                        payout.getFeeCents(),
+                        "payout:" + payout.getId(),
+                        null,
+                        java.util.Map.of(
+                                "northline_kind", "instant_payout_fee_returned",
+                                "northline_payout_id", payout.getId(),
+                                "northline_merchant_id", payout.getMerchantId()),
+                        StripeIdempotencyKeys.of("instant-payout-fee-return", payout.getId())))));
     }
 
     private void record(Payout payout) {

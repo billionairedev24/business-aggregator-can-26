@@ -53,6 +53,9 @@ public interface EscrowRepository {
 
     Optional<Escrow> findByRef(String refType, String refId);
 
+    /** The escrow a PaymentIntent row currently backs. */
+    Optional<Escrow> findByPaymentIntentId(String paymentIntentId);
+
     /** Held escrows whose release time has passed, oldest first. */
     List<Escrow> releasable(Instant now, int limit);
 
@@ -63,6 +66,9 @@ public interface EscrowRepository {
     String recordPaymentIntent(IntentRecord intent);
 
     void markPaymentIntent(String paymentIntentId, IntentStatus state);
+
+    /** Stripe says it is authorized ({@code amount_capturable_updated}). */
+    void markAuthorized(String paymentIntentId, Instant at);
 
     /** Captured: the charge transfers will draw on. */
     void recordCapture(String paymentIntentId, @Nullable String stripeCharge);
@@ -96,4 +102,7 @@ public interface EscrowRepository {
     Optional<TransferRecord> transferOf(String escrowId);
 
     void addReversal(String transferId, long cents);
+
+    /** Stripe's cumulative {@code amount_reversed} of a transfer; false when the transfer isn't Northline's. */
+    boolean syncReversed(String stripeTransfer, long amountReversedCents);
 }

@@ -4,6 +4,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -28,19 +29,22 @@ class SecurityConfig {
     SecurityFilterChain api(HttpSecurity http, NorthlineJwtConverter converter, ObjectProvider<DevAuthFilter> devAuth) {
         devAuth.ifAvailable(filter -> http.addFilterBefore(filter, BearerTokenAuthenticationFilter.class));
         return http.securityMatcher("/api/**")
-                .authorizeHttpRequests(
-                        a -> a.requestMatchers("/api/v1/search/**", "/api/v1/storefronts/**", "/api/v1/geo/**")
-                                .permitAll()
-                                // Email unsubscribe links: the signed token is the authorisation (S-13). The template
-                                // previews exist only under the `local` profile (404 elsewhere).
-                                .requestMatchers("/api/v1/email/unsubscribe", "/api/v1/dev/emails/**")
-                                .permitAll()
-                                .requestMatchers("/api/v1/console/**")
-                                .hasRole("STAFF")
-                                .requestMatchers("/api/v1/merchants/**")
-                                .hasAuthority("SCOPE_merchant")
-                                .anyRequest()
-                                .authenticated())
+                .authorizeHttpRequests(a -> a.requestMatchers(
+                                "/api/v1/search/**", "/api/v1/storefronts/**", "/api/v1/geo/**")
+                        .permitAll()
+                        // Email unsubscribe links: the signed token is the authorisation (S-13). The template
+                        // previews exist only under the `local` profile (404 elsewhere).
+                        .requestMatchers("/api/v1/email/unsubscribe", "/api/v1/dev/emails/**")
+                        .permitAll()
+                        // Stripe webhooks: authenticated by the Stripe-Signature, not a token (S-12)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/webhooks/stripe", "/api/v1/webhooks/stripe/connect")
+                        .permitAll()
+                        .requestMatchers("/api/v1/console/**")
+                        .hasRole("STAFF")
+                        .requestMatchers("/api/v1/merchants/**")
+                        .hasAuthority("SCOPE_merchant")
+                        .anyRequest()
+                        .authenticated())
                 .oauth2ResourceServer(o -> o.jwt(j -> j.jwtAuthenticationConverter(converter)))
                 .exceptionHandling(e -> e.accessDeniedHandler(problemDenied()))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
