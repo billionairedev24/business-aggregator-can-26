@@ -34,7 +34,9 @@ for env in dev staging prod; do
   done
 done
 check "local-kind" -f "$CHART/values-local-kind.yaml"
-check "dev × gcp, Gateway API" -f "$CHART/values-dev.yaml" -f "$CHART/values-gcp.yaml" -f test-values/gateway.yaml
+check "local-kind + External Secrets (fake)" -f "$CHART/values-local-kind.yaml" -f "$CHART/values-local-kind-eso.yaml"
+check "dev × aws, plain Secret (no ESO)" -f "$CHART/values-dev.yaml" -f "$CHART/values-aws.yaml" --set externalSecrets.enabled=false
+check "dev × gcp, Gateway API" -f "$CHART/values-dev.yaml" -f "$CHART/values-gcp.yaml" -f test-values/identities-gcp.yaml -f test-values/gateway.yaml
 check "defaults" 
 
 # Refusals the chart must keep: secrets from values outside local, http URLs in prod.
@@ -44,6 +46,15 @@ else echo "ok   secrets.create refused outside local"; fi
 if helm template northline "$CHART" -f "$CHART/values-prod.yaml" --set urls.auth=http://auth.example >/dev/null 2>&1; then
   echo "FAIL http URL accepted in prod"; failed=1
 else echo "ok   http URLs refused in staging/prod"; fi
+if helm template northline "$CHART" -f "$CHART/values-dev.yaml" --set externalSecrets.enabled=true --set externalSecrets.provider=fake >/dev/null 2>&1; then
+  echo "FAIL fake secret store accepted outside local"; failed=1
+else echo "ok   fake secret store refused outside local"; fi
+# No secret value may appear in a cloud render (S-6): only remote key names.
+for cloud in aws gcp azure; do
+  if helm template northline "$CHART" -f "$CHART/values-prod.yaml" -f "$CHART/values-$cloud.yaml" -f "test-values/identities-$cloud.yaml" \
+      | grep -qE '^kind: Secret$'; then echo "FAIL prod × $cloud renders a Secret"; failed=1
+  else echo "ok   prod × $cloud renders no Secret (External Secrets only)"; fi
+done
 
 rm -f /tmp/helm-lint.$$ /tmp/kubeconform.$$
 exit $failed

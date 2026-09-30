@@ -19,6 +19,15 @@ networkPolicy:
   # VPC CNI enforces NetworkPolicy when its network policy agent is enabled (enableNetworkPolicy=true).
   enabled: true
 
+# S-6: secrets from AWS Secrets Manager (northline/<env>/<name>) through External Secrets, authenticated as the ESO
+# controller's IRSA role (Terraform: workload identity "external-secrets", read on northline/<env>/*).
+externalSecrets:
+  enabled: true
+  provider: aws
+  aws:
+    region: ca-central-1
+  remoteKeyPrefix: "northline/{env}/"
+
 apps:
   api:
     env:

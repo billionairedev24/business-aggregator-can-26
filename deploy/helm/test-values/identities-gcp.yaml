@@ -9,3 +9,5 @@ configEnv:
   DB_USER: northline_app
   KMS_PROVIDER: gcp
   STORAGE_PROVIDER: gcs
+externalSecrets:
+  gcp: { projectID: northline-dev }

@@ -9,3 +9,5 @@ configEnv:
   DB_USER: northline_app
   KMS_PROVIDER: azure
   STORAGE_PROVIDER: azure
+externalSecrets:
+  azure: { vaultUrl: "https://nl-dev-sec-abc123.vault.azure.net/" }

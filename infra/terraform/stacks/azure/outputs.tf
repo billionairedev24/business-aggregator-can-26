@@ -50,6 +50,14 @@ output "secrets_provider" {
   value       = module.secrets.secrets_provider
 }
 
+output "external_secrets" {
+  description = "External Secrets Operator store settings for the Helm chart (externalSecrets.provider and its block, S-6)."
+  value = {
+    provider = "azure"
+    azure    = { vaultUrl = module.secrets.cloud.key_vault_uri }
+  }
+}
+
 output "secret_store" {
   description = "Where generated secrets are written."
   value       = module.secrets.store
