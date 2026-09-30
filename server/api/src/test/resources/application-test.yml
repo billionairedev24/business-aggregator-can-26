@@ -1,6 +1,9 @@
 # Integration tests (IntegrationTest base class). The datasource comes from the shared Testcontainers PostGIS via
 # @ServiceConnection; Flyway applies classpath:db/migration (no dev seed). Kafka/ES/Redis are not started.
 spring:
+  # S-62: the shared database also holds the dev seed (V100–V109) once a `local` test ran; since V110 exists those rows
+  # are no longer "future" to the other contexts, so Flyway must not treat them as missing migrations.
+  flyway.ignore-migration-patterns: "*:future,*:missing"
   modulith:
     events:
       externalization.enabled: false
