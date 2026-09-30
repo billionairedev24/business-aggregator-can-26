@@ -58,10 +58,13 @@ class StockAdapter implements StockStore {
                         Sql.intOrNull(rs, "handling_days"),
                         rs.getString("image_id")))
                 .list();
-        // an offer without variants appears once with variant_id null; with variants, once per variant
+        // an offer without variants appears once with variant_id null; with variants, once per variant — all of them
+        // when the item names none (the caller then asks to choose one)
         return rows.stream()
                 .filter(r -> items.stream()
-                        .anyMatch(i -> i.offerId().equals(r.offerId()) && Objects.equals(i.variantId(), r.variantId())))
+                        .anyMatch(i -> i.offerId().equals(r.offerId())
+                                && (Objects.equals(i.variantId(), r.variantId())
+                                        || (i.variantId() == null && r.hasVariants()))))
                 .toList();
     }
 
