@@ -6,18 +6,19 @@ import { hoursQuery, rulesQuery } from './api';
 import { HoursTab } from './HoursTab';
 import { useAvailabilityT } from './messages';
 import { RulesTab } from './RulesTab';
-import { SyncTab } from './SyncTab';
+import { SyncTab, type CalendarReturn } from './SyncTab';
 import { TimeOffTab } from './TimeOffTab';
 import './Availability.css';
 
 export type AvTab = 'hours' | 'rules' | 'timeoff' | 'sync';
 export type SaveState = 'clean' | 'dirty' | 'saved';
 
-export function AvailabilityScreen() {
+/** `returned`: the outcome of a calendar connection (OAuth callback) — opens the sync tab with a notice. */
+export function AvailabilityScreen({ returned, onReturnSeen }: { returned?: CalendarReturn; onReturnSeen?: () => void } = {}) {
   const t = useAvailabilityT();
   const merchantId = useMerchantId();
   const { locale } = useLocale();
-  const [tab, setTab] = useState<AvTab>('hours');
+  const [tab, setTab] = useState<AvTab>(returned?.calendar ? 'sync' : 'hours');
   const [state, setState] = useState<SaveState>('clean');
   const hours = useQuery(hoursQuery(merchantId));
   const rules = useQuery(rulesQuery(merchantId));
@@ -36,7 +37,7 @@ export function AvailabilityScreen() {
         {tab === 'hours' && <HoursTab onState={change} />}
         {tab === 'rules' && <RulesTab onState={change} />}
         {tab === 'timeoff' && <TimeOffTab />}
-        {tab === 'sync' && <SyncTab />}
+        {tab === 'sync' && <SyncTab returned={returned} onReturnSeen={onReturnSeen} />}
       </div>
     </div>
   );

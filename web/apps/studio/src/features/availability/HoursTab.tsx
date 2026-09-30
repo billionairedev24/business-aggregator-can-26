@@ -143,7 +143,7 @@ const withValue = (v: string) => (TIME_OPTIONS.includes(v) ? TIME_OPTIONS : [...
 
 function PreviewPanel({ t, name, day, setDay, duration, serviceId, setServiceId, services, preview, loading, error, retry }: {
   t: ReturnType<typeof useAvailabilityT>; name: string; day: Day; setDay: (d: Day) => void; duration: number; serviceId?: string; setServiceId: (id: string) => void;
-  services: { id: string; name: string; durationMin: number }[]; preview?: { slots: { start: string; free: boolean }[]; jobs: number; intervalMin: number; bufferMin: number; closed?: string | null };
+  services: { id: string; name: string; durationMin: number }[]; preview?: { slots: { start: string; free: boolean }[]; jobs: number; busyBlocks?: number; intervalMin: number; bufferMin: number; closed?: string | null };
   loading: boolean; error: boolean; retry: () => void;
 }) {
   const { locale } = useLocale();
@@ -151,7 +151,8 @@ function PreviewPanel({ t, name, day, setDay, duration, serviceId, setServiceId,
   const free = preview?.slots.filter(s => s.free).length ?? 0;
   const note = !preview ? '' : preview.closed === 'holiday' ? t('closedHoliday', { day: t(`day_${day}`) }) : preview.closed === 'time_off' ? t('closedTimeOff', { name: first, day: t(`day_${day}`) })
     : preview.slots.length === 0 ? t('notBookableOn', { name: first, day: t(`day_${day}`) })
-    : t('previewNote', { free, total: preview.slots.length, min: duration, jobs: preview.jobs, buffer: preview.bufferMin, interval: preview.intervalMin });
+    : t('previewNote', { free, total: preview.slots.length, min: duration, jobs: preview.jobs, buffer: preview.bufferMin, interval: preview.intervalMin })
+      + (preview.busyBlocks ? ` · ${t('previewBusy', { n: preview.busyBlocks })}` : '');
   return (
     <section aria-labelledby="av-preview">
       <h3 id="av-preview" className="nl-av-h3">{t('previewTitle')}</h3>

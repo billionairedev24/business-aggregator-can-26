@@ -80,7 +80,7 @@ export const useSettingsT = defineMessages({
     signingNote: 'Verify the Northline-Signature header with this secret (HMAC-SHA256). It is shown only once.',
     err_url: 'Enter the URL that receives events.', err_https: 'Enter an https:// URL.', err_events: 'Pick at least one event.',
     embedTitle: 'Embed your store', integrations: 'Integrations', connected: 'Connected', connect: 'Connect', notConnected: 'Not connected',
-    int_google: 'Google Calendar', int_quickbooks: 'QuickBooks', int_commerce: 'Shopify / Square inventory',
+    int_google: 'Google Calendar', int_quickbooks: 'QuickBooks', int_commerce: 'Shopify / Square inventory', int_reconnect: 'Reconnect',
     actionFailed: 'That didn’t work. Try again.',
   },
   fr: {
@@ -156,7 +156,7 @@ export const useSettingsT = defineMessages({
     signingNote: 'Vérifiez l’en-tête Northline-Signature avec ce secret (HMAC-SHA256). Il ne s’affiche qu’une fois.',
     err_url: 'Entrez l’URL qui reçoit les événements.', err_https: 'Entrez une URL https://.', err_events: 'Choisissez au moins un événement.',
     embedTitle: 'Intégrer votre boutique', integrations: 'Intégrations', connected: 'Connecté', connect: 'Connecter', notConnected: 'Non connecté',
-    int_google: 'Google Agenda', int_quickbooks: 'QuickBooks', int_commerce: 'Inventaire Shopify / Square',
+    int_google: 'Google Agenda', int_quickbooks: 'QuickBooks', int_commerce: 'Inventaire Shopify / Square', int_reconnect: 'Reconnecter',
     actionFailed: 'Cela n’a pas fonctionné. Réessayez.',
   },
 });
