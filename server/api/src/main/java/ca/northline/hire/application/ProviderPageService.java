@@ -17,6 +17,7 @@ import ca.northline.trust.api.PublicReviews;
 import ca.northline.trust.api.PublicReviews.ReviewPage;
 import ca.northline.trust.api.QualityQuery;
 import ca.northline.trust.api.RatingQuery;
+import ca.northline.region.api.TaxRates;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +46,8 @@ class ProviderPageService implements ViewProvider, ListProviderReviews {
     private final RatingQuery ratings;
     private final QualityQuery quality;
     private final PublicReviews reviews;
+    private final TaxRates taxRates;
+    private final HireProperties region;
 
     @Override
     public ProviderPage provider(String slug, String lang) {
@@ -92,6 +95,7 @@ class ProviderPageService implements ViewProvider, ListProviderReviews {
                 offered.stream().map(ProviderPageService::service).toList(),
                 areas.zones(List.of(p.merchantId())).getOrDefault(p.merchantId(), List.of()),
                 offered.isEmpty() ? null : slots.next(p.merchantId(), shortest).orElse(null),
+                taxRates.bpsFor(Objects.requireNonNullElse(p.province(), region.defaultProvince())),
                 reviews.newest(p.merchantId(), FIRST_REVIEWS, 0));
     }
 

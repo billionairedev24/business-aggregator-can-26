@@ -31,7 +31,7 @@ const facts: ProviderFacts = {
     { id: 's2', name: 'Alternator', included: null, pricingMode: 'quote', priceCents: null, durationMin: 90, instantBook: false, categorySlug: 'mobile-mechanic', kind: 'visit' },
   ],
   zones: ['Beltline', 'Downtown'], nextAvailable: null,
-  reviews: { items: [review(1), review(2), review(3)], nextOffset: 3 },
+  taxBps: 500, reviews: { items: [review(1), review(2), review(3)], nextOffset: 3 },
 };
 
 function api(over: { page?: Partial<Storefront>; facts?: Partial<ProviderFacts> } = {}) {

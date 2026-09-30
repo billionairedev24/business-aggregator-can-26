@@ -44,7 +44,7 @@ export const ProviderFacts = z.object({
   verifiedFacts: z.array(z.string()), rating: z.number(), reviewCount: z.number().int(),
   onTimePct: z.number().nullish(), disputePct: z.number().nullish(), rebookPct: z.number().nullish(),
   kind: ServiceKind, category: z.object({ id: z.string(), slug: z.string(), names: Names }).nullish(), vehicle: z.boolean(), quoteable: z.boolean(),
-  services: z.array(ProviderService), zones: z.array(z.string()), nextAvailable: z.string().nullish(), reviews: ReviewPage,
+  services: z.array(ProviderService), zones: z.array(z.string()), nextAvailable: z.string().nullish(), taxBps: z.number().int().catch(0), reviews: ReviewPage,
 });
 export type ProviderFacts = z.infer<typeof ProviderFacts>;
 

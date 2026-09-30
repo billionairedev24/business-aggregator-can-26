@@ -2623,8 +2623,10 @@ Branch `web/s-55-booking-wizard`, stacked on `web/s-54-provider-page` (itself on
   passkey (the S-51 `StepUpDialog`). A free consultation holds no money and skips it.
 - **Pricing** (`hire.domain.Pricing`): fixed = the service price; hourly = rate × hours (home services ask the hours;
   cleaning estimates them from bedrooms + add-ons, design 06); consultations free; quote-only services and services
-  without instant book answer 422 ("…ask for a quote instead", S-56). GST from `region.api.TaxRates` (AB). The whole
-  price + tax is held in escrow ("Hold $93.45 in escrow"). Free cancellation until 12 h before is recorded on the
+  without instant book answer 422 ("…ask for a quote instead", S-56). Sales tax from `region.api.TaxRates` for the provider's province. The whole
+  price + tax is held in escrow ("Hold $93.45 in escrow"). The rate is the provider's province's
+  (`merchants.province`, else `northline.hire.default-province`); the provider page returns it (`taxBps`) so the
+  wizard's summary shows the same tax, labelled "Tax 5%" (the tax's name differs by province). Free cancellation until 12 h before is recorded on the
   booking (`free_cancel_until`) and shown; charging late cancellations is not part of this story.
 - **Validation messages** (422, per field; en in both locales like the other server rules): "Describe the problem in
   at least 10 characters.", "Tell us the vehicle year, make and model.", "Pick or enter the address.", "Add access
@@ -2637,6 +2639,9 @@ Branch `web/s-55-booking-wizard`, stacked on `web/s-54-provider-page` (itself on
   customer id) for S-33, and `CalendarSyncListener` writes it back to the member's connected calendar (S-32).
 - **Schema (V115, additive):** `booking.access_notes`; `bookings.source` (`studio`|`customer`), `tax_cents`,
   `free_cancel_until`; index `ix_bookings_member_starts`.
+- **Region-neutral:** "today" and calendar days use `northline.hire.time-zone` (config) on the server and the shared
+  `TIME_ZONE` of `@northline/ui` in the browser (an existing literal, S-134); the planner underneath still uses
+  availability's `Team.ZONE` and `AlbertaHolidays` (existing, S-134).
 - **Not done:** cancelling the PaymentIntent when a hold expires after the card was confirmed but before `confirm`
   (the authorization lapses at Stripe on its own; a sweeper is follow-up work); saved cards, points and promo codes on
   bookings; photo upload in job details; late-cancellation fees; the customer's bookings list (`/account/orders`

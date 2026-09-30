@@ -68,8 +68,7 @@ class MyBookingsController {
             @RequestParam(required = false) @Nullable LocalDate from,
             @RequestParam(defaultValue = "7") int days,
             @Nullable Principal principal) {
-        var start = from == null ? LocalDate.now(java.time.ZoneId.of("America/Edmonton")) : from;
-        return calendars.calendar(slug, serviceId, start, days, principal == null ? null : principal.getName());
+        return calendars.calendar(slug, serviceId, from, days, principal == null ? null : principal.getName());
     }
 
     @PostMapping("/api/v1/me/bookings/holds")

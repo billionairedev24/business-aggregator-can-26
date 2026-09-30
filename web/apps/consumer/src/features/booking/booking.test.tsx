@@ -32,7 +32,7 @@ const facts: ProviderFacts = {
     { id: 's1', name: 'Brake inspection', included: null, pricingMode: 'fixed', priceCents: 8900, durationMin: 60, instantBook: true, categorySlug: 'brakes-and-suspension', kind: 'visit' },
     { id: 's2', name: 'Alternator', included: null, pricingMode: 'quote', priceCents: null, durationMin: 90, instantBook: false, categorySlug: 'mobile-mechanic', kind: 'visit' },
   ],
-  zones: ['Beltline'], nextAvailable: null, reviews: { items: [], nextOffset: null },
+  zones: ['Beltline'], nextAvailable: null, taxBps: 500, reviews: { items: [], nextOffset: null },
 };
 const addDays = (iso: string, n: number) => { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const calendar = (from: string) => ({

@@ -55,9 +55,6 @@ import tools.jackson.databind.json.JsonMapper;
 class BookingCheckoutService
         implements ViewCalendar, HoldSlot, ReleaseSlot, StartCheckout, ConfirmBooking, ViewBooking {
 
-    /** Every business on Northline is in Alberta for now (booking module decision, "Operations"). */
-    static final String PROVINCE = "AB";
-
     /** Design 06: "free cancellation until 12 h before". */
     static final Duration FREE_CANCEL = Duration.ofHours(12);
 
@@ -80,6 +77,7 @@ class BookingCheckoutService
     private final PersonDirectory people;
     private final TaxRates taxRates;
     private final SecretSealer sealer;
+    private final HireProperties region;
     private final Clock clock;
 
     /** What travels with the hold between "Hold $…" and the card confirmation (sealed: it has the access note). */
@@ -90,11 +88,11 @@ class BookingCheckoutService
             @Nullable String paymentIntent) {}
 
     @Override
-    public Calendar calendar(String slug, String serviceId, LocalDate from, int days, @Nullable String customerId) {
+    public Calendar calendar(String slug, String serviceId, @Nullable LocalDate from, int days, @Nullable String customerId) {
         var provider = provider(slug);
         var offer = offer(provider, serviceId);
-        var today = LocalDate.now(clock.withZone(java.time.ZoneId.of("America/Edmonton")));
-        var start = from.isBefore(today) ? today : from;
+        var today = LocalDate.now(clock.withZone(region.timeZone()));
+        var start = from == null || from.isBefore(today) ? today : from;
         var duration = offer.durationMin();
         return new Calendar(
                 serviceId,
@@ -146,7 +144,7 @@ class BookingCheckoutService
                 .orElseThrow(() -> new NotFound("service", request.serviceId()));
         var kind = kind(offer);
         var pricing =
-                Pricing.of(kind, offer.pricingMode(), offer.priceCents(), request.hours(), taxRates.bpsFor(PROVINCE));
+                Pricing.of(kind, offer.pricingMode(), offer.priceCents(), request.hours(), taxRates.bpsFor(province(hold.merchantId())));
         request.validate(kind, vehicle(offer), pricing.free());
         if (pricing.free()) {
             var booked = book(hold, request, offer, kind, pricing.priceCents(), pricing.taxCents(), null);
@@ -293,6 +291,15 @@ class BookingCheckoutService
             var box = JSON.readValue(json, SecretSealer.Sealed.class);
             return JSON.readValue(sealer.open(box, "slot-hold:" + holdId), Draft.class);
         });
+    }
+
+    /** The business's own province (onboarding), else the configured default: its bookings are taxed there. */
+    private String province(String merchantId) {
+        return providers.published(List.of(merchantId), "en").stream()
+                .map(PublicProviders.Provider::province)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(region.defaultProvince());
     }
 
     private PublicProviders.Provider provider(String slug) {

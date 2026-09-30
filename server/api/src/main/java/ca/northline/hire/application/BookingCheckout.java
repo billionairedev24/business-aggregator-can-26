@@ -17,7 +17,9 @@ public final class BookingCheckout {
     private BookingCheckout() {}
 
     public interface ViewCalendar {
-        Calendar calendar(String slug, String serviceId, LocalDate from, int days, @Nullable String customerId);
+        /** @param from the first day, null = today in the market's time zone */
+        Calendar calendar(
+                String slug, String serviceId, @Nullable LocalDate from, int days, @Nullable String customerId);
     }
 
     public interface HoldSlot {
