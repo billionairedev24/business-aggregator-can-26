@@ -11,6 +11,9 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration,classpath:db/seed-dev
+    # S-62: migrations above the seed range (V110+ consumer, V120+ search) may already be applied when the dev seed
+    # (V100–V109) comes along — a database migrated without `local` first, or a seed file added later.
+    out-of-order: true
 management.health.redis.enabled: false
 server.servlet.session.cookie.secure: false
 logging.level:
