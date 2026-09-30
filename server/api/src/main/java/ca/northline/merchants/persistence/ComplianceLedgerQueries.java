@@ -58,6 +58,20 @@ class ComplianceLedgerQueries implements ComplianceLedgerStore {
     }
 
     @Override
+    public List<ComplianceItem> platformChecks(String merchantId, Instant now) {
+        return jdbc.sql("""
+                        select v.id, v.check_type, v.check_key, v.registry, v.reference, v.label, v.status,
+                               v.expires_at, v.verified_at, v.submitted_at
+                          from merchants.verifications v
+                         where v.merchant_id = :m and v.check_key in ('kyc')
+                         order by v.position nulls last, v.id
+                        """)
+                .param("m", merchantId)
+                .query((rs, _) -> item(rs, now))
+                .list();
+    }
+
+    @Override
     public Optional<ComplianceItem> item(String merchantId, String verificationId, Instant now) {
         return jdbc.sql(LEDGER + " and v.id = :id")
                 .param("m", merchantId)

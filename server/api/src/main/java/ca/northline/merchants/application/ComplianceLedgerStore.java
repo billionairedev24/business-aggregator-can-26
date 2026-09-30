@@ -13,6 +13,12 @@ public interface ComplianceLedgerStore {
     /** Ledger rows as of {@code now}, in checklist order; Stripe-side checks (KYC, bank, MFA, visit) excluded. */
     List<ComplianceItem> items(String merchantId, Instant now);
 
+    /**
+     * Checklist rows kept outside the ledger's list that still feed {@code ComplianceStatus}: the owners' identity
+     * verification ({@code kyc}, S-22).
+     */
+    List<ComplianceItem> platformChecks(String merchantId, Instant now);
+
     Optional<ComplianceItem> item(String merchantId, String verificationId, Instant now);
 
     /** A renewal was handed in: status {@code submitted}, the document becomes the row's evidence. */

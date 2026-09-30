@@ -2,7 +2,6 @@ package ca.northline.merchants.integration;
 
 import ca.northline.merchants.application.DocumentStorage;
 import ca.northline.merchants.application.VerificationGateways.DomainVerifier;
-import ca.northline.merchants.application.VerificationGateways.IdentityVerification;
 import ca.northline.merchants.application.VerificationGateways.Outcome;
 import ca.northline.merchants.application.VerificationGateways.RegistryLookup;
 import ca.northline.shared.storage.UsesLocalStorage;
@@ -11,7 +10,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
 /**
- * Placeholders outside {@code local}/{@code test} until the production adapters exist (Stripe Identity S-22, registry
+ * Placeholders outside {@code local}/{@code test} until the production adapters exist (registry
  * lookups S-23, custom domains S-31 — bank linking is {@link PaymentsBankLinking} since S-24; object storage S-10 when {@code STORAGE_PROVIDER=local}): the application starts in the
  * {@code dev}/{@code staging}/{@code prod} profiles, and using the feature fails loudly — the same convention as the
  * other modules' unconfigured adapters.
@@ -19,13 +18,6 @@ import org.springframework.context.annotation.Profile;
 @Configuration(proxyBeanMethods = false)
 @Profile("!local & !test")
 class UnconfiguredMerchantIntegrations {
-
-    @Bean
-    IdentityVerification unconfiguredIdentityVerification() {
-        return _ -> {
-            throw unconfigured("identity verification (Stripe Identity, S-22)");
-        };
-    }
 
     @Bean
     RegistryLookup unconfiguredRegistryLookup() {

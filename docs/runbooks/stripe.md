@@ -126,7 +126,7 @@ Two endpoints, each with its own signing secret:
 
 | endpoint (Stripe dashboard → Developers → Webhooks → Add endpoint) | listen to | events | secret |
 |---|---|---|---|
-| `https://<api host>/api/v1/webhooks/stripe` | **Your account** | `payment_intent.amount_capturable_updated`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.canceled`, `charge.refunded`, `refund.created`, `refund.updated`, `refund.failed`, `charge.dispute.created`, `charge.dispute.updated`, `charge.dispute.closed`, `charge.dispute.funds_withdrawn`, `charge.dispute.funds_reinstated`, `transfer.reversed`, `transfer.updated`, `financial_connections.account.disconnected`, `financial_connections.account.deactivated` (S-24) | `STRIPE_WEBHOOK_SECRET` |
+| `https://<api host>/api/v1/webhooks/stripe` | **Your account** | `payment_intent.amount_capturable_updated`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.canceled`, `charge.refunded`, `refund.created`, `refund.updated`, `refund.failed`, `charge.dispute.created`, `charge.dispute.updated`, `charge.dispute.closed`, `charge.dispute.funds_withdrawn`, `charge.dispute.funds_reinstated`, `transfer.reversed`, `transfer.updated`, `financial_connections.account.disconnected`, `financial_connections.account.deactivated` (S-24), and for Identity (S-22) `identity.verification_session.created`, `.processing`, `.requires_input`, `.verified`, `.canceled` | `STRIPE_WEBHOOK_SECRET` |
 | `https://<api host>/api/v1/webhooks/stripe/connect` | **Connected accounts** | `account.updated`, `payout.paid`, `payout.failed`, `payout.canceled` | `STRIPE_CONNECT_WEBHOOK_SECRET` |
 
 - **API version:** create both endpoints with **`2026-08-26.dahlia`** (the pinned version, § 1); an endpoint on
@@ -280,3 +280,52 @@ documented API and tested with stripe-mock only.
   TD ··3391, …) instead of Stripe.js and sends a local token (`btok_local_<institution>_<last4>`); nothing leaves the
   machine. With stripe-mock (§ 3) the real adapter runs, but the Studio can't complete Stripe.js against it.
 
+## 8. Identity (S-22)
+
+Every owner the business structure requires (the principals at or above the structure's KYC threshold: 25 % for
+partnerships and corporations, everyone for sole proprietors, co-ops and non-profits — `docs/spec/legal-details.schema.json`)
+verifies with a **Stripe Identity** VerificationSession: a government ID (driving licence, passport or ID card, live
+capture) plus a matching selfie. Onboarding › Verification › "Identity (Stripe KYC)" lists them; the signed-in owner
+opens Stripe's hosted flow ("This is me · verify now"), the others get the link by email (the `identity-verification`
+template, [email.md](email.md)). Stripe sends the person back to `STUDIO_ORIGIN/onboarding/verification?…&identity=returned`
+(signed-in owner) or to the public `STUDIO_ORIGIN/identity/done` (emailed owners).
+
+| `IDENTITY_PROVIDER` | what happens | needs |
+|---|---|---|
+| `local` (default) | fake sessions; the "hosted flow" is `API_PUBLIC_URL/api/v1/dev/identity-sessions/{id}` (profile `local` only) where you pick the outcome: verified, name / date-of-birth mismatch, processing, `document_expired`, `document_unverified_other`, `selfie_face_mismatch`, `consent_declined`, canceled. It is applied exactly like the webhook. Refused under `staging`/`prod`; under `dev` a warning (owners can't finish) | — |
+| `stripe` | stripe-java against Stripe Identity (API version pinned, § 1); `STRIPE_API_BASE` + stripe-mock works for requests (stripe-mock's fixture has no hosted-flow URL, so starting a session answers 409 there) | `STRIPE_SECRET_KEY` (the platform key; or a restricted key with Identity *write* and *read* — reading `verified_outputs` needs it), the platform webhook endpoint (§ 5) subscribed to the `identity.verification_session.*` events |
+
+**Account setup (once per mode):** Stripe dashboard → Settings → Identity: activate Identity, fill the branding
+(Northline name, logo, support email — shown in the hosted flow), check that Canada is supported for document
+verification (it is at the time of writing; Identity pricing is per verification). Add the five
+`identity.verification_session.*` events to the **platform** webhook endpoint (§ 5). Staging uses test mode (Stripe's
+test documents; nothing is really checked), prod live mode.
+
+**What Northline keeps** (`merchants.owner_identity_checks`, V032): the session id, the status
+(`pending | processing | verified | retry | review | canceled`), Stripe's `last_error.code`, and two results —
+`name_match` (the verified first + last name against the principal's legal name, accents/case/punctuation ignored,
+extra middle names allowed) and `dob_match` (the verified date of birth against the business's Stripe Connect person
+with the same name, when the Connect account exists and has one). The api reads `verified_outputs` once, compares in
+memory and drops it; it never stores or logs ID images, ID numbers, names read or the date of birth. Webhook payloads
+are stored redacted (`verified_outputs`, `provided_details`, names removed). The owner's email is kept for "Send a new
+link".
+
+**Flow and states:** verified by Stripe + names match → `verified`; verified but a name or date-of-birth mismatch →
+`review` (a Northline agent decides in the console — not built yet; until then trust & safety looks at the row and the
+Stripe dashboard); `requires_input` with an error → `retry` (the owner starts again; the old session is canceled at
+Stripe, new idempotency key `nl1:identity-session:<check>:<attempt>`). The checklist's `kyc` row follows the owners:
+all verified → verified; all verified / processing / in review → submitted (counts as complete for submitting);
+otherwise to do — and while it is to do it is a `ComplianceStatus` due item ("Identity verification" on the dashboard).
+Webhooks go through the S-12 platform endpoint (signature, 5-minute tolerance, dedupe on the event id), then an
+in-process `IdentitySessionUpdated` to the merchants module, applied in Stripe's `created` order; events for replaced
+sessions are ignored.
+
+**Operations:**
+- *An owner didn't get the email* — Mailpit locally; in the cloud check the email provider's logs; the owner can send
+  a new link from the dialog (each new link cancels the previous session).
+- *An owner is stuck in `review`* — compare the legal name typed in the Business step with the ID (Stripe dashboard →
+  Identity → the session, searchable by metadata `northline_merchant_id`). If the application has a typo, the owner
+  fixes the Business step (a principal whose name changes is a new principal and verifies again); otherwise an agent
+  approves in the console (S-console).
+- *Redaction* — a person's request to delete their verification data is done in the Stripe dashboard (Identity →
+  session → Redact); Northline holds no copy.

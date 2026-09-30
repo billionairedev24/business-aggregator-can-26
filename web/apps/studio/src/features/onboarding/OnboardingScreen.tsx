@@ -72,7 +72,7 @@ export function OnboardingScreen({ step, search }: { step: Step; search: Onboard
         onDone={(id, t2) => go('business', id, t2)}
       />);
     case 'business': return layout(<BusinessStep key={o!.merchantId} onboarding={o!} onBack={() => go('account')} onDone={() => go('verification')} />);
-    case 'verification': return layout(<VerificationStep onboarding={o!} onBack={() => go('business')} onSubmitted={() => go('review')} />);
+    case 'verification': return layout(<VerificationStep onboarding={o!} identityReturned={search.identity === 'returned'} onBack={() => go('business')} onSubmitted={() => go('review')} />);
     case 'review': return layout(<ReviewStep onboarding={o!} onNext={() => go('page')} />);
     case 'page': return layout(<PageStep onboarding={o!} onBack={() => go('review')} onNext={() => go('listings')} />);
     case 'listings': return layout(<ListingsStep onboarding={o!} onBack={() => go('page')} onDone={() => void navigate({ to: studioHome(o!.merchantId, o!.type) })} />);

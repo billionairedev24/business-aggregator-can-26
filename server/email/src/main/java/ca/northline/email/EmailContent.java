@@ -109,6 +109,43 @@ public sealed interface EmailContent {
         }
     }
 
+    // ── Onboarding ───────────────────────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Onboarding › Verification (S-22): an owner of the business asked Northline to send this owner their Stripe
+     * Identity link (government ID + selfie). Transactional (requested on the recipient's behalf by their business).
+     *
+     * @param ownerName the principal's legal name as entered in the application
+     * @param link Stripe's hosted verification flow (single use; Stripe expires it)
+     */
+    record IdentityVerificationLink(String businessName, String requesterName, String ownerName, URI link)
+            implements EmailContent {
+
+        @Override
+        public String template() {
+            return "identity-verification";
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.TRANSACTIONAL;
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            return Map.of(
+                    "businessName", businessName,
+                    "requesterName", requesterName,
+                    "ownerName", ownerName,
+                    "link", link.toString());
+        }
+
+        @Override
+        public List<Object> reasonArgs() {
+            return List.of(requesterName, businessName);
+        }
+    }
+
     // ── Finance ──────────────────────────────────────────────────────────────────────────────────────────────────
 
     /**
@@ -387,6 +424,13 @@ public sealed interface EmailContent {
                         "technician",
                         URI.create("http://localhost:3100/invite/sample-token"),
                         at.plus(Duration.ofDays(7))));
+        all.put(
+                "identity-verification",
+                new IdentityVerificationLink(
+                        business,
+                        "Ravi Sandhu",
+                        "Priya Sandhu",
+                        URI.create("https://verify.stripe.com/start/test_sample")));
         for (var phase : BankAccountChange.Phase.values()) {
             var sample = new BankAccountChange(business, phase, at.plus(Duration.ofHours(24)), payouts);
             all.put(key(sample), sample);

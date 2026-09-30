@@ -11,7 +11,7 @@ export const Check = z.object({
   id: z.string(),
   key: z.string(),
   checkType: z.string(),
-  action: z.enum(['instant', 'number', 'upload', 'sign', 'choose', 'slot']),
+  action: z.enum(['instant', 'identity', 'number', 'upload', 'sign', 'choose', 'slot']),
   registry: z.string().nullish(),
   status: z.enum(['todo', 'submitted', 'verified', 'expired', 'rejected']),
   reference: z.string().nullish(),
@@ -101,3 +101,45 @@ export const useCompleteCheck = (merchantId: string) =>
   useOnboardingWrite<{ id: string } & CompleteInput>(merchantId, ({ id, ...body }) => http(`/api/v1/merchants/${merchantId}/verifications/${id}/complete`, { method: 'POST', body }, Onboarding));
 /** DEV ONLY ("Simulate approval →"): the api exposes it under the `local` profile only. */
 export const useSimulateApproval = (merchantId: string) => useOnboardingWrite<void>(merchantId, () => http(`/api/v1/dev/merchants/${merchantId}/approve`, { method: 'POST' }, Onboarding));
+
+/** S-22 · `GET /api/v1/merchants/{id}/identity-checks`: every owner who verifies with Stripe Identity (owner-only). */
+export const OwnerIdentity = z.object({
+  principalId: z.string(),
+  legalName: z.string(),
+  role: PrincipalRole,
+  ownershipPct: z.number().nullish(),
+  you: z.boolean(),
+  status: z.enum(['not_started', 'pending', 'processing', 'verified', 'retry', 'review', 'canceled']),
+  delivery: z.enum(['self', 'email']).nullish(),
+  emailMasked: z.string().nullish(),
+  lastError: z.string().nullish(),
+  nameMatch: z.enum(['match', 'mismatch', 'unavailable']).nullish(),
+  dobMatch: z.enum(['match', 'mismatch', 'unavailable']).nullish(),
+  attempts: z.number(),
+  updatedAt: z.string().nullish(),
+});
+export type OwnerIdentity = z.infer<typeof OwnerIdentity>;
+const OwnerIdentities = z.object({ items: z.array(OwnerIdentity) });
+const SessionStarted = z.object({ owner: OwnerIdentity, url: z.string().nullish() });
+
+/** While Stripe is checking or a link is out, the list refreshes itself (webhooks move the owners). */
+export const ownerIdentityQuery = (merchantId: string) => queryOptions({
+  queryKey: ['merchant', merchantId, 'identity-checks'],
+  queryFn: () => http(`/api/v1/merchants/${merchantId}/identity-checks`, {}, OwnerIdentities).then(r => r.items),
+  refetchInterval: q => (q.state.data?.some(o => o.status === 'pending' || o.status === 'processing') ? 5000 : false),
+});
+
+export interface StartSessionInput { principalId: string; delivery: 'self' | 'email'; email?: string }
+
+/** `POST …/identity-checks/{principalId}/session` → Stripe's hosted flow (self) or an emailed link. */
+export function useStartOwnerSession(merchantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ principalId, ...body }: StartSessionInput) =>
+      http(`/api/v1/merchants/${merchantId}/identity-checks/${principalId}/session`, { method: 'POST', body }, SessionStarted),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ownerIdentityQuery(merchantId).queryKey });
+      void qc.invalidateQueries({ queryKey: onboardingQuery(merchantId).queryKey });
+    },
+  });
+}

@@ -81,6 +81,21 @@ public class Verification {
         updatedAt = at;
     }
 
+    /**
+     * Rows whose state follows other records rather than one piece of evidence (the {@code kyc} row follows the
+     * owners' Stripe Identity checks): may move in any direction, including back from verified. Returns whether it
+     * changed.
+     */
+    public boolean follow(VerificationStatus newStatus, @Nullable String newReference, Instant at) {
+        if (status == newStatus && java.util.Objects.equals(reference, newReference)) {
+            return false;
+        }
+        status = newStatus;
+        reference = newReference;
+        updatedAt = at;
+        return true;
+    }
+
     /** Approval by trust &amp; safety: every submitted item counts as verified. */
     public void confirm(Instant at) {
         if (status == VerificationStatus.SUBMITTED) {

@@ -30,6 +30,10 @@ class EmailTemplatesTest {
     @MethodSource("samples")
     void rendersEveryTemplate_inBothLanguages(String name, EmailContent content, Locale locale) {
         var email = TEMPLATES.render(content, locale, UNSUBSCRIBE);
+        // every email links into the Studio, except the identity link, which goes to Stripe's hosted flow (S-22)
+        var link = content instanceof EmailContent.IdentityVerificationLink
+                ? "https://verify.stripe.com/"
+                : "http://localhost:3100/";
 
         assertThat(email.subject())
                 .isNotBlank()
@@ -45,9 +49,9 @@ class EmailTemplatesTest {
         assertThat(email.html())
                 .startsWith("<!DOCTYPE html>")
                 .contains("lang=\"" + locale.toLanguageTag() + "\"")
-                .contains("href=\"http://localhost:3100/")
+                .contains("href=\"" + link)
                 .doesNotContain("<style", "class=\"", "th:text", "th:style", "var(--"); // inline styles only
-        assertThat(email.text()).doesNotContain("<", ">").contains("http://localhost:3100/");
+        assertThat(email.text()).doesNotContain("<", ">").contains(link);
         if (content.purpose().needsUnsubscribe()) {
             assertThat(email.html()).contains("href=\"" + UNSUBSCRIBE + "\"");
             assertThat(email.text()).contains(UNSUBSCRIBE.toString());

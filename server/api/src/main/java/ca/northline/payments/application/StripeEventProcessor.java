@@ -1,11 +1,14 @@
 package ca.northline.payments.application;
 
+import ca.northline.payments.api.IdentitySessionUpdated;
 import ca.northline.payments.application.StripeEventStore.State;
 import ca.northline.payments.domain.Payout;
+import ca.northline.shared.Ids;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -33,6 +36,7 @@ class StripeEventProcessor {
     private final RefundCaseService cases;
     private final ConnectedAccountService accounts;
     private final StripeChargeSync charges;
+    private final ApplicationEventPublisher events;
     private final BankAccountService bankAccounts;
     private final TransactionTemplate transactions;
     private final Clock clock;
@@ -44,6 +48,7 @@ class StripeEventProcessor {
             RefundCaseService cases,
             ConnectedAccountService accounts,
             StripeChargeSync charges,
+            ApplicationEventPublisher events,
             BankAccountService bankAccounts,
             PlatformTransactionManager transactionManager,
             Clock clock) {
@@ -53,6 +58,7 @@ class StripeEventProcessor {
         this.cases = cases;
         this.accounts = accounts;
         this.charges = charges;
+        this.events = events;
         this.bankAccounts = bankAccounts;
         this.clock = clock;
         // each event in its own transaction, also when called from the listener's
@@ -122,9 +128,35 @@ class StripeEventProcessor {
             case "charge.refunded" -> charges.chargeRefunded(o);
             case "refund.created", "refund.updated", "refund.failed" -> charges.refund(o);
             case "transfer.reversed", "transfer.updated" -> charges.transferReversed(o);
+            case "identity.verification_session.created",
+                    "identity.verification_session.processing",
+                    "identity.verification_session.requires_input",
+                    "identity.verification_session.verified",
+                    "identity.verification_session.canceled" -> identitySession(event);
             case "financial_connections.account.disconnected", "financial_connections.account.deactivated" ->
                 bankAccounts.connectionEnded(event);
             default -> false;
         };
+    }
+
+    /**
+     * Stripe Identity (S-22): the merchants module owns the owners' checks; payments hands the verified, de-duplicated
+     * update over in the same transaction (outbox), without the session's personal data.
+     */
+    private boolean identitySession(StripeEvent event) {
+        var o = event.object();
+        var id = o.id();
+        var status = o.text("status");
+        if (id == null || status == null || event.endpoint() != StripeEvent.Endpoint.PLATFORM) {
+            return false;
+        }
+        events.publishEvent(new IdentitySessionUpdated(
+                Ids.next(),
+                event.created(),
+                id,
+                status,
+                o.text("last_error", "code"),
+                o.text("metadata", "northline_merchant_id")));
+        return true;
     }
 }

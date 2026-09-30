@@ -20,7 +20,7 @@ export function onboarding(over: Partial<Onboarding> = {}): Onboarding {
     merchantId: MERCHANT, type: 'provider', status: 'applicant', step: 'business', province: 'AB', workEmail: null, businessTermsAccepted: false,
     displayName: 'New business', city: null, business: null,
     checklist: [
-      { id: 'V1', key: 'kyc', checkType: 'kyc', action: 'instant', registry: null, status: 'todo', reference: null, document: null, expiresOn: null, updatedAt: '2026-09-29T16:00:00Z' },
+      { id: 'V1', key: 'kyc', checkType: 'kyc', action: 'identity', registry: null, status: 'todo', reference: null, document: null, expiresOn: null, updatedAt: '2026-09-29T16:00:00Z' },
       { id: 'V2', key: 'registry', checkType: 'registry', action: 'instant', registry: null, status: 'todo', reference: null, document: null, expiresOn: null, updatedAt: '2026-09-29T16:00:00Z' },
       { id: 'V3', key: 'licence:AMVIC', checkType: 'licence', action: 'number', registry: 'AMVIC', status: 'todo', reference: null, document: null, expiresOn: null, updatedAt: '2026-09-29T16:00:00Z' },
       { id: 'V4', key: 'insurance', checkType: 'insurance', action: 'upload', registry: null, status: 'todo', reference: null, document: null, expiresOn: null, updatedAt: '2026-09-29T16:00:00Z' },

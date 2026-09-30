@@ -85,6 +85,10 @@ northline:
     goods-tax-code: ${TAX_CODE_GOODS:txcd_99999999}
     food-tax-code: ${TAX_CODE_FOOD:txcd_40060003}
     reconcile-cron: ${TAX_RECONCILE_CRON:0 17 3 * * *}           # nightly reconciliation, America/Edmonton
+  # Owners' identity verification (S-22, docs/runbooks/stripe.md § Identity): local (fake with an outcome page at
+  # /api/v1/dev/identity-sessions/{id}; refused under staging/prod) | stripe (Stripe Identity with STRIPE_SECRET_KEY).
+  identity:
+    provider: ${IDENTITY_PROVIDER:local}
   # Provider switches (ca.northline.platform) — see docs/runbooks/README.md.
   # Object storage (S-10, ca.northline.shared.storage): local (modules' disk fakes; placeholders under dev; refused
   # under staging/prod) | s3 (AWS S3 or RustFS/MinIO: endpoint + path-style) | gcs | azure (endpoint = account URL).

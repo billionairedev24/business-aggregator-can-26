@@ -3,7 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { onboarding } from '../../test/fixtures';
 import { mockFetch, renderWithProviders } from '../../test/render';
-import type { Onboarding } from './api';
+import type { Onboarding, OwnerIdentity } from './api';
+import { IdentityDialog } from './IdentityDialog';
+import { IdentityDoneScreen } from './IdentityDoneScreen';
 import { ReviewStep } from './ReviewStep';
 import { VerificationStep } from './VerificationStep';
 
@@ -21,11 +23,11 @@ const done = (o: Onboarding, key: string, patch: Partial<Onboarding['checklist']
 describe('VerificationStep', () => {
   it('runs instant checks through the api and shows the done label', async () => {
     const o = onboarding();
-    const calls = mockFetch(c => (c.url.endsWith('/verifications/V1/complete') ? { body: done(o, 'kyc') } : undefined));
+    const calls = mockFetch(c => (c.url.endsWith('/verifications/V5/complete') ? { body: done(o, 'bank') } : undefined));
     renderWithProviders(<VerificationStep onboarding={o} onBack={() => {}} onSubmitted={() => {}} />);
     expect(screen.getByText('0 of 6 complete')).toBeTruthy();
-    await userEvent.click(screen.getByRole('button', { name: 'Start with Stripe' }));
-    await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url.endsWith('/V1/complete'))).toBe(true));
+    await userEvent.click(screen.getByRole('button', { name: 'Connect bank' }));
+    await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url.endsWith('/V5/complete'))).toBe(true));
     expect(((screen.getByRole('button', { name: 'Submit for review' })) as HTMLButtonElement).disabled).toBe(true);
   });
 
@@ -52,6 +54,59 @@ describe('VerificationStep', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Submit for review' }));
     await waitFor(() => expect(onSubmitted).toHaveBeenCalled());
     expect(calls.filter(c => c.method === 'POST')).toHaveLength(1);
+  });
+});
+
+describe('Identity (Stripe KYC) — S-22', () => {
+  const owner = (over: Partial<OwnerIdentity> = {}): OwnerIdentity => ({
+    principalId: 'P1', legalName: 'Ravi Sandhu', role: 'director', ownershipPct: 60, you: false, status: 'not_started',
+    delivery: null, emailMasked: null, lastError: null, nameMatch: null, dobMatch: null, attempts: 0, updatedAt: null, ...over,
+  });
+  const owners = [owner(), owner({ principalId: 'P2', legalName: 'Priya Sandhu', role: 'shareholder', ownershipPct: 40, status: 'retry', lastError: 'selfie_face_mismatch', delivery: 'email', emailMasked: 'p***@example.ca', attempts: 1 })];
+
+  it('opens the owners list from the checklist instead of completing the row', async () => {
+    const calls = mockFetch(c => (c.url.endsWith('/identity-checks') ? { body: { items: owners } } : undefined));
+    renderWithProviders(<VerificationStep onboarding={onboarding()} onBack={() => {}} onSubmitted={() => {}} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Start with Stripe' }));
+    const dialog = screen.getByRole('dialog', { name: 'Identity (Stripe KYC)' });
+    expect(await within(dialog).findByText('Ravi Sandhu')).toBeTruthy();
+    expect(within(dialog).getByText('Director · 60 %')).toBeTruthy();
+    expect(within(dialog).getByText("Try again · Selfie didn't match the ID")).toBeTruthy();
+    expect(calls.some(c => c.url.includes('/complete'))).toBe(false);
+  });
+
+  it('sends the signed-in owner to Stripe and emails the others, with the server message', async () => {
+    const navigate = vi.fn();
+    const calls = mockFetch(c => {
+      if (c.url.endsWith('/identity-checks')) return { body: { items: owners } };
+      if (c.url.endsWith('/P1/session')) return { body: { owner: owner({ you: true, status: 'pending', delivery: 'self' }), url: 'https://verify.stripe.com/start/test_x' } };
+      if (c.url.endsWith('/P2/session')) return (c.body as { email?: string }).email ? { body: { owner: owners[1], url: null } } : { status: 422, body: { errors: [{ field: 'email', rule: 'required', message: "Enter the owner's email address." }] } };
+      return undefined;
+    });
+    renderWithProviders(<IdentityDialog merchantId="M1" title="Identity" onClose={() => {}} navigate={navigate} />);
+    const dialog = await screen.findByRole('dialog', { name: 'Identity' });
+    await userEvent.click((await within(dialog).findAllByRole('button', { name: 'This is me · verify now' }))[0]!);
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('https://verify.stripe.com/start/test_x'));
+    expect(calls.find(c => c.url.endsWith('/P1/session'))?.body).toEqual({ delivery: 'self' });
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Send a new link' }));
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Send link' }));
+    expect(await within(dialog).findByText("Enter the owner's email address.")).toBeTruthy();
+    await userEvent.type(within(dialog).getByLabelText("Priya Sandhu's email"), 'priya@example.ca');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Send link' }));
+    expect(await within(dialog).findByText(/Link sent to p\*\*\*@example.ca/)).toBeTruthy();
+  });
+
+  it('reads French', async () => {
+    mockFetch(c => (c.url.endsWith('/identity-checks') ? { body: { items: [owner({ status: 'processing' })] } } : undefined));
+    renderWithProviders(<IdentityDialog merchantId="M1" title="Identité" onClose={() => {}} />, { locale: 'fr' });
+    expect(await screen.findByText('Vérification par Stripe')).toBeTruthy();
+    expect(screen.getByText('Administrateur · 60 %')).toBeTruthy();
+  });
+
+  it('thanks owners who verified from an emailed link', () => {
+    renderWithProviders(<IdentityDoneScreen />);
+    expect(screen.getByRole('heading', { name: "You're done" })).toBeTruthy();
   });
 });
 

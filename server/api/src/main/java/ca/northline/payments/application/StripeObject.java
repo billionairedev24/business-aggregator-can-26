@@ -37,7 +37,12 @@ public final class StripeObject {
             "ssn_last_4",
             "support_phone",
             "support_email",
-            "support_address");
+            "support_address",
+            // Identity VerificationSessions (S-22): never expanded in webhooks, dropped in case they ever are
+            "verified_outputs",
+            "provided_details",
+            "first_name",
+            "last_name");
 
     private final JsonNode node;
 

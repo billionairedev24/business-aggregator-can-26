@@ -10,7 +10,7 @@ import org.jspecify.annotations.Nullable;
  * {@link #LICENCE} is a family: one row per regulator of the selected categories ({@code licence:AMVIC}).
  */
 public enum CheckKind {
-    KYC("kyc", CheckType.KYC, null, Action.INSTANT),
+    KYC("kyc", CheckType.KYC, null, Action.IDENTITY),
     REGISTRY("registry", CheckType.REGISTRY, null, Action.INSTANT),
     GST("gst", CheckType.REGISTRY, "CRA", Action.NUMBER),
     LICENCE("licence", CheckType.LICENCE, null, Action.NUMBER),
@@ -29,8 +29,10 @@ public enum CheckKind {
 
     /** How the Verification step completes the check. */
     public enum Action implements ca.northline.shared.CodedEnum {
-        /** One click through an external system (Stripe KYC, registry lookup, bank link, second factor). */
+        /** One click through an external system (registry lookup, bank link, second factor). */
         INSTANT,
+        /** Every owner who needs it verifies with Stripe Identity (S-22); the row follows their results. */
+        IDENTITY,
         /** Enter a licence / permit / business number. */
         NUMBER,
         /** Upload a document. */

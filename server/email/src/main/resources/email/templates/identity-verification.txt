@@ -1,0 +1,11 @@
+[(#{identity-verification.heading(${businessName})})]
+
+[(#{identity-verification.body(${requesterName}, ${businessName}, ${ownerName})})]
+
+[(#{identity-verification.how})]
+
+[(#{identity-verification.cta})]: [(${link})]
+
+[(#{identity-verification.expires(${requesterName})})]
+[(#{identity-verification.ignore(${businessName})})]
+[# th:insert="~{footer.txt}" /]

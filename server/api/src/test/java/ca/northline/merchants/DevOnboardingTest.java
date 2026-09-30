@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ca.northline.merchants.api.MerchantApproved;
+import ca.northline.merchants.application.DevIdentityOutcomes;
 import ca.northline.support.IntegrationTest;
 import ca.northline.support.TestJwt;
 import ca.northline.tools.CategorySeeder;
@@ -39,10 +40,13 @@ class DevOnboardingTest extends IntegrationTest {
     @Autowired
     DataSource dataSource;
 
+    @Autowired
+    DevIdentityOutcomes identity;
+
     @Test
     void simulateApproval_pendingBecomesActive() throws Exception {
         new CategorySeeder(dataSource).seed();
-        var flow = new OnboardingFlow(mvc);
+        var flow = new OnboardingFlow(mvc, dataSource, identity);
         var user = data.user("Dev");
         var id = flow.start(user, "seller");
 

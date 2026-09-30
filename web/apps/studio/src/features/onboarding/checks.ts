@@ -18,7 +18,7 @@ export function checkText(c: Check, type: MerchantType, t: OnboardingT, locale: 
   const onFile = pending ? `${t('done_on_file')} · ${t('inReview')}` : t('done_on_file');
   const key = c.key.startsWith('licence:') ? 'licence' : c.key;
   switch (key) {
-    case 'kyc': return { name: t('ck_kyc'), desc: t(food || seller ? 'ckd_kyc_owners' : 'ckd_kyc'), cta: t('cta_kyc'), done: t('done_kyc') };
+    case 'kyc': return { name: t('ck_kyc'), desc: t(food || seller ? 'ckd_kyc_owners' : 'ckd_kyc'), cta: t('cta_kyc'), done: pending ? t('done_kyc_review') : t('done_kyc') };
     case 'registry': return {
       name: t(food ? 'ck_registry_kitchen' : 'ck_registry'), desc: t(food ? 'ckd_registry_kitchen' : seller ? 'ckd_registry_seller' : 'ckd_registry'), cta: t('cta_registry'),
       done: ref && ref !== 'matched' ? t('done_registry_ref', { ref }) : t('done_registry'),

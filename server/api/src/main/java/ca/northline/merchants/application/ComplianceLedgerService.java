@@ -30,6 +30,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -175,7 +176,8 @@ class ComplianceLedgerService
 
     @Override
     public List<DueItem> dueItems(String merchantId) {
-        return ledger.items(merchantId, clock.instant()).stream()
+        var now = clock.instant();
+        return Stream.concat(ledger.items(merchantId, now).stream(), ledger.platformChecks(merchantId, now).stream())
                 .filter(ComplianceItem::due)
                 .sorted(Comparator.comparing(
                         ComplianceItem::expiresAt, Comparator.nullsLast(Comparator.naturalOrder())))

@@ -205,11 +205,30 @@ class ApplicationPersistenceAdapter implements ApplicationRepository {
         replaceCategories(a);
     }
 
+    /**
+     * Makes the stored principals equal to the application's. A principal whose legal name is unchanged (ignoring case
+     * and spacing) keeps its row id, its "this is me" user and its identity check (S-22); the rest are replaced.
+     */
     private void replacePrincipals(MerchantApplication a) {
-        jdbc.sql("delete from merchants.merchant_principals where merchant_id = :id")
+        var existing = new java.util.HashMap<String, String>();
+        jdbc.sql("select id, legal_name from merchants.merchant_principals where merchant_id = :id order by id")
                 .param("id", a.getId())
-                .update();
+                .query((rs, _) -> existing.putIfAbsent(nameKey(rs.getString("legal_name")), rs.getString("id")))
+                .list();
         for (var p : a.getPrincipals()) {
+            var id = existing.remove(nameKey(p.legalName()));
+            if (id != null) {
+                jdbc.sql("""
+                                update merchants.merchant_principals set legal_name = :name, role = :role, ownership_pct = :pct
+                                 where id = :id
+                                """)
+                        .param("id", id)
+                        .param("name", p.legalName())
+                        .param("role", p.role().code())
+                        .param("pct", p.ownershipPct())
+                        .update();
+                continue;
+            }
             jdbc.sql("""
                             insert into merchants.merchant_principals (id, merchant_id, legal_name, role, ownership_pct)
                             values (:id, :m, :name, :role, :pct)
@@ -221,6 +240,16 @@ class ApplicationPersistenceAdapter implements ApplicationRepository {
                     .param("pct", p.ownershipPct())
                     .update();
         }
+        if (!existing.isEmpty()) {
+            jdbc.sql("delete from merchants.merchant_principals where merchant_id = :m and id in (:ids)")
+                    .param("m", a.getId())
+                    .param("ids", List.copyOf(existing.values()))
+                    .update();
+        }
+    }
+
+    private static String nameKey(String legalName) {
+        return legalName.strip().replaceAll("\\s+", " ").toLowerCase(java.util.Locale.ROOT);
     }
 
     private void replaceCategories(MerchantApplication a) {
