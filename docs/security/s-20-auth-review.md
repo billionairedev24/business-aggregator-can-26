@@ -139,7 +139,7 @@ concurrent requests (`SignInApiTest.totpCode_cannotBeReplayed`, `StepUpApiTest.u
 |---|---|
 | issuance | **OK** — the auth session exists only after a second factor (sign-in: passkey/TOTP/backup code; registration: phone + passkey/TOTP); federation never becomes the session; `acr=mfa` is set from the `FACTOR_*` authorities only. |
 | api, merchant endpoints | **OK** — `@RequiresMerchant` → `MerchantAccess` requires `FACTOR_MFA` (`mfa_required`), checked per handler; `MerchantScopedEndpointsTest` fails an unguarded `{merchantId}` handler. |
-| api, console (staff) endpoints | **fixed (M)** — `/api/v1/console/**` checked the staff role only, although CLAUDE.md requires `acr=mfa` for staff tokens too. Now role + MFA (`ConsoleAccessTest`). No console endpoint exists yet, so nothing was exposed. |
+| api, console (staff) endpoints | **fixed (M)** — `/api/v1/console/**` checked the staff role only, although CLAUDE.md requires `acr=mfa` for staff tokens too. Now role + MFA at path level, answered `403 mfa_required` for single-factor staff (`ConsoleAccessTest`). The only console endpoint (S-21's tax reconciliation) checks MFA in its handler, so nothing was exposed; the path rule covers every future one. |
 
 ### 11. PKCE, token lifetimes, refresh rotation
 

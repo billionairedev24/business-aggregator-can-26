@@ -146,7 +146,9 @@ class EarningsApiTest extends IntegrationTest {
         mvc.perform(get("/api/v1/merchants/{id}/reports/gst-summary.csv", shop.merchantId())
                         .with(TestJwt.member(shop.ownerId())))
                 .andExpect(status().isOk())
-                .andExpect(content().string(startsWith("Month,Taxable sales,GST/HST collected,Remitted by Northline")))
+                .andExpect(content()
+                        .string(startsWith(
+                                "Month,Taxable sales,GST/HST collected,GST/HST refunded,Remitted by Northline")))
                 .andExpect(content().string(containsString("marketplace facilitator")));
         mvc.perform(get("/api/v1/merchants/{id}/reports/annual-statement.csv", shop.merchantId())
                         .param("year", "2025")

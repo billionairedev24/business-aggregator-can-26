@@ -18,6 +18,7 @@ record RefundRow(
         String what,
         @Nullable String customerName,
         long amountCents,
+        long taxCents,
         String reason,
         String chargedTo,
         String kind,

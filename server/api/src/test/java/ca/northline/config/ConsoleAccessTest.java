@@ -39,12 +39,13 @@ class ConsoleAccessTest extends IntegrationTest {
     void staffWithoutASecondFactor_isForbidden() throws Exception {
         mvc.perform(get("/api/v1/console/merchants").with(token(List.of("staff"), null)))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("forbidden"));
+                .andExpect(jsonPath("$.code").value("mfa_required"));
     }
 
     @Test
     void aSecondFactorWithoutTheStaffRole_isForbidden() throws Exception {
         mvc.perform(get("/api/v1/console/merchants").with(token(List.of(), "mfa")))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("forbidden"));
     }
 }

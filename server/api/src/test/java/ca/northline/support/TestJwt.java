@@ -28,6 +28,28 @@ public final class TestJwt {
         return token(userId, "openid profile", null);
     }
 
+    /** Northline staff (platform console: role {@code staff}, {@code acr=mfa}). */
+    public static JwtRequestPostProcessor staff(String userId) {
+        return staffToken(userId, "mfa");
+    }
+
+    /** Staff who signed in with a single factor. */
+    public static JwtRequestPostProcessor staffWithoutMfa(String userId) {
+        return staffToken(userId, null);
+    }
+
+    private static JwtRequestPostProcessor staffToken(String userId, String acr) {
+        return jwt().jwt(j -> {
+                    j.subject(userId)
+                            .claim("scope", "openid profile console")
+                            .claim("roles", java.util.List.of("staff"));
+                    if (acr != null) {
+                        j.claim("acr", acr);
+                    }
+                })
+                .authorities(NorthlineJwtConverter::authorities);
+    }
+
     private static JwtRequestPostProcessor token(String userId, String scope, String acr) {
         return jwt().jwt(j -> {
                     j.subject(userId).claim("scope", scope);

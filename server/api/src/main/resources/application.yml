@@ -77,6 +77,14 @@ northline:
   stripe:                                                      # Stripe Connect (merchants) outside local/test
     secret-key: ${STRIPE_SECRET_KEY:}
     api-base: ${STRIPE_API_BASE:}
+  # Sales tax (S-21; docs/runbooks/stripe.md § 6): local (fixed Canadian rates, nothing reported; refused under
+  # staging/prod) | stripe (Stripe Tax on the platform account, uses STRIPE_SECRET_KEY / STRIPE_API_BASE).
+  tax:
+    provider: ${TAX_PROVIDER:local}
+    service-tax-code: ${TAX_CODE_SERVICE:txcd_20030000}          # Stripe product tax codes per kind of sale
+    goods-tax-code: ${TAX_CODE_GOODS:txcd_99999999}
+    food-tax-code: ${TAX_CODE_FOOD:txcd_40060003}
+    reconcile-cron: ${TAX_RECONCILE_CRON:0 17 3 * * *}           # nightly reconciliation, America/Edmonton
   # Provider switches (ca.northline.platform) — see docs/runbooks/README.md.
   # Object storage (S-10, ca.northline.shared.storage): local (modules' disk fakes; placeholders under dev; refused
   # under staging/prod) | s3 (AWS S3 or RustFS/MinIO: endpoint + path-style) | gcs | azure (endpoint = account URL).

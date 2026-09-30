@@ -49,6 +49,7 @@ class RefundCaseService implements RespondToCases, CustomerCases, DisputeDecisio
     private final SalesReadModel sales;
     private final MerchantTiers tiers;
     private final PaymentGateway gateway;
+    private final TaxTransactions taxes;
     private final DisputeEvidenceStorage storage;
     private final ApplicationEventPublisher events;
     private final Clock clock;
@@ -284,6 +285,9 @@ class RefundCaseService implements RespondToCases, CustomerCases, DisputeDecisio
             cases.update(refund);
             if (!paid.holdCanceled()) {
                 ledger.post(LedgerEntry.refunded(refund, fromReleased, now));
+                if (refund.getKind() == Refund.Kind.REFUND) {
+                    taxes.refunded(refund, now); // the GST/HST given back is reversed at Stripe Tax (S-21)
+                }
             }
             events.publishEvent(issued);
         }
@@ -314,7 +318,7 @@ class RefundCaseService implements RespondToCases, CustomerCases, DisputeDecisio
         var metadata = StripeMetadata.refund(refund, escrow);
         var stripeRefund = gateway.refund(
                 intent.stripePaymentIntent(),
-                refund.getAmountCents(),
+                refund.cardCents(), // the amount and the tax on it
                 metadata,
                 StripeIdempotencyKeys.of("refund", refund.getId()));
         if (!fromReleased || escrow == null || refund.getChargedTo() != ChargedTo.MERCHANT) {
@@ -455,6 +459,12 @@ class RefundCaseService implements RespondToCases, CustomerCases, DisputeDecisio
         }
         ledger.post(
                 LedgerEntry.chargedBack(escrow, dispute.getId(), merchantPart, total - merchantPart, released, now));
+        taxes.chargedBack(
+                dispute.getId(),
+                escrow.getId(),
+                merchantPart,
+                Math.min(total - merchantPart, escrow.getTaxCents()),
+                now);
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────────────────────────────────────────

@@ -14,6 +14,8 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -76,14 +78,34 @@ class SecurityConfig {
                 .build();
     }
 
-    /** Filter-level 403s (e.g. missing {@code merchant} scope) in the same ProblemDetail shape as the controller advice. */
+    /**
+     * Filter-level 403s (e.g. missing {@code merchant} scope) in the same ProblemDetail shape as the controller advice.
+     * Staff without a second factor get {@code mfa_required}, like merchant endpoints, so the client knows to step up.
+     */
     private static AccessDeniedHandler problemDenied() {
-        return (_, response, _) -> {
+        return (request, response, _) -> {
             response.setStatus(HttpStatus.FORBIDDEN.value());
             response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+            if (request.getRequestURI().startsWith("/api/v1/console/") && staffWithoutMfa()) {
+                response.getWriter().write("""
+                        {"type":"https://northline.ca/problems/mfa-required","title":"Forbidden","status":403,\
+                        "detail":"Sign in with your second factor to do this.","code":"mfa_required"}""");
+                return;
+            }
             response.getWriter().write("""
                     {"type":"https://northline.ca/problems/forbidden","title":"Forbidden","status":403,\
                     "detail":"Your sign-in doesn't allow this.","code":"forbidden"}""");
         };
+    }
+
+    private static boolean staffWithoutMfa() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) {
+            return false;
+        }
+        var authorities = auth.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList();
+        return authorities.contains(Authorities.ROLE_PREFIX + "STAFF") && !authorities.contains(Authorities.MFA);
     }
 }

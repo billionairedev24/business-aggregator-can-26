@@ -191,7 +191,8 @@ class FinanceReadModels implements EarningsReadModel, SalesReadModel {
                            where merchant_id = :m and extract(year from occurred_at at time zone 'America/Edmonton') = :y
                            group by 1),
                         refunds as (
-                          select to_char(created_at at time zone 'America/Edmonton', 'YYYY-MM') as ym, sum(amount_cents) as refunded
+                          select to_char(created_at at time zone 'America/Edmonton', 'YYYY-MM') as ym, sum(amount_cents) as refunded,
+                                 sum(tax_cents) as tax_refunded
                             from payments.refunds
                            where merchant_id = :m and state = 'paid'
                              and extract(year from created_at at time zone 'America/Edmonton') = :y
@@ -204,7 +205,8 @@ class FinanceReadModels implements EarningsReadModel, SalesReadModel {
                            group by 1),
                         keys as (select ym from months union select ym from refunds union select ym from payouts)
                         select k.ym, coalesce(m.gross, 0) as gross, coalesce(m.fee, 0) as fee, coalesce(m.tax, 0) as tax,
-                               coalesce(r.refunded, 0) as refunded, coalesce(p.paid, 0) as paid
+                               coalesce(r.refunded, 0) as refunded, coalesce(r.tax_refunded, 0) as tax_refunded,
+                               coalesce(p.paid, 0) as paid
                           from keys k left join months m using (ym) left join refunds r using (ym) left join payouts p using (ym)
                          order by k.ym""")
                 .param("m", merchantId)
@@ -215,6 +217,7 @@ class FinanceReadModels implements EarningsReadModel, SalesReadModel {
                         rs.getLong("fee"),
                         rs.getLong("tax"),
                         rs.getLong("refunded"),
+                        rs.getLong("tax_refunded"),
                         rs.getLong("paid")))
                 .list();
     }
