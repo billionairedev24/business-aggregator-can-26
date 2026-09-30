@@ -93,13 +93,21 @@ resource "aws_s3_bucket_policy" "this" {
         Resource  = [each.value.arn, "${each.value.arn}/*"]
         Condition = { Bool = { "aws:SecureTransport" = "false" } }
       }],
-      length(var.writers) == 0 ? [] : [{
-        Sid       = "Writers"
+      # Least privilege for the api (docs/runbooks/object-storage.md): object read/write/delete, plus ListBucket so a
+      # missing key answers 404 instead of 403.
+      [for statement in [{
+        Sid       = "WritersObjects"
         Effect    = "Allow"
         Principal = { AWS = values(var.writers) }
-        Action    = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket", "s3:GetBucketLocation"]
-        Resource  = [each.value.arn, "${each.value.arn}/*"]
-      }]
+        Action    = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
+        Resource  = "${each.value.arn}/*"
+        }, {
+        Sid       = "WritersList"
+        Effect    = "Allow"
+        Principal = { AWS = values(var.writers) }
+        Action    = "s3:ListBucket"
+        Resource  = each.value.arn
+      }] : statement if length(var.writers) > 0]
     )
   })
 

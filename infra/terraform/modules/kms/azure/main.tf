@@ -67,6 +67,8 @@ resource "azurerm_key_vault_key" "this" {
   depends_on = [azurerm_role_assignment.operator]
 }
 
+# "Key Vault Crypto User" on the key only (versionless scope, so every version after a rotation is covered): sign +
+# get key, what northline-auth calls (S-7).
 resource "azurerm_role_assignment" "key_user" {
   for_each             = local.grants
   scope                = azurerm_key_vault_key.this[each.value.key].resource_versionless_id

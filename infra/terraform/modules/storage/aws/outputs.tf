@@ -18,6 +18,11 @@ output "storage_endpoint" {
   value       = ""
 }
 
+output "storage_encryption_key" {
+  description = "Value for STORAGE_ENCRYPTION_KEY: the customer-managed key the api names on every write (AWS: KMS key ARN, SSE-KMS; Google Cloud: Cloud KMS key name, CMEK; Azure: an encryption scope). Empty = the bucket's default encryption."
+  value       = var.kms_key == null ? "" : var.kms_key.id
+}
+
 output "cloud" {
   description = "AWS-only details."
   value       = { bucket_arns = { for k, v in aws_s3_bucket.this : k => v.arn } }

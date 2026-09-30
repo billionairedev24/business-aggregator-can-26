@@ -10,7 +10,7 @@ import { SignedOutPage, type AuthMode } from './SignedOutPage';
 type Reply = { status: number; body?: unknown };
 type Handler = (body: Record<string, unknown>) => Reply;
 let routes: Record<string, Handler>;
-let calls: { path: string; body: Record<string, unknown> }[];
+let calls: { path: string; body: Record<string, unknown>; headers: Record<string, string> }[];
 
 const user = { id: '01J9ZD3V00000000000000RAV1', firstName: 'Ravi', lastName: 'Sandhu', email: 'ravi@prairiewrench.ca', phone: '+14035550148', initials: 'RS', locale: 'en-CA', memberSince: '2026-01-05' };
 const ok = (body: unknown): Reply => ({ status: 200, body });
@@ -30,7 +30,7 @@ beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
     const path = new URL(url, 'http://localhost').pathname;
     const body = init?.body ? JSON.parse(String(init.body)) as Record<string, unknown> : {};
-    calls.push({ path, body });
+    calls.push({ path, body, headers: (init?.headers ?? {}) as Record<string, string> });
     const handler = routes[path];
     const reply = handler ? handler(body) : { status: 404 };
     return new Response(reply.body === undefined ? '' : JSON.stringify(reply.body), { status: reply.status, headers: { 'content-type': 'application/json' } });
@@ -38,12 +38,12 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllGlobals());
 
-function renderPage(props: { mode?: AuthMode; next?: string } = {}) {
+function renderPage(props: { mode?: AuthMode; next?: string; locale?: 'en' | 'fr' } = {}) {
   const navigate = vi.fn();
   const onModeChange = vi.fn();
   const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
   render(
-    <I18nProvider initial="en">
+    <I18nProvider initial={props.locale ?? 'en'}>
       <QueryClientProvider client={qc}>
         <SignedOutPage mode={props.mode ?? 'register'} next={props.next} onModeChange={onModeChange} navigate={navigate} />
       </QueryClientProvider>
@@ -178,6 +178,34 @@ describe('Create account — steps', () => {
 
 // ── Sign in ───────────────────────────────────────────────────────────────────────────────────────────────────────
 
+describe('Create account — code delivery (S-8)', () => {
+  it('sends the UI language, so the code is worded in it', async () => {
+    const { ui } = renderPage();
+    await fillRegistration(ui);
+    await ui.click(screen.getByRole('button', { name: 'Send verification code' }));
+    await screen.findByLabelText(/code/i);
+    expect(calls.find(c => c.path === '/api/auth/register')?.headers['accept-language']).toBe('en-CA');
+  });
+
+  it('the provider could not send the first code: says so, the form stays', async () => {
+    routes['/api/auth/register'] = () => ({ status: 503, body: { code: 'code_not_sent', detail: 'x' } });
+    const { ui } = renderPage();
+    await fillRegistration(ui);
+    await ui.click(screen.getByRole('button', { name: 'Send verification code' }));
+    expect(await screen.findByText("We couldn't send a code to this number right now. Try again in a moment.")).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Send verification code' })).toBeTruthy();
+  });
+
+  it('a call that could not be placed offers the text message instead', async () => {
+    routes['/api/auth/register/resend'] = () => ({ status: 503, body: { code: 'code_not_sent', detail: 'x' } });
+    const { ui } = renderPage();
+    await fillRegistration(ui);
+    await ui.click(screen.getByRole('button', { name: 'Send verification code' }));
+    await ui.click(await screen.findByRole('button', { name: 'Call me instead' }));
+    expect(await screen.findByText("We couldn't call this number. Try again in a moment, or resend the code by text.")).toBeTruthy();
+  });
+});
+
 describe('Sign in', () => {
   it('email → authenticator code → signed in → hand-off to next', async () => {
     const { ui, navigate } = renderPage({ mode: 'signin', next: '/b/01J9ZD3V00000000000000PWM1/orders' });
@@ -247,5 +275,78 @@ describe('Sign in', () => {
     renderPage({ mode: 'signin' });
     expect(screen.getByText('Signed out')).toBeTruthy();
     expect((screen.getByRole('link', { name: /Google/ })).getAttribute('href')).toBe('http://localhost:9000/oauth2/authorization/google');
+  });
+});
+
+// ── S-9 rate limits: 429 rate_limited + Retry-After ─────────────────────────────────────────────────────────────────
+
+const limited = (seconds: number): Reply => ({ status: 429, body: { code: 'rate_limited', retryAfterSeconds: seconds, detail: 'Too many attempts. Wait a moment and try again.' } });
+
+describe('Rate limits (429 rate_limited)', () => {
+  it('sign-in: the identifier step shows the wait and blocks Continue until it is over', async () => {
+    routes['/api/auth/sign-in'] = () => limited(90);
+    const { ui } = renderPage({ mode: 'signin' });
+    await ui.type(screen.getByLabelText('Email or mobile'), 'ravi@prairiewrench.ca');
+    await ui.click(screen.getByRole('button', { name: 'Continue' }));
+    const alert = await screen.findByText(/^Too many attempts\. Try again in 1:(30|29)\.$/);
+    expect(alert.closest('[role="alert"]')).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Continue' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByText('Second factor required for ravi@prairiewrench.ca.')).toBeNull();
+  });
+
+  it('sign-in: a locked factor counts down, then lets the person try again', async () => {
+    routes['/api/auth/sign-in/totp'] = () => limited(1);
+    const { ui } = renderPage({ mode: 'signin' });
+    await ui.type(screen.getByLabelText('Email or mobile'), 'ravi@prairiewrench.ca');
+    await ui.click(screen.getByRole('button', { name: 'Continue' }));
+    await ui.click(await screen.findByRole('radio', { name: /Authenticator app/ }));
+    await ui.type(screen.getByLabelText('6-digit code'), '654321');
+    await ui.click(screen.getByRole('button', { name: 'Verify code' }));
+    expect(await screen.findByText('Too many attempts. Try again in 0:01.')).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Verify code' }) as HTMLButtonElement).disabled).toBe(true);
+    await waitFor(() => expect(screen.queryByText(/Too many attempts/)).toBeNull(), { timeout: 3000 });
+    expect((screen.getByRole('button', { name: 'Verify code' }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('sign-in in French', async () => {
+    routes['/api/auth/sign-in'] = () => limited(300);
+    const { ui } = renderPage({ mode: 'signin', locale: 'fr' });
+    await ui.type(screen.getByLabelText('Courriel ou mobile'), 'ravi@prairiewrench.ca');
+    await ui.click(screen.getByRole('button', { name: 'Continuer' }));
+    expect(await screen.findByText(/^Trop de tentatives\. Réessayez dans (5:00|4:59)\.$/)).toBeTruthy();
+  });
+
+  it('register: sending the code is refused with the wait', async () => {
+    routes['/api/auth/register'] = () => limited(3600);
+    const { ui } = renderPage();
+    await fillRegistration(ui);
+    await ui.click(screen.getByRole('button', { name: 'Send verification code' }));
+    expect(await screen.findByText(/^Too many attempts\. Try again in (60:00|59:5\d)\.$/)).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Send verification code' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('register: wrong phone codes and resends that hit the limit show the wait', async () => {
+    routes['/api/auth/register/verify'] = () => limited(900);
+    routes['/api/auth/register/resend'] = () => limited(900);
+    const { ui } = renderPage({ locale: 'fr' });
+    await ui.type(screen.getByLabelText('Prénom'), 'Amara');
+    await ui.type(screen.getByLabelText('Nom'), 'Osei');
+    await ui.type(screen.getByLabelText('Numéro de mobile'), '+1 403 555 0148');
+    await ui.type(screen.getByLabelText('Courriel'), 'amara@example.ca');
+    await ui.click(screen.getByRole('checkbox'));
+    await ui.click(screen.getByRole('button', { name: 'Envoyer le code de vérification' }));
+    await ui.click(await screen.findByRole('button', { name: 'M’appeler plutôt' }));
+    expect(await screen.findByText(/^Trop de tentatives\. Réessayez dans 1[45]:\d\d\.$/)).toBeTruthy();
+  });
+
+  it('a federated sign-in refused by the limits explains it', () => {
+    render(
+      <I18nProvider initial="en">
+        <QueryClientProvider client={new QueryClient()}>
+          <SignedOutPage mode="signin" error="rate_limited" onModeChange={vi.fn()} navigate={vi.fn()} />
+        </QueryClientProvider>
+      </I18nProvider>,
+    );
+    expect(screen.getByText('Too many attempts. Wait a moment and try again.')).toBeTruthy();
   });
 });

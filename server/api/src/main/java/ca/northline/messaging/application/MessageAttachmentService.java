@@ -10,6 +10,7 @@ import ca.northline.messaging.application.AttachmentStore.StoredAttachment;
 import ca.northline.messaging.application.BrowseInbox.Attachment;
 import ca.northline.shared.Ids;
 import ca.northline.shared.RuleViolation;
+import ca.northline.shared.storage.ObjectKeys;
 import java.time.Clock;
 import java.util.Locale;
 import java.util.Optional;
@@ -45,7 +46,7 @@ class MessageAttachmentService implements ManageMessageAttachments {
         var attachment = new StoredAttachment(
                 id,
                 upload.merchantId(),
-                "messages/%s/%s".formatted(upload.merchantId(), id),
+                ObjectKeys.merchantObject(upload.merchantId(), id, type),
                 name.length() > 200 ? name.substring(name.length() - 200) : name,
                 type,
                 upload.bytes().length,

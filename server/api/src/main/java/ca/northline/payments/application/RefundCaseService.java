@@ -14,6 +14,7 @@ import ca.northline.shared.Conflict;
 import ca.northline.shared.Ids;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
+import ca.northline.shared.storage.ObjectKeys;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Optional;
@@ -86,7 +87,7 @@ class RefundCaseService implements RespondToCases, CustomerCases, DisputeDecisio
             throw RuleViolation.of("file", "size", CaseMessages.EVIDENCE_SIZE);
         }
         var id = Ids.next();
-        var key = "disputes/%s/%s".formatted(dispute.getId(), id);
+        var key = ObjectKeys.merchantObject(merchantId, id, upload.contentType());
         var item = new Evidence(
                 id, kind, upload.name(), upload.contentType(), upload.bytes().length, "merchant", clock.instant(), key);
         dispute.addEvidence(item);

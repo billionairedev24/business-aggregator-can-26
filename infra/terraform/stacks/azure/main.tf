@@ -68,8 +68,8 @@ module "kms" {
     signing = { usage = "sign" }
   }
   key_users = {
+    # Only northline-auth signs tokens (S-7); the api and bff verify through the JWK set, not the KMS.
     signing = {
-      api  = module.kubernetes.workload_identities["api"].principal
       auth = module.kubernetes.workload_identities["auth"].principal
     }
   }

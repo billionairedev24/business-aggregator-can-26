@@ -9,7 +9,7 @@ output "key_ids" {
 }
 
 output "key_refs" {
-  description = "Key name => value for KMS_KEY_ID (the key ARN)."
+  description = "Key name => value for KMS_KEY_ID: the key ARN (AWS rotates signing keys by creating a new key, not a version)."
   value       = { for k, v in aws_kms_key.this : k => v.arn }
 }
 

@@ -64,8 +64,9 @@ resource "aws_iam_role_policy" "key_user" {
     Version = "2012-10-17"
     Statement = [{
       Effect = "Allow"
+      # sign: what northline-auth calls (S-7, docs/runbooks/key-rotation.md) — GetPublicKey at start-up, Sign per token.
       Action = var.keys[each.value.key].usage == "sign" ? [
-        "kms:Sign", "kms:Verify", "kms:GetPublicKey", "kms:DescribeKey"
+        "kms:Sign", "kms:GetPublicKey"
         ] : [
         "kms:Encrypt", "kms:Decrypt", "kms:ReEncrypt*", "kms:GenerateDataKey*", "kms:DescribeKey"
       ]

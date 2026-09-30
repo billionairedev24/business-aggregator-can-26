@@ -52,7 +52,8 @@ spring:
           user-name-attribute: sub
 server:
   port: ${SERVER_PORT:9000}
-  forward-headers-strategy: native
+  # X-Forwarded-* are applied by TrustedProxyFilter, only from northline.auth.trusted-proxies (S-9), not by Tomcat.
+  forward-headers-strategy: none
   servlet.session:
     timeout: 12h                       # "sessions expire after 12 h idle"
     cookie: { name: NL_AUTH, http-only: true, secure: true, same-site: lax, domain: "${COOKIE_DOMAIN:}" }
@@ -67,30 +68,92 @@ northline:
     webauthn:
       rp-id: ${WEBAUTHN_RP_ID:localhost}
       origins: [ "${STUDIO_ORIGIN:http://localhost:3100}", "${CONSUMER_ORIGIN:http://localhost:3000}" ]
-  # BFF client secrets as stored by the auth server: {bcrypt}… in the cloud, {noop}… only for local development.
-  # The matching plain secret goes to the BFF (STUDIO_BFF_SECRET). Clients are registered at start-up except under prod.
-  clients:
-    studio:
-      secret: ${STUDIO_BFF_SECRET_HASH:{noop}dev-studio-bff}
-      redirect-uris: [ "${STUDIO_ORIGIN:http://localhost:3100}/login/oauth2/code/studio" ]
-      post-logout-redirect-uris: [ "${STUDIO_ORIGIN:http://localhost:3100}/sign-in" ]
-    consumer:
-      secret: ${CONSUMER_BFF_SECRET_HASH:{noop}dev-consumer-bff}
-      redirect-uris: [ "${CONSUMER_ORIGIN:http://localhost:3000}/login/oauth2/code/northline" ]
-      post-logout-redirect-uris: [ "${CONSUMER_ORIGIN:http://localhost:3000}/" ]
-    console:
-      secret: ${CONSOLE_BFF_SECRET_HASH:{noop}dev-console-bff}
-      redirect-uris: [ "${CONSOLE_ORIGIN:http://localhost:3200}/login/oauth2/code/console" ]
-      post-logout-redirect-uris: [ "${CONSOLE_ORIGIN:http://localhost:3200}/" ]
-  # Provider switches (ca.northline.platform). Only `local` adapters exist yet — see docs/runbooks/README.md.
+    # Load balancer / ingress CIDRs whose X-Forwarded-For/-Proto/-Host are believed (client IP for the rate limits and
+    # the sign-in log). Narrow it to the ingress subnet in the cloud; anyone else's forwarded headers are dropped.
+    trusted-proxies: ${TRUSTED_PROXIES:127.0.0.0/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7}
+    # S-9 rate limits (docs/runbooks/README.md § Rate limits). A REQUESTS action (otp-send, sign-in-lookup) allows `max`
+    # calls per sliding `window`; a FAILURES action locks at the `max`-th failure. Each lockout of the same subject
+    # doubles (lockout × 2^(n-1), up to max-lockout) while earlier ones are remembered (backoff-memory). Successes reset
+    # the account and session counters. On top of the per-flow rules (5 tries per code / per sign-in attempt).
+    rate-limits:
+      store: ${RATE_LIMIT_STORE:redis}          # redis (Valkey, shared) | memory (one instance: local/test only)
+      backoff-memory: 24h
+      limits:
+        otp-send:                               # SMS and voice codes cost money; every "Send code" counts
+          account: { max: 5, window: 1h, lockout: 1h }
+          ip: { max: 20, window: 1h, lockout: 1h }
+          session: { max: 5, window: 1h, lockout: 1h }
+        otp-verify:
+          account: { max: 10, window: 1h, lockout: 15m }
+          ip: { max: 50, window: 1h, lockout: 15m }
+          session: { max: 10, window: 1h, lockout: 15m }
+        sign-in-lookup:                         # no account scope: typing someone's email must not lock them out
+          ip: { max: 30, window: 10m, lockout: 10m }
+          session: { max: 20, window: 10m, lockout: 10m }
+        totp-verify:
+          account: { max: 10, window: 15m, lockout: 15m }
+          ip: { max: 30, window: 15m, lockout: 15m }
+          session: { max: 10, window: 15m, lockout: 15m }
+        backup-code-verify:
+          account: { max: 10, window: 15m, lockout: 15m }
+          ip: { max: 30, window: 15m, lockout: 15m }
+          session: { max: 10, window: 15m, lockout: 15m }
+        passkey-assertion:
+          account: { max: 10, window: 15m, lockout: 15m }
+          ip: { max: 30, window: 15m, lockout: 15m }
+          session: { max: 10, window: 15m, lockout: 15m }
+        step-up:
+          account: { max: 10, window: 15m, lockout: 15m }
+          ip: { max: 30, window: 15m, lockout: 15m }
+          session: { max: 10, window: 15m, lockout: 15m }
+  # OAuth clients (S-122, docs/runbooks/README.md § OAuth clients): reconciled into auth.oauth2_registered_client at every
+  # start (create/update, never delete) and by `./gradlew :auth:oauthClients --args='sync'` (Kubernetes Job). Secrets are
+  # the *encoded* values ({bcrypt}…) from the secrets manager; {noop}… only for local development. The matching plain
+  # secret goes to the BFF (STUDIO_BFF_SECRET). Unset properties take the defaults in ClientSpec (authorization_code +
+  # refresh_token, PKCE, no consent, access 10 min, rotating refresh 12 h = session idle, ES256 ID tokens).
+  oauth:
+    sync-on-startup: ${OAUTH_CLIENTS_SYNC_ON_STARTUP:true}
+    clients:
+      studio-bff:
+        type: confidential
+        secret-hash: ${STUDIO_BFF_SECRET_HASH:{noop}dev-studio-bff}
+        redirect-uris: [ "${STUDIO_ORIGIN:http://localhost:3100}/login/oauth2/code/studio" ]
+        post-logout-redirect-uris: [ "${STUDIO_ORIGIN:http://localhost:3100}/sign-in" ]
+        scopes: [ openid, profile, merchant ]
+      consumer-bff:                    # the consumer BFF isn't built yet (E-7): registered only once its hash is set
+        type: confidential
+        optional: true
+        secret-hash: ${CONSUMER_BFF_SECRET_HASH:}
+        redirect-uris: [ "${CONSUMER_ORIGIN:http://localhost:3000}/login/oauth2/code/northline" ]
+        post-logout-redirect-uris: [ "${CONSUMER_ORIGIN:http://localhost:3000}/" ]
+        scopes: [ openid, profile, orders, bookings ]
+      console-bff:                     # the console isn't built yet (E-8): registered only once its hash is set
+        type: confidential
+        optional: true
+        secret-hash: ${CONSOLE_BFF_SECRET_HASH:}
+        redirect-uris: [ "${CONSOLE_ORIGIN:http://localhost:3200}/login/oauth2/code/console" ]
+        post-logout-redirect-uris: [ "${CONSOLE_ORIGIN:http://localhost:3200}/" ]
+        scopes: [ openid, profile, console ]
+      # Mobile (S-28/S-29) and partner clients are added here, or in an environment's extra configuration file
+      # (SPRING_CONFIG_ADDITIONAL_LOCATION) — see the runbook. application-local.yml declares the mobile ones.
+  # Provider switches (ca.northline.platform) — see docs/runbooks/README.md.
   kms:
-    provider: ${KMS_PROVIDER:local}    # token signing keys (S-7)
-    key-id: ${KMS_KEY_ID:}
-  sms:
-    provider: ${SMS_PROVIDER:local}    # phone codes (S-8)
-    from: ${SMS_FROM:}
-    account-id: ${SMS_ACCOUNT_ID:}
-    auth-token: ${SMS_AUTH_TOKEN:}
+    provider: ${KMS_PROVIDER:local}    # token signing keys (S-7): local | aws | gcp | azure
+    key-id: ${KMS_KEY_ID:}             # the key that signs (cloud providers): AWS key ARN, GCP key version, Azure key URL
+  auth.signing:                        # docs/runbooks/key-rotation.md
+    local-dir: ${SIGNING_KEYS_DIR:${user.home}/.northline/auth-signing-keys}   # local provider: JWK set file
+    published-key-ids: ${KMS_PUBLISHED_KEY_IDS:}   # cloud: keys published in the JWK set but not signing (rotation)
+    rotate-every: ${SIGNING_KEYS_ROTATE_EVERY:}    # local: automatic rotation, e.g. 90d (empty = by command only)
+    region: ${KMS_REGION:}             # AWS only; empty = AWS_REGION / the SDK default chain
+    endpoint: ${KMS_ENDPOINT:}         # AWS only; e.g. LocalStack
+  sms:                                 # phone codes (S-8, docs/runbooks/README.md § SMS and voice codes)
+    provider: ${SMS_PROVIDER:local}    # local (logged) | twilio | aws; staging/prod refuse local
+    from: ${SMS_FROM:}                 # +1… sender number (twilio: or a Messaging Service MG…; aws: number id/ARN or pool)
+    voice-from: ${SMS_VOICE_FROM:}     # caller id for voice codes; empty = SMS_FROM
+    account-id: ${SMS_ACCOUNT_ID:}     # twilio: account SID AC…
+    auth-token: ${SMS_AUTH_TOKEN:}     # twilio: auth token (secrets manager)
+    region: ${SMS_REGION:}             # aws: ca-central-1 (empty = SDK default chain)
+    endpoint: ${SMS_ENDPOINT:}         # API base override (tests, LocalStack, VPC endpoint)
 ---
 # Local runs read server/.env (or .env next to the jar) — KEY=value lines, see server/.env.example. Never under `test`.
 spring.config.activate.on-profile: "!test"

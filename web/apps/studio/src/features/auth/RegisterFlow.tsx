@@ -1,10 +1,11 @@
 import { useMemo, useState, type FormEvent, type InputHTMLAttributes } from 'react';
 import { useForm, useStore } from '@tanstack/react-form';
-import { Alert, Button, Checkbox, Field, OptionCard, StepBars, TextInput } from '@northline/ui';
+import { Alert, Button, Checkbox, Field, OptionCard, StepBars, TextInput, useLocale } from '@northline/ui';
 import { visibleError } from '../../lib/forms';
 import { authApi, codeSchema, firstIssue, registerSchema, useAuthMutation, type AuthSession, type RegisterValues, type RegistrationStep, type TotpSetup } from './api';
 import { fieldErrors, flowError, isRestart, retryAfter } from './errors';
 import { useAuthT } from './messages';
+import { RateLimitNotice, useRateLimit } from './rateLimit';
 import { SocialButtons } from './SocialButtons';
 import { mmss, useCountdown } from './useCountdown';
 import { createPasskey, PasskeyError, passkeysSupported } from './webauthn';
@@ -77,7 +78,9 @@ function RegisterForm({ initial, notice, onSignIn, onSent }: { initial: Register
   const schema = useMemo(() => registerSchema(t), [t]);
   const [server, setServer] = useState<Record<string, string>>({});
   const [failure, setFailure] = useState('');
-  const send = useAuthMutation(authApi.register);
+  const limit = useRateLimit();
+  const { locale } = useLocale();
+  const send = useAuthMutation((v: RegisterValues) => authApi.register(v, locale));
   const form = useForm({
     defaultValues: initial,
     validators: { onChange: schema, onSubmit: schema },
@@ -86,6 +89,7 @@ function RegisterForm({ initial, notice, onSignIn, onSent }: { initial: Register
       try {
         onSent(value, await send.mutateAsync(value));
       } catch (e) {
+        if (limit.hold(e)) return;
         setServer(fieldErrors(e, t));
         setFailure(flowError(e, t) ?? '');
       }
@@ -136,7 +140,8 @@ function RegisterForm({ initial, notice, onSignIn, onSent }: { initial: Register
       </form.Field>
       {attention > 0 && <Alert tone="error">{t('attention', { count: attention })}</Alert>}
       {failure && <Alert tone="error">{failure}</Alert>}
-      <Button type="submit" className="nl-auth-primary" disabled={send.isPending} aria-busy={send.isPending || undefined}>{send.isPending ? t('sending') : t('sendCode')}</Button>
+      <RateLimitNotice left={limit.left} />
+      <Button type="submit" className="nl-auth-primary" disabled={send.isPending || limit.limited} aria-busy={send.isPending || undefined}>{send.isPending ? t('sending') : t('sendCode')}</Button>
       <SocialButtons />
       <div className="nl-auth-switch">{t('alreadyCustomer')}<button type="button" className="nl-auth-link" onClick={onSignIn}>{t('tabSignIn')}</button>{t('alreadyCustomerAfter')}</div>
     </form>
@@ -156,7 +161,9 @@ function PhoneCodeStep({ phone, sent, onResent, onVerified, onBack, onRestart }:
   const [notice, setNotice] = useState<{ tone: 'info' | 'error'; text: string } | null>(null);
   const [calledFor, setCalledFor] = useState<number | null>(null);
   const verify = useAuthMutation(authApi.verifyPhone);
-  const resend = useAuthMutation(authApi.resend);
+  const { locale } = useLocale();
+  const resend = useAuthMutation((channel: 'sms' | 'voice') => authApi.resend(channel, locale));
+  const limit = useRateLimit();
   const left = useCountdown(sent.at + sent.info.resendAfterSeconds * 1000);
   const clientError = (touched || tried) ? firstIssue(codeSchema(t), code) : undefined;
   const error = clientError ?? server;
@@ -166,6 +173,7 @@ function PhoneCodeStep({ phone, sent, onResent, onVerified, onBack, onRestart }:
     setTried(true);
     if (firstIssue(codeSchema(t), code)) return;
     try { await verify.mutateAsync(code); onVerified(); } catch (err) {
+      if (limit.hold(err)) { setNotice(null); return; }
       if (isRestart(err)) return onRestart();
       setServer(fieldErrors(err, t).code ?? '');
       const f = flowError(err, t);
@@ -181,9 +189,10 @@ function PhoneCodeStep({ phone, sent, onResent, onVerified, onBack, onRestart }:
       if (channel === 'voice') setCalledFor(sent.at);
       setNotice({ tone: 'info', text: t(channel === 'voice' ? 'calling' : 'resent') });
     } catch (err) {
+      if (limit.hold(err)) return;
       if (isRestart(err)) return onRestart();
       const wait = retryAfter(err);
-      setNotice({ tone: 'error', text: wait ? t('resendIn', { time: mmss(wait) }) : flowError(err, t) ?? '' });
+      setNotice({ tone: 'error', text: wait ? t('resendIn', { time: mmss(wait) }) : flowError(err, t, channel) ?? '' });
     }
   };
   return (
@@ -196,13 +205,14 @@ function PhoneCodeStep({ phone, sent, onResent, onVerified, onBack, onRestart }:
       <div className="nl-auth-hint">
         {left > 0
           ? <span aria-live="polite">{t('resendIn', { time: mmss(left) })}</span>
-          : <button type="button" className="nl-auth-link" onClick={() => void again('sms')} disabled={resend.isPending}>{t('resend')}</button>}
+          : <button type="button" className="nl-auth-link" onClick={() => void again('sms')} disabled={resend.isPending || limit.limited}>{t('resend')}</button>}
         {' · '}
-        <button type="button" className="nl-auth-link" onClick={() => void again('voice')} disabled={resend.isPending || calledFor === sent.at}>{t('callMe')}</button>
+        <button type="button" className="nl-auth-link" onClick={() => void again('voice')} disabled={resend.isPending || limit.limited || calledFor === sent.at}>{t('callMe')}</button>
       </div>
-      {notice && <Alert tone={notice.tone} role={notice.tone === 'error' ? 'alert' : 'status'}>{notice.text}</Alert>}
+      {notice && !limit.limited && <Alert tone={notice.tone} role={notice.tone === 'error' ? 'alert' : 'status'}>{notice.text}</Alert>}
+      <RateLimitNotice left={limit.left} />
       <div className="nl-auth-row">
-        <Button type="submit" disabled={verify.isPending} aria-busy={verify.isPending || undefined}>{t('verify')}</Button>
+        <Button type="submit" disabled={verify.isPending || limit.limited} aria-busy={verify.isPending || undefined}>{t('verify')}</Button>
         <Button type="button" variant="ghost" onClick={onBack}>{t('back')}</Button>
       </div>
     </form>

@@ -61,8 +61,8 @@ module "kms" {
     signing = { usage = "sign" }
   }
   key_users = {
+    # Only northline-auth signs tokens (S-7); the api and bff verify through the JWK set, not the KMS.
     signing = {
-      api  = module.kubernetes.workload_identities["api"].principal
       auth = module.kubernetes.workload_identities["auth"].principal
     }
   }
@@ -171,4 +171,23 @@ module "search" {
   kms_key             = { id = module.kms.key_ids["data"] }
   secret_store        = module.secrets.store
   deletion_protection = var.deletion_protection
+}
+
+# ---- SMS and voice codes through AWS End User Messaging (S-8, optional) -------------------------------------------
+# The origination number itself is requested by hand (Canadian long code / toll-free registration, SMS sandbox exit,
+# spend limit — docs/runbooks/README.md § SMS and voice codes); Terraform only grants northline-auth the two send
+# actions on it and fills SMS_PROVIDER / SMS_FROM / SMS_REGION. Without it the environment uses Twilio (manual inputs).
+
+resource "aws_iam_role_policy" "auth_sms" {
+  count = var.sms_origination_identity == null ? 0 : 1
+  name  = "sms-voice-${local.name}"
+  role  = element(split("/", module.kubernetes.workload_identities["auth"].principal), length(split("/", module.kubernetes.workload_identities["auth"].principal)) - 1)
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["sms-voice:SendTextMessage", "sms-voice:SendVoiceMessage"]
+      Resource = var.sms_origination_identity
+    }]
+  })
 }

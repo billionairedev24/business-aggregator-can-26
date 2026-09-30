@@ -116,8 +116,8 @@ module "kms" {
       { for s in local.cmek_service_agents : split(".", s)[0] => google_project_service_identity.cmek[s].member },
       { storage = "serviceAccount:${data.google_storage_project_service_account.this.email_address}" },
     )
+    # Only northline-auth signs tokens (S-7); the api and bff verify through the JWK set, not the KMS.
     signing = {
-      api  = module.kubernetes.workload_identities["api"].principal
       auth = module.kubernetes.workload_identities["auth"].principal
     }
   }

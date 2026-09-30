@@ -98,3 +98,23 @@ variable "data_stores" {
     })
   })
 }
+
+variable "signing_key_ids" {
+  description = "Token signing key rotation (docs/runbooks/key-rotation.md § Rotating — cloud providers). active = KMS_KEY_ID (null = the signing key Terraform created: AWS key ARN, Google Cloud key version name, Azure versioned key URL); published = KMS_PUBLISHED_KEY_IDS (keys published without signing: the next key before a switch, the previous one after it)."
+  type = object({
+    active    = optional(string)
+    published = optional(list(string), [])
+  })
+  default = {}
+}
+
+variable "sms_origination_identity" {
+  description = "ARN of the AWS End User Messaging phone number or pool that sends phone codes (S-8, SMS_PROVIDER=aws), requested by hand; null = Twilio, configured by the operator."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.sms_origination_identity == null || can(regex("^arn:aws[a-z-]*:sms-voice:ca-(central|west)-1:[0-9]{12}:(phone-number|pool)/.+$", var.sms_origination_identity))
+    error_message = "sms_origination_identity must be the ARN of an End User Messaging phone number or pool in a Canadian region."
+  }
+}

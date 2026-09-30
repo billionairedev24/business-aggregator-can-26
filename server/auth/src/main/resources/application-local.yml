@@ -13,6 +13,8 @@ logging.level:
   ca.northline: debug
 northline:
   auth:
+    # S-9: without Valkey the limits live in memory (logged at start-up); `local,valkey` keeps them in your Valkey.
+    rate-limits.store: ${RATE_LIMIT_STORE:memory}
     # Dev-only key: the TOTP secret seeded for the personas in db/seed-dev/V101__auth.sql is encrypted with it.
     totp-key: bm9ydGhsaW5lLWxvY2FsLWRldi10b3RwLWtleS0zMmI=
     login-page: http://localhost:3100/sign-in
@@ -20,19 +22,30 @@ northline:
     webauthn:
       rp-id: localhost
       origins: [ "http://localhost:3100", "http://localhost:8082" ]
-  clients:
-    studio:
-      secret: "{noop}dev-studio-bff"
-      redirect-uris:
-        - http://localhost:3100/login/oauth2/code/studio
-        - http://127.0.0.1:3100/login/oauth2/code/studio
-        - http://localhost:8082/login/oauth2/code/studio
-      post-logout-redirect-uris: [ "http://localhost:3100/sign-in" ]
-    consumer:
-      secret: "{noop}dev-consumer-bff"
-      redirect-uris: [ "http://localhost:8081/login/oauth2/code/northline" ]
-      post-logout-redirect-uris: [ "http://localhost:8081/" ]
-    console:
-      secret: "{noop}dev-console-bff"
-      redirect-uris: [ "http://localhost:8083/login/oauth2/code/console" ]
-      post-logout-redirect-uris: [ "http://localhost:8083/" ]
+  oauth:
+    clients:
+      studio-bff:
+        redirect-uris:
+          - http://localhost:3100/login/oauth2/code/studio
+          - http://127.0.0.1:3100/login/oauth2/code/studio
+          - http://localhost:8082/login/oauth2/code/studio
+        post-logout-redirect-uris: [ "http://localhost:3100/sign-in" ]
+      consumer-bff:
+        secret-hash: ${CONSUMER_BFF_SECRET_HASH:{noop}dev-consumer-bff}
+        redirect-uris: [ "http://localhost:8081/login/oauth2/code/northline" ]
+        post-logout-redirect-uris: [ "http://localhost:8081/" ]
+      console-bff:
+        secret-hash: ${CONSOLE_BFF_SECRET_HASH:{noop}dev-console-bff}
+        redirect-uris: [ "http://localhost:8083/login/oauth2/code/console" ]
+        post-logout-redirect-uris: [ "http://localhost:8083/" ]
+      mobile-consumer:                 # public, PKCE, rotating refresh 30 days (S-28 ships the app)
+        type: public
+        redirect-uris: [ "ca.northline.app:/oauth2redirect" ]
+        scopes: [ openid, profile, orders, offline_access ]
+        refresh-token-ttl: 30d
+        dpop-required: false           # ARCHITECTURE.md wants DPoP; not enforced yet
+      courier-app:                     # public, PKCE, rotating refresh 30 days (S-87)
+        type: public
+        redirect-uris: [ "ca.northline.courier:/oauth2redirect" ]
+        scopes: [ openid, profile, deliveries, offline_access ]
+        refresh-token-ttl: 30d

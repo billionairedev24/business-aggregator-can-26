@@ -35,6 +35,7 @@ module "northline" {
   dns_zone_name       = "staging.northline.ca"
   bucket_name_suffix  = var.bucket_name_suffix
   deletion_protection = false
+  signing_key_ids     = var.signing_key_ids
 
   data_stores = {
     postgres = { instance_size = "GP_Standard_D2ds_v5", storage_gb = 64, high_availability = true, backup_retention_days = 7 }

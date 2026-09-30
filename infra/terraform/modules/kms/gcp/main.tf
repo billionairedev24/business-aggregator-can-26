@@ -25,6 +25,9 @@ resource "google_kms_crypto_key" "this" {
   destroy_scheduled_duration = var.deletion_protection ? "2592000s" : "86400s"
   labels                     = var.context.tags
 
+  # Version 1 is created with the key; key_refs points KMS_KEY_ID at it (asymmetric keys have no primary version).
+  skip_initial_version_creation = false
+
   version_template {
     algorithm        = each.value.usage == "sign" ? "EC_SIGN_P256_SHA256" : "GOOGLE_SYMMETRIC_ENCRYPTION"
     protection_level = var.context.environment == "prod" ? "HSM" : "SOFTWARE"
@@ -38,10 +41,12 @@ resource "google_kms_crypto_key_iam_member" "encrypt" {
   member        = each.value.principal
 }
 
+# sign: what northline-auth calls (S-7) — asymmetricSign per token (roles/cloudkms.signer) and getPublicKey at start-up
+# (roles/cloudkms.publicKeyViewer). Granted on the key, so every version of it (rotation) is covered.
 resource "google_kms_crypto_key_iam_member" "sign" {
   for_each      = { for k, v in local.grants : k => v if var.keys[v.key].usage == "sign" }
   crypto_key_id = google_kms_crypto_key.this[each.value.key].id
-  role          = "roles/cloudkms.signerVerifier"
+  role          = "roles/cloudkms.signer"
   member        = each.value.principal
 }
 

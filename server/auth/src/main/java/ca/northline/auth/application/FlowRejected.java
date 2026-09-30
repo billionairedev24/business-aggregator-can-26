@@ -15,6 +15,10 @@ public final class FlowRejected extends RuntimeException {
         THROTTLED("otp_throttled"),
         /** Too many wrong codes → 429. */
         LOCKED("too_many_attempts"),
+        /** Over a rate limit per account, IP or session (S-9) → 429 with retryAfterSeconds and Retry-After. */
+        RATE_LIMITED("rate_limited"),
+        /** The SMS/voice provider didn't take the code (S-8) → 503 (detail says which channel failed). */
+        CODE_NOT_SENT("code_not_sent"),
         /** Needs a signed-in session with a second factor → 401. */
         UNAUTHENTICATED("unauthenticated");
 

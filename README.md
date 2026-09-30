@@ -70,7 +70,7 @@ by the `events` profile. See `docs/runbooks/local.md` § 6.
 cd ../web && NL_DEV_USER=01J9ZD3V00000000000000RAV1 VITE_NL_DEV_STEP_UP=1 pnpm dev   # studio :3100 as Ravi Sandhu
 ```
 Ravi owns the three seeded businesses (Switch business in the account menu): **Prairie Wrench** (provider), **Prairie Wrench Parts** (seller) and **Pho Dau Bo** (kitchen). Settings › Security needs the auth server (see Local sign-in below).
-Smoke sweep of every screen: `npx -y -p playwright-core@1.56 node scripts/studio-smoke.mjs` (api on :8090 or set the proxy target with `NL_API`).
+Smoke sweep of every screen (migrates + seeds a disposable database, starts api, auth and the studio, then checks 135 screens): `ci/studio-smoke.sh` — ports, database and Chromium are set by environment variables, see `docs/runbooks/ci.md`.
 
 ## Local sign-in (Studio → auth → BFF → api, Postgres only)
 ```

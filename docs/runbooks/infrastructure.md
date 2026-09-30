@@ -148,12 +148,15 @@ terraform output -json secret_env | jq '[to_entries[] | {secretKey: .key, remote
 | variable | output | module output | AWS | Google Cloud | Azure |
 |---|---|---|---|---|---|
 | `STORAGE_PROVIDER` | `config_env` | `storage.storage_provider` | `s3` | `gcs` | `azure` |
-| `STORAGE_BUCKET` | `config_env` | `storage.bucket_names["uploads"]` | `northline-<env>-uploads` | `northline-<env>-uploads` | container `uploads` |
-| `STORAGE_REGION` | `config_env` | `storage.storage_region` | region | region | region |
-| `STORAGE_ENDPOINT` | `config_env` | `storage.storage_endpoint` | empty (SDK default) | empty | `https://<account>.blob.core.windows.net/` |
-| `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY` | — | — | empty: workload identity | empty | empty |
+| `STORAGE_BUCKET` | `config_env` | `storage.bucket_names["uploads"]` | `northline-<env>-uploads` | `northline-<env>-uploads` | the **container** name `uploads` |
+| `STORAGE_REGION` | `config_env` | `storage.storage_region` | region (S3 signing region) | empty (not read) | empty (not read) |
+| `STORAGE_ENDPOINT` | `config_env` | `storage.storage_endpoint` | empty (SDK default) | empty (an endpoint means an emulator) | `https://nl<env>st<suffix>.blob.core.windows.net` (**required** by the api on Azure) |
+| `STORAGE_ENCRYPTION_KEY` | `config_env` | `storage.storage_encryption_key` | the `data` key ARN (SSE-KMS on every write) | the `data` key name `projects/…/cryptoKeys/data` (CMEK per object) | empty: the storage account is encrypted with the Key Vault `data` key, so no encryption scope is needed |
+| `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`, `STORAGE_PATH_STYLE` | — | — | unset: workload identity (`northline-api`) | unset | unset |
 | `KMS_PROVIDER` | `config_env` | `kms.kms_provider` | `aws` | `gcp` | `azure` |
-| `KMS_KEY_ID` | `config_env` | `kms.key_refs["signing"]` | key ARN | `projects/…/cryptoKeys/signing` | `https://<vault>.vault.azure.net/keys/signing` |
+| `KMS_KEY_ID` | `config_env` | `kms.key_refs["signing"]`, or `signing_key_ids.active` | key ARN | key **version** `projects/…/cryptoKeys/signing/cryptoKeyVersions/1` | **versioned** key URL `https://<vault>.vault.azure.net/keys/signing/<version>` |
+| `KMS_PUBLISHED_KEY_IDS` | `config_env` | `signing_key_ids.published` (comma-joined) | empty outside a rotation | same | same |
+| `SMS_PROVIDER`, `SMS_FROM`, `SMS_REGION` | `config_env` (AWS, only with `sms_origination_identity`) | env root variable | `aws`, the number/pool ARN, region | — (Twilio: set by the operator) | — (Twilio: set by the operator) |
 | `DB_URL` | `config_env` | `postgres.db_url` | `jdbc:postgresql://<rds-endpoint>:5432/northline?sslmode=require` | `jdbc:postgresql://<private-ip>:5432/northline?sslmode=require` | `jdbc:postgresql://<server>.postgres.database.azure.com:5432/northline?sslmode=require` |
 | `DB_USER` | `config_env` | `postgres.db_user` | `northline_app` (role created by the bootstrap SQL, § 5.1) | same | same |
 | `DB_PASSWORD` | `secret_env` | `postgres.db_password_secret_ref` | `northline/<env>/db-app-password` | `northline-<env>-db-app-password` | `db-app-password` |
@@ -170,6 +173,41 @@ terraform output -json secret_env | jq '[to_entries[] | {secretKey: .key, remote
 | `ES_USERNAME` | `config_env` | `search.es_username` | `elastic` (deployment superuser until a least-privilege user exists, § 5.4) | same | same |
 | `ES_PASSWORD` | `secret_env` | `search.es_password_secret_ref` | `northline/<env>/es-password` | `northline-<env>-es-password` | `es-password` |
 | `TOTP_KEY`, `WEBHOOK_SECRET_KEY`, `STUDIO_BFF_SECRET`, `STUDIO_BFF_SECRET_HASH`, `CONSUMER_BFF_SECRET_HASH`, `CONSOLE_BFF_SECRET_HASH`, `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `GOOGLE_CLIENT_SECRET`, `APPLE_CLIENT_SECRET`, `SMS_AUTH_TOKEN` | `secret_env` | `secrets.secret_refs` | `northline/<env>/<name>` | `northline-<env>-<name>` | `<name>` in vault `nl-<env>-sec-…` |
+
+What Terraform grants for these (least privilege, [object-storage.md](object-storage.md), [key-rotation.md](key-rotation.md)):
+`northline-api` gets object read/write/delete on the uploads bucket (AWS: `s3:GetObject/PutObject/DeleteObject` on
+`bucket/*` + `s3:ListBucket` on the bucket, and `kms:GenerateDataKey`/`kms:Decrypt` on the `data` key; Google Cloud:
+`roles/storage.objectUser` on the bucket; Azure: "Storage Blob Data Contributor" on the container). No presigned-URL
+permissions (`signBlob`, "Storage Blob Delegator") until something uses them. `northline-auth` gets sign + read the
+public key on the `signing` key only (AWS `kms:Sign`, `kms:GetPublicKey`; Google Cloud `roles/cloudkms.signer` +
+`roles/cloudkms.publicKeyViewer`; Azure "Key Vault Crypto User" on the key). The api has no KMS access: it verifies
+tokens through the JWK set.
+
+Variables the apps need that Terraform does **not** set — add them to the ConfigMap / secrets yourself (values in
+the environment runbooks): `SPRING_PROFILES_ACTIVE`, `AUTH_ISSUER`, `AUTH_INTERNAL_URL`, `API_URL`, the `*_ORIGIN`s,
+`WEBAUTHN_RP_ID`, `TRUSTED_PROXIES`, the SMS provider (S-8: `SMS_PROVIDER=twilio`, `SMS_FROM`, `SMS_ACCOUNT_ID`,
+`SMS_VOICE_FROM` — only `SMS_AUTH_TOKEN` has a secret in `secret_env`; on AWS, End User Messaging can be wired instead
+with `sms_origination_identity`), `OAUTH_CLIENTS_SYNC_ON_STARTUP` (S-122; default `true`), and the Google/Apple client
+ids (S-18). `CONSUMER_BFF_SECRET_HASH` / `CONSOLE_BFF_SECRET_HASH` are optional since S-122: leave their secrets
+without a value until those BFFs exist (map them in the ExternalSecret only once set).
+
+### Signing key rotation with Terraform (S-7)
+
+The procedure is [key-rotation.md § Rotating — cloud providers](key-rotation.md#rotating--cloud-providers); Terraform
+only carries the two variables, through `signing_key_ids` in the env root's `terraform.tfvars`:
+
+```hcl
+signing_key_ids = { active = "<old id>", published = ["<new id>"] }   # step 2: publish
+signing_key_ids = { active = "<new id>", published = ["<old id>"] }   # step 3: switch
+signing_key_ids = { active = "<new id>" }                              # step 4: retire
+```
+
+each followed by `terraform apply`, the ConfigMap refresh above and a rolling restart of northline-auth.
+Google Cloud and Azure rotate by adding a **version** of the same key (`gcloud kms keys versions create`,
+`az keyvault key rotate`): the key-level grants cover it. On Azure, pin `active` to the current versioned URL
+**before** creating the new version — the key's Terraform `id` follows the newest version, so an unpinned apply would
+switch `KMS_KEY_ID` without the publish step. AWS rotates by creating a new **key**: until the stack manages several
+signing keys, create it by hand and give the auth role `kms:Sign` + `kms:GetPublicKey` on its ARN (key-rotation.md).
 
 The data-store secrets (`DB_PASSWORD`, `REDIS_PASSWORD`, `KAFKA_SASL_JAAS_CONFIG`, `ES_PASSWORD`, plus the admin
 ones in § 5) are **generated by Terraform** and written with their values, so they pass through the state: keep
@@ -193,6 +231,7 @@ Other outputs, for the stories that consume them:
 | `dns.name_servers` | delegation (S-17): NS records for `dev.northline.ca` / `staging.northline.ca` in the `northline.ca` zone; the prod zone's servers at the registrar |
 | `network.cloud.nat_public_ips` | allow-lists that need the cluster's egress IPs (Elastic Cloud traffic filters, partners) |
 | `kms.key_ids["data"]` | encryption at rest of Kubernetes Secrets, buckets, registry, secrets |
+| `kms.key_refs["signing"]` | the signing key id Terraform created (`KMS_KEY_ID` unless `signing_key_ids.active` overrides it) |
 | `data_stores.postgres.admin_secret_ref`, `.cloud.admin_username` | the bootstrap SQL (§ 5.1), S-16 migration job, S-114 backups |
 | `data_stores.cache.cloud` | Google Cloud: `server_ca_certs` to trust (§ 5.2); AWS: reader endpoint |
 | `data_stores.kafka.replication_factor`, `.topic_policy`, `.cloud` | topic creation (§ 5.3, S-25); Azure: `admin_jaas_secret_name` |

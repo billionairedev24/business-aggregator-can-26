@@ -9,8 +9,8 @@ output "key_ids" {
 }
 
 output "key_refs" {
-  description = "Key name => value for KMS_KEY_ID (versionless key URL)."
-  value       = { for k, v in azurerm_key_vault_key.this : k => v.versionless_id }
+  description = "Key name => value for KMS_KEY_ID: the versioned key URL https://<vault>.vault.azure.net/keys/<name>/<version> (S-7 signs with an explicit version)."
+  value       = { for k, v in azurerm_key_vault_key.this : k => v.id }
 }
 
 output "cloud" {

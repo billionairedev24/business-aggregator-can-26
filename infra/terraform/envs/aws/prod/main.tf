@@ -34,6 +34,9 @@ module "northline" {
   dns_zone_name       = "northline.ca"
   bucket_name_suffix  = var.bucket_name_suffix
   deletion_protection = true
+  signing_key_ids     = var.signing_key_ids
+
+  sms_origination_identity = var.sms_origination_identity
 
   data_stores = {
     postgres = { instance_size = "db.m7g.large", storage_gb = 100, high_availability = true, backup_retention_days = 35 }

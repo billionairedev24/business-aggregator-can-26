@@ -5,12 +5,19 @@
 output "config_env" {
   description = "Non-secret environment variables for the ConfigMap."
   value = {
-    STORAGE_PROVIDER = module.storage.storage_provider
-    STORAGE_BUCKET   = module.storage.bucket_names["uploads"]
-    STORAGE_REGION   = module.storage.storage_region
-    STORAGE_ENDPOINT = module.storage.storage_endpoint
-    KMS_PROVIDER     = module.kms.kms_provider
-    KMS_KEY_ID       = module.kms.key_refs["signing"]
+    # api, object storage (S-10, docs/runbooks/object-storage.md). Workload identity: STORAGE_ACCESS_KEY/SECRET_KEY
+    # stay unset, STORAGE_PATH_STYLE false.
+    STORAGE_PROVIDER       = module.storage.storage_provider
+    STORAGE_BUCKET         = module.storage.bucket_names["uploads"]
+    STORAGE_REGION         = module.storage.storage_region
+    STORAGE_ENDPOINT       = module.storage.storage_endpoint
+    STORAGE_ENCRYPTION_KEY = module.storage.storage_encryption_key
+
+    # northline-auth, token signing (S-7, docs/runbooks/key-rotation.md). var.signing_key_ids overrides the key
+    # Terraform created during a rotation.
+    KMS_PROVIDER          = module.kms.kms_provider
+    KMS_KEY_ID            = coalesce(var.signing_key_ids.active, module.kms.key_refs["signing"])
+    KMS_PUBLISHED_KEY_IDS = join(",", var.signing_key_ids.published)
 
     DB_URL                  = module.postgres.db_url
     DB_USER                 = module.postgres.db_user

@@ -43,13 +43,15 @@ export type TotpSetup = z.infer<typeof TotpSetup>;
 /** WebAuthn options exactly as Spring Security serialises them (base64url bytes). */
 export const PasskeyOptions = z.record(z.string(), z.unknown());
 
-const post = <T>(path: string, schema: z.ZodType<T>, body: unknown = {}) => http(authUrl(path), { method: 'POST', body }, schema);
+const post = <T>(path: string, schema: z.ZodType<T>, body: unknown = {}, headers?: Record<string, string>) => http(authUrl(path), { method: 'POST', body, headers }, schema);
+/** The UI language, so the SMS / voice code is worded in it (S-8). */
+const language = (locale: string) => ({ 'accept-language': locale === 'fr' ? 'fr-CA' : 'en-CA' });
 
 // ── northline-auth JSON API ───────────────────────────────────────────────────────────────────────────────────────
 
 export const authApi = {
-  register: (v: RegisterValues) => post('/api/auth/register', RegistrationStep, { ...v, firstName: v.firstName.trim(), lastName: v.lastName.trim(), phone: v.phone.trim(), email: v.email.trim() }),
-  resend: (channel: 'sms' | 'voice') => post('/api/auth/register/resend', RegistrationStep, { channel }),
+  register: (v: RegisterValues, locale = 'en') => post('/api/auth/register', RegistrationStep, { ...v, firstName: v.firstName.trim(), lastName: v.lastName.trim(), phone: v.phone.trim(), email: v.email.trim() }, language(locale)),
+  resend: (channel: 'sms' | 'voice', locale = 'en') => post('/api/auth/register/resend', RegistrationStep, { channel }, language(locale)),
   verifyPhone: (code: string) => post('/api/auth/register/verify', RegistrationStep, { code: code.trim() }),
   passkeyRegistrationOptions: () => post('/api/auth/register/passkey/options', PasskeyOptions),
   registerPasskey: (credential: unknown) => post('/api/auth/register/passkey', AuthSession, { credential, label: 'Passkey' }),

@@ -121,8 +121,14 @@ export const useAuthT = defineMessages({
     passkeyCancelled: 'The passkey prompt was closed. Try again or choose another method.',
     passkeyFailed: "That passkey couldn't be verified. Try again or use another method.",
     tooMany: 'Too many attempts. Start again in a few minutes.',
+    rateLimited: 'Too many attempts. Try again in {time}.',
+    rateLimitedLater: 'Too many attempts. Wait a moment and try again.',
     restart: 'That took too long. Start again.',
     network: "We couldn't reach Northline. Check your connection and try again.",
+    // S-8: the SMS / voice provider didn't take the code (503 code_not_sent)
+    codeNotSentForm: "We couldn't send a code to this number right now. Try again in a moment.",
+    codeNotSentSms: "We couldn't send the text message. Try again in a moment, or choose Call me instead.",
+    codeNotSentVoice: "We couldn't call this number. Try again in a moment, or resend the code by text.",
     federationFailed: "Signing in with Google or Apple didn't work. Try again or use your email.",
   },
   fr: {
@@ -237,8 +243,13 @@ export const useAuthT = defineMessages({
     passkeyCancelled: 'La fenêtre de la clé d’accès a été fermée. Réessayez ou choisissez une autre méthode.',
     passkeyFailed: 'Cette clé d’accès n’a pas pu être vérifiée. Réessayez ou utilisez une autre méthode.',
     tooMany: 'Trop de tentatives. Recommencez dans quelques minutes.',
+    rateLimited: 'Trop de tentatives. Réessayez dans {time}.',
+    rateLimitedLater: 'Trop de tentatives. Patientez un moment, puis réessayez.',
     restart: 'Le délai est dépassé. Recommencez.',
     network: 'Impossible de joindre Northline. Vérifiez votre connexion et réessayez.',
+    codeNotSentForm: 'Impossible d’envoyer un code à ce numéro pour le moment. Réessayez dans un instant.',
+    codeNotSentSms: 'Impossible d’envoyer le texto. Réessayez dans un instant ou choisissez « M’appeler plutôt ».',
+    codeNotSentVoice: 'Impossible d’appeler ce numéro. Réessayez dans un instant ou renvoyez le code par texto.',
     federationFailed: 'La connexion avec Google ou Apple n’a pas fonctionné. Réessayez ou utilisez votre courriel.',
   },
 });

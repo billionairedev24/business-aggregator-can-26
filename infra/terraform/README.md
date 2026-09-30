@@ -70,7 +70,7 @@ time before the key exists).
 | kms | `keys`, `key_users`, `deletion_protection` | `kms_provider`, `key_ids`, `key_refs` |
 | registry | `repositories`, `kms_key`, `readers`, `keep_images` | `registry_url`, `repository_urls` |
 | dns | `zone_name` | `zone_id`, `zone_name`, `name_servers` |
-| storage | `buckets`, `name_suffix`, `kms_key`, `writers`, `force_destroy` | `storage_provider`, `bucket_names`, `storage_region`, `storage_endpoint` |
+| storage | `buckets`, `name_suffix`, `kms_key`, `writers`, `force_destroy` | `storage_provider`, `bucket_names`, `storage_region`, `storage_endpoint`, `storage_encryption_key` |
 | secrets | `secret_names`, `readers`, `kms_key`, `deletion_protection` | `secrets_provider`, `store`, `secret_refs` |
 | postgres | `network_id`, `subnet_ids`, `allowed_cidrs`, `kms_key`, `secret_store`, `deletion_protection`, `instance_size`, `storage_gb`, `high_availability`, `backup_retention_days`, `database_name`, `app_user`, `postgres_version` | `db_host`, `db_port`, `db_name`, `db_user`, `db_url`, `db_password_secret_ref`, `admin_secret_ref` |
 | cache | `network_id`, `subnet_ids`, `allowed_cidrs`, `kms_key`, `secret_store`, `deletion_protection`, `node_size`, `replicas` | `redis_host`, `redis_port`, `redis_ssl`, `redis_username`, `redis_password_secret_ref` |
@@ -92,7 +92,8 @@ on Google Cloud and Azure (regional subnets) or `kms_key` on ACR (customer-manag
 | network | VPC; public, private (nodes) and isolated data subnets per zone; NAT per zone or shared; S3 gateway endpoint; flow logs outside dev | custom VPC; regional node subnet with `pods`/`services` ranges; data subnet; Cloud NAT with static IPs; Private Service Access (Cloud SQL) and a PSC policy (Memorystore) | VNet; `aks`, `endpoints` and a `postgres` subnet delegated to Flexible Server; NAT gateway with static IP |
 | Kubernetes | EKS, API auth mode, secrets encrypted with KMS, managed node groups (AL2023), IRSA, core add-ons incl. EBS CSI | GKE Standard, zonal in dev / regional otherwise, private nodes, Dataplane V2, Workload Identity, secrets encrypted with Cloud KMS | AKS, CNI overlay + Cilium, Entra RBAC (local accounts off), Workload Identity, KMS etcd encryption, user-assigned kubelet identity |
 | workload identity → ServiceAccount | `eks.amazonaws.com/role-arn` | `iam.gke.io/gcp-service-account` | `azure.workload.identity/client-id` + pod label `azure.workload.identity/use: "true"` |
-| signing key (`KMS_KEY_ID`) | key ARN, `ECC_NIST_P256` | crypto key name, `EC_SIGN_P256_SHA256` (HSM in prod) | versionless key URL, EC P-256 (HSM in prod) |
+| signing key (`KMS_KEY_ID`, S-7) | key ARN, `ECC_NIST_P256` | key **version** name `…/cryptoKeys/signing/cryptoKeyVersions/1`, `EC_SIGN_P256_SHA256` (HSM in prod) | **versioned** key URL, EC P-256 (HSM in prod) |
+| uploads (`STORAGE_*`, S-10) | bucket `northline-<env>-uploads`, SSE-KMS with the `data` key (`STORAGE_ENCRYPTION_KEY` = its ARN) | bucket `northline-<env>-uploads`, CMEK `data` (`STORAGE_ENCRYPTION_KEY` = its name) | container `uploads` (`STORAGE_BUCKET`) in account `nl<env>st<suffix>`, `STORAGE_ENDPOINT` = its blob endpoint; account-level CMK, so `STORAGE_ENCRYPTION_KEY` stays empty |
 | secrets | `northline/<env>/<name>`, created empty | `northline-<env>-<name>`, user-managed replication in the region only, created empty | one vault per environment; Key Vault has no empty secrets, so the operator creates them |
 | PostgreSQL 17 | RDS in the isolated data subnets, SG limited to the VPC, `rds.force_ssl`, gp3 + KMS, PITR, Multi-AZ when HA, master password managed by RDS | Cloud SQL Enterprise, private IP only (Private Service Access), `ENCRYPTED_ONLY`, CMEK, backups pinned to the region, PITR, REGIONAL when HA | Flexible Server in the delegated subnet + private DNS zone, `azure.extensions=POSTGIS,CITEXT,PGCRYPTO,PG_STAT_STATEMENTS`, zone-redundant HA, geo-redundant backup in prod (paired region is Canadian) |
 | Valkey / Redis | ElastiCache for Valkey 8, cluster mode off, TLS + AUTH token, Multi-AZ failover with replicas | Memorystore for Valkey 8, cluster mode off, PSC endpoint, TLS (server CA to trust), **no password** (IAM auth only; the apps have no IAM client yet) | Azure Managed Redis, `EnterpriseCluster` single endpoint, TLS on port 10000, access key, private endpoint |
@@ -129,11 +130,15 @@ The stacks create one cloud identity per Kubernetes service account below (names
 
 | name | service account | grants |
 |---|---|---|
-| `api` | `northline-api` | signing key (sign/verify), uploads bucket (read/write) |
-| `auth` | `northline-auth` | signing key (sign/verify) |
+| `api` | `northline-api` | uploads bucket: object read/write/delete + list (AWS; plus the `data` key for SSE-KMS), `roles/storage.objectUser` (Google Cloud), "Storage Blob Data Contributor" on the container (Azure) — docs/runbooks/object-storage.md |
+| `auth` | `northline-auth` | signing key: sign + get public key only (AWS `kms:Sign`/`kms:GetPublicKey`, Google Cloud `roles/cloudkms.signer` + `publicKeyViewer`, Azure "Key Vault Crypto User" on the key); AWS with `sms_origination_identity`: `sms-voice:SendTextMessage`/`SendVoiceMessage` on that number (S-8) |
 | `bff` | `northline-bff` | — |
 | `worker` | `northline-worker` | — |
 | `external-secrets` | `external-secrets/external-secrets` | read every secret of the environment |
+
+The api needs no KMS access (it verifies tokens through the JWK set), so only `auth` is a user of the signing key.
+Rotation of the signing key goes through the env root variable `signing_key_ids` (`active` → `KMS_KEY_ID`,
+`published` → `KMS_PUBLISHED_KEY_IDS`; docs/runbooks/infrastructure.md § 4).
 
 The Helm charts (S-14) put `kubernetes.workload_identities[<name>].service_account_annotations` on the
 ServiceAccounts and `pod_labels` on the pods; the apps then need no static cloud credentials

@@ -39,13 +39,54 @@ run "config_env_keys" {
   command = plan
 
   assert {
-    condition     = alltrue([for k in ["STORAGE_PROVIDER", "STORAGE_BUCKET", "STORAGE_REGION", "KMS_PROVIDER", "DB_URL", "DB_USER", "REDIS_HOST", "REDIS_PORT", "REDIS_SSL", "KAFKA_BOOTSTRAP", "KAFKA_SECURITY_PROTOCOL", "KAFKA_SASL_MECHANISM", "ES_URIS", "ES_USERNAME"] : contains(keys(output.config_env), k)])
+    condition     = alltrue([for k in ["STORAGE_PROVIDER", "STORAGE_BUCKET", "STORAGE_REGION", "STORAGE_ENDPOINT", "STORAGE_ENCRYPTION_KEY", "KMS_PROVIDER", "KMS_KEY_ID", "KMS_PUBLISHED_KEY_IDS", "DB_URL", "DB_USER", "REDIS_HOST", "REDIS_PORT", "REDIS_SSL", "KAFKA_BOOTSTRAP", "KAFKA_SECURITY_PROTOCOL", "KAFKA_SASL_MECHANISM", "ES_URIS", "ES_USERNAME"] : contains(keys(output.config_env), k)])
     error_message = "config_env must carry the variable names the apps read (docs/runbooks/README.md)."
   }
 
   assert {
     condition     = alltrue([for k in ["DB_PASSWORD", "KAFKA_SASL_JAAS_CONFIG", "ES_PASSWORD", "TOTP_KEY"] : contains(keys(output.secret_env), k)])
     error_message = "secret_env must name the secret behind each secret variable."
+  }
+}
+
+run "s7_s10_values" {
+  command = plan
+
+  override_resource {
+    override_during = plan
+    target          = module.northline.module.storage.azurerm_storage_account.this
+    values = {
+      id                    = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-northline/providers/Microsoft.Storage/storageAccounts/nlst000000"
+      primary_blob_endpoint = "https://nlst000000.blob.core.windows.net/"
+    }
+  }
+
+  assert {
+    condition     = output.config_env["STORAGE_BUCKET"] == "uploads" && output.config_env["STORAGE_REGION"] == ""
+    error_message = "Azure: STORAGE_BUCKET is the container name."
+  }
+
+  assert {
+    condition     = startswith(output.config_env["STORAGE_ENDPOINT"], "https://") && !endswith(output.config_env["STORAGE_ENDPOINT"], "/")
+    error_message = "Azure: STORAGE_ENDPOINT must be the account's blob endpoint URL (required by the api)."
+  }
+
+  assert {
+    condition     = output.config_env["KMS_PUBLISHED_KEY_IDS"] == ""
+    error_message = "KMS_PUBLISHED_KEY_IDS is empty outside a rotation."
+  }
+}
+
+run "signing_key_rotation" {
+  command = plan
+
+  variables {
+    signing_key_ids = { active = "old-key", published = ["new-key", "older-key"] }
+  }
+
+  assert {
+    condition     = output.config_env["KMS_KEY_ID"] == "old-key" && output.config_env["KMS_PUBLISHED_KEY_IDS"] == "new-key,older-key"
+    error_message = "signing_key_ids must drive KMS_KEY_ID and KMS_PUBLISHED_KEY_IDS (docs/runbooks/key-rotation.md)."
   }
 }
 

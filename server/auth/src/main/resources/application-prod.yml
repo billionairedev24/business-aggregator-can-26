@@ -1,2 +1,6 @@
-# Production (also activates `cloud`, see application-cloud.yml). ClientSeeder is off under prod: OAuth clients must
-# already exist in auth.oauth2_registered_client (see docs/runbooks/prod.md, "Blockers").
+# Production (also activates `cloud`, see application-cloud.yml). OAuth clients are reconciled from northline.oauth.clients
+# at start-up (S-122): https redirect URIs and {bcrypt} secret hashes only.
+# Token signing keys live in the cloud KMS (S-7, docs/runbooks/key-rotation.md); KMS_PROVIDER=local is refused.
+northline.required-env:
+  signing-key: KMS_KEY_ID             # + KMS_PROVIDER (application-cloud.yml)
+  sms-provider: SMS_PROVIDER, SMS_FROM   # S-8: twilio or aws; `local` is refused here (SmsConfig)

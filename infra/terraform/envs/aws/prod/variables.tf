@@ -37,3 +37,18 @@ variable "bucket_name_suffix" {
   type        = string
   default     = ""
 }
+
+variable "signing_key_ids" {
+  description = "Token signing key rotation (docs/runbooks/key-rotation.md): active overrides KMS_KEY_ID (null = the key Terraform created), published = KMS_PUBLISHED_KEY_IDS."
+  type = object({
+    active    = optional(string)
+    published = optional(list(string), [])
+  })
+  default = {}
+}
+
+variable "sms_origination_identity" {
+  description = "ARN of the End User Messaging phone number or pool for phone codes (SMS_PROVIDER=aws, S-8); null = Twilio (manual inputs)."
+  type        = string
+  default     = null
+}

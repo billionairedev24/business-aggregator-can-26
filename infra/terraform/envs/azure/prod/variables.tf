@@ -42,3 +42,12 @@ variable "subscription_id" {
   description = "Azure subscription for this environment."
   type        = string
 }
+
+variable "signing_key_ids" {
+  description = "Token signing key rotation (docs/runbooks/key-rotation.md): active overrides KMS_KEY_ID (null = the key Terraform created), published = KMS_PUBLISHED_KEY_IDS."
+  type = object({
+    active    = optional(string)
+    published = optional(list(string), [])
+  })
+  default = {}
+}

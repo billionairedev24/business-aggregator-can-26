@@ -9,8 +9,10 @@ output "key_ids" {
 }
 
 output "key_refs" {
-  description = "Key name => value for KMS_KEY_ID (the crypto key name; the adapter picks the primary/latest version)."
-  value       = { for k, v in google_kms_crypto_key.this : k => v.id }
+  description = "Key name => value for KMS_KEY_ID. sign keys: the key version resource name (…/cryptoKeys/<key>/cryptoKeyVersions/1, the version created with the key; S-7 signs with an explicit version). encrypt keys: the crypto key name."
+  value = {
+    for k, v in google_kms_crypto_key.this : k => var.keys[k].usage == "sign" ? "${v.id}/cryptoKeyVersions/1" : v.id
+  }
 }
 
 output "cloud" {

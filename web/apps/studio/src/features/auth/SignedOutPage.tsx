@@ -21,7 +21,7 @@ export interface SignedOutPageProps {
   /** Back from Google/Apple: known email → factor step; unknown → pre-filled registration. */
   resumeIdentifier?: string;
   prefill?: Partial<Pick<RegisterValues, 'firstName' | 'lastName' | 'email'>>;
-  /** `?error=federation|signin` from the auth server / BFF. */
+  /** `?error=federation|signin|rate_limited` from the auth server / BFF. */
   error?: string;
   /** Navigates to the BFF hand-off (tests replace it). */
   navigate?: (url: string) => void;
@@ -64,7 +64,7 @@ export function SignedOutPage({ mode, onModeChange, recoverOnLoad, next, resumeI
           <UnderlineTabs aria-label={t('tabs')} value={mode} onChange={onModeChange}
             options={[{ value: 'signin', label: t('tabSignIn') }, { value: 'register', label: t('tabRegister') }]} />
           <h2 className="nl-auth-title" id="nl-auth-title">{title}</h2>
-          {error && <Alert tone="error">{t('federationFailed')}</Alert>}
+          {error && <Alert tone="error">{t(error === 'rate_limited' ? 'rateLimitedLater' : 'federationFailed')}</Alert>}
           {mode === 'register'
             ? <RegisterFlow prefill={prefill} onSignIn={() => onModeChange('signin')} onFinished={() => navigate(bffLoginUrl(onboarding && next ? next : '/onboarding'))} />
             : <SignInFlow onboarding={onboarding} resumeIdentifier={resumeIdentifier} recover={recover}

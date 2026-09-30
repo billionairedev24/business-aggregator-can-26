@@ -3,6 +3,7 @@ package ca.northline.auth.support;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ca.northline.auth.application.SmsDeliveryFailed;
 import ca.northline.auth.application.SmsSender;
 import ca.northline.auth.domain.OtpChallenge.Channel;
 import ca.northline.auth.domain.PhoneNumber;
@@ -13,10 +14,12 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -31,6 +34,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /**
@@ -107,26 +111,31 @@ public abstract class AuthIntegrationTest {
         return Totp.codeAt(secret, Totp.step(clock.instant()));
     }
 
+    /** Hook for every request {@link #register} sends (the rate-limit tests give each registration its own IP). */
+    protected MockHttpServletRequestBuilder client(MockHttpServletRequestBuilder request) {
+        return request;
+    }
+
     /** Registers through the API with an authenticator app; the returned session is signed in with acr=mfa. */
     protected Registered register(Person person) throws Exception {
         var session = new MockHttpSession();
-        mvc.perform(post("/api/auth/register")
+        mvc.perform(client(post("/api/auth/register"))
                         .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(person.json()))
                 .andExpect(status().isOk());
-        mvc.perform(post("/api/auth/register/verify")
+        mvc.perform(client(post("/api/auth/register/verify"))
                         .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(Map.of("code", sms.lastCodeTo(person.e164())))))
                 .andExpect(status().isOk());
-        var setup = mvc.perform(post("/api/auth/register/totp").session(session))
+        var setup = mvc.perform(client(post("/api/auth/register/totp")).session(session))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
         String secret = JsonPath.read(setup, "$.secret");
-        var created = mvc.perform(post("/api/auth/register/totp/verify")
+        var created = mvc.perform(client(post("/api/auth/register/totp/verify"))
                         .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(Map.of("code", totpNow(secret)))))
@@ -187,12 +196,24 @@ public abstract class AuthIntegrationTest {
         private final Map<String, List<Sent>> sent = new ConcurrentHashMap<>();
 
         /** One delivery. */
-        public record Sent(String code, Channel channel) {}
+        public record Sent(String code, Channel channel, Locale locale) {}
+
+        private volatile SmsDeliveryFailed.@Nullable Kind failNext;
+
+        /** The next send fails like a provider would (then sending works again). */
+        public void failNext(SmsDeliveryFailed.Kind kind) {
+            failNext = kind;
+        }
 
         @Override
-        public void sendCode(PhoneNumber to, String code, Channel channel) {
+        public void sendCode(PhoneNumber to, String code, Channel channel, Locale locale) {
+            var failure = failNext;
+            if (failure != null) {
+                failNext = null;
+                throw new SmsDeliveryFailed(failure, "simulated");
+            }
             sent.computeIfAbsent(to.e164(), _ -> new java.util.concurrent.CopyOnWriteArrayList<>())
-                    .add(new Sent(code, channel));
+                    .add(new Sent(code, channel, locale));
         }
 
         public String lastCodeTo(String e164) {

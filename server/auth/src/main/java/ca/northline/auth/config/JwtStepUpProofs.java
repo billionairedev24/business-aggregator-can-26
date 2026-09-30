@@ -2,8 +2,6 @@ package ca.northline.auth.config;
 
 import ca.northline.auth.application.StepUpProofs;
 import ca.northline.auth.domain.Factor;
-import com.nimbusds.jose.jwk.source.JWKSource;
-import com.nimbusds.jose.proc.SecurityContext;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -13,12 +11,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
-import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.stereotype.Component;
 
 /**
- * Step-up proofs signed with the same ES256 key as access tokens (the api already trusts the JWK set):
+ * Step-up proofs signed with the same ES256 key as access tokens through the shared {@link JwtEncoder} (so they survive
+ * restarts and rotations like access tokens, and carry the key's {@code kid}; the api already trusts the JWK set):
  * {@code iss}, {@code sub}, {@code aud=northline-api/step-up}, {@code token_use=step_up}, {@code acr=mfa},
  * {@code amr}, {@code auth_time}, {@code jti} (one use), valid 5 minutes.
  */
@@ -28,15 +27,15 @@ class JwtStepUpProofs implements StepUpProofs {
     static final String AUDIENCE = "northline-api/step-up";
     static final Duration TTL = Duration.ofMinutes(5);
 
-    private final NimbusJwtEncoder encoder;
+    private final JwtEncoder encoder;
     private final String issuer;
     private final Clock clock;
 
     JwtStepUpProofs(
-            JWKSource<SecurityContext> jwks,
+            JwtEncoder encoder,
             @Value("${spring.security.oauth2.authorizationserver.issuer}") String issuer,
             Clock clock) {
-        this.encoder = new NimbusJwtEncoder(jwks);
+        this.encoder = encoder;
         this.issuer = issuer;
         this.clock = clock;
     }

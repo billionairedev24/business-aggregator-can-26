@@ -41,7 +41,7 @@ resource "azurerm_storage_account" "this" {
     versioning_enabled = anytrue([for b in var.buckets : b.versioning])
 
     delete_retention_policy {
-      days = 7
+      days = 30 # docs/runbooks/object-storage.md: blob soft delete 30 days, container soft delete 7 days
     }
 
     container_delete_retention_policy {
@@ -104,11 +104,14 @@ resource "azurerm_storage_account_customer_managed_key" "this" {
   depends_on = [azurerm_role_assignment.cmk]
 }
 
+# Least privilege (docs/runbooks/object-storage.md): "Storage Blob Data Contributor" on each container, not the account.
 resource "azurerm_role_assignment" "writers" {
-  for_each             = var.writers
-  scope                = azurerm_storage_account.this.id
+  for_each = merge([
+    for b in keys(var.buckets) : { for label, principal in var.writers : "${b}/${label}" => { bucket = b, principal = principal } }
+  ]...)
+  scope                = azurerm_storage_container.this[each.value.bucket].id
   role_definition_name = "Storage Blob Data Contributor"
-  principal_id         = each.value
+  principal_id         = each.value.principal
 }
 
 # Contract inputs this implementation does not need (README § Module contract); referenced so the omission is explicit.

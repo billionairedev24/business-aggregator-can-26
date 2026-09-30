@@ -1,6 +1,7 @@
 package ca.northline.food.adapters;
 
 import ca.northline.food.application.KitchenPhotoStore;
+import ca.northline.shared.storage.UsesLocalStorage;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -18,7 +19,11 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @Profile({"local", "test"})
+@UsesLocalStorage
 class LocalKitchenPhotoStore implements KitchenPhotoStore {
+
+    private static final String SEED_PREFIX = "seed/";
+    private static final String SEED_MEDIA = "/seed-media/kitchen/";
 
     private final Path root;
 
@@ -43,9 +48,20 @@ class LocalKitchenPhotoStore implements KitchenPhotoStore {
     public Optional<byte[]> get(String key) {
         var file = resolve(key);
         try {
-            return Files.isRegularFile(file) ? Optional.of(Files.readAllBytes(file)) : Optional.empty();
+            return Files.isRegularFile(file) ? Optional.of(Files.readAllBytes(file)) : seedSample(key);
         } catch (IOException ex) {
             throw new UncheckedIOException(ex);
+        }
+    }
+
+    /** Dev-seed items (V108) reference {@code seed/<name>.jpg}; serve the bundled sample photo when none was uploaded. */
+    private static Optional<byte[]> seedSample(String key) throws IOException {
+        var name = key.startsWith(SEED_PREFIX) ? key.substring(SEED_PREFIX.length()) : "";
+        if (!name.matches("[a-z0-9-]+\\.jpg")) {
+            return Optional.empty();
+        }
+        try (var in = LocalKitchenPhotoStore.class.getResourceAsStream(SEED_MEDIA + name)) {
+            return in == null ? Optional.empty() : Optional.of(in.readAllBytes());
         }
     }
 

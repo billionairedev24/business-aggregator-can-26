@@ -98,3 +98,12 @@ variable "data_stores" {
     })
   })
 }
+
+variable "signing_key_ids" {
+  description = "Token signing key rotation (docs/runbooks/key-rotation.md § Rotating — cloud providers). active = KMS_KEY_ID (null = the signing key Terraform created: AWS key ARN, Google Cloud key version name, Azure versioned key URL); published = KMS_PUBLISHED_KEY_IDS (keys published without signing: the next key before a switch, the previous one after it)."
+  type = object({
+    active    = optional(string)
+    published = optional(list(string), [])
+  })
+  default = {}
+}

@@ -9,13 +9,20 @@ output "bucket_names" {
 }
 
 output "storage_region" {
-  description = "Value for STORAGE_REGION."
-  value       = var.context.region
+  description = "Value for STORAGE_REGION (S3 signing region; empty on Google Cloud and Azure, which don't read it)."
+  value       = ""
 }
 
 output "storage_endpoint" {
-  description = "Value for STORAGE_ENDPOINT (the account's blob endpoint)."
-  value       = azurerm_storage_account.this.primary_blob_endpoint
+  description = "Value for STORAGE_ENDPOINT: the account's blob endpoint https://<account>.blob.core.windows.net (required by the api on Azure)."
+  value       = trimsuffix(azurerm_storage_account.this.primary_blob_endpoint, "/")
+}
+
+output "storage_encryption_key" {
+  description = "Value for STORAGE_ENCRYPTION_KEY: the customer-managed key the api names on every write (AWS: KMS key ARN, SSE-KMS; Google Cloud: Cloud KMS key name, CMEK; Azure: an encryption scope). Empty = the bucket's default encryption."
+  # Azure: empty. With kms_key set, the account itself is encrypted with the Key Vault key (customer-managed key on the
+  # account), so every blob already uses it; an encryption scope per request would add nothing.
+  value = ""
 }
 
 output "cloud" {

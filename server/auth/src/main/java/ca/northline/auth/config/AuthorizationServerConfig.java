@@ -2,21 +2,10 @@ package ca.northline.auth.config;
 
 import ca.northline.auth.application.AuthProperties;
 import ca.northline.auth.application.UserClaimsService;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.jwk.Curve;
-import com.nimbusds.jose.jwk.ECKey;
-import com.nimbusds.jose.jwk.JWKSet;
-import com.nimbusds.jose.jwk.KeyUse;
-import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
-import java.security.GeneralSecurityException;
-import java.security.KeyPairGenerator;
-import java.security.interfaces.ECPublicKey;
-import java.security.spec.ECGenParameterSpec;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -44,8 +33,9 @@ import org.springframework.security.web.authentication.LoginUrlAuthenticationEnt
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 
 /**
- * Spring Authorization Server: endpoints, JDBC storage (V017 {@code auth.oauth2_*}), ES256 signing and the token
- * claims ({@link UserClaimsService}). An unauthenticated {@code /oauth2/authorize} goes to the Studio's own sign-in page
+ * Spring Authorization Server: endpoints, JDBC storage (V017 {@code auth.oauth2_*}) and the token claims
+ * ({@link UserClaimsService}). Tokens are signed through {@code ca.northline.auth.signing} (the {@code JwtEncoder} and
+ * {@code JWKSource} beans: persistent keys in a file or a cloud KMS, with rotation). An unauthenticated {@code /oauth2/authorize} goes to the Studio's own sign-in page
  * ({@code northline.auth.login-page}); after the Studio's JSON sign-in the session exists and the code is issued without
  * any page (clients don't require consent).
  */
@@ -82,24 +72,6 @@ class AuthorizationServerConfig {
     @Bean
     OAuth2AuthorizationConsentService consents(JdbcOperations jdbc, RegisteredClientRepository clients) {
         return new JdbcOAuth2AuthorizationConsentService(jdbc, clients);
-    }
-
-    /**
-     * ES256 signing key (ARCHITECTURE.md § Identity). Generated per start-up — fine for one local instance; production
-     * loads the key pair from the secrets manager (see DECISIONS.md).
-     */
-    @Bean
-    JWKSource<SecurityContext> jwkSource() throws GeneralSecurityException {
-        var generator = KeyPairGenerator.getInstance("EC");
-        generator.initialize(new ECGenParameterSpec("secp256r1"));
-        var pair = generator.generateKeyPair();
-        var key = new ECKey.Builder(Curve.P_256, (ECPublicKey) pair.getPublic())
-                .privateKey(pair.getPrivate())
-                .keyID(UUID.randomUUID().toString())
-                .keyUse(KeyUse.SIGNATURE)
-                .algorithm(JWSAlgorithm.ES256)
-                .build();
-        return new ImmutableJWKSet<>(new JWKSet(key));
     }
 
     /** Validates our own tokens at the OIDC userinfo endpoint. */

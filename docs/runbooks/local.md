@@ -92,8 +92,22 @@ Leave `NL_DEV_USER` empty in `web/apps/studio/.env` and run `cd web && pnpm dev`
 Other personas and factors: README § Local sign-in. "Create account" works end to end: the 6-digit phone code is
 printed in the auth log (`Verification code for …`). Passkeys work on `localhost` (not `127.0.0.1`).
 
+**OAuth clients:** auth registers `studio-bff`, `consumer-bff`, `console-bff`, `mobile-consumer` and `courier-app` in
+its database at every start (local values in `application-local.yml`); `./gradlew :auth:oauthClients --args='list'`
+compares configuration and database without starting the server ([README § OAuth clients](README.md#oauth-clients-s-122)).
+
+**Signing keys:** northline-auth keeps its ES256 key pair in `~/.northline/auth-signing-keys/signing-keys.jwks.json`
+(created on first start; `SIGNING_KEYS_DIR` moves it), so restarting auth keeps you signed in and two auth instances
+pointed at the same directory share tokens. Rotate or inspect it with `./gradlew :auth:signingKeys --args='status'`
+([key-rotation.md](key-rotation.md)). Cloud KMS providers aren't needed locally (`KMS_PROVIDER=local`, the default).
+
+**Rate limits (S-9):** under `local` they are kept in memory (the auth log says `Rate limits (S-9) are kept IN
+MEMORY`), so a restart clears a lockout; with `local,valkey` they live in your Valkey like in the cloud. Limits and
+how to clear them: [README § Rate limits](README.md#rate-limits-s-9). Every request from your browser comes from
+`127.0.0.1`: 30 sign-in lookups in 10 minutes lock the IP for 10 minutes — restart auth (memory) to clear it.
+
 **Sessions in your Valkey** (as in the cloud): start auth and bff with `--spring.profiles.active=local,valkey`.
-Sessions are stored under `nl:auth:*` and `nl:studio-bff:*` and survive restarts. Valkey from Docker:
+Sessions are stored under `nl:auth:*` and `nl:studio-bff:*` and survive restarts; auth's rate limits under `nl:auth-rl:*`. Valkey from Docker:
 `docker compose --profile cache up -d`.
 
 ## 6. Optional stand-ins
@@ -108,14 +122,16 @@ Start any of them with `docker compose --profile <name> up -d`, or list them in 
 | `events` | Kafka 4 (KRaft) + one-shot topic creation (`scripts/topics.sh`, takes ~2 min) | `KAFKA_BOOTSTRAP=localhost:9092` | worker; api without `local` |
 | `search` | Elasticsearch 9 (security off) | `ES_URIS=http://localhost:9200` | worker; api without `local` |
 | `mail` | Mailpit — inbox at http://localhost:8025 | `SMTP_HOST=localhost`, `SMTP_PORT=1025` | email adapter (S-13) |
-| `storage` | S3-compatible storage (RustFS) + bucket `northline-local`; console http://localhost:9101 | `STORAGE_ENDPOINT=http://localhost:9100`, `STORAGE_ACCESS_KEY=northline`, `STORAGE_SECRET_KEY=northline-dev-secret`, `STORAGE_PATH_STYLE=true` | storage adapter (S-10) |
+| `storage` | S3-compatible storage (RustFS) + bucket `northline-local`; console http://localhost:9101 | `STORAGE_ENDPOINT=http://localhost:9100`, `STORAGE_ACCESS_KEY=northline`, `STORAGE_SECRET_KEY=northline-dev-secret`, `STORAGE_PATH_STYLE=true` | api with `STORAGE_PROVIDER=s3` (S-10) |
 | `payments` | stripe-mock | `STRIPE_SECRET_KEY=sk_test_123`, `STRIPE_API_BASE=http://localhost:12111` | api payments + Stripe Connect instead of the fake |
 | `tools` | Kafka UI :8190, Kibana :5601 | — | you |
 
 Notes:
-- **Storage:** MinIO no longer publishes images on Docker Hub, so the `storage` profile runs RustFS (same S3 API).
-  An existing MinIO or any S3-compatible server works the same way through `STORAGE_ENDPOINT`. Nothing reads these
-  variables yet: under `local` uploads go to folders in the temp directory until S-10.
+- **Storage:** by default (`STORAGE_PROVIDER=local`) uploads go to folders in the temp directory. To use the bucket,
+  set `STORAGE_PROVIDER=s3` plus the variables above in `server/.env` and restart the api — uploads then land in
+  RustFS under `<module>/<merchantId>/…` ([object-storage.md](object-storage.md#local-rustfs)). MinIO no longer
+  publishes images on Docker Hub, so the `storage` profile runs RustFS (same S3 API); an existing MinIO or any
+  S3-compatible server works the same way through `STORAGE_ENDPOINT`.
 - **Mail:** nothing sends email yet (team invitations are logged, S-13); Mailpit is ready for it.
 - **Your own Kafka:** create the topics with
   `KAFKA_TOPICS_CMD=kafka-topics.sh KAFKA_TOPICS_BOOTSTRAP=localhost:9092 scripts/topics.sh`.
@@ -136,14 +152,15 @@ export SPRING_PROFILES_ACTIVE=dev DB_URL=jdbc:postgresql://localhost:5432/northl
   AUTH_ISSUER=http://localhost:9000 API_URL=http://localhost:8080 STUDIO_ORIGIN=http://localhost:3100 \
   CONSUMER_ORIGIN=http://localhost:3000 CONSOLE_ORIGIN=http://localhost:3200 WEBAUTHN_RP_ID=localhost \
   TOTP_KEY=$(openssl rand -base64 32) WEBHOOK_SECRET_KEY=$(openssl rand -base64 32) STUDIO_BFF_SECRET=s1 \
+  KMS_PROVIDER=local SIGNING_KEYS_DIR=/tmp/northline-dev-keys \
   STUDIO_BFF_SECRET_HASH='{noop}s1' CONSUMER_BFF_SECRET_HASH='{noop}s2' CONSOLE_BFF_SECRET_HASH='{noop}s3'
 cd server && ./gradlew :api:bootRun     # first: the api applies the migrations
 ./gradlew :auth:bootRun & ./gradlew :bff:bootRun & ./gradlew :worker:bootRun
 curl localhost:8080/actuator/health/readiness
 ```
 
-Leave a variable out and the app stops with the list of what is missing. Under `dev` nobody can sign in yet: there are
-no seeded users and registration needs an SMS provider (S-8). Move `server/.env` aside while you do this, or its
+Leave a variable out and the app stops with the list of what is missing. Under `dev` there are no seeded users: register in
+the Studio — `SMS_PROVIDER` defaults to `local`, so the phone code is in the auth log (`grep "Verification code"`). Move `server/.env` aside while you do this, or its
 values fill in what you meant to leave out.
 
 ## 8. Troubleshooting
@@ -160,6 +177,8 @@ values fill in what you meant to leave out.
 | Studio keeps returning to Sign in | the bff (8082) or auth (9000) is not running, or `NL_DEV_USER` is set while you meant real auth. Cookies are `Secure` outside `local`, so run auth and bff with `local` on http. |
 | "Settings › Security" shows an error under dev auth | expected: it needs northline-auth (step 5). |
 | Authenticator code rejected | your clock is off; sync it. Codes are 30 s, ±1 step, and a used code can't be reused. |
+| `KMS_PROVIDER=local is not allowed under staging/prod` | rehearse `staging`/`prod` with a real KMS key (`KMS_PROVIDER`, `KMS_KEY_ID`; AWS also works against LocalStack with `KMS_ENDPOINT`), or rehearse `dev` |
+| "Too many attempts. Try again in …" while developing | an S-9 rate limit: wait, or restart auth (`local` keeps limits in memory), or with `local,valkey` delete `nl:auth-rl:*` in Valkey |
 | Passkey prompt fails | use `http://localhost:3100`, not `127.0.0.1` (WebAuthn RP id is `localhost`). |
 | Worker logs `UNKNOWN_TOPIC_OR_PARTITION` | topics missing: wait for the `kafka-topics` one-shot to finish (`docker compose logs kafka-topics`) or run `scripts/topics.sh`. |
 | Elasticsearch exits with code 137 | not enough memory for Docker: lower `ES_HEAP` in `.env` (e.g. `512m`). |
