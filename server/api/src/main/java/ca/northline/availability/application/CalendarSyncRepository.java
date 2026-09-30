@@ -33,7 +33,11 @@ public interface CalendarSyncRepository {
     /** Keeps the chosen calendars' cursors, adds the new ones, drops the others (with their blocks and channels). */
     void replaceSources(String linkId, Map<String, String> calendarNames);
 
-    /** Locks the source for a sync ({@code FOR UPDATE SKIP LOCKED}); empty when another replica is syncing it. */
+    /**
+     * Locks the source for a sync ({@code FOR NO KEY UPDATE SKIP LOCKED}: it doesn't block the key-share locks of
+     * foreign keys, so a channel can be inserted in its own transaction meanwhile); empty when another replica is
+     * syncing it.
+     */
     Optional<Source> lock(String linkId, String calendarId);
 
     /** Sources of connected links not read since {@code before}, oldest first. */

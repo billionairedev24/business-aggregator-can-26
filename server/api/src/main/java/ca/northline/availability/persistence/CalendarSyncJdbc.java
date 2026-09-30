@@ -113,7 +113,7 @@ class CalendarSyncJdbc implements CalendarSyncRepository {
     public Optional<Source> lock(String linkId, String calendarId) {
         return jdbc.sql("select " + SOURCE_COLUMNS + """
                          from availability.calendar_sources where link_id = :link and calendar_id = :id
-                           for update skip locked
+                           for no key update skip locked
                         """)
                 .param("link", linkId)
                 .param("id", calendarId)

@@ -316,7 +316,7 @@ class AvailabilityJdbc implements HoursRepository, TimeOffRepository, CalendarLi
     @Override
     public Optional<Link> lock(String linkId) {
         return jdbc.sql("select " + LINK_COLUMNS
-                        + " from availability.calendar_links where id = :id for update skip locked")
+                        + " from availability.calendar_links where id = :id for no key update skip locked")
                 .param("id", linkId)
                 .query((rs, _) -> link(rs))
                 .optional();

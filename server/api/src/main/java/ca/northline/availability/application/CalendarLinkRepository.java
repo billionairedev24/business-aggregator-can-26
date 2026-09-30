@@ -19,7 +19,7 @@ public interface CalendarLinkRepository {
 
     Optional<Link> byId(String linkId);
 
-    /** Locks the link for a write-back ({@code FOR UPDATE SKIP LOCKED}); empty when another replica holds it. */
+    /** Locks the link for a write-back ({@code FOR NO KEY UPDATE SKIP LOCKED}); empty when another replica holds it. */
     Optional<Link> lock(String linkId);
 
     /** Google and Outlook links that still work (the jobs' work list). */
