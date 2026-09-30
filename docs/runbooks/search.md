@@ -1,12 +1,14 @@
 # Search (Elasticsearch read model)
 
 Elasticsearch 9 holds the **search read model** only: PostgreSQL stays the source of truth, and everything in the
-indices can be rebuilt from it. This runbook covers the indices and their synonyms (S-42) and the indexer that fills them (S-43).
+indices can be rebuilt from it. This runbook covers the indices and their synonyms (S-42), the indexer that fills them (S-43) and
+the search API that reads them (S-44).
 
 | story | what | where |
 |---|---|---|
 | S-42 | indices `listings_en` / `listings_fr`, analyzers, synonyms, the bootstrap Job | `deploy/search`, `server/search-index`, `ca.northline.worker.search` |
 | S-43 | the `search-indexer` consumer, the reconcile sweep, `merchants.locations` | `ca.northline.worker.search`, `db/migrations/V120` |
+| S-44 | the public search API `GET /api/v1/search` and `/api/v1/search/suggest` (contract § 8) | api module `ca.northline.search` |
 
 Environments: local uses the compose `search` profile (Elasticsearch 9.1, security off, [local.md](local.md)); dev,
 staging and prod use Elastic Cloud from the S-3 Terraform ([infrastructure.md § 5.4](infrastructure.md#54-elasticsearch-elastic-cloud)).
@@ -45,8 +47,8 @@ So `L'Épicerie du marché` indexes as `epic`, `march`, and `cafe` finds `café`
 `name` (+ `name.prefix`, `name.sort`), `description`, `keywords`, `categoryId`, `categoryPath` (root → leaf ids),
 `categoryRoot`, `categoryNames`, `priceCents`, `pricingMode`, `rating`, `reviewCount`, `trustTier`, `trustRank`,
 `qualityScore`, `vetting` (always `approved`), `status` (always `live`), `instantBook`, `fulfilment`,
-`deliveryCutoffMinute` (same-day pooled run cut-off, minutes after midnight in Edmonton), `inStock`, `soldOutOn`,
-`openHours` (`integer_range`s of minutes in the week, Monday 00:00 Edmonton = 0), `pausedUntil`, `prepMinutes`,
+`deliveryCutoffMinute` (same-day pooled run cut-off, minutes after midnight, local time), `inStock`, `soldOutOn`,
+`openHours` (`integer_range`s of minutes in the week, Monday 00:00 local time = 0), `pausedUntil`, `prepMinutes`,
 `allergens`, `dietary`, `location` (`geo_point`), `serviceRadiusKm`, `imageKey`, `sales30d`, `updatedAt`,
 `suggest` (completion, contexts `market` and `kind`), `suggestCategory` (completion, context `market`).
 
@@ -175,7 +177,47 @@ distance.
 group dead-lettered: `./gradlew :worker:dlqReplay --args='replay --topic=catalogue.listing.dlq --group=search-indexer'`
 ([events.md § DLQ](events.md)). **Metrics:** `northline_events_consumed_total{consumer="search-indexer"}` by outcome.
 
-## 7. Troubleshooting
+## 7. The search API (S-44)
+
+The api reads the aliases (never writes them) through the port `SearchIndex`:
+
+| `SEARCH_PROVIDER` | where | behaviour |
+|---|---|---|
+| `elasticsearch` | default; dev, staging, prod | `listings_en` / `listings_fr` on `ES_URIS` |
+| `local` | the `local` and `test` profiles' default | no index: every search is empty (the rules still apply); refused under staging and prod |
+
+To search locally: `docker compose --profile search up -d`, `./gradlew :worker:searchIndices --args='apply'`, fill the
+indices (the worker with `--profile events`, or the reindex), and run the api with `SEARCH_PROVIDER=elasticsearch`.
+
+- **Anonymous and rate limited:** `/api/v1/search/**` is open (no token needed; a token changes nothing). Each client
+  address gets `SEARCH_RATE_LIMIT` (120) requests a minute per api instance, then `429` ProblemDetail
+  `code: rate_limited` with `Retry-After: 60`. The address: when the peer is internal (loopback, RFC 1918, 100.64/10,
+  IPv6 ULA — the ingress, a BFF, the consumer SSR server), the right-most public `X-Forwarded-For` hop; otherwise the
+  peer. Entries a client writes itself sit further left and are ignored. The consumer web's SSR server should add the
+  browser's address to `X-Forwarded-For` when it searches for a page view, or every server-rendered search counts
+  against the SSR pod.
+- **Hot-query cache:** an identical request is answered for `SEARCH_CACHE_TTL` (30 s) from Redis/Valkey (`nl:search:*`,
+  shared by the replicas; memory under `local`/`test`). Best effort: when Redis is down the index answers. So an edit
+  shows in search after the indexer (seconds) + at most the TTL.
+- **Relevance:** text match (name ×4, merchant and category names ×2, keywords, description; every word must match;
+  or as a prefix of the name) × (trust tier 1.5 / 1.2 / 1.0 + rating log10(2 + stars) + nearness up to 2 within
+  1 km, half at 6 km, when `lat`/`lng` are sent). Ties: tier, then id.
+- **Only what customers may see:** the market's documents with `vetting=approved`, `status=live`,
+  `merchantStatus=active` (the indexer indexes nothing else; the filters are there too).
+- **Markets are configuration** (`SEARCH_MARKETS`, `CODE=Zone/Id,…`; region config until S-134): a province opens
+  to search by adding it there. Its time zone is the "now" for open-now, the same-day cut-off and "sold out today"
+  (the index keeps local times). A code that isn't configured gets 422 `unsupported`; `SEARCH_DEFAULT_MARKET` must be
+  one of them (blank = `market` required). The api refuses to start on a malformed entry.
+- **Latency:** the API adds the cache and one Elasticsearch request; `SearchApiTest` checks p95 < 150 ms on the
+  seeded index (Testcontainers, security off).
+
+## 8. Contract for the consumer web and app
+
+The request parameters, response shapes and how the design's filters map to them are in
+[docs/CONSUMER_WEB_PLAN.md § Contracts › Search](../CONSUMER_WEB_PLAN.md#search-s-44) — the consumer web's single list of
+contracts. OpenAPI: `/v3/api-docs` (tag *Search*).
+
+## 9. Troubleshooting
 
 | symptom | cause / fix |
 |---|---|
@@ -186,3 +228,5 @@ group dead-lettered: `./gradlew :worker:dlqReplay --args='replay --topic=catalog
 | a published listing isn't found | the merchant is not `active`, has no province, the listing isn't `approved` + `live`, or (merchant documents) the page isn't published; check `DEAD-LETTERED consumer=search-indexer` in the worker log |
 | an edit shows up only after a minute | expected: edits without an event arrive with the reconcile sweep (§ 6) |
 | no distance on a merchant's results | no row in `merchants.locations` (§ 6) |
+| every search is empty | the api runs with `SEARCH_PROVIDER=local` (the `local` profile's default), or the indices are empty (run the indexer / reindex) |
+| `429 rate_limited` from the consumer web | its requests arrive without the browser's address in `X-Forwarded-For` (the SSR server's own address counts them all): forward it, or raise `SEARCH_RATE_LIMIT` (§ 7) |
