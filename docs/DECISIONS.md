@@ -2214,3 +2214,76 @@ Built on S-45 (branch `web/s-62-consumer-auth` from `web/s-45-consumer-shell`).
 - **Not done / not verified:** no real SMS, passkey or Google/Apple round trip was exercised in a browser (unit tests
   mock the auth API; server tests use the recording SMS sender, WireMock providers); step-up for payments on
   single-factor consumer sessions is S-51's; the security addendum is in docs/security/s-20-auth-review.md.
+
+## 2026-09-30 — S-49 Shop landing, department/category pages
+
+- **Public browse endpoints** (catalogue, open under `/api/v1/public/**`, guests allowed):
+  `GET /api/v1/public/shop?market=&lang=` (landing) and `GET /api/v1/public/shop/departments/{slug}?market=&lang=`
+  (404 for an unknown slug, a group or a banned leaf). The pages are server-rendered and identical for everyone, so the
+  market and the language are **query parameters** (`lang` wins over Accept-Language), not the session;
+  `Cache-Control: public, max-age=60`. The read models (`catalogue.application.ShopViews`) are purpose-built for these
+  pages and serialized as they are (as the studio dashboard does). Bad market (blank / > 60 characters) → 422
+  "Choose a city." (our copy).
+- **What is shown:** offers with `vetting = approved` and `status = live`, of merchants that are `active` sellers
+  (`seller` | `both`) whose `city` is the market, in `shop.*` categories other than the banned leaves
+  (`northline.catalogue.banned-categories`). Merchants are read through the new **`merchants.api.ShopDirectory`**
+  (`shopsIn(market)`, `shops(ids)`); catalogue never joins the merchants schema (S-37 rule). One product card per
+  catalogue product: its cheapest offer in the market, with the number of sellers ("from $6.50", "+ 1 more shop").
+  Popular = 30-day sales of all its offers, then newest. Images: the offer's main image when it is **approved** (S-123
+  rule via `MediaRepository.approved`), served from `/api/v1/public/catalogue/media/{id}`; otherwise the design's
+  halftone placeholder.
+- **Market = city.** `region.zones` has no rows and addresses aren't geocoded to zones yet, so a market is one of
+  `northline.orders.delivery.markets` (Calgary, Edmonton, Airdrie — design 06's live markets) matched against
+  `merchants.merchants.city` ignoring case. Another city answers `served: false` with empty lists and the page says
+  "Northline Shop doesn't deliver to {city} yet." with **Change location**. The consumer app renders the market in
+  the URL (default Calgary) and follows the visitor's location after hydration (CONSUMER_WEB_PLAN.md § Market).
+- **Pooled runs** (design 06 "Tonight's pooled run leaves 6:00 pm · order by 5:19"): new **`orders.api.DeliveryRuns`**,
+  implemented by the orders module from `northline.orders.delivery` (application.yml): every market gets an evening
+  run 6–9 pm (shops pack by 5:45, $2.99) and a morning run 8–11 am (pack by 7:30, $1.99) each day, plus the direct
+  courier (45 min, $9.99) — the design's three windows and prices. A run is an `orders.delivery_windows` row created
+  the first time someone asks (today and the next two days; `insert … on conflict do nothing`, in its own
+  transaction so read-only callers can ask); windows without a market (the V103 dev seed's R-611/R-612) count as every
+  market's. **Cut-off:** `cutoff_at` stays what the Studio shows sellers (pack by); customers must order
+  `order-lead` (25 min) before it — "order by 5:20 pm" for a 5:45 pack-by (the design's 5:19 is a mock-up value).
+  "N neighbours in" = distinct customers with a non-cancelled order on the run. Plus prices don't exist yet (no
+  membership), so everyone pays the standard fee.
+- **On the run:** a shop / product is on the first run it can make — it has an in-stock offer (a variant in stock
+  when it has variants) whose fulfilment includes `pooled` (or is empty), and its handling time allows it: same day →
+  the next run, next day → a run from tomorrow, two days → from the day after. Shop tags: "Order by {time}" for the
+  next run, "Tomorrow" / a weekday for a later one, "Not on a run" otherwise (ours; the design has no such shop).
+- **Departments are the taxonomy's leaves** (`/shop/bakery`), as the design's tiles are (Groceries, Butcher, Bakery,
+  …). The design's sub-aisle chips ("All · Bread · Pastry · Cakes · Gluten-free") have no data behind them — the
+  taxonomy stops at leaves — so the chips are the **other departments of the same group** that have shops in the
+  market, the current one selected (`aria-current`), each a link. "Sorted by popular ▾" shows without the ▾: there is
+  no other order yet.
+- **Copy the design doesn't give:** run words for other days ("Today's / Tomorrow's / Tuesday's pooled run leaves …",
+  "All shops on tomorrow's run", "On today's run"), the empty and not-served states, plural forms, "from $6.50",
+  "+ N more shops", page descriptions — en + fr-CA (glossary: tournée groupée, Maître / Fiable / Inscrit, Sur la
+  tournée de ce soir, Populaire dans …). The landing's "3× points" shop tag and the product page's "points" need
+  merchant rewards (`trust.merchant_rewards`), which nothing fills: not shown. Distances ("0.8 km") need merchant
+  locations, which don't exist: not shown.
+- **Links:** department tiles and landing shop cards → `/shop/<department>`; department-page shop cards → search
+  (`/search?scope=shop&q=<shop>`, the design's `go.search`); product cards → `/products/<id>` (S-50). An explicit
+  `?market=` is kept on links between Shop pages.
+- **French category names:** `db/seed/categories.json` is English only and `seedCategories` rewrites `name_i18n` on
+  every run, so the translations live in the new `catalogue.category_labels` (V111) and the browse queries prefer
+  them. Only the shop taxonomy is translated (services and food belong to S-53 / S-57).
+- **UI kit:** `ProductTile`, `ShopTile` (department and landing looks), `DepartmentTile`, `TileGrid` (+ stories) in
+  `@northline/ui`; shops without a logo get one of six token swatches picked from their id (no hex). `messagesFor()`
+  gives a feature's catalogue outside React (route `head()`). The consumer test harness now uses the app's
+  `RouteError` / `NotFound` as the router's defaults.
+- **Schema (V111, consumer range):** `orders.delivery_windows.market`, `.slot` + unique `(market, starts_at)` where a
+  market is set; `orders.run_label_seq` (R-700…); `ix_orders_window`; partial indexes `ix_offers_live` /
+  `ix_offers_live_product`; `catalogue.category_labels` with the French shop taxonomy. **Dev seed V113**
+  (`db/seed-dev/V113__consumer_shop.sql`, local only): design 06's Calgary shops and products (Country sourdough with
+  Whole / Sliced, free-run eggs from two shops). V111–V113 sort after the dev seed's V100–V110, as S-62's V110 does.
+- **Tests:** `PublicShopApiTest` (market filter: drafts, pending, hidden, paused merchants, providers, other cities
+  and banned categories left out; cheapest offer + seller count; popularity order; handling time / stock / pickup-only
+  vs the run; households on the run; French names by `lang` and by Accept-Language; unserved city; 404s; 422 message),
+  in its own test market (application-test.yml lists `Shopville` & co.). vitest: `features/shop/shop.test.tsx` (design
+  copy en + fr-CA, market follows the location and stays on links, explicit market kept, not-served and empty
+  states, skeleton, error + Retry, department page).
+- **Not done:** SEO structured data, canonical/hreflang and the sitemap (S-63); department pages for other markets'
+  dedicated URLs (`/shop/bakery?market=Edmonton` is the URL); a shop's own page (sellers have no public storefront
+  route — S-54 builds providers'); sorting other than popular; the Storybook a11y run of the new stories (no Chromium
+  in the sandbox — `pnpm test-storybook` in CI).
