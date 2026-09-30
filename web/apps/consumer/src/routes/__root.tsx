@@ -1,32 +1,65 @@
-import { createRootRouteWithContext, HeadContent, Outlet, Scripts, useNavigate, useRouterState } from '@tanstack/react-router';
-import { QueryClientProvider, type QueryClient, useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
-import { SiteHeader, useGeolocation } from '@northline/ui';
+import type { ReactNode } from 'react';
+import { createRootRouteWithContext, HeadContent, Outlet, Scripts } from '@tanstack/react-router';
+import { I18nProvider, SiteLinkProvider } from '@northline/ui';
 import tokensCss from '@northline/tokens/tokens.css?url';
-import { meQuery } from '../api/me';
+import uiCss from '@northline/ui/styles.css?url';
+import shellCss from '../features/shell/shell.css?url';
+import { ConsumerLayout } from '../features/shell/ConsumerLayout';
+import { NotFound } from '../features/shell/NotFound';
+import { RouteError } from '../features/shell/RouteError';
+import { htmlLang, persistLocale } from '../lib/locale';
+import { publicConfig, requestLocale } from '../lib/request';
+import { RouterSiteLink } from '../lib/SiteLinkAdapter';
+import type { RouterContext } from '../router';
 
-export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({ meta: [{ charSet: 'utf-8' }, { name: 'viewport', content: 'width=device-width, initial-scale=1' }, { title: 'Northline' }], links: [{ rel: 'stylesheet', href: tokensCss }] }),
-  component: Root,
+const FONTS = 'https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Instrument+Sans:wght@400;500;600;700&display=swap';
+
+export const Route = createRootRouteWithContext<RouterContext>()({
+  beforeLoad: () => ({ locale: requestLocale(), config: publicConfig() }),
+  head: () => ({
+    meta: [{ charSet: 'utf-8' }, { name: 'viewport', content: 'width=device-width, initial-scale=1' }, { title: 'Northline' }],
+    links: [
+      { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+      { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+      { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
+      { rel: 'stylesheet', href: FONTS },
+      { rel: 'stylesheet', href: tokensCss },
+      { rel: 'stylesheet', href: uiCss },
+      { rel: 'stylesheet', href: shellCss },
+    ],
+  }),
+  shellComponent: Document,
+  component: App,
+  notFoundComponent: NotFound,
+  errorComponent: RouteError,
 });
 
-function Root() {
-  const { queryClient } = Route.useRouteContext();
-  return (<html lang="en"><head><HeadContent /></head><body><QueryClientProvider client={queryClient}><Shell /></QueryClientProvider><Scripts /></body></html>);
+/** The HTML document (server-rendered): language from the cookie / Accept-Language, public config for the browser. */
+function Document({ children }: { children: ReactNode }) {
+  const { locale, config } = Route.useRouteContext();
+  return (
+    <html lang={htmlLang(locale)}>
+      <head>
+        <HeadContent />
+        <script dangerouslySetInnerHTML={{ __html: `window.__NL_CONFIG__=${JSON.stringify(config).replace(/</g, '\\u003c')}` }} />
+      </head>
+      <body>
+        {children}
+        <Scripts />
+      </body>
+    </html>
+  );
 }
 
-function Shell() {
-  const nav = useNavigate();
-  const path = useRouterState({ select: s => s.location.pathname });
-  const { data: me } = useQuery(meQuery);
-  const geo = useGeolocation(me?.defaultAddress?.label);
-  const [q, setQ] = useState('');
-  return (<>
-    <SiteHeader geo={geo} onLocation={() => nav({ to: '/location' })} showSearch={path !== '/'} query={q} onQuery={setQ}
-      onSearch={() => nav({ to: '/search', search: { q, scope: 'all' } })} cartCount={me?.cartCount ?? 0}
-      user={me ? { name: me.name, email: me.email, initials: me.initials } : undefined} activeOrders={me?.activeOrders}
-      onNavigate={to => nav({ to })} onSignIn={() => (location.href = '/bff/login')} onCreateAccount={() => (location.href = '/bff/login?prompt=create')}
-      onNotYou={() => (location.href = '/bff/logout?reauth=1')} onSignOut={() => (location.href = '/bff/logout')} />
-    <main style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 80px' }}><Outlet /></main>
-  </>);
+function App() {
+  const { locale, config } = Route.useRouteContext();
+  return (
+    <I18nProvider initial={locale} onChange={persistLocale}>
+      <SiteLinkProvider value={RouterSiteLink}>
+        <ConsumerLayout authOrigin={config.authOrigin}>
+          <Outlet />
+        </ConsumerLayout>
+      </SiteLinkProvider>
+    </I18nProvider>
+  );
 }

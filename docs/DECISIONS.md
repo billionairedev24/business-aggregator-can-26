@@ -2061,3 +2061,73 @@ Worker: `WebhookDeliveryTest` (Kafka 4 + PostGIS + WireMock receiver: signed `bo
   - the GTIN lookup hides the first seller's unvetted photos until approval
 - **Not done:** the consumer app doesn't render listing images yet, so nothing calls the public route today. There is
   no signed or CDN URL (S-10's `presignGet` is still unused).
+
+## 2026-09-30 — S-45 Consumer shell: header, location pill, EN/FR, cart, account menu (consumer-bff, consumer app foundation)
+
+Contracts for the stories that follow: [CONSUMER_WEB_PLAN.md](CONSUMER_WEB_PLAN.md).
+
+- **consumer-bff = a profile of server/bff, not new code.** `SPRING_PROFILES_ACTIVE=<env>,consumer` (profile added
+  last; the chart's new per-app `profiles` list does it). The studio client registration and the Studio's cloud cookie /
+  required secret moved into `!consumer` documents so the two never mix; `application-consumer.yml` sets client
+  `consumer-bff` (registration id `northline`, matching the redirect URI S-122 already registered), scopes openid profile
+  orders bookings, cookie `NL_CONSUMER` / `__Host-NL_CONSUMER`, Redis namespace `nl:consumer-bff`, port 8081. Deployed as
+  `northline-consumer-bff` from the bff image (no image of its own; `promote.sh` writes the bff's digest for it).
+- **Guests** (`northline.bff.guests`): `/api/**` is permitted without a session and relayed without a token (the api
+  decides: public paths answer, the rest 401); CSRF still applies to their POSTs. `GET /bff/session` answers 200 with
+  `user: null` instead of 401 — a 401 on every page view for most visitors would be noise, and the page needs the guest id.
+- **Guest id** (the "anonymous session"): 128 random bits (`g_` + base64url) in the BFF session, created by
+  `GET /bff/session` only (an `/api` call never creates a session: bots and the SSR server stay sessionless), kept
+  through sign-in (Spring's session-id change keeps attributes), relayed as `X-Northline-Guest`. It keys the guest's
+  cart (S-51 contract); it is not authentication. The relay now drops the browser's own `Authorization`,
+  `X-Northline-Guest` and `X-Dev-User` for both BFFs (the Studio never sent them).
+- **IP city:** the consumer-bff reuses S-19's `CLIENT_CITY_HEADER`; `/bff/session` returns it (URL-decoded, control
+  characters removed, ≤ 60 chars) as `location.city`. Display-only, same accepted risk as S-19.
+- **No MFA for consumer tokens:** nothing in the BFF checks `acr`; the api already requires `acr=mfa` only on merchant
+  and console endpoints.
+- **`pages.` host:** `/api` and `/bff` go to the consumer-bff (guest browsing), `/oauth2` and `/login` don't — the
+  consumer-bff client has one redirect URI (the apex), so signing in happens on the apex. Merchants' own domains
+  (S-31 reconciler) still route only to the consumer app; they get the relay when S-54/S-63 need it.
+- **auth:** `CONSUMER_BFF_SECRET_HASH` is required in the cloud now (was optional until the BFF existed, S-122); the
+  client is no longer `optional`. Local: the consumer dev server (:3000) is a redirect URI, a CORS origin and a WebAuthn
+  origin. New secret `CONSUMER_BFF_SECRET` (`consumer-bff-secret`): Terraform `secret_env` (three clouds), chart
+  `secretNames`, `apps.consumer-bff.secretEnv`, kind values.
+- **Consumer app: TanStack Start SSR** (CLAUDE.md, SEO for S-63). Server-rendered HTML is identical for every visitor:
+  loaders fetch public data as a guest through the consumer-bff (`NL_BFF_URL`); session, cart, account values and
+  location load in the browser. `@tanstack/react-router-ssr-query` added for dehydration/hydration.
+- **Language:** cookie `nl.locale` (else Accept-Language) read on the server via `createIsomorphicFn`, so French pages
+  are rendered in French; the toggle switches in place (no reload) and writes the cookie.
+- **Location pill logic** (the design's `_locate`): saved address → browser geolocation (asked on load, 3.5 s timeout,
+  a 4 s safety fallback as in the design) → CDN IP city → **Calgary**. The design's fallback label "Beltline, Calgary"
+  is a neighbourhood nobody chose; the fallback says "Calgary" (the story says "fallback to Calgary"). There is no
+  reverse-geocoding endpoint yet: coordinates are named by `GET /api/v1/geo/reverse` when it exists (S-47), else by
+  the nearest live market within 40 km (Calgary, Edmonton, Airdrie — the Location screen's list). A fallback shows the
+  kicker "Deliver to" and the title "Delivery location" (the design reused "Detected from your device…" for its
+  fallback, which would be untrue). The detected place is remembered for the visit (sessionStorage); a chosen address
+  (S-47) in localStorage.
+- **Header details the design leaves open:** the location pill, nav links, cart and menu items are links (crawlable,
+  open in a new tab); the current section's link gets `aria-current="page"` (text colour only); the cart's accessible
+  name carries the count ("Cart, 3 items"); the language button is labelled "Switch language — Français" and shows the
+  current language (EN/FR) as the design does; on the sign-in pages the header keeps brand/location/search/nav/cart but
+  not Sign in / Create account (design: `signedOut` hides them on `auth`). While the session loads, the account slot
+  is a skeleton (no flash of "Sign in"). Phones: the search field takes its own row.
+- **Account menu:** the design's items, sections and order; values ("3 active", "Visa ··4471", …) and the points card
+  come from `GET /api/v1/me/account-summary` (a contract for S-58/S-59; missing → no values). The header line shows
+  "email · reliability 4.9" only when the summary has a reliability. "Add photo" links to Profile (S-59). "Not you?"
+  isn't in design 06's consumer menu, so it isn't there. Sign out = `POST /bff/logout` + northline-auth
+  `POST /api/auth/sign-out`, then a full reload as a guest.
+- **Footer:** design 06 has one, so a placeholder ships: company line, Privacy and Terms (the verbatim design 09/10
+  pages, now also generated into `web/apps/consumer/public/legal` by `scripts/legal-pages.mjs` until S-63), the language
+  switch, "Sell on Northline" / "Offer a service" / "Run a kitchen" → `/sell?type=…` (S-61). The prototype's
+  "← Direction" link is not part of the product.
+- **Routes** for every design-06 state (table in CONSUMER_WEB_PLAN.md), each a `ScreenPending`; home too (S-46 owns its
+  content). Orders & bookings is `/account/orders`; account tabs are `/account?tab=`.
+- **Shared code:** `@northline/client` (new package) holds the Studio's `http.ts`/`forms.ts` (+ `setHttpBase` for SSR,
+  `isNotFound`); the Studio's `lib/` files re-export it. The UI kit's prototype consumer components (SiteHeader,
+  LocationPill, AccountMenu, SearchBar) were rewritten to the design with tokens-only CSS (`styles/site.css`) and
+  en/fr copy; `SiteLink`/`SiteLinkProvider` let the app route kit links; `useGeolocation` moved into the app.
+- **Migration ranges:** V110–V119 consumer, V120–V129 search, consumer dev seed `V109`. S-45 adds no migration.
+- **Not done / not verified:** Storybook browser tests (interaction + a11y) of the new stories were not run here (no
+  Chromium in the sandbox) — `pnpm test-storybook` in CI; the consumer bundle is one ~590 kB chunk (the UI kit barrel
+  pulls DataTable/Chat in) — split when screens land; merchant custom domains get no BFF routes yet; the api has none of
+  the consumer endpoints listed in CONSUMER_WEB_PLAN.md (cart, account summary, geo reverse…), so the header shows no
+  count/values until they land.

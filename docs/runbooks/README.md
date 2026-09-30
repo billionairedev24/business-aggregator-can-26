@@ -136,7 +136,9 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `TOTP_KEY` | | ✓ | | | yes |
 | `STUDIO_BFF_SECRET` | | | ✓ | | yes |
 | `STUDIO_BFF_SECRET_HASH` | | ✓ | | | yes |
-| `CONSUMER_BFF_SECRET_HASH`, `CONSOLE_BFF_SECRET_HASH` | | ✓ | | | no — the client is registered only once its hash is set ([OAuth clients](#oauth-clients-s-122)) |
+| `CONSUMER_BFF_SECRET` | | | ✓ (`consumer` profile) | | yes, for the consumer-bff (S-45, [Consumer BFF](#consumer-bff-s-45)) |
+| `CONSUMER_BFF_SECRET_HASH` | | ✓ | | | yes (S-45: the consumer-bff exists) |
+| `CONSOLE_BFF_SECRET_HASH` | | ✓ | | | no — the client is registered only once its hash is set ([OAuth clients](#oauth-clients-s-122)) |
 | `OAUTH_CLIENTS_SYNC_ON_STARTUP` | | ✓ | | | no (`true`; `false` = register only with the Job) |
 | `GOOGLE_CLIENT_ID`/`_SECRET`, `APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` | | ✓ | | | staging, prod (S-18, [federation.md](federation.md)); empty = that provider off |
 | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` | ✓ | | | | staging and prod |
@@ -177,15 +179,47 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `RATE_LIMIT_STORE` | | ✓ | | | no (`redis`; `memory` only under `local`/`test`) |
 | `RATE_LIMIT_WHEN_UNAVAILABLE` | | ✓ | | | no (`closed` in staging/prod, `open` elsewhere — S-20, [Rate limits](#rate-limits-s-9)) |
 | `REPLAY_STORE`, `DPOP_NONCE_LIFETIME` | | ✓ | | | no (`redis` — `memory` only under `local`/`test`; `5m`) — S-29, [mobile-auth.md](mobile-auth.md) |
-| `CLIENT_CITY_HEADER` | | ✓ | | | no (empty: no city in the session list — S-19) |
+| `CLIENT_CITY_HEADER` | | ✓ | ✓ (`consumer` profile) | | no (empty: no city in the session list — S-19; no IP guess for the consumer location pill — S-45) |
 | `SESSION_STEP_UP_MAX_AGE` | | ✓ | | | no (`10m`: how recent a second factor revoking sessions / removing passkeys needs) |
 | `SESSION_CHECK_INTERVAL` | | | ✓ | | no (`60s`: how often the BFF checks its session wasn't revoked) |
 | `OTEL_EXPORT_ENABLED` | ✓ | | | | no (false until S-111) |
-| `SERVER_PORT` | ✓ | ✓ | ✓ | | no (8080 / 9000 / 8082) |
+| `SERVER_PORT` | ✓ | ✓ | ✓ | | no (8080 / 9000 / 8082; the consumer-bff 8081) |
 
 Studio (web): the container image reads `NL_AUTH_ORIGIN` (= `AUTH_ISSUER`; the chart sets it from `urls.auth`) at
 start and serves it as `/config.js`, so one Studio image serves every environment (S-14). `VITE_NL_AUTH_ORIGIN` is
 only the build-time fallback (the Vite dev server). Worker: `SERVER_PORT` 8084, health only (S-14).
+
+Consumer web (S-45, `web/apps/consumer`, TanStack Start SSR on Node): `PORT` (3000), `NL_BFF_URL` (the consumer-bff for
+server-side rendering; the chart sets `http://northline-consumer-bff:8081`), `NL_AUTH_ORIGIN` (= `urls.auth`; the
+browser signs out of northline-auth there), `TRUST_PROXY` (`true` behind the Gateway). `GET /healthz` answers `ok`.
+
+## Consumer BFF (S-45)
+
+The consumer web app has its own BFF: the **bff image with the `consumer` profile added last**
+(`SPRING_PROFILES_ACTIVE=dev,consumer`; locally `--spring.profiles.active=local,consumer`), deployed as
+`northline-consumer-bff` (chart `apps.consumer-bff`, port 8081). It serves `/api`, `/bff`, `/oauth2` and `/login` on the
+consumer host (the apex) and `/api`, `/bff` on `pages.` (signing in happens on the apex). Compared with the Studio's:
+
+| | studio-bff | consumer-bff |
+|---|---|---|
+| OAuth client | `studio-bff`, scopes openid profile merchant | `consumer-bff` (registration `northline`), scopes openid profile orders bookings |
+| client secret | `STUDIO_BFF_SECRET` | `CONSUMER_BFF_SECRET` (auth: `CONSUMER_BFF_SECRET_HASH`) |
+| session cookie | `__Host-NL_STUDIO` | `__Host-NL_CONSUMER`; sessions under `nl:consumer-bff:*` |
+| signed out | `/bff/session` 401, `/api/**` 401 | **guests**: `/bff/session` 200 `{user: null, guestId}`, `/api/**` relayed without a token (the api answers its public endpoints, 401 otherwise) |
+| second factor | the api refuses merchant endpoints without `acr=mfa` | not needed (consumer tokens carry `acr=mfa` only after a passkey / authenticator) |
+
+Same as the Studio's: CSRF double-submit (`__Host-XSRF-TOKEN`, header `X-XSRF-TOKEN` only — guests' POSTs too), the
+S-19 revocation check, sign-out revoking the refresh token, `next` limited to local paths, no framing.
+
+- **Guest id:** 128 random bits in the BFF session (created by `GET /bff/session`, kept across sign-in), relayed to the
+  api as `X-Northline-Guest` on every `/api` call of that session; the browser's own `X-Northline-Guest`,
+  `Authorization` and `X-Dev-User` headers are dropped. It keys a guest's cart; it is never authentication.
+- **IP city:** with `CLIENT_CITY_HEADER` set (e.g. `CloudFront-Viewer-City`, or a header the Gateway fills), `GET
+  /bff/session` adds `location.city` — the location pill's first guess. Only set it when the edge overwrites that
+  header on every request (Envoy alone passes the client's through); it is display-only either way.
+- **Secrets:** `consumer-bff-secret` (plain, the consumer-bff) and `consumer-bff-secret-hash` (`{bcrypt}` of the same
+  value, auth) in the secrets manager — Terraform creates both empty ([secrets.md](secrets.md)). Rotate like the
+  Studio's (below), with the `CONSUMER_` variables.
 
 ## OAuth clients (S-122)
 
@@ -214,7 +248,7 @@ the database but not in configuration is logged as `stored but not in configurat
 | client | type | registered when | redirect URI | scopes |
 |---|---|---|---|---|
 | `studio-bff` | confidential (`client_secret_basic`) | always — `STUDIO_BFF_SECRET_HASH` is required | `${STUDIO_ORIGIN}/login/oauth2/code/studio` | openid profile merchant |
-| `consumer-bff` | confidential | `CONSUMER_BFF_SECRET_HASH` set (`optional: true`) | `${CONSUMER_ORIGIN}/login/oauth2/code/northline` | openid profile orders bookings |
+| `consumer-bff` | confidential | always since S-45 — `CONSUMER_BFF_SECRET_HASH` is required | `${CONSUMER_ORIGIN}/login/oauth2/code/northline` (locally also the consumer dev server, `http://localhost:3000/…`) | openid profile orders bookings |
 | `console-bff` | confidential | `CONSOLE_BFF_SECRET_HASH` set (`optional: true`) | `${CONSOLE_ORIGIN}/login/oauth2/code/console` | openid profile console |
 | `mobile-consumer` ("Northline") | public (PKCE S256, no secret), **DPoP required** (S-29) | always | `${CONSUMER_ORIGIN}/app/oauth2redirect` (App Link / Universal Link), `ca.northline.app:/oauth2redirect` | openid profile orders bookings offline_access; refresh 30 d |
 | `partner:<name>` (S-30) | client credentials, `private_key_jwt` (no secret) | when declared under `northline.oauth.partners` (chart value `partners`) | — | `api.read` / `api.write`, bound to named businesses; 15 min tokens — [partners.md](partners.md) |
@@ -380,6 +414,8 @@ per phone code, 45 s resend cool-down, 5 failed factors per sign-in attempt or s
 |---|---|---|---|---|
 | auth server session | auth | `NL_AUTH` | `__Host-NL_AUTH` | HttpOnly, SameSite=Lax, Secure (not under `local`), host-only (`auth.<zone>`), 12 h idle |
 | BFF session | bff | `NL_STUDIO` | `__Host-NL_STUDIO` | HttpOnly, SameSite=Lax, Secure, host-only (`studio.<zone>`), 12 h idle |
+| consumer BFF session (S-45) | bff (`consumer`) | `NL_CONSUMER` | `__Host-NL_CONSUMER` | the same, host-only (the apex; `pages.` gets its own) |
+| language (S-45) | consumer web | `nl.locale` | `nl.locale` | `en`/`fr`, readable, SameSite=Lax, 1 year — no personal data |
 | CSRF token | bff | `XSRF-TOKEN` | `__Host-XSRF-TOKEN` | readable by the Studio, SameSite=Strict, Secure in the cloud, path `/` |
 
 - `__Host-` cookies are Secure, path `/` and carry no Domain, so a sibling subdomain (the consumer apex, `pages.`

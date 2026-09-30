@@ -118,6 +118,28 @@ set it to `closed` to see the staging/prod behaviour (codes and second factors a
 Sessions are stored under `nl:auth:*` and `nl:studio-bff:*` and survive restarts; auth's rate limits under `nl:auth-rl:*`. Valkey from Docker:
 `docker compose --profile cache up -d`.
 
+## 5b. Consumer web (S-45)
+
+`web/apps/consumer` is TanStack Start with server-side rendering on :3000 ([CONSUMER_WEB_PLAN.md](../CONSUMER_WEB_PLAN.md)).
+Its BFF is the same bff jar with the `consumer` profile, on :8081:
+
+```sh
+cd server
+./gradlew :auth:bootRun --args='--spring.profiles.active=local'            # :9000
+./gradlew :api:bootRun  --args='--spring.profiles.active=local'            # :8080
+./gradlew :bff:bootRun  --args='--spring.profiles.active=local,consumer'   # :8081 — consumer-bff (guests allowed)
+cd ../web && pnpm dev:consumer                                             # http://localhost:3000
+```
+
+The dev server proxies `/api`, `/bff`, `/oauth2`, `/login` to the consumer-bff (`NL_BFF` overrides the target) and
+renders pages on the server, fetching public data from `NL_BFF_URL` (default `http://localhost:8081`). Without the
+bff and auth: in `web/apps/consumer/.env` set `NL_DEV_USER=01J9ZD3V0000000000000C0001` (Amara Osei, the seeded
+customer; single-factor like a real consumer) — or `NL_DEV_GUEST=1` to browse as a guest — plus
+`NL_BFF_URL=http://localhost:8080`; `/api` then goes to the api with `X-Dev-User` and `/bff/session` is answered by
+the dev server. Location: the header asks for the browser's position once per visit (Chrome DevTools › Sensors
+overrides it); `localStorage['nl.location']` holds an address chosen on the Location screen. Language: the FR/EN
+toggle writes the `nl.locale` cookie, so the server renders the next page in French.
+
 ## 6. Optional stand-ins
 
 Start any of them with `docker compose --profile <name> up -d`, or list them in `COMPOSE_PROFILES` in `.env` and run

@@ -154,10 +154,9 @@ northline:
         redirect-uris: [ "${STUDIO_ORIGIN:http://localhost:3100}/login/oauth2/code/studio" ]
         post-logout-redirect-uris: [ "${STUDIO_ORIGIN:http://localhost:3100}/sign-in" ]
         scopes: [ openid, profile, merchant ]
-      consumer-bff:                    # the consumer BFF isn't built yet (E-7): registered only once its hash is set
+      consumer-bff:                    # S-45: the bff under its `consumer` profile (the consumer web app's BFF)
         type: confidential
-        optional: true
-        secret-hash: ${CONSUMER_BFF_SECRET_HASH:}
+        secret-hash: ${CONSUMER_BFF_SECRET_HASH:{noop}dev-consumer-bff}
         redirect-uris: [ "${CONSUMER_ORIGIN:http://localhost:3000}/login/oauth2/code/northline" ]
         post-logout-redirect-uris: [ "${CONSUMER_ORIGIN:http://localhost:3000}/" ]
         scopes: [ openid, profile, orders, bookings ]

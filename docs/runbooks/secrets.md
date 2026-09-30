@@ -57,7 +57,9 @@ Terraform (AWS, Google Cloud) or not at all (Azure: Key Vault has no empty secre
 | `WEBHOOK_SECRET_KEY` | `webhook-secret-key` | api, worker (S-33) | yes | operator: `openssl rand -base64 32` |
 | `STUDIO_BFF_SECRET` | `studio-bff-secret` | bff | yes | operator: `openssl rand -base64 32` |
 | `STUDIO_BFF_SECRET_HASH` | `studio-bff-secret-hash` | auth | yes | operator: `{bcrypt}` of `STUDIO_BFF_SECRET` ([dev.md](dev.md#environment-variables)) |
-| `CONSUMER_BFF_SECRET_HASH`, `CONSOLE_BFF_SECRET_HASH` | `consumer-bff-secret-hash`, `console-bff-secret-hash` | auth | no — add to `optionalKeys` once set | operator, when those BFFs exist |
+| `CONSUMER_BFF_SECRET` | `consumer-bff-secret` | consumer-bff (S-45) | yes | operator: `openssl rand -base64 32` |
+| `CONSUMER_BFF_SECRET_HASH` | `consumer-bff-secret-hash` | auth | yes (S-45) | operator: `{bcrypt}` of `CONSUMER_BFF_SECRET` |
+| `CONSOLE_BFF_SECRET_HASH` | `console-bff-secret-hash` | auth | no — add to `optionalKeys` once set | operator, when the console BFF exists |
 | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` | `stripe-secret-key`, `stripe-publishable-key` | api | staging, prod | Stripe dashboard ([stripe.md](stripe.md)) |
 | `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET` | `stripe-webhook-secret`, `stripe-connect-webhook-secret` | api | staging, prod | the two webhook endpoints' signing secrets ([stripe.md](stripe.md)) |
 | `EMAIL_UNSUBSCRIBE_KEY` | `email-unsubscribe-key` | api | staging, prod | operator: `openssl rand -base64 32` ([email.md](email.md)) |

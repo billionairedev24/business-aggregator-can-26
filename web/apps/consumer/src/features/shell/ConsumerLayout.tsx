@@ -1,0 +1,29 @@
+import type { ReactNode } from 'react';
+import { useRouterState } from '@tanstack/react-router';
+import { DeliveryLocationProvider } from '../location/useDeliveryLocation';
+import { useViewer } from '../session/api';
+import { Footer } from './Footer';
+import { GuestBanner } from './GuestBanner';
+import { Header } from './Header';
+import { useShellT } from './messages';
+import { SCREENS, screenFor } from './screens';
+
+/** Header, guest banner, the screen, footer. Every consumer route renders inside it (routes/__root.tsx). */
+export function ConsumerLayout({ authOrigin, children, geolocation }: { authOrigin: string; children: ReactNode; geolocation?: Geolocation | null }) {
+  const t = useShellT();
+  const { user, loading, session } = useViewer();
+  const pathname = useRouterState({ select: s => s.location.pathname });
+  const screen = screenFor(pathname);
+  const banner = !loading && !user && screen && SCREENS[screen].guestBanner;
+  return (
+    <DeliveryLocationProvider ipCity={session?.location?.city} geolocation={geolocation}>
+      <div className="nl-app">
+        <a href="#main" className="nl-skip">{t('skip')}</a>
+        <Header authOrigin={authOrigin} />
+        {banner && <GuestBanner />}
+        <main id="main" tabIndex={-1} className="nl-main">{children}</main>
+        <Footer />
+      </div>
+    </DeliveryLocationProvider>
+  );
+}
