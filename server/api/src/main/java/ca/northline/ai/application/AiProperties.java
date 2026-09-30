@@ -68,7 +68,14 @@ public record AiProperties(
             @DefaultValue("deny") String dataCollection,
             @DefaultValue("true") boolean zdr,
             @DefaultValue("5s") Duration connectTimeout,
-            @DefaultValue("60s") Duration readTimeout) {}
+            @DefaultValue("60s") Duration readTimeout) {
+
+        /** The same settings with another API key (tests, the live eval). */
+        public OpenRouter withKey(String key) {
+            return new OpenRouter(
+                    baseUrl, key, model, lightModel, referer, title, dataCollection, zdr, connectTimeout, readTimeout);
+        }
+    }
 
     /** The model a feature's requests name, or null to leave it to the adapter (the fake). */
     public @Nullable String modelFor(AiFeature feature) {

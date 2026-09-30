@@ -12,4 +12,4 @@ northline.required-env:
   commerce: COMMERCE_PROVIDER, API_PUBLIC_URL   # S-35: oauth; `local` is refused at start-up
   pos: POS_PROVIDER   # S-36: oauth; `local` is refused at start-up
   kms-envelope: KMS_PROVIDER, KMS_ENCRYPTION_KEY_ID   # S-32 refresh tokens sealed by the cloud key service; `local` refused
-  ai: AI_PROVIDER, OPENROUTER_API_KEY   # S-129: openrouter; `fake` is refused at start-up (docs/runbooks/ai.md)
+  ai: AI_PROVIDER   # S-129: openrouter (`fake` refused at start-up); no OPENROUTER_API_KEY yet = AI answers 503 (docs/runbooks/ai.md)
