@@ -1,0 +1,166 @@
+{{- /*
+S-42: the Elasticsearch listings indices as a deploy step. Before every install/upgrade (Helm pre-install/pre-upgrade
+hook; Argo CD PreSync, after the Kafka topics Job), the worker image runs SearchIndicesCommand against the
+environment's Elasticsearch: it creates or updates the synonym sets of deploy/search (reloaded by the search analyzers
+at once), creates the aliases listings_en / listings_fr with their first versioned index when missing, and adds new
+fields in place. A change that needs a reindex (analyzers, an incompatible field, a schema bump) is only reported —
+REINDEX REQUIRED in the Job's log — and done by the reindex Job (S-71, docs/runbooks/search.md). It never deletes.
+
+searchIndices.command: apply (default), plan, verify (exit 3 on anything missing or drifted — fails the release).
+
+Like the topics Job, it has its own hook-scoped ConfigMap (Terraform config_env: ES_URIS, ES_USERNAME) and Secret
+(ES_PASSWORD). No Spring profile is active: the command needs no database, Kafka or Valkey.
+*/ -}}
+{{- if and .Values.searchIndices.enabled .Values.apps.worker.enabled }}
+{{- $k := .Values.searchIndices }}
+{{- $app := .Values.apps.worker }}
+{{- $ctx := dict "root" . "name" "worker" "app" $app }}
+{{- $es := .Values.externalSecrets }}
+{{- if not (has $k.command (list "apply" "plan" "verify")) }}
+{{- fail (printf "searchIndices.command must be apply, plan or verify (got %q)" $k.command) }}
+{{- end }}
+{{- $jaasFromEso := and $es.enabled (has "ES_PASSWORD" $es.optionalKeys) }}
+{{- $jaasFromValues := and (not $es.enabled) .Values.secrets.create (hasKey (default (dict) .Values.secrets.values) "ES_PASSWORD") }}
+{{- /* Hook objects named northline-search-indices-<hash of what the Job runs>, as the migrations Job (S-15): Argo CD
+       re-applies a same-named hook onto the previous sync's object while BeforeHookCreation is still deleting it.
+       The layout (deploy/search) is inside the worker image, so the image covers its changes. */}}
+{{- $mode := ternary "external-secrets" (ternary "values" (printf "existing:%s" .Values.secrets.existingSecret) $jaasFromValues) $jaasFromEso }}
+{{- $esEnv := dict }}
+{{- range $key, $value := .Values.configEnv }}{{ if hasPrefix "ES_" $key }}{{ $_ := set $esEnv $key (toString $value) }}{{ end }}{{ end }}
+{{- $inputs := list (include "northline.image" $ctx) $k.command (toYaml $esEnv) $mode (include "northline.infraConfigMap" .) }}
+{{- $name := printf "northline-search-indices-%s" (join "\n" $inputs | sha256sum | trunc 10) }}
+{{- $secretName := .Values.secrets.existingSecret }}
+{{- if or $jaasFromEso $jaasFromValues }}{{ $secretName = $name }}{{ end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "search-indices") | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-20"
+    helm.sh/hook-delete-policy: before-hook-creation
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-20"
+data:
+  {{- range $key, $value := .Values.configEnv }}
+  {{- if hasPrefix "ES_" $key }}
+  {{ $key }}: {{ $value | toString | quote }}
+  {{- end }}
+  {{- end }}
+{{- if $jaasFromEso }}
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "search-indices") | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-20"
+    helm.sh/hook-delete-policy: before-hook-creation
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-20"
+spec:
+  refreshInterval: {{ $es.refreshInterval }}
+  secretStoreRef:
+    kind: {{ $es.store.kind }}
+    name: {{ $es.store.name }}
+  target:
+    name: {{ $name }}
+    creationPolicy: Owner
+  data:
+    - secretKey: ES_PASSWORD
+      remoteRef:
+        key: {{ include "northline.remoteKey" (dict "root" . "key" "ES_PASSWORD") | quote }}
+{{- else if $jaasFromValues }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "search-indices") | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-20"
+    helm.sh/hook-delete-policy: before-hook-creation
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-20"
+type: Opaque
+stringData:
+  ES_PASSWORD: {{ .Values.secrets.values.ES_PASSWORD | quote }}
+{{- end }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "search-indices") | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-9"
+    helm.sh/hook-delete-policy: before-hook-creation
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "-9"
+spec:
+  backoffLimit: {{ $k.backoffLimit }}
+  activeDeadlineSeconds: {{ $k.activeDeadlineSeconds }}
+  ttlSecondsAfterFinished: {{ $k.ttlSecondsAfterFinished }}
+  template:
+    metadata:
+      labels:
+        {{- include "northline.selectorLabels" (dict "root" . "app" "search-indices") | nindent 8 }}
+        app.kubernetes.io/part-of: northline
+        {{- with .Values.global.podLabels }}{{ toYaml . | nindent 8 }}{{ end }}
+    spec:
+      restartPolicy: Never
+      # The chart's ServiceAccounts don't exist yet before a first install; the Job needs no cloud identity.
+      serviceAccountName: default
+      automountServiceAccountToken: false
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+        runAsUser: {{ $app.runAsUser }}
+        runAsGroup: {{ $app.runAsUser }}
+      containers:
+        - name: search-indices
+          image: {{ include "northline.image" $ctx | quote }}
+          imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+          command: ["java", "-XX:MaxRAMPercentage=75", "-cp", "@/app/jib-classpath-file",
+                    "ca.northline.worker.search.SearchIndicesCommand", {{ $k.command | quote }}]
+          envFrom:
+            - configMapRef:
+                name: {{ include "northline.infraConfigMap" $ }}
+                optional: true
+            - configMapRef:
+                name: {{ $name }}
+          {{- if $secretName }}
+          env:
+            - name: ES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName }}
+                  key: ES_PASSWORD
+                  optional: true    # security off (kind, local) has none
+          {{- end }}
+          resources:
+            {{- toYaml $k.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml $.Values.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 64Mi }
+{{- end }}

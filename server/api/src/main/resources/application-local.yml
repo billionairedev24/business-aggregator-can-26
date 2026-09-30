@@ -4,8 +4,8 @@
 spring:
   flyway:
     locations: classpath:db/migration,classpath:db/seed-dev
-    # S-62: migrations above the seed range (V110+ consumer, V120+ search) may already be applied when the dev seed
-    # (V100–V109) comes along — a database migrated without `local` first, or a seed file added later.
+    # The dev seed (V100–V109, V121) interleaves with migrations of later ranges (V110+): a database migrated without
+    # the seed first (./gradlew :api:flywayMigrate, the test profile) takes the seed files afterwards.
     out-of-order: true
   modulith:
     events:
