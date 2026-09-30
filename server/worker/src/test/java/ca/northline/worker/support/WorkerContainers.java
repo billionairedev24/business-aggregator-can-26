@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 import org.apache.kafka.clients.admin.Admin;
 import org.flywaydb.core.Flyway;
+import org.testcontainers.elasticsearch.ElasticsearchContainer;
 import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
@@ -30,7 +31,11 @@ public final class WorkerContainers {
             .withUsername("northline")
             .withPassword("northline");
 
+    /** Elasticsearch 9 (the compose image, security off), started only by the tests that need it ({@link #elastic}). */
+    public static final ElasticsearchContainer ELASTIC = newElastic();
+
     private static boolean started;
+    private static boolean indicesCreated;
 
     private WorkerContainers() {}
 
@@ -50,6 +55,42 @@ public final class WorkerContainers {
                     .reconcile(catalogue().desired(), TopicProvisioner.Mode.APPLY);
         }
         started = true;
+    }
+
+    /** A new Elasticsearch 9 container like the compose one: HTTP, security off, a small heap. */
+    public static ElasticsearchContainer newElastic() {
+        return new ElasticsearchContainer(DockerImageName.parse("elasticsearch:9.1.3")
+                        .asCompatibleSubstituteFor("docker.elastic.co/elasticsearch/elasticsearch"))
+                .withEnv("xpack.security.enabled", "false")
+                .withEnv("ES_JAVA_OPTS", "-Xms512m -Xmx512m")
+                .withStartupTimeout(java.time.Duration.ofMinutes(4)); // slow under a full parallel build
+    }
+
+    /** Starts Elasticsearch once per test JVM; returns its {@code http://host:port}. */
+    public static synchronized String elastic() {
+        if (!ELASTIC.isRunning()) {
+            ELASTIC.start();
+        }
+        return "http://" + ELASTIC.getHttpHostAddress();
+    }
+
+    /** {@link #elastic()} with the synonym sets and the listings indices created (the deploy step, once). */
+    public static synchronized String elasticWithIndices() {
+        var uri = elastic();
+        if (!indicesCreated) {
+            try (var es = co.elastic.clients.elasticsearch.ElasticsearchClient.of(
+                    b -> b.host(uri).jsonMapper(new co.elastic.clients.json.jackson.Jackson3JsonpMapper()))) {
+                new ca.northline.searchindex.IndexBootstrap(
+                                new ca.northline.searchindex.ListingIndices(es),
+                                ca.northline.searchindex.IndexLayout.fromClasspath(),
+                                java.time.Clock.systemUTC())
+                        .reconcile(ca.northline.searchindex.IndexBootstrap.Mode.APPLY);
+            } catch (java.io.IOException e) {
+                throw new java.io.UncheckedIOException(e);
+            }
+            indicesCreated = true;
+        }
+        return uri;
     }
 
     /** The real catalogue plus the test consumers' topic and groups. */

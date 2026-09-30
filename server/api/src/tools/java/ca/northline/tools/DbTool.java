@@ -46,12 +46,11 @@ public final class DbTool {
     static void run(String command, Map<Object, Object> properties, Map<String, String> env) {
         var devSeed = Boolean.parseBoolean(String.valueOf(properties.getOrDefault("db.devSeed", "false")));
         var url = setting(properties, env, "db.url", "DB_URL", "jdbc:postgresql://localhost:5432/northline");
-        if (devSeed) {
-            var refusal = devSeedRefusal(profiles(properties, env), url);
-            if (refusal != null) {
-                throw new IllegalStateException(refusal);
-            }
+        var refusal = devSeedRefusal(profiles(properties, env), url);
+        if (devSeed && refusal != null) {
+            throw new IllegalStateException(refusal);
         }
+        var localDatabase = refusal == null;
         var dataSource = new PGSimpleDataSource();
         dataSource.setUrl(url);
         dataSource.setUser(setting(properties, env, "db.user", "DB_USER", "northline"));
@@ -59,9 +58,9 @@ public final class DbTool {
         log.info("Database {} as {}", redact(url), dataSource.getUser());
 
         switch (command) {
-            case "migrate" -> migrate(flyway(dataSource, devSeed));
+            case "migrate" -> migrate(flyway(dataSource, devSeed, localDatabase));
             case "info" -> {
-                for (var m : flyway(dataSource, devSeed).info().all()) {
+                for (var m : flyway(dataSource, devSeed, localDatabase).info().all()) {
                     log.info("{} {} {}", m.getVersion(), m.getState(), m.getDescription());
                 }
             }
@@ -173,16 +172,26 @@ public final class DbTool {
         return url.replaceAll("password=[^&]*", "password=***");
     }
 
-    private static Flyway flyway(PGSimpleDataSource dataSource, boolean devSeed) {
+    /**
+     * The dev seed (V100–V109, V121) interleaves with the migrations of later ranges (V110+): with it, a database
+     * migrated without the seed first takes the seed files afterwards (out of order); without it, a local database the
+     * {@code local} profile seeded doesn't fail validation over seed files this run doesn't resolve. A deployed database
+     * never has the seed and keeps Flyway's strict validation.
+     */
+    private static Flyway flyway(PGSimpleDataSource dataSource, boolean devSeed, boolean localDatabase) {
         var locations = new ArrayList<String>();
         locations.add("classpath:db/migration");
         if (devSeed) {
             locations.add("classpath:db/seed-dev");
         }
-        return Flyway.configure()
+        var configuration = Flyway.configure()
                 .dataSource(dataSource)
                 .locations(locations.toArray(String[]::new))
-                .failOnMissingLocations(true)
-                .load();
+                .outOfOrder(devSeed)
+                .failOnMissingLocations(true);
+        if (localDatabase && !devSeed) {
+            configuration = configuration.ignoreMigrationPatterns("*:future", "*:missing");
+        }
+        return configuration.load();
     }
 }

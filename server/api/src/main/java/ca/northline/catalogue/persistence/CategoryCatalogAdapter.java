@@ -84,6 +84,11 @@ class CategoryCatalogAdapter implements CategoryCatalog {
                 .optional();
     }
 
+    @Override
+    public Set<String> banned() {
+        return banned;
+    }
+
     private CategoryProfile map(ResultSet rs) throws SQLException {
         var id = rs.getString("id");
         var themes = Sql.strings(rs, "variant_themes").stream()
