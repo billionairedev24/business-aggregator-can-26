@@ -29,8 +29,8 @@ global:
 # API_PUBLIC_URL, WEBAUTHN_RP_ID, the Studio's NL_AUTH_ORIGIN and the ingress hosts.
 urls:
   auth: https://auth.dev.northline.ca
-  # The api's public host serves only the email unsubscribe route (S-13, /api/v1/email/unsubscribe); everything else
-  # reaches the api through the BFF.
+  # The api's public host serves only the routes that must bypass the BFF: Stripe webhooks (S-12,
+  # /api/v1/webhooks/stripe[/connect]) and the email unsubscribe page (S-13, /api/v1/email/unsubscribe).
   api: https://api.dev.northline.ca
   studio: https://business.dev.northline.ca
   consumer: https://dev.northline.ca
@@ -144,6 +144,8 @@ apps:
       ES_PASSWORD: false
       STRIPE_SECRET_KEY: false
       STRIPE_PUBLISHABLE_KEY: false
+      STRIPE_WEBHOOK_SECRET: false          # S-12: required under staging/prod
+      STRIPE_CONNECT_WEBHOOK_SECRET: false  # S-12: required under staging/prod
       EMAIL_UNSUBSCRIBE_KEY: false  # required under staging/prod (values-staging/prod.yaml)
       EMAIL_API_KEY: false          # sendgrid, or azure with an access key
       SMTP_PASSWORD: false          # EMAIL_PROVIDER=smtp
@@ -152,7 +154,7 @@ apps:
       startup: { path: /actuator/health/liveness, periodSeconds: 5, failureThreshold: 60 }
       liveness: { path: /actuator/health/liveness, periodSeconds: 10, failureThreshold: 3 }
       readiness: { path: /actuator/health/readiness, periodSeconds: 5, failureThreshold: 3 }
-    public: true                  # the ingress reaches it for /api/v1/email/unsubscribe only (ingress.yaml)
+    public: true                  # the ingress reaches it for the Stripe webhooks and email unsubscribe only (ingress.yaml)
     allowFrom: [bff]
     extraVolumes: []
     extraVolumeMounts: []

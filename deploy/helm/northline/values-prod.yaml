@@ -25,6 +25,8 @@ apps:
     secretEnv:
       STRIPE_SECRET_KEY: true
       STRIPE_PUBLISHABLE_KEY: true
+      STRIPE_WEBHOOK_SECRET: true   # S-12
+      STRIPE_CONNECT_WEBHOOK_SECRET: true
       EMAIL_UNSUBSCRIBE_KEY: true   # S-13: required under staging/prod
   auth:
     autoscaling: { enabled: true, minReplicas: 3, maxReplicas: 6 }

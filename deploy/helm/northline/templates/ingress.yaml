@@ -1,7 +1,8 @@
 {{- /*
 Routes (S-17 adds TLS, DNS and the controller): the Studio host serves the Studio and, on the same origin, the
 studio-bff for /api, /bff, /oauth2 and /login; auth, consumer and console have their own hosts. The api host exposes
-only /api/v1/email/unsubscribe (S-13); the rest of the api is reached through the BFF.
+only /api/v1/webhooks/stripe (+ /connect, S-12) and /api/v1/email/unsubscribe (S-13); the rest of the api is reached
+through the BFF.
 */ -}}
 {{- define "northline.routes" -}}
 {{- $v := .Values -}}
@@ -12,8 +13,9 @@ only /api/v1/email/unsubscribe (S-13); the rest of the api is reached through th
       (dict "path" "/login" "app" "bff") (dict "path" "/" "app" "studio"))) -}}
 {{- end -}}
 {{- if $v.apps.api.enabled -}}
-{{- /* S-13: only the email unsubscribe page / one-click POST is public on the api host. */ -}}
-{{- $routes = append $routes (dict "host" (include "northline.host" $v.urls.api) "paths" (list (dict "path" "/api/v1/email/unsubscribe" "app" "api"))) -}}
+{{- /* Public on the api host, without the BFF: Stripe webhooks (S-12, signed) and email unsubscribe (S-13). */ -}}
+{{- $routes = append $routes (dict "host" (include "northline.host" $v.urls.api) "paths" (list
+      (dict "path" "/api/v1/webhooks/stripe" "app" "api") (dict "path" "/api/v1/email/unsubscribe" "app" "api"))) -}}
 {{- end -}}
 {{- if $v.apps.auth.enabled -}}
 {{- $routes = append $routes (dict "host" (include "northline.host" $v.urls.auth) "paths" (list (dict "path" "/" "app" "auth"))) -}}
