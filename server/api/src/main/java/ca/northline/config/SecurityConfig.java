@@ -8,6 +8,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.authorization.AuthenticatedAuthorizationManager;
 import org.springframework.security.authorization.AuthorityAuthorizationManager;
 import org.springframework.security.authorization.AuthorizationManagers;
 import org.springframework.security.config.Customizer;
@@ -62,10 +63,16 @@ class SecurityConfig {
                         .access(AuthorizationManagers.allOf(
                                 AuthorityAuthorizationManager.hasRole("STAFF"),
                                 AuthorityAuthorizationManager.hasAuthority(Authorities.MFA)))
+                        // Studio tokens (scope merchant) and partner clients (S-30: role partner — each handler
+                        // must also be marked @PartnerAccess, and only the partner's businesses are open)
                         .requestMatchers("/api/v1/merchants/**")
-                        .hasAuthority("SCOPE_merchant")
+                        .hasAnyAuthority("SCOPE_merchant", Authorities.PARTNER)
+                        // Partner tokens reach nothing else (no person behind them: /me, orders, …)
                         .anyRequest()
-                        .authenticated())
+                        .access(AuthorizationManagers.allOf(
+                                AuthenticatedAuthorizationManager.authenticated(),
+                                AuthorizationManagers.not(
+                                        AuthorityAuthorizationManager.hasAuthority(Authorities.PARTNER)))))
                 // S-29: `Authorization: DPoP <token>` + `DPoP: <proof>` (mobile apps). Spring's bearer filter refuses a
                 // DPoP-bound token (cnf.jkt) sent as a bearer token, so a stolen one is useless without the app's key.
                 .oauth2ResourceServer(o -> o.jwt(j -> j.jwtAuthenticationConverter(converter))
