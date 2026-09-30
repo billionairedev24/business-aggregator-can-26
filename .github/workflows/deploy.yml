@@ -109,9 +109,8 @@ jobs:
           # A tar holds one platform; pushing builds every platform in $PLATFORMS.
           task=jibBuildTar platforms=linux/amd64
           [ "$PUSH" = "true" ] && task=jib platforms="$PLATFORMS"
-          ./gradlew "$task" -x test \
-            -Pimage.registry="${REGISTRY:-northline}" -Pimage.tag="$IMAGE_TAG" -Pimage.platforms="$platforms" \
-            --init-script ../ci/gradle/maven-mirror.init.gradle.kts --max-workers=2 --console=plain
+          make -C .. images-java JIB_TASK="$task" REGISTRY="${REGISTRY:-northline}" IMAGE_TAG="$IMAGE_TAG" \
+            IMAGE_PLATFORMS="$platforms" GRADLE_FLAGS="--max-workers=2 --console=plain"
       - name: Image digests
         if: ${{ inputs.push }}
         run: |
@@ -167,5 +166,5 @@ jobs:
         run: |
           curl -sSL https://github.com/yannh/kubeconform/releases/download/v0.7.0/kubeconform-linux-amd64.tar.gz \
             | sudo tar xz -C /usr/local/bin kubeconform
-      - name: deploy/helm/validate.sh
-        run: deploy/helm/validate.sh
+      - name: make helm-validate
+        run: make helm-validate
