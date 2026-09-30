@@ -242,6 +242,17 @@ the topics (and their `.dlq` / retry topics) before any pod starts.
   lines and a summary). `kafkaTopics.enabled: false` turns it off (the kind rehearsal has no Kafka).
 - Details, per-cloud table and how to change the catalogue: [infrastructure.md § 5.3](infrastructure.md#53-kafka-topics-and-credentials).
 
+## Search indices (S-42)
+
+The Job `northline-search-indices-<hash>` runs right after the topics Job (hook weight −9, Argo CD `PreSync` wave −9),
+from the **worker** image: `SearchIndicesCommand <searchIndices.command>` makes Elasticsearch match `deploy/search`
+(packaged in the image) with the worker's `ES_*` settings — the synonym sets, the aliases `listings_en` / `listings_fr`
+and their first versioned index, new fields added in place. A change that needs a reindex is only logged
+(`REINDEX REQUIRED`). `searchIndices.command`: `apply` (default), `plan`, `verify` (exit 3 fails the release).
+Inputs: hook ConfigMap `northline-search-indices-<hash>` (the `ES_*` keys of `configEnv`) and hook Secret with
+`ES_PASSWORD` (hook ExternalSecret, or `secrets.values` on kind). `searchIndices.enabled: false` turns it off (the kind
+rehearsal has no Elasticsearch). Details: [search.md § 2](search.md#2-the-bootstrap-job-every-deploy).
+
 ## Local: kind
 
 A full rehearsal on a laptop: kind + the local images + Postgres and Valkey, with the Spring apps in the `dev`
