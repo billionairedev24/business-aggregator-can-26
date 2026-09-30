@@ -2185,3 +2185,46 @@ Built on S-45 (branch `web/s-62-consumer-auth` from `web/s-45-consumer-shell`).
 - **Not done / not verified:** no real SMS, passkey or Google/Apple round trip was exercised in a browser (unit tests
   mock the auth API; server tests use the recording SMS sender, WireMock providers); step-up for payments on
   single-factor consumer sessions is S-51's; the security addendum is in docs/security/s-20-auth-review.md.
+
+## 2026-09-30 — S-46 Home: search-first hero and Services/Shop/Food entry points
+
+Built on S-45's shell (docs/CONSUMER_WEB_PLAN.md). No migration.
+
+- **Server-rendered layout, numbers in the browser.** The SSR HTML (the same for everyone) carries the hero, the tile
+  names and links, the four promises and the section titles; the counts, greeting, trusted providers and "Your week"
+  load after hydration, once the location (S-45 pill) and session are known. Until the place is known the heading reads
+  "What do you need today?" / « De quoi avez-vous besoin aujourd'hui ? » (ours) instead of guessing a city; counts show
+  skeletons.
+- **Search** submits to `/search?q=` (S-48 renders results). No typeahead on the hero yet: the design's suggestions
+  come from the search API (E-6), which S-48 wires to the same input.
+- **New public read `GET /api/v1/public/home?city=`** in a new module **`discovery`** (the consumer site's
+  cross-module landing reads; it only uses other modules' `api` packages): `providers` (active provider + both),
+  `shops` (seller + both), `kitchensOpen`, `categories` (active businesses per approved category id), `cuisines` (open
+  kitchens per cuisine code, plus `meal_kits` = open kitchens offering meal kits), `trusted` (three providers: best
+  average rating, then most reviews, then higher tier, then name). Unknown cities answer zeros (the page then says
+  "Northline isn't in {city} yet." and links to the Location screen); blank city → 422 "Choose a city.", > 60
+  characters → "At most 60 characters.". `Cache-Control: public, max-age=60` (the same for everyone in a city).
+- **Shared-contract additions (additive):** `merchants.api.PublicDirectory` (active businesses with their published
+  storefront slug and brand colour, approved categories, public profile cuisines/dietary and kitchen address — never the
+  legal name, contacts or documents); `food.api.KitchenAvailability` (open now, next opening, pause, fulfilment, prep).
+- **"Open" for a kitchen** (`food.domain.KitchenCalendar`): inside today's opening range (Edmonton; a holiday entry
+  replaces the weekday), not paused, **auto-pause enforced at read time** — the Studio's "Auto-pause if late orders ≥ N"
+  (stored but not enforced since the kitchen workstream) now closes the kitchen to customers while N or more accepted
+  orders are past their ready-by time, and reopens it as soon as the kitchen catches up (no write, no event) — and a
+  live menu with at least one approved, published dish. Ranges end exclusive. "Opens …" looks a week ahead.
+- **Tiles** are the design's lists (9 departments, 8 cuisines, 9 service categories) mapped to category ids of
+  `db/seed/categories.json` / onboarding's cuisine codes (`features/home/catalog.ts`): Pharmacy = "Pharmacy (OTC)",
+  Gifts = "Gifts & crafts", Home cleaning = "House cleaning", Tutor = K–12 + post-secondary (summed), Meal kits = the
+  `meal_kits` fulfilment. The design's hard-coded "All 62 categories" reads "All categories" (the taxonomy has more,
+  and the number would drift). Counts use ICU plurals ("1 shop"). Tile names are the design's en/fr pairs; category
+  names from the database (English only today) are marked `lang="en"`.
+- **Trusted near you:** providers come to the customer, so "near" = the same city and no distance is shown (the design's
+  "1.2 km" has no source); the meta line is the first approved category (the design's "from $79" needs pricing reads
+  that don't exist). Providers without a published page aren't links. No reviews → "New".
+- **Your week** = contract `GET /api/v1/me/upcoming` for S-58 (CONSUMER_WEB_PLAN.md § Your week); until it exists the
+  signed-in section says "Nothing booked or on its way this week." with "Book a service", guests get "Sign in to see
+  your orders, bookings and quotes here." (ours). The points line uses the account summary's `points`; the design's
+  "Glenmore Bakery is funding 3× this week" has no source and isn't shown.
+- **Greeting** by the Edmonton hour, computed after mount: morning 5–12, afternoon 12–17, evening otherwise ("Good
+  evening, Amara · Beltline, Calgary"; guests "Good evening · Calgary"; French « Bonsoir Amara · … »).
+- **Not done:** hero typeahead (S-48), prices on trusted providers, distances.
