@@ -165,6 +165,9 @@ Leave a variable out and the app stops with the list of what is missing. Under `
 the Studio — `SMS_PROVIDER` defaults to `local`, so the phone code is in the auth log (`grep "Verification code"`). Move `server/.env` aside while you do this, or its
 values fill in what you meant to leave out.
 
+**On Kubernetes:** the same rehearsal with the real images and Helm chart runs on a local kind cluster —
+`deploy/kind/up.sh` ([deploy.md § Local: kind](deploy.md#local-kind), S-14).
+
 ## 8. Troubleshooting
 
 | symptom | fix |

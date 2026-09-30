@@ -291,7 +291,7 @@ later, run `alter role northline_app password '…'` with the new value.
   short-lived token the client must refresh) or none. The module uses *none*, so access is limited to the VPC through
   Private Service Connect, and `REDIS_PASSWORD` stays empty. Its TLS certificate is signed by a **per-instance CA**
   that the JVM does not trust: import `data_stores.cache.cloud.server_ca_certs` into a truststore mounted in the pods
-  (`JAVA_TOOL_OPTIONS=-Djavax.net.ssl.trustStore=…`), which belongs to the Helm charts (S-14). Until then Google Cloud
+  (`JAVA_TOOL_OPTIONS=-Djavax.net.ssl.trustStore=…`), which belongs to the Helm charts (S-14). *Since S-14:* `values-gcp.yaml` trusts it through a Spring Boot SSL bundle (`SPRING_DATA_REDIS_SSL_BUNDLE=redis` + the PEM from ConfigMap `northline-redis-ca`, [deploy.md](deploy.md)) — not yet tried against a real instance. Before that, Google Cloud
   cannot serve Valkey to the apps as they are.
 
 ### 5.3 Kafka: topics and credentials

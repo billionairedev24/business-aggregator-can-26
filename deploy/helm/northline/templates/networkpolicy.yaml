@@ -1,0 +1,39 @@
+{{- /*
+Ingress-only policies: each app accepts traffic only from the peers it needs (the ingress controller for public apps,
+the listed apps for internal ones). Egress stays open: the managed data stores, the KMS and the secrets manager live
+outside the cluster at provider-specific addresses.
+*/ -}}
+{{- if .Values.networkPolicy.enabled }}
+{{- range $name, $app := .Values.apps }}
+{{- if $app.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "northline.appName" $name }}
+  labels:
+    {{- include "northline.labels" (dict "root" $ "app" $name) | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "northline.selectorLabels" (dict "root" $ "app" $name) | nindent 6 }}
+  policyTypes: [Ingress]
+  {{- $from := list }}
+  {{- if $app.public }}{{ $from = concat $from $.Values.networkPolicy.ingressFrom }}{{ end }}
+  {{- range $app.allowFrom }}
+  {{- $from = append $from (dict "podSelector" (dict "matchLabels" (dict "app.kubernetes.io/name" (include "northline.appName" .)))) }}
+  {{- end }}
+  {{- $from = concat $from $.Values.networkPolicy.extraFrom }}
+  {{- if and $from $app.service }}
+  ingress:
+    - from:
+        {{- toYaml $from | nindent 8 }}
+      ports:
+        - port: {{ $app.port }}
+          protocol: TCP
+  {{- else }}
+  ingress: []
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

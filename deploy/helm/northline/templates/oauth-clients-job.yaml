@@ -1,0 +1,64 @@
+{{- /*
+S-122: registers the OAuth clients from configuration after each install/upgrade (docs/runbooks/README.md § OAuth
+clients). Same image and environment as the auth Deployment; runs OAuthClientsCommand (data source only: no web
+server, Valkey or KMS). Helm runs post-install hooks once the release's resources are ready when installed with
+--wait; Argo CD maps the hook to PostSync.
+*/ -}}
+{{- if and .Values.oauthClientsJob.enabled .Values.apps.auth.enabled }}
+{{- $app := .Values.apps.auth }}
+{{- $ctx := dict "root" . "name" "auth" "app" $app }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: northline-oauth-clients
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "oauth-clients") | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: {{ .Values.oauthClientsJob.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.oauthClientsJob.activeDeadlineSeconds }}
+  ttlSecondsAfterFinished: {{ .Values.oauthClientsJob.ttlSecondsAfterFinished }}
+  template:
+    metadata:
+      labels:
+        {{- include "northline.selectorLabels" (dict "root" . "app" "oauth-clients") | nindent 8 }}
+        app.kubernetes.io/part-of: northline
+        {{- with .Values.global.podLabels }}{{ toYaml . | nindent 8 }}{{ end }}
+        {{- with (include "northline.identityPodLabels" $ctx) }}{{ . | nindent 8 }}{{ end }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "northline.appName" "auth" }}
+      automountServiceAccountToken: false
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+        runAsUser: {{ $app.runAsUser }}
+        runAsGroup: {{ $app.runAsUser }}
+      containers:
+        - name: oauth-clients
+          image: {{ include "northline.image" $ctx | quote }}
+          imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+          # Jib image: the app's classpath is listed in /app/jib-classpath-file.
+          command: ["java", "-XX:MaxRAMPercentage=75", "-cp", "@/app/jib-classpath-file",
+                    "ca.northline.auth.clients.OAuthClientsCommand", {{ .Values.oauthClientsJob.command | quote }}]
+          {{- include "northline.springEnv" $ctx | nindent 10 }}
+          resources:
+            {{- toYaml .Values.oauthClientsJob.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            {{- with .Values.spring.extraVolumeMounts }}{{ toYaml . | nindent 12 }}{{ end }}
+            {{- with $app.extraVolumeMounts }}{{ toYaml . | nindent 12 }}{{ end }}
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 64Mi }
+        {{- with .Values.spring.extraVolumes }}{{ toYaml . | nindent 8 }}{{ end }}
+        {{- with $app.extraVolumes }}{{ toYaml . | nindent 8 }}{{ end }}
+{{- end }}

@@ -1,0 +1,37 @@
+# Google Cloud (GKE) overlay. Only values: the templates have no cloud logic.
+#
+# Workload identity: GKE Workload Identity — the ServiceAccounts carry iam.gke.io/gcp-service-account from
+#   terraform output -json kubernetes | jq '{workloadIdentities: .workload_identities}' > identities.json
+#
+# Images: <region>-docker.pkg.dev/<project>/<repository> (terraform output registry.registry_url).
+# Ingress (S-17 decides): GKE Gateway (gateway.enabled, parentRefs → a gke-l7-global-external-managed Gateway) or
+# ingress-nginx; the GCE Ingress class ("gce") needs NEG annotations on the Services.
+#
+# Memorystore for Valkey presents a certificate signed by a per-instance CA (infrastructure.md § 5.2). The Spring apps
+# trust it through a Spring Boot SSL bundle: put the PEM from
+#   terraform output -json data_stores | jq -r '.cache.cloud.server_ca_certs[]'
+# into a ConfigMap first:
+#   kubectl -n northline-<env> create configmap northline-redis-ca --from-file=ca.pem=redis-ca.pem
+env:
+  SPRING_DATA_REDIS_SSL_BUNDLE: redis
+  SPRING_SSL_BUNDLE_PEM_REDIS_TRUSTSTORE_CERTIFICATE: file:/etc/northline/redis-ca/ca.pem
+
+spring:
+  extraVolumes:
+    - name: redis-ca
+      configMap:
+        name: northline-redis-ca
+  extraVolumeMounts:
+    - name: redis-ca
+      mountPath: /etc/northline/redis-ca
+      readOnly: true
+
+networkPolicy:
+  enabled: true                   # Dataplane V2 enforces NetworkPolicy
+
+apps:
+  api:
+    env:
+      # S-13 (docs/runbooks/email.md): Google Cloud has no first-party email service; SendGrid with EMAIL_API_KEY
+      # (secret) — or EMAIL_PROVIDER=smtp with any relay.
+      EMAIL_PROVIDER: sendgrid

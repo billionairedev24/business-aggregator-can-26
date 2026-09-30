@@ -1,0 +1,10 @@
+{{- /* Refusals evaluated at render time. */ -}}
+{{- if and .Values.secrets.create (ne .Values.global.environment "local") }}
+{{- fail "secrets.create renders secrets from Helm values and is allowed only with global.environment=local (kind). Create the Secret outside the chart, or use External Secrets (S-6)." }}
+{{- end }}
+{{- if not (has .Values.global.environment (list "local" "dev" "staging" "prod")) }}
+{{- fail (printf "global.environment must be local, dev, staging or prod (got %q)" .Values.global.environment) }}
+{{- end }}
+{{- if and (has .Values.global.environment (list "staging" "prod")) (not (hasPrefix "https://" .Values.urls.auth)) }}
+{{- fail "urls.* must be https:// in staging and prod" }}
+{{- end }}

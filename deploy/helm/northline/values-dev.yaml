@@ -1,0 +1,22 @@
+# dev — shared cloud development environment (docs/runbooks/dev.md). Smallest footprint: one replica each, no HPA.
+# Layer a cloud overlay (values-aws.yaml | values-gcp.yaml | values-azure.yaml) and the Terraform-generated values
+# (config_env, workload identities) on top — docs/runbooks/deploy.md.
+global:
+  environment: dev
+
+urls:
+  auth: https://auth.dev.northline.ca
+  api: https://api.dev.northline.ca
+  studio: https://business.dev.northline.ca
+  consumer: https://dev.northline.ca
+  console: https://console.dev.northline.ca
+  webauthnRpId: dev.northline.ca
+
+ingress:
+  enabled: true                   # routes only; TLS and the controller come with S-17
+
+apps:
+  auth:
+    env:
+      # One replica may keep the signing keys in a file (KMS_PROVIDER=local) — set KMS_PROVIDER from Terraform instead.
+      OAUTH_CLIENTS_SYNC_ON_STARTUP: "true"

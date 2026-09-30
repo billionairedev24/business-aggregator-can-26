@@ -1,0 +1,171 @@
+# S-14 — container images (build + push to any registry) and Helm chart checks.
+#
+# MANUAL ONLY: runs only from Actions › deploy › Run workflow (or `gh workflow run deploy.yml -f registry=… `).
+# Nothing here deploys to a cluster (Argo CD, S-15). Runbook: docs/runbooks/deploy.md
+#
+# Registry credentials (Settings › Secrets and variables › Actions):
+#   login = password → secrets REGISTRY_USERNAME / REGISTRY_PASSWORD: GitLab/Harbor/any registry user + token;
+#     ACR token or service principal; Artifact Registry `_json_key_base64` + a base64 service-account key;
+#     ECR `AWS` + `aws ecr get-login-password` (valid 12 h).
+#   login = ghcr → the workflow's GITHUB_TOKEN (packages: write) for ghcr.io/<owner>/…
+name: deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      registry:
+        description: "Image registry including its path, e.g. 123456789012.dkr.ecr.ca-central-1.amazonaws.com/northline, northamerica-northeast1-docker.pkg.dev/<project>/northline, <acr>.azurecr.io/northline, ghcr.io/<owner>/northline"
+        type: string
+        default: ""
+      image-tag:
+        description: Image tag (empty = the short commit sha)
+        type: string
+        default: ""
+      images:
+        description: Which images to build
+        type: choice
+        default: all
+        options: [all, java, web, none]
+      push:
+        description: Push to the registry (false = build only, e.g. to check the Dockerfiles)
+        type: boolean
+        default: true
+      login:
+        description: How to log in to the registry
+        type: choice
+        default: password
+        options: [password, ghcr]
+      platforms:
+        description: Image platforms
+        type: string
+        default: linux/amd64,linux/arm64
+      chart:
+        description: helm lint + helm template | kubeconform for every environment × cloud
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  packages: write # only used with login = ghcr
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ${{ inputs.registry }}
+  PLATFORMS: ${{ inputs.platforms }}
+
+jobs:
+  prepare:
+    name: tag
+    runs-on: ubuntu-24.04
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - id: tag
+        env:
+          TAG: ${{ inputs.image-tag }}
+          PUSH: ${{ inputs.push }}
+        run: |
+          [ -n "$TAG" ] || TAG="${GITHUB_SHA::12}"
+          if [ "$PUSH" = "true" ] && [ -z "$REGISTRY" ]; then echo "::error::registry is required to push"; exit 1; fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Images: ${REGISTRY:-northline}/<app>:$TAG" >> "$GITHUB_STEP_SUMMARY"
+
+  java:
+    name: images (api, auth, bff, worker — Jib)
+    needs: prepare
+    if: ${{ inputs.images == 'all' || inputs.images == 'java' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      IMAGE_TAG: ${{ needs.prepare.outputs.tag }}
+      GIT_SHA: ${{ github.sha }}
+      MAVEN_MIRROR_URL: ${{ vars.MAVEN_MIRROR_URL }}
+      MAVEN_MIRROR_USERNAME: ${{ secrets.MAVEN_MIRROR_USERNAME }}
+      MAVEN_MIRROR_PASSWORD: ${{ secrets.MAVEN_MIRROR_PASSWORD }}
+      GRADLE_OPTS: -Dorg.gradle.workers.max=2
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: "25" }
+      - uses: gradle/actions/setup-gradle@v5
+      # Jib reads the credentials docker login writes to ~/.docker/config.json.
+      - name: Registry login
+        if: ${{ inputs.push }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ inputs.login == 'ghcr' && 'ghcr.io' || inputs.registry }}
+          username: ${{ inputs.login == 'ghcr' && github.actor || secrets.REGISTRY_USERNAME }}
+          password: ${{ inputs.login == 'ghcr' && secrets.GITHUB_TOKEN || secrets.REGISTRY_PASSWORD }}
+      - name: Build (and push) with Jib
+        env:
+          PUSH: ${{ inputs.push }}
+        run: |
+          # A tar holds one platform; pushing builds every platform in $PLATFORMS.
+          task=jibBuildTar platforms=linux/amd64
+          [ "$PUSH" = "true" ] && task=jib platforms="$PLATFORMS"
+          ./gradlew "$task" -x test \
+            -Pimage.registry="${REGISTRY:-northline}" -Pimage.tag="$IMAGE_TAG" -Pimage.platforms="$platforms" \
+            --init-script ../ci/gradle/maven-mirror.init.gradle.kts --max-workers=2 --console=plain
+      - name: Image digests
+        if: ${{ inputs.push }}
+        run: |
+          for app in api auth bff worker; do
+            echo "- $app: \`$(cat "$app/build/jib-image.digest")\`" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+  web:
+    name: images (studio, consumer — Dockerfile)
+    needs: prepare
+    if: ${{ inputs.images == 'all' || inputs.images == 'web' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        app: [studio, consumer]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - name: Registry login
+        if: ${{ inputs.push }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ inputs.login == 'ghcr' && 'ghcr.io' || inputs.registry }}
+          username: ${{ inputs.login == 'ghcr' && github.actor || secrets.REGISTRY_USERNAME }}
+          password: ${{ inputs.login == 'ghcr' && secrets.GITHUB_TOKEN || secrets.REGISTRY_PASSWORD }}
+      - name: Build (and push)
+        uses: docker/build-push-action@v6
+        with:
+          context: web
+          file: web/Dockerfile
+          target: ${{ matrix.app }}
+          platforms: ${{ inputs.platforms }}
+          push: ${{ inputs.push }}
+          provenance: false
+          tags: ${{ inputs.registry || 'northline' }}/${{ matrix.app }}:${{ needs.prepare.outputs.tag }}
+          build-args: |
+            GIT_SHA=${{ github.sha }}
+            IMAGE_TAG=${{ needs.prepare.outputs.tag }}
+          cache-from: type=gha,scope=web-${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=web-${{ matrix.app }}
+
+  chart:
+    name: helm lint + kubeconform
+    if: ${{ inputs.chart }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: azure/setup-helm@v4
+        with: { version: v3.19.0 }
+      - name: Install kubeconform
+        run: |
+          curl -sSL https://github.com/yannh/kubeconform/releases/download/v0.7.0/kubeconform-linux-amd64.tar.gz \
+            | sudo tar xz -C /usr/local/bin kubeconform
+      - name: deploy/helm/validate.sh
+        run: deploy/helm/validate.sh

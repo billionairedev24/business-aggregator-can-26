@@ -1,0 +1,5 @@
+# kind cluster for the local Helm rehearsal (deploy/kind/up.sh). One node; kindnet enforces NetworkPolicy.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane

@@ -16,6 +16,8 @@ Docker executor that allows `docker:dind` (GitLab), plus public images and packa
 | web | `web.yml` › `storybook` | `web:storybook` | `build-storybook` (artifact `storybook-static`) and `test-storybook`: every story in headless Chromium with its play function (interaction tests) and the a11y addon (`a11y.test: 'error'` — any violation fails). |
 | infra | `infra.yml` › `validate` | `infra:validate` | Terraform 1.16.4. `infra/terraform/scripts/validate.sh`: `terraform fmt -check`, the module contract check (the AWS, Google Cloud and Azure implementations of each capability share variables and outputs), `init -backend=false` + `validate` for every module, stack, bootstrap and env root, and `terraform test` in each env root (a plan against mocked providers, plus a check that non-Canadian regions are rejected). No cloud credentials, no state. |
 | infra | `infra.yml` › `tflint` (on by default) | `infra:tflint` (on by default) | tflint 0.64 with the terraform, aws, google and azurerm rulesets (`infra/terraform/.tflint.hcl`). |
+| deploy | `deploy.yml` › `java`, `web` (images) | `images:java`, `images:web` (`PIPELINE_PART=images` only, never in `all`) | S-14: build and push `api`, `auth`, `bff`, `worker` with Jib and `studio`, `consumer` with `web/Dockerfile` (buildx, amd64 + arm64) to the registry given as input; digests in the run summary / `image-digests.txt` ([deploy.md](deploy.md#build-and-push)) |
+| deploy | `deploy.yml` › `chart` | `chart:validate` (`PIPELINE_PART=chart` or `all`) | S-14: `deploy/helm/validate.sh` — `helm lint --strict` + `helm template \| kubeconform -strict` for dev/staging/prod × aws/gcp/azure, kind and Gateway API |
 | web | `web.yml` › `studio-smoke` (optional) | `web:studio-smoke` (optional) | `ci/studio-smoke.sh`: PostGIS service → `:api:flywayMigrate -Pdb.devSeed=true` + `:api:seedCategories` → api and auth with the `local` profile → studio dev server (dev auth as Ravi Sandhu) → `scripts/studio-smoke.mjs` (135 screen/width/locale checks). Screenshots and logs in the `studio-smoke` artifact. |
 
 Expected durations (hosted runners; first run in brackets, before caches are warm):
@@ -35,7 +37,8 @@ Expected durations (hosted runners; first run in brackets, before caches are war
 - **UI:** repository › *Actions* › pick **server** or **web** › *Run workflow* › choose the branch and inputs › *Run workflow*.
 - **CLI:** `gh workflow run server.yml --ref <branch> [-f project=api] [-f skip-tests=true] [-f rerun-tasks=true]`
   or `gh workflow run web.yml --ref <branch> [-f storybook=false] [-f studio-smoke=true]`,
-  or `gh workflow run infra.yml --ref <branch> [-f cloud=aws] [-f tflint=false]`; follow with `gh run watch`.
+  or `gh workflow run infra.yml --ref <branch> [-f cloud=aws] [-f tflint=false]`,
+  or `gh workflow run deploy.yml --ref <branch> -f registry=<registry/path> [-f image-tag=…] [-f images=java] [-f push=false] [-f login=ghcr]`; follow with `gh run watch`.
 
 | Workflow | Input | Default | Meaning |
 |---|---|---|---|
@@ -46,6 +49,13 @@ Expected durations (hosted runners; first run in brackets, before caches are war
 | web | `studio-smoke` | `false` | run the studio smoke sweep job |
 | infra | `cloud` | `all` | `all`, `aws`, `gcp` or `azure`: which modules and env roots to validate |
 | infra | `tflint` | `true` | run the tflint job |
+| deploy | `registry` | — | registry including its path (required to push) |
+| deploy | `image-tag` | short sha | image tag |
+| deploy | `images` | `all` | `all`, `java`, `web` or `none` |
+| deploy | `push` | `true` | `false` builds only (Java: one platform, as a tar) |
+| deploy | `login` | `password` | `password` (secrets `REGISTRY_USERNAME` / `REGISTRY_PASSWORD`) or `ghcr` (the workflow token) |
+| deploy | `platforms` | `linux/amd64,linux/arm64` | image platforms |
+| deploy | `chart` | `true` | run `deploy/helm/validate.sh` |
 
 A new run on the same branch cancels the previous one of the same workflow (concurrency group per workflow and ref).
 
@@ -61,6 +71,10 @@ A new run on the same branch cancels the previous one of the same workflow (conc
 | `RUN_STUDIO_SMOKE` | `false` | `true` adds the studio smoke sweep |
 | `INFRA_CLOUD` | `all` | infra: `all`, `aws`, `gcp` or `azure` |
 | `RUN_TFLINT` | `true` | infra: `false` skips tflint (it downloads its rulesets from GitHub) |
+| `IMAGE_REGISTRY` | the project's registry | images: registry including its path |
+| `IMAGE_TAG` | short sha | images: tag |
+| `IMAGE_APPS` | `all` | images: `all`, `java` or `web` |
+| `IMAGE_PLATFORMS` | `linux/amd64,linux/arm64` | images: platforms |
 
 Runner requirements: `server:build` needs a runner with `privileged = true` for the `docker:dind` service that
 Testcontainers talks to (`DOCKER_HOST=tcp://docker:2375`, `TESTCONTAINERS_HOST_OVERRIDE=docker`, Ryuk disabled).
@@ -68,12 +82,13 @@ GitLab.com hosted Linux runners qualify; on a self-managed runner set `privilege
 Every job is `interruptible`, so a newer pipeline on the same branch cancels the older one.
 
 ## Variables and secrets
-**None are required** — every job builds from public images and registries.
+**None are required** for the checks — every job builds from public images and registries. Pushing images needs registry credentials (below).
 
 | Name | Where | Purpose |
 |---|---|---|
 | `MAVEN_MIRROR_URL` | GitHub: *Settings › Secrets and variables › Actions › Variables*; GitLab: *Settings › CI/CD › Variables* | Optional. Maven repository that Gradle tries before Maven Central and the Plugin Portal (Maven Central answers bursts with HTTP 429). E.g. `https://maven-central.storage-download.googleapis.com/maven2/`, or an Artifactory/Nexus/GitLab package proxy. Applied by `ci/gradle/maven-mirror.init.gradle.kts`, which does nothing when the variable is empty. |
 | `MAVEN_MIRROR_USERNAME`, `MAVEN_MIRROR_PASSWORD` | GitHub: *Secrets*; GitLab: masked variables | Optional, only for a mirror that needs credentials. |
+| `REGISTRY_USERNAME`, `REGISTRY_PASSWORD` (GitHub) / `REGISTRY_USER`, `REGISTRY_PASSWORD` (GitLab) | Secrets / masked variables | Only for pushing images (S-14) to a registry other than GHCR / the GitLab project registry; per-cloud values in [deploy.md](deploy.md#from-ci-manual). |
 
 ## Enabling automatic runs
 **GitHub** — in `.github/workflows/server.yml`, `web.yml` and `infra.yml`, add triggers next to `workflow_dispatch` (inputs then

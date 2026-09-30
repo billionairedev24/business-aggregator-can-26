@@ -1,0 +1,23 @@
+# Azure (AKS) overlay. Only values: the templates have no cloud logic.
+#
+# Workload identity: Azure Workload Identity — the ServiceAccounts carry azure.workload.identity/client-id and the pods
+# the label azure.workload.identity/use: "true", both from
+#   terraform output -json kubernetes | jq '{workloadIdentities: .workload_identities}' > identities.json
+# The webhook then injects AZURE_CLIENT_ID, AZURE_TENANT_ID and AZURE_FEDERATED_TOKEN_FILE, which the Azure SDK
+# (Key Vault keys, Blob Storage) reads through DefaultAzureCredential.
+#
+# Images: <registry>.azurecr.io/northline (terraform output registry.registry_url + /northline); the kubelet identity
+# has AcrPull, so no imagePullSecrets.
+# Ingress (S-17 decides): AKS application routing → ingress.className: webapprouting.kubernetes.azure.com, or
+# ingress-nginx / Application Gateway for Containers (gateway.enabled).
+# Azure Managed Redis listens on 10000 (REDIS_PORT in config_env).
+
+networkPolicy:
+  enabled: true                   # Cilium (network_policy = cilium in the AKS module) enforces NetworkPolicy
+
+apps:
+  api:
+    env:
+      # S-13 (docs/runbooks/email.md): Azure Communication Services Email with Entra ID (workload identity). Also set
+      # EMAIL_ENDPOINT=https://<resource>.canada.communication.azure.com — the api refuses to start without it.
+      EMAIL_PROVIDER: azure

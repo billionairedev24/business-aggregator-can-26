@@ -2,8 +2,9 @@
 
 One runbook per environment. Each lists what the environment needs — services, variables, secrets, third-party
 accounts — and how to run, deploy and roll back **with what exists today**. Terraform for the cloud foundation and the managed data
-stores exists (S-2, S-3; not applied yet); External Secrets, container images, Helm charts and GitOps arrive with later
-stories (S-6, S-14, S-15, S-16, S-17); the runbooks say where a step is still manual or missing.
+stores exists (S-2, S-3; not applied yet); container images and the Helm chart exist (S-14, [deploy.md](deploy.md));
+External Secrets, the migration Job, GitOps and TLS/DNS arrive with later stories (S-6, S-16, S-15, S-17); the runbooks
+say where a step is still manual or missing.
 
 | runbook | for |
 |---|---|
@@ -16,6 +17,7 @@ stories (S-6, S-14, S-15, S-16, S-17); the runbooks say where a step is still ma
 | [stripe.md](stripe.md) | Stripe Connect Express: platform account setup (test/live), money flow, idempotency, local stripe-mock, operations (S-11) |
 | [email.md](email.md) | transactional email: Mailpit locally, SES / SendGrid / Azure Communication Services / SMTP set-up, SPF/DKIM/DMARC, CASL (S-13) |
 | [ci.md](ci.md) | CI pipelines on GitHub Actions and GitLab CI, manual trigger only (S-4/S-5, infra checks S-2/S-3) |
+| [deploy.md](deploy.md) | container images (Jib, Dockerfile) to any registry, the Helm chart per environment and cloud, install/upgrade/roll back, local rehearsal on kind (S-14) |
 
 ## Environment matrix
 
@@ -128,8 +130,9 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `OTEL_EXPORT_ENABLED` | ✓ | | | | no (false until S-111) |
 | `SERVER_PORT` | ✓ | ✓ | ✓ | | no (8080 / 9000 / 8082) |
 
-Studio build (web): `VITE_NL_AUTH_ORIGIN` (= `AUTH_ISSUER`) is baked into the bundle at build time, so each
-environment needs its own Studio build until runtime configuration exists.
+Studio (web): the container image reads `NL_AUTH_ORIGIN` (= `AUTH_ISSUER`; the chart sets it from `urls.auth`) at
+start and serves it as `/config.js`, so one Studio image serves every environment (S-14). `VITE_NL_AUTH_ORIGIN` is
+only the build-time fallback (the Vite dev server). Worker: `SERVER_PORT` 8084, health only (S-14).
 
 ## OAuth clients (S-122)
 

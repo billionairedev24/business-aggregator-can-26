@@ -1,0 +1,10 @@
+# Build context of web/Dockerfile (S-14): sources and the lockfile only.
+**/node_modules
+**/dist
+**/.output
+**/storybook-static
+**/*.tsbuildinfo
+**/.env
+**/.env.*
+**/test-results
+**/playwright-report

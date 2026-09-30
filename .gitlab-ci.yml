@@ -1,4 +1,4 @@
-# Northline CI on GitLab — S-4 (server), S-5 (web), S-2/S-3 (infra). Runbook: docs/runbooks/ci.md
+# Northline CI on GitLab — S-4 (server), S-5 (web), S-2/S-3 (infra), S-14 (images, chart). Runbook: docs/runbooks/ci.md
 #
 # MANUAL ONLY: CI credits are depleted, so pipelines are created only by Build › Pipelines › "Run pipeline"
 # (source "web") or the API/trigger tokens (source "api"). Pushes, merge requests and schedules create nothing.
@@ -17,8 +17,8 @@ workflow:
 variables:
   PIPELINE_PART:
     value: all
-    options: [all, server, web, infra]
-    description: Which part to build and test.
+    options: [all, server, web, infra, chart, images]
+    description: "Which part to build and test. `images` builds and pushes the container images (S-14, never part of `all`); `chart` = Helm checks (also in `all`)."
   SERVER_GRADLE_ARGS:
     value: build
     description: "Gradle arguments for server/ (e.g. build, :api:build, build -x test, build --rerun-tasks)."
@@ -30,6 +30,19 @@ variables:
     value: "true"
     options: ["true", "false"]
     description: "infra: also run tflint (downloads the aws/google/azurerm rulesets from GitHub)."
+  IMAGE_REGISTRY:
+    value: ""
+    description: "images: registry including its path (empty = this project's GitLab registry, $CI_REGISTRY_IMAGE). E.g. 123456789012.dkr.ecr.ca-central-1.amazonaws.com/northline, <acr>.azurecr.io/northline."
+  IMAGE_TAG:
+    value: ""
+    description: "images: tag (empty = the short commit sha)."
+  IMAGE_APPS:
+    value: all
+    options: [all, java, web]
+    description: "images: which images to build."
+  IMAGE_PLATFORMS:
+    value: linux/amd64,linux/arm64
+    description: "images: platforms."
   RUN_STUDIO_SMOKE:
     value: "false"
     options: ["false", "true"]
@@ -43,6 +56,7 @@ stages:
 default:
   interruptible: true
 
-# One file per part: ci/gitlab/server.yml (S-4), ci/gitlab/web.yml (S-5), ci/gitlab/infra.yml (S-2/S-3).
+# One file per part: ci/gitlab/server.yml (S-4), ci/gitlab/web.yml (S-5), ci/gitlab/infra.yml (S-2/S-3),
+# ci/gitlab/deploy.yml (S-14 images and chart).
 include:
   - local: ci/gitlab/*.yml
