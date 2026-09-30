@@ -2384,7 +2384,7 @@ Branch `web/s-53-services-landing` (from main). Contracts: [CONSUMER_WEB_PLAN.md
   (Beltline 1.2 km … SE Calgary 10 km, Airdrie/Cochrane/Okotoks the towns) — reference data, the same everywhere, until
   `region.zones` has Calgary polygons. A business covers the customer when one of its zones contains the device's
   point, or, with only a city (the IP guess, the Calgary fallback, a saved address without coordinates), when one of
-  its zones is in that city; no location at all = Calgary. Appointments and consultations (the customer goes to them)
+  its zones is in that city; no location at all = the configured default market (`northline.hire.default-city`). Appointments and consultations (the customer goes to them)
   also match the business's own city. The heading's area is the zone the point is in (nearest centre when two
   overlap), else the city. `availability.api.ServiceAreas`.
 - **Trust order** (design: "Sorted by trust · tier, on-time rate, dispute rate and re-book rate"): tier, then on-time
@@ -2425,3 +2425,11 @@ Branch `web/s-53-services-landing` (from main). Contracts: [CONSUMER_WEB_PLAN.md
   ServiceOffers`, `merchants.api.PublicProviders`.
 - **Not done:** search-backed ranking and `next_slot` (E-6); distance; per-category French taxonomy in the database;
   structured data (S-63).
+- **Region-neutral** (the decision above): no province, city or time zone in this story's code or copy. The default
+  market, the fallback province and the time zone are configuration (`northline.hire`: `default-city`,
+  `default-province`, `time-zone`; HireProperties) until S-134's region configuration; the landing and a category
+  return `provinces` (their live providers' `merchants.province`) and the copy names them as a parameter ("4 categories
+  live in {region}"); registry names in the copy come from the category (`regulatedRegistry`). Existing literals still
+  relied on (S-134): the web's shared `TIME_ZONE` (`@northline/ui`), `DEFAULT_MARKET` (`features/location/markets.ts`),
+  `AlbertaHolidays` and `Team.ZONE` in the availability planner (moved into `DaySchedule`, unchanged), and the zone rows
+  of V114 (reference data).
