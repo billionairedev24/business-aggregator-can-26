@@ -11,6 +11,7 @@ import ca.northline.catalogue.domain.ItemCondition;
 import ca.northline.catalogue.domain.Listing;
 import ca.northline.catalogue.domain.ListingState;
 import ca.northline.catalogue.domain.ListingStatus;
+import ca.northline.catalogue.domain.MaterialField;
 import ca.northline.catalogue.domain.PricingMode;
 import ca.northline.catalogue.domain.ProductDetails;
 import ca.northline.catalogue.domain.ProductDetails.Variant;
@@ -125,10 +126,11 @@ class ListingPersistenceAdapter implements ListingRepository {
                         insert into catalogue.offers (id, product_id, merchant_id, title, sku, price_cents, compare_at_cents,
                           cost_cents, stock, low_stock_at, condition, fulfilment, vetting, status, variant_theme, image_source,
                           own_images, handling_time, returns_policy, country_of_origin, restricted_ok, bilingual_ok, warranty,
-                          search_keywords, vetting_flags, submitted_at, created_at, updated_at)
+                          search_keywords, vetting_flags, revet_reasons, submitted_at, created_at, updated_at)
                         values (:id, :product, :merchant, :title, :sku, :price, :compareAt, :cost, :stock, :lowStock, :condition,
                           :fulfilment, :vetting, :status, :theme, :imageSource, :ownImages, :handling, :returns, :origin,
-                          :restrictedOk, :bilingualOk, :warranty, :keywords, :flags, :submittedAt, :createdAt, :updatedAt)
+                          :restrictedOk, :bilingualOk, :warranty, :keywords, :flags, :revet, :submittedAt, :createdAt,
+                          :updatedAt)
                         on conflict (id) do update set product_id = excluded.product_id, title = excluded.title,
                           sku = excluded.sku, price_cents = excluded.price_cents, compare_at_cents = excluded.compare_at_cents,
                           cost_cents = excluded.cost_cents, stock = excluded.stock, low_stock_at = excluded.low_stock_at,
@@ -139,7 +141,8 @@ class ListingPersistenceAdapter implements ListingRepository {
                           country_of_origin = excluded.country_of_origin, restricted_ok = excluded.restricted_ok,
                           bilingual_ok = excluded.bilingual_ok, warranty = excluded.warranty,
                           search_keywords = excluded.search_keywords, vetting_flags = excluded.vetting_flags,
-                          submitted_at = excluded.submitted_at, updated_at = excluded.updated_at
+                          revet_reasons = excluded.revet_reasons, submitted_at = excluded.submitted_at,
+                          updated_at = excluded.updated_at
                         """)
                 .param("id", listing.getId())
                 .param("product", listing.getRecord().id())
@@ -166,6 +169,7 @@ class ListingPersistenceAdapter implements ListingRepository {
                 .param("warranty", d.warranty())
                 .param("keywords", d.searchKeywords())
                 .param("flags", codes(s.getFlags()))
+                .param("revet", codes(s.getRevetReasons()))
                 .param("submittedAt", ts(s.getSubmittedAt()))
                 .param("createdAt", ts(s.getCreatedAt()))
                 .param("updatedAt", ts(s.getUpdatedAt()))
@@ -198,16 +202,18 @@ class ListingPersistenceAdapter implements ListingRepository {
         jdbc.sql("""
                         insert into catalogue.services (id, merchant_id, category_id, name, name_i18n, sku, included,
                           pricing_mode, price_cents, duration_min, buffer_min, instant_book, vetting, status, vetting_flags,
-                          submitted_at, created_at, updated_at)
+                          revet_reasons, submitted_at, created_at, updated_at)
                         values (:id, :merchant, :category, :name, cast(:nameI18n as jsonb), :sku, :included, :mode, :price,
-                          :duration, :buffer, :instant, :vetting, :status, :flags, :submittedAt, :createdAt, :updatedAt)
+                          :duration, :buffer, :instant, :vetting, :status, :flags, :revet, :submittedAt, :createdAt,
+                          :updatedAt)
                         on conflict (id) do update set category_id = excluded.category_id, name = excluded.name,
                           name_i18n = catalogue.services.name_i18n || excluded.name_i18n, sku = excluded.sku,
                           included = excluded.included, pricing_mode = excluded.pricing_mode,
                           price_cents = excluded.price_cents, duration_min = excluded.duration_min,
                           buffer_min = excluded.buffer_min, instant_book = excluded.instant_book, vetting = excluded.vetting,
                           status = excluded.status, vetting_flags = excluded.vetting_flags,
-                          submitted_at = excluded.submitted_at, updated_at = excluded.updated_at
+                          revet_reasons = excluded.revet_reasons, submitted_at = excluded.submitted_at,
+                          updated_at = excluded.updated_at
                         """)
                 .param("id", listing.getId())
                 .param("merchant", listing.getMerchantId())
@@ -224,6 +230,7 @@ class ListingPersistenceAdapter implements ListingRepository {
                 .param("vetting", s.getVetting().code())
                 .param("status", s.getStatus().code())
                 .param("flags", codes(s.getFlags()))
+                .param("revet", codes(s.getRevetReasons()))
                 .param("submittedAt", ts(s.getSubmittedAt()))
                 .param("createdAt", ts(s.getCreatedAt()))
                 .param("updatedAt", ts(s.getUpdatedAt()))
@@ -378,6 +385,7 @@ class ListingPersistenceAdapter implements ListingRepository {
                 .vetting(Objects.requireNonNullElse(enumOrNull(rs, "vetting", Vetting.class), Vetting.DRAFT))
                 .status(Objects.requireNonNullElse(enumOrNull(rs, "status", ListingStatus.class), ListingStatus.HIDDEN))
                 .flags(enums(rs, "vetting_flags", VettingFlag.class))
+                .revetReasons(enums(rs, "revet_reasons", MaterialField.class))
                 .submittedAt(instant(rs, "submitted_at"))
                 .createdAt(requiredInstant(rs, "created_at"))
                 .updatedAt(requiredInstant(rs, "updated_at"))

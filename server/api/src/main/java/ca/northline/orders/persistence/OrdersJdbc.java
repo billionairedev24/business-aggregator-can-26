@@ -1,5 +1,6 @@
 package ca.northline.orders.persistence;
 
+import ca.northline.orders.api.OfferSales;
 import ca.northline.orders.api.OrderInsights;
 import ca.northline.orders.application.OrderQueries;
 import ca.northline.orders.application.OrderViews.Line;
@@ -32,7 +33,7 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 @RequiredArgsConstructor
-class OrdersJdbc implements OrderQueries, OrderInsights, NavBadgeContributor {
+class OrdersJdbc implements OrderQueries, OrderInsights, OfferSales, NavBadgeContributor {
 
     private static final String ORDER_COLUMNS = """
             o.id, o.ref, o.customer_id, o.delivery_area, o.state, o.placed_at, o.delivered_at,
@@ -180,6 +181,27 @@ class OrdersJdbc implements OrderQueries, OrderInsights, NavBadgeContributor {
                 .param("to", JdbcTimes.ts(to))
                 .query((rs, _) -> new Volume(rs.getLong("orders"), rs.getLong("items")))
                 .single();
+    }
+
+    @Override
+    public Map<String, Long> unitsByOffer(String merchantId, Instant from, Instant to) {
+        return jdbc
+                .sql("""
+                        select l.offer_id, sum(coalesce(l.qty, 1)) as units
+                          from orders.order_lines l join orders.orders o on o.id = l.order_id
+                         where l.merchant_id = :m and l.offer_id is not null
+                           and coalesce(l.state, 'pending') <> 'refunded'
+                           and o.type = 'goods' and o.state not in ('cancelled', 'refunded')
+                           and o.placed_at >= :from and o.placed_at < :to
+                         group by l.offer_id
+                        """)
+                .param("m", merchantId)
+                .param("from", JdbcTimes.ts(from))
+                .param("to", JdbcTimes.ts(to))
+                .query((rs, _) -> Map.entry(rs.getString("offer_id"), rs.getLong("units")))
+                .list()
+                .stream()
+                .collect(java.util.stream.Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     /** "4 to pack" / « 4 à emballer ». */

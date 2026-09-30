@@ -21,6 +21,7 @@ import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +38,8 @@ class ListingEditingService implements EditProduct, EditService, ViewListing {
     private final CatalogRecords records;
     private final CategoryCatalog categories;
     private final MediaRepository media;
+    private final MediaVisibility visibility;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     @Override
@@ -72,9 +75,11 @@ class ListingEditingService implements EditProduct, EditService, ViewListing {
         var listing = listings.product(command.merchantId(), id).orElseThrow(() -> new NotFound("listing", id));
         var details = checked(command.merchantId(), id, command.details());
         var record = resolveRecord(command.merchantId(), details, listing.getRecord());
-        listing.revise(effective(command.merchantId(), details, record), record, clock.instant());
+        var revet = listing.revise(
+                effective(command.merchantId(), details, record), record, command.actorId(), clock.instant());
         listings.save(listing);
         media.attach(details.ownImageIds(), OFFER, listing.getId());
+        revet.forEach(events::publishEvent);
         return productView(listing);
     }
 
@@ -158,7 +163,7 @@ class ListingEditingService implements EditProduct, EditService, ViewListing {
                 category,
                 p.contentShared(),
                 media.findAll(p.getDetails().ownImageIds()),
-                media.findAll(p.catalogueImageIds()),
+                visibility.visibleTo(p.getMerchantId(), media.findAll(p.catalogueImageIds())),
                 p.completeness(category));
     }
 
@@ -178,8 +183,10 @@ class ListingEditingService implements EditProduct, EditService, ViewListing {
     public ServiceView update(EditService.Command command) {
         var id = Objects.requireNonNull(command.listingId());
         var listing = listings.service(command.merchantId(), id).orElseThrow(() -> new NotFound("listing", id));
-        listing.revise(checked(command.merchantId(), id, command.details()), clock.instant());
+        var revet = listing.revise(
+                checked(command.merchantId(), id, command.details()), command.actorId(), clock.instant());
         listings.save(listing);
+        revet.forEach(events::publishEvent);
         return serviceView(listing);
     }
 
