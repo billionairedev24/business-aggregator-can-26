@@ -17,8 +17,11 @@ workflow:
 variables:
   PIPELINE_PART:
     value: all
-    options: [all, server, web, infra, chart, images, gitops, promote]
-    description: "Which part to build and test. `images` builds and pushes the container images (S-14, never part of `all`); `chart` = Helm checks, `gitops` = Argo CD checks (S-15; both also in `all`); `promote` opens a promotion merge request (S-15, never part of `all`)."
+    options: [all, server, web, infra, chart, images, gitops, promote, events]
+    description: "Which part to build and test. `events` = the event schema contract check (S-34, also in `all`). `images` builds and pushes the container images (S-14, never part of `all`); `chart` = Helm checks, `gitops` = Argo CD checks (S-15; both also in `all`); `promote` opens a promotion merge request (S-15, never part of `all`)."
+  EVENT_SCHEMAS_BASE:
+    value: main
+    description: "events: the branch the event schemas are compared with (breaking changes need a version bump)."
   SERVER_GRADLE_ARGS:
     value: build
     description: "Gradle arguments for server/ (e.g. build, :api:build, build -x test, build --rerun-tasks)."
@@ -65,6 +68,7 @@ default:
   interruptible: true
 
 # One file per part: ci/gitlab/server.yml (S-4), ci/gitlab/web.yml (S-5), ci/gitlab/infra.yml (S-2/S-3),
-# ci/gitlab/deploy.yml (S-14 images and chart), ci/gitlab/gitops.yml (S-15 Argo CD checks and promotion).
+# ci/gitlab/deploy.yml (S-14 images and chart), ci/gitlab/gitops.yml (S-15 Argo CD checks and promotion),
+# ci/gitlab/events.yml (S-34 event schema contract).
 include:
   - local: ci/gitlab/*.yml
