@@ -1,6 +1,8 @@
 package ca.northline.availability.web;
 
+import ca.northline.availability.application.CalendarUseCases.ChooseCalendarSources;
 import ca.northline.availability.domain.BookingRules.AcceptMode;
+import ca.northline.availability.domain.CalendarLinkState;
 import ca.northline.availability.domain.CalendarProvider;
 import ca.northline.availability.domain.TimeOff;
 import ca.northline.shared.security.MerchantRole;
@@ -10,6 +12,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import java.net.URI;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -65,6 +68,7 @@ final class AvailabilityDtos {
     record PreviewResponse(
             List<SlotResponse> slots,
             int jobs,
+            int busyBlocks,
             int intervalMin,
             int bufferMin,
             @Nullable String closed) {}
@@ -141,12 +145,27 @@ final class AvailabilityDtos {
             @NotNull(message = "Choose open or closed.") Boolean open) {}
 
     // ── sync & team ──
+    /** {@code authorizationUrl}: after "Connect" for Google / Outlook — the Studio sends the browser there. */
     record CalendarResponse(
             CalendarProvider provider,
             boolean connected,
             @Nullable String accountLabel,
             @Nullable Instant lastSyncAt,
-            @Nullable String feedUrl) {}
+            @Nullable String feedUrl,
+            @Nullable CalendarLinkState state,
+            boolean available,
+            List<String> sources,
+            @Nullable URI authorizationUrl) {}
+
+    record SourceResponse(String id, String name, boolean primary, boolean selected) {}
+
+    /** {@code authorizationUrl}: the provider must first allow Northline to list calendars (incremental consent). */
+    record SourcesResponse(
+            List<SourceResponse> items, @Nullable URI authorizationUrl) {}
+
+    record ChooseSourcesBody(
+            @NotEmpty(message = ChooseCalendarSources.NONE)
+            List<@NotNull(message = ChooseCalendarSources.NONE) String> calendarIds) {}
 
     record TeamMemberResponse(
             String userId,

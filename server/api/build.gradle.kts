@@ -36,6 +36,11 @@ dependencies {
     implementation(libs.azure.storage.blob) { exclude(group = "com.azure", module = "azure-core-http-netty") }
     implementation(libs.azure.identity) { exclude(group = "com.azure", module = "azure-core-http-netty") }
     implementation(libs.azure.core.http.jdk) // JDK HttpClient instead of Netty for the Azure SDK
+    // Envelope encryption of stored secrets (S-32, ca.northline.shared.crypto): only the key service selected by
+    // northline.kms.provider is instantiated, as in northline-auth (S-7).
+    implementation(libs.aws.kms) { exclude(group = "software.amazon.awssdk", module = "netty-nio-client") }
+    implementation(libs.gcp.kms)
+    implementation(libs.azure.keyvault.keys) { exclude(group = "com.azure", module = "azure-core-http-netty") }
     annotationProcessor(libs.mapstruct.processor)
     annotationProcessor(libs.lombok.mapstruct.binding)
     runtimeOnly("org.postgresql:postgresql")

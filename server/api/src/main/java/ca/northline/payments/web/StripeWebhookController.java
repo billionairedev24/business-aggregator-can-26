@@ -2,6 +2,7 @@ package ca.northline.payments.web;
 
 import ca.northline.payments.application.ReceiveStripeEvents;
 import ca.northline.payments.application.StripeEvent;
+import ca.northline.shared.WebhookRateLimiter;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.time.Clock;

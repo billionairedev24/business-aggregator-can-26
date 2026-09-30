@@ -108,6 +108,21 @@ northline:
       key: ${REGISTRY_CALGARY_APP_TOKEN:}                           # Socrata app token (optional, secret)
     recheck-after: ${REGISTRY_RECHECK_AFTER:P30D}
     recheck-cron: ${REGISTRY_RECHECK_CRON:0 41 3 * * *}             # daily, America/Edmonton
+  # Google and Microsoft calendar two-way sync (S-32, docs/runbooks/calendar-sync.md): local (fake Google and Outlook;
+  # refused under staging/prod) | oauth (Google Calendar API / Microsoft Graph, each once its client id + secret are set).
+  calendar:
+    provider: ${CALENDAR_PROVIDER:local}
+    studio-url: ${STUDIO_ORIGIN:http://localhost:3100}      # OAuth redirect URIs: <studio>/api/v1/calendar/oauth/<google|outlook>/callback
+    notification-url: ${API_PUBLIC_URL:http://localhost:8080}   # change notifications (HTTPS only; http = periodic reads only)
+    sync-interval: ${CALENDAR_SYNC_INTERVAL:PT5M}
+    webhook-rate-limit: ${CALENDAR_WEBHOOK_RATE_LIMIT:600}      # notifications per minute and client address
+    google:
+      client-id: ${GOOGLE_CALENDAR_CLIENT_ID:}
+      client-secret: ${GOOGLE_CALENDAR_CLIENT_SECRET:}
+    microsoft:
+      client-id: ${MICROSOFT_CALENDAR_CLIENT_ID:}
+      client-secret: ${MICROSOFT_CALENDAR_CLIENT_SECRET:}
+      tenant: ${MICROSOFT_CALENDAR_TENANT:common}
   # Provider switches (ca.northline.platform) — see docs/runbooks/README.md.
   # Object storage (S-10, ca.northline.shared.storage): local (modules' disk fakes; placeholders under dev; refused
   # under staging/prod) | s3 (AWS S3 or RustFS/MinIO: endpoint + path-style) | gcs | azure (endpoint = account URL).
@@ -123,6 +138,14 @@ northline:
   kms:
     provider: ${KMS_PROVIDER:local}
     key-id: ${KMS_KEY_ID:}
+  # Envelope encryption of stored secrets (S-32 calendar refresh tokens, ca.northline.shared.crypto). KMS_PROVIDER
+  # local: data keys wrapped with KMS_LOCAL_KEY (fixed dev key under local/test; refused under staging/prod);
+  # aws | gcp | azure: wrapped by the key service with KMS_ENCRYPTION_KEY_ID (Terraform's `tokens` key).
+  crypto:
+    key-id: ${KMS_ENCRYPTION_KEY_ID:}
+    local-key: ${KMS_LOCAL_KEY:}
+    region: ${KMS_REGION:}
+    endpoint: ${KMS_ENDPOINT:}
   # Transactional email (S-13, library server/email; docs/runbooks/email.md): local (SMTP to Mailpit, only logs when
   # Mailpit isn't running; refused under staging/prod) | smtp (any relay, e.g. SES SMTP) | ses | sendgrid | azure.
   email:

@@ -58,6 +58,13 @@ class SecurityConfig {
                         // Stripe webhooks: authenticated by the Stripe-Signature, not a token (S-12)
                         .requestMatchers(HttpMethod.POST, "/api/v1/webhooks/stripe", "/api/v1/webhooks/stripe/connect")
                         .permitAll()
+                        // Calendar change notifications: verified per channel secret, not a token (S-32)
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/v1/webhooks/calendar/google",
+                                "/api/v1/webhooks/calendar/microsoft",
+                                "/api/v1/webhooks/calendar/microsoft/lifecycle")
+                        .permitAll()
                         // Staff tokens require acr=mfa like business ones (CLAUDE.md; S-20 found only the role checked)
                         .requestMatchers("/api/v1/console/**")
                         .access(AuthorizationManagers.allOf(

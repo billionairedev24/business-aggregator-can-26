@@ -1,4 +1,4 @@
-package ca.northline.payments.web;
+package ca.northline.shared;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

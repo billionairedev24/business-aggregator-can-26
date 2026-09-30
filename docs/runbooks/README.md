@@ -15,6 +15,7 @@ say where a step is still manual or missing.
 | [prod.md](prod.md) | production (Calgary launch) |
 | [infrastructure.md](infrastructure.md) | Terraform on AWS / Google Cloud / Azure: accounts, state bucket, plan/apply, outputs → variables, cost, teardown (S-2/S-3) |
 | [object-storage.md](object-storage.md) | uploads in S3 / RustFS, Cloud Storage or Azure Blob: variables, buckets, least-privilege access per cloud (S-10) |
+| [calendar-sync.md](calendar-sync.md) | Google and Microsoft calendar two-way sync: Google Cloud and Microsoft Entra app registrations, redirect and notification URIs per environment, secrets, KMS envelope key, operations (S-32) |
 | [registries.md](registries.md) | business registry lookups: Corporations Canada API, Alberta Corporate Registry (search service or registry-agent searches), City of Calgary licences (Socrata), manual review queue, re-checks (S-23) |
 | [stripe.md](stripe.md) | Stripe Connect Express: platform account setup (test/live), money flow, idempotency, local stripe-mock, operations (S-11), webhooks (S-12), Stripe Tax (S-21) |
 | [email.md](email.md) | transactional email: Mailpit locally, SES / SendGrid / Azure Communication Services / SMTP set-up, SPF/DKIM/DMARC, CASL (S-13) |
@@ -45,6 +46,7 @@ say where a step is still manual or missing.
 | Dev seed (`db/seed-dev`) | yes | **no** (not in the images; refused — S-16) | **no** | **no** |
 | Stripe | fake gateway, or stripe-mock (`--profile payments`) | fake, or test keys | **test keys required** | **live keys required** |
 | Business registries (`REGISTRY_*_PROVIDER`) | `fixtures` | `fixtures` (warning), `manual` or the APIs | **`manual` / APIs** (`fixtures` refused) | same |
+| Calendar sync (`CALENDAR_PROVIDER`) | `local`: fake Google / Outlook (connects at once, a lunch block tomorrow) | `local`, or `oauth` with the dev app registrations | **`oauth`** (`local` refused) | same |
 | Identity verification (`IDENTITY_PROVIDER`) | `local`: pick the outcome on a page | `local` (owners can't finish) or `stripe` with test keys | **`stripe`**, test mode | **`stripe`**, live mode |
 | SMS / email | logged | *no provider yet (S-8, S-13)* | same | same |
 | Required variables checked at start-up | none | yes | yes (+ Stripe, storage) | yes (+ Stripe, storage) |
@@ -84,7 +86,8 @@ say where a step is still manual or missing.
   | property | variable | values | adapters arrive in |
   |---|---|---|---|
   | `northline.storage.provider` | `STORAGE_PROVIDER` | `local` · `s3` (AWS S3, MinIO/RustFS, any S3 API) · `gcs` · `azure` | **done** (S-10, api uploads — [object-storage.md](object-storage.md)) |
-  | `northline.kms.provider` | `KMS_PROVIDER` | `local` · `aws` · `gcp` · `azure` | **done** (S-7, auth token signing keys — [key-rotation.md](key-rotation.md)) |
+  | `northline.kms.provider` | `KMS_PROVIDER` | `local` · `aws` · `gcp` · `azure` | **done** (S-7, auth token signing keys — [key-rotation.md](key-rotation.md); S-32, api envelope encryption of stored secrets with `KMS_ENCRYPTION_KEY_ID` — [calendar-sync.md](calendar-sync.md#the-envelope-key-kms_encryption_key_id)) |
+  | `northline.calendar.provider` | `CALENDAR_PROVIDER` | `local` (fake Google and Outlook) · `oauth` (Google Calendar API, Microsoft Graph; each once its client is set) | **done** (S-32, calendar two-way sync — [calendar-sync.md](calendar-sync.md)) |
   | `northline.email.provider` | `EMAIL_PROVIDER` | `local` (SMTP to Mailpit) · `smtp` · `ses` · `sendgrid` · `azure` | **done** (S-13, api invitations and money notices — [email.md](email.md); S-27 worker: `payout.failed`) |
   | `northline.tax.provider` | `TAX_PROVIDER` | `local` (fixed Canadian rates) · `stripe` (Stripe Tax) | **done** (S-21, api sales tax — [stripe.md § 6](stripe.md#6-stripe-tax-s-21)) |
   | `northline.identity.provider` | `IDENTITY_PROVIDER` | `local` (fake with an outcome page) · `stripe` (Stripe Identity) | **done** (S-22, owners' identity verification — [stripe.md § Identity](stripe.md#8-identity-s-22)) |
@@ -139,10 +142,16 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `WEBHOOKS_MAX_IN_FLIGHT`, `WEBHOOKS_CONNECT_TIMEOUT`, `WEBHOOKS_RESPONSE_TIMEOUT`, `WEBHOOKS_TOTAL_TIMEOUT`, `WEBHOOKS_DISABLE_AFTER`, `WEBHOOKS_LOG_RETENTION` | | | | ✓ | no (64, 5s, 10s, 15s, 3d, 30d — [webhooks.md](webhooks.md)) |
 | `STORAGE_PROVIDER`, `STORAGE_BUCKET` | ✓ | | | | staging and prod (`local` refused there — S-10, [object-storage.md](object-storage.md)) |
 | `STORAGE_REGION`, `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY`, `STORAGE_PATH_STYLE`, `STORAGE_ENCRYPTION_KEY` | ✓ | | | | no (`STORAGE_ENDPOINT` needed for `azure`) |
-| `KMS_PROVIDER`, `KMS_KEY_ID` | | ✓ | | | `KMS_PROVIDER` everywhere, `KMS_KEY_ID` in staging and prod (S-7, [key-rotation.md](key-rotation.md)) |
-| `KMS_PUBLISHED_KEY_IDS`, `KMS_REGION`, `KMS_ENDPOINT`, `SIGNING_KEYS_DIR`, `SIGNING_KEYS_ROTATE_EVERY` | | ✓ | | | no |
+| `KMS_PROVIDER`, `KMS_KEY_ID` | ✓ (`KMS_PROVIDER`) | ✓ | | | `KMS_PROVIDER` everywhere, `KMS_KEY_ID` in staging and prod (S-7, [key-rotation.md](key-rotation.md)) |
+| `KMS_ENCRYPTION_KEY_ID` | ✓ | | | | staging and prod (S-32: the api's envelope key, Terraform output; [calendar-sync.md](calendar-sync.md#the-envelope-key-kms_encryption_key_id)) |
+| `KMS_LOCAL_KEY` | ✓ | | | | no (`KMS_PROVIDER=local` outside local/test only; refused in staging/prod) |
+| `KMS_PUBLISHED_KEY_IDS`, `SIGNING_KEYS_DIR`, `SIGNING_KEYS_ROTATE_EVERY` | | ✓ | | | no |
+| `KMS_REGION`, `KMS_ENDPOINT` | ✓ | ✓ | | | no (AWS region chain; LocalStack) |
+| `CALENDAR_PROVIDER` | ✓ | | | | staging and prod: `oauth` (`local` refused there — S-32, [calendar-sync.md](calendar-sync.md)) |
+| `GOOGLE_CALENDAR_CLIENT_ID`/`_SECRET`, `MICROSOFT_CALENDAR_CLIENT_ID`/`_SECRET` | ✓ | | | | no — empty = that provider shows "Not available yet" ([calendar-sync.md](calendar-sync.md#set-up-per-environment)) |
+| `MICROSOFT_CALENDAR_TENANT`, `CALENDAR_SYNC_INTERVAL`, `CALENDAR_WEBHOOK_RATE_LIMIT` | ✓ | | | | no (`common`, `PT5M`, 600/min) |
 | `EMAIL_PROVIDER`, `EMAIL_FROM` | ✓ | | | ✓ | staging and prod (`local` refused there — S-13, [email.md](email.md)) |
-| `EMAIL_UNSUBSCRIBE_KEY`, `API_PUBLIC_URL` | ✓ | | | ✓ | staging and prod (unsubscribe links; the worker signs them for `payout.failed`, S-27 — [email.md](email.md#variables)) |
+| `EMAIL_UNSUBSCRIBE_KEY`, `API_PUBLIC_URL` | ✓ | | | ✓ | staging and prod (unsubscribe links; the worker signs them for `payout.failed`, S-27 — [email.md](email.md#variables); S-32 calendar notification URLs) |
 | `EMAIL_REPLY_TO`, `EMAIL_MAILING_ADDRESS`, `EMAIL_CONTACT`, `EMAIL_REGION`, `EMAIL_ENDPOINT`, `EMAIL_API_KEY`, `EMAIL_CONFIGURATION_SET`, `EMAIL_RETRY_*`, `SMTP_*` | ✓ | | | ✓ | per provider: `EMAIL_API_KEY` with `sendgrid`, `EMAIL_ENDPOINT` with `azure`, `SMTP_HOST` with `smtp` ([email.md](email.md#variables)) |
 | `SMS_PROVIDER`, `SMS_FROM` | ✓ | ✓ | | ✓ | staging and prod (`local` refused there; `dev` may keep `local`). api: team invitations, worker: notifications (S-27) |
 | `SMS_ACCOUNT_ID`, `SMS_AUTH_TOKEN` | ✓ | ✓ | | ✓ | with `SMS_PROVIDER=twilio` |

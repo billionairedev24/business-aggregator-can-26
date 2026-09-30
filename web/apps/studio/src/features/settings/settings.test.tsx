@@ -185,6 +185,21 @@ describe('Settings › API & integrations', () => {
     expect(await screen.findByText('nl_live_Zzzzsecret')).toBeTruthy();
   });
 
+  it('Integrations: a Google Calendar that needs a reconnect says so (S-32)', async () => {
+    mockFetch({
+      [`GET ${S}/api-keys`]: () => ({ items: [] }),
+      [`GET ${S}/webhooks`]: () => ({ items: [] }),
+      [`GET ${S}/developer-options`]: () => ({ scopes: [], events: [] }),
+      [`GET ${S}/business`]: () => business,
+      'GET /api/v1/merchants/m1/availability/sync': () => ({ calendars: [{ provider: 'google', connected: true, state: 'reconnect' }], team: [] }),
+      'GET /api/v1/merchants/m1/listings/integrations': () => ({ items: [] }),
+    });
+    renderWithProviders(<ApiTab />);
+    const row = (await screen.findByText('Google Calendar')).closest('li')!;
+    expect(await within(row).findByRole('button', { name: 'Reconnect' })).toBeTruthy();
+    expect(within(row).queryByText('Connected')).toBeNull();
+  });
+
   const apiRoutes = (hook: Record<string, unknown>, extra: Record<string, (url: string, init: RequestInit) => unknown> = {}) => ({
     ...extra,
     [`GET ${S}/api-keys`]: () => ({ items: [] }),

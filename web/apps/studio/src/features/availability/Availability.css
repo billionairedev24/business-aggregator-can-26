@@ -45,3 +45,7 @@
 .nl-av-how { margin-top: 24px; }
 .nl-av-bullets { font-size: 14px; display: flex; flex-direction: column; gap: 6px; color: var(--color-neutral-800); padding-left: 18px; margin: 0; }
 .nl-av-code { font-family: ui-monospace, Menlo, monospace; font-size: 12px; overflow-wrap: anywhere; }
+
+/* S-32 calendar sync: "reconnect" sub-line and the Choose calendars dialog */
+.nl-av-warn { color: var(--color-accent-2-700); }
+.nl-av-error { color: var(--color-accent-2-700); font-size: 13px; margin: 8px 0 0; }

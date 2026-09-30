@@ -2,7 +2,10 @@ package ca.northline.availability.domain;
 
 import ca.northline.shared.CodedEnum;
 
-/** Calendar sync providers: Google and Outlook sync two-way; iCal is a read-only subscription feed. */
+/**
+ * Calendar sync providers: Google Calendar and Outlook / Microsoft 365 sync two-way over OAuth (S-32); iCal is a
+ * read-only subscription feed.
+ */
 public enum CalendarProvider implements CodedEnum {
     GOOGLE,
     OUTLOOK,

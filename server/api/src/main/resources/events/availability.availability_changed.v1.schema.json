@@ -34,7 +34,8 @@
         "rules",
         "time_off",
         "holidays",
-        "team"
+        "team",
+        "calendar"
       ]
     }
   }

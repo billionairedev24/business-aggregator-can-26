@@ -55,6 +55,9 @@ locals {
     REGISTRY_CORPORATIONS_CANADA_KEY = "registry-corporations-canada-key"
     REGISTRY_ALBERTA_KEY             = "registry-alberta-key"
     REGISTRY_CALGARY_APP_TOKEN       = "registry-calgary-app-token"
+    # S-32 calendar sync: the Google OAuth client and Microsoft Entra app registration secrets.
+    GOOGLE_CALENDAR_CLIENT_SECRET    = "google-calendar-client-secret"
+    MICROSOFT_CALENDAR_CLIENT_SECRET = "microsoft-calendar-client-secret"
   }
 }
 
@@ -72,11 +75,17 @@ module "kms" {
   keys = {
     data    = { usage = "encrypt" }
     signing = { usage = "sign" }
+    # S-32: the api's envelope key for secrets it stores (calendar refresh tokens); KMS_ENCRYPTION_KEY_ID.
+    tokens = { usage = "encrypt" }
   }
   key_users = {
     # Only northline-auth signs tokens (S-7); the api and bff verify through the JWK set, not the KMS.
     signing = {
       auth = module.kubernetes.workload_identities["auth"].principal
+    }
+    # Only the api seals and opens its stored secrets (S-32).
+    tokens = {
+      api = module.kubernetes.workload_identities["api"].principal
     }
   }
   deletion_protection = var.deletion_protection

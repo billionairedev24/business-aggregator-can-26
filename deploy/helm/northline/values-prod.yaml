@@ -43,6 +43,10 @@ apps:
       REGISTRY_CORPORATIONS_CANADA_PROVIDER: manual
       REGISTRY_ALBERTA_PROVIDER: manual
       REGISTRY_CALGARY_PROVIDER: socrata
+      # S-32: Google Calendar and Microsoft 365 over OAuth; `local` is refused here. The client ids go in configEnv
+      # (GOOGLE_CALENDAR_CLIENT_ID, MICROSOFT_CALENDAR_CLIENT_ID), the secrets in the secrets manager
+      # (secretEnv below once set); KMS_ENCRYPTION_KEY_ID comes from Terraform's config_env.
+      CALENDAR_PROVIDER: oauth
       EMAIL_FROM: "Northline <no-reply@northline.ca>"
     autoscaling: { enabled: true, minReplicas: 3, maxReplicas: 10 }
     resources:

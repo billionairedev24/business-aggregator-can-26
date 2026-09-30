@@ -33,7 +33,7 @@ global:
 urls:
   auth: https://auth.dev.northline.ca
   # The api's public host serves the routes that must bypass the BFF: Stripe webhooks (S-12,
-  # /api/v1/webhooks/stripe[/connect]), the email unsubscribe page (S-13, /api/v1/email/unsubscribe) and — with
+  # /api/v1/webhooks/stripe[/connect]), calendar change notifications (S-32, /api/v1/webhooks/calendar/…), the email unsubscribe page (S-13, /api/v1/email/unsubscribe) and — with
   # apps.api.tokenClients (S-29) — /api/v1 for the mobile apps (DPoP-bound tokens, no BFF).
   api: https://api.dev.northline.ca
   studio: https://studio.dev.northline.ca
@@ -121,6 +121,8 @@ externalSecrets:
     EMAIL_UNSUBSCRIBE_KEY: email-unsubscribe-key
     EMAIL_API_KEY: email-api-key
     SMTP_PASSWORD: smtp-password
+    GOOGLE_CALENDAR_CLIENT_SECRET: google-calendar-client-secret        # S-32 calendar sync (api)
+    MICROSOFT_CALENDAR_CLIENT_SECRET: microsoft-calendar-client-secret  # S-32 calendar sync (api)
   # Optional variables (secretEnv: false) to map as well. List only those that hold a value in the secrets manager:
   # one empty or missing remote secret fails the app's whole ExternalSecret. Required variables are always mapped.
   optionalKeys: [REDIS_PASSWORD, KAFKA_SASL_JAAS_CONFIG, ES_PASSWORD]
@@ -307,12 +309,14 @@ apps:
       REGISTRY_CORPORATIONS_CANADA_KEY: false  # S-23: with REGISTRY_CORPORATIONS_CANADA_PROVIDER=api
       REGISTRY_ALBERTA_KEY: false              # S-23: with REGISTRY_ALBERTA_PROVIDER=opencorporates
       REGISTRY_CALGARY_APP_TOKEN: false        # S-23: optional Socrata app token (higher rate limits)
+      GOOGLE_CALENDAR_CLIENT_SECRET: false     # S-32: with GOOGLE_CALENDAR_CLIENT_ID (configEnv); empty = Google not offered
+      MICROSOFT_CALENDAR_CLIENT_SECRET: false  # S-32: with MICROSOFT_CALENDAR_CLIENT_ID (configEnv)
     runAsUser: 65532
     probes:
       startup: { path: /actuator/health/liveness, periodSeconds: 5, failureThreshold: 60 }
       liveness: { path: /actuator/health/liveness, periodSeconds: 10, failureThreshold: 3 }
       readiness: { path: /actuator/health/readiness, periodSeconds: 5, failureThreshold: 3 }
-    public: true                  # the ingress reaches it for the Stripe webhooks and email unsubscribe (ingress.yaml)
+    public: true                  # the ingress reaches it for the Stripe and calendar webhooks and email unsubscribe (ingress.yaml)
     # S-29: route all of /api/v1 on the api host, for clients that hold their own tokens (the mobile apps, with DPoP;
     # partners). false = webhooks and unsubscribe only, as before. Every other endpoint still needs a token.
     tokenClients: true

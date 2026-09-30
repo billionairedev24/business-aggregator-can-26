@@ -216,7 +216,9 @@ function Integrations({ keys, owner, onQuickBooks }: { keys: ApiKey[]; owner: bo
   const kitchen = merchant.type === 'kitchen';
   const sync = useQuery({ ...syncQuery(merchantId), enabled: provider });
   const commerce = useQuery({ ...integrationsQuery(merchantId), enabled: !kitchen });
-  const google = sync.data?.calendars.find(c => c.provider === 'google')?.connected;
+  const googleCal = sync.data?.calendars.find(c => c.provider === 'google');
+  const google = googleCal?.connected && googleCal.state !== 'reconnect';
+  const toSync = () => void navigate({ to: screenHref(merchantId, 'availability') });
   const shop = commerce.data?.some(c => (c.provider === 'shopify' || c.provider === 'square') && c.connected);
   const quickbooks = keys.some(k => /quickbooks/i.test(k.name));
   const row = (label: string, connected: boolean | undefined, onConnect: () => void) => (
@@ -226,7 +228,9 @@ function Integrations({ keys, owner, onQuickBooks }: { keys: ApiKey[]; owner: bo
     <section aria-labelledby="set-int">
       <h3 id="set-int" className="nl-set-h3 nl-set-gap">{t('integrations')}</h3>
       <ul className="nl-set-rows">
-        {provider && row(t('int_google'), google, () => void navigate({ to: screenHref(merchantId, 'availability') }))}
+        {provider && (googleCal?.state === 'reconnect'
+          ? <li className="nl-set-row"><span>{t('int_google')}</span><Button variant="ghost" onClick={toSync}>{t('int_reconnect')}</Button></li>
+          : row(t('int_google'), google, toSync))}
         {row(t('int_quickbooks'), quickbooks, onQuickBooks)}
         {!kitchen && row(t('int_commerce'), shop, () => void navigate({ to: `${screenHref(merchantId, 'products')}/bulk` }))}
       </ul>

@@ -152,6 +152,13 @@ Notes:
   (e.g. Alberta `2021456789` = Prairie Wrench, Calgary `BL 22-118840` = Pho Dau Bo); unknown numbers go to the manual
   review queue (`GET /api/v1/console/registry-reviews`, staff). To try Calgary's real dataset:
   `REGISTRY_CALGARY_PROVIDER=socrata` (no account needed). [registries.md](registries.md)
+- **Calendar sync (S-32):** `CALENDAR_PROVIDER=local` (the default) fakes Google and Outlook: Availability › Calendar
+  sync & team › Connect goes straight back through the OAuth callback, the member gets a "Work" and a "Family"
+  calendar, tomorrow 12:00–13:00 is busy in the preview, and bookings written back are logged (`Local calendar
+  (google): wrote …`). Refresh tokens are sealed with the development key (`KMS_PROVIDER=local`). To try the real
+  providers from your laptop: `CALENDAR_PROVIDER=oauth` with your own Google / Microsoft test app registrations and
+  the redirect URIs `http://localhost:3100/api/v1/calendar/oauth/<google|outlook>/callback`; push notifications stay
+  off (they need a public HTTPS `API_PUBLIC_URL`), the 5-minute read does the work. [calendar-sync.md](calendar-sync.md)
 - **Your own Kafka:** create the topics with
   `KAFKA_TOPICS_CMD=kafka-topics.sh KAFKA_TOPICS_BOOTSTRAP=localhost:9092 scripts/topics.sh`, or with the provisioner
   the deployed environments use: `cd server && ./gradlew :worker:kafkaTopics --args='apply'` (`plan` / `verify` change

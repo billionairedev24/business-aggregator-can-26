@@ -4,13 +4,16 @@ import ca.northline.availability.application.CalendarLinkRepository;
 import ca.northline.availability.application.HoursRepository;
 import ca.northline.availability.application.TimeOffRepository;
 import ca.northline.availability.domain.BookingRules;
+import ca.northline.availability.domain.CalendarLinkState;
 import ca.northline.availability.domain.CalendarProvider;
+import ca.northline.availability.domain.CalendarScope;
 import ca.northline.availability.domain.TimeOff;
 import ca.northline.availability.domain.TimeRange;
 import ca.northline.availability.domain.WeeklyHours;
 import ca.northline.shared.CodedEnum;
 import ca.northline.shared.Ids;
 import ca.northline.shared.JdbcTimes;
+import ca.northline.shared.crypto.SecretSealer.Sealed;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
@@ -18,6 +21,7 @@ import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -279,11 +283,14 @@ class AvailabilityJdbc implements HoursRepository, TimeOffRepository, CalendarLi
 
     // ── calendar links ──────────────────────────────────────────────────────────
 
+    private static final String LINK_COLUMNS = """
+            id, merchant_id, member_user_id, provider, account_label, token_ref, connected_at, last_sync_at, state,
+            scopes, external_account_id, write_calendar_id""";
+
     @Override
     public List<Link> of(String merchantId, String memberUserId) {
-        return jdbc.sql("""
-                        select id, member_user_id, provider, account_label, token_ref, connected_at, last_sync_at
-                          from availability.calendar_links where merchant_id = :m and member_user_id = :member
+        return jdbc.sql("select " + LINK_COLUMNS + """
+                         from availability.calendar_links where merchant_id = :m and member_user_id = :member
                         """)
                 .param("m", merchantId)
                 .param("member", memberUserId)
@@ -296,6 +303,34 @@ class AvailabilityJdbc implements HoursRepository, TimeOffRepository, CalendarLi
         return of(merchantId, memberUserId).stream()
                 .filter(l -> l.provider() == provider)
                 .findFirst();
+    }
+
+    @Override
+    public Optional<Link> byId(String linkId) {
+        return jdbc.sql("select " + LINK_COLUMNS + " from availability.calendar_links where id = :id")
+                .param("id", linkId)
+                .query((rs, _) -> link(rs))
+                .optional();
+    }
+
+    @Override
+    public Optional<Link> lock(String linkId) {
+        return jdbc.sql("select " + LINK_COLUMNS
+                        + " from availability.calendar_links where id = :id for no key update skip locked")
+                .param("id", linkId)
+                .query((rs, _) -> link(rs))
+                .optional();
+    }
+
+    @Override
+    public List<Link> connected() {
+        return jdbc.sql("select " + LINK_COLUMNS + """
+                         from availability.calendar_links
+                        where provider in ('google', 'outlook') and state = 'connected' and refresh_token_enc is not null
+                        order by id
+                        """)
+                .query((rs, _) -> link(rs))
+                .list();
     }
 
     @Override
@@ -320,6 +355,88 @@ class AvailabilityJdbc implements HoursRepository, TimeOffRepository, CalendarLi
     }
 
     @Override
+    public Link saveGrant(Link l, Sealed token) {
+        jdbc.sql("""
+                        insert into availability.calendar_links (id, merchant_id, member_user_id, provider, account_label,
+                               mode, token_ref, connected_at, last_sync_at, state, scopes, external_account_id,
+                               refresh_token_enc, refresh_token_key, write_calendar_id, last_error, state_changed_at)
+                        values (:id, :m, :member, :provider, :label, 'two_way', :tokenRef, :connected, :sync, 'connected',
+                               :scopes, :subject, :enc, :key, :write, null, :connected)
+                        on conflict (merchant_id, member_user_id, provider) do update set
+                               account_label = excluded.account_label, token_ref = excluded.token_ref,
+                               state = 'connected', scopes = excluded.scopes,
+                               external_account_id = excluded.external_account_id,
+                               refresh_token_enc = excluded.refresh_token_enc,
+                               refresh_token_key = excluded.refresh_token_key,
+                               write_calendar_id = excluded.write_calendar_id, last_error = null,
+                               state_changed_at = now()
+                        """)
+                .param("id", l.id())
+                .param("m", l.merchantId())
+                .param("member", l.memberUserId())
+                .param("provider", l.provider().code())
+                .param("label", l.accountLabel())
+                .param("tokenRef", l.tokenRef())
+                .param("connected", JdbcTimes.ts(l.connectedAt()))
+                .param("sync", JdbcTimes.ts(l.lastSyncAt()), Types.TIMESTAMP_WITH_TIMEZONE)
+                .param(
+                        "scopes",
+                        l.scopes().stream().map(CalendarScope::code).sorted().toArray(String[]::new))
+                .param("subject", l.externalAccountId(), Types.VARCHAR)
+                .param("enc", token.ciphertext())
+                .param("key", token.wrappedKey())
+                .param("write", l.writeCalendarId(), Types.VARCHAR)
+                .update();
+        return find(l.merchantId(), l.memberUserId(), l.provider()).orElseThrow();
+    }
+
+    @Override
+    public Optional<Sealed> refreshToken(String linkId) {
+        return jdbc.sql("""
+                        select token_ref, refresh_token_key, refresh_token_enc from availability.calendar_links
+                         where id = :id and refresh_token_enc is not null
+                        """)
+                .param("id", linkId)
+                .query((rs, _) -> new Sealed(
+                        rs.getString("token_ref"), rs.getBytes("refresh_token_key"), rs.getBytes("refresh_token_enc")))
+                .optional();
+    }
+
+    @Override
+    public void replaceRefreshToken(String linkId, Sealed token) {
+        jdbc.sql("""
+                        update availability.calendar_links set token_ref = :ref, refresh_token_key = :key,
+                               refresh_token_enc = :enc
+                         where id = :id
+                        """)
+                .param("id", linkId)
+                .param("ref", token.keyRef())
+                .param("key", token.wrappedKey())
+                .param("enc", token.ciphertext())
+                .update();
+    }
+
+    @Override
+    public void markReconnect(String linkId, String error, Instant at) {
+        jdbc.sql("""
+                        update availability.calendar_links set state = 'reconnect', last_error = :error, state_changed_at = :at
+                         where id = :id and state <> 'reconnect'
+                        """)
+                .param("id", linkId)
+                .param("error", error)
+                .param("at", JdbcTimes.ts(at))
+                .update();
+    }
+
+    @Override
+    public void synced(String linkId, Instant at) {
+        jdbc.sql("update availability.calendar_links set last_sync_at = :at where id = :id")
+                .param("id", linkId)
+                .param("at", JdbcTimes.ts(at))
+                .update();
+    }
+
+    @Override
     public void delete(String merchantId, String memberUserId, CalendarProvider provider) {
         jdbc.sql("""
                         delete from availability.calendar_links
@@ -332,14 +449,26 @@ class AvailabilityJdbc implements HoursRepository, TimeOffRepository, CalendarLi
     }
 
     private static Link link(ResultSet rs) throws SQLException {
+        var scopes = EnumSet.noneOf(CalendarScope.class);
+        var array = rs.getArray("scopes");
+        if (array != null) {
+            for (var code : (String[]) array.getArray()) {
+                scopes.add(CodedEnum.fromCode(CalendarScope.class, code));
+            }
+        }
         return new Link(
                 rs.getString("id"),
+                java.util.Objects.requireNonNullElse(rs.getString("merchant_id"), ""),
                 rs.getString("member_user_id"),
                 CodedEnum.fromCode(CalendarProvider.class, rs.getString("provider")),
                 java.util.Objects.requireNonNullElse(rs.getString("account_label"), ""),
                 java.util.Objects.requireNonNullElse(rs.getString("token_ref"), ""),
                 java.util.Objects.requireNonNullElse(JdbcTimes.instant(rs, "connected_at"), Instant.EPOCH),
-                JdbcTimes.instant(rs, "last_sync_at"));
+                JdbcTimes.instant(rs, "last_sync_at"),
+                CodedEnum.fromCode(CalendarLinkState.class, rs.getString("state")),
+                scopes,
+                rs.getString("external_account_id"),
+                rs.getString("write_calendar_id"));
     }
 
     private record DayRow(String member, LocalDate effectiveFrom, int weekday, List<TimeRange> ranges) {}

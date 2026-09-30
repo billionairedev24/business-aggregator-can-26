@@ -90,7 +90,7 @@ export const useSettingsT = defineMessages({
     overlap: 'Old secret keeps working', overlap_24: 'For 24 hours (recommended)', overlap_168: 'For 7 days', overlap_0: 'No — stop it now (it leaked)', rotating: 'Rotating…',
     err_url: 'Enter the URL that receives events.', err_https: 'Enter an https:// URL.', err_events: 'Pick at least one event.',
     embedTitle: 'Embed your store', integrations: 'Integrations', connected: 'Connected', connect: 'Connect', notConnected: 'Not connected',
-    int_google: 'Google Calendar', int_quickbooks: 'QuickBooks', int_commerce: 'Shopify / Square inventory',
+    int_google: 'Google Calendar', int_quickbooks: 'QuickBooks', int_commerce: 'Shopify / Square inventory', int_reconnect: 'Reconnect',
     actionFailed: 'That didn’t work. Try again.',
   },
   fr: {
@@ -175,7 +175,7 @@ export const useSettingsT = defineMessages({
     overlap: 'L’ancien secret reste valide', overlap_24: 'Pendant 24 heures (recommandé)', overlap_168: 'Pendant 7 jours', overlap_0: 'Non — l’arrêter maintenant (il a fuité)', rotating: 'Renouvellement…',
     err_url: 'Entrez l’URL qui reçoit les événements.', err_https: 'Entrez une URL https://.', err_events: 'Choisissez au moins un événement.',
     embedTitle: 'Intégrer votre boutique', integrations: 'Intégrations', connected: 'Connecté', connect: 'Connecter', notConnected: 'Non connecté',
-    int_google: 'Google Agenda', int_quickbooks: 'QuickBooks', int_commerce: 'Inventaire Shopify / Square',
+    int_google: 'Google Agenda', int_quickbooks: 'QuickBooks', int_commerce: 'Inventaire Shopify / Square', int_reconnect: 'Reconnecter',
     actionFailed: 'Cela n’a pas fonctionné. Réessayez.',
   },
 });

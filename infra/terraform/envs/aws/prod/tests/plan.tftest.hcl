@@ -30,7 +30,7 @@ run "config_env_keys" {
   command = plan
 
   assert {
-    condition     = alltrue([for k in ["STORAGE_PROVIDER", "STORAGE_BUCKET", "STORAGE_REGION", "STORAGE_ENDPOINT", "STORAGE_ENCRYPTION_KEY", "KMS_PROVIDER", "KMS_KEY_ID", "KMS_PUBLISHED_KEY_IDS", "DB_URL", "DB_USER", "REDIS_HOST", "REDIS_PORT", "REDIS_SSL", "KAFKA_BOOTSTRAP", "KAFKA_SECURITY_PROTOCOL", "KAFKA_SASL_MECHANISM", "ES_URIS", "ES_USERNAME"] : contains(keys(output.config_env), k)])
+    condition     = alltrue([for k in ["STORAGE_PROVIDER", "STORAGE_BUCKET", "STORAGE_REGION", "STORAGE_ENDPOINT", "STORAGE_ENCRYPTION_KEY", "KMS_PROVIDER", "KMS_KEY_ID", "KMS_PUBLISHED_KEY_IDS", "KMS_ENCRYPTION_KEY_ID", "DB_URL", "DB_USER", "REDIS_HOST", "REDIS_PORT", "REDIS_SSL", "KAFKA_BOOTSTRAP", "KAFKA_SECURITY_PROTOCOL", "KAFKA_SASL_MECHANISM", "ES_URIS", "ES_USERNAME"] : contains(keys(output.config_env), k)])
     error_message = "config_env must carry the variable names the apps read (docs/runbooks/README.md)."
   }
 

@@ -16,7 +16,7 @@ export type MemberHours = z.infer<typeof MemberHours>;
 export const HoursView = z.object({ members: z.array(MemberHours), lastSavedAt: z.string().nullish() });
 export type HoursView = z.infer<typeof HoursView>;
 
-export const Preview = z.object({ slots: z.array(z.object({ start: z.string(), free: z.boolean() })), jobs: z.number(), intervalMin: z.number(), bufferMin: z.number(), closed: z.string().nullish() });
+export const Preview = z.object({ slots: z.array(z.object({ start: z.string(), free: z.boolean() })), jobs: z.number(), busyBlocks: z.number().optional(), intervalMin: z.number(), bufferMin: z.number(), closed: z.string().nullish() });
 export type Preview = z.infer<typeof Preview>;
 export const Service = z.object({ id: z.string(), name: z.string(), durationMin: z.number() });
 
@@ -39,8 +39,14 @@ export type Holiday = z.infer<typeof Holiday>;
 export const TimeOffView = z.object({ entries: z.array(TimeOffEntry), holidays: z.array(Holiday), holidayPremiumCents: z.number() });
 export type TimeOffView = z.infer<typeof TimeOffView>;
 
-export const Calendar = z.object({ provider: z.enum(['google', 'outlook', 'ical']), connected: z.boolean(), accountLabel: z.string().nullish(), lastSyncAt: z.string().nullish(), feedUrl: z.string().nullish() });
+/** S-32: `state` reconnect = the provider revoked the grant; `authorizationUrl` right after Connect (OAuth consent). */
+export const Calendar = z.object({
+  provider: z.enum(['google', 'outlook', 'ical']), connected: z.boolean(), accountLabel: z.string().nullish(), lastSyncAt: z.string().nullish(), feedUrl: z.string().nullish(),
+  state: z.enum(['connected', 'reconnect']).nullish(), available: z.boolean().optional(), sources: z.array(z.string()).optional(), authorizationUrl: z.string().nullish(),
+});
 export type Calendar = z.infer<typeof Calendar>;
+export const CalendarSources = z.object({ items: z.array(z.object({ id: z.string(), name: z.string(), primary: z.boolean(), selected: z.boolean() })), authorizationUrl: z.string().nullish() });
+export type CalendarSources = z.infer<typeof CalendarSources>;
 export const TeamMember = z.object({ userId: z.string(), name: z.string(), role: Role, bookable: z.boolean(), days: DaysSchema.nullish() });
 export type TeamMember = z.infer<typeof TeamMember>;
 export const SyncView = z.object({ calendars: z.array(Calendar), team: z.array(TeamMember) });
@@ -123,11 +129,28 @@ export function useSetHoliday(m: string) {
   });
 }
 
+/** The browser leaves for the provider's consent page (Google / Microsoft); tests replace it. */
+export const goTo = { assign: (url: string) => window.location.assign(url) };
+
 export function useToggleCalendar(m: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ provider, connect }: { provider: Calendar['provider']; connect: boolean }) => http(`${base(m)}/calendars/${provider}`, { method: connect ? 'POST' : 'DELETE' }, Calendar),
-    onSuccess: cal => qc.setQueryData(syncQuery(m).queryKey, v => v && { ...v, calendars: v.calendars.map(c => (c.provider === cal.provider ? cal : c)) }),
+    onSuccess: cal => {
+      if (cal.authorizationUrl) { goTo.assign(cal.authorizationUrl); return; }
+      qc.setQueryData(syncQuery(m).queryKey, v => v && { ...v, calendars: v.calendars.map(c => (c.provider === cal.provider ? cal : c)) });
+    },
+  });
+}
+
+type TwoWay = Exclude<Calendar['provider'], 'ical'>;
+export const sourcesQuery = (m: string, provider: TwoWay) => queryOptions({ queryKey: key(m, 'sources', provider), queryFn: () => http(`${base(m)}/calendars/${provider}/sources`, {}, CalendarSources), staleTime: 0 });
+
+export function useChooseSources(m: string, provider: TwoWay) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (calendarIds: string[]) => http(`${base(m)}/calendars/${provider}/sources`, { method: 'PUT', body: { calendarIds } }, CalendarSources),
+    onSuccess: data => { qc.setQueryData(sourcesQuery(m, provider).queryKey, data); void qc.invalidateQueries({ queryKey: key(m, 'sync') }); },
   });
 }
 

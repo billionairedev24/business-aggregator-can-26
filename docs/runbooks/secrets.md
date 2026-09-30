@@ -65,6 +65,7 @@ Terraform (AWS, Google Cloud) or not at all (Azure: Key Vault has no empty secre
 | `SMTP_PASSWORD` | `smtp-password` | api, worker | with `EMAIL_PROVIDER=smtp` | relay credentials |
 | `GOOGLE_CLIENT_SECRET`, `APPLE_PRIVATE_KEY` | `google-client-secret`, `apple-private-key` | auth | staging, prod (S-18) | Google Cloud console / Apple Developer `.p8` key ([federation.md](federation.md)) |
 | `REGISTRY_CORPORATIONS_CANADA_KEY`, `REGISTRY_ALBERTA_KEY`, `REGISTRY_CALGARY_APP_TOKEN` | `registry-corporations-canada-key`, `registry-alberta-key`, `registry-calgary-app-token` | api | with `api` / `opencorporates` / optional for `socrata` (S-23) | GC API Store subscription / OpenCorporates account / data.calgary.ca developer settings ([registries.md](registries.md)) |
+| `GOOGLE_CALENDAR_CLIENT_SECRET`, `MICROSOFT_CALENDAR_CLIENT_SECRET` | `google-calendar-client-secret`, `microsoft-calendar-client-secret` | api | once that calendar provider is offered (S-32; add to `optionalKeys` when set) | Google Cloud console OAuth client / Microsoft Entra app registration › Certificates & secrets ([calendar-sync.md](calendar-sync.md)) |
 | `SMS_AUTH_TOKEN` | `sms-auth-token` | auth | with `SMS_PROVIDER=twilio` | Twilio console ([README § SMS](README.md#sms-and-voice-codes-s-8)) |
 
 Which optional variables to map is a per-environment decision in the values, e.g. dev on AWS with Twilio and SendGrid:
@@ -167,6 +168,7 @@ kubectl -n northline-<env> rollout restart deploy/northline-<app>
 | `WEBHOOK_SECRET_KEY` | **don't** without re-encrypting the stored partner webhook signing secrets | — |
 | `EMAIL_UNSUBSCRIBE_KEY` | new value, restart api | links in emails already sent stop working (the page points to Settings) |
 | `EMAIL_API_KEY`, `SMTP_PASSWORD`, `SMS_AUTH_TOKEN` | create the new credential at the provider, update, restart, revoke the old | none |
+| `GOOGLE_CALENDAR_CLIENT_SECRET`, `MICROSOFT_CALENDAR_CLIENT_SECRET` | add a second client secret in the Google Cloud console / Entra app registration (both stay valid), update, restart api, delete the old one | none: stored refresh tokens belong to the client id, not the secret ([calendar-sync.md](calendar-sync.md#rotating)) |
 
 Rehearsed on kind: the `STUDIO_BFF_SECRET` row end to end (new value → ESO refresh → OAuth client sync
 `studio-bff: update secret` → bff restart → the token endpoint accepts the new secret and answers 401 to the old one).
