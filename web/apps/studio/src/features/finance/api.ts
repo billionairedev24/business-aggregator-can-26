@@ -53,6 +53,8 @@ export type Schedule = z.infer<typeof Schedule>;
 export const Account = z.object({
   id: z.string(), method: z.enum(['instant', 'manual']), institutionName: z.string(), last4: z.string(), holderName: z.string(), label: z.string(),
   state: z.enum(['draft', 'pending', 'active', 'replaced', 'discarded']), effectiveAt: z.string().nullish(),
+  /** S-24: an instantly linked account whose Financial Connections link ended (payouts still go there). */
+  disconnectedAt: z.string().nullish(),
 });
 export type Account = z.infer<typeof Account>;
 export const PayoutOverview = z.object({
@@ -135,7 +137,7 @@ export function useSaveSchedule(m: string) {
 
 export const useLinkSession = (m: string) => useMutation({ mutationFn: () => http(`${base(m)}/payouts/bank-accounts/link-session`, { method: 'POST' }, LinkSession) });
 
-export interface BankInput { method: 'instant' | 'manual'; linkedAccount?: string; institution?: string; transit?: string; accountNumber?: string; holderName?: string }
+export interface BankInput { method: 'instant' | 'manual'; linkedAccount?: string; financialConnectionsAccount?: string; institution?: string; transit?: string; accountNumber?: string; holderName?: string }
 export const usePrepareBank = (m: string) => useMutation({ mutationFn: (b: BankInput) => http(`${base(m)}/payouts/bank-accounts`, { method: 'POST', body: b }, Account) });
 
 export function useConfirmBank(m: string) {
