@@ -4,6 +4,9 @@
 spring:
   flyway:
     locations: classpath:db/migration,classpath:db/seed-dev
+    # The dev seed (V100–V109, V121) interleaves with migrations of later ranges (V110+): a database migrated without
+    # the seed first (./gradlew :api:flywayMigrate, the test profile) takes the seed files afterwards.
+    out-of-order: true
   modulith:
     events:
       externalization.enabled: false      # nothing goes to Kafka; in-process @ApplicationModuleListeners still use the registry
