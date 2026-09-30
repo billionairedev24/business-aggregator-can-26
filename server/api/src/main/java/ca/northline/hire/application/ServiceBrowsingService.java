@@ -30,12 +30,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
-import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -148,21 +146,14 @@ class ServiceBrowsingService implements ListCategories, ViewCategory, ListProvid
                 p.tagline() != null ? p.tagline() : p.about(),
                 rating.average(),
                 rating.count(),
-                component(score, "on_time"),
-                component(score, "disputes"),
-                component(score, "rebook"),
+                QualityFigures.of(score, "on_time"),
+                QualityFigures.of(score, "disputes"),
+                QualityFigures.of(score, "rebook"),
                 cheapest.map(Offer::priceCents).orElse(null),
                 cheapest.map(Offer::pricingMode).orElse("quote"),
                 offered.stream().anyMatch(Offer::instantBook),
                 slots.next(p.merchantId(), shortest).orElse(null),
                 zones);
-    }
-
-    private static @Nullable Double component(Optional<QualityQuery.QualityScore> score, String key) {
-        return score.flatMap(s ->
-                        s.components().stream().filter(c -> c.key().equals(key)).findFirst())
-                .map(QualityQuery.Component::value)
-                .orElse(null);
     }
 
     /** Offers of published, active service businesses only. */

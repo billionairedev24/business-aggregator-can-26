@@ -90,6 +90,26 @@ public record HireFixtures(JdbcClient jdbc) {
                         """).params(merchantId, onTime, rebook, disputes).update();
     }
 
+    /** A verified review of the business, {@code daysAgo} days old. */
+    public String review(String merchantId, int rating, String text, String author, int daysAgo) {
+        var id = Ids.next();
+        jdbc.sql("""
+                        insert into trust.reviews (id, ref_type, ref_id, author_id, target_type, target_id, rating, text,
+                               author_name, job_label, created_at)
+                        values (?, 'booking', ?, ?, 'merchant', ?, ?, ?, ?, 'Brake inspection', now() - make_interval(days => ?))
+                        """)
+                .params(id, Ids.next(), Ids.next(), merchantId, rating, text, author, daysAgo)
+                .update();
+        return id;
+    }
+
+    public void verified(String merchantId, String checkKey) {
+        jdbc.sql("""
+                        insert into merchants.verifications (id, merchant_id, check_type, check_key, status, position)
+                        values (?, ?, split_part(?, ':', 1), ?, 'verified', 0)
+                        """).params(Ids.next(), merchantId, checkKey, checkKey).update();
+    }
+
     public void unpublish(String merchantId) {
         jdbc.sql("update merchants.storefronts set published_at = null where merchant_id = ?")
                 .params(merchantId)
