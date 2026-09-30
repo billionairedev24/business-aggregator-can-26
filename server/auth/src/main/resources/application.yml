@@ -71,6 +71,14 @@ northline:
     # Load balancer / ingress CIDRs whose X-Forwarded-For/-Proto/-Host are believed (client IP for the rate limits and
     # the sign-in log). Narrow it to the ingress subnet in the cloud; anyone else's forwarded headers are dropped.
     trusted-proxies: ${TRUSTED_PROXIES:127.0.0.0/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7}
+    # S-19: header in which the ingress / CDN puts the client's city (e.g. CloudFront-Viewer-City, or a custom header
+    # filled from {client_city} on Google Cloud); only believed from trusted-proxies. Empty = no city in the session list.
+    client-city-header: ${CLIENT_CITY_HEADER:}
+    # S-19 session management (docs/runbooks/README.md § Sessions).
+    sessions:
+      idle-timeout: 12h                         # = server.servlet.session.timeout: listed as active while seen since
+      step-up-max-age: ${SESSION_STEP_UP_MAX_AGE:10m}   # revoke / remove passkey need a second factor this recent
+      touch-interval: 1m                        # "last seen" is written at most this often
     # S-9 rate limits (docs/runbooks/README.md § Rate limits). A REQUESTS action (otp-send, sign-in-lookup) allows `max`
     # calls per sliding `window`; a FAILURES action locks at the `max`-th failure. Each lockout of the same subject
     # doubles (lockout × 2^(n-1), up to max-lockout) while earlier ones are remembered (backoff-memory). Successes reset
@@ -106,6 +114,10 @@ northline:
           account: { max: 10, window: 15m, lockout: 15m }
           ip: { max: 30, window: 15m, lockout: 15m }
           session: { max: 10, window: 15m, lockout: 15m }
+        security-change:                        # S-19: revoke sessions, remove passkeys — every call counts
+          account: { max: 20, window: 1h, lockout: 15m }
+          ip: { max: 60, window: 1h, lockout: 15m }
+          session: { max: 20, window: 1h, lockout: 15m }
   # OAuth clients (S-122, docs/runbooks/README.md § OAuth clients): reconciled into auth.oauth2_registered_client at every
   # start (create/update, never delete) and by `./gradlew :auth:oauthClients --args='sync'` (Kubernetes Job). Secrets are
   # the *encoded* values ({bcrypt}…) from the secrets manager; {noop}… only for local development. The matching plain

@@ -73,7 +73,7 @@ class SignInController {
     private AuthResponses.Session establish(
             SignInService.SignedIn done, HttpServletRequest request, HttpServletResponse response) {
         var factors = List.of(done.factor());
-        sessions.signIn(done.account().id(), factors, request, response);
+        sessions.signIn(done.account().id(), factors, done.sessionId(), request, response);
         return AuthResponses.Session.of(done.account(), factors);
     }
 }

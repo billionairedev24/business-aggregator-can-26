@@ -100,7 +100,7 @@ class RegistrationController {
     private AuthResponses.Session signIn(
             RegistrationService.Created created, HttpServletRequest request, HttpServletResponse response) {
         var factors = List.of(Factor.PHONE_OTP, created.secondFactor());
-        sessions.signIn(created.account().id(), factors, request, response);
+        sessions.signIn(created.account().id(), factors, created.sessionId(), request, response);
         return AuthResponses.Session.of(created.account(), factors);
     }
 

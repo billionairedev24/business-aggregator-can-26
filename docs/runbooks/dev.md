@@ -86,6 +86,9 @@ Every app reads its configuration from environment variables; nothing environmen
 | `KMS_REGION`, `KMS_ENDPOINT` | auth | no | AWS only: `ca-central-1`, a VPC endpoint URL | deployment manifest |
 | `TRUSTED_PROXIES` | auth | no (private ranges + loopback) | the ingress / load balancer subnet, e.g. `10.20.0.0/22` (comma-separated CIDRs) | network plan (S-2); only these peers may set `X-Forwarded-For/-Proto/-Host` — the client IP the rate limits and the sign-in log use ([README § Rate limits](README.md#rate-limits-s-9)) |
 | `RATE_LIMIT_STORE` | auth | no (`redis`) | leave unset: `memory` is refused here | — |
+| `CLIENT_CITY_HEADER` | auth | no (empty) | `CloudFront-Viewer-City`, or the custom header your load balancer / Front Door fills with the client's city | ingress / CDN configuration; believed only from `TRUSTED_PROXIES` ([README § Sessions](README.md#sessions-s-19)) |
+| `SESSION_STEP_UP_MAX_AGE` | auth | no (`10m`) | leave unset | how recent a second factor revoking sessions / removing passkeys needs (S-19) |
+| `SESSION_CHECK_INTERVAL` | bff | no (`60s`) | leave unset | a revoked session's BFF session ends within this (S-19) |
 | `SIGNING_KEYS_DIR`, `SIGNING_KEYS_ROTATE_EVERY` | auth | with `KMS_PROVIDER=local` | `/var/lib/northline/auth-keys` (shared volume), `90d` | deployment manifest |
 | `EMAIL_PROVIDER`, `EMAIL_FROM` | api | no (`local` = SMTP to `SMTP_HOST`, logs only when nothing listens) | `ses` / `sendgrid` / `azure`, `Northline <no-reply@dev.northline.ca>` | email provider account ([email.md](email.md)) → ConfigMap |
 | `EMAIL_UNSUBSCRIBE_KEY`, `API_PUBLIC_URL` | api | no (development key, `http://localhost:8080`) | `openssl rand -base64 32`, `https://api.dev.northline.ca` | key → secrets manager → Kubernetes Secret; URL → ConfigMap |

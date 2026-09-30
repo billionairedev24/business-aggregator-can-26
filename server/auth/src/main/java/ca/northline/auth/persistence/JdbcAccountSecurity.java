@@ -74,6 +74,31 @@ class JdbcAccountSecurity implements AccountSecurity {
                 .list();
     }
 
+    @Override
+    public void lockFactors(String userId) {
+        jdbc.sql("SELECT id FROM identity.users WHERE id = :u FOR UPDATE")
+                .param("u", userId)
+                .query(String.class)
+                .optional();
+    }
+
+    @Override
+    public boolean removePasskey(String userId, String credentialId) {
+        return jdbc.sql("""
+                                DELETE FROM auth.user_credentials c
+                                 USING auth.user_entities e
+                                 WHERE e.id = c.user_entity_user_id AND e.name = :u AND c.credential_id = :id
+                                """).param("u", userId).param("id", credentialId).update() == 1;
+    }
+
+    @Override
+    public void setMfaPrimary(String userId, String factor) {
+        jdbc.sql("UPDATE identity.users SET mfa_primary = :f WHERE id = :u")
+                .param("u", userId)
+                .param("f", factor)
+                .update();
+    }
+
     private static @Nullable Instant instant(@Nullable OffsetDateTime value) {
         return value == null ? null : value.toInstant();
     }

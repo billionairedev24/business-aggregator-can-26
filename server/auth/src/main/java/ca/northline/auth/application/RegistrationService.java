@@ -55,8 +55,8 @@ public class RegistrationService {
     /** Input of the first step, already shape-validated (validation-rules.md) by the web adapter. */
     public record Start(String firstName, String lastName, String phone, String email) {}
 
-    /** A new account, signed in with these factors. */
-    public record Created(UserAccount account, Factor secondFactor) {}
+    /** A new account, signed in with these factors; {@code sessionId} is its first session ({@code identity.sessions}). */
+    public record Created(UserAccount account, Factor secondFactor, String sessionId) {}
 
     /** Authenticator-app set-up: the secret, the otpauth:// URI and the same URI as a PNG QR code (data URI). */
     public record TotpSetup(String secret, String otpauthUri, String qrCode) {}
@@ -223,9 +223,9 @@ public class RegistrationService {
                 registration.termsVersion(),
                 now));
         flow.remove(FlowStore.REGISTRATION);
-        signIns.succeeded(registration.userId(), "registration", true, client);
+        var sessionId = signIns.succeeded(registration.userId(), "registration", true, client);
         var account = accounts.findById(registration.userId()).orElseThrow();
-        return new Created(account, factor);
+        return new Created(account, factor, sessionId);
     }
 
     private PendingRegistration current() {

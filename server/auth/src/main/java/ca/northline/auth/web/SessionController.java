@@ -2,6 +2,8 @@ package ca.northline.auth.web;
 
 import ca.northline.auth.application.BackupCodeService;
 import ca.northline.auth.application.FlowRejected;
+import ca.northline.auth.application.SessionAuthentication;
+import ca.northline.auth.application.SessionService;
 import ca.northline.auth.application.UserAccounts;
 import ca.northline.auth.application.UserClaimsService;
 import ca.northline.auth.domain.Factor;
@@ -37,6 +39,7 @@ class SessionController {
     private final UserAccounts accounts;
     private final BackupCodeService backupCodes;
     private final SessionSignIn sessions;
+    private final SessionService sessionService;
 
     @GetMapping("/session")
     ResponseEntity<AuthResponses.Session> session(
@@ -49,9 +52,15 @@ class SessionController {
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
     }
 
+    /** Also ends the session (sign-in) itself: it leaves the Security tab's list and its refresh tokens stop (S-19). */
     @PostMapping("/sign-out")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    void signOut(HttpServletRequest request) {
+    void signOut(
+            HttpServletRequest request,
+            @CurrentSecurityContext(expression = "authentication") @Nullable Authentication authentication) {
+        if (authentication instanceof UsernamePasswordAuthenticationToken user) {
+            SessionAuthentication.sessionIdOf(user).ifPresent(id -> sessionService.signedOut(user.getName(), id));
+        }
         sessions.signOut(request);
     }
 
