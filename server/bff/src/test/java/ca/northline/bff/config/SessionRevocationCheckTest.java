@@ -40,7 +40,9 @@ class SessionRevocationCheckTest {
             "/sign-in",
             "http://auth/oauth2/introspect",
             Duration.ofMinutes(1),
-            "XSRF-TOKEN");
+            "XSRF-TOKEN",
+            false,
+            "");
     private final SessionRevocationCheck filter =
             new SessionRevocationCheck(clients, introspection, props, Clock.systemUTC());
 

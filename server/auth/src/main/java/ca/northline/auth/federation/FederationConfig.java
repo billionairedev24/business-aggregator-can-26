@@ -1,7 +1,7 @@
 package ca.northline.auth.federation;
 
-import ca.northline.auth.application.AuthProperties;
 import ca.northline.auth.application.FederatedSignInService;
+import ca.northline.auth.application.LoginPages;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Clock;
 import java.util.List;
@@ -21,8 +21,10 @@ import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
+import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoderFactory;
+import org.springframework.web.util.UriComponentsBuilder;
 
 /**
  * Google / Apple sign-in wiring (S-18). Only configured providers are registered; with none, {@code oauth2Login} is
@@ -83,8 +85,8 @@ public class FederationConfig {
             FederationRegistrations registrations,
             JdbcAuthorizationRequestRepository requests,
             FederatedSignInService federation,
-            AuthProperties props) {
-        return new FederationLogin(registrations, requests, new FederatedSignIn(federation, props));
+            LoginPages pages) {
+        return new FederationLogin(registrations, requests, new FederatedSignIn(federation, pages));
     }
 
     /** Applies {@code oauth2Login} to the web security chain when at least one provider is configured. */
@@ -132,14 +134,39 @@ public class FederationConfig {
                 return null;
             }
             var id = path.substring(AUTHORIZATION_BASE.length() + 1);
-            return registrations.findByRegistrationId(id) == null ? null : delegate.resolve(request);
+            return registrations.findByRegistrationId(id) == null ? null : fromApp(request, delegate.resolve(request));
         }
 
         @Override
         public @Nullable OAuth2AuthorizationRequest resolve(HttpServletRequest request, String registrationId) {
             return registrations.findByRegistrationId(registrationId) == null
                     ? null
-                    : delegate.resolve(request, registrationId);
+                    : fromApp(request, delegate.resolve(request, registrationId));
+        }
+
+        /**
+         * S-62: started on the consumer site ({@code ?app=consumer}) — mark the {@code state} so the callback returns
+         * there ({@link LoginPages#forFederationCallback}). The state stays unguessable; the prefix only picks a page.
+         */
+        private static @Nullable OAuth2AuthorizationRequest fromApp(
+                HttpServletRequest request, @Nullable OAuth2AuthorizationRequest resolved) {
+            if (resolved == null || !LoginPages.fromConsumer(request)) {
+                return resolved;
+            }
+            var state = LoginPages.CONSUMER_STATE_PREFIX + resolved.getState();
+            // The prefix is URL-safe, so the provider URI changes only in its (already encoded) state parameter.
+            var encodedState = UriComponentsBuilder.fromUriString(resolved.getAuthorizationRequestUri())
+                    .build()
+                    .getQueryParams()
+                    .getFirst(OAuth2ParameterNames.STATE);
+            var uri = resolved.getAuthorizationRequestUri()
+                    .replace(
+                            OAuth2ParameterNames.STATE + "=" + encodedState,
+                            OAuth2ParameterNames.STATE + "=" + LoginPages.CONSUMER_STATE_PREFIX + encodedState);
+            return OAuth2AuthorizationRequest.from(resolved)
+                    .state(state)
+                    .authorizationRequestUri(uri)
+                    .build();
         }
     }
 }

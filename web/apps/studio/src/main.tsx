@@ -8,6 +8,7 @@ import '@northline/ui/styles.css';
 import './studio.css';
 import { createStudioRouter } from './router';
 import { isUnauthorized } from './lib/http';
+import './lib/auth-server'; // configures northline-auth's origin for @northline/auth-kit
 
 const LOCALE_KEY = 'nl.locale';
 const initialLocale = (): Locale => { try { const v = localStorage.getItem(LOCALE_KEY); if (v === 'fr' || v === 'en') return v; } catch { /* ignore */ } return navigator.language.toLowerCase().startsWith('fr') ? 'fr' : 'en'; };

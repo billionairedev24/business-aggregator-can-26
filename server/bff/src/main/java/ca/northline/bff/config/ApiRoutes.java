@@ -8,24 +8,43 @@ import static org.springframework.cloud.gateway.server.mvc.handler.HandlerFuncti
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.servlet.function.RequestPredicates;
 import org.springframework.web.servlet.function.RouterFunction;
+import org.springframework.web.servlet.function.ServerRequest;
 import org.springframework.web.servlet.function.ServerResponse;
 
 /**
  * {@code /api/**} → the api with the session's access token as {@code Authorization: Bearer} (TokenRelay, refreshed
- * when needed). The browser's cookies are not forwarded.
+ * when needed). The browser's cookies, its own {@code Authorization} and any {@code X-Northline-Guest} /
+ * {@code X-Dev-User} it sends are not forwarded. S-45: with {@code northline.bff.guests} a request without a signed-in
+ * session goes on without a token (the api answers its public endpoints and 401 for the rest), and the session's guest
+ * id is added as {@value Guests#HEADER}.
  */
 @Configuration(proxyBeanMethods = false)
 class ApiRoutes {
 
     @Bean
     RouterFunction<ServerResponse> api(BffProperties props) {
-        return route("api")
+        var route = route("api")
                 .route(RequestPredicates.path("/api/**"), http())
                 .before(uri(props.apiUri()))
-                .before(removeRequestHeader("Cookie"))
-                .filter(tokenRelay())
-                .build();
+                .before(removeRequestHeader(HttpHeaders.COOKIE))
+                .before(removeRequestHeader(HttpHeaders.AUTHORIZATION))
+                .before(removeRequestHeader(Guests.HEADER))
+                .before(removeRequestHeader("X-Dev-User"));
+        if (props.guests()) {
+            route = route.before(ApiRoutes::guestHeader);
+        }
+        return route.filter(tokenRelay()).build();
+    }
+
+    private static ServerRequest guestHeader(ServerRequest request) {
+        var guest = Guests.existing(request.servletRequest());
+        return guest == null
+                ? request
+                : ServerRequest.from(request)
+                        .headers(h -> h.set(Guests.HEADER, guest))
+                        .build();
     }
 }

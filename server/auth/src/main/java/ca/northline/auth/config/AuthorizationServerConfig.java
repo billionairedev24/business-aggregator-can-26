@@ -1,6 +1,6 @@
 package ca.northline.auth.config;
 
-import ca.northline.auth.application.AuthProperties;
+import ca.northline.auth.application.LoginPages;
 import ca.northline.auth.application.PartnerTokens;
 import ca.northline.auth.application.RefreshTokenReuse;
 import ca.northline.auth.application.SessionAuthentication;
@@ -26,6 +26,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.authorization.OAuth2AuthorizationServerConfigurer;
+import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
 import org.springframework.security.oauth2.core.oidc.endpoint.OidcParameterNames;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -48,14 +49,16 @@ import org.springframework.security.oauth2.server.authorization.token.OAuth2Toke
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenGenerator;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
+import org.springframework.security.web.authentication.preauth.AbstractPreAuthenticatedProcessingFilter;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
 
 /**
  * Spring Authorization Server: endpoints, JDBC storage (V017 {@code auth.oauth2_*}) and the token claims
  * ({@link UserClaimsService}). Tokens are signed through {@code ca.northline.auth.signing} (the {@code JwtEncoder} and
- * {@code JWKSource} beans: persistent keys in a file or a cloud KMS, with rotation). An unauthenticated {@code /oauth2/authorize} goes to the Studio's own sign-in page
- * ({@code northline.auth.login-page}); after the Studio's JSON sign-in the session exists and the code is issued without
- * any page (clients don't require consent).
+ * {@code JWKSource} beans: persistent keys in a file or a cloud KMS, with rotation). An unauthenticated {@code /oauth2/authorize} goes to its client's sign-in page
+ * ({@code northline.auth.login-page}, or the consumer site's for consumer-bff — S-62, {@link LoginPages}); after the
+ * JSON sign-in the session exists and the code is issued without any page (clients don't require consent). Business
+ * clients get a code only for a sign-in with a second factor ({@link MfaRequiredClients}).
  *
  * <p>S-29 (mobile and courier apps): DPoP-bound tokens ({@code cnf.jkt}), refresh tokens for DPoP public clients and
  * their refresh grant ({@code ca.northline.auth.dpop}), and refresh-token reuse detection
@@ -71,7 +74,7 @@ class AuthorizationServerConfig {
     @Order(1)
     SecurityFilterChain authorizationServer(
             HttpSecurity http,
-            AuthProperties props,
+            LoginPages pages,
             RegisteredClientRepository clients,
             PartnerAssertions partnerAssertions,
             PartnerTokens partnerTokens) {
@@ -101,9 +104,14 @@ class AuthorizationServerConfig {
                                         .errorResponseHandler(new PartnerTokenErrors())))
                 .authorizeHttpRequests(a -> a.anyRequest().authenticated())
                 .headers(WebSecurityConfig::lockedDown)
+                // S-62: each client's people sign in on their own site (the Studio's, the consumer's).
                 .exceptionHandling(e -> e.defaultAuthenticationEntryPointFor(
-                        new LoginUrlAuthenticationEntryPoint(props.loginPage()),
+                        (request, response, ex) -> new LoginUrlAuthenticationEntryPoint(
+                                        pages.forClient(request.getParameter(OAuth2ParameterNames.CLIENT_ID)))
+                                .commence(request, response, ex),
                         new MediaTypeRequestMatcher(MediaType.TEXT_HTML)))
+                // S-62: no Studio / console code for a sign-in without a second factor.
+                .addFilterBefore(new MfaRequiredClients(pages), AbstractPreAuthenticatedProcessingFilter.class)
                 .oauth2ResourceServer(rs -> rs.jwt(Customizer.withDefaults()))
                 .build();
     }

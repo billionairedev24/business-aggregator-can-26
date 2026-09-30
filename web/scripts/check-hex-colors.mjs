@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Lint: no hex colour literals in components (CLAUDE.md — packages/tokens/tokens.json is the ONLY place colours are
-// defined; components use var(--*)). Scans packages/ui/src and apps/*/src (.tsx, .ts, .css), skipping tests and
+// defined; components use var(--*)). Scans packages/ui/src, packages/auth-kit/src and apps/*/src (.tsx, .ts, .css), skipping tests and
 // test fixtures. Legitimate exceptions (third-party brand artwork, merchant data) live in hex-colors.allowlist.
 //
 //   node scripts/check-hex-colors.mjs        (from web/, or `pnpm lint:colors`)
@@ -9,7 +9,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const webRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const roots = ['packages/ui/src', ...readdirSync(path.join(webRoot, 'apps')).map(a => `apps/${a}/src`)];
+const roots = ['packages/ui/src', 'packages/auth-kit/src', ...readdirSync(path.join(webRoot, 'apps')).map(a => `apps/${a}/src`)];
 const extensions = new Set(['.tsx', '.ts', '.css']);
 const skip = [/\.test\.tsx?$/, /\.spec\.tsx?$/, /(^|\/)test\//, /(^|\/)__tests__\//, /(^|\/)node_modules\//, /\.gen\.ts$/, /routeTree\.gen\.ts$/];
 

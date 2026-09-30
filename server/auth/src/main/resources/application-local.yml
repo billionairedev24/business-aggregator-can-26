@@ -11,6 +11,9 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration,classpath:db/seed-dev
+    # S-62: migrations above the seed range (V110+ consumer, V120+ search) may already be applied when the dev seed
+    # (V100–V109) comes along — a database migrated without `local` first, or a seed file added later.
+    out-of-order: true
 management.health.redis.enabled: false
 server.servlet.session.cookie.secure: false
 logging.level:
@@ -23,10 +26,12 @@ northline:
     # Dev-only key: the TOTP secret seeded for the personas in db/seed-dev/V101__auth.sql is encrypted with it.
     totp-key: bm9ydGhsaW5lLWxvY2FsLWRldi10b3RwLWtleS0zMmI=
     login-page: http://localhost:3100/sign-in
-    allowed-origins: [ "http://localhost:3100", "http://127.0.0.1:3100", "http://localhost:8082" ]
+    consumer-login-page: http://localhost:3000/sign-in
+    # S-45: the consumer app's dev server (:3000) calls the JSON API too (sign-out; S-62's sign-in pages).
+    allowed-origins: [ "http://localhost:3100", "http://127.0.0.1:3100", "http://localhost:8082", "http://localhost:3000", "http://127.0.0.1:3000" ]
     webauthn:
       rp-id: localhost
-      origins: [ "http://localhost:3100", "http://localhost:8082" ]
+      origins: [ "http://localhost:3100", "http://localhost:8082", "http://localhost:3000" ]
   oauth:
     clients:
       studio-bff:
@@ -37,8 +42,12 @@ northline:
         post-logout-redirect-uris: [ "http://localhost:3100/sign-in" ]
       consumer-bff:
         secret-hash: ${CONSUMER_BFF_SECRET_HASH:{noop}dev-consumer-bff}
-        redirect-uris: [ "http://localhost:8081/login/oauth2/code/northline" ]
-        post-logout-redirect-uris: [ "http://localhost:8081/" ]
+        # S-45: the consumer app's dev server (:3000) proxies /login and /oauth2 to the consumer-bff (:8081).
+        redirect-uris:
+          - http://localhost:3000/login/oauth2/code/northline
+          - http://127.0.0.1:3000/login/oauth2/code/northline
+          - http://localhost:8081/login/oauth2/code/northline
+        post-logout-redirect-uris: [ "http://localhost:3000/" ]
       console-bff:
         secret-hash: ${CONSOLE_BFF_SECRET_HASH:{noop}dev-console-bff}
         redirect-uris: [ "http://localhost:8083/login/oauth2/code/console" ]

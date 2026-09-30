@@ -1,7 +1,14 @@
 # Google and Apple sign-in (S-18)
 
-"Continue with Google / Apple" on the Studio's sign-in and "Create account" tabs. northline-auth is the OIDC client of
-Google and Apple; the browser never sees their tokens. How it behaves: [DECISIONS.md § S-18](../DECISIONS.md).
+"Continue with Google / Apple" on the Studio's sign-in and "Create account" tabs, and "Apple" / "Google" on the consumer
+site's (S-62). northline-auth is the OIDC client of Google and Apple; the browser never sees their tokens. How it
+behaves: [DECISIONS.md § S-18](../DECISIONS.md).
+
+**Which site the person comes back to (S-62):** the consumer site's buttons open
+`/oauth2/authorization/<provider>?app=consumer`; northline-auth marks the provider `state` (`consumer.` + the random
+state) and, on the way back, sends the browser to `northline.auth.consumer-login-page` (`${CONSUMER_ORIGIN}/sign-in`,
+`/register`) instead of the Studio's `login-page`. The same redirect URIs at Google and Apple serve both sites. On the
+consumer site the "factor step" is a code to the account's mobile (consumers need no second factor).
 
 ## What the person gets
 

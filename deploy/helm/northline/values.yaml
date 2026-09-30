@@ -109,6 +109,7 @@ externalSecrets:
     WEBHOOK_SECRET_KEY: webhook-secret-key
     STUDIO_BFF_SECRET: studio-bff-secret
     STUDIO_BFF_SECRET_HASH: studio-bff-secret-hash
+    CONSUMER_BFF_SECRET: consumer-bff-secret              # S-45: the consumer-bff's client secret (plain)
     CONSUMER_BFF_SECRET_HASH: consumer-bff-secret-hash
     CONSOLE_BFF_SECRET_HASH: console-bff-secret-hash
     STRIPE_SECRET_KEY: stripe-secret-key
@@ -339,6 +340,7 @@ oauthClientsJob:
 
 # ---- apps -----------------------------------------------------------------------------------------------------------
 # type: spring (Java, actuator probes, infra ConfigMap + secrets), static (nginx), node (SSR).
+# profiles (spring): Spring profiles added after global.environment's (consumer-bff: the bff image with `consumer`).
 apps:
   api:
     enabled: true
@@ -387,7 +389,7 @@ apps:
     # S-29: route all of /api/v1 on the api host, for clients that hold their own tokens (the mobile apps, with DPoP;
     # partners). false = webhooks and unsubscribe only, as before. Every other endpoint still needs a token.
     tokenClients: true
-    allowFrom: [bff]
+    allowFrom: [bff, consumer-bff]
     extraVolumes: []
     extraVolumeMounts: []
     podLabels: {}
@@ -413,7 +415,7 @@ apps:
       DB_PASSWORD: true
       TOTP_KEY: true
       STUDIO_BFF_SECRET_HASH: true
-      CONSUMER_BFF_SECRET_HASH: false
+      CONSUMER_BFF_SECRET_HASH: true   # S-45: the consumer-bff exists (required since then)
       CONSOLE_BFF_SECRET_HASH: false
       REDIS_PASSWORD: false
       KAFKA_SASL_JAAS_CONFIG: false # S-28: user.registered is externalized to Kafka
@@ -425,7 +427,7 @@ apps:
       startup: { path: /actuator/health/liveness, periodSeconds: 5, failureThreshold: 60 }
       liveness: { path: /actuator/health/liveness, periodSeconds: 10, failureThreshold: 3 }
       readiness: { path: /actuator/health/readiness, periodSeconds: 5, failureThreshold: 3 }
-    allowFrom: [bff, api]
+    allowFrom: [bff, consumer-bff, api]
     extraVolumes: []
     extraVolumeMounts: []
     podLabels: {}
@@ -456,6 +458,41 @@ apps:
       liveness: { path: /actuator/health/liveness, periodSeconds: 10, failureThreshold: 3 }
       readiness: { path: /actuator/health/readiness, periodSeconds: 5, failureThreshold: 3 }
     allowFrom: []
+    extraVolumes: []
+    extraVolumeMounts: []
+    podLabels: {}
+    podAnnotations: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+
+  # S-45: the consumer web app's BFF — the bff image under the `consumer` profile (server/bff application-consumer.yml):
+  # client consumer-bff, cookie __Host-NL_CONSUMER, guests browse /api without a token. Routes: /api, /bff, /oauth2,
+  # /login on the consumer host; /api and /bff on pages. (templates/ingress.yaml). The consumer app's server-side
+  # rendering calls it in-cluster (NL_BFF_URL).
+  consumer-bff:
+    enabled: true
+    type: spring
+    image: { repository: bff, tag: "", digest: "" }
+    profiles: [consumer]
+    port: 8081
+    service: true
+    public: true
+    replicas: 1
+    autoscaling: { enabled: false, minReplicas: 2, maxReplicas: 6, targetCPUUtilizationPercentage: 70 }
+    resources:
+      requests: { cpu: 100m, memory: 512Mi }
+      limits: { memory: 512Mi }
+    env: {}
+    secretEnv:
+      CONSUMER_BFF_SECRET: true
+      REDIS_PASSWORD: false
+    runAsUser: 65532
+    probes:
+      startup: { path: /actuator/health/liveness, periodSeconds: 5, failureThreshold: 60 }
+      liveness: { path: /actuator/health/liveness, periodSeconds: 10, failureThreshold: 3 }
+      readiness: { path: /actuator/health/readiness, periodSeconds: 5, failureThreshold: 3 }
+    allowFrom: [consumer]
     extraVolumes: []
     extraVolumeMounts: []
     podLabels: {}

@@ -10,12 +10,47 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CartRouteImport } from './routes/cart'
+import { Route as LocationRouteImport } from './routes/location'
+import { Route as RegisterRouteImport } from './routes/register'
 import { Route as SearchRouteImport } from './routes/search'
+import { Route as SellRouteImport } from './routes/sell'
+import { Route as SignInRouteImport } from './routes/sign-in'
+import { Route as AccountIndexRouteImport } from './routes/account/index'
 import { Route as AccountOrdersRouteImport } from './routes/account/orders'
+import { Route as FoodIndexRouteImport } from './routes/food/index'
+import { Route as FoodKitchenRouteImport } from './routes/food/$kitchen'
+import { Route as FoodCheckoutRouteImport } from './routes/food/checkout'
+import { Route as OrdersOrderIdRouteImport } from './routes/orders/$orderId'
+import { Route as ProductsProductIdRouteImport } from './routes/products/$productId'
+import { Route as QuotesQuoteIdRouteImport } from './routes/quotes/$quoteId'
+import { Route as ServicesIndexRouteImport } from './routes/services/index'
+import { Route as ShopIndexRouteImport } from './routes/shop/index'
+import { Route as ShopDepartmentRouteImport } from './routes/shop/$department'
+import { Route as FoodOrdersOrderIdRouteImport } from './routes/food/orders/$orderId'
+import { Route as ProvidersSlugIndexRouteImport } from './routes/providers/$slug/index'
+import { Route as ProvidersSlugBookRouteImport } from './routes/providers/$slug/book'
+import { Route as ServicesCategoryIndexRouteImport } from './routes/services/$category/index'
+import { Route as ServicesCategoryProvidersRouteImport } from './routes/services/$category/providers'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CartRoute = CartRouteImport.update({
+  id: '/cart',
+  path: '/cart',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LocationRoute = LocationRouteImport.update({
+  id: '/location',
+  path: '/location',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SearchRoute = SearchRouteImport.update({
@@ -23,40 +58,276 @@ const SearchRoute = SearchRouteImport.update({
   path: '/search',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SellRoute = SellRouteImport.update({
+  id: '/sell',
+  path: '/sell',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignInRoute = SignInRouteImport.update({
+  id: '/sign-in',
+  path: '/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountIndexRoute = AccountIndexRouteImport.update({
+  id: '/account/',
+  path: '/account/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AccountOrdersRoute = AccountOrdersRouteImport.update({
   id: '/account/orders',
   path: '/account/orders',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FoodIndexRoute = FoodIndexRouteImport.update({
+  id: '/food/',
+  path: '/food/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FoodKitchenRoute = FoodKitchenRouteImport.update({
+  id: '/food/$kitchen',
+  path: '/food/$kitchen',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FoodCheckoutRoute = FoodCheckoutRouteImport.update({
+  id: '/food/checkout',
+  path: '/food/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrdersOrderIdRoute = OrdersOrderIdRouteImport.update({
+  id: '/orders/$orderId',
+  path: '/orders/$orderId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProductsProductIdRoute = ProductsProductIdRouteImport.update({
+  id: '/products/$productId',
+  path: '/products/$productId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QuotesQuoteIdRoute = QuotesQuoteIdRouteImport.update({
+  id: '/quotes/$quoteId',
+  path: '/quotes/$quoteId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ServicesIndexRoute = ServicesIndexRouteImport.update({
+  id: '/services/',
+  path: '/services/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShopIndexRoute = ShopIndexRouteImport.update({
+  id: '/shop/',
+  path: '/shop/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShopDepartmentRoute = ShopDepartmentRouteImport.update({
+  id: '/shop/$department',
+  path: '/shop/$department',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FoodOrdersOrderIdRoute = FoodOrdersOrderIdRouteImport.update({
+  id: '/food/orders/$orderId',
+  path: '/food/orders/$orderId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProvidersSlugIndexRoute = ProvidersSlugIndexRouteImport.update({
+  id: '/providers/$slug/',
+  path: '/providers/$slug/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProvidersSlugBookRoute = ProvidersSlugBookRouteImport.update({
+  id: '/providers/$slug/book',
+  path: '/providers/$slug/book',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ServicesCategoryIndexRoute = ServicesCategoryIndexRouteImport.update({
+  id: '/services/$category/',
+  path: '/services/$category/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ServicesCategoryProvidersRoute =
+  ServicesCategoryProvidersRouteImport.update({
+    id: '/services/$category/providers',
+    path: '/services/$category/providers',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/cart': typeof CartRoute
+  '/location': typeof LocationRoute
+  '/register': typeof RegisterRoute
   '/search': typeof SearchRoute
+  '/sell': typeof SellRoute
+  '/sign-in': typeof SignInRoute
   '/account/orders': typeof AccountOrdersRoute
+  '/food/$kitchen': typeof FoodKitchenRoute
+  '/food/checkout': typeof FoodCheckoutRoute
+  '/orders/$orderId': typeof OrdersOrderIdRoute
+  '/products/$productId': typeof ProductsProductIdRoute
+  '/quotes/$quoteId': typeof QuotesQuoteIdRoute
+  '/shop/$department': typeof ShopDepartmentRoute
+  '/account/': typeof AccountIndexRoute
+  '/food/': typeof FoodIndexRoute
+  '/services/': typeof ServicesIndexRoute
+  '/shop/': typeof ShopIndexRoute
+  '/food/orders/$orderId': typeof FoodOrdersOrderIdRoute
+  '/providers/$slug/book': typeof ProvidersSlugBookRoute
+  '/services/$category/providers': typeof ServicesCategoryProvidersRoute
+  '/providers/$slug/': typeof ProvidersSlugIndexRoute
+  '/services/$category/': typeof ServicesCategoryIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/cart': typeof CartRoute
+  '/location': typeof LocationRoute
+  '/register': typeof RegisterRoute
   '/search': typeof SearchRoute
+  '/sell': typeof SellRoute
+  '/sign-in': typeof SignInRoute
   '/account/orders': typeof AccountOrdersRoute
+  '/food/$kitchen': typeof FoodKitchenRoute
+  '/food/checkout': typeof FoodCheckoutRoute
+  '/orders/$orderId': typeof OrdersOrderIdRoute
+  '/products/$productId': typeof ProductsProductIdRoute
+  '/quotes/$quoteId': typeof QuotesQuoteIdRoute
+  '/shop/$department': typeof ShopDepartmentRoute
+  '/account': typeof AccountIndexRoute
+  '/food': typeof FoodIndexRoute
+  '/services': typeof ServicesIndexRoute
+  '/shop': typeof ShopIndexRoute
+  '/food/orders/$orderId': typeof FoodOrdersOrderIdRoute
+  '/providers/$slug/book': typeof ProvidersSlugBookRoute
+  '/services/$category/providers': typeof ServicesCategoryProvidersRoute
+  '/providers/$slug': typeof ProvidersSlugIndexRoute
+  '/services/$category': typeof ServicesCategoryIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/cart': typeof CartRoute
+  '/location': typeof LocationRoute
+  '/register': typeof RegisterRoute
   '/search': typeof SearchRoute
+  '/sell': typeof SellRoute
+  '/sign-in': typeof SignInRoute
   '/account/orders': typeof AccountOrdersRoute
+  '/food/$kitchen': typeof FoodKitchenRoute
+  '/food/checkout': typeof FoodCheckoutRoute
+  '/orders/$orderId': typeof OrdersOrderIdRoute
+  '/products/$productId': typeof ProductsProductIdRoute
+  '/quotes/$quoteId': typeof QuotesQuoteIdRoute
+  '/shop/$department': typeof ShopDepartmentRoute
+  '/account/': typeof AccountIndexRoute
+  '/food/': typeof FoodIndexRoute
+  '/services/': typeof ServicesIndexRoute
+  '/shop/': typeof ShopIndexRoute
+  '/food/orders/$orderId': typeof FoodOrdersOrderIdRoute
+  '/providers/$slug/book': typeof ProvidersSlugBookRoute
+  '/services/$category/providers': typeof ServicesCategoryProvidersRoute
+  '/providers/$slug/': typeof ProvidersSlugIndexRoute
+  '/services/$category/': typeof ServicesCategoryIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/search' | '/account/orders'
+  fullPaths:
+    | '/'
+    | '/cart'
+    | '/location'
+    | '/register'
+    | '/search'
+    | '/sell'
+    | '/sign-in'
+    | '/account/orders'
+    | '/food/$kitchen'
+    | '/food/checkout'
+    | '/orders/$orderId'
+    | '/products/$productId'
+    | '/quotes/$quoteId'
+    | '/shop/$department'
+    | '/account/'
+    | '/food/'
+    | '/services/'
+    | '/shop/'
+    | '/food/orders/$orderId'
+    | '/providers/$slug/book'
+    | '/services/$category/providers'
+    | '/providers/$slug/'
+    | '/services/$category/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/search' | '/account/orders'
-  id: '__root__' | '/' | '/search' | '/account/orders'
+  to:
+    | '/'
+    | '/cart'
+    | '/location'
+    | '/register'
+    | '/search'
+    | '/sell'
+    | '/sign-in'
+    | '/account/orders'
+    | '/food/$kitchen'
+    | '/food/checkout'
+    | '/orders/$orderId'
+    | '/products/$productId'
+    | '/quotes/$quoteId'
+    | '/shop/$department'
+    | '/account'
+    | '/food'
+    | '/services'
+    | '/shop'
+    | '/food/orders/$orderId'
+    | '/providers/$slug/book'
+    | '/services/$category/providers'
+    | '/providers/$slug'
+    | '/services/$category'
+  id:
+    | '__root__'
+    | '/'
+    | '/cart'
+    | '/location'
+    | '/register'
+    | '/search'
+    | '/sell'
+    | '/sign-in'
+    | '/account/orders'
+    | '/food/$kitchen'
+    | '/food/checkout'
+    | '/orders/$orderId'
+    | '/products/$productId'
+    | '/quotes/$quoteId'
+    | '/shop/$department'
+    | '/account/'
+    | '/food/'
+    | '/services/'
+    | '/shop/'
+    | '/food/orders/$orderId'
+    | '/providers/$slug/book'
+    | '/services/$category/providers'
+    | '/providers/$slug/'
+    | '/services/$category/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CartRoute: typeof CartRoute
+  LocationRoute: typeof LocationRoute
+  RegisterRoute: typeof RegisterRoute
   SearchRoute: typeof SearchRoute
+  SellRoute: typeof SellRoute
+  SignInRoute: typeof SignInRoute
   AccountOrdersRoute: typeof AccountOrdersRoute
+  FoodKitchenRoute: typeof FoodKitchenRoute
+  FoodCheckoutRoute: typeof FoodCheckoutRoute
+  OrdersOrderIdRoute: typeof OrdersOrderIdRoute
+  ProductsProductIdRoute: typeof ProductsProductIdRoute
+  QuotesQuoteIdRoute: typeof QuotesQuoteIdRoute
+  ShopDepartmentRoute: typeof ShopDepartmentRoute
+  AccountIndexRoute: typeof AccountIndexRoute
+  FoodIndexRoute: typeof FoodIndexRoute
+  ServicesIndexRoute: typeof ServicesIndexRoute
+  ShopIndexRoute: typeof ShopIndexRoute
+  FoodOrdersOrderIdRoute: typeof FoodOrdersOrderIdRoute
+  ProvidersSlugBookRoute: typeof ProvidersSlugBookRoute
+  ServicesCategoryProvidersRoute: typeof ServicesCategoryProvidersRoute
+  ProvidersSlugIndexRoute: typeof ProvidersSlugIndexRoute
+  ServicesCategoryIndexRoute: typeof ServicesCategoryIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -68,11 +339,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cart': {
+      id: '/cart'
+      path: '/cart'
+      fullPath: '/cart'
+      preLoaderRoute: typeof CartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/location': {
+      id: '/location'
+      path: '/location'
+      fullPath: '/location'
+      preLoaderRoute: typeof LocationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/search': {
       id: '/search'
       path: '/search'
       fullPath: '/search'
       preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sell': {
+      id: '/sell'
+      path: '/sell'
+      fullPath: '/sell'
+      preLoaderRoute: typeof SellRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sign-in': {
+      id: '/sign-in'
+      path: '/sign-in'
+      fullPath: '/sign-in'
+      preLoaderRoute: typeof SignInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account/': {
+      id: '/account/'
+      path: '/account'
+      fullPath: '/account/'
+      preLoaderRoute: typeof AccountIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/account/orders': {
@@ -82,13 +395,131 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountOrdersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/food/': {
+      id: '/food/'
+      path: '/food'
+      fullPath: '/food/'
+      preLoaderRoute: typeof FoodIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/food/$kitchen': {
+      id: '/food/$kitchen'
+      path: '/food/$kitchen'
+      fullPath: '/food/$kitchen'
+      preLoaderRoute: typeof FoodKitchenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/food/checkout': {
+      id: '/food/checkout'
+      path: '/food/checkout'
+      fullPath: '/food/checkout'
+      preLoaderRoute: typeof FoodCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/orders/$orderId': {
+      id: '/orders/$orderId'
+      path: '/orders/$orderId'
+      fullPath: '/orders/$orderId'
+      preLoaderRoute: typeof OrdersOrderIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/products/$productId': {
+      id: '/products/$productId'
+      path: '/products/$productId'
+      fullPath: '/products/$productId'
+      preLoaderRoute: typeof ProductsProductIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/quotes/$quoteId': {
+      id: '/quotes/$quoteId'
+      path: '/quotes/$quoteId'
+      fullPath: '/quotes/$quoteId'
+      preLoaderRoute: typeof QuotesQuoteIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/services/': {
+      id: '/services/'
+      path: '/services'
+      fullPath: '/services/'
+      preLoaderRoute: typeof ServicesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shop/': {
+      id: '/shop/'
+      path: '/shop'
+      fullPath: '/shop/'
+      preLoaderRoute: typeof ShopIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shop/$department': {
+      id: '/shop/$department'
+      path: '/shop/$department'
+      fullPath: '/shop/$department'
+      preLoaderRoute: typeof ShopDepartmentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/food/orders/$orderId': {
+      id: '/food/orders/$orderId'
+      path: '/food/orders/$orderId'
+      fullPath: '/food/orders/$orderId'
+      preLoaderRoute: typeof FoodOrdersOrderIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/providers/$slug/': {
+      id: '/providers/$slug/'
+      path: '/providers/$slug'
+      fullPath: '/providers/$slug/'
+      preLoaderRoute: typeof ProvidersSlugIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/providers/$slug/book': {
+      id: '/providers/$slug/book'
+      path: '/providers/$slug/book'
+      fullPath: '/providers/$slug/book'
+      preLoaderRoute: typeof ProvidersSlugBookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/services/$category/': {
+      id: '/services/$category/'
+      path: '/services/$category'
+      fullPath: '/services/$category/'
+      preLoaderRoute: typeof ServicesCategoryIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/services/$category/providers': {
+      id: '/services/$category/providers'
+      path: '/services/$category/providers'
+      fullPath: '/services/$category/providers'
+      preLoaderRoute: typeof ServicesCategoryProvidersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CartRoute: CartRoute,
+  LocationRoute: LocationRoute,
+  RegisterRoute: RegisterRoute,
   SearchRoute: SearchRoute,
+  SellRoute: SellRoute,
+  SignInRoute: SignInRoute,
   AccountOrdersRoute: AccountOrdersRoute,
+  FoodKitchenRoute: FoodKitchenRoute,
+  FoodCheckoutRoute: FoodCheckoutRoute,
+  OrdersOrderIdRoute: OrdersOrderIdRoute,
+  ProductsProductIdRoute: ProductsProductIdRoute,
+  QuotesQuoteIdRoute: QuotesQuoteIdRoute,
+  ShopDepartmentRoute: ShopDepartmentRoute,
+  AccountIndexRoute: AccountIndexRoute,
+  FoodIndexRoute: FoodIndexRoute,
+  ServicesIndexRoute: ServicesIndexRoute,
+  ShopIndexRoute: ShopIndexRoute,
+  FoodOrdersOrderIdRoute: FoodOrdersOrderIdRoute,
+  ProvidersSlugBookRoute: ProvidersSlugBookRoute,
+  ServicesCategoryProvidersRoute: ServicesCategoryProvidersRoute,
+  ProvidersSlugIndexRoute: ProvidersSlugIndexRoute,
+  ServicesCategoryIndexRoute: ServicesCategoryIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

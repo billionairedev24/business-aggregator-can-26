@@ -1,14 +1,35 @@
+import { useId } from 'react';
+import clsx from 'clsx';
 import { MagnifyingGlass } from '@phosphor-icons/react';
-import { Button } from './Button';
-export type Scope = 'all' | 'services' | 'shop' | 'food';
-export interface SearchBarProps { value: string; onChange: (v: string) => void; onSubmit: () => void; size?: 'hero' | 'header'; placeholder?: string }
-export function SearchBar({ value, onChange, onSubmit, size = 'hero', placeholder = 'Plumber, sourdough, pho for four…' }: SearchBarProps) {
-  const hero = size === 'hero';
+import { defineMessages } from './i18n';
+
+const useT = defineMessages({
+  en: { label: 'Search', button: 'Search' },
+  fr: { label: 'Rechercher', button: 'Rechercher' },
+});
+
+export interface SearchBarProps {
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: (value: string) => void;
+  /** hero: the home page's pill with a Search button; header: the header's field (off-home). */
+  variant?: 'hero' | 'header';
+  placeholder?: string;
+  /** Accessible name; defaults to "Search". */
+  label?: string;
+}
+
+/** Search field (role=search). Enter or the button submits; typeahead (S-48) hangs off the same input. */
+export function SearchBar({ value, onChange, onSubmit, variant = 'hero', placeholder, label }: SearchBarProps) {
+  const t = useT();
+  const id = useId();
   return (
-    <form role="search" onSubmit={e => { e.preventDefault(); onSubmit(); }} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--color-surface)', borderRadius: 999, padding: hero ? 6 : 2, boxShadow: hero ? 'none' : 'inset 0 0 0 1px var(--color-neutral-300)' }}>
-      <MagnifyingGlass weight="duotone" size={hero ? 22 : 18} color="var(--color-accent)" style={{ marginLeft: 12 }} aria-hidden />
-      <input aria-label="Search" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={{ flex: 1, border: 0, background: 'transparent', font: 'inherit', fontSize: hero ? 17 : 15, minHeight: hero ? 48 : 40, outline: 'none', color: 'var(--color-text)' }} />
-      {hero && <Button variant="highlight" type="submit" style={{ borderRadius: 999, minHeight: 48, padding: '0 26px' }}>Search</Button>}
+    <form role="search" className={clsx('nl-search', `nl-search-${variant}`)} onSubmit={e => { e.preventDefault(); onSubmit(value.trim()); }}>
+      <MagnifyingGlass weight="duotone" size={variant === 'hero' ? 22 : 18} className="nl-search-icon" aria-hidden />
+      <label htmlFor={id} className="nl-sr-only">{label ?? t('label')}</label>
+      <input id={id} type="search" className={clsx(variant === 'header' && 'input', 'nl-search-input')} value={value} placeholder={placeholder}
+        enterKeyHint="search" autoComplete="off" onChange={e => onChange(e.target.value)} />
+      {variant === 'hero' && <button type="submit" className="btn btn-highlight nl-search-button">{t('button')}</button>}
     </form>
   );
 }

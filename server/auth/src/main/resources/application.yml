@@ -63,6 +63,11 @@ northline:
     terms-version: "3.0"               # design/09 Terms of Service · Version 3.0 · Effective 1 October 2026
     totp-key: ${TOTP_KEY}              # base64 AES-256; no default outside local/test (secrets manager)
     login-page: ${STUDIO_ORIGIN:http://localhost:3100}/sign-in
+    # S-62: the consumer web app's sign-in page (consumer-bff's unauthenticated authorization requests, Google / Apple
+    # started there), and which clients only get a code after a second factor.
+    consumer-login-page: ${CONSUMER_ORIGIN:http://localhost:3000}/sign-in
+    consumer-clients: [ consumer-bff ]
+    mfa-required-clients: [ studio-bff, console-bff ]
     allowed-origins: [ "${STUDIO_ORIGIN:http://localhost:3100}", "${CONSUMER_ORIGIN:http://localhost:3000}" ]   # CORS
     webauthn:
       rp-id: ${WEBAUTHN_RP_ID:localhost}
@@ -154,10 +159,9 @@ northline:
         redirect-uris: [ "${STUDIO_ORIGIN:http://localhost:3100}/login/oauth2/code/studio" ]
         post-logout-redirect-uris: [ "${STUDIO_ORIGIN:http://localhost:3100}/sign-in" ]
         scopes: [ openid, profile, merchant ]
-      consumer-bff:                    # the consumer BFF isn't built yet (E-7): registered only once its hash is set
+      consumer-bff:                    # S-45: the bff under its `consumer` profile (the consumer web app's BFF)
         type: confidential
-        optional: true
-        secret-hash: ${CONSUMER_BFF_SECRET_HASH:}
+        secret-hash: ${CONSUMER_BFF_SECRET_HASH:{noop}dev-consumer-bff}
         redirect-uris: [ "${CONSUMER_ORIGIN:http://localhost:3000}/login/oauth2/code/northline" ]
         post-logout-redirect-uris: [ "${CONSUMER_ORIGIN:http://localhost:3000}/" ]
         scopes: [ openid, profile, orders, bookings ]

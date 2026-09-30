@@ -38,6 +38,7 @@ locals {
     WEBHOOK_SECRET_KEY       = "webhook-secret-key"
     STUDIO_BFF_SECRET        = "studio-bff-secret"
     STUDIO_BFF_SECRET_HASH   = "studio-bff-secret-hash"
+    CONSUMER_BFF_SECRET      = "consumer-bff-secret"
     CONSUMER_BFF_SECRET_HASH = "consumer-bff-secret-hash"
     CONSOLE_BFF_SECRET_HASH  = "console-bff-secret-hash"
     STRIPE_SECRET_KEY        = "stripe-secret-key"

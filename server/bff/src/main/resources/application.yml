@@ -2,6 +2,8 @@
 # (Valkey/Redis). Every URL and secret is an environment variable with a local default (docs/runbooks/README.md).
 # Profiles: `local` (application-local.yml: in-memory session, no Redis), `test`, and `dev` | `staging` | `prod`,
 # which also activate `cloud` (application-cloud.yml: required variables checked at start-up).
+# S-45: the same jar is the consumer-bff with the `consumer` profile added (application-consumer.yml: client
+# consumer-bff, cookie NL_CONSUMER, port 8081, anonymous browsing). The studio client below is registered only without it.
 spring:
   application.name: northline-studio-bff
   threads.virtual.enabled: true
@@ -19,15 +21,6 @@ spring:
     data.redis.namespace: nl:studio-bff   # Boot 4 name (spring.session.redis.* is ignored)
     timeout: 12h                          # "sessions expire after 12 h idle"
   security.oauth2.client:
-    registration:
-      studio:
-        provider: northline
-        client-id: studio-bff
-        client-secret: ${STUDIO_BFF_SECRET:dev-studio-bff}   # plain; northline-auth stores its hash (STUDIO_BFF_SECRET_HASH)
-        client-authentication-method: client_secret_basic
-        authorization-grant-type: authorization_code
-        redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
-        scope: openid,profile,merchant
     provider:
       northline:                          # explicit endpoints: no discovery at start-up, no userinfo call
         # Browser-facing (public) auth URL, then the in-cluster one for back-channel calls; both default to AUTH_ISSUER.
@@ -52,6 +45,18 @@ northline.bff:
   introspection-uri: ${AUTH_INTERNAL_URL:${AUTH_ISSUER:http://localhost:9000}}/oauth2/introspect
   session-check-interval: ${SESSION_CHECK_INTERVAL:60s}
   sign-in-page: /sign-in
+---
+# The Studio's OAuth client — not registered under the `consumer` profile (application-consumer.yml has its own).
+spring.config.activate.on-profile: "!consumer"
+spring.security.oauth2.client.registration:
+  studio:
+    provider: northline
+    client-id: studio-bff
+    client-secret: ${STUDIO_BFF_SECRET:dev-studio-bff}   # plain; northline-auth stores its hash (STUDIO_BFF_SECRET_HASH)
+    client-authentication-method: client_secret_basic
+    authorization-grant-type: authorization_code
+    redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+    scope: openid,profile,merchant
 ---
 # Local runs read server/.env (or .env next to the jar) — KEY=value lines, see server/.env.example. Never under `test`.
 spring.config.activate.on-profile: "!test"
