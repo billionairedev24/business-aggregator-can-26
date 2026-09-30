@@ -69,6 +69,10 @@ northline:
     stripe-secret-key: ${STRIPE_SECRET_KEY:}
     stripe-publishable-key: ${STRIPE_PUBLISHABLE_KEY:}
     stripe-api-base: ${STRIPE_API_BASE:}                       # http://localhost:12111 for stripe-mock
+    stripe-webhook-secret: ${STRIPE_WEBHOOK_SECRET:}           # whsec_… of POST /api/v1/webhooks/stripe (S-12)
+    stripe-connect-webhook-secret: ${STRIPE_CONNECT_WEBHOOK_SECRET:}  # whsec_… of …/webhooks/stripe/connect
+    stripe-webhook-tolerance: ${STRIPE_WEBHOOK_TOLERANCE:PT5M} # oldest signed delivery accepted (replay protection)
+    webhook-rate-limit: ${STRIPE_WEBHOOK_RATE_LIMIT:600}       # deliveries per minute and client address
   stripe:                                                      # Stripe Connect (merchants) outside local/test
     secret-key: ${STRIPE_SECRET_KEY:}
     api-base: ${STRIPE_API_BASE:}

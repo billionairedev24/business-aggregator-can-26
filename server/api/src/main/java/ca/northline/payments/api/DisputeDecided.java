@@ -11,7 +11,8 @@ import org.springframework.modulith.events.Externalized;
  *
  * @param caseNumber {@code DS-…} as the Studio shows it (added by S-13 for the notification email; additive)
  * @param amountCents the disputed amount (added by S-13; additive)
- * @param decidedBy identity.users id of the agent, the merchant owner (full refund) or the customer (accepted offer)
+ * @param decidedBy identity.users id of the agent, the merchant owner (full refund) or the customer (accepted offer);
+ *     {@code stripe} when the card issuer decided a card dispute (S-12)
  */
 @Externalized("payments.dispute::#{aggregateId()}")
 public record DisputeDecided(

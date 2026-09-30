@@ -606,3 +606,70 @@ Record anything the spec did not decide. Format: date · decision · why · spec
 - **Local preview:** `GET /api/v1/dev/emails[/{key}?lang=fr-CA&format=text]` (profile `local` only; public route) renders every sample; the rendering tests use the same samples.
 - **Tests:** library — every template × variant × en/fr (subject, CASL footer, links, inline styles only, escaping, unsubscribe required), `EmailBrandTest` (tokens.json), GreenMail SMTP (multipart/alternative, headers, UTF-8, no server = unavailable, `local` logs), WireMock contracts for SES (SigV4, body shape, `MessageRejected` not retried, `SendingPaused` unavailable, 500 → retried, 429 × 3), SendGrid (body, 400 rejected once, 403 unavailable, 503 → retried, 500 × 3) and Azure (HMAC signature and content hash recomputed, 400, 429 → retried, 503 × 3), `DefaultMailerTest`, `EmailAutoConfigurationTest` (selection, missing settings, `local` refused under staging/prod). api — `TeamInvitationEmailTest` (one email via the real endpoint, French, same link; mobile = not sent; a withdrawn invitation never emailed), `MerchantEmailNoticesTest` (exactly one email per member even when the event is delivered twice concurrently, language, roles, matrix honoured, bank notice always, unsubscribe GET/POST one-click, forged token), `CaseNotificationEventsTest` (payments publishes the new events with case numbers and deadlines).
 - **Not done:** SMS notices and mobile invitations (S-27); bounce/complaint feedback into Settings (providers' suppression lists handle it); DNS records are manual (S-17); consent records for commercial email (none sent); the worker doesn't use the library yet (S-27 adds `implementation(project(":email"))`).
+
+## 2026-09-30 — S-12 Stripe webhooks (payments; merchants link on account.updated)
+
+- **Endpoints:** `POST /api/v1/webhooks/stripe` (platform events) and `POST /api/v1/webhooks/stripe/connect`
+  (connected accounts' events), each with its own signing secret — `STRIPE_WEBHOOK_SECRET` /
+  `STRIPE_CONNECT_WEBHOOK_SECRET` (`northline.payments.stripe-webhook-secret` / `…-connect-webhook-secret`), required
+  in staging/prod (`northline.required-env.payments`); without one the endpoint answers 503 `webhooks_unconfigured`.
+  Open in `SecurityConfig` (POST only): no token, session or CSRF — the `Stripe-Signature` is the authentication.
+  Rate limit 600 requests/min per client address and api instance (`STRIPE_WEBHOOK_RATE_LIMIT`), then 429 +
+  `Retry-After` (in-process fixed window; there is no shared rate-limit store yet).
+- **Verification:** stripe-java `Webhook.constructEvent` (HMAC-SHA256, all `v1` values so secret rolls work) with a
+  5-minute timestamp tolerance (`STRIPE_WEBHOOK_TOLERANCE`) — a captured delivery can't be replayed later; a delivery
+  signed for the other endpoint fails. Bad / missing / stale → 400 `invalid_signature`. Handlers read the raw
+  `data.object` JSON, so they don't depend on stripe-java's typed deserialisation for the event's API version (the
+  endpoints must still be created with the pinned `2026-08-26.dahlia`).
+- **Dedupe + async:** V063 `payments.stripe_events` (PK = Stripe event id; type, endpoint, account, livemode, object id,
+  Stripe's `created`, payload, state `received|processed|ignored|failed`, attempts, error). Receiving inserts
+  `on conflict do nothing` and publishes the internal `StripeEventReceived` in the same transaction (Modulith outbox),
+  answers 200 (`{"received":true,"duplicate":…}`) — duplicates too. `StripeEventListener`
+  (`@ApplicationModuleListener`) and the payments job (`processStripeEvents`, every minute, ≤ 10 attempts) apply events
+  through `StripeEventProcessor`, each in its own transaction under `SELECT … FOR UPDATE`, so the two never apply one
+  twice; a failure is recorded on the row and retried. Processed/ignored rows are purged after 30 days. The stored
+  payload drops personal fields (billing details, e-mail, phone, names, addresses, dispute evidence, individual /
+  representative) — Northline never needs them.
+- **Out of order:** payouts and closed cases never leave a final state (`payout.paid` after `payout.failed` changes
+  nothing; Stripe can send `failed` after `paid`, which is honoured); disputes and connected accounts store the
+  `created` time of the last event applied and ignore older ones; a dispute event for a dispute not seen yet opens it
+  first (closed-before-created ends in the same state); PaymentIntent statuses only move forward. Events of the other
+  mode (live vs test, from the key prefix) are ignored.
+- **Handlers:**
+  - `payout.paid|failed|canceled` → `Payout.paid()` / `returned()`: a returned payout goes back to the merchant's
+    balance (`LedgerEntry.payoutReturned`, the reverse of `paidOut`), the recovered instant fee is transferred back to
+    the connected account, `failure_code` kept, new event **`payout.failed`** (`payments.payout`, schema v1). The
+    settle job stays as the **fallback reconciler**: it asks Stripe for in-transit payouts 24 h after their arrival
+    date (at once with the fake, which sends no webhooks).
+  - `charge.dispute.*` → the existing disputes flow: a new card-dispute case (`Dispute.chargeback`, subject "Card
+    dispute · <reason>", reply-by = Stripe's evidence deadline − 2 days, escrow on hold, `dispute.updated` "opened" so
+    S-13 emails the team), or the customer's open case on that escrow becomes the card dispute. The merchant answers
+    with response + evidence; goodwill offers and "full refund" are refused (409 `card_dispute`) because a disputed
+    charge can't be refunded — the issuer decides. `won` / `warning_closed` → decision `release` (escrow resumes its
+    normal release); `lost` → `full_refund`: unreleased escrow is refunded from escrow, released money is taken from
+    the merchant's balance and reversed from the transfer; the merchant carries up to the escrow amount, Northline the
+    tax part (`LedgerEntry.chargedBack`). `dispute.decided` with `decidedBy = "stripe"`. Submitting evidence to Stripe
+    stays an agent task in the Stripe dashboard.
+  - `account.updated` → `payments.connected_accounts` gets charges/payouts enabled, requirements due / past due,
+    disabled reason and instant eligibility (default bank's `available_payout_methods`); an account whose metadata names
+    a merchant is recorded if unknown. Instant payouts answer 409 `payouts_disabled` and the scheduled run skips the
+    merchant while Stripe has paused payouts. New in-process event `payments.api.ConnectAccountUpdated`; merchants
+    links the business to the account (`StripeAccountUpdates`); the compliance screen already reads requirements live.
+  - `payment_intent.*` → mirror state (authorized / captured + charge / failed / canceled); a hold canceled at Stripe
+    while its escrow still waits for capture publishes `payment.reauthorization_required`. `charge.refunded` → intent
+    `refunded`. `refund.*` → `refunds.stripe_status` (failed/canceled logged as errors; refunds made outside Northline
+    logged and ignored). `transfer.reversed|updated` → `transfers.reversed_cents` = Stripe's cumulative
+    `amount_reversed`.
+  - Anything else → stored `ignored`, logged at info.
+- **Schema V063:** `payments.stripe_events`; `payouts.failure_code, returned_fee_transfer`; `disputes.stripe_dispute`
+  (unique), `stripe_status, stripe_reason, stripe_updated_at`; `refunds.stripe_status`; `connected_accounts.charges_enabled,
+  payouts_enabled, requirements_due, requirements_past_due, disabled_reason, stripe_updated_at`.
+- **Tests:** `StripeWebhookApiTest` signs fixtures like Stripe (`t=…,v1=HMAC`) with the test profile's obviously fake
+  `whsec_test_…` secrets and goes through `Webhook.constructEvent`: missing / wrong / other-endpoint / tampered
+  signatures, a stale timestamp (replay), duplicate delivery applied once, payout paid → failed → late paid, dispute
+  created → updated → lost (+ late older update), closed-before-created (won), a card dispute joining the customer's
+  case, account.updated pausing payouts / linking the business / newest wins, PaymentIntent mirror only moving forward
+  + lapsed hold, refund and transfer events, unknown events and redaction, live-mode events ignored;
+  `WebhookRateLimiterTest`.
+- **Not done:** submitting dispute evidence to Stripe from Northline; the Stripe dispute fee in the ledger; emailing
+  `payout.failed` (the event exists; the S-13 notifier doesn't subscribe to it yet); a shared (Redis) rate limit.

@@ -25,6 +25,7 @@ class PaymentsScheduler {
     @Scheduled(fixedDelayString = "${northline.payments.jobs-interval:PT1M}", initialDelayString = "PT20S")
     void run() {
         step("release escrow", jobs::releaseDueEscrows);
+        step("stripe events", jobs::processStripeEvents);
         step("renew card holds", jobs::renewAuthorizations);
         step("lapse cases", jobs::lapseCases);
         step("refund queue", jobs::payRefundQueue);

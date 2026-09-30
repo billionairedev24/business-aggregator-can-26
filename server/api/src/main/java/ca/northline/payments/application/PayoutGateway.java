@@ -42,6 +42,12 @@ public interface PayoutGateway {
     /** A payout's current state at Stripe (the reconciler for payouts whose webhook never came). */
     Payout.State payoutState(String connectedAccount, String stripePayout);
 
+    /**
+     * Whether Stripe webhooks report this gateway's payouts ({@code payout.paid} / {@code failed}); the fake sends
+     * none, so its payouts are reconciled as soon as they arrive.
+     */
+    boolean webhooksDeliver();
+
     /** Turns Stripe's automatic payouts off for the account: Northline's scheduled run creates every payout. */
     void useManualPayouts(String connectedAccount);
 

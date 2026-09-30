@@ -335,6 +335,11 @@ class StripeConnectGateway implements PaymentGateway, PayoutGateway {
     }
 
     @Override
+    public boolean webhooksDeliver() {
+        return true;
+    }
+
+    @Override
     public void useManualPayouts(String connectedAccount) {
         var schedule = AccountUpdateParams.Settings.Payouts.Schedule.builder()
                 .setInterval(AccountUpdateParams.Settings.Payouts.Schedule.Interval.MANUAL)

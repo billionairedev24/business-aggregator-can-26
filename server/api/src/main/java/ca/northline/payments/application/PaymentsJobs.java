@@ -12,6 +12,9 @@ public interface PaymentsJobs {
     /** Card holds about to lapse at Stripe are renewed (see {@code AuthorizationWindow}). */
     int renewAuthorizations();
 
+    /** Stripe webhook events not processed yet (or failed), and the purge of old ones. */
+    int processStripeEvents();
+
     /** Refund cases past their contest deadline, and goodwill offers past 72 h. */
     int lapseCases();
 

@@ -161,6 +161,11 @@ class FakeStripeGateway implements PaymentGateway, PayoutGateway {
     }
 
     @Override
+    public boolean webhooksDeliver() {
+        return false;
+    }
+
+    @Override
     public void useManualPayouts(String connectedAccount) {
         log.debug("FAKE STRIPE manual payouts for {}", connectedAccount);
     }

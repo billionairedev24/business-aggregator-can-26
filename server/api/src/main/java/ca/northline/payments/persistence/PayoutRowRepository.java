@@ -17,4 +17,6 @@ interface PayoutRowRepository extends ListCrudRepository<PayoutRow, String> {
             String merchantId, String kind, Instant from, Instant to);
 
     Optional<PayoutRow> findFirstByMerchantIdOrderByCreatedAtDesc(String merchantId);
+
+    Optional<PayoutRow> findByStripePayout(String stripePayout);
 }

@@ -24,7 +24,9 @@ public interface PaymentGateway {
         /** {@code succeeded}. */
         CAPTURED,
         CANCELED,
-        FAILED
+        FAILED,
+        /** The charge was refunded in full (only from {@code charge.refunded}). */
+        REFUNDED
     }
 
     /**

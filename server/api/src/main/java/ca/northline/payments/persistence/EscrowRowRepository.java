@@ -9,6 +9,8 @@ import org.springframework.data.repository.ListCrudRepository;
 interface EscrowRowRepository extends ListCrudRepository<EscrowRow, String> {
     Optional<EscrowRow> findByRefTypeAndRefId(String refType, String refId);
 
+    Optional<EscrowRow> findByPaymentIntentId(String paymentIntentId);
+
     @Query("""
             select * from payments.escrows
              where state = 'held' and release_at <= :now

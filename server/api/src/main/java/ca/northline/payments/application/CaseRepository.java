@@ -39,6 +39,14 @@ public interface CaseRepository {
 
     List<Dispute> expiredOffers(Instant now, int limit);
 
+    Optional<Dispute> disputeByStripeId(String stripeDispute);
+
+    /** The customer's open case on an escrow that isn't a card dispute yet. */
+    Optional<Dispute> openDisputeOn(String escrowId);
+
+    /** Mirrors Stripe's refund status; false when no refund has that Stripe id (made outside Northline). */
+    boolean refundStripeStatus(String stripeRefund, String status);
+
     /** Newest first. */
     List<Dispute> disputes(String merchantId, int limit);
 

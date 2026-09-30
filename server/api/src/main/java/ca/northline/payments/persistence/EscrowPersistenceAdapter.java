@@ -42,6 +42,11 @@ class EscrowPersistenceAdapter implements EscrowRepository {
     }
 
     @Override
+    public Optional<Escrow> findByPaymentIntentId(String paymentIntentId) {
+        return rows.findByPaymentIntentId(paymentIntentId).map(mapper::toDomain);
+    }
+
+    @Override
     public List<Escrow> releasable(Instant now, int limit) {
         return rows.releasable(now, limit).stream().map(mapper::toDomain).toList();
     }
@@ -99,6 +104,13 @@ class EscrowPersistenceAdapter implements EscrowRepository {
                 .param("state", state.code())
                 .param("id", paymentIntentId)
                 .update();
+    }
+
+    @Override
+    public void markAuthorized(String paymentIntentId, Instant at) {
+        jdbc.sql("""
+                        update payments.payment_intents
+                           set state = 'authorized', authorized_at = coalesce(authorized_at, :at) where id = :id""").param("at", ts(at)).param("id", paymentIntentId).update();
     }
 
     @Override
@@ -231,5 +243,16 @@ class EscrowPersistenceAdapter implements EscrowRepository {
                 .param("cents", cents)
                 .param("id", transferId)
                 .update();
+    }
+
+    @Override
+    public boolean syncReversed(String stripeTransfer, long amountReversedCents) {
+        return jdbc.sql("""
+                        update payments.transfers set reversed_cents = greatest(reversed_cents, :cents)
+                         where stripe_transfer = :tr""")
+                        .param("cents", amountReversedCents)
+                        .param("tr", stripeTransfer)
+                        .update()
+                > 0;
     }
 }

@@ -74,7 +74,7 @@ objects, connected accounts, webhooks and keys don't carry over.
     Transfers, Payouts, Accounts (Connect), Account links, Login links, Tokens, Financial Connections sessions; read
     access to Balance, Charges, Events. Store them as `STRIPE_SECRET_KEY` / `STRIPE_PUBLISHABLE_KEY` in the secrets
     manager (see the environment runbooks). Never commit a key; never put a live key in dev or staging.
-13. **Webhooks** — S-12 (a section of this runbook once it lands).
+13. **Webhooks** — § 5.
 
 ### Test mode data
 
@@ -106,10 +106,66 @@ every mutating call sends an `Idempotency-Key` and every call the pinned `Stripe
   retries; fix by a new checkout for the job, then the escrow can be captured.
 - **Transfer failed** (release job log): the release job retries each minute with the same key. `balance_insufficient`
   shouldn't happen (transfers draw on their charge via `source_transaction`); check the charge was captured.
-- **Payout failed / canceled**: S-12 webhooks move it back to the merchant's balance; until then the payout
-  reconciler logs `Payout … is failed at Stripe`.
+- **Payout failed / canceled**: the `payout.failed` / `payout.canceled` webhook (or the reconciler 24 h after the
+  arrival date) puts the money back in the merchant's balance, gives an instant fee back and publishes
+  `payout.failed`; the owner fixes the bank account in Payouts.
 - **Refund exceeded the transfer** (merchant already paid out): the reversal is capped at what is still transferred;
   the rest is a negative merchant balance recovered from later releases, and Stripe debits the bank if the connected
   account goes negative.
 - **Reconciling**: every Stripe object carries `northline_*` metadata; search the dashboard by
   `metadata[northline_escrow_id]` or by the `transfer_group`.
+
+## 5. Webhooks (S-12)
+
+Two endpoints, each with its own signing secret:
+
+| endpoint (Stripe dashboard → Developers → Webhooks → Add endpoint) | listen to | events | secret |
+|---|---|---|---|
+| `https://<api host>/api/v1/webhooks/stripe` | **Your account** | `payment_intent.amount_capturable_updated`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.canceled`, `charge.refunded`, `refund.created`, `refund.updated`, `refund.failed`, `charge.dispute.created`, `charge.dispute.updated`, `charge.dispute.closed`, `charge.dispute.funds_withdrawn`, `charge.dispute.funds_reinstated`, `transfer.reversed`, `transfer.updated` | `STRIPE_WEBHOOK_SECRET` |
+| `https://<api host>/api/v1/webhooks/stripe/connect` | **Connected accounts** | `account.updated`, `payout.paid`, `payout.failed`, `payout.canceled` | `STRIPE_CONNECT_WEBHOOK_SECRET` |
+
+- **API version:** create both endpoints with **`2026-08-26.dahlia`** (the pinned version, § 1); an endpoint on
+  another version sends objects in a shape the handlers weren't tested with. Upgrading = new endpoints on the new
+  version, deploy, delete the old ones.
+- **Test vs live:** register both endpoints in test mode for dev/staging and again in live mode for prod; each has its
+  own `whsec_…`. A test-mode installation (key `sk_test_…`) ignores live-mode events and vice versa.
+- **Secrets:** reveal each endpoint's signing secret, store it in the secrets manager as `STRIPE_WEBHOOK_SECRET` /
+  `STRIPE_CONNECT_WEBHOOK_SECRET` (staging and prod refuse to start without them). **Rolling a secret:** Stripe's
+  "Roll secret" keeps the old one valid for up to 24 h and signs with both, so set the new value and restart within
+  that window.
+- **What Northline does:** checks `Stripe-Signature` (HMAC-SHA256, timestamp ≤ 5 min old — `STRIPE_WEBHOOK_TOLERANCE`),
+  stores the event once in `payments.stripe_events` (event id = primary key; retries and replays are no-ops, payload
+  with personal fields removed, kept 30 days), answers 200, and applies it asynchronously (outbox listener, plus a
+  retry job every minute, up to 10 attempts). Events can arrive in any order: payouts and cases never leave a final
+  state; disputes and accounts ignore an event older than the last one applied. Unknown types are stored as `ignored`.
+  The endpoints need no session or token (and have no CSRF); the signature is the authentication; 600 requests/min per
+  address (`STRIPE_WEBHOOK_RATE_LIMIT`), then 429.
+- **Effects:** `payout.paid` → paid; `payout.failed` / `canceled` → returned to the merchant's balance (+ instant fee
+  back, `payout.failed` event); `charge.dispute.*` → a card-dispute case in Refunds & disputes (escrow on hold,
+  `dispute.updated` "opened" email; merchant answers with response + evidence, can't refund or offer goodwill), closed
+  won → escrow resumes, lost → the merchant carries it (escrow or balance + transfer reversal), `dispute.decided`;
+  `account.updated` → payouts enabled / instant eligibility / requirements on `payments.connected_accounts` (payouts
+  pause while Stripe says so) and the business linked to the account; PaymentIntent, refund and transfer events keep
+  the mirrors current (a hold canceled at Stripe asks the customer to pay again).
+- **Fallback:** the payout reconciler still settles in-transit payouts 24 h after their arrival date by asking Stripe,
+  in case a webhook never arrives.
+
+### Local testing with the Stripe CLI
+
+The CLI isn't part of the repo's tooling; install it from Stripe's docs (`brew install stripe/stripe-cli/stripe`, or
+the Linux package / Docker image `stripe/stripe-cli`). Then, with the api running on 8080 and a **test-mode** key:
+
+```sh
+stripe login
+# platform events → the platform endpoint; prints "Your webhook signing secret is whsec_…"
+stripe listen --forward-to localhost:8080/api/v1/webhooks/stripe
+# connected accounts' events → the Connect endpoint (second terminal; its own whsec_…)
+stripe listen --forward-connect-to localhost:8080/api/v1/webhooks/stripe/connect
+```
+
+Put the two printed secrets in `server/.env` as `STRIPE_WEBHOOK_SECRET` / `STRIPE_CONNECT_WEBHOOK_SECRET` and restart
+the api. Trigger events with `stripe trigger payment_intent.amount_capturable_updated`, `stripe trigger
+charge.dispute.created`, `stripe trigger payout.failed --stripe-account acct_…`, or replay one with
+`stripe events resend evt_…` (a replay is deduplicated). Events for objects Northline doesn't know (most `trigger`
+fixtures) are stored and logged as ignored — use objects created through the Studio to see effects. stripe-mock
+doesn't send webhooks; the automated tests sign fixtures themselves (`StripeWebhookApiTest`).
