@@ -123,6 +123,27 @@ northline:
       client-id: ${MICROSOFT_CALENDAR_CLIENT_ID:}
       client-secret: ${MICROSOFT_CALENDAR_CLIENT_SECRET:}
       tenant: ${MICROSOFT_CALENDAR_TENANT:common}
+  # Shopify, Square and Lightspeed catalogue sync (S-35, docs/runbooks/commerce-sync.md): local (fakes with fixture
+  # catalogues; refused under staging/prod) | oauth (the real APIs, each once its app credentials are set).
+  commerce:
+    provider: ${COMMERCE_PROVIDER:local}
+    api-url: ${API_PUBLIC_URL:http://localhost:8080}      # OAuth redirect URIs + webhooks: <api>/api/v1/commerce/oauth/<p>/callback, <api>/api/v1/webhooks/commerce/<p>
+    studio-url: ${STUDIO_ORIGIN:http://localhost:3100}   # where the callback sends the browser back
+    poll-interval: ${COMMERCE_POLL_INTERVAL:PT1H}           # full read without webhooks
+    reconcile-interval: ${COMMERCE_RECONCILE_INTERVAL:P1D}  # full read with webhooks
+    webhook-rate-limit: ${COMMERCE_WEBHOOK_RATE_LIMIT:600}  # deliveries per minute and client address
+    shopify:
+      client-id: ${SHOPIFY_CLIENT_ID:}
+      client-secret: ${SHOPIFY_CLIENT_SECRET:}
+      api-version: ${SHOPIFY_API_VERSION:2026-07}
+    square:
+      client-id: ${SQUARE_CLIENT_ID:}
+      client-secret: ${SQUARE_CLIENT_SECRET:}
+      webhook-signature-key: ${SQUARE_WEBHOOK_SIGNATURE_KEY:}
+      base-url: ${SQUARE_BASE_URL:https://connect.squareup.com}   # https://connect.squareupsandbox.com = sandbox
+    lightspeed:
+      client-id: ${LIGHTSPEED_CLIENT_ID:}
+      client-secret: ${LIGHTSPEED_CLIENT_SECRET:}
   # Provider switches (ca.northline.platform) — see docs/runbooks/README.md.
   # Object storage (S-10, ca.northline.shared.storage): local (modules' disk fakes; placeholders under dev; refused
   # under staging/prod) | s3 (AWS S3 or RustFS/MinIO: endpoint + path-style) | gcs | azure (endpoint = account URL).

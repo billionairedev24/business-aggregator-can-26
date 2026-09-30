@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.ResultActions;
 
-/** Bulk upload (validate → report → import, history) and the Shopify / Square / Lightspeed integrations. */
+/** Bulk upload (validate → report → import, history); the commerce integrations: {@link CommerceSyncApiTest}. */
 class BulkUploadApiTest extends CatalogueApiTest {
 
     static final String IMPORTS = "/api/v1/merchants/{m}/listings/imports";
@@ -217,54 +217,6 @@ class BulkUploadApiTest extends CatalogueApiTest {
                             .param("template", "price_stock")
                             .with(TestJwt.member(bookkeeper)))
                     .andExpect(status().isForbidden());
-        }
-    }
-
-    @Nested
-    class Integrations {
-
-        static final String INTEGRATIONS = "/api/v1/merchants/{m}/listings/integrations";
-
-        @Test
-        void connectAndSyncPriceAndStock() throws Exception {
-            var biz = seller(MerchantRole.OWNER);
-            mvc.perform(postJson(
-                                    "/api/v1/merchants/{m}/products",
-                                    completeProduct("Brake pads", "BP-S1", 6800),
-                                    biz.merchantId())
-                            .with(TestJwt.member(biz.userId())))
-                    .andExpect(status().isCreated());
-
-            mvc.perform(get(INTEGRATIONS, biz.merchantId()).with(TestJwt.member(biz.userId())))
-                    .andExpect(jsonPath("$.items", hasSize(3)))
-                    .andExpect(jsonPath("$.items[0].provider").value("shopify"))
-                    .andExpect(jsonPath("$.items[0].connected").value(false));
-            mvc.perform(post(INTEGRATIONS + "/shopify/sync", biz.merchantId()).with(TestJwt.member(biz.userId())))
-                    .andExpect(status().isConflict());
-            mvc.perform(post(INTEGRATIONS + "/shopify/connect", biz.merchantId())
-                            .with(TestJwt.member(biz.userId())))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.connected").value(true))
-                    .andExpect(jsonPath("$.accountLabel").value(org.hamcrest.Matchers.endsWith(".myshopify.com")));
-            mvc.perform(post(INTEGRATIONS + "/shopify/sync", biz.merchantId()).with(TestJwt.member(biz.userId())))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.lastSyncCount").value(1));
-            mvc.perform(get("/api/v1/merchants/{m}/listings", biz.merchantId()).with(TestJwt.member(biz.userId())))
-                    .andExpect(jsonPath("$.items[0].stock").value(11));
-            mvc.perform(post(INTEGRATIONS + "/shopify/disconnect", biz.merchantId())
-                            .with(TestJwt.member(biz.userId())))
-                    .andExpect(jsonPath("$.connected").value(false));
-            mvc.perform(post(INTEGRATIONS + "/etsy/connect", biz.merchantId()).with(TestJwt.member(biz.userId())))
-                    .andExpect(status().isNotFound());
-        }
-
-        @Test
-        void onlyTheOwnerConnects() throws Exception {
-            var biz = seller(MerchantRole.OWNER);
-            var tech = member(biz.merchantId(), MerchantRole.TECHNICIAN);
-            mvc.perform(post(INTEGRATIONS + "/square/connect", biz.merchantId()).with(TestJwt.member(tech)))
-                    .andExpect(status().isForbidden())
-                    .andExpect(jsonPath("$.code").value("insufficient_role"));
         }
     }
 }
