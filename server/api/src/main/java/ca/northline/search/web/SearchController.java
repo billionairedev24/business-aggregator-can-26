@@ -53,7 +53,7 @@ class SearchController {
             @RequestHeader(name = HttpHeaders.ACCEPT_LANGUAGE, required = false) @Nullable String language,
             HttpServletRequest request) {
         limit(request);
-        return mapper.toResponse(search.search(params.toQuery(settings.defaultMarket(), language)));
+        return mapper.toResponse(search.search(params.toQuery(settings, language)));
     }
 
     @Operation(
@@ -69,7 +69,7 @@ class SearchController {
             @RequestHeader(name = HttpHeaders.ACCEPT_LANGUAGE, required = false) @Nullable String language,
             HttpServletRequest request) {
         limit(request);
-        return mapper.toSuggestResponse(suggest.suggest(params.toSuggest(settings.defaultMarket(), language)));
+        return mapper.toSuggestResponse(suggest.suggest(params.toSuggest(settings, language)));
     }
 
     private void limit(HttpServletRequest request) {

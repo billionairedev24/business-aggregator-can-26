@@ -405,7 +405,8 @@ class SearchApiTest extends IntegrationTest {
     @Test
     void validationMessages() throws Exception {
         invalid("q=" + "x".repeat(101), "q", "Search for 100 characters or fewer.");
-        invalid("market=YT", "market", "Choose a province: AB, BC, ON or QC.");
+        invalid("market=YT", "market", "Search isn't available in YT yet."); // well-formed, not in SEARCH_MARKETS
+        invalid("market=A1", "market", "Use a two-letter province or territory code.");
         invalid("kind=boat", "kind", "Choose service, product, food or merchant.");
         invalid("tier=gold", "tier", "Choose registered, trusted or master.");
         invalid("sort=cheapest", "sort", "Sort by relevance, distance, price_asc, price_desc or rating.");

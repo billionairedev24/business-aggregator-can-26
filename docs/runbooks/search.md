@@ -48,8 +48,8 @@ So `L'Épicerie du marché` indexes as `epic`, `march`, and `cafe` finds `café`
 `name` (+ `name.prefix`, `name.sort`), `description`, `keywords`, `categoryId`, `categoryPath` (root → leaf ids),
 `categoryRoot`, `categoryNames`, `priceCents`, `pricingMode`, `rating`, `reviewCount`, `trustTier`, `trustRank`,
 `qualityScore`, `vetting` (always `approved`), `status` (always `live`), `instantBook`, `fulfilment`,
-`deliveryCutoffMinute` (same-day pooled run cut-off, minutes after midnight in Edmonton), `inStock`, `soldOutOn`,
-`openHours` (`integer_range`s of minutes in the week, Monday 00:00 Edmonton = 0), `pausedUntil`, `prepMinutes`,
+`deliveryCutoffMinute` (same-day pooled run cut-off, minutes after midnight, local time), `inStock`, `soldOutOn`,
+`openHours` (`integer_range`s of minutes in the week, Monday 00:00 local time = 0), `pausedUntil`, `prepMinutes`,
 `allergens`, `dietary`, `location` (`geo_point`), `serviceRadiusKm`, `imageKey`, `sales30d`, `updatedAt`,
 `suggest` (completion, contexts `market` and `kind`), `suggestCategory` (completion, context `market`).
 
@@ -205,6 +205,10 @@ indices (the worker with `--profile events`, or the reindex), and run the api wi
   1 km, half at 6 km, when `lat`/`lng` are sent). Ties: tier, then id.
 - **Only what customers may see:** the market's documents with `vetting=approved`, `status=live`,
   `merchantStatus=active` (the indexer indexes nothing else; the filters are there too).
+- **Markets are configuration** (`SEARCH_MARKETS`, `CODE=Zone/Id,…`; region config until S-134): a province opens
+  to search by adding it there. Its time zone is the "now" for open-now, the same-day cut-off and "sold out today"
+  (the index keeps local times). A code that isn't configured gets 422 `unsupported`; `SEARCH_DEFAULT_MARKET` must be
+  one of them (blank = `market` required). The api refuses to start on a malformed entry.
 - **Latency:** the API adds the cache and one Elasticsearch request; `SearchApiTest` checks p95 < 150 ms on the
   seeded index (Testcontainers, security off).
 

@@ -198,7 +198,7 @@ Both endpoints are `GET`, public, JSON, camelCase; money in cents; errors as eve
 | parameter | meaning |
 |---|---|
 | `q` | what was typed (≤ 100 characters); blank = browse by the filters |
-| `market` | province of the location pill: `AB` (default, `SEARCH_DEFAULT_MARKET`), `BC`, `ON`, `QC` |
+| `market` | province/territory code of the location pill; the served markets are configuration (`SEARCH_MARKETS`), and when it's left out the api uses `SEARCH_DEFAULT_MARKET`. A well-formed code that isn't served → 422 `unsupported` |
 | `lang` | `en` \| `fr` — picks the index; default `Accept-Language` (fr* → French), else English |
 | `kind` | `service`, `product`, `food`, `merchant` — repeat or comma-separate (the web's `scope`: services → `service`, shop → `product`, food → `food`) |
 | `category` | a category id at any level (group or leaf) |
@@ -206,7 +206,7 @@ Both endpoints are `GET`, public, JSON, camelCase; money in cents; errors as eve
 | `minRating` | 1–5 |
 | `tier` | `registered`, `trusted`, `master` ("Master sellers", "Master tier") |
 | `instantBook` | `true` = services bookable at once |
-| `openNow` | `true` = inside its weekly hours now (Edmonton), not paused, not sold out today ("Open now", "Available today") |
+| `openNow` | `true` = inside its weekly hours now (the market's local time), not paused, not sold out today ("Open now", "Available today") |
 | `delivery` | `tonight` = on tonight's pooled run: pooled delivery, before the seller's cut-off, in stock ("On tonight's run") |
 | `dietary` | tags every result has: `halal`, `vegan`, `gluten_free` … ("Halal", "Vegan", "Gluten-free") |
 | `allergenFree` | Health Canada allergen codes no result contains: `peanuts`, `tree_nuts` … ("Nut-free" = `peanuts,tree_nuts`) |

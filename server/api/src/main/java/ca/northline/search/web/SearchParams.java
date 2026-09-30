@@ -1,5 +1,6 @@
 package ca.northline.search.web;
 
+import ca.northline.search.application.SearchSettings;
 import ca.northline.search.domain.Coordinates;
 import ca.northline.search.domain.SearchKind;
 import ca.northline.search.domain.SearchMessages;
@@ -30,7 +31,10 @@ record SearchParams(
         @Parameter(description = "What was typed; blank = browse by the filters") @Nullable
         String q,
 
-        @Parameter(description = "Province of the person's location: AB, BC, ON, QC (default AB)") @Nullable
+        @Parameter(
+                description =
+                        "Province or territory code of the person's location (default: the configured SEARCH_DEFAULT_MARKET)")
+        @Nullable
         String market,
 
         @Parameter(description = "en | fr — picks listings_en or listings_fr (default: Accept-Language)") @Nullable
@@ -57,7 +61,8 @@ record SearchParams(
         @Parameter(description = "Services that can be booked at once") @Nullable
         Boolean instantBook,
 
-        @Parameter(description = "Open at this minute (Edmonton), not paused, not sold out today") @Nullable
+        @Parameter(description = "Open at this minute (the market's local time), not paused, not sold out today")
+        @Nullable
         Boolean openNow,
 
         @Parameter(description = "tonight = on tonight's pooled run (before the seller's cut-off, in stock)") @Nullable
@@ -88,8 +93,9 @@ record SearchParams(
         @Parameter(description = "The `next` token of the previous page") @Nullable
         String after) {
 
-    SearchQuery toQuery(String defaultMarket, @Nullable String acceptLanguage) {
+    SearchQuery toQuery(SearchSettings settings, @Nullable String acceptLanguage) {
         var problems = new ArrayList<Violation>();
+        var searched = market(settings, problems);
         var kinds = codes(SearchKind.class, kind, "kind", SearchMessages.KIND, problems);
         var tiers = codes(TrustTier.class, tier, "tier", SearchMessages.TIER, problems);
         var order = sort == null || sort.isBlank()
@@ -104,7 +110,7 @@ record SearchParams(
         }
         return new SearchQuery(
                 q,
-                market(defaultMarket),
+                searched,
                 language(acceptLanguage),
                 kinds,
                 blankToNull(category),
@@ -124,24 +130,34 @@ record SearchParams(
                 blankToNull(after));
     }
 
-    SuggestQuery toSuggest(String defaultMarket, @Nullable String acceptLanguage) {
+    SuggestQuery toSuggest(SearchSettings settings, @Nullable String acceptLanguage) {
         var problems = new ArrayList<Violation>();
+        var searched = market(settings, problems);
         var kinds = codes(SearchKind.class, kind, "kind", SearchMessages.KIND, problems);
         if (!problems.isEmpty()) {
             throw new RuleViolation(List.copyOf(problems));
         }
         return new SuggestQuery(
                 Objects.requireNonNullElse(q, ""),
-                market(defaultMarket),
+                searched,
                 language(acceptLanguage),
                 kinds,
                 size == null ? SuggestQuery.DEFAULT_SIZE : size);
     }
 
-    private String market(String defaultMarket) {
-        return market == null || market.isBlank()
-                ? defaultMarket
+    /** The requested market, else the configured default; a well-formed code search doesn't serve is refused. */
+    private String market(SearchSettings settings, List<Violation> problems) {
+        var code = market == null || market.isBlank()
+                ? settings.defaultMarket()
                 : market.strip().toUpperCase(Locale.ROOT);
+        if (code == null) {
+            problems.add(new Violation("market", "required", SearchMessages.MARKET_REQUIRED));
+            return "";
+        }
+        if (SearchQuery.MARKET.matcher(code).matches() && !settings.serves(code)) {
+            problems.add(new Violation("market", "unsupported", SearchMessages.marketNotServed(code)));
+        }
+        return code;
     }
 
     private SearchLanguage language(@Nullable String acceptLanguage) {
