@@ -17,7 +17,9 @@ public interface SignInSessions {
     enum EndReason {
         REVOKED("revoked"),
         REVOKED_OTHERS("revoked_others"),
-        SIGNED_OUT("signed_out");
+        SIGNED_OUT("signed_out"),
+        /** S-29: a rotated refresh token of the sign-in was presented again (possible theft). */
+        REFRESH_TOKEN_REUSED("refresh_token_reused");
 
         private final String code;
 
@@ -77,4 +79,7 @@ public interface SignInSessions {
      * (a revoked or missing one no longer keeps the session listed as active).
      */
     void link(String authorizationId, String sessionId, boolean refreshable);
+
+    /** Deletes one authorization (a refresh-token family that isn't linked to a session). */
+    void deleteAuthorization(String authorizationId);
 }

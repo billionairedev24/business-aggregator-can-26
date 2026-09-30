@@ -58,7 +58,7 @@ class OAuthClientSyncTest extends AuthIntegrationTest {
         assertThat(app).isNotNull();
         assertThat(app.getClientSecret()).isNull();
         assertThat(app.getTokenSettings().getRefreshTokenTimeToLive()).hasDays(30);
-        assertThat(app.getClientSettings().<Boolean>getSetting(ClientSpec.DPOP_REQUIRED))
+        assertThat(app.getClientSettings().<Boolean>getSetting(RegisteredClients.DPOP_REQUIRED))
                 .isTrue();
     }
 
@@ -131,7 +131,8 @@ class OAuthClientSyncTest extends AuthIntegrationTest {
             "--spring.datasource.password=" + SharedPostgres.INSTANCE.getPassword(),
             "--northline.oauth.clients." + id + ".type=public",
             "--northline.oauth.clients." + id + ".redirect-uris=ca.northline.cmd:/cb",
-            "--northline.oauth.clients." + id + ".scopes=openid"
+            "--northline.oauth.clients." + id + ".scopes=openid",
+            "--northline.oauth.clients." + id + ".dpop-required=true"
         };
 
         assertThat(OAuthClientsCommand.run("list", args))

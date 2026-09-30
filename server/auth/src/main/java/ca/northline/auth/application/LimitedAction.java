@@ -22,7 +22,9 @@ public enum LimitedAction {
     /** A failed step-up confirmation (payouts), passkey or authenticator code. */
     STEP_UP(Kind.FAILURES, true),
     /** S-19: revoking sessions or removing a passkey (Settings › Security) — every call counts. */
-    SECURITY_CHANGE(Kind.REQUESTS, false);
+    SECURITY_CHANGE(Kind.REQUESTS, false),
+    /** S-30: an access token issued to a partner (client credentials) — account scope = the partner. */
+    PARTNER_TOKEN(Kind.REQUESTS, false);
 
     /** Whether every call counts, or only failures. */
     public enum Kind {

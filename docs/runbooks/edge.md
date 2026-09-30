@@ -54,8 +54,11 @@ Certificates: cert-manager, Let's Encrypt (HTTP-01 through the Gateway; DNS-01 t
 
 - **Studio: `studio.`** (the backlog's name; earlier drafts said `business.`, nothing was ever deployed there).
   The passkey RP id stays the zone (`urls.webauthnRpId`), shared by the Studio and the consumer origins.
-- **api:** only `/api/v1/webhooks/stripe` (+ `/connect`, S-12) and `/api/v1/email/unsubscribe` (S-13); everything
-  else answers 404 at the Gateway. Browsers reach the api through the BFF on the Studio host.
+- **api:** `/api/v1` (S-29, `apps.api.tokenClients: true`, the default): the mobile apps call it directly with
+  DPoP-bound tokens ([mobile-auth.md](mobile-auth.md)); every endpoint still needs a token except the Stripe webhooks
+  (S-12, signed) and the email unsubscribe link (S-13). Anything outside `/api/v1` (actuator, OpenAPI) answers 404 at
+  the Gateway. Browsers reach the api through the BFF on the Studio host. `tokenClients: false` narrows the route back
+  to `/api/v1/webhooks/stripe` (+ `/connect`) and `/api/v1/email/unsubscribe`.
 - **console:** placeholder. No route, certificate or record exists until `apps.console.enabled` (E-8).
 - **pages:** storefronts, served by the consumer app by `Host` (storefront rendering is E-3/E-7 work), plus merchant
   domains (below).

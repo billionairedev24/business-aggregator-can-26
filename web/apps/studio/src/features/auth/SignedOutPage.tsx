@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Alert, UnderlineTabs } from '@northline/ui';
-import { bffLoginUrl } from '../../lib/auth-server';
+import { appAuthorizationUrl, bffLoginUrl } from '../../lib/auth-server';
 import { Brand } from '../shell/StudioLayout';
 import type { RegisterValues } from './api';
 import { useAuthT, type AuthKey } from './messages';
@@ -33,7 +33,8 @@ export interface SignedOutPageProps {
 /**
  * The Studio's signed-out page (design 02, lines 17–96): top bar "Signed out", the pitch on the left, and the
  * Sign in / Create account card. The Studio renders its own sign-in UI against northline-auth's JSON API, then hands
- * off to the BFF (`/bff/login?next=`), which gets its tokens without showing another page.
+ * off to the BFF (`/bff/login?next=`), which gets its tokens without showing another page — or, when a mobile app sent
+ * the browser here (S-29), back to that app's authorization request.
  */
 const ERRORS: Record<string, AuthKey> = {
   rate_limited: 'rateLimitedLater', federation_cancelled: 'federationCancelled', federation_unavailable: 'federationUnavailable',
@@ -80,9 +81,9 @@ export function SignedOutPage({ mode, onModeChange, recoverOnLoad, next, resumeI
             </Alert>
           )}
           {mode === 'register'
-            ? <RegisterFlow prefill={prefill} onSignIn={() => onModeChange('signin')} onFinished={() => navigate(bffLoginUrl(onboarding && next ? next : '/onboarding'))} />
+            ? <RegisterFlow prefill={prefill} onSignIn={() => onModeChange('signin')} onFinished={s => navigate(appAuthorizationUrl(s.continueTo) ?? bffLoginUrl(onboarding && next ? next : '/onboarding'))} />
             : <SignInFlow onboarding={onboarding} resumeIdentifier={resumeIdentifier} recover={recover}
-                onRegister={() => onModeChange('register')} onFinished={() => navigate(bffLoginUrl(next ?? '/'))} />}
+                onRegister={() => onModeChange('register')} onFinished={s => navigate(appAuthorizationUrl(s.continueTo) ?? bffLoginUrl(next ?? '/'))} />}
           <p className="nl-auth-footer">
             {t('footerTrouble')}
             <button type="button" className="nl-auth-link" onClick={() => (mode === 'signin' ? setRecover(r => r + 1) : onModeChange('signin', { recover: true }))}>{t('footerRecover')}</button>

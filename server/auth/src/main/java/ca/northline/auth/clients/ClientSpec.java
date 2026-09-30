@@ -28,8 +28,9 @@ import org.springframework.util.StringUtils;
  * @param secretHash confidential only: the <em>encoded</em> secret ({@code {bcrypt}…}) from the secrets manager
  *     ({@code *_BFF_SECRET_HASH}); never the plain secret. Changing it rotates the secret.
  * @param grantTypes {@code authorization_code}, {@code refresh_token}, {@code client_credentials}
- * @param dpopRequired placeholder for the mobile clients (ARCHITECTURE.md § Identity): stored in the client settings as
- *     {@value #DPOP_REQUIRED}, not enforced yet
+ * @param dpopRequired every token request must carry a DPoP proof (RFC 9449) and the tokens are bound to its key
+ *     ({@code cnf.jkt}); stored as client setting {@value RegisteredClients#DPOP_REQUIRED} and enforced at the token
+ *     endpoint (S-29). Required for a public client that refreshes: its refresh tokens are sender-constrained.
  */
 record ClientSpec(
         @Nullable Type type,
@@ -48,9 +49,6 @@ record ClientSpec(
         @DefaultValue("10m") Duration accessTokenTtl,
         @DefaultValue("12h") Duration refreshTokenTtl,
         @DefaultValue("false") boolean dpopRequired) {
-
-    /** Client setting key of the DPoP placeholder. */
-    static final String DPOP_REQUIRED = "settings.client.northline.dpop-required";
 
     private static final Pattern CLIENT_ID = Pattern.compile("[a-z0-9][a-z0-9._:-]{0,99}");
     private static final Pattern ENCODED = Pattern.compile("\\{[a-z0-9-]+}.+");
@@ -133,6 +131,10 @@ record ClientSpec(
         if (grantTypes.contains("client_credentials")) {
             problems.add("a public client cannot use client_credentials");
         }
+        if (grantTypes.contains("refresh_token") && !dpopRequired) {
+            problems.add("a public client that refreshes needs dpop-required: true (its refresh tokens must be bound"
+                    + " to the app's key, RFC 9449 § 5)");
+        }
         return problems;
     }
 
@@ -163,7 +165,7 @@ record ClientSpec(
                 .clientSettings(ClientSettings.builder()
                         .requireProofKey(requirePkce)
                         .requireAuthorizationConsent(requireConsent)
-                        .settings(s -> s.putAll(Map.of(DPOP_REQUIRED, dpopRequired)))
+                        .settings(s -> s.putAll(Map.of(RegisteredClients.DPOP_REQUIRED, dpopRequired)))
                         .build())
                 .tokenSettings(TokenSettings.builder()
                         .accessTokenTimeToLive(accessTokenTtl)

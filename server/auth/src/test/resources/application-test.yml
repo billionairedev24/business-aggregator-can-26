@@ -16,6 +16,7 @@ northline:
   auth:
     # S-9: in memory for the suite (every MockMvc call comes from 127.0.0.1, so the IP scope is effectively off);
     # the rate-limit tests use Valkey (Testcontainers) and their own limits.
+    replay.store: memory                 # S-29: ReplayStoreTest runs the Valkey store
     rate-limits:
       store: memory
       limits:
@@ -27,6 +28,9 @@ northline:
         passkey-assertion.ip.max: 100000
         step-up.ip.max: 100000
         security-change.ip.max: 100000
+        partner-token:                   # S-30: low per partner so PartnerClientsApiTest reaches it; each test has its own partners
+          account: { max: 3, window: 1h, lockout: 15m }
+          ip: { max: 100000, window: 1h, lockout: 15m }
     signing:
       local-dir: ${java.io.tmpdir}/northline-auth-test-signing-keys
     totp-key: bm9ydGhsaW5lLWxvY2FsLWRldi10b3RwLWtleS0zMmI=

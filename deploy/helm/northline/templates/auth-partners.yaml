@@ -1,0 +1,17 @@
+{{- /*
+S-30: partner API clients (docs/runbooks/partners.md) — `partners` in the values becomes northline.oauth.partners in
+a file northline-auth reads (SPRING_CONFIG_ADDITIONAL_LOCATION=/config/partners/, set in templates/_helpers.tpl). Public
+keys, JWK Set URLs and business ids only: nothing secret. The oauth-clients Job registers them (its name changes with
+them, so every change runs it), and auth restarts with them (checksum/config).
+*/ -}}
+{{- if and .Values.apps.auth.enabled .Values.partners }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: northline-auth-partners
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "auth") | nindent 4 }}
+data:
+  application.yml: |
+    {{- dict "northline" (dict "oauth" (dict "partners" .Values.partners)) | toYaml | nindent 4 }}
+{{- end }}

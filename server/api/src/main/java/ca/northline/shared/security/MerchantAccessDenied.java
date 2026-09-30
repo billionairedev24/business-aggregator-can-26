@@ -12,7 +12,11 @@ public final class MerchantAccessDenied extends AccessDeniedException {
         NOT_A_MEMBER,
         INSUFFICIENT_ROLE,
         /** Programming error: a {@code {merchantId}} handler without {@link RequiresMerchant}. */
-        UNGUARDED_ENDPOINT
+        UNGUARDED_ENDPOINT,
+        /** S-30: a partner token on an endpoint not open to partners, or without the scope it needs. */
+        PARTNER_NOT_ALLOWED,
+        /** S-30: a partner token for a business it isn't bound to (not in its {@code merchants} claim). */
+        NOT_BOUND
     }
 
     private final Reason reason;

@@ -38,6 +38,18 @@ public final class TestJwt {
         return staffToken(userId, null);
     }
 
+    /**
+     * S-30: a partner client's token as northline-auth issues it ({@code sub = partner:<name>}, {@code roles: [partner]},
+     * the businesses it is bound to in {@code merchants}, no {@code acr}).
+     */
+    public static JwtRequestPostProcessor partner(String clientId, String scope, String... merchants) {
+        return jwt().jwt(j -> j.subject(clientId)
+                        .claim("scope", scope)
+                        .claim("roles", java.util.List.of("partner"))
+                        .claim("merchants", java.util.List.of(merchants)))
+                .authorities(NorthlineJwtConverter::authorities);
+    }
+
     private static JwtRequestPostProcessor staffToken(String userId, String acr) {
         return jwt().jwt(j -> {
                     j.subject(userId)

@@ -22,6 +22,8 @@ say where a step is still manual or missing.
 | [webhooks.md](webhooks.md) | partner webhooks: payloads and signature for integrators, delivery design (per-endpoint scheduling, retries, auto-disable), SSRF rules, operations (S-33) |
 | [events.md](events.md) | domain events: wire format, the worker's consumer framework (dedupe, retries, DLQ), alerts and metrics, DLQ replay (S-25/S-26) |
 | [ci.md](ci.md) | CI pipelines on GitHub Actions and GitLab CI, manual trigger only (S-4/S-5, infra checks S-2/S-3) |
+| [mobile-auth.md](mobile-auth.md) | the consumer and courier apps: sign-in with PKCE, DPoP-bound tokens, nonces, rotating refresh tokens and reuse detection, calling the api, sign-out, sessions (S-29) |
+| [partners.md](partners.md) | partner API clients: `client_credentials` with `private_key_jwt`, keys (JWK Set URL or registered), scopes, business binding, rotation, revocation, rate limits, audit (S-30) |
 | [federation.md](federation.md) | Google and Apple sign-in: console set-up, redirect URIs per environment, secrets, the Apple client secret (S-18) |
 | [secrets.md](secrets.md) | secrets in AWS Secrets Manager / Secret Manager / Key Vault through External Secrets Operator: inventory, set-up, rotation (S-6) |
 | [edge.md](edge.md) | public hosts per environment, DNS delegation, Let's Encrypt certificates (cert-manager), external-dns, Envoy Gateway, HSTS/TLS policy, WAF options per cloud, storefront custom domains (S-17) |
@@ -148,6 +150,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `TRUSTED_PROXIES` | | ✓ | | | no (private ranges + loopback; narrow it to the ingress subnet) |
 | `RATE_LIMIT_STORE` | | ✓ | | | no (`redis`; `memory` only under `local`/`test`) |
 | `RATE_LIMIT_WHEN_UNAVAILABLE` | | ✓ | | | no (`closed` in staging/prod, `open` elsewhere — S-20, [Rate limits](#rate-limits-s-9)) |
+| `REPLAY_STORE`, `DPOP_NONCE_LIFETIME` | | ✓ | | | no (`redis` — `memory` only under `local`/`test`; `5m`) — S-29, [mobile-auth.md](mobile-auth.md) |
 | `CLIENT_CITY_HEADER` | | ✓ | | | no (empty: no city in the session list — S-19) |
 | `SESSION_STEP_UP_MAX_AGE` | | ✓ | | | no (`10m`: how recent a second factor revoking sessions / removing passkeys needs) |
 | `SESSION_CHECK_INTERVAL` | | | ✓ | | no (`60s`: how often the BFF checks its session wasn't revoked) |
@@ -187,10 +190,13 @@ the database but not in configuration is logged as `stored but not in configurat
 | `studio-bff` | confidential (`client_secret_basic`) | always — `STUDIO_BFF_SECRET_HASH` is required | `${STUDIO_ORIGIN}/login/oauth2/code/studio` | openid profile merchant |
 | `consumer-bff` | confidential | `CONSUMER_BFF_SECRET_HASH` set (`optional: true`) | `${CONSUMER_ORIGIN}/login/oauth2/code/northline` | openid profile orders bookings |
 | `console-bff` | confidential | `CONSOLE_BFF_SECRET_HASH` set (`optional: true`) | `${CONSOLE_ORIGIN}/login/oauth2/code/console` | openid profile console |
-| `mobile-consumer`, `courier-app` | public (PKCE, no secret) | `local` only today (S-28, S-87) | `ca.northline.app:/oauth2redirect`, `ca.northline.courier:/oauth2redirect` | openid profile orders/deliveries offline_access |
+| `mobile-consumer` ("Northline") | public (PKCE S256, no secret), **DPoP required** (S-29) | always | `${CONSUMER_ORIGIN}/app/oauth2redirect` (App Link / Universal Link), `ca.northline.app:/oauth2redirect` | openid profile orders bookings offline_access; refresh 30 d |
+| `partner:<name>` (S-30) | client credentials, `private_key_jwt` (no secret) | when declared under `northline.oauth.partners` (chart value `partners`) | — | `api.read` / `api.write`, bound to named businesses; 15 min tokens — [partners.md](partners.md) |
+| `courier-app` ("Northline Courier") | public (PKCE S256, no secret), **DPoP required** (S-29) | always | `${CONSUMER_ORIGIN}/courier/oauth2redirect`, `ca.northline.courier:/oauth2redirect` | openid courier deliveries; refresh 12 h |
 
 Defaults for anything not set: grant types `authorization_code` + `refresh_token`, PKCE required, no consent screen,
-access token 10 min, rotating refresh token 12 h (= the session idle limit), ES256 ID tokens.
+access token 10 min, rotating refresh token 12 h (= the session idle limit), ES256 ID tokens. How the apps use their
+clients (DPoP proofs, nonces, refresh, reuse detection, sign-out): [mobile-auth.md](mobile-auth.md).
 
 **Rules, checked before anything is written** (the app or the Job stops with every problem listed):
 
@@ -209,28 +215,25 @@ least one client.
 restart the bff. Between the two the bff's old secret is refused (sign-ins fail for that minute); do it in a quiet
 window. (Spring Authorization Server holds one secret per client, so there is no overlap period.)
 
-**Adding a client later** — mobile apps (S-28 consumer app, S-87 courier app) or partners (S-29): add a block to
+**Adding a client later** — another app or BFF (partners have their own block, `northline.oauth.partners`, see
+[partners.md](partners.md)): add a block to
 `application.yml` (every environment) or to an environment-only file mounted with
 `SPRING_CONFIG_ADDITIONAL_LOCATION=/config/oauth-clients.yml`, then run the Job:
 
 ```yaml
 northline.oauth.clients:
-  mobile-consumer:
+  kiosk-app:                     # another public app: PKCE, DPoP required to refresh (S-29)
     type: public
-    redirect-uris: [ "ca.northline.app:/oauth2redirect" ]   # or a claimed https App Link / Universal Link
-    scopes: [ openid, profile, orders, offline_access ]
+    name: Northline Kiosk
+    redirect-uris: [ "ca.northline.kiosk:/oauth2redirect" ]   # or a claimed https App Link / Universal Link
+    scopes: [ openid, orders ]
     refresh-token-ttl: 30d
-    dpop-required: true          # recorded in the client settings; enforcement arrives with the mobile stories
-  partner-acme:                  # S-29: client credentials; private_key_jwt (jwk-set-url) is still to be added
-    type: confidential
-    secret-hash: ${PARTNER_ACME_SECRET_HASH}
-    grant-types: [ client_credentials ]
-    scopes: [ partner.orders.read ]
+    dpop-required: true          # every token request needs a DPoP proof; tokens are bound to the app's key
 ```
 
 Keys: `type` (`confidential` | `public`), `optional`, `name`, `secret-hash`, `redirect-uris`,
 `post-logout-redirect-uris`, `scopes`, `grant-types`, `require-pkce`, `require-consent`, `access-token-ttl`,
-`refresh-token-ttl`, `dpop-required`. Retiring a client: remove it from configuration (it is then only reported), and
+`refresh-token-ttl`, `dpop-required` (enforced since S-29; a public client that refreshes must set it). Retiring a client: remove it from configuration (it is then only reported), and
 delete it by hand (`delete from auth.oauth2_registered_client where client_id = '…'`) once nothing uses it.
 
 ## SMS and voice codes (S-8)
@@ -314,6 +317,7 @@ per phone code, 45 s resend cool-down, 5 failed factors per sign-in attempt or s
 | wrong authenticator code / backup code / failed passkey (`totp-verify`, `backup-code-verify`, `passkey-assertion`) | 10 / 15 min each | 30 / 15 min | 10 / 15 min | 15 min |
 | failed step-up for payouts (`step-up`) | 10 / 15 min | 30 / 15 min | 10 / 15 min | 15 min |
 | revoke a session / sign out others / remove a passkey (`security-change`, S-19, every call counts) | 20 / h | 60 / h | 20 / h | 15 min |
+| partner access token issued (`partner-token`, S-30; account = the partner) | 60 / h | 600 / h | — | 15 min |
 
 - Sliding windows; a success resets the account and session counters of that action (never the IP's). Lockouts of
   the same subject double while earlier ones are remembered (24 h). All numbers are properties under
@@ -375,6 +379,7 @@ device*), and lets the person sign one out, sign out all others, or remove a pas
 | what | when |
 |---|---|
 | refresh tokens issued from it (BFF, apps) | at once — the authorizations are deleted in the revoking transaction; `/oauth2/token` answers `invalid_grant`, `/oauth2/introspect` `active:false` |
+| an app's DPoP-bound access token (api) | stateless like the BFF's: until it expires, **≤ 10 min** — but it only works with the app's key, which never leaves the phone |
 | the auth server's own HTTP session | on its next request (`RevokedSessionFilter`): no silent `/oauth2/authorize` code, JSON API 401 |
 | the BFF session | at its next request after `SESSION_CHECK_INTERVAL` (default **60 s**): the BFF introspects its refresh token; a refused refresh also ends it |
 | an access token already issued (JWT, api) | stateless: until it expires, **≤ 10 min** — it only ever lives inside the BFF, whose session is gone within a minute |
@@ -397,6 +402,11 @@ device*), and lets the person sign one out, sign out all others, or remove a pas
   `UPDATE identity.sessions SET revoked_at = now(), revoke_reason = 'revoked' WHERE user_id = :u AND revoked_at IS NULL;
   DELETE FROM auth.oauth2_authorization WHERE principal_name = :u;` — the same effect as the Studio's buttons.
 - Sessions from before S-19 carry no session id: they aren't listed and end with their 12 h idle timeout.
+- **Mobile apps (S-29):** signing in to an app is a sign-in of its own (the phone's browser), listed with the app's
+  name ("Northline", "Northline Courier") for as long as its refresh token lives (30 d / 12 h); revoking it here stops
+  the app's next refresh. The app signing out (`/oauth2/revoke`) ends it (`signed_out`). A rotated refresh token
+  presented again ends it too (`revoke_reason = refresh_token_reused`, audit `auth.refresh_token_reused` +
+  `auth.session_revoked`): the whole refresh-token family is revoked and the person signs in again on that phone.
 
 ## Choosing a cloud
 

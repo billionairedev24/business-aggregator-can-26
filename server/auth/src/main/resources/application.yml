@@ -120,6 +120,14 @@ northline:
           account: { max: 20, window: 1h, lockout: 15m }
           ip: { max: 60, window: 1h, lockout: 15m }
           session: { max: 20, window: 1h, lockout: 15m }
+        partner-token:                          # S-30: access tokens issued per partner (account = the partner)
+          account: { max: 60, window: 1h, lockout: 15m }
+          ip: { max: 600, window: 1h, lockout: 15m }
+    # S-29: one-time ids (DPoP proof jti) and DPoP server nonces, shared by every instance. redis (Valkey; required
+    # under staging/prod) | memory (one instance: local/test). Valkey unreachable = requests that need a single-use check
+    # are refused (503): a proof that can't be checked for replay is never accepted.
+    replay.store: ${REPLAY_STORE:redis}
+    dpop.nonce-lifetime: ${DPOP_NONCE_LIFETIME:5m}   # a DPoP-Nonce is accepted for one to two of these
   # "or continue with" Google / Apple (S-18, docs/runbooks/federation.md). A provider without a client id is off (its
   # button answers "not available"); staging/prod require both. Redirect URI = <public auth URL>/login/oauth2/code/<provider>.
   auth.federation:
@@ -160,8 +168,39 @@ northline:
         redirect-uris: [ "${CONSOLE_ORIGIN:http://localhost:3200}/login/oauth2/code/console" ]
         post-logout-redirect-uris: [ "${CONSOLE_ORIGIN:http://localhost:3200}/" ]
         scopes: [ openid, profile, console ]
-      # Mobile (S-28/S-29) and partner clients are added here, or in an environment's extra configuration file
-      # (SPRING_CONFIG_ADDITIONAL_LOCATION) — see the runbook. application-local.yml declares the mobile ones.
+      # S-29 mobile apps (ARCHITECTURE.md § Identity, docs/runbooks/mobile-auth.md): public clients — PKCE S256, no
+      # secret — whose every token request carries a DPoP proof, so access and refresh tokens are bound to the app's key
+      # (cnf.jkt). Refresh tokens rotate on every use; a rotated one presented again revokes the family and ends the
+      # sign-in. Redirects: a claimed https App Link / Universal Link on the consumer host (the apps publish
+      # apple-app-site-association / assetlinks.json there) and the reverse-domain custom scheme (RFC 8252 § 7.1).
+      mobile-consumer:
+        type: public
+        name: Northline
+        redirect-uris:
+          - ${CONSUMER_ORIGIN:http://localhost:3000}/app/oauth2redirect
+          - ca.northline.app:/oauth2redirect
+        scopes: [ openid, profile, orders, bookings, offline_access ]
+        refresh-token-ttl: 30d               # design 05: rotating refresh, DPoP-bound, key in the secure enclave
+        dpop-required: true
+      courier-app:
+        type: public
+        name: Northline Courier
+        redirect-uris:
+          - ${CONSUMER_ORIGIN:http://localhost:3000}/courier/oauth2redirect
+          - ca.northline.courier:/oauth2redirect
+        scopes: [ openid, courier, deliveries ]
+        refresh-token-ttl: 12h               # design 05: "device-bound, short refresh" — one shift
+        dpop-required: true
+    # S-30 partner API clients (docs/runbooks/partners.md): northline.oauth.partners.<name> → client partner:<name>,
+    # client_credentials with private_key_jwt (RFC 7523). None by default; declare them in an environment's extra
+    # configuration file (SPRING_CONFIG_ADDITIONAL_LOCATION) and run the oauthClients Job:
+    #   partners:
+    #     acme:
+    #       name: Acme Books
+    #       jwk-set-url: https://acme.example/.well-known/jwks.json   # or public-keys: [ '{"kty":"EC",…,"kid":"k1"}' ]
+    #       scopes: [ api.read ]                                        # api.read | api.write
+    #       merchants: [ 01J9ZD3V00000000000000PWM1 ]                   # the businesses it acts for
+    #       revoked: false                                              # true = no new token
   # Provider switches (ca.northline.platform) — see docs/runbooks/README.md.
   kms:
     provider: ${KMS_PROVIDER:local}    # token signing keys (S-7): local | aws | gcp | azure
