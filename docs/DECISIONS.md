@@ -2414,7 +2414,9 @@ Built on S-49 (branch `web/s-50-product-detail` from `web/s-49-shop-landing`).
   - Stripe Tax calculations for the delivery fee under the platform;
   - canceling PaymentIntents when a checkout expires.
 - **Schema (V112, consumer range):** `orders.carts` timestamps + unique keys, `orders.cart_items`, `orders.checkouts`,
-  `orders.orders.checkout_id` / `delivery_kind`, `orders.order_ref_seq`.
+  `orders.orders.checkout_id` / `delivery_kind`, `orders.order_ref_seq`; the `ref_type` checks of
+  `payments.payment_intents` and `payments.tax_calculations` widened to allow `order_delivery` (the delivery fee's
+  PaymentIntent and tax calculation, referenced by the order id).
 - **Tests:**
   - `CartCheckoutApiTest` covers:
     - the cart: guest keyed by header, validation messages, quantity changes, merge at sign-in, unavailable lines;

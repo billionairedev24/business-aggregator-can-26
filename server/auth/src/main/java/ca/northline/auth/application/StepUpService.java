@@ -79,7 +79,9 @@ public class StepUpService {
         if ("passkey".equals(account.mfaPrimary()) || "totp".equals(account.mfaPrimary())) {
             throw new FlowRejected(Reason.STEP_UP_REQUIRED, "Use your passkey or authenticator app instead.");
         }
-        var name = account.email() != null ? account.email() : java.util.Objects.requireNonNullElse(account.phone(), userId);
+        var name = account.email() != null
+                ? account.email()
+                : java.util.Objects.requireNonNullElse(account.phone(), userId);
         var options = passkeys.creationOptions(userId, name, account.givenName());
         flow.put(FlowStore.PASSKEY_CREATION, options);
         return passkeys.toJson(options);

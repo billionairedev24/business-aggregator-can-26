@@ -109,10 +109,16 @@ class CartCheckoutApiTest extends IntegrationTest {
                     .andExpect(status().isOk())
                     .andExpect(header().string("Cache-Control", "no-store"))
                     .andExpect(jsonPath("$.itemCount").value(3));
-            mvc.perform(get("/api/v1/cart").header("X-Northline-Guest", guest())).andExpect(jsonPath("$.itemCount").value(0));
-            mvc.perform(get("/api/v1/cart")).andExpect(status().isOk()).andExpect(jsonPath("$.itemCount").value(0));
+            mvc.perform(get("/api/v1/cart").header("X-Northline-Guest", guest()))
+                    .andExpect(jsonPath("$.itemCount").value(0));
+            mvc.perform(get("/api/v1/cart"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.itemCount").value(0));
             // the raw guest id is never stored
-            assertThat(jdbc.sql("select count(*) from orders.carts where device_key = ?").params(g).query(Long.class).single())
+            assertThat(jdbc.sql("select count(*) from orders.carts where device_key = ?")
+                            .params(g)
+                            .query(Long.class)
+                            .single())
                     .isZero();
         }
 
@@ -122,7 +128,8 @@ class CartCheckoutApiTest extends IntegrationTest {
             add(post("/api/v1/cart/items"), bread.offerId(), 1)
                     .andExpect(status().isUnprocessableContent())
                     .andExpect(jsonPath("$.errors[0].field").value("X-Northline-Guest"))
-                    .andExpect(jsonPath("$.errors[0].message").value("Your browsing session expired. Reload the page."));
+                    .andExpect(
+                            jsonPath("$.errors[0].message").value("Your browsing session expired. Reload the page."));
             add(post("/api/v1/cart/items").header("X-Northline-Guest", g), bread.offerId(), 0)
                     .andExpect(status().isUnprocessableContent())
                     .andExpect(jsonPath("$.errors[0].message").value("Choose a quantity from 1 to 99."));
@@ -140,7 +147,8 @@ class CartCheckoutApiTest extends IntegrationTest {
                     .andExpect(status().isUnprocessableContent())
                     .andExpect(jsonPath("$.errors[0].field").value("variantId"))
                     .andExpect(jsonPath("$.errors[0].message").value("Choose an option."));
-            mvc.perform(body(post("/api/v1/cart/items").header("X-Northline-Guest", g),
+            mvc.perform(body(
+                            post("/api/v1/cart/items").header("X-Northline-Guest", g),
                             "{\"offerId\":\"%s\",\"variantId\":\"%s\",\"qty\":2}".formatted(loaf.offerId(), sliced)))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.groups[0].items[0].option").value("Sliced"))
@@ -151,7 +159,12 @@ class CartCheckoutApiTest extends IntegrationTest {
         void quantitiesChangeAndLinesGo() throws Exception {
             var g = guest();
             var cart = json(add(post("/api/v1/cart/items").header("X-Northline-Guest", g), bread.offerId(), 1));
-            var itemId = cart.path("groups").get(0).path("items").get(0).path("itemId").asString();
+            var itemId = cart.path("groups")
+                    .get(0)
+                    .path("items")
+                    .get(0)
+                    .path("itemId")
+                    .asString();
             mvc.perform(body(patch("/api/v1/cart/items/{id}", itemId).header("X-Northline-Guest", g), "{\"qty\":4}"))
                     .andExpect(jsonPath("$.itemCount").value(4));
             mvc.perform(body(patch("/api/v1/cart/items/{id}", itemId).header("X-Northline-Guest", g), "{\"qty\":11}"))
@@ -169,20 +182,24 @@ class CartCheckoutApiTest extends IntegrationTest {
         void signingInMergesTheGuestsCartIntoThePersons() throws Exception {
             var g = guest();
             var amara = data.user("Amara Osei");
-            add(post("/api/v1/cart/items").with(TestJwt.customer(amara)), bread.offerId(), 1).andExpect(status().isCreated());
+            add(post("/api/v1/cart/items").with(TestJwt.customer(amara)), bread.offerId(), 1)
+                    .andExpect(status().isCreated());
             add(post("/api/v1/cart/items").header("X-Northline-Guest", g), bread.offerId(), 2);
             add(post("/api/v1/cart/items").header("X-Northline-Guest", g), steak.offerId(), 1);
             mvc.perform(get("/api/v1/cart").with(TestJwt.customer(amara)).header("X-Northline-Guest", g))
                     .andExpect(jsonPath("$.itemCount").value(4))
                     .andExpect(jsonPath("$.groups[0].items[0].qty").value(3));
-            mvc.perform(get("/api/v1/cart").header("X-Northline-Guest", g)).andExpect(jsonPath("$.itemCount").value(0));
+            mvc.perform(get("/api/v1/cart").header("X-Northline-Guest", g))
+                    .andExpect(jsonPath("$.itemCount").value(0));
         }
 
         @Test
         void aHiddenListingOrPausedShopMakesTheLineUnavailable() throws Exception {
             var g = guest();
             add(post("/api/v1/cart/items").header("X-Northline-Guest", g), bread.offerId(), 1);
-            jdbc.sql("update merchants.merchants set status = 'paused' where id = ?").params(bakery).update();
+            jdbc.sql("update merchants.merchants set status = 'paused' where id = ?")
+                    .params(bakery)
+                    .update();
             mvc.perform(get("/api/v1/cart").header("X-Northline-Guest", g))
                     .andExpect(jsonPath("$.groups[0].items[0].available").value(false))
                     .andExpect(jsonPath("$.subtotalCents").value(0));
@@ -192,8 +209,7 @@ class CartCheckoutApiTest extends IntegrationTest {
     // ── checkout ──────────────────────────────────────────────────────────────────────────────────────────────────
 
     static final String ADDRESS = """
-            {"street":"1204 17 Ave SW","unit":"Apt 804","city":"%s","province":"AB","postal":"t2t0b8","note":"Buzz 0804"}"""
-            .formatted(MARKET);
+            {"street":"1204 17 Ave SW","unit":"Apt 804","city":"%s","province":"AB","postal":"t2t0b8","note":"Buzz 0804"}""".formatted(MARKET);
 
     String checkoutBody(String windowId) {
         return """
@@ -201,8 +217,9 @@ class CartCheckoutApiTest extends IntegrationTest {
     }
 
     String firstWindow(String user) throws Exception {
-        var setup = json(mvc.perform(get("/api/v1/me/checkout").param("market", MARKET).with(TestJwt.customerWithMfa(user)))
-                .andExpect(status().isOk()));
+        var setup = json(
+                mvc.perform(get("/api/v1/me/checkout").param("market", MARKET).with(TestJwt.customerWithMfa(user)))
+                        .andExpect(status().isOk()));
         return setup.path("options").get(0).path("windowId").asString();
     }
 
@@ -226,8 +243,10 @@ class CartCheckoutApiTest extends IntegrationTest {
         @BeforeEach
         void customer() throws Exception {
             amara = data.user("Amara Osei");
-            add(post("/api/v1/cart/items").with(TestJwt.customer(amara)), bread.offerId(), 2).andExpect(status().isCreated());
-            add(post("/api/v1/cart/items").with(TestJwt.customer(amara)), steak.offerId(), 1).andExpect(status().isCreated());
+            add(post("/api/v1/cart/items").with(TestJwt.customer(amara)), bread.offerId(), 2)
+                    .andExpect(status().isCreated());
+            add(post("/api/v1/cart/items").with(TestJwt.customer(amara)), steak.offerId(), 1)
+                    .andExpect(status().isCreated());
         }
 
         @Test
@@ -243,7 +262,9 @@ class CartCheckoutApiTest extends IntegrationTest {
                     .andExpect(jsonPath("$.options[2].kind").value("direct"))
                     .andExpect(jsonPath("$.options[2].etaMinutes").value(45))
                     .andExpect(jsonPath("$.options[2].feeCents").value(999));
-            jdbc.sql("update identity.users set mfa_primary = 'totp' where id = ?").params(amara).update();
+            jdbc.sql("update identity.users set mfa_primary = 'totp' where id = ?")
+                    .params(amara)
+                    .update();
             mvc.perform(get("/api/v1/me/checkout").param("market", MARKET).with(TestJwt.customer(amara)))
                     .andExpect(jsonPath("$.stepUp").value("required"));
             mvc.perform(get("/api/v1/me/checkout").param("market", MARKET).with(TestJwt.customerWithMfa(amara)))
@@ -253,10 +274,15 @@ class CartCheckoutApiTest extends IntegrationTest {
         @Test
         void quoteAddsGstOnItemsAndDelivery() throws Exception {
             var window = firstWindow(amara);
-            var fee = json(mvc.perform(get("/api/v1/me/checkout").param("market", MARKET).with(TestJwt.customer(amara))))
-                    .path("options").get(0).path("feeCents").asLong();
+            var fee = json(mvc.perform(
+                            get("/api/v1/me/checkout").param("market", MARKET).with(TestJwt.customer(amara))))
+                    .path("options")
+                    .get(0)
+                    .path("feeCents")
+                    .asLong();
             var subtotal = 2 * 750 + 1850;
-            var quote = json(mvc.perform(body(post("/api/v1/me/checkout/quote"), checkoutBody(window)).with(TestJwt.customer(amara)))
+            var quote = json(mvc.perform(body(post("/api/v1/me/checkout/quote"), checkoutBody(window))
+                            .with(TestJwt.customer(amara)))
                     .andExpect(status().isOk()));
             assertThat(quote.path("subtotalCents").asLong()).isEqualTo(subtotal);
             assertThat(quote.path("deliveryFeeCents").asLong()).isEqualTo(fee);
@@ -272,27 +298,36 @@ class CartCheckoutApiTest extends IntegrationTest {
         void addressAndChoicesAreValidated() throws Exception {
             var window = firstWindow(amara);
             mvc.perform(body(post("/api/v1/me/checkout/quote"), """
-                            {"kind":"pooled","windowId":"%s","address":{"street":" ","city":"","province":"XX","postal":"123"},"substitution":"similar"}"""
-                            .formatted(window)).with(TestJwt.customer(amara)))
+                            {"kind":"pooled","windowId":"%s","address":{"street":" ","city":"","province":"XX","postal":"123"},"substitution":"similar"}""".formatted(window))
+                            .with(TestJwt.customer(amara)))
                     .andExpect(status().isUnprocessableContent())
-                    .andExpect(jsonPath("$.errors[?(@.field=='address.street')].message").value("Enter the street address."))
-                    .andExpect(jsonPath("$.errors[?(@.field=='address.city')].message").value("Enter the city."))
+                    .andExpect(jsonPath("$.errors[?(@.field=='address.street')].message")
+                            .value("Enter the street address."))
+                    .andExpect(jsonPath("$.errors[?(@.field=='address.city')].message")
+                            .value("Enter the city."))
                     .andExpect(jsonPath("$.errors[?(@.field=='address.province')].message")
                             .value("Choose a Canadian province or territory."))
                     .andExpect(jsonPath("$.errors[?(@.field=='address.postal')].message")
                             .value("Enter a Canadian postal code, like T2P 1B5."));
-            mvc.perform(body(post("/api/v1/me/checkout/quote"), checkoutBody(window).replace("similar", "maybe"))
+            mvc.perform(body(
+                                    post("/api/v1/me/checkout/quote"),
+                                    checkoutBody(window).replace("similar", "maybe"))
                             .with(TestJwt.customer(amara)))
                     .andExpect(jsonPath("$.errors[0].message").value("Choose what we do if something's out of stock."));
-            mvc.perform(body(post("/api/v1/me/checkout/quote"), checkoutBody(window).replace(MARKET, "Red Deer"))
+            mvc.perform(body(
+                                    post("/api/v1/me/checkout/quote"),
+                                    checkoutBody(window).replace(MARKET, "Red Deer"))
                             .with(TestJwt.customer(amara)))
                     .andExpect(status().isUnprocessableContent())
                     .andExpect(jsonPath("$.errors[0].field").value("address.city"))
                     .andExpect(jsonPath("$.errors[0].message").value("We don't deliver to Red Deer yet."));
-            mvc.perform(body(post("/api/v1/me/checkout/quote"), checkoutBody(Ids.next())).with(TestJwt.customer(amara)))
+            mvc.perform(body(post("/api/v1/me/checkout/quote"), checkoutBody(Ids.next()))
+                            .with(TestJwt.customer(amara)))
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.code").value("window_closed"));
-            mvc.perform(body(post("/api/v1/me/checkout/quote"), checkoutBody(window).replace("\"pooled\"", "\"\""))
+            mvc.perform(body(
+                                    post("/api/v1/me/checkout/quote"),
+                                    checkoutBody(window).replace("\"pooled\"", "\"\""))
                             .with(TestJwt.customer(amara)))
                     .andExpect(jsonPath("$.errors[0].message").value("Choose a delivery window."));
         }
@@ -303,7 +338,9 @@ class CartCheckoutApiTest extends IntegrationTest {
             start(TestJwt.customer(amara), checkoutBody(window), Ids.next())
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.code").value("second_factor_required"));
-            jdbc.sql("update identity.users set mfa_primary = 'passkey' where id = ?").params(amara).update();
+            jdbc.sql("update identity.users set mfa_primary = 'passkey' where id = ?")
+                    .params(amara)
+                    .update();
             start(TestJwt.customer(amara), checkoutBody(window), Ids.next())
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.code").value("step_up_required"));
@@ -324,11 +361,14 @@ class CartCheckoutApiTest extends IntegrationTest {
             var key = Ids.next();
             var first = start(TestJwt.customerWithMfa(amara), checkoutBody(window), key)
                     .andExpect(status().isCreated())
-                    .andReturn().getResponse().getContentAsString();
+                    .andReturn()
+                    .getResponse()
+                    .getContentAsString();
             start(TestJwt.customerWithMfa(amara), checkoutBody(window), key)
                     .andExpect(status().isCreated())
                     .andExpect(header().string("Idempotent-Replayed", "true"))
-                    .andExpect(r -> assertThat(r.getResponse().getContentAsString()).isEqualTo(first));
+                    .andExpect(r ->
+                            assertThat(r.getResponse().getContentAsString()).isEqualTo(first));
             start(TestJwt.customerWithMfa(amara), checkoutBody(window).replace("similar", "refund"), key)
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.code").value("idempotency_key_reused"));
@@ -358,34 +398,51 @@ class CartCheckoutApiTest extends IntegrationTest {
             var orderId = placed.path("orderId").asString();
             assertThat(orderId).isEqualTo(started.path("orderId").asString());
 
-            var order = jdbc.sql("select state, type, window_id, delivery_kind, customer_id, tax_cents from orders.orders where id = ?")
-                    .params(orderId).query().singleRow();
-            assertThat(order).containsEntry("state", "placed").containsEntry("type", "goods")
-                    .containsEntry("window_id", window).containsEntry("delivery_kind", "pooled").containsEntry("customer_id", amara);
-            assertThat(jdbc.sql("select count(*) from orders.order_lines where order_id = ?").params(orderId).query(Long.class).single())
+            var order = jdbc.sql(
+                            "select state, type, window_id, delivery_kind, customer_id, tax_cents from orders.orders where id = ?")
+                    .params(orderId)
+                    .query()
+                    .singleRow();
+            assertThat(order)
+                    .containsEntry("state", "placed")
+                    .containsEntry("type", "goods")
+                    .containsEntry("window_id", window)
+                    .containsEntry("delivery_kind", "pooled")
+                    .containsEntry("customer_id", amara);
+            assertThat(jdbc.sql("select count(*) from orders.order_lines where order_id = ?")
+                            .params(orderId)
+                            .query(Long.class)
+                            .single())
                     .isEqualTo(2);
             assertThat(jdbc.sql("""
                             select count(*) from payments.escrows e join orders.order_lines l on l.id = e.ref_id
-                             where l.order_id = ? and e.ref_type = 'order_line'""").params(orderId).query(Long.class).single())
-                    .isEqualTo(2);
+                             where l.order_id = ? and e.ref_type = 'order_line'""").params(orderId).query(Long.class).single()).isEqualTo(2);
 
-            List<OrderPlaced> placedEvents = events.stream(OrderPlaced.class).filter(e -> e.aggregateId().equals(orderId)).toList();
+            List<OrderPlaced> placedEvents = events.stream(OrderPlaced.class)
+                    .filter(e -> e.aggregateId().equals(orderId))
+                    .toList();
             assertThat(placedEvents).extracting(OrderPlaced::merchantId).containsExactlyInAnyOrder(bakery, butcher);
-            var bakeryEvent = placedEvents.stream().filter(e -> e.merchantId().equals(bakery)).findFirst().orElseThrow();
+            var bakeryEvent = placedEvents.stream()
+                    .filter(e -> e.merchantId().equals(bakery))
+                    .findFirst()
+                    .orElseThrow();
             assertThat(bakeryEvent.subtotalCents()).isEqualTo(1500);
             assertThat(bakeryEvent.lines()).singleElement().satisfies(l -> {
                 assertThat(l.offerId()).isEqualTo(bread.offerId());
                 assertThat(l.qty()).isEqualTo(2);
             });
 
-            mvc.perform(get("/api/v1/cart").with(TestJwt.customerWithMfa(amara))).andExpect(jsonPath("$.itemCount").value(0));
+            mvc.perform(get("/api/v1/cart").with(TestJwt.customerWithMfa(amara)))
+                    .andExpect(jsonPath("$.itemCount").value(0));
             // placing again answers the same order
-            mvc.perform(post("/api/v1/me/checkouts/{id}/place", checkoutId).with(TestJwt.customerWithMfa(amara))
+            mvc.perform(post("/api/v1/me/checkouts/{id}/place", checkoutId)
+                            .with(TestJwt.customerWithMfa(amara))
                             .header("Idempotency-Key", Ids.next()))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.orderId").value(orderId));
             // someone else's checkout is invisible
-            mvc.perform(post("/api/v1/me/checkouts/{id}/place", checkoutId).with(TestJwt.customerWithMfa(data.user("Other")))
+            mvc.perform(post("/api/v1/me/checkouts/{id}/place", checkoutId)
+                            .with(TestJwt.customerWithMfa(data.user("Other")))
                             .header("Idempotency-Key", Ids.next()))
                     .andExpect(status().isNotFound());
         }
@@ -398,11 +455,15 @@ class CartCheckoutApiTest extends IntegrationTest {
             jdbc.sql("""
                             update orders.checkouts set lines = jsonb_set(lines, '{0,paymentIntent}', '"pi_requires_action_test"')
                              where id = ?""").params(checkoutId).update();
-            mvc.perform(post("/api/v1/me/checkouts/{id}/place", checkoutId).with(TestJwt.customerWithMfa(amara))
+            mvc.perform(post("/api/v1/me/checkouts/{id}/place", checkoutId)
+                            .with(TestJwt.customerWithMfa(amara))
                             .header("Idempotency-Key", Ids.next()))
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.code").value("payment_not_authorized"));
-            assertThat(jdbc.sql("select count(*) from orders.orders where checkout_id = ?").params(checkoutId).query(Long.class).single())
+            assertThat(jdbc.sql("select count(*) from orders.orders where checkout_id = ?")
+                            .params(checkoutId)
+                            .query(Long.class)
+                            .single())
                     .isZero();
         }
 
@@ -413,7 +474,9 @@ class CartCheckoutApiTest extends IntegrationTest {
             assertThat(stock(steak)).isEqualTo(2);
             expiry.expire(Instant.now().plus(Duration.ofMinutes(31)));
             assertThat(stock(steak)).isEqualTo(3);
-            mvc.perform(post("/api/v1/me/checkouts/{id}/place", started.path("checkoutId").asString())
+            mvc.perform(post(
+                                    "/api/v1/me/checkouts/{id}/place",
+                                    started.path("checkoutId").asString())
                             .with(TestJwt.customerWithMfa(amara))
                             .header("Idempotency-Key", Ids.next()))
                     .andExpect(status().isConflict())
@@ -435,7 +498,8 @@ class CartCheckoutApiTest extends IntegrationTest {
         var last = shopFixtures.listing(bakery, BAKERY, "Last cake", 3000, 1);
         var buyers = List.of(data.user("Buyer One"), data.user("Buyer Two"));
         for (var buyer : buyers) {
-            add(post("/api/v1/cart/items").with(TestJwt.customer(buyer)), last.offerId(), 1).andExpect(status().isCreated());
+            add(post("/api/v1/cart/items").with(TestJwt.customer(buyer)), last.offerId(), 1)
+                    .andExpect(status().isCreated());
         }
         var window = firstWindow(buyers.getFirst());
         var ready = new CountDownLatch(1);
@@ -445,7 +509,9 @@ class CartCheckoutApiTest extends IntegrationTest {
                     .map(buyer -> pool.submit(() -> {
                         ready.await();
                         return start(TestJwt.customerWithMfa(buyer), checkoutBody(window), Ids.next())
-                                .andReturn().getResponse().getStatus();
+                                .andReturn()
+                                .getResponse()
+                                .getStatus();
                     }))
                     .toList();
             ready.countDown();
@@ -458,6 +524,9 @@ class CartCheckoutApiTest extends IntegrationTest {
     }
 
     int stock(Listing listing) {
-        return jdbc.sql("select stock from catalogue.offers where id = ?").params(listing.offerId()).query(Integer.class).single();
+        return jdbc.sql("select stock from catalogue.offers where id = ?")
+                .params(listing.offerId())
+                .query(Integer.class)
+                .single();
     }
 }
