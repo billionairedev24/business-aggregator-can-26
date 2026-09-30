@@ -36,7 +36,8 @@ export function firstIssue(schema: z.ZodType, value: unknown): string | undefine
 export const RegistrationStep = z.object({ step: z.enum(['otp', 'mfa']), phone: z.string(), resendAfterSeconds: z.number(), channel: z.enum(['sms', 'voice']) });
 export type RegistrationStep = z.infer<typeof RegistrationStep>;
 export const SignInStarted = z.object({ identifier: z.string(), factors: z.array(z.string()) });
-export const AuthSession = z.object({ user: SessionUser, acr: z.string().nullish() });
+/** `continueTo` (S-29): a mobile app's authorization request that sent the browser here, to go back to. */
+export const AuthSession = z.object({ user: SessionUser, acr: z.string().nullish(), continueTo: z.string().nullish() });
 export type AuthSession = z.infer<typeof AuthSession>;
 export const TotpSetup = z.object({ secret: z.string(), otpauthUri: z.string(), qrCode: z.string() });
 export type TotpSetup = z.infer<typeof TotpSetup>;

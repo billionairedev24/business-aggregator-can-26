@@ -232,6 +232,33 @@ describe('Sign in', () => {
     expect(navigate).toHaveBeenCalledWith('/bff/login?next=%2Fb%2F01J9ZD3V00000000000000PWM1%2Forders');
   });
 
+  it('a mobile app sent the browser here (S-29): goes back to its authorization request, not to the BFF', async () => {
+    const authorize = 'http://localhost:9000/oauth2/authorize?response_type=code&client_id=mobile-consumer&state=s29&continue';
+    routes['/api/auth/sign-in/totp'] = () => ok({ user, acr: 'mfa', continueTo: authorize });
+    const { ui, navigate } = renderPage({ mode: 'signin' });
+    await ui.type(screen.getByLabelText('Email or mobile'), 'ravi@prairiewrench.ca');
+    await ui.click(screen.getByRole('button', { name: 'Continue' }));
+    await ui.click(await screen.findByRole('radio', { name: /Authenticator app/ }));
+    await ui.type(screen.getByLabelText('6-digit code'), '654321');
+    await ui.click(screen.getByRole('button', { name: 'Verify code' }));
+    await screen.findByRole('status');
+    await ui.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(navigate).toHaveBeenCalledWith(authorize);
+  });
+
+  it('never follows a continueTo that is not an authorization request on northline-auth', async () => {
+    routes['/api/auth/sign-in/totp'] = () => ok({ user, acr: 'mfa', continueTo: 'https://evil.example/oauth2/authorize?x' });
+    const { ui, navigate } = renderPage({ mode: 'signin' });
+    await ui.type(screen.getByLabelText('Email or mobile'), 'ravi@prairiewrench.ca');
+    await ui.click(screen.getByRole('button', { name: 'Continue' }));
+    await ui.click(await screen.findByRole('radio', { name: /Authenticator app/ }));
+    await ui.type(screen.getByLabelText('6-digit code'), '654321');
+    await ui.click(screen.getByRole('button', { name: 'Verify code' }));
+    await screen.findByRole('status');
+    await ui.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(navigate).toHaveBeenCalledWith('/bff/login?next=%2F');
+  });
+
   it('coming from onboarding uses the onboarding copy', async () => {
     const { ui, navigate } = renderPage({ mode: 'signin', next: '/onboarding' });
     expect(screen.getByRole('heading', { name: 'Sign in to start onboarding' })).toBeTruthy();
