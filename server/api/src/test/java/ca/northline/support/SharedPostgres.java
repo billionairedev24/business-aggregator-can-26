@@ -20,7 +20,9 @@ public final class SharedPostgres {
         var container = new PostgreSQLContainer(image)
                 .withDatabaseName("northline")
                 .withUsername("northline")
-                .withPassword("northline");
+                .withPassword("northline")
+                // every cached Spring test context keeps its own pool (10): leave room for all of them (S-32)
+                .withCommand("postgres", "-c", "fsync=off", "-c", "max_connections=300");
         container.start();
         return container;
     }

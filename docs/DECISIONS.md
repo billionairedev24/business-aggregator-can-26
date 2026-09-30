@@ -1282,7 +1282,9 @@ accepted with rationale (the story's acceptance criterion):
   401/404, choose calendars with 422 messages, 403 for outsiders / without MFA / bookkeepers, public webhooks refusing
   forgeries), `EnvelopeSealerTest` + `AwsKmsSealerLocalStackTest` (real KMS API in LocalStack) +
   `CryptoConfigurationTest`, `CalendarConfigTest`, `BookingEventTextTest`; Studio `sync.test.tsx` (en + fr-CA) and a
-  Settings reconnect test.
+  Settings reconnect test. The suite had reached Postgres' default 100 connections (each cached Spring context keeps a
+  pool of 10); the WireMock test's extra context pushed it over ("too many clients"), so the shared test container now
+  runs with `max_connections=300` (and keeps `fsync=off`) and that context uses a pool of 4.
 - **Never run against the real services:** no Google Cloud project or Entra registration exists. Unverified against
   the live APIs: Google's acceptance of `calendar.events.owned` for `events.watch`, the untimed first `events.list`
   size on long histories, all-day and floating-time events; Graph's all-day times under `outlook.timezone="UTC"`,

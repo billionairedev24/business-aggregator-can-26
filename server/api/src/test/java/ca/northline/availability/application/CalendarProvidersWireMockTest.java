@@ -72,6 +72,7 @@ class CalendarProvidersWireMockTest extends IntegrationTest {
     @DynamicPropertySource
     static void providers(DynamicPropertyRegistry r) {
         r.add("northline.calendar.provider", () -> "oauth");
+        r.add("spring.datasource.hikari.maximum-pool-size", () -> "4");
         r.add("northline.calendar.studio-url", () -> "https://studio.test.northline.invalid");
         r.add("northline.calendar.notification-url", () -> "https://api.test.northline.invalid");
         r.add("northline.calendar.google.client-id", () -> "test-google-calendar-client.apps.example.invalid");
