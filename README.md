@@ -89,8 +89,8 @@ Open http://localhost:3100 → Sign in. Seeded credentials (`db/seed-dev/V101__a
 | Priya Sandhu (bookkeeper) | `priya.sandhu@example.com` · `+1 403 555 0191` | backup codes `priya-00001` … `priya-00010` |
 
 "Create account" works end to end: the 6-digit code is printed in the auth server's log (`Verification code for …`),
-passkeys work in any browser on `localhost` (WebAuthn RP id `localhost`). Google/Apple need real client ids
-(`GOOGLE_CLIENT_ID`, `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET`). The Studio reaches northline-auth at
+passkeys work in any browser on `localhost` (WebAuthn RP id `localhost`). Google/Apple need real client registrations
+(`GOOGLE_CLIENT_ID`/`_SECRET`, `APPLE_*` — `docs/runbooks/federation.md`); without them the buttons say "not available". The Studio reaches northline-auth at
 `VITE_NL_AUTH_ORIGIN` (default `http://localhost:9000`). How the hand-off works: `docs/DECISIONS.md` § Auth workstream.
 
 ## v2 layout

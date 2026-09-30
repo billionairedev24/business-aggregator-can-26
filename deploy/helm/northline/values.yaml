@@ -110,7 +110,7 @@ externalSecrets:
     STRIPE_WEBHOOK_SECRET: stripe-webhook-secret
     STRIPE_CONNECT_WEBHOOK_SECRET: stripe-connect-webhook-secret
     GOOGLE_CLIENT_SECRET: google-client-secret
-    APPLE_CLIENT_SECRET: apple-client-secret
+    APPLE_PRIVATE_KEY: apple-private-key       # S-18: the Sign in with Apple .p8 key (PEM); auth makes the client secret
     SMS_AUTH_TOKEN: sms-auth-token
     EMAIL_UNSUBSCRIBE_KEY: email-unsubscribe-key
     EMAIL_API_KEY: email-api-key
@@ -268,8 +268,8 @@ apps:
       CONSUMER_BFF_SECRET_HASH: false
       CONSOLE_BFF_SECRET_HASH: false
       REDIS_PASSWORD: false
-      GOOGLE_CLIENT_SECRET: false
-      APPLE_CLIENT_SECRET: false
+      GOOGLE_CLIENT_SECRET: false   # S-18; required (true) in staging/prod
+      APPLE_PRIVATE_KEY: false      # S-18; required (true) in staging/prod
       SMS_AUTH_TOKEN: false
     runAsUser: 65532
     probes:

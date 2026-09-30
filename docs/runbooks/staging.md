@@ -71,8 +71,8 @@ Every app reads its configuration from environment variables; nothing environmen
 | `STUDIO_BFF_SECRET_HASH` | auth | **yes** | `{bcrypt}$2y$12$…` of `STUDIO_BFF_SECRET` | secrets manager (secret created empty by Terraform, named in `secret_env`) → External Secrets (S-6, [secrets.md](secrets.md)) → Secret `northline-<app>-secrets`. The three BFF secrets must differ (the authorization server rejects duplicates) |
 | `CONSUMER_BFF_SECRET_HASH`, `CONSOLE_BFF_SECRET_HASH` | auth | no | `{bcrypt}…` of their own secrets | secrets manager (secret created empty by Terraform, named in `secret_env`) → External Secrets (S-6) → Kubernetes Secret, once the consumer / console BFF is deployed: the client is registered only when its hash is set ([README § OAuth clients](README.md#oauth-clients-s-122)) |
 | `OAUTH_CLIENTS_SYNC_ON_STARTUP` | auth | no | `true` (default); `false` = clients only via the "Register OAuth clients" Job | deployment manifest |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | auth | no (S-18) | `…apps.googleusercontent.com` | Google Cloud console → OAuth client; redirect `https://auth.staging.northline.ca/login/oauth2/code/google` |
-| `APPLE_CLIENT_ID`, `APPLE_CLIENT_SECRET` | auth | no (S-18) | Services ID / signed client-secret JWT | Apple Developer → Sign in with Apple; redirect `https://auth.staging.northline.ca/login/oauth2/code/apple` |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | auth | **yes** (S-18) | `…apps.googleusercontent.com` / `GOCSPX-…` | Google Cloud console → OAuth client ([federation.md](federation.md)); redirect `https://auth.staging.northline.ca/login/oauth2/code/google`; the secret → secrets manager `google-client-secret` |
+| `APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` | auth | **yes** (S-18) | Services ID / team id / key id / the `.p8` PEM | Apple Developer → Sign in with Apple ([federation.md](federation.md)); redirect `https://auth.staging.northline.ca/login/oauth2/code/apple`; the key → secrets manager `apple-private-key` (the client secret JWT is generated and renewed by auth) |
 | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` | api | **yes** | `sk_test_…` / `pk_test_…` | Stripe dashboard (Connect platform account) → secrets manager (secret created empty by Terraform, named in `secret_env`) → External Secrets (S-6, [secrets.md](secrets.md)) → Secret `northline-<app>-secrets` |
 | `STRIPE_API_BASE` | api | never | — | stripe-mock only (local) |
 | `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET` | api | **yes** | `whsec_…` | the two webhook endpoints in the Stripe dashboard ([stripe.md](stripe.md#5-webhooks-s-12)) → secrets manager → External Secrets (S-6) → Kubernetes Secret |
@@ -111,7 +111,7 @@ docker run --rm httpd:2.4-alpine htpasswd -bnBC 12 "" "$SECRET" | tr -d ':\n' | 
 |---|---|---|
 | Stripe (Connect Express, Tax) | payments, payouts, merchant onboarding — test mode | required |
 | Twilio (or AWS End User Messaging SMS and voice) | phone verification codes at registration (SMS + voice) | required; set-up in [README § SMS and voice codes](README.md#sms-and-voice-codes-s-8) (upgraded account, Canada-only geo permissions, Canadian sender) |
-| Google Cloud OAuth client, Apple Developer (Sign in with Apple) | "continue with Google / Apple" | S-18; redirect URIs on the auth host |
+| Google Cloud OAuth client, Apple Developer (Sign in with Apple) | "continue with Google / Apple" | S-18: [federation.md](federation.md) — OAuth client, Services ID, Sign in with Apple key, private relay email domain |
 | Email provider (SES / SendGrid / Azure Communication Services, or an SMTP relay) | invitations and money notices, with SPF/DKIM/DMARC on the sending domain | required; set-up in [email.md](email.md) (SES: production access out of the sandbox) |
 | Elastic Cloud (unless ECK) | search | subscription (or the cloud marketplace's) + an API key exported as `EC_API_KEY` for Terraform; the deployment is created in the chosen cloud's Canadian region |
 | Cloud account with startup credits (AWS / Google Cloud / Azure) | everything else | one provider per environment |
@@ -139,7 +139,7 @@ What still stops a complete deployment. Under the `local`/`test` profiles each o
 | `CommerceSync` (catalogue) | unconfigured adapter throws | Shopify / Square / Lightspeed connections | S-35 |
 | `CalendarSync` (availability) | 409 `calendar_sync_unavailable` | Google / Microsoft calendar sync | S-32 |
 | `PaymentGateway` / `ConnectAccountGateway` (payments, merchants) | stripe-java when `STRIPE_SECRET_KEY` is set | Connect accounts, escrow charges, transfers, payouts, refunds (S-11) and webhooks (S-12) work with keys and signing secrets, set up per [stripe.md](stripe.md) | — |
-| Google / Apple sign-in (auth) | placeholder client ids | the buttons fail | S-18 |
+| Google / Apple sign-in (auth) | real registrations from `GOOGLE_*` / `APPLE_*` (S-18) | without them the buttons say "not available"; staging/prod refuse to start | — ([federation.md](federation.md)) |
 | Search indexer (worker) | consumer is a stub (`TODO(implement)`) | nothing reaches Elasticsearch | S-42, S-43 |
 
 Terraform for the cloud foundation exists but is unapplied (S-2, [infrastructure.md](infrastructure.md)). The managed data stores are in the same Terraform, also unapplied (S-3). Delivery pieces that don't exist yet: Argo CD (S-15), DNS/TLS (S-17), observability (S-111–S-113), backups and DR drill (S-114). Container images and the Helm chart exist since S-14 ([deploy.md](deploy.md)); the worker now has a health-only HTTP port (8084).

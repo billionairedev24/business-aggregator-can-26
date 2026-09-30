@@ -1,5 +1,6 @@
 package ca.northline.auth.application;
 
+import ca.northline.auth.domain.PendingFederation;
 import ca.northline.auth.domain.PendingRegistration;
 import ca.northline.auth.domain.SignInAttempt;
 import java.io.Serializable;
@@ -24,6 +25,9 @@ public interface FlowStore {
             new Key<>("nl.auth.step-up-passkey", PublicKeyCredentialRequestOptions.class);
 
     Key<Integer> STEP_UP_FAILURES = new Key<>("nl.auth.step-up-failures", Integer.class);
+
+    /** S-18: a Google / Apple account waiting for the second factor (existing account) or the new account. */
+    Key<PendingFederation> FEDERATION = new Key<>("nl.auth.federation", PendingFederation.class);
 
     <T extends Serializable> Optional<T> get(Key<T> key);
 

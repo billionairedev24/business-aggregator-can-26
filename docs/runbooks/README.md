@@ -18,6 +18,7 @@ say where a step is still manual or missing.
 | [stripe.md](stripe.md) | Stripe Connect Express: platform account setup (test/live), money flow, idempotency, local stripe-mock, operations (S-11) |
 | [email.md](email.md) | transactional email: Mailpit locally, SES / SendGrid / Azure Communication Services / SMTP set-up, SPF/DKIM/DMARC, CASL (S-13) |
 | [ci.md](ci.md) | CI pipelines on GitHub Actions and GitLab CI, manual trigger only (S-4/S-5, infra checks S-2/S-3) |
+| [federation.md](federation.md) | Google and Apple sign-in: console set-up, redirect URIs per environment, secrets, the Apple client secret (S-18) |
 | [secrets.md](secrets.md) | secrets in AWS Secrets Manager / Secret Manager / Key Vault through External Secrets Operator: inventory, set-up, rotation (S-6) |
 | [deploy.md](deploy.md) | container images (Jib, Dockerfile) to any registry, the Helm chart per environment and cloud, install/upgrade/roll back, local rehearsal on kind (S-14) |
 
@@ -112,7 +113,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `STUDIO_BFF_SECRET_HASH` | | ✓ | | | yes |
 | `CONSUMER_BFF_SECRET_HASH`, `CONSOLE_BFF_SECRET_HASH` | | ✓ | | | no — the client is registered only once its hash is set ([OAuth clients](#oauth-clients-s-122)) |
 | `OAUTH_CLIENTS_SYNC_ON_STARTUP` | | ✓ | | | no (`true`; `false` = register only with the Job) |
-| `GOOGLE_CLIENT_ID`/`_SECRET`, `APPLE_CLIENT_ID`/`_SECRET` | | ✓ | | | no (placeholders until S-18) |
+| `GOOGLE_CLIENT_ID`/`_SECRET`, `APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` | | ✓ | | | staging, prod (S-18, [federation.md](federation.md)); empty = that provider off |
 | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` | ✓ | | | | staging and prod |
 | `STRIPE_API_BASE` | ✓ | | | | never in the cloud (stripe-mock only) |
 | `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET` | ✓ | | | | staging and prod (S-12; [stripe.md](stripe.md#5-webhooks-s-12)) |
