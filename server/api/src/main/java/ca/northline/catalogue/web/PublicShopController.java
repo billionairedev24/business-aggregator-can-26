@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
  * <pre>
  * GET /api/v1/public/shop?market=Calgary&amp;lang=fr                 the landing page
  * GET /api/v1/public/shop/departments/{slug}?market=&amp;lang=         a department (404 for an unknown slug)
+ * GET /api/v1/public/shop/products/{productId}?market=&amp;lang=      a product and the market's offers (S-50)
  * </pre>
  */
 @RestController
@@ -56,6 +57,17 @@ class PublicShopController {
         var department = shop.department(slug, market(market), locale(lang, locale))
                 .orElseThrow(() -> new NotFound("department", slug));
         return ResponseEntity.ok().cacheControl(CACHE).body(department);
+    }
+
+    @GetMapping("/products/{productId}")
+    ResponseEntity<ShopViews.ProductPage> product(
+            @PathVariable String productId,
+            @RequestParam(defaultValue = DEFAULT_MARKET) String market,
+            @RequestParam(required = false) @Nullable String lang,
+            Locale locale) {
+        var product = shop.product(productId, market(market), locale(lang, locale))
+                .orElseThrow(() -> new NotFound("product", productId));
+        return ResponseEntity.ok().cacheControl(CACHE).body(product);
     }
 
     static String market(String market) {

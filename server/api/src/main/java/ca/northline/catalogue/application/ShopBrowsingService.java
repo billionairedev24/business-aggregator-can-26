@@ -1,8 +1,11 @@
 package ca.northline.catalogue.application;
 
 import ca.northline.catalogue.application.ShopCatalogue.Category;
+import ca.northline.catalogue.application.ShopCatalogue.MoreRow;
+import ca.northline.catalogue.application.ShopCatalogue.OfferRow;
 import ca.northline.catalogue.application.ShopCatalogue.ProductRow;
 import ca.northline.catalogue.application.ShopCatalogue.ShopStats;
+import ca.northline.catalogue.application.ShopCatalogue.VariantRow;
 import ca.northline.catalogue.application.ShopViews.DepartmentTile;
 import ca.northline.catalogue.application.ShopViews.ProductCard;
 import ca.northline.catalogue.application.ShopViews.Run;
@@ -10,6 +13,7 @@ import ca.northline.catalogue.application.ShopViews.ShopCard;
 import ca.northline.merchants.api.ShopDirectory;
 import ca.northline.merchants.api.ShopDirectory.Shop;
 import ca.northline.orders.api.DeliveryRuns;
+import ca.northline.trust.api.RatingQuery;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -46,12 +50,14 @@ class ShopBrowsingService implements BrowseShop {
     static final int LANDING_PRODUCTS = 8;
     static final int DEPARTMENT_PRODUCTS = 48;
     static final String MEDIA_URL = "/api/v1/public/catalogue/media/";
+    static final int MORE_FROM_SHOP = 3;
 
     private final ShopDirectory directory;
     private final ShopCatalogue catalogue;
     private final CategoryCatalog categories;
     private final MediaRepository media;
     private final DeliveryRuns deliveryRuns;
+    private final RatingQuery ratings;
     private final Clock clock;
 
     @Override
@@ -139,6 +145,117 @@ class ShopBrowsingService implements BrowseShop {
                     shops,
                     products);
         });
+    }
+
+    @Override
+    public Optional<ShopViews.ProductPage> product(String productId, String market, Locale locale) {
+        var lang = "fr".equals(locale.getLanguage()) ? "fr" : "en";
+        return catalogue
+                .product(productId, lang)
+                .filter(p -> !categories.banned().contains(p.categoryId()))
+                .map(record -> {
+                    var ctx = context(market, locale);
+                    var department = ctx.categories().get(record.categoryId());
+                    var rows = ctx.served() ? catalogue.offers(productId, ctx.merchantIds()) : List.<OfferRow>of();
+                    var offerIds = rows.stream().map(OfferRow::offerId).toList();
+                    var variants = offerIds.isEmpty()
+                            ? Map.<String, List<VariantRow>>of()
+                            : catalogue.variants(offerIds).stream().collect(Collectors.groupingBy(VariantRow::offerId));
+                    var merchants =
+                            rows.stream().map(OfferRow::merchantId).distinct().toList();
+                    var more = merchants.isEmpty()
+                            ? Map.<String, List<MoreRow>>of()
+                            : catalogue.moreFrom(merchants, productId, lang, MORE_FROM_SHOP).stream()
+                                    .collect(Collectors.groupingBy(MoreRow::merchantId));
+                    var candidates = new HashSet<>(record.imageIds());
+                    rows.forEach(r -> candidates.addAll(r.imageIds()));
+                    var approved = candidates.isEmpty() ? Set.<String>of() : media.approved(candidates);
+                    var offers = rows.stream()
+                            .<ShopViews.Offer>mapMulti((row, sink) -> {
+                                var shop = ctx.shops().get(row.merchantId());
+                                if (shop != null) {
+                                    sink.accept(offer(ctx, shop, row, variants, more, record, approved));
+                                }
+                            })
+                            .sorted(BEST_FIRST)
+                            .toList();
+                    var direct = ctx.served() ? deliveryRuns.direct() : null;
+                    return new ShopViews.ProductPage(
+                            record.productId(),
+                            record.name(),
+                            record.brand(),
+                            record.description(),
+                            record.bullets(),
+                            record.unit(),
+                            department == null ? "" : department.slug(),
+                            department == null ? "" : department.name(),
+                            ctx.market(),
+                            ctx.served(),
+                            offers,
+                            direct == null
+                                    ? null
+                                    : new ShopViews.Direct((int) direct.eta().toMinutes(), direct.feeCents()));
+                });
+    }
+
+    /** In stock first, then the earliest run, then the lower price, then the higher tier. */
+    static final Comparator<ShopViews.Offer> BEST_FIRST = Comparator.comparing((ShopViews.Offer o) -> o.stock() == 0)
+            .thenComparing(
+                    o -> o.runs().isEmpty() ? Instant.MAX : o.runs().getFirst().startsAt())
+            .thenComparingLong(ShopViews.Offer::priceCents)
+            .thenComparing(o -> switch (o.tier()) {
+                case "master" -> 0;
+                case "trusted" -> 1;
+                default -> 2;
+            })
+            .thenComparing(ShopViews.Offer::offerId);
+
+    private ShopViews.Offer offer(
+            Context ctx,
+            Shop shop,
+            OfferRow row,
+            Map<String, List<VariantRow>> variants,
+            Map<String, List<MoreRow>> more,
+            ShopCatalogue.ProductRecord record,
+            Set<String> approved) {
+        var own = variants.getOrDefault(row.offerId(), List.of()).stream()
+                .map(v -> new ShopViews.Variant(v.variantId(), v.value(), v.priceCents(), v.stock()))
+                .toList();
+        var price = own.stream()
+                .filter(v -> v.stock() > 0)
+                .mapToLong(ShopViews.Variant::priceCents)
+                .min()
+                .orElse(
+                        own.isEmpty()
+                                ? row.priceCents()
+                                : own.stream()
+                                        .mapToLong(ShopViews.Variant::priceCents)
+                                        .min()
+                                        .orElse(row.priceCents()));
+        var lowAt = row.lowStockAt();
+        var images = (row.imageIds().isEmpty() ? record.imageIds() : row.imageIds())
+                .stream().filter(approved::contains).map(id -> MEDIA_URL + id).toList();
+        var rating = ratings.summary(shop.merchantId());
+        return new ShopViews.Offer(
+                row.offerId(),
+                shop.merchantId(),
+                shop.displayName(),
+                shop.tier(),
+                rating.average(),
+                rating.count(),
+                price,
+                row.compareAtCents(),
+                row.condition(),
+                row.stock(),
+                row.stock() > 0 && lowAt != null && row.stock() <= lowAt,
+                row.returnsPolicy(),
+                row.variantTheme(),
+                own,
+                ctx.runsFor(row.handlingDays(), 2),
+                images,
+                more.getOrDefault(shop.merchantId(), List.of()).stream()
+                        .map(m -> new ShopViews.MoreItem(m.productId(), m.name(), m.priceCents()))
+                        .toList());
     }
 
     /** Departments of the same group with shops in the market (this one always), by name. */
@@ -231,23 +348,36 @@ class ShopBrowsingService implements BrowseShop {
         /** The first run at least {@code handlingDays} days from today; null when not on any upcoming run. */
         @Nullable
         Run runFor(@Nullable Integer handlingDays) {
+            return runsFor(handlingDays, 1).stream().findFirst().orElse(null);
+        }
+
+        /** Up to {@code limit} upcoming runs at least {@code handlingDays} days from today. */
+        List<Run> runsFor(@Nullable Integer handlingDays, int limit) {
             if (handlingDays == null) {
-                return null;
+                return List.of();
             }
             var today = LocalDate.ofInstant(now, ZONE);
             return runs.stream()
                     .filter(r ->
                             ChronoUnit.DAYS.between(today, LocalDate.ofInstant(r.startsAt(), ZONE)) >= handlingDays)
-                    .findFirst()
+                    .limit(limit)
                     .map(this::view)
-                    .orElse(null);
+                    .toList();
         }
 
         private Run view(DeliveryRuns.Run r) {
             var days = ChronoUnit.DAYS.between(LocalDate.ofInstant(now, ZONE), LocalDate.ofInstant(r.startsAt(), ZONE));
             var day = days <= 0 ? "today" : days == 1 ? "tomorrow" : "later";
             return new Run(
-                    r.windowId(), r.label(), day, r.startsAt(), r.endsAt(), r.orderBy(), r.feeCents(), r.households());
+                    r.windowId(),
+                    r.label(),
+                    day,
+                    r.startsAt(),
+                    r.endsAt(),
+                    r.orderBy(),
+                    r.packBy(),
+                    r.feeCents(),
+                    r.households());
         }
     }
 }

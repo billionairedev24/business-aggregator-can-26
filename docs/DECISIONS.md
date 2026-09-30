@@ -2287,3 +2287,45 @@ Built on S-45 (branch `web/s-62-consumer-auth` from `web/s-45-consumer-shell`).
   dedicated URLs (`/shop/bakery?market=Edmonton` is the URL); a shop's own page (sellers have no public storefront
   route — S-54 builds providers'); sorting other than popular; the Storybook a11y run of the new stories (no Chromium
   in the sandbox — `pnpm test-storybook` in CI).
+
+## 2026-09-30 — S-50 Product detail with offers, variants, stock and delivery cut-off
+
+Built on S-49 (branch `web/s-50-product-detail` from `web/s-49-shop-landing`).
+
+- **Endpoint:** `GET /api/v1/public/shop/products/{productId}?market=&lang=` (public, server-rendered page, cached 60 s).
+  404 when the id isn't a shop product, is in a banned category, or **no shop anywhere** has an approved, live offer
+  for it — an unvetted catalogue record never becomes public. A product sold only in other markets answers 200 with
+  no offers, and the page says "No shop in {city} sells this right now." with Back to Shop.
+- **Several sellers per catalogue product** (Amazon-ASIN model, DECISIONS "Catalogue"): every active seller of the
+  market with an approved, live offer on the record. Order ("best first"): in stock, then the earliest run it can
+  make, then price, then tier (Master, Trusted, Registered). The first is shown in the design's layout; the others
+  are listed under **"Also sold by"** (ours — design 06 shows one shop) with tier, run and price, and **Choose** opens
+  the same page with `?offer=<id>`. "Also from {shop}" = up to 3 of that shop's other live products, most popular
+  first (the design's "Also from Glenmore").
+- **Price and stock:** an offer with variants shows the cheapest variant in stock (a variant's own price); its stock is
+  the variants' total. Variants are the design's "Options" chips (one value per variant, as the Studio editor stores
+  them); out-of-stock options are disabled. "Only N left" (rosehip tag) at or under the shop's low-stock mark or ≤ 3;
+  "Out of stock" disables Add. The quantity stepper stops at the stock. Compare-at price shows as "Was $…".
+- **Delivery cut-off, server-side in America/Edmonton:** each offer carries the next two pooled runs it can make
+  (same `DeliveryRuns` and handling-time rule as S-49), each with `orderBy` (customer cut-off) and `packBy` (the shop
+  packs). The panel reads, e.g., "Order by 5:20 p.m. for tonight 6–9 p.m. pooled ($2.99), tomorrow 8–11 a.m., or direct
+  courier in 45 min. Glenmore Bakery packs at 5:45 p.m.; the shop is paid only after you confirm delivery." — the
+  design's sentence with the order-by time in front (the story asks for the cut-off). Pickup-only or out of stock have
+  their own sentences. The tag reads "On tonight's / today's / tomorrow's / <weekday>'s run".
+- **Rating:** `trust.api.RatingQuery` ("★ 4.8 (211 verified)"), hidden when a shop has no reviews. The design's
+  "3× points this week" and "Baked today" tags have no data (no merchant rewards, no bake dates): not shown.
+- **Add to cart** posts `POST /api/v1/cart/items {offerId, variantId?, qty}` (the S-51 contract) and goes to `/cart`,
+  as the design's `addToCart` does; any failure shows "We couldn't add it to your cart. Try again." **Until S-51 is
+  merged the endpoint doesn't exist**, so Add answers with that error.
+- **Images:** the offer's own approved images (or the record's, for shared-image listings), main + up to 3
+  thumbnails that switch the main photo; without images, the design's halftone placeholders.
+- **Copy the design doesn't give** (en + fr-CA): the order-by sentence variants, "Also sold by", "Choose", "Only N
+  left", "Was …", returns tags ("Returns within 14 days" / "Final sale"), empty states. Glossary: Niveau Maître,
+  TPS, tournée groupée, livreur direct.
+- **Schema:** none (S-49's indexes serve the product query).
+- **Tests:** `ProductPageApiTest` (best-first order with pending / other-market / sold-out offers, cheapest variant in
+  stock, variants and stock, "Also from", runs by handling time with order-by = pack-by − 25 min and the configured
+  Edmonton times, French title and department, market without sellers, 404 for drafts / banned / unknown);
+  vitest `features/product/product.test.tsx` (design copy, cut-off sentence, option + quantity to the cart request,
+  stock limit, other sellers + Choose, out of stock, cart failure, French, empty state, skeleton).
+- **Not done:** Product JSON-LD and canonical URLs (S-63); per-variant images (the editor has none).

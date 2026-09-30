@@ -15,4 +15,10 @@ public interface BrowseShop {
 
     /** A department (a leaf of the shop taxonomy, by its slug: {@code bakery}); empty for an unknown slug. */
     Optional<ShopViews.Department> department(String slug, String market, Locale locale);
+
+    /**
+     * A catalogue product with the market's offers (S-50). Empty when the product isn't a shop product or no shop
+     * anywhere sells it (an unvetted record is never public); a product sold only elsewhere has no offers.
+     */
+    Optional<ShopViews.ProductPage> product(String productId, String market, Locale locale);
 }
