@@ -816,7 +816,7 @@ Record anything the spec did not decide. Format: date · decision · why · spec
 
 - **Gateway API with Envoy Gateway is the default edge on every cloud**, not ingress-nginx (retired by Kubernetes SIG Network in March 2026: no more releases or security fixes) and not the clouds' own L7 load balancers (each has a different TLS/header/redirect model, and AWS/Azure need an extra controller). The cloud only provides the layer-4 load balancer of the Envoy Service (EnvoyProxy per cloud in `deploy/argocd/addons/envoy-gateway/manifests/<cloud>`: EKS in-tree NLB, GKE passthrough NLB, AKS Standard LB; `externalTrafficPolicy: Local` to keep client addresses). TLS, redirects, HSTS and TLS policy are then identical on EKS, GKE, AKS and kind. The chart keeps the `Ingress` path (same certificates, HTTP-01 through the Ingress class) and HTTPRoutes on an existing Gateway (`gateway.parentRefs`) for other set-ups.
 - **The chart owns the environment's Gateway** (`edge.gateway.create`, one environment per cluster): an HTTP listener that only redirects (301, port 443) and carries cert-manager's HTTP-01 challenge routes, and one HTTPS listener per host, each with its own Secret. App routes attach to their host's HTTPS listener by `sectionName`, so nothing is served over plain HTTP and a request for an unknown host fails the TLS handshake (no default certificate).
-- **Hosts:** consumer on the zone apex, `studio.` (the backlog's name — replaces the draft `business.`, which was never deployed; `OAuthClientCatalogTest` still uses the old name as sample data), `auth.`, `api.` (Stripe webhooks and unsubscribe only, as S-14 decided), `pages.` (storefronts + merchant domains, served by the consumer app), `console.` (no route until E-8). New `urls.pages`. Zones stay one per environment (`dev.northline.ca`, `staging.northline.ca` delegated from `northline.ca`), with the passkey RP id = the zone.
+- **Hosts:** consumer on the zone apex, `studio.` (the backlog's name — replaces the draft `business.`, which was never deployed; S-20 renamed the last sample in `OAuthClientCatalogTest`), `auth.`, `api.` (Stripe webhooks and unsubscribe only, as S-14 decided), `pages.` (storefronts + merchant domains, served by the consumer app), `console.` (no route until E-8). New `urls.pages`. Zones stay one per environment (`dev.northline.ca`, `staging.northline.ca` delegated from `northline.ca`), with the passkey RP id = the zone.
 - **Certificates: cert-manager + Let's Encrypt, one Certificate per host over HTTP-01 by default** (no cloud credentials, works behind any DNS), ECDSA P-256, new key on renewal, renewed 30 days early. **DNS-01 is an option** (`edge.certManager.issuer.solver: dns01`, required for `wildcard: true`): Terraform outputs the cloud's solver block (`helm_values.edge.certManager.issuer.dns01`) and cert-manager uses its workload identity. The Issuer is namespaced (the app project allows no cluster-scoped kinds) and cert-manager runs with `--issuer-ambient-credentials` for that — acceptable with one environment per cluster. Staging/prod refuse non-ACME issuers; `ca`/`selfSigned` exist for kind.
 - **HSTS and headers as Gateway API `ResponseHeaderModifier` filters** on every route rule (`max-age=63072000; includeSubDomains`, no `preload` until every subdomain is HTTPS for good; `nosniff`, `Referrer-Policy`), portable across implementations. CSP and frame options stay with each app (the Studio's nginx sets them). TLS 1.2 minimum and trusted proxy hops (for a CDN/WAF in front) through Envoy Gateway's `ClientTrafficPolicy`, rendered only for the `envoy` class.
 - **external-dns publishes the HTTPRoute hostnames** (source `gateway-httproute`, `policy: sync`, TXT ownership `_extdns.` prefix, owner `northline-<env>`, zone filter from Terraform); it never touches records it didn't create (NS/SOA/CAA/MX/SPF/DKIM stay manual). Merchant domains are outside its zone filter and their routes are annotated `controller: none`.
@@ -825,3 +825,90 @@ Record anything the spec did not decide. Format: date · decision · why · spec
 - **WAF is an option, not a dependency** (documented per cloud in edge.md): Cloudflare in front (any cloud, Full (strict) with our Let's Encrypt origin certificates), CloudFront + AWS WAF (AWS WAF can't attach to an NLB), Cloud Armor via GKE Gateway (`gke-l7-global-external-managed`, since Cloud Armor needs an Application LB), Azure Front Door Premium WAF. Each needs `edge.trustedProxyHops: 1`. Not in Terraform yet.
 - **Custom domains:** `edge.customDomains` (by PR, after S-31 verified the CNAME to `pages.<zone>`) → listener + HTTP-01 Certificate + route to the consumer app. Documented limits: apex domains need ALIAS or a reserved IP; a Gateway holds at most 64 listeners, so beyond the pilot use several Gateways, `ListenerSet`, or CDN on-demand TLS (Cloudflare for SaaS, CloudFront SaaS Manager, Front Door) — to decide with S-31.
 - **Rehearsed on kind** (the S-15 cluster; cert-manager 1.18.2 from the Bitnami builds because quay.io is unreachable here, Envoy Gateway 1.5.1 / Envoy 1.35.3 from Docker Hub, a local CA issuer): Argo CD synced the edge; Issuer and Certificates Ready; `https://auth.kind.northline.test` served the OIDC document over HTTP/2 with the host's certificate, HSTS, `nosniff`, `Referrer-Policy`; TLS 1.2/1.3 accepted, TLS 1.1 refused by the server; HTTP → 301 `https://…`; `/actuator/health` on the api host 404 at the Gateway; unknown SNI → no certificate. Not done: Let's Encrypt, external-dns against a real zone, cloud load balancers and WAFs (no accounts yet); the add-on charts themselves were not rendered offline (their chart repositories are unreachable here — the kind rehearsal used the same versions' release manifests).
+
+## 2026-09-30 — S-20 Security review of the JSON sign-in flow and BFF handoff
+
+Full review with every check, its result and the threat model: `docs/security/s-20-auth-review.md`. Findings fixed or
+accepted with rationale (the story's acceptance criterion):
+
+- **Fixed (medium):** Studio `safeNext` let `/<TAB>/host` through (the URL parser turns it into `//host`) → control
+  characters refused, as in the BFF (which now also refuses DEL). The BFF accepted the CSRF token as an XOR-masked
+  `_csrf` form field (`csrf.spa()`), usable from a sibling subdomain that plants the cookie → header-only token handler.
+  No `__Host-` cookies → `__Host-NL_AUTH`, `__Host-NL_STUDIO`, `__Host-XSRF-TOKEN` under the cloud profiles, CSRF cookie
+  `SameSite=Strict`. Session id not renewed at step-up → renewed. Passkey sign-in options listed the typed account's
+  credentials (enumeration) → the same options for everyone. Passkey user verification `preferred` → `required`
+  (a passkey alone gives `acr=mfa`). Signature counter compared with the registration's (Spring builds the webauthn4j
+  record from the stored attestation object) → `PasskeyService` checks it against the stored counter first. Rate limits
+  failed open with Valkey down → policy (below). The Studio's sign-out left the auth session alive when the browser's
+  `POST /api/auth/sign-out` failed → a revoked refresh token ends its sign-in. `/api/v1/console/**` didn't require
+  `acr=mfa` → role + MFA. Any pod could reach auth/bff with forged `X-Forwarded-*` → staging/prod NetworkPolicy admits
+  only `envoy-gateway-system`.
+- **Fixed (low):** decoy work for unknown accounts (TOTP / backup code timing); a request without `Origin` but with
+  `Sec-Fetch-Site: cross-site` is refused; identifier ≤ 320 and backup code ≤ 64 characters (422 rule `length`, the
+  auth API's error mapper now maps `Size` → `length` as the api does); CSP `default-src 'none'; frame-ancestors 'none';
+  base-uri 'none'; form-action 'none'` and `Referrer-Policy: no-referrer` on every auth and bff answer.
+- **Rate limits when Valkey is unreachable = `northline.auth.rate-limits.when-unavailable` (`RATE_LIMIT_WHEN_UNAVAILABLE`):**
+  `open` | `closed`. Default `open` in `application.yml` (local, dev, test); `application-staging.yml` and
+  `application-prod.yml` default it to `closed`. It applies to the actions that check a guessable secret — new
+  `LimitedAction.guardsSecret()`: `otp-send`, `otp-verify`, `totp-verify`, `backup-code-verify`, `passkey-assertion`,
+  `step-up`; `sign-in-lookup` (no secret; the next step fails closed anyway) and `security-change` (signed in, recent
+  second factor already required) stay open. Closed = `503` ProblemDetail `code: sign_in_unavailable`,
+  `retryAfterSeconds: 30`, `Retry-After: 30`, detail "Signing in is paused for a few minutes while we fix a problem on
+  our side. Try again shortly." (en server copy; the Studio shows it in en/fr: « La connexion est suspendue quelques
+  minutes, le temps de régler un problème de notre côté. Réessayez sous peu. »). A wrong answer recorded while the
+  store is down is also answered 503 (not 422), so no "wrong code" oracle exists without counting. The port now
+  signals an unreachable store (`RateLimiter.Unavailable`) and `AttemptLimits` decides; a failed *reset* is only logged
+  (it can only make limits stricter). Overridable in staging/prod as a break-glass (a WARN at start-up) rather than
+  refused: during a long Valkey outage the operator may prefer sign-ins over the limit, and the per-flow limits (5 per
+  code / attempt) still hold. Chosen over failing closed for everything: typing an email reveals nothing and the
+  Security tab already demands a fresh second factor.
+- **Sign-out ends the sign-in when the refresh token is revoked:** `SessionLinkedAuthorizations.save` sees an
+  authorization whose refresh token is *invalidated* (a client's `/oauth2/revoke`, or the server after a replayed
+  authorization code) and calls `SessionService.signedOut` (`revoke_reason = signed_out`, authorizations deleted,
+  auth HTTP session dropped on its next request by `RevokedSessionFilter`). This changes S-19's "refreshable = false"
+  for that case: signing out of one app (the Studio, later a mobile app) now ends that sign-in for every client that
+  shares it — single sign-out, which is what "Sign out" and "Not you?" mean. The Studio still calls
+  `/api/auth/sign-out` too (idempotent).
+- **Cookie names are profile configuration** (`server.servlet.session.cookie.name`, new `northline.bff.csrf-cookie-name`
+  in the cloud profiles), not code, because `__Host-` needs Secure and local runs are http. **`COOKIE_DOMAIN` is
+  removed** (auth, bff, runbooks, `.env.example`): nothing needs a cookie shared across subdomains and it would break
+  `__Host-`. Renaming the cookies signs everyone out once at deploy. `SameSite=Lax` is kept for the session cookies
+  (Strict breaks the federation callback and email links); CSRF defences don't rely on it. The Studio's
+  `xsrfToken()` (`lib/http.ts`) reads either name; the finance evidence upload uses it instead of its own copy.
+- **Passkey sign-in options:** new `PasskeyService.signInOptions()` (always anonymous); step-up keeps
+  `requestOptions(userId)` (the user is signed in). Counter rule: refuse when `presented ≤ stored` unless both are 0
+  (WebAuthn § 6.1.1; synced passkeys report 0). Existing passkeys registered without UV keep working only if the
+  authenticator performs UV at sign-in (all platform passkeys do).
+- **Network policy:** `networkPolicy.ingressFrom` in `values-staging.yaml` / `values-prod.yaml` =
+  `namespaceSelector kubernetes.io/metadata.name: envoy-gateway-system` (the S-17 edge on every cloud). Another edge
+  (GKE Gateway for Cloud Armor, Envoy in Gateway-namespace mode) must replace it — edge.md § Trusted proxies.
+  `TRUSTED_PROXIES` itself stays the private ranges: Envoy's pods have pod addresses, so narrowing the CIDR can't
+  single them out; the NetworkPolicy can.
+- **Accepted risks (reasons in the review):** registration's "already uses this email/mobile" (design copy; rate
+  limited, checked before any SMS); `SameSite=Lax`; BFF `redirect_uri` host from `X-Forwarded-Host` of private peers
+  (sender-only effect, exact-match URIs refuse it; local development needs it); city header spoofable without a CDN
+  (display only; documented); unsalted SHA-256 backup-code hashes (~50 bits; follow-up: HMAC with a server key and a
+  compatible check of old hashes); no refresh-token reuse detection in Spring Authorization Server (confidential BFFs
+  only in the cloud; revisit with the mobile apps and DPoP); `none` attestation; codes in the log of the local SMS fake
+  (refused in staging/prod); OAuth `code`/`state` in edge access logs (single use, PKCE); access tokens valid ≤ 10 min
+  after sign-out and fail-open introspection (S-19).
+- **Sample data:** `OAuthClientCatalogTest` and federation.md use `studio.` instead of the draft `business.` host (S-17).
+- **No schema change** (no migration in V024–V029). New variable `RATE_LIMIT_WHEN_UNAVAILABLE` (auth; runbooks README,
+  dev, staging, prod, local, `.env.example`); `COOKIE_DOMAIN` removed. No new secret.
+- **Tests:** auth `SecurityReviewApiTest` (session id renewed at sign-in, registration and step-up; Origin, Fetch
+  Metadata and CORS; headers on the JSON API and `/oauth2/authorize`; malformed and oversized input; unknown vs known
+  account answers; exact redirect URIs; PKCE required and S256 only; 10-min access tokens and refresh rotation; the
+  BFF's revocation ends the auth session), `PasskeyApiTest` (identical options, UV required at sign-in and
+  registration, cloned counter refused, non-counting authenticator allowed, foreign origin refused),
+  `RateLimitStoreDownApiTest` (Valkey unreachable + closed: 503 on phone code, TOTP, backup code, passkey; lookup
+  works), `AttemptLimitsTest`, `RateLimitConfigTest` (policy per profile, break-glass warning), `SignInServiceTest`
+  (decoy work), `SessionCookieSettingsTest`; bff `BffHardeningTest` (full code + PKCE callback against a WireMock auth
+  server with an ES256 ID token: session id renewed, lands on `next`, `code_verifier` sent; forged state; `__Host-`
+  CSRF cookie attributes; `_csrf` form field and a planted cookie refused; logout clears `__Host-NL_STUDIO`; headers),
+  `SessionCookieSettingsTest`, `BffSessionTest` (control characters in `next`); api `ConsoleAccessTest`; Studio
+  `routeSupport.test.ts`, `session.test.tsx` (`__Host-XSRF-TOKEN`), `auth.test.tsx` (503 message en/fr). The new
+  auth tests (step-up fixation, passkeys, headers, Fetch Metadata, revocation) and the BFF `_csrf` test were also run
+  against the pre-fix code and failed there.
+- **Not done:** backup-code HMAC; refresh-token family revocation; a GeoIP city fallback; rendering the Helm change
+  (no Helm binary in this environment — reviewed as YAML); anything against real Google/Apple, real authenticators or
+  a deployed environment.

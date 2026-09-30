@@ -18,6 +18,16 @@ gateway:
 edge:
   enabled: true
 
+# S-20: only the Envoy Gateway proxies may reach the public apps. auth and the bff believe X-Forwarded-For (client IP
+# for rate limits, sessions list) and the city header from private addresses; with any namespace allowed, any pod in
+# the cluster could pick its own client IP. A CDN/WAF in front still enters through Envoy. Using another edge (e.g. GKE
+# Gateway for Cloud Armor)? Put its source here instead (docs/runbooks/edge.md § Trusted proxies).
+networkPolicy:
+  ingressFrom:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: envoy-gateway-system
+
 # S-25: two in-sync replicas of three before a write is acknowledged (the api produces with acks=all).
 kafkaTopics:
   minInsyncReplicas: "2"

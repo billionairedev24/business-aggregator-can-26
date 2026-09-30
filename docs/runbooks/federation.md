@@ -58,7 +58,7 @@ less than a quarter of its life is left. To replace the key itself: create a new
 
 1. Pick (or create) the environment's project, e.g. `northline-staging`. **APIs & Services → OAuth consent screen**:
    user type *External*; app name "Northline"; support email; logo; app domain `northline.ca`, privacy policy
-   `https://business.northline.ca/legal/privacy.html`, terms `…/legal/terms.html`; authorised domain `northline.ca`;
+   `https://studio.northline.ca/legal/privacy.html`, terms `…/legal/terms.html`; authorised domain `northline.ca`;
    scopes `openid`, `…/auth/userinfo.email`, `…/auth/userinfo.profile` (non-sensitive — no Google verification
    review needed); **Publish app** (Testing mode only lets listed test users in and expires refresh after 7 days).
 2. **Credentials → Create credentials → OAuth client ID**, type *Web application*, name `northline-auth-<env>`.

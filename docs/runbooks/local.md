@@ -108,6 +108,8 @@ pointed at the same directory share tokens. Rotate or inspect it with `./gradlew
 MEMORY`), so a restart clears a lockout; with `local,valkey` they live in your Valkey like in the cloud. Limits and
 how to clear them: [README § Rate limits](README.md#rate-limits-s-9). Every request from your browser comes from
 `127.0.0.1`: 30 sign-in lookups in 10 minutes lock the IP for 10 minutes — restart auth (memory) to clear it.
+With `local,valkey`, stopping Valkey lets sign-in through (`RATE_LIMIT_WHEN_UNAVAILABLE=open`, the local default);
+set it to `closed` to see the staging/prod behaviour (codes and second factors answer 503, S-20).
 
 **Sessions in your Valkey** (as in the cloud): start auth and bff with `--spring.profiles.active=local,valkey`.
 Sessions are stored under `nl:auth:*` and `nl:studio-bff:*` and survive restarts; auth's rate limits under `nl:auth-rl:*`. Valkey from Docker:

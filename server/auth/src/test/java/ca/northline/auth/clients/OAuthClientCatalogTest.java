@@ -30,7 +30,7 @@ class OAuthClientCatalogTest {
     void strict_acceptsHttpsAndHashedSecrets() {
         var catalog = new OAuthClientCatalog(
                 props(
-                        "studio-bff", bff(BCRYPT, "https://business.northline.ca/login/oauth2/code/studio"),
+                        "studio-bff", bff(BCRYPT, "https://studio.northline.ca/login/oauth2/code/studio"),
                         "mobile-consumer", mobile("ca.northline.app:/oauth2redirect")),
                 ClientPolicy.STRICT);
 
@@ -54,7 +54,7 @@ class OAuthClientCatalogTest {
         new OAuthClientCatalog(props("a", bff("{noop}a", "http://localhost:3100/cb")), ClientPolicy.DEV);
 
         assertThatThrownBy(() -> new OAuthClientCatalog(
-                        props("a", bff("{noop}a", "http://business.dev.northline.ca/cb")), ClientPolicy.DEV))
+                        props("a", bff("{noop}a", "http://studio.dev.northline.ca/cb")), ClientPolicy.DEV))
                 .hasMessageContaining("must use https outside local");
     }
 

@@ -124,6 +124,19 @@ SPF/DKIM stay manual. `policy: sync` removes its records when a route goes away.
 | api surface | the api host routes two path prefixes only | the rest 404 at the Gateway |
 | client address | `edge.trustedProxyHops` (0 = clients hit the LB directly; 1 behind Cloudflare/CloudFront/Front Door) | `X-Forwarded-For` trusted that many hops, so rate limits (S-9) see the real client |
 
+### Trusted proxies (S-20)
+
+auth and the bff believe `X-Forwarded-For/-Proto/-Host` (client IP for the rate limits and the sessions list, the
+scheme for redirect URIs) and auth the city header (`CLIENT_CITY_HEADER`) only from private addresses
+(`TRUSTED_PROXIES`, Tomcat's internal proxies for the bff). Envoy's proxy pods have pod addresses, so the chart's
+NetworkPolicy is what keeps everyone else out: staging and prod allow the public apps' ports only from the
+`envoy-gateway-system` namespace (`networkPolicy.ingressFrom` in `values-staging.yaml` / `values-prod.yaml`; dev and
+kind keep "any namespace"). If you run Envoy Gateway's proxies in another namespace (Gateway-namespace mode) or use
+another edge (GKE Gateway for Cloud Armor: traffic comes from Google's front ends `35.191.0.0/16`, `130.211.0.0/22`),
+replace that entry with the right `namespaceSelector` or `ipBlock`s. Set `CLIENT_CITY_HEADER` only when a CDN in
+front **overwrites** that header on every request (CloudFront does for `CloudFront-Viewer-City`); Envoy alone passes a
+client's own header through, so the city would be the client's choice (display-only, but misleading).
+
 ## WAF and DDoS protection
 
 A WAF is an option in front, not a dependency: the chart and Gateway work the same with or without one. Pick one per
