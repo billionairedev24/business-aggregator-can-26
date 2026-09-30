@@ -64,6 +64,9 @@ locals {
     SQUARE_CLIENT_SECRET         = "square-client-secret"
     SQUARE_WEBHOOK_SIGNATURE_KEY = "square-webhook-signature-key"
     LIGHTSPEED_CLIENT_SECRET     = "lightspeed-client-secret"
+    # S-36 POS menu import: the Clover app secret and Toast partner credentials (Square reuses S-35's app).
+    CLOVER_CLIENT_SECRET = "clover-client-secret"
+    TOAST_CLIENT_SECRET  = "toast-client-secret"
   }
 }
 

@@ -1646,3 +1646,80 @@ Worker: `WebhookDeliveryTest` (Kafka 4 + PostGIS + WireMock receiver: signed `bo
   per-connection default category (the merchant picks one per draft); importing Square item options as variation
   themes (variation names become the values); compare-at prices and costs; Shopify's App Store listing, Square's
   production review and Lightspeed's add-on approval (operational, before launch).
+
+## 2026-09-30 — S-36 POS menu import for kitchens
+
+- **Based on S-35** (branch `catalogue/s-35-commerce-sync`, PR #41): the Square app and its OAuth plumbing are shared,
+  so this branch needs S-35's code. Merge S-35 first.
+- **Shared plumbing moved to `ca.northline.shared.integration`** (named interface `integration`): `ProviderHttp`
+  (`@HttpExchange` clients over the JDK client on HTTP/1.1, query/form encoding, HMAC, token-call helpers), `Backoff`
+  (429 / 502–504 with `Retry-After`) and the `OAuthCallback` SPI. S-35's catalogue adapters now use them
+  (`CommerceHttp` delegates; `Backoff` is no longer a bean). **One OAuth callback endpoint**
+  (`shared.web.OAuthCallbackController`, `/api/v1/commerce/oauth/<platform>/callback`, the S-35 path) asks each
+  module's `OAuthCallback` in turn; the one whose single-use state it is completes it. Needed because Square takes
+  **one redirect URL per application** and the same Square app serves the catalogue sync and the kitchens' import.
+  An unknown state still ends at `/?commerce=<platform>&result=expired`.
+- **Port:** `food.application.PosMenuSource`, adapters in `food.adapters.pos`: `SquarePosSource` (Catalog API,
+  `SQUARE_*` of S-35, scopes `ITEMS_READ MERCHANT_PROFILE_READ`), `CloverPosSource` (REST v3, OAuth v2 with expiring
+  tokens), `ToastPosSource` (menus API v2 + machine-client authentication — **partner-gated**, see below) and
+  `FakePosSource` with `pos-fixtures/menu.json`. Chosen by `northline.pos.provider` (`POS_PROVIDER`): `local`
+  (default; refused under staging/prod) or `oauth`, each POS offered once its credentials are set.
+- **Toast is partner-gated:** there is no merchant OAuth. Northline signs in with partner credentials
+  (`TOAST_CLIENT_ID`/`_SECRET`, `userAccessType: TOAST_MACHINE_CLIENT`); the restaurant enables the Northline
+  integration in Toast and the owner enters its restaurant GUID (422 "Enter your Toast restaurant GUID (Toast Web ›
+  Integrations)." when malformed, "Northline can't read this restaurant yet. Turn on the Northline integration in
+  Toast, then try again." when Toast refuses). The adapter follows Toast's published docs as last known
+  (doc.toasttab.com was unreachable from the build environment); **it has never run against Toast** and Northline is
+  not a Toast partner yet.
+- **Mapping:** categories → sections (matched to a section of the menu with the same name, else created at the end);
+  items → dishes with price; modifier lists → modifier groups (kitchen-wide). POS min/max → the builder's rule
+  (min = max → exactly N required; min > 0 → at least N required; else up to max). Square variations (Small / Large)
+  become a required "Size" group priced as the difference to the cheapest; Toast menus are flattened into sections
+  prefixed with the menu's name when there are several. Names/descriptions are cut to the builder's limits. Can't be
+  imported (listed as problems): dishes without a fixed price, groups without options or with an option over $100 (the
+  CHECK's range). Hidden/archived/inactive POS items are skipped.
+- **Allergens are never taken from a POS** (the story: POS data can't be trusted for them). Imported dishes have
+  `allergens` NULL (= not declared) and status draft; the item editor already requires an explicit allergen choice
+  before any save, and the V090 CHECK keeps an undeclared dish from being published. The builder now tags such dishes
+  **"Confirm allergens"**. Dietary tags, photos, prep time and availability are not read either.
+- **Items are created hidden until approval, as today:** drafts (`vetting = draft`); publishing, the photo and the
+  kitchen's approval work as in the kitchen workstream.
+- **Preview and diff:** "Review import" reads the POS menu into `food.pos_imports` (the normalised menu + the diff);
+  nothing is written. "Apply" re-plans from the stored menu against the kitchen's data at that moment and writes it in
+  one transaction; a preview can be applied once, within an hour (409 `import_closed` / `preview_expired`), or
+  discarded. **Re-import rules:** a dish imported before is *changed* only if the POS changed it since the last import
+  (content hash in `food.pos_links`) **and** it differs from Northline — then only name, description, price, modifiers
+  and section are written; the kitchen's allergens, photo, status and tags are kept. A dish deleted in Northline isn't
+  imported again. A dish gone from the POS goes back to draft (hidden, never deleted; `food.item_availability` when it
+  was visible — new `MenuBuilderService.unpublish`).
+- **Connections:** Square / Clover over OAuth with a 256-bit single-use state stored hashed (10 min) and bound to the
+  owner, who must still hold MANAGE when the callback comes back; tokens sealed with `SecretSealer` (S-32) and
+  re-sealed on rotation; a refused refresh → `reconnect` (409 `reconnect_required` until the owner reconnects).
+  Clover's callback `merchant_id` is checked (letters and digits) before it becomes part of a URL. Connect/disconnect
+  are owner-only (MANAGE); preview/apply/discard EDIT (owner, cook); the list VIEW.
+- **CSV:** the existing CSV import stays as it was (all rows or none, no preview) under a "CSV file" tab; the design
+  has no XLSX template, so a CSV template download was added. The old note pointing POS sync to Settings › API is gone.
+- **No webhooks / scheduled sync:** menus change rarely and every import needs a human review (allergens), so imports
+  are on demand; re-import shows the diff.
+- **Schema (V092, additive):** `food.pos_connections`, `pos_oauth_requests`, `pos_links` (section / item / group /
+  option → local id + content hash + removed_at, scoped per menu for sections and items), `pos_imports`.
+- **Configuration:** `POS_PROVIDER` (required `oauth` in staging/prod), `CLOVER_CLIENT_ID`/`_SECRET`/`CLOVER_AUTH_URL`/
+  `CLOVER_API_URL`, `TOAST_CLIENT_ID`/`_SECRET`/`TOAST_API_URL`; Square reuses `SQUARE_*`. Secrets
+  `clover-client-secret`, `toast-client-secret` in Terraform `app_secrets` (three clouds), the chart's `secretNames`
+  and optional `secretEnv`; `POS_PROVIDER: oauth` in values-staging/prod. The callback path was already routed on the
+  api host (S-35). Runbook: docs/runbooks/pos-menu-import.md.
+- **Tests:** `PosSourcesWireMockTest` (Square: consent URL, code exchange, refresh, catalog paging, variations → Size
+  group, variable price and archived items; Clover: forged merchant id, exchange, token refresh with rotation, a 429
+  retried, categories/items/modifier groups; Toast: partner login once, restaurant refused/accepted, menus v2 with
+  nested groups and several menus, reference maps), `PosImportApiTest` (the fakes: callback through the shared
+  endpoint, preview writes nothing, apply, re-import diff with changed/unchanged/removed and the kitchen's own edits
+  kept, Toast GUID messages, Clover connect/disconnect, discard, expiry, single-use state, lost MANAGE, 403s for cooks
+  connecting / bookkeepers / outsiders / without MFA, 422 and 404), `PosImportPlannerTest`, `PosConfigTest`; Studio
+  `pos.test.tsx` (en + fr-CA).
+- **Never run against the real services:** no Square, Clover or Toast account exists. Unverified live: Square's
+  `modifier_list_info` minimums and `categories[]` vs `category_id` on current API versions; Clover's OAuth v2 field
+  names (`access_token_expiration`), the redirect configuration and `merchant_id` on the callback; everything about
+  Toast (partner access, response shapes, `general.name`).
+- **Not done:** scheduled or webhook-driven menu sync; importing POS item photos (the kitchen photo rules need own
+  photos); Clover item descriptions (Clover has none); Square item options (only variations); a per-dish "don't sync"
+  switch; Lightspeed Restaurant (the story names Square, Clover and Toast).
