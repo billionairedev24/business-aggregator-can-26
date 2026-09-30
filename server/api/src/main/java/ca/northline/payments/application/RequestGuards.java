@@ -1,6 +1,7 @@
-package ca.northline.orders.web;
+package ca.northline.payments.application;
 
-import ca.northline.payments.api.MoneyRequests;
+import ca.northline.payments.api.IdempotentRequests;
+import ca.northline.payments.api.PaymentStepUp;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.RuleViolation;
 import java.nio.charset.StandardCharsets;
@@ -10,57 +11,61 @@ import java.util.HexFormat;
 import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * {@code Idempotency-Key} on the food checkout's money-moving POSTs — the payments module's rules and store (S-11 /
- * Finance): required; same key + same body → the stored response ({@code Idempotent-Replayed: true}); same key + other
- * body → 409 {@code idempotency_key_reused}; still running → 409 {@code idempotency_in_progress}; a failure frees the key.
+ * The Finance endpoints' Idempotency-Key and step-up rules as a service, so other modules' money-moving endpoints
+ * (S-51 checkout) apply exactly the same ones ({@link IdempotentRequests}, {@link PaymentStepUp}).
  */
-@Component
+@Service
 @RequiredArgsConstructor
-class FoodIdempotency {
+class RequestGuards implements IdempotentRequests, PaymentStepUp {
 
     static final String HEADER = "Idempotency-Key";
     static final String REQUIRED = "Idempotency-Key header is required.";
 
-    private final MoneyRequests store;
-    private final JsonMapper json = JsonMapper.builder().build();
+    private final IdempotencyStore store;
+    private final StepUpVerifier stepUp;
+    private final JsonMapper json;
 
-    ResponseEntity<String> run(
-            String scope, @Nullable String key, @Nullable Object request, HttpStatus status, Supplier<?> action) {
+    @Override
+    public Outcome run(String scope, @Nullable String key, @Nullable Object request, int status, Supplier<?> action) {
         if (key == null || key.isBlank() || key.length() > 255) {
             throw RuleViolation.of(HEADER, "required", REQUIRED);
         }
         var fingerprint = sha256(request == null ? "" : json.writeValueAsString(request));
-        var existing = store.claim(scope, key, fingerprint);
+        var existing = store.claim(scope, key, fingerprint, IdempotencyStore.TTL);
         if (existing.isPresent()) {
             var stored = existing.get();
             if (!stored.fingerprint().equals(fingerprint)) {
                 throw new Conflict(
                         "idempotency_key_reused", "This Idempotency-Key was already used for a different request.");
             }
-            if (stored.status() == null || stored.body() == null) {
+            var storedStatus = stored.status();
+            var body = stored.body();
+            if (storedStatus == null || body == null) {
                 throw new Conflict("idempotency_in_progress", "The first request with this key is still running.");
             }
-            return ResponseEntity.status(stored.status())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .header("Idempotent-Replayed", "true")
-                    .body(stored.body());
+            return new Outcome(storedStatus, body, true);
         }
         try {
             var body = json.writeValueAsString(action.get());
-            store.complete(scope, key, status.value(), body);
-            return ResponseEntity.status(status)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(body);
+            store.complete(scope, key, status, body);
+            return new Outcome(status, body, false);
         } catch (RuntimeException e) {
             store.release(scope, key);
             throw e;
+        }
+    }
+
+    @Override
+    public boolean verified(String userId, @Nullable String proof) {
+        try {
+            stepUp.verify(userId, proof);
+            return true;
+        } catch (StepUpRequired e) {
+            return false;
         }
     }
 

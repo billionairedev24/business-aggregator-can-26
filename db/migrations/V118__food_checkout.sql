@@ -47,3 +47,12 @@ ALTER TABLE payments.escrows
   ADD COLUMN platform_fee_cents bigint NOT NULL DEFAULT 0 CHECK (platform_fee_cents >= 0),
   ADD COLUMN platform_tax_cents bigint NOT NULL DEFAULT 0 CHECK (platform_tax_cents >= 0),
   ADD COLUMN tip_cents bigint NOT NULL DEFAULT 0 CHECK (tip_cents >= 0);
+
+-- A food order's card payment is one PaymentIntent and one Stripe Tax calculation referenced as ('food_order',
+-- <order id>). Widening V112's checks only: every existing value stays valid.
+ALTER TABLE payments.payment_intents DROP CONSTRAINT payment_intents_ref_type_check;
+ALTER TABLE payments.payment_intents
+  ADD CONSTRAINT payment_intents_ref_type_check CHECK (ref_type IN ('booking', 'order_line', 'order_delivery', 'food_order'));
+ALTER TABLE payments.tax_calculations DROP CONSTRAINT tax_calculations_ref_type_check;
+ALTER TABLE payments.tax_calculations
+  ADD CONSTRAINT tax_calculations_ref_type_check CHECK (ref_type IN ('booking', 'order_line', 'order_delivery', 'food_order'));

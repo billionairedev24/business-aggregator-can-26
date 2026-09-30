@@ -18,8 +18,18 @@ public final class FoodCheckout {
     }
 
     public interface StartFoodOrder {
-        /** @param clientKey the request's Idempotency-Key (the Stripe call reuses it) */
-        Started start(String customerId, Order order, String clientKey, Locale locale);
+        /**
+         * @param mfa the sign-in used a second factor ({@code acr=mfa}); otherwise {@code stepUpProof} must be a fresh
+         *     step-up (S-51's payment rule) — 403 {@code step_up_required} / {@code second_factor_required}
+         * @param clientKey the request's Idempotency-Key (the Stripe call reuses it)
+         */
+        Started start(
+                String customerId,
+                boolean mfa,
+                @Nullable String stepUpProof,
+                Order order,
+                String clientKey,
+                Locale locale);
     }
 
     public interface PlaceFoodOrder {
@@ -97,6 +107,7 @@ public final class FoodCheckout {
     /** One priced line as the customer sees it. */
     public record Line(
             @Nullable String itemId,
+            @Nullable String comboId,
             String title,
             int qty,
             long unitCents,

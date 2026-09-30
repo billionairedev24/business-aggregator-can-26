@@ -150,7 +150,10 @@ Storefront pages on `pages.<zone>` and merchants' own domains (by `Host`) are S-
 - `GET /api/v1/cart` → `{ itemCount, … }` — the cart of the signed-in person, else of the guest id. Guests must be
   allowed (open the path in the api's `SecurityConfig` and key it by the header). The header reads `itemCount`
   (`cartQuery`, key `['cart']`); every cart mutation invalidates it. On sign-in the api merges the guest's cart into the
-  person's (the guest id arrives with the first signed-in call). Until the endpoint exists the header shows 0.
+  person's (the guest id arrives with the first signed-in call).
+- Paying needs a second factor: `stepUp` in `GET /api/v1/me/checkout` says whether the session must step up
+  (`features/cart/stepUp.ts`, `X-Step-Up`) or enrol a passkey first (DECISIONS § S-51). Other money-moving consumer
+  screens (food checkout, booking deposits) should reuse it.
 
 ### Location
 
@@ -187,6 +190,14 @@ The home page's "Your week" (S-46) lists the signed-in person's orders, bookings
 `GET /api/v1/me/upcoming` → `{ items: [{ id, title, subtitle?, state, tone: accent|neutral|accent-2, href }] }` — texts
 in the caller's language (`Accept-Language`), `href` a consumer route (`/orders/…`, `/quotes/…`). S-58 provides it;
 until then (404) the section shows its empty line. The points line under it reads `points` of the account summary.
+### Market (S-49)
+
+The Shop pages are rendered for the market in their URL, `?market=<city>` (default **Calgary**, the fallback market),
+so the server's HTML stays the same for everyone and is cacheable. `features/shop/market.ts`
+`useMarketFollowsLocation()` switches a page without `?market=` to the visitor's city once `useDeliveryLocation()`
+knows it (history replace); links between Shop pages keep an explicit market (`withMarket`). A city without pooled
+delivery answers `served: false` and the page shows its empty state. The api's markets are
+`northline.orders.delivery.markets` (Calgary, Edmonton, Airdrie); runs and cut-offs come from `orders.api.DeliveryRuns`.
 
 ### Language
 
@@ -204,9 +215,10 @@ Cookie `nl.locale` = `en` | `fr` (1 year, not HttpOnly). `useLocale().setLocale(
 | `GET /api/v1/geo/reverse`, `/markets`, `/autocomplete`, `/places/{id}`, `/resolve`, `POST /waitlist` | **exists** (S-47) | pill, Location screen, checkout |
 | `GET /api/v1/search`, suggestions | missing (path public; E-6 S-42…S-44) | S-48, home |
 | `GET /api/v1/public/home?city=` → section counts, businesses per category id, open kitchens per cuisine, trusted providers | **exists** (S-46, module `discovery`) | home |
-| categories / departments / landing content (public catalogue reads) | missing | S-49, S-53 |
-| product detail + offers | missing | S-50 |
-| cart (`/api/v1/cart…`, guest-keyed) + checkout (Stripe Payment Element) | missing | S-51 |
+| Shop landing + departments: `GET /api/v1/public/shop?market=&lang=`, `GET /api/v1/public/shop/departments/{slug}?market=&lang=` | **exists** (S-49) | S-49 (S-46 may reuse the landing's departments) |
+| service categories landing content (public catalogue reads) | missing | S-53 |
+| product detail + offers: `GET /api/v1/public/shop/products/{id}?market=&lang=` | **exists** (S-50) | S-50 |
+| cart: `GET /api/v1/cart`, `POST /api/v1/cart/items`, `PATCH`/`DELETE /api/v1/cart/items/{id}` (guest-keyed by `X-Northline-Guest`); checkout: `GET /api/v1/me/checkout?market=`, `POST /api/v1/me/checkout/quote`, `POST /api/v1/me/checkouts` (Idempotency-Key, X-Step-Up), `POST /api/v1/me/checkouts/{id}/place` (Idempotency-Key) | **exists** (S-51) | S-51 (S-57 food checkout may reuse the step-up and payment parts) |
 | consumer orders + tracking SSE | missing (merchant-side only today) | S-52, S-58 |
 | public menus / kitchens, food checkout | missing | S-57 |
 | providers by category, availability slots, booking create, quote request / accept (consumer side) | missing (merchant side exists) | S-53, S-55, S-56 |

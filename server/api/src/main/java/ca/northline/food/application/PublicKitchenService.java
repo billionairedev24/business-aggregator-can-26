@@ -66,13 +66,9 @@ class PublicKitchenService implements PublicKitchenUseCases, FoodCheckoutFacts {
         var status = availability.now(ids);
         var rows = calendarsOf(ids);
         var cards = kitchens.stream()
-                .filter(k -> rows.containsKey(k.merchantId()))
-                .map(k -> card(
-                        k,
-                        status.getOrDefault(k.merchantId(), KitchenStatus.CLOSED),
-                        rows.get(k.merchantId()),
-                        lat,
-                        lng))
+                .flatMap(k -> Optional.ofNullable(rows.get(k.merchantId()))
+                        .map(row -> card(k, status.getOrDefault(k.merchantId(), KitchenStatus.CLOSED), row, lat, lng))
+                        .stream())
                 .sorted(Comparator.comparing((Card c) -> !c.open())
                         .thenComparing(c -> c.distanceKm() == null ? Double.MAX_VALUE : c.distanceKm())
                         .thenComparing(Card::name))

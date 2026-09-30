@@ -7,7 +7,7 @@ import ca.northline.orders.application.FoodCheckout.StartFoodOrder;
 import ca.northline.orders.application.FoodCheckout.Totals;
 import ca.northline.orders.application.FoodCheckout.TrackFoodOrder;
 import ca.northline.orders.application.FoodCheckout.Tracking;
-import ca.northline.payments.api.MoneyRequests;
+import ca.northline.payments.api.IdempotentRequests;
 import ca.northline.shared.security.CurrentUser;
 import java.time.Instant;
 import java.util.List;
@@ -16,6 +16,7 @@ import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,7 +29,8 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * The signed-in customer's food orders (S-57). Any signed-in token is enough to read and quote; paying needs an
  * {@code Idempotency-Key}, and a session signed in with a phone code only (no {@code acr=mfa}) also needs a fresh
- * step-up proof ({@code X-Step-Up}, 403 {@code step_up_required} otherwise).
+ * step-up proof ({@code X-Step-Up}; S-51's rule: 403 {@code step_up_required}, or {@code second_factor_required}
+ * when the account has no second factor to step up with).
  *
  * <pre>
  * POST /api/v1/me/food-orders/quote           the order's totals (tax estimated from the province's rates)
@@ -46,8 +48,10 @@ class FoodOrderController {
     private final StartFoodOrder start;
     private final PlaceFoodOrder place;
     private final TrackFoodOrder track;
-    private final MoneyRequests money;
-    private final FoodIdempotency idempotency;
+    private final IdempotentRequests idempotent;
+
+    static final String IDEMPOTENCY_KEY = "Idempotency-Key";
+    static final String STEP_UP = "X-Step-Up";
 
     record ItemLine(
             @Nullable String itemId,
@@ -91,30 +95,38 @@ class FoodOrderController {
     @PostMapping
     ResponseEntity<String> start(
             @RequestBody OrderRequest body,
-            @RequestHeader(value = FoodIdempotency.HEADER, required = false) @Nullable String key,
-            @RequestHeader(value = "X-Step-Up", required = false) @Nullable String stepUp,
+            @RequestHeader(value = IDEMPOTENCY_KEY, required = false) @Nullable String key,
+            @RequestHeader(value = STEP_UP, required = false) @Nullable String stepUp,
             CurrentUser user,
             Locale locale) {
         var order = FoodRequests.order(body);
-        return idempotency.run("food-order:start:" + user.userId(), key, body, HttpStatus.CREATED, () -> {
-            if (!user.mfa()) {
-                money.requireStepUp(user.userId(), stepUp);
-            }
-            return start.start(user.userId(), order, Objects.requireNonNull(key), locale);
-        });
+        return json(idempotent.run(
+                "consumer:" + user.userId() + ":food-order",
+                key,
+                body,
+                HttpStatus.CREATED.value(),
+                () -> start.start(user.userId(), user.mfa(), stepUp, order, Objects.requireNonNull(key), locale)));
     }
 
     @PostMapping("/{orderId}/confirm")
     ResponseEntity<String> confirm(
             @PathVariable String orderId,
-            @RequestHeader(value = FoodIdempotency.HEADER, required = false) @Nullable String key,
+            @RequestHeader(value = IDEMPOTENCY_KEY, required = false) @Nullable String key,
             CurrentUser user) {
-        return idempotency.run(
-                "food-order:confirm:" + user.userId(),
+        return json(idempotent.run(
+                "consumer:" + user.userId() + ":food-order:" + orderId,
                 key,
-                orderId,
-                HttpStatus.OK,
-                () -> place.place(user.userId(), orderId));
+                null,
+                HttpStatus.OK.value(),
+                () -> place.place(user.userId(), orderId)));
+    }
+
+    private static ResponseEntity<String> json(IdempotentRequests.Outcome outcome) {
+        var response = ResponseEntity.status(outcome.status()).contentType(MediaType.APPLICATION_JSON);
+        if (outcome.replayed()) {
+            response.header("Idempotent-Replayed", "true");
+        }
+        return response.body(outcome.body());
     }
 
     @GetMapping("/{orderId}")

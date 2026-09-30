@@ -73,4 +73,21 @@ class CheckoutPaymentService implements PaymentAuthorizations {
                 authorization.clientSecret(),
                 authorization.status().code());
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean authorized(String paymentIntent, long amountCents) {
+        var authorization = gateway.authorization(paymentIntent);
+        return authorization.status() == IntentStatus.AUTHORIZED
+                && (authorization.amountCapturableCents() == 0 || authorization.amountCapturableCents() >= amountCents);
+    }
+
+    @Override
+    public void cancel(String paymentIntent) {
+        var authorization = gateway.authorization(paymentIntent);
+        if (authorization.status() == IntentStatus.AUTHORIZED
+                || authorization.status() == IntentStatus.REQUIRES_ACTION) {
+            gateway.cancel(paymentIntent, StripeIdempotencyKeys.of("cancel-checkout", paymentIntent));
+        }
+    }
 }

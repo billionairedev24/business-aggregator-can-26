@@ -13,31 +13,34 @@ E-4,,Epic,"Worker, events and notifications","Worker, events and notifications",
 Phase 1. 5 stories, 27 points.",High,,phase-1,events,,worker,,2026-11-16,2026-12-25
 E-5,,Epic,Studio follow-ups and polish,Studio follow-ups and polish,"Gaps and deviations left in the Studio after the first full build (docs/DECISIONS.md), plus cross-module API cleanups.
 
-Phase 2. 19 stories, 66 points.",High,,phase-2,studio,,studio,,2026-12-14,2027-04-02
+Phase 2. 19 stories, 66 points.",High,,phase-2,studio,,studio,,2026-12-28,2027-04-16
 E-6,,Epic,Search (Elasticsearch read model),Search (Elasticsearch read model),"listings_en / listings_fr indices, geo sort, completion suggester, synonyms, search API used by consumer web and app.
 
-Phase 2. 4 stories, 24 points.",High,,phase-2,search,,search,,2026-12-28,2027-03-19
+Phase 2. 4 stories, 24 points.",High,,phase-2,search,,search,,2026-12-28,2027-04-02
 E-7,,Epic,Consumer web (06 Consumer Web),Consumer web (06 Consumer Web),"Build web/apps/consumer from design/06 Consumer Web.dc.html: every screen in docs/SCREENS.md with loading/empty/error states, en/fr, no horizontal scroll.
 
-Phase 2. 19 stories, 134 points.",High,,phase-2,web,,consumer-web,,2027-01-11,2027-03-05
+Phase 2. 19 stories, 134 points.",High,,phase-2,web,,consumer-web,,2027-01-11,2027-03-19
 E-8,,Epic,Platform console (03 Platform Console),Platform console (03 Platform Console),"web/apps/console from design/03 Platform Console.dc.html: role-gated ops, trust & safety, finance and rollout tools.
 
-Phase 3. 14 stories, 91 points.",High,,phase-3,console,,console,,2027-03-22,2027-05-14
+Phase 3. 14 stories, 91 points.",High,,phase-3,console,,console,,2027-04-05,2027-06-11
 E-9,,Epic,"Fulfilment, dispatch and courier","Fulfilment, dispatch and courier","Pooled runs, dispatch, courier app, live tracking (SSE + Redis pub/sub), proof of delivery; goods delivery drives escrow release.
 
-Phase 3. 5 stories, 39 points.",High,,phase-3,fulfil,,fulfilment,,2027-03-22,2027-04-30
+Phase 3. 5 stories, 39 points.",High,,phase-3,fulfil,,fulfilment,,2027-04-05,2027-05-28
 E-10,,Epic,Consumer mobile app (01 Consumer App),Consumer mobile app (01 Consumer App),"iOS/Android consumer app from design/01 Consumer App.dc.html and Consumer Screen.dc.html, journeys A–D.
 
-Phase 4. 7 stories, 57 points.",High,,phase-4,app,,mobile,,2027-05-03,2027-06-11
+Phase 4. 7 stories, 57 points.",High,,phase-4,app,,mobile,,2027-05-31,2027-06-25
 E-11,,Epic,"Security, privacy and legal compliance","Security, privacy and legal compliance","Pen test, PIPEDA/Law 25 rights, retention, CASL, Loi 96, accessibility, legal review.
 
-Phase 5. 8 stories, 39 points.",High,,phase-5,sec,,compliance,,2027-05-31,2027-06-25
+Phase 5. 8 stories, 39 points.",High,,phase-5,sec,,compliance,,2027-06-14,2027-07-23
 E-12,,Epic,Observability and operations,Observability and operations,"Tracing, metrics, logs, alerts, runbooks, backups and disaster recovery.
 
-Phase 5. 5 stories, 21 points.",High,,phase-5,ops,,platform,,2027-06-14,2027-06-25
+Phase 5. 3 stories, 13 points.",High,,phase-5,ops,,platform,,2027-06-28,2027-07-09
 E-13,,Epic,"QA, pilot and Calgary launch","QA, pilot and Calgary launch","End-to-end test suite, load test, pilot merchants, go-live in Calgary (Alberta live market).
 
-Phase 6. 5 stories, 26 points.",High,,phase-6,launch,,release,,2027-06-14,2027-07-09
+Phase 6. 5 stories, 26 points.",High,,phase-6,launch,,release,,2027-07-12,2027-07-23
+E-14,,Epic,"Developer experience, API docs, observability and AI (MCP)","Developer experience, API docs, observability and AI (MCP)","Makefiles for every workflow; OpenAPI for every service with Swagger UI, Scalar and Redoc; a Docusaurus documentation site; OpenTelemetry tracing, metrics and PII-safe logs across all apps; a built-in MCP server so AI assistants can work with Northline through the same scopes and audit as the API.
+
+Phase 2. 12 stories, 63 points.",High,,phase-2,dx,,platform,,2026-12-14,2027-04-16
 S-1,E-1,Story,"Environment profiles and runbooks: local, dev, staging, prod",,"Spring profiles and env-var configuration so local runs against your own Postgres/PostGIS, Valkey and other stand-ins (MinIO, Mailpit, Kafka, Elasticsearch, stripe-mock) and every cloud environment is configured the same way. One runbook per environment listing every service, credential and secret needed, per cloud provider.
 
 Acceptance criteria:
@@ -299,20 +302,46 @@ Acceptance criteria:
 - Import from at least one POS (e.g. Square) creates sections/items.
 
 Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Low,8,phase-1,food,,integrations,Sprint 6,2026-12-14,2026-12-25
+S-124,E-14,Story,Makefiles for every developer and operator workflow,,"Root Makefile (help target) + per-area includes: setup, local stack up/down (docker compose profiles), build/test/lint/format per stack, run each app, db migrate/seed, Kafka topics, search indices, docs, OpenAPI export, Helm/Argo CD/Terraform validation, e2e; mirrors the manual CI jobs.
+
+Acceptance criteria:
+- `make help` lists every target
+- a fresh clone reaches a running local stack with `make setup up run`
+- CI jobs call the same targets.
+
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Highest,3,phase-2,dx,tooling,platform,Sprint 6,2026-12-14,2026-12-25
+S-125,E-14,Story,"OpenAPI 3.1 for every HTTP service with Swagger UI, Scalar and Redoc",,"api, auth JSON API, BFF session API, partner and public APIs documented with springdoc (groups per audience); Swagger UI, Scalar and Redoc served in local/dev/staging, public/partner specs published for prod through the docs site; generated specs committed and drift-checked.
+
+Acceptance criteria:
+- All three viewers render every spec
+- `make openapi` regenerates
+- a check fails when code and committed spec differ
+- prod exposes no internal spec.
+
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Highest,5,phase-2,dx,api-docs,platform,Sprint 6,2026-12-14,2026-12-25
+S-129,E-14,Story,"AI platform: LlmClient port with OpenRouter (Spring AI stack), fake provider, budgets, metrics and evals",,"Following the samop-inv-ship-26 pattern: an LlmClient port (OpenAI chat-completions shape with tool calling, streaming) chosen by northline.ai.provider = openrouter | fake (fake refused in staging/prod); OpenRouter adapter with attribution headers and usage/cost accounting; per-person and per-merchant token budgets; 503 ai_unavailable / 429 ai_rate_limited; metrics, traces and PII redaction on the port; eval harness (simulated model, mock OpenRouter, opt-in live eval). OPENROUTER_API_KEY and model per environment in runbooks, Helm/External Secrets and Terraform.
+
+Acceptance criteria:
+- Every AI feature depends only on the port
+- local runs with fake
+- a live eval passes against OpenRouter when a key is set
+- cost per call visible on dashboards.
+
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Highest,8,phase-2,ai,platform,platform,Sprint 7,2026-12-28,2027-01-08
 S-37,E-5,Story,Merchants public query API to replace direct SQL reads in other modules,,"payments (tier, take rate), messaging (type, tier), catalogue (licence check) read merchants tables directly.
 
 Acceptance criteria:
 - All cross-module reads go through merchants.api
 - ArchUnit rule forbids cross-schema SQL.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-2,tech-debt,backend,studio,Sprint 6,2026-12-14,2026-12-25
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-2,tech-debt,backend,studio,Sprint 7,2026-12-28,2027-01-08
 S-38,E-5,Story,Feed sales_30d on offers and services from orders/bookings,,"Listings table 30-day sales column stays 0 today.
 
 Acceptance criteria:
 - sales_30d updated by event listener
 - Listings shows real numbers.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,3,phase-2,catalogue,,studio,Sprint 6,2026-12-14,2026-12-25
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,3,phase-2,catalogue,,studio,Sprint 7,2026-12-28,2027-01-08
 S-39,E-5,Story,Re-vet approved listings when material fields change,,"Editing an approved listing keeps it approved today.
 
 Acceptance criteria:
@@ -353,14 +382,14 @@ Acceptance criteria:
 - Published listing searchable within 5 s
 - hidden removed.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-2,search,worker,search,Sprint 7,2026-12-28,2027-01-08
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-2,search,worker,search,Sprint 8,2027-01-11,2027-01-22
 S-44,E-6,Story,"Search API: query, filters, geo sort, trust/distance boosts, completion suggester",,"GET /api/v1/search, /suggest; 30 s Redis hot-query cache.
 
 Acceptance criteria:
 - p95 < 150 ms on seeded data
 - suggestions include typed-match highlight data.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-2,search,api,search,Sprint 7,2026-12-28,2027-01-08
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-2,search,api,search,Sprint 8,2027-01-11,2027-01-22
 S-45,E-7,Story,"Shell: header, location pill (auto-detect + fallback), EN/FR, cart, account menu with Orders & bookings",,"Design 06 header; Orders never in top nav.
 
 Acceptance criteria:
@@ -405,14 +434,14 @@ Acceptance criteria:
 - no horizontal scroll ≥ 320 px
 - a11y checks pass.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-2,consumer-web,,consumer-web,Sprint 8,2027-01-11,2027-01-22
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-2,consumer-web,,consumer-web,Sprint 9,2027-01-25,2027-02-05
 S-50,E-7,Story,"Product detail with offers, variants, stock and delivery cut-off",,"Acceptance criteria:
 - Matches design 06 in en and fr
 - loading/empty/error states
 - no horizontal scroll ≥ 320 px
 - a11y checks pass.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-2,consumer-web,,consumer-web,Sprint 8,2027-01-11,2027-01-22
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-2,consumer-web,,consumer-web,Sprint 9,2027-01-25,2027-02-05
 S-51,E-7,Story,Cart (multi-shop) and checkout with Stripe Payment Element,,"Delivery window, substitutions, points; card data never touches Northline (SAQ-A).
 
 Acceptance criteria:
@@ -448,7 +477,7 @@ Acceptance criteria:
 - no horizontal scroll ≥ 320 px
 - a11y checks pass.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-2,consumer-web,,consumer-web,Sprint 9,2027-01-25,2027-02-05
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-2,consumer-web,,consumer-web,Sprint 10,2027-02-08,2027-02-19
 S-55,E-7,Story,Booking wizard: job details → location & access → schedule → payment → confirmed,,"Empty forms, validation, slot holds (Redis, 10 min).
 
 Acceptance criteria:
@@ -473,7 +502,7 @@ S-57,E-7,Story,"Food landing, restaurant menu with modifiers and combos, food ch
 - no horizontal scroll ≥ 320 px
 - a11y checks pass.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,13,phase-2,consumer-web,,consumer-web,Sprint 10,2027-02-08,2027-02-19
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,13,phase-2,consumer-web,,consumer-web,Sprint 11,2027-02-22,2027-03-05
 S-58,E-7,Story,"Account area: orders & bookings, quotes, favourites, wallet & points",,"Acceptance criteria:
 - Matches design 06 in en and fr
 - loading/empty/error states
@@ -505,7 +534,7 @@ S-61,E-7,Story,Sell or offer a service: entry into Studio onboarding (07a–07d)
 - no horizontal scroll ≥ 320 px
 - a11y checks pass.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,2,phase-2,consumer-web,,consumer-web,Sprint 11,2027-02-22,2027-03-05
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,2,phase-2,consumer-web,,consumer-web,Sprint 12,2027-03-08,2027-03-19
 S-62,E-7,Story,"Consumer auth pages using the auth JSON API (sign in, register, OTP, MFA)",,"Reuse studio auth components.
 
 Acceptance criteria:
@@ -514,21 +543,64 @@ Acceptance criteria:
 - no horizontal scroll ≥ 320 px
 - a11y checks pass.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-2,consumer-web,,consumer-web,Sprint 11,2027-02-22,2027-03-05
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-2,consumer-web,,consumer-web,Sprint 12,2027-03-08,2027-03-19
 S-63,E-7,Story,"Legal pages and footer; SEO, sitemap, structured data for provider pages",,"Acceptance criteria:
 - Matches design 06 in en and fr
 - loading/empty/error states
 - no horizontal scroll ≥ 320 px
 - a11y checks pass.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,3,phase-2,consumer-web,,consumer-web,Sprint 11,2027-02-22,2027-03-05
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,3,phase-2,consumer-web,,consumer-web,Sprint 12,2027-03-08,2027-03-19
+S-126,E-14,Story,"Docusaurus documentation site (docs., en/fr)",,"web/apps/docs renders docs/ (architecture, runbooks, decisions, security, backlog), API reference via Redoc and Scalar from the committed specs, search, versioning; deployed by Helm on docs.<zone> (internal sections behind SSO) with a static-export option.
+
+Acceptance criteria:
+- Site builds from `make docs`
+- every runbook and spec reachable
+- deployed to dev by Argo CD.
+
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-2,dx,docs,platform,Sprint 12,2027-03-08,2027-03-19
+S-127,E-14,Story,"Built-in MCP server for merchants, partners and ops (OAuth 2.1)",,"Model Context Protocol server (Streamable HTTP) exposing Northline tools and resources (listings, orders, bookings, availability, messages, payouts read-only; ops tools for staff) with the same scopes, merchant binding, acr rules, rate limits and audit as the REST API; MCP authorization via the auth server (protected-resource metadata, PKCE, dynamic client registration policy).
+
+Acceptance criteria:
+- An MCP client (e.g. Claude) connects with OAuth, lists tools, performs scoped actions
+- every call audited
+- no PII beyond what the caller may already see.
+
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-2,ai,mcp,platform,Sprint 12,2027-03-08,2027-03-19
+S-130,E-14,Story,"Studio AI assistant: chat with tools that run as the caller, streamed, plus screen insights",,"Merchant assistant in the Studio (provider/seller/kitchen): answers from tools over the application use cases (orders, bookings, listings, availability, payouts, messages, reviews) executed with the caller's permissions and acr; bounded tool loops; streamed answers; short insights on the dashboard, earnings and listings screens; en/fr.
+
+Acceptance criteria:
+- Assistant answers only from tool results
+- no cross-merchant data
+- writes require explicit confirmation
+- evals cover the top questions.
+
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-2,ai,studio,platform,Sprint 12,2027-03-08,2027-03-19
+S-131,E-14,Story,"AI writing help: listing copy, quote lines, message replies, review summaries (en/fr)",,"Drafts titles/descriptions in English and French from listing attributes (still vetted), suggested quote lines from the job request, reply suggestions in Messages, review summaries on the provider page. Always a draft the person edits; never auto-sent or auto-published.
+
+Acceptance criteria:
+- Each feature behind the port with evals
+- drafts marked as AI-assisted
+- no PII sent beyond what the feature needs.
+
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-2,ai,studio,platform,Sprint 12,2027-03-08,2027-03-19
+S-111,E-14,Story,"OpenTelemetry tracing and metrics across api, auth, bff, worker",,"Acceptance criteria:
+- Traces span browser → BFF → api → DB/Kafka
+- dashboards per service.
+
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-2,observability,,platform,Sprint 13,2027-03-22,2027-04-02
+S-112,E-14,Story,Centralised logging with PII redaction,,"Acceptance criteria:
+- Logs searchable
+- emails/phones masked.
+
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,3,phase-2,observability,privacy,platform,Sprint 13,2027-03-22,2027-04-02
 S-64,E-5,Story,Orders public API for order lines; remove direct orders SQL from food,,"food reads orders/order_lines/couriers read-only.
 
 Acceptance criteria:
 - food uses orders.api
 - ArchUnit rule added.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,3,phase-2,tech-debt,backend,studio,Sprint 11,2027-02-22,2027-03-05
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,3,phase-2,tech-debt,backend,studio,Sprint 13,2027-03-22,2027-04-02
 S-65,E-5,Story,"Per-variant images, bundles and compliance documents in the product editor",,"Variant column shows 'inherits'; Bundle not selectable; Compliance Documents buttons disabled.
 
 Acceptance criteria:
@@ -536,92 +608,113 @@ Acceptance criteria:
 - bundles purchasable
 - documents upload.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,8,phase-2,catalogue,,studio,Sprint 12,2027-03-08,2027-03-19
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,8,phase-2,catalogue,,studio,Sprint 13,2027-03-22,2027-04-02
 S-66,E-5,Story,Finance and compliance implement CaseReferences for the help form,,"Help 'Related to' lists bookings, orders, disputes only.
 
 Acceptance criteria:
 - Payouts and compliance documents selectable when opening a case.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,2,phase-2,help,,studio,Sprint 12,2027-03-08,2027-03-19
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,2,phase-2,help,,studio,Sprint 13,2027-03-22,2027-04-02
 S-67,E-5,Story,Enforce kitchen auto-pause on late orders and the ±40 % menu price vetting rule,,"Both settings are stored but not enforced.
 
 Acceptance criteria:
 - Late-order threshold pauses ordering
 - outlier prices flagged.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,3,phase-2,food,,studio,Sprint 12,2027-03-08,2027-03-19
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,3,phase-2,food,,studio,Sprint 13,2027-03-22,2027-04-02
 S-68,E-5,Story,Server-sent events for messages and live orders (replace polling),,"Messages poll every 5–15 s; KDS every 15 s.
 
 Acceptance criteria:
 - New message/order appears within 1 s
 - falls back to polling.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-2,realtime,,studio,Sprint 12,2027-03-08,2027-03-19
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-2,realtime,,studio,Sprint 13,2027-03-22,2027-04-02
 S-69,E-5,Story,Studio bundle size and code splitting,,"Main chunk ~550 kB; icons and DataTable loaded eagerly.
 
 Acceptance criteria:
 - Initial JS under 250 kB gzip
 - Lighthouse performance ≥ 90 on dashboard.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,3,phase-2,performance,frontend,studio,Sprint 12,2027-03-08,2027-03-19
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,3,phase-2,performance,frontend,studio,Sprint 13,2027-03-22,2027-04-02
 S-70,E-5,Story,Remaining schema TODO constraints and indexes,,"V004+ TODO comments not materialised by owning teams (review list in DECISIONS.md).
 
 Acceptance criteria:
 - Every TODO index/constraint exists or is explicitly dropped with rationale.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,3,phase-2,database,,studio,Sprint 12,2027-03-08,2027-03-19
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,3,phase-2,database,,studio,Sprint 13,2027-03-22,2027-04-02
 S-71,E-6,Story,Full reindex job and backfill from Postgres,,"Rebuildable read model.
 
 Acceptance criteria:
 - Reindex into new index and alias-swap without downtime.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,3,phase-2,search,,search,Sprint 12,2027-03-08,2027-03-19
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,3,phase-2,search,,search,Sprint 13,2027-03-22,2027-04-02
+S-128,E-14,Story,"Developer docs MCP (search docs, runbooks and OpenAPI)",,"Read-only MCP resources/tools over the docs site content and OpenAPI specs for engineers and integrators.
+
+Acceptance criteria:
+- An MCP client can search runbooks and fetch an operation's schema.
+
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,3,phase-2,ai,mcp,platform,Sprint 14,2027-04-05,2027-04-16
+S-132,E-14,Story,Consumer AI: natural-language search and help triage,,"Turns a natural-language request into structured search filters for the search API (S-44) and routes 'something's wrong' reports into the right case category (S-60) with a summary for staff.
+
+Acceptance criteria:
+- Search queries map to filters with an eval set
+- triage suggestions never decide refunds.
+
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-2,ai,consumer-web,platform,Sprint 14,2027-04-05,2027-04-16
+S-133,E-14,Story,"AI trust & safety assist: vetting, review moderation and anomaly scans",,"Flags risky listings and price/text anomalies for vetting, screens reviews and messages for abuse/off-platform payment attempts, weekly anomaly scan per market; suggestions go to staff queues, never automatic rejection.
+
+Acceptance criteria:
+- Precision/recall measured on a labelled set
+- every flag explains itself
+- staff decide.
+
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-2,ai,trust,platform,Sprint 14,2027-04-05,2027-04-16
 S-72,E-5,Story,Bulk import: validate image URLs and support full updates on re-import,,"Re-importing an SKU only updates price and stock; image URLs not checked.
 
 Acceptance criteria:
 - Unreachable URL reported in validation report
 - re-import updates all columns.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Low,3,phase-2,catalogue,,studio,Sprint 12,2027-03-08,2027-03-19
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Low,3,phase-2,catalogue,,studio,Sprint 14,2027-04-05,2027-04-16
 S-73,E-5,Story,Guard kitchen endpoints to kitchen businesses,,"Other types get empty data today.
 
 Acceptance criteria:
 - Non-kitchen merchant gets 404/403 on /kitchen/* endpoints.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Low,1,phase-2,food,security,studio,Sprint 12,2027-03-08,2027-03-19
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Low,1,phase-2,food,security,studio,Sprint 14,2027-04-05,2027-04-16
 S-74,E-5,Story,Appointments calendar: 'Open slot' and 'Held for quote' cells,,"Design cells not rendered yet.
 
 Acceptance criteria:
 - Week view shows open slots and quote holds as in design 02.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Low,3,phase-2,appointments,,studio,Sprint 12,2027-03-08,2027-03-19
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Low,3,phase-2,appointments,,studio,Sprint 14,2027-04-05,2027-04-16
 S-75,E-5,Story,Storefront analytics: visits and bookings stats; provider-funded reward,,"Left out of the Studio page for lack of an analytics source; reward belongs to trust/loyalty.
 
 Acceptance criteria:
 - Page shows visits/booked stats
 - reward toggle works.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Low,5,phase-2,storefront,analytics,studio,Sprint 12,2027-03-08,2027-03-19
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Low,5,phase-2,storefront,analytics,studio,Sprint 14,2027-04-05,2027-04-16
 S-76,E-5,Story,Publishable keys for the website embed snippet,,"Embed shows the design's pk_live_ placeholder.
 
 Acceptance criteria:
 - Merchant copies a real publishable key
 - embed loads their page.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Low,3,phase-2,developer,,studio,Sprint 13,2027-03-22,2027-04-02
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Low,3,phase-2,developer,,studio,Sprint 14,2027-04-05,2027-04-16
 S-77,E-5,Story,Seed data photos for kitchen items and listings,,"Seed references photo keys with no stored bytes.
 
 Acceptance criteria:
 - Local dev shows real photos for seeded items.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Low,1,phase-2,dev-experience,,studio,Sprint 13,2027-03-22,2027-04-02
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Low,1,phase-2,dev-experience,,studio,Sprint 14,2027-04-05,2027-04-16
 S-78,E-9,Story,Goods delivered/confirmed drive escrow release (EscrowLifecycle fulfilled/confirmed),,"Only booking completion and food handoff are wired today.
 
 Acceptance criteria:
 - Delivered order line starts the 7-day clock
 - customer confirmation releases at once.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Highest,3,phase-3,fulfilment,payments,fulfilment,Sprint 13,2027-03-22,2027-04-02
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Highest,3,phase-3,fulfilment,payments,fulfilment,Sprint 14,2027-04-05,2027-04-16
 S-79,E-8,Story,"Verification queue: review merchant checks, approve/reject with reasons",,"Replaces the local 'Simulate approval' endpoint.
 
 Acceptance criteria:
@@ -629,31 +722,31 @@ Acceptance criteria:
 - actions audit-logged
 - role gates enforced server-side.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-3,console,,console,Sprint 13,2027-03-22,2027-04-02
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-3,console,,console,Sprint 14,2027-04-05,2027-04-16
 S-80,E-8,Story,Disputes: evidence review and decisions (DisputeDecisions),,"Acceptance criteria:
 - Matches design 03
 - actions audit-logged
 - role gates enforced server-side.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-3,console,,console,Sprint 13,2027-03-22,2027-04-02
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-3,console,,console,Sprint 15,2027-04-19,2027-04-30
 S-81,E-8,Story,Orders monitor and delivery ops map,,"Acceptance criteria:
 - Matches design 03
 - actions audit-logged
 - role gates enforced server-side.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-3,console,,console,Sprint 13,2027-03-22,2027-04-02
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-3,console,,console,Sprint 15,2027-04-19,2027-04-30
 S-82,E-8,Story,Sellers directory and seller detail with oversight actions and audit,,"Acceptance criteria:
 - Matches design 03
 - actions audit-logged
 - role gates enforced server-side.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-3,console,,console,Sprint 13,2027-03-22,2027-04-02
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-3,console,,console,Sprint 15,2027-04-19,2027-04-30
 S-83,E-8,Story,"Support desk: agent queue, macros EN/FR, role-gated case actions",,"Acceptance criteria:
 - Matches design 03
 - actions audit-logged
 - role gates enforced server-side.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-3,console,,console,Sprint 14,2027-04-05,2027-04-16
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-3,console,,console,Sprint 15,2027-04-19,2027-04-30
 S-84,E-8,Story,"Provinces, markets and zones switchboard (Off/Waitlist/Pilot/Live)",,"Market cannot exceed province stage.
 
 Acceptance criteria:
@@ -661,13 +754,13 @@ Acceptance criteria:
 - actions audit-logged
 - role gates enforced server-side.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-3,console,,console,Sprint 14,2027-04-05,2027-04-16
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-3,console,,console,Sprint 15,2027-04-19,2027-04-30
 S-85,E-8,Story,Finance and reconciliation (Stripe vs ledger),,"Acceptance criteria:
 - Matches design 03
 - actions audit-logged
 - role gates enforced server-side.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-3,console,,console,Sprint 14,2027-04-05,2027-04-16
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-3,console,,console,Sprint 16,2027-05-03,2027-05-14
 S-86,E-9,Story,Pooled run planning and dispatch service,,"Runs, stops, cut-offs per zone; assignment to couriers.
 
 Acceptance criteria:
@@ -675,25 +768,25 @@ Acceptance criteria:
 - stops ordered
 - seller pack deadlines shown in Studio.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,13,phase-3,fulfilment,,fulfilment,Sprint 14,2027-04-05,2027-04-16
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,13,phase-3,fulfilment,,fulfilment,Sprint 16,2027-05-03,2027-05-14
 S-87,E-9,Story,"Courier app (MVP): shifts, stops, pickup/drop-off, proof of delivery",,"Public PKCE client.
 
 Acceptance criteria:
 - Courier completes a run end to end in staging.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,13,phase-3,fulfilment,mobile,fulfilment,Sprint 15,2027-04-19,2027-04-30
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,13,phase-3,fulfilment,mobile,fulfilment,Sprint 16,2027-05-03,2027-05-14
 S-88,E-9,Story,Live tracking via SSE and Redis pub/sub,,"Consumer tracking and kitchen courier status.
 
 Acceptance criteria:
 - Customer sees courier position updates ≤ 5 s apart.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-3,fulfilment,realtime,fulfilment,Sprint 15,2027-04-19,2027-04-30
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-3,fulfilment,realtime,fulfilment,Sprint 17,2027-05-17,2027-05-28
 S-89,E-9,Story,Checkout sets orders.fulfilment_mode and customer_eta,,"Kitchen treats empty as delivery.
 
 Acceptance criteria:
 - Pickup orders show 'Handed to customer' flow.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,2,phase-3,orders,,fulfilment,Sprint 15,2027-04-19,2027-04-30
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,2,phase-3,orders,,fulfilment,Sprint 17,2027-05-17,2027-05-28
 S-90,E-8,Story,"Console shell with role switch, role-filtered nav and denied screen",,"Roles: admin, trust & safety, ops dispatcher, finance, support, read-only analyst.
 
 Acceptance criteria:
@@ -701,13 +794,13 @@ Acceptance criteria:
 - actions audit-logged
 - role gates enforced server-side.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,console,,console,Sprint 15,2027-04-19,2027-04-30
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,console,,console,Sprint 17,2027-05-17,2027-05-28
 S-91,E-8,Story,Overview: GMV and health dashboard,,"Acceptance criteria:
 - Matches design 03
 - actions audit-logged
 - role gates enforced server-side.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,console,,console,Sprint 15,2027-04-19,2027-04-30
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,console,,console,Sprint 17,2027-05-17,2027-05-28
 S-92,E-8,Story,Listing vetting queue: flagged listings approve/reject,,"Owns rejecting flagged listings.
 
 Acceptance criteria:
@@ -715,38 +808,38 @@ Acceptance criteria:
 - actions audit-logged
 - role gates enforced server-side.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,console,,console,Sprint 15,2027-04-19,2027-04-30
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,console,,console,Sprint 17,2027-05-17,2027-05-28
 S-93,E-8,Story,"Trust & safety rules, flags (incl. off-platform payment flags from messaging)",,"Acceptance criteria:
 - Matches design 03
 - actions audit-logged
 - role gates enforced server-side.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,console,,console,Sprint 16,2027-05-03,2027-05-14
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,console,,console,Sprint 17,2027-05-17,2027-05-28
 S-94,E-8,Story,"Taxonomy management (categories, regulators, limits, suggested categories)",,"Acceptance criteria:
 - Matches design 03
 - actions audit-logged
 - role gates enforced server-side.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,console,,console,Sprint 16,2027-05-03,2027-05-14
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,console,,console,Sprint 17,2027-05-17,2027-05-28
 S-95,E-8,Story,Analytics: funnels and cohorts,,"Acceptance criteria:
 - Matches design 03
 - actions audit-logged
 - role gates enforced server-side.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,console,,console,Sprint 16,2027-05-03,2027-05-14
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,console,,console,Sprint 17,2027-05-17,2027-05-28
 S-96,E-8,Story,"API keys, team, audit log, on-call and profile screens",,"Acceptance criteria:
 - Matches design 03
 - actions audit-logged
 - role gates enforced server-side.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,console,,console,Sprint 16,2027-05-03,2027-05-14
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,console,,console,Sprint 18,2027-05-31,2027-06-11
 S-97,E-10,Story,Mobile tech decision and project setup (React Native/Expo recommended; shared tokens and API client),,"Record the decision in DECISIONS.md.
 
 Acceptance criteria:
 - App builds for iOS and Android in CI
 - tokens shared with web.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-4,mobile,,mobile,Sprint 16,2027-05-03,2027-05-14
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-4,mobile,,mobile,Sprint 18,2027-05-31,2027-06-11
 S-98,E-10,Story,"Journey A: welcome, sign up, OTP, MFA, location",,"Per design 01 Consumer App.
 
 Acceptance criteria:
@@ -754,7 +847,7 @@ Acceptance criteria:
 - accessible
 - works offline-tolerant on flaky networks.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-4,mobile,,mobile,Sprint 16,2027-05-03,2027-05-14
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-4,mobile,,mobile,Sprint 18,2027-05-31,2027-06-11
 S-99,E-10,Story,"Journey B: shop — home, search, product, cart, checkout (Stripe), confirmed, tracking, delivered, refund",,"Per design 01 Consumer App.
 
 Acceptance criteria:
@@ -762,7 +855,7 @@ Acceptance criteria:
 - accessible
 - works offline-tolerant on flaky networks.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,13,phase-4,mobile,,mobile,Sprint 17,2027-05-17,2027-05-28
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,13,phase-4,mobile,,mobile,Sprint 18,2027-05-31,2027-06-11
 S-100,E-10,Story,"Journey C: services — providers, profile, booking, notifications, ETA, sign-off, review",,"Per design 01 Consumer App.
 
 Acceptance criteria:
@@ -770,7 +863,7 @@ Acceptance criteria:
 - accessible
 - works offline-tolerant on flaky networks.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,13,phase-4,mobile,,mobile,Sprint 17,2027-05-17,2027-05-28
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,13,phase-4,mobile,,mobile,Sprint 19,2027-06-14,2027-06-25
 S-101,E-10,Story,"Journey D: account — orders, quote received, account, security, wallet",,"Per design 01 Consumer App.
 
 Acceptance criteria:
@@ -778,7 +871,7 @@ Acceptance criteria:
 - accessible
 - works offline-tolerant on flaky networks.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-4,mobile,,mobile,Sprint 17,2027-05-17,2027-05-28
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-4,mobile,,mobile,Sprint 19,2027-06-14,2027-06-25
 S-102,E-10,Story,Push notifications (APNs/FCM) and deep links,,"Per design 01 Consumer App.
 
 Acceptance criteria:
@@ -786,7 +879,7 @@ Acceptance criteria:
 - accessible
 - works offline-tolerant on flaky networks.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-4,mobile,,mobile,Sprint 17,2027-05-17,2027-05-28
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-4,mobile,,mobile,Sprint 19,2027-06-14,2027-06-25
 S-103,E-10,Story,App Store / Play Store release pipeline and store listings (en/fr),,"Per design 01 Consumer App.
 
 Acceptance criteria:
@@ -794,99 +887,89 @@ Acceptance criteria:
 - accessible
 - works offline-tolerant on flaky networks.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-4,mobile,,mobile,Sprint 18,2027-05-31,2027-06-11
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-4,mobile,,mobile,Sprint 19,2027-06-14,2027-06-25
 S-104,E-11,Story,External penetration test and remediation,,"Scope: auth, BFF, api, studio, console, payments flows.
 
 Acceptance criteria:
 - No open critical/high findings at launch.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Highest,8,phase-5,security,,compliance,Sprint 18,2027-05-31,2027-06-11
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Highest,8,phase-5,security,,compliance,Sprint 19,2027-06-14,2027-06-25
 S-105,E-11,Story,"Privacy rights: access, correction and erasure (PIPEDA, Alberta PIPA, Law 25)",,"Erasure pipeline across schemas and S3; no PII in events already enforced.
 
 Acceptance criteria:
 - Erasure request completes within SLA and is audit-logged.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Highest,8,phase-5,privacy,,compliance,Sprint 18,2027-05-31,2027-06-11
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Highest,8,phase-5,privacy,,compliance,Sprint 20,2027-06-28,2027-07-09
 S-106,E-11,Story,Legal counsel review of Terms of Service and Privacy Policy (drafts),,"Design notes: strong draft, not legal advice.
 
 Acceptance criteria:
 - Counsel sign-off recorded
 - pages updated verbatim.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Highest,3,phase-5,legal,,compliance,Sprint 18,2027-05-31,2027-06-11
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Highest,3,phase-5,legal,,compliance,Sprint 20,2027-06-28,2027-07-09
 S-107,E-11,Story,Data retention jobs per the Privacy Policy retention schedule,,"Acceptance criteria:
 - Expired data purged automatically
 - report available.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-5,privacy,,compliance,Sprint 18,2027-05-31,2027-06-11
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-5,privacy,,compliance,Sprint 20,2027-06-28,2027-07-09
 S-108,E-11,Story,CASL consent capture and unsubscribe for commercial messages,,"Acceptance criteria:
 - Consent stored with timestamp and source
 - one-click unsubscribe.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,3,phase-5,legal,notifications,compliance,Sprint 18,2027-05-31,2027-06-11
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,3,phase-5,legal,notifications,compliance,Sprint 20,2027-06-28,2027-07-09
 S-109,E-11,Story,"Accessibility audit (WCAG 2.2 AA) of Studio, consumer web and console",,"Acceptance criteria:
 - No critical issues
 - remaining issues ticketed.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-5,a11y,,compliance,Sprint 18,2027-05-31,2027-06-11
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-5,a11y,,compliance,Sprint 20,2027-06-28,2027-07-09
 S-110,E-11,Story,PCI SAQ-A attestation and Stripe compliance review,,"Acceptance criteria:
 - SAQ-A completed
 - no card data in logs or DB.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,2,phase-5,payments,security,compliance,Sprint 18,2027-05-31,2027-06-11
-S-111,E-12,Story,"OpenTelemetry tracing and metrics across api, auth, bff, worker",,"Acceptance criteria:
-- Traces span browser → BFF → api → DB/Kafka
-- dashboards per service.
-
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-5,observability,,platform,Sprint 19,2027-06-14,2027-06-25
-S-112,E-12,Story,Centralised logging with PII redaction,,"Acceptance criteria:
-- Logs searchable
-- emails/phones masked.
-
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,3,phase-5,observability,privacy,platform,Sprint 19,2027-06-14,2027-06-25
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,2,phase-5,payments,security,compliance,Sprint 20,2027-06-28,2027-07-09
 S-113,E-12,Story,"Alerting and on-call (SLOs for sign-in, checkout, payouts, KDS)",,"Acceptance criteria:
 - Pager alerts on SLO burn
 - runbooks linked.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-5,observability,,platform,Sprint 19,2027-06-14,2027-06-25
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-5,observability,,platform,Sprint 20,2027-06-28,2027-07-09
 S-114,E-12,Story,"Backups, point-in-time restore and DR drill",,"Acceptance criteria:
 - Restore of prod snapshot to staging verified
 - RPO/RTO documented.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-5,reliability,,platform,Sprint 19,2027-06-14,2027-06-25
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-5,reliability,,platform,Sprint 20,2027-06-28,2027-07-09
 S-115,E-12,Story,"Runbooks: key rotation, Stripe incidents, Kafka DLQ replay, reindex",,"Acceptance criteria:
 - Runbooks in docs/ and exercised once.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,3,phase-5,operations,,platform,Sprint 19,2027-06-14,2027-06-25
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,3,phase-5,operations,,platform,Sprint 20,2027-06-28,2027-07-09
 S-116,E-11,Story,Loi 96 French-first readiness for Québec expansion,,"Acceptance criteria:
 - All customer-facing text available in fr-CA before Québec launch.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Low,5,phase-5,i18n,legal,compliance,Sprint 19,2027-06-14,2027-06-25
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Low,5,phase-5,i18n,legal,compliance,Sprint 21,2027-07-12,2027-07-23
 S-117,E-13,Story,Playwright end-to-end suite in CI (studio smoke + critical journeys),,"Grow scripts/studio-smoke.mjs into CI e2e: sign-in, onboarding, quote → booking → escrow, order → pack → deliver, payout.
 
 Acceptance criteria:
 - Suite green on staging nightly.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Highest,8,phase-6,qa,e2e,release,Sprint 19,2027-06-14,2027-06-25
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Highest,8,phase-6,qa,e2e,release,Sprint 21,2027-07-12,2027-07-23
 S-118,E-13,Story,Go-live checklist and Calgary launch (Alberta market Live),,"Console province/market switch to Live for Calgary.
 
 Acceptance criteria:
 - Production live
 - hypercare rota for two weeks.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Highest,3,phase-6,release,,release,Sprint 19,2027-06-14,2027-06-25
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Highest,3,phase-6,release,,release,Sprint 21,2027-07-12,2027-07-23
 S-119,E-13,Story,"Load and soak testing (search, checkout, KDS, nav badges)",,"Acceptance criteria:
 - Target load sustained with p95 within SLOs.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-6,qa,performance,release,Sprint 20,2027-06-28,2027-07-09
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-6,qa,performance,release,Sprint 21,2027-07-12,2027-07-23
 S-120,E-13,Story,"Pilot merchant onboarding (Calgary: providers, sellers, kitchens)",,"Real verification, kitchen visits, Stripe accounts.
 
 Acceptance criteria:
 - ≥ 10 pilot businesses live on staging-to-prod path.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-6,pilot,,release,Sprint 20,2027-06-28,2027-07-09
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-6,pilot,,release,Sprint 21,2027-07-12,2027-07-23
 S-121,E-13,Story,UAT with pilot merchants and customers; triage feedback,,"Acceptance criteria:
 - Sign-off from pilot group
 - blocking issues fixed.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-6,pilot,qa,release,Sprint 20,2027-06-28,2027-07-09
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-6,pilot,qa,release,Sprint 21,2027-07-12,2027-07-23

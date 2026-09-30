@@ -12,7 +12,7 @@ import org.jspecify.annotations.Nullable;
 public interface PaymentAuthorizations {
 
     /**
-     * @param refType {@code booking} | {@code order_line}
+     * @param refType {@code booking} | {@code order_line} | {@code order_delivery} (an order's delivery fee, merchant {@link #PLATFORM})
      * @param amountCents the merchant's amount before tax
      * @param taxCents GST/HST collected on top
      * @param transferGroup {@code order:<orderId>} or {@code booking:<bookingId>}
@@ -81,4 +81,22 @@ public interface PaymentAuthorizations {
     record Started(String paymentIntent, @Nullable String clientSecret, String status) {}
 
     Started start(Request request);
+
+    /**
+     * The merchant id of a payment for Northline's own charges — the delivery fee of a goods order (S-51), which is no
+     * merchant's escrow: its PaymentIntent is recorded under this id and never transferred.
+     */
+    String PLATFORM = "northline";
+
+    /**
+     * Whether Stripe holds the PaymentIntent for at least {@code amountCents} ({@code requires_capture}) — checkout
+     * checks a payment that isn't an escrow hold (the delivery fee) this way before placing the order (S-51).
+     */
+    boolean authorized(String paymentIntent, long amountCents);
+
+    /**
+     * Cancels an authorization that won't become an order (checkout abandoned or failed, S-51): the hold on the
+     * customer's card is released at once instead of lapsing after 7 days. Idempotent; a captured one is left alone.
+     */
+    void cancel(String paymentIntent);
 }

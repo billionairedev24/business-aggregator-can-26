@@ -4,6 +4,7 @@ import ca.northline.food.api.FoodCheckoutFacts;
 import ca.northline.food.api.FoodMenuPricing;
 import ca.northline.food.api.KitchenProgress;
 import ca.northline.identity.api.PersonDirectory;
+import ca.northline.identity.api.SecondFactors;
 import ca.northline.orders.api.OrderPlaced;
 import ca.northline.orders.application.FoodCheckout.Line;
 import ca.northline.orders.application.FoodCheckout.Order;
@@ -17,10 +18,13 @@ import ca.northline.orders.application.FoodCheckout.TrackFoodOrder;
 import ca.northline.orders.application.FoodCheckout.Tracking;
 import ca.northline.orders.application.FoodCheckoutStore.CheckoutRow;
 import ca.northline.orders.application.FoodCheckoutStore.OrderLineRow;
+import ca.northline.orders.domain.CheckoutMessages;
 import ca.northline.orders.domain.FoodOrderRules;
 import ca.northline.payments.api.EscrowKind;
 import ca.northline.payments.api.EscrowLifecycle;
 import ca.northline.payments.api.PaymentAuthorizations;
+import ca.northline.payments.api.PaymentSettings;
+import ca.northline.payments.api.PaymentStepUp;
 import ca.northline.payments.api.TaxCalculations;
 import ca.northline.region.api.TaxRates;
 import ca.northline.shared.Conflict;
@@ -37,7 +41,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -69,9 +72,10 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
     private final FoodCheckoutStore store;
     private final ApplicationEventPublisher events;
     private final Clock clock;
+    private final SecondFactors secondFactors;
+    private final PaymentStepUp stepUp;
+    private final PaymentSettings settings;
     private final JsonMapper json = JsonMapper.builder().build();
-    private final boolean stripe;
-    private final String publishableKey;
 
     FoodCheckoutService(
             FoodMenuPricing pricing,
@@ -85,8 +89,9 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
             FoodCheckoutStore store,
             ApplicationEventPublisher events,
             Clock clock,
-            @Value("${northline.payments.stripe-secret-key:}") String secretKey,
-            @Value("${northline.payments.stripe-publishable-key:}") String publishableKey) {
+            SecondFactors secondFactors,
+            PaymentStepUp stepUp,
+            PaymentSettings settings) {
         this.pricing = pricing;
         this.kitchens = kitchens;
         this.progress = progress;
@@ -98,8 +103,9 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
         this.store = store;
         this.events = events;
         this.clock = clock;
-        this.stripe = !secretKey.isBlank() && !publishableKey.isBlank();
-        this.publishableKey = publishableKey;
+        this.secondFactors = secondFactors;
+        this.stepUp = stepUp;
+        this.settings = settings;
     }
 
     /** Everything decided before any money moves: the kitchen, the priced lines, fees, tip, place of supply. */
@@ -124,7 +130,19 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
 
     @Override
     @Transactional
-    public Started start(String customerId, Order order, String clientKey, Locale locale) {
+    public Started start(
+            String customerId,
+            boolean mfa,
+            @Nullable String stepUpProof,
+            Order order,
+            String clientKey,
+            Locale locale) {
+        // S-51's payment rule: a phone-code sign-in confirms with its second factor first, or enrols one
+        if (!mfa && !stepUp.verified(customerId, stepUpProof)) {
+            throw secondFactors.hasSecondFactor(customerId)
+                    ? new StepUpNeeded("step_up_required", CheckoutMessages.STEP_UP)
+                    : new StepUpNeeded("second_factor_required", CheckoutMessages.ENROL);
+        }
         var p = price(order);
         var postal = order.delivery() == null ? null : order.delivery().postalCode();
         var quote = taxes.calculate(new TaxCalculations.Request(
@@ -183,8 +201,8 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
                 started.paymentIntent(),
                 started.clientSecret(),
                 started.status(),
-                stripe ? "stripe" : "fake",
-                stripe ? publishableKey : null);
+                settings.provider(),
+                settings.publishableKey());
     }
 
     @Override
@@ -219,20 +237,33 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
                 new EscrowLifecycle.PlatformCharges(
                         row.deliveryFeeCents() + row.serviceFeeCents(), row.feeTaxCents(), row.tipCents())));
         var orderLines = lines.stream()
-                .map(l -> new OrderLineRow(Ids.next(), l.itemId(), l.title(), l.qty(), l.unitCents(), modifiers(l)))
+                .map(l -> new OrderLineRow(
+                        Ids.next(), l.itemId(), l.comboId(), l.title(), l.qty(), l.unitCents(), modifiers(l)))
                 .toList();
         if (store.place(row, orderLines, now)) {
+            // S-51's event; one kitchen per food order, "direct" = the hot courier
             events.publishEvent(new OrderPlaced(
                     Ids.next(),
                     now,
                     row.id(),
-                    "food",
+                    row.merchantId(),
                     customerId,
-                    List.of(row.merchantId()),
-                    row.fulfilmentMode(),
-                    row.scheduledFor(),
-                    orderLines.size(),
-                    row.totalCents()));
+                    row.ref(),
+                    "food",
+                    row.fulfilmentMode().equals("pickup") ? "pickup" : "direct",
+                    null,
+                    row.subtotalCents(),
+                    row.taxCents(),
+                    orderLines.stream()
+                            .map(l -> new OrderPlaced.Line(
+                                    l.id(),
+                                    Objects.requireNonNullElse(
+                                            l.menuItemId(), Objects.requireNonNullElse(l.comboId(), "")),
+                                    null,
+                                    l.qty(),
+                                    l.unitCents() * l.qty(),
+                                    l.menuItemId() != null ? "menu_item" : "combo"))
+                            .toList()));
         }
         return new Placed(row.id(), row.ref());
     }
@@ -271,19 +302,22 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
     // ── pricing ────────────────────────────────────────────────────────────────────────────────────────────
 
     private Priced price(Order order) {
-        var delivery = order.delivery();
         var isDelivery = order.mode().equals("delivery");
         if (!isDelivery && !order.mode().equals("pickup")) {
             throw RuleViolation.of("mode", "required", FoodOrderRules.MODE);
         }
-        if (isDelivery && delivery == null) {
-            throw RuleViolation.of("delivery", "required", FoodOrderRules.ADDRESS_REQUIRED);
-        }
-        if (isDelivery) {
+        var delivery = isDelivery
+                ? Objects.requireNonNullElseGet(order.delivery(), () -> {
+                    throw RuleViolation.of("delivery", "required", FoodOrderRules.ADDRESS_REQUIRED);
+                })
+                : null;
+        if (delivery != null) {
             FoodOrderRules.checkDelivery(delivery.dropoff(), delivery.extras(), delivery.note(), delivery.unit());
         }
         var kitchen = kitchens.kitchen(
-                        order.merchantId(), isDelivery ? delivery.lat() : null, isDelivery ? delivery.lng() : null)
+                        order.merchantId(),
+                        delivery == null ? null : delivery.lat(),
+                        delivery == null ? null : delivery.lng())
                 .orElseThrow(() -> new NotFound("kitchen", order.merchantId()));
         if (isDelivery && !kitchen.fulfilment().contains("courier")) {
             throw new Conflict("no_delivery", kitchen.name() + " doesn't deliver. Choose pickup.");
@@ -322,7 +356,7 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
             throw RuleViolation.of(
                     "items", "minimum", FoodOrderRules.belowMinimum(kitchen.minOrderCents() - dishes.subtotalCents()));
         }
-        var province = isDelivery ? delivery.province() : Objects.requireNonNullElse(kitchen.province(), "AB");
+        var province = delivery != null ? delivery.province() : Objects.requireNonNullElse(kitchen.province(), "AB");
         if (!FoodOrderRules.PROVINCE.matcher(province).matches()) {
             throw RuleViolation.of("delivery.province", "format", FoodOrderRules.PROVINCE_FORMAT);
         }
@@ -347,6 +381,7 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
         var lines = p.dishes().lines().stream()
                 .map(l -> new Line(
                         l.itemId(),
+                        l.comboId(),
                         l.title(),
                         l.qty(),
                         l.unitCents(),

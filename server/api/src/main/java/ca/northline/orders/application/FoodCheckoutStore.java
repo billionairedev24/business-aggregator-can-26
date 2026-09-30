@@ -57,7 +57,13 @@ public interface FoodCheckoutStore {
 
     /** @param modifiers JSON list the kitchen display reads ({@code [{"name": "Large"}, …]}) */
     record OrderLineRow(
-            String id, @Nullable String menuItemId, String title, int qty, long unitCents, String modifiers) {}
+            String id,
+            @Nullable String menuItemId,
+            @Nullable String comboId,
+            String title,
+            int qty,
+            long unitCents,
+            String modifiers) {}
 
     record OrderState(String state, @Nullable Instant deliveredAt) {}
 }
