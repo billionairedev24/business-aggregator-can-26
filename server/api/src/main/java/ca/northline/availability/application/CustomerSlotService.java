@@ -37,6 +37,7 @@ class CustomerSlotService implements ProviderSlots {
     private final HoursRepository hours;
     private final Team team;
     private final DaySchedule schedule;
+    private final SlotHoldStore holds;
     private final Clock clock;
 
     @Override
@@ -46,7 +47,7 @@ class CustomerSlotService implements ProviderSlots {
         var now = clock.instant();
         var result = new ArrayList<Day>();
         for (int i = 0; i < days; i++) {
-            result.add(day(merchantId, members, rules, from.plusDays(i), durationMin, now));
+            result.add(day(merchantId, members, rules, from.plusDays(i), durationMin, now, customerId));
         }
         return List.copyOf(result);
     }
@@ -61,7 +62,7 @@ class CustomerSlotService implements ProviderSlots {
         var now = clock.instant();
         var today = LocalDate.now(clock.withZone(ZONE));
         for (int i = 0; i < Math.min(rules.horizonDays(), NEXT_LOOKAHEAD_DAYS); i++) {
-            var free = day(merchantId, members, rules, today.plusDays(i), durationMin, now).slots().stream()
+            var free = day(merchantId, members, rules, today.plusDays(i), durationMin, now, null).slots().stream()
                     .filter(Slot::free)
                     .findFirst();
             if (free.isPresent()) {
@@ -74,11 +75,16 @@ class CustomerSlotService implements ProviderSlots {
     @Override
     public Optional<String> freeMember(
             String merchantId, Instant startsAt, int durationMin, @Nullable String customerId) {
-        var rules = hours.rules(merchantId).orElseGet(BookingRules::defaults);
+        return freeMembers(merchantId, startsAt, durationMin, customerId).stream().findFirst();
+    }
+
+    /** Every bookable member free for the job at {@code startsAt}, the least busy that day first. */
+    List<String> freeMembers(String merchantId, Instant startsAt, int durationMin, @Nullable String customerId) {
+        var rules = rules(merchantId);
         var date = startsAt.atZone(ZONE).toLocalDate();
         var now = clock.instant();
         if (!bookableTime(rules, date, startsAt, now)) {
-            return Optional.empty();
+            return List.of();
         }
         var start = startsAt.atZone(ZONE).toLocalTime();
         record Candidate(String userId, int jobs) {}
@@ -88,7 +94,7 @@ class CustomerSlotService implements ProviderSlots {
                     var free = day.jobs() < rules.maxJobsPerDay()
                             && SlotPlanner.preview(
                                             day.ranges(),
-                                            day.busy(),
+                                            busy(day, merchantId, m.userId(), date, now, customerId),
                                             durationMin,
                                             rules.intervalMin(),
                                             rules.bufferMin())
@@ -98,20 +104,53 @@ class CustomerSlotService implements ProviderSlots {
                         out.accept(new Candidate(m.userId(), day.jobs()));
                     }
                 })
-                .min(Comparator.comparingInt(Candidate::jobs).thenComparing(Candidate::userId))
-                .map(Candidate::userId);
+                .sorted(Comparator.comparingInt(Candidate::jobs).thenComparing(Candidate::userId))
+                .map(Candidate::userId)
+                .toList();
+    }
+
+    BookingRules rules(String merchantId) {
+        return hours.rules(merchantId).orElseGet(BookingRules::defaults);
+    }
+
+    /** Jobs and calendar busy blocks, plus other customers' slot holds (S-55). */
+    private List<SlotPlanner.Busy> busy(
+            DaySchedule.Day day,
+            String merchantId,
+            String memberUserId,
+            LocalDate date,
+            Instant now,
+            @Nullable String customerId) {
+        var held = holds
+                .ofMember(merchantId, memberUserId, DaySchedule.start(date), DaySchedule.start(date.plusDays(1)), now)
+                .stream()
+                .filter(h -> !h.customerId().equals(customerId))
+                .map(h -> DaySchedule.busy(h.startsAt(), h.endsAt(), date))
+                .toList();
+        if (held.isEmpty()) {
+            return day.busy();
+        }
+        var all = new ArrayList<>(day.busy());
+        all.addAll(held);
+        return all;
     }
 
     private Day day(
-            String merchantId, List<Member> members, BookingRules rules, LocalDate date, int durationMin, Instant now) {
+            String merchantId,
+            List<Member> members,
+            BookingRules rules,
+            LocalDate date,
+            int durationMin,
+            Instant now,
+            @Nullable String customerId) {
         var starts = new TreeMap<LocalTime, Boolean>();
         var closedReasons = new ArrayList<@Nullable String>();
         for (var member : members) {
             var day = schedule.of(merchantId, member.userId(), date, null);
             closedReasons.add(day.closed());
             boolean full = day.jobs() >= rules.maxJobsPerDay();
-            for (var slot : SlotPlanner.preview(
-                    day.ranges(), day.busy(), durationMin, rules.intervalMin(), rules.bufferMin())) {
+            var busy = busy(day, merchantId, member.userId(), date, now, customerId);
+            for (var slot : SlotPlanner.preview(day.ranges(), busy, durationMin, rules.intervalMin(), rules.bufferMin())) {
                 starts.merge(slot.start(), slot.free() && !full, Boolean::logicalOr);
             }
         }

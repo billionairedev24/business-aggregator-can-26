@@ -1,5 +1,7 @@
 package ca.northline.availability.application;
 
+import ca.northline.booking.api.BookingConfirmed;
+
 import ca.northline.availability.application.CalendarSyncEvents.CalendarChanged;
 import ca.northline.availability.application.CalendarSyncEvents.CalendarConnected;
 import ca.northline.availability.application.CalendarSyncEvents.ChannelRenewalRequested;
@@ -13,6 +15,15 @@ import org.springframework.stereotype.Component;
 class CalendarSyncListener {
 
     private final CalendarSyncService sync;
+
+    /** S-55: the new job goes to the member's Google / Outlook calendar at once (S-32 waited for this event). */
+    @ApplicationModuleListener
+    void on(BookingConfirmed event) {
+        var member = event.memberUserId();
+        if (member != null) {
+            sync.writeBackMember(event.merchantId(), member);
+        }
+    }
 
     @ApplicationModuleListener
     void on(CalendarConnected event) {
