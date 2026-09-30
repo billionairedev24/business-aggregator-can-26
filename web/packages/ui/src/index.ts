@@ -17,3 +17,4 @@ export * from './DataTable';
 export * from './GroupedMultiSelect';
 export * from './FileButton';
 export * from './Chat';
+export * from './ShopTiles';

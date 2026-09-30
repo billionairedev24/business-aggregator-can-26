@@ -1,0 +1,26 @@
+/* Shop landing and department pages (design 06 shop / category). Tokens only; tiles are the kit's (ShopTiles). */
+.shop-page { padding-top: 32px; }
+.shop-hero, .shop-dept-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.shop-dept-head { margin-top: 10px; }
+.shop-kicker { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-neutral-700); }
+.shop-title { font-size: clamp(30px, 4vw, 40px); margin: 6px 0 0; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.shop-sub { font-size: 14px; color: var(--color-neutral-700); margin-top: 6px; }
+.shop-section { padding-top: 36px; }
+.shop-section + .shop-section { padding-top: 40px; }
+.shop-section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.shop-h2 { font-size: 22px; margin: 0; }
+.shop-note { font-size: 13px; color: var(--color-neutral-700); }
+.shop-more { font-size: 14px; display: inline-flex; align-items: center; min-height: 44px; }
+.shop-crumbs { padding-top: 0; font-size: 13px; color: var(--color-neutral-700); }
+.shop-crumbs ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; }
+.shop-crumbs li { display: inline-flex; align-items: center; }
+.shop-crumbs li + li::before { content: '›'; padding: 0 6px; color: var(--color-neutral-600); }
+.shop-crumbs a { display: inline-flex; align-items: center; min-height: 44px; }
+.shop-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.shop-chip { font-size: 14px; padding: 8px 14px; min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; border-radius: var(--radius-md); border: 1px solid var(--color-divider); color: var(--color-text); text-decoration: none; }
+.shop-chip:hover { background: var(--color-accent-100); color: var(--color-text); }
+.shop-chip[aria-current='page'] { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-bg); }
+.shop-chip:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.shop-skeleton-grid { display: grid; margin-top: 28px; }
+.shop-skeleton-depts { grid-template-columns: repeat(auto-fill, minmax(min(100%, 130px), 1fr)); gap: 10px; }
+.shop-skeleton-products { grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 20px; }

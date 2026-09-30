@@ -44,6 +44,13 @@ export function defineMessages<M extends Record<string, string>>(dict: { en: M; 
   };
 }
 
+/**
+ * The same catalogue outside React (a route's `head()`, which runs before render): `messagesFor(dict, 'fr')('title')`.
+ */
+export function messagesFor<M extends Record<string, string>>(dict: { en: M; fr: { [K in keyof M]: string } }, locale: Locale): Translate<Extract<keyof M, string>> {
+  return (key, values) => format((dict[locale] as M)[key] ?? dict.en[key] ?? key, locale, values);
+}
+
 /** Money is stored in cents (CAD). en-CA → $1,912.40 · fr-CA → 1 912,40 $ */
 export function formatMoney(cents: number, locale: Locale = 'en', opts: { whole?: boolean } = {}): string {
   return new Intl.NumberFormat(INTL_LOCALE[locale], { style: 'currency', currency: 'CAD', currencyDisplay: 'narrowSymbol', minimumFractionDigits: opts.whole ? 0 : 2, maximumFractionDigits: opts.whole ? 0 : 2 }).format(cents / 100);

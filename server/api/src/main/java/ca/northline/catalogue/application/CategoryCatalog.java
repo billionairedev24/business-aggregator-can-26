@@ -4,6 +4,7 @@ import ca.northline.catalogue.domain.CategoryProfile;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 
 /** Outbound port: categories with their attribute templates, banned flag and median approved price. */
 public interface CategoryCatalog {
@@ -12,4 +13,7 @@ public interface CategoryCatalog {
     List<CategoryProfile> all(String root, Locale locale);
 
     Optional<CategoryProfile> profile(String categoryId);
+
+    /** Leaves no listing may use ({@code northline.catalogue.banned-categories}). */
+    Set<String> banned();
 }

@@ -6,6 +6,8 @@ import { createMemoryHistory, createRootRoute, createRoute, createRouter, Outlet
 import { I18nProvider, SiteLinkProvider, type Locale } from '@northline/ui';
 import { vi } from 'vitest';
 import { ConsumerLayout } from '../features/shell/ConsumerLayout';
+import { NotFound } from '../features/shell/NotFound';
+import { RouteError } from '../features/shell/RouteError';
 import { ScreenPending } from '../features/shell/ScreenPending';
 import { SCREENS, type ScreenKey } from '../features/shell/screens';
 import { persistLocale } from '../lib/locale';
@@ -46,7 +48,7 @@ export function renderApp(path: string, { locale = 'en' as Locale, geolocation =
   });
   const routes = (Object.entries(SCREENS) as [ScreenKey, (typeof SCREENS)[ScreenKey]][]).map(([key, s]) =>
     createRoute({ getParentRoute: () => root, path: s.path, component: screens[key] ?? (() => <ScreenPending screen={key} />) }));
-  const router = createRouter({ routeTree: root.addChildren(routes), history: createMemoryHistory({ initialEntries: [path] }) });
+  const router = createRouter({ routeTree: root.addChildren(routes), history: createMemoryHistory({ initialEntries: [path] }), defaultErrorComponent: RouteError, defaultNotFoundComponent: NotFound });
   const result = render(<QueryClientProvider client={queryClient}><RouterProvider router={router} /></QueryClientProvider>);
   return { ...result, router, queryClient };
 }
