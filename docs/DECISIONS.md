@@ -1902,3 +1902,54 @@ Worker: `WebhookDeliveryTest` (Kafka 4 + PostGIS + WireMock receiver: signed `bo
   - `SchemaOwnershipTests`, `SchemaOwnershipDetectorTest`, `ModularityTests`
   - the existing payments, messaging, food, catalogue and merchants API tests, unchanged.
 - **Schema:** none.
+
+## 2026-09-30 — S-123 Catalogue media: check merchant ownership before serving draft images
+
+- **The bug:** `GET /api/v1/merchants/{merchantId}/media/{mediaId}` checked that the caller was a member of
+  `{merchantId}`, then loaded the image by id alone. A member of business B could read business A's unvetted upload
+  through B's own path if they learned the id.
+- **Rule:** a listing image is served to members of the business that uploaded it (`catalogue.media.merchant_id`) and
+  to anyone else only once it is **approved content**:
+  - (a) an own image (`offers.own_images`) of an **approved** offer of the uploading business, or
+  - (b) an image of a **locked** catalogue record (`catalog_products.image_set` with `locked = true`), meaning brand-owner or
+    platform-curated content, such as the seeded Bosch record.
+  - Approval is read from the listings on every request, not stored on the image. An image that leaves an approved
+    listing, or whose listing goes back to pending (S-39), becomes private again. Customers don't see a pending
+    listing anyway.
+  - It must be the **uploader's own** approved offer. When seller B's listing that inherits A's shared GTIN record is
+    approved, that does not publish A's images. Otherwise anyone who knows a product's GTIN could publish another
+    seller's unvetted photos.
+- **Responses:**
+  - Another business's unapproved image: **403** ProblemDetail `code: forbidden`, detail "This image belongs to another
+    business and hasn't been approved yet." (our copy).
+  - Unknown id: 404, as before.
+  - The owner's path used by an outsider: still 403 `not_a_member`.
+- **Storefront:** there was no public route for listing images, so this adds `GET /api/v1/public/catalogue/media/{mediaId}`,
+  open under the existing `/api/v1/public/**` rule.
+  - It serves approved images only, and anything else is **404** (not 403), so ids can't be probed.
+  - `Cache-Control: public, max-age=3600`, kept short so that an image going private (S-39) drops out of caches within an hour.
+  - Plus `nosniff`, which the Studio route now also sends.
+- **Editor and GTIN lookup:** `GET …/catalogue/products/lookup` and the product editor's shared-record images leave
+  out images the caller may not load, instead of returning URLs that would 403. So a second seller of a new GTIN sees
+  the record's text right away and its photos once the first seller's listing is approved.
+  - `LookupCatalogue.byGtin` now takes the merchant id.
+  - `MediaVisibility` (catalogue application) holds the rule for the endpoint, the lookup and the editor.
+- **Schema (V053, additive):** two partial GIN indexes for the lookup: `offers(own_images) WHERE vetting = 'approved'`
+  and `catalog_products(image_set) WHERE locked`. No new columns.
+- **Other file endpoints checked for the same bug:** none had it. Each already looks the file up by merchant *and* id:
+  - kitchen menu-item photos (`MenuStore.item(merchantId, itemId)`)
+  - message and help-case attachments (`messaging.attachments where merchant_id = :m`)
+  - onboarding / verification documents and storefront logos (`merchants.documents where merchant_id = :m`; a logo must be the merchant's own `logo` document)
+  - dispute evidence (loaded through the merchant's dispute)
+  - booking job photos, which have no download route, and attaching them checks the merchant.
+
+  Regression checks were added for kitchen photos and dispute evidence: another business's own path returns 404. The
+  tests for documents and attachments already covered this.
+- **Tests:** `VettingAndMediaApiTest.Ownership`:
+  - a draft image is 403 for another business (their path) and for an outsider on the owner's path, and 404 publicly
+  - once approved, it is public (with public caching) and visible to other businesses, while the same business's
+    other drafts stay private
+  - locked-record images are approved
+  - the GTIN lookup hides the first seller's unvetted photos until approval
+- **Not done:** the consumer app doesn't render listing images yet, so nothing calls the public route today. There is
+  no signed or CDN URL (S-10's `presignGet` is still unused).

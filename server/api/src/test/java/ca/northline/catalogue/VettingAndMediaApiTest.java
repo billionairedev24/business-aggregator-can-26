@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -244,6 +245,128 @@ class VettingAndMediaApiTest extends CatalogueApiTest {
                             .with(TestJwt.member(owner.userId())))
                     .andExpect(status().isUnprocessableContent())
                     .andExpect(jsonPath("$.errors[0].field").value("images"));
+        }
+    }
+
+    /** S-123: another business's images are served only once approved; the storefront path only serves approved ones. */
+    @Nested
+    class Ownership {
+
+        static final String MEDIA = "/api/v1/merchants/{m}/media/{id}";
+        static final String PUBLIC = "/api/v1/public/catalogue/media/{id}";
+
+        @Test
+        void draftImageIs403ForAnotherBusiness_andNotPublic() throws Exception {
+            var owner = seller(MerchantRole.OWNER);
+            var bytes = png(1200, 1200, Color.WHITE);
+            var draft = upload(owner, bytes);
+            product(owner, AUTO_PARTS, 2000, draft);
+            var other = seller(MerchantRole.OWNER);
+
+            mvc.perform(get(MEDIA, owner.merchantId(), draft).with(TestJwt.member(owner.userId())))
+                    .andExpect(status().isOk())
+                    .andExpect(content().bytes(bytes));
+            // the other business's own Studio path: the key is known, the image isn't theirs
+            mvc.perform(get(MEDIA, other.merchantId(), draft).with(TestJwt.member(other.userId())))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value("forbidden"))
+                    .andExpect(jsonPath("$.detail")
+                            .value("This image belongs to another business and hasn't been approved yet."));
+            // the owner's path: not a member
+            mvc.perform(get(MEDIA, owner.merchantId(), draft).with(TestJwt.member(other.userId())))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value("not_a_member"));
+            mvc.perform(get(PUBLIC, draft)).andExpect(status().isNotFound());
+            mvc.perform(get(MEDIA, other.merchantId(), "01J9ZD3V0000000000000NOPE1")
+                            .with(TestJwt.member(other.userId())))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        void approvedImageIsPublic_andVisibleToOtherBusinesses_otherDraftsStayPrivate() throws Exception {
+            var owner = seller(MerchantRole.OWNER);
+            var bytes = png(1250, 1250, Color.WHITE);
+            var image = upload(owner, bytes);
+            var id = product(owner, AUTO_PARTS, 2000, image);
+            submit(owner, id);
+            awaitApproved(owner, id);
+            var unused = upload(owner, png(1260, 1260, Color.WHITE));
+            var other = seller(MerchantRole.OWNER);
+
+            mvc.perform(get(PUBLIC, image))
+                    .andExpect(status().isOk())
+                    .andExpect(content().bytes(bytes))
+                    .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("public")));
+            mvc.perform(get(MEDIA, other.merchantId(), image).with(TestJwt.member(other.userId())))
+                    .andExpect(status().isOk());
+            mvc.perform(get(MEDIA, other.merchantId(), unused).with(TestJwt.member(other.userId())))
+                    .andExpect(status().isForbidden());
+            mvc.perform(get(PUBLIC, unused)).andExpect(status().isNotFound());
+        }
+
+        @Test
+        void imagesOfALockedCatalogueRecordAreApproved() throws Exception {
+            var brand = seller(MerchantRole.OWNER);
+            var image = upload(brand, png(1300, 1100, Color.WHITE));
+            var recordId = ca.northline.shared.Ids.next();
+            jdbc.sql("""
+                            insert into catalogue.catalog_products (id, ref, identifier_type, title, category_id, attributes,
+                              image_set, locked)
+                            values (?, ?, 'none', 'Brand record', ?, '{}', ?, true)
+                            """)
+                    .params(recordId, "T-" + recordId, AUTO_PARTS, new String[] {image})
+                    .update();
+            var other = seller(MerchantRole.OWNER);
+            mvc.perform(get(MEDIA, other.merchantId(), image).with(TestJwt.member(other.userId())))
+                    .andExpect(status().isOk());
+            mvc.perform(get(PUBLIC, image)).andExpect(status().isOk());
+        }
+
+        @Test
+        void gtinLookupLeavesOutTheFirstSellersUnvettedImages_untilApproved() throws Exception {
+            var first = seller(MerchantRole.OWNER);
+            var gtin = randomGtin13();
+            var image = upload(first, png(1400, 1400, Color.WHITE));
+            var body = """
+                    {"identifierType":"gtin","gtin":"%s","title":"New wiper","brand":"Acme","categoryId":"%s",
+                     "attributes":{"partType":"Brakes","length":"n/a","position":"Front"},"priceCents":2000,"stock":3,
+                     "imageSource":"own","imageIds":["%s"],"fulfilment":["pickup"],"countryOfOrigin":"CA",
+                     "restrictedOk":true,"bilingualOk":true}
+                    """.formatted(gtin, AUTO_PARTS, image);
+            var id = json(mvc.perform(postJson("/api/v1/merchants/{m}/products", body, first.merchantId())
+                                    .with(TestJwt.member(first.userId())))
+                            .andExpect(status().isCreated()))
+                    .get("id")
+                    .asString();
+            var second = seller(MerchantRole.OWNER);
+            var lookup = "/api/v1/merchants/{m}/catalogue/products/lookup?gtin={g}";
+
+            mvc.perform(get(lookup, second.merchantId(), gtin).with(TestJwt.member(second.userId())))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.images").isEmpty());
+            mvc.perform(get(lookup, first.merchantId(), gtin).with(TestJwt.member(first.userId())))
+                    .andExpect(jsonPath("$.images[0].id").value(image));
+
+            submit(first, id);
+            awaitApproved(first, id);
+            mvc.perform(get(lookup, second.merchantId(), gtin).with(TestJwt.member(second.userId())))
+                    .andExpect(jsonPath("$.images[0].id").value(image))
+                    .andExpect(jsonPath("$.images[0].url")
+                            .value("/api/v1/merchants/%s/media/%s".formatted(second.merchantId(), image)));
+        }
+
+        /** A GTIN-13 with a valid check digit in the 2xx (restricted circulation) range, fresh per call. */
+        static String randomGtin13() {
+            var random = java.util.concurrent.ThreadLocalRandom.current();
+            var digits = new StringBuilder("2");
+            for (int i = 0; i < 11; i++) {
+                digits.append(random.nextInt(10));
+            }
+            var sum = 0;
+            for (int i = 0; i < 12; i++) {
+                sum += (digits.charAt(i) - '0') * (i % 2 == 0 ? 1 : 3);
+            }
+            return digits.append((10 - sum % 10) % 10).toString();
         }
     }
 }

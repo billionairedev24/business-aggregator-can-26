@@ -12,6 +12,7 @@ import ca.northline.shared.RuleViolation;
 import ca.northline.shared.storage.ObjectKeys;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +28,7 @@ class MediaService implements ManageMedia {
     private final MediaRepository media;
     private final MediaStorage storage;
     private final ImageInspector inspector;
+    private final MediaVisibility visibility;
 
     @Override
     @Transactional
@@ -58,8 +60,20 @@ class MediaService implements ManageMedia {
     }
 
     @Override
-    public Optional<Content> content(String mediaId) {
-        return media.find(mediaId)
-                .flatMap(m -> storage.get(m.storageKey()).map(bytes -> new Content(bytes, m.contentType())));
+    public Optional<Content> content(String merchantId, String mediaId) {
+        var asset = media.find(mediaId);
+        if (asset.isPresent() && !visibility.visibleTo(merchantId, asset.get())) {
+            throw new AccessDeniedException(ListingMessages.MEDIA_NOT_YOURS);
+        }
+        return asset.flatMap(this::bytes);
+    }
+
+    @Override
+    public Optional<Content> publicContent(String mediaId) {
+        return media.find(mediaId).filter(visibility::approved).flatMap(this::bytes);
+    }
+
+    private Optional<Content> bytes(MediaAsset m) {
+        return storage.get(m.storageKey()).map(bytes -> new Content(bytes, m.contentType()));
     }
 }

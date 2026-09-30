@@ -48,6 +48,9 @@ public final class ListingMessages {
     public static final String IMAGES_TOO_MANY = "Main image plus up to 8 more.";
     public static final String IMAGE_UNKNOWN = "That image is no longer available — upload it again.";
     public static final String IMAGE_TYPE = "Use a JPG or PNG image.";
+    /** 403 detail: another business's image that hasn't been approved (S-123). */
+    public static final String MEDIA_NOT_YOURS = "This image belongs to another business and hasn't been approved yet.";
+
     public static final String IMAGE_TOO_SMALL = "Images must be at least 1000 px on the longest side.";
     public static final String IMAGE_TOO_LARGE = "Images must be 15 MB or smaller.";
     public static final String IMAGE_REQUIRED = "Choose an image to upload.";

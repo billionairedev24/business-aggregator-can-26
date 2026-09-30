@@ -129,6 +129,12 @@ class RefundCaseApiTest extends IntegrationTest {
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.IMAGE_PNG))
                     .andExpect(content().bytes(new byte[] {(byte) 0x89, 'P', 'N', 'G'}));
+            // S-123: another business can't read it through its own path, even knowing both ids
+            var stranger = fx.shop("provider", "master");
+            mvc.perform(get("/api/v1/merchants/" + stranger.merchantId() + "/disputes/" + disputeId + "/evidence/"
+                                    + evidenceId)
+                            .with(TestJwt.member(stranger.ownerId())))
+                    .andExpect(status().isNotFound());
             mvc.perform(post(url("/disputes/" + disputeId + "/goodwill-offer"))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"amountCents\":8000}")
