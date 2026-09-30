@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ago, D, H, M, renderScreen, stubFetch } from '../messages/testing';
@@ -13,6 +13,12 @@ vi.mock('../shell/api', () => ({
 vi.mock('@tanstack/react-router', async orig => ({ ...(await orig<typeof import('@tanstack/react-router')>()), useNavigate: () => shell.navigate }));
 
 import { HelpScreen, type HelpSearch } from './HelpScreen';
+
+// Pin the clock (noon in Edmonton) before the fixtures below are built: "today"/"tomorrow" are Edmonton days, so a
+// real clock made the SLA wording depend on whether UTC and Edmonton were on the same calendar day.
+vi.useFakeTimers({ toFake: ['Date'] });
+vi.setSystemTime(new Date('2026-09-08T18:00:00Z'));
+afterAll(() => vi.useRealTimers());
 
 const base = `/api/v1/merchants/${M}/help`;
 const TOPICS = { items: [
