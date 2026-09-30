@@ -209,10 +209,11 @@ class CommerceSyncService implements SyncIntegrations, CommerceJobs {
                 }
                 for (var product : page.items()) {
                     seen.add(product.id());
-                    switch (applyOne(connection, product, known.get(product.id()), linked, errors)) {
-                        case CREATED -> created++;
-                        case UPDATED -> updated++;
-                        case UNCHANGED, SKIPPED -> {}
+                    var result = applyOne(connection, product, known.get(product.id()), linked, errors);
+                    if (result == CommerceImporter.Result.CREATED) {
+                        created++;
+                    } else if (result == CommerceImporter.Result.UPDATED) {
+                        updated++;
                     }
                 }
                 cursor = next(page);

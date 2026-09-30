@@ -62,10 +62,10 @@ class FakeCatalogSource implements CommerceCatalogSource {
         var p = CommerceHttp.params();
         p.put("code", "fake-" + Ids.next().toLowerCase(Locale.ROOT));
         p.put("state", state);
-        switch (provider) {
-            case SHOPIFY -> p.put("shop", shop == null ? "prairie-parts.myshopify.com" : shop);
-            case LIGHTSPEED -> p.put("domain_prefix", "prairieparts");
-            case SQUARE -> {}
+        if (provider == CommerceProvider.SHOPIFY) {
+            p.put("shop", shop == null ? "prairie-parts.myshopify.com" : shop);
+        } else if (provider == CommerceProvider.LIGHTSPEED) {
+            p.put("domain_prefix", "prairieparts");
         }
         return URI.create(redirectUri + CommerceHttp.query(p));
     }
