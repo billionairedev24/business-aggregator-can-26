@@ -2,7 +2,8 @@ import { useEffect, useId, useState, type ReactNode } from 'react';
 import { ChipTabs, Field, FileButton, TextInput } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import type { MerchantType } from '../shell/api';
-import { useArrangeSections, useUpdateStorefront, useUploadLogo, useVerifyDomain, type SectionState, type Storefront } from './api';
+import { useArrangeSections, useUpdateStorefront, useUploadLogo, type SectionState, type Storefront } from './api';
+import { CustomDomainField } from './CustomDomainField';
 import { SectionList } from './SectionList';
 import { StorefrontPreview } from './StorefrontPreview';
 import { sectionText, useStorefrontT } from './messages';
@@ -31,18 +32,14 @@ export function PageBuilder({ storefront: s, canEdit, variant, children }: PageB
   const update = useUpdateStorefront(s.merchantId);
   const arrange = useArrangeSections(s.merchantId);
   const logo = useUploadLogo(s.merchantId);
-  const verify = useVerifyDomain(s.merchantId);
   const [selected, setSelected] = useState<SectionKind>(s.sections[0]?.kind ?? 'hero');
   const [device, setDevice] = useState<'phone' | 'web'>('phone');
   const [announce, setAnnounce] = useState('');
-  const ids = { tagline: useId(), domain: useId(), sections: useId() };
+  const ids = { tagline: useId(), sections: useId() };
 
   const [tagline, setTagline] = useState(s.tagline ?? '');
-  const [domain, setDomain] = useState(s.customDomain ?? '');
   useEffect(() => setTagline(s.tagline ?? ''), [s.tagline]);
-  useEffect(() => setDomain(s.customDomain ?? ''), [s.customDomain]);
   const taglineError = tagline.trim().length > 80 ? t('taglineTooLong') : serverError(update.error, 'tagline');
-  const domainError = serverError(update.error, 'customDomain');
 
   const onCount = s.sections.filter(x => x.enabled).length;
   const arrangeTo = (next: SectionState[], moved?: { kind: SectionKind; to: number }) => {
@@ -52,7 +49,7 @@ export function PageBuilder({ storefront: s, canEdit, variant, children }: PageB
   const reset = () => arrangeTo(DEFAULT_ORDER[type].map(kind => ({ kind, enabled: true })));
   const sel = s.sections.find(x => x.kind === selected) ?? s.sections[0]!;
   const ratio = contrastWithWhite(s.brandColor);
-  const busy = update.isPending || arrange.isPending || logo.isPending || verify.isPending;
+  const busy = update.isPending || arrange.isPending || logo.isPending;
   const failed = update.isError || arrange.isError || logo.isError;
 
   return (
@@ -117,28 +114,7 @@ export function PageBuilder({ storefront: s, canEdit, variant, children }: PageB
           </div>
         </div>
 
-        <div className="nl-field">
-          <label className="nl-label" htmlFor={ids.domain}>{t('customDomain')}</label>
-          <div className="nl-domain-row">
-            <TextInput
-              id={ids.domain}
-              placeholder={t(`domainPh_${type}`)}
-              value={domain}
-              disabled={!canEdit}
-              aria-invalid={domainError ? true : undefined}
-              aria-describedby={`${ids.domain}-hint`}
-              onChange={e => setDomain(e.target.value)}
-              onBlur={() => { if (domain.trim() !== (s.customDomain ?? '')) update.mutate({ customDomain: domain.trim() }); }}
-              onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-            />
-            {s.customDomain && s.customDomainStatus !== 'verified' && canEdit
-              ? <button type="button" className="btn btn-secondary" disabled={verify.isPending} onClick={() => verify.mutate()}>{t('checkNow')}</button>
-              : null}
-          </div>
-          {domainError ? <div role="alert" className="nl-error">{domainError}</div> : null}
-          {s.customDomain && s.customDomainStatus ? <div className="nl-hint" data-status={s.customDomainStatus} role="status">{t(`domain_${s.customDomainStatus}`)}</div> : null}
-          <div className="nl-hint" id={`${ids.domain}-hint`}>{t('domainHint')}</div>
-        </div>
+        <CustomDomainField storefront={s} canEdit={canEdit} />
 
         {children}
 

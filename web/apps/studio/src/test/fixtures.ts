@@ -8,7 +8,7 @@ export function storefront(over: Partial<Storefront> = {}): Storefront {
   return {
     id: '01J9ZD3V0000000000000SFTS1', merchantId: MERCHANT, slug: 'aspen-wrench', url: 'northline.ca/aspen-wrench', pageKind: 'business_page',
     brandColor: '#2f5d3a', brandContrast: 7.6, logo: null, tagline: 'Mobile mechanic · Calgary', ctaLabel: 'book_visit', announcement: null,
-    customDomain: null, customDomainStatus: null, publishedAt: null,
+    customDomain: null, customDomainStatus: null, customDomainTarget: 'pages.northline.ca', customDomainSetup: null, publishedAt: null,
     sections: DEFAULT_ORDER.provider.map((kind, i) => ({ id: `S${i}`, kind, position: i, enabled: true, required: kind === 'hero' || kind === 'cta', settings: {} })),
     business: { displayName: 'Aspen Wrench', type: 'provider', tier: 'registered', status: 'applicant', city: 'Calgary', about: 'Mobile mechanic since 2019.', serviceArea: 'Calgary + 40 km', sameDayCutoff: null, fulfilment: [], cuisines: [], verifiedFacts: ['licence:AMVIC'] },
     ...over,

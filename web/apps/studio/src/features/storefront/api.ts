@@ -7,6 +7,25 @@ import { CTA_LABELS, SECTION_KINDS, type SectionKind } from './sections';
 /** `GET /api/v1/merchants/{id}/storefront` — see DECISIONS.md › storefront API. */
 export const Section = z.object({ id: z.string(), kind: z.enum(SECTION_KINDS), position: z.number(), enabled: z.boolean(), required: z.boolean(), settings: z.record(z.string(), z.unknown()).default({}) });
 export type Section = z.infer<typeof Section>;
+/** S-31: pending → verified → issuing → live, failed, expired (DECISIONS.md › S-31). */
+export const DomainStatus = z.enum(['pending', 'verified', 'issuing', 'live', 'failed', 'expired']);
+export type DomainStatus = z.infer<typeof DomainStatus>;
+export const DomainProblem = z.enum(['txt_missing', 'txt_mismatch', 'no_record', 'not_pointing', 'dns_error', 'certificate', 'capacity', 'rate_limited']);
+export type DomainProblem = z.infer<typeof DomainProblem>;
+/** What the owner adds at their DNS host (CNAME, or ALIAS / A for an apex, and the ownership TXT) and where it stands. */
+export const DomainSetup = z.object({
+  target: z.string(),
+  apex: z.boolean(),
+  records: z.array(z.object({ type: z.string(), name: z.string(), value: z.string() })),
+  problem: DomainProblem.nullish(),
+  checkedAt: z.string().nullish(),
+  nextCheckAt: z.string().nullish(),
+  verifiedAt: z.string().nullish(),
+  liveAt: z.string().nullish(),
+  graceEndsAt: z.string().nullish(),
+});
+export type DomainSetup = z.infer<typeof DomainSetup>;
+
 export const Storefront = z.object({
   id: z.string(),
   merchantId: z.string(),
@@ -20,7 +39,9 @@ export const Storefront = z.object({
   ctaLabel: z.enum(CTA_LABELS),
   announcement: z.string().nullish(),
   customDomain: z.string().nullish(),
-  customDomainStatus: z.enum(['pending', 'verified', 'failed']).nullish(),
+  customDomainStatus: DomainStatus.nullish(),
+  customDomainTarget: z.string().default('pages.northline.ca'),
+  customDomainSetup: DomainSetup.nullish(),
   publishedAt: z.string().nullish(),
   sections: z.array(Section),
   business: z.object({
@@ -94,6 +115,10 @@ export const useArrangeSections = (merchantId: string) =>
 
 export const useVerifyDomain = (merchantId: string) =>
   useStorefrontMutation<void>(merchantId, () => http(`/api/v1/merchants/${merchantId}/storefront/domain/verify`, { method: 'POST' }, Storefront));
+
+/** DEV ONLY ("Simulate DNS records →"): the api exposes it under the `local` profile only (in-memory DNS zone). */
+export const useSimulateDns = (merchantId: string) =>
+  useStorefrontMutation<void>(merchantId, () => http(`/api/v1/dev/merchants/${merchantId}/storefront/domain/dns`, { method: 'POST' }, Storefront));
 
 export const usePublishStorefront = (merchantId: string) =>
   useStorefrontMutation<void>(merchantId, () => http(`/api/v1/merchants/${merchantId}/storefront/publish`, { method: 'POST' }, Storefront));
