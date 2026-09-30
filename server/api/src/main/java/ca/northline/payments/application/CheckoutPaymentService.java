@@ -21,12 +21,17 @@ class CheckoutPaymentService implements PaymentAuthorizations {
 
     private final EscrowRepository escrows;
     private final PaymentGateway gateway;
+    private final TaxCalculationService taxCalculations;
     private final Clock clock;
 
     @Override
     public Started start(Request request) {
         if (request.amountCents() <= 0 || request.taxCents() < 0) {
             throw RuleViolation.of("amountCents", "range", "Enter an amount.");
+        }
+        var calculationId = request.taxCalculationId();
+        if (calculationId != null) {
+            taxCalculations.use(calculationId, request);
         }
         var total = request.amountCents() + request.taxCents();
         var customer = escrows.stripeCustomer(request.customerId()).orElseGet(() -> {
