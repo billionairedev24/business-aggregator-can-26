@@ -143,6 +143,10 @@ Notes:
   ends (verified, name mismatch, `document_expired`, …); emailed links land in Mailpit and open the same page. To try
   the real adapter, set `IDENTITY_PROVIDER=stripe` with a test-mode `STRIPE_SECRET_KEY` and forward webhooks with
   `stripe listen` ([stripe.md § Identity](stripe.md#7-identity-s-22)).
+- **Business registries (S-23):** the three sources answer from `server/api/src/main/resources/registries/fixtures.json`
+  (e.g. Alberta `2021456789` = Prairie Wrench, Calgary `BL 22-118840` = Pho Dau Bo); unknown numbers go to the manual
+  review queue (`GET /api/v1/console/registry-reviews`, staff). To try Calgary's real dataset:
+  `REGISTRY_CALGARY_PROVIDER=socrata` (no account needed). [registries.md](registries.md)
 - **Your own Kafka:** create the topics with
   `KAFKA_TOPICS_CMD=kafka-topics.sh KAFKA_TOPICS_BOOTSTRAP=localhost:9092 scripts/topics.sh`, or with the provisioner
   the deployed environments use: `cd server && ./gradlew :worker:kafkaTopics --args='apply'` (`plan` / `verify` change
