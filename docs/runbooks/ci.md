@@ -20,6 +20,7 @@ Docker executor that allows `docker:dind` (GitLab), plus public images and packa
 | deploy | `deploy.yml` › `chart` | `chart:validate` (`PIPELINE_PART=chart` or `all`) | S-14: `deploy/helm/validate.sh` — `helm lint --strict` + `helm template \| kubeconform -strict` for dev/staging/prod × aws/gcp/azure, kind and Gateway API |
 | gitops | `gitops.yml` › `validate` (`action=validate`) | `gitops:validate` (`PIPELINE_PART=gitops` or `all`) | S-15: `deploy/argocd/validate.sh` — the app of apps for dev/staging/prod × aws/gcp/azure \| `kubeconform -strict` against the Argo CD CRDs, the sync policy (only dev automated), the chart as each Application renders it, the Argo CD install kustomization ([gitops.md](gitops.md#checks-no-cluster)) |
 | gitops | `gitops.yml` › `promote` (`action=promote`) | `gitops:promote` (`PIPELINE_PART=promote` only) | S-15: `deploy/argocd/promote.sh` writes `deploy/argocd/envs/<env>/images.yaml` (digests looked up in the registry, or copied from another environment) and opens the promotion PR / merge request ([gitops.md § Promotion](gitops.md#promotion-build--digest--pr--sync)) |
+| events | `event-schemas.yml` › `event schemas` | `events:schemas` (`PIPELINE_PART=events` or `all`) | S-34: `./gradlew :event-contracts:eventSchemas` with the base branch (input `base` / `EVENT_SCHEMAS_BASE`, default `main`, fetched in full): schemas valid for the worker's validator, every `@Externalized` event ↔ a schema, sample payloads validate, no breaking change against the merge base without a version bump — required base (exit 2 without it). `server build` runs the first three and check 4 when the base is there ([events.md § Schema checks](events.md#7-schema-checks-s-34)). |
 | web | `web.yml` › `studio-smoke` (optional) | `web:studio-smoke` (optional) | `ci/studio-smoke.sh`: PostGIS service → `:api:flywayMigrate -Pdb.devSeed=true` + `:api:seedCategories` → api and auth with the `local` profile → studio dev server (dev auth as Ravi Sandhu) → `scripts/studio-smoke.mjs` (135 screen/width/locale checks). Screenshots and logs in the `studio-smoke` artifact. |
 
 Expected durations (hosted runners; first run in brackets, before caches are warm):
@@ -64,6 +65,7 @@ Expected durations (hosted runners; first run in brackets, before caches are war
 | gitops | `from` | — | promote: copy the digests `dev` or `staging` runs |
 | gitops | `registry`, `image-tag` | — | promote without `from`: look up `<registry>/<app>:<image-tag>` |
 | gitops | `login` | `password` | promote: registry login for the lookup (`password`, `ghcr`, `none`) |
+| event-schemas | `base` | `main` | the branch the schemas are compared with |
 
 A new run on the same branch cancels the previous one of the same workflow (concurrency group per workflow and ref).
 
@@ -74,7 +76,8 @@ A new run on the same branch cancels the previous one of the same workflow (conc
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `PIPELINE_PART` | `all` | `all`, `server`, `web`, `infra`, `chart`, `gitops` (S-15), `images` or `promote` (S-15; the last two never in `all`) |
+| `PIPELINE_PART` | `all` | `all`, `server`, `web`, `infra`, `chart`, `gitops` (S-15), `events` (S-34), `images` or `promote` (S-15; the last two never in `all`) |
+| `EVENT_SCHEMAS_BASE` | `main` | events: the branch the schemas are compared with |
 | `SERVER_GRADLE_ARGS` | `build` | Gradle arguments for server/, e.g. `:api:build`, `build -x test`, `build --rerun-tasks` |
 | `RUN_STUDIO_SMOKE` | `false` | `true` adds the studio smoke sweep |
 | `INFRA_CLOUD` | `all` | infra: `all`, `aws`, `gcp` or `azure` |

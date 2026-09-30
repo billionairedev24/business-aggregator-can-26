@@ -5,18 +5,24 @@ import ca.northline.developer.api.AuditTrail;
 import ca.northline.developer.api.WebhookEndpointChanged;
 import ca.northline.developer.application.DeveloperUseCases.Actor;
 import ca.northline.developer.application.DeveloperUseCases.AddWebhookEndpoint;
+import ca.northline.developer.application.DeveloperUseCases.EnableWebhookEndpoint;
 import ca.northline.developer.application.DeveloperUseCases.IssueApiKey;
 import ca.northline.developer.application.DeveloperUseCases.ListApiKeys;
+import ca.northline.developer.application.DeveloperUseCases.ListWebhookDeliveries;
 import ca.northline.developer.application.DeveloperUseCases.ListWebhookEndpoints;
 import ca.northline.developer.application.DeveloperUseCases.RemoveWebhookEndpoint;
+import ca.northline.developer.application.DeveloperUseCases.ResendWebhookDelivery;
 import ca.northline.developer.application.DeveloperUseCases.RevokeApiKey;
 import ca.northline.developer.application.DeveloperUseCases.RotateWebhookSecret;
+import ca.northline.developer.application.DeveloperUseCases.SendTestWebhook;
 import ca.northline.developer.application.DeveloperUseCases.ViewAuditLog;
 import ca.northline.developer.domain.ApiKey;
 import ca.northline.developer.domain.AuditRecord;
 import ca.northline.developer.domain.DeveloperRules;
 import ca.northline.developer.domain.Secrets;
+import ca.northline.developer.domain.WebhookDelivery;
 import ca.northline.developer.domain.WebhookEndpoint;
+import ca.northline.shared.Conflict;
 import ca.northline.shared.Ids;
 import ca.northline.shared.NotFound;
 import java.time.Clock;
@@ -24,6 +30,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,6 +50,10 @@ class DeveloperSettingsService
                 AddWebhookEndpoint,
                 RotateWebhookSecret,
                 RemoveWebhookEndpoint,
+                EnableWebhookEndpoint,
+                ListWebhookDeliveries,
+                ResendWebhookDelivery,
+                SendTestWebhook,
                 ViewAuditLog {
 
     private final DeveloperStore store;
@@ -102,8 +113,7 @@ class DeveloperSettingsService
         var subscribed = DeveloperRules.events(command.events());
         var actor = command.actor();
         var secret = Secrets.webhookSecret();
-        var endpoint =
-                new WebhookEndpoint(Ids.next(), actor.merchantId(), url, subscribed, true, clock.instant(), null, null);
+        var endpoint = WebhookEndpoint.created(Ids.next(), actor.merchantId(), url, subscribed, clock.instant());
         store.insertEndpoint(endpoint, cipher.encrypt(secret), cipher.keyRef(), actor.userId());
         audit.record(entry(actor, "webhook.created", "webhook_endpoint", endpoint.id())
                 .withChange(null, Map.of("events", subscribed)));
@@ -113,13 +123,79 @@ class DeveloperSettingsService
 
     @Override
     @Transactional
-    public WebhookEndpoint.WithSecret rotate(Actor actor, String endpointId) {
+    public WebhookEndpoint.WithSecret rotate(Actor actor, String endpointId, @Nullable Integer overlapHours) {
+        var overlap = DeveloperRules.secretOverlap(overlapHours);
         var endpoint = endpoint(actor, endpointId);
         var secret = Secrets.webhookSecret();
-        store.replaceSecret(endpoint.id(), cipher.encrypt(secret), cipher.keyRef());
-        audit.record(entry(actor, "webhook.secret_rotated", "webhook_endpoint", endpoint.id()));
+        var previousUntil = overlap.isZero() ? null : clock.instant().plus(overlap);
+        store.replaceSecret(endpoint.id(), cipher.encrypt(secret), cipher.keyRef(), previousUntil);
+        audit.record(entry(actor, "webhook.secret_rotated", "webhook_endpoint", endpoint.id())
+                .withChange(null, Map.of("overlapHours", overlap.toHours())));
         publish(actor, endpoint.id(), "secret_rotated");
-        return new WebhookEndpoint.WithSecret(endpoint, secret);
+        return new WebhookEndpoint.WithSecret(endpoint(actor, endpointId), secret);
+    }
+
+    @Override
+    @Transactional
+    public WebhookEndpoint enable(Actor actor, String endpointId) {
+        var endpoint = endpoint(actor, endpointId);
+        if (endpoint.active()) {
+            return endpoint;
+        }
+        store.enableEndpoint(endpoint.id());
+        audit.record(entry(actor, "webhook.enabled", "webhook_endpoint", endpoint.id()));
+        publish(actor, endpoint.id(), "enabled");
+        return endpoint(actor, endpointId);
+    }
+
+    @Override
+    public List<WebhookDelivery> deliveries(String merchantId, String endpointId) {
+        var endpoint = store.findEndpoint(merchantId, endpointId)
+                .orElseThrow(() -> new NotFound("webhook endpoint", endpointId));
+        return store.deliveries(endpoint.id(), ListWebhookDeliveries.LIMIT);
+    }
+
+    @Override
+    @Transactional
+    public WebhookDelivery resend(Actor actor, String endpointId, String deliveryId) {
+        var endpoint = activeEndpoint(actor, endpointId);
+        var original = store.findDelivery(endpoint.id(), deliveryId)
+                .orElseThrow(() -> new NotFound("webhook delivery", deliveryId));
+        if (original.pending()) {
+            throw new Conflict("delivery_pending", "This delivery is still being retried.");
+        }
+        if (original.eventType() == null) {
+            throw new Conflict(
+                    "delivery_not_resendable", "This delivery predates the delivery log and can't be resent.");
+        }
+        var queued = store.queueDelivery(
+                Ids.next(),
+                actor.merchantId(),
+                endpoint.id(),
+                original.eventId(),
+                original.eventType(),
+                original.id(),
+                original.test(),
+                clock.instant());
+        audit.record(entry(actor, "webhook.delivery_resent", "webhook_delivery", original.id()));
+        return queued;
+    }
+
+    @Override
+    @Transactional
+    public WebhookDelivery sendTest(Actor actor, String endpointId) {
+        var endpoint = activeEndpoint(actor, endpointId);
+        var queued = store.queueDelivery(
+                Ids.next(),
+                actor.merchantId(),
+                endpoint.id(),
+                Ids.next(),
+                WebhookDelivery.TEST_EVENT,
+                null,
+                true,
+                clock.instant());
+        audit.record(entry(actor, "webhook.test_sent", "webhook_endpoint", endpoint.id()));
+        return queued;
     }
 
     @Override
@@ -139,6 +215,14 @@ class DeveloperSettingsService
     private WebhookEndpoint endpoint(Actor actor, String endpointId) {
         return store.findEndpoint(actor.merchantId(), endpointId)
                 .orElseThrow(() -> new NotFound("webhook endpoint", endpointId));
+    }
+
+    private WebhookEndpoint activeEndpoint(Actor actor, String endpointId) {
+        var endpoint = endpoint(actor, endpointId);
+        if (!endpoint.active()) {
+            throw new Conflict("webhook_disabled", "This endpoint is turned off. Turn it back on first.");
+        }
+        return endpoint;
     }
 
     private void publish(Actor actor, String endpointId, String change) {

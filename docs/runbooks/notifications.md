@@ -17,6 +17,7 @@ the provider is called — the api's S-13 `Mailer` and the worker use the same c
 | `dispute.updated`, `dispute.decided` (`payments.dispute`) | `dispute` | owners | email | SMS, push |
 | `refund.case_updated`, `refund.issued` (`payments.refund`) | `dispute` | owners | email | SMS, push |
 | team invitation to a mobile number | — | the invitee | **SMS** (the link's token never leaves the api) | — |
+| a webhook endpoint turned off after 3 days of failures (worker dispatcher, not a Kafka event — S-33, [webhooks.md](webhooks.md)) | — service notice | owners | — | **email** (template `webhook-disabled`), whatever the matrix; claimed per owner under the endpoint's `disable_notice_id`, retried every minute for 2 days while the provider is down |
 
 The emails S-13 built stay in the api (they're tested there and send right after commit); the worker adds what S-13
 left open: the SMS and push channels, and the `payout.failed` email. Technicians and cooks get no money notices. Rows

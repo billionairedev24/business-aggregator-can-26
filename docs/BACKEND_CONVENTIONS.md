@@ -213,6 +213,8 @@ public record QuoteSent(String eventId, Instant occurredAt, String aggregateId, 
    and is retried from the registry, so make it idempotent on `eventId`.
 4. Payloads carry ids, never PII. Add `server/api/src/main/resources/events/<module>.<event>.v1.schema.json`. A breaking
    change means a version bump (`@Override int version()` plus a new schema file).
+   `:event-contracts` (S-34, part of `./gradlew build`) checks the schemas against the records and against `main`
+   (docs/runbooks/events.md § 7).
 5. Under `local` and `test` externalization is off (no Kafka). Module listeners still work.
 
 ## 10. Code style

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "northline:developer.webhook_endpoint_changed:1",
-  "description": "A webhook endpoint was created, re-keyed or deleted; the webhook worker reloads it. Topic developer.webhook_endpoint, key = endpoint id.",
+  "description": "A webhook endpoint was created, re-keyed, turned back on (S-33) or deleted; the webhook worker reads endpoints at delivery time. Topic developer.webhook_endpoint, key = endpoint id.",
   "type": "object",
   "required": [
     "eventId",
@@ -36,6 +36,7 @@
       "enum": [
         "created",
         "secret_rotated",
+        "enabled",
         "deleted"
       ]
     }

@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { Alert, Button, Checkbox, DataTable, Dialog, ErrorState, Field, PageSkeleton, Tag, TextInput, type DataTableColumn } from '@northline/ui';
+import { Alert, Button, Checkbox, DataTable, Dialog, Drawer, ErrorState, Field, PageSkeleton, Select, Tag, TextInput, useFormatters, type DataTableColumn } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { syncQuery } from '../availability/api';
 import { integrationsQuery } from '../catalogue/api';
 import { useMerchant, useMerchantId, useRole } from '../shell/api';
 import { screenHref } from '../shell/nav';
-import { apiKeysQuery, businessQuery, developerOptionsQuery, useAddWebhook, useIssueKey, useRemoveWebhook, useRevokeKey, useRotateWebhook, webhooksQuery, type ApiKey, type Webhook } from './api';
+import { apiKeysQuery, businessQuery, deliveriesQuery, developerOptionsQuery, useAddWebhook, useEnableWebhook, useIssueKey, useQueueDelivery, useRemoveWebhook, useRevokeKey, useRotateWebhook, webhooksQuery, type ApiKey, type Webhook, type WebhookDelivery } from './api';
 import { useSettingsT, type SettingsT } from './messages';
 import { keySchema, localizeServerErrors, webhookErrors } from './validation';
 
@@ -63,11 +63,14 @@ export function ApiTab() {
 
 function Webhooks({ owner, onSecret }: { owner: boolean; onSecret: (s: Secret) => void }) {
   const t = useSettingsT();
+  const f = useFormatters();
   const merchantId = useMerchantId();
   const q = useQuery(webhooksQuery(merchantId));
-  const rotate = useRotateWebhook(merchantId);
   const remove = useRemoveWebhook(merchantId);
+  const enable = useEnableWebhook(merchantId);
   const [adding, setAdding] = useState(false);
+  const [rotating, setRotating] = useState<Webhook | null>(null);
+  const [log, setLog] = useState<Webhook | null>(null);
   const delivery = (w: Webhook) => (w.lastStatus == null ? t('noDelivery') : t('lastDelivery', { status: `${w.lastStatus} ${w.lastStatus < 300 ? t('ok') : t('failed')}` }));
   return (
     <section aria-labelledby="set-hooks">
@@ -78,21 +81,116 @@ function Webhooks({ owner, onSecret }: { owner: boolean; onSecret: (s: Secret) =
             <li key={w.id}>
               <span className="nl-set-hookurl">{w.url}</span>
               <span className="nl-set-sub">{t('webhookMeta', { events: w.events.join(' · '), signature: w.signature, delivery: delivery(w) })}</span>
-              {owner && (
-                <span className="nl-set-hookactions">
-                  <Button variant="ghost" aria-label={t('rotateLabel', { url: w.url })} disabled={rotate.isPending}
-                    onClick={() => rotate.mutate(w.id, { onSuccess: r => onSecret({ title: t('signingTitle'), note: t('signingNote'), value: r.secret }) })}>{t('rotate')}</Button>
+              {!w.active && w.disabledAt ? <span className="nl-set-hookstate"><Tag tone="accent-2">{t('hookOff', { date: f.date(w.disabledAt, 'full') })}</Tag></span>
+                : w.failingSince ? <span className="nl-set-sub nl-error">{t('hookFailing', { date: f.date(w.failingSince, 'dateTime') })}</span> : null}
+              {w.previousSecretUntil ? <span className="nl-set-sub">{t('prevSecret', { time: f.date(w.previousSecretUntil, 'dateTime') })}</span> : null}
+              <span className="nl-set-hookactions">
+                {owner && !w.active && <Button variant="secondary" aria-label={t('enableLabel', { url: w.url })} disabled={enable.isPending} onClick={() => enable.mutate(w.id)}>{t('enable')}</Button>}
+                <Button variant="ghost" aria-label={t('deliveriesLabel', { url: w.url })} onClick={() => setLog(w)}>{t('deliveries')}</Button>
+                {owner && (<>
+                  <Button variant="ghost" aria-label={t('rotateLabel', { url: w.url })} onClick={() => setRotating(w)}>{t('rotate')}</Button>
                   <Button variant="ghost" aria-label={t('removeLabel', { url: w.url })} disabled={remove.isPending} onClick={() => remove.mutate(w.id)}>{t('remove')}</Button>
-                </span>
-              )}
+                </>)}
+              </span>
             </li>
           ))}
         </ul>
       )}
-      {(rotate.isError || remove.isError) && <p role="alert" className="nl-error">{t('actionFailed')}</p>}
+      {(remove.isError || enable.isError) && <p role="alert" className="nl-error">{t('actionFailed')}</p>}
       {owner && <Button variant="secondary" className="nl-set-below" onClick={() => setAdding(true)}>{t('addWebhook')}</Button>}
       {adding && <WebhookDialog onClose={() => setAdding(false)} onAdded={value => { setAdding(false); onSecret({ title: t('signingTitle'), note: t('signingNote'), value }); }} />}
+      {rotating && <RotateDialog endpoint={rotating} onClose={() => setRotating(null)} onRotated={value => { setRotating(null); onSecret({ title: t('signingTitle'), note: t('signingNote'), value }); }} />}
+      {log && <DeliveriesDrawer endpoint={q.data?.find(w => w.id === log.id) ?? log} owner={owner} onClose={() => setLog(null)} />}
     </section>
+  );
+}
+
+const OVERLAPS = ['24', '168', '0'] as const;
+
+/** Rotate with an overlap: the old secret keeps signing (a second v1 in Northline-Signature) while the partner updates. */
+function RotateDialog({ endpoint, onClose, onRotated }: { endpoint: Webhook; onClose: () => void; onRotated: (secret: string) => void }) {
+  const t = useSettingsT();
+  const merchantId = useMerchantId();
+  const rotate = useRotateWebhook(merchantId);
+  const [overlap, setOverlap] = useState<(typeof OVERLAPS)[number]>('24');
+  return (
+    <Dialog open onClose={onClose} title={t('rotateTitle')} actions={<>
+      <Button variant="ghost" onClick={onClose}>{t('cancel')}</Button>
+      <Button disabled={rotate.isPending} onClick={() => rotate.mutate({ id: endpoint.id, overlapHours: Number(overlap) }, { onSuccess: r => onRotated(r.secret) })}>{rotate.isPending ? t('rotating') : t('rotate')}</Button>
+    </>}>
+      <div className="nl-set-dialogform">
+        <p className="nl-small">{t('rotateBody')}</p>
+        <p className="nl-small nl-set-hookurl"><code>{endpoint.url}</code></p>
+        <Field label={t('overlap')}>
+          <Select value={overlap} onChange={e => setOverlap(e.target.value as (typeof OVERLAPS)[number])} options={OVERLAPS.map(o => ({ value: o, label: t(`overlap_${o}`) }))} />
+        </Field>
+        {rotate.isError && <p role="alert" className="nl-error">{t('actionFailed')}</p>}
+      </div>
+    </Dialog>
+  );
+}
+
+/** The endpoint's delivery log (S-33): state, attempts with status / error, response snippets, resend and test event. */
+function DeliveriesDrawer({ endpoint, owner, onClose }: { endpoint: Webhook; owner: boolean; onClose: () => void }) {
+  const t = useSettingsT();
+  const merchantId = useMerchantId();
+  const q = useQuery(deliveriesQuery(merchantId, endpoint.id));
+  const queue = useQueueDelivery(merchantId, endpoint.id);
+  const canQueue = owner && endpoint.active;
+  return (
+    <Drawer open onClose={onClose} title={t('deliveriesTitle')} width={560}
+      footer={canQueue ? <Button variant="secondary" disabled={queue.isPending} onClick={() => queue.mutate({ test: true })}>{t('sendTest')}</Button> : undefined}>
+      <p className="nl-small nl-set-hookurl"><code>{endpoint.url}</code></p>
+      <p className="nl-small nl-muted">{t('deliveriesNote')}</p>
+      {queue.isSuccess && <p role="status" className="nl-small">{t('queued')}</p>}
+      {queue.isError && <p role="alert" className="nl-error">{t('actionFailed')}</p>}
+      {q.isPending ? <PageSkeleton kpis={0} rows={4} /> : q.isError ? <ErrorState message={t('deliveriesError')} onRetry={() => void q.refetch()} />
+        : q.data.length === 0 ? <p className="nl-small nl-muted">{t('deliveriesEmpty')}</p> : (
+          <ul className="nl-set-deliveries">
+            {q.data.map(d => <DeliveryRow key={d.id} d={d} canResend={canQueue && d.state !== 'pending' && !!d.eventType} onResend={() => queue.mutate({ resend: d.id })} busy={queue.isPending} />)}
+          </ul>
+        )}
+    </Drawer>
+  );
+}
+
+export function outcome(a: { statusCode?: number | null; error?: string | null }): string {
+  return a.statusCode != null ? `HTTP ${a.statusCode}` : a.error ?? '—';
+}
+
+function DeliveryRow({ d, canResend, onResend, busy }: { d: WebhookDelivery; canResend: boolean; onResend: () => void; busy: boolean }) {
+  const t = useSettingsT();
+  const f = useFormatters();
+  const state = d.state === 'pending' && d.attempts > 0 ? 'retrying' : d.state;
+  const tone = { succeeded: 'accent', retrying: 'highlight', pending: 'neutral', failed: 'accent-2' } as const;
+  const when = f.date(d.lastAttemptAt ?? d.createdAt, 'dateTime');
+  return (
+    <li>
+      <div className="nl-set-row">
+        <span><code>{d.eventType ?? '—'}</code>{d.test ? <span className="nl-muted"> · {t('testEvent')}</span> : null}</span>
+        <Tag tone={tone[state]}>{t(`st_${state}`)}</Tag>
+      </div>
+      <span className="nl-set-sub">
+        {[when, d.attempts > 0 ? outcome(d) : null, d.attempts > 0 ? t('attemptsN', { n: d.attempts }) : null,
+          state === 'retrying' && d.nextAttemptAt ? t('nextAttempt', { time: f.date(d.nextAttemptAt, 'dateTime') }) : null].filter(Boolean).join(' · ')}
+      </span>
+      {(d.history.length > 0 || canResend) && (
+        <details className="nl-set-delivery">
+          <summary>{t('details')}</summary>
+          {d.history.length > 0 && (
+            <ol className="nl-set-attempts">
+              {d.history.map(a => (
+                <li key={a.attempt}>
+                  <span>{t('attemptRow', { n: a.attempt, time: f.date(a.at, 'dateTime'), outcome: outcome(a) })}{a.durationMs != null ? ` · ${t('durationMs', { ms: a.durationMs })}` : ''}</span>
+                  {a.responseSnippet ? <pre className="nl-set-code nl-set-snippet" aria-label={t('response')}>{a.responseSnippet}</pre> : null}
+                </li>
+              ))}
+            </ol>
+          )}
+          {canResend && <Button variant="ghost" disabled={busy} aria-label={t('resendLabel', { type: d.eventType ?? '', time: when })} onClick={onResend}>{t('resend')}</Button>}
+        </details>
+      )}
+    </li>
   );
 }
 

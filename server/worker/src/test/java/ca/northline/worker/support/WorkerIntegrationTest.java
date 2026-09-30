@@ -31,5 +31,15 @@ public abstract class WorkerIntegrationTest {
         registry.add("northline.notifications.retry.max-delay", () -> "1000");
         registry.add("northline.notifications.deferred-initial-delay", () -> "1h");
         registry.add("northline.email.retry.attempts", () -> "1");
+        // Webhooks (S-33): WireMock on http://localhost, a fast dispatcher tick, no jitter (the tests move the clock),
+        // short timeouts.
+        registry.add("northline.webhooks.allow-local", () -> "true");
+        registry.add("northline.webhooks.poll-every", () -> "100ms");
+        registry.add("northline.webhooks.notify-every", () -> "200ms");
+        registry.add("northline.webhooks.initial-delay", () -> "0s");
+        registry.add("northline.webhooks.retry.jitter", () -> "0");
+        registry.add("northline.webhooks.connect-timeout", () -> "2s");
+        registry.add("northline.webhooks.response-timeout", () -> "3s");
+        registry.add("northline.webhooks.total-timeout", () -> "4s");
     }
 }

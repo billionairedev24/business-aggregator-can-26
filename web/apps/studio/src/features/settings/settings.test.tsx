@@ -6,7 +6,7 @@ import { BusinessTab } from './BusinessTab';
 import { NotificationsTab, eventsFor } from './NotificationsTab';
 import { SecurityTab, deviceName } from './SecurityTab';
 import { TeamTab } from './TeamTab';
-import { ApiTab, ago } from './ApiTab';
+import { ApiTab, ago, outcome } from './ApiTab';
 import { businessErrors, dollarsToCents, inviteErrors, webhookErrors } from './validation';
 
 let role = 'owner';
@@ -200,11 +200,94 @@ describe('Settings › API & integrations', () => {
     expect(within(row).queryByText('Connected')).toBeNull();
   });
 
+  const apiRoutes = (hook: Record<string, unknown>, extra: Record<string, (url: string, init: RequestInit) => unknown> = {}) => ({
+    ...extra,
+    [`GET ${S}/api-keys`]: () => ({ items: [] }),
+    [`GET ${S}/webhooks`]: () => ({ items: [{ id: 'w1', url: 'https://prairiewrench.ca/hooks/northline', events: ['booking.completed'], active: true, signature: 'HMAC-SHA256', createdAt: '2026-02-02T17:00:00Z', lastStatus: 503, lastDeliveryAt: '2026-09-30T18:00:00Z', ...hook }] }),
+    [`GET ${S}/developer-options`]: () => ({ scopes: [], events: ['booking.completed'] }),
+    [`GET ${S}/business`]: () => business,
+    'GET /api/v1/merchants/m1/availability/sync': () => ({ calendars: [], team: [] }),
+    'GET /api/v1/merchants/m1/listings/integrations': () => ({ items: [] }),
+  });
+  const deliveries = { items: [
+    { id: 'd2', eventId: 'e2', eventType: 'booking.completed', state: 'pending', attempts: 2, statusCode: 503, lastAttemptAt: '2026-09-30T18:00:00Z', nextAttemptAt: '2026-09-30T18:04:30Z', durationMs: 120, error: null, responseSnippet: 'busy', test: false, resendOf: null, createdAt: '2026-09-30T17:58:00Z',
+      history: [{ attempt: 2, at: '2026-09-30T18:00:00Z', statusCode: 503, durationMs: 120, error: null, responseSnippet: 'busy' }, { attempt: 1, at: '2026-09-30T17:58:00Z', statusCode: null, durationMs: 15000, error: 'timed out after 15 s', responseSnippet: null }] },
+    { id: 'd1', eventId: 'e1', eventType: 'payment.released', state: 'succeeded', attempts: 1, statusCode: 200, lastAttemptAt: '2026-09-29T18:00:00Z', nextAttemptAt: null, durationMs: 80, error: null, responseSnippet: 'ok', test: false, resendOf: null, createdAt: '2026-09-29T18:00:00Z',
+      history: [{ attempt: 1, at: '2026-09-29T18:00:00Z', statusCode: 200, durationMs: 80, error: null, responseSnippet: 'ok' }] },
+  ] };
+
+  it('shows the delivery log with attempts and responses; the owner resends and sends a test event', async () => {
+    const queued = { id: 'd3', eventId: 'e1', eventType: 'payment.released', state: 'pending', attempts: 0, test: false, resendOf: 'd1', createdAt: new Date().toISOString(), history: [] };
+    const calls = mockFetch(apiRoutes({}, {
+      [`GET ${S}/webhooks/w1/deliveries`]: () => deliveries,
+      [`POST ${S}/webhooks/w1/deliveries/d1/resend`]: () => queued,
+      [`POST ${S}/webhooks/w1/test`]: () => ({ ...queued, id: 'd4', eventType: 'webhook.test', test: true, resendOf: null }),
+    }));
+    const user = userEvent.setup();
+    renderWithProviders(<ApiTab />);
+    await user.click(await screen.findByRole('button', { name: 'Deliveries to https://prairiewrench.ca/hooks/northline' }));
+    const drawer = await screen.findByRole('dialog', { name: 'Deliveries' });
+    expect(await within(drawer).findByText('Retrying')).toBeTruthy();
+    expect(within(drawer).getByText('Delivered')).toBeTruthy();
+    expect(within(drawer).getByText(/HTTP 503 · 2 attempts · next attempt/)).toBeTruthy();
+    expect(within(drawer).getByText(/Attempt 1 · .* · timed out after 15 s · 15000 ms/)).toBeTruthy();
+    expect(within(drawer).getAllByLabelText('Response').map(p => p.textContent)).toEqual(['busy', 'ok']);
+    expect(within(drawer).queryByRole('button', { name: /^Resend booking.completed/ })).toBeNull(); // still retrying
+
+    await user.click(within(drawer).getByRole('button', { name: /^Resend payment.released/ }));
+    await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url.endsWith('/webhooks/w1/deliveries/d1/resend'))).toBe(true));
+    expect(await within(drawer).findByText('Queued. It goes out within a few seconds.')).toBeTruthy();
+
+    await user.click(within(drawer).getByRole('button', { name: 'Send test event' }));
+    await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url.endsWith('/webhooks/w1/test'))).toBe(true));
+  });
+
+  it('a technician reads the log but can’t resend or test', async () => {
+    role = 'technician';
+    mockFetch(apiRoutes({}, { [`GET ${S}/webhooks/w1/deliveries`]: () => deliveries }));
+    const user = userEvent.setup();
+    renderWithProviders(<ApiTab />);
+    await user.click(await screen.findByRole('button', { name: 'Deliveries to https://prairiewrench.ca/hooks/northline' }));
+    const drawer = await screen.findByRole('dialog', { name: 'Deliveries' });
+    expect(await within(drawer).findByText('Delivered')).toBeTruthy();
+    expect(within(drawer).queryByRole('button', { name: /^Resend/ })).toBeNull();
+    expect(within(drawer).queryByRole('button', { name: 'Send test event' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Rotate/ })).toBeNull();
+  });
+
+  it('shows a turned-off endpoint and turns it back on', async () => {
+    const calls = mockFetch(apiRoutes({ active: false, disabledAt: '2026-09-30T18:00:00Z', failingSince: '2026-09-27T18:00:00Z' }, {
+      [`POST ${S}/webhooks/w1/enable`]: () => ({ id: 'w1', url: 'https://prairiewrench.ca/hooks/northline', events: ['booking.completed'], active: true, signature: 'HMAC-SHA256', createdAt: '2026-02-02T17:00:00Z', lastStatus: 503 }),
+    }));
+    const user = userEvent.setup();
+    renderWithProviders(<ApiTab />);
+    expect(await screen.findByText('Turned off Sep 30, 2026 after 3 days of failed deliveries')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Turn https://prairiewrench.ca/hooks/northline back on' }));
+    await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url.endsWith('/webhooks/w1/enable'))).toBe(true));
+    await waitFor(() => expect(screen.queryByText(/Turned off/)).toBeNull());
+  });
+
+  it('rotates with the chosen overlap and shows the new secret once', async () => {
+    const calls = mockFetch(apiRoutes({}, {
+      [`POST ${S}/webhooks/w1/secret`]: () => ({ endpoint: { id: 'w1', url: 'https://prairiewrench.ca/hooks/northline', events: ['booking.completed'], active: true, signature: 'HMAC-SHA256', createdAt: '2026-02-02T17:00:00Z', previousSecretUntil: null }, secret: 'whsec_test_new' }),
+    }));
+    const user = userEvent.setup();
+    renderWithProviders(<ApiTab />);
+    await user.click(await screen.findByRole('button', { name: 'Rotate the signing secret of https://prairiewrench.ca/hooks/northline' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Rotate the signing secret' });
+    await user.selectOptions(within(dialog).getByLabelText('Old secret keeps working'), 'No — stop it now (it leaked)');
+    await user.click(within(dialog).getByRole('button', { name: 'Rotate secret' }));
+    expect(await screen.findByText('whsec_test_new')).toBeTruthy();
+    expect(calls.find(c => c.method === 'POST' && c.url.endsWith('/secret'))?.body).toEqual({ overlapHours: 0 });
+  });
+
   it('formats "last used"', () => {
     const t = ((k: string, v?: Record<string, unknown>) => `${k}:${v?.n ?? ''}`) as never;
     expect(ago(null, t)).toBe('never:');
     expect(ago(new Date(Date.now() - 2 * 60_000).toISOString(), t)).toBe('minAgo:2');
     expect(ago(new Date(Date.now() - 60 * 60_000).toISOString(), t)).toBe('hAgo:1');
+    expect(outcome({ statusCode: 503 })).toBe('HTTP 503');
+    expect(outcome({ statusCode: null, error: 'refused: only https:// URLs are allowed' })).toBe('refused: only https:// URLs are allowed');
   });
 });
 

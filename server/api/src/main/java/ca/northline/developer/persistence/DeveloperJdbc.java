@@ -8,6 +8,7 @@ import ca.northline.developer.api.AuditTrail;
 import ca.northline.developer.application.DeveloperStore;
 import ca.northline.developer.domain.ApiKey;
 import ca.northline.developer.domain.AuditRecord;
+import ca.northline.developer.domain.WebhookDelivery;
 import ca.northline.developer.domain.WebhookEndpoint;
 import ca.northline.shared.Ids;
 import java.sql.Array;
@@ -19,6 +20,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -116,12 +118,96 @@ class DeveloperJdbc implements DeveloperStore, AuditTrail {
     }
 
     @Override
-    public void replaceSecret(String endpointId, byte[] encryptedSecret, String secretRef) {
-        jdbc.sql("update developer.webhook_endpoints set secret_enc = :enc, secret_ref = :ref where id = :id")
+    public void replaceSecret(
+            String endpointId, byte[] encryptedSecret, String secretRef, @Nullable Instant previousUntil) {
+        jdbc.sql("""
+                        update developer.webhook_endpoints
+                           set secret_prev_enc = case when cast(:until as timestamptz) is null then null else secret_enc end,
+                               secret_prev_until = case when secret_enc is null then null else cast(:until as timestamptz) end,
+                               secret_enc = :enc, secret_ref = :ref
+                         where id = :id
+                        """)
                 .param("id", endpointId)
                 .param("enc", encryptedSecret)
                 .param("ref", secretRef)
+                .param("until", previousUntil == null ? null : ts(previousUntil))
                 .update();
+    }
+
+    @Override
+    public void enableEndpoint(String endpointId) {
+        jdbc.sql("""
+                        update developer.webhook_endpoints
+                           set active = true, disabled_at = null, disabled_reason = null, failing_since = null,
+                               consecutive_failures = 0, disable_notice_id = null, disabled_notified_at = null
+                         where id = :id
+                        """).param("id", endpointId).update();
+    }
+
+    @Override
+    public List<WebhookDelivery> deliveries(String endpointId, int limit) {
+        var rows = jdbc.sql(DELIVERIES + " where d.endpoint_id = :e order by d.created_at desc, d.id desc limit :limit")
+                .param("e", endpointId)
+                .param("limit", limit)
+                .query((rs, _) -> delivery(rs, List.of()))
+                .list();
+        if (rows.isEmpty()) {
+            return rows;
+        }
+        var attempts = jdbc
+                .sql("""
+                        select delivery_id, attempt, at, status_code, duration_ms, error, response_snippet
+                          from developer.webhook_attempts where delivery_id in (:ids)
+                         order by delivery_id, attempt desc
+                        """)
+                .param("ids", rows.stream().map(WebhookDelivery::id).toList())
+                .query((rs, _) -> Map.entry(rs.getString("delivery_id"), attempt(rs)))
+                .list()
+                .stream()
+                .collect(Collectors.groupingBy(
+                        Map.Entry::getKey, Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
+        return rows.stream()
+                .map(d -> withHistory(d, attempts.getOrDefault(d.id(), List.of())))
+                .toList();
+    }
+
+    @Override
+    public Optional<WebhookDelivery> findDelivery(String endpointId, String deliveryId) {
+        return jdbc.sql(DELIVERIES + " where d.endpoint_id = :e and d.id = :id")
+                .param("e", endpointId)
+                .param("id", deliveryId)
+                .query((rs, _) -> delivery(rs, List.of()))
+                .optional();
+    }
+
+    @Override
+    public WebhookDelivery queueDelivery(
+            String id,
+            String merchantId,
+            String endpointId,
+            String eventId,
+            String eventType,
+            @Nullable String resendOf,
+            boolean test,
+            Instant at) {
+        jdbc.sql("""
+                        insert into developer.webhook_deliveries
+                               (id, endpoint_id, merchant_id, event_id, event_type, payload, state, attempt,
+                                next_attempt_at, resend_of, test, created_at)
+                        values (:id, :e, :m, :event, :type,
+                                (select payload from developer.webhook_deliveries where id = :resendOf),
+                                'pending', 0, :at, :resendOf, :test, :at)
+                        """)
+                .param("id", id)
+                .param("e", endpointId)
+                .param("m", merchantId)
+                .param("event", eventId)
+                .param("type", eventType)
+                .param("resendOf", resendOf)
+                .param("test", test)
+                .param("at", ts(at))
+                .update();
+        return findDelivery(endpointId, id).orElseThrow();
     }
 
     @Override
@@ -177,6 +263,8 @@ class DeveloperJdbc implements DeveloperStore, AuditTrail {
 
     private static final String ENDPOINTS = """
             select e.id, e.merchant_id, e.url, e.events, coalesce(e.active, true) as active, e.created_at,
+                   e.failing_since, e.disabled_at,
+                   case when e.secret_prev_enc is not null then e.secret_prev_until end as prev_until,
                    d.status_code as last_status, d.at as last_at
               from developer.webhook_endpoints e
               left join lateral (select status_code, at from developer.webhook_deliveries
@@ -205,7 +293,76 @@ class DeveloperJdbc implements DeveloperStore, AuditTrail {
                 rs.getBoolean("active"),
                 requiredInstant(rs, "created_at"),
                 rs.getObject("last_status") == null ? null : rs.getInt("last_status"),
-                instant(rs, "last_at"));
+                instant(rs, "last_at"),
+                instant(rs, "failing_since"),
+                instant(rs, "disabled_at"),
+                instant(rs, "prev_until"));
+    }
+
+    /** Deliveries; a row written before S-33 has no state: its status code says how it went. */
+    private static final String DELIVERIES = """
+            select d.id, d.endpoint_id, d.event_id, d.event_type,
+                   coalesce(d.state, case when d.status_code between 200 and 299 then 'succeeded' else 'failed' end)
+                       as state,
+                   coalesce(d.attempt, 0) as attempts, d.status_code, d.at, d.next_attempt_at, d.duration_ms, d.error,
+                   d.response_snippet, d.test, d.resend_of, least(d.created_at, coalesce(d.at, d.created_at)) as created_at
+              from developer.webhook_deliveries d
+            """;
+
+    private static WebhookDelivery delivery(ResultSet rs, List<WebhookDelivery.Attempt> history) throws SQLException {
+        var pending = WebhookDelivery.PENDING.equals(rs.getString("state"));
+        return new WebhookDelivery(
+                rs.getString("id"),
+                rs.getString("endpoint_id"),
+                rs.getString("event_id"),
+                rs.getString("event_type"),
+                rs.getString("state"),
+                rs.getInt("attempts"),
+                integer(rs, "status_code"),
+                instant(rs, "at"),
+                pending ? instant(rs, "next_attempt_at") : null,
+                integer(rs, "duration_ms"),
+                rs.getString("error"),
+                rs.getString("response_snippet"),
+                rs.getBoolean("test"),
+                rs.getString("resend_of"),
+                requiredInstant(rs, "created_at"),
+                history);
+    }
+
+    private static WebhookDelivery withHistory(WebhookDelivery d, List<WebhookDelivery.Attempt> history) {
+        return new WebhookDelivery(
+                d.id(),
+                d.endpointId(),
+                d.eventId(),
+                d.eventType(),
+                d.state(),
+                d.attempts(),
+                d.statusCode(),
+                d.lastAttemptAt(),
+                d.nextAttemptAt(),
+                d.durationMs(),
+                d.error(),
+                d.responseSnippet(),
+                d.test(),
+                d.resendOf(),
+                d.createdAt(),
+                history);
+    }
+
+    private static WebhookDelivery.Attempt attempt(ResultSet rs) throws SQLException {
+        return new WebhookDelivery.Attempt(
+                rs.getInt("attempt"),
+                requiredInstant(rs, "at"),
+                integer(rs, "status_code"),
+                integer(rs, "duration_ms"),
+                rs.getString("error"),
+                rs.getString("response_snippet"));
+    }
+
+    private static @Nullable Integer integer(ResultSet rs, String column) throws SQLException {
+        var value = rs.getInt(column);
+        return rs.wasNull() ? null : value;
     }
 
     private static List<String> strings(@Nullable Array array) throws SQLException {
@@ -219,7 +376,7 @@ class DeveloperJdbc implements DeveloperStore, AuditTrail {
     private static String pgArray(List<String> values) {
         return values.stream()
                 .map(v -> '"' + v.replace("\\", "\\\\").replace("\"", "\\\"") + '"')
-                .collect(java.util.stream.Collectors.joining(",", "{", "}"));
+                .collect(Collectors.joining(",", "{", "}"));
     }
 
     private static @Nullable String json(@Nullable Map<String, ?> value) {

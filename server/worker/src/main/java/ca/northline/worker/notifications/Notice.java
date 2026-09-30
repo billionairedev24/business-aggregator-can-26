@@ -47,9 +47,19 @@ public record Notice(
         /** The push title. */
         String title(String business, Locale locale);
 
-        /** The email, when the worker owns this notice's email ({@code payout.failed}); null otherwise. */
-        default @Nullable EmailContent email(String business, java.net.URI payoutsLink) {
+        /**
+         * The email, when the worker owns this notice's email ({@code payout.failed}, {@code webhook disabled});
+         * null otherwise.
+         *
+         * @param link the Studio page of {@link #studioPage()} for this business
+         */
+        default @Nullable EmailContent email(String business, java.net.URI link) {
             return null;
+        }
+
+        /** The Studio page the email links to, relative to {@code /b/<merchantId>/}. */
+        default String studioPage() {
+            return "payouts";
         }
     }
 }
