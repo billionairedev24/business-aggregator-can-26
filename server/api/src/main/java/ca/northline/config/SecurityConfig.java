@@ -10,12 +10,17 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.authorization.AuthorityAuthorizationManager;
 import org.springframework.security.authorization.AuthorizationManagers;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.ObjectPostProcessor;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.DPoPProofContext;
+import org.springframework.security.oauth2.jwt.JwtDecoderFactory;
+import org.springframework.security.oauth2.server.resource.authentication.DPoPAuthenticationProvider;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -24,6 +29,7 @@ import org.springframework.security.web.access.AccessDeniedHandler;
  * Resource server: validates JWTs from northline-auth (claims mapped by {@link NorthlineJwtConverter}).
  * Merchant membership + {@code acr=mfa} are enforced per handler by {@code @RequiresMerchant}; this chain only does
  * the coarse, path-level rules — including staff role + {@code acr=mfa} for {@code /api/v1/console/**}. Under the {@code local} profile {@link DevAuthFilter} may authenticate first.
+ * DPoP-bound tokens of the mobile apps (S-29) are accepted with a proof of their key only ({@link DpopResourceConfig}).
  */
 @Configuration(proxyBeanMethods = false)
 @EnableMethodSecurity
@@ -31,7 +37,11 @@ class SecurityConfig {
 
     @Bean
     @Order(1)
-    SecurityFilterChain api(HttpSecurity http, NorthlineJwtConverter converter, ObjectProvider<DevAuthFilter> devAuth) {
+    SecurityFilterChain api(
+            HttpSecurity http,
+            NorthlineJwtConverter converter,
+            ObjectProvider<DevAuthFilter> devAuth,
+            JwtDecoderFactory<DPoPProofContext> dpopProofs) {
         devAuth.ifAvailable(filter -> http.addFilterBefore(filter, BearerTokenAuthenticationFilter.class));
         return http.securityMatcher("/api/**")
                 .authorizeHttpRequests(a -> a.requestMatchers(
@@ -56,7 +66,17 @@ class SecurityConfig {
                         .hasAuthority("SCOPE_merchant")
                         .anyRequest()
                         .authenticated())
-                .oauth2ResourceServer(o -> o.jwt(j -> j.jwtAuthenticationConverter(converter)))
+                // S-29: `Authorization: DPoP <token>` + `DPoP: <proof>` (mobile apps). Spring's bearer filter refuses a
+                // DPoP-bound token (cnf.jkt) sent as a bearer token, so a stolen one is useless without the app's key.
+                .oauth2ResourceServer(o -> o.jwt(j -> j.jwtAuthenticationConverter(converter))
+                        .dPoP(Customizer.withDefaults())
+                        .withObjectPostProcessor(new ObjectPostProcessor<DPoPAuthenticationProvider>() {
+                            @Override
+                            public <O extends DPoPAuthenticationProvider> O postProcess(O provider) {
+                                provider.setDPoPProofVerifierFactory(dpopProofs);
+                                return provider;
+                            }
+                        }))
                 .exceptionHandling(e -> e.accessDeniedHandler(problemDenied()))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .csrf(AbstractHttpConfigurer::disable)
