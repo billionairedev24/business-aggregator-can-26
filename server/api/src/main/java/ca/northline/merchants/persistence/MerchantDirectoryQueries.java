@@ -2,8 +2,14 @@ package ca.northline.merchants.persistence;
 
 import ca.northline.merchants.api.MerchantDirectory;
 import ca.northline.merchants.api.MerchantVerifications;
+import ca.northline.merchants.api.ShopDirectory;
 import ca.northline.shared.JdbcTimes;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -11,11 +17,11 @@ import org.springframework.stereotype.Repository;
 
 /**
  * {@link MerchantDirectory} and {@link MerchantVerifications}: the queries payments, messaging, food and catalogue
- * used to run against the merchants schema themselves (S-37).
+ * used to run against the merchants schema themselves (S-37). {@link ShopDirectory}: the consumer Shop's sellers (S-49).
  */
 @Repository
 @RequiredArgsConstructor
-class MerchantDirectoryQueries implements MerchantDirectory, MerchantVerifications {
+class MerchantDirectoryQueries implements MerchantDirectory, MerchantVerifications, ShopDirectory {
 
     private final JdbcClient jdbc;
 
@@ -33,6 +39,38 @@ class MerchantDirectoryQueries implements MerchantDirectory, MerchantVerificatio
                         rs.getObject("take_rate_bps", Integer.class),
                         rs.getString("province")))
                 .optional();
+    }
+
+    private static final String SHOP = """
+            select id, display_name, coalesce(tier, 'registered') as tier, city from merchants.merchants
+             where status = 'active' and type in ('seller', 'both')
+            """;
+
+    @Override
+    public List<Shop> shopsIn(String market) {
+        return jdbc.sql(SHOP + " and lower(city) = lower(:city) order by display_name, id")
+                .param("city", market.strip())
+                .query((rs, _) -> shop(rs))
+                .list();
+    }
+
+    @Override
+    public List<Shop> shops(Collection<String> merchantIds) {
+        if (merchantIds.isEmpty()) {
+            return List.of();
+        }
+        return jdbc.sql(SHOP + " and id = any(:ids) order by display_name, id")
+                .param("ids", merchantIds.toArray(String[]::new))
+                .query((rs, _) -> shop(rs))
+                .list();
+    }
+
+    private static Shop shop(ResultSet rs) throws SQLException {
+        return new Shop(
+                rs.getString("id"),
+                rs.getString("display_name"),
+                rs.getString("tier"),
+                Objects.requireNonNullElse(rs.getString("city"), ""));
     }
 
     @Override

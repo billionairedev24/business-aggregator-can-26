@@ -21,6 +21,9 @@ logging.level:
   org.testcontainers: warn
   tc: warn
 northline:                               # a STRIPE_SECRET_KEY exported in the shell must never reach Stripe from tests
+  # Consumer Shop (S-49…S-52): each test class browses its own market, so rows other tests leave in the shared
+  # database (sellers in Calgary) never show up in its lists.
+  orders.delivery.markets: [Calgary, Edmonton, Airdrie, Shopville, Productville, Cartville, Trackville]
   payments.stripe-secret-key: ""
   payments.stripe-webhook-secret: whsec_test_platform_fake    # obviously fake: S-12 tests sign with these
   payments.stripe-connect-webhook-secret: whsec_test_connect_fake

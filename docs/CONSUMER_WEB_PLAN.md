@@ -181,6 +181,15 @@ openCases?, paymentMethod?: {brand, last4}, addresses?: {count, members}, signIn
 {from, to}, dietary?: string[], province? }` (every field optional; S-58/S-59 provide it). Mutations that change a
 value invalidate `accountSummaryQuery`.
 
+### Market (S-49)
+
+The Shop pages are rendered for the market in their URL, `?market=<city>` (default **Calgary**, the fallback market),
+so the server's HTML stays the same for everyone and is cacheable. `features/shop/market.ts`
+`useMarketFollowsLocation()` switches a page without `?market=` to the visitor's city once `useDeliveryLocation()`
+knows it (history replace); links between Shop pages keep an explicit market (`withMarket`). A city without pooled
+delivery answers `served: false` and the page shows its empty state. The api's markets are
+`northline.orders.delivery.markets` (Calgary, Edmonton, Airdrie); runs and cut-offs come from `orders.api.DeliveryRuns`.
+
 ### Language
 
 Cookie `nl.locale` = `en` | `fr` (1 year, not HttpOnly). `useLocale().setLocale()` switches in place and writes it.
@@ -196,8 +205,9 @@ Cookie `nl.locale` = `en` | `fr` (1 year, not HttpOnly). `useLocale().setLocale(
 | northline-auth JSON API (`/api/auth/register…`, `/api/auth/sign-in…`, `/api/auth/sign-out`) + S-62's `/api/auth/sign-in/code[/verify]`, `/api/auth/register/complete` | exists | S-62 (built) |
 | `GET /api/v1/geo/reverse`, `/markets`, `/autocomplete`, `/places/{id}`, `/resolve`, `POST /waitlist` | **exists** (S-47) | pill, Location screen, checkout |
 | `GET /api/v1/search`, suggestions | missing (path public; E-6 S-42…S-44) | S-48, home |
-| categories / departments / landing content (public catalogue reads) | missing | S-46, S-49, S-53 |
-| product detail + offers | missing | S-50 |
+| Shop landing + departments: `GET /api/v1/public/shop?market=&lang=`, `GET /api/v1/public/shop/departments/{slug}?market=&lang=` | **exists** (S-49) | S-49 (S-46 may reuse the landing's departments) |
+| service categories / home landing content (public catalogue reads) | missing | S-46, S-53 |
+| product detail + offers: `GET /api/v1/public/shop/products/{id}?market=&lang=` | **exists** (S-50) | S-50 |
 | cart (`/api/v1/cart…`, guest-keyed) + checkout (Stripe Payment Element) | missing | S-51 |
 | consumer orders + tracking SSE | missing (merchant-side only today) | S-52, S-58 |
 | public menus / kitchens, food checkout | missing | S-57 |

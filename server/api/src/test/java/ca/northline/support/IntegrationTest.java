@@ -29,7 +29,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Import({TestData.class, RecordingEmailSender.Config.class, RecordingSmsTransport.Config.class})
+@Import({TestData.class, ShopFixtures.class, RecordingEmailSender.Config.class, RecordingSmsTransport.Config.class})
 public abstract class IntegrationTest {
 
     @ServiceConnection
@@ -40,6 +40,10 @@ public abstract class IntegrationTest {
 
     @Autowired
     protected TestData data;
+
+    /** Consumer Shop sellers and listings (S-49…S-52). */
+    @Autowired
+    protected ShopFixtures shopFixtures;
 
     /** Emails the application sent (S-13), instead of a provider. */
     @Autowired
