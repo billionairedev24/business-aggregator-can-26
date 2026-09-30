@@ -65,6 +65,14 @@ northline:
     - { group: gateway.envoyproxy.io, kind: ClientTrafficPolicy }   # S-17: TLS 1.2+, trusted proxy hops
     - { group: cert-manager.io, kind: Issuer }                      # S-17: Let's Encrypt account per environment
     - { group: cert-manager.io, kind: Certificate }
+    - { group: rbac.authorization.k8s.io, kind: Role }             # S-31: the api's custom-domain reconciler, this
+    - { group: rbac.authorization.k8s.io, kind: RoleBinding }      # namespace only
+  # S-31: objects the api's custom-domain reconciler writes at run time (not in Git, on purpose): not "orphaned".
+  runtimeResources:
+    - { group: gateway.networking.k8s.io, kind: Gateway, name: "northline-custom-*" }
+    - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: "nl-cd-*" }
+    - { group: cert-manager.io, kind: Certificate, name: "nl-cd-*" }
+    - { group: "", kind: Secret, name: "nl-cd-*" }
 
 # AppProject of the environment: which repositories, clusters, namespaces and kinds its Applications may use, and who
 # may sync. Argo CD RBAC groups come from its SSO (Dex / OIDC: GitHub teams, GitLab groups, Entra ID, Google groups).

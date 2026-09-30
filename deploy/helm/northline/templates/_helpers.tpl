@@ -126,6 +126,10 @@ their own variables. (dict "root" $ "name" "<app>" "app" $appValues)
 {{- /* S-30: northline.oauth.partners from the ConfigMap northline-auth-partners (templates/auth-partners.yaml). */ -}}
 {{- $_ := set $env "SPRING_CONFIG_ADDITIONAL_LOCATION" "optional:file:/config/partners/" -}}
 {{- end -}}
+{{- if eq .name "api" -}}
+{{- /* S-31: custom domains — the DNS target, blocklist and, with the reconciler, the edge it writes. */ -}}
+{{- $env = merge $env (include "northline.domainsEnv" $root | fromYaml) -}}
+{{- end -}}
 {{- if and (eq .name "api") $v.migrations.enabled -}}
 {{- /* S-16: the migration Job owns Flyway; the api only runs against the migrated schema. */ -}}
 {{- $_ := set $env "SPRING_FLYWAY_ENABLED" "false" -}}
@@ -209,20 +213,73 @@ northline-tls-wildcard
 {{- end -}}
 {{- end }}
 
-{{/* Response headers the edge sets on every route (HSTS and friends), as YAML name/value pairs; empty when off. */}}
+{{/*
+Response headers the edge sets on every route (HSTS and friends), as YAML name/value pairs; empty when off.
+(dict "root" $ "custom" true) for a merchant's own domain: HSTS without includeSubDomains/preload — the merchant's other
+subdomains are theirs, not ours to force onto HTTPS. A plain root context = our own hosts.
+*/}}
 {{- define "northline.responseHeaders" -}}
-{{- $e := .Values.edge -}}
+{{- $root := default . .root -}}
+{{- $custom := and (hasKey . "custom") .custom -}}
+{{- $e := $root.Values.edge -}}
 {{- if $e.enabled -}}
 {{- $h := list -}}
 {{- if $e.hsts.enabled -}}
 {{- $v := printf "max-age=%d" (int $e.hsts.maxAge) -}}
-{{- if $e.hsts.includeSubDomains }}{{ $v = printf "%s; includeSubDomains" $v }}{{ end -}}
-{{- if $e.hsts.preload }}{{ $v = printf "%s; preload" $v }}{{ end -}}
+{{- if and $e.hsts.includeSubDomains (not $custom) }}{{ $v = printf "%s; includeSubDomains" $v }}{{ end -}}
+{{- if and $e.hsts.preload (not $custom) }}{{ $v = printf "%s; preload" $v }}{{ end -}}
 {{- $h = append $h (dict "name" "Strict-Transport-Security" "value" $v) -}}
 {{- end -}}
 {{- range $name, $value := $e.responseHeaders -}}
 {{- $h = append $h (dict "name" $name "value" $value) -}}
 {{- end -}}
 {{- if $h }}{{ toYaml $h }}{{ end -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+S-31: the api's custom-domain settings (docs/runbooks/custom-domains.md), as a YAML map of variables. The target is
+pages.<zone> (urls.pages); with edge.domainReconciler.enabled the api writes shard Gateways, Certificates and HTTPRoutes
+into this namespace (DOMAINS_EDGE_PROVIDER=kubernetes) and asks DNS over HTTPS / JNDI.
+*/}}
+{{- define "northline.domainsEnv" -}}
+{{- $v := .Values -}}
+{{- $r := $v.edge.domainReconciler -}}
+{{- $env := dict -}}
+{{- if $v.urls.pages -}}
+{{- $_ := set $env "DOMAINS_TARGET_HOST" (include "northline.host" $v.urls.pages) -}}
+{{- end -}}
+{{- $_ := set $env "DOMAINS_BLOCKED_SUFFIXES" (join "," (concat (list "northline.ca" (include "northline.edgeZone" .)) $r.blockedSuffixes | uniq)) -}}
+{{- if $r.edgeAddresses }}{{ $_ := set $env "DOMAINS_EDGE_ADDRESSES" (join "," $r.edgeAddresses) }}{{ end -}}
+{{- if and $v.edge.enabled $r.enabled -}}
+{{- $headers := dict -}}
+{{- range (include "northline.responseHeaders" (dict "root" . "custom" true) | fromYamlArray) }}{{ $_ := set $headers .name .value }}{{ end -}}
+{{- $_ := set $env "DOMAINS_EDGE_PROVIDER" "kubernetes" -}}
+{{- $_ := set $env "DOMAINS_EDGE_NAMESPACE" .Release.Namespace -}}
+{{- $_ := set $env "DOMAINS_EDGE_GATEWAY_CLASS" $v.edge.gateway.className -}}
+{{- $_ := set $env "DOMAINS_EDGE_GATEWAY_PREFIX" $r.gatewayPrefix -}}
+{{- $_ := set $env "DOMAINS_EDGE_LISTENERS_PER_GATEWAY" (toString $r.listenersPerGateway) -}}
+{{- $_ := set $env "DOMAINS_MAX" (toString $r.maxDomains) -}}
+{{- $_ := set $env "DOMAINS_ISSUE_PER_HOUR" (toString $r.issuePerHour) -}}
+{{- $_ := set $env "DOMAINS_EDGE_ISSUER" $r.issuer.name -}}
+{{- $_ := set $env "DOMAINS_EDGE_SERVICE" (include "northline.appName" "consumer") -}}
+{{- $_ := set $env "DOMAINS_EDGE_SERVICE_PORT" (toString $v.apps.consumer.port) -}}
+{{- $_ := set $env "DOMAINS_EDGE_RESPONSE_HEADERS" (toJson $headers) -}}
+{{- $_ := set $env "DOMAINS_DNS_PROVIDER" $r.dns.provider -}}
+{{- with $r.dns.dohUrl }}{{ $_ := set $env "DOMAINS_DOH_URL" . }}{{ end -}}
+{{- with $r.dns.servers }}{{ $_ := set $env "DOMAINS_DNS_SERVERS" (join "," .) }}{{ end -}}
+{{- end -}}
+{{- toYaml $env -}}
+{{- end }}
+
+{{/* S-31: the ACME server of merchants' certificates — Let's Encrypt production in prod, staging everywhere else. */}}
+{{- define "northline.customIssuerServer" -}}
+{{- $server := .Values.edge.domainReconciler.issuer.server -}}
+{{- if $server -}}
+{{- $server -}}
+{{- else if eq .Values.global.environment "prod" -}}
+https://acme-v02.api.letsencrypt.org/directory
+{{- else -}}
+https://acme-staging-v02.api.letsencrypt.org/directory
 {{- end -}}
 {{- end }}

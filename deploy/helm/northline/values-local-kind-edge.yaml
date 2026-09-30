@@ -19,3 +19,9 @@ edge:
     issuer:
       type: ca
       caSecretName: northline-local-ca
+  # S-31: merchants' domains reconciled by the api onto shard Gateways, certificates from the same local CA
+  # (docs/runbooks/custom-domains.md § Local rehearsal). jndi: the pod's resolver (kind has no way out to DoH).
+  domainReconciler:
+    enabled: true
+    dns:
+      provider: jndi

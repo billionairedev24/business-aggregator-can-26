@@ -10,6 +10,9 @@ serviceAccount:
 # workload identity for DNS-01 (one environment per cluster, so no other tenant can borrow it).
 extraArgs:
   - --issuer-ambient-credentials
+# S-31: a Certificate's Secret is owned by it, so removing a merchant's domain (the api deletes the Certificate) also
+# removes its key — the api may not touch Secrets itself.
+enableCertificateOwnerRef: true
 # HTTP-01 challenges answered through Gateway API HTTPRoutes on the northline Gateway.
 config:
   apiVersion: controller.config.cert-manager.io/v1alpha1

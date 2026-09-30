@@ -43,7 +43,7 @@ check "dev × gcp, existing Gateway (no edge)" -f "$CHART/values-dev.yaml" -f "$
 for cloud in aws gcp azure; do
   check "prod × $cloud, wildcard DNS-01 + custom domain" -f "$CHART/values-prod.yaml" -f "$CHART/values-$cloud.yaml" -f "test-values/identities-$cloud.yaml" -f test-values/edge-wildcard.yaml
 done
-check "staging × aws, Ingress + cert-manager" -f "$CHART/values-staging.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml -f test-values/edge-ingress.yaml
+check "staging × aws, Ingress + cert-manager" -f "$CHART/values-staging.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml -f test-values/edge-ingress.yaml --set edge.domainReconciler.enabled=false
 check "defaults" 
 
 # Refusals the chart must keep: secrets from values outside local, http URLs in prod.
@@ -86,6 +86,41 @@ refuse "wildcard without DNS-01" -f "$CHART/values-prod.yaml" -f "$CHART/values-
 refuse "DNS-01 without the cloud's solver" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" --set edge.certManager.issuer.solver=dns01
 refuse "a CA issuer in prod" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" --set edge.certManager.issuer.type=ca --set edge.certManager.issuer.caSecretName=x
 refuse "edge without routes" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" --set gateway.enabled=false
+
+# S-31: merchants' own domains. The api reconciles them (Role limited to Gateways, HTTPRoutes and Certificates in its
+# namespace, token mounted only in the api), certificates from Let's Encrypt staging outside prod, and the refusals.
+for env in dev staging prod; do
+  for cloud in aws gcp azure; do
+    out=$(helm template northline "$CHART" --namespace "northline-$env" -f "$CHART/values-$env.yaml" -f "$CHART/values-$cloud.yaml" -f "test-values/identities-$cloud.yaml")
+    rules=$(awk '/^kind: Role$/{r=1} r && /^  - apiGroups:/{print} r && /^    resources:/{print} /^---/{r=0}' <<<"$out" | tr -d ' ' | tr '\n' ' ')
+    expected='-apiGroups:[gateway.networking.k8s.io] resources:[gateways,httproutes] -apiGroups:[cert-manager.io] resources:[certificates] '
+    mounted=$(grep -c 'automountServiceAccountToken: true' <<<"$out")
+    server=$(awk '/name: northline-acme-custom$/{i=1} i && /server:/{print $2; exit}' <<<"$out")
+    want=https://acme-staging-v02.api.letsencrypt.org/directory; [[ $env == prod ]] && want=https://acme-v02.api.letsencrypt.org/directory
+    if [[ $rules == "$expected" && $mounted -eq 1 && $server == "$want" ]] \
+        && grep -q 'DOMAINS_EDGE_PROVIDER: "kubernetes"' <<<"$out" \
+        && grep -q "DOMAINS_EDGE_NAMESPACE: \"northline-$env\"" <<<"$out" \
+        && grep -q 'DOMAINS_TARGET_HOST: "pages\.' <<<"$out" \
+        && grep -q 'name: northline-api$' <<<"$(awk '/^kind: RoleBinding$/{r=1} r' <<<"$out")"; then
+      echo "ok   $env × $cloud: domain reconciler (RBAC in its namespace, token in the api only, issuer ${server#https://})"
+    else echo "FAIL $env × $cloud domain reconciler: rules [$rules] mounted $mounted server $server"; failed=1; fi
+  done
+done
+refuse "Let's Encrypt production for merchants outside prod" -f "$CHART/values-staging.yaml" -f "$CHART/values-aws.yaml" \
+  --set edge.domainReconciler.issuer.server=https://acme-v02.api.letsencrypt.org/directory
+refuse "more than 64 listeners per shard Gateway" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" \
+  --set edge.domainReconciler.listenersPerGateway=65
+refuse "the domain reconciler without the consumer app" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" \
+  --set apps.consumer.enabled=false
+refuse "the domain reconciler without the chart's Gateway" -f "$CHART/values-staging.yaml" -f "$CHART/values-aws.yaml" \
+  -f test-values/identities-aws.yaml -f test-values/edge-ingress.yaml
+refuse "the in-memory DNS in a cluster" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" \
+  --set edge.domainReconciler.dns.provider=local
+if helm template northline "$CHART" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml \
+    -f test-values/edge-wildcard.yaml | awk '/name: northline-book-example-ca$/{r=1} r && /Strict-Transport-Security/{getline; print; exit}' \
+    | grep -qE 'value: "?max-age=63072000"?$'; then
+  echo "ok   a merchant's domain gets HSTS without includeSubDomains"
+else echo "FAIL a merchant's domain gets HSTS with includeSubDomains"; failed=1; fi
 
 # S-16: the migration Job never names the dev seed in any deployed render.
 for env in dev staging prod; do

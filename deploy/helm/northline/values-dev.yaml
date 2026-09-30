@@ -19,6 +19,10 @@ gateway:
   enabled: true
 edge:
   enabled: true
+  # S-31: the api verifies merchants' domains and reconciles them onto the edge (docs/runbooks/custom-domains.md);
+  # merchants' certificates from Let's Encrypt STAGING (untrusted by browsers, on purpose).
+  domainReconciler:
+    enabled: true
 
 apps:
   auth:

@@ -6,6 +6,9 @@ metadata:
   name: northline
   namespace: envoy-gateway-system
 spec:
+  # S-31: every Gateway of the class shares these proxies and their one load balancer — the environment's Gateway and
+  # the api's shard Gateways for merchants' domains (northline-custom-N) — so pages.<zone> is the single target.
+  mergeGateways: true
   provider:
     type: Kubernetes
     kubernetes:
