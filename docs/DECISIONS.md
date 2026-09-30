@@ -2448,5 +2448,5 @@ Built on S-49 (branch `web/s-50-product-detail` from `web/s-49-shop-landing`).
     - only the customer sees it (401 / 404 for others, stream included);
     - the timeline follows the state through delivered;
     - the stream sends the order at once and again when a shop packs.
-  - vitest `features/orders/orders.test.tsx`: design copy for pooled and direct, packed count, live update from the
-    stream, delivered, sign-in prompt, not found, French.
+  - vitest `features/orders/orders.test.tsx`: design copy for pooled and direct, packed count and the run, live update
+    from the stream, sign-in prompt, not found, skeleton, error + Retry, French.
