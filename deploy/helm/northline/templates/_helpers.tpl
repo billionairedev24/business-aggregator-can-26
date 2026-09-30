@@ -122,6 +122,10 @@ their own variables. (dict "root" $ "name" "<app>" "app" $appValues)
 {{- $_ := set $env "WEBAUTHN_RP_ID" $v.urls.webauthnRpId -}}
 {{- $_ := set $env "API_PUBLIC_URL" $v.urls.api -}}
 {{- $_ := set $env "SERVER_PORT" (toString .app.port) -}}
+{{- if and (eq .name "auth") $v.partners -}}
+{{- /* S-30: northline.oauth.partners from the ConfigMap northline-auth-partners (templates/auth-partners.yaml). */ -}}
+{{- $_ := set $env "SPRING_CONFIG_ADDITIONAL_LOCATION" "optional:file:/config/partners/" -}}
+{{- end -}}
 {{- if and (eq .name "api") $v.migrations.enabled -}}
 {{- /* S-16: the migration Job owns Flyway; the api only runs against the migrated schema. */ -}}
 {{- $_ := set $env "SPRING_FLYWAY_ENABLED" "false" -}}
@@ -178,6 +182,7 @@ env:
 {{- define "northline.configChecksum" -}}
 {{- $parts := list (include "northline.appEnv" .) (toYaml .root.Values.configEnv) (toYaml (default (dict) .app.secretEnv)) -}}
 {{- if .root.Values.secrets.create }}{{ $parts = append $parts (toYaml .root.Values.secrets.values) }}{{ end -}}
+{{- if and (eq .name "auth") .root.Values.partners }}{{ $parts = append $parts (toYaml .root.Values.partners) }}{{ end -}}
 {{- join "\n" $parts | sha256sum -}}
 {{- end }}
 

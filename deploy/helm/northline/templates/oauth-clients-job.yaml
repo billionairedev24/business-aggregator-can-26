@@ -58,9 +58,19 @@ spec:
               mountPath: /tmp
             {{- with .Values.spring.extraVolumeMounts }}{{ toYaml . | nindent 12 }}{{ end }}
             {{- with $app.extraVolumeMounts }}{{ toYaml . | nindent 12 }}{{ end }}
+            {{- if .Values.partners }}
+            - name: partners
+              mountPath: /config/partners
+              readOnly: true
+            {{- end }}
       volumes:
         - name: tmp
           emptyDir: { sizeLimit: 64Mi }
         {{- with .Values.spring.extraVolumes }}{{ toYaml . | nindent 8 }}{{ end }}
         {{- with $app.extraVolumes }}{{ toYaml . | nindent 8 }}{{ end }}
+        {{- if .Values.partners }}
+        - name: partners
+          configMap:
+            name: northline-auth-partners
+        {{- end }}
 {{- end }}

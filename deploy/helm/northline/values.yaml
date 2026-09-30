@@ -252,6 +252,18 @@ kafkaTopics:
 # Registers the OAuth clients (S-122) after every install/upgrade: the auth image running OAuthClientsCommand sync
 # with the auth Deployment's environment. Idempotent; northline-auth also syncs at start unless
 # apps.auth.env.OAUTH_CLIENTS_SYNC_ON_STARTUP is "false".
+# S-30 partner API clients (docs/runbooks/partners.md): northline.oauth.partners.<name> → OAuth client partner:<name>
+# (client_credentials + private_key_jwt). Rendered into the ConfigMap northline-auth-partners, read by auth and the
+# oauth-clients Job. Example:
+#   partners:
+#     acme:
+#       name: Acme Books
+#       jwk-set-url: https://acme.example/.well-known/jwks.json   # or public-keys: ['{"kty":"EC","crv":"P-256",…,"kid":"k1"}']
+#       scopes: [api.read]
+#       merchants: [01J9ZD3V00000000000000PWM1]
+#       revoked: false
+partners: {}
+
 oauthClientsJob:
   enabled: true
   command: sync                   # sync | list

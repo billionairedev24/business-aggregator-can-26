@@ -1,0 +1,7 @@
+# S-30: a partner API client (docs/runbooks/partners.md), for validate.sh.
+partners:
+  acme:
+    name: Acme Books
+    jwk-set-url: https://acme.example/.well-known/jwks.json
+    scopes: [api.read]
+    merchants: [01J9ZD3V00000000000000PWM1]

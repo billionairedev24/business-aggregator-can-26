@@ -22,6 +22,7 @@ say where a step is still manual or missing.
 | [events.md](events.md) | domain events: wire format, the worker's consumer framework (dedupe, retries, DLQ), alerts and metrics, DLQ replay (S-25/S-26) |
 | [ci.md](ci.md) | CI pipelines on GitHub Actions and GitLab CI, manual trigger only (S-4/S-5, infra checks S-2/S-3) |
 | [mobile-auth.md](mobile-auth.md) | the consumer and courier apps: sign-in with PKCE, DPoP-bound tokens, nonces, rotating refresh tokens and reuse detection, calling the api, sign-out, sessions (S-29) |
+| [partners.md](partners.md) | partner API clients: `client_credentials` with `private_key_jwt`, keys (JWK Set URL or registered), scopes, business binding, rotation, revocation, rate limits, audit (S-30) |
 | [federation.md](federation.md) | Google and Apple sign-in: console set-up, redirect URIs per environment, secrets, the Apple client secret (S-18) |
 | [secrets.md](secrets.md) | secrets in AWS Secrets Manager / Secret Manager / Key Vault through External Secrets Operator: inventory, set-up, rotation (S-6) |
 | [edge.md](edge.md) | public hosts per environment, DNS delegation, Let's Encrypt certificates (cert-manager), external-dns, Envoy Gateway, HSTS/TLS policy, WAF options per cloud, storefront custom domains (S-17) |
@@ -187,6 +188,7 @@ the database but not in configuration is logged as `stored but not in configurat
 | `consumer-bff` | confidential | `CONSUMER_BFF_SECRET_HASH` set (`optional: true`) | `${CONSUMER_ORIGIN}/login/oauth2/code/northline` | openid profile orders bookings |
 | `console-bff` | confidential | `CONSOLE_BFF_SECRET_HASH` set (`optional: true`) | `${CONSOLE_ORIGIN}/login/oauth2/code/console` | openid profile console |
 | `mobile-consumer` ("Northline") | public (PKCE S256, no secret), **DPoP required** (S-29) | always | `${CONSUMER_ORIGIN}/app/oauth2redirect` (App Link / Universal Link), `ca.northline.app:/oauth2redirect` | openid profile orders bookings offline_access; refresh 30 d |
+| `partner:<name>` (S-30) | client credentials, `private_key_jwt` (no secret) | when declared under `northline.oauth.partners` (chart value `partners`) | — | `api.read` / `api.write`, bound to named businesses; 15 min tokens — [partners.md](partners.md) |
 | `courier-app` ("Northline Courier") | public (PKCE S256, no secret), **DPoP required** (S-29) | always | `${CONSUMER_ORIGIN}/courier/oauth2redirect`, `ca.northline.courier:/oauth2redirect` | openid courier deliveries; refresh 12 h |
 
 Defaults for anything not set: grant types `authorization_code` + `refresh_token`, PKCE required, no consent screen,
@@ -210,7 +212,8 @@ least one client.
 restart the bff. Between the two the bff's old secret is refused (sign-ins fail for that minute); do it in a quiet
 window. (Spring Authorization Server holds one secret per client, so there is no overlap period.)
 
-**Adding a client later** — e.g. a partner (S-30) or another app: add a block to
+**Adding a client later** — another app or BFF (partners have their own block, `northline.oauth.partners`, see
+[partners.md](partners.md)): add a block to
 `application.yml` (every environment) or to an environment-only file mounted with
 `SPRING_CONFIG_ADDITIONAL_LOCATION=/config/oauth-clients.yml`, then run the Job:
 
@@ -223,11 +226,6 @@ northline.oauth.clients:
     scopes: [ openid, orders ]
     refresh-token-ttl: 30d
     dpop-required: true          # every token request needs a DPoP proof; tokens are bound to the app's key
-  partner-acme:                  # client credentials; private_key_jwt (jwk-set-url) is still to be added (S-30)
-    type: confidential
-    secret-hash: ${PARTNER_ACME_SECRET_HASH}
-    grant-types: [ client_credentials ]
-    scopes: [ partner.orders.read ]
 ```
 
 Keys: `type` (`confidential` | `public`), `optional`, `name`, `secret-hash`, `redirect-uris`,
@@ -316,6 +314,7 @@ per phone code, 45 s resend cool-down, 5 failed factors per sign-in attempt or s
 | wrong authenticator code / backup code / failed passkey (`totp-verify`, `backup-code-verify`, `passkey-assertion`) | 10 / 15 min each | 30 / 15 min | 10 / 15 min | 15 min |
 | failed step-up for payouts (`step-up`) | 10 / 15 min | 30 / 15 min | 10 / 15 min | 15 min |
 | revoke a session / sign out others / remove a passkey (`security-change`, S-19, every call counts) | 20 / h | 60 / h | 20 / h | 15 min |
+| partner access token issued (`partner-token`, S-30; account = the partner) | 60 / h | 600 / h | — | 15 min |
 
 - Sliding windows; a success resets the account and session counters of that action (never the IP's). Lockouts of
   the same subject double while earlier ones are remembered (24 h). All numbers are properties under
