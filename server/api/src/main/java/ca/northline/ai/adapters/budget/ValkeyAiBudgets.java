@@ -32,6 +32,12 @@ public final class ValkeyAiBudgets implements AiBudgets {
     @Override
     public void admit(Caller caller) {
         try {
+            if (caller.isSystem()) {
+                if (spent(personKey(caller)) >= limits.systemTokensPerDay()) {
+                    throw BudgetWindows.personSpent(clock);
+                }
+                return;
+            }
             var rate = PREFIX + "{p:" + caller.personId() + "}:rpm:" + BudgetWindows.minute(clock);
             var count = redis.opsForValue().increment(rate);
             if (count != null && count == 1) {

@@ -19,6 +19,12 @@ public final class InMemoryAiBudgets implements AiBudgets {
     @Override
     public void admit(Caller caller) {
         sweep();
+        if (caller.isSystem()) {
+            if (counter(person(caller)).get() >= limits.systemTokensPerDay()) {
+                throw BudgetWindows.personSpent(clock);
+            }
+            return;
+        }
         var rate = counter("p:" + caller.personId() + ":rpm:" + BudgetWindows.minute(clock));
         if (rate.incrementAndGet() > limits.personRequestsPerMinute()) {
             throw BudgetWindows.tooFast(clock);

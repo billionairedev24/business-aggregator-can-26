@@ -275,7 +275,7 @@ class DefaultAiCompletionsTest {
                 AiProperties.Provider.OPENROUTER,
                 3);
         var budgets = new ca.northline.ai.adapters.budget.InMemoryAiBudgets(
-                new AiProperties.Budget(1_000, 1_000_000, 20), java.time.Clock.systemUTC());
+                new AiProperties.Budget(1_000, 1_000_000, 20, 2_000_000), java.time.Clock.systemUTC());
         var completions = new DefaultAiCompletions(
                 tight.client, budgets, tight.usage::add, tight.access, tight.props, tight.json);
         STUB.responder = _ -> MockOpenRouter.answer("ok");

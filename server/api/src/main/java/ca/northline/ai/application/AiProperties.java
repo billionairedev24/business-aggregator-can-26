@@ -33,11 +33,14 @@ public record AiProperties(
      * @param personTokensPerDay tokens one person may use per (UTC) day — {@code AI_BUDGET_PERSON_TOKENS_PER_DAY}
      * @param merchantTokensPerDay tokens one business may use per day, all its team — {@code AI_BUDGET_MERCHANT_TOKENS_PER_DAY}
      * @param personRequestsPerMinute model requests one person may start per minute — {@code AI_REQUESTS_PER_MINUTE}
+     * @param systemTokensPerDay tokens each platform job (trust &amp; safety screening, anomaly scans) may use per day;
+     *     jobs have no per-minute rate — {@code AI_BUDGET_SYSTEM_TOKENS_PER_DAY}
      */
     public record Budget(
             @DefaultValue("200000") long personTokensPerDay,
             @DefaultValue("1000000") long merchantTokensPerDay,
-            @DefaultValue("20") int personRequestsPerMinute) {}
+            @DefaultValue("20") int personRequestsPerMinute,
+            @DefaultValue("2000000") long systemTokensPerDay) {}
 
     /**
      * {@code provider=fake}: a latency ({@code "0"} or {@code "min-max"} ms) and a cost per million tokens, so local

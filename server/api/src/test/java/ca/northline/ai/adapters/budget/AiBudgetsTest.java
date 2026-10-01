@@ -21,7 +21,7 @@ import org.testcontainers.containers.GenericContainer;
 /** Both budget stores behave the same: a per-minute rate per person, daily tokens per person and per business. */
 class AiBudgetsTest {
 
-    static final AiProperties.Budget LIMITS = new AiProperties.Budget(1_000, 5_000, 3);
+    static final AiProperties.Budget LIMITS = new AiProperties.Budget(1_000, 5_000, 3, 2_000);
     static final Clock CLOCK = Clock.fixed(Instant.parse("2026-10-01T15:00:30Z"), ZoneOffset.UTC);
 
     abstract static class Contract {
@@ -50,6 +50,16 @@ class AiBudgetsTest {
                 org.assertj.core.api.Assertions.assertThat(e.getRetryAfter().toHours())
                         .isEqualTo(8);
             });
+        }
+
+        @Test
+        void aSystemJobHasNoPerMinuteRateButItsOwnDailyTokens() {
+            var job = Caller.system("test-" + Ids.next());
+            for (int i = 0; i < 10; i++) {
+                budgets().admit(job);
+            }
+            budgets().charge(job, 2_000);
+            assertThatThrownBy(() -> budgets().admit(job)).isInstanceOf(AiRateLimited.class);
         }
 
         @Test

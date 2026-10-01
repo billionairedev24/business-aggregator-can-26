@@ -345,6 +345,7 @@ northline:
       person-tokens-per-day: ${AI_BUDGET_PERSON_TOKENS_PER_DAY:200000}
       merchant-tokens-per-day: ${AI_BUDGET_MERCHANT_TOKENS_PER_DAY:1000000}
       person-requests-per-minute: ${AI_REQUESTS_PER_MINUTE:20}
+      system-tokens-per-day: ${AI_BUDGET_SYSTEM_TOKENS_PER_DAY:2000000}   # S-133 trust & safety jobs
     fake:                                                          # local dashboards: "300-1800" ms and a cost
       latency-ms: ${AI_FAKE_LATENCY_MS:0}
       usd-per-million-tokens: ${AI_FAKE_USD_PER_MTOK:0}

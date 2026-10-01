@@ -41,8 +41,8 @@ public final class AiTestKit {
         observations.observationConfig().observationHandler(new DefaultMeterObservationHandler(meters));
         this.client = new ObservedLlmClient(adapter, observations, meters);
         this.props = properties(provider, maxToolRounds, "");
-        this.budgets =
-                new InMemoryAiBudgets(new AiProperties.Budget(10_000_000, 10_000_000, 10_000), Clock.systemUTC());
+        this.budgets = new InMemoryAiBudgets(
+                new AiProperties.Budget(10_000_000, 10_000_000, 10_000, 10_000_000), Clock.systemUTC());
         this.completions = new DefaultAiCompletions(client, budgets, usage::add, access, props, json);
     }
 
@@ -59,7 +59,7 @@ public final class AiTestKit {
         return new AiProperties(
                 provider,
                 maxToolRounds,
-                new AiProperties.Budget(200_000, 1_000_000, 20),
+                new AiProperties.Budget(200_000, 1_000_000, 20, 2_000_000),
                 new AiProperties.Fake("0", 0),
                 new AiProperties.OpenRouter(
                         baseUrl.isEmpty() ? "https://openrouter.ai/api/v1" : baseUrl,

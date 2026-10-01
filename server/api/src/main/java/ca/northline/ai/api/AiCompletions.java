@@ -45,6 +45,17 @@ public interface AiCompletions {
         public static Caller member(String userId, String merchantId) {
             return new Caller(userId, merchantId);
         }
+
+        /** A platform job (trust &amp; safety screening, anomaly scans): its own daily budget, no per-minute rate. */
+        public static Caller system(String job) {
+            return new Caller(SYSTEM + job, null);
+        }
+
+        public static final String SYSTEM = "system:";
+
+        public boolean isSystem() {
+            return personId.startsWith(SYSTEM);
+        }
     }
 
     /** A chat message; {@code role} = {@code system}, {@code user} or {@code assistant}. */
