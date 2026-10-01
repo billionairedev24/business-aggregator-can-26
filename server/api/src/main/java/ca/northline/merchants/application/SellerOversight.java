@@ -18,6 +18,9 @@ public interface SellerOversight {
     String SAME_TIER = "The business is already on that tier.";
     String NOT_APPROVED = "Only an approved business has a tier to change.";
     String NOT_VERIFIABLE = "Only a verified or submitted check can be asked for again.";
+    String ALREADY_HIDDEN = "This business is already hidden from search.";
+    String NOT_HIDDEN = "This business isn't hidden from search.";
+    String HIDDEN_REQUIRED = "Choose hide or show.";
 
     Oversight suspend(String merchantId, String reason, Actor actor);
 
@@ -27,6 +30,9 @@ public interface SellerOversight {
 
     /** @param tier {@code registered} | {@code trusted} | {@code master} */
     Oversight changeTier(String merchantId, String tier, String reason, Actor actor);
+
+    /** Hides the business from search ({@code hidden}) or shows it again; its page and existing customers still work. */
+    Oversight searchVisibility(String merchantId, boolean hidden, String reason, Actor actor);
 
     /** @param role the console roles acted with ({@code CurrentStaff.roleCodes()}) */
     record Actor(String userId, String role) {}

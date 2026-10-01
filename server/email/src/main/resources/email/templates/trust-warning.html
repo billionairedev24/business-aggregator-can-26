@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout.html :: email(#{trust-warning.preheader}, ~{::content})}">
+<body>
+<div th:fragment="content">
+  <h1 th:style="${s.h1}" th:text="#{trust-warning.heading}">Heading</h1>
+  <p th:style="${s.p}" th:text="#{__${'trust-warning.body.' + rule}__(${businessName})}">Body</p>
+  <p th:if="${note != ''}" th:style="${s.notice}" th:text="#{trust-warning.note(${note})}">Note</p>
+  <p th:style="${s.p}" th:text="#{trust-warning.next}">Next</p>
+  <th:block th:replace="~{button.html :: button(#{trust-warning.cta}, ${link})}"/>
+</div>
+</body>
+</html>

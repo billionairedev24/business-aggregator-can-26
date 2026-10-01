@@ -206,6 +206,48 @@ class SellerOversightApiTest extends IntegrationTest {
     }
 
     @Test
+    void hideFromSearchAndShowAgain() throws Exception {
+        mvc.perform(json(
+                                post("/api/v1/console/merchants/{id}/search", business),
+                                "{\"hidden\":true,\"reason\":\"Bait pricing on three listings\"}")
+                        .with(TestJwt.staff(staff, StaffRole.TRUST_SAFETY)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.action").value("search_hidden"))
+                .andExpect(jsonPath("$.detail.cause").value("staff"));
+        assertThat(jdbc.sql("select search_hidden_cause from merchants.merchants where id = ?")
+                        .params(business)
+                        .query(String.class)
+                        .single())
+                .isEqualTo("staff");
+        assertThat(audited("merchant.search_hidden")).isEqualTo(1);
+        assertThat(awaitEmails(1).getFirst().subject())
+                .isEqualTo("Bow River Mechanics is hidden from Northline search");
+        mvc.perform(json(
+                                post("/api/v1/console/merchants/{id}/search", business),
+                                "{\"hidden\":true,\"reason\":\"again\"}")
+                        .with(TestJwt.staff(staff, StaffRole.ADMIN)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("already_hidden"));
+        mvc.perform(json(
+                                post("/api/v1/console/merchants/{id}/search", business),
+                                "{\"hidden\":false,\"reason\":\"Prices fixed\"}")
+                        .with(TestJwt.staff(staff, StaffRole.ADMIN)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.action").value("search_restored"));
+        mvc.perform(json(post("/api/v1/console/merchants/{id}/search", business), "{\"hidden\":false,\"reason\":\"x\"}")
+                        .with(TestJwt.staff(staff, StaffRole.ADMIN)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("not_hidden"));
+        mvc.perform(json(post("/api/v1/console/merchants/{id}/search", business), "{\"reason\":\"x\"}")
+                        .with(TestJwt.staff(staff, StaffRole.ADMIN)))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.errors[0].message").value("Choose hide or show."));
+        mvc.perform(json(post("/api/v1/console/merchants/{id}/search", business), "{\"hidden\":true,\"reason\":\"x\"}")
+                        .with(TestJwt.staff(staff, StaffRole.SUPPORT)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void validationMessages() throws Exception {
         mvc.perform(json(post("/api/v1/console/merchants/{id}/suspend", business), "{\"reason\":\"  \"}")
                         .with(TestJwt.staff(staff, StaffRole.ADMIN)))

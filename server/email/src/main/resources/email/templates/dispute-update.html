@@ -11,6 +11,7 @@
     <tr><td th:style="${s.factLabel}" th:text="#{dispute-update.amount}">Amount</td><td th:style="${s.factValue}" th:text="${amount}">$0.00</td></tr>
     <tr th:if="${change == 'decided'}"><td th:style="${s.factLabel}" th:text="#{dispute-update.refund}">Refund</td><td th:style="${s.factValue}" th:text="${refund}">$0.00</td></tr>
   </table>
+  <p th:if="${note != ''}" th:style="${s.notice}" th:text="#{dispute-update.note(${note})}">Note</p>
   <th:block th:replace="~{button.html :: button(#{dispute-update.cta}, ${link})}"/>
 </div>
 </body>

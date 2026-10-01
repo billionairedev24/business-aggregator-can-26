@@ -2,16 +2,19 @@ package ca.northline.merchants.application;
 
 import ca.northline.developer.api.AuditTrail;
 import ca.northline.merchants.api.MerchantReinstated;
+import ca.northline.merchants.api.MerchantSearchVisibilityChanged;
 import ca.northline.merchants.api.MerchantSuspended;
 import ca.northline.merchants.api.MerchantTierChanged;
 import ca.northline.merchants.api.ReverificationRequired;
 import ca.northline.merchants.api.SellerDirectory.Oversight;
+import ca.northline.merchants.api.SellerSanctions;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.Ids;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 @RequiredArgsConstructor
-class SellerOversightService implements SellerOversight {
+class SellerOversightService implements SellerOversight, SellerSanctions {
 
     static final int REASON_MAX = 500;
     private static final Set<String> TIERS = Set.of("registered", "trusted", "master");
@@ -108,6 +111,74 @@ class SellerOversightService implements SellerOversight {
         events.publishEvent(
                 new MerchantTierChanged(Ids.next(), now, merchantId, actor.userId(), action.id(), state.tier(), to));
         return action;
+    }
+
+    @Override
+    public Oversight searchVisibility(String merchantId, boolean hidden, String reason, Actor actor) {
+        var why = reason(reason);
+        state(merchantId);
+        var current = store.searchHidden(merchantId);
+        if (hidden && current.isPresent()) {
+            throw new Conflict("already_hidden", ALREADY_HIDDEN);
+        }
+        if (!hidden && current.isEmpty()) {
+            throw new Conflict("not_hidden", NOT_HIDDEN);
+        }
+        return visibility(merchantId, hidden, "staff", why, actor);
+    }
+
+    private Oversight visibility(String merchantId, boolean hidden, String cause, String reason, Actor actor) {
+        var now = clock.instant();
+        store.searchHidden(merchantId, hidden ? cause : null, now);
+        var action = record(
+                merchantId, hidden ? "search_hidden" : "search_restored", reason, Map.of("cause", cause), actor, now);
+        events.publishEvent(new MerchantSearchVisibilityChanged(
+                Ids.next(), now, merchantId, actor.userId(), action.id(), hidden, cause));
+        return action;
+    }
+
+    // ── SellerSanctions: the trust rules' automatic consequences (actor "system") ─────────────────────────────
+
+    private static final Actor SYSTEM_ACTOR = new Actor(SellerSanctions.SYSTEM, SellerSanctions.SYSTEM);
+
+    @Override
+    public boolean hideFromSearch(String merchantId, String cause, String reason) {
+        var state = store.lock(merchantId);
+        if (state.isEmpty()
+                || !"active".equals(state.get().status())
+                || store.searchHidden(merchantId).isPresent()) {
+            return false;
+        }
+        visibility(merchantId, true, cause, reason(reason), SYSTEM_ACTOR);
+        return true;
+    }
+
+    @Override
+    public boolean restoreSearch(String merchantId, String cause, String reason) {
+        if (store.lock(merchantId).isEmpty()
+                || !store.searchHidden(merchantId).map(cause::equals).orElse(false)) {
+            return false;
+        }
+        visibility(merchantId, false, cause, reason(reason), SYSTEM_ACTOR);
+        return true;
+    }
+
+    @Override
+    public boolean suspend(String merchantId, String reason) {
+        var state = store.lock(merchantId);
+        if (state.isEmpty()
+                || state.get().status() == null
+                || !SUSPENDABLE.contains(state.get().status())) {
+            return false;
+        }
+        suspend(merchantId, reason, SYSTEM_ACTOR);
+        return true;
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public List<String> hiddenFromSearch(String cause) {
+        return store.hiddenFromSearch(cause);
     }
 
     private OversightStore.State state(String merchantId) {

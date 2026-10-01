@@ -22,6 +22,8 @@ public enum StaffRole implements CodedEnum {
     DISPATCH,
     FINANCE,
     SUPPORT,
+    /** S-83: a support agent who also keeps the desk's macros (design: "support leads"). */
+    SUPPORT_LEAD,
     ANALYST;
 
     /** The platform role that opens the console at all ({@code /api/v1/console/**}). */
@@ -50,7 +52,7 @@ public enum StaffRole implements CodedEnum {
                         ConsoleScreen.REPORTS,
                         ConsoleScreen.DISPUTES,
                         ConsoleScreen.TEAM);
-            case SUPPORT ->
+            case SUPPORT, SUPPORT_LEAD ->
                 Set.of(
                         ConsoleScreen.OVERVIEW,
                         ConsoleScreen.SUPPORT,
@@ -75,6 +77,7 @@ public enum StaffRole implements CodedEnum {
             case DISPATCH -> Set.of(ConsoleAction.DISPATCH);
             case FINANCE -> Set.of(ConsoleAction.REFUND, ConsoleAction.PAYOUTS);
             case SUPPORT -> Set.of(ConsoleAction.SUPPORT);
+            case SUPPORT_LEAD -> Set.of(ConsoleAction.SUPPORT, ConsoleAction.MACROS);
             case ANALYST -> Set.of();
         };
     }

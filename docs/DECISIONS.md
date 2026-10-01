@@ -5263,6 +5263,244 @@ Branch `fulfil/s-88-live-tracking`, **stacked on S-86**. No migration.
   - No map tiles or geocoding on the web.
   - The courier app's background-location permission flow is S-87's.
 
+
+## 2026-10-01 — S-79 Verification queue: review merchant checks, approve/reject with reasons
+
+- **One queue of applications, built on the S-23/S-22 reviews** (merchants module, `/api/v1/console/verification/applications`;
+  screen `verify`, deciding needs `verify` — admin and trust & safety): submitted businesses (status `pending`, oldest
+  submission first) plus those decided in the last 7 days with their latest decision, each with its checklist, a risk
+  and the waiting time. `GET …/{businessId}` adds the owners' Stripe Identity results (S-22), every registry lookup that
+  went to an agent (S-23, open or decided) and the decision history. The path variable is `businessId`, not
+  `merchantId`, because `{merchantId}` handlers are member endpoints (`@RequiresMerchant`).
+- **Decisions = the design's two buttons.** "Approve" (pending → active at Registered: the existing
+  `ApproveApplication`, which confirms submitted checks and publishes `merchant.approved`) and "Request info", which is
+  how the backlog's "reject with reasons" is drawn: the agent picks the checks to redo and writes a note (both
+  required); the application goes back to `applicant` at the Verification step and those rows become `rejected`, so
+  the owner redoes them and submits again (and `ComplianceStatus` lists them). Requesting identity (`kyc`) also sends
+  every owner whose Stripe check was handed in back to Stripe (`last_error = agent_rejected`; the Studio words it "A
+  Northline agent couldn't confirm it"). Declining a business for good isn't in the design and isn't built (suspension
+  is S-82). **Approve waits for the manual reviews:** 409 `reviews_open` while a registry lookup or an identity
+  mismatch of the business is open.
+- **Manual reviews:** registry lookups keep their S-23 endpoint (now with `CurrentStaff` and the audit log); identity
+  mismatches get `POST …/{businessId}/identity-reviews/{checkId}/decision {approve|reject, note?}` — approve → owner
+  verified (the agent checked the person), reject → the owner verifies again; the `kyc` row is re-derived.
+- **Risk** (the design's Low / Medium / "High · no licence"): high when a licence or permit row (`licence`,
+  `ahs_permit` types) isn't verified; medium when another check waits for an agent's review or failed; low otherwise.
+  **Check states:** passed (verified), review (open registry review / identity mismatch), waiting (submitted evidence
+  a human reads — uploads, numbers without an API), failed. The table shows ✓ / ✗ as designed and ○ for waiting.
+- **Headline:** "{n} applications · median {d} days · SLA 2" — n = pending in scope; the median is submission → decision
+  over the last 30 days (`application_decisions.submitted_at`); without decisions the median part is left out. SLA 2 is
+  the design's copy.
+- **Audit:** every decision writes `developer.audit_log` in its transaction (`merchant_id` = the business, role = the
+  console role(s) acted with): `verification.application_approved`, `verification.info_requested`,
+  `verification.identity_approved|identity_rejected`, `verification.registry_approved|registry_rejected`.
+- **Notification (S-27 channels):** a new in-process event `merchants.api.ApplicationDecided` (decision, check keys,
+  the agent's note; not externalized) → the messaging module emails every owner (`application-decision` template,
+  en/fr, transactional — the answer to their own submission, so not subject to the notification matrix). SMS/push: the
+  S-27 worker has no row for application decisions; not added.
+- **Region filter:** `?province=&market=` (S-134). The overview's resolution moved to a shared kernel port
+  `shared.PlaceFilter` (implemented by merchants, which knows where each business operates) so every queue resolves
+  places and answers the same 422s. The console's `PlaceFilters` component (shell) is shared too.
+- **Schema V210** (console queues range V210–V219: V19x would sort below fulfilment's V200–V202): `merchants.application_decisions` (decision, check keys, note ≤ 500, agent, role, submitted/decided
+  times); `owner_identity_checks.reviewed_by|reviewed_at|review_note`; partial indexes for pending businesses and open
+  identity reviews.
+- **"Simulate approval" (local only) is kept** for Studio development: design 02 draws the button, and it exists only
+  under the `local` profile. Every other environment approves through this queue.
+- **Data Table:** `onAction` may resolve to `false` to skip the "done" toast (Request info opens the console's own
+  dialog).
+- **Messages (fr in the catalogue):** "Choose approve or request info.", "Choose what the business needs to fix.",
+  "Pick checks from this application.", "Tell the business what to fix.", 409 "This application isn't waiting for a
+  decision." / "Decide the open registry and identity reviews first." / "Only a submitted application can be sent
+  back."
+- **Not done:** the design's "welcome call fast-tracks Trusted" (tiers are S-93/S-82); sanctions screening and
+  insurance OCR named in the lede (no provider exists — the lede is the design's copy); assigning applications to an
+  agent; the Studio doesn't show the agent's note in the wizard (it is in the email).
+
+## 2026-10-01 — S-92 Listing vetting queue: flagged listings approve/reject
+
+Stacked on S-79 (it uses S-79's `shared.PlaceFilter`, the console's `PlaceFilters`, `useGrant`, `queues.css`).
+
+- **One queue, three sources, composed in the console module** (`GET /api/v1/console/vetting?province=&market=`,
+  screen `vetting`; deciding needs `vet` — admin and trust & safety): listings the automated checks flagged (catalogue
+  `pending` with `vetting_flags`, S-39 re-vets included with their `revetReasons`), listings an **open S-133 trust flag**
+  points at (target type `listing`, whatever their vetting — the AI never holds a listing), and **dishes held by the S-67
+  price check** (published, outside ±40 % of the median, price not confirmed — the "console review queue for menu
+  prices" S-67 left open). Each module answers through its `api` (`catalogue.api.ListingVetting`,
+  `food.api.MenuPriceReviews`, `trust.api.ListingFlags`); no cross-module SQL. Decided listings stay listed 7 days with
+  their decision ("Approved" / "Rejected · seller notified").
+- **Approve** a flagged listing = as if the automated checks had passed (live on a first submission; a re-vetted one
+  keeps the merchant's live / hidden choice; `listing.published` when customers can now see it). Approving a listing
+  that only had a trust flag changes nothing in the catalogue and **dismisses** its flags. Approving a held dish keeps
+  its price (as the owner's "Keep this price" would).
+- **Reject** needs at least one reason (`prohibited | misleading | pricing | licence | images | other`; the design has
+  no reason list, the codes are ours) and takes an optional note. A listing becomes `rejected` (hidden from customers,
+  `listing.hidden` if it was visible; the merchant fixes and resubmits — the existing rejected → submit path), its open
+  trust flags are **actioned**; a dish goes back to **draft**. The owners get the `listing-rejected` email (en/fr,
+  transactional) with the reasons and the note.
+- **What "actioned" does to a listing (the S-133 open question):** the listing is rejected, exactly like a reviewer's
+  rejection (reason `other`, the staff note), whether the flag is actioned from the vetting queue or from the trust
+  queue. Trust now publishes `trust.api.FlagDecided` for every staff decision; the catalogue reacts for target type
+  `listing` (a listing already rejected is left alone, so the vetting path doesn't reject twice). Dismissed changes
+  nothing. Other target types (reviews, messages) are S-93's.
+- **Module wiring:** the owners' email is a `messaging.api.ListingRejectedNotice` event published by catalogue and food —
+  messaging can't listen to catalogue or food events (catalogue → trust → messaging would be a cycle), so the notice
+  type lives in messaging's api. Trust flag decisions now record the console role acted with (was the literal `staff`).
+- **Headline:** "{n} listings auto-approved this week · {m} flagged for a human": auto-approved = listings submitted in
+  the last 7 days whose vetting is approved with no reviewer decision; flagged = items waiting.
+- **Rule and evidence wording** (design: "Price −72% vs median", "Missing licence", "Duplicate image", "Category rule",
+  "Restricted claim"): built from codes and figures by the console (deviation from the category / cuisine median, the
+  regulator from the category, the AI flag's own explanation, the re-vet reasons). AI flags show as "Restricted claim"
+  with their explanation as evidence.
+- **Audit:** `vetting.listing_approved|listing_rejected` (target `product|service`), `vetting.dish_approved|dish_rejected`
+  (target `menu_item`), with the business's id and the console role; trust flags resolved alongside write
+  `trust.flag_decided` as before.
+- **Schema V211:** `catalogue.vetting_decisions` (decision, reasons, the flags seen, note ≤ 500, reviewer, role, time);
+  partial indexes on pending offers and services. No food or trust schema change.
+- **Messages (fr in the catalogue):** "Choose why the listing is rejected.", "Pick reasons from the list.", 409 "This
+  listing isn't waiting for a decision." / "This dish isn't waiting for a price decision."
+- **Not done:** the design's "restricted keywords" and "claims requiring proof" rules exist only as the S-133 AI
+  screening (no keyword list in vetting yet — S-93 makes keyword lists configuration); the "SLA 4 business hours" is the
+  design's copy, not computed; the Studio doesn't show the reviewer's reasons on a rejected listing (they are in the
+  email).
+
+## 2026-10-01 — S-80 Disputes: evidence review and decisions (DisputeDecisions)
+
+Stacked on S-92 (#122), itself on S-79 (#121).
+
+- **The agents' queue** (`GET /api/v1/console/disputes?province=&market=`, screen `disputes`: admin, trust & safety,
+  finance, support): disputes with an agent (`agent`, `appealed` — the seller contested, or the goodwill offer was
+  declined / expired) and **S-60 refund cases escalated after the seller's 24 h** (`agent_review`), oldest first, then
+  cases agents decided in the last 7 days. Headline counts: cases for an agent, refund cases still in the seller window,
+  disputes and refund cases closed in the last 7 days. Payments owns the data (`payments.api.AgentCases`); the console
+  module adds the business name, province and S-38 quality score (`trust.api.QualityQuery`) — payments can't depend on
+  trust (trust → messaging → payments).
+- **Case view:** both parties' statements (the dispute's customer statement and seller response; a refund case's
+  contest reason), the evidence list with downloads of stored files
+  (`GET …/dispute/{id}/evidence/{evidenceId}`, `nosniff`), the customer's other disputes, the seller's prior disputes
+  and how many were released to it. The design's "Reliability 4.9" and "message thread (14)" have no source yet and are
+  left out.
+- **Decisions = the design's four outcomes** (`POST …/{dispute|refund}/{id}/decision {outcome, refundCents?, note?}`,
+  action `decide`): full refund, partial (any amount between $0 and the escrow; the console pre-fills 50 %), release to
+  seller, **goodwill credit (platform pays)** — the escrow is released to the seller and the customer gets a Northline
+  credit for the chosen amount (`payments.refunds` kind `credit`, charged to the platform). Money moves only through the
+  existing case paths (S-11): refunds become `approved` and the refund queue job pays them; releases let the escrow go.
+  **Never auto-refund:** nothing pays out at decision time. Refund cases take only full refund or release (they have
+  no partial path).
+- **Finance co-sign above $500** (design 03 Team: Finance — "refunds > $500 · Passkey + 2nd approver"): a decision that
+  returns more than $500 (card refund or credit) is stored `awaiting_cosign`; nothing moves and the escrow stays on hold
+  until another person with the `refund` action (finance, admin) co-signs (`POST …/decisions/{id}/cosign {approve |
+  decline, note?}`). The decider can't co-sign (409 `cosign_self`). Declining returns the case to the agents. The $500
+  is the design's number, a constant (`AgentCases.COSIGN_ABOVE_CENTS`), not configuration. The design's "Passkey"
+  step-up is not modelled (every console session already has a second factor).
+- **The note "visible to both parties"** is stored with the decision (`agent_decisions.note`,
+  `payments.disputes.decision_note`) and carried by `dispute.decided` as an **optional `note`** (additive schema change)
+  so the merchant's "dispute decided" email shows it. Customer-facing display of the note (consumer Help & cases) is not
+  built.
+- **Audit:** `disputes.decided`, `disputes.decision_awaiting_cosign`, `disputes.cosigned`, `disputes.cosign_declined`
+  (target `dispute|refund`, the business's id, the console role).
+- **Schema V212:** `payments.agent_decisions`; `payments.disputes.decision_note`; partial indexes on agent cases.
+- **Messages (fr in the catalogue):** "Choose an outcome.", "A partial refund is more than $0 and less than the amount
+  in escrow.", "A refund case is refunded in full or released to the seller.", "Choose approve or decline.", 409s
+  "This case isn't waiting for an agent.", "This case already has a decision waiting for a finance co-sign.", "This
+  decision was already co-signed or declined.", "Another person must co-sign this decision.".
+- **Not done:** seller appeals ("seller may appeal once" is the design's copy; the `appealed` state exists but no
+  appeal flow); "quality scores update tonight" relies on the existing nightly quality job; Stripe card disputes
+  (chargebacks) stay with the issuer and don't appear in the queue.
+
+## 2026-10-01 — S-93 Trust & safety rules, flags (incl. off-platform payment flags from messaging)
+
+Stacked on S-80 (#123) → S-92 (#122) → S-79 (#121).
+
+- **Rules as configuration** (`trust.domain.TrustRule`, `trust.rules`): tier thresholds and take rates (Registered /
+  Trusted / Master, design 03 tier rules), the rating floor (4.2 over 90 days, 30 days to recover), provider no-shows (3
+  in 30 days), customer no-shows (×2), the missing-photo escrow delay (48 h), the **off-platform payment phrases** and
+  the **restricted keywords** for listings. Each rule is a typed JSON value with the design's numbers as defaults; a rule
+  without a row uses its default (no seed data). `GET /api/v1/console/trust/rules`, `PUT …/rules/{key} {value}`
+  (action `decide`) validates every field (422 per `value.<field>`), stores it and writes `trust.rule_changed`
+  (platform-level, before/after).
+- **What the rules drive today:** the phrases add to the message detector's built-in patterns (`messaging.api.
+  OffPlatformPhrases`, implemented by trust — messaging can't call trust, trust → messaging); the restricted keywords
+  are a new automated vetting check (`restricted_keyword` flag → the S-92 queue; `trust.api.ListingKeywordRules`); the
+  rating floor drives "Simulate impact" (`GET …/rules/rating_floor/impact?rating=&province=&market=`: businesses with at
+  least 5 reviews in the window, and how many average below it). **Display only for now:** tier thresholds and take
+  rates (tiers aren't recomputed by a job yet; payments still reads the tier stored on the business), the no-show limits
+  and the photo delay — the consequences list reads them, so the copy follows the configuration.
+- **Flags:** `GET /api/v1/console/trust/flags/queue?province=&market=` lists open flags of the businesses in scope
+  (with name and province) and those decided in the last 7 days. **Actions** `POST …/flags/{id}/action {warn | coach
+  | confirm | suspend_listings | escalate, note?}` (action `decide`; `suspend_listings` also needs `suspend`) action
+  the flag and record what was done in `trust.flags.action` (column of V012, first use). **Warn** emails the owners
+  (`trust-warning`, en/fr, transactional; `messaging.api.TrustWarningNotice`) — the design's "warning, then
+  suspension". The others are recorded (and audit-logged) only: coaching, instant-book-off and suspensions belong to the
+  sellers oversight screen (S-82). A listing's flag keeps S-92's meaning ("actioned" rejects the listing; the console
+  shows it as "Reject listing"). Dismiss uses the S-133 decision endpoint. `FlagDecided` now carries the action.
+- **Which action a flag offers** (console): off-platform payment → Warn; quality below floor → Start coaching; a
+  customer no-show → Confirm; regulated work without permit → Suspend listing rights; listing flags → Reject listing;
+  anything else → Escalate to ops.
+- **Copy:** the design's tier rules and consequences are built from the rule values ("20+ jobs · quality ≥ 80 · …",
+  "Instant book, 12% take, badge"); the lede mentions ClickHouse as written in the design (scores are computed by the
+  existing nightly job). Keyword lists, the rule dialog and flag wording for the api's codes are ours.
+- **Schema V213:** `trust.rules`; index `trust.flags(merchant_id, state)`.
+- **Messages (fr in the catalogue):** "Enter a number in the allowed range.", "Enter a whole number in the allowed
+  range.", "Add at least one word or phrase.", "Each word or phrase is at most 60 characters.", "At most 200 words or
+  phrases.", "Pick a rule from the list.", "Send the rule's value.", "Enter a rating from 1 to 5.", "Only a business
+  can be warned.".
+- **Not done:** the automatic consequences themselves (removing a business from search below the floor, instant book
+  off after no-shows, the photo delay) — the rules are their configuration, the jobs are S-82's; appeals.
+
+## 2026-10-01 — S-83 Support desk: agent queue, EN/FR macros, role-gated case actions
+
+Stacked on S-93 → S-80 → S-92 → S-79.
+
+- **The queue** (`messaging.application.SupportDesk`, `GET /api/v1/console/support/tickets`): every open helpdesk case
+  (`messaging.tickets` — businesses' Help › Contact support, S-60 customer cases) of the businesses in the province /
+  market scope; with no filter also customers' and couriers' cases (they have no business, so a province filter leaves
+  them out). Sorted by SLA due time. The design's chips are filters with counts (All, Urgent, Unassigned, Mine, SLA at
+  risk, Providers, Kitchens, Customers — plus **Sellers**, since sellers write in too). "SLA at risk" = waiting for
+  Northline (not `waiting` on the requester) and due within 30 min. KPIs: open, urgent, median first reply (30 days,
+  from the new `first_replied_at`), SLA at risk, resolved without escalation (30 days), CSAT (30 days, `tickets.csat` —
+  nothing collects it yet, so it shows "—"), share of open cases in French. The design's "Québec pilot prep" note is
+  left out (region-neutral).
+- **Requester context** is what the case was opened with (`tickets.context`: portal, tier, role, recent events; a
+  customer case's refund cases and triage summary) plus the reference label — no new lookups.
+- **Case actions** (all need `support`; every one writes the audit log with the acting role, `target_type = ticket`):
+  - reply → an `agent` message in the case conversation (the `case` thread the business sees under Help and the
+    customer under their cases, created if an old case has none), state `waiting` ("Send & keep open") or `resolved`
+    ("Send & resolve"); unassigned cases are assigned to the replier; `support.replied[_resolved]` records the macro
+    used.
+  - take → assigned to me (`new` → `in_progress`), `support.assigned`.
+  - escalate to trust & safety → `escalated_at/by` and a `system` message "Escalated to trust & safety." (+ note) the
+    requester sees; once (409 `already_escalated`). It does not create a trust flag (the T&S queue is flags; a case
+    becomes one when T&S raises it) — open question.
+  - Any action on a resolved case → 409 `case_resolved`.
+- **Refund request to finance** (never an automatic refund): an agent asks with an amount and a reason
+  (`messaging.support_refund_requests`, `pending`); someone with `refund` on the **finance screen** (finance, admin)
+  approves or declines it, **never the person who asked** (409 `request_self`) — that is the design's "second approver",
+  so no amount threshold applies here. An approved request decides the S-60 refund cases the case points at that are
+  waiting for an agent (state `agent`, no co-sign pending) through `DisputeDecisions.decideRefund` — they become
+  `approved` and the refund queue pays them; eligibility is checked first because an exception from payments would roll
+  the whole decision back. For any other case the approval is finance's instruction on record (audit
+  `support.refund_approved` with the cases it moved); the money movement for business-fee refunds has no path yet.
+  `GET /api/v1/console/support/refund-requests` lists pending ones for the finance screen (S-85); in the support desk an
+  admin can decide in place. The design's "Refunds > $50 … need a lead's co-sign" is replaced by this finance approval.
+- **Macros**: canned replies with a title and text in English and French (`messaging.macros`, topic `support`, new
+  `title_i18n`, `updated_by/at`), seeded with the design's six. Agents pick one and its text is inserted in the
+  **requester's language** (`tickets.lang`), then edit before sending. Writing them needs the new action `macros`.
+- **New role `support_lead`** ("macros EN/FR … editable by support leads"): the support screens and actions plus
+  `macros`; admins also have `macros`. The CHECK on `identity.platform_roles.role` is widened (V214); the dev seed
+  gives Priya the role (seed-dev V215). Grant it with SQL like the others (runbooks README § Console BFF).
+- **Schema V214:** role check widened; `tickets.first_replied_at`, `escalated_at`, `escalated_by` and an open-cases
+  index; `macros.title_i18n`, `updated_by`, `updated_at` + six seeded support macros; `messaging.support_refund_requests`.
+  Seed-dev V215. No new configuration variables.
+- **Messages (fr in the catalogue):** "Write a reply.", "Keep your reply under 5,000 characters.", "Enter an amount more
+  than $0.", "Use lower-case letters, digits, dots and dashes for the key.", "Give the macro a title in English and
+  French.", "Write the macro in English and French.", "That key is already used.", "Another person must decide this
+  refund request.", "This refund request was already decided.", "This case is already with trust & safety.", "This case
+  is resolved.", "Pick a filter from the list.".
+- **Not done:** the requester isn't emailed or pushed about an agent reply (they see it in Help / their cases); CSAT
+  survey; the design's per-case "one-click" suggestions (re-verify WCB, restore
+  instant book, force-dispatch…) belong to the screens that own those actions — the desk offers assign / refund request
+  / escalate; the finance screen's list of refund requests (S-85).
+
 ## 2026-10-01 — S-87 Courier app (MVP): shifts, stops, pickup/drop-off, proof of delivery
 
 Branch `courier/s-87-courier-app`. **No migration** (the V220–V229 range offered for this story is unused) and no new
@@ -5420,8 +5658,32 @@ server environment variable. Runbook: [runbooks/courier-app.md](runbooks/courier
   lands), an open trust flag, or a check that is due (to do, expired, rejected), under review (licences, registries,
   permits) or expiring within 30 days. Dispute rate = disputes opened ÷ orders + bookings, 90 days. The headline counts
   active businesses and the active ones at risk.
-- **Not done (design 03 shows them):** Coaching plan, Instant book off, Hide from search (no such states exist yet),
-  "Bulk message", "Message" and "Impersonate (read-only)" (no staff-to-business messaging or impersonation exists).
+- **Hide from search (design 03 "Existing customers can still book").** V230 adds `merchants.search_hidden_at` and
+  `search_hidden_cause` (`staff` | `rating_floor`). `POST …/{businessId}/search {hidden, reason}` (sellers ·
+  `suspend`) hides or shows a business; 409 `already_hidden` / `not_hidden`. The search worker indexes a hidden active
+  business as `hidden`, so its documents leave search exactly as a paused one's do (tested in `SearchIndexerTest`);
+  its page, listings and checkout stay open, so existing customers can still book. Event
+  `merchant.search_visibility_changed` (`actionId`, `hidden`, `cause`), trail `search_hidden` / `search_restored`,
+  audit `merchant.search_hidden` / `merchant.search_restored`, owners emailed. The directory's Flags column and the
+  detail header say "Hidden from search" (with "· rating floor" when the rules hid it).
+- **The trust rules' consequences are enforced here (coordinator: S-93 left them as configuration).** A nightly job
+  (`TrustEnforcementScheduler`, `northline.console.trust-enforcement-cron`, default `0 23 5 * * *`, off under the
+  `test` profile) runs `console.application.TrustEnforcementService`: trust decides who
+  (`trust.api.TrustConsequences`), merchants applies (`merchants.api.SellerSanctions`), so neither module depends on
+  the other.
+  - **Rating floor** (`trust.rules` `rating_floor`, default 4.2 over 90 days): a business with at least 5 reviews in
+    the window whose average is below the floor is hidden from search (cause `rating_floor`); once its average is
+    back at the floor, or it no longer has 5 reviews in the window, it is shown again automatically. A business staff
+    hid is never shown again by the job, and the job never hides one twice.
+  - **Off-platform payment, warning then suspension:** an open `off_platform_payment` flag raised after another of
+    the business's off-platform flags was actioned "warn" within 180 days suspends it (`active|paused → suspended`).
+  - Each one is an oversight action by actor `system` (role `system`), audited, emailed to the owners with the
+    reason; the timeline reads "… by the trust rules".
+  - The reasons the job writes are English only (they are stored once, like a staff member's reason).
+- **Not done (design 03 shows them):** Coaching plan, Instant book off (no instant-book state exists to switch, so
+  "instant book off after no-shows" is not enforced either), the completion-photo delay and customer no-show
+  consequences (no such states), "Bulk message", "Message" and "Impersonate (read-only)" (no staff-to-business
+  messaging or impersonation exists).
   The design's "Coaching" status has no equivalent. The directory returns at most 2,000 businesses (`truncated`;
   search by name finds the others).
 

@@ -1,4 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { ScreenPending } from '../../features/shell/ScreenPending';
+import { z } from 'zod';
+import { VerificationQueue } from '../../features/verify/VerificationQueue';
 
-export const Route = createFileRoute('/_console/verification')({ component: () => <ScreenPending screen="verify" /> });
+/** The verification queue (S-79): province and market of the region model, and the open application. */
+export const Route = createFileRoute('/_console/verification')({
+  validateSearch: z.object({ province: z.string().optional(), market: z.string().optional(), application: z.string().optional() }),
+  component: VerificationQueue,
+});

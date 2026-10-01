@@ -200,7 +200,11 @@ final class DocumentSource {
                    where merchant_id = :m and (effective_from is null or effective_from <= current_date)
                    order by member_user_id, weekday, effective_from desc nulls last) r""", merchantId);
         return jdbc.sql("""
-                        select m.id, m.type, m.display_name, m.status, m.tier, m.quality_score, m.province,
+                        select m.id, m.type, m.display_name,
+                               -- S-82: hidden from search (staff, or below the rating floor) is indexed as not active
+                               case when m.search_hidden_at is not null and m.status = 'active' then 'hidden'
+                                    else m.status end as status,
+                               m.tier, m.quality_score, m.province,
                                m.profile->>'sameDayCutoff' as same_day_cutoff, m.profile->>'description' as about,
                                m.updated_at,
                                sf.slug, sf.published_at is not null as page_published,

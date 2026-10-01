@@ -1,6 +1,8 @@
 package ca.northline.food.application;
 
+import ca.northline.developer.api.AuditTrail;
 import ca.northline.food.api.MenuItemAvailabilityChanged;
+import ca.northline.food.api.MenuPriceReviews;
 import ca.northline.food.api.MenuPublished;
 import ca.northline.food.application.MenuStore.ItemRow;
 import ca.northline.food.application.MenuStore.MenuRow;
@@ -28,10 +30,13 @@ import ca.northline.food.domain.KitchenTime;
 import ca.northline.food.domain.MenuStatus;
 import ca.northline.food.domain.ModifierGroup;
 import ca.northline.food.domain.OpeningRanges;
+import ca.northline.food.domain.PriceCheck;
+import ca.northline.messaging.api.ListingRejectedNotice;
 import ca.northline.region.api.MerchantPlaces;
 import ca.northline.shared.Bytes;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.Ids;
+import ca.northline.shared.MerchantScope;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
 import ca.northline.shared.RuleViolation.Violation;
@@ -59,7 +64,14 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 class MenuBuilderService
-        implements ListMenus, ViewMenu, EditMenus, EditSections, EditMenuItems, MenuItemPhotos, KitchenProvisioning {
+        implements ListMenus,
+                ViewMenu,
+                EditMenus,
+                EditSections,
+                EditMenuItems,
+                MenuItemPhotos,
+                KitchenProvisioning,
+                MenuPriceReviews {
 
     static final Set<String> PHOTO_TYPES = Set.of("image/jpeg", "image/png", "image/webp");
     static final int PHOTO_MAX_BYTES = 10 * 1024 * 1024;
@@ -74,6 +86,7 @@ class MenuBuilderService
     private final Clock clock;
     private final MerchantPlaces places;
     private final PriceBenchmarks prices;
+    private final AuditTrail audit;
 
     // ── menus ─────────────────────────────────────────────────────────────────
 
@@ -280,6 +293,66 @@ class MenuBuilderService
         var row = confirmed.withVetting(visibility(confirmed, approved).vetting());
         menus.updateItem(row);
         return afterWrite(row, visible(before, approved));
+    }
+
+    // ── S-92: the console's review of dishes held by the price check ──────────────────────────────────────────
+
+    @Override
+    public List<HeldDish> held(MerchantScope scope, int limit) {
+        return menus.heldForPrice(scope, PriceCheck.BAND_PCT, limit).stream()
+                .map(i -> held(i, "held"))
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public HeldDish decide(
+            String itemId, boolean approve, List<String> reasons, @Nullable String note, String staffId, String role) {
+        var before = menus.itemById(itemId).orElseThrow(() -> new NotFound("menu item", itemId));
+        if (before.status() != ItemStatus.PUBLISHED || !before.priceCheck().flagged()) {
+            throw new Conflict("not_in_review", "This dish isn't waiting for a price decision.");
+        }
+        if (!approve && reasons.isEmpty()) {
+            throw RuleViolation.of("reasons", "required", "Choose why the listing is rejected.");
+        }
+        var merchantId = before.merchantId();
+        var approved = merchant.approved(merchantId);
+        var wasVisible = visible(before, approved);
+        var row = approve
+                ? before.withPriceConfirmedCents(before.priceCents())
+                : before.toBuilder().status(ItemStatus.DRAFT).build();
+        row = row.withVetting(visibility(row, approved).vetting());
+        menus.updateItem(row);
+        afterWrite(row, wasVisible);
+        var cleanNote = note == null || note.isBlank() ? null : note.strip();
+        audit.record(AuditTrail.Entry.of(
+                        merchantId,
+                        staffId,
+                        role,
+                        approve ? "vetting.dish_approved" : "vetting.dish_rejected",
+                        "menu_item",
+                        itemId)
+                .withChange(
+                        Map.of("status", before.status().code(), "priceCents", before.priceCents()),
+                        Map.of("status", row.status().code(), "reasons", List.copyOf(reasons))));
+        if (!approve) {
+            events.publishEvent(new ListingRejectedNotice(
+                    Ids.next(), clock.instant(), itemId, merchantId, "dish", row.name(), reasons, cleanNote));
+        }
+        return held(row, approve ? "approved" : "rejected");
+    }
+
+    private static HeldDish held(ItemRow i, String state) {
+        var check = i.priceCheck();
+        return new HeldDish(
+                i.id(),
+                i.merchantId(),
+                i.name(),
+                i.priceCents(),
+                check.medianCents(),
+                check.deviationPct(),
+                i.updatedAt(),
+                state);
     }
 
     @Override

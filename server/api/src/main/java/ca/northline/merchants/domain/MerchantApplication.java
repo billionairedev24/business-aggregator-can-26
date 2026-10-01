@@ -198,6 +198,19 @@ public class MerchantApplication {
         return new MerchantApproved(Ids.next(), at, id, actorId, type.code(), tierCode);
     }
 
+    /**
+     * S-79 "Request info": the agent sends a submitted application back (pending → applicant) to the Verification
+     * step, where the owner fixes the reopened checks and submits again.
+     */
+    public void returnForInformation(Instant at) {
+        if (status != MerchantStatus.PENDING) {
+            throw new Conflict("not_pending", "Only a submitted application can be sent back.");
+        }
+        status = MerchantStatus.APPLICANT;
+        step = OnboardingStep.VERIFICATION;
+        updatedAt = at;
+    }
+
     public int categoryLimit() {
         return type.categoryLimit();
     }

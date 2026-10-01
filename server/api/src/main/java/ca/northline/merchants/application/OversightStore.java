@@ -23,6 +23,14 @@ public interface OversightStore {
 
     void insert(Oversight action, String merchantId);
 
+    /** Hidden from search since when and why ({@code staff} | {@code rating_floor}); empty when visible. */
+    Optional<String> searchHidden(String merchantId);
+
+    /** @param cause null to show the business again */
+    void searchHidden(String merchantId, @org.jspecify.annotations.Nullable String cause, Instant at);
+
+    java.util.List<String> hiddenFromSearch(String cause);
+
     record State(
             String id, @Nullable String status, @Nullable String tier) {}
 }

@@ -25,6 +25,7 @@ public interface SellerDirectory {
     /**
      * @param categoryIds approved or requested categories, in the order they were added
      * @param attention verifications that are expired, rejected, still to do, under review, or expire within 30 days
+     * @param searchHidden why it is hidden from search ({@code staff} or {@code rating_floor}), null when it is shown
      */
     record Seller(
             String id,
@@ -37,7 +38,8 @@ public interface SellerDirectory {
             List<String> categoryIds,
             Instant createdAt,
             @Nullable Instant approvedAt,
-            List<Check> attention) {
+            List<Check> attention,
+            @Nullable String searchHidden) {
 
         public Seller {
             categoryIds = List.copyOf(categoryIds);

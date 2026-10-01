@@ -5,6 +5,7 @@ import static ca.northline.messaging.domain.MessagingRules.MESSAGE_TOO_LONG;
 
 import ca.northline.messaging.api.Conversations;
 import ca.northline.messaging.api.MessageSent;
+import ca.northline.messaging.api.OffPlatformPhrases;
 import ca.northline.messaging.application.ThreadStore.NewMessage;
 import ca.northline.messaging.application.ThreadStore.NewThread;
 import ca.northline.messaging.domain.InboxScope;
@@ -38,6 +39,7 @@ class MessagingInboxService implements BrowseInbox, SendMessage, Conversations {
     private final MerchantProfiles merchants;
     private final ApplicationEventPublisher events;
     private final Clock clock;
+    private final OffPlatformPhrases offPlatform;
 
     @Override
     public List<ThreadSummary> threads(String merchantId, Viewer viewer) {
@@ -67,7 +69,7 @@ class MessagingInboxService implements BrowseInbox, SendMessage, Conversations {
         if (raw.length() > MESSAGE_MAX) {
             throw RuleViolation.of("body", "length", MESSAGE_TOO_LONG);
         }
-        var text = OutgoingText.of(raw);
+        var text = OutgoingText.of(raw, offPlatform.phrases());
         var templateKey = command.templateKey() != null
                         && threads.quickReplyText(portal(command.merchantId()), command.templateKey(), "en")
                                 .isPresent()
