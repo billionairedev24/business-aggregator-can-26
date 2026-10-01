@@ -1,11 +1,12 @@
 package ca.northline.discovery.web;
 
 import ca.northline.discovery.application.ListSitemap;
-import ca.northline.shared.PublicPages;
 import ca.northline.shared.RuleViolation;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,20 +34,33 @@ class SitemapController {
 
     private final ListSitemap sitemap;
 
-    record Index(int pageSize, List<ListSitemap.Section> sections) {}
+    record SitemapIndex(int pageSize, List<SitemapSection> sections) {}
 
-    record Items(List<PublicPages.Page> items) {}
+    record SitemapSection(String name, long count, int pages) {}
+
+    record SitemapPage(List<SitemapEntry> items) {}
+
+    record SitemapEntry(
+            String key,
+            @Nullable String customDomain,
+            @Nullable Instant updatedAt) {}
 
     @GetMapping
-    ResponseEntity<Index> index() {
-        return ResponseEntity.ok().cacheControl(HOUR).body(new Index(ListSitemap.PAGE_SIZE, sitemap.sections()));
+    ResponseEntity<SitemapIndex> index() {
+        var sections = sitemap.sections().stream()
+                .map(s -> new SitemapSection(s.name(), s.count(), s.pages()))
+                .toList();
+        return ResponseEntity.ok().cacheControl(HOUR).body(new SitemapIndex(ListSitemap.PAGE_SIZE, sections));
     }
 
     @GetMapping("/{section}")
-    ResponseEntity<Items> section(@PathVariable String section, @RequestParam(defaultValue = "1") int page) {
+    ResponseEntity<SitemapPage> section(@PathVariable String section, @RequestParam(defaultValue = "1") int page) {
         if (page < 1 || page > ListSitemap.MAX_PAGE) {
             throw RuleViolation.of("page", "range", PAGE_RANGE);
         }
-        return ResponseEntity.ok().cacheControl(HOUR).body(new Items(sitemap.page(section, page)));
+        var items = sitemap.page(section, page).stream()
+                .map(p -> new SitemapEntry(p.key(), p.customDomain(), p.updatedAt()))
+                .toList();
+        return ResponseEntity.ok().cacheControl(HOUR).body(new SitemapPage(items));
     }
 }
