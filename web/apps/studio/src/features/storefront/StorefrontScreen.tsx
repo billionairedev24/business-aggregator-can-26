@@ -4,12 +4,8 @@ import { Alert, Dialog, EmptyState, ErrorState, Field, FormGrid, PageHeader, Pag
 import { ApiError } from '../../lib/http';
 import { useMerchant, useMerchantId, useRole } from '../shell/api';
 import { useShellT } from '../shell/messages';
-<<<<<<< HEAD
 import { rewardQuery, storefrontQuery, storefrontStatsQuery, useCreateStorefront, usePublishStorefront, useSaveReward, useUpdateStorefront, type Reward, type Storefront } from './api';
-=======
-import { storefrontQuery, useCreateStorefront, usePublishStorefront, useUpdateStorefront, type Storefront } from './api';
 import { EmbedSnippet } from '../settings/EmbedSnippet';
->>>>>>> origin/developer/s-76-publishable-keys
 import { PageBuilder, serverError } from './PageBuilder';
 import { StorefrontPreview } from './StorefrontPreview';
 import { useStorefrontT } from './messages';

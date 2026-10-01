@@ -4851,3 +4851,29 @@ and the audit log rules: no update, no delete, and a retention delete only past 
   CORS headers, every validation message, 403s, audit), `embed.test.ts` (consumer: request, button, language, colour
   contrast, inactive key, single mount), `embed.test.tsx` (studio: snippet, create, confirm replace, websites with
   the 422 message, read-only role, French).
+
+## 2026-09-30 — S-77 Seed data photos for kitchen items and listings
+
+- **What #5 already did.** PR #5 bundled eight menu-item pictures (`server/api/src/main/resources/seed-media/kitchen`).
+  `LocalKitchenPhotoStore` serves them for V108's `seed/<name>.jpg` keys until a photo is uploaded under the key.
+  That covers every seeded menu item: V108 is the only seed with menu items. Nothing did the same for listings: V104's
+  NL-P-88120 named `seed/nl-p-88120-{1,2,3}.jpg` with no bytes, and the other seeded listings had no images.
+- **Completed here.**
+  - The catalogue's `LocalMediaStorage` gets the same fallback from `seed-media/catalogue`: only lower-case
+    `seed/<name>.jpg` keys, and an upload under the key wins.
+  - 23 pictures are bundled (≈ 820 KB): NL-P-88120's three, plus one per seller-owned listing.
+  - The dev seed `V184__seed_listing_photos.sql` (db/seed-dev, `local` profile only) adds a main image to Prairie
+    Wrench Parts' brake pads and oil (V104) and to all 19 neighbourhood-shop listings (V113), as `own_images`.
+  - Every live seeded listing now shows a picture in the Studio and on the consumer site.
+  - The cabin air filter (V104) stays a draft without photos on purpose: it is the editor's missing-photo example.
+- **They are sample pictures, not photographs.** They match #5's style: a colour gradient, the item's name and
+  "Sample photo · dev seed", generated with Pillow (script in the PR description). Photo hosts (Wikimedia Commons and
+  others) are not reachable from this environment, so no licensed photographs were fetched. Replacing a file with a
+  real photo under the same name needs no other change. They are classpath resources of the api jar; the cloud
+  profiles never read them, because the object-store adapters have no seed fallback and db/seed-dev is refused
+  outside `local`/`test` (S-16).
+- **Not covered:** booking job photos (V103 `seed://tires-done.jpg`) and onboarding documents (V102 PDFs). They are not
+  listings or menu items and still show their placeholders.
+- **Tests:** `LocalMediaStorageTest` (fallback, an upload wins, unknown or unsafe keys) and `SeedPhotosTest`
+  (`local` profile: every seeded menu item and listing image key has bytes, every live seeded listing has an image,
+  the public media endpoint serves one as image/jpeg).
