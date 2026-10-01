@@ -119,14 +119,14 @@ jobs:
           done
 
   web:
-    name: images (studio, consumer, docs, docs-internal — Dockerfile)
+    name: images (studio, consumer, console, docs, docs-internal — Dockerfile)
     needs: prepare
     if: ${{ inputs.images == 'all' || inputs.images == 'web' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
       matrix:
-        app: [studio, consumer, docs, docs-internal]
+        app: [studio, consumer, console, docs, docs-internal]
     steps:
       - uses: actions/checkout@v5
       - uses: docker/setup-buildx-action@v3
