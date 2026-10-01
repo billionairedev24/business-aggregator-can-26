@@ -188,7 +188,7 @@ everything except `tools` (`make kafka-ui`, `make kibana`).
 | profile | service | point the apps at it (`server/.env`) | used by |
 |---|---|---|---|
 | `db` | Postgres 17 + PostGIS | `DB_URL=jdbc:postgresql://localhost:5432/northline` | everything |
-| `cache` | Valkey 8 | `REDIS_HOST=localhost`, `REDIS_PORT=6379` | `local,valkey`, worker, non-`local` runs |
+| `cache` | Valkey 8 | `REDIS_HOST=localhost`, `REDIS_PORT=6379` (+ `LIVE_BUS=redis` to carry the Studio's live signals over Valkey pub/sub as in the cloud, S-68) | `local,valkey`, worker, non-`local` runs |
 | `events` | Kafka 4 (KRaft) + one-shot topic creation (`scripts/topics.sh` from `deploy/kafka/topics.yaml`, ~1 min the first time, seconds after) | `KAFKA_BOOTSTRAP=localhost:9092` | worker; api without `local` |
 | `search` | Elasticsearch 9 (security off) | `ES_URIS=http://localhost:9200` (+ `SEARCH_PROVIDER=elasticsearch` for the api under `local`) | worker; the api's search |
 | `mail` | Mailpit — inbox at http://localhost:8025 | `SMTP_HOST=localhost`, `SMTP_PORT=1025` (the defaults) | api email (`EMAIL_PROVIDER=local`, S-13) |
