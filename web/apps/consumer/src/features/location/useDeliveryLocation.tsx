@@ -37,7 +37,7 @@ export interface DeliveryLocation {
 }
 
 /**
- * What the Location screen saves (S-47): the pill's label ("1204 17 Ave SW, Calgary"), the market's city, the
+ * What the Location screen saves (S-47): the pill's label ("{street}, {city}"), the market's city, the
  * coordinates, and — additive since S-47 — the address parts checkout needs (street, unit / buzzer / drop-off note,
  * province, postal code) and the market / zone it resolved to.
  */
