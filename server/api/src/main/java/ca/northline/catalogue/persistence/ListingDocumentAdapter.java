@@ -1,6 +1,7 @@
 package ca.northline.catalogue.persistence;
 
 import static ca.northline.catalogue.persistence.Sql.requiredInstant;
+import static ca.northline.catalogue.persistence.Sql.ts;
 
 import ca.northline.catalogue.application.ListingDocumentStore;
 import ca.northline.catalogue.domain.DocumentPurpose;
@@ -8,7 +9,6 @@ import ca.northline.catalogue.domain.ListingDocument;
 import ca.northline.shared.CodedEnum;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -38,7 +38,7 @@ class ListingDocumentAdapter implements ListingDocumentStore {
                 .param("size", d.byteSize())
                 .param("key", d.storageKey())
                 .param("by", d.uploadedBy())
-                .param("at", Timestamp.from(d.createdAt()))
+                .param("at", ts(d.createdAt()))
                 .update();
     }
 
