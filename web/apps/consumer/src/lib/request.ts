@@ -1,16 +1,16 @@
 import { createIsomorphicFn } from '@tanstack/react-start';
-import { getCookie, getRequestHeader } from '@tanstack/react-start/server';
+import { getCookie, getRequestHeader, getRequestUrl } from '@tanstack/react-start/server';
 import type { Locale } from '@northline/ui';
 import { FALLBACK_CONFIG, type PublicConfig } from './config';
-import { LOCALE_COOKIE, pickLocale, readCookie } from './locale';
+import { LOCALE_COOKIE, pickLocale, readCookie, urlLocale } from './locale';
 import type { PageHost } from './pages';
 
 export type { PublicConfig } from './config';
 
 /** The locale of this request: on the server from the cookie / Accept-Language, in the browser from the cookie. */
 export const requestLocale = createIsomorphicFn()
-  .server((): Locale => pickLocale(getCookie(LOCALE_COOKIE), getRequestHeader('accept-language')))
-  .client((): Locale => pickLocale(readCookie(LOCALE_COOKIE), navigator.language));
+  .server((): Locale => pickLocale(getCookie(LOCALE_COOKIE), getRequestHeader('accept-language'), urlLocale(getRequestUrl().href)))
+  .client((): Locale => pickLocale(readCookie(LOCALE_COOKIE), navigator.language, urlLocale(window.location.href)));
 
 /** Which business page this request is on another host (headers set by server/page-hosts.mjs only). */
 function pageFromHeaders(): PageHost | null {

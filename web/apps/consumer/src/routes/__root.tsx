@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { createRootRouteWithContext, HeadContent, Outlet, Scripts } from '@tanstack/react-router';
 import { I18nProvider, SiteLinkProvider } from '@northline/ui';
 import { configureAuthOrigin } from '@northline/auth-kit';
@@ -8,7 +8,7 @@ import shellCss from '../features/shell/shell.css?url';
 import { ConsumerLayout } from '../features/shell/ConsumerLayout';
 import { NotFound } from '../features/shell/NotFound';
 import { RouteError } from '../features/shell/RouteError';
-import { htmlLang, persistLocale } from '../lib/locale';
+import { htmlLang, persistLocale, urlLocale } from '../lib/locale';
 import { publicConfig, requestLocale } from '../lib/request';
 import { RouterSiteLink } from '../lib/SiteLinkAdapter';
 import type { RouterContext } from '../router';
@@ -55,6 +55,8 @@ function Document({ children }: { children: ReactNode }) {
 function App() {
   const { locale, config } = Route.useRouteContext();
   configureAuthOrigin(config.authOrigin); // idempotent; server and browser render the same auth links
+  // S-63: arriving on a `?lang=` URL (a search engine's French result) keeps that language for the next pages
+  useEffect(() => { if (urlLocale(window.location.href)) persistLocale(locale); }, [locale]);
   return (
     <I18nProvider initial={locale} onChange={persistLocale}>
       <SiteLinkProvider value={RouterSiteLink}>

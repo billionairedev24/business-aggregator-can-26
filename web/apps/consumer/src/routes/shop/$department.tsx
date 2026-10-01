@@ -6,6 +6,7 @@ import { DepartmentPage } from '../../features/shop/DepartmentPage';
 import { shopText } from '../../features/shop/messages';
 import { ShopSkeleton } from '../../features/shop/parts';
 import { pageTitle } from '../../features/shell/messages';
+import { seo } from '../../lib/seo';
 
 /** Department / category page (S-49): design 06 `category`. Server-rendered for SEO; an unknown department is a 404. */
 export const Route = createFileRoute('/shop/$department')({
@@ -19,14 +20,14 @@ export const Route = createFileRoute('/shop/$department')({
       throw e;
     }
   },
-  head: ({ match, loaderData }) => {
+  head: ({ match, loaderData, params }) => {
     const t = shopText(match.context.locale);
-    return {
-      meta: loaderData
-        ? [{ title: t('deptTitle', { name: loaderData.name }) }, { name: 'description', content: t('deptMetaDescription', { name: loaderData.name, city: loaderData.market }) }]
-        : [{ title: pageTitle(match.context.locale, 'category') }],
-      links: [{ rel: 'stylesheet', href: shopCss }],
-    };
+    const tags = seo(match.context, {
+      title: loaderData ? t('deptTitle', { name: loaderData.name }) : pageTitle(match.context.locale, 'category'),
+      description: loaderData && t('deptMetaDescription', { name: loaderData.name, city: loaderData.market }),
+      path: `/shop/${params.department}`, query: { market: match.search.market },
+    });
+    return { ...tags, links: [...tags.links, { rel: 'stylesheet', href: shopCss }] };
   },
   pendingComponent: ShopSkeleton,
   component: DepartmentRoute,
