@@ -29,6 +29,8 @@ public final class DeliveryRules {
     public static final String VEHICLE = "Choose bike, ebike, car or van.";
     public static final String SHIFT_TIMES = "A shift ends after it starts and lasts at most 12 hours.";
     public static final String ALREADY_A_COURIER = "This person is already a courier.";
+    public static final String PAUSE_REASON = "Say why the courier is paused.";
+    public static final String PAUSE_REASON_LENGTH = "Keep the reason under 500 characters.";
 
     public static final Set<String> PROOFS = Set.of("photo", "signature", "pin");
     public static final Set<String> VEHICLES = Set.of("bike", "ebike", "car", "van");

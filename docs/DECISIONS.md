@@ -5580,3 +5580,141 @@ server environment variable. Runbook: [runbooks/courier-app.md](runbooks/courier
   location reviews. The acceptance criterion (a run end to end in staging) is not met yet: it needs an EAS project, a
   build and a test phone (runbook § Staging acceptance). Hardware-backed key, courier contact, pickup item lists, App
   Links: follow-ups above.
+
+## 2026-10-01 — S-81 Orders monitor and delivery ops map
+
+- **Orders monitor = orders and bookings in one list** (design 03 `orders`: "BK-7712 · Service", "NL-48188 · Order").
+  `GET /api/v1/console/orders?view=&q=&province=&market=` lives in the `console` module and composes new query ports of
+  the owning modules: `orders.api.OrderMonitor`, `booking.api.BookingMonitor`, `fulfilment.api.DeliveryAlerts`, plus
+  identity's `PersonDirectory` (customer short names, "A. Osei") and merchants' `BusinessNames`. No cross-module SQL.
+  Rows: everything placed or booked in the last 7 days, and every one still open, at most 500 per source and 300 shown
+  (`truncated` says so; a reference search reaches older ones). "This week" = `MarketplaceOrders.placed` +
+  `MarketplaceBookings.made` (cancelled out, as on the overview).
+- **What "needs attention" means** (the spec only shows examples): **issue** — an order line with a reported issue
+  (`issue_note`) or short / refunded, or a disputed booking; **stuck** — the order's run has a pending stop more than
+  10 min past its ETA (the overview's "stuck" threshold); **late** — a pooled order past its window's end and not
+  delivered, or a confirmed booking 15 min past its start with no en-route / on-site; **escrow > 48 h** — a completed
+  booking whose customer hasn't signed off 48 h after the job's end. Goods' 7-day release window is not flagged (it is
+  the rule, not a problem). The Issue column is built from these codes, never from the customer's own words.
+- **Chips are views** with counts (`attention`, `live` = new + in progress + late + stuck, `escrow`, `late` = late +
+  stuck, `all`); the default is "Needs attention", as in the design. Province / market filters use the overview's rule
+  (`console.application.PlaceScope`, same 422 messages).
+- **Opening an order** shows its delivery from S-86's `GET /api/v1/console/fulfilment/orders/{id}` in a drawer; a
+  booking shows its row. The monitor itself is read-only (the design's table has no actions for these roles).
+- **Ops map provider: no third-party map by default; an optional XYZ tile basemap.** The design's map is a schematic
+  (grid, zone polygons, courier dots, legend), so the console draws the market's delivery zones (`region.zones`
+  PostGIS polygons, new `region.api.DeliveryZones`) and the couriers' latest positions (S-88) in Web Mercator, fitted
+  to the data — no place, centre or zoom in code. `CONSOLE_MAP_TILES` (an https XYZ template) + `CONSOLE_MAP_ATTRIBUTION`
+  add raster tiles under it (any OSM-compatible or commercial tile server; served to the browser through
+  `GET /api/v1/console/delivery/map`). **Google Maps was not used:** S-47's key is a server key restricted to Places
+  and Geocoding by IP, and the Maps JavaScript API needs a key in the browser, against "keys server-side". The tile
+  provider is configuration only; nothing was tried against a real tile server (CSP already allows `img-src https:`).
+- **Dispatcher actions:** *Reassign* uses S-86's assign (a run that hasn't started; 409 `run_started` / `courier_busy`
+  shown in the dialog). *Pause / Resume a courier* are new: `POST /api/v1/console/fulfilment/couriers/{id}/pause
+  {reason}` and `/resume`, screen delivery + action `dispatch`, audited as `fulfilment.courier_paused` (with the reason)
+  / `fulfilment.courier_resumed`. Paused = `fulfilment.couriers.active = false` (V202's column, already excluded from
+  automatic assignment); manual assignment now refuses a paused courier too (409 `courier_busy`). A run the courier
+  has stays theirs. The pause reason is a staff note in the platform audit log (`after.reason`), never shown to the
+  courier or customers.
+- **Couriers table** (name, vehicle, status, shift, run, with Pause / Resume) is an addition to design 03's delivery
+  screen: the design has no place to act on a courier, and the story asks for it.
+- **Not done:** the design's "Page Sam" and "Notify 7 customers" (no paging or bulk-notice integration exists) and
+  "Publish pricing" (zone pricing edits belong to S-84's region switchboard; "Edit zones (GeoJSON)" links there for
+  admins). Runs are planned per market window, not per zone, so the runs table's Zone column shows the run's market.
+  **Cost/stop and margin** show "—": no courier cost model is recorded anywhere. A started run can't be reassigned
+  (stops already picked up are with the courier); moving the rest of a stuck run is a follow-up.
+- **No migration.** Migration range for the console's second batch (S-81, S-82, S-84, S-85, S-94, S-95, S-96):
+  **V230–V239** (the console queues hold V210–V219; IMPLEMENTATION_PLAN).
+
+## 2026-10-01 — S-82 Sellers directory and seller detail with oversight actions and audit
+
+- **Where things live.** The directory and detail (`GET /api/v1/console/sellers`, `/{sellerId}`) are composed in the
+  `console` module from new query ports of the owners: `merchants.api.SellerDirectory` (profile, categories, the checks
+  that need attention, the oversight trail), `trust.api.SellerStanding` (latest quality score, open flag rules, in bulk),
+  `orders.api.OrderMonitor.salesByMerchant` and `booking.api.BookingMonitor.salesByMerchant` (90-day GMV and counts),
+  `payments.api.DisputeCounts`, plus `QualityQuery`, `RatingQuery`, `CategorySource` (names) and `PersonDirectory`
+  (who acted). The actions belong to the merchants module: `POST /api/v1/console/merchants/{businessId}/suspend |
+  reinstate | reverification | tier` (`{businessId}`, not `{merchantId}`: that name is reserved for `@RequiresMerchant`).
+- **Role gates (design 03 `CAN`: the sellers table's perm is `suspend`).** Suspend, reinstate and change tier need the
+  `suspend` action (admin, trust & safety); require re-verification needs `verify` (admin, trust & safety). Support
+  opens the directory and detail read-only. The design's T&S lead co-sign ("Suspend requires a T&S lead co-sign") is
+  not modelled (no lead role exists; CONSOLE_PLAN "Not modelled yet").
+- **Each action takes a reason (1–500 characters) the business sees.** It is kept in the new
+  `merchants.oversight_actions` (**V230**: action, reason, codes-only detail, actor, roles, time) — the detail page's
+  "Timeline & audit" — and the platform audit log gets `merchant.suspended | reinstated | reverification_required |
+  tier_changed` with the business id, the oversight id and the codes (no free text in `developer.audit_log`).
+- **Effects.** Suspend: status `active|paused → suspended` (every public read already requires `active`: page,
+  listings, search, checkout); open orders, jobs and escrow are untouched (escrow stays held until settled).
+  Reinstate: `suspended → active`. Re-verification: a `verified` or `submitted` check (not `kyc`, which is the owners'
+  S-22 identity flow) becomes `expired` now, so Compliance shows it due and the usual grace period applies. Tier:
+  `merchants.tier` changes; the take rate follows the tier unless the business has its own (`take_rate_bps`).
+- **Events → search and email.** `merchant.suspended`, `merchant.reinstated`, `merchant.tier_changed`,
+  `merchant.reverification_required` on `merchants.merchant` (schemas v1; search re-reads the business on any event of
+  that topic). The reason is not in the payload (free text): events carry `actionId`, and messaging's new
+  `OversightEmailNotices` reads it back through `SellerDirectory.action` and emails the **owners** (template
+  `seller-oversight`, en + fr, an account notice always sent).
+- **"At risk" (the design's Flags column):** quality below the tier's floor, dispute rate above it (design 03 tier
+  rules: Trusted ≥ 80 / ≤ 1.5 %, Master ≥ 85 / ≤ 1 %; S-93 makes the rules configurable — read them from there once it
+  lands), an open trust flag, or a check that is due (to do, expired, rejected), under review (licences, registries,
+  permits) or expiring within 30 days. Dispute rate = disputes opened ÷ orders + bookings, 90 days. The headline counts
+  active businesses and the active ones at risk.
+- **Hide from search (design 03 "Existing customers can still book").** V230 adds `merchants.search_hidden_at` and
+  `search_hidden_cause` (`staff` | `rating_floor`). `POST …/{businessId}/search {hidden, reason}` (sellers ·
+  `suspend`) hides or shows a business; 409 `already_hidden` / `not_hidden`. The search worker indexes a hidden active
+  business as `hidden`, so its documents leave search exactly as a paused one's do (tested in `SearchIndexerTest`);
+  its page, listings and checkout stay open, so existing customers can still book. Event
+  `merchant.search_visibility_changed` (`actionId`, `hidden`, `cause`), trail `search_hidden` / `search_restored`,
+  audit `merchant.search_hidden` / `merchant.search_restored`, owners emailed. The directory's Flags column and the
+  detail header say "Hidden from search" (with "· rating floor" when the rules hid it).
+- **The trust rules' consequences are enforced here (coordinator: S-93 left them as configuration).** A nightly job
+  (`TrustEnforcementScheduler`, `CONSOLE_TRUST_ENFORCEMENT_CRON`, default `0 23 5 * * *` platform zone, off under the
+  `test` profile) runs `console.application.TrustEnforcementService`: trust decides who
+  (`trust.api.TrustConsequences`), merchants applies (`merchants.api.SellerSanctions`), so neither module depends on
+  the other.
+  - **Rating floor** (`trust.rules` `rating_floor`, default 4.2 over 90 days): a business with at least 5 reviews in
+    the window whose average is below the floor is hidden from search (cause `rating_floor`); once its average is
+    back at the floor, or it no longer has 5 reviews in the window, it is shown again automatically. A business staff
+    hid is never shown again by the job, and the job never hides one twice.
+  - **Off-platform payment, warning then suspension:** an open `off_platform_payment` flag raised after another of
+    the business's off-platform flags was actioned "warn" within 180 days suspends it (`active|paused → suspended`).
+  - Each one is an oversight action by actor `system` (role `system`), audited, emailed to the owners with the
+    reason; the timeline reads "… by the trust rules".
+  - The reasons the job writes are English only (they are stored once, like a staff member's reason).
+- **Not done (design 03 shows them):** Coaching plan, Instant book off (no instant-book state exists to switch, so
+  "instant book off after no-shows" is not enforced either), the completion-photo delay and customer no-show
+  consequences (no such states), "Bulk message", "Message" and "Impersonate (read-only)" (no staff-to-business
+  messaging or impersonation exists).
+  The design's "Coaching" status has no equivalent. The directory returns at most 2,000 businesses (`truncated`;
+  search by name finds the others).
+
+## 2026-10-01 — S-84 Provinces, markets and zones switchboard (Off/Waitlist/Pilot/Live)
+
+- **A UI over the S-134 region model, no new table.** `console.application.Switchboard` edits `region.regions` (stage,
+  courier model, new markets) and `region.zones` (delivery zones, GeoJSON boundaries) through the new write port
+  `region.api.RegionEditor` — it lives in the console module because region writing the audit log itself would make a
+  module cycle (region → developer → identity → region) — writes the platform audit log in
+  the same transaction (`region.stage_changed` — with the markets brought down —, `region.courier_model_changed`,
+  `region.market_added`, `region.zone_created | zone_updated | zone_removed`; `merchant_id` null, codes only) and calls
+  `Regions.refresh()` after commit, so the instance serves the change at once and the others within
+  `REGION_CACHE_TTL`. Endpoints `/api/v1/console/regions/**` (CONSOLE_PLAN § Province switchboard).
+- **Admin only:** screen `regions` + action `province` on every change (the role table already gives both to admin
+  only). **Confirmation step:** every stage change carries `confirm` — the province's code, or the market's name — that
+  the server checks (422), and the screen asks for it in a dialog. The design's "two co-signers for Off ↔ Live" is not
+  modelled (no co-sign workflow; CONSOLE_PLAN "Not modelled yet"), nor the "waitlist emailed automatically on Live".
+- **Going live needs the checklist** (409 `not_ready`): a tax profile, a holiday calendar, at least one business
+  registry adapter key on the province (the story's list; a province whose records are checked by hand sets the
+  `manual` key), and a market with a delivery zone that has a boundary. A market goes live only with such a zone
+  (409), and **never above its province** (422 "A market can't be more open than its province."); lowering a province
+  lowers its markets above the new stage (one audit entry lists them). A live market keeps at least one zone (409
+  `last_zone`). Pilot and waitlist need no checklist.
+- **New markets** need a centre in Canada's bounding box and a radius of 1–200 km; their id is `mkt-<city slug>` (a
+  suffix when taken), stage off, the province's languages; the time zone stays the province's (set `time_zones` by
+  SQL for a market in another zone).
+- **Zone boundaries:** "Import GeoJSON" (a Polygon, MultiPolygon or a Feature holding one, lng/lat) → PostGIS
+  `ST_MakeValid`, the largest polygon kept (`region.zones.polygon` is a single `geography(Polygon)`); 422 on anything
+  unreadable. "Draw on map" and "From postal codes (FSA)" are not built. Fees and the minimum basket are typed in
+  dollars ("Free" = 0).
+- **Not done (design 03 shows them):** "Dry-run as customer", "Categories live" (no per-province category flags exist in
+  the model), sellers per market, and the re-matching of addresses when a zone is removed (addresses are matched when
+  saved; nothing stores a zone on an address). The lede and footer were reworded where the design promised these
+  ("Flags propagate in 30 s" → "within a minute", the region cache period).

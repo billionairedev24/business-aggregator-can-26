@@ -12,4 +12,9 @@ public enum LaunchStatus implements CodedEnum {
     public boolean live() {
         return this == LIVE;
     }
+
+    /** More open than {@code other} (off &lt; waitlist &lt; pilot &lt; live): a market can't be above its province. */
+    public boolean above(LaunchStatus other) {
+        return compareTo(other) > 0;
+    }
 }

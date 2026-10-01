@@ -4,6 +4,7 @@ import ca.northline.developer.api.AuditTrail;
 import ca.northline.messaging.api.OffPlatformPhrases;
 import ca.northline.shared.MerchantScope;
 import ca.northline.trust.api.ListingKeywordRules;
+import ca.northline.trust.api.TrustConsequences;
 import ca.northline.trust.domain.TrustRule;
 import java.time.Clock;
 import java.time.Duration;
@@ -26,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-class TrustRulesService implements TrustRules, OffPlatformPhrases, ListingKeywordRules {
+class TrustRulesService implements TrustRules, OffPlatformPhrases, ListingKeywordRules, TrustConsequences {
 
     /** A business needs this many reviews in the window before the rating floor applies to it. */
     static final int MIN_REVIEWS = 5;
@@ -83,6 +84,36 @@ class TrustRulesService implements TrustRules, OffPlatformPhrases, ListingKeywor
         return words(TrustRule.RESTRICTED_KEYWORDS, "words").stream()
                 .filter(lower::contains)
                 .findFirst();
+    }
+
+    // ── S-82: what the rules say should happen now ───────────────────────────────────────────────────────────
+
+    @Override
+    public RatingFloor ratingFloor() {
+        var floor = value(TrustRule.RATING_FLOOR);
+        return new RatingFloor(
+                ((Number) floor.getOrDefault("rating", 4.2)).doubleValue(),
+                ((Number) floor.getOrDefault("days", 90)).intValue(),
+                ((Number) floor.getOrDefault("recoverDays", 30)).intValue());
+    }
+
+    @Override
+    public List<Below> belowRatingFloor() {
+        var floor = ratingFloor();
+        return store.averages(clock.instant().minus(Duration.ofDays(floor.days())), MIN_REVIEWS).stream()
+                .filter(b -> b.average() < floor.rating())
+                .toList();
+    }
+
+    @Override
+    public List<String> recovered(List<String> merchantIds) {
+        var below = belowRatingFloor().stream().map(Below::merchantId).collect(java.util.stream.Collectors.toSet());
+        return merchantIds.stream().filter(id -> !below.contains(id)).toList();
+    }
+
+    @Override
+    public List<String> offPlatformAfterWarning(Duration within) {
+        return store.warnedAgain(clock.instant().minus(within));
     }
 
     private Map<String, Object> value(TrustRule rule) {

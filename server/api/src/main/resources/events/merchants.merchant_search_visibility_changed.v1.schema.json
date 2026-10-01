@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:merchants.merchant_search_visibility_changed:1",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "actorId",
+    "actionId",
+    "hidden",
+    "cause"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "merchants.merchants.id"
+    },
+    "actorId": {
+      "type": "string",
+      "description": "identity.users.id of the staff member, or system"
+    },
+    "actionId": {
+      "type": "string",
+      "description": "merchants.oversight_actions.id (the reason is there, not in the event)"
+    },
+    "hidden": {
+      "type": "boolean"
+    },
+    "cause": {
+      "enum": [
+        "staff",
+        "rating_floor"
+      ]
+    }
+  }
+}

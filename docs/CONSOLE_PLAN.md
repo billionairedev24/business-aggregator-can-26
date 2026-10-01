@@ -105,17 +105,17 @@ member.
 |---|---|---|---|---|---|
 | `/sign-in` | signed out | — | anyone | S-90 | built (`?next=`, `?error=staff_only\|mfa_required\|signin`) |
 | `/?province=&market=` | `overview` | `overview` | all six | S-91 | built |
-| `/orders` | `orders` | `orders` | admin, dispatch, support, support_lead | S-81 | stand-in |
+| `/orders?view=&q=&province=&market=` | `orders` | `orders` | admin, dispatch, support, support_lead | S-81 | built |
 | `/disputes?province=&market=&case=kind:id` | `disputes` | `disputes` | admin, trust_safety, finance, support, support_lead | S-80 | built |
-| `/delivery` | `delivery` | `delivery` | admin, dispatch | S-81 | stand-in |
-| `/sellers` | `sellers` | `sellers` | admin, trust_safety, support, support_lead | S-82 | stand-in |
-| `/sellers/$sellerId` | `seller_detail` | `sellers` | admin, trust_safety, support, support_lead | S-82 | stand-in |
+| `/delivery?market=` | `delivery` | `delivery` | admin, dispatch | S-81 | built |
+| `/sellers?q=&province=&market=&risk=` | `sellers` | `sellers` | admin, trust_safety, support, support_lead | S-82 | built |
+| `/sellers/$sellerId` | `seller_detail` | `sellers` | admin, trust_safety, support, support_lead | S-82 | built |
 | `/verification?province=&market=&application=` | `verify` | `verify` | admin, trust_safety | S-79 | built |
 | `/vetting?province=&market=` | `vetting` | `vetting` | admin, trust_safety | S-92 | built |
 | `/trust?province=&market=` | `trust` | `trust` | admin, trust_safety | S-93 | built |
 | `/catalogue` | `taxonomy` | `taxonomy` | admin | S-94 | stand-in |
 | `/support?province=&market=&filter=&ticket=` | `support` | `support` | admin, trust_safety, dispatch, support, support_lead | S-83 | built |
-| `/provinces` | `regions` | `regions` | admin | S-84 | stand-in |
+| `/provinces?province=` | `regions` | `regions` | admin | S-84 | built |
 | `/finance` | `finance` | `finance` | admin, finance | S-85 | stand-in |
 | `/reports` | `reports` | `reports` | admin, finance, analyst | S-95 | stand-in |
 | `/integrations` | `api` | `api` | admin | S-96 | stand-in |
@@ -273,21 +273,84 @@ Full contract, payloads and the planning rules: [runbooks/fulfilment.md](runbook
 `RunSummary` = `{id, label, part, market, kind, state, startsAt, endsAt, packBy, courier: {id, userId, name}, orders,
 stopsDone, stopsTotal, nextEta, late, heuristic}` (`late`: a pending stop more than 15 min past its ETA).
 
+### Orders monitor and delivery ops (S-81)
+
+```
+GET  /api/v1/console/orders?view=attention|live|escrow|late|all&q=&province=&market=      (screen orders)
+→ { asOf, week, counts: { attention, live, escrow, late, all }, truncated,
+    items: [{ id, ref, kind: order|booking, type: goods|food|service, customer, sellers: [name], amountCents, state,
+              status: new|live|escrow|escrow_48h|late|stuck|issue|delivered|done|cancelled, attention, at, since }] }
+GET  /api/v1/console/delivery/map?market=<region market id>                              (screen delivery)
+→ { market: { id, city, province, lat, lng }, zones: [{ id, marketId, name, ring: [{lat, lng}], runsPerDay, feeStdCents,
+    feePlusCents, minBasketCents }], basemap: { tiles, attribution } | null }
+POST /api/v1/console/fulfilment/couriers/{courierId}/pause {reason}                        (delivery · dispatch)
+POST /api/v1/console/fulfilment/couriers/{courierId}/resume                                (delivery · dispatch)
+```
+
+Rules (attention, late, stuck, escrow > 48 h) and the map provider: DECISIONS "S-81". Pause / resume are audited
+(`fulfilment.courier_paused` with the reason, `fulfilment.courier_resumed`); a paused courier gets no run.
+
+### Sellers directory and seller detail (S-82)
+
+```
+GET  /api/v1/console/sellers?q=&province=&market=            (screen sellers)
+→ { asOf, active, atRisk, truncated, items: [Row] }
+Row: { id, name, category: {id, names}, type, province, city, tier, status, quality, gmv90Cents, disputeRate,
+       flags: [{ kind: quality_below|disputes_above|trust_flag|check_expiring|check_due|check_pending, rule?, checkType?,
+                 registry?, status?, value?, floor?, days? }] }
+GET  /api/v1/console/sellers/{sellerId}
+→ { asOf, seller: Row, joinedAt, approvedAt, stripeAccount, ratingAverage, ratingCount, quality, onTime, disputes
+    ({value, floor}), signals: [{key, value, bar, barFloor, inverted}], checks: [Check], trail: [{id, action, reason,
+    detail, actorName, actorRole, at}] }
+POST /api/v1/console/merchants/{businessId}/suspend {reason}                      (sellers · suspend) 409 not_active
+POST /api/v1/console/merchants/{businessId}/reinstate {reason}                    (sellers · suspend) 409 not_suspended
+POST /api/v1/console/merchants/{businessId}/reverification {verificationId, reason} (sellers · verify) 409 not_verifiable
+POST /api/v1/console/merchants/{businessId}/tier {tier, reason}                   (sellers · suspend) 409 same_tier · not_approved
+POST /api/v1/console/merchants/{businessId}/search {hidden, reason}               (sellers · suspend) 409 already_hidden · not_hidden
+```
+
+Row also carries `searchHidden` (`staff` | `rating_floor` | null). A nightly job enforces the trust rules'
+consequences: below the rating floor → hidden from search until it recovers; off-platform payment again after a
+warning → suspended (actor `system`).
+
+Audit `merchant.<action>`; events `merchant.suspended|reinstated|tier_changed|reverification_required`; the owners are
+emailed with the reason (DECISIONS "S-82").
+
+### Province switchboard (S-84)
+
+```
+GET    /api/v1/console/regions                                   (screen regions) → { provinces: [Province] }
+Province: { id, code, names, stage, languages, courierModel, tax: {gst|pst|hst|qst: bps}, timeZones, holidays, privacyLaw,
+            registries, waitlist, markets: [{id, city, stage, lat, lng, radiusKm, zones, waitlist}],
+            zones: [{id, marketId, name, runsPerDay, feeStdCents, feePlusCents, minBasketCents, areaKm2}],
+            checklist: {taxProfile, holidays, registries, marketWithZones} }
+POST   /api/v1/console/regions/provinces/{code}/stage {stage, confirm: <code>}       (province) 409 not_ready
+PUT    /api/v1/console/regions/provinces/{code}/courier-model {courierModel: own|contracted|hybrid}
+POST   /api/v1/console/regions/markets {province, city, lat, lng, radiusKm}           409 market_exists
+POST   /api/v1/console/regions/markets/{marketId}/stage {stage, confirm: <city>}      422 stage (above the province) · 409 not_ready
+POST   /api/v1/console/regions/zones {marketId, name, runsPerDay?, feeStdCents?, feePlusCents?, minBasketCents?, boundary?: GeoJSON}
+PUT    /api/v1/console/regions/zones/{zoneId}   (same body; boundary omitted = kept)
+DELETE /api/v1/console/regions/zones/{zoneId}                                         409 last_zone
+→ each change answers the province (Province)
+```
+
+Every change is audited (`region.*`) and re-reads the region model after commit (DECISIONS "S-84").
+
 ## API: what exists, what's missing
 
 | screen | exists | missing (the screen's story adds it) |
 |---|---|---|
 | shell | `GET /api/v1/console/me`, `POST …/me/role-view` (S-90); `GET /api/v1/geo/regions` (S-134) | nav badge counts (`GET /api/v1/console/nav-badges`, design: "14", "1 stuck", "23 open"…); global search (`GET /api/v1/console/search?q=` across merchants, orders, cases — the design shows the pill only, no results; no story owns it yet) |
 | overview | `GET /api/v1/console/overview` (S-91, below) | — |
-| orders, delivery | `/api/v1/console/fulfilment/**` (S-86, § Delivery below): runs by market/time with `late`, run detail with stops, an order's delivery, couriers with shift and run, onboard a courier, schedule a shift, plan now, reassign a run | the orders list itself (search, filters by state/market), the ops map's geometry, zone economics (S-81) |
+| orders, delivery | `/api/v1/console/fulfilment/**` (S-86, § Delivery below): runs by market/time with `late`, run detail with stops, an order's delivery, couriers with shift and run, onboard a courier, schedule a shift, plan now, reassign a run; S-81: the orders monitor, the map's geometry, pause / resume a courier | zone economics' cost per stop (no courier cost model), paging a courier, bulk customer notices |
 | disputes | `GET /api/v1/console/disputes`, `GET …/{kind}/{id}`, evidence download, `POST …/{kind}/{id}/decision`, `POST …/decisions/{id}/cosign` (S-80) | — |
-| sellers | `merchants.api.MerchantDirectory`, `trust.api.QualityQuery` | directory with filters, seller detail, oversight actions (coach, instant book off, hide, demote, suspend) (S-82) |
+| sellers | S-82: directory, detail, suspend / reinstate, re-verification, tier, hide from search | coaching, instant book off, bulk message, impersonation |
 | verify | `GET/POST /api/v1/console/registry-reviews` (S-23); `GET /api/v1/console/verification/applications[/{id}]`, `POST …/{id}/decision`, `POST …/{id}/identity-reviews/{checkId}/decision` (S-79) | — |
 | vetting | `GET /api/v1/console/vetting`, `POST …/listings/{id}/decision`, `POST …/dishes/{id}/decision` (S-92) | — |
-| trust | `GET /api/v1/console/trust/flags`, `POST …/{id}/decision` (S-133); `GET …/flags/queue`, `POST …/flags/{id}/action`, `GET/PUT …/trust/rules[/{key}]`, `GET …/rules/rating_floor/impact` (S-93) | the consequences' jobs (S-82) |
+| trust | `GET /api/v1/console/trust/flags`, `POST …/{id}/decision` (S-133); `GET …/flags/queue`, `POST …/flags/{id}/action`, `GET/PUT …/trust/rules[/{key}]`, `GET …/rules/rating_floor/impact` (S-93) | S-82 enforces the rating floor (hide from search) and warning-then-suspension; instant book off after no-shows and the photo delay have no state to act on |
 | taxonomy | `db/seed/categories.json` (seed only) | categories CRUD with regulators, limits, per-province rules (S-94) |
 | support | `GET /api/v1/console/support/tickets[/{id}]`, `POST …/tickets/{id}/reply\|take\|escalate\|refund-requests`, `GET …/refund-requests`, `POST …/refund-requests/{id}/decision`, `GET/POST/PUT/DELETE …/macros` (S-83) | the finance screen's list of refund requests (S-85 reads `GET …/support/refund-requests`); CSAT collection (no survey sends it yet) |
-| regions | `region.api.Regions` reads; `GET /api/v1/geo/regions` | province / market / zone stage changes with co-sign (S-84) |
+| regions | S-84: stages with a confirmation and the go-live checklist, markets, zones (GeoJSON), courier model | the co-sign of a second admin, dry-run as customer, categories per province, drawing zones on a map |
 | finance | `POST /api/v1/console/payments/tax-reconciliations` (S-21) | escrow / payouts / reconciliation / take rate by tier / revenue mix (S-85) |
 | reports | — | funnels, cohorts, top categories, supply gaps (S-95) |
 | api | `developer` module (merchants' keys and webhooks) | platform-wide API clients and rate limits (S-96) |
@@ -296,7 +359,7 @@ stopsDone, stopsTotal, nextEta, late, heuristic}` (`late`: a pending stop more t
 
 ## Migration and seed ranges
 
-**V190–V199** (IMPLEMENTATION_PLAN.md, the next free range above V183). S-90: V190 (`identity.platform_roles` console
+**V190–V199** (IMPLEMENTATION_PLAN.md, the next free range above V183); the console queues (S-79, S-80, S-83, S-92, S-93) **V210–V219**; the second batch (S-81, S-82, S-84, S-85, S-94–S-96) **V230–V239**. S-90: V190 (`identity.platform_roles` console
 roles, `granted_by`; `ix_audit_log_platform`), dev seed V191 (Priya Natarajan, staff with every role). Later console
 stories take the next numbers in the range; a seed stays in `db/seed-dev/`. The review queues (S-79, S-92, S-80, S-93,
 S-83) use **V210–V219** (fulfilment took V200–V209 first; ordering rule).

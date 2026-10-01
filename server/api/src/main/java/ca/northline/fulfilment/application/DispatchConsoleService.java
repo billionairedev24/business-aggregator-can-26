@@ -185,16 +185,14 @@ class DispatchConsoleService implements DispatchConsole {
     public RunSummary assign(String runId, String courierId, Actor actor) {
         var now = clock.instant();
         var run = runs.lock(runId).orElseThrow(() -> new NotFound("run", runId));
-        if (couriers.find(courierId).isEmpty()) {
-            throw new NotFound("courier", courierId);
-        }
+        var courier = couriers.find(courierId).orElseThrow(() -> new NotFound("courier", courierId));
         if (!run.state().equals("planned")) {
             throw new Conflict("run_started", DeliveryRules.RUN_STARTED);
         }
         if (courierId.equals(run.courierId())) {
             return views.summary(run, runs.stops(runId));
         }
-        if (!couriers.claim(courierId, now)) {
+        if (!courier.active() || !couriers.claim(courierId, now)) { // a paused courier gets no run (S-81)
             throw new Conflict("courier_busy", DeliveryRules.COURIER_BUSY);
         }
         var previous = run.courierId();
@@ -211,6 +209,36 @@ class DispatchConsoleService implements DispatchConsole {
                 previous == null ? null : Map.of("courierId", previous),
                 Map.of("courierId", courierId));
         return views.summary(runs.find(runId).orElseThrow(), runs.stops(runId));
+    }
+
+    @Override
+    public CourierSummary pause(String courierId, String reason, Actor actor) {
+        return setActive(courierId, false, reason, actor);
+    }
+
+    @Override
+    public CourierSummary resume(String courierId, Actor actor) {
+        return setActive(courierId, true, null, actor);
+    }
+
+    private CourierSummary setActive(String courierId, boolean active, @Nullable String reason, Actor actor) {
+        var courier = couriers.find(courierId).orElseThrow(() -> new NotFound("courier", courierId));
+        if (courier.active() != active) {
+            couriers.active(courierId, active);
+            var after = new HashMap<String, Object>(Map.of("active", active));
+            if (reason != null) {
+                after.put("reason", reason.strip());
+            }
+            audit(
+                    actor,
+                    active ? "fulfilment.courier_resumed" : "fulfilment.courier_paused",
+                    "courier",
+                    courierId,
+                    Map.of("active", courier.active()),
+                    after);
+        }
+        var now = couriers.find(courierId).orElseThrow();
+        return summary(now, people.people(List.of(now.userId())).get(now.userId()));
     }
 
     @Override

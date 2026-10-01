@@ -78,6 +78,15 @@ public final class DispatchUseCases {
 
         RunSummary assign(String runId, String courierId, Actor actor);
 
+        /**
+         * S-81: stops giving the courier new runs (a run they have stays theirs; reassign it to move it), with the
+         * dispatcher's reason in the audit log. Idempotent.
+         */
+        CourierSummary pause(String courierId, String reason, Actor actor);
+
+        /** S-81: the courier can be given runs again. Idempotent. */
+        CourierSummary resume(String courierId, Actor actor);
+
         /** Plans and assigns now, without waiting for the job. */
         Planned planNow(@Nullable String market, Actor actor);
 

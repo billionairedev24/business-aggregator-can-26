@@ -3,8 +3,8 @@
 Northline starts in Alberta but is built for every province (DECISIONS "Region-neutral by design"). Nothing in code
 names a province, city or time zone: every place fact comes from the **region model** — rows in `region.regions`
 (provinces and the city markets inside them) and `availability.service_zones`, with configuration on top. Opening a
-province is data and, at most, configuration; never a code change. The console will edit these rows (phase 3); until
-then, operations write them with SQL (a migration for every environment, or by hand for one).
+province is data and, at most, configuration; never a code change. The console's Provinces screen (S-84) edits stages, markets and delivery
+zones; the rest is SQL (a migration for every environment, or by hand for one).
 
 ## 1. What the model holds
 
@@ -23,6 +23,15 @@ then, operations write them with SQL (a migration for every environment, or by h
 V130 fills every province and territory (zones, holidays, privacy law, tax, French forms); V131 makes **Alberta**
 live with its Calgary, Edmonton and Airdrie markets, the Calgary licence registry and Calgary's service zones — the
 first *configured* region. `GET /api/v1/geo/regions?lang=` serves the model to the web apps.
+
+### From the console (S-84)
+
+Admins open **Provinces** in the platform console (`/provinces`): a province's and each market's stage (with the
+province's code or the market's name typed to confirm), new markets (centre and radius), delivery zones with a GeoJSON
+boundary, and the courier model. Going live needs the checklist on screen (tax profile, holidays, a registry key on
+the province — `manual` when an agent checks records by hand —, and a market with a zone). Every change is in the
+platform audit log (`region.*`) and is served at once by the instance that made it, by the others within
+`REGION_CACHE_TTL`. Service zones (`availability.service_zones`), time zones and registry keys are still SQL.
 
 ## 2. Configuration (`northline.region.*`)
 
