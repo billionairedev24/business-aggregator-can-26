@@ -155,6 +155,9 @@ their own variables. (dict "root" $ "name" "<app>" "app" $appValues)
 {{- if eq .name "consumer" -}}
 {{- /* S-45: sign-out (and S-62's sign-in pages) call northline-auth from the browser. */ -}}
 {{- $_ := set $env "NL_AUTH_ORIGIN" $v.urls.auth -}}
+{{- /* S-54: business pages on pages.<zone> and merchants' own domains link back to the site (server/page-hosts.mjs). */ -}}
+{{- $_ := set $env "NL_SITE_ORIGIN" $v.urls.consumer -}}
+{{- with $v.urls.pages }}{{- $_ := set $env "NL_PAGES_HOST" (urlParse .).host -}}{{- end -}}
 {{- end -}}
 {{- $env = merge (deepCopy (default (dict) .app.env)) $env -}}
 {{- end -}}
