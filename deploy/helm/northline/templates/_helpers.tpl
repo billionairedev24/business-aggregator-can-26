@@ -336,12 +336,40 @@ environment's exporters (observability.collector.exporters / pipelines).
 {{- toYaml $config -}}
 {{- end }}
 
-{{/* Processors the chart adds for one signal only (S-112 fills this). YAML map signal → list. */}}
+{{/* Processors the chart adds for one signal only. YAML map signal → list. */}}
 {{- define "northline.collectorSignalProcessors" -}}
-{}
+logs: [transform/redact]
+traces: [transform/redact]
 {{- end }}
 
-{{/* Definitions of those processors. */}}
+{{/*
+S-112: the Collector's second line of defence (the apps already redact, platform Redactor): emails, North American
+phone numbers, card-like digit runs, Canadian postal codes, bearer credentials and JWTs in log bodies and in log and
+span attributes. RE2 has no look-behind, so these are coarser than the apps' rules; docs/runbooks/logging.md.
+*/}}
 {{- define "northline.collectorExtraProcessors" -}}
-{}
+transform/redact:
+  error_mode: ignore
+  log_statements:
+    - context: log
+      statements:
+        {{- range (include "northline.redactPatterns" . | fromYamlArray) }}
+        - {{ printf "replace_pattern(body, %q, %q)" .regex .with | quote }}
+        - {{ printf "replace_all_patterns(attributes, \"value\", %q, %q)" .regex .with | quote }}
+        {{- end }}
+  trace_statements:
+    - context: span
+      statements:
+        {{- range (include "northline.redactPatterns" . | fromYamlArray) }}
+        - {{ printf "replace_all_patterns(attributes, \"value\", %q, %q)" .regex .with | quote }}
+        {{- end }}
+{{- end }}
+
+{{- define "northline.redactPatterns" -}}
+- { regex: "(?i)(bearer|basic|dpop)\\s+[A-Za-z0-9._~+/=-]{8,}", with: "$$1 [REDACTED]" }
+- { regex: "eyJ[A-Za-z0-9_-]{5,}\\.[A-Za-z0-9_-]{5,}\\.[A-Za-z0-9_-]*", with: "[REDACTED]" }
+- { regex: "[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*\\.[A-Za-z]{2,}", with: "[EMAIL]" }
+- { regex: "\\b\\d(?:[ -]?\\d){12,18}\\b", with: "[CARD]" }
+- { regex: "(\\+?1[ .-]?)?\\(?\\b[2-9]\\d{2}\\)?[ .-]?[2-9]\\d{2}[ .-]?\\d{4}\\b", with: "[PHONE]" }
+- { regex: "\\b([ABCEGHJ-NPRSTVXY]\\d[ABCEGHJ-NPRSTV-Z]) ?\\d[ABCEGHJ-NPRSTV-Z]\\d\\b", with: "$$1 ***" }
 {{- end }}

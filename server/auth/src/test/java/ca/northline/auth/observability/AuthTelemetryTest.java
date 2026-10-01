@@ -1,5 +1,11 @@
 package ca.northline.auth.observability;
 
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.junit.jupiter.api.extension.ExtendWith;
+import io.micrometer.observation.ObservationRegistry;
+import ca.northline.platform.logging.RedactionCheck;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -21,6 +27,8 @@ import org.springframework.test.context.DynamicPropertySource;
  * over OTLP, and sign-ins are counted by method, second factor and outcome ({@code northline.auth.sign_ins}) — never
  * with who signed in.
  */
+@ExtendWith(OutputCaptureExtension.class)
+@TestPropertySource(properties = "LOG_FORMAT=ecs") // S-112: the deployed console format
 class AuthTelemetryTest extends AuthIntegrationTest {
 
     static final OtlpReceiver OTLP = OtlpReceiver.start();
@@ -87,5 +95,14 @@ class AuthTelemetryTest extends AuthIntegrationTest {
         return meters.find("northline.auth.sign_ins").tag("outcome", outcome).counters().stream()
                 .mapToDouble(c -> c.count())
                 .sum();
+    }
+
+    @Autowired
+    ObservationRegistry observations;
+
+    /** S-112: the console JSON line and the OTLP log record are redacted; the record carries its trace id. */
+    @Test
+    void logsLeaveRedactedAndLinkedToTheirTrace(CapturedOutput output) {
+        RedactionCheck.assertRedacted("northline-auth", OTLP, observations, output::getOut);
     }
 }

@@ -25,6 +25,7 @@ say where a step is still manual or missing.
 | [notifications.md](notifications.md) | team notifications: who sends which email / SMS / push (api vs worker), matrix and quiet hours, failures, push stub (S-13/S-27) |
 | [webhooks.md](webhooks.md) | partner webhooks: payloads and signature for integrators, delivery design (per-endpoint scheduling, retries, auto-disable), SSRF rules, operations (S-33) |
 | [search.md](search.md) | the Elasticsearch read model: index layout and naming, analyzers per language, synonyms, the search-indices Job, least-privilege access (S-42); the indexer, visibility rules, versions, the reconcile sweep, merchant locations (S-43); the search API and its contract for the consumer web (S-44); the full reindex with an alias swap (S-71) |
+| [logging.md](logging.md) | structured JSON logs (ECS), the redaction layer (emails, phones, tokens, cards, postal codes, codes), shipping over OTLP through the Collector, the local SMS stand-in rule (S-112) |
 | [observability.md](observability.md) | traces, metrics and logs over OpenTelemetry: the Collector per environment and its exporters (any OTLP backend, AWS X-Ray/CloudWatch, Google Cloud Operations, Azure Monitor), sampling, business metrics, dashboards as code, alerts, the local Grafana LGTM stack (S-111) |
 | [events.md](events.md) | domain events: wire format, the worker's consumer framework (dedupe, retries, DLQ), alerts and metrics, DLQ replay (S-25/S-26) |
 | [ci.md](ci.md) | CI pipelines on GitHub Actions and GitLab CI, manual trigger only (S-4/S-5, infra checks S-2/S-3) |
@@ -192,6 +193,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `CLIENT_CITY_HEADER` | | ✓ | ✓ (`consumer` profile) | | no (empty: no city in the session list — S-19; no IP guess for the consumer location pill — S-45) |
 | `SESSION_STEP_UP_MAX_AGE` | | ✓ | | | no (`10m`: how recent a second factor revoking sessions / removing passkeys needs) |
 | `SESSION_CHECK_INTERVAL` | | | ✓ | | no (`60s`: how often the BFF checks its session wasn't revoked) |
+| `LOG_FORMAT` | ✓ | ✓ | ✓ | ✓ | no — `ecs` JSON under dev/staging/prod, plain `text` under local/test (S-112, [logging.md](logging.md)) |
 | `OTEL_EXPORT_ENABLED`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_TRACES_SAMPLER_ARG`, `OTEL_RESOURCE_ATTRIBUTES` | ✓ | ✓ | ✓ | ✓ | no — the chart sets them when its Collector is on (S-111, [observability.md](observability.md)); locally `make up OBS=1` |
 | `SERVER_PORT` | ✓ | ✓ | ✓ | | no (8080 / 9000 / 8082; the consumer-bff 8081) |
 
@@ -313,7 +315,7 @@ northline-auth sends the registration phone code (6 digits, 10 min) by SMS, or b
 
 | `SMS_PROVIDER` | what happens | needs |
 |---|---|---|
-| `local` (default) | the code is **written to the auth log** (`grep "Verification code"`), nothing is sent. Refused under `staging`/`prod`; `dev` logs a warning | — |
+| `local` (default) | the code is **written to the auth log** (`grep "Verification code"`) under the `local` profile only, nothing is sent. Refused under `staging`/`prod`; under `dev` the code is **withheld** (S-112: no code ever reaches shipped logs — [logging.md](logging.md#the-local-sms-stand-in-s-20)), so dev needs `twilio` or `aws` to finish a phone verification | — |
 | `twilio` (recommended) | SMS via Programmable Messaging (`POST /2010-04-01/Accounts/{sid}/Messages.json`), voice via a call that reads the code twice (`Calls.json` with inline TwiML, Amazon Polly voices Joanna / Chantal) | `SMS_ACCOUNT_ID`, `SMS_AUTH_TOKEN`, `SMS_FROM`; `SMS_VOICE_FROM` when `SMS_FROM` is a Messaging Service |
 | `aws` | AWS End User Messaging SMS and voice (`pinpoint-sms-voice-v2`: `SendTextMessage` transactional, `SendVoiceMessage` Polly) — keeps an all-AWS deployment on one bill and IAM | `SMS_FROM` (phone number id/ARN or pool), `SMS_REGION=ca-central-1`; credentials from workload identity (IRSA / Pod Identity) with `sms-voice:SendTextMessage` + `sms-voice:SendVoiceMessage` |
 | `azure` | reserved (Azure Communication Services SMS + Call Automation) — start-up fails with "not implemented yet" | — |

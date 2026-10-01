@@ -4,10 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import ca.northline.sms.aws.AwsSmsTransport;
 import ca.northline.sms.twilio.TwilioSmsTransport;
+import java.util.Locale;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 /** {@code northline.sms.provider} picks one transport; the S-8 rules (missing settings, `local` in prod) hold. */
+@ExtendWith(OutputCaptureExtension.class)
 class SmsTransportsTest {
 
     private final ApplicationContextRunner runner =
@@ -22,6 +27,21 @@ class SmsTransportsTest {
                         .getFailure()
                         .rootCause()
                         .hasMessageContaining("SMS_PROVIDER=local is not allowed under staging/prod"));
+    }
+
+    @Test
+    void localWritesTheTextOnlyOnADevelopersMachine(CapturedOutput output) {
+        runner.withPropertyValues("spring.profiles.active=local").run(ctx -> ctx.getBean(SmsTransport.class)
+                .sendText("+15875550101", "Join Prairie Wrench: https://studio.example/invite/tok_local_visible"));
+        assertThat(output.getOut()).contains("tok_local_visible");
+
+        // S-112: dev keeps the fake but ships its logs — the text (invitation links, codes) never reaches them.
+        runner.withPropertyValues("spring.profiles.active=dev").run(ctx -> {
+            var transport = ctx.getBean(SmsTransport.class);
+            transport.sendText("+15875550101", "Join Prairie Wrench: https://studio.example/invite/tok_dev_hidden");
+            transport.call("+15875550101", "Your code is 4 8 2 9 1 3", Locale.CANADA);
+        });
+        assertThat(output.getOut()).doesNotContain("tok_dev_hidden", "4 8 2 9 1 3").contains("text withheld");
     }
 
     @Test

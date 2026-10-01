@@ -3,10 +3,17 @@ package ca.northline.auth.sms;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import ca.northline.auth.application.SmsSender;
+import ca.northline.auth.domain.OtpChallenge.Channel;
+import ca.northline.auth.domain.PhoneNumber;
+import java.util.Locale;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 /** {@code northline.sms.provider} picks the adapter; missing settings and {@code local} under staging/prod stop start-up. */
+@ExtendWith(OutputCaptureExtension.class)
 class SmsConfigTest {
 
     private final ApplicationContextRunner runner =
@@ -24,6 +31,25 @@ class SmsConfigTest {
         runner.run(ctx -> assertThat(ctx).getBean(SmsSender.class).isInstanceOf(LoggingSmsSender.class));
         runner.withPropertyValues("spring.profiles.active=dev")
                 .run(ctx -> assertThat(ctx).getBean(SmsSender.class).isInstanceOf(LoggingSmsSender.class));
+    }
+
+    /**
+     * S-20 accepted that the local fake logs codes on a developer's machine; S-112 makes sure that can't happen
+     * anywhere else: under dev (which may keep the fake) neither the code nor the number reaches the log.
+     */
+    @Test
+    void local_logsTheCodeOnlyOnADevelopersMachine(CapturedOutput output) {
+        var to = PhoneNumber.parse("+1 587 555 0101").orElseThrow();
+        runner.withPropertyValues("spring.profiles.active=local")
+                .run(ctx -> ctx.getBean(SmsSender.class).sendCode(to, "482913", Channel.SMS, Locale.CANADA));
+        assertThat(output.getOut()).contains("Verification code for +1 587 555 0101: 482913");
+
+        runner.withPropertyValues("spring.profiles.active=dev")
+                .run(ctx -> ctx.getBean(SmsSender.class).sendCode(to, "731264", Channel.VOICE, Locale.CANADA_FRENCH));
+        assertThat(output.getOut())
+                .doesNotContain("731264")
+                .contains("[VOICE] Verification code withheld")
+                .contains("verification codes are neither sent nor logged");
     }
 
     @Test

@@ -22,6 +22,8 @@ dependencies {
     // S-111 test fixture shared by the apps' tests: an OTLP/HTTP receiver that decodes what the apps export.
     testFixturesImplementation(libs.otel.proto)
     testFixturesImplementation("org.assertj:assertj-core")
+    testFixturesImplementation("io.micrometer:micrometer-observation") // S-112 RedactionCheck
+    testFixturesImplementation("org.slf4j:slf4j-api")
     testFixturesCompileOnly(libs.jspecify)
     testImplementation(libs.otel.proto)
 }

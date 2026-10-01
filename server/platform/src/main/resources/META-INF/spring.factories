@@ -5,4 +5,5 @@ org.springframework.boot.diagnostics.FailureAnalyzer=\
 ca.northline.platform.MissingEnvironmentFailureAnalyzer
 
 org.springframework.boot.EnvironmentPostProcessor=\
-ca.northline.platform.observability.ObservabilityDefaults
+ca.northline.platform.observability.ObservabilityDefaults,\
+ca.northline.platform.logging.LoggingDefaults

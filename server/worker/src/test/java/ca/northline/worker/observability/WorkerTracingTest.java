@@ -1,5 +1,12 @@
 package ca.northline.worker.observability;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.junit.jupiter.api.extension.ExtendWith;
+import io.micrometer.observation.ObservationRegistry;
+import ca.northline.platform.logging.RedactionCheck;
 import static ca.northline.worker.support.WorkerContainers.KAFKA;
 import static ca.northline.worker.support.WorkerContainers.TEST_TOPIC;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -20,6 +27,8 @@ import org.springframework.test.context.DynamicPropertySource;
  * writes — {@code TracingTest} in the api checks that side) is consumed in the same trace: the listener's CONSUMER
  * span and the dedupe claim's SQL span carry the producer's trace id, and the worker exports them over OTLP.
  */
+@ExtendWith(OutputCaptureExtension.class)
+@TestPropertySource(properties = "LOG_FORMAT=ecs") // S-112: the deployed console format
 class WorkerTracingTest extends WorkerIntegrationTest {
 
     static final OtlpReceiver OTLP = OtlpReceiver.start();
@@ -49,5 +58,14 @@ class WorkerTracingTest extends WorkerIntegrationTest {
         assertThat(consumer.parentSpanId()).isEqualTo(producerSpan);
         OTLP.awaitSpans(
                 s -> s.traceId().equals(trace) && s.attributes().containsKey("jdbc.query[0]"), Duration.ofSeconds(30));
+    }
+
+    @Autowired
+    ObservationRegistry observations;
+
+    /** S-112: the console JSON line and the OTLP log record are redacted; the record carries its trace id. */
+    @Test
+    void logsLeaveRedactedAndLinkedToTheirTrace(CapturedOutput output) {
+        RedactionCheck.assertRedacted("northline-worker", OTLP, observations, output::getOut);
     }
 }

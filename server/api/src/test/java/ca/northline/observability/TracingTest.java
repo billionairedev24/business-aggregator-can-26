@@ -1,5 +1,12 @@
 package ca.northline.observability;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.junit.jupiter.api.extension.ExtendWith;
+import io.micrometer.observation.ObservationRegistry;
+import ca.northline.platform.logging.RedactionCheck;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -33,6 +40,8 @@ import org.testcontainers.kafka.KafkaContainer;
  * externalized event's {@code traceparent} carries the same trace id — the hop the worker continues
  * ({@code WorkerTracingTest}).
  */
+@ExtendWith(OutputCaptureExtension.class)
+@TestPropertySource(properties = "LOG_FORMAT=ecs") // S-112: the deployed console format
 class TracingTest extends IntegrationTest {
 
     static final KafkaContainer KAFKA = new KafkaContainer("apache/kafka:4.1.0");
@@ -130,5 +139,14 @@ class TracingTest extends IntegrationTest {
             }
             throw new AssertionError("no record for " + key);
         }
+    }
+
+    @Autowired
+    ObservationRegistry observations;
+
+    /** S-112: the console JSON line and the OTLP log record are redacted; the record carries its trace id. */
+    @Test
+    void logsLeaveRedactedAndLinkedToTheirTrace(CapturedOutput output) {
+        RedactionCheck.assertRedacted("northline-api", OTLP, observations, output::getOut);
     }
 }

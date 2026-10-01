@@ -1,5 +1,11 @@
 package ca.northline.bff;
 
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.junit.jupiter.api.extension.ExtendWith;
+import io.micrometer.observation.ObservationRegistry;
+import ca.northline.platform.logging.RedactionCheck;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
@@ -33,6 +39,8 @@ import org.springframework.test.web.servlet.MockMvc;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles({"test", "consumer"})
+@ExtendWith(OutputCaptureExtension.class)
+@TestPropertySource(properties = "LOG_FORMAT=ecs") // S-112: the deployed console format
 class BffTracingTest {
 
     static final OtlpReceiver OTLP = OtlpReceiver.start();
@@ -87,5 +95,14 @@ class BffTracingTest {
                         s -> s.traceId().equals(trace) && s.kind().equals("CLIENT"), Duration.ofSeconds(20))
                 .getFirst();
         assertThat(traceparent).contains("-" + client.spanId() + "-");
+    }
+
+    @Autowired
+    ObservationRegistry observations;
+
+    /** S-112: the console JSON line and the OTLP log record are redacted; the record carries its trace id. */
+    @Test
+    void logsLeaveRedactedAndLinkedToTheirTrace(CapturedOutput output) {
+        RedactionCheck.assertRedacted("northline-consumer-bff", OTLP, observations, output::getOut);
     }
 }
