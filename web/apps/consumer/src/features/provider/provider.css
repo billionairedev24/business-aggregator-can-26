@@ -1,0 +1,46 @@
+/* Public provider page — design 06 `provider` (template lines 553–580). Tokens only; the hero's background is the
+   business's brand colour (merchant data, inline). */
+.nl-prov { min-width: 0; }
+.nl-prov-announce { margin-bottom: 12px; }
+.nl-prov-hero { margin-top: 24px; padding: 36px clamp(20px, 4vw, 48px); border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; color: var(--color-on-accent); }
+.nl-prov-id { display: flex; gap: 20px; align-items: center; min-width: 0; }
+.nl-prov-mark { width: 72px; height: 72px; border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); display: grid; place-items: center; font-weight: 600; font-size: 30px; flex: none; overflow: hidden; }
+.nl-prov-mark img { width: 100%; height: 100%; object-fit: cover; }
+.nl-prov-idtext { min-width: 0; }
+.nl-prov-name { font-size: clamp(30px, 5vw, 40px); margin: 0; letter-spacing: -0.02em; color: var(--color-on-accent); overflow-wrap: anywhere; }
+.nl-prov-tagline { font-size: 15px; opacity: .88; }
+.nl-prov-tier { background: var(--color-surface); color: var(--color-text); }
+.nl-prov-split { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(min(100%, 320px), 1fr); gap: 28px 64px; margin-top: 28px; align-items: start; }
+@media (max-width: 859px) { .nl-prov-split { grid-template-columns: minmax(0, 1fr); } }
+.nl-prov-main { min-width: 0; }
+.nl-prov-figures { display: flex; gap: 16px 32px; font-size: 13px; flex-wrap: wrap; margin: 0; }
+.nl-prov-figures > div { display: flex; flex-direction: column-reverse; }
+.nl-prov-figures dt { color: var(--color-neutral-700); }
+.nl-prov-figures dd { margin: 0; }
+.nl-prov-fig { font-size: 26px; font-weight: 600; }
+.nl-prov-creds { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 16px; }
+.nl-prov-about { line-height: 1.55; margin: 18px 0 0; max-width: 60ch; }
+.nl-prov-section { margin-top: 28px; }
+.nl-prov-h2 { font-size: 22px; margin: 0 0 8px; }
+.nl-prov-text { margin: 0 0 8px; line-height: 1.5; max-width: 60ch; }
+.nl-prov-zones { display: flex; gap: 6px; flex-wrap: wrap; margin: 0; padding: 0; list-style: none; }
+.nl-prov-reviews { margin: 0; padding: 0; list-style: none; }
+.nl-prov-review { margin: 0 0 16px; max-width: 60ch; }
+.nl-prov-quote { font-style: italic; margin: 0 0 4px; line-height: 1.5; }
+.nl-prov-who { font-size: 12px; color: var(--color-neutral-700); }
+.nl-prov-reply { font-size: 13px; margin: 6px 0 0; padding-left: 12px; border-left: 2px solid var(--color-divider); }
+.nl-prov-faq { border-bottom: 1px solid var(--color-divider); padding: 10px 0; max-width: 60ch; }
+.nl-prov-faq summary { cursor: pointer; font-weight: 600; min-height: 32px; display: flex; align-items: center; }
+.nl-prov-faq summary:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.nl-prov-faq p { margin: 6px 0 0; line-height: 1.5; }
+.nl-prov-cta { padding: 20px; background: var(--color-surface); border-radius: var(--radius-md); min-width: 0; }
+@media (min-width: 860px) { .nl-prov-cta { position: sticky; top: 20px; } }
+.nl-prov-cta-title { font-size: 22px; margin: 0 0 6px; }
+.nl-prov-cta-hint { font-size: 14px; color: var(--color-neutral-700); margin: 0 0 14px; }
+.nl-prov-menu { display: flex; flex-direction: column; gap: 6px; font-size: 14px; margin: 0; padding: 0; list-style: none; }
+.nl-prov-menu-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; }
+.nl-prov-menu-dur { display: block; font-size: 12px; color: var(--color-neutral-700); }
+.nl-prov-book { width: 100%; min-height: 48px; font-size: 16px; margin-top: 14px; box-sizing: border-box; }
+.nl-prov-quote-btn { width: 100%; min-height: 44px; margin-top: 8px; box-sizing: border-box; }
+.nl-prov-foot { font-size: 12px; color: var(--color-neutral-700); margin-top: 10px; line-height: 1.5; }
+.nl-prov .nl-errorstate { margin: 8px 0; }

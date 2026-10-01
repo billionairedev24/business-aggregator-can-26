@@ -131,6 +131,7 @@ Every app reads its configuration from environment variables; nothing environmen
 | `WEBHOOKS_MAX_IN_FLIGHT`, `WEBHOOKS_CONNECT_TIMEOUT`, `WEBHOOKS_RESPONSE_TIMEOUT`, `WEBHOOKS_TOTAL_TIMEOUT`, `WEBHOOKS_DISABLE_AFTER`, `WEBHOOKS_LOG_RETENTION` | worker (S-33) | no (`64`, `5s`, `10s`, `15s`, `3d`, `30d`) | leave unset | partner webhook delivery ([webhooks.md](webhooks.md)); `WEBHOOKS_ALLOW_LOCAL` must stay unset (`true` is refused in the cloud) |
 | `OTEL_EXPORT_ENABLED` | api | no | `false` until a collector exists (S-111) | deployment manifest |
 | `VITE_NL_AUTH_ORIGIN` (Studio build) | web/apps/studio | no since S-14: the Studio image reads `NL_AUTH_ORIGIN` at start (chart: `urls.auth`); the build-time value is only a fallback | `https://auth.northline.ca` | CI build argument; one Studio build per environment |
+| `NL_SITE_ORIGIN`, `NL_PAGES_HOST` | web/apps/consumer (S-54) | no — the chart sets them from `urls.consumer` / `urls.pages` | `https://northline.ca` / `pages.northline.ca` | business pages on `pages.` and merchants' own domains (README § Consumer web) |
 
 Generating the secrets:
 

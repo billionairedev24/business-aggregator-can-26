@@ -1,0 +1,71 @@
+/* Services landing, service category, provider list — design 06 `services`, `svcCategory`, `providers`. Tokens only. */
+.nl-svc { min-width: 0; }
+.nl-svc-title { font-size: 36px; margin: 0; letter-spacing: -0.02em; }
+.nl-svc-sub { font-size: 14px; color: var(--color-neutral-700); margin: 4px 0 0; }
+.nl-svc-muted { font-size: 14px; color: var(--color-neutral-700); margin: 0; }
+.nl-svc-kicker { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-neutral-700); margin-bottom: 10px; }
+
+/* landing */
+.nl-svc-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 28px 48px; margin-top: 28px; }
+.nl-svc-group-title { font-size: 22px; margin: 0 0 4px; }
+.nl-svc-group-kind { font-size: 12px; color: var(--color-neutral-700); margin-bottom: 10px; }
+.nl-svc-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.nl-svc-groups .nl-svc-chips { margin-top: 10px; }
+.nl-svc-chip { display: inline-flex; align-items: center; font-size: 14px; padding: 8px 12px; min-height: 44px; box-sizing: border-box; border-radius: var(--radius-md); border: 1px solid var(--color-divider); color: var(--color-text); text-decoration: none; }
+.nl-svc-chip:hover { background: var(--color-accent-100); color: var(--color-text); }
+.nl-svc-chip:focus-visible, .nl-svc-job:focus-visible, .nl-svc-row:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+/* category */
+.nl-svc-crumbs { padding-top: 0; font-size: 13px; color: var(--color-neutral-700); }
+.nl-svc-crumbs a { display: inline-flex; align-items: center; min-height: 24px; }
+.nl-svc-split { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(min(100%, 280px), 1fr); gap: 28px 64px; margin-top: 10px; align-items: start; }
+@media (max-width: 859px) { .nl-svc-split { grid-template-columns: minmax(0, 1fr); } }
+.nl-svc-main { min-width: 0; }
+.nl-svc-cat-title { font-size: 40px; margin: 0; letter-spacing: -0.02em; }
+.nl-svc-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.nl-svc-tags .tag { white-space: normal; }
+.nl-svc-blurb { font-size: 16px; line-height: 1.55; margin: 16px 0 0; max-width: 60ch; }
+.nl-svc-h2 { font-size: 22px; margin: 28px 0 10px; }
+.nl-svc-jobs { display: flex; flex-direction: column; max-width: 640px; margin: 0; padding: 0; list-style: none; }
+.nl-svc-job { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; min-height: 44px; color: var(--color-text); text-decoration: none; border-bottom: 1px solid var(--color-divider); }
+.nl-svc-job:hover { color: var(--color-text); background: var(--color-accent-100); }
+.nl-svc-job-desc { display: block; font-size: 13px; color: var(--color-neutral-700); }
+.nl-svc-job-price { font-weight: 600; white-space: nowrap; }
+.nl-svc-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: 10px; max-width: 720px; margin: 0; padding: 0; list-style: none; }
+.nl-svc-step { padding: 12px; background: var(--color-surface); border-radius: var(--radius-md); font-size: 13px; }
+.nl-svc-step-n { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-neutral-700); }
+.nl-svc-step-name { font-weight: 600; margin-top: 4px; }
+.nl-svc-step-desc { color: var(--color-neutral-700); margin-top: 2px; }
+.nl-svc-aside { padding: 20px; background: var(--color-surface); border-radius: var(--radius-md); min-width: 0; }
+.nl-svc-aside-title { font-size: 22px; margin: 0 0 6px; }
+.nl-svc-aside-hint { font-size: 14px; color: var(--color-neutral-700); margin: 0 0 14px; }
+.nl-svc-cta { width: 100%; min-height: 48px; font-size: 16px; box-sizing: border-box; }
+.nl-svc-cta2 { width: 100%; min-height: 44px; margin-top: 8px; box-sizing: border-box; text-align: center; }
+.nl-svc-aside-note { font-size: 12px; color: var(--color-neutral-700); margin-top: 12px; line-height: 1.5; }
+
+/* provider list */
+.nl-svc-providers { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 28px 48px; }
+@media (max-width: 759px) { .nl-svc-providers { grid-template-columns: minmax(0, 1fr); } }
+.nl-svc-filters { font-size: 14px; }
+.nl-svc-filter-list { display: flex; flex-direction: column; gap: 2px; }
+@media (max-width: 759px) { .nl-svc-filter-list { flex-direction: row; flex-wrap: wrap; gap: 4px 16px; } }
+.nl-svc-filter { display: flex; gap: 10px; align-items: center; min-height: 44px; cursor: pointer; }
+.nl-svc-filter input { width: 18px; height: 18px; margin: 0; accent-color: var(--color-accent); }
+.nl-svc-filter input:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.nl-svc-list { min-width: 0; }
+.nl-svc-list-title { font-size: 32px; margin: 0; letter-spacing: -0.02em; }
+.nl-svc-sortnote { font-size: 13px; margin-top: 4px; }
+.nl-svc-rows { margin: 8px 0 0; padding: 0; list-style: none; }
+.nl-svc-row { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 16px; align-items: center; width: 100%; padding: 18px 0; color: var(--color-text); text-decoration: none; border-bottom: 1px solid var(--color-divider); box-sizing: border-box; }
+.nl-svc-row:hover { color: var(--color-text); background: var(--color-accent-100); }
+@media (max-width: 479px) { .nl-svc-row { grid-template-columns: 48px minmax(0, 1fr); } .nl-svc-row .nl-brandmark { width: 48px !important; height: 48px !important; } .nl-svc-row-side { grid-column: 2; text-align: left !important; } }
+.nl-svc-row-body { display: flex; flex-direction: column; min-width: 0; }
+.nl-svc-row-name { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.nl-svc-row-title { font-weight: 600; font-size: 18px; }
+.nl-svc-tier { font-size: 10px; padding: 1px 7px; }
+.nl-svc-row-meta { font-size: 13px; color: var(--color-neutral-700); }
+.nl-svc-row-blurb { font-size: 14px; margin-top: 4px; }
+.nl-svc-row-side { text-align: right; display: flex; flex-direction: column; }
+.nl-svc-row-price { font-weight: 600; }
+.nl-svc-row-avail { font-size: 13px; color: var(--color-neutral-700); }
+.nl-svc-row-skel { border-bottom: 0; }

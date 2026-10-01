@@ -201,6 +201,10 @@ only the build-time fallback (the Vite dev server). Worker: `SERVER_PORT` 8084, 
 Consumer web (S-45, `web/apps/consumer`, TanStack Start SSR on Node): `PORT` (3000), `NL_BFF_URL` (the consumer-bff for
 server-side rendering; the chart sets `http://northline-consumer-bff:8081`), `NL_AUTH_ORIGIN` (= `urls.auth`; the
 browser signs out of northline-auth there), `TRUST_PROXY` (`true` behind the Gateway). `GET /healthz` answers `ok`.
+S-54: `NL_SITE_ORIGIN` (= `urls.consumer`, the site's own origin; business pages served elsewhere link back to it) and
+`NL_PAGES_HOST` (= the host of `urls.pages`): with it set, `pages.<zone>/<slug>` and merchants' own domains (looked up
+with `GET /api/v1/public/storefronts/by-host`, S-31) serve the business's public page; without it (local) every host is
+the site. Both optional, set by the chart.
 
 ## Consumer BFF (S-45)
 

@@ -163,6 +163,13 @@ every department has its name. The pages are rendered for `?market=` (default Ca
 seeded shops, so their pages show the empty state). Pooled runs are created on demand from
 `northline.orders.delivery.runs` (application.yml): tonight 6–9 pm, tomorrow 8–11 am.
 
+Business pages on other hosts (S-54): the built server serves `pages.<zone>/<slug>` and merchants' own domains when
+`NL_PAGES_HOST` is set (the Vite dev server doesn't). Try it with `pnpm --filter @northline/consumer build`, then
+`NL_SITE_ORIGIN=http://localhost:3000 NL_PAGES_HOST=pages.localhost NL_BFF_URL=http://localhost:8080 node
+web/apps/consumer/server/node-server.mjs` and open `http://pages.localhost:3000/prairie-wrench` (browsers resolve
+`*.localhost`). A custom domain needs a host name pointing at your machine and a live domain in the database (S-31's
+"Simulate DNS records →").
+
 ## 6. Optional stand-ins
 
 Start any of them with `make up PROFILES=<name>,…` (or `make standins-up PROFILES=…` without the apps; = `docker

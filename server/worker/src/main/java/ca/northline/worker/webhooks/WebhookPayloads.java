@@ -34,14 +34,14 @@ public final class WebhookPayloads {
 
     /** Public type ← internal {@code <type>:<version>} (what is delivered today). */
     public static final Map<String, String> SOURCES = Map.of(
+            "booking.confirmed", "booking.booking_confirmed:1",
             "booking.completed", "booking.booking_completed:1",
             "payment.released", "payments.escrow_released:1",
             "refund.issued", "payments.refund_issued:1",
             "order.placed", "orders.order_placed:1");
 
     /** Types endpoints can subscribe to (Settings › API) whose domain event isn't published on Kafka yet. */
-    public static final List<String> NOT_YET_PUBLISHED =
-            List.of("booking.confirmed", "order.delivered", "review.created");
+    public static final List<String> NOT_YET_PUBLISHED = List.of("order.delivered", "review.created");
 
     /** A payload ready to send. */
     public record PublicEvent(String eventId, String type, String merchantId, ObjectNode payload) {}
@@ -59,6 +59,21 @@ public final class WebhookPayloads {
         var d = event.data();
         var merchant = event.text("merchantId");
         var mapped = switch (event.type() + ":" + event.version()) {
+            case "booking.booking_confirmed:1" -> {
+                // S-55: no customer id (S-33 PII rule) — the booking id leads to everything in the Studio
+                var data = json.createObjectNode();
+                data.put("bookingId", event.aggregateId());
+                data.put("memberUserId", event.optionalText("memberUserId"));
+                data.put("serviceId", event.optionalText("serviceId"));
+                data.put("quoteId", event.optionalText("quoteId"));
+                data.put("bookingType", event.text("bookingType"));
+                data.put("startsAt", event.text("startsAt"));
+                data.put("endsAt", event.text("endsAt"));
+                data.put("priceCents", d.path("priceCents").asLong());
+                data.put("depositCents", d.path("depositCents").asLong());
+                data.put("currency", "CAD");
+                yield envelope(event, "booking.confirmed", merchant, data);
+            }
             case "booking.booking_completed:1" -> {
                 var data = json.createObjectNode();
                 data.put("bookingId", event.aggregateId());
