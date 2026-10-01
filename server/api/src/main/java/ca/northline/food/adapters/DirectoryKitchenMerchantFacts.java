@@ -12,12 +12,22 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 class DirectoryKitchenMerchantFacts implements KitchenMerchantFacts {
 
+    private static final String KITCHEN = "kitchen";
+
     private final MerchantDirectory directory;
     private final MerchantVerifications verifications;
 
     @Override
     public boolean approved(String merchantId) {
         return directory.profile(merchantId).filter(MerchantProfile::active).isPresent();
+    }
+
+    @Override
+    public boolean kitchen(String merchantId) {
+        return directory
+                .profile(merchantId)
+                .filter(p -> KITCHEN.equals(p.type()))
+                .isPresent();
     }
 
     @Override

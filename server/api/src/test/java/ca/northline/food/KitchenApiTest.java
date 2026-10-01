@@ -174,6 +174,52 @@ class KitchenApiTest extends IntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    // ── Kitchen businesses only (S-73) ──────────────────────────────────────────
+
+    @Test
+    void otherBusinessTypesGet404_afterTheMembershipChecks() throws Exception {
+        for (var type : List.of("provider", "seller", "both")) {
+            var merchantId = data.merchant(type, "Not a kitchen");
+            var owner = data.user("Owner");
+            data.member(merchantId, owner, MerchantRole.OWNER);
+            var base = "/api/v1/merchants/" + merchantId;
+            for (var path : List.of(
+                    "/kitchen/live",
+                    "/kitchen/setup",
+                    "/kitchen/promos",
+                    "/menus",
+                    "/modifier-groups",
+                    "/combos",
+                    "/pos/connections")) {
+                mvc.perform(get(base + path).with(TestJwt.member(owner)))
+                        .andExpect(status().isNotFound())
+                        .andExpect(jsonPath("$.code").value("not_found"));
+            }
+            // before validation: an invalid body is still a 404, never a kitchen's 422
+            mvc.perform(put(base + "/kitchen/prep")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}")
+                            .with(TestJwt.member(owner)))
+                    .andExpect(status().isNotFound());
+            mvc.perform(post(base + "/kitchen/pause").with(TestJwt.member(owner)))
+                    .andExpect(status().isNotFound());
+            // membership first: strangers and single-factor sessions still get 403, not a hint about the type
+            mvc.perform(get(base + "/kitchen/live").with(TestJwt.member(data.user("Stranger"))))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value("not_a_member"));
+            mvc.perform(get(base + "/kitchen/live").with(TestJwt.memberWithoutMfa(owner)))
+                    .andExpect(status().isForbidden());
+        }
+    }
+
+    @Test
+    void kitchensStillReachTheirEndpoints() throws Exception {
+        var k = fx().kitchen();
+        for (var path : List.of("/kitchen/live", "/kitchen/setup", "/menus", "/modifier-groups", "/combos")) {
+            mvc.perform(get(k.base() + path).with(TestJwt.member(k.ownerId()))).andExpect(status().isOk());
+        }
+    }
+
     // ── Hours, prep & capacity ──────────────────────────────────────────────────
 
     @Test
