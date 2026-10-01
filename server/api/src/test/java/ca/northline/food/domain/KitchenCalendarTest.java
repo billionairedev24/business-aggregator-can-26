@@ -32,7 +32,7 @@ class KitchenCalendarTest {
             int late,
             boolean menuLive) {
         var week = Map.of(1, ranges("11:00", "21:00"), 3, ranges("11:00", "21:00"), 4, ranges("11:00", "21:00"));
-        return new KitchenCalendar(week, holidays, pausedUntil, autoPause, late, menuLive);
+        return new KitchenCalendar(KitchenTime.ZONE, week, holidays, pausedUntil, autoPause, late, menuLive);
     }
 
     private static KitchenCalendar open() {

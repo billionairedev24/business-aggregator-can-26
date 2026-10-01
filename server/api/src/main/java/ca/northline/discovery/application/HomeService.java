@@ -46,8 +46,9 @@ class HomeService implements ViewHome {
         var perCategory = new HashMap<String, Integer>();
         businesses.forEach(b -> b.categoryIds().forEach(id -> perCategory.merge(id, 1, Integer::sum)));
 
-        var status = kitchens.now(
-                kitchenList.stream().map(PublicBusiness::merchantId).toList());
+        var status = kitchens.now(kitchenList.stream()
+                .map(k -> new KitchenAvailability.Kitchen(k.merchantId(), k.province()))
+                .toList());
         var perCuisine = new HashMap<String, Integer>();
         var open = 0;
         for (var k : kitchenList) {

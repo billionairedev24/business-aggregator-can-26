@@ -190,6 +190,7 @@ The home page's "Your week" (S-46) lists the signed-in person's orders, bookings
 `GET /api/v1/me/upcoming` → `{ items: [{ id, title, subtitle?, state, tone: accent|neutral|accent-2, href }] }` — texts
 in the caller's language (`Accept-Language`), `href` a consumer route (`/orders/…`, `/quotes/…`). S-58 provides it;
 until then (404) the section shows its empty line. The points line under it reads `points` of the account summary.
+
 ### Market (S-49)
 
 The Shop pages are rendered for the market in their URL, `?market=<city>` (default **Calgary**, the fallback market),

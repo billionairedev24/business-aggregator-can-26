@@ -8,13 +8,16 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * Whether kitchens take orders now, as the consumer site shows them (S-46 home "N open", S-57 food landing): opening
- * hours of the Edmonton day (holiday hours win), the Studio's pause, auto-pause after too many late orders, and a live
+ * hours of the day in the kitchen's market time zone (holiday hours win), the Studio's pause, auto-pause after too many late orders, and a live
  * menu. A kitchen without settings or hours is closed.
  */
 public interface KitchenAvailability {
 
-    /** One entry per requested merchant id. */
-    Map<String, KitchenStatus> now(Collection<String> merchantIds);
+    /** One entry per requested kitchen. */
+    Map<String, KitchenStatus> now(Collection<Kitchen> kitchens);
+
+    /** A kitchen and its province, whose market's time zone its hours are kept in ({@code null} = default market). */
+    record Kitchen(String merchantId, @Nullable String province) {}
 
     /**
      * @param opensAt the next opening within a week while closed, else null

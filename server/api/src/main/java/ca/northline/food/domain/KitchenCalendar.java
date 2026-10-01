@@ -3,22 +3,25 @@ package ca.northline.food.domain;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Whether a kitchen takes orders at a moment, as customers see it (S-46/S-57): its opening hours for the Edmonton day
- * (a holiday entry replaces the weekday's hours), not paused (the Studio's 30-minute pause, or <b>auto-pause</b>: at
+ * Whether a kitchen takes orders at a moment, as customers see it (S-46/S-57): its opening hours for the day in the kitchen's
+ * market time zone (a holiday entry replaces the weekday's hours), not paused (the Studio's 30-minute pause, or <b>auto-pause</b>: at
  * least {@code autoPauseLate} accepted orders past their promised ready time), and a live menu to order from.
  *
+ * @param zone the time zone of the kitchen's market (region configuration), which its hours are kept in
  * @param week opening ranges per ISO weekday (1 = Monday); a missing day is closed
  * @param holidays replacement ranges for single dates (an empty list = closed that day)
  * @param autoPauseLate the Studio's "Auto-pause if late orders ≥" (3, 5, or null = never)
  * @param lateOrders accepted orders now past their ready-by time
  */
 public record KitchenCalendar(
+        ZoneId zone,
         Map<Integer, OpeningRanges> week,
         Map<LocalDate, OpeningRanges> holidays,
         @Nullable Instant pausedUntil,
@@ -50,17 +53,14 @@ public record KitchenCalendar(
         if (!menuLive) {
             return new State(false, null, null, false);
         }
-        var local = now.atZone(KitchenTime.ZONE);
+        var local = now.atZone(zone);
         var current = rangeAt(local.toLocalDate(), local.toLocalTime());
         var paused = KitchenPause.paused(pausedUntil, now) || autoPaused();
         if (current.isPresent() && !paused) {
             return new State(
                     true,
                     null,
-                    local.toLocalDate()
-                            .atTime(current.get().to())
-                            .atZone(KitchenTime.ZONE)
-                            .toInstant(),
+                    local.toLocalDate().atTime(current.get().to()).atZone(zone).toInstant(),
                     false);
         }
         var resume = paused && !autoPaused() && pausedUntil != null ? pausedUntil : now;
@@ -116,14 +116,14 @@ public record KitchenCalendar(
 
     /** The first moment at or after {@code from} inside an opening range, within a week. */
     private @Nullable Instant nextOpening(Instant from) {
-        var local = from.atZone(KitchenTime.ZONE);
+        var local = from.atZone(zone);
         if (rangeAt(local.toLocalDate(), local.toLocalTime()).isPresent()) {
             return from;
         }
         for (int d = 0; d <= LOOK_AHEAD_DAYS; d++) {
             var date = local.toLocalDate().plusDays(d);
             for (var range : day(date).ranges()) {
-                var start = date.atTime(range.from()).atZone(KitchenTime.ZONE).toInstant();
+                var start = date.atTime(range.from()).atZone(zone).toInstant();
                 if (start.isAfter(from)) {
                     return start;
                 }

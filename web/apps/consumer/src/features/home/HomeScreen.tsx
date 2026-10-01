@@ -12,12 +12,10 @@ import { useHomeT } from './messages';
 
 type T = ReturnType<typeof useHomeT>;
 
-/** The hour in Edmonton, read after mount (the server's clock and the visitor's may disagree about "evening"). */
-function useEdmontonHour(): number | null {
+/** The hour on the visitor's own clock, read after mount (the server's time zone may disagree about "evening"). */
+function useLocalHour(): number | null {
   const [hour, setHour] = useState<number | null>(null);
-  useEffect(() => {
-    setHour(Number(new Intl.DateTimeFormat('en-CA', { hour: 'numeric', hourCycle: 'h23', timeZone: 'America/Edmonton' }).format(new Date())));
-  }, []);
+  useEffect(() => { setHour(new Date().getHours()); }, []);
   return hour;
 }
 
@@ -36,7 +34,7 @@ export function HomeScreen() {
   const navigate = useNavigate();
   const { user, loading: sessionLoading } = useViewer();
   const { location } = useDeliveryLocation();
-  const hour = useEdmontonHour();
+  const hour = useLocalHour();
   const [query, setQuery] = useState('');
   const summary = useHomeSummary(location.city);
   const place = location.label?.split(',')[0]?.trim();
