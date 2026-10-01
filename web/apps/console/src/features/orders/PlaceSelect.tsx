@@ -1,5 +1,5 @@
 import { Select, useLocale } from '@northline/ui';
-import { useOverviewT } from '../overview/messages';
+import { useShellT } from '../shell/messages';
 import { useRegions } from '../shell/api';
 
 export interface Place { province?: string; market?: string }
@@ -9,7 +9,7 @@ export interface Place { province?: string; market?: string }
  * from code. `onChange` gets the new pair (a province change clears the market).
  */
 export function PlaceSelect({ filter, onChange }: { filter: Place; onChange: (next: Place) => void }) {
-  const t = useOverviewT();
+  const t = useShellT();
   const { locale } = useLocale();
   const regions = useRegions(locale).data;
   const provinces = (regions?.provinces ?? []).filter(p => p.status !== 'off');
