@@ -11,10 +11,10 @@ import ca.northline.support.IntegrationTest;
 import ca.northline.support.TestJwt;
 import ca.northline.tools.CategorySeeder;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
@@ -75,9 +75,7 @@ class CalendarCellsApiTest extends IntegrationTest {
         jdbc.sql("""
                         insert into booking.quote_requests (id, customer_id, details, merchant_ids, expires_at, respond_by)
                         values (?, ?, '{"title":"Alternator"}'::jsonb, array[?], now() + interval '3 days', now() + interval '2 hours')
-                        """)
-                .params(request, customer, provider.merchantId())
-                .update();
+                        """).params(request, customer, provider.merchantId()).update();
         var open = Ids.next();
         var expired = Ids.next();
         for (var q : List.of(open, expired)) {
@@ -92,24 +90,27 @@ class CalendarCellsApiTest extends IntegrationTest {
                             request,
                             provider.merchantId(),
                             q.equals(open) ? 1 : 2,
-                            (q.equals(open) ? Instant.now().plusSeconds(86_400) : Instant.now().minusSeconds(60)).atOffset(ZoneOffset.UTC),
+                            (q.equals(open)
+                                            ? Instant.now().plusSeconds(86_400)
+                                            : Instant.now().minusSeconds(60))
+                                    .atOffset(ZoneOffset.UTC),
                             at(tomorrow.plusDays(1), 10).atOffset(ZoneOffset.UTC))
                     .update();
         }
 
         var body = JSON.readTree(mvc.perform(get(CELLS, provider.merchantId())
-                                .param("from", tomorrow.toString())
-                                .param("days", "2")
-                                .with(TestJwt.member(provider.owner())))
-                        .andExpect(status().isOk())
-                        .andExpect(jsonPath("$.quoteHolds.length()").value(1))
-                        .andExpect(jsonPath("$.quoteHolds[0].quoteId").value(open))
-                        .andExpect(jsonPath("$.quoteHolds[0].customerName").value("M. Tran"))
-                        .andExpect(jsonPath("$.quoteHolds[0].ref").value("QT-74"))
-                        .andExpect(jsonPath("$.quoteHolds[0].durationMin").value(120))
-                        .andReturn()
-                        .getResponse()
-                        .getContentAsString());
+                        .param("from", tomorrow.toString())
+                        .param("days", "2")
+                        .with(TestJwt.member(provider.owner())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.quoteHolds.length()").value(1))
+                .andExpect(jsonPath("$.quoteHolds[0].quoteId").value(open))
+                .andExpect(jsonPath("$.quoteHolds[0].customerName").value("M. Tran"))
+                .andExpect(jsonPath("$.quoteHolds[0].ref").value("QT-74"))
+                .andExpect(jsonPath("$.quoteHolds[0].durationMin").value(120))
+                .andReturn()
+                .getResponse()
+                .getContentAsString());
         var tomorrowSlots = new ArrayList<Instant>();
         for (var slot : body.get("openSlots")) {
             var startsAt = Instant.parse(slot.get("startsAt").asString());
@@ -144,7 +145,6 @@ class CalendarCellsApiTest extends IntegrationTest {
                         .param("durationMin", "5")
                         .with(TestJwt.member(provider.owner())))
                 .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.errors[0].message")
-                        .value("Choose a duration between 15 minutes and 12 hours."));
+                .andExpect(jsonPath("$.errors[0].message").value("Choose a duration between 15 minutes and 12 hours."));
     }
 }

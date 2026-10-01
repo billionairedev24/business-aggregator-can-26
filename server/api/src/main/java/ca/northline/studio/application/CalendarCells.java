@@ -26,7 +26,12 @@ public interface CalendarCells {
     record OpenSlot(Instant startsAt) {}
 
     record QuoteHold(
-            String quoteId, String requestId, @Nullable String ref, String customerName, Instant startsAt, int durationMin) {}
+            String quoteId,
+            String requestId,
+            @Nullable String ref,
+            String customerName,
+            Instant startsAt,
+            int durationMin) {}
 
     int OPEN_SLOTS_PER_DAY = 3;
 }

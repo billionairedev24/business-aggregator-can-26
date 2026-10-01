@@ -26,7 +26,13 @@ public interface BookingCalendar {
      */
     List<QuoteHold> quoteHolds(String merchantId, Instant from, Instant to);
 
-    record QuoteHold(String quoteId, String requestId, @Nullable String ref, @Nullable String customerId, Instant startsAt, int durationMin) {}
+    record QuoteHold(
+            String quoteId,
+            String requestId,
+            @Nullable String ref,
+            @Nullable String customerId,
+            Instant startsAt,
+            int durationMin) {}
 
     record Busy(String bookingId, @Nullable String memberUserId, Instant startsAt, Instant endsAt) {}
 
