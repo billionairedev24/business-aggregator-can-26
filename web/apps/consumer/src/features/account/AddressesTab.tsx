@@ -3,11 +3,11 @@ import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 import { Button, Dialog, EmptyState, ErrorState, Field, FormGrid, Select, Tag, TextInput } from '@northline/ui';
 import { serverFieldErrors } from '@northline/client';
+import { useRegions } from '../location/regions';
 import { FormSkeleton } from './ProfileTab';
 import { addressesQuery, householdQuery, useAddAddress, useChangeAddress, useDefaultAddress, useRemoveAddress, type Address } from './settingsApi';
 import { useSettingsT, type SettingsT } from './settingsMessages';
 
-export const PROVINCES = ['AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'NT', 'NU', 'ON', 'PE', 'QC', 'SK', 'YT'] as const;
 const FIELDS = ['label', 'street', 'unit', 'city', 'province', 'postal', 'note'] as const;
 type Values = Record<(typeof FIELDS)[number], string>;
 const EMPTY: Values = { label: '', street: '', unit: '', city: '', province: '', postal: '', note: '' };
@@ -18,7 +18,7 @@ const schema = (t: SettingsT, editing: boolean) => z.object({
   street: editing ? z.string() : z.string().trim().min(1, t('v_street')).max(120, t('v_street')),
   unit: z.string().trim().max(20, t('v_unit')),
   city: editing ? z.string() : z.string().trim().min(1, t('v_city')).max(60, t('v_city')),
-  province: editing ? z.string() : z.enum(PROVINCES, { message: t('v_province') }),
+  province: editing ? z.string() : z.string().min(1, t('v_province')),
   postal: editing ? z.string() : z.string().trim().regex(/^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/, t('v_postal')),
   note: z.string().trim().max(200, t('v_note')),
 });
@@ -78,6 +78,7 @@ export function AddressesTab() {
 
 function AddressDialog({ address, onClose }: { address?: Address; onClose: () => void }) {
   const t = useSettingsT();
+  const regions = useRegions();
   const add = useAddAddress();
   const change = useChangeAddress();
   const remove = useRemoveAddress();
@@ -116,7 +117,8 @@ function AddressDialog({ address, onClose }: { address?: Address; onClose: () =>
           <Field label={t('unit')} error={errors.unit}><TextInput value={values.unit} onChange={e => set('unit')(e.target.value)} autoComplete="address-line2" /></Field>
           <Field label={t('city')} error={errors.city}><TextInput value={values.city} readOnly={editing} onChange={e => set('city')(e.target.value)} autoComplete="address-level2" /></Field>
           <Field label={t('province')} error={errors.province}>
-            <Select value={values.province} disabled={editing} onChange={e => set('province')(e.target.value)} placeholder="—" options={PROVINCES.map(p => ({ value: p, label: p }))} />
+            <Select value={values.province} disabled={editing} onChange={e => set('province')(e.target.value)} placeholder="—"
+              options={(regions?.provinces ?? []).map(p => ({ value: p.code, label: p.name }))} />
           </Field>
           <Field label={t('postal')} error={errors.postal}><TextInput value={values.postal} readOnly={editing} onChange={e => set('postal')(e.target.value)} autoComplete="postal-code" /></Field>
           <Field label={t('note')} hint={t('noteHint')} error={errors.note} span><TextInput value={values.note} onChange={e => set('note')(e.target.value)} /></Field>

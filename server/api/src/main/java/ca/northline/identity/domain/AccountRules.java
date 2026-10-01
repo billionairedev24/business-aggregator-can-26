@@ -2,7 +2,6 @@ package ca.northline.identity.domain;
 
 import ca.northline.shared.RuleViolation;
 import java.time.MonthDay;
-import java.util.List;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
@@ -38,10 +37,6 @@ public final class AccountRules {
     public static final String LABEL = "Keep the name under 40 characters.";
     public static final String LAST_ADDRESS_DEFAULT = "This is already your default address.";
 
-    /** Canada's provinces and territories. */
-    public static final List<String> PROVINCES =
-            List.of("AB", "BC", "MB", "NB", "NL", "NS", "NT", "NU", "ON", "PE", "QC", "SK", "YT");
-
     /** "MM-DD" → a month-day; blank → none; anything else is a 422 on {@code birthday}. */
     public static @Nullable MonthDay birthday(@Nullable String value) {
         if (value == null || value.isBlank()) {
@@ -65,9 +60,10 @@ public final class AccountRules {
         return compact.length() == 6 ? compact.substring(0, 3) + " " + compact.substring(3) : value.strip();
     }
 
-    public static String province(String value) {
+    /** @param known the provinces and territories of the region model ({@code region.api.Regions}) */
+    public static String province(String value, Set<String> known) {
         var code = value.strip().toUpperCase(java.util.Locale.ROOT);
-        if (!PROVINCES.contains(code)) {
+        if (!known.contains(code)) {
             throw RuleViolation.of("province", "allowed", PROVINCE);
         }
         return code;

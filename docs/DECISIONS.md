@@ -4130,7 +4130,8 @@ Branch `web/s-59-account-settings`, **stacked on S-58** (`web/s-58-account-activ
 - **Language & region:** English / Français switch the app in place on Save and set `identity.users.locale`
   (receipts, notifications). The design's "ਪੰਜਾਬੀ · Punjabi (beta)" is not offered: the app has no Punjabi copy.
   Province choices are the region model's live and pilot provinces (S-134; pilots marked "(pilot)"), plus "Follow my
-  location"; units and time format are stored (nothing formats with them yet); currency is CAD only.
+  location"; the api accepts any province of the region model (no province list in code — S-134's lint). The French
+  option's design wording "requis au Québec" is allowed in the web region lint with that reason; units and time format are stored (nothing formats with them yet); currency is CAD only.
 - **Dietary & accessibility:** codes stored in `account.preferences`; the menu shows the dietary words. **Not yet
   used:** shop filtering by diet, flagging products, sharing notes with visiting providers, and applying the display
   choices (larger text, high contrast, reduce motion) to the page.

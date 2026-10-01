@@ -28,8 +28,6 @@ public final class PreferenceRules {
     public static final Set<String> UNITS = Set.of("metric", "imperial");
     public static final Set<String> TIME_FORMATS = Set.of("12h", "24h");
     public static final Set<String> LANGUAGES = Set.of("en", "fr");
-    public static final List<String> PROVINCES =
-            List.of("AB", "BC", "MB", "NB", "NL", "NS", "NT", "NU", "ON", "PE", "QC", "SK", "YT");
 
     private static final Map<String, String[]> DIETARY_WORDS = Map.of(
             "halal", new String[] {"Halal", "Halal"},
@@ -59,12 +57,13 @@ public final class PreferenceRules {
         return value;
     }
 
-    public static @Nullable String province(@Nullable String value) {
+    /** @param known the provinces and territories of the region model ({@code region.api.Regions}) */
+    public static @Nullable String province(@Nullable String value, Set<String> known) {
         if (value == null) {
             return null;
         }
         var code = value.strip().toUpperCase(Locale.ROOT);
-        if (!PROVINCES.contains(code)) {
+        if (!known.contains(code)) {
             throw RuleViolation.of("province", "allowed", CHOOSE);
         }
         return code;
