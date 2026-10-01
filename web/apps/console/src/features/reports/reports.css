@@ -1,0 +1,18 @@
+/* Reports & analytics (S-95, design 03 lines 325–345). Token values only. */
+.nl-rp-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+.nl-rp-kicker { display: block; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-neutral-700); margin-bottom: 10px; }
+.nl-rp-title { font-size: clamp(30px, 3.5vw, 44px); margin: 0; letter-spacing: -0.02em; }
+.nl-rp-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 36px clamp(28px, 4vw, 64px); }
+.nl-rp-h2 { font-size: 22px; margin: 0 0 10px; }
+.nl-rp-gap { margin-top: 28px; }
+.nl-rp-sub { font-size: 13px; color: var(--color-neutral-700); margin: 0 0 10px; }
+.nl-rp-step .nl-meter-label { width: 160px; }
+.nl-rp-step .nl-meter-track { height: 14px; }
+.nl-rp-step .nl-meter-value { width: 96px; text-align: right; font-weight: 600; }
+.nl-rp-table { margin-top: 8px; font-size: 13px; }
+.nl-rp-table summary { cursor: pointer; color: var(--color-neutral-700); }
+.nl-rp-cohorts { width: 100%; }
+.nl-rp-cell { display: inline-block; min-width: 44px; padding: 2px 6px; border-radius: var(--radius-sm, 4px); background: color-mix(in srgb, var(--color-accent) var(--rate, 0%), transparent); color: var(--color-ink, inherit); }
+.nl-rp-empty { color: var(--color-neutral-500); }
+.nl-rp-gaps { font-size: 14px; display: flex; flex-direction: column; gap: 6px; }
+.nl-rp-gaps > div { display: flex; justify-content: space-between; gap: 12px; }
