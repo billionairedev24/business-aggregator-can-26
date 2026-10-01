@@ -3,8 +3,7 @@ package ca.northline.trust.web;
 import ca.northline.shared.ListResponse;
 import ca.northline.shared.security.ConsoleAction;
 import ca.northline.shared.security.ConsoleScreen;
-import ca.northline.shared.security.CurrentUser;
-import ca.northline.shared.security.MerchantAccessDenied;
+import ca.northline.shared.security.CurrentStaff;
 import ca.northline.shared.security.RequiresConsole;
 import ca.northline.trust.application.TrustFlagQueue;
 import ca.northline.trust.application.TrustFlagQueue.FlagView;
@@ -52,23 +51,13 @@ class TrustFlagQueueController {
     ListResponse<FlagView> list(
             @RequestParam(defaultValue = "open") @Pattern(regexp = "open|dismissed|actioned|all") String state,
             @RequestParam(required = false) @Nullable @Pattern(regexp = "ai|rules") String source,
-            @RequestParam(defaultValue = "50") int limit,
-            CurrentUser user) {
-        requireMfa(user);
+            @RequestParam(defaultValue = "50") int limit) {
         return new ListResponse<>(queue.list("all".equals(state) ? null : state, source, limit));
     }
 
     @PostMapping("/{id}/decision")
     @RequiresConsole(value = ConsoleScreen.TRUST, actions = ConsoleAction.DECIDE)
-    FlagView decide(@PathVariable String id, @Valid @RequestBody DecisionRequest body, CurrentUser user) {
-        requireMfa(user);
-        return queue.decide(id, body.decision(), user.userId(), body.note());
-    }
-
-    private static void requireMfa(CurrentUser user) {
-        if (!user.mfa()) {
-            throw new MerchantAccessDenied(
-                    MerchantAccessDenied.Reason.MFA_REQUIRED, "Sign in with your second factor to do this.");
-        }
+    FlagView decide(@PathVariable String id, @Valid @RequestBody DecisionRequest body, CurrentStaff staff) {
+        return queue.decide(id, body.decision(), staff.userId(), staff.roleCodes(), body.note());
     }
 }

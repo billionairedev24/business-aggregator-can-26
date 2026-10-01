@@ -41,6 +41,9 @@ public interface TrustFlagStore {
 
     Optional<StoredFlag> find(String id);
 
+    /** S-92: open flags on one kind of target (and one target, when given), oldest first. */
+    List<StoredFlag> openOn(String targetType, @Nullable String targetId, int limit);
+
     /** Records the staff decision on an open flag; false when it isn't open any more. */
     boolean decide(String id, String state, String staffId, @Nullable String note, Instant at);
 

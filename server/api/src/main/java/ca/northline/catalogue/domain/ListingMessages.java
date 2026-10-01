@@ -111,6 +111,9 @@ public final class ListingMessages {
     public static final String DOCUMENTS_TOO_MANY = "Up to 10 documents per listing.";
 
     // lifecycle
+    /** S-92: a reviewer decided a listing that isn't pending or live. */
+    public static final String NOT_IN_REVIEW = "This listing isn't waiting for a decision.";
+
     public static final String NOT_SUBMITTABLE = "Only drafts and rejected listings can be submitted for vetting.";
     public static final String DRAFT_CANNOT_PUBLISH = "Submit this listing for vetting before publishing it.";
 }

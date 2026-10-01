@@ -111,7 +111,7 @@ member.
 | `/sellers` | `sellers` | `sellers` | admin, trust_safety, support | S-82 | stand-in |
 | `/sellers/$sellerId` | `seller_detail` | `sellers` | admin, trust_safety, support | S-82 | stand-in |
 | `/verification?province=&market=&application=` | `verify` | `verify` | admin, trust_safety | S-79 | built |
-| `/vetting` | `vetting` | `vetting` | admin, trust_safety | S-92 | stand-in |
+| `/vetting?province=&market=` | `vetting` | `vetting` | admin, trust_safety | S-92 | built |
 | `/trust` | `trust` | `trust` | admin, trust_safety | S-93 | stand-in |
 | `/catalogue` | `taxonomy` | `taxonomy` | admin | S-94 | stand-in |
 | `/support` | `support` | `support` | admin, trust_safety, dispatch, support | S-83 | stand-in |
@@ -171,6 +171,18 @@ POST /api/v1/console/verification/applications/{businessId}/identity-reviews/{ch
 Every console screen that filters by place resolves `?province=&market=` through `shared.PlaceFilter` (same rules and
 422s as the overview) and shows the shell's `PlaceFilters`.
 
+### Listing vetting (S-92)
+
+```
+GET  /api/v1/console/vetting[?province=&market=]          → { autoApproved, flagged, items: [Item] }   (screen vetting)
+POST /api/v1/console/vetting/listings/{id}/decision        {decision: approve|reject, reasons?, note?}  (vet)
+POST /api/v1/console/vetting/dishes/{id}/decision          {decision: approve|reject, reasons?, note?}  (vet)
+Item: { id, kind: product|service|dish, merchantId, businessName, province?, name, priceCents?, category?, medianCents?,
+        deviationPct?, regulator?, flags[], revetReasons[], trustFlags[{flagId, rule, source, explanation, categories}],
+        state: pending|approved|rejected, submittedAt?, decidedAt?, reasons[], note? }
+409 not_in_review
+```
+
 ### Overview (S-91)
 
 ```
@@ -212,7 +224,7 @@ GET /api/v1/console/overview[?province=AB][&market=<region market id>]   (screen
 | disputes | `payments.api.DisputeDecisions` (decide, decideRefund) | the agents' queue and evidence endpoints (S-80) |
 | sellers | `merchants.api.MerchantDirectory`, `trust.api.QualityQuery` | directory with filters, seller detail, oversight actions (coach, instant book off, hide, demote, suspend) (S-82) |
 | verify | `GET/POST /api/v1/console/registry-reviews` (S-23); `GET /api/v1/console/verification/applications[/{id}]`, `POST …/{id}/decision`, `POST …/{id}/identity-reviews/{checkId}/decision` (S-79) | — |
-| vetting | — | flagged listings queue, approve / reject (S-92) |
+| vetting | `GET /api/v1/console/vetting`, `POST …/listings/{id}/decision`, `POST …/dishes/{id}/decision` (S-92) | — |
 | trust | `GET /api/v1/console/trust/flags`, `POST …/{id}/decision` (S-133) | tier rules, automatic consequences, rating floor tuning (S-93) |
 | taxonomy | `db/seed/categories.json` (seed only) | categories CRUD with regulators, limits, per-province rules (S-94) |
 | support | customer cases (`account`, `messaging.api`) for their owners | tickets queue, macros en/fr, case actions (S-83) |

@@ -5,6 +5,7 @@ import ca.northline.catalogue.api.ListingFlagged;
 import ca.northline.catalogue.api.ListingHidden;
 import ca.northline.catalogue.api.ListingPublished;
 import ca.northline.catalogue.api.ListingSubmitted;
+import ca.northline.shared.Conflict;
 import ca.northline.shared.DomainEvent;
 import ca.northline.shared.Ids;
 import ca.northline.shared.RuleViolation;
@@ -81,6 +82,26 @@ public sealed interface Listing permits ProductListing, ServiceListing {
         return wasVisible
                 ? List.of(new ListingHidden(Ids.next(), at, getId(), getMerchantId(), kind().code()), submitted)
                 : List.of(submitted);
+    }
+
+    /**
+     * S-92: a Northline reviewer approved the listing. A pending (flagged) one is approved as if the checks had passed
+     * (live on a first submission; a re-vetted one keeps its live / hidden choice); an approved one with a trust flag
+     * stays as it is.
+     */
+    default Optional<DomainEvent> approveByReviewer(Instant at) {
+        return switch (getState().getVetting()) {
+            case PENDING -> vetted(List.of(), at);
+            case APPROVED -> Optional.empty();
+            case DRAFT, REJECTED -> throw new Conflict("not_in_review", ListingMessages.NOT_IN_REVIEW);
+        };
+    }
+
+    /** S-92: a Northline reviewer rejected the listing; {@code listing.hidden} when customers could see it. */
+    default Optional<ListingHidden> rejectByReviewer(Instant at) {
+        return getState().reject(at)
+                ? Optional.of(new ListingHidden(Ids.next(), at, getId(), getMerchantId(), kind().code()))
+                : Optional.empty();
     }
 
     default Optional<ListingPublished> publish(Instant at) {

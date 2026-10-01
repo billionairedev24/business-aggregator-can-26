@@ -107,6 +107,22 @@ class TrustFlagAdapter implements TrustFlagStore {
     }
 
     @Override
+    public List<StoredFlag> openOn(String targetType, @Nullable String targetId, int limit) {
+        return jdbc.sql("select " + COLUMNS + """
+                         from trust.flags
+                         where coalesce(state, 'open') = 'open' and target_type = :type
+                           and (cast(:target as text) is null or target_id = cast(:target as text))
+                         order by created_at, id
+                         limit :limit
+                        """)
+                .param("type", targetType)
+                .param("target", targetId)
+                .param("limit", limit)
+                .query((rs, n) -> flag(rs))
+                .list();
+    }
+
+    @Override
     public boolean decide(String id, String state, String staffId, @Nullable String note, Instant at) {
         return jdbc.sql("""
                         update trust.flags

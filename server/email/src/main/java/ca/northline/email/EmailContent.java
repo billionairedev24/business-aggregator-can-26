@@ -576,6 +576,49 @@ public sealed interface EmailContent {
         }
     }
 
+    /**
+     * S-92: a Northline reviewer rejected a listing or a dish (console listing vetting). Transactional: a service notice
+     * about the business's own listing, sent to the owners whatever the matrix.
+     *
+     * @param kind {@code product | service | dish}
+     * @param reasons {@code prohibited | misleading | pricing | licence | images | other}
+     */
+    record ListingRejected(
+            String businessName, String kind, String listingName, List<String> reasons, @Nullable String note, URI link)
+            implements EmailContent {
+
+        public ListingRejected {
+            reasons = List.copyOf(reasons);
+        }
+
+        @Override
+        public String template() {
+            return "listing-rejected";
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.TRANSACTIONAL;
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            var v = new LinkedHashMap<String, Object>();
+            v.put("businessName", businessName);
+            v.put("kind", kind);
+            v.put("listingName", listingName);
+            v.put("reasons", reasons);
+            v.put("note", note == null ? "" : note);
+            v.put("link", link.toString());
+            return v;
+        }
+
+        @Override
+        public List<Object> subjectArgs(EmailFormat format) {
+            return List.of(listingName, businessName);
+        }
+    }
+
     // ── Samples (preview endpoint, rendering tests) ──────────────────────────────────────────────────────────────
 
     /**
@@ -683,6 +726,15 @@ public sealed interface EmailContent {
                         List.of("insurance", "licence:AMVIC"),
                         "Your insurance certificate is cut off at the bottom; please upload all pages.",
                         URI.create("http://localhost:3100/onboarding/verification?m=01J9ZD3V00000000000000PWM1")));
+        all.put(
+                "listing-rejected",
+                new ListingRejected(
+                        business,
+                        "service",
+                        "Full brake job",
+                        List.of("pricing", "misleading"),
+                        "The price is far below what the job costs; customers would be charged more on site.",
+                        URI.create(studio + "/listings")));
         return java.util.Collections.unmodifiableMap(all);
     }
 

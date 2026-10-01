@@ -1,0 +1,13 @@
+[(#{listing-rejected.heading})]
+
+[(#{__${'listing-rejected.body.' + kind}__(${listingName}, ${businessName})})]
+[# th:each="r : ${reasons}"]
+- [(#{__${'listing-rejected.why.' + r}__})][/]
+[# th:if="${note != ''}"]
+[(#{listing-rejected.note(${note})})]
+[/]
+[(#{listing-rejected.next})]
+
+[(#{listing-rejected.cta})]: [(${link})]
+
+[# th:insert="~{footer.txt}" /]

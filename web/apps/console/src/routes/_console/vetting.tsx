@@ -1,4 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { ScreenPending } from '../../features/shell/ScreenPending';
+import { z } from 'zod';
+import { ListingVetting } from '../../features/vetting/ListingVetting';
 
-export const Route = createFileRoute('/_console/vetting')({ component: () => <ScreenPending screen="vetting" /> });
+/** Listing vetting (S-92): province and market of the region model. */
+export const Route = createFileRoute('/_console/vetting')({
+  validateSearch: z.object({ province: z.string().optional(), market: z.string().optional() }),
+  component: ListingVetting,
+});

@@ -5,6 +5,7 @@ import ca.northline.email.EmailContent;
 import ca.northline.email.EmailContent.ApplicationDecision;
 import ca.northline.email.EmailContent.BankAccountChange;
 import ca.northline.email.EmailContent.CustomDomainNotice;
+import ca.northline.email.EmailContent.ListingRejected;
 import ca.northline.email.EmailContent.DisputeUpdate;
 import ca.northline.email.EmailContent.PayoutSent;
 import ca.northline.email.EmailContent.RefundCaseUpdate;
@@ -15,6 +16,7 @@ import ca.northline.merchants.api.ApplicationDecided;
 import ca.northline.merchants.api.BusinessNames;
 import ca.northline.merchants.api.CustomDomainChanged;
 import ca.northline.merchants.api.TeamRoster;
+import ca.northline.messaging.api.ListingRejectedNotice;
 import ca.northline.messaging.application.NotificationPreferences.NotificationPrefsStore;
 import ca.northline.messaging.domain.NotificationMatrix;
 import ca.northline.payments.api.DisputeDecided;
@@ -183,6 +185,22 @@ class MerchantEmailNotices {
                 OWNERS,
                 null,
                 business -> new ApplicationDecision(business, event.decision(), event.checkKeys(), event.note(), link));
+    }
+
+    /**
+     * S-92: a reviewer rejected a listing or a dish in the console's vetting queue. A service notice about the
+     * business's own listing: always sent, to the owners.
+     */
+    @ApplicationModuleListener
+    void on(ListingRejectedNotice event) {
+        var link = links.studio(event.merchantId(), "dish".equals(event.kind()) ? "kitchen/menu" : "listings");
+        notify(
+                event.eventId(),
+                event.merchantId(),
+                OWNERS,
+                null,
+                business -> new ListingRejected(
+                        business, event.kind(), event.listingName(), event.reasons(), event.note(), link));
     }
 
     /**

@@ -5054,3 +5054,50 @@ and the audit log rules: no update, no delete, and a retention delete only past 
 - **Not done:** the design's "welcome call fast-tracks Trusted" (tiers are S-93/S-82); sanctions screening and
   insurance OCR named in the lede (no provider exists — the lede is the design's copy); assigning applications to an
   agent; the Studio doesn't show the agent's note in the wizard (it is in the email).
+
+## 2026-10-01 — S-92 Listing vetting queue: flagged listings approve/reject
+
+Stacked on S-79 (it uses S-79's `shared.PlaceFilter`, the console's `PlaceFilters`, `useGrant`, `queues.css`).
+
+- **One queue, three sources, composed in the console module** (`GET /api/v1/console/vetting?province=&market=`,
+  screen `vetting`; deciding needs `vet` — admin and trust & safety): listings the automated checks flagged (catalogue
+  `pending` with `vetting_flags`, S-39 re-vets included with their `revetReasons`), listings an **open S-133 trust flag**
+  points at (target type `listing`, whatever their vetting — the AI never holds a listing), and **dishes held by the S-67
+  price check** (published, outside ±40 % of the median, price not confirmed — the "console review queue for menu
+  prices" S-67 left open). Each module answers through its `api` (`catalogue.api.ListingVetting`,
+  `food.api.MenuPriceReviews`, `trust.api.ListingFlags`); no cross-module SQL. Decided listings stay listed 7 days with
+  their decision ("Approved" / "Rejected · seller notified").
+- **Approve** a flagged listing = as if the automated checks had passed (live on a first submission; a re-vetted one
+  keeps the merchant's live / hidden choice; `listing.published` when customers can now see it). Approving a listing
+  that only had a trust flag changes nothing in the catalogue and **dismisses** its flags. Approving a held dish keeps
+  its price (as the owner's "Keep this price" would).
+- **Reject** needs at least one reason (`prohibited | misleading | pricing | licence | images | other`; the design has
+  no reason list, the codes are ours) and takes an optional note. A listing becomes `rejected` (hidden from customers,
+  `listing.hidden` if it was visible; the merchant fixes and resubmits — the existing rejected → submit path), its open
+  trust flags are **actioned**; a dish goes back to **draft**. The owners get the `listing-rejected` email (en/fr,
+  transactional) with the reasons and the note.
+- **What "actioned" does to a listing (the S-133 open question):** the listing is rejected, exactly like a reviewer's
+  rejection (reason `other`, the staff note), whether the flag is actioned from the vetting queue or from the trust
+  queue. Trust now publishes `trust.api.FlagDecided` for every staff decision; the catalogue reacts for target type
+  `listing` (a listing already rejected is left alone, so the vetting path doesn't reject twice). Dismissed changes
+  nothing. Other target types (reviews, messages) are S-93's.
+- **Module wiring:** the owners' email is a `messaging.api.ListingRejectedNotice` event published by catalogue and food —
+  messaging can't listen to catalogue or food events (catalogue → trust → messaging would be a cycle), so the notice
+  type lives in messaging's api. Trust flag decisions now record the console role acted with (was the literal `staff`).
+- **Headline:** "{n} listings auto-approved this week · {m} flagged for a human": auto-approved = listings submitted in
+  the last 7 days whose vetting is approved with no reviewer decision; flagged = items waiting.
+- **Rule and evidence wording** (design: "Price −72% vs median", "Missing licence", "Duplicate image", "Category rule",
+  "Restricted claim"): built from codes and figures by the console (deviation from the category / cuisine median, the
+  regulator from the category, the AI flag's own explanation, the re-vet reasons). AI flags show as "Restricted claim"
+  with their explanation as evidence.
+- **Audit:** `vetting.listing_approved|listing_rejected` (target `product|service`), `vetting.dish_approved|dish_rejected`
+  (target `menu_item`), with the business's id and the console role; trust flags resolved alongside write
+  `trust.flag_decided` as before.
+- **Schema V193:** `catalogue.vetting_decisions` (decision, reasons, the flags seen, note ≤ 500, reviewer, role, time);
+  partial indexes on pending offers and services. No food or trust schema change.
+- **Messages (fr in the catalogue):** "Choose why the listing is rejected.", "Pick reasons from the list.", 409 "This
+  listing isn't waiting for a decision." / "This dish isn't waiting for a price decision."
+- **Not done:** the design's "restricted keywords" and "claims requiring proof" rules exist only as the S-133 AI
+  screening (no keyword list in vetting yet — S-93 makes keyword lists configuration); the "SLA 4 business hours" is the
+  design's copy, not computed; the Studio doesn't show the reviewer's reasons on a rejected listing (they are in the
+  email).

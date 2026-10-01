@@ -17,7 +17,8 @@ public interface TrustFlagQueue {
 
     List<FlagView> list(@Nullable String state, @Nullable String source, int limit);
 
-    FlagView decide(String flagId, String decision, String staffId, @Nullable String note);
+    /** @param role the console role(s) the staff member acts with (audit log) */
+    FlagView decide(String flagId, String decision, String staffId, String role, @Nullable String note);
 
     /**
      * @param source "ai" when the model's screening or scan raised it, else "rules"

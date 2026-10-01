@@ -121,6 +121,23 @@ public final class ListingState {
         return false;
     }
 
+    /**
+     * S-92: a Northline reviewer rejected the listing — pending in the vetting queue, or approved with an open trust
+     * flag. Customers stop seeing it; the merchant fixes it and submits again.
+     *
+     * @return true when customers could see it until now
+     */
+    boolean reject(Instant at) {
+        if (vetting != Vetting.PENDING && vetting != Vetting.APPROVED) {
+            throw new Conflict("not_in_review", ListingMessages.NOT_IN_REVIEW);
+        }
+        var wasVisible = isCustomerVisible();
+        vetting = Vetting.REJECTED;
+        revetReasons = List.of();
+        updatedAt = at;
+        return wasVisible;
+    }
+
     /** @return true when the listing became visible to customers */
     boolean publish(Instant at) {
         if (vetting == Vetting.DRAFT) {

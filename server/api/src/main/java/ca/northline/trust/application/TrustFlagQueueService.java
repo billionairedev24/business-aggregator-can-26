@@ -1,5 +1,11 @@
 package ca.northline.trust.application;
 
+import ca.northline.shared.Ids;
+import ca.northline.trust.api.FlagDecided;
+import ca.northline.trust.api.ListingFlags;
+import ca.northline.trust.application.TrustFlagStore.StoredFlag;
+import org.springframework.context.ApplicationEventPublisher;
+
 import ca.northline.developer.api.AuditTrail;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.NotFound;
@@ -17,10 +23,13 @@ import org.springframework.transaction.annotation.Transactional;
 /** {@link TrustFlagQueue} over {@code trust.flags}; every decision is audited ({@code trust.flag_decided}). */
 @Service
 @RequiredArgsConstructor
-class TrustFlagQueueService implements TrustFlagQueue {
+class TrustFlagQueueService implements TrustFlagQueue, ListingFlags {
+
+    static final String LISTING = "listing";
 
     private final TrustFlagStore flags;
     private final AuditTrail audit;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     @Override
@@ -33,20 +42,55 @@ class TrustFlagQueueService implements TrustFlagQueue {
 
     @Override
     @Transactional
-    public FlagView decide(String flagId, String decision, String staffId, @Nullable String note) {
+    public FlagView decide(String flagId, String decision, String staffId, String role, @Nullable String note) {
         if (!"dismissed".equals(decision) && !"actioned".equals(decision)) {
             throw RuleViolation.of("decision", "invalid", DECISION_REQUIRED);
         }
         var flag = flags.find(flagId).orElseThrow(() -> new NotFound("flag", flagId));
-        var cleanNote = note == null || note.isBlank() ? null : note.strip();
-        if (!flags.decide(flagId, decision, staffId, cleanNote, clock.instant())) {
+        if (!record(flag, decision, staffId, role, note)) {
             throw new Conflict("flag_decided", NOT_OPEN);
+        }
+        return view(flags.find(flagId).orElseThrow(() -> new NotFound("flag", flagId)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ListingFlag> open(int limit) {
+        return flags.openOn(LISTING, null, Math.clamp(limit, 1, 500)).stream()
+                .map(f -> {
+                    var v = view(f);
+                    return new ListingFlag(
+                            f.id(), f.targetId(), f.merchantId(), f.rule(), v.source(), v.explanation(), v.categories(),
+                            f.createdAt());
+                })
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public int resolve(String listingId, boolean actioned, String staffId, String role, @Nullable String note) {
+        var decided = 0;
+        for (var flag : flags.openOn(LISTING, listingId, 100)) {
+            if (record(flag, actioned ? "actioned" : "dismissed", staffId, role, note)) {
+                decided++;
+            }
+        }
+        return decided;
+    }
+
+    /** Decides one open flag: the row, the audit entry and {@link FlagDecided}. False when it was no longer open. */
+    private boolean record(StoredFlag flag, String decision, String staffId, String role, @Nullable String note) {
+        var flagId = flag.id();
+        var cleanNote = note == null || note.isBlank() ? null : note.strip();
+        var now = clock.instant();
+        if (!flags.decide(flagId, decision, staffId, cleanNote, now)) {
+            return false;
         }
         // Platform-level entry (no merchant_id): staff moderation isn't listed in the business's own audit log.
         audit.record(new AuditTrail.Entry(
                 null,
                 staffId,
-                "staff",
+                role,
                 "trust.flag_decided",
                 "trust_flag",
                 flagId,
@@ -60,7 +104,19 @@ class TrustFlagQueueService implements TrustFlagQueue {
                         source(flag),
                         "merchantId",
                         String.valueOf(flag.merchantId()))));
-        return view(flags.find(flagId).orElseThrow(() -> new NotFound("flag", flagId)));
+        events.publishEvent(new FlagDecided(
+                Ids.next(),
+                now,
+                flagId,
+                flag.targetType(),
+                flag.targetId(),
+                flag.rule(),
+                flag.merchantId(),
+                decision,
+                staffId,
+                role,
+                cleanNote));
+        return true;
     }
 
     static FlagView view(StoredFlag f) {
