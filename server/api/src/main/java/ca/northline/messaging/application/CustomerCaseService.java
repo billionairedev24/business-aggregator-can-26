@@ -146,7 +146,8 @@ class CustomerCaseService implements CustomerCaseDesk {
     @Transactional(readOnly = true)
     public Optional<Content> content(String customerId, String attachmentId) {
         return store.upload(customerId, attachmentId)
-                .flatMap(u -> storage.get(u.storageKey()).map(b -> new Content(Bytes.of(b), u.contentType(), u.fileName())));
+                .flatMap(u ->
+                        storage.get(u.storageKey()).map(b -> new Content(Bytes.of(b), u.contentType(), u.fileName())));
     }
 
     private List<String> ownFiles(String customerId, List<String> ids) {

@@ -26,21 +26,23 @@ class CustomerOrdersJdbc implements CustomerOrders {
 
     @Override
     public Optional<OrderDetail> detail(String customerId, String orderId) {
-        return query(customerId, orderId, 1).stream().findFirst().map(order -> new OrderDetail(
-                order,
-                jdbc.sql("""
+        return query(customerId, orderId, 1).stream()
+                .findFirst()
+                .map(order -> new OrderDetail(
+                        order,
+                        jdbc.sql("""
                                 select id, coalesce(merchant_id, '') as merchant_id, coalesce(title, 'Item') as title, qty,
                                        coalesce(unit_cents, 0) as unit
                                   from orders.order_lines where order_id = :o order by id
                                 """)
-                        .param("o", orderId)
-                        .query((rs, _) -> new Line(
-                                rs.getString("id"),
-                                rs.getString("merchant_id"),
-                                rs.getString("title"),
-                                rs.getInt("qty"),
-                                rs.getLong("unit")))
-                        .list()));
+                                .param("o", orderId)
+                                .query((rs, _) -> new Line(
+                                        rs.getString("id"),
+                                        rs.getString("merchant_id"),
+                                        rs.getString("title"),
+                                        rs.getInt("qty"),
+                                        rs.getLong("unit")))
+                                .list()));
     }
 
     private List<OrderSummary> query(String customerId, @Nullable String orderId, int limit) {

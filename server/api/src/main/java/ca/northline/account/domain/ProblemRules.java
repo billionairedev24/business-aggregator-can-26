@@ -17,10 +17,12 @@ public final class ProblemRules {
     public static final Duration FOOD_WINDOW = Duration.ofHours(24);
 
     /** Design 06: Missing, Damaged, Wrong item, Poor quality, Late. */
-    public static final List<String> GOODS_REASONS = List.of("missing", "damaged", "wrong_item", "poor_quality", "late");
+    public static final List<String> GOODS_REASONS =
+            List.of("missing", "damaged", "wrong_item", "poor_quality", "late");
 
     /** Services: the job wasn't done, done badly, late, nobody came, charged wrongly. */
-    public static final List<String> SERVICE_REASONS = List.of("not_done", "poor_quality", "late", "no_show", "billing");
+    public static final List<String> SERVICE_REASONS =
+            List.of("not_done", "poor_quality", "late", "no_show", "billing");
 
     /** A reason → S-132's case category (used when the report wasn't triaged). */
     public static final Map<String, String> CATEGORIES = Map.of(
@@ -34,15 +36,27 @@ public final class ProblemRules {
 
     /** S-132's categories. */
     public static final List<String> TRIAGE_CATEGORIES = List.of(
-            "missing_item", "wrong_item", "damaged", "not_as_described", "late", "not_delivered", "service_not_done",
-            "service_quality", "no_show", "billing", "safety", "account", "other");
+            "missing_item",
+            "wrong_item",
+            "damaged",
+            "not_as_described",
+            "late",
+            "not_delivered",
+            "service_not_done",
+            "service_quality",
+            "no_show",
+            "billing",
+            "safety",
+            "account",
+            "other");
 
     public static final String ITEMS_REQUIRED = "Pick at least one item.";
     public static final String REASON_REQUIRED = "Pick what went wrong.";
     public static final String NOTE_TOO_LONG = "Keep it under 1,000 characters.";
     public static final int NOTE_MAX = 1000;
     public static final String NOT_FULFILLED = "You can report a problem once it's delivered or done.";
-    public static final String WINDOW_CLOSED = "The time to report a problem with this has passed. Contact Northline from Help & cases.";
+    public static final String WINDOW_CLOSED =
+            "The time to report a problem with this has passed. Contact Northline from Help & cases.";
     public static final String ALREADY_REPORTED = "You've already reported this. Follow it in Help & cases.";
     public static final String NOT_PAID = "Nothing was paid for this, so there's nothing to refund.";
 

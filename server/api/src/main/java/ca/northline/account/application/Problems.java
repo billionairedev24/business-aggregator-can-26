@@ -75,11 +75,21 @@ public final class Problems {
 
     /** One refund case opened by the report ("RF-2201"). */
     public record Opened(
-            String id, String number, long amountCents, long taxCents, String merchantName, @Nullable Instant respondBy) {}
+            String id,
+            String number,
+            long amountCents,
+            long taxCents,
+            String merchantName,
+            @Nullable Instant respondBy) {}
 
     /** @param caseCode the staff case ({@code HD-…}) */
     public record Reported(
-            String caseId, String caseCode, List<Opened> refunds, Instant submittedAt, long totalCents, @Nullable Card card) {
+            String caseId,
+            String caseCode,
+            List<Opened> refunds,
+            Instant submittedAt,
+            long totalCents,
+            @Nullable Card card) {
 
         public Reported {
             refunds = List.copyOf(refunds);

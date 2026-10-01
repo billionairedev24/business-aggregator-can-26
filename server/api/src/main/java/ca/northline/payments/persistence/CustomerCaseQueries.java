@@ -1,8 +1,8 @@
 package ca.northline.payments.persistence;
 
-import ca.northline.payments.api.CustomerCaseQuery;
 import static ca.northline.shared.JdbcTimes.instant;
 
+import ca.northline.payments.api.CustomerCaseQuery;
 import ca.northline.shared.JdbcTimes;
 import java.util.List;
 import java.util.Objects;
@@ -86,5 +86,4 @@ class CustomerCaseQueries implements CustomerCaseQuery {
                         instant(rs, "review_by")))
                 .list();
     }
-
 }

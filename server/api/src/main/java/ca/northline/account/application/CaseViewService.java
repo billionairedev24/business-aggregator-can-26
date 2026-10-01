@@ -11,6 +11,7 @@ import ca.northline.payments.api.CustomerCaseQuery;
 import ca.northline.payments.api.CustomerCaseQuery.CaseSummary;
 import ca.northline.payments.api.SavedCards;
 import ca.northline.shared.NotFound;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -38,17 +39,31 @@ class CaseViewService implements ViewCases {
     public List<Row> cases(String userId) {
         var list = cases.cases(userId, 200);
         var subjects = subjects(userId);
-        var names = businesses.of(list.stream().map(CaseSummary::merchantId).distinct().toList());
-        return list.stream().map(c -> row(c, subjects, names.containsKey(c.merchantId())
-                ? Objects.requireNonNull(names.get(c.merchantId())).name() : "")).toList();
+        var names = businesses.of(
+                list.stream().map(CaseSummary::merchantId).distinct().toList());
+        return list.stream()
+                .map(c -> row(
+                        c,
+                        subjects,
+                        names.containsKey(c.merchantId())
+                                ? Objects.requireNonNull(names.get(c.merchantId()))
+                                        .name()
+                                : ""))
+                .toList();
     }
 
     @Override
     public Detail detail(String userId, String caseId) {
         var c = cases.find(userId, caseId).orElseThrow(() -> new NotFound("case", caseId));
         var name = businesses.one(c.merchantId()).map(Businesses.Business::name).orElse("");
-        var card = cards.defaultCard(userId).map(x -> new Problems.Card(x.brand(), x.last4())).orElse(null);
-        return new Detail(row(c, subjects(userId), name), steps(c), card, desk.forRefund(userId, c.id()).orElse(null));
+        var card = cards.defaultCard(userId)
+                .map(x -> new Problems.Card(x.brand(), x.last4()))
+                .orElse(null);
+        return new Detail(
+                row(c, subjects(userId), name),
+                steps(c),
+                card,
+                desk.forRefund(userId, c.id()).orElse(null));
     }
 
     @Override
@@ -69,26 +84,41 @@ class CaseViewService implements ViewCases {
             switch (item.kind()) {
                 case FOOD -> byRef.put("food_order:" + item.id(), item);
                 case BOOKING -> byRef.put("booking:" + item.id(), item);
-                case ORDER -> lineOrders.forEach((line, order) -> {
-                    if (order.equals(item.id())) {
-                        byRef.put("order_line:" + line, item);
-                    }
-                });
-                case QUOTE -> { }
+                case ORDER ->
+                    lineOrders.forEach((line, order) -> {
+                        if (order.equals(item.id())) {
+                            byRef.put("order_line:" + line, item);
+                        }
+                    });
+                case QUOTE -> {}
             }
         }
         return byRef;
     }
 
     private static Row row(CaseSummary c, Map<String, Item> subjects, Map<String, Businesses.Business> names) {
-        var name = names.containsKey(c.merchantId()) ? Objects.requireNonNull(names.get(c.merchantId())).name() : "";
+        var name = names.containsKey(c.merchantId())
+                ? Objects.requireNonNull(names.get(c.merchantId())).name()
+                : "";
         return row(c, subjects, name);
     }
 
     private static Row row(CaseSummary c, Map<String, Item> subjects, String merchantName) {
         return new Row(
-                c.id(), c.number(), c.kind(), c.state(), c.open(), c.what(), c.amountCents(), c.taxCents(), merchantName,
-                c.openedAt(), c.respondBy(), c.outcome(), c.settledCents(), subjects.get(c.refType() + ":" + c.refId()));
+                c.id(),
+                c.number(),
+                c.kind(),
+                c.state(),
+                c.open(),
+                c.what(),
+                c.amountCents(),
+                c.taxCents(),
+                merchantName,
+                c.openedAt(),
+                c.respondBy(),
+                c.outcome(),
+                c.settledCents(),
+                subjects.get(c.refType() + ":" + c.refId()));
     }
 
     /** Submitted → Seller reviews → Northline decides → Refund issued, from the case's state. */
@@ -99,7 +129,7 @@ class CaseViewService implements ViewCases {
         String seller;
         String northline;
         String money;
-        @Nullable java.time.Instant moneyAt = null;
+        @Nullable Instant moneyAt = null;
         if (refund) {
             seller = "seller_review".equals(c.state()) ? "current" : "done";
             northline = switch (c.state()) {

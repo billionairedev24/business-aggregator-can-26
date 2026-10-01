@@ -4146,3 +4146,64 @@ Branch `web/s-59-account-settings`, **stacked on S-58** (`web/s-58-account-activ
   changes, security locked, quiet hours validation and the menu value; preferences incl. locale and menu values;
   export; 401s), `StripeSavedCardsStripeMockTest`; vitest `features/account/settings.test.tsx` (every tab's main path,
   validation messages, step-up prompt, French).
+
+## 2026-10-01 — S-60 Refund / "something's wrong" flow into the case queue
+
+Branch `web/s-60-something-wrong`, **stacked on S-59** (#93, itself on S-58 #90).
+
+- **Design source:** design 06 has the cases table (Help & cases) and "View case" from Orders & bookings; the report
+  screen itself is the consumer app's `refund` screen (`design/Consumer Screen.dc.html`, "Something's wrong" on
+  `delivered`). Its copy is used as written ("Pick what went wrong. Your request opens a case…", "Request $X refund",
+  "Case RF-2201 · in review", the four steps, "We'll notify you at each step…").
+- **Never an instant refund.** A report opens, per escrow, a payments refund case through the new
+  `CustomerCases.requestReview` (S-11's case queue: the escrow goes on hold, the business is emailed via
+  `refund.case_updated`, the business accepts or contests within 24 h). Unlike `requestRefund` — whose "under $25 is
+  approved unless contested within 48 h" rule the Studio describes — **review cases are never approved by the clock**:
+  `Refund.requested(…, autoApprove = false)` makes the lapse job send them to a Northline agent. Payment happens only
+  through the existing refund queue after an approval. A refund case on an already refunded escrow is now refused
+  (409 `escrow_refunded`) for both paths.
+- **Escrow windows respected** (`account.domain.ProblemRules`, `payments.api.CustomerEscrows`): an item can be reported
+  while its escrow is held and fulfilled and before it releases — goods until 7 days after delivery, services until
+  48 h after completion (a customer's sign-off / "All good" releases at once and closes the window). Food is released
+  at handoff, so food problems can be reported for **24 h after handoff** (our number; the refund then comes back
+  through S-11's transfer reversal). Statuses per item: open, reported (a case is open), closed (released / refunded
+  / past the window), not_yet (not delivered / done), not_paid (no escrow). 409 codes: `already_reported`,
+  `window_closed`, `not_fulfilled`, `not_paid`.
+- **One case per escrow:** goods orders hold escrow per line, so each chosen line gets its own `RF-…` (the design's
+  cases table lists them per item: "kale spoiled · $4.46"); a food order (one escrow) and a booking get one, whatever
+  lines are picked (food: the picked lines' amount, capped at the escrow). The amount asked is the item's price plus
+  its share of the tax, as the refund queue pays it.
+- **Northline's case queue:** each report also opens one **customer case** in `messaging.tickets`
+  (`requester_type = customer`, no business — so it never shows in a Studio's Help — topic `refund`, `HD-…`, the
+  support SLA: urgent 15 min, else 4 h of support hours) with a `case` thread holding the report and photos, and in
+  `context` the refund case ids and the triage. No console queue screen exists yet; staff work from the table (no
+  `ticket.opened` event: its schema requires a business — follow-up).
+- **S-132 triage is optional:** the web asks `POST /api/v1/me/help/triage` when the person writes a note (≥ 10
+  characters, on blur) and shows "Sounds like: Damaged" with a button to use it; only when the person's chosen reason
+  matches the suggestion are `triageCategory` / `triageSummary` sent. Any failure (AI off, budget, older api) shows
+  nothing. Without triage the server maps the reason to S-132's categories (`damaged`, `missing_item`,
+  `service_quality` …); `safety` makes the case urgent. The flow works the same without the AI module.
+- **Reasons:** goods and food — Missing, Damaged, Wrong item, Poor quality, Late (design); services — Not done, Poor
+  quality, Late, No-show, Charged wrongly (ours; the design shows only goods).
+- **Photos:** `POST /me/case-uploads` (the help form's rules: JPG/PNG/HEIC/PDF, signature checked, ≤ 10 MB, ≤ 5 per
+  report or note) into the messaging `AttachmentStorage` under `customers/<user>/…` (new `ObjectKeys.customerObject`)
+  and `messaging.customer_uploads`; only the uploader can attach or read them.
+- **Help & cases** (`/account?tab=help`, design 06 `at.help`): the person's refund cases and disputes with the design's
+  statuses ("Seller reviewing · 14 h left", "Closed · $15 credit", …) and what they are about (the Orders & bookings
+  row); `?case=` opens one with its timeline (Submitted → Seller reviews → Northline decides → Refund issued; steps
+  marked done / now / next / not needed / not refunded) and the case's messages, where the person can add a message
+  ("You can add photos or messages to the case any time"). **Not built:** "Chat with Northline" (no live support chat
+  for customers); adding photos to an existing case from the web (the api accepts `attachmentIds` on notes).
+- **Entry points:** Orders & bookings rows of delivered orders (goods: 7 days, food: 24 h) and completed paid jobs get
+  "Something's wrong" (`report` action → `/account/problem/<order|food|booking>/<id>`); the order tracking page (S-52)
+  when delivered and the food tracking page (S-57) after handoff link to it. The page itself checks the escrow.
+- **Points adjusted** in the last step is the design's copy; no ledger writer exists yet (S-58).
+- **Schema (V164):** `messaging.customer_uploads`; index `messaging.tickets (requester_type, requester_id,
+  created_at)`. No new configuration.
+- **Tests:** `SomethingWrongApiTest` (report → refund case in seller review with `auto = false`, escrow on hold,
+  customer ticket with the refund and triage category, already reported 409, lapse goes to an agent not an approval;
+  closed / not yet / not paid; a job as one case and safety urgent; food released at handoff still reportable, one
+  case for two lines; validation messages and others' 404/401; photos, Help & cases list, detail steps, a note,
+  others' 404; the `report` action in Orders & bookings). vitest `features/account/problem.test.tsx` (report with a
+  photo and the four steps, required item and reason, triage suggestion used and sent, no suggestion when triage is
+  off, closed window, error + Retry, French; Help & cases statuses, a case's timeline and a message).

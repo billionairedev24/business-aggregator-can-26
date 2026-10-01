@@ -66,12 +66,19 @@ class MyProblemsController {
     private final CustomerCaseDesk desk;
 
     record ReportRequest(
-            @NotBlank(message = ProblemRules.ITEMS_REQUIRED) @Pattern(regexp = "order|food|booking", message = ProblemRules.ITEMS_REQUIRED)
-                    String kind,
+            @NotBlank(message = ProblemRules.ITEMS_REQUIRED)
+            @Pattern(regexp = "order|food|booking", message = ProblemRules.ITEMS_REQUIRED)
+            String kind,
+
             @NotBlank(message = ProblemRules.ITEMS_REQUIRED) String id,
             @Nullable List<String> items,
-            @NotBlank(message = ProblemRules.REASON_REQUIRED) String reason,
-            @Nullable @Size(max = ProblemRules.NOTE_MAX, message = ProblemRules.NOTE_TOO_LONG) String note,
+
+            @NotBlank(message = ProblemRules.REASON_REQUIRED)
+            String reason,
+
+            @Nullable @Size(max = ProblemRules.NOTE_MAX, message = ProblemRules.NOTE_TOO_LONG)
+            String note,
+
             @Nullable List<String> attachmentIds,
             @Nullable String triageCategory,
             @Nullable @Size(max = 300) String triageSummary) {}
@@ -120,14 +127,21 @@ class MyProblemsController {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
                 .contentType(MediaType.parseMediaType(c.contentType()))
-                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.inline().filename(c.fileName()).build().toString())
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.inline()
+                                .filename(c.fileName())
+                                .build()
+                                .toString())
                 .body(c.bytes().toArray());
     }
 
     @Operation(summary = "The caller's refund cases and disputes")
     @GetMapping("/cases")
     ResponseEntity<ListResponse<Row>> list(CurrentUser user) {
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(new ListResponse<>(cases.cases(user.userId())));
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(new ListResponse<>(cases.cases(user.userId())));
     }
 
     @Operation(summary = "One case: its timeline and conversation")

@@ -72,7 +72,8 @@ class CustomerCaseJdbc implements CustomerCaseStore {
     }
 
     @Override
-    public void message(String threadId, String senderRole, String senderId, String body, List<String> files, Instant at) {
+    public void message(
+            String threadId, String senderRole, String senderId, String body, List<String> files, Instant at) {
         jdbc.sql("""
                         insert into messaging.messages (id, thread_id, sender_id, sender_role, body, attachments, at, flagged)
                         values (:id, :t, :sender, :role, :body, :files, :at, false)
@@ -123,7 +124,8 @@ class CustomerCaseJdbc implements CustomerCaseStore {
                 h.id(), h.code(), h.state(), h.thread() == null ? List.of() : notes(h.thread(), customerId)));
     }
 
-    private record Head(String id, String code, String state, @Nullable String thread) {}
+    private record Head(
+            String id, String code, String state, @Nullable String thread) {}
 
     private List<Note> notes(String threadId, String customerId) {
         record Row(Instant at, String by, String body, List<String> files) {}
@@ -138,7 +140,9 @@ class CustomerCaseJdbc implements CustomerCaseStore {
                         rs.getString("body"),
                         strings(rs.getArray("attachments"))))
                 .list();
-        return rows.stream().map(r -> new Note(r.at(), r.by(), r.body(), attachments(r.files()))).toList();
+        return rows.stream()
+                .map(r -> new Note(r.at(), r.by(), r.body(), attachments(r.files())))
+                .toList();
     }
 
     @Override
@@ -160,10 +164,7 @@ class CustomerCaseJdbc implements CustomerCaseStore {
                         update messaging.tickets set updated_at = :at,
                                state = case when state = 'waiting' then 'in_progress' else state end
                          where id = :id
-                        """)
-                .param("at", ts(at))
-                .param("id", ticketId)
-                .update();
+                        """).param("at", ts(at)).param("id", ticketId).update();
     }
 
     @Override
@@ -219,7 +220,7 @@ class CustomerCaseJdbc implements CustomerCaseStore {
         return jdbc.sql("select id from messaging.customer_uploads where customer_id = :c and id in (:ids)")
                 .param("c", customerId)
                 .param("ids", List.copyOf(ids))
-                .query(String.class)
+                .query((rs, _) -> rs.getString("id"))
                 .list();
     }
 
@@ -235,13 +236,18 @@ class CustomerCaseJdbc implements CustomerCaseStore {
                         """)
                 .param("ids", List.copyOf(ids))
                 .query((rs, _) -> new Attachment(
-                        rs.getString("id"), rs.getString("file_name"), rs.getString("content_type"), rs.getLong("byte_size")))
+                        rs.getString("id"),
+                        rs.getString("file_name"),
+                        rs.getString("content_type"),
+                        rs.getLong("byte_size")))
                 .list();
     }
 
     private static List<String> strings(@Nullable Array array) throws SQLException {
         return array == null
                 ? List.of()
-                : Arrays.stream((Object[]) array.getArray()).map(String::valueOf).toList();
+                : Arrays.stream((Object[]) array.getArray())
+                        .map(String::valueOf)
+                        .toList();
     }
 }

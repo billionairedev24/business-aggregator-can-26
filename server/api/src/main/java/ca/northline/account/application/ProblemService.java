@@ -58,7 +58,13 @@ class ProblemService implements ReportProblems {
     /** What was bought, before the escrow facts are known. */
     private record Thing(String ref, String title, int qty, long amountCents, String merchantId, String escrowRef) {}
 
-    private record Subject(String kind, String id, @Nullable String ref, String title, Instant date, String escrowType,
+    private record Subject(
+            String kind,
+            String id,
+            @Nullable String ref,
+            String title,
+            Instant date,
+            String escrowType,
             List<Thing> things) {}
 
     @Override
@@ -67,12 +73,28 @@ class ProblemService implements ReportProblems {
         var subject = subject(userId, kind, id);
         var items = items(userId, subject);
         var open = items.stream().filter(i -> "open".equals(i.status())).toList();
-        var status = !open.isEmpty() ? "open"
-                : items.stream().map(Item::status).min(Comparator.comparingInt(ProblemService::rank)).orElse("not_paid");
-        var reportBy = open.stream().map(Item::reportBy).filter(Objects::nonNull).min(Comparator.naturalOrder()).orElse(null);
+        var status = !open.isEmpty()
+                ? "open"
+                : items.stream()
+                        .map(Item::status)
+                        .min(Comparator.comparingInt(ProblemService::rank))
+                        .orElse("not_paid");
+        var reportBy = open.stream()
+                .map(Item::reportBy)
+                .filter(Objects::nonNull)
+                .min(Comparator.naturalOrder())
+                .orElse(null);
         return new Context(
-                subject.kind(), subject.id(), subject.ref(), subject.title(), subject.date(), items,
-                ProblemRules.reasons(kind), status, reportBy, card(userId));
+                subject.kind(),
+                subject.id(),
+                subject.ref(),
+                subject.title(),
+                subject.date(),
+                items,
+                ProblemRules.reasons(kind),
+                status,
+                reportBy,
+                card(userId));
     }
 
     private static int rank(String status) {
@@ -92,7 +114,8 @@ class ProblemService implements ReportProblems {
             throw RuleViolation.of("note", "length", ProblemRules.NOTE_TOO_LONG);
         }
         var subject = subject(userId, r.kind(), r.id());
-        var items = items(userId, subject).stream().collect(Collectors.toMap(Item::ref, i -> i, (a, _) -> a, LinkedHashMap::new));
+        var items = items(userId, subject).stream()
+                .collect(Collectors.toMap(Item::ref, i -> i, (a, _) -> a, LinkedHashMap::new));
         var chosen = new ArrayList<Item>();
         for (var ref : r.items().stream().distinct().toList()) {
             var item = items.get(ref);
@@ -112,15 +135,25 @@ class ProblemService implements ReportProblems {
         var byEscrow = new LinkedHashMap<String, List<Item>>();
         var facts = facts(userId, subject);
         for (var item : chosen) {
-            var thing = subject.things().stream().filter(t -> t.ref().equals(item.ref())).findFirst().orElseThrow();
+            var thing = subject.things().stream()
+                    .filter(t -> t.ref().equals(item.ref()))
+                    .findFirst()
+                    .orElseThrow();
             var escrow = Objects.requireNonNull(facts.get(thing.escrowRef()));
             byEscrow.computeIfAbsent(escrow.escrowId(), _ -> new ArrayList<>()).add(item);
         }
         var refunds = new ArrayList<String>();
         byEscrow.forEach((escrowId, list) -> {
-            var escrow = facts.values().stream().filter(f -> f.escrowId().equals(escrowId)).findFirst().orElseThrow();
-            var amount = Math.min(escrow.amountCents(), list.stream().mapToLong(Item::amountCents).sum());
-            var titles = list.stream().map(i -> i.qty() > 1 ? i.title() + " ×" + i.qty() : i.title()).collect(Collectors.joining(", "));
+            var escrow = facts.values().stream()
+                    .filter(f -> f.escrowId().equals(escrowId))
+                    .findFirst()
+                    .orElseThrow();
+            var amount = Math.min(
+                    escrow.amountCents(),
+                    list.stream().mapToLong(Item::amountCents).sum());
+            var titles = list.stream()
+                    .map(i -> i.qty() > 1 ? i.title() + " ×" + i.qty() : i.title())
+                    .collect(Collectors.joining(", "));
             var what = clip(reasonWord + " · " + titles + (note.isEmpty() ? "" : " — " + note), 200);
             refunds.add(cases.requestReview(escrowId, userId, amount, what));
         });
@@ -133,7 +166,9 @@ class ProblemService implements ReportProblems {
             default -> "Order " + Objects.requireNonNullElse(subject.ref(), subject.id());
         };
         var body = "Reported: " + reasonWord + "\n"
-                + chosen.stream().map(i -> "- " + i.title() + (i.qty() > 1 ? " ×" + i.qty() : "") + " (" + i.merchantName() + ")")
+                + chosen.stream()
+                        .map(i ->
+                                "- " + i.title() + (i.qty() > 1 ? " ×" + i.qty() : "") + " (" + i.merchantName() + ")")
                         .collect(Collectors.joining("\n"))
                 + (note.isEmpty() ? "" : "\n\n" + note);
         var opened = desk.open(new CustomerCaseDesk.NewCase(
@@ -152,15 +187,24 @@ class ProblemService implements ReportProblems {
         var summaries = refunds.stream()
                 .map(id -> caseQuery.find(userId, id).orElseThrow())
                 .map(c -> new Opened(
-                        c.id(), c.number(), c.amountCents(), c.taxCents(),
-                        businesses.one(c.merchantId()).map(Businesses.Business::name).orElse(""), c.respondBy()))
+                        c.id(),
+                        c.number(),
+                        c.amountCents(),
+                        c.taxCents(),
+                        businesses
+                                .one(c.merchantId())
+                                .map(Businesses.Business::name)
+                                .orElse(""),
+                        c.respondBy()))
                 .toList();
         return new Reported(
                 opened.id(),
                 opened.code(),
                 summaries,
                 clock.instant(),
-                summaries.stream().mapToLong(o -> o.amountCents() + o.taxCents()).sum(),
+                summaries.stream()
+                        .mapToLong(o -> o.amountCents() + o.taxCents())
+                        .sum(),
                 card(userId));
     }
 
@@ -169,7 +213,9 @@ class ProblemService implements ReportProblems {
     }
 
     private @Nullable Card card(String userId) {
-        return cards.defaultCard(userId).map(c -> new Card(c.brand(), c.last4())).orElse(null);
+        return cards.defaultCard(userId)
+                .map(c -> new Card(c.brand(), c.last4()))
+                .orElse(null);
     }
 
     // ── what was bought ──────────────────────────────────────────────────────────────────────────────────────────────
@@ -183,14 +229,22 @@ class ProblemService implements ReportProblems {
                     throw new NotFound("order", id);
                 }
                 var things = detail.lines().stream()
-                        .map(l -> new Thing(l.id(), l.title(), l.qty(), l.amountCents(), l.merchantId(), food ? id : l.id()))
+                        .map(l -> new Thing(
+                                l.id(), l.title(), l.qty(), l.amountCents(), l.merchantId(), food ? id : l.id()))
                         .toList();
-                var date = Objects.requireNonNullElse(detail.order().deliveredAt(), detail.order().placedAt());
+                var date = Objects.requireNonNullElse(
+                        detail.order().deliveredAt(), detail.order().placedAt());
                 yield new Subject(kind, id, detail.order().ref(), "", date, food ? "food_order" : "order_line", things);
             }
             case "booking" -> {
                 var b = history.booking(userId, id).orElseThrow(() -> new NotFound("booking", id));
-                yield new Subject(kind, id, b.ref(), b.title(), b.startsAt(), "booking",
+                yield new Subject(
+                        kind,
+                        id,
+                        b.ref(),
+                        b.title(),
+                        b.startsAt(),
+                        "booking",
                         List.of(new Thing(b.id(), b.title(), 1, 0, b.merchantId(), b.id())));
             }
             default -> throw new NotFound("problem", kind);
@@ -205,34 +259,58 @@ class ProblemService implements ReportProblems {
 
     private List<Item> items(String userId, Subject s) {
         var facts = facts(userId, s);
-        var names = businesses.of(s.things().stream().map(Thing::merchantId).distinct().toList());
+        var names = businesses.of(
+                s.things().stream().map(Thing::merchantId).distinct().toList());
         var now = clock.instant();
-        return s.things().stream().map(t -> {
-            var f = facts.get(t.escrowRef());
-            var name = names.containsKey(t.merchantId()) ? Objects.requireNonNull(names.get(t.merchantId())).name() : "";
-            if (f == null) {
-                return new Item(t.ref(), t.title(), t.qty(), t.amountCents(), 0, t.merchantId(), name, "not_paid", null);
-            }
-            // the booking's price is the escrow's; a food line's tax is its share of the order's
-            var amount = "booking".equals(s.kind()) ? f.amountCents() : t.amountCents();
-            var tax = f.amountCents() == 0 ? 0 : Math.round((double) f.taxCents() * amount / f.amountCents());
-            var reportBy = "food".equals(s.kind()) && f.fulfilledAt() != null
-                    ? f.fulfilledAt().plus(ProblemRules.FOOD_WINDOW)
-                    : f.releaseAt();
-            String status;
-            if (f.openCase() || "disputed".equals(f.state())) {
-                status = "reported";
-            } else if ("refunded".equals(f.state())) {
-                status = "closed";
-            } else if (f.fulfilledAt() == null) {
-                status = "not_yet";
-            } else if ("food".equals(s.kind())) {
-                status = reportBy != null && reportBy.isAfter(now) ? "open" : "closed";
-            } else {
-                status = "held".equals(f.state()) && reportBy != null && reportBy.isAfter(now) ? "open" : "closed";
-            }
-            return new Item(t.ref(), t.title(), t.qty(), amount, tax, t.merchantId(), name, status,
-                    "open".equals(status) ? reportBy : null);
-        }).toList();
+        return s.things().stream()
+                .map(t -> {
+                    var f = facts.get(t.escrowRef());
+                    var name = names.containsKey(t.merchantId())
+                            ? Objects.requireNonNull(names.get(t.merchantId())).name()
+                            : "";
+                    if (f == null) {
+                        return new Item(
+                                t.ref(),
+                                t.title(),
+                                t.qty(),
+                                t.amountCents(),
+                                0,
+                                t.merchantId(),
+                                name,
+                                "not_paid",
+                                null);
+                    }
+                    // the booking's price is the escrow's; a food line's tax is its share of the order's
+                    var amount = "booking".equals(s.kind()) ? f.amountCents() : t.amountCents();
+                    var tax = f.amountCents() == 0 ? 0 : Math.round((double) f.taxCents() * amount / f.amountCents());
+                    var reportBy = "food".equals(s.kind()) && f.fulfilledAt() != null
+                            ? f.fulfilledAt().plus(ProblemRules.FOOD_WINDOW)
+                            : f.releaseAt();
+                    String status;
+                    if (f.openCase() || "disputed".equals(f.state())) {
+                        status = "reported";
+                    } else if ("refunded".equals(f.state())) {
+                        status = "closed";
+                    } else if (f.fulfilledAt() == null) {
+                        status = "not_yet";
+                    } else if ("food".equals(s.kind())) {
+                        status = reportBy != null && reportBy.isAfter(now) ? "open" : "closed";
+                    } else {
+                        status = "held".equals(f.state()) && reportBy != null && reportBy.isAfter(now)
+                                ? "open"
+                                : "closed";
+                    }
+                    return new Item(
+                            t.ref(),
+                            t.title(),
+                            t.qty(),
+                            amount,
+                            tax,
+                            t.merchantId(),
+                            name,
+                            status,
+                            "open".equals(status) ? reportBy : null);
+                })
+                .toList();
     }
 }

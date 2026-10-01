@@ -128,7 +128,8 @@ class AccountActivityService implements ViewActivity, ViewUpcoming, ViewWallet, 
                 : firstNonNull(o.deliveredAt(), o.placedAt());
         var href = (food ? "/food/orders/" : "/orders/") + o.id();
         var reportable = caseRef == null && reportable(o);
-        var action = open ? ActivityAction.VIEW_CASE
+        var action = open
+                ? ActivityAction.VIEW_CASE
                 : active ? ActivityAction.TRACK : reportable ? ActivityAction.REPORT : ActivityAction.DETAILS;
         if (action == ActivityAction.REPORT) {
             href = "/account/problem/" + (food ? "food/" : "order/") + o.id();

@@ -40,7 +40,11 @@ public final class Cases {
     public record Step(String key, String state, @Nullable Instant at) {}
 
     /** @param thread the case in Northline's queue opened with it (code, notes), when there is one */
-    public record Detail(Row row, List<Step> steps, @Nullable Problems.Card card, @Nullable CaseThread thread) {
+    public record Detail(
+            Row row,
+            List<Step> steps,
+            Problems.@Nullable Card card,
+            @Nullable CaseThread thread) {
         public Detail {
             steps = List.copyOf(steps);
         }

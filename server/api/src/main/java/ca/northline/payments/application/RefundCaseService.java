@@ -172,8 +172,8 @@ class RefundCaseService implements RespondToCases, CustomerCases, DisputeDecisio
         if (escrow.getState() == EscrowState.REFUNDED) {
             throw new Conflict("escrow_refunded", "This payment was already refunded.");
         }
-        var refund = Refund.requested(
-                cases.nextCaseNumber("RF"), escrow, amountCents, what, clock.instant(), autoApprove);
+        var refund =
+                Refund.requested(cases.nextCaseNumber("RF"), escrow, amountCents, what, clock.instant(), autoApprove);
         cases.insert(refund);
         escrow.putOnHold();
         escrows.update(escrow);

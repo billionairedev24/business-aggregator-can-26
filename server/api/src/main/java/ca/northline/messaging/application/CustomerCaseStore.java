@@ -32,7 +32,8 @@ public interface CustomerCaseStore {
 
     void thread(String threadId, String ticketId, String code, String subject, Instant at);
 
-    void message(String threadId, String senderRole, String senderId, String body, List<String> attachmentIds, Instant at);
+    void message(
+            String threadId, String senderRole, String senderId, String body, List<String> attachmentIds, Instant at);
 
     Optional<CaseThread> forRefund(String customerId, String refundId);
 
@@ -44,7 +45,13 @@ public interface CustomerCaseStore {
     void touched(String ticketId, Instant at);
 
     record StoredUpload(
-            String id, String customerId, String storageKey, String fileName, String contentType, long byteSize, Instant at) {}
+            String id,
+            String customerId,
+            String storageKey,
+            String fileName,
+            String contentType,
+            long byteSize,
+            Instant at) {}
 
     void insertUpload(StoredUpload upload);
 
