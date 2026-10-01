@@ -29,12 +29,17 @@ public final class ReplyEval implements EvalSuite {
     @Override
     public EvalReport run(AiTestKit kit, String mode) {
         var service = new ReplySuggestions(
-                kit.completions, new PromptLibraryAccess(), mock(BrowseInbox.class), JsonMapper.builder().build());
+                kit.completions,
+                new PromptLibraryAccess(),
+                mock(BrowseInbox.class),
+                JsonMapper.builder().build());
         var cases = new ArrayList<EvalReport.Case>();
         var model = kit.client.model();
         for (var c : set.cases()) {
             var turns = new ArrayList<SuggestReplies.Turn>();
-            c.path("turns").forEach(t -> turns.add(new SuggestReplies.Turn(t.get(0).asString(), t.get(1).asString())));
+            c.path("turns")
+                    .forEach(t -> turns.add(new SuggestReplies.Turn(
+                            t.get(0).asString(), t.get(1).asString())));
             try {
                 var s = service.suggest(
                         "eval-merchant",
@@ -49,8 +54,13 @@ public final class ReplyEval implements EvalSuite {
                     misses.add("replies: " + s.replies().size());
                 }
                 cases.add(new EvalReport.Case(
-                        c.path("id").asString(), "ok", misses.isEmpty() ? "ok" : "bad", misses.isEmpty(),
-                        misses.isEmpty() ? s.replies().getFirst() : misses + " → " + all.replace('\n', '|'), 0, 0));
+                        c.path("id").asString(),
+                        "ok",
+                        misses.isEmpty() ? "ok" : "bad",
+                        misses.isEmpty(),
+                        misses.isEmpty() ? s.replies().getFirst() : misses + " → " + all.replace('\n', '|'),
+                        0,
+                        0));
             } catch (RuntimeException e) {
                 cases.add(new EvalReport.Case(c.path("id").asString(), "ok", "error", false, e.toString(), 0, 0));
             }

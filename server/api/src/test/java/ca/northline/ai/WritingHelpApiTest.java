@@ -85,8 +85,9 @@ class WritingHelpApiTest extends ScriptedModelTest {
         }
 
         long listings(String merchantId) {
-            return jdbc.sql("select count(*) from catalogue.listings where merchant_id = ?")
-                    .param(merchantId)
+            return jdbc.sql("select (select count(*) from catalogue.services where merchant_id = :m)"
+                            + " + (select count(*) from catalogue.offers where merchant_id = :m)")
+                    .param("m", merchantId)
                     .query(Long.class)
                     .single();
         }
@@ -114,7 +115,11 @@ class WritingHelpApiTest extends ScriptedModelTest {
                     .andExpect(jsonPath("$.lines[1].unitCents").doesNotExist())
                     .andExpect(jsonPath("$.questions[0]").value("How old is the battery?"))
                     .andExpect(jsonPath("$.aiAssisted").value(true));
-            assertThat(MODEL.lastRequest().path("messages").path(1).path("content").asString())
+            assertThat(MODEL.lastRequest()
+                            .path("messages")
+                            .path(1)
+                            .path("content")
+                            .asString())
                     .contains("Alternator, 2016 Civic")
                     .doesNotContain("Amara");
         }
@@ -141,17 +146,23 @@ class WritingHelpApiTest extends ScriptedModelTest {
             var biz = data.business(MerchantRole.OWNER);
             var thread = thread(biz.merchantId());
             message(thread, "merchant", "See you Thursday at 9.", Instant.now().minusSeconds(3600));
-            message(thread, "customer", "Can I pay cash? My email is amara@example.com", Instant.now().minusSeconds(60));
+            message(
+                    thread,
+                    "customer",
+                    "Can I pay cash? My email is amara@example.com",
+                    Instant.now().minusSeconds(60));
             var before = messages(thread);
-            MODEL.enqueue(MockOpenRouter.answer(
-                    "{\"replies\":[\"Payments go through Northline.\",\"We can only take payment on Northline.\",\"Please pay on Northline.\"]}"));
+            MODEL.enqueue(
+                    MockOpenRouter.answer(
+                            "{\"replies\":[\"Payments go through Northline.\",\"We can only take payment on Northline.\",\"Please pay on Northline.\"]}"));
             mvc.perform(post("/api/v1/merchants/{m}/threads/{t}/reply-suggestions", biz.merchantId(), thread)
                             .with(TestJwt.member(biz.userId())))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.replies.length()").value(3))
                     .andExpect(jsonPath("$.aiAssisted").value(true));
             assertThat(messages(thread)).isEqualTo(before);
-            var sent = MODEL.lastRequest().path("messages").path(1).path("content").asString();
+            var sent =
+                    MODEL.lastRequest().path("messages").path(1).path("content").asString();
             assertThat(sent).contains("Can I pay cash?").contains("[EMAIL]").doesNotContain("amara@example.com");
         }
 
@@ -179,9 +190,7 @@ class WritingHelpApiTest extends ScriptedModelTest {
                                                            counterpart_name, subject, participant_ids, created_at)
                             values (?, ?, 'customer', 'booking', ?, 'BK-7712', ?, 'Amara Osei', 'brake inspection', '{}',
                                     now() - interval '1 day')
-                            """)
-                    .params(id, merchantId, Ids.next(), Ids.next())
-                    .update();
+                            """).params(id, merchantId, Ids.next(), Ids.next()).update();
             return id;
         }
 
@@ -228,7 +237,11 @@ class WritingHelpApiTest extends ScriptedModelTest {
                     .andExpect(jsonPath("$.fr.themes[0]").value("explications claires"))
                     .andExpect(jsonPath("$.reviews").value(3))
                     .andExpect(jsonPath("$.aiAssisted").value(true));
-            assertThat(MODEL.lastRequest().path("messages").path(1).path("content").asString())
+            assertThat(MODEL.lastRequest()
+                            .path("messages")
+                            .path(1)
+                            .path("content")
+                            .asString())
                     .contains("Explained everything clearly.")
                     .doesNotContain("Dana");
         }

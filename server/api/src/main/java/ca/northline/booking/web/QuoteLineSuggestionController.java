@@ -25,7 +25,9 @@ class QuoteLineSuggestionController {
 
     private final DraftQuoteLines drafts;
 
-    record Body(@Nullable @Size(max = 1000, message = "Keep notes under 1,000 characters.") String notes) {}
+    record Body(
+            @Nullable @Size(max = 1000, message = "Keep notes under 1,000 characters.")
+            String notes) {}
 
     @PostMapping("/api/v1/merchants/{merchantId}/quote-requests/{requestId}/line-suggestions")
     @RequiresMerchant(EDIT)

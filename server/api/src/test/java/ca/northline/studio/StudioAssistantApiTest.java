@@ -10,8 +10,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ca.northline.ai.MockOpenRouter;
-import ca.northline.shared.security.MerchantRole;
 import ca.northline.ai.ScriptedModelTest;
+import ca.northline.shared.security.MerchantRole;
 import ca.northline.support.OperationsFixtures;
 import ca.northline.support.OperationsFixtures.Line;
 import ca.northline.support.TestJwt;
@@ -29,10 +29,8 @@ import tools.jackson.databind.JsonNode;
  */
 class StudioAssistantApiTest extends ScriptedModelTest {
 
-
     @Autowired
     JdbcClient jdbc;
-
 
     record Seller(String merchantId, String owner, String order, String ref) {}
 

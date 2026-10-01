@@ -46,19 +46,22 @@ public class ReviewSummaryService implements DraftReviewSummary {
                 .map(r -> new ReviewText(
                         r.rating(),
                         r.job(),
-                        r.text() == null || r.text().length() <= TEXT_MAX ? r.text() : r.text().substring(0, TEXT_MAX)))
+                        r.text() == null || r.text().length() <= TEXT_MAX
+                                ? r.text()
+                                : r.text().substring(0, TEXT_MAX)))
                 .toList();
         var prompt = prompts.get("review-summary");
         var answer = ai.complete(Request.of(
-                                AiFeature.REVIEW_SUMMARY,
-                                Caller.member(userId, merchantId),
-                                prompt,
-                                prompt.text(),
-                                "Verified reviews (newest first): " + json.writeValueAsString(input))
-                        .asJson()
-                        .withMaxTokens(700));
+                        AiFeature.REVIEW_SUMMARY,
+                        Caller.member(userId, merchantId),
+                        prompt,
+                        prompt.text(),
+                        "Verified reviews (newest first): " + json.writeValueAsString(input))
+                .asJson()
+                .withMaxTokens(700));
         var node = answer.json().orElseThrow(() -> new IllegalStateException("The model's summary wasn't JSON."));
-        return new Summary(version(node.path("en")), version(node.path("fr")), texts.size(), true, answer.model(), prompt.id());
+        return new Summary(
+                version(node.path("en")), version(node.path("fr")), texts.size(), true, answer.model(), prompt.id());
     }
 
     static Version version(JsonNode n) {

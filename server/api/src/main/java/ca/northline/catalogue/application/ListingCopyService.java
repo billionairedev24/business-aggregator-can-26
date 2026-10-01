@@ -51,15 +51,16 @@ public class ListingCopyService implements DraftListingCopy {
         }
         put(known, "notesFromTheBusiness", facts.notes());
         var prompt = prompts.get("listing-copy");
-        var system = prompt.render(Map.of("titleMax", ListingMessages.TITLE_MAX, "bulletsMax", ListingMessages.BULLETS_MAX));
+        var system =
+                prompt.render(Map.of("titleMax", ListingMessages.TITLE_MAX, "bulletsMax", ListingMessages.BULLETS_MAX));
         var answer = ai.complete(Request.of(
-                                AiFeature.LISTING_COPY,
-                                Caller.member(userId, merchantId),
-                                prompt,
-                                system,
-                                "Listing facts: " + json.writeValueAsString(known))
-                        .asJson()
-                        .withMaxTokens(900));
+                        AiFeature.LISTING_COPY,
+                        Caller.member(userId, merchantId),
+                        prompt,
+                        system,
+                        "Listing facts: " + json.writeValueAsString(known))
+                .asJson()
+                .withMaxTokens(900));
         var node = answer.json().orElseThrow(() -> new IllegalStateException("The model's draft wasn't JSON."));
         return new Draft(copy(node.path("en")), copy(node.path("fr")), true, answer.model(), prompt.id());
     }

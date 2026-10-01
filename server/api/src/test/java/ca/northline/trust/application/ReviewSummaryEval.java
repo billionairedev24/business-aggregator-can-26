@@ -28,12 +28,17 @@ public final class ReviewSummaryEval implements EvalSuite {
     @Override
     public EvalReport run(AiTestKit kit, String mode) {
         var service = new ReviewSummaryService(
-                kit.completions, new PromptLibraryAccess(), mock(BrowseReviews.class), JsonMapper.builder().build());
+                kit.completions,
+                new PromptLibraryAccess(),
+                mock(BrowseReviews.class),
+                JsonMapper.builder().build());
         var cases = new ArrayList<EvalReport.Case>();
         var model = kit.client.model();
         for (var c : set.cases()) {
             var reviews = new ArrayList<DraftReviewSummary.ReviewText>();
-            c.path("reviews").forEach(r -> reviews.add(new DraftReviewSummary.ReviewText(r.get(0).asInt(), r.get(1).asString(), r.get(2).asString())));
+            c.path("reviews")
+                    .forEach(r -> reviews.add(new DraftReviewSummary.ReviewText(
+                            r.get(0).asInt(), r.get(1).asString(), r.get(2).asString())));
             try {
                 var s = service.summarize("eval-merchant", "eval-owner", reviews);
                 model = s.model();
@@ -43,8 +48,13 @@ public final class ReviewSummaryEval implements EvalSuite {
                     misses.add("no French summary");
                 }
                 cases.add(new EvalReport.Case(
-                        c.path("id").asString(), "ok", misses.isEmpty() ? "ok" : "bad", misses.isEmpty(),
-                        misses.isEmpty() ? s.en().summary() : misses.toString(), 0, 0));
+                        c.path("id").asString(),
+                        "ok",
+                        misses.isEmpty() ? "ok" : "bad",
+                        misses.isEmpty(),
+                        misses.isEmpty() ? s.en().summary() : misses.toString(),
+                        0,
+                        0));
             } catch (RuntimeException e) {
                 cases.add(new EvalReport.Case(c.path("id").asString(), "ok", "error", false, e.toString(), 0, 0));
             }

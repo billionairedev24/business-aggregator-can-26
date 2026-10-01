@@ -103,6 +103,14 @@ Rotation: create a new key, update the secret, restart the api, delete the old k
   button and the insight cards.
 - **Audit:** confirmed writes appear in Settings › Security › Audit log as `assistant.action_confirmed`.
 
+## Writing help (S-131)
+
+- Listing copy (en/fr), quote line suggestions, reply suggestions and review summaries are drafts. Nothing is saved,
+  sent or published by them, and each is guarded by the permission of its screen.
+- Turning them off works like the assistant: no key means the buttons are hidden.
+- Their usage appears in `ai.usage` as `listing_copy`, `quote_lines`, `message_reply` and `review_summary`.
+- Details: [docs/ai/writing-help.md](../ai/writing-help.md).
+
 ## Dashboards and alerts
 
 The port is wrapped by `ObservedLlmClient` (redaction, traces, metrics). Tags: `provider`, `model`, `feature`,

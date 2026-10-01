@@ -35,7 +35,9 @@ class ListingCopyController {
             @Nullable @Size(max = 30) Map<String, String> attributes,
             @Nullable @Size(max = 2000) String included,
             @Nullable Integer durationMin,
-            @Nullable @Size(max = 1000, message = "Keep notes under 1,000 characters.") String notes) {}
+
+            @Nullable @Size(max = 1000, message = "Keep notes under 1,000 characters.")
+            String notes) {}
 
     @PostMapping("/api/v1/merchants/{merchantId}/listing-copy")
     @RequiresMerchant(EDIT)

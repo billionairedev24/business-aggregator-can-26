@@ -33,7 +33,8 @@ public class QuoteLineSuggestions implements DraftQuoteLines {
     private final JsonMapper json;
 
     @Override
-    public Suggestion suggest(String merchantId, String requestId, String userId, @Nullable String notes, Locale locale) {
+    public Suggestion suggest(
+            String merchantId, String requestId, String userId, @Nullable String notes, Locale locale) {
         var request = requests.find(merchantId, requestId)
                 .filter(r -> !r.declined())
                 .orElseThrow(() -> new NotFound("quote request", requestId));
@@ -54,20 +55,22 @@ public class QuoteLineSuggestions implements DraftQuoteLines {
             facts.put("notesFromTheBusiness", notes.strip());
         }
         var prompt = prompts.get("quote-lines");
-        var system = prompt.render(Map.of("language", locale.getLanguage().equals("fr") ? "Canadian French" : "English"));
+        var system =
+                prompt.render(Map.of("language", locale.getLanguage().equals("fr") ? "Canadian French" : "English"));
         var answer = ai.complete(Request.of(
-                                AiFeature.QUOTE_LINES,
-                                Caller.member(userId, merchantId),
-                                prompt,
-                                system,
-                                "Job request: " + json.writeValueAsString(facts))
-                        .asJson()
-                        .withMaxTokens(600));
+                        AiFeature.QUOTE_LINES,
+                        Caller.member(userId, merchantId),
+                        prompt,
+                        system,
+                        "Job request: " + json.writeValueAsString(facts))
+                .asJson()
+                .withMaxTokens(600));
         var node = answer.json().orElseThrow(() -> new IllegalStateException("The model's suggestion wasn't JSON."));
         var lines = new ArrayList<Line>();
         for (var l : node.path("lines")) {
             var kind = Arrays.stream(LineKind.values())
-                    .filter(k -> k != LineKind.DISCOUNT && k.code().equals(l.path("kind").asString("")))
+                    .filter(k -> k != LineKind.DISCOUNT
+                            && k.code().equals(l.path("kind").asString("")))
                     .findFirst();
             var description = l.path("description").asString("").strip();
             if (kind.isEmpty() || description.isEmpty() || lines.size() >= MAX_LINES) {
@@ -79,7 +82,9 @@ public class QuoteLineSuggestions implements DraftQuoteLines {
             }
             lines.add(new Line(
                     kind.get(),
-                    description.length() > DESCRIPTION_MAX ? description.substring(0, DESCRIPTION_MAX).strip() : description,
+                    description.length() > DESCRIPTION_MAX
+                            ? description.substring(0, DESCRIPTION_MAX).strip()
+                            : description,
                     qty.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros()));
         }
         var questions = new ArrayList<String>();

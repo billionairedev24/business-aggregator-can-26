@@ -31,7 +31,10 @@ public final class ListingCopyEval implements EvalSuite {
     @Override
     public EvalReport run(AiTestKit kit, String mode) {
         var service = new ListingCopyService(
-                kit.completions, new PromptLibraryAccess(), mock(CategoryCatalog.class), JsonMapper.builder().build());
+                kit.completions,
+                new PromptLibraryAccess(),
+                mock(CategoryCatalog.class),
+                JsonMapper.builder().build());
         var frWords = new ArrayList<String>();
         set.root().path("frWords").forEach(w -> frWords.add(w.asString()));
         var cases = new ArrayList<EvalReport.Case>();
@@ -39,7 +42,9 @@ public final class ListingCopyEval implements EvalSuite {
         for (var c : set.cases()) {
             var f = c.path("facts");
             var attributes = new LinkedHashMap<String, String>();
-            f.path("attributes").properties().forEach(e -> attributes.put(e.getKey(), e.getValue().asString()));
+            f.path("attributes")
+                    .properties()
+                    .forEach(e -> attributes.put(e.getKey(), e.getValue().asString()));
             try {
                 var draft = service.draft(
                         "eval-merchant",
@@ -51,11 +56,15 @@ public final class ListingCopyEval implements EvalSuite {
                                 f.path("brand").asString(null),
                                 attributes,
                                 f.path("included").asString(null),
-                                f.path("durationMin").isNumber() ? f.path("durationMin").asInt() : null,
+                                f.path("durationMin").isNumber()
+                                        ? f.path("durationMin").asInt()
+                                        : null,
                                 f.path("notes").asString(null)));
                 model = draft.model();
-                var en = draft.en().title() + "\n" + draft.en().description() + "\n" + String.join("\n", draft.en().bullets());
-                var fr = draft.fr().title() + "\n" + draft.fr().description() + "\n" + String.join("\n", draft.fr().bullets());
+                var en = draft.en().title() + "\n" + draft.en().description() + "\n"
+                        + String.join("\n", draft.en().bullets());
+                var fr = draft.fr().title() + "\n" + draft.fr().description() + "\n"
+                        + String.join("\n", draft.fr().bullets());
                 var misses = new ArrayList<>(LabelledSet.contentMisses(c, en + "\n" + fr));
                 if (draft.en().title().isBlank() || draft.en().description().isBlank()) {
                     misses.add("no English draft");
@@ -65,8 +74,15 @@ public final class ListingCopyEval implements EvalSuite {
                     misses.add("no French draft");
                 }
                 cases.add(new EvalReport.Case(
-                        c.path("id").asString(), "ok", misses.isEmpty() ? "ok" : "bad", misses.isEmpty(),
-                        misses.isEmpty() ? draft.en().title() + " / " + draft.fr().title() : misses.toString(), 0, 0));
+                        c.path("id").asString(),
+                        "ok",
+                        misses.isEmpty() ? "ok" : "bad",
+                        misses.isEmpty(),
+                        misses.isEmpty()
+                                ? draft.en().title() + " / " + draft.fr().title()
+                                : misses.toString(),
+                        0,
+                        0));
             } catch (RuntimeException e) {
                 cases.add(new EvalReport.Case(c.path("id").asString(), "ok", "error", false, e.toString(), 0, 0));
             }

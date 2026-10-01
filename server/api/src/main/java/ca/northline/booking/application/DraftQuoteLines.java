@@ -13,7 +13,10 @@ import org.jspecify.annotations.Nullable;
 public interface DraftQuoteLines {
 
     /** The job as the business sees it in the quote inbox. */
-    record Job(String title, @Nullable String description, @Nullable String area) {}
+    record Job(
+            String title,
+            @Nullable String description,
+            @Nullable String area) {}
 
     record Line(LineKind kind, String description, BigDecimal qty) {}
 

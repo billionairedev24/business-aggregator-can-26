@@ -3682,3 +3682,62 @@ Stacked on S-129 (#82, branch `ai/s-129-platform`).
   - No live-model run (no OpenRouter key yet).
   - The UI was tested with Testing Library, not in a browser.
   - No Storybook story: the drawer is a Studio feature composed from kit components that already have stories.
+
+## 2026-10-01 — S-131 AI writing help: listing copy, quote lines, message replies, review summaries (en/fr)
+
+Stacked on S-130 (#83), which is stacked on S-129 (#82). It reuses S-130's `ScriptedModelTest` and test heap.
+
+- **Each feature lives in the module that owns its data** and depends only on `ai.api`. Each has a versioned prompt, a
+  labelled eval set and suite, and an endpoint guarded like its screen:
+
+  | Feature | Module | Endpoint | Permission | Prompt and model |
+  |---|---|---|---|---|
+  | listing copy | catalogue | `POST /api/v1/merchants/{id}/listing-copy` | EDIT | `listing-copy@v1`, standard |
+  | quote lines | booking | `POST …/quote-requests/{requestId}/line-suggestions` | EDIT | `quote-lines@v1`, standard |
+  | reply suggestions | messaging | `POST …/threads/{threadId}/reply-suggestions` | OPERATE; technicians only for their own jobs' threads, through `BrowseInbox` | `message-reply@v1`, light |
+  | review summary | trust | `POST …/reviews/summary-draft` | EDIT | `review-summary@v1`, light |
+
+- **Always a draft the person edits; never sent, saved or published by the AI:**
+  - No endpoint writes anything. Every answer carries `aiAssisted: true` and the Studio labels it:
+    - "AI-assisted draft … every listing is still vetted by Northline";
+    - "AI-suggested lines … set the prices and check each one";
+    - "AI-suggested replies — pick one to edit it before sending";
+    - "AI-assisted summary … nothing is published automatically".
+  - Listing copy fills the editor's fields only when the person picks the English or the French draft. Saving and
+    submitting go through the normal flow, so **vetting is unchanged**.
+  - A suggested reply only fills the message box.
+  - Suggested quote lines are added as editable rows **without prices**: the prompt never asks for them, and the
+    response has no price field. Discount lines are dropped.
+- **French drafts are not stored.** Listings have one set of text fields. `i18n.content_translations` (`source`,
+  `approved`, "MT draft → approved") exists, but catalogue has no write path for it yet. Both drafts are shown and the
+  person picks one. Saving the other language as a translation is a follow-up with the catalogue workstream.
+- **Review summary on the provider page:** the backlog says "on the provider page". A summary published there
+  automatically would contradict "never auto-published", so it is drafted on the Studio Reviews screen. The owner or
+  staff copy and edit it, and can put it on their page through the storefront editor. It needs at least 3 reviews
+  (409 `too_few_reviews`). It reads the 40 latest reviews: rating, job and text cut at 500 characters, **without author
+  names**.
+- **Minimum data per feature:**
+  - Listing copy sends the editor's facts: kind, name, category name, brand, attributes, included, duration, notes.
+  - Quote lines send the request's title, description and area. The customer's name is never sent.
+  - Replies send the last 8 messages as `{from: customer|business|northline, text}`, without names.
+  - The port's redaction masks contact details anyway, and the prompts forbid contact details and off-platform payment
+    in the output.
+- **Output is clamped to the domain rules**, so a draft never fails the editor's validation:
+  - listings: title ≤ 80, bullets ≤ 5 × 250, description ≤ 4,000;
+  - quote lines ≤ 6, description ≤ 80, quantity 0.01–999;
+  - three replies of ≤ 600 characters;
+  - four themes.
+- **Evals:**
+  - `listing-copy.json` (6 cases, including notes with a phone number and "cash discount" that must not leak);
+  - `quote-lines.json` (5, including en/fr and a vague request);
+  - `message-reply.json` (5, including an e-transfer request that must be answered "through Northline", a refund ask
+    that must not promise one, and French);
+  - `review-summary.json` (3).
+  `WritingHelpEvalTest` runs them against the simulated model, and `AiEvalLiveTest` runs them live.
+- **No schema change.** Usage is recorded in `ai.usage` per feature (`listing_copy`, `quote_lines`, `message_reply`,
+  `review_summary`).
+- **Not done:**
+  - French translations are not persisted (above).
+  - Nothing is audited per draft, since nothing changed; the usage row is the record.
+  - No live-model run.
+  - UI tested with Testing Library only.

@@ -10,7 +10,8 @@ import org.jspecify.annotations.Nullable;
 public interface DraftReviewSummary {
 
     /** One review as the model sees it: no author name. */
-    record ReviewText(int rating, @Nullable String job, @Nullable String text) {}
+    record ReviewText(
+            int rating, @Nullable String job, @Nullable String text) {}
 
     record Version(String summary, List<String> themes) {}
 

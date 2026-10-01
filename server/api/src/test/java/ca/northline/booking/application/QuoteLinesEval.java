@@ -29,7 +29,10 @@ public final class QuoteLinesEval implements EvalSuite {
     @Override
     public EvalReport run(AiTestKit kit, String mode) {
         var service = new QuoteLineSuggestions(
-                kit.completions, new PromptLibraryAccess(), mock(QuoteRequests.class), JsonMapper.builder().build());
+                kit.completions,
+                new PromptLibraryAccess(),
+                mock(QuoteRequests.class),
+                JsonMapper.builder().build());
         var cases = new ArrayList<EvalReport.Case>();
         var model = kit.client.model();
         for (var c : set.cases()) {
@@ -38,11 +41,18 @@ public final class QuoteLinesEval implements EvalSuite {
                 var s = service.suggest(
                         "eval-merchant",
                         "eval-owner",
-                        new DraftQuoteLines.Job(j.path("title").asString(), j.path("description").asString(null), j.path("area").asString(null)),
+                        new DraftQuoteLines.Job(
+                                j.path("title").asString(),
+                                j.path("description").asString(null),
+                                j.path("area").asString(null)),
                         null,
                         Locale.forLanguageTag(c.path("locale").asString("en") + "-CA"));
                 model = s.model();
-                var text = String.join("\n", s.lines().stream().map(DraftQuoteLines.Line::description).toList());
+                var text = String.join(
+                        "\n",
+                        s.lines().stream()
+                                .map(DraftQuoteLines.Line::description)
+                                .toList());
                 var misses = new ArrayList<>(LabelledSet.contentMisses(c, text));
                 if (s.lines().isEmpty() || s.lines().size() > 6) {
                     misses.add("lines: " + s.lines().size());
@@ -54,8 +64,13 @@ public final class QuoteLinesEval implements EvalSuite {
                     }
                 });
                 cases.add(new EvalReport.Case(
-                        c.path("id").asString(), "ok", misses.isEmpty() ? "ok" : "bad", misses.isEmpty(),
-                        misses.isEmpty() ? text.replace('\n', ';') : misses.toString(), 0, 0));
+                        c.path("id").asString(),
+                        "ok",
+                        misses.isEmpty() ? "ok" : "bad",
+                        misses.isEmpty(),
+                        misses.isEmpty() ? text.replace('\n', ';') : misses.toString(),
+                        0,
+                        0));
             } catch (RuntimeException e) {
                 cases.add(new EvalReport.Case(c.path("id").asString(), "ok", "error", false, e.toString(), 0, 0));
             }

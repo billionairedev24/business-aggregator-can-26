@@ -40,7 +40,8 @@ public class ReplySuggestions implements SuggestReplies {
         if (turns.isEmpty() || !"customer".equals(turns.getLast().from())) {
             throw new Conflict("nothing_to_reply", "There's no customer message to reply to.");
         }
-        var refType = thread.thread().refType() == null ? "request" : thread.thread().refType();
+        var refType =
+                thread.thread().refType() == null ? "request" : thread.thread().refType();
         return suggest(merchantId, viewer.userId(), refType, turns, locale);
     }
 
@@ -51,13 +52,13 @@ public class ReplySuggestions implements SuggestReplies {
         var system = prompt.render(Map.of(
                 "refType", refType, "language", locale.getLanguage().equals("fr") ? "Canadian French" : "English"));
         var answer = ai.complete(Request.of(
-                                AiFeature.MESSAGE_REPLY,
-                                Caller.member(userId, merchantId),
-                                prompt,
-                                system,
-                                "Thread (oldest first): " + json.writeValueAsString(recent))
-                        .asJson()
-                        .withMaxTokens(500));
+                        AiFeature.MESSAGE_REPLY,
+                        Caller.member(userId, merchantId),
+                        prompt,
+                        system,
+                        "Thread (oldest first): " + json.writeValueAsString(recent))
+                .asJson()
+                .withMaxTokens(500));
         var node = answer.json().orElseThrow(() -> new IllegalStateException("The model's suggestions weren't JSON."));
         var replies = new ArrayList<String>();
         node.path("replies").forEach(r -> {

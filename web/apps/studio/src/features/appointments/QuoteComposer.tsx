@@ -5,6 +5,7 @@ import { useMerchantId } from '../shell/api';
 import { useReviseQuote, useSendQuote, useUploadMedia, type LineKind, type Quote, type QuoteRequest } from './api';
 import { useAppointmentsT } from './messages';
 import { DURATIONS, VALID_HOURS, attention, initialState, newLine, toBody, totals, validate, type ComposerLine, type ComposerState } from './quote';
+import { QuoteLineSuggestions } from '../writing/WritingHelp';
 
 const KINDS: LineKind[] = ['labour', 'part', 'fee', 'travel', 'discount'];
 
@@ -86,6 +87,8 @@ export function QuoteComposer({ request, revising, onDone, onCancel }: { request
         <button type="button" className="btn btn-ghost" onClick={() => set({ lines: [...s.lines, newLine({ name: t('travelLine'), kind: 'travel', amount: '20' })] })}>{t('addTravel')}</button>
         <button type="button" className="btn btn-ghost" onClick={() => set({ lines: [...s.lines, newLine({ name: t('shopLine'), kind: 'fee', amount: '12' })] })}>{t('addShop')}</button>
       </div>
+      <QuoteLineSuggestions merchantId={merchantId} requestId={request.id}
+        onAdd={ls => set({ lines: [...s.lines.filter(l => l.name.trim() || l.amount.trim()), ...ls.map(l => newLine({ name: l.description, kind: l.kind, qty: String(l.qty) }))] })} />
       <dl className="nl-appt-totals" aria-live="polite">
         <dt>{t('totLabour')}</dt><dd>{f.money(tot.labour)}</dd>
         <dt>{t('totParts')}</dt><dd>{f.money(tot.parts)}</dd>
