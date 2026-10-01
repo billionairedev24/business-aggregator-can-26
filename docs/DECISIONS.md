@@ -3657,3 +3657,36 @@ Built on the S-44 contract (docs/CONSUMER_WEB_PLAN.md § Search) and S-47's loca
 - **Not done:** the legal documents in French (no French source in the design); `Vary` headers / an edge cache for
   cookie-negotiated pages; image sitemaps; listing every kitchen's dishes or services as their own URLs (they have no
   pages); validation against Google's Rich Results tool (never run — no network to it).
+
+## 2026-10-01 — S-61 Sell or offer a service: entry into Studio onboarding (07a–07d)
+
+- **`/sell` is design 06's account › `sell` panel as its own page** (the route S-45 reserved; the account menu's "Sell
+  or offer a service" and the footer's Sell / Offer / Run a kitchen link there). Server-rendered and indexable (title,
+  description); the account line is the only part that depends on the visitor and starts as a skeleton.
+- **Into the Studio, never a second onboarding:** the three cards link to the Studio's existing onboarding
+  (`/onboarding?type=provider|seller|kitchen`, 07a–07c) at the new public config `studioOrigin` (`NL_STUDIO_ORIGIN`,
+  the chart's `urls.studio`; default the Studio dev server :3100). **Signed in** on the consumer site → the studio-bff's
+  sign-in hand-off `/bff/login?next=/onboarding?type=…` (S-20/S-62): northline-auth already holds the person's session,
+  so the authorization completes at once and they arrive in onboarding with the same account ("same login, same
+  passkey"; the Studio then asks for the second factor business accounts need). **A guest** → `/onboarding?type=…`
+  directly; the Studio's guard sends them to its own sign-in / register and back (`next`). The design's "Not a
+  customer yet? Start fresh." → Studio `/register?next=/onboarding?…&new=1` (07d, the brand-new-account path),
+  keeping the chosen type. Guests also get "Already shop on Northline? Sign in first — …" to the consumer sign-in
+  coming back to `/sell` (ours; the design only draws the signed-in line).
+- **`?type=`** outlines the chosen card (accent ring, "Chosen" for screen readers) — the design has no chosen state;
+  order and copy stay as designed. The CTAs are plain links (another origin), named "… (opens the Studio)" for screen
+  readers.
+- **Copy:** as designed except place-specific words (region rule, DECISIONS 2026-09-30): "trade licence (AMVIC,
+  RECA…)" → "trade licence for regulated trades" (those are one province's regulators); "AHS Food Handling Permit" →
+  "{province} Food Handling Permit" from the visitor's province (the S-134 ambient values; "Food Handling Permit" before
+  the region model answers). The design's figures ("Take rate 15% → 9% at Master", "Median 1.4 days") are kept as
+  copy. French is ours (design/i18n-fr.js has none of these lines).
+- **Configuration:** `NL_STUDIO_ORIGIN` (consumer web, optional; chart from `urls.studio`) — README, local, dev,
+  staging, prod runbooks, `web/apps/consumer/.env.example`, chart helper. No server change, no migration.
+- **Tests:** `features/sell/sell.test.tsx` — the three cards' copy, guest links (Studio onboarding per type, consumer
+  sign-in back to `/sell?type=`, Start fresh with `new=1`), signed-in links through the studio-bff hand-off and the
+  "Logged in as" line, the chosen card, the province's permit (BC) and French (QC), reached from the footer and the
+  account menu; the link builders.
+- **Not exercised end to end:** the cross-origin hand-off was not run against a live auth + both BFFs here (the BFF's
+  `next` rule and the Studio's onboarding parameters are unchanged and covered by their own tests). If northline-auth's
+  session has expired while the consumer-bff's has not, the Studio's sign-in asks again — accepted.

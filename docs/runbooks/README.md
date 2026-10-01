@@ -228,6 +228,10 @@ alternate and sitemap entry, and the server answers `/robots.txt`, `/sitemap.xml
 the public origin in every environment that should be indexed. Nothing to configure for the legal pages (they are in
 the image).
 
+the site. Both optional, set by the chart. S-61: `NL_STUDIO_ORIGIN` (= `urls.studio`, set by the chart; default
+`http://localhost:3100`) — `/sell` links into the Studio's onboarding there (signed in: the Studio BFF's
+`/bff/login?next=/onboarding?type=…` hand-off; a guest: `/onboarding?type=…`, which signs in on the Studio).
+
 ## Consumer BFF (S-45)
 
 The consumer web app has its own BFF: the **bff image with the `consumer` profile added last**
