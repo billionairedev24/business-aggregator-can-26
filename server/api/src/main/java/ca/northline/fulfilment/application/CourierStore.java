@@ -29,6 +29,9 @@ public interface CourierStore {
     /** Sets the status ({@code offline} | {@code available} | {@code on_run}). */
     void status(String courierId, String status);
 
+    /** Pauses ({@code false}) or resumes ({@code true}) a courier: a paused courier is given no new run (S-81). */
+    void active(String courierId, boolean active);
+
     void insertShift(Shift shift);
 
     Optional<Shift> shift(String shiftId);

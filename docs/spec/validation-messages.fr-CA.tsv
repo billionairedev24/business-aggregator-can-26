@@ -640,3 +640,6 @@ Your role can't do this.	Votre rôle ne permet pas de faire ceci.	new
 That market isn't in the chosen province.	Ce marché n’est pas dans la province choisie.	new
 Choose a province from the list.	Choisissez une province dans la liste.	new
 Choose a market from the list.	Choisissez un marché dans la liste.	new
+Say why the courier is paused.	Indiquez pourquoi le livreur est mis en pause.	new
+Keep the reason under 500 characters.	Limitez la raison à 500 caractères.	new
+Choose needs attention, live, escrow, late or all.	Choisissez à traiter, en cours, séquestre, en retard ou tout.	new

@@ -408,6 +408,11 @@ northline:
       anomaly-cron: ${TRUST_AI_ANOMALY_CRON:0 10 12 * * MON}        # UTC; scans the week that ended
   # S-91 console overview, "System health": PromQL over the S-111 metrics (docs/runbooks/observability.md § Console
   # health). `none` = every signal unknown (local, test, or no metrics store yet).
+  # S-81 delivery ops map: an XYZ raster basemap under the zones and couriers (docs/runbooks/README.md § Console map).
+  # Empty = no basemap: the console draws the zones on its own grid (design 03). The browser fetches the tiles.
+  console.map:
+    tiles: ${CONSOLE_MAP_TILES:}
+    attribution: ${CONSOLE_MAP_ATTRIBUTION:}
   console.health:
     provider: ${CONSOLE_HEALTH_PROVIDER:none}
     prometheus:

@@ -104,6 +104,14 @@ class CourierStoreJdbc implements CourierStore {
     }
 
     @Override
+    public void active(String courierId, boolean active) {
+        jdbc.sql("update fulfilment.couriers set active = :a where id = :id")
+                .param("a", active)
+                .param("id", courierId)
+                .update();
+    }
+
+    @Override
     public void insertShift(Shift s) {
         jdbc.sql("""
                         insert into fulfilment.shifts (id, courier_id, starts_at, ends_at, state)
