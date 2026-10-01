@@ -79,7 +79,7 @@ record UpcomingCopy(boolean fr, Locale locale, ZoneId zone) {
             case FOOD -> "pickup".equals(i.delivery()) ? when + t(" · pickup", " · à emporter") : when;
             case BOOKING ->
                 i.status() == ActivityStatus.ESCROW || i.status() == ActivityStatus.DEPOSIT_HELD
-                        ? when + " · " + money(i.amountCents()) + t(" in escrow", " en séquestre")
+                        ? when + " · " + money(i.amountCents()) + t(" in escrow", " en fiducie")
                         : when;
             case QUOTE ->
                 i.status() == ActivityStatus.QUOTE_READY

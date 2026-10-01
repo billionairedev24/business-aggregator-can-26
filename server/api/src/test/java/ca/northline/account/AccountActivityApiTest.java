@@ -169,7 +169,7 @@ class AccountActivityApiTest extends IntegrationTest {
                             .header("Accept-Language", "fr-CA")
                             .with(TestJwt.customer(amara)))
                     .andExpect(jsonPath("$.items[0].subtitle")
-                            .value(org.hamcrest.Matchers.matchesRegex(".* · 93,45[\\s\\u00a0\\u202f]\\$ en séquestre")))
+                            .value(org.hamcrest.Matchers.matchesRegex(".* · 93,45[\\s\\u00a0\\u202f]\\$ en fiducie")))
                     .andExpect(jsonPath("$.items[0].state").value("Réservé"));
         }
     }
