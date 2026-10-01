@@ -10,6 +10,8 @@ import { StudioLayout } from '../features/shell/StudioLayout';
 import { PlaceValues } from '../features/shell/place';
 
 export const Route = createFileRoute('/b/$merchantId')({
+  // S-69: the business is requested with the session check, not after the layout's chunk (see vite.config.ts).
+  codeSplitGroupings: [['component'], ['pendingComponent'], ['errorComponent'], ['notFoundComponent']],
   beforeLoad: ({ context, location }) => requireSession(context.queryClient, location.href),
   loader: ({ context, params }) => context.queryClient.ensureQueryData(merchantQuery(params.merchantId)),
   pendingComponent: () => <div style={{ padding: 32 }}><PageSkeleton /></div>,

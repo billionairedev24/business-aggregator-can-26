@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { SETTINGS_TABS, businessQuery, type SettingsTab } from '../../features/settings/api';
+import { businessQuery } from '../../features/settings/api';
+import { SETTINGS_TABS, type SettingsTab } from '../../features/settings/tabs';
 import { SettingsScreen } from '../../features/settings/SettingsScreen';
 
 interface SettingsSearch { tab?: SettingsTab }

@@ -23,6 +23,35 @@ function devAuth(env: Record<string, string>): Plugin {
   };
 }
 
+/**
+ * S-69: `<link rel="modulepreload">` for the Studio layout and the dashboard (the screen most sessions open on) and
+ * the chunks they import, so the browser fetches them while the entry script runs instead of after it. Costs the
+ * signed-out pages ~40 kB gzip they may not need; buys the dashboard one network round trip.
+ */
+function preloadLanding(): Plugin {
+  const landing = [/routes\/b\.\$merchantId\.tsx\?tsr-split=component/, /routes\/b\.\$merchantId\/index\.tsx\?tsr-split=component/];
+  return {
+    name: 'northline-preload-landing',
+    apply: 'build',
+    transformIndexHtml: {
+      order: 'post',
+      handler(_html, ctx) {
+        const chunks = Object.values(ctx.bundle ?? {}).filter(c => c.type === 'chunk');
+        const byFile = new Map(chunks.map(c => [c.fileName, c]));
+        const files = new Set<string>();
+        const add = (file: string) => {
+          const chunk = byFile.get(file);
+          if (!chunk || chunk.isEntry || files.has(file)) return;
+          files.add(file);
+          chunk.imports.forEach(add);
+        };
+        chunks.filter(c => landing.some(re => re.test(c.facadeModuleId ?? ''))).forEach(c => add(c.fileName));
+        return [...files].map(file => ({ tag: 'link', attrs: { rel: 'modulepreload', crossorigin: true, href: `/${file}` }, injectTo: 'head' as const }));
+      },
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, import.meta.dirname, 'NL_');
   const dev = !!env.NL_DEV_USER;
@@ -32,7 +61,12 @@ export default defineConfig(({ mode }) => {
     : { '/api': bff, '/bff': bff, '/oauth2': bff, '/login': bff };
   return {
     // /legal/terms.html, /legal/privacy.html: design 09/10 verbatim, shared with the consumer app (S-63)
-    plugins: [tanstackRouter({ target: 'react', autoCodeSplitting: true }), react(), devAuth(env), legalPages()],
+    // S-69: each route's loader travels with its component (one lazy chunk), so the features' api modules and their
+    // zod schemas stay out of the initial bundle; the error/pending/not-found components get their own chunks.
+    plugins: [tanstackRouter({
+      target: 'react', autoCodeSplitting: true,
+      codeSplittingOptions: { defaultBehavior: [['loader', 'component'], ['pendingComponent'], ['errorComponent'], ['notFoundComponent']] },
+    }), react(), devAuth(env), legalPages(), preloadLanding()],
     server: {
       port: 3100,
       proxy,
