@@ -81,10 +81,10 @@ class DisputesController {
         return desk.queue(places.resolve(province, market).scope());
     }
 
-    @GetMapping("/{kind:dispute|refund}/{id}")
+    @GetMapping("/{kind}/{id}")
     @RequiresConsole(ConsoleScreen.DISPUTES)
     Detail detail(@PathVariable String kind, @PathVariable String id) {
-        return desk.detail(kind, id).orElseThrow(() -> new NotFound(kind, id));
+        return desk.detail(kind(kind, id), id).orElseThrow(() -> new NotFound(kind, id));
     }
 
     @GetMapping("/dispute/{id}/evidence/{evidenceId}")
@@ -103,7 +103,7 @@ class DisputesController {
                 .body(file.bytes().toArray());
     }
 
-    @PostMapping("/{kind:dispute|refund}/{id}/decision")
+    @PostMapping("/{kind}/{id}/decision")
     @RequiresConsole(value = ConsoleScreen.DISPUTES, actions = ConsoleAction.DECIDE)
     Item decide(
             @PathVariable String kind,
@@ -111,13 +111,21 @@ class DisputesController {
             @Valid @RequestBody DecisionRequest body,
             CurrentStaff staff) {
         return desk.decide(new AgentCases.Decide(
-                kind,
+                kind(kind, id),
                 id,
                 AgentCases.Outcome.valueOf(body.outcome().toUpperCase(Locale.ROOT)),
                 body.refundCents() == null ? 0 : body.refundCents(),
                 body.note(),
                 staff.userId(),
                 staff.roleCodes()));
+    }
+
+    /** {@code dispute | refund}; anything else is a case that doesn't exist. */
+    private static String kind(String kind, String id) {
+        if (!"dispute".equals(kind) && !"refund".equals(kind)) {
+            throw new NotFound("case", id);
+        }
+        return kind;
     }
 
     @PostMapping("/decisions/{decisionId}/cosign")
