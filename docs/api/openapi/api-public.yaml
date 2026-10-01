@@ -2401,6 +2401,59 @@ paths:
       security: []
       tags:
       - public-shop-controller
+  /api/v1/public/sitemap:
+    get:
+      operationId: sitemapIndex
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SitemapIndex"
+          description: OK
+      security: []
+      tags:
+      - sitemap-controller
+  /api/v1/public/sitemap/{section}:
+    get:
+      operationId: sitemapSection
+      parameters:
+      - in: path
+        name: section
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: page
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 1
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SitemapPage"
+          description: OK
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      security: []
+      tags:
+      - sitemap-controller
   /api/v1/public/storefronts/by-host:
     get:
       operationId: publicStorefrontByHost
@@ -4969,6 +5022,44 @@ components:
           type: string
         packed:
           type: boolean
+    SitemapEntry:
+      type: object
+      properties:
+        customDomain:
+          type: string
+        key:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+    SitemapIndex:
+      type: object
+      properties:
+        pageSize:
+          type: integer
+          format: int32
+        sections:
+          type: array
+          items:
+            $ref: "#/components/schemas/SitemapSection"
+    SitemapPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SitemapEntry"
+    SitemapSection:
+      type: object
+      properties:
+        count:
+          type: integer
+          format: int64
+        name:
+          type: string
+        pages:
+          type: integer
+          format: int32
     Slot:
       type: object
       properties:

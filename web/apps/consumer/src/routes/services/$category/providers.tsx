@@ -6,6 +6,7 @@ import { ProviderList } from '../../../features/services/ProviderList';
 import { ServiceCategorySkeleton } from '../../../features/services/ServiceCategory';
 import { categoryName } from '../../../features/services/taxonomy';
 import { pageTitle } from '../../../features/shell/messages';
+import { seo } from '../../../lib/seo';
 
 /**
  * Provider list (S-53): design 06 `providers`. The category is rendered on the server; the providers covering the
@@ -20,13 +21,17 @@ export const Route = createFileRoute('/services/$category/providers')({
       throw e;
     }
   },
-  head: ({ match, loaderData }) => {
+  head: ({ match, loaderData, params }) => {
     const locale = match.context.locale;
     const name = loaderData ? categoryName(loaderData.slug, loaderData.names, locale).text : undefined;
-    return {
-      meta: [{ title: name ? `${name} · ${locale === 'fr' ? 'Prestataires' : 'Providers'} · Northline` : pageTitle(locale, 'providers') }],
-      links: [{ rel: 'stylesheet', href: servicesCss }],
-    };
+    const tags = seo(match.context, {
+      title: name ? `${name} · ${locale === 'fr' ? 'Prestataires' : 'Providers'} · Northline` : pageTitle(locale, 'providers'),
+      path: `/services/${params.category}/providers`,
+      description: name && (locale === 'fr'
+        ? `${name} : comparez les prestataires vérifiés près de chez vous — niveau, ponctualité, avis.`
+        : `${name}: compare verified providers near you — tier, on-time rate, reviews.`),
+    });
+    return { ...tags, links: [...tags.links, { rel: 'stylesheet', href: servicesCss }] };
   },
   pendingComponent: ServiceCategorySkeleton,
   component: ProvidersRoute,
