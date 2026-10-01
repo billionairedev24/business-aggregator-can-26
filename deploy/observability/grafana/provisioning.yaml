@@ -1,0 +1,11 @@
+# Loads deploy/observability/grafana/dashboards into the local Grafana (docker compose --profile observability).
+# Grafana Cloud / Amazon Managed Grafana / Azure Managed Grafana: import the same JSON files (docs/runbooks/observability.md).
+apiVersion: 1
+providers:
+  - name: Northline
+    folder: Northline
+    type: file
+    disableDeletion: true
+    options:
+      path: /otel-lgtm/grafana/conf/provisioning/dashboards/northline
+      foldersFromFilesStructure: false

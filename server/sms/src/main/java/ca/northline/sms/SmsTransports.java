@@ -44,10 +44,11 @@ public final class SmsTransports {
 
     public static SmsTransport local(Environment environment) {
         refuseLocal(environment);
-        if (environment.matchesProfiles("dev")) {
-            log.warn("SMS_PROVIDER=local: text messages are written to the log, not sent");
+        var reveal = environment.matchesProfiles("local | test");
+        if (!reveal) {
+            log.warn("SMS_PROVIDER=local: text messages are neither sent nor logged (S-112)");
         }
-        return new LoggingSmsTransport();
+        return new LoggingSmsTransport(reveal);
     }
 
     /** {@code local} is a developer fake: staging and prod must send for real. */

@@ -42,6 +42,18 @@ let base = '';
 export function setHttpBase(origin: string) { base = origin.replace(/\/$/, ''); }
 const resolve = (path: string) => (path.startsWith('/') ? base + path : path);
 
+/**
+ * A new W3C trace context for one call (S-111, docs/runbooks/observability.md): `00-<trace id>-<parent id>-01`. The BFF
+ * continues this trace through the api, the database and Kafka, so a request seen in the browser's network panel can
+ * be found in the tracing backend by its trace id. The browser exports no spans itself; the flag only asks — each
+ * service decides on the trace id with the same ratio (ConsistentSampling), so a caller can't force sampling.
+ */
+export function traceparent(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(24));
+  const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+  return `00-${hex.slice(0, 32)}-${hex.slice(32)}-01`;
+}
+
 export interface RequestOptions { method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; body?: unknown; idempotencyKey?: string; signal?: AbortSignal; headers?: Record<string, string> }
 
 /**
@@ -54,6 +66,8 @@ export async function http<T = unknown>(path: string, opts: RequestOptions = {},
   if (opts.body !== undefined && !(opts.body instanceof FormData)) headers['content-type'] = 'application/json';
   if (method !== 'GET') { const t = xsrfToken(); if (t) headers['x-xsrf-token'] = t; }
   if (opts.idempotencyKey) headers['idempotency-key'] = opts.idempotencyKey;
+  // Same-origin (the BFF) only: another origin's CORS policy may not allow the header.
+  if (path.startsWith('/') && !headers.traceparent) headers.traceparent = traceparent();
   const res = await fetch(resolve(path), { method, headers, credentials: 'include', signal: opts.signal, body: opts.body === undefined ? undefined : opts.body instanceof FormData ? opts.body : JSON.stringify(opts.body) });
   const text = await res.text();
   const data: unknown = text ? safeJson(text) : undefined;

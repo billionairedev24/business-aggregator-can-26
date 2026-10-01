@@ -1,0 +1,73 @@
+# The local OpenTelemetry Collector (docker compose --profile observability, S-111): the same processors as the chart's
+# Collector (deploy/helm/northline/templates/_helpers.tpl → northline.collectorConfig), exporting to the local
+# Grafana LGTM stack (Tempo, Mimir/Prometheus, Loki). Apps on your machine send to localhost:4318 (OTLP/HTTP).
+receivers:
+  otlp:
+    protocols:
+      grpc: { endpoint: "0.0.0.0:4317" }
+      http: { endpoint: "0.0.0.0:4318" }
+
+processors:
+  memory_limiter: { check_interval: 1s, limit_mib: 400, spike_limit_mib: 80 }
+  resource:
+    attributes:
+      - { key: deployment.environment.name, value: local, action: upsert }
+  attributes/scrub:
+    actions:
+      - { pattern: "^jdbc\\.params.*", action: delete }
+      - { pattern: "^http\\.request\\.header\\.(authorization|cookie|x-xsrf-token|x-dev-user)$", action: delete }
+      - { pattern: "^http\\.response\\.header\\.set-cookie$", action: delete }
+      - { key: enduser.id, action: delete }
+      - { key: user.email, action: delete }
+  # S-112: the same log/span redaction as the chart (generated from deploy/helm/northline/templates/_helpers.tpl).
+  transform/redact:
+    error_mode: ignore
+    log_statements:
+    - context: log
+      statements:
+      - replace_pattern(body, "(?i)(bearer|basic|dpop)\\s+[A-Za-z0-9._~+/=-]{8,}", "$$1 [REDACTED]")
+      - replace_all_patterns(attributes, "value", "(?i)(bearer|basic|dpop)\\s+[A-Za-z0-9._~+/=-]{8,}", "$$1 [REDACTED]")
+      - replace_pattern(body, "eyJ[A-Za-z0-9_-]{5,}\\.[A-Za-z0-9_-]{5,}\\.[A-Za-z0-9_-]*", "[REDACTED]")
+      - replace_all_patterns(attributes, "value", "eyJ[A-Za-z0-9_-]{5,}\\.[A-Za-z0-9_-]{5,}\\.[A-Za-z0-9_-]*", "[REDACTED]")
+      - replace_pattern(body, "[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*\\.[A-Za-z]{2,}", "[EMAIL]")
+      - replace_all_patterns(attributes, "value", "[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*\\.[A-Za-z]{2,}", "[EMAIL]")
+      - replace_pattern(body, "\\b\\d(?:[ -]?\\d){12,18}\\b", "[CARD]")
+      - replace_all_patterns(attributes, "value", "\\b\\d(?:[ -]?\\d){12,18}\\b", "[CARD]")
+      - replace_pattern(body, "(\\+?1[ .-]?)?\\(?\\b[2-9]\\d{2}\\)?[ .-]?[2-9]\\d{2}[ .-]?\\d{4}\\b", "[PHONE]")
+      - replace_all_patterns(attributes, "value", "(\\+?1[ .-]?)?\\(?\\b[2-9]\\d{2}\\)?[ .-]?[2-9]\\d{2}[ .-]?\\d{4}\\b", "[PHONE]")
+      - replace_pattern(body, "\\b([ABCEGHJ-NPRSTVXY]\\d[ABCEGHJ-NPRSTV-Z]) ?\\d[ABCEGHJ-NPRSTV-Z]\\d\\b", "$$1 ***")
+      - replace_all_patterns(attributes, "value", "\\b([ABCEGHJ-NPRSTVXY]\\d[ABCEGHJ-NPRSTV-Z]) ?\\d[ABCEGHJ-NPRSTV-Z]\\d\\b", "$$1 ***")
+    trace_statements:
+    - context: span
+      statements:
+      - replace_all_patterns(attributes, "value", "(?i)(bearer|basic|dpop)\\s+[A-Za-z0-9._~+/=-]{8,}", "$$1 [REDACTED]")
+      - replace_all_patterns(attributes, "value", "eyJ[A-Za-z0-9_-]{5,}\\.[A-Za-z0-9_-]{5,}\\.[A-Za-z0-9_-]*", "[REDACTED]")
+      - replace_all_patterns(attributes, "value", "[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*\\.[A-Za-z]{2,}", "[EMAIL]")
+      - replace_all_patterns(attributes, "value", "\\b\\d(?:[ -]?\\d){12,18}\\b", "[CARD]")
+      - replace_all_patterns(attributes, "value", "(\\+?1[ .-]?)?\\(?\\b[2-9]\\d{2}\\)?[ .-]?[2-9]\\d{2}[ .-]?\\d{4}\\b", "[PHONE]")
+      - replace_all_patterns(attributes, "value", "\\b([ABCEGHJ-NPRSTVXY]\\d[ABCEGHJ-NPRSTV-Z]) ?\\d[ABCEGHJ-NPRSTV-Z]\\d\\b", "$$1 ***")
+  batch: { send_batch_size: 1024, timeout: 2s }
+
+exporters:
+  otlphttp/lgtm:
+    endpoint: http://lgtm:4318
+  debug: { verbosity: basic }
+
+extensions:
+  health_check: { endpoint: "0.0.0.0:13133" }
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, attributes/scrub, transform/redact, batch]
+      exporters: [otlphttp/lgtm]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlphttp/lgtm]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, attributes/scrub, transform/redact, batch]
+      exporters: [otlphttp/lgtm]
