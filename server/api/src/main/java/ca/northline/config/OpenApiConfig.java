@@ -44,7 +44,7 @@ class OpenApiConfig {
     static final String[] PUBLIC_READS = {
         "/api/v1/public/**", "/api/v1/storefronts/**", "/api/v1/search/**", "/api/v1/geo/**"
     };
-    static final String[] CUSTOMER = {"/api/v1/me", "/api/v1/me/**"};
+    static final String[] CUSTOMER = {"/api/v1/me", "/api/v1/me/**", "/api/v1/cart", "/api/v1/cart/**"};
     static final String[] STUDIO = {
         "/api/v1/merchants/**",
         "/api/v1/me",
@@ -66,6 +66,7 @@ class OpenApiConfig {
         return GroupedOpenApi.builder()
                 .group("public")
                 .displayName("Public & consumer")
+                .addOpenApiCustomizer(ApiDocs.base(props))
                 .pathsToMatch(concat(PUBLIC_READS, CUSTOMER))
                 .pathsToExclude("/api/v1/me/businesses")
                 .addOpenApiCustomizer(schemes(props))
@@ -86,6 +87,7 @@ class OpenApiConfig {
         return GroupedOpenApi.builder()
                 .group("studio")
                 .displayName("Studio (businesses)")
+                .addOpenApiCustomizer(ApiDocs.base(props))
                 .pathsToMatch(STUDIO)
                 .addOpenApiCustomizer(schemes(props))
                 .addOpenApiCustomizer(api -> {
@@ -107,6 +109,7 @@ class OpenApiConfig {
         return GroupedOpenApi.builder()
                 .group("partner")
                 .displayName("Partners")
+                .addOpenApiCustomizer(ApiDocs.base(props))
                 .pathsToMatch("/api/v1/merchants/**")
                 .addOpenApiMethodFilter(method -> method.isAnnotationPresent(PartnerAccess.class))
                 .addOperationCustomizer((operation, handler) -> {
@@ -134,6 +137,7 @@ class OpenApiConfig {
         return GroupedOpenApi.builder()
                 .group("console")
                 .displayName("Console (staff)")
+                .addOpenApiCustomizer(ApiDocs.base(props))
                 .pathsToMatch(CONSOLE)
                 .addOpenApiCustomizer(schemes(props))
                 .addOpenApiCustomizer(api -> {
@@ -152,6 +156,7 @@ class OpenApiConfig {
         return GroupedOpenApi.builder()
                 .group("webhooks")
                 .displayName("Partner webhooks")
+                .addOpenApiCustomizer(ApiDocs.base(props))
                 .pathsToMatch("/none-webhooks-have-no-paths")
                 .addOpenApiCustomizer(api -> {
                     ApiDocs.describeGroup(api, "Webhooks", """
@@ -169,6 +174,7 @@ class OpenApiConfig {
         return GroupedOpenApi.builder()
                 .group("internal")
                 .displayName("Internal (providers, links, dev)")
+                .addOpenApiCustomizer(ApiDocs.base(props))
                 .pathsToMatch(INTERNAL)
                 .addOpenApiCustomizer(schemes(props))
                 .addOpenApiCustomizer(api -> {

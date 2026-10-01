@@ -116,6 +116,33 @@ public final class ApiDocs {
                         .required(List.of("errors")));
     }
 
+    /**
+     * Each group's first customizer: info, the fixed {@code servers} (never the request's host, so the committed specs
+     * are reproducible) and the shared schemas. Per group rather than one {@code OpenAPI} bean, which springdoc would
+     * reuse — and mutate — for every group.
+     */
+    public static org.springdoc.core.customizers.OpenApiCustomizer base(DocsProperties props) {
+        return openApi -> {
+            openApi.info(new io.swagger.v3.oas.models.info.Info()
+                    .title(props.title())
+                    .version("v1")
+                    .description(props.description())
+                    .contact(new io.swagger.v3.oas.models.info.Contact()
+                            .name("Northline")
+                            .url("https://northline.ca"))
+                    .license(new io.swagger.v3.oas.models.info.License()
+                            .name("Proprietary")
+                            .identifier("LicenseRef-Northline")));
+            openApi.servers(props.servers().stream()
+                    .map(url -> new io.swagger.v3.oas.models.servers.Server().url(url))
+                    .toList());
+            if (openApi.getComponents() == null) {
+                openApi.components(new Components());
+            }
+            addSharedSchemas(openApi.getComponents());
+        };
+    }
+
     /** The Northline conventions ({@link ApiConventions}); add it as each group's last customizer. */
     public static org.springdoc.core.customizers.OpenApiCustomizer conventions() {
         return new ApiConventions();

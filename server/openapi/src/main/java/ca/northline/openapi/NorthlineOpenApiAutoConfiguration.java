@@ -1,22 +1,18 @@
 package ca.northline.openapi;
 
-import io.swagger.v3.oas.models.Components;
-import io.swagger.v3.oas.models.OpenAPI;
-import io.swagger.v3.oas.models.info.Contact;
-import io.swagger.v3.oas.models.info.Info;
-import io.swagger.v3.oas.models.info.License;
-import io.swagger.v3.oas.models.servers.Server;
 import java.util.List;
+import org.springdoc.core.customizers.GlobalOperationCustomizer;
 import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
+import org.springframework.web.servlet.function.RouterFunction;
+import org.springframework.web.servlet.function.ServerResponse;
 
 /**
  * S-125: the shared OpenAPI setup of the api, northline-auth and the BFF. Off with {@code northline.docs.enabled=false}
@@ -29,28 +25,27 @@ import org.springframework.core.env.Environment;
 @EnableConfigurationProperties(DocsProperties.class)
 public class NorthlineOpenApiAutoConfiguration {
 
-    /** Info, servers (fixed, so the committed specs don't depend on the request) and the shared schemas. */
+    /**
+     * Stable, readable operation ids: {@code <controller without "Controller"><Method>}, e.g. {@code listingList} —
+     * springdoc's default ({@code list_5}) renumbers whenever another controller adds a {@code list} method, which would
+     * churn the committed specs and every generated client.
+     */
     @Bean
-    @ConditionalOnMissingBean
-    OpenAPI northlineOpenApi(DocsProperties props) {
-        var components = new Components();
-        ApiDocs.addSharedSchemas(components);
-        return new OpenAPI()
-                .info(new Info()
-                        .title(props.title())
-                        .version("v1")
-                        .description(props.description())
-                        .contact(new Contact().name("Northline").url("https://northline.ca"))
-                        .license(new License().name("Proprietary").identifier("LicenseRef-Northline")))
-                .servers(props.servers().stream()
-                        .map(url -> new Server().url(url))
-                        .toList())
-                .components(components);
+    GlobalOperationCustomizer northlineOperationIds() {
+        return (operation, handler) -> {
+            var type = handler.getBeanType().getSimpleName().replaceFirst("(Rest)?Controller$", "");
+            var method = handler.getMethod().getName();
+            operation.setOperationId(Character.toLowerCase(type.charAt(0))
+                    + type.substring(1)
+                    + Character.toUpperCase(method.charAt(0))
+                    + method.substring(1));
+            return operation;
+        };
     }
 
     @Bean
-    DocsPagesController northlineDocsPages(
+    RouterFunction<ServerResponse> northlineDocsPages(
             DocsProperties props, ObjectProvider<List<GroupedOpenApi>> groups, Environment environment) {
-        return new DocsPagesController(props, groups, environment);
+        return new DocsPagesController(props, groups, environment).routes();
     }
 }

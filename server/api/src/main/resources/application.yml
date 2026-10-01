@@ -64,7 +64,6 @@ management.endpoints.web.exposure.include: health,info,prometheus,modulith
 # (/swagger-ui.html), Scalar (/docs/scalar) and Redoc (/docs/redoc); landing page /docs. Off in prod (application-prod.yml).
 springdoc:
   api-docs.path: /v3/api-docs
-  paths-to-match: /api/**
   writer-with-order-by-keys: true          # stable output: the committed specs are compared byte for byte
   override-with-generic-response: false    # error responses come from ApiDocs conventions, not every @ExceptionHandler
   swagger-ui:

@@ -1,6 +1,7 @@
 package ca.northline.openapi;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
@@ -10,22 +11,25 @@ import org.springframework.core.env.Environment;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.function.RouterFunction;
+import org.springframework.web.servlet.function.RouterFunctions;
+import org.springframework.web.servlet.function.ServerResponse;
 import org.springframework.web.util.HtmlUtils;
 
 /**
  * {@code <base>/docs}: a landing page listing every group with its three viewers (Swagger UI and Scalar from springdoc's
- * starters, Redoc from here) and the raw specs; {@code <base>/docs/redoc}: Redoc with a group picker. Redoc's bundle is
- * served from the classpath (fetched from the npm registry at build time, see openapi/build.gradle.kts); no page loads
- * anything from another origin, and no page has an inline script (the CSP of {@link DocsSecurityConfiguration}).
+ * starters — Scalar shows every group on one page, with a document switcher —, Redoc from here) and the raw specs;
+ * {@code <base>/docs/redoc}: Redoc with a group picker. Redoc's bundle is served from the classpath (fetched from the
+ * npm registry at build time, see openapi/build.gradle.kts); no page loads anything from another origin, and no page
+ * has an inline script (the CSP of {@link DocsSecurityConfiguration}). Functional routes rather than a
+ * {@code @Controller}: the api scans {@code ca.northline.**}, which would register an annotated controller twice.
  */
-@ResponseBody
 final class DocsPagesController {
 
     private static final CacheControl ASSETS =
             CacheControl.maxAge(Duration.ofHours(1)).cachePublic();
+    private static final MediaType JS = MediaType.parseMediaType("text/javascript;charset=UTF-8");
+    private static final MediaType CSS = MediaType.parseMediaType("text/css;charset=UTF-8");
 
     private final DocsProperties props;
     private final ObjectProvider<List<GroupedOpenApi>> groups;
@@ -37,19 +41,27 @@ final class DocsPagesController {
         this.environment = environment;
     }
 
-    @GetMapping(path = "${northline.docs.base-path:}/docs", produces = MediaType.TEXT_HTML_VALUE)
-    String landing() throws IOException {
+    RouterFunction<ServerResponse> routes() {
+        return RouterFunctions.route()
+                .GET(props.path("/docs"), _ -> html(landing()))
+                .GET(props.path("/docs/redoc"), _ -> html(redoc()))
+                .GET(props.path("/docs/redoc/redoc.standalone.js"), _ -> asset("redoc/redoc.standalone.js", JS))
+                .GET(props.path("/docs/assets/redoc-init.js"), _ -> asset("redoc-init.js", JS))
+                .GET(props.path("/docs/assets/docs.css"), _ -> asset("docs.css", CSS))
+                .build();
+    }
+
+    String landing() {
         var rows = new StringBuilder();
         for (var group : groups()) {
             var name = group.getGroup();
-            var label = group.getDisplayName() == null ? name : group.getDisplayName();
             rows.append("<tr><th scope=\"row\">")
-                    .append(esc(label))
+                    .append(esc(label(group)))
                     .append("<br><code>")
                     .append(esc(name))
                     .append("</code></th><td>")
                     .append(link(swaggerUi() + "?urls.primaryName=" + name, "Swagger UI"))
-                    .append(link(scalar() + "/" + name, "Scalar"))
+                    .append(link(scalar(), "Scalar"))
                     .append(link(props.path("/docs/redoc") + "?group=" + name, "Redoc"))
                     .append("</td><td>")
                     .append(link(apiDocs() + "/" + name, "JSON"))
@@ -62,17 +74,15 @@ final class DocsPagesController {
                 .replace("{{rows}}", rows.toString());
     }
 
-    @GetMapping(path = "${northline.docs.base-path:}/docs/redoc", produces = MediaType.TEXT_HTML_VALUE)
-    String redoc() throws IOException {
+    String redoc() {
         var options = new StringBuilder();
         for (var group : groups()) {
-            var label = group.getDisplayName() == null ? group.getGroup() : group.getDisplayName();
             options.append("<option value=\"")
                     .append(esc(apiDocs() + "/" + group.getGroup()))
                     .append("\" data-group=\"")
                     .append(esc(group.getGroup()))
                     .append("\">")
-                    .append(esc(label))
+                    .append(esc(label(group)))
                     .append("</option>");
         }
         return template("redoc.html")
@@ -81,23 +91,13 @@ final class DocsPagesController {
                 .replace("{{options}}", options.toString());
     }
 
-    @GetMapping(path = "${northline.docs.base-path:}/docs/redoc/redoc.standalone.js", produces = "text/javascript")
-    ResponseEntity<byte[]> redocBundle() throws IOException {
-        return asset("redoc/redoc.standalone.js", "text/javascript");
-    }
-
-    @GetMapping(path = "${northline.docs.base-path:}/docs/assets/redoc-init.js", produces = "text/javascript")
-    ResponseEntity<byte[]> redocInit() throws IOException {
-        return asset("redoc-init.js", "text/javascript");
-    }
-
-    @GetMapping(path = "${northline.docs.base-path:}/docs/assets/docs.css", produces = "text/css")
-    ResponseEntity<byte[]> css() throws IOException {
-        return asset("docs.css", "text/css");
-    }
-
     private List<GroupedOpenApi> groups() {
         return groups.getIfAvailable(List::of);
+    }
+
+    private static String label(GroupedOpenApi group) {
+        var display = group.getDisplayName();
+        return display == null || display.isBlank() ? group.getGroup() : display;
     }
 
     private String apiDocs() {
@@ -112,6 +112,20 @@ final class DocsPagesController {
         return environment.getProperty("scalar.path", "/scalar");
     }
 
+    private static ServerResponse html(String body) {
+        return ServerResponse.ok()
+                .contentType(MediaType.parseMediaType("text/html;charset=UTF-8"))
+                .body(body);
+    }
+
+    private static ServerResponse asset(String name, MediaType type) throws IOException {
+        var resource = new ClassPathResource("northline-docs/" + name);
+        if (!resource.exists()) {
+            return ServerResponse.notFound().build();
+        }
+        return ServerResponse.ok().cacheControl(ASSETS).contentType(type).body(resource.getContentAsByteArray());
+    }
+
     private static String link(String href, String text) {
         return "<a href=\"" + esc(href) + "\">" + text + "</a> ";
     }
@@ -120,18 +134,11 @@ final class DocsPagesController {
         return HtmlUtils.htmlEscape(text);
     }
 
-    private static String template(String name) throws IOException {
-        return new ClassPathResource("northline-docs/" + name).getContentAsString(StandardCharsets.UTF_8);
-    }
-
-    private static ResponseEntity<byte[]> asset(String name, String type) throws IOException {
-        var resource = new ClassPathResource("northline-docs/" + name);
-        if (!resource.exists()) {
-            return ResponseEntity.notFound().build();
+    private static String template(String name) {
+        try {
+            return new ClassPathResource("northline-docs/" + name).getContentAsString(StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
-        return ResponseEntity.ok()
-                .cacheControl(ASSETS)
-                .contentType(MediaType.parseMediaType(type + ";charset=UTF-8"))
-                .body(resource.getContentAsByteArray());
     }
 }
