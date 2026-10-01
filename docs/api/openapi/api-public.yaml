@@ -539,6 +539,342 @@ paths:
           description: Your sign-in doesn't allow this.
       tags:
       - me-controller
+  /api/v1/me/bookings/checkout:
+    post:
+      operationId: myBookingsCheckout
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        required: false
+        schema:
+          type: string
+      - in: header
+        name: X-Step-Up
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: user
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentUser"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - my-bookings-controller
+  /api/v1/me/bookings/holds:
+    post:
+      operationId: myBookingsHold
+      parameters:
+      - in: query
+        name: user
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentUser"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HoldRequest"
+        required: true
+      responses:
+        "201":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/HoldView"
+          description: Created
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - my-bookings-controller
+  /api/v1/me/bookings/holds/{holdId}:
+    delete:
+      operationId: myBookingsRelease
+      parameters:
+      - in: path
+        name: holdId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: user
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentUser"
+      responses:
+        "200":
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - my-bookings-controller
+  /api/v1/me/bookings/holds/{holdId}/confirm:
+    post:
+      operationId: myBookingsConfirm
+      parameters:
+      - in: path
+        name: holdId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: header
+        name: Idempotency-Key
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: user
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentUser"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - my-bookings-controller
+  /api/v1/me/bookings/{bookingId}:
+    get:
+      operationId: myBookingsBooking
+      parameters:
+      - in: path
+        name: bookingId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: user
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentUser"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Confirmation"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - my-bookings-controller
   /api/v1/me/checkout:
     get:
       operationId: checkoutSetup
@@ -1221,6 +1557,455 @@ paths:
           description: Not found.
       tags:
       - consumer-order-controller
+  /api/v1/me/quote-requests:
+    post:
+      operationId: myQuotesRequest
+      parameters:
+      - in: query
+        name: user
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentUser"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuoteAsk"
+        required: true
+      responses:
+        "201":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Requested"
+          description: Created
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - my-quotes-controller
+  /api/v1/me/quote-requests/{requestId}:
+    get:
+      operationId: myQuotesCompare
+      parameters:
+      - in: path
+        name: requestId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: lang
+        required: false
+        schema:
+          type: string
+          default: en
+      - in: query
+        name: user
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentUser"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Comparison"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - my-quotes-controller
+  /api/v1/me/quotes/{quoteId}:
+    get:
+      operationId: myQuotesQuote
+      parameters:
+      - in: path
+        name: quoteId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: lang
+        required: false
+        schema:
+          type: string
+          default: en
+      - in: query
+        name: user
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentUser"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/QuotePage"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - my-quotes-controller
+  /api/v1/me/quotes/{quoteId}/accept:
+    post:
+      operationId: myQuotesAccept
+      parameters:
+      - in: path
+        name: quoteId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: header
+        name: Idempotency-Key
+        required: false
+        schema:
+          type: string
+      - in: header
+        name: X-Step-Up
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: user
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentUser"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuoteVisit"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - my-quotes-controller
+  /api/v1/me/quotes/{quoteId}/accept/confirm:
+    post:
+      operationId: myQuotesConfirm
+      parameters:
+      - in: path
+        name: quoteId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: header
+        name: Idempotency-Key
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: user
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentUser"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuoteVisit"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - my-quotes-controller
+  /api/v1/me/quotes/{quoteId}/decline:
+    post:
+      operationId: myQuotesDecline
+      parameters:
+      - in: path
+        name: quoteId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: user
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentUser"
+      responses:
+        "200":
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - my-quotes-controller
   /api/v1/public/catalogue/media/{mediaId}:
     get:
       operationId: publicMediaContent
@@ -1350,6 +2135,258 @@ paths:
       security: []
       tags:
       - public-kitchen-controller
+  /api/v1/public/providers/{slug}:
+    get:
+      operationId: publicProvidersProvider
+      parameters:
+      - in: path
+        name: slug
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: lang
+        required: false
+        schema:
+          type: string
+          default: en
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ProviderPage"
+          description: OK
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      security: []
+      tags:
+      - public-providers-controller
+  /api/v1/public/providers/{slug}/reviews:
+    get:
+      operationId: publicProvidersReviews
+      parameters:
+      - in: path
+        name: slug
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: offset
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - in: query
+        name: limit
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 10
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ReviewPage"
+          description: OK
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      security: []
+      tags:
+      - public-providers-controller
+  /api/v1/public/providers/{slug}/slots:
+    get:
+      operationId: myBookingsSlots
+      parameters:
+      - in: path
+        name: slug
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: serviceId
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: from
+        required: false
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: days
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 7
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Calendar"
+          description: OK
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      security: []
+      tags:
+      - my-bookings-controller
+  /api/v1/public/services:
+    get:
+      operationId: publicServicesLanding
+      parameters:
+      - in: query
+        name: lang
+        required: false
+        schema:
+          type: string
+          default: en
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Landing"
+          description: OK
+      security: []
+      tags:
+      - public-services-controller
+  /api/v1/public/services/{slug}:
+    get:
+      operationId: publicServicesCategory
+      parameters:
+      - in: path
+        name: slug
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: lang
+        required: false
+        schema:
+          type: string
+          default: en
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Category"
+          description: OK
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      security: []
+      tags:
+      - public-services-controller
+  /api/v1/public/services/{slug}/providers:
+    get:
+      operationId: publicServicesProviders
+      parameters:
+      - in: path
+        name: slug
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: lat
+        required: false
+        schema:
+          type: number
+          format: double
+      - in: query
+        name: lng
+        required: false
+        schema:
+          type: number
+          format: double
+      - in: query
+        name: city
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: lang
+        required: false
+        schema:
+          type: string
+          default: en
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Providers"
+          description: OK
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      security: []
+      tags:
+      - public-services-controller
   /api/v1/public/shop:
     get:
       operationId: publicShopLanding
@@ -2090,6 +3127,51 @@ components:
           type: string
         unit:
           type: string
+    BookingRequest:
+      type: object
+      properties:
+        accessNote:
+          type: string
+        addressLine:
+          type: string
+        agreePolicies:
+          type: boolean
+        agreeTerms:
+          type: boolean
+        area:
+          type: string
+        consult:
+          $ref: "#/components/schemas/Consult"
+        contactPhone:
+          type: string
+        contactPreference:
+          type: string
+        description:
+          type: string
+        event:
+          $ref: "#/components/schemas/Event"
+        flexibility:
+          type: string
+        holdId:
+          type: string
+        home:
+          $ref: "#/components/schemas/Home"
+        hours:
+          type: number
+        present:
+          type: string
+        serviceId:
+          type: string
+        spot:
+          type: string
+        staff:
+          type: string
+        unit:
+          type: string
+        urgency:
+          type: string
+        vehicle:
+          $ref: "#/components/schemas/Vehicle"
     BucketResponse:
       type: object
       properties:
@@ -2146,6 +3228,18 @@ components:
           type: array
           items:
             type: string
+    Calendar:
+      type: object
+      properties:
+        days:
+          type: array
+          items:
+            $ref: "#/components/schemas/Day"
+        durationMin:
+          type: integer
+          format: int32
+        serviceId:
+          type: string
     Card:
       type: object
       properties:
@@ -2271,10 +3365,41 @@ components:
     Category:
       type: object
       properties:
+        group:
+          $ref: "#/components/schemas/Group"
         id:
           type: string
-        name:
+        jobs:
+          type: array
+          items:
+            $ref: "#/components/schemas/Job"
+        kind:
           type: string
+          enum:
+          - visit
+          - home
+          - event
+          - appointment
+          - consult
+        names:
+          type: object
+          additionalProperties:
+            type: string
+        providers:
+          type: integer
+          format: int32
+        provinces:
+          type: array
+          items:
+            type: string
+        quoteable:
+          type: boolean
+        regulatedRegistry:
+          type: string
+        slug:
+          type: string
+        vehicle:
+          type: boolean
     CategoryRef:
       type: object
       properties:
@@ -2345,6 +3470,92 @@ components:
         qty:
           type: integer
           format: int32
+    Comparison:
+      type: object
+      properties:
+        area:
+          type: string
+        categorySlug:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        description:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        offers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Offer"
+        preferredAt:
+          type: string
+          format: date-time
+        ref:
+          type: string
+        requestId:
+          type: string
+        respondBy:
+          type: string
+          format: date-time
+        title:
+          type: string
+    Confirmation:
+      type: object
+      properties:
+        addressLine:
+          type: string
+        bookingId:
+          type: string
+        endsAt:
+          type: string
+          format: date-time
+        freeCancelUntil:
+          type: string
+          format: date-time
+        heldCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        memberFirstName:
+          type: string
+        priceCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        providerName:
+          type: string
+        providerSlug:
+          type: string
+        ref:
+          type: string
+        startsAt:
+          type: string
+          format: date-time
+        taxCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        title:
+          type: string
+        type:
+          type: string
+    Consult:
+      type: object
+      properties:
+        areas:
+          type: string
+        goal:
+          type: string
+        meeting:
+          type: string
+        preapproved:
+          type: string
+        priceRange:
+          type: string
+        timeline:
+          type: string
     CurrentUser:
       type: object
       properties:
@@ -2362,6 +3573,91 @@ components:
           uniqueItems: true
         userId:
           type: string
+    CustomerQuote:
+      type: object
+      properties:
+        currentQuoteId:
+          type: string
+        depositBps:
+          type: integer
+          format: int32
+        depositCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        depositKind:
+          type: string
+        durationMin:
+          type: integer
+          format: int32
+        exclusions:
+          type: string
+        expired:
+          type: boolean
+        id:
+          type: string
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/Line"
+        merchantId:
+          type: string
+        proposedAt:
+          type: string
+          format: date-time
+        ref:
+          type: string
+        requestId:
+          type: string
+        scope:
+          type: string
+        sentAt:
+          type: string
+          format: date-time
+        state:
+          type: string
+        subtotalCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        taxBps:
+          type: integer
+          format: int32
+        taxCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        totalCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        validUntil:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          format: int32
+        versions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Version"
+        warranty:
+          type: string
+    Day:
+      type: object
+      properties:
+        closed:
+          type: string
+        date:
+          type: string
+          format: date
+        free:
+          type: integer
+          format: int32
+        slots:
+          type: array
+          items:
+            $ref: "#/components/schemas/Slot"
     Delivery:
       type: object
       properties:
@@ -2480,6 +3776,30 @@ components:
           description: Cents of Canadian dollars (CAD).
         soldOut:
           type: boolean
+    Event:
+      type: object
+      properties:
+        budget:
+          type: string
+        date:
+          type: string
+        duration:
+          type: string
+        guests:
+          type: integer
+          format: int32
+        occasion:
+          type: string
+        style:
+          type: array
+          items:
+            type: string
+        supplies:
+          type: string
+        time:
+          type: string
+        venue:
+          type: string
     FacetsResponse:
       type: object
       properties:
@@ -2511,25 +3831,20 @@ components:
     Group:
       type: object
       properties:
-        count:
-          type: integer
-          format: int32
         id:
           type: string
-        name:
-          type: string
-        options:
+        items:
           type: array
           items:
-            $ref: "#/components/schemas/Option"
-        required:
-          type: boolean
-        rule:
+            $ref: "#/components/schemas/Item"
+        key:
           type: string
-        showForOptionIds:
-          type: array
-          items:
+        names:
+          type: object
+          additionalProperties:
             type: string
+        note:
+          type: string
     HighlightResponse:
       type: object
       properties:
@@ -2539,6 +3854,57 @@ components:
         start:
           type: integer
           format: int32
+    HoldRequest:
+      type: object
+      properties:
+        hours:
+          type: number
+        serviceId:
+          type: string
+          minLength: 1
+        slug:
+          type: string
+          minLength: 1
+        startsAt:
+          type: string
+          format: date-time
+      required:
+      - serviceId
+      - slug
+      - startsAt
+    HoldView:
+      type: object
+      properties:
+        bookingId:
+          type: string
+        endsAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        holdId:
+          type: string
+        startsAt:
+          type: string
+          format: date-time
+    Home:
+      type: object
+      properties:
+        addons:
+          type: array
+          items:
+            type: string
+        baths:
+          type: string
+        beds:
+          type: string
+        pets:
+          type: string
+        size:
+          type: string
+        type:
+          type: string
     HomeSummary:
       type: object
       properties:
@@ -2567,6 +3933,26 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TrustedProvider"
+    Item:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum:
+          - visit
+          - home
+          - event
+          - appointment
+          - consult
+        names:
+          type: object
+          additionalProperties:
+            type: string
+        providers:
+          type: integer
+          format: int32
+        slug:
+          type: string
     ItemLine:
       type: object
       properties:
@@ -2581,6 +3967,22 @@ components:
         qty:
           type: integer
           format: int32
+    Job:
+      type: object
+      properties:
+        durationMin:
+          type: integer
+          format: int32
+        included:
+          type: string
+        name:
+          type: string
+        priceCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        pricingMode:
+          type: string
     Kitchens:
       type: object
       properties:
@@ -2850,6 +4252,19 @@ components:
           description: Cents of Canadian dollars (CAD).
         type:
           type: string
+    Other:
+      type: object
+      properties:
+        providerName:
+          type: string
+        quoteId:
+          type: string
+        state:
+          type: string
+        totalCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
     Payment:
       type: object
       properties:
@@ -2958,6 +4373,166 @@ components:
           type: boolean
         unit:
           type: string
+    ProviderCard:
+      type: object
+      properties:
+        blurb:
+          type: string
+        brandColor:
+          type: string
+        disputePct:
+          type: number
+          format: double
+        fromCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        instantBook:
+          type: boolean
+        merchantId:
+          type: string
+        name:
+          type: string
+        nextAvailable:
+          type: string
+          format: date-time
+        onTimePct:
+          type: number
+          format: double
+        pricingMode:
+          type: string
+        rating:
+          type: number
+          format: double
+        rebookPct:
+          type: number
+          format: double
+        reviewCount:
+          type: integer
+          format: int32
+        slug:
+          type: string
+        tier:
+          type: string
+        zones:
+          type: array
+          items:
+            type: string
+    ProviderPage:
+      type: object
+      properties:
+        category:
+          $ref: "#/components/schemas/CategoryRef"
+        city:
+          type: string
+        disputePct:
+          type: number
+          format: double
+        kind:
+          type: string
+          enum:
+          - visit
+          - home
+          - event
+          - appointment
+          - consult
+        merchantId:
+          type: string
+        name:
+          type: string
+        nextAvailable:
+          type: string
+          format: date-time
+        onTimePct:
+          type: number
+          format: double
+        quoteable:
+          type: boolean
+        rating:
+          type: number
+          format: double
+        rebookPct:
+          type: number
+          format: double
+        reviewCount:
+          type: integer
+          format: int32
+        reviews:
+          $ref: "#/components/schemas/ReviewPage"
+        services:
+          type: array
+          items:
+            $ref: "#/components/schemas/Service"
+        since:
+          type: string
+          format: date-time
+        slug:
+          type: string
+        taxBps:
+          type: integer
+          format: int32
+        tier:
+          type: string
+        vehicle:
+          type: boolean
+        verifiedFacts:
+          type: array
+          items:
+            type: string
+        zones:
+          type: array
+          items:
+            type: string
+    ProviderSummary:
+      type: object
+      properties:
+        brandColor:
+          type: string
+        disputePct:
+          type: number
+          format: double
+        merchantId:
+          type: string
+        name:
+          type: string
+        onTimePct:
+          type: number
+          format: double
+        rating:
+          type: number
+          format: double
+        reviewCount:
+          type: integer
+          format: int32
+        slug:
+          type: string
+        tier:
+          type: string
+        verifiedFacts:
+          type: array
+          items:
+            type: string
+    Providers:
+      type: object
+      properties:
+        area:
+          type: string
+        categorySlug:
+          type: string
+        city:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProviderCard"
+        kind:
+          type: string
+          enum:
+          - visit
+          - home
+          - event
+          - appointment
+          - consult
     Province:
       type: object
       properties:
@@ -2979,6 +4554,27 @@ components:
         taxBps:
           type: integer
           format: int32
+    PublicReview:
+      type: object
+      properties:
+        author:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        id:
+          type: string
+        jobLabel:
+          type: string
+        rating:
+          type: integer
+          format: int32
+        refType:
+          type: string
+        reply:
+          type: string
+        text:
+          type: string
     PublicSection:
       type: object
       properties:
@@ -3068,6 +4664,78 @@ components:
           type: integer
           format: int64
           description: Cents of Canadian dollars (CAD).
+    QuoteAsk:
+      type: object
+      properties:
+        area:
+          type: string
+        budget:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        eventDate:
+          type: string
+          format: date
+        guests:
+          type: integer
+          format: int32
+        note:
+          type: string
+        preferredDate:
+          type: string
+          format: date
+        providers:
+          type: array
+          items:
+            type: string
+        vehicle:
+          $ref: "#/components/schemas/Vehicle"
+    QuotePage:
+      type: object
+      properties:
+        area:
+          type: string
+        bookingId:
+          type: string
+        others:
+          type: array
+          items:
+            $ref: "#/components/schemas/Other"
+        provider:
+          $ref: "#/components/schemas/ProviderSummary"
+        quote:
+          $ref: "#/components/schemas/CustomerQuote"
+        title:
+          type: string
+    QuoteVisit:
+      type: object
+      properties:
+        accessNote:
+          type: string
+        addressLine:
+          type: string
+        contactPhone:
+          type: string
+        unit:
+          type: string
+    Requested:
+      type: object
+      properties:
+        expiresAt:
+          type: string
+          format: date-time
+        providers:
+          type: integer
+          format: int32
+        ref:
+          type: string
+        requestId:
+          type: string
+        respondBy:
+          type: string
+          format: date-time
     Resolution:
       type: object
       properties:
@@ -3184,6 +4852,16 @@ components:
           - registered
           - trusted
           - master
+    ReviewPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicReview"
+        nextOffset:
+          type: integer
+          format: int32
     Run:
       type: object
       properties:
@@ -3241,6 +4919,36 @@ components:
         menu:
           type: string
         name:
+          type: string
+    Service:
+      type: object
+      properties:
+        categorySlug:
+          type: string
+        durationMin:
+          type: integer
+          format: int32
+        id:
+          type: string
+        included:
+          type: string
+        instantBook:
+          type: boolean
+        kind:
+          type: string
+          enum:
+          - visit
+          - home
+          - event
+          - appointment
+          - consult
+        name:
+          type: string
+        priceCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        pricingMode:
           type: string
     Setup:
       type: object
@@ -3307,15 +5015,11 @@ components:
     Slot:
       type: object
       properties:
-        itemIds:
-          type: array
-          items:
-            type: string
-        label:
+        free:
+          type: boolean
+        startsAt:
           type: string
-        qty:
-          type: integer
-          format: int32
+          format: date-time
     SseEmitter:
       type: object
       properties:
@@ -3583,6 +5287,32 @@ components:
           type: string
         variantId:
           type: string
+    Vehicle:
+      type: object
+      properties:
+        make:
+          type: string
+        model:
+          type: string
+        year:
+          type: string
+    Version:
+      type: object
+      properties:
+        quoteId:
+          type: string
+        sentAt:
+          type: string
+          format: date-time
+        state:
+          type: string
+        totalCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        version:
+          type: integer
+          format: int32
     Waitlist:
       type: object
       properties:
