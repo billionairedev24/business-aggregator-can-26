@@ -5,8 +5,11 @@ import ca.northline.merchants.application.RegistryReviews.DecideReview;
 import ca.northline.merchants.application.RegistryReviews.ListReviews;
 import ca.northline.merchants.application.RegistryReviews.ReviewView;
 import ca.northline.shared.ListResponse;
+import ca.northline.shared.security.ConsoleAction;
+import ca.northline.shared.security.ConsoleScreen;
 import ca.northline.shared.security.CurrentUser;
 import ca.northline.shared.security.MerchantAccessDenied;
+import ca.northline.shared.security.RequiresConsole;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -25,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Platform console — registry verification queue (S-23): lookups that didn't match, with their evidence, and the
  * agent's decision. {@code /api/v1/console/**} needs role {@code STAFF}; a second factor is required too.
+ * S-90: the verification queue (admin, trust &amp; safety); deciding needs {@code verify}.
  *
  * <pre>
  * GET  /api/v1/console/registry-reviews[?limit=50]                                      {items: [ReviewView]}
@@ -53,12 +57,14 @@ class RegistryReviewController {
             String note) {}
 
     @GetMapping
+    @RequiresConsole(ConsoleScreen.VERIFY)
     ListResponse<ReviewView> open(@RequestParam(defaultValue = "50") int limit, CurrentUser user) {
         requireMfa(user);
         return new ListResponse<>(reviews.open(Math.clamp(limit, 1, 200)));
     }
 
     @PostMapping("/{id}/decision")
+    @RequiresConsole(value = ConsoleScreen.VERIFY, actions = ConsoleAction.VERIFY)
     ReviewView decide(@PathVariable String id, @Valid @RequestBody DecisionRequest body, CurrentUser user) {
         requireMfa(user);
         return decide.decide(new DecideReview.Command(
