@@ -3,10 +3,10 @@
 ##@ Docs and API specs
 
 # S-125 (docs/runbooks/api-docs.md): the specs are what the apps' OpenApiSpecsTest fetch from a booted context
-# (api, northline-auth, studio-bff and consumer-bff); -Popenapi.write=true writes them instead of comparing.
+# (api, northline-auth, studio-bff, consumer-bff and console-bff); -Popenapi.write=true writes them instead of comparing.
 REDOCLY_VERSION ?= 2.57.0
 openapi_tests = --no-parallel :api:test --tests '*OpenApiSpecsTest' :auth:test --tests '*OpenApiSpecsTest' \
-	:bff:test --tests '*BffSessionTest' --tests '*ConsumerBffOpenApiTest'
+	:bff:test --tests '*BffSessionTest' --tests '*ConsumerBffOpenApiTest' --tests '*ConsoleBffOpenApiTest'
 
 .PHONY: openapi
 openapi: ## Regenerate docs/api/openapi/*.yaml from the code (boots api, auth, bff in tests; Docker), then lint

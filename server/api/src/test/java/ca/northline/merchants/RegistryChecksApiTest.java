@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ca.northline.merchants.api.ComplianceStatus;
 import ca.northline.merchants.application.RecheckRegistries;
+import ca.northline.shared.security.StaffRole;
 import ca.northline.support.IntegrationTest;
 import ca.northline.support.TestJwt;
 import ca.northline.tools.CategorySeeder;
@@ -108,7 +109,7 @@ class RegistryChecksApiTest extends IntegrationTest {
         return mvc.perform(post("/api/v1/console/registry-reviews/{id}/decision", reviewId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
-                .with(TestJwt.staff(staff)));
+                .with(TestJwt.staff(staff, StaffRole.TRUST_SAFETY)));
     }
 
     @Test
@@ -146,7 +147,8 @@ class RegistryChecksApiTest extends IntegrationTest {
                 .containsEntry("review_state", "open");
 
         var reviewId = reviewOf(check(unknown, "registry"));
-        mvc.perform(get("/api/v1/console/registry-reviews?limit=200").with(TestJwt.staff(staff)))
+        mvc.perform(get("/api/v1/console/registry-reviews?limit=200")
+                        .with(TestJwt.staff(staff, StaffRole.TRUST_SAFETY)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[?(@.id == '%s')].outcome".formatted(reviewId))
                         .value("not_found"))

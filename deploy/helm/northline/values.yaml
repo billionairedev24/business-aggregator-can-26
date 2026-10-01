@@ -160,6 +160,7 @@ externalSecrets:
     STUDIO_BFF_SECRET_HASH: studio-bff-secret-hash
     CONSUMER_BFF_SECRET: consumer-bff-secret              # S-45: the consumer-bff's client secret (plain)
     CONSUMER_BFF_SECRET_HASH: consumer-bff-secret-hash
+    CONSOLE_BFF_SECRET: console-bff-secret                # S-90: the console-bff's client secret (plain)
     CONSOLE_BFF_SECRET_HASH: console-bff-secret-hash
     STRIPE_SECRET_KEY: stripe-secret-key
     STRIPE_PUBLISHABLE_KEY: stripe-publishable-key
@@ -183,6 +184,7 @@ externalSecrets:
     OTEL_BACKEND_AUTH: otel-backend-auth                              # S-111: the OTLP backend's credentials (Collector)
     APPLICATIONINSIGHTS_CONNECTION_STRING: applicationinsights-connection-string  # S-111: Azure Monitor (Collector)
     OPENROUTER_API_KEY: openrouter-api-key                            # S-129 AI platform (api)
+    CONSOLE_HEALTH_PROMETHEUS_TOKEN: console-health-prometheus-token  # S-91 console overview health (api), optional
   # Optional variables (secretEnv: false) to map as well. List only those that hold a value in the secrets manager:
   # one empty or missing remote secret fails the app's whole ExternalSecret. Required variables are always mapped.
   optionalKeys: [REDIS_PASSWORD, KAFKA_SASL_JAAS_CONFIG, ES_PASSWORD]
@@ -440,6 +442,7 @@ apps:
       TOAST_CLIENT_SECRET: false               # S-36: with TOAST_CLIENT_ID (configEnv), once Toast admits Northline as a partner
       GOOGLE_MAPS_API_KEY: false               # S-47: with PLACES_PROVIDER=google (required in staging/prod)
       OPENROUTER_API_KEY: false                # S-129: empty = every AI feature answers 503; add to optionalKeys once the key exists
+      CONSOLE_HEALTH_PROMETHEUS_TOKEN: false   # S-91: only for a metrics store that needs a bearer token
     runAsUser: 65532
     probes:
       startup: { path: /actuator/health/liveness, periodSeconds: 5, failureThreshold: 60 }
@@ -457,7 +460,7 @@ apps:
     # S-127: route /mcp (the MCP server for AI agents: Claude, IDEs; OAuth 2.1 tokens from auth with the mcp scope and
     # acr=mfa) and /.well-known/oauth-protected-resource on the api host. false = agents can't reach it (docs/runbooks/mcp.md).
     mcp: true
-    allowFrom: [bff, consumer-bff]
+    allowFrom: [bff, consumer-bff, console-bff]
     extraVolumes: []
     extraVolumeMounts: []
     podLabels: {}
@@ -484,7 +487,7 @@ apps:
       TOTP_KEY: true
       STUDIO_BFF_SECRET_HASH: true
       CONSUMER_BFF_SECRET_HASH: true   # S-45: the consumer-bff exists (required since then)
-      CONSOLE_BFF_SECRET_HASH: false
+      CONSOLE_BFF_SECRET_HASH: true    # S-90: the console-bff exists (required since then)
       REDIS_PASSWORD: false
       KAFKA_SASL_JAAS_CONFIG: false # S-28: user.registered is externalized to Kafka
       GOOGLE_CLIENT_SECRET: false   # S-18; required (true) in staging/prod
@@ -495,7 +498,7 @@ apps:
       startup: { path: /actuator/health/liveness, periodSeconds: 5, failureThreshold: 60 }
       liveness: { path: /actuator/health/liveness, periodSeconds: 10, failureThreshold: 3 }
       readiness: { path: /actuator/health/readiness, periodSeconds: 5, failureThreshold: 3 }
-    allowFrom: [bff, consumer-bff, api]
+    allowFrom: [bff, consumer-bff, console-bff, api]
     extraVolumes: []
     extraVolumeMounts: []
     podLabels: {}
@@ -561,6 +564,40 @@ apps:
       liveness: { path: /actuator/health/liveness, periodSeconds: 10, failureThreshold: 3 }
       readiness: { path: /actuator/health/readiness, periodSeconds: 5, failureThreshold: 3 }
     allowFrom: [consumer]
+    extraVolumes: []
+    extraVolumeMounts: []
+    podLabels: {}
+    podAnnotations: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+
+  # S-90: the platform console's BFF — the bff image under the `console` profile (server/bff application-console.yml):
+  # client console-bff, cookie __Host-NL_CONSOLE, staff with a second factor only. Routes: /api, /bff, /oauth2, /login
+  # on the console host (templates/ingress.yaml).
+  console-bff:
+    enabled: true
+    type: spring
+    image: { repository: bff, tag: "", digest: "" }
+    profiles: [console]
+    port: 8083
+    service: true
+    public: true
+    replicas: 1
+    autoscaling: { enabled: false, minReplicas: 2, maxReplicas: 3, targetCPUUtilizationPercentage: 70 }
+    resources:
+      requests: { cpu: 50m, memory: 512Mi }
+      limits: { memory: 512Mi }
+    env: {}
+    secretEnv:
+      CONSOLE_BFF_SECRET: true
+      REDIS_PASSWORD: false
+    runAsUser: 65532
+    probes:
+      startup: { path: /actuator/health/liveness, periodSeconds: 5, failureThreshold: 60 }
+      liveness: { path: /actuator/health/liveness, periodSeconds: 10, failureThreshold: 3 }
+      readiness: { path: /actuator/health/readiness, periodSeconds: 5, failureThreshold: 3 }
+    allowFrom: []
     extraVolumes: []
     extraVolumeMounts: []
     podLabels: {}
@@ -720,27 +757,28 @@ apps:
     tolerations: []
     affinity: {}
 
-  # Placeholder: the platform console (E-8, web/apps/console) does not exist yet, so there is no image. When it does,
-  # add its build target to web/Dockerfile, set enabled: true and pick its type (node for TanStack Start SSR).
+  # S-90: the platform console (web/apps/console, design 03) — a TanStack Router SPA like the Studio: static files on
+  # nginx (web/Dockerfile --target console), NL_AUTH_ORIGIN read at start. The console-bff serves /api, /bff, /oauth2
+  # and /login on the same host.
   console:
-    enabled: false
-    type: node
+    enabled: true
+    type: static
     image: { repository: console, tag: "", digest: "" }
-    port: 3000
+    port: 8080
     service: true
     public: true
     replicas: 1
-    autoscaling: { enabled: false, minReplicas: 2, maxReplicas: 4, targetCPUUtilizationPercentage: 70 }
+    autoscaling: { enabled: false, minReplicas: 2, maxReplicas: 3, targetCPUUtilizationPercentage: 70 }
     resources:
-      requests: { cpu: 50m, memory: 128Mi }
-      limits: { memory: 256Mi }
-    env:
-      TRUST_PROXY: "true"
-    runAsUser: 65532
+      requests: { cpu: 20m, memory: 32Mi }
+      limits: { memory: 64Mi }
+    env: {}
+    runAsUser: 101
     probes:
       liveness: { path: /healthz, periodSeconds: 10, failureThreshold: 3 }
       readiness: { path: /healthz, periodSeconds: 5, failureThreshold: 3 }
     allowFrom: []
+    writableDirs: [/tmp, /etc/nginx/conf.d]
     extraVolumes: []
     extraVolumeMounts: []
     podLabels: {}

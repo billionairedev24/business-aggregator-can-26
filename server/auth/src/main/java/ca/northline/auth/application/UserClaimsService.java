@@ -16,7 +16,8 @@ import org.springframework.stereotype.Service;
 /**
  * Token claims for a signed-in person. Access tokens: {@code roles} (platform roles), {@code merchants} (every
  * business the person belongs to), {@code acr=mfa} only when a second factor was used, and {@code amr}. ID tokens add the
- * OIDC profile claims the BFF turns into {@code GET /bff/session}.
+ * OIDC profile claims the BFF turns into {@code GET /bff/session}; for the {@code console} scope also {@code roles}
+ * (S-90: the console-bff lets only staff in, from the ID token it validated).
  */
 @Service
 @RequiredArgsConstructor
@@ -46,8 +47,14 @@ public class UserClaimsService {
         return claims;
     }
 
-    public Map<String, Object> idTokenClaims(String userId, Collection<Factor> factors) {
+    /** The {@code console} scope (S-90): the ID token carries the platform roles too. */
+    public static final String CONSOLE_SCOPE = "console";
+
+    public Map<String, Object> idTokenClaims(String userId, Collection<Factor> factors, Collection<String> scopes) {
         var claims = new LinkedHashMap<String, Object>();
+        if (scopes.contains(CONSOLE_SCOPE)) {
+            claims.put("roles", new ArrayList<>(accounts.platformRoles(userId)));
+        }
         accounts.findById(userId).ifPresent(u -> {
             claims.put("given_name", u.givenName());
             claims.put("family_name", u.familyName());

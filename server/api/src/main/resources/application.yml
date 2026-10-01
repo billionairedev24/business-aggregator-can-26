@@ -406,6 +406,25 @@ northline:
       initial-lookback: P1D
       anomaly-scan: ${TRUST_AI_ANOMALY_SCAN_ENABLED:true}
       anomaly-cron: ${TRUST_AI_ANOMALY_CRON:0 10 12 * * MON}        # UTC; scans the week that ended
+  # S-91 console overview, "System health": PromQL over the S-111 metrics (docs/runbooks/observability.md § Console
+  # health). `none` = every signal unknown (local, test, or no metrics store yet).
+  console.health:
+    provider: ${CONSOLE_HEALTH_PROVIDER:none}
+    prometheus:
+      url: ${CONSOLE_HEALTH_PROMETHEUS_URL:}                         # base of /api/v1/query
+      token: ${CONSOLE_HEALTH_PROMETHEUS_TOKEN:}                     # bearer token (secret), when the store needs one
+      timeout: ${CONSOLE_HEALTH_PROMETHEUS_TIMEOUT:3s}
+      queries:
+        api_p95: 'histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{application="northline-api"}[5m]))) * 1000'
+        search_p95: 'histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{application="northline-api",uri=~"/api/v1/search.*"}[5m]))) * 1000'
+        kafka_lag: 'max(kafka_consumer_fetch_manager_records_lag_max{application="northline-worker"})'
+        stripe: 'sum(rate(http_client_requests_seconds_count{application="northline-api",client_name="api.stripe.com",outcome!="SUCCESS"}[5m])) / clamp_min(sum(rate(http_client_requests_seconds_count{application="northline-api",client_name="api.stripe.com"}[5m])), 1e-9)'
+        tracking_streams: 'sum(northline_tracking_streams{application="northline-api"})'
+      degraded-above:                                                # a reading above it shows the rosehip dot
+        api_p95: 500                                                 # ms
+        search_p95: 300                                              # ms
+        kafka_lag: 1000                                              # records (the NorthlineConsumerLag alert)
+        stripe: 0.05                                                 # 5 % failed calls
 ---
 # Local runs read server/.env (or .env next to the jar) — KEY=value lines, see server/.env.example. Never under `test`.
 spring.config.activate.on-profile: "!test"

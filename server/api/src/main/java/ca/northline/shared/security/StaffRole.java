@@ -1,0 +1,102 @@
+package ca.northline.shared.security;
+
+import ca.northline.shared.CodedEnum;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.EnumSet;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import org.jspecify.annotations.Nullable;
+
+/**
+ * Northline staff roles in the platform console (S-90, design 03 {@code ROLES}). Granted in
+ * {@code identity.platform_roles} next to {@code staff} (the console's on/off switch: no {@code staff}, no console) and
+ * carried in the access token's {@code roles} claim. Each role opens a set of screens and allows a set of actions; a
+ * person may hold several and narrow the console to one ("Switch role view", {@code X-Console-Role}).
+ */
+public enum StaffRole implements CodedEnum {
+    ADMIN,
+    TRUST_SAFETY,
+    DISPATCH,
+    FINANCE,
+    SUPPORT,
+    ANALYST;
+
+    /** The platform role that opens the console at all ({@code /api/v1/console/**}). */
+    public static final String STAFF = "staff";
+
+    /** The screens this role opens (besides the ones every staff member has, {@link ConsoleScreen#openToAllStaff}). */
+    public Set<ConsoleScreen> screens() {
+        return switch (this) {
+            case ADMIN -> Set.copyOf(EnumSet.allOf(ConsoleScreen.class));
+            case TRUST_SAFETY ->
+                Set.of(
+                        ConsoleScreen.OVERVIEW,
+                        ConsoleScreen.SELLERS,
+                        ConsoleScreen.VERIFY,
+                        ConsoleScreen.VETTING,
+                        ConsoleScreen.TRUST,
+                        ConsoleScreen.DISPUTES,
+                        ConsoleScreen.SUPPORT,
+                        ConsoleScreen.TEAM);
+            case DISPATCH ->
+                Set.of(ConsoleScreen.OVERVIEW, ConsoleScreen.ORDERS, ConsoleScreen.DELIVERY, ConsoleScreen.SUPPORT);
+            case FINANCE ->
+                Set.of(
+                        ConsoleScreen.OVERVIEW,
+                        ConsoleScreen.FINANCE,
+                        ConsoleScreen.REPORTS,
+                        ConsoleScreen.DISPUTES,
+                        ConsoleScreen.TEAM);
+            case SUPPORT ->
+                Set.of(
+                        ConsoleScreen.OVERVIEW,
+                        ConsoleScreen.SUPPORT,
+                        ConsoleScreen.ORDERS,
+                        ConsoleScreen.SELLERS,
+                        ConsoleScreen.DISPUTES);
+            case ANALYST -> Set.of(ConsoleScreen.OVERVIEW, ConsoleScreen.REPORTS);
+        };
+    }
+
+    /** What this role may change on the screens it opens. */
+    public Set<ConsoleAction> actions() {
+        return switch (this) {
+            case ADMIN -> Set.copyOf(EnumSet.allOf(ConsoleAction.class));
+            case TRUST_SAFETY ->
+                Set.of(
+                        ConsoleAction.SUSPEND,
+                        ConsoleAction.DECIDE,
+                        ConsoleAction.VERIFY,
+                        ConsoleAction.VET,
+                        ConsoleAction.SUPPORT);
+            case DISPATCH -> Set.of(ConsoleAction.DISPATCH);
+            case FINANCE -> Set.of(ConsoleAction.REFUND, ConsoleAction.PAYOUTS);
+            case SUPPORT -> Set.of(ConsoleAction.SUPPORT);
+            case ANALYST -> Set.of();
+        };
+    }
+
+    public boolean opens(ConsoleScreen screen) {
+        return screen.openToAllStaff() || screens().contains(screen);
+    }
+
+    public boolean allows(ConsoleAction action) {
+        return actions().contains(action);
+    }
+
+    public static Optional<StaffRole> fromCode(@Nullable String code) {
+        return Arrays.stream(values()).filter(r -> r.code().equals(code)).findFirst();
+    }
+
+    /** The console roles among a token's platform roles (case-insensitive; {@code staff} and others ignored). */
+    public static Set<StaffRole> held(Collection<String> platformRoles) {
+        var held = platformRoles.stream()
+                .map(r -> r.toLowerCase(Locale.ROOT))
+                .flatMap(r -> fromCode(r).stream())
+                .collect(Collectors.toCollection(() -> EnumSet.noneOf(StaffRole.class)));
+        return Set.copyOf(held);
+    }
+}

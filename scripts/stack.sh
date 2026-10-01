@@ -8,9 +8,10 @@
 #   scripts/stack.sh logs [service…]    follow the logs, one prefix per service
 #   scripts/stack.sh dev [service…]     up + logs in the foreground; Ctrl-C stops what this run started
 #
-# Services: api auth bff bff-consumer worker studio consumer storybook docs  ("all" = every one of them)
-#   bff = studio-bff (:8082), bff-consumer = the same jar with the `consumer` profile (:8081).
-#   studio / consumer use dev auth (DEV_USER / CONSUMER_DEV_USER, no sign-in, only the api needed) unless their BFF is
+# Services: api auth bff bff-consumer bff-console worker studio consumer console storybook docs  ("all" = every one)
+#   bff = studio-bff (:8082), bff-consumer = the same jar with the `consumer` profile (:8081), bff-console with the
+#   `console` profile (:8083, S-90).
+#   studio / consumer / console use dev auth (DEV_USER / CONSUMER_DEV_USER / CONSOLE_DEV_USER, no sign-in, only the api needed) unless their BFF is
 #   started with them or already runs; DEV_AUTH=1 or DEV_AUTH=0 forces it either way.
 #
 # Each service runs in its own session / process group (setsid on Linux, Perl's POSIX::setsid on macOS) and is stopped
@@ -25,11 +26,12 @@ SPRING_PROFILE="${SPRING_PROFILE:-local}"
 GRADLE_FLAGS="${GRADLE_FLAGS:---max-workers=2}"
 DEV_USER="${DEV_USER:-01J9ZD3V00000000000000RAV1}"                   # Ravi Sandhu, owner of the three seeded businesses
 CONSUMER_DEV_USER="${CONSUMER_DEV_USER:-01J9ZD3V0000000000000C0001}" # Amara Osei, the seeded consumer
+CONSOLE_DEV_USER="${CONSOLE_DEV_USER:-01J9ZD3V00000000000000PNA1}"   # Priya Natarajan, staff with every console role (S-90)
 DEV_AUTH="${DEV_AUTH:-auto}"
 
-ALL_SERVICES="auth api bff bff-consumer worker studio consumer storybook docs"
+ALL_SERVICES="auth api bff bff-consumer bff-console worker studio consumer console storybook docs"
 DEFAULT_SERVICES="api studio"
-JAVA_SERVICES="auth api bff bff-consumer worker"
+JAVA_SERVICES="auth api bff bff-consumer bff-console worker"
 
 c_dim=$'\033[2m'; c_ok=$'\033[32m'; c_bad=$'\033[31m'; c_warn=$'\033[33m'; c_off=$'\033[0m'
 [ -t 1 ] || { c_dim=; c_ok=; c_bad=; c_warn=; c_off=; }
@@ -38,14 +40,14 @@ die() { say "${c_bad}✗ $*${c_off}" >&2; exit 1; }
 
 port_of() {
   case "$1" in
-    api) echo 8080 ;; auth) echo 9000 ;; bff) echo 8082 ;; bff-consumer) echo 8081 ;; worker) echo 8084 ;;
-    studio) echo 3100 ;; consumer) echo 3000 ;; storybook) echo 6006 ;; docs) echo 3300 ;;
+    api) echo 8080 ;; auth) echo 9000 ;; bff) echo 8082 ;; bff-consumer) echo 8081 ;; bff-console) echo 8083 ;; worker) echo 8084 ;;
+    studio) echo 3100 ;; consumer) echo 3000 ;; console) echo 3200 ;; storybook) echo 6006 ;; docs) echo 3300 ;;
     *) die "unknown service '$1' (services: $ALL_SERVICES, or all)" ;;
   esac
 }
 health_url() {
   case "$1" in
-    api | auth | bff | bff-consumer | worker) echo "http://localhost:$(port_of "$1")/actuator/health" ;;
+    api | auth | bff | bff-consumer | bff-console | worker) echo "http://localhost:$(port_of "$1")/actuator/health" ;;
     *) echo "http://localhost:$(port_of "$1")/" ;;
   esac
 }
@@ -70,6 +72,7 @@ command_of() { # command_of <service> <services being started>
     auth) gradle ":auth:bootRun --args='$profile'" ;;
     bff) gradle ":bff:bootRun --args='$profile'" ;;
     bff-consumer) gradle ":bff:bootRun --args='$profile,consumer'" ;;
+    bff-console) gradle ":bff:bootRun --args='$profile,console'" ;;
     worker) if [ "$SPRING_PROFILE" = local ]; then gradle ":worker:bootRun"; else gradle ":worker:bootRun --args='$profile'"; fi ;;
     studio)
       if dev_auth bff "$2"; then echo "cd '$ROOT/web' && NL_DEV_USER=$DEV_USER VITE_NL_DEV_STEP_UP=1 pnpm --filter @northline/studio dev"
@@ -77,6 +80,9 @@ command_of() { # command_of <service> <services being started>
     consumer)
       if dev_auth bff-consumer "$2"; then echo "cd '$ROOT/web' && NL_DEV_USER=$CONSUMER_DEV_USER NL_BFF_URL=http://localhost:8080 pnpm --filter @northline/consumer dev"
       else echo "cd '$ROOT/web' && pnpm --filter @northline/consumer dev"; fi ;;
+    console)
+      if dev_auth bff-console "$2"; then echo "cd '$ROOT/web' && NL_DEV_USER=$CONSOLE_DEV_USER pnpm --filter @northline/console dev"
+      else echo "cd '$ROOT/web' && pnpm --filter @northline/console dev"; fi ;;
     storybook) echo "cd '$ROOT/web' && pnpm --filter @northline/ui storybook --no-open" ;;
     docs) echo "cd '$ROOT/web' && pnpm --filter @northline/docs start" ;; # S-126, internal variant, English
   esac
@@ -185,7 +191,7 @@ cmd_up() {
   if [ -n "$java" ]; then
     [ -n "${JAVA_HOME:-}" ] && [ "$(java_major "$JAVA_HOME")" = 25 ] || die "Java 25 not found: install it and set JAVA_HOME (make doctor)"
     # One compile before the apps start: several Gradle builds compiling the same projects at once would race.
-    for s in $java; do case "$s" in bff-consumer) s=bff ;; esac; contains "$tasks" ":$s:classes" || tasks="$tasks :$s:classes"; done
+    for s in $java; do case "$s" in bff-consumer | bff-console) s=bff ;; esac; contains "$tasks" ":$s:classes" || tasks="$tasks :$s:classes"; done
     say "${c_dim}… compiling$tasks${c_off}"
     (cd "$ROOT/server" && ./gradlew $GRADLE_FLAGS -q $tasks) || die "the server does not compile (above)"
   fi
@@ -229,6 +235,10 @@ cmd_status() {
   if running consumer; then
     if grep -q NL_DEV_USER "$RUN_DIR/consumer.cmd" 2>/dev/null; then say "  Consumer   http://localhost:3000 — as Amara Osei (dev auth)"
     else say "  Consumer   http://localhost:3000 (through the consumer-bff)"; fi
+  fi
+  if running console; then
+    if grep -q NL_DEV_USER "$RUN_DIR/console.cmd" 2>/dev/null; then say "  Console    http://localhost:3200 — as Priya Natarajan, every console role (dev auth)"
+    else say "  Console    http://localhost:3200 — sign in: priya.natarajan@example.com, backup code priya-n-00001 (README § Local sign-in)"; fi
   fi
   running auth && say "  Auth       http://localhost:9000/.well-known/openid-configuration  (SMS codes: grep 'Verification code' .run/logs/auth.log)"
   running storybook && say "  Storybook  http://localhost:6006"

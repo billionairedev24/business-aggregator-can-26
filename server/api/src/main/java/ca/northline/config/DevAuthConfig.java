@@ -1,6 +1,7 @@
 package ca.northline.config;
 
 import ca.northline.shared.security.MerchantMemberships;
+import ca.northline.shared.security.PlatformRoles;
 import java.time.Clock;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -15,7 +16,11 @@ import org.springframework.context.annotation.Profile;
 class DevAuthConfig {
 
     @Bean
-    DevAuthFilter devAuthFilter(MerchantMemberships memberships, NorthlineJwtConverter converter, Clock clock) {
+    DevAuthFilter devAuthFilter(
+            MerchantMemberships memberships,
+            PlatformRoles platformRoles,
+            NorthlineJwtConverter converter,
+            Clock clock) {
         log.warn("""
 
                 ************************************************************************
@@ -23,7 +28,7 @@ class DevAuthConfig {
                 *  X-Dev-User: <identity.users id> are authenticated WITHOUT a token.  *
                 *  Never activate the 'local' profile in any shared environment.       *
                 ************************************************************************""");
-        return new DevAuthFilter(memberships, converter, clock);
+        return new DevAuthFilter(memberships, platformRoles, converter, clock);
     }
 
     /** Keep the servlet container from also running it outside Spring Security's chain. */

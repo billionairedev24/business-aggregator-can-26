@@ -1,4 +1,4 @@
-# web/ — pnpm monorepo (tokens, ui + Storybook, auth-kit, client, studio, consumer). docs/runbooks/ci.md.
+# web/ — pnpm monorepo (tokens, ui + Storybook, auth-kit, client, studio, consumer, console). docs/runbooks/ci.md.
 # Every target installs the dependencies first when web/pnpm-lock.yaml is newer than web/node_modules.
 
 WEB_INSTALLED := $(ROOT)/web/node_modules/.modules.yaml
@@ -13,7 +13,7 @@ $(WEB_INSTALLED): $(ROOT)/web/pnpm-lock.yaml $(ROOT)/web/package.json
 web-install: $(WEB_INSTALLED) ## pnpm install (frozen lockfile); a no-op while node_modules is up to date
 
 .PHONY: web-check
-web-check: web-lint web-test web-build-studio ## What CI's web checks run: hex colours, typecheck, vitest, Studio build
+web-check: web-lint web-test web-build-studio web-build-console ## What CI's web checks run: hex colours, typecheck, vitest, Studio + console builds
 
 .PHONY: web-build
 web-build: $(WEB_INSTALLED) ## Build every web package that has a build script (tokens, studio, consumer, …)
@@ -22,6 +22,10 @@ web-build: $(WEB_INSTALLED) ## Build every web package that has a build script (
 .PHONY: web-build-studio
 web-build-studio: $(WEB_INSTALLED) ## Build the Studio SPA (web/apps/studio/dist)
 	$(PNPM) --filter @northline/studio build
+
+.PHONY: web-build-console
+web-build-console: $(WEB_INSTALLED) ## Build the platform console SPA (web/apps/console/dist; S-90)
+	$(PNPM) --filter @northline/console build
 
 .PHONY: web-build-consumer
 web-build-consumer: $(WEB_INSTALLED) ## Build the consumer app (TanStack Start, SSR)
@@ -81,3 +85,11 @@ run-consumer: $(WEB_INSTALLED) ## Consumer web on :3000 through the consumer-bff
 .PHONY: run-consumer-dev
 run-consumer-dev: $(WEB_INSTALLED) ## Consumer web with dev auth as CONSUMER_DEV_USER (Amara Osei); needs only the api
 	cd $(ROOT)/web && NL_DEV_USER=$(CONSUMER_DEV_USER) NL_BFF_URL=http://localhost:8080 pnpm --filter @northline/consumer dev
+
+.PHONY: run-console
+run-console: $(WEB_INSTALLED) ## Platform console on :3200 through the console-bff (staff sign-in; S-90)
+	$(PNPM) --filter @northline/console dev
+
+.PHONY: run-console-dev
+run-console-dev: $(WEB_INSTALLED) ## Console on :3200 with dev auth as CONSOLE_DEV_USER (Priya Natarajan, every role); needs only the api
+	cd $(ROOT)/web && NL_DEV_USER=$(CONSOLE_DEV_USER) pnpm --filter @northline/console dev

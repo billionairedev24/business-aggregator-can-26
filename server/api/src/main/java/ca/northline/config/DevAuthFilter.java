@@ -3,6 +3,7 @@ package ca.northline.config;
 import ca.northline.shared.Ids;
 import ca.northline.shared.security.MerchantMemberships;
 import ca.northline.shared.security.MerchantMemberships.Membership;
+import ca.northline.shared.security.PlatformRoles;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,7 +22,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * LOCAL PROFILE ONLY. Authenticates {@code X-Dev-User: <identity.users id>} without the auth server by minting an
  * in-memory JWT with the same claims northline-auth would issue ({@code scope=openid profile merchant} plus the MCP
  * agent scopes {@code mcp mcp.write} for the local MCP server,
- * {@code merchants} from {@code merchants.merchant_members}, {@code acr=mfa} unless {@code X-Dev-Acr: none}).
+ * {@code merchants} from {@code merchants.merchant_members}, {@code roles} from {@code identity.platform_roles} (S-90: staff
+ * and their console roles), {@code acr=mfa} unless {@code X-Dev-Acr: none}).
  * A real {@code Authorization: Bearer} header always wins. Wired by {@link DevAuthConfig}.
  */
 @Slf4j
@@ -32,6 +34,7 @@ class DevAuthFilter extends OncePerRequestFilter {
     static final String ACR_HEADER = "X-Dev-Acr";
 
     private final MerchantMemberships memberships;
+    private final PlatformRoles platformRoles;
     private final NorthlineJwtConverter converter;
     private final Clock clock;
 
@@ -64,6 +67,7 @@ class DevAuthFilter extends OncePerRequestFilter {
                         memberships.membershipsOf(userId).stream()
                                 .map(Membership::merchantId)
                                 .toList())
+                .claim("roles", platformRoles.of(userId))
                 .claim("acr", acr == null ? "mfa" : acr)
                 .issuedAt(now)
                 .expiresAt(now.plus(Duration.ofMinutes(10)))

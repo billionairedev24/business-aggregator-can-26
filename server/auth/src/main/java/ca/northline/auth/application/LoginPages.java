@@ -6,8 +6,9 @@ import org.springframework.stereotype.Component;
 
 /**
  * S-62: which sign-in page a browser is sent to. Two web apps sign people in against this server's JSON API — the
- * Studio ({@code northline.auth.login-page}) and the consumer site ({@code northline.auth.consumer-login-page}). An
- * authorization request goes to its client's page; a Google / Apple sign-in comes back to the app that started it
+ * Studio ({@code northline.auth.login-page}) and the consumer site ({@code northline.auth.consumer-login-page}); S-90 adds
+ * the platform console ({@code northline.auth.console-login-page}) for staff. An authorization request goes to its
+ * client's page; a Google / Apple sign-in comes back to the app that started it
  * (the consumer's buttons add {@code ?app=consumer}, carried through the provider in the {@code state}).
  */
 @Component
@@ -33,9 +34,18 @@ public class LoginPages {
         return page == null || page.isBlank() ? props.loginPage() : page;
     }
 
+    /** S-90: the platform console's sign-in page (staff). */
+    public String console() {
+        var page = props.consoleLoginPage();
+        return page == null || page.isBlank() ? props.loginPage() : page;
+    }
+
     /** The sign-in page of an OAuth client's people. */
     public String forClient(@Nullable String clientId) {
-        return clientId != null && props.consumerClients().contains(clientId) ? consumer() : studio();
+        if (clientId != null && props.consumerClients().contains(clientId)) {
+            return consumer();
+        }
+        return clientId != null && props.consoleClients().contains(clientId) ? console() : studio();
     }
 
     /** {@code ?app=consumer} on a request (the consumer's Google / Apple buttons). */
