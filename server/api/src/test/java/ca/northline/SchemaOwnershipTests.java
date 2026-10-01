@@ -45,7 +45,8 @@ class SchemaOwnershipTests {
             "payments",
             "trust",
             "messaging",
-            "developer");
+            "developer",
+            "account");
 
     /**
      * Known cross-schema reads kept on purpose, by class → schemas. Keep this list short and give each entry a reason
