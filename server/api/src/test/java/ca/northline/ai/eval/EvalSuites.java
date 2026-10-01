@@ -15,6 +15,8 @@ public final class EvalSuites {
                 new ca.northline.messaging.application.ReplyEval(),
                 new ca.northline.trust.application.ReviewSummaryEval(),
                 new ca.northline.search.application.SearchFiltersEval(),
-                new ca.northline.messaging.application.HelpTriageEval());
+                new ca.northline.messaging.application.HelpTriageEval(),
+                new ca.northline.trust.application.TrustScreenEval(),
+                new ca.northline.trust.application.AnomalyScanEval());
     }
 }

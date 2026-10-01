@@ -1,0 +1,32 @@
+{
+  "about": "S-133 weekly anomaly scan eval (AnomalyScanEval): each case is one market's week, its businesses' counts against their previous 8 weeks. The rules must pick exactly the businesses labelled 'flag' with the expected signals (precision/recall of 'flag'); the model's explanation of each must cite the numbers (mustInclude) and accuse no one (mustNotInclude). `input` is a line of the first flagged business's facts, as sent.",
+  "cases": [
+    {"id": "burst", "input": "reviews this week 14 (previous 8 weeks: 16,",
+     "businesses": [{"reviews": 14, "average": 5.0, "priorReviews": 16, "priorAverage": 4.4, "offPlatform": 0, "aiFlags": 0, "expected": "flag", "signals": ["review_burst"]}],
+     "mustInclude": [["14"]], "mustNotInclude": ["fraudster", "is cheating"],
+     "mock": {"json": {"businesses": [{"ref": "A", "explanation": "14 reviews this week against about 2 a week before, averaging 5.0. Could be a promotion or a busy week; it can also be review stuffing: check the reviews come from different customers' completed jobs."}], "summary": "One business with a review burst."}}},
+    {"id": "drop", "input": "reviews this week 4 (previous 8 weeks: 30,",
+     "businesses": [{"reviews": 4, "average": 2.0, "priorReviews": 30, "priorAverage": 4.6, "offPlatform": 0, "aiFlags": 0, "expected": "flag", "signals": ["rating_drop"]}],
+     "mustInclude": [["2.0", "2 stars"], ["4.6"]],
+     "mock": {"json": {"businesses": [{"ref": "A", "explanation": "The average fell to 2.0 this week from 4.6 over 4 reviews. Possibly a service problem (new staff, a bad week) or a coordinated attack: read the reviews and check they come from real jobs."}], "summary": "One business's ratings dropped sharply."}}},
+    {"id": "off-platform", "input": "reviews this week 1 (previous 8 weeks: 9,",
+     "businesses": [{"reviews": 1, "average": 4.0, "priorReviews": 9, "priorAverage": 4.5, "offPlatform": 4, "aiFlags": 1, "expected": "flag", "signals": ["off_platform"]}],
+     "mustInclude": [["4 off-platform", "four off-platform", "4 messages", "off-platform payment flags 4", "4 flags"]],
+     "mock": {"json": {"businesses": [{"ref": "A", "explanation": "4 off-platform payment flags this week. It may be customers asking about cash, but repeated flags usually mean the business is steering payments off Northline: read the flagged messages first."}], "summary": "One business repeatedly flagged for payments outside Northline."}}},
+    {"id": "quiet", "input": "(not sent: nothing stands out)",
+     "businesses": [
+       {"reviews": 3, "average": 4.3, "priorReviews": 24, "priorAverage": 4.5, "offPlatform": 0, "aiFlags": 0, "expected": "ok", "signals": []},
+       {"reviews": 6, "average": 4.8, "priorReviews": 40, "priorAverage": 4.7, "offPlatform": 1, "aiFlags": 2, "expected": "ok", "signals": []}],
+     "mock": {"json": {"businesses": [], "summary": "Nothing unusual."}}},
+    {"id": "mixed", "input": "reviews this week 2 (previous 8 weeks: 12,",
+     "businesses": [
+       {"reviews": 2, "average": 4.5, "priorReviews": 12, "priorAverage": 4.4, "offPlatform": 3, "aiFlags": 3, "expected": "flag", "signals": ["off_platform", "ai_flags"]},
+       {"reviews": 6, "average": 4.9, "priorReviews": 40, "priorAverage": 4.8, "offPlatform": 0, "aiFlags": 0, "expected": "ok", "signals": []}],
+     "mustInclude": [["3"]],
+     "mock": {"json": {"businesses": [{"ref": "A", "explanation": "3 off-platform payment flags and 3 screening flags this week. Possibly one long dispute, but together they suggest payments are being moved off Northline: review the flagged messages and listings."}], "summary": "One business with repeated payment and screening flags."}}},
+    {"id": "new-business", "input": "reviews this week 5 (previous 8 weeks: 0,",
+     "businesses": [{"reviews": 5, "average": 5.0, "priorReviews": 0, "offPlatform": 0, "aiFlags": 0, "expected": "flag", "signals": ["review_burst"]}],
+     "mustInclude": [["5 reviews", "five reviews"]],
+     "mock": {"json": {"businesses": [{"ref": "A", "explanation": "5 reviews in its first week, all 5 stars, with no history. A good launch is likely, but early bursts are where review stuffing starts: check the reviews come from different customers' completed jobs."}], "summary": "A new business with a strong first week."}}}
+  ]
+}

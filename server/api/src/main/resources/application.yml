@@ -371,6 +371,16 @@ northline:
       help-triage: ${OPENROUTER_MODEL_HELP_TRIAGE:}
       trust-screen: ${OPENROUTER_MODEL_TRUST_SCREEN:}
       anomaly-scan: ${OPENROUTER_MODEL_ANOMALY_SCAN:}
+  # AI trust & safety assist (S-133, docs/ai/trust-safety.md): suggestions go to the console queue, staff decide.
+  trust:
+    ai:
+      screening: ${TRUST_AI_SCREENING_ENABLED:true}                 # listings, reviews, messages since the last run
+      screen-messages: ${TRUST_AI_SCREEN_MESSAGES:true}
+      interval: ${TRUST_AI_SCREENING_INTERVAL:PT15M}
+      batch: ${TRUST_AI_SCREENING_BATCH:25}                         # per source per run
+      initial-lookback: P1D
+      anomaly-scan: ${TRUST_AI_ANOMALY_SCAN_ENABLED:true}
+      anomaly-cron: ${TRUST_AI_ANOMALY_CRON:0 10 12 * * MON}        # UTC; scans the week that ended
 ---
 # Local runs read server/.env (or .env next to the jar) — KEY=value lines, see server/.env.example. Never under `test`.
 spring.config.activate.on-profile: "!test"
