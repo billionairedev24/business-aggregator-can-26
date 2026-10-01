@@ -245,6 +245,35 @@ def events():
     return b
 
 
+def ai():
+    """S-129/S-130: the LlmClient port (ObservedLlmClient) — calls, outcome, latency, tokens and cost per call."""
+    sel = 'application="northline-api"'
+    calls = "northline_ai_completion_seconds"
+    b = Board("northline-ai", "Northline · AI",
+              "Model calls through the LlmClient port: outcome, latency, tokens and cost (OpenRouter's own figure), by "
+              "feature and model. Per-business spend: the ai.usage table (docs/runbooks/ai.md).", ["ai", "flow"])
+    b.row("Spend")
+    b.stat("Spend today (USD)", f"sum(increase(northline_ai_cost_usd_total{{{sel}}}[24h]))", unit="currencyUSD")
+    b.stat("Cost per call (USD)", f"{rate('northline_ai_cost_usd_total', sel)} / {rate(calls + '_count', sel)}",
+           unit="currencyUSD")
+    b.stat("Calls / min", f"{rate(calls + '_count', sel)} * 60")
+    failed = rate(calls + "_count", sel + ',outcome!="ok"')
+    b.stat("Error share", f"{failed} / {rate(calls + '_count', sel)}",
+           unit="percentunit", thresholds=[{"color": "green", "value": None}, {"color": "red", "value": 0.1}])
+    b.ts("Cost per call by feature", [(f"{rate('northline_ai_cost_usd_total', sel, 'feature')} / "
+                                       f"{rate(calls + '_count', sel, 'feature')}", "{{feature}}")],
+         unit="currencyUSD", w=12)
+    b.ts("Spend by feature and model (USD/h)", [(f"{rate('northline_ai_cost_usd_total', sel, 'feature, model')} * 3600",
+                                                 "{{feature}} · {{model}}")], unit="currencyUSD", w=12, stack=True)
+    b.row("Calls")
+    b.ts("Calls by outcome", [(f"{rate(calls + '_count', sel, 'outcome')} * 60", "{{outcome}}")], w=12, stack=True)
+    b.ts("Latency p95 by feature", [(quantile(0.95, calls, sel, "le, feature"), "{{feature}}")], unit="s", w=12)
+    b.ts("Tokens / min", [(f"{rate('northline_ai_tokens_total', sel, 'kind')} * 60", "{{kind}}")], w=12, stack=True)
+    b.ts("Tokens / min by feature", [(f"{rate('northline_ai_tokens_total', sel, 'feature')} * 60", "{{feature}}")],
+         w=12, stack=True)
+    return b
+
+
 def boards():
     yield overview()
     for key, app in SERVICES.items():
@@ -253,6 +282,7 @@ def boards():
     yield checkout()
     yield kitchens()
     yield events()
+    yield ai()
 
 
 def main(check):

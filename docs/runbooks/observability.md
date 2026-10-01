@@ -147,6 +147,7 @@ apps redact before export (S-112) and the Collector scrubs again.
 | checkout and payouts | `northline-checkout-payouts` |
 | kitchens (KDS) | `northline-kitchens` |
 | events (Kafka: outcomes, lag, DLQ, listener and producer timings) | `northline-events` |
+| AI (S-129: model calls, outcome, latency, tokens, cost per call by feature and model — [ai.md](ai.md)) | `northline-ai` |
 
 Queries are PromQL on a `datasource` variable — any Prometheus-compatible source: the local LGTM, Grafana Cloud,
 Amazon Managed Prometheus, Google Managed Prometheus, Azure Monitor managed Prometheus. Change a dashboard in the

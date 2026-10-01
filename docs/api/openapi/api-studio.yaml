@@ -339,6 +339,304 @@ paths:
           description: "Validation failed: one error per field with the exact message."
       tags:
       - merchant-controller
+  /api/v1/merchants/{merchantId}/assistant/actions:
+    post:
+      operationId: assistantConfirm
+      parameters:
+      - in: path
+        name: merchantId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActionBody"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ActionResult"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - assistant-controller
+  /api/v1/merchants/{merchantId}/assistant/chat:
+    post:
+      operationId: assistantChat
+      parameters:
+      - in: path
+        name: merchantId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatBody"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Answer"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - assistant-controller
+  /api/v1/merchants/{merchantId}/assistant/chat/stream:
+    post:
+      operationId: assistantStream
+      parameters:
+      - in: path
+        name: merchantId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatBody"
+        required: true
+      responses:
+        "200":
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - assistant-controller
+  /api/v1/merchants/{merchantId}/assistant/insights/{screen}:
+    get:
+      operationId: assistantInsight
+      parameters:
+      - in: path
+        name: merchantId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: path
+        name: screen
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Insight"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - assistant-controller
   /api/v1/merchants/{merchantId}/availability/calendars/{provider}:
     delete:
       operationId: availabilityDisconnect
@@ -14036,6 +14334,27 @@ components:
       required:
       - province
       - type
+    ActionBody:
+      type: object
+      properties:
+        arguments:
+          type: object
+          additionalProperties: {}
+        tool:
+          type: string
+          maxLength: 60
+          minLength: 0
+      required:
+      - tool
+    ActionResult:
+      type: object
+      properties:
+        screen:
+          type: string
+        summary:
+          type: string
+        tool:
+          type: string
     AddWebhookRequest:
       type: object
       properties:
@@ -14057,6 +14376,23 @@ components:
           type: boolean
         provider:
           type: string
+    Answer:
+      type: object
+      properties:
+        content:
+          type: string
+        model:
+          type: string
+        pending:
+          $ref: "#/components/schemas/PendingAction"
+        screen:
+          type: string
+        toolRuns:
+          type: array
+          items:
+            $ref: "#/components/schemas/ToolRun"
+        usage:
+          $ref: "#/components/schemas/Usage"
     ApiKeyResponse:
       type: object
       properties:
@@ -14594,6 +14930,21 @@ components:
           minLength: 1
       required:
       - role
+    ChatBody:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/TurnBody"
+          maxItems: 20
+          minItems: 0
+        screen:
+          type: string
+          maxLength: 40
+          minLength: 0
+      required:
+      - messages
     CheckResponse:
       type: object
       properties:
@@ -15545,6 +15896,19 @@ components:
         sectionsCreated:
           type: integer
           format: int32
+    Insight:
+      type: object
+      properties:
+        body:
+          type: string
+        bullets:
+          type: array
+          items:
+            type: string
+        model:
+          type: string
+        title:
+          type: string
     InstantPayout:
       type: object
       properties:
@@ -17040,6 +17404,16 @@ components:
           - paid
           - failed
           - canceled
+    PendingAction:
+      type: object
+      properties:
+        arguments:
+          type: object
+          additionalProperties: {}
+        preview:
+          type: string
+        tool:
+          type: string
     Point:
       type: object
       properties:
@@ -19088,6 +19462,15 @@ components:
           type: string
         title:
           type: string
+    ToolRun:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        summary:
+          type: string
+        tool:
+          type: string
     Topic:
       type: object
       properties:
@@ -19100,6 +19483,19 @@ components:
           type: string
         name:
           type: string
+    TurnBody:
+      type: object
+      properties:
+        content:
+          type: string
+          maxLength: 4000
+          minLength: 0
+        role:
+          type: string
+          pattern: user|assistant
+      required:
+      - content
+      - role
     Ulid:
       type: string
       description: "A ULID: 26 characters, Crockford base 32, sortable by creation\
@@ -19177,6 +19573,24 @@ components:
           type: string
         tagline:
           type: string
+    Usage:
+      type: object
+      properties:
+        completionTokens:
+          type: integer
+          format: int64
+        costUsd:
+          type: number
+          format: double
+        latencyMs:
+          type: integer
+          format: int64
+        modelCalls:
+          type: integer
+          format: int32
+        promptTokens:
+          type: integer
+          format: int64
     ValidationError:
       type: object
       properties:
