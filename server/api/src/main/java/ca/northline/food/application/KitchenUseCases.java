@@ -52,6 +52,21 @@ public final class KitchenUseCases {
         LiveBoard resume(String merchantId, String actorId);
     }
 
+    /**
+     * S-67: "Auto-pause if late orders ≥ N" enforced. {@link #check} compares a kitchen's late orders (accepted, past
+     * their ready-by time) with its threshold and, on a change, marks it and publishes {@code kitchen.auto_paused} /
+     * {@code kitchen.auto_resumed}; customers are refused at read time either way ({@code KitchenCalendar}).
+     */
+    public interface KitchenAutoPause {
+        void check(String merchantId);
+
+        /** Every kitchen with auto-pause on (the scheduler, once a minute); returns how many changed state. */
+        int checkAll();
+    }
+
+    /** The board's auto-pause line: {@code active} while {@code lateOrders} ≥ {@code threshold} (null = off). */
+    public record AutoPause(int lateOrders, @Nullable Integer threshold, boolean active) {}
+
     public record LiveLine(int qty, String title, List<String> modifiers) {}
 
     /**
@@ -92,7 +107,8 @@ public final class KitchenUseCases {
             List<LiveTicket> items,
             LiveCounts counts,
             PrepShown prep,
-            @Nullable Instant pausedUntil) {}
+            @Nullable Instant pausedUntil,
+            AutoPause autoPause) {}
 
     // ── Hours, prep & capacity ────────────────────────────────────────────────
 

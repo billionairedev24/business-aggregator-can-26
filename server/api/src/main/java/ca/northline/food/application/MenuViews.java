@@ -67,7 +67,14 @@ public final class MenuViews {
             ItemStatus status,
             ItemVisibility visibility,
             boolean hasPhoto,
-            @Nullable Instant updatedAt) {}
+            @Nullable Instant updatedAt,
+            @Nullable PriceFlag priceCheck) {}
+
+    /**
+     * S-67: the price is more than 40 % off comparable dishes ({@code deviationPct} +52 = above, -45 = below).
+     * {@code confirmed}: the owner kept this price, so it is live; otherwise the dish waits ({@code price_check}).
+     */
+    public record PriceFlag(long medianCents, int deviationPct, boolean confirmed) {}
 
     public record SectionDetail(String id, String name, int sort, List<ItemView> items) {}
 

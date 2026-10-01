@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { Alert, Checkbox, Chip, Field, Select, TextArea, TextInput } from '@northline/ui';
+import { Alert, Checkbox, Chip, Field, Select, TextArea, TextInput, useFormatters } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { attentionCount } from '../../lib/forms';
-import { ALLERGENS, DIETARY, WINDOWS, useDeleteItem, useSaveItem, useUploadPhoto, type ItemBody, type MenuDetail, type MenuItem, type ModifierGroup } from './api';
+import { ALLERGENS, DIETARY, WINDOWS, useConfirmPrice, useDeleteItem, useSaveItem, useUploadPhoto, type ItemBody, type MenuDetail, type MenuItem, type ModifierGroup } from './api';
 import { ItemPhoto } from './ItemPhoto';
 import { useKitchenT } from './messages';
 import { dollars, parseDollars } from './model';
@@ -80,6 +80,7 @@ export function MenuItemEditor({ merchantId, menu, groups, item, sectionId, canD
   return (
     <form className="nl-k-editor-form" noValidate onSubmit={e => { e.preventDefault(); submit(true); }}>
       {tried && n > 0 ? <Alert tone="error" role="alert">{t('attention', { n })}</Alert> : null}
+      {item?.priceCheck ? <PriceCheckNote merchantId={merchantId} item={item} /> : null}
       <Field label={t('f_name')} error={err('name')}><TextInput value={name} placeholder={t('f_namePh')} maxLength={120} onChange={e => setName(e.target.value)} onBlur={touch('name')} /></Field>
       <Field label={t('f_desc')} error={err('description')}><TextArea value={description} placeholder={t('f_descPh')} rows={3} onChange={e => setDescription(e.target.value)} onBlur={touch('description')} /></Field>
       <div className="nl-k-pair">
@@ -136,5 +137,21 @@ export function MenuItemEditor({ merchantId, menu, groups, item, sectionId, canD
         ) : null}
       </div>
     </form>
+  );
+}
+
+/** S-67: the ±40 % price check — why the dish waits, and "Keep this price" (or it was kept). */
+function PriceCheckNote({ merchantId, item }: { merchantId: string; item: MenuItem }) {
+  const t = useKitchenT();
+  const f = useFormatters();
+  const confirm = useConfirmPrice(merchantId);
+  const check = item.priceCheck!;
+  const values = { price: f.money(item.priceCents), median: f.money(check.medianCents), pct: Math.abs(check.deviationPct) };
+  if (check.confirmed) return <p className="nl-hint">{t('priceCheckConfirmed', values)}</p>;
+  return (
+    <Alert tone="highlight" role="status" actions={<button type="button" className="btn btn-secondary" disabled={confirm.isPending} onClick={() => confirm.mutate(item.id)}>{t('confirmPrice')}</button>}>
+      {t(check.deviationPct > 0 ? 'priceCheckAbove' : 'priceCheckBelow', values)}
+      {confirm.isError ? <span role="alert" className="nl-error"> {t('confirmPriceError')}</span> : null}
+    </Alert>
   );
 }

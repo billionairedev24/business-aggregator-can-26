@@ -64,6 +64,13 @@ class MenuItemController {
         return items.soldOut(merchantId, itemId, body.soldOut());
     }
 
+    /** S-67: "Keep this price" — confirms a price the ±40 % check flagged, so the dish can go live. */
+    @PostMapping("/{itemId}/confirm-price")
+    @RequiresMerchant(EDIT)
+    ItemView confirmPrice(@PathVariable String merchantId, @PathVariable String itemId) {
+        return items.confirmPrice(merchantId, itemId);
+    }
+
     @DeleteMapping("/{itemId}")
     @RequiresMerchant(DELETE)
     @ResponseStatus(HttpStatus.NO_CONTENT)
