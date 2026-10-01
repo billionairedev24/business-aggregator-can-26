@@ -1,7 +1,12 @@
 package ca.northline.food.persistence;
 
+import ca.northline.food.api.KitchenOrderFeed;
+import ca.northline.food.api.KitchenOrderFeed.FoodOrder;
 import ca.northline.shared.NavBadgeContributor;
+import java.time.Clock;
+import java.time.Duration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -9,26 +14,39 @@ import org.springframework.stereotype.Component;
 
 /**
  * Kitchen sidebar badges: {@code kds} = food orders in the kitchen (New + Cooking) → "6 cooking" / « 6 en cuisine »;
- * {@code menu} = sections of the kitchen's first menu (live menus first) → "3 sections". One query each.
+ * {@code menu} = sections of the kitchen's first menu (live menus first) → "3 sections". The orders come from the
+ * orders module ({@link KitchenOrderFeed}, S-64); the stages are the kitchen's own tickets.
  */
 @Component
 @RequiredArgsConstructor
 class KitchenNavBadges implements NavBadgeContributor {
 
+    private static final List<String> IN_KITCHEN = List.of("placed", "accepted", "packing");
+
     private final JdbcClient jdbc;
+    private final KitchenOrderFeed orders;
+    private final Clock clock;
 
     @Override
     public Map<String, String> badges(NavBadgeContributor.Context context) {
         var m = context.merchantId();
         var out = new HashMap<String, String>();
-        int cooking = jdbc.sql("""
-                        select count(*) from orders.orders o
-                          left join food.kitchen_tickets t on t.order_id = o.id and t.merchant_id = :m
-                         where o.type = 'food' and o.state in ('placed', 'accepted', 'packing')
-                           and coalesce(t.stage, 'new') in ('new', 'cooking')
-                           and (o.scheduled_for is null or o.scheduled_for <= now() + interval '60 minutes')
-                           and exists (select 1 from orders.order_lines l where l.order_id = o.id and l.merchant_id = :m)
-                        """).param("m", m).query(Integer.class).single();
+        var ids = orders.open(m, clock.instant().plus(Duration.ofMinutes(60))).stream()
+                .filter(o -> IN_KITCHEN.contains(o.state()))
+                .map(FoodOrder::id)
+                .toList();
+        int cooking = ids.isEmpty()
+                ? 0
+                : ids.size()
+                        - jdbc.sql("""
+                                        select count(*) from food.kitchen_tickets
+                                         where merchant_id = :m and order_id in (:ids)
+                                           and stage not in ('new', 'cooking')
+                                        """)
+                                .param("m", m)
+                                .param("ids", ids)
+                                .query(Integer.class)
+                                .single();
         if (cooking > 0) {
             out.put("kds", (context.french() ? "%d en cuisine" : "%d cooking").formatted(cooking));
         }

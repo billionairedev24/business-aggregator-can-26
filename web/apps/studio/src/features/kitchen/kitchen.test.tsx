@@ -74,6 +74,13 @@ describe('Live orders', () => {
     expect(calls.filter(c => c.method === 'POST')).toHaveLength(2);
   });
 
+  it('says when late orders auto-paused the kitchen (S-67)', async () => {
+    mockFetch({ [`GET ${B}/kitchen/live`]: () => board([ticket('o1', 'FD-1', 'cooking', { readyBy: inMin(-8) })], { autoPause: { lateOrders: 3, threshold: 3, active: true } }) });
+    renderWithProviders(<LiveOrdersScreen />);
+    expect(await screen.findByText('Auto-paused.')).toBeTruthy();
+    expect(screen.getByText(/3 orders are past the ready-by time \(your limit is 3\)/)).toBeTruthy();
+  });
+
   it('bookkeepers see the board without actions; errors offer retry', async () => {
     role = 'bookkeeper';
     mockFetch({ [`GET ${B}/kitchen/live`]: () => board([ticket('o1', 'FD-1', 'new')]) });
@@ -147,6 +154,25 @@ describe('Menu builder', () => {
     await waitFor(() => expect(screen.queryByRole('heading', { name: 'New item' })).toBeNull());
     const posts = calls.filter(c => c.method === 'POST' && c.url.endsWith('/menu-items'));
     expect(posts.at(-1)?.body).toMatchObject({ menuId: 'mn1', sectionId: 's2', name: 'Com tam', priceCents: 1650, allergens: ['fish'], modifierGroupIds: ['g1'], publish: false });
+  });
+
+  it('holds an outlier price until the owner keeps it (S-67)', async () => {
+    let confirmed = false;
+    const flagged = () => item('i1', 'Pho dac biet', { priceCents: 2300, visibility: confirmed ? 'live' : 'price_check', priceCheck: { medianCents: 1500, deviationPct: 53, confirmed } });
+    const detail = () => ({ ...menuDetail(), sections: [{ id: 's1', name: 'Mains', sort: 0, items: [flagged()] }] });
+    const calls = mockFetch({
+      [`GET ${B}/menus/mn1`]: () => detail(),
+      [`GET ${B}/menus`]: () => menus(),
+      [`GET ${B}/modifier-groups`]: () => ({ items: [group] }),
+      [`POST ${B}/menu-items/i1/confirm-price`]: () => { confirmed = true; return flagged(); },
+    });
+    const user = userEvent.setup({ delay: null });
+    renderWithProviders(<MenuBuilderScreen />);
+    expect(await screen.findByText('Price check')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Edit Pho dac biet' }));
+    expect(screen.getByText(/\$23\.00 is 53 % above similar dishes nearby \(median \$15\.00\)/)).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Keep this price' }));
+    await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url.endsWith('/i1/confirm-price'))).toBe(true));
   });
 
   it('bookkeepers get a read-only builder', async () => {

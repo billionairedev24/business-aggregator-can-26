@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:food.kitchen_auto_paused:1",
+  "description": "kitchen.auto_paused — S-67: N or more accepted orders are past their ready-by time; customers can't order until the kitchen catches up. Topic food.kitchen, key = merchant id.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "lateOrders",
+    "threshold"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "merchants.merchants.id"
+    },
+    "lateOrders": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "accepted orders past their ready-by time"
+    },
+    "threshold": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "the kitchen's \"Auto-pause if late orders ≥\" setting"
+    }
+  }
+}

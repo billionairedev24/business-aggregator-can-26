@@ -4,7 +4,8 @@ import { ValidationError } from '../../lib/http';
 import { useMerchantId } from '../shell/api';
 import { useReviseQuote, useSendQuote, useUploadMedia, type LineKind, type Quote, type QuoteRequest } from './api';
 import { useAppointmentsT } from './messages';
-import { DURATIONS, VALID_HOURS, attention, initialState, newLine, toBody, totals, validate, type ComposerLine, type ComposerState } from './quote';
+import { DURATIONS, QUOTE_MESSAGES_FR, VALID_HOURS, attention, initialState, newLine, toBody, totals, validate, type ComposerLine, type ComposerState } from './quote';
+import { localizeAll, useLocalizeMessage } from '../../lib/validation';
 import { QuoteLineSuggestions } from '../writing/WritingHelp';
 
 const KINDS: LineKind[] = ['labour', 'part', 'fee', 'travel', 'discount'];
@@ -27,7 +28,8 @@ export function QuoteComposer({ request, revising, onDone, onCancel }: { request
   const fileRef = useRef<HTMLInputElement>(null);
   const uid = useId();
 
-  const errors = { ...(tried ? validate(s) : {}), ...server };
+  const lm = useLocalizeMessage(QUOTE_MESSAGES_FR);
+  const errors = localizeAll({ ...(tried ? validate(s) : {}), ...server }, lm);
   const tot = totals(s.lines);
   const count = attention(errors);
   const pending = send.isPending || revise.isPending;

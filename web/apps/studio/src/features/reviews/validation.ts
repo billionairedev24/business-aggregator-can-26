@@ -14,7 +14,7 @@ export const MSG = {
   NOTE_TOO_LONG: 'Keep the note under 500 characters.',
 } as const;
 
-const FR: Record<string, string> = {
+export const FR: Record<string, string> = {
   [MSG.REPLY_REQUIRED]: 'Écrivez une réponse avant de l’envoyer.',
   [MSG.REPLY_TOO_LONG]: 'Les réponses doivent faire moins de 1 000 caractères.',
   [MSG.REASON_REQUIRED]: 'Choisissez une raison.',

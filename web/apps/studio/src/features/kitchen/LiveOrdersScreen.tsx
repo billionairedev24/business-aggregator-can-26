@@ -49,6 +49,7 @@ export function LiveOrdersScreen() {
           ) : null}
         </div>
       </div>
+      {b.autoPause?.active && b.autoPause.threshold ? <div className="nl-k-paused" role="status"><strong>{t('autoPausedStrong')}</strong> {t('autoPausedText', { late: b.autoPause.lateOrders, limit: b.autoPause.threshold })}</div> : null}
       {paused ? <div className="nl-k-paused" role="status"><strong>{t('pausedStrong')}</strong> {t('pausedText', { n: Math.max(1, minutesUntil(b.pausedUntil!, now)) })}</div> : null}
       {act.isError || toggle.isError ? <Alert tone="error" role="alert">{t('actionError')}</Alert> : null}
       {b.items.length === 0 ? <EmptyState>{t('liveEmpty')}</EmptyState> : (

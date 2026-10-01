@@ -106,6 +106,9 @@ export const downloads = {
   export: (m: string, period: Period) => `${base(m)}/reports/export.csv?period=${period}`,
   gst: (m: string, year: number) => `${base(m)}/reports/gst-summary.csv?year=${year}`,
   annual: (m: string, year: number) => `${base(m)}/reports/annual-statement.csv?year=${year}`,
+  /** S-41: the same tax documents as PDF statements, in the Studio's language. */
+  gstPdf: (m: string, year: number, lang: 'en' | 'fr') => `${base(m)}/reports/gst-summary.pdf?year=${year}&lang=${lang}`,
+  annualPdf: (m: string, year: number, lang: 'en' | 'fr') => `${base(m)}/reports/annual-statement.pdf?year=${year}&lang=${lang}`,
   evidence: (m: string, disputeId: string, evidenceId: string) => `${base(m)}/disputes/${disputeId}/evidence/${evidenceId}`,
 };
 

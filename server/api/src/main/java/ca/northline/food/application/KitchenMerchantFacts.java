@@ -12,6 +12,9 @@ public interface KitchenMerchantFacts {
 
     boolean approved(String merchantId);
 
+    /** Whether the business is a kitchen (type {@code kitchen}); false for an unknown id. */
+    boolean kitchen(String merchantId);
+
     FoodSafety foodSafety(String merchantId);
 
     /**

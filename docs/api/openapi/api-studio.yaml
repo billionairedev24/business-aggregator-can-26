@@ -6978,6 +6978,71 @@ paths:
           description: "Validation failed: one error per field with the exact message."
       tags:
       - menu-item-controller
+  /api/v1/merchants/{merchantId}/menu-items/{itemId}/confirm-price:
+    post:
+      operationId: menuItemConfirmPrice
+      parameters:
+      - in: path
+        name: merchantId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: path
+        name: itemId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ItemView"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - menu-item-controller
   /api/v1/merchants/{merchantId}/menu-items/{itemId}/photo:
     get:
       operationId: menuItemPhoto
@@ -11421,6 +11486,78 @@ paths:
           description: Not found.
       tags:
       - earnings-controller
+  /api/v1/merchants/{merchantId}/reports/annual-statement.pdf:
+    get:
+      operationId: earningsAnnualPdf
+      parameters:
+      - in: path
+        name: merchantId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: year
+        required: false
+        schema:
+          type: integer
+          format: int32
+      - in: query
+        name: lang
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: byte
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - earnings-controller
   /api/v1/merchants/{merchantId}/reports/export.csv:
     get:
       operationId: earningsExport
@@ -11508,6 +11645,78 @@ paths:
             '*/*':
               schema:
                 type: string
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - earnings-controller
+  /api/v1/merchants/{merchantId}/reports/gst-summary.pdf:
+    get:
+      operationId: earningsGstPdf
+      parameters:
+      - in: path
+        name: merchantId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: year
+        required: false
+        schema:
+          type: integer
+          format: int32
+      - in: query
+        name: lang
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: byte
           description: OK
         "401":
           content:
@@ -14847,6 +15056,17 @@ components:
           type: string
         targetType:
           type: string
+    AutoPause:
+      type: object
+      properties:
+        active:
+          type: boolean
+        lateOrders:
+          type: integer
+          format: int32
+        threshold:
+          type: integer
+          format: int32
     BankAccount:
       type: object
       properties:
@@ -16429,6 +16649,8 @@ components:
           type: integer
           format: int64
           description: Cents of Canadian dollars (CAD).
+        priceCheck:
+          $ref: "#/components/schemas/PriceFlag"
         sectionId:
           type: string
         soldOut:
@@ -16449,6 +16671,7 @@ components:
           enum:
           - draft
           - needs_photo
+          - price_check
           - awaiting_approval
           - live
     JobDetailResponse:
@@ -16918,6 +17141,8 @@ components:
     LiveBoard:
       type: object
       properties:
+        autoPause:
+          $ref: "#/components/schemas/AutoPause"
         counts:
           $ref: "#/components/schemas/LiveCounts"
         items:
@@ -17938,6 +18163,18 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SlotResponse"
+    PriceFlag:
+      type: object
+      properties:
+        confirmed:
+          type: boolean
+        deviationPct:
+          type: integer
+          format: int32
+        medianCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
     PriceStockRequest:
       type: object
       properties:
