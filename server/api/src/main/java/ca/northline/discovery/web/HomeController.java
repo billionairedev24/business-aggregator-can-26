@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * {@code GET /api/v1/public/home?city=Calgary} — public (guests included), the same for everyone in a city, so it may
+ * {@code GET /api/v1/public/home?city={city}} — public (guests included), the same for everyone in a city, so it may
  * be cached for a minute. Unknown cities answer zeros, not 404: the page then offers to change the location.
  */
 @RestController

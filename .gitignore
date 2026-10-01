@@ -3,3 +3,5 @@
 .env.*
 !.env.example
 smoke-out/
+# make up / make run (scripts/stack.sh): pids and app logs
+.run/
