@@ -42,7 +42,8 @@ class SellerOversightController {
             String reason) {}
 
     record ReverificationRequest(
-            @NotBlank(message = SellerOversight.CHECK_REQUIRED) String verificationId,
+            @NotBlank(message = SellerOversight.CHECK_REQUIRED)
+            String verificationId,
 
             @NotBlank(message = SellerOversight.REASON_REQUIRED)
             @Size(max = 500, message = SellerOversight.REASON_LENGTH)

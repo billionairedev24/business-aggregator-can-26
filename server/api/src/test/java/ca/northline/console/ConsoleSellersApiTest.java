@@ -45,8 +45,15 @@ class ConsoleSellersApiTest extends IntegrationTest {
         glen = business("seller", prefix + " Glenmore Bakery", "master");
         // Bow River: quality 78 (< Trusted floor 80), insurance expiring in 21 days, $240 + $100 of jobs, one dispute
         quality(bow, 78);
-        new SettingsFixtures(jdbc).verification(bow, "insurance", null, null, "verified",
-                Instant.now().plus(Duration.ofDays(21)).plus(Duration.ofHours(2)), null);
+        new SettingsFixtures(jdbc)
+                .verification(
+                        bow,
+                        "insurance",
+                        null,
+                        null,
+                        "verified",
+                        Instant.now().plus(Duration.ofDays(21)).plus(Duration.ofHours(2)),
+                        null);
         new SettingsFixtures(jdbc).verification(bow, "licence", "AMVIC", "51022", "verified", null, null);
         booking(bow, 24_000);
         booking(bow, 10_000);
@@ -56,14 +63,14 @@ class ConsoleSellersApiTest extends IntegrationTest {
         order(glen, 2, 2_060);
         jdbc.sql("""
                         insert into trust.flags (id, target_type, target_id, rule, state, merchant_id)
-                        values (?, 'merchant', ?, 'off_platform_payment', 'open', ?)""")
-                .params(Ids.next(), glen, glen)
-                .update();
+                        values (?, 'merchant', ?, 'off_platform_payment', 'open', ?)""").params(Ids.next(), glen, glen).update();
     }
 
     @Test
     void theDirectoryShowsTierQualityGmvDisputesAndWhatPutsABusinessAtRisk() throws Exception {
-        mvc.perform(get("/api/v1/console/sellers").param("q", prefix).param("province", "NU")
+        mvc.perform(get("/api/v1/console/sellers")
+                        .param("q", prefix)
+                        .param("province", "NU")
                         .with(TestJwt.staff(staff, StaffRole.TRUST_SAFETY)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items", hasSize(2)))
@@ -90,7 +97,9 @@ class ConsoleSellersApiTest extends IntegrationTest {
         mvc.perform(get("/api/v1/console/sellers").param("q", prefix).with(TestJwt.staff(staff, StaffRole.SUPPORT)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items", hasSize(2)));
-        mvc.perform(get("/api/v1/console/sellers").param("q", prefix).param("province", "YT")
+        mvc.perform(get("/api/v1/console/sellers")
+                        .param("q", prefix)
+                        .param("province", "YT")
                         .with(TestJwt.staff(staff, StaffRole.ADMIN)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items", hasSize(0)));
@@ -112,7 +121,8 @@ class ConsoleSellersApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.disputes.value").value(50.0))
                 .andExpect(jsonPath("$.ratingCount").value(0))
                 .andExpect(jsonPath("$.checks", hasSize(2)))
-                .andExpect(jsonPath("$.checks[?(@.checkType == 'licence')].reference").value("51022"))
+                .andExpect(jsonPath("$.checks[?(@.checkType == 'licence')].reference")
+                        .value("51022"))
                 .andExpect(jsonPath("$.trail", hasSize(1)))
                 .andExpect(jsonPath("$.trail[0].action").value("tier_changed"))
                 .andExpect(jsonPath("$.trail[0].reason").value("Quality below the floor"))
@@ -134,7 +144,9 @@ class ConsoleSellersApiTest extends IntegrationTest {
         mvc.perform(get("/api/v1/console/sellers").with(TestJwt.staffWithoutMfa(staff, StaffRole.ADMIN)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("mfa_required"));
-        mvc.perform(get("/api/v1/console/sellers").param("market", "mkt-nowhere").with(TestJwt.staff(staff, StaffRole.ADMIN)))
+        mvc.perform(get("/api/v1/console/sellers")
+                        .param("market", "mkt-nowhere")
+                        .with(TestJwt.staff(staff, StaffRole.ADMIN)))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.errors[0].message").value("Choose a market from the list."));
     }
@@ -143,14 +155,16 @@ class ConsoleSellersApiTest extends IntegrationTest {
 
     private String business(String type, String name, String tier) {
         var id = data.merchant(type, name);
-        jdbc.sql("update merchants.merchants set province = 'NU', city = 'Iqaluit', tier = ?, status = 'active' where id = ?")
+        jdbc.sql(
+                        "update merchants.merchants set province = 'NU', city = 'Iqaluit', tier = ?, status = 'active' where id = ?")
                 .params(tier, id)
                 .update();
         return id;
     }
 
     private void quality(String merchant, int score) {
-        jdbc.sql("insert into trust.quality_scores (merchant_id, date, score, components) values (?, ?, ?, '[]'::jsonb)")
+        jdbc.sql(
+                        "insert into trust.quality_scores (merchant_id, date, score, components) values (?, ?, ?, '{}'::jsonb)")
                 .params(merchant, LocalDate.now(), score)
                 .update();
     }

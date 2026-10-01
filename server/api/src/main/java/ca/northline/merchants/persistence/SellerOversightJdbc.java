@@ -69,7 +69,9 @@ class SellerOversightJdbc implements SellerDirectory, OversightStore {
                 .param("ids", rows.stream().map(Seller::id).toArray(String[]::new))
                 .query((rs, _) -> Map.entry(rs.getString("merchant_id"), check(rs)))
                 .list()
-                .forEach(e -> attention.computeIfAbsent(e.getKey(), _ -> new ArrayList<>()).add(e.getValue()));
+                .forEach(e -> attention
+                        .computeIfAbsent(e.getKey(), _ -> new ArrayList<>())
+                        .add(e.getValue()));
         return rows.stream()
                 .map(s -> withAttention(s, attention.getOrDefault(s.id(), List.of())))
                 .toList();
@@ -79,7 +81,8 @@ class SellerOversightJdbc implements SellerDirectory, OversightStore {
     public Optional<SellerFile> seller(String merchantId) {
         return jdbc.sql(SELLER + " where m.id = :id")
                 .param("id", merchantId)
-                .query((rs, _) -> Map.entry(seller(rs, List.of()), Optional.ofNullable(rs.getString("stripe_account_id"))))
+                .query((rs, _) ->
+                        Map.entry(seller(rs, List.of()), Optional.ofNullable(rs.getString("stripe_account_id"))))
                 .optional()
                 .map(e -> {
                     var checks = jdbc.sql("""
@@ -99,7 +102,8 @@ class SellerOversightJdbc implements SellerDirectory, OversightStore {
                             .param("id", merchantId)
                             .query((rs, _) -> oversight(rs))
                             .list();
-                    return new SellerFile(withAttention(e.getKey(), due), e.getValue().orElse(null), checks, trail);
+                    return new SellerFile(
+                            withAttention(e.getKey(), due), e.getValue().orElse(null), checks, trail);
                 });
     }
 
