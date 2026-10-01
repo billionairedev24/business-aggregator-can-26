@@ -1,0 +1,68 @@
+{{- /*
+S-71: the full search reindex as a one-off Job (docs/runbooks/search.md § 9). Rendered only when searchReindex.runId is
+set: the worker image runs SearchReindexCommand with the worker Deployment's environment (database, Kafka,
+Elasticsearch) — it builds new versioned indices from Postgres, catches up from Kafka, swaps the aliases atomically and
+deletes the old indices. Safe while everything runs; a failure before the swap leaves the live indices untouched. Not a
+hook: it runs beside the release. To run it again, set another runId (a Job's spec can't change); remove the value
+once it has finished.
+*/ -}}
+{{- $r := .Values.searchReindex }}
+{{- if and $r.runId .Values.apps.worker.enabled }}
+{{- $app := .Values.apps.worker }}
+{{- $ctx := dict "root" . "name" "worker" "app" $app }}
+{{- if not (regexMatch "^[a-z0-9]([-a-z0-9]{0,30}[a-z0-9])?$" (toString $r.runId)) }}
+{{- fail (printf "searchReindex.runId must be a short DNS label (a-z, 0-9, -), got %q" (toString $r.runId)) }}
+{{- end }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: northline-search-reindex-{{ $r.runId }}
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "search-reindex") | nindent 4 }}
+  annotations:
+    # Argo CD: never prune or replace a running reindex because of a later sync
+    argocd.argoproj.io/sync-options: Prune=false,Replace=false
+spec:
+  backoffLimit: 0                 # a failed run cleaned up after itself; look at the log, then set a new runId
+  activeDeadlineSeconds: {{ $r.activeDeadlineSeconds }}
+  ttlSecondsAfterFinished: {{ $r.ttlSecondsAfterFinished }}
+  template:
+    metadata:
+      labels:
+        {{- include "northline.selectorLabels" (dict "root" . "app" "search-reindex") | nindent 8 }}
+        app.kubernetes.io/part-of: northline
+        {{- with .Values.global.podLabels }}{{ toYaml . | nindent 8 }}{{ end }}
+        {{- with (include "northline.identityPodLabels" $ctx) }}{{ . | nindent 8 }}{{ end }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "northline.appName" "worker" }}
+      automountServiceAccountToken: false
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+        runAsUser: {{ $app.runAsUser }}
+        runAsGroup: {{ $app.runAsUser }}
+      containers:
+        - name: search-reindex
+          image: {{ include "northline.image" $ctx | quote }}
+          imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+          command: ["java", "-XX:MaxRAMPercentage=75", "-cp", "@/app/jib-classpath-file",
+                    "ca.northline.worker.search.SearchReindexCommand"{{ if $r.keepOld }}, "--keep-old"{{ end }}]
+          {{- include "northline.springEnv" $ctx | nindent 10 }}
+          resources:
+            {{- toYaml $r.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            {{- with .Values.spring.extraVolumeMounts }}{{ toYaml . | nindent 12 }}{{ end }}
+            {{- with $app.extraVolumeMounts }}{{ toYaml . | nindent 12 }}{{ end }}
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 64Mi }
+        {{- with .Values.spring.extraVolumes }}{{ toYaml . | nindent 8 }}{{ end }}
+        {{- with $app.extraVolumes }}{{ toYaml . | nindent 8 }}{{ end }}
+{{- end }}

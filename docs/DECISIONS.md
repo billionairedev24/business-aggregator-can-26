@@ -2446,6 +2446,64 @@ Built on S-49 (branch `web/s-50-product-detail` from `web/s-49-shop-landing`).
   - Disclose the processor in the Privacy Policy and in the PIPEDA / Law 25 assessment (SEC stories), together with the other processors.
 - **Pending:** an OpenRouter API key per environment. Until it exists, `northline.ai.provider=fake` locally, and AI features answer `503 ai_unavailable` in the cloud.
 
+## 2026-09-30 — S-124 Makefiles for every developer and operator workflow
+
+- **Root `Makefile` + one include per area** (`make/server.mk`, `web.mk`, `db.mk`, `kafka.mk`, `search.mk`, `docs.mk`,
+  `deploy.mk`, `infra.mk`), self-documenting: `target: ## text` and `##@ Section` lines are what `make help` prints
+  (plus `##> VAR  text` for the common variables), so a target without a description is deliberately hidden
+  (internal helpers such as `server-clean`). Layout, target names, `SERVICES`, `up`/`run`/`down`/`status`/`logs`/
+  `restart` and the help format follow the user's other repository (samop), as asked. Guide: `docs/LOCAL_DEVELOPMENT.md`
+  (same role as samop's); `docs/runbooks/local.md` keeps the configuration detail and now shows the make target next to
+  each plain command.
+- **`make up` = stand-ins + database + apps in the background.** Compose profiles come from `PROFILES` (comma list) or,
+  when empty, `COMPOSE_PROFILES` in `.env` (`db`); `docker compose up -d --wait` (Compose ≥ 2.20, already the runbook's
+  minimum), then `db-migrate` (with the dev personas) and `db-seed` (`SKIP_DB=1` skips), then `scripts/stack.sh up
+  $(SERVICES)`. `make run` (alias `make dev`) is the foreground variant with merged, prefixed logs; Ctrl-C stops only what
+  that run started. So `make setup up run` (the acceptance criterion) starts Postgres, migrates, seeds, starts the api and
+  the Studio, and follows their logs. `make down` stops every app the runner started and every stand-in (data kept,
+  `VOLUMES=1` deletes it); `make down SERVICES=…` stops only those apps.
+- **App runner `scripts/stack.sh`** (samop's pattern): each app in its own session/process group (setsid, or Perl's
+  `POSIX::setsid` on macOS where util-linux is missing), pid + log in `.run/` (git-ignored), stopped by group id only;
+  refuses a port someone else holds and names the holder; restarts an app whose command changed; waits for
+  `/actuator/health` (Java, up to 6 min for a cold first start) or the dev server's `/`. It compiles the selected server
+  projects **once before** starting several `bootRun`s, because parallel Gradle builds compiling the same classes race.
+- **Default `SERVICES="api studio"` with dev auth:** the fastest path needs only Postgres. The web apps choose dev auth
+  (`NL_DEV_USER` = Ravi Sandhu / Amara Osei) automatically unless their BFF is being started or already runs;
+  `DEV_AUTH=1|0` forces it. Real sign-in is `make up SERVICES="auth api bff studio"`.
+- **Portable make:** GNU make 3.81 (macOS) — no `.ONESHELL`, `.SHELLFLAGS`, `::=`/`!=`, `undefine`, `$(file)`; bash 3.2 in
+  recipes and in `stack.sh` (no `mapfile`, no associative arrays); no GNU-only `sed -i`/`find -printf`/`readlink -f`.
+  Checked statically (grep) and run with GNU make 4.3; make 3.81 itself could not be downloaded here (the GNU mirrors are
+  blocked by the sandbox proxy) and nothing ran on macOS. `infra/terraform/scripts/validate.sh` itself uses `mapfile` and
+  `find -printf` (S-2): `make tf-validate` on macOS needs Homebrew bash + findutils, which `make doctor` and the guide say.
+- **Toolchain check** `make/toolchain.sh` (POSIX sh): JDK 25, Node 22+, pnpm are required (setup fails without them);
+  Docker/Compose ≥ 2.20, psql, helm ≥ 3.14, kubeconform, terraform ≥ 1.9, tflint, kubectl, kind and bash ≥ 4 only warn,
+  each with what it is needed for. The Makefile finds a JDK 25 even when `JAVA_HOME` points at another version.
+- **Gradle** always runs with `--max-workers=2` and CI's `ci/gradle/maven-mirror.init.gradle.kts` (a no-op without
+  `MAVEN_MIRROR_URL`), so laptop and CI builds are the same command. `server-lint` = `spotlessCheck checkstyleMain
+  checkstyleTest compileTestJava` (Error Prone/NullAway run in the compiler).
+- **`web-format` formats only the web files changed against `BASE` (default `origin/main`)** plus untracked ones: Prettier
+  was never applied to `web/` (139 Studio files differ), so a whole-tree format would bury real changes in every PR.
+  `WEB_FORMAT_ALL=1` does the whole tree when someone decides to. `web-lint` = the hex-colour lint + typecheck (the root
+  `pnpm lint` has no ESLint config and would fail). Web targets depend on `web/node_modules/.modules.yaml`, so they
+  install only when the lockfile is newer.
+- **`db-reset`** asks first (`YES=1` skips), refuses a non-local `PGHOST`, uses the compose `postgres` container when it
+  runs, else psql as a superuser (creating `postgis`, `citext`, `pgcrypto`), then migrates and seeds.
+- **Kafka/search targets wrap the existing provisioners** (`:worker:kafkaTopics`, `:worker:searchIndices`,
+  `:worker:dlqReplay`); `search-reindex` calls S-71's `:worker:searchReindex`, which exists once S-71 is merged (before
+  that Gradle says the task is unknown). `openapi` and `docs` are placeholders in this PR, filled by S-125 and S-126.
+- **CI calls the targets** (still `workflow_dispatch` / web-or-api pipelines only): GitHub server (`make server-build
+  TASKS=…`), web (`web-lint`, `web-test`, `web-build-studio`, `web-storybook-build`/`-test`, `e2e`), infra
+  (`tf-validate`, `tf-lint`), deploy (`images-java JIB_TASK=…`, `helm-validate`), gitops (`argocd-validate`), event-schemas
+  (`server-events`); GitLab likewise, installing `make` in images that lack it (Temurin, Playwright via apt; Alpine
+  helm/terraform/tflint via apk). Kept as they were: the web image job (docker/build-push-action with the GHA cache, a
+  buildx matrix on GitLab) and the promotion jobs (PR/MR creation is CI-specific).
+- **Verified here:** `make env`, `make up PROFILES=db` (an isolated compose project: stand-ins healthy, 182 categories
+  seeded, api + Studio up, `/api/v1/me/businesses` through the Studio's proxy as Ravi), `make status`, `make logs`,
+  `make down SERVICES=…`, `make run SERVICES=api` stopped by a signal (app stopped, pid files removed), a failed start
+  reported with the log's last lines, `make help`, and `-n` dry runs of the Gradle/compose/image targets.
+- **Not done:** `OBS=1` (samop's observability flag) waits for S-111/S-112, which bring the telemetry stack; the pipelines
+  were not run (manual only, no credits); nothing was run on macOS.
+
 ## 2026-09-30 — S-51 Cart and checkout (server-side cart, step-up, tax, manual-capture payments, order.placed)
 
 - **Cart (orders, `/api/v1/cart`, open to guests):** `GET`, `POST /items` `{offerId, variantId?, qty}`,
@@ -2547,3 +2605,91 @@ Built on S-49 (branch `web/s-50-product-detail` from `web/s-49-shop-landing`).
   - `WebhookPayloadsTest.orderPlaced_theShopsLinesWithoutTheCustomer`.
   - vitest `features/cart/cart.test.tsx`: design copy, guest banner and sign-in, multi-shop groups, quantity and
     remove, delivery windows, tax lines, step-up dialog, fake card, errors, French.
+
+## 2026-09-30 — S-52 Order confirmed and tracking (design 06 confirmed)
+
+- **Endpoints (orders, `/api/v1/me/orders`, single-factor sessions allowed):**
+  - `GET /{orderId}` returns the order (ref, state, totals), its delivery (the pooled run's label, window and
+    households, or the direct courier's estimated time), one entry per shop (name, items, packed) and the timeline.
+    It is `Cache-Control: no-store`. Anyone other than the order's customer gets 404, not 403, so order ids can't be
+    probed.
+  - `GET /{orderId}/events` is `text/event-stream`: an `order` event with the same JSON at once and again on every
+    change. It sends a keep-alive comment every 25 s and ends after 30 minutes (the browser's EventSource
+    reconnects). The ownership check runs before the stream opens.
+- **The timeline follows the order's state**, since there are no courier or fulfilment events yet:
+  - Paid → Shops packing (`placed` / `accepted` / `packing`) → Courier picks up (`ready`) → Delivered (`picked_up`
+    is current, `delivered` / `confirmed` is done).
+  - A cancelled or refunded order shows only Paid plus the state sentence.
+  - "N of M packed" counts the shops whose lines have all left `pending`, which is the Studio's "Mark packed"
+    (`POST /api/v1/merchants/{m}/orders/{o}/pack`).
+  - The design's copy ("Shops packing · 1 of 3 packed", "Courier picks up · scan at each shop", "Delivered · photo
+    proof · you confirm, shops paid") is used as it stands, even though courier scans and photo proof don't exist
+    yet. That is the flow the design describes, and the steps advance when the order's state does.
+- **Live updates:** `OrderTrackingEvents` turns every event that changes what the customer sees (`OrderPlaced`,
+  `OrderPacked`, kitchen accepted/ready, food handed off) into a "changed" on the new `TrackingBus`.
+  - Under `local` / `test` the bus is in memory.
+  - Everywhere else it is Redis pub/sub (channel `nl:order:<id>`, message = the order id, nothing stored; CLAUDE.md
+    names Redis for order tracking). Every replica wakes its own open streams, and each stream re-reads the order,
+    so a message carries no data. No new configuration is needed (the existing `REDIS_*` variables).
+  - The page also refetches every 30 s, in case a stream is dropped by a proxy.
+- **Screen (`/orders/$orderId`):** checkout lands here after placing.
+  - The title comes from the delivery: "Order placed. Arriving tonight 6–9 pm." / "… by about 7:10 pm". It then
+    becomes "On the way…" and "Delivered.".
+  - The subtitle is "{ref} · {total} · N shops packing now…".
+  - The run card ("Pooled run R-701 · leaves 6:00 pm", households) and View orders / Back to home.
+  - Signed out: "Sign in to see your order." with Sign in (next = this page). An unknown order: "We couldn't find
+    this order.". en + fr-CA.
+- **Not done / gaps:**
+  - The design's map is a placeholder panel (no courier positions exist).
+  - "Receipt sent to …" and points earned are not shown (no receipt email, no loyalty ledger).
+  - "View orders" links to `/account/orders` (S-58).
+  - SSE through the consumer-bff (Spring Cloud Gateway MVC relay) and the TanStack Start server hasn't been run end
+    to end here. The api's stream is tested with MockMvc. If a proxy buffers it, the 30-second refetch still keeps
+    the page current.
+- **Schema:** none (reads `orders.orders` / `order_lines` and `orders.delivery_windows` through `DeliveryRuns`).
+- **Tests:**
+  - `OrderTrackingApiTest` (own market "Trackville"):
+    - the view and its timeline;
+    - only the customer sees it (401 / 404 for others, stream included);
+    - the timeline follows the state through delivered;
+    - the stream sends the order at once and again when a shop packs.
+  - vitest `features/orders/orders.test.tsx`: design copy for pooled and direct, packed count and the run, live update
+    from the stream, sign-in prompt, not found, skeleton, error + Retry, French.
+
+## 2026-09-30 — Region-neutral by design (user direction)
+
+- Northline **starts** in Alberta (Calgary first) but is built for every province.
+- Code must not hardcode a province, city or time zone. That covers messages, defaults, holiday calendars, time zones, service zones and legal copy. All of it comes from the region configuration: the provinces (time zones, statutory holidays, tax, privacy law, registries, launch status) and the markets (city, province, time zone, zones, live flag).
+- A message that names a place takes it as a parameter ({province}, {city}), in English and French.
+- Province-specific integrations, such as the Alberta corporate registry or the City of Calgary licences, stay as adapters. They are selected by the business's province and city, never by default.
+- S-134 moves the existing literals into that configuration and adds a lint rule. Until it lands, new code must not add region literals.
+
+## 2026-09-30 — S-44 Search API: query, filters, geo sort, trust/distance boosts, completion suggester
+
+- **Module `search` (api), hexagonal like the others:** `domain` (`SearchQuery`, `SuggestQuery` with every rule checked at once, `Coordinates`, `Highlight`, codes `SearchKind`/`SearchSort`/`TrustTier`), `application` (use cases `SearchListings`, `SuggestListings`; ports `SearchIndex`, `SearchCache`, `SearchRateLimit`; `SearchService` with the hot-query cache), `integration` (`ElasticsearchSearchIndex`, `LocalSearchIndex`, Redis/memory caches, `SearchConfig`), `web` (`SearchController`, `SearchParams`, DTOs, MapStruct `SearchWebMapper`). It reads the read model through the shared `ListingDocument` contract and never writes to Elasticsearch (ARCHITECTURE). No SQL at all (S-37's rule holds trivially).
+- **Provider port as elsewhere:** `SEARCH_PROVIDER=elasticsearch` (default) | `local` = no index, empty results, the `local`/`test` profiles' default so the api still starts without Elasticsearch; `local` is refused under staging/prod at start-up. `SearchApiTest` switches to Elasticsearch in its own context.
+- **Query DSL as JSON** (Jackson `ObjectNode`, sent with `withJson`), read back through the typed client: easier to read next to `deploy/search/listings.json` than the builder API. **Match:** `best_fields` on name ×4, merchant and category names ×2, keywords ×1.5, description with every word required; plus `cross_fields` (words spread over name, merchant, categories, keywords; ×0.5) and a `bool_prefix` on `name.prefix` for words still being typed. **Relevance:** `function_score` = text × (tier 1.5 master / 1.2 trusted / 1.0 registered + log10(2 + rating) + up to 2 for nearness: Gauss on `location`, full within 1 km, half at 6 km, only for documents that have a location). Summed rather than multiplied so a good match farther away still ranks (multiplying by the decay zeroed everything beyond ~10 km). Ties: trust rank, then id.
+- **Filters** map the design's chips (design 06: shop "On tonight's run", "Under $10", "Master sellers", "Halal"/"Gluten-free"; providers "Master tier", "Instant book", "Available today", "Under 3 km", "Under $80"; food "Open now", "Halal", "Vegan", "Nut-free"): `kind` (the web's `scope`), `category` (any level, on `categoryPath`), `minPrice`/`maxPrice`, `minRating`, `tier`, `instantBook`, `openNow`, `delivery=tonight`, `dietary`, `allergenFree`, `lat`/`lng` + `radiusKm`. Time-dependent ones are evaluated at query time against Edmonton time: `openNow` = the minute of the week inside `openHours`, no pause in force, not sold out today; `delivery=tonight` = pooled, before `deliveryCutoffMinute`, in stock. Market, `vetting=approved`, `status=live`, `merchantStatus=active` are always filtered. "Available today" for services = `openNow` for now (next free slot needs the booking calendar). "Organic", "Family packs", "EV certified", "Free delivery (Plus)" have no data yet.
+- **Location:** `lat`/`lng` (the consumer shell's names; both or neither); `market` = province/territory code (default `SEARCH_DEFAULT_MARKET`) — the location pill knows the province; no polygon lookup exists (`region.zones` is empty). `distanceKm` on every result that has a location (haversine, one decimal); `sort=distance` leaves out results without a location (their sort value would be infinite and can't round-trip in `search_after`).
+- **Pages:** `search_after` on the sort values + `id` (no point-in-time: pages may shift when the index changes between them, acceptable for a marketplace list); the `next` token is `<sort>.<base64url JSON>` and is refused (422 on `after`) for another sort or when damaged. Facets (kinds, categories with the leaf name, merchants with names via `top_hits`, tiers, price buckets under_10/10_25/25_50/50_100/100_plus, dietary) on the first page only; they count the whole filtered result (not multi-select). `total` exact up to 10 000.
+- **Suggestions** from the S-42 completion fields (`suggest` with contexts market + kind, `suggestCategory` with market), `skip_duplicates`, categories keep at most two places; **highlight** computed in the api (`Highlight`: case- and accent-insensitive, one char per char so offsets line up, only at a word start) as UTF-16 offsets. Types: `service` | `product` | `food` | `merchant` | `category`. Recent searches stay client-side; synonym rows ("fr → sourdough") aren't suggestions.
+- **Hot-query cache 30 s** (backlog): Redis/Valkey `nl:search:<q|s>:<sha-256 of the canonical parameters>` outside `local`/`test` (memory there); best effort — a cache failure is logged and the index answers. `SEARCH_CACHE_TTL`.
+- **Rate limit:** anonymous callers are welcome, so every client address gets `SEARCH_RATE_LIMIT` (120) requests a minute per api instance (the fixed-window `WebhookRateLimiter` already used for webhooks), then 429 `rate_limited` + `Retry-After: 60`. The address is the right-most public `X-Forwarded-For` hop when the peer is internal (ingress, BFFs, the consumer SSR server), else the peer — the api otherwise sees only the BFF's address and one limit would throttle every consumer. Per instance, not shared through Redis: good enough to stop scraping; a shared limit is a follow-up if needed.
+- **Validation messages** are ours (search has no form in `validation-rules.md`), English like the other API messages until S-40: "Search for 100 characters or fewer.", "Choose a province: AB, BC, ON or QC.", "Choose service, product, food or merchant.", "Choose registered, trusted or master.", "Sort by relevance, distance, price_asc, price_desc or rating.", "Latitude must be between -90 and 90.", "Longitude must be between -180 and 180.", "Send both lat and lng, or neither.", "Choose a distance between 1 and 100 km.", "A distance filter needs your location (lat and lng).", "Sorting by distance needs your location (lat and lng).", "Prices can't be negative.", "The lowest price is above the highest.", "Choose a rating between 1 and 5.", "Ask for 1 to 50 results.", "Ask for 1 to 10 suggestions.", "This page link no longer works. Start the search again.", "Type at least one letter.", "Use delivery=tonight or leave it out.".
+- **Contract** for the consumer web in `docs/CONSUMER_WEB_PLAN.md` § Contracts › Search (S-45's list of contracts; the search runbook links it), with the mapping of the web's `scope` and the design's chips to parameters, and the "exists" row in its public API table. OpenAPI: springdoc from `@Tag`/`@Operation`/`@Parameter` on the controller and `@ParameterObject SearchParams` (`/v3/api-docs`, tag *Search*).
+- **Region-neutral** (DECISIONS "Region-neutral by design"): the markets search serves and each one's time zone are configuration, `SEARCH_MARKETS` (`CODE=Zone/Id,…`; default `AB=America/Edmonton,BC=America/Vancouver,ON=America/Toronto,QC=America/Toronto`), not code. "Now" for open-now, the same-day cut-off and "sold out today" is taken in the requested market's zone (the index keeps local times). A malformed code → 422 `format`; a well-formed one not configured → 422 `unsupported` ("Search isn't available in {market} yet."); `SEARCH_DEFAULT_MARKET` blank = requests must name a market, and it must be one of `SEARCH_MARKETS` (checked at start). S-134 moves both into the region configuration.
+- **Variables (api):** `SEARCH_PROVIDER`, `SEARCH_MARKETS`, `SEARCH_DEFAULT_MARKET`, `SEARCH_CACHE_TTL`, `SEARCH_RATE_LIMIT` (all optional) — README, dev/staging/prod tables, `.env.example`.
+- **Tests:** `SearchApiTest` (Elasticsearch 9.1 in Testcontainers with the deploy/search layout, documents built with the shared `ListingDocument`, a fixed clock — Wednesday 12:00 in Edmonton, anonymous requests): text ranked by tier and rating, market isolation; `lang` and `Accept-Language` pick the index, French synonyms and accents; the card fields; open now vs sold out vs paused, weekly hours; tonight's run, dietary, allergens, price, rating, tier, instant book, category at any level; distances, distance sort, radius; nearness and tier boosts; `search_after` pages cover everything once in order (unpriced last); facets on the first page only; suggestions with highlights (products, category, merchant, French, kind context); every validation message; the rate limit per address including `X-Forwarded-For` behind a proxy and a spoofed left entry; the 30 s cache; the OpenAPI description; p95 < 150 ms over 60 uncached queries. `SearchLocalProviderTest`: empty results and the rules with `local`, highlight folding.
+- **Not done / never run for real:** nothing has run against Elastic Cloud; "Your recent" searches (client side); next free slot for services; image URLs (`imageKey` is opaque until a public media URL exists); multi-select facets; a shared (Redis) rate limit.
+
+## 2026-09-30 — S-71 Full reindex job and backfill from Postgres
+
+- **Blue/green by alias, fed from Postgres, caught up from Kafka** (`SearchReindex`, worker): note the end offsets of the `search-indexer` topics → create `listings_<lang>_v<schema>_<now>` beside the live indices (refresh off, no replica, `auto_expand_replicas` off while loading) → backfill every merchant through the live indexer's own `SearchProjection` → catch up the events published since the start, pass after pass until a pass applies nothing → restore the layout's refresh/replica settings, refresh, wait for yellow → **swap both aliases in one `_aliases` request** → catch up once more and re-read merchants changed since the start without an event (what the reconcile sweep wrote to the old index meanwhile) → delete the old indices (`--keep-old` keeps them). Readers never see a missing or partial index; the live indexer, the sweep and the API keep running.
+- **Why the extra passes are safe:** every write goes through the per-merchant advisory lock and the Postgres-clock versions of S-43, so the catch-up and the live indexer can apply the same event in any order (an older snapshot is refused, a 409 is `stale`, not an error). Events are only a list of scopes to re-read; the catch-up reads the main topics (retries and DLQs repeat those records) with a group-less consumer that commits nothing.
+- **One run at a time:** a Postgres *session* advisory lock (`search-reindex`) held on a dedicated connection for the whole run; a second run fails at once (exit 2). **Failure before the swap** deletes the new indices and leaves the aliases untouched (exit 1); after the swap the new indices are live and the indexer keeps them current.
+- **Index names** bump a second when the timestamped name is taken. Old indices of earlier failed runs aren't touched by name guessing: only the indices the aliases pointed at are deleted.
+- **Where it runs:** `SearchReindexCommand` (worker image, the worker's `DB_*`/`KAFKA_*`/`ES_*`), Gradle `:worker:searchReindex`, and a Helm one-off Job `northline-search-reindex-<runId>` rendered only while `searchReindex.runId` is set (a DNS label; the chart refuses others), `backoffLimit: 0`, 2 h deadline, Argo CD `Prune=false,Replace=false` so a later sync never kills a running rebuild. Not a deploy hook: a rebuild is an operator's decision (the search-indices Job only says `REINDEX REQUIRED`). `validate.sh` checks it renders only with a run id.
+- **Library additions** (`ListingIndices`): `putSettings`, `refreshAndWait`, atomic `swap`, `delete` (listings indices only), `count`.
+- **No migration.**
+- **Tests:** `SearchReindexTest` on Kafka 4 + PostGIS + Elasticsearch 9 with the whole worker running: a listing indexed live, a ghost document Postgres doesn't have, a live listing whose event was lost; during the backfill a new listing is published (the live indexer writes the old index) — after the run the alias points at a new versioned index with the layout's `_meta`, the old index is gone, the ghost is gone, the lost and the late listings are there, searches answered the kept listing at every phase, and the live indexer keeps writing through the alias. A second concurrent run is refused; a failure after the backfill deletes the half-built indices and leaves the live alias as it was; `--keep-old` keeps the previous indices.
+- **Not done / never run for real:** nothing has run against Elastic Cloud; no throttling of the backfill (Elasticsearch bulk per merchant; add one if a large catalogue loads a small cluster); a scheduled periodic rebuild (on demand only).

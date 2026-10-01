@@ -17,10 +17,10 @@ import org.jspecify.annotations.Nullable;
  * @param market the merchant's province (AB, BC …): search only ever shows one market
  * @param categoryPath category ids from the root group to the leaf (food: the kitchen's cuisines)
  * @param trustRank 1 registered · 2 trusted · 3 master (boosts; {@code trustTier} is the code)
- * @param deliveryCutoffMinute minutes after midnight (Edmonton) of the same-day pooled run cut-off
+ * @param deliveryCutoffMinute minutes after midnight (local time) of the same-day pooled run cut-off
  * @param inStock products: stock left (null for other kinds)
- * @param soldOutOn dishes: the Edmonton date they are sold out for
- * @param openHours minute-of-week ranges (Monday 00:00 Edmonton = 0, {@code lt} exclusive)
+ * @param soldOutOn dishes: the local date they are sold out for
+ * @param openHours minute-of-week ranges (Monday 00:00 local time = 0, {@code lt} exclusive)
  * @param pausedUntil kitchens: new orders paused until then
  * @param imageKey opaque image reference: {@code media:<catalogue.media id>} or {@code object:<storage key>}
  * @param suggest completion inputs (the name and its later words) and weight
