@@ -4613,3 +4613,94 @@ Measured on the production build. Sizes are gzip -9 in kB (1000 B). "Initial JS"
   - zod (95 kB raw) stays in the entry: the session and business checks that every route runs parse with it, and a
     `zod/mini` split would mean two zod copies.
   - intl-messageformat's parser (38 kB raw) stays too: precompiling the messages would change `defineMessages`.
+
+## 2026-09-30 — S-70 Remaining schema TODO constraints and indexes
+
+Every `-- TODO indexes/constraints` comment of the V002–V015 baseline was checked against a database migrated to
+main (V164). Each one is now one of three things:
+- **done earlier:** it exists from a later migration;
+- **V181:** added by this story;
+- **dropped:** with the reason given below.
+
+The baseline files keep their comments, because applied migrations are never edited, so this list is the reference.
+
+| table | TODO | status |
+|---|---|---|
+| identity.users | unique(phone), unique(email) | done earlier (V020, partial unique) |
+| identity.users | RLS: self or admin | **dropped**. Every query runs as the api's database role and the module services enforce "self or staff" (CurrentUser / staff role). Row-level security would need a role per request and session variables on every pooled connection, for no rule the services don't already apply. |
+| identity.passkeys | index(user_id) | done earlier |
+| identity.sessions | index(user_id) | done earlier (V021) |
+| identity.sessions | TTL job | **dropped**. The rows are the sign-in history that Settings › Security lists (S-19), not live sessions; those are in Valkey with their own TTL. How long the history is kept is a retention decision for the privacy policy, not an index. |
+| identity.household_members | PK(household_id,user_id) | done earlier |
+| identity.addresses | index(user_id) | done earlier (partial, `deleted_at is null`) |
+| identity.addresses | GiST(geom) | **V181** `ix_addresses_geom` (partial, geom not null) |
+| region.regions | unique(province) | done earlier (V130, partial on `kind = 'province'`) |
+| region.zones | GiST(polygon) | done earlier |
+| region.feature_flags | PK(key,region_id) | done earlier |
+| merchants.merchants | index(type,status), index(tier), unique(business_number) | done earlier |
+| merchants.merchant_principals | index(merchant_id), role check per structure | done earlier (V031 trigger `trg_principal_role`) |
+| merchants.merchant_categories | PK, count ≤ limit trigger | done earlier (V016 `trg_category_limit`) |
+| merchants.merchant_members | PK(merchant_id,user_id) | done earlier |
+| merchants.verifications | index(merchant_id,status), index(expires_at) | done earlier |
+| merchants.storefronts | unique(slug), unique(custom_domain) | done earlier (V030, V085) |
+| merchants.storefront_sections | unique(storefront_id,position), kind allowed for page_kind | done earlier (V016 `trg_section_kind`) |
+| merchants.service_areas | PK(merchant_id,zone_id) | done earlier |
+| catalogue.categories | index(parent_id), gin(search_terms) | **V181** `ix_categories_parent`, `ix_categories_search_terms` |
+| catalogue.catalog_products | unique(gtin) | done earlier (V050, partial) |
+| catalogue.catalog_products | GIN(attributes) | **dropped**. No SQL query filters on attributes: attribute facets and filters are served by the Elasticsearch read model (S-44). A GIN index would cost every catalogue write for no reader. |
+| catalogue.offers | unique(merchant_id,sku), index(product_id) | done earlier |
+| catalogue.variants | unique(offer_id,sku) | done earlier |
+| catalogue.services | index(merchant_id), index(category_id) | **V181** `ix_services_merchant`, `ix_services_category`. The (merchant_id, sku) unique index is partial, so it can't serve "every service of a business". |
+| catalogue.media | index(phash), index(owner_type,owner_id) | done earlier |
+| food.menus | index(merchant_id) | done earlier ((merchant_id, sort)) |
+| food.menu_items | index(merchant_id,available) | done earlier |
+| food.item_modifiers | PK(item_id,group_id) | done earlier |
+| availability.availability_rules | index(merchant_id,member_user_id) | done earlier: the leading columns of the unique (merchant_id, member_user_id, weekday, effective_from) |
+| availability.time_off | index(merchant_id,starts_on) | done earlier |
+| booking.bookings | index(merchant_id,starts_at), index(customer_id) | done earlier |
+| booking.bookings | exclusion constraint on member/time | **dropped**. Reasons below the table. |
+| booking.booking_events | index(booking_id,at) | done earlier |
+| booking.quotes | index(request_id), index(merchant_id,state) | done earlier |
+| booking.quote_lines | unique(quote_id,position), discount/amount check | done earlier (V040) |
+| orders.carts | index(customer_id) | done earlier (unique partial) |
+| orders.orders | index(customer_id), index(state,window_id) | done earlier |
+| orders.order_lines | index(order_id), index(merchant_id,state) | done earlier |
+| orders.delivery_windows | index(zone_id,starts_at) | done earlier |
+| orders.group_orders | unique(link_code) | **V181** `ux_group_orders_link_code` (partial) |
+| fulfilment.runs | index(courier_id,state) | **V181** `ix_runs_courier_state` |
+| fulfilment.stops | index(run_id,seq) | **V181** `ix_stops_run_seq` |
+| fulfilment.couriers | Redis Streams · TTL 24 h | **dropped**. Not a database item: live courier positions travel over Valkey pub/sub (S-52 tracking), never through this table. |
+| payments.payment_intents | unique(stripe_pi) | done earlier |
+| payments.escrows | index(release_at), index(merchant_id,state) | done earlier |
+| payments.payouts | index(merchant_id,at) | done earlier: (merchant_id, created_at desc). The table has no `at` column. |
+| payments.ledger_entries | index(account,at), append-only | done earlier (V061 trigger) |
+| payments.refunds, payments.disputes | index(state) | done earlier |
+| trust.reviews | unique(ref_id,author_id), index(target_type,target_id) | done earlier (unique per target type) |
+| trust.quality_scores | PK(merchant_id,date) | done earlier |
+| trust.flags | index(state) | done earlier |
+| trust.points_ledger | index(user_id) | done earlier ((user_id, created_at)) |
+| messaging.threads | index(ref_type,ref_id) | done earlier |
+| messaging.messages | index(thread_id,at) | done earlier |
+| messaging.notifications | index(user_id,sent_at) | **V181** `ix_notifications_user_sent` |
+| messaging.tickets | index(state,sla_due_at), index(agent_id) | done earlier (V071) |
+| i18n.translations | PK(key,locale) | done earlier |
+| i18n.translations | published as CDN bundles | **dropped**. Not a database item. UI strings ship in the web bundles (`defineMessages`), and this table has no writer. |
+| i18n.content_translations | PK | done earlier |
+| developer.api_keys | index(key_hash) | done earlier (unique) |
+| developer.webhook_deliveries | index(endpoint_id,at) | done earlier |
+| developer.outbox | Debezium reads WAL; rows purged after publish | **dropped**. Obsolete: the Modulith JDBC registry (`events.event_publication`) is the outbox, Debezium was removed, and nothing writes this table. Dropping the table itself is left out: migrations here are additive. |
+| developer.audit_log | append-only | **V181** trigger `audit_log_append_only`: UPDATE and DELETE are refused. The one exception is a transaction that sets `northline.audit_retention = 'on'` and deletes rows older than seven years. |
+| developer.audit_log | nightly export to cold storage · 7-year retention | **dropped** as a schema item. The export and the purge job are operations work that no story covers yet. The trigger above already admits the purge. |
+
+**Why the bookings exclusion constraint was dropped.**
+- Customer bookings already serialise per team member and refuse overlaps: `CustomerBookingJdbc.lockAndCheckOverlap`
+  takes an advisory lock and runs an overlap query.
+- The availability holds in Valkey (S-55) go further, with travel buffers that a plain time-range exclusion can't
+  express.
+- The constraint would need `btree_gist`.
+- Only the customer booking path runs that check. Rows written by other paths (quote acceptance, the dev seed, older
+  data) aren't guaranteed overlap-free, and any overlapping row in a deployed database would make the migration fail
+  at deploy. That is a risk an additive migration must not take.
+
+**Tests.** `SchemaTodosTest` checks the V181 indexes on the migrated test database, the group-order link uniqueness,
+and the audit log rules: no update, no delete, and a retention delete only past seven years with the setting.
