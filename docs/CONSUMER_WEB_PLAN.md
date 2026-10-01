@@ -101,18 +101,18 @@ A feature folder per story area, named after the design: `home`, `location`, `se
 
 | route | design 06 state | story | notes |
 |---|---|---|---|
-| `/` | home | S-46 | no search in the header on this page |
-| `/location` | location | S-47 | saves with `useDeliveryLocation().save()` |
+| `/` | home | S-46 (**built**) | no search in the header on this page; its tiles link to `/shop/<department>` (the leaf slug of the category id, e.g. `bakery`), `/services/<category>` (e.g. `mobile-mechanic`) and `/food?cuisine=<code>` — S-49 / S-53 / S-57 take those parameters |
+| `/location?next=` | location | S-47 (**built**) | saves with `useDeliveryLocation().save()`, then goes to `next` (local path) or home |
 | `/search?q=&scope=` | search | S-48 | header / hero search lands here; `scope` all \| services \| shop \| food |
 | `/shop` | shop | S-49 | landing page, not results |
 | `/shop/$department` | category | S-49 | SSR + SEO |
 | `/products/$productId` | product | S-50 | SSR + SEO |
 | `/cart` | cart | S-51 | cart + checkout; guest banner |
 | `/orders/$orderId` | confirmed | S-52 | confirmed + tracking (SSE) |
-| `/food` | food | S-57 | |
-| `/food/$kitchen` | restaurant | S-57 | SSR + SEO |
-| `/food/checkout` | foodCheckout | S-57 | guest banner |
-| `/food/orders/$orderId` | foodTrack | S-57 | |
+| `/food` | food | S-57 (**built**) | `?cuisine=<code>` preselects a cuisine; loads in the browser once the location is known |
+| `/food/$kitchen` | restaurant | S-57 (**built**) | SSR + SEO; the food order lives in the browser (`nl.foodCart`, one kitchen) |
+| `/food/checkout` | foodCheckout | S-57 (**built**) | guest banner; signed in to pay; S-51's step-up |
+| `/food/orders/$orderId` | foodTrack | S-57 (**built**) | polls every 15 s |
 | `/services` | services | S-53 (**built**) | landing page; SSR |
 | `/services/$category` | svcCategory | S-53 (**built**) | SSR + SEO; `$category` = the leaf slug (`mobile-mechanic`) |
 | `/services/$category/providers` | providers | S-53 (**built**) | category SSR, providers by location in the browser |
@@ -159,13 +159,25 @@ Storefront pages on `pages.<zone>` and merchants' own domains (by `Host`) share 
 
 ### Location
 
-`useDeliveryLocation()` (`features/location`) → `{ location: { status, label, city, lat?, lng?, source }, save, forget }`.
-Order: saved (`localStorage['nl.location']`, written by `save({ label, city, lat?, lng?, placeId? })` on the Location
-screen) → the device's geolocation, named by `GET /api/v1/geo/reverse?lat&lng → { label, city }` when the api has it
-(S-47), else the nearest live market (Calgary, Edmonton, Airdrie within 40 km) → the IP city → Calgary. Statuses map to
-the pill's copy: `locating`, `detected` ("Detected · deliver to"), `fallback` / `saved` ("Deliver to"). Screens filter
-by `location.city` (and `lat/lng` when present). Server-side the location is unknown: render location-independent
-content or a skeleton.
+`useDeliveryLocation()` (`features/location`) → `{ location: { status, label, city, lat?, lng?, source, province?, street?,
+unit?, postalCode?, placeId?, marketId?, zoneId?, zone? }, save, forget }`.
+Order: saved (`localStorage['nl.location']`, written by `save({ label, city, lat?, lng?, placeId?, street?, unit?,
+province?, postalCode?, marketId?, zoneId?, zone? })` on the Location screen — S-47 added everything after `placeId`,
+all optional) → the device's geolocation, named by `GET /api/v1/geo/reverse?lat&lng → { label, city, province?,
+market?: {id, city, province, stage}, zone?: {id, name, …} }` (S-47; 404 when nothing is known there; a `market` that is
+null or not live/pilot counts as outside every market, as does no answer) → the IP city → the api's fallback market
+(`GET /api/v1/geo/markets` → `fallback`, from region configuration; none → "Set location"). Statuses map to the pill's copy: `locating`, `detected` ("Detected · deliver to"),
+`fallback` / `saved` ("Deliver to"). Screens filter by `location.city` (and `lat/lng` when present); checkout reads the
+saved address parts (`street`, `unit`, `postalCode`, `province` — the province is the place of supply for tax, S-21).
+Server-side the location is unknown: render location-independent content or a skeleton. `/location?next=/path` comes
+back to `next` after Save (checkout's "Change").
+
+**Geo api (S-47, public under `/api/v1/geo`, the Google key on the server):** `GET /markets` → `{items, fallback}` (provinces,
+served ones first, with stage, `taxBps` and markets with stage and centre; `fallback` = the pill's market when nothing
+is known), `GET /autocomplete?q=&session=&lat=&lng=` (Canada only; ≥ 3 characters; one `session` token per address
+search), `GET /places/{placeId}?session=` (the address + `resolution: { market, zone, waitlist }`), `GET /reverse`,
+`GET /resolve?lat=&lng=`, `POST /waitlist { regionId, email? }` (guests give an email; 201, or 200 when already on it).
+Lookups are limited per browsing session (429 `rate_limited`); Google failures are 503 `places_unavailable`.
 
 ### Account menu
 
@@ -174,6 +186,13 @@ Items and routes in `features/shell/AccountArea.tsx` (`ACCOUNT_LINKS`). Values c
 openCases?, paymentMethod?: {brand, last4}, addresses?: {count, members}, signIn?: passkey|totp|sms, quietHours?:
 {from, to}, dietary?: string[], province? }` (every field optional; S-58/S-59 provide it). Mutations that change a
 value invalidate `accountSummaryQuery`.
+
+### Your week (home)
+
+The home page's "Your week" (S-46) lists the signed-in person's orders, bookings and quotes of the next seven days from
+`GET /api/v1/me/upcoming` → `{ items: [{ id, title, subtitle?, state, tone: accent|neutral|accent-2, href }] }` — texts
+in the caller's language (`Accept-Language`), `href` a consumer route (`/orders/…`, `/quotes/…`). S-58 provides it;
+until then (404) the section shows its empty line. The points line under it reads `points` of the account summary.
 
 ### Market (S-49)
 
@@ -188,6 +207,95 @@ delivery answers `served: false` and the page shows its empty state. The api's m
 
 Cookie `nl.locale` = `en` | `fr` (1 year, not HttpOnly). `useLocale().setLocale()` switches in place and writes it.
 
+### Search (S-44)
+
+Public, anonymous, rate limited per client address (120/min per api instance → 429 `rate_limited` + `Retry-After`). When the
+SSR server searches for a page view it should add the browser's address to `X-Forwarded-For`; otherwise every
+server-rendered search counts against the SSR pod. Only live, approved listings of active businesses in the market.
+Operations and tuning: `docs/runbooks/search.md` § 7.
+
+Both endpoints are `GET`, public, JSON, camelCase; money in cents; errors as everywhere in the api (422
+`{"errors":[{"field","rule","message"}]}`, 429 ProblemDetail). OpenAPI: `/v3/api-docs` (tag *Search*).
+
+#### `GET /api/v1/search`
+
+| parameter | meaning |
+|---|---|
+| `q` | what was typed (≤ 100 characters); blank = browse by the filters |
+| `market` | province/territory code of the location pill; the served markets are configuration (`SEARCH_MARKETS`), and when it's left out the api uses `SEARCH_DEFAULT_MARKET`. A well-formed code that isn't served → 422 `unsupported` |
+| `lang` | `en` \| `fr` — picks the index; default `Accept-Language` (fr* → French), else English |
+| `kind` | `service`, `product`, `food`, `merchant` — repeat or comma-separate (the web's `scope`: services → `service`, shop → `product`, food → `food`) |
+| `category` | a category id at any level (group or leaf) |
+| `minPrice`, `maxPrice` | cents, inclusive ("Under $10" = `maxPrice=999`) |
+| `minRating` | 1–5 |
+| `tier` | `registered`, `trusted`, `master` ("Master sellers", "Master tier") |
+| `instantBook` | `true` = services bookable at once |
+| `openNow` | `true` = inside its weekly hours now (the market's local time), not paused, not sold out today ("Open now", "Available today") |
+| `delivery` | `tonight` = on tonight's pooled run: pooled delivery, before the seller's cut-off, in stock ("On tonight's run") |
+| `dietary` | tags every result has: `halal`, `vegan`, `gluten_free` … ("Halal", "Vegan", "Gluten-free") |
+| `allergenFree` | Health Canada allergen codes no result contains: `peanuts`, `tree_nuts` … ("Nut-free" = `peanuts,tree_nuts`) |
+| `lat`, `lng` | the person's location (both or neither): `distanceKm` on results, nearness boost, distance sort and filter |
+| `radiusKm` | 1–100, needs `lat`/`lng` ("Under 3 km") |
+| `sort` | `relevance` (default), `distance` (needs `lat`/`lng`; results without a location are left out), `price_asc`, `price_desc` (no price last), `rating` |
+| `size` | 1–50, default 24 |
+| `after` | the previous page's `next` (keep the other parameters the same) |
+
+```json
+{
+  "items": [{
+    "id": "01J9…", "kind": "product", "name": "Country sourdough", "description": "…",
+    "merchant": { "id": "01J9…", "name": "Glenmore Bakery", "type": "seller", "slug": "glenmore-bakery", "tier": "master" },
+    "category": { "id": "shop.groceries.bakery", "name": "Bakery" },
+    "priceCents": 750, "pricingMode": "fixed", "rating": 4.8, "reviewCount": 120, "trustTier": "master",
+    "distanceKm": 1.2, "instantBook": false, "fulfilment": ["pooled"],
+    "openNow": false, "soldOut": false, "onTonightsRun": true, "prepMinutes": null,
+    "dietary": [], "allergens": [], "imageKey": "media:01J9…"
+  }],
+  "total": 3,
+  "facets": {
+    "kinds": [{ "value": "product", "label": null, "count": 3 }],
+    "categories": [{ "value": "shop.groceries.bakery", "label": "Bakery", "count": 2 }],
+    "merchants": [{ "value": "01J9…", "label": "Glenmore Bakery", "count": 3 }],
+    "tiers": [{ "value": "master", "label": null, "count": 1 }],
+    "prices": [{ "value": "under_10", "label": null, "count": 2 }],
+    "dietary": []
+  },
+  "next": "relevance.WzEuNDMsMywiMDFKOS4uLiJd"
+}
+```
+
+- `kind = merchant` items are the businesses themselves (shop / provider / kitchen pages: `merchant.slug`); the
+  others link to the listing. `pricingMode = quote` or `priceCents = null` → "Quote"; a merchant's `priceCents` is
+  its cheapest listing ("from $").
+- `facets` only on the first page (empty lists after); `prices` buckets are `under_10`, `10_25`, `25_50`, `50_100`,
+  `100_plus` (dollars). `total` is exact up to 10 000.
+- `next` is null on the last page. A `next` from another sort, or a damaged one, is a 422 on `after`
+  ("This page link no longer works. Start the search again.").
+- `imageKey` is opaque (`media:<id>` catalogue image, `object:<key>` dish photo); no public image URL exists yet.
+
+#### `GET /api/v1/search/suggest`
+
+`q` (required, what has been typed), `market`, `lang` / `Accept-Language`, `kind`, `size` (1–10, default 6).
+
+```json
+{ "items": [
+  { "text": "Country sourdough", "type": "product", "id": "01J9…", "merchantId": "01J9…",
+    "merchantName": "Glenmore Bakery", "merchantType": "seller", "merchantSlug": "glenmore-bakery",
+    "priceCents": 750, "trustTier": "master", "rating": 4.8, "highlight": [{ "start": 8, "length": 4 }] },
+  { "text": "Mobile mechanic", "type": "category", "id": "service.automotive.mobile-mechanic",
+    "merchantId": null, "merchantName": null, "merchantType": null, "merchantSlug": null,
+    "priceCents": null, "trustTier": null, "rating": null, "highlight": [{ "start": 7, "length": 3 }] }
+] }
+```
+
+- `type`: `service` | `product` | `food` (a listing: open it), `merchant` (a business page: `merchantSlug`),
+  `category` (a category: search with `category=<id>`).
+- Suggestions start a word with `q` ("sour" → "Country **sour**dough"), ignoring case and accents; heavier ones
+  (trust tier, rating, recent sales) first; categories take at most two places. `highlight` = UTF-16 offsets into
+  `text` to set in bold (empty when the match came from another word form).
+- The design's "Your recent" searches are the client's (not stored by the api); "fr → sourdough" synonym rows are not
+  returned (synonyms apply to `/search`).
+
 ## Public API: what exists, what's missing
 
 | endpoint | status | needed by |
@@ -198,15 +306,14 @@ Cookie `nl.locale` = `en` | `fr` (1 year, not HttpOnly). `useLocale().setLocale(
 | `GET /api/v1/public/providers/{slug}`, `/providers/{slug}/reviews?offset&limit` | **exists** (S-54, module `hire`) | S-54 |
 | `GET /api/v1/onboarding/taxonomy` | exists (signed in) | S-61 |
 | northline-auth JSON API (`/api/auth/register…`, `/api/auth/sign-in…`, `/api/auth/sign-out`) + S-62's `/api/auth/sign-in/code[/verify]`, `/api/auth/register/complete` | exists | S-62 (built) |
-| `GET /api/v1/geo/reverse` | **missing** (the path is already public in the api) | S-47 (header falls back without it) |
-| markets / zones for an address (`/api/v1/geo/…`) | missing | S-47 |
-| `GET /api/v1/search`, suggestions | missing (path public; E-6 S-42…S-44) | S-48, home |
+| `GET /api/v1/geo/reverse`, `/markets`, `/autocomplete`, `/places/{id}`, `/resolve`, `POST /waitlist` | **exists** (S-47) | pill, Location screen, checkout |
+| `GET /api/v1/public/home?city=` → section counts, businesses per category id, open kitchens per cuisine, trusted providers | **exists** (S-46, module `discovery`) | home |
+| `GET /api/v1/search`, `GET /api/v1/search/suggest` | **exists** (S-44; contract above, § Search) | S-48, home |
 | Shop landing + departments: `GET /api/v1/public/shop?market=&lang=`, `GET /api/v1/public/shop/departments/{slug}?market=&lang=` | **exists** (S-49) | S-49 (S-46 may reuse the landing's departments) |
-| service categories / home landing content (public catalogue reads) | missing | S-46, S-53 |
 | product detail + offers: `GET /api/v1/public/shop/products/{id}?market=&lang=` | **exists** (S-50) | S-50 |
 | cart: `GET /api/v1/cart`, `POST /api/v1/cart/items`, `PATCH`/`DELETE /api/v1/cart/items/{id}` (guest-keyed by `X-Northline-Guest`); checkout: `GET /api/v1/me/checkout?market=`, `POST /api/v1/me/checkout/quote`, `POST /api/v1/me/checkouts` (Idempotency-Key, X-Step-Up), `POST /api/v1/me/checkouts/{id}/place` (Idempotency-Key) | **exists** (S-51) | S-51 (S-57 food checkout may reuse the step-up and payment parts) |
 | consumer order + tracking: `GET /api/v1/me/orders/{id}`, `GET /api/v1/me/orders/{id}/events` (SSE, event `order`) | **exists** (S-52); the orders list is missing | S-52, S-58 (list), S-57 (food tracking may reuse the stream) |
-| public menus / kitchens, food checkout | missing | S-57 |
+| food: `GET /api/v1/public/kitchens?city=&lat=&lng=`, `GET /api/v1/public/kitchens/{slug}`; `POST /api/v1/me/food-orders/quote`, `POST /api/v1/me/food-orders` (Idempotency-Key, X-Step-Up), `POST /api/v1/me/food-orders/{id}/confirm` (Idempotency-Key), `GET /api/v1/me/food-orders/{id}` | **exists** (S-57) | food landing, restaurant, food checkout, tracking |
 | `GET /api/v1/public/services`, `/services/{slug}`, `/services/{slug}/providers?lat&lng&city` | **exists** (S-53, module `hire`) | S-53 |
 | `GET /api/v1/public/providers/{slug}/slots`, `POST/DELETE /api/v1/me/bookings/holds`, `POST /api/v1/me/bookings/checkout` (Idempotency-Key, X-Step-Up), `POST /api/v1/me/bookings/holds/{id}/confirm`, `GET /api/v1/me/bookings/{id}` | **exists** (S-55, module `hire`) | S-55 |
 | `POST /api/v1/me/quote-requests`, `GET /api/v1/me/quote-requests/{id}`, `GET /api/v1/me/quotes/{id}`, `POST /api/v1/me/quotes/{id}/decline`, `POST /api/v1/me/quotes/{id}/accept` (Idempotency-Key, X-Step-Up), `POST /api/v1/me/quotes/{id}/accept/confirm` | **exists** (S-56, module `hire`) | S-56 |

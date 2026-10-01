@@ -34,7 +34,12 @@ class SearchIndexer {
 
     @RetryableTopic(
             attempts = "4",
-            backOff = @BackOff(delay = 10_000, multiplier = 6, maxDelay = 300_000),
+            // 10 s, 60 s, 5 min; tests shorten them (the topic suffixes don't depend on the delays)
+            backOff =
+                    @BackOff(
+                            delayString = "${northline.search.retry.delay:10000}",
+                            multiplierString = "${northline.search.retry.multiplier:6}",
+                            maxDelayString = "${northline.search.retry.max-delay:300000}"),
             retryTopicSuffix = ".search-indexer.retry",
             dltTopicSuffix = ".dlq",
             topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE,
@@ -59,6 +64,15 @@ class SearchIndexer {
     @DltHandler
     void deadLetter(ConsumerRecord<String, byte[]> record) {
         events.deadLettered(GROUP, record);
+    }
+
+    /** The topics this consumer reads (the reindex catches up from the same ones). */
+    static java.util.List<String> topics(ca.northline.worker.topics.TopicCatalogue catalogue) {
+        return catalogue.consumers().stream()
+                .filter(c -> c.group().equals(GROUP))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(GROUP + " is not in deploy/kafka/topics.yaml"))
+                .topics();
     }
 
     private void index(EventEnvelope event) {

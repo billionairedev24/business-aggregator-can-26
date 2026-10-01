@@ -181,7 +181,7 @@ everything except `tools` (`make kafka-ui`, `make kibana`).
 | `db` | Postgres 17 + PostGIS | `DB_URL=jdbc:postgresql://localhost:5432/northline` | everything |
 | `cache` | Valkey 8 | `REDIS_HOST=localhost`, `REDIS_PORT=6379` | `local,valkey`, worker, non-`local` runs |
 | `events` | Kafka 4 (KRaft) + one-shot topic creation (`scripts/topics.sh` from `deploy/kafka/topics.yaml`, ~1 min the first time, seconds after) | `KAFKA_BOOTSTRAP=localhost:9092` | worker; api without `local` |
-| `search` | Elasticsearch 9 (security off) | `ES_URIS=http://localhost:9200` | worker; api without `local` |
+| `search` | Elasticsearch 9 (security off) | `ES_URIS=http://localhost:9200` (+ `SEARCH_PROVIDER=elasticsearch` for the api under `local`) | worker; the api's search |
 | `mail` | Mailpit — inbox at http://localhost:8025 | `SMTP_HOST=localhost`, `SMTP_PORT=1025` (the defaults) | api email (`EMAIL_PROVIDER=local`, S-13) |
 | `storage` | S3-compatible storage (RustFS) + bucket `northline-local`; console http://localhost:9101 | `STORAGE_ENDPOINT=http://localhost:9100`, `STORAGE_ACCESS_KEY=northline`, `STORAGE_SECRET_KEY=northline-dev-secret`, `STORAGE_PATH_STYLE=true` | api with `STORAGE_PROVIDER=s3` (S-10) |
 | `payments` | stripe-mock | `STRIPE_SECRET_KEY=sk_test_123`, `STRIPE_API_BASE=http://localhost:12111` (+ `TAX_PROVIDER=stripe` for Stripe Tax, S-21) | api payments + Stripe Connect (+ Stripe Tax) instead of the fakes |
@@ -225,6 +225,11 @@ Notes:
 - **POS menu import (S-36):** `POS_PROVIDER=local` (the default) fakes Square, Clover and Toast: Kitchen › Menu › Import
   › From your POS connects at once (Toast: any GUID but the nil one) and previews the fixture menu
   (`server/api/src/main/resources/pos-fixtures/menu.json`, Pho Dau Bo). [pos-menu-import.md](pos-menu-import.md)
+- **Addresses (S-47):** `PLACES_PROVIDER=local` (the default) answers the consumer Location screen from fixture
+  addresses (`places-fixtures/addresses.json`: design 06's "1204 17 …", one per market of the dev seed
+  `db/seed-dev/V119__dev_markets.sql`, a few outside every market for the waitlist) and
+  names the device's position when it is within 3 km of one. To try Google from a laptop:
+  `PLACES_PROVIDER=google GOOGLE_MAPS_API_KEY=…` in `server/.env` ([google-maps.md](google-maps.md)).
 - **Your own Kafka:** create the topics with `make kafka-topics` (`-plan`, `-verify`; `make kafka-topics-list` prints
   them), or
   `KAFKA_TOPICS_CMD=kafka-topics.sh KAFKA_TOPICS_BOOTSTRAP=localhost:9092 scripts/topics.sh`, or with the provisioner

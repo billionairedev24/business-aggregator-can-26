@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -121,6 +122,52 @@ public final class ListingIndices {
         IntStream.range(0, rules.size())
                 .forEach(i -> list.add(SynonymRule.of(r -> r.id("r" + i).synonyms(rules.get(i)))));
         call(() -> es.synonyms().putSynonym(p -> p.id(set).synonymsSet(list)));
+    }
+
+    /** Changes dynamic settings of an index (refresh interval, replicas). */
+    public void putSettings(String index, Map<String, String> settings) {
+        var body = JSON.writeValueAsString(settings);
+        call(() -> es.indices().putSettings(p -> p.index(index).withJson(new StringReader(body))));
+    }
+
+    /** Makes everything written so far searchable and waits until the index's primaries (and replicas, if any) are up. */
+    public void refreshAndWait(String index, java.time.Duration timeout) {
+        call(() -> es.indices().refresh(r -> r.index(index)));
+        call(() -> es.cluster()
+                .health(h -> h.index(index)
+                        .waitForStatus(co.elastic.clients.elasticsearch._types.HealthStatus.Yellow)
+                        .timeout(t -> t.time(timeout.toSeconds() + "s"))));
+    }
+
+    /**
+     * Points the aliases at the new indices in one atomic request: every alias of {@code to}'s languages is removed from
+     * the indices it pointed at and added to the new one (as its write index). Readers never see a missing or empty
+     * alias.
+     */
+    public void swap(Map<SearchLanguage, String> to) {
+        var actions = new ArrayList<co.elastic.clients.elasticsearch.indices.update_aliases.Action>();
+        to.forEach((language, index) -> {
+            for (var old : aliased(language)) {
+                actions.add(co.elastic.clients.elasticsearch.indices.update_aliases.Action.of(
+                        a -> a.remove(r -> r.index(old).alias(language.alias()))));
+            }
+            actions.add(co.elastic.clients.elasticsearch.indices.update_aliases.Action.of(
+                    a -> a.add(ad -> ad.index(index).alias(language.alias()).isWriteIndex(true))));
+        });
+        call(() -> es.indices().updateAliases(u -> u.actions(actions)));
+    }
+
+    /** Deletes a concrete listings index (never an alias). */
+    public void delete(String index) {
+        if (Arrays.stream(SearchLanguage.values()).noneMatch(l -> IndexLayout.isIndexOf(l, index))) {
+            throw new IllegalArgumentException("Not a listings index: " + index);
+        }
+        call(() -> es.indices().delete(d -> d.index(index)));
+    }
+
+    /** How many documents an index holds (after a refresh). */
+    public long count(String index) {
+        return call(() -> es.count(c -> c.index(index)).count());
     }
 
     @FunctionalInterface

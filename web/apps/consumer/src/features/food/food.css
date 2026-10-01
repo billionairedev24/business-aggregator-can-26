@@ -1,0 +1,103 @@
+/* Food (design 06 `food`, `restaurant`, `foodCheckout`, `foodTrack`). Tokens only. */
+.nl-food { padding-top: 32px; }
+.nl-food-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.nl-food-title { font-size: 40px; margin: 0; letter-spacing: -0.02em; }
+.nl-food-sub { font-size: 14px; color: var(--color-neutral-700); margin: 4px 0 0; }
+.nl-food-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.nl-food-actions .btn { min-height: 44px; }
+.nl-food-panel { margin: 14px 0 0; padding: 12px 14px; background: var(--color-surface); border-radius: var(--radius-md); font-size: 14px; }
+.nl-food-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 18px; }
+.nl-food-chips + .nl-food-chips { margin-top: 10px; }
+.nl-food-chips .nl-chip { min-height: 44px; }
+.nl-food-heading { font-size: 22px; margin: 32px 0 10px; }
+.nl-food-block { margin-top: 32px; }
+.nl-food-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 20px; margin-top: 12px; }
+.nl-food-card { display: block; color: var(--color-text); text-decoration: none; min-width: 0; }
+.nl-food-card:hover .nl-food-card-name { color: var(--color-accent-800); }
+.nl-food-card:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 4px; border-radius: var(--radius-md); }
+.nl-food-tile { aspect-ratio: 16 / 10; border-radius: var(--radius-md); background: linear-gradient(135deg, var(--color-accent), var(--color-neutral-600)); position: relative; }
+.nl-food-eta { position: absolute; left: 8px; top: 8px; background: var(--color-bg); color: var(--color-text); font-size: 10px; }
+.nl-food-opens { position: absolute; right: 8px; top: 8px; font-size: 10px; }
+.nl-food-card-head { margin-top: 10px; display: flex; justify-content: space-between; gap: 8px; font-size: 13px; }
+.nl-food-card-name { font-weight: 600; font-size: 16px; }
+.nl-food-card-meta { font-size: 13px; color: var(--color-neutral-700); }
+.nl-food-tags { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+.nl-food-tags .tag { font-size: 10px; padding: 1px 7px; }
+.nl-food-info { padding: 44px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 20px 40px; }
+.nl-food-info h3 { font-size: 18px; margin: 0 0 4px; }
+.nl-food-info p { font-size: 14px; color: var(--color-neutral-700); margin: 0; }
+.nl-food-info a { font-size: 14px; display: inline-flex; min-height: 44px; align-items: center; }
+
+.nl-rest { padding-top: 28px; }
+.nl-rest-crumbs { font-size: 13px; color: var(--color-neutral-700); }
+.nl-rest-banner { margin-top: 14px; padding: 32px clamp(20px, 4vw, 48px); background: var(--color-accent); color: var(--color-on-accent); border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; }
+.nl-rest-banner h1 { font-size: clamp(30px, 5vw, 40px); margin: 0; letter-spacing: -0.02em; color: inherit; }
+.nl-rest-banner p { font-size: 15px; margin: 4px 0 0; opacity: .85; }
+.nl-rest-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.nl-rest-badges .tag { background: var(--color-bg); color: var(--color-text); }
+.nl-rest-alert { margin-top: 14px; }
+.nl-rest-layout { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 28px 64px; margin-top: 24px; align-items: start; }
+@media (min-width: 900px) { .nl-rest-layout { grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); } }
+.nl-rest-sections { display: flex; gap: 6px; flex-wrap: wrap; position: sticky; top: 0; background: var(--color-bg); padding: 8px 0; z-index: 2; }
+.nl-rest-sections a { text-decoration: none; min-height: 32px; }
+.nl-rest h2 { font-size: 22px; margin: 24px 0 6px; }
+.nl-rest-dish { display: grid; grid-template-columns: minmax(0, 1fr) 88px; gap: 16px; padding: 14px 0; align-items: start; }
+.nl-rest-dish-head { display: flex; justify-content: space-between; gap: 12px; }
+.nl-rest-dish-head span { font-weight: 600; }
+.nl-rest-dish-desc { font-size: 13px; color: var(--color-neutral-700); margin: 2px 0 0; line-height: 1.45; }
+.nl-rest-muted { font-size: 13px; color: var(--color-neutral-700); margin: 6px 0 0; }
+.nl-rest-plus { width: 88px; height: 88px; border-radius: var(--radius-md); border: 0; cursor: pointer; background: linear-gradient(135deg, var(--color-neutral-300), var(--color-neutral-500)); position: relative; }
+.nl-rest-plus span { position: absolute; right: 6px; bottom: 6px; width: 28px; height: 28px; border-radius: 50%; background: var(--color-bg); display: grid; place-items: center; font-size: 18px; color: var(--color-accent-700); box-shadow: var(--shadow-sm); }
+.nl-rest-plus:disabled { cursor: not-allowed; opacity: .5; }
+.nl-rest-plus:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.nl-rest-editor { margin-top: 12px; padding: 14px; background: var(--color-surface); border-radius: var(--radius-md); display: flex; flex-direction: column; gap: 12px; }
+.nl-rest-group { border: 0; padding: 0; margin: 0; }
+.nl-rest-group legend { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-neutral-700); margin-bottom: 6px; padding: 0; }
+.nl-rest-rule { opacity: .7; }
+.nl-rest-options { display: flex; gap: 6px; flex-wrap: wrap; }
+.nl-rest-options .nl-chip { min-height: 44px; }
+.nl-rest-editor-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.nl-rest-editor-actions .btn { min-height: 44px; }
+.nl-rest-stepper { display: flex; align-items: center; border: 1px solid var(--color-divider); border-radius: var(--radius-md); }
+.nl-rest-stepper button { width: 44px; height: 44px; border: 0; background: transparent; font: inherit; font-size: 18px; color: var(--color-accent-700); cursor: pointer; }
+.nl-rest-stepper button:disabled { opacity: .4; cursor: not-allowed; }
+.nl-rest-stepper span { min-width: 20px; text-align: center; font-weight: 600; }
+.nl-rest-aside { position: sticky; top: 20px; padding: 20px; background: var(--color-surface); border-radius: var(--radius-md); display: flex; flex-direction: column; gap: 10px; }
+.nl-rest-aside h2 { font-size: 22px; margin: 0; }
+.nl-rest-lines { list-style: none; margin: 0; padding: 0; }
+.nl-rest-lines li { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; font-size: 14px; }
+.nl-rest-line-sub { display: block; font-size: 12px; color: var(--color-neutral-700); }
+.nl-rest-line-end { display: flex; gap: 4px; align-items: center; white-space: nowrap; }
+.nl-rest-line-end button { border: 0; background: transparent; font: inherit; color: var(--color-neutral-600); cursor: pointer; min-width: 44px; min-height: 44px; }
+.nl-rest-totals { margin: 0; border-top: 1px solid var(--color-divider); padding-top: 10px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.nl-rest-totals div { display: flex; justify-content: space-between; }
+.nl-rest-totals dt, .nl-rest-totals dd { margin: 0; }
+.nl-rest-total { font-weight: 600; font-size: 18px; padding-top: 6px; }
+.nl-rest-aside .btn { min-height: 48px; }
+
+.nl-fco { padding-top: 32px; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 28px 64px; align-items: start; }
+@media (min-width: 900px) { .nl-fco { grid-template-columns: minmax(0, 1.4fr) minmax(300px, 1fr); } }
+.nl-fco h1 { font-size: clamp(28px, 4vw, 36px); margin: 0; letter-spacing: -0.02em; }
+.nl-fco h2 { font-size: 22px; margin: 28px 0 10px; }
+.nl-fco-when { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 8px; }
+.nl-fco-address { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.nl-fco-strong { font-weight: 600; }
+.nl-fco-muted { font-size: 13px; color: var(--color-neutral-700); margin: 6px 0 0; }
+.nl-fco-chips { border: 0; padding: 0; margin: 12px 0 0; display: flex; gap: 8px; flex-wrap: wrap; max-width: 640px; }
+.nl-fco-chips legend { font-size: 14px; font-weight: 600; margin-bottom: 6px; padding: 0; width: 100%; }
+.nl-fco-chips .nl-chip { min-height: 44px; }
+.nl-fco-note { font-size: 12px; color: var(--color-neutral-700); margin: 0; line-height: 1.5; }
+.nl-fco-bank { padding: 16px; background: var(--color-bg); border-radius: var(--radius-md); display: flex; flex-direction: column; gap: 8px; }
+.nl-fco-kicker { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-neutral-700); }
+
+.nl-track { padding-top: 40px; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 28px 64px; align-items: start; }
+.nl-track h1 { font-size: clamp(28px, 4vw, 36px); margin: 12px 0 8px; letter-spacing: -0.02em; }
+.nl-track-steps { list-style: none; margin: 22px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font-size: 15px; color: var(--color-neutral-700); }
+.nl-track-steps li { display: flex; gap: 12px; align-items: center; }
+.nl-track-steps li[data-done] { color: var(--color-text); }
+.nl-track-dot { width: 20px; height: 20px; border-radius: 50%; flex: none; box-sizing: border-box; border: 2px solid var(--color-neutral-300); }
+.nl-track-steps li[data-done] .nl-track-dot { border: 0; background: var(--color-accent-2); }
+.nl-track-actions { display: flex; gap: 10px; margin-top: 24px; }
+.nl-track-map { aspect-ratio: 4 / 3; position: relative; border-radius: var(--radius-md); background-color: var(--color-neutral-200); background-image: linear-gradient(var(--color-neutral-300) 1px, transparent 1px), linear-gradient(90deg, var(--color-neutral-300) 1px, transparent 1px); background-size: 44px 44px; }
+.nl-track-map svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.nl-track-caption { position: absolute; left: 16px; bottom: 16px; background: var(--color-bg); padding: 8px 12px; border-radius: var(--radius-md); box-shadow: var(--shadow-md); font-size: 13px; }

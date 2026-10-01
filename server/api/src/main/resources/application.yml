@@ -92,6 +92,16 @@ northline:
   stripe:                                                      # Stripe Connect (merchants) outside local/test
     secret-key: ${STRIPE_SECRET_KEY:}
     api-base: ${STRIPE_API_BASE:}
+  # Search API (S-44, docs/runbooks/search.md): elasticsearch (listings_en / listings_fr, filled by the worker) | local
+  # (no index: every search is empty; the `local` profile's default, refused under staging/prod).
+  search:
+    provider: ${SEARCH_PROVIDER:elasticsearch}
+    # Region configuration until S-134 (DECISIONS "Region-neutral by design"): the markets search serves and the time
+    # zone each keeps its listings' hours / cut-offs / "sold out today" in; the market searched when a request names none
+    markets: ${SEARCH_MARKETS:AB=America/Edmonton,BC=America/Vancouver,ON=America/Toronto,QC=America/Toronto}
+    default-market: ${SEARCH_DEFAULT_MARKET:AB}
+    cache-ttl: ${SEARCH_CACHE_TTL:30s}              # identical searches answered from Redis/Valkey for this long
+    rate-limit: ${SEARCH_RATE_LIMIT:120}            # requests per minute and client address (anonymous included)
   # Sales tax (S-21; docs/runbooks/stripe.md § 6): local (fixed Canadian rates, nothing reported; refused under
   # staging/prod) | stripe (Stripe Tax on the platform account, uses STRIPE_SECRET_KEY / STRIPE_API_BASE).
   tax:
@@ -208,6 +218,12 @@ northline:
       client-id: ${TOAST_CLIENT_ID:}
       client-secret: ${TOAST_CLIENT_SECRET:}
       api-url: ${TOAST_API_URL:https://ws-api.toasttab.com}    # sandbox: https://ws-sandbox-api.eng.toasttab.com
+  # Addresses (S-47, docs/runbooks/google-maps.md): local = fixture addresses (refused under staging/prod) | google =
+  # Places API (New) autocomplete + details and the Geocoding API (reverse), key server-side only.
+  places:
+    provider: ${PLACES_PROVIDER:local}
+    api-key: ${GOOGLE_MAPS_API_KEY:}
+    per-minute: ${PLACES_RATE_LIMIT:60}                   # address lookups per browsing session and minute, per instance
   # Provider switches (ca.northline.platform) — see docs/runbooks/README.md.
   # Object storage (S-10, ca.northline.shared.storage): local (modules' disk fakes; placeholders under dev; refused
   # under staging/prod) | s3 (AWS S3 or RustFS/MinIO: endpoint + path-style) | gcs | azure (endpoint = account URL).
@@ -262,4 +278,4 @@ northline:
 ---
 # Local runs read server/.env (or .env next to the jar) — KEY=value lines, see server/.env.example. Never under `test`.
 spring.config.activate.on-profile: "!test"
-spring.config.import: optional:file:.env[.properties],optional:file:../.env[.properties]
+spring.config.import: optional:file:${NORTHLINE_DOTENV_DIR:.}/.env[.properties],optional:file:${NORTHLINE_DOTENV_DIR:..}/.env[.properties]

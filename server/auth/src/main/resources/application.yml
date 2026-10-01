@@ -226,4 +226,4 @@ northline:
 ---
 # Local runs read server/.env (or .env next to the jar) — KEY=value lines, see server/.env.example. Never under `test`.
 spring.config.activate.on-profile: "!test"
-spring.config.import: optional:file:.env[.properties],optional:file:../.env[.properties]
+spring.config.import: optional:file:${NORTHLINE_DOTENV_DIR:.}/.env[.properties],optional:file:${NORTHLINE_DOTENV_DIR:..}/.env[.properties]
