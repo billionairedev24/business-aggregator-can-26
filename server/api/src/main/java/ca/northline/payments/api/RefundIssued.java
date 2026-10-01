@@ -10,7 +10,7 @@ import org.springframework.modulith.events.Externalized;
  * Kafka topic {@code payments.refund}, key = refund id. Schema {@code events/payments.refund_issued.v1.schema.json}.
  *
  * @param caseNumber {@code RF-…} as the Studio shows it (added by S-13 for the notification email; additive)
- * @param chargedTo {@code merchant} | {@code platform}
+ * @param chargedTo {@code "merchant"} | {@code "platform"}
  */
 @Externalized("payments.refund::#{aggregateId()}")
 public record RefundIssued(

@@ -1,7 +1,5 @@
 package ca.northline.payments.application;
 
-import static ca.northline.shared.stripe.StripeIdempotencyKeys.of;
-
 import ca.northline.payments.api.EscrowLifecycle;
 import ca.northline.payments.api.PaymentReauthorizationRequired;
 import ca.northline.payments.application.PaymentGateway.Authorization;
@@ -13,6 +11,7 @@ import ca.northline.payments.domain.LedgerEntry;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.Ids;
 import ca.northline.shared.NotFound;
+import ca.northline.shared.stripe.StripeIdempotencyKeys;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Objects;
@@ -204,7 +203,7 @@ class EscrowService implements EscrowLifecycle {
                     card,
                     true,
                     StripeMetadata.escrow(escrow),
-                    of("reauthorize", escrow.getId(), attempt)));
+                    StripeIdempotencyKeys.of("reauthorize", escrow.getId(), attempt)));
         } catch (RuntimeException e) {
             renewalFailed(escrow, intent, lapsesAt, now, e.getMessage());
             return false;
@@ -212,7 +211,9 @@ class EscrowService implements EscrowLifecycle {
         if (next.status() != IntentStatus.AUTHORIZED) {
             // needs the customer (3-D Secure) or was declined: drop the attempt, keep the old hold
             if (next.status() == IntentStatus.REQUIRES_ACTION) {
-                gateway.cancel(next.paymentIntent(), of("cancel-reauthorization", escrow.getId(), attempt));
+                gateway.cancel(
+                        next.paymentIntent(),
+                        StripeIdempotencyKeys.of("cancel-reauthorization", escrow.getId(), attempt));
             }
             renewalFailed(escrow, intent, lapsesAt, now, next.status().code());
             return false;
@@ -234,7 +235,7 @@ class EscrowService implements EscrowLifecycle {
                 intent.reauthorizations() + 1));
         escrow.reauthorized(renewedId);
         escrows.update(escrow);
-        gateway.cancel(intent.stripePaymentIntent(), of("cancel", intent.id()));
+        gateway.cancel(intent.stripePaymentIntent(), StripeIdempotencyKeys.of("cancel", intent.id()));
         escrows.replacePaymentIntent(intent.id(), renewedId);
         log.info(
                 "Escrow {}: card hold renewed ({} → {})",
@@ -277,7 +278,7 @@ class EscrowService implements EscrowLifecycle {
                 var charge = gateway.capture(
                         intent.stripePaymentIntent(),
                         escrow.getAmountCents() + escrow.getTaxCents(),
-                        of("capture", escrow.getId(), intent.id()));
+                        StripeIdempotencyKeys.of("capture", escrow.getId(), intent.id()));
                 escrows.recordCapture(intent.id(), charge);
             });
         }
@@ -303,7 +304,7 @@ class EscrowService implements EscrowLifecycle {
                                     group,
                                     intent == null ? null : intent.charge(),
                                     StripeMetadata.escrow(escrow),
-                                    of("transfer", escrow.getId())));
+                                    StripeIdempotencyKeys.of("transfer", escrow.getId())));
                             escrows.recordTransfer(
                                     escrow.getId(),
                                     transfer,

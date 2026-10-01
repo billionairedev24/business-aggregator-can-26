@@ -7,7 +7,7 @@ import org.jspecify.annotations.Nullable;
 /**
  * One completion under the search box (design 06: products, services, dishes, shops/providers, categories).
  *
- * @param type {@code service} | {@code product} | {@code food} | {@code merchant} | {@code category}
+ * @param type {@code "service"} | {@code "product"} | {@code "food"} | {@code "merchant"} | {@code "category"}
  * @param id the listing or merchant id, or the category id
  * @param highlight the typed part of {@code text}
  */

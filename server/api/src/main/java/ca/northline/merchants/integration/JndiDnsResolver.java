@@ -117,7 +117,8 @@ final class JndiDnsResolver implements DnsResolver {
         var out = new StringBuilder();
         var quoted = false;
         var escaped = false;
-        for (var c : s.toCharArray()) {
+        for (int i = 0; i < s.length(); i++) {
+            var c = s.charAt(i);
             if (escaped) {
                 out.append(c);
                 escaped = false;

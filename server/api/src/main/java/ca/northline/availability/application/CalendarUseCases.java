@@ -30,7 +30,11 @@ public final class CalendarUseCases {
                 @Nullable String error) {}
 
         /** @param choose the member was asked for the calendar list: the Studio reopens "Choose calendars" */
-        record Completion(@Nullable String merchantId, CalendarProvider provider, Outcome outcome, boolean choose) {}
+        record Completion(
+                @Nullable String merchantId,
+                CalendarProvider provider,
+                CompleteCalendarConnection.Outcome outcome,
+                boolean choose) {}
 
         Completion complete(Callback callback);
     }
@@ -88,7 +92,7 @@ public final class CalendarUseCases {
         }
 
         /** Throws {@link InvalidNotification} for an unknown channel, a wrong token or resource. */
-        Outcome google(GoogleNotification notification);
+        ReceiveCalendarNotifications.Outcome google(GoogleNotification notification);
 
         /** The number accepted; throws {@link InvalidNotification} when not one entry verifies. */
         int microsoft(List<GraphNotification> batch);
