@@ -1,0 +1,590 @@
+# fr-CA wording of every message the API returns in a 422 (and of the 403/409 details the Studio shows), S-40.
+# One message per line: English<TAB>French<TAB>status. The English is the exact server text — the spec's
+# (docs/spec/validation-rules.md) or the module's own constant — and the server answers with the French when the
+# request's Accept-Language prefers French (fr, fr-CA). A message missing here is sent in English.
+#
+# Placeholders: a message built at run time names its parts the way the code does (%s, %d, %02d, %1$s) or, for
+# concatenations and Bean Validation attributes, {name}. The French must use the same placeholders; %s/%d are filled
+# in order, %1$s by position, {name} by name; {province:in} asks for the place with its French preposition
+# (en Alberta, au Québec). Amounts like $12.50 are re-written as 12,50 $ in the French.
+#
+# status: shipped = the wording the Studio / consumer web already showed in French (kept so both read the same);
+#         new     = first French wording, from this catalogue (S-40);
+#         review  = new wording a translator must settle first (technical codes, gendered or prepositional forms).
+# No line has been signed off by a professional translator yet (docs/DECISIONS.md, S-40).
+%s doesn't deliver to %s.	%s ne livre pas à %s.	new
+A business needs at least one owner.	Une entreprise doit avoir au moins un propriétaire.	shipped
+A distance filter needs your location (lat and lng).	Un filtre de distance exige votre position (lat et lng).	review
+A document for this check is already waiting for review.	Un document pour cette vérification attend déjà d’être examiné.	new
+A Northline agent is reviewing this owner.	Un agent de Northline examine ce propriétaire.	new
+Accept the cancellation policy to continue.	Acceptez la politique d’annulation pour continuer.	new
+Account numbers are 7 to 12 digits.	Les numéros de compte comptent de 7 à 12 chiffres.	shipped
+Add $%d.%02d to reach the $15 minimum.	Ajoutez %d,%02d $ pour atteindre le minimum de 15 $.	new
+Add a bank account first.	Ajoutez d’abord un compte bancaire.	new
+Add a custom domain first.	Ajoutez d’abord un domaine personnalisé.	new
+Add a main image on white, at least 1000 px.	Ajoutez une image principale sur fond blanc, d’au moins 1000 px.	shipped
+Add a name or a category first.	Ajoutez d’abord un nom ou une catégorie.	shipped
+Add a passkey to pay: payments sit behind a second factor.	Ajoutez une clé d’accès pour payer : les paiements exigent un deuxième facteur.	new
+Add a photo (JPEG, PNG, HEIC, WebP) or a PDF.	Ajoutez une photo (JPEG, PNG, HEIC, WebP) ou un PDF.	new
+Add access instructions (3+ characters).	Ajoutez des instructions d’accès (3 caractères ou plus).	new
+Add another passkey or an authenticator app before you remove this one.	Ajoutez une autre clé d’accès ou une application d’authentification avant de retirer celle-ci.	shipped
+Add at least 2 partners.	Ajoutez au moins 2 associés.	shipped
+Add at least 3 board members.	Ajoutez au moins 3 membres du conseil.	shipped
+Add at least one director or owner.	Ajoutez au moins un administrateur ou propriétaire.	shipped
+Add at least one director.	Ajoutez au moins un administrateur.	shipped
+Add at least one line.	Ajoutez au moins une ligne.	new
+Add at least one option.	Ajoutez au moins une option.	shipped
+Add at least one slot.	Ajoutez au moins un emplacement.	shipped
+Add at least one variant.	Ajoutez au moins une variante.	shipped
+Add something to your order.	Ajoutez quelque chose à votre commande.	new
+Add the board chair.	Ajoutez le président du conseil.	shipped
+Add the card again.	Ajoutez la carte de nouveau.	new
+Add the hours you're open.	Ajoutez vos heures d’ouverture.	new
+Add the hours.	Ajoutez les heures.	new
+Add the owner.	Ajoutez le propriétaire.	new
+Add the president.	Ajoutez le président.	shipped
+Add up to 5 photos.	Ajoutez jusqu’à 5 photos.	shipped
+Add your delivery address first.	Ajoutez d’abord votre adresse de livraison.	new
+Add {missing} to reach the $15 minimum.	Ajoutez {missing} pour atteindre le minimum de 15 $.	new
+Agree to the Northline terms to continue.	Acceptez les conditions de Northline pour continuer.	new
+Alert level can't be negative.	Le seuil d'alerte ne peut pas être négatif.	shipped
+An account already uses this email. Sign in instead.	Un compte utilise déjà ce courriel. Connectez-vous plutôt.	shipped
+An account already uses this mobile number. Sign in instead.	Un compte utilise déjà ce numéro de mobile. Connectez-vous plutôt.	shipped
+An invitation is already pending for this contact.	Une invitation est déjà en attente pour ce contact.	shipped
+An option costs more than $100 (or less than $0) in your POS.	Une option coûte plus de 100 $ (ou moins de 0 $) dans votre PDV.	review
+An order holds up to 30 lines.	Une commande compte au plus 30 lignes.	new
+Another team member is verifying as this owner.	Un autre membre de l’équipe fait la vérification au nom de ce propriétaire.	new
+Ask at most 20 messages at a time.	Envoyez au plus 20 messages à la fois.	review
+Ask for 1 to 10 suggestions.	Demandez de 1 à 10 suggestions.	new
+Ask for 1 to 50 results.	Demandez de 1 à 50 résultats.	new
+At least 2 characters.	Au moins 2 caractères.	shipped
+At most %d characters.	Au plus %d caractères.	new
+At most 1,000 characters.	Au plus 1 000 caractères.	new
+At most 10 attachments.	Au plus 10 pièces jointes.	new
+At most 12 photos.	Au plus 12 photos.	new
+At most 120 characters.	Au plus 120 caractères.	shipped
+At most 160 characters.	Au plus 160 caractères.	new
+At most 200 characters.	Au plus 200 caractères.	shipped
+At most 2000 characters.	2000 caractères au maximum.	shipped
+At most 250 characters.	250 caractères au maximum.	shipped
+At most 40 characters.	Au plus 40 caractères.	shipped
+At most 4000 characters.	4000 caractères au maximum.	shipped
+At most 50 lines.	Au plus 50 lignes.	new
+At most 500 characters.	Au plus 500 caractères.	shipped
+At most 500 items per file.	Au plus 500 articles par fichier.	new
+At most 60 characters.	Au plus 60 caractères.	shipped
+At most 80 characters.	Au plus 80 caractères.	shipped
+At most {max} characters.	Au plus {max} caractères.	shipped
+Attach JPG, PNG, HEIC or PDF files.	Joignez des fichiers JPG, PNG, HEIC ou PDF.	shipped
+Attach up to 5 files.	Joignez jusqu'à 5 fichiers.	shipped
+Buffer must be between 0 and 120 minutes.	Le battement doit être entre 0 et 120 minutes.	shipped
+Business access needs a second factor. Sign in again with your passkey or authenticator app.	L’accès Entreprise exige un deuxième facteur. Reconnectez-vous avec votre clé d’accès ou votre application d’authentification.	new
+Business number is 9 digits (e.g. 123456789).	Le numéro d'entreprise compte 9 chiffres (p. ex. 123456789).	shipped
+Calculate the tax again.	Calculez la taxe de nouveau.	new
+Category not allowed in Shop	Catégorie non permise dans la Boutique	shipped
+Check this field.	Vérifiez ce champ.	new
+Choose %s.	Choisissez : %s.	review
+Choose 1 to 3 providers.	Choisissez de 1 à 3 prestataires.	new
+Choose 30 d, 90 d or 12 mo.	Choisissez 30 j, 90 j ou 12 mois.	new
+Choose a Canadian province or territory.	Choisissez une province ou un territoire du Canada.	shipped
+Choose a category down to the last level.	Choisissez une catégorie jusqu'au dernier niveau.	shipped
+Choose a category.	Choisissez une catégorie.	shipped
+Choose a city.	Choisissez une ville.	new
+Choose a day of the month.	Choisissez un jour du mois.	new
+Choose a day of the week.	Choisissez un jour de la semaine.	new
+Choose a delivery address.	Choisissez une adresse de livraison.	new
+Choose a delivery window.	Choisissez une plage de livraison.	new
+Choose a deposit.	Choisissez un dépôt.	new
+Choose a distance between 1 and 100 km.	Choisissez une distance de 1 à 100 km.	new
+Choose a duration between 15 minutes and 12 hours.	Choisissez une durée entre 15 minutes et 12 heures.	shipped
+Choose a duration.	Choisissez une durée.	shipped
+Choose a file to attach.	Choisissez un fichier à joindre.	shipped
+Choose a file to upload.	Choisissez un fichier à téléverser.	new
+Choose a payout schedule.	Choisissez un calendrier de versements.	new
+Choose a quantity from 1 to 99.	Choisissez une quantité de 1 à 99.	new
+Choose a rating between 1 and 5.	Choisissez une note de 1 à 5.	new
+Choose a reason.	Choisissez une raison.	shipped
+Choose a reserve option.	Choisissez une option de réserve.	new
+Choose a role.	Choisissez un rôle.	shipped
+Choose a service category.	Choisissez une catégorie de service.	shipped
+Choose a service.	Choisissez un service.	new
+Choose a team member.	Choisissez un membre de l’équipe.	new
+Choose a template.	Choisissez un modèle.	new
+Choose a tip between $0 and $100, or up to 30 %.	Choisissez un pourboire de 0 $ à 100 $, ou jusqu’à 30 %.	new
+Choose a topic.	Choisissez un sujet.	shipped
+Choose a type.	Choisissez un type.	new
+Choose a warranty.	Choisissez une garantie.	new
+Choose an .xlsx or .csv file.	Choisissez un fichier .xlsx ou .csv.	new
+Choose an action.	Choisissez une action.	new
+Choose an address in Canada.	Choisissez une adresse au Canada.	new
+Choose an image to upload.	Choisissez une image à téléverser.	new
+Choose an option.	Choisissez une option.	new
+Choose approve or reject.	Choisissez Approuver ou Refuser.	new
+Choose at least one calendar.	Choisissez au moins un calendrier.	new
+Choose at least one fulfilment option.	Choisissez au moins un mode d'exécution.	shipped
+Choose between 1 and 12 hours, in half hours.	Choisissez entre 1 et 12 heures, par demi-heure.	new
+Choose between 1 and 20.	Choisissez entre 1 et 20.	new
+Choose bookable or hidden.	Choisissez Réservable ou Masqué.	review
+Choose closed or special hours.	Choisissez Fermé ou Heures spéciales.	new
+Choose delivery or pickup.	Choisissez la livraison ou le ramassage.	new
+Choose dismissed or actioned.	Choisissez Rejeté ou Traité.	review
+Choose each option once.	Choisissez chaque option une seule fois.	new
+Choose every part of the combo.	Choisissez chaque élément du combo.	shipped
+Choose from the extras offered.	Choisissez parmi les extras offerts.	new
+Choose from the list.	Choisissez dans la liste.	new
+Choose how long the quote is valid.	Choisissez la durée de validité du devis.	new
+Choose how this owner verifies.	Choisissez comment ce propriétaire se vérifie.	new
+Choose how to add the account.	Choisissez comment ajouter le compte.	new
+Choose how to hand it over.	Choisissez le mode de remise.	new
+Choose how we should reach you.	Choisissez comment vous joindre.	shipped
+Choose how you price this service.	Choisissez comment vous tarifez ce service.	shipped
+Choose monthly or annual.	Choisissez mensuel ou annuel.	new
+Choose one of the options.	Choisissez une des options.	new
+Choose one of the windows offered.	Choisissez une des plages offertes.	new
+Choose open or closed.	Choisissez Ouvert ou Fermé.	new
+Choose order or booking.	Choisissez Commande ou Réservation.	new
+Choose registered, trusted or master.	Choisissez Inscrit, De confiance ou Maître.	review
+Choose service or product.	Choisissez Service ou Produit.	new
+Choose service, product, food or merchant.	Choisissez service, produit, repas ou commerçant.	review
+Choose the country of origin.	Choisissez le pays d'origine.	shipped
+Choose the number of bedrooms.	Choisissez le nombre de chambres.	new
+Choose the type of home.	Choisissez le type de logement.	new
+Choose what we do if something's out of stock.	Choisissez ce que nous faisons si un article est en rupture de stock.	new
+Choose where you’d like Northline.	Choisissez où vous aimeriez avoir Northline.	new
+Choose your POS.	Choisissez votre PDV.	new
+Compare-at must be higher than your price.	Le prix de comparaison doit dépasser votre prix.	shipped
+Complete every check before submitting.	Terminez toutes les vérifications avant de soumettre.	new
+Complete the Business step first.	Terminez d’abord l’étape Entreprise.	new
+Confirm bilingual labelling.	Confirmez l'étiquetage bilingue.	shipped
+Confirm it's you to make this change.	Confirmez votre identité pour faire ce changement.	new
+Confirm it's you with your passkey or authenticator app to pay.	Confirmez votre identité avec votre clé d’accès ou votre application d’authentification pour payer.	new
+Confirm this is not a restricted product.	Confirmez qu'il ne s'agit pas d'un produit restreint.	shipped
+Confirm with your passkey. Payouts always require a fresh authentication.	Confirmez avec votre clé d’accès. Les versements exigent toujours une nouvelle authentification.	new
+Connect this account first.	Connectez d’abord ce compte.	new
+Connect your bank first.	Liez d'abord votre banque.	shipped
+Connect your POS first.	Connectez d’abord votre PDV.	new
+Corporate access number is 10 digits.	Le numéro d'accès compte 10 chiffres.	shipped
+Corporation number is 7 digits.	Le numéro de société compte 7 chiffres.	shipped
+Cost can't be negative.	Le coût ne peut pas être négatif.	shipped
+Days are mon, tue, wed, thu, fri, sat and sun.	Les jours sont mon, tue, wed, thu, fri, sat et sun.	review
+Declare allergens, or choose None.	Déclarez les allergènes ou choisissez Aucun.	shipped
+Deposit must be between 1 and 100 %.	Le dépôt doit être de 1 à 100 %.	new
+Describe the extra parts or work.	Décrivez les pièces ou les travaux supplémentaires.	new
+Describe the job in at least 10 characters.	Décrivez le travail en au moins 10 caractères.	new
+Describe the problem in at least 10 characters.	Décrivez le problème en au moins 10 caractères.	new
+Describe the scope of work.	Décrivez la portée des travaux.	new
+Describe this line — customers must see what they're paying for.	Décrivez cette ligne — les clients doivent voir ce qu’ils paient.	new
+Describe this slot, e.g. Any 2 mains.	Décrivez cet emplacement, p. ex. 2 plats au choix.	shipped
+Describe what's included.	Décrivez ce qui est inclus.	shipped
+Discounts can't be more than the other lines.	Les rabais ne peuvent pas dépasser les autres lignes.	new
+Each owner verifies with Stripe Identity: start it from the owners list.	Chaque propriétaire se vérifie avec Stripe Identity : lancez la vérification depuis la liste des propriétaires.	new
+Each variant needs its own SKU.	Chaque variante doit avoir sa propre UGS.	shipped
+Each variant needs its own value.	Chaque variante doit avoir sa propre valeur.	shipped
+Email is required.	Le courriel est obligatoire.	shipped
+End time must be after start time.	L’heure de fin doit suivre l’heure de début.	shipped
+Enter 1 to 14 days.	Entrez de 1 à 14 jours.	shipped
+Enter a birthday like 03/14 (month / day).	Entrez une date comme 03/14 (mois / jour).	shipped
+Enter a Canadian postal code, like T2P 1B5.	Entrez un code postal canadien, comme T2P 1B5.	shipped
+Enter a combo name.	Entrez un nom de combo.	shipped
+Enter a discount from 1 to 90 %.	Entrez un rabais de 1 à 90 %.	shipped
+Enter a domain like book.yourbusiness.ca.	Entrez un domaine comme reserver.votreentreprise.ca.	new
+Enter a duration.	Entrez une durée.	new
+Enter a group name.	Entrez un nom de groupe.	shipped
+Enter a group size from 2 to 50.	Entrez une taille de groupe de 2 à 50.	shipped
+Enter a limit from 1 to 999.	Entrez une limite de 1 à 999.	shipped
+Enter a menu name.	Entrez un nom de menu.	shipped
+Enter a name.	Entrez un nom.	shipped
+Enter a notice from 1 to 336 hours.	Entrez un préavis de 1 à 336 heures.	shipped
+Enter a number from 1 to 20.	Entrez un nombre de 1 à 20.	shipped
+Enter a percentage from 0 to 100.	Entrez un pourcentage de 0 à 100.	shipped
+Enter a phone number like +1 403 555 0123.	Entrez un numéro de téléphone comme +1 403 555 0123.	new
+Enter a price above $0.	Entrez un prix supérieur à 0 $.	shipped
+Enter a price change from $0 to $100.	Entrez un écart de prix de 0 $ à 100 $.	shipped
+Enter a price.	Entrez un prix.	shipped
+Enter a product title.	Entrez un titre de produit.	shipped
+Enter a quantity from 1 to 20.	Entrez une quantité de 1 à 20.	shipped
+Enter a radius from 1 to 25 km.	Entrez un rayon de 1 à 25 km.	shipped
+Enter a section name.	Entrez un nom de section.	shipped
+Enter a service name.	Entrez un nom de service.	shipped
+Enter a SKU.	Entrez une UGS.	shipped
+Enter a time like 09:00.	Entrez une heure comme 09:00.	new
+Enter a valid Canadian mobile, e.g. +1 403 555 0148.	Entrez un mobile canadien valide, p. ex. +1 403 555 0148.	shipped
+Enter an amount of $0 or more.	Entrez un montant de 0 $ ou plus.	shipped
+Enter an amount.	Entrez un montant.	shipped
+Enter an email or a mobile number.	Entrez un courriel ou un numéro de mobile.	shipped
+Enter an https:// URL.	Entrez une URL https://.	shipped
+Enter an option name.	Entrez un nom d’option.	shipped
+Enter one of your backup codes.	Entrez un de vos codes de secours.	shipped
+Enter stock on hand.	Entrez le stock disponible.	shipped
+Enter the 3-digit institution number.	Entrez le numéro d'institution à 3 chiffres.	shipped
+Enter the 5-digit transit number.	Entrez le numéro de transit à 5 chiffres.	shipped
+Enter the 6-digit code.	Entrez le code à 6 chiffres.	shipped
+Enter the account holder's legal name.	Entrez le nom légal du titulaire du compte.	shipped
+Enter the city.	Entrez la ville.	shipped
+Enter the full address.	Entrez l'adresse complète.	shipped
+Enter the full legal name.	Entrez le nom légal complet.	shipped
+Enter the GTIN, or choose None (handmade / local).	Entrez le GTIN ou choisissez Aucun (fait main / local).	shipped
+Enter the licence number, or confirm you don't sell alcohol.	Entrez le numéro de licence ou confirmez que vous ne vendez pas d’alcool.	new
+Enter the licence number.	Entrez le numéro de licence.	new
+Enter the name customers will see.	Entrez le nom que verront les clients.	shipped
+Enter the number of guests (1 to 2,000).	Entrez le nombre d’invités (de 1 à 2 000).	new
+Enter the owner's email address.	Entrez l’adresse courriel du propriétaire.	new
+Enter the permit number.	Entrez le numéro de permis.	new
+Enter the registered legal name.	Entrez la dénomination sociale enregistrée.	shipped
+Enter the street address.	Entrez l’adresse.	shipped
+Enter the URL that receives events.	Entrez l’URL qui reçoit les événements.	shipped
+Enter your email or mobile first.	Entrez d’abord votre courriel ou votre mobile.	new
+Enter your email or mobile.	Entrez votre courriel ou votre mobile.	shipped
+Enter your permit numbers, or confirm none are required.	Entrez vos numéros de permis ou confirmez qu’aucun n’est exigé.	new
+Enter your Shopify store address (your-store.myshopify.com).	Entrez l’adresse de votre boutique Shopify (votre-boutique.myshopify.com).	shipped
+Enter your Toast restaurant GUID (Toast Web › Integrations).	Entrez le GUID de votre restaurant Toast (Toast Web › Intégrations).	shipped
+File uploads are not available yet.	Le téléversement de fichiers n’est pas encore offert.	new
+Files can be at most 10 MB.	Les fichiers peuvent faire au plus 10 Mo.	new
+Files can be up to 10 MB.	Les fichiers peuvent atteindre 10 Mo.	shipped
+Final sale is allowed only for perishables.	La vente finale est permise seulement pour les périssables.	shipped
+Finish Stripe onboarding first.	Terminez d’abord l’inscription Stripe.	new
+First name is required.	Le prénom est obligatoire.	shipped
+Format is 9 digits + RR0001 (e.g. 123456789 RR0001).	Format : 9 chiffres + RR0001 (p. ex. 123456789 RR0001).	shipped
+Format is 9 digits + RT0001 (e.g. 123456789 RT0001).	Format : 9 chiffres + RT0001 (p. ex. 123456789 RT0001).	shipped
+GTIN check digit invalid	Chiffre de contrôle du GTIN invalide	shipped
+GTIN must be 8, 12, 13 or 14 digits.	Le GTIN compte 8, 12, 13 ou 14 chiffres.	shipped
+Header and Book / order button are always on.	L’en-tête et le bouton Réserver / Commander sont toujours affichés.	review
+Idempotency-Key header is required.	L’en-tête Idempotency-Key est obligatoire.	new
+Images must be 15 MB or smaller.	Les images doivent faire 15 Mo ou moins.	shipped
+Images must be at least 1000 px on the longest side.	Les images doivent mesurer au moins 1000 px sur le côté le plus long.	shipped
+Instant payouts need an eligible Canadian debit-linked account.	Les versements instantanés exigent un compte canadien admissible lié à une carte de débit.	shipped
+Instant payouts start at $1.00.	Les versements instantanés commencent à 1,00 $.	shipped
+Keep a message under 4,000 characters.	Gardez le message sous 4 000 caractères.	new
+Keep allergies under 200 characters.	Gardez les allergies sous 200 caractères.	shipped
+Keep delivery notes under 200 characters.	Gardez la note sous 200 caractères.	shipped
+Keep instructions under 140 characters.	Gardez les instructions sous 140 caractères.	new
+Keep it under 1,000 characters.	Gardez-le sous 1 000 caractères.	shipped
+Keep it under 2,000 characters.	Gardez-le sous 2 000 caractères.	new
+Keep it under 200 characters.	Gardez-le sous 200 caractères.	new
+Keep it under 4,000 characters.	Moins de 4 000 caractères, svp.	shipped
+Keep messages under 2,000 characters.	Les messages doivent faire moins de 2 000 caractères.	shipped
+Keep names under 60 characters.	Gardez les noms sous 60 caractères.	shipped
+Keep notes for providers under 500 characters.	Gardez les notes sous 500 caractères.	shipped
+Keep notes under 1,000 characters.	Gardez les notes sous 1 000 caractères.	new
+Keep replies under 1,000 characters.	Les réponses doivent faire moins de 1 000 caractères.	shipped
+Keep the name under 40 characters.	Gardez le nom sous 40 caractères.	shipped
+Keep the note under 140 characters.	Gardez la note sous 140 caractères.	new
+Keep the note under 500 characters.	La note doit faire moins de 500 caractères.	shipped
+Keep the old secret for 0 to 168 hours.	Gardez l’ancien secret de 0 à 168 heures.	new
+Keep the unit under 20 characters.	Gardez l’unité sous 20 caractères.	shipped
+Keep your response under 2,000 characters.	Limitez votre réponse à 2 000 caractères.	shipped
+Last name is required.	Le nom est obligatoire.	shipped
+Latitude must be between -90 and 90.	La latitude doit être entre -90 et 90.	new
+Leave out promo words like sale, free or best.	Retirez les mots promotionnels comme solde, gratuit ou meilleur.	shipped
+Location is not a valid position.	L’emplacement n’est pas une position valide.	new
+Longitude must be between -180 and 180.	La longitude doit être entre -180 et 180.	new
+Main image plus up to 8 more.	Image principale et jusqu'à 8 autres.	shipped
+Maximum %d.	Maximum %d.	new
+Mobile number is required for verification.	Le numéro de mobile est obligatoire pour la vérification.	shipped
+Name the key so you can tell it apart.	Nommez la clé pour la reconnaître.	shipped
+Name this variant.	Nommez cette variante.	shipped
+No price in your POS — set one there, or add this item by hand.	Aucun prix dans votre PDV — fixez-en un là-bas ou ajoutez cet article à la main.	new
+Northline can't read this restaurant yet. Turn on the Northline integration in Toast, then try again.	Northline ne peut pas encore lire ce restaurant. Activez l’intégration Northline dans Toast, puis réessayez.	new
+Northline is already live here.	Northline est déjà offert ici.	new
+Northline isn't open in {province} yet.	Northline n’est pas encore offert {province:in}.	new
+Northline Plus is already active for your household.	Northline Plus est déjà actif pour votre foyer.	new
+Not a field for this structure.	Ce champ ne s’applique pas à cette structure.	new
+Nothing was paid for this, so there's nothing to refund.	Rien n’a été payé pour ceci, il n’y a donc rien à rembourser.	new
+Offer less than the full amount — or choose Full refund.	Offrez moins que le montant total — ou choisissez Remboursement complet.	new
+One of these providers doesn't offer this service any more. Choose again.	Un de ces prestataires n’offre plus ce service. Choisissez de nouveau.	new
+One partner must be the signing partner.	Un associé doit être signataire.	shipped
+Only %d left.	Plus que %d en stock.	new
+Only a submitted application can be approved.	Seule une demande soumise peut être approuvée.	new
+Only approved refunds are paid.	Seuls les remboursements approuvés sont payés.	new
+Only drafts and rejected listings can be submitted for vetting.	Seuls les brouillons et les annonces refusées peuvent être soumis à la vérification.	new
+Only the customer can accept this quote.	Seul le client peut accepter ce devis.	new
+Only the customer can decline this quote.	Seul le client peut refuser ce devis.	new
+Only the customer can sign off this job.	Seul le client peut approuver la fin de ce travail.	new
+Ownership can't add up to more than 100 %.	La participation totale ne peut pas dépasser 100 %.	shipped
+Partner clients have no cart.	Les clients partenaires n’ont pas de panier.	new
+Payouts are paused until %s after the bank account change.	Les versements sont suspendus jusqu’au %s après le changement de compte bancaire.	new
+Pick a colour like #2F5D3A.	Choisissez une couleur comme #2F5D3A.	new
+Pick a date from tomorrow on.	Choisissez une date à partir de demain.	new
+Pick a day.	Choisissez un jour.	new
+Pick a menu and a section.	Choisissez un menu et une section.	shipped
+Pick a record from the list.	Choisissez un dossier dans la liste.	shipped
+Pick a returns policy.	Choisissez une politique de retour.	new
+Pick a role.	Choisissez un rôle.	new
+Pick a section or items for this slot.	Choisissez une section ou des plats pour cet emplacement.	shipped
+Pick a service.	Choisissez un service.	new
+Pick a step.	Choisissez une étape.	new
+Pick a time.	Choisissez une heure.	new
+Pick allergens from the Health Canada list.	Choisissez les allergènes dans la liste de Santé Canada.	new
+Pick at least one day.	Choisissez au moins un jour.	shipped
+Pick at least one department.	Choisissez au moins un rayon.	shipped
+Pick at least one event.	Choisissez au moins un événement.	shipped
+Pick at least one item.	Choisissez au moins un article.	shipped
+Pick at least one language.	Choisissez au moins une langue.	shipped
+Pick at least one scope.	Choisissez au moins une portée.	shipped
+Pick at least one service.	Choisissez au moins un service.	shipped
+Pick at least {n} for {group}.	Choisissez au moins {n} pour {group}.	new
+Pick at most 62 days.	Choisissez au plus 62 jours.	new
+Pick categories from the list, or suggest a new one.	Choisissez des catégories dans la liste ou proposez-en une nouvelle.	new
+Pick dietary tags from the list.	Choisissez les étiquettes alimentaires dans la liste.	new
+Pick events and channels from the table.	Choisissez les événements et les canaux dans le tableau.	new
+Pick events from the list.	Choisissez les événements dans la liste.	new
+Pick languages from the list.	Choisissez les langues dans la liste.	new
+Pick legal, verification or logo.	Choisissez légal, vérification ou logo.	review
+Pick modifier groups from your list.	Choisissez les groupes d’options dans votre liste.	new
+Pick one of the labels.	Choisissez une des étiquettes.	new
+Pick one of the offered visit slots.	Choisissez un des créneaux proposés.	shipped
+Pick one of the options.	Choisissez une des options.	new
+Pick one of the roles listed.	Choisissez un des rôles de la liste.	new
+Pick options from another group.	Choisissez des options d’un autre groupe.	new
+Pick or enter the address.	Choisissez ou entrez l’adresse.	new
+Pick provider, seller, kitchen or both.	Choisissez prestataire, vendeur, cuisine ou les deux.	review
+Pick scopes from the list.	Choisissez les portées dans la liste.	new
+Pick the business structure.	Choisissez la structure de l’entreprise.	new
+Pick the date of the event.	Choisissez la date de l’événement.	new
+Pick the first day.	Choisissez le premier jour.	new
+Pick the province you operate in.	Choisissez la province où vous exercez vos activités.	new
+Pick the time again for this service.	Choisissez l’heure de nouveau pour ce service.	new
+Pick the time again.	Choisissez l’heure de nouveau.	new
+Pick today or a later date.	Choisissez aujourd’hui ou une date ultérieure.	shipped
+Pick up to {n} for {group}.	Choisissez jusqu’à {n} pour {group}.	new
+Pick what went wrong.	Choisissez ce qui n’allait pas.	shipped
+Pick what you're looking to do.	Choisissez ce que vous souhaitez faire.	shipped
+Pick what your business does on Northline.	Choisissez ce que fait votre entreprise sur Northline.	shipped
+Pick {n} for {group}.	Choisissez {n} pour {group}.	new
+Point the CNAME at pages.northline.ca and verify it before publishing.	Pointez le CNAME vers pages.northline.ca et vérifiez-le avant de publier.	new
+Prep time is already at +30 min.	Le temps de préparation est déjà à +30 min.	new
+Prices can't be negative.	Les prix ne peuvent pas être négatifs.	new
+Quantity must be more than 0.	La quantité doit être supérieure à 0.	new
+Read and sign to continue.	Lisez et signez pour continuer.	shipped
+Reconnect this account to keep syncing.	Reconnectez ce compte pour poursuivre la synchronisation.	new
+Reconnect your POS to import.	Reconnectez votre PDV pour importer.	new
+Refund between $0.01 and the amount paid.	Remboursez entre 0,01 $ et le montant payé.	new
+Reload the page to read the current version first.	Rechargez d’abord la page pour lire la version actuelle.	new
+Required for corporations, co-ops and non-profits.	Obligatoire pour les sociétés, coopératives et organismes sans but lucratif.	shipped
+Role is user or assistant.	Le rôle est user ou assistant.	review
+Scan the QR code first.	Balayez d’abord le code QR.	new
+Search for 100 characters or fewer.	Recherchez 100 caractères ou moins.	new
+Search isn't available in {market} yet.	La recherche n’est pas encore offerte à {market}.	new
+Security alerts always go to every channel.	Les alertes de sécurité sont toujours envoyées sur tous les canaux.	new
+Send a code first.	Envoyez d’abord un code.	new
+Send both lat and lng, or neither.	Envoyez lat et lng, ou aucun des deux.	review
+Send every section of the menu, in the new order.	Envoyez toutes les sections du menu, dans le nouvel ordre.	new
+Send every section of this page exactly once.	Envoyez chaque section de cette page une seule fois.	new
+Send the province or territory to search in (market).	Envoyez la province ou le territoire où chercher (market).	review
+Services have no stock.	Les services n’ont pas de stock.	new
+Set up payouts with Stripe first.	Configurez d’abord les versements avec Stripe.	new
+Sign in again to add a passkey.	Reconnectez-vous pour ajouter une clé d’accès.	new
+Sign in again.	Reconnectez-vous.	new
+Sign in first.	Connectez-vous d’abord.	new
+Sign in with a passkey or authenticator first.	Connectez-vous d’abord avec une clé d’accès ou une application d’authentification.	new
+Sign in with a second factor first.	Connectez-vous d’abord avec un deuxième facteur.	new
+Sign in with your second factor to do this.	Connectez-vous avec votre deuxième facteur pour faire ceci.	new
+Signing in is paused for a few minutes while we fix a problem on our side. Try again shortly.	La connexion est suspendue quelques minutes, le temps de régler un problème de notre côté. Réessayez sous peu.	shipped
+Someone already moved this order. Refresh to see where it is.	Quelqu’un a déjà déplacé cette commande. Actualisez pour voir où elle en est.	new
+Someone else changed this. Reload and try again.	Quelqu’un d’autre a modifié ceci. Rechargez et réessayez.	new
+Something in your cart just sold out. Check your cart and try again.	Un article de votre panier vient d’être épuisé. Vérifiez votre panier et réessayez.	shipped
+Sort by relevance, distance, price_asc, price_desc or rating.	Triez par relevance, distance, price_asc, price_desc ou rating.	review
+Sorting by distance needs your location (lat and lng).	Le tri par distance exige votre position (lat et lng).	review
+Start adding the key again.	Recommencez l’ajout de la clé.	new
+Start adding the passkey again.	Recommencez l’ajout de la clé d’accès.	new
+Start the address search again.	Recommencez la recherche d’adresse.	new
+Start the passkey confirmation again.	Recommencez la confirmation par clé d’accès.	new
+Start the passkey set-up again.	Recommencez la configuration de la clé d’accès.	new
+Start the passkey sign-in again.	Recommencez la connexion par clé d’accès.	new
+Start the payment first.	Lancez d’abord le paiement.	new
+Start the registration again.	Recommencez l’inscription.	new
+Stock can't be negative.	Le stock ne peut pas être négatif.	shipped
+Stripe collects the SIN — confirm to continue.	Stripe recueille le NAS — confirmez pour continuer.	new
+Stripe could not be reached. Try again.	Impossible de joindre Stripe. Réessayez.	new
+Stripe has paused payouts on this account. Finish the steps in Settings › Stripe & compliance.	Stripe a suspendu les versements de ce compte. Terminez les étapes dans Paramètres › Stripe et conformité.	new
+Stripe is not configured.	Stripe n’est pas configuré.	new
+Stripe is still checking this owner's documents.	Stripe vérifie encore les documents de ce propriétaire.	new
+Submit the application for review first.	Soumettez d’abord la demande pour examen.	new
+Submit this listing for vetting before publishing it.	Soumettez cette annonce à la vérification avant de la publier.	new
+Tell the agent why you're contesting this refund.	Dites à l'agent pourquoi vous contestez ce remboursement.	shipped
+Tell us a little more (at least 10 characters).	Dites-nous-en un peu plus (au moins 10 caractères).	new
+Tell us the vehicle year, make and model.	Indiquez l’année, la marque et le modèle du véhicule.	new
+Tell us what's happening.	Dites-nous ce qui se passe.	shipped
+Tell us what's wrong with this review.	Dites-nous ce qui ne va pas avec cet avis.	shipped
+That address is taken.	Cette adresse est déjà prise.	new
+That already exists.	Cela existe déjà.	new
+That backup code didn't work, or it was already used.	Ce code de secours n’a pas fonctionné ou a déjà été utilisé.	shipped
+That business number is already registered on Northline.	Ce numéro d’entreprise est déjà inscrit sur Northline.	new
+That choice isn't on this dish any more. Open it again.	Ce choix n’est plus offert pour ce plat. Ouvrez-le de nouveau.	new
+That code didn't work. Check it and try again.	Ce code n’a pas fonctionné. Vérifiez-le et réessayez.	shipped
+That code doesn't match. Check it and try again.	Ce code ne correspond pas. Vérifiez-le et réessayez.	shipped
+That code has expired. Send a new one.	Ce code a expiré. Demandez-en un nouveau.	shipped
+That delivery window just closed. Choose another.	Cette fenêtre de livraison vient de fermer. Choisissez-en une autre.	shipped
+That dish isn't part of this combo.	Ce plat ne fait pas partie de ce combo.	new
+That doesn't look like an email address.	Cette adresse courriel ne semble pas valide.	shipped
+That domain can't be connected to a Northline page.	Ce domaine ne peut pas être connecté à une page Northline.	new
+That domain is already connected to another page.	Ce domaine est déjà connecté à une autre page.	new
+That email is already used by another account.	Ce courriel est déjà utilisé par un autre compte.	new
+That file is no longer available. Attach it again.	Ce fichier n'est plus disponible. Joignez-le de nouveau.	shipped
+That image is no longer available — upload it again.	Cette image n’est plus disponible — téléversez-la de nouveau.	new
+That location is outside the map.	Cet emplacement est hors de la carte.	new
+That passkey couldn't be verified. Try again or use another method.	Cette clé d’accès n’a pas pu être vérifiée. Réessayez ou utilisez une autre méthode.	shipped
+That passkey was already removed.	Cette clé d’accès a déjà été retirée.	new
+That session has already ended.	Cette session est déjà terminée.	new
+That SKU is already used by another listing.	Cette UGS est déjà utilisée par une autre annonce.	shipped
+That time was just taken. Pick another slot.	Cette heure vient d’être prise. Choisissez-en une autre.	shipped
+The card isn't confirmed yet. Try again.	La carte n’est pas encore confirmée. Réessayez.	new
+The card issuer decides this dispute. Send your response and evidence.	L’émetteur de la carte tranche ce litige. Envoyez votre réponse et vos preuves.	new
+The card payment isn't authorized yet.	Le paiement par carte n’est pas encore autorisé.	new
+The card was authorized for less than the amount due.	La carte a été autorisée pour moins que le montant dû.	new
+The code is 6 digits.	Le code compte 6 chiffres.	shipped
+The combo must cost less than buying the items separately.	Le combo doit coûter moins cher que les articles achetés séparément.	new
+The file has no items.	Le fichier ne contient aucun article.	new
+The file has no rows.	Le fichier ne contient aucune ligne.	new
+The first request with this key is still running.	La première requête avec cette clé est toujours en cours.	new
+The first row must name the columns: section, name, price, allergens.	La première ligne doit nommer les colonnes : section, name, price, allergens.	review
+The last day can't be before the first day.	Le dernier jour ne peut pas précéder le premier.	new
+The lowest price is above the highest.	Le prix le plus bas dépasse le plus élevé.	new
+The provider is no longer free at the proposed time. Ask them for a new one.	Le prestataire n’est plus libre à l’heure proposée. Demandez-lui une autre heure.	shipped
+The provider revised this quote. Review the new version before accepting.	Le prestataire a révisé ce devis. Consultez la nouvelle version avant d’accepter.	new
+The tax doesn't match its calculation. Calculate it again.	La taxe ne correspond pas à son calcul. Calculez-la de nouveau.	new
+The time to report a problem with this has passed. Contact Northline from Help & cases.	Le délai pour signaler un problème est passé. Contactez Northline depuis Aide et dossiers.	shipped
+There aren't enough options to pick that many.	Il n’y a pas assez d’options pour en choisir autant.	shipped
+There is no open offer on this dispute.	Il n’y a aucune offre ouverte sur ce litige.	new
+These hours overlap another range on the same day.	Ces heures chevauchent une autre plage le même jour.	shipped
+This application was already submitted.	Cette demande a déjà été soumise.	new
+This bank account change was already confirmed or cancelled.	Ce changement de compte bancaire a déjà été confirmé ou annulé.	new
+This bank account isn't due to take over yet.	Ce compte bancaire n’est pas encore censé prendre le relais.	new
+This calendar can't be connected yet.	Ce calendrier ne peut pas encore être connecté.	new
+This calendar isn't in your account any more.	Ce calendrier ne fait plus partie de votre compte.	new
+This case is already closed.	Ce dossier est déjà fermé.	new
+This case is closed. Contact support from Help & cases.	Ce dossier est fermé. Contactez le soutien depuis Aide et dossiers.	new
+This case is resolved. Open a new case.	Ce dossier est résolu. Ouvrez un nouveau dossier.	new
+This change breaks a business rule.	Ce changement enfreint une règle d’affaires.	new
+This check is already verified.	Cette vérification est déjà faite.	new
+This checkout can't be paid any more. Start again from the menu.	Ce paiement ne peut plus être effectué. Recommencez à partir du menu.	new
+This checkout expired. Check your cart and pay again.	Ce paiement a expiré. Vérifiez votre panier et payez de nouveau.	new
+This day is not a statutory holiday in {province}.	Ce jour n’est pas un jour férié {province:in}.	new
+This day is not a statutory holiday.	Ce jour n’est pas un jour férié.	new
+This delivery is still being retried.	Cette livraison est encore en cours de nouvelle tentative.	new
+This delivery predates the delivery log and can't be resent.	Cette livraison précède le journal des livraisons et ne peut pas être renvoyée.	new
+This document has expired.	Ce document a expiré.	new
+This endpoint is not available.	Ce point de terminaison n’est pas disponible.	new
+This endpoint is turned off. Turn it back on first.	Ce point de terminaison est désactivé. Réactivez-le d’abord.	new
+This endpoint isn't open to partners.	Ce point de terminaison n’est pas ouvert aux partenaires.	new
+This file can't be accepted. Try a different file.	Ce fichier ne peut pas être accepté. Essayez un autre fichier.	new
+This file has already been imported.	Ce fichier a déjà été importé.	new
+This file is empty.	Ce fichier est vide.	new
+This file wasn't uploaded to this business.	Ce fichier n’a pas été téléversé pour cette entreprise.	new
+This flag was already decided.	Ce signalement a déjà été traité.	new
+This Idempotency-Key was already used for a different request.	Cette Idempotency-Key a déjà servi pour une autre requête.	new
+This image belongs to another business and hasn't been approved yet.	Cette image appartient à une autre entreprise et n’a pas encore été approuvée.	new
+This import was already applied or discarded.	Cette importation a déjà été appliquée ou abandonnée.	new
+This invitation has expired. Ask for a new one.	Cette invitation a expiré. Demandez-en une nouvelle.	new
+This invitation was already used.	Cette invitation a déjà été utilisée.	shipped
+This invitation was sent to a different email or mobile. Sign in with that account.	Cette invitation a été envoyée à un autre courriel ou mobile. Connectez-vous avec ce compte.	new
+This invitation was withdrawn.	Cette invitation a été retirée.	shipped
+This is already your default address.	C’est déjà votre adresse par défaut.	new
+This is required.	Ce champ est requis.	shipped
+This is the session you're using now. Sign out instead.	C’est la session que vous utilisez en ce moment. Déconnectez-vous plutôt.	new
+This item is sold out.	Cet article est épuisé.	new
+This item isn't available any more.	Cet article n’est plus disponible.	new
+This job is %s and can't move to %s.	Ce travail est à l’état %s et ne peut pas passer à %s.	review
+This job is %s; extra approvals are only possible before it is completed.	Ce travail est à l’état %s; les approbations supplémentaires ne sont possibles qu’avant qu’il soit terminé.	review
+This modifier group has no options in your POS.	Ce groupe d’options n’a aucune option dans votre PDV.	new
+This order has nothing left to pack.	Cette commande n’a plus rien à emballer.	new
+This order was cancelled.	Cette commande a été annulée.	shipped
+This owner is already verified.	Ce propriétaire est déjà vérifié.	new
+This page link no longer works. Start the search again.	Ce lien de page ne fonctionne plus. Recommencez la recherche.	shipped
+This partner doesn't act for this business.	Ce partenaire n’agit pas pour cette entreprise.	new
+This partner token lacks the %s scope.	Ce jeton de partenaire n’a pas la portée %s.	new
+This payment is no longer on hold.	Ce paiement n’est plus retenu.	new
+This payment is no longer waiting for capture.	Ce paiement n’attend plus d’être encaissé.	new
+This payment was already refunded.	Ce paiement a déjà été remboursé.	new
+This payment was already released.	Ce paiement a déjà été libéré.	new
+This person is already on your team.	Cette personne fait déjà partie de votre équipe.	shipped
+This person isn't on your team.	Cette personne ne fait pas partie de votre équipe.	new
+This photo wasn't uploaded to this business.	Cette photo n’a pas été téléversée pour cette entreprise.	new
+This platform can't be connected yet.	Cette plateforme ne peut pas encore être connectée.	new
+This POS can't be connected yet.	Ce PDV ne peut pas encore être connecté.	new
+This preview is more than an hour old. Import again to see the latest menu.	Cet aperçu date de plus d’une heure. Importez de nouveau pour voir le menu à jour.	new
+This product has variants: change their prices and stock in the editor.	Ce produit a des variantes : modifiez leurs prix et leur stock dans l’éditeur.	new
+This quote can no longer be accepted.	Ce devis ne peut plus être accepté.	new
+This quote can no longer be declined.	Ce devis ne peut plus être refusé.	new
+This quote has expired. Ask for an updated quote.	Ce devis a expiré. Demandez un devis à jour.	shipped
+This quote has no date yet. Ask the provider to propose one.	Ce devis n’a pas encore de date. Demandez au prestataire d’en proposer une.	shipped
+This quote is %s and can no longer be revised.	Ce devis est à l’état %s et ne peut plus être révisé.	review
+This quote is %s and can't be %s.	Ce devis est à l’état %s; action impossible : %s.	review
+This request has expired.	Cette demande a expiré.	new
+This review was already decided.	Cet examen a déjà fait l’objet d’une décision.	new
+This role isn't available for this business.	Ce rôle n’est pas offert pour cette entreprise.	new
+This service is booked directly — pick a time on a provider's page.	Ce service se réserve directement — choisissez une heure sur la page d’un prestataire.	new
+This service is priced by quote — ask for a quote instead.	Ce service est tarifé sur devis — demandez plutôt un devis.	new
+This service needs the provider's approval — ask for a quote instead.	Ce service exige l’approbation du prestataire — demandez plutôt un devis.	new
+This tax calculation is for another booking or order line.	Ce calcul de taxe vise une autre réservation ou ligne de commande.	new
+Too many address lookups. Try again in a minute.	Trop de recherches d’adresses. Réessayez dans une minute.	shipped
+Too many attempts. Start again in a few minutes.	Trop de tentatives. Recommencez dans quelques minutes.	shipped
+Too many attempts. Wait a moment and try again.	Trop de tentatives. Patientez un moment, puis réessayez.	shipped
+Too many choices.	Trop de choix.	new
+Too many searches. Try again in a minute.	Trop de recherches. Réessayez dans une minute.	new
+Too many tries. Send a new code.	Trop d’essais. Demandez un nouveau code.	shipped
+Type a question.	Tapez une question.	new
+Type at least one letter.	Tapez au moins une lettre.	new
+Type what you're looking for.	Tapez ce que vous cherchez.	new
+Up to 10,000 rows per file.	Jusqu’à 10 000 lignes par fichier.	new
+Up to 12 photos.	Jusqu’à 12 photos.	new
+Up to 5 bullet points.	Jusqu'à 5 points clés.	shipped
+Up to 6 featured products.	Jusqu’à 6 produits en vedette.	new
+Up to 8 questions.	Jusqu’à 8 questions.	new
+Upload a CSV file under 1 MB.	Téléversez un fichier CSV de moins de 1 Mo.	new
+Upload a JPEG, PNG or WebP photo under 10 MB.	Téléversez une photo JPEG, PNG ou WebP de moins de 10 Mo.	shipped
+Upload a PDF, PNG or JPEG under 10 MB.	Téléversez un PDF, PNG ou JPEG de moins de 10 Mo.	new
+Upload a photo (JPG, PNG, HEIC) or a PDF.	Téléversez une photo (JPG, PNG, HEIC) ou un PDF.	shipped
+Upload an .xlsx or .csv file.	Téléversez un fichier .xlsx ou .csv.	new
+Upload an SVG or PNG under 10 MB.	Téléversez un SVG ou un PNG de moins de 10 Mo.	new
+Upload the document.	Téléversez le document.	shipped
+Use 3–40 lowercase letters, numbers or hyphens.	Utilisez de 3 à 40 lettres minuscules, chiffres ou traits d’union.	new
+Use a date like 2026-10-02.	Utilisez une date comme 2026-10-02.	new
+Use a JPG or PNG image.	Utilisez une image JPG ou PNG.	shipped
+Use a photo at least 1000 px on the short side.	Utilisez une photo d’au moins 1000 px sur le côté court.	new
+Use a quarter like 2026-Q3.	Utilisez un trimestre comme 2026-Q3.	review
+Use a time like 11:00.	Utilisez une heure comme 11:00.	shipped
+Use a two-letter province or territory code.	Utilisez un code de province ou de territoire à deux lettres.	new
+Use delivery=tonight or leave it out.	Utilisez delivery=tonight ou omettez-le.	review
+Use service or product.	Utilisez service ou product.	review
+Use shop or service.	Utilisez shop ou service.	review
+Use the format YYYY-MM-DD.	Utilisez le format AAAA-MM-JJ.	shipped
+Use your passkey or authenticator app instead.	Utilisez plutôt votre clé d’accès ou votre application d’authentification.	new
+Verify your mobile number first.	Vérifiez d’abord votre numéro de mobile.	new
+Wait %d s before sending another code.	Attendez %d s avant d’envoyer un autre code.	new
+We couldn't call this number. Try again in a moment, or resend the code by text.	Impossible d’appeler ce numéro. Réessayez dans un instant ou renvoyez le code par texto.	shipped
+We couldn't look up addresses right now. Try again in a moment.	Impossible de chercher des adresses pour le moment. Réessayez dans un instant.	new
+We couldn't reach Stripe. Try again in a moment.	Impossible de joindre Stripe. Réessayez dans un instant.	shipped
+We couldn't send a code to this number right now. Try again in a moment.	Impossible d’envoyer un code à ce numéro pour le moment. Réessayez dans un instant.	shipped
+We couldn't send the text message. Try again in a moment, or choose Call me instead.	Impossible d’envoyer le texto. Réessayez dans un instant ou choisissez « M’appeler plutôt ».	shipped
+We couldn't use that bank link. Connect your bank again.	Nous n'avons pas pu utiliser ce lien bancaire. Liez votre banque de nouveau.	shipped
+We don't deliver to %s yet.	Nous ne livrons pas encore à %s.	new
+Webhooks are not available yet.	Les webhooks ne sont pas encore offerts.	new
+White text needs 4.5:1 contrast — pick a darker colour.	Le texte blanc exige un contraste de 4,5:1 — choisissez une couleur plus foncée.	new
+Write a message or add a photo.	Écrivez un message ou ajoutez une photo.	shipped
+Write a message or attach a file.	Écrivez un message ou joignez un fichier.	shipped
+Write a reply before sending.	Écrivez une réponse avant de l’envoyer.	shipped
+Write your response before sending this to an agent.	Rédigez votre réponse avant de transmettre le dossier à un agent.	shipped
+You already answered this dispute.	Vous avez déjà répondu à ce litige.	new
+You already sent a quote for this request. Revise it instead.	Vous avez déjà envoyé un devis pour cette demande. Révisez-le plutôt.	new
+You are not a member of this business.	Vous n’êtes pas membre de cette entreprise.	new
+You can attach up to 20 files.	Vous pouvez joindre jusqu’à 20 fichiers.	new
+You can pay out up to %s.	Vous pouvez verser jusqu’à %s.	new
+You can report a problem once it's delivered or done.	Vous pourrez signaler un problème une fois la livraison ou le travail terminé.	new
+You declined this request.	Vous avez refusé cette demande.	new
+You need to accept the Terms and Privacy Policy.	Vous devez accepter les Conditions et la Politique de confidentialité.	shipped
+You've already replied to this review.	Vous avez déjà répondu à cet avis.	new
+You've already reported this review.	Vous avez déjà signalé cet avis.	new
+You've already reported this. Follow it in Help & cases.	Vous l’avez déjà signalé. Suivez-le dans Aide et dossiers.	new
+Your 10-minute hold ended. Pick the time again.	Votre réservation de 10 minutes a pris fin. Choisissez l’heure de nouveau.	shipped
+Your browsing session expired. Reload the page.	Votre session de navigation a expiré. Rechargez la page.	new
+Your cart is empty.	Votre panier est vide.	shipped
+Your menu goes live once Northline approves your kitchen.	Votre menu sera en ligne dès que Northline aura approuvé votre cuisine.	new
+Your page goes live once Northline approves your business.	Votre page sera en ligne dès que Northline aura approuvé votre entreprise.	shipped
+Your role (%s) can't do this.	Votre rôle (%s) ne permet pas de faire ceci.	review
+Your role (%s) can't see this screen's data.	Votre rôle (%s) ne permet pas de voir les données de cet écran.	review
+{dish} isn't available right now.	{dish} : non disponible pour le moment.	new
+{kitchen} doesn't deliver to this address. Choose pickup or another address.	{kitchen} ne livre pas à cette adresse. Choisissez le ramassage ou une autre adresse.	new
+{kitchen} doesn't deliver. Choose pickup.	{kitchen} ne livre pas. Choisissez le ramassage.	new
+{kitchen} doesn't offer pickup.	{kitchen} n’offre pas le ramassage.	new
+{name} is sold out.	{name} : épuisé.	new
