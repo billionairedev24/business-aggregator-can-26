@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import ca.northline.shared.Ids;
 import ca.northline.support.IntegrationTest;
+import java.util.Locale;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -45,7 +46,7 @@ class MerchantTriggersTest extends IntegrationTest {
         var id = Ids.next();
         jdbc.sql(
                         "insert into merchants.storefronts (id, merchant_id, slug, page_kind, cta_label) values (?, ?, ?, ?, 'order_now')")
-                .params(id, merchantId, "t-" + id.toLowerCase(), pageKind)
+                .params(id, merchantId, "t-" + id.toLowerCase(Locale.ROOT), pageKind)
                 .update();
         return id;
     }
@@ -137,7 +138,7 @@ class MerchantTriggersTest extends IntegrationTest {
                 .hasMessageContaining("chk_slug");
         assertThatThrownBy(() -> jdbc.sql(
                                 "insert into merchants.storefronts (id, merchant_id, slug, page_kind, brand_color) values (?, ?, ?, 'store', 'green')")
-                        .params(Ids.next(), id, "ok-" + id.toLowerCase())
+                        .params(Ids.next(), id, "ok-" + id.toLowerCase(Locale.ROOT))
                         .update())
                 .hasMessageContaining("chk_brand_color");
         var first = storefront(id, "store");

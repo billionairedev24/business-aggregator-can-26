@@ -1,6 +1,7 @@
 package ca.northline.shared.storage;
 
 import ca.northline.platform.StorageProperties;
+import ca.northline.shared.Bytes;
 import com.google.auth.ServiceAccountSigner;
 import com.google.cloud.NoCredentials;
 import com.google.cloud.storage.BlobId;
@@ -88,7 +89,8 @@ final class GcsObjectStore implements ObjectStore, AutoCloseable {
             return Optional.empty();
         }
         var bytes = blob.getContent();
-        return Optional.of(new ObjectContent(new ObjectInfo(key, type(blob.getContentType()), bytes.length), bytes));
+        return Optional.of(
+                new ObjectContent(new ObjectInfo(key, type(blob.getContentType()), bytes.length), Bytes.of(bytes)));
     }
 
     @Override

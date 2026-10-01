@@ -24,7 +24,7 @@ public final class SettingsUseCases {
                 @Nullable Long autoAcceptQuoteCents,
                 List<String> languages) {}
 
-        BusinessSettings update(Command command);
+        BusinessSettings update(UpdateBusinessSettings.Command command);
     }
 
     public interface ViewTeam {
@@ -38,7 +38,7 @@ public final class SettingsUseCases {
                 @Nullable String phone,
                 @Nullable String role) {}
 
-        InvitationCreated invite(Command command);
+        InvitationCreated invite(InviteTeamMember.Command command);
     }
 
     public interface RevokeTeamInvitation {

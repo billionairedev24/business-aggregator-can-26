@@ -40,7 +40,7 @@ public final class AvailabilityUseCases {
 
         record Command(String merchantId, String actorId, LocalDate effectiveFrom, List<MemberDays> members) {}
 
-        HoursView save(Command command);
+        HoursView save(SaveHours.Command command);
     }
 
     /**
@@ -115,7 +115,7 @@ public final class AvailabilityUseCases {
                 List<TimeRange> specialRanges,
                 @Nullable String reason) {}
 
-        TimeOffEntry add(Command command);
+        TimeOffEntry add(AddTimeOff.Command command);
     }
 
     public interface RemoveTimeOff {

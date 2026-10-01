@@ -17,7 +17,7 @@ import org.testcontainers.containers.wait.strategy.Wait;
 /**
  * stripe-mock ({@code stripe/stripe-mock}), one per test JVM: Stripe's official mock, which validates every request
  * against Stripe's OpenAPI spec and answers with fixtures (it keeps no state, so a PaymentIntent it returns never
- * becomes {@code requires_capture}). {@link #client()} records what stripe-java sends so tests can check the
+ * becomes {@code requires_capture}). {@link #client(Recorder)} records what stripe-java sends so tests can check the
  * {@code Idempotency-Key} and {@code Stripe-Version} headers.
  */
 public final class StripeMock {

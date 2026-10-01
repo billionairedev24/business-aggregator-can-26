@@ -43,7 +43,6 @@ class OwnerIdentityService implements ListOwners, StartOwnerVerification, ApplyI
 
     private final OwnerIdentityStore store;
     private final VerificationRepository verifications;
-    private final MerchantRepository merchants;
     private final IdentityVerification identity;
     private final StudioLinks links;
     private final ApplicationEventPublisher events;

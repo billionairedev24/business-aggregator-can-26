@@ -1,6 +1,7 @@
 package ca.northline.shared.storage;
 
 import ca.northline.platform.StorageProperties;
+import ca.northline.shared.Bytes;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Duration;
@@ -101,8 +102,8 @@ final class S3ObjectStore implements ObjectStore, AutoCloseable {
         try {
             var object = s3.getObjectAsBytes(b -> b.bucket(bucket).key(key));
             var bytes = object.asByteArray();
-            return Optional.of(
-                    new ObjectContent(new ObjectInfo(key, object.response().contentType(), bytes.length), bytes));
+            return Optional.of(new ObjectContent(
+                    new ObjectInfo(key, object.response().contentType(), bytes.length), Bytes.of(bytes)));
         } catch (NoSuchKeyException _) {
             return Optional.empty();
         }

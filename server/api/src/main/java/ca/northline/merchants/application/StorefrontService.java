@@ -15,6 +15,7 @@ import ca.northline.merchants.domain.MerchantStatus;
 import ca.northline.merchants.domain.MerchantType;
 import ca.northline.merchants.domain.Slug;
 import ca.northline.merchants.domain.Storefront;
+import ca.northline.shared.Bytes;
 import ca.northline.shared.CodedEnum;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
@@ -93,31 +94,38 @@ class StorefrontService
         var storefront = lock(command.merchantId());
         var now = clock.instant();
         var problems = new ArrayList<Violation>();
-        if (command.brandColor() instanceof String color) {
+        var color = command.brandColor();
+        if (color != null) {
             attempt(problems, () -> storefront.restyle(new BrandColor(color), now));
         }
-        if (command.tagline() instanceof String tagline) {
+        var tagline = command.tagline();
+        if (tagline != null) {
             attempt(problems, () -> storefront.retitle(tagline, now));
         }
-        if (command.announcement() instanceof String announcement) {
+        var announcement = command.announcement();
+        if (announcement != null) {
             attempt(problems, () -> storefront.announce(announcement, now));
         }
-        if (command.ctaLabel() instanceof String label) {
+        var label = command.ctaLabel();
+        if (label != null) {
             attempt(problems, () -> storefront.relabel(ctaLabel(label), now));
         }
-        if (command.slug() instanceof String raw) {
+        var rawSlug = command.slug();
+        if (rawSlug != null) {
             attempt(problems, () -> {
-                var slug = new Slug(raw.strip());
+                var slug = new Slug(rawSlug.strip());
                 if (storefronts.slugTaken(slug, storefront.getId())) {
                     throw RuleViolation.of(Slug.FIELD, "unique", Slug.TAKEN);
                 }
                 storefront.moveTo(slug, now);
             });
         }
-        if (command.customDomain() instanceof String raw) {
-            attempt(problems, () -> domains.connect(storefront, raw, now));
+        var domain = command.customDomain();
+        if (domain != null) {
+            attempt(problems, () -> domains.connect(storefront, domain, now));
         }
-        if (command.logoDocumentId() instanceof String logoId) {
+        var logoId = command.logoDocumentId();
+        if (logoId != null) {
             attempt(problems, () -> storefront.useLogo(logo(command.merchantId(), logoId), now));
         }
         if (!problems.isEmpty()) {
@@ -167,7 +175,7 @@ class StorefrontService
         if (logo == null) {
             throw new NotFound("logo", slug);
         }
-        return new ReadDocument.Content(logo, storage.get(logo.storageKey()));
+        return new ReadDocument.Content(logo, Bytes.of(storage.get(logo.storageKey())));
     }
 
     private StorefrontView toView(Storefront storefront) {

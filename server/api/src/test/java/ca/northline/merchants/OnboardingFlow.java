@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import ca.northline.merchants.application.DevIdentityOutcomes;
 import ca.northline.support.TestJwt;
 import com.jayway.jsonpath.JsonPath;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -89,7 +90,8 @@ final class OnboardingFlow {
     }
 
     String upload(String merchantId, String userId, String purpose) throws Exception {
-        var file = new MockMultipartFile("file", "document.pdf", "application/pdf", PDF.getBytes());
+        var file =
+                new MockMultipartFile("file", "document.pdf", "application/pdf", PDF.getBytes(StandardCharsets.UTF_8));
         var body = mvc.perform(multipart("/api/v1/merchants/{id}/onboarding/documents", merchantId)
                         .file(file)
                         .param("purpose", purpose)

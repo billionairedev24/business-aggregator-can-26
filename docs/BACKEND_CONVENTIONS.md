@@ -150,6 +150,14 @@ class QuoteController {
   `Pattern/Email` → `format`, `Size/Length` → `length`, `Min/Max/Positive…` → `range`. A custom constraint `@GstNumber`
   gets the snake_cased name `gst_number`.
 - The DB triggers in V016 stay as the last line of defence. Validate before writing so users see 422 messages, not a 409.
+- **Nullness of request records.** A component that Bean Validation requires (`@NotNull`) is declared **non-null**
+  for NullAway: no `@Nullable` next to it, because the two contradict each other (Error Prone
+  `MultipleNullnessAnnotations`). A missing JSON field still deserializes to `null`, and `@Valid` turns it into the
+  422 with the exact message before the handler runs, so the handler uses the value directly (no `requireNonNull`).
+  The record must therefore never dereference such a component before validation: no compact-constructor checks and
+  no methods called before `@Valid` (put those rules in the domain). Optional components are `@Nullable` with no
+  `@NotNull`. `@NotBlank`/`@NotEmpty` are not nullness annotations and may sit next to `@Nullable`
+  (`PayoutRequests`, `CaseRequests`).
 
 ## 6. Integration tests
 
@@ -230,5 +238,11 @@ public record QuoteSent(String eventId, Instant occurredAt, String aggregateId, 
 - MapStruct for every mapping. Mappers are Spring beans with constructor injection, and an unmapped target is a
   compile error.
 - Error Prone plus NullAway run on every compile (NullAway errors fail the build; other Error Prone findings are warnings).
+  Keep the warning count at **0**: fix the code; suppress only a real false positive, with a narrow
+  `@SuppressWarnings("<Check>") // reason`.
+- File content in a record (an upload, a stored object) is `ca.northline.shared.Bytes`, never `byte[]`: a record
+  compares and prints an array by reference, `Bytes` compares by content and prints only the size.
+- Nested types that share a name across use cases (`SendQuote.Command`, `ReviseQuote.Command`) are written qualified
+  wherever more than one is in scope, including in their own use-case file.
 - No `ThreadLocal` (use `ScopedValue`), no hand-rolled executors (virtual threads are on), no `System.out`, no
   `java.util.Date`. Checkstyle enforces these.

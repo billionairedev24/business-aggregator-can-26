@@ -22,7 +22,7 @@ public final class DeveloperUseCases {
     public interface IssueApiKey {
         record Command(Actor actor, String name, List<String> scopes) {}
 
-        ApiKey.Issued issue(Command command);
+        ApiKey.Issued issue(IssueApiKey.Command command);
     }
 
     public interface RevokeApiKey {
@@ -36,7 +36,7 @@ public final class DeveloperUseCases {
     public interface AddWebhookEndpoint {
         record Command(Actor actor, String url, List<String> events) {}
 
-        WebhookEndpoint.WithSecret add(Command command);
+        WebhookEndpoint.WithSecret add(AddWebhookEndpoint.Command command);
     }
 
     public interface RotateWebhookSecret {

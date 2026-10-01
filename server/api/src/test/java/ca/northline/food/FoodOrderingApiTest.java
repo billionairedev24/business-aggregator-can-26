@@ -21,6 +21,7 @@ import com.jayway.jsonpath.JsonPath;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalTime;
+import java.util.Locale;
 import org.awaitility.Awaitility;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
@@ -76,7 +77,7 @@ class FoodOrderingApiTest extends IntegrationTest {
         fx = new KitchenFixtures(jdbc, data);
         k = fx.kitchen();
         city = "Foodville " + Ids.next().substring(18);
-        slug = "pho-" + k.merchantId().toLowerCase();
+        slug = "pho-" + k.merchantId().toLowerCase(Locale.ROOT);
         jdbc.sql("""
                         update merchants.merchants set city = ?, province = 'AB',
                                profile = '{"cuisines":["vietnamese"],"dietary":["halal"],"kitchenAddress":"1 Test St"}'::jsonb
@@ -230,7 +231,7 @@ class FoodOrderingApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.sections[0].items[0].groups[0].options[1].deltaCents")
                         .value(300))
                 .andExpect(jsonPath("$.slots").isNotEmpty());
-        mvc.perform(get("/api/v1/public/kitchens/{slug}", "nobody-" + Ids.next().toLowerCase()))
+        mvc.perform(get("/api/v1/public/kitchens/{slug}", "nobody-" + Ids.next().toLowerCase(Locale.ROOT)))
                 .andExpect(status().isNotFound());
     }
 

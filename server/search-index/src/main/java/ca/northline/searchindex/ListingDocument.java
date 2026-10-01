@@ -13,7 +13,7 @@ import org.jspecify.annotations.Nullable;
  * approved and live listings, published dishes on live menus, of active merchants with a market.
  *
  * @param id the listing, dish or merchant id (ULIDs never collide across tables)
- * @param kind one of {@code service}, {@code product}, {@code food}, {@code merchant}
+ * @param kind one of {@code "service"}, {@code "product"}, {@code "food"}, {@code "merchant"}
  * @param market the merchant's province (AB, BC …): search only ever shows one market
  * @param categoryPath category ids from the root group to the leaf (food: the kitchen's cuisines)
  * @param trustRank 1 registered · 2 trusted · 3 master (boosts; {@code trustTier} is the code)

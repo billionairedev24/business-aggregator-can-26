@@ -51,7 +51,6 @@ class CatalogueBrowsingService implements BrowseListings, BrowseCategories, Look
     @Override
     public Map<String, String> badges(NavBadgeContributor.Context context) {
         var merchantId = context.merchantId();
-        var locale = context.locale();
         var count = queries.count(merchantId);
         return count == 0 ? Map.of() : Map.of("products", Integer.toString(count));
     }

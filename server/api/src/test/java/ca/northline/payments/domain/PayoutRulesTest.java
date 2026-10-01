@@ -107,7 +107,7 @@ class PayoutRulesTest {
     @Test
     void releaseRules() {
         var done = edmonton("2026-09-06T14:00");
-        assertThat(Duration.between(done, EscrowKind.SERVICE.releaseAt(done))).isEqualTo(Duration.ofHours(48));
+        assertThat(Duration.between(done, EscrowKind.SERVICE.releaseAt(done))).isEqualTo(Duration.ofDays(2));
         assertThat(Duration.between(done, EscrowKind.GOODS.releaseAt(done))).isEqualTo(Duration.ofDays(7));
         assertThat(EscrowKind.FOOD.releaseAt(done)).isEqualTo(done);
     }
@@ -134,7 +134,7 @@ class PayoutRulesTest {
         var small = Refund.requested("RF-1", escrow, 1_900, "One blade wrong size", now);
         assertThat(small.isAuto()).isTrue();
         assertThat(small.lapse(now.plus(Duration.ofHours(47)))).isFalse();
-        assertThat(small.lapse(now.plus(Duration.ofHours(48)))).isTrue();
+        assertThat(small.lapse(now.plus(Duration.ofDays(2)))).isTrue();
         assertThat(small.getState()).isEqualTo(Refund.State.APPROVED);
         var big = Refund.requested("RF-2", escrow, 3_800, "Both wrong", now);
         assertThat(big.lapse(now.plus(Duration.ofHours(24)))).isTrue();

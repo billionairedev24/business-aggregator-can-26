@@ -5,6 +5,7 @@ import static ca.northline.shared.security.MerchantPermission.VIEW;
 
 import ca.northline.messaging.application.BrowseInbox.Attachment;
 import ca.northline.messaging.application.ManageMessageAttachments;
+import ca.northline.shared.Bytes;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
 import ca.northline.shared.security.CurrentMember;
@@ -52,7 +53,7 @@ class MessageAttachmentController {
                     member.userId(),
                     Objects.requireNonNullElse(file.getOriginalFilename(), ""),
                     Objects.requireNonNullElse(file.getContentType(), "application/octet-stream"),
-                    file.getBytes()));
+                    Bytes.of(file.getBytes())));
         } catch (IOException ex) {
             throw new UncheckedIOException(ex);
         }
@@ -73,6 +74,6 @@ class MessageAttachmentController {
                                 .build()
                                 .toString())
                 .header("X-Content-Type-Options", "nosniff")
-                .body(content.bytes());
+                .body(content.bytes().toArray());
     }
 }

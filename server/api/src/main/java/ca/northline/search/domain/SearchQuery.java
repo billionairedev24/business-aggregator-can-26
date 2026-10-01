@@ -23,7 +23,7 @@ import org.jspecify.annotations.Nullable;
  * @param allergenFree none of these allergens (Health Canada codes)
  * @param near the person's location: distance on every result, nearness boost, distance sort and filter
  * @param radiusKm only results within this distance of {@code near}
- * @param after the {@code next} token of the previous page (search_after); opaque
+ * @param after the opaque page token the previous page returned (search_after)
  */
 public record SearchQuery(
         @Nullable String text,

@@ -95,7 +95,7 @@ class ConsumerFrameworkTest extends WorkerIntegrationTest {
         var outcomes = new CopyOnWriteArrayList<EventProcessing.Outcome>();
         try (var threads = Executors.newVirtualThreadPerTaskExecutor()) {
             for (var i = 0; i < 4; i++) {
-                threads.submit(() -> outcomes.add(processing.process("concurrency-test", record, _ -> {
+                threads.execute(() -> outcomes.add(processing.process("concurrency-test", record, _ -> {
                     handled.incrementAndGet();
                     sleep(300);
                 })));
