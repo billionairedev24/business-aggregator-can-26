@@ -1,0 +1,501 @@
+openapi: 3.1.0
+info:
+  contact:
+    name: Northline
+    url: https://northline.ca
+  description: "How every client gets tokens from northline-auth: the BFFs and the\
+    \ mobile apps with the authorization code flow and PKCE (S256 only), the mobile\
+    \ apps with DPoP-bound tokens (RFC 9449), partners with client credentials and\
+    \ `private_key_jwt` (RFC 7523). Access tokens are ES256 JWTs valid 10 minutes\
+    \ (partners 15); refresh tokens rotate on every use. Discovery: `/.well-known/openid-configuration`."
+  license:
+    identifier: LicenseRef-Northline
+    name: Proprietary
+  title: northline-auth · OAuth 2.1 / OpenID Connect
+  version: v1
+servers:
+- url: http://localhost:9000
+paths:
+  /.well-known/openid-configuration:
+    get:
+      description: "Issuer, endpoints, supported grant types, PKCE methods (S256),\
+        \ signing algorithms (ES256), token endpoint authentication methods and DPoP\
+        \ algorithms."
+      operationId: oidcDiscovery
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: The provider metadata.
+      security: []
+      summary: OpenID Provider metadata
+  /oauth2/authorize:
+    get:
+      description: Starts a sign-in in the browser. Redirect URIs must match a registered
+        one exactly; `code_challenge` with `S256` is required for every client. Business
+        and staff clients get `acr=mfa` only after a passkey or TOTP.
+      operationId: authorize
+      parameters:
+      - description: Always `code`.
+        example: code
+        in: query
+        name: response_type
+        required: true
+        schema:
+          type: string
+      - description: The registered client.
+        example: studio-bff
+        in: query
+        name: client_id
+        required: true
+        schema:
+          type: string
+      - description: Exactly as registered.
+        example: http://localhost:8082/login/oauth2/code/northline
+        in: query
+        name: redirect_uri
+        required: true
+        schema:
+          type: string
+      - description: Space-separated scopes.
+        example: openid profile merchant
+        in: query
+        name: scope
+        required: true
+        schema:
+          type: string
+      - description: Opaque value echoed back (CSRF protection).
+        example: af0ifjsldkj
+        in: query
+        name: state
+        required: true
+        schema:
+          type: string
+      - description: BASE64URL(SHA-256(code_verifier)).
+        example: E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM
+        in: query
+        name: code_challenge
+        required: true
+        schema:
+          type: string
+      - description: Only `S256`.
+        example: S256
+        in: query
+        name: code_challenge_method
+        required: true
+        schema:
+          type: string
+      - description: OIDC replay protection for the ID token.
+        example: n-0S6_WzA2Mj
+        in: query
+        name: nonce
+        required: false
+        schema:
+          type: string
+      - description: "Mobile apps (S-29): thumbprint of the DPoP key the code is bound\
+          \ to."
+        example: NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs
+        in: query
+        name: dpop_jkt
+        required: false
+        schema:
+          type: string
+      responses:
+        "302":
+          description: "To the sign-in page, then back to `redirect_uri` with `code`\
+            \ and `state` (or `error`)."
+      security: []
+      summary: Authorization endpoint (code + PKCE)
+  /oauth2/jwks:
+    get:
+      description: "The public ES256 keys access and ID tokens are signed with. Cache\
+        \ it and refetch on an unknown `kid`: keys rotate with an overlap (docs/runbooks/key-rotation.md)."
+      operationId: jwks
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: A JWK Set.
+      security: []
+      summary: Token signing keys (JWK Set)
+  /oauth2/revoke:
+    post:
+      description: Revoking a refresh token ends that sign-in for every client sharing
+        it (sign-out).
+      operationId: revoke
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+                token_type_hint:
+                  type: string
+                  enum:
+                  - refresh_token
+                  - access_token
+              required:
+              - token
+        required: true
+      responses:
+        "200":
+          description: Revoked (also for an unknown token).
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      security:
+      - oauth2: []
+      summary: Token revocation (RFC 7009)
+  /oauth2/token:
+    post:
+      description: |-
+        * `authorization_code` — `code`, `redirect_uri`, `code_verifier`; confidential clients (the BFFs) authenticate with their secret, public clients (the mobile apps) send `client_id` and a `DPoP` proof.
+        * `refresh_token` — rotates: the old refresh token stops working; a reused one revokes the whole sign-in.
+        * `client_credentials` — partners only: `client_assertion_type` = `urn:ietf:params:oauth:client-assertion-type:jwt-bearer` and a `client_assertion` signed by the partner's registered key (`private_key_jwt`); scopes `api.read` / `api.write`. 60 tokens per hour per partner (429 with `Retry-After`).
+      operationId: token
+      parameters:
+      - description: "DPoP proof JWT (mobile apps). The token is then of type `DPoP`,\
+          \ bound to it."
+        in: header
+        name: DPoP
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                client_assertion:
+                  type: string
+                  description: "Partners: the signed JWT."
+                client_assertion_type:
+                  type: string
+                  enum:
+                  - urn:ietf:params:oauth:client-assertion-type:jwt-bearer
+                client_id:
+                  type: string
+                  description: Required for public clients and partners.
+                code:
+                  type: string
+                code_verifier:
+                  type: string
+                  description: PKCE verifier (43–128 characters).
+                grant_type:
+                  type: string
+                  enum:
+                  - authorization_code
+                  - refresh_token
+                  - client_credentials
+                redirect_uri:
+                  type: string
+                refresh_token:
+                  type: string
+                scope:
+                  type: string
+                  example: api.read
+              required:
+              - grant_type
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+          description: Tokens.
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthError"
+          description: "`invalid_grant`, `invalid_request`, `invalid_dpop_proof`,\
+            \ `use_dpop_nonce` (with a `DPoP-Nonce` header) …"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthError"
+          description: "`invalid_client`: unknown, revoked or unauthenticated client,\
+            \ or a refused assertion."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthError"
+          description: "`rate_limited`, with `Retry-After`."
+      security:
+      - partnerClientCredentials:
+        - api.read
+      - oauth2: []
+      summary: Token endpoint
+  /userinfo:
+    get:
+      operationId: userinfo
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: "Claims of the signed-in user (`sub`, `name`, `email`, `locale`,\
+            \ …)."
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      security:
+      - oauth2:
+        - openid
+      summary: OIDC UserInfo
+components:
+  schemas:
+    MoneyCents:
+      type: integer
+      format: int64
+      description: An amount in cents of Canadian dollars (CAD); 12345 = $123.45.
+        Never a decimal.
+      example: 12345
+    OAuthError:
+      type: object
+      description: RFC 6749 § 5.2 error.
+      properties:
+        error:
+          type: string
+          example: invalid_grant
+        error_description:
+          type: string
+      required:
+      - error
+    Problem:
+      type: object
+      description: RFC 9457 problem details. 403 and 409 carry a machine-readable
+        `code`.
+      properties:
+        code:
+          type: string
+          description: "Stable reason, e.g. `mfa_required`, `not_a_member`, `insufficient_role`,\
+            \ `partner_not_allowed`, `not_bound`, `stale`, `duplicate`, `rate_limited`."
+          example: mfa_required
+        detail:
+          type: string
+          example: Your sign-in doesn't allow this.
+        instance:
+          type: string
+          format: uri-reference
+        status:
+          type: integer
+          format: int32
+          example: 403
+        title:
+          type: string
+          example: Forbidden
+        type:
+          type: string
+          format: uri
+          example: https://northline.ca/problems/forbidden
+      required:
+      - status
+      - title
+      - type
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: ES256 JWT.
+        expires_in:
+          type: integer
+          format: int32
+          example: 600
+        id_token:
+          type: string
+          description: With the `openid` scope.
+        refresh_token:
+          type: string
+          description: Not for client credentials.
+        scope:
+          type: string
+        token_type:
+          type: string
+          enum:
+          - Bearer
+          - DPoP
+      required:
+      - access_token
+      - expires_in
+      - token_type
+    Ulid:
+      type: string
+      description: "A ULID: 26 characters, Crockford base 32, sortable by creation\
+        \ time."
+      example: 01J9ZD3V00000000000000PWM1
+      pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
+    ValidationError:
+      type: object
+      properties:
+        field:
+          type: string
+          description: "JSON property path of the request, e.g. `displayName` or `lines[2].amount`."
+          example: displayName
+        message:
+          type: string
+          description: "The exact message of docs/spec/validation-rules.md, in the\
+            \ caller's locale."
+          example: At least 2 characters.
+        rule:
+          type: string
+          description: "The failed rule: `required`, `format`, `length`, `range`,\
+            \ or a named rule (snake_case), e.g. `gst_number`."
+          example: length
+      required:
+      - field
+      - message
+      - rule
+    ValidationErrors:
+      type: object
+      description: "422: one error per field, the most basic failing rule first."
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ValidationError"
+      required:
+      - errors
+  securitySchemes:
+    dpopProof:
+      description: "DPoP proof JWT (`typ: dpop+jwt`, `htm`, `htu`, `iat`, `jti`, `ath`);\
+        \ a server nonce may be demanded with `DPoP-Nonce`."
+      in: header
+      name: DPoP
+      type: apiKey
+    oauth2:
+      description: "OAuth 2.1 authorization code with PKCE (S256 only) at northline-auth;\
+        \ ES256 JWT access tokens valid 10 minutes with claims `sub`, `scope`, `roles`,\
+        \ `merchants`, `acr`. Business and staff calls need `acr=mfa` (passkey or\
+        \ TOTP). Confidential clients: the BFFs; public clients: the mobile apps (with\
+        \ DPoP)."
+      flows:
+        authorizationCode:
+          authorizationUrl: http://localhost:9000/oauth2/authorize
+          refreshUrl: http://localhost:9000/oauth2/token
+          scopes:
+            merchant: "the Studio: businesses the user is a member of (acr=mfa required)"
+            openid: OpenID Connect sign-in
+            profile: "name, locale"
+          tokenUrl: http://localhost:9000/oauth2/token
+      type: oauth2
+    partnerClientCredentials:
+      description: "Partner integrations (S-30): client `partner:<name>` gets a token\
+        \ with `grant_type=client_credentials`, authenticating with `private_key_jwt`\
+        \ — `client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer`\
+        \ and a `client_assertion` JWT signed by a key registered for the partner\
+        \ (ES256, RS256 or PS256; `iss` = `sub` = client id, `aud` = issuer or token\
+        \ endpoint, ≤ 5 min, single-use `jti`). Tokens last 15 minutes and open only\
+        \ the businesses bound to the partner. 60 tokens per hour per partner (429\
+        \ with Retry-After)."
+      flows:
+        clientCredentials:
+          scopes:
+            api.read: read the bound businesses' data
+            api.write: change it
+          tokenUrl: http://localhost:9000/oauth2/token
+      type: oauth2
+      x-token-endpoint-auth-methods:
+      - private_key_jwt

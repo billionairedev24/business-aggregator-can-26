@@ -8,3 +8,9 @@ northline.required-env:
 # S-20: while Valkey is unreachable, phone codes and second factors answer 503 instead of going through without a limit.
 # RATE_LIMIT_WHEN_UNAVAILABLE=open is a temporary break-glass only (logged as a warning at start-up).
 northline.auth.rate-limits.when-unavailable: ${RATE_LIMIT_WHEN_UNAVAILABLE:closed}
+# S-125: no spec and no viewer in production; the public OAuth reference is on the docs site (S-126).
+springdoc:
+  api-docs.enabled: false
+  swagger-ui.enabled: false
+scalar.enabled: false
+northline.docs.enabled: false

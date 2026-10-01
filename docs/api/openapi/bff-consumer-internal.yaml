@@ -1,0 +1,213 @@
+openapi: 3.1.0
+info:
+  contact:
+    name: Northline
+    url: https://northline.ca
+  description: "The consumer web's backend-for-frontend (S-45). Guests get a session\
+    \ too (`guestId`) and browse the api without a token. The browser holds only the\
+    \ HttpOnly session cookie; tokens stay in the server-side session. `/api/**` on\
+    \ the same origin is relayed to the api with the user's access token (see the\
+    \ api's documents); POST, PUT, PATCH and DELETE need the `X-XSRF-TOKEN` header.\
+    \ Sign-in starts at `/oauth2/authorization/northline` (or `/bff/login?next=…`)."
+  license:
+    identifier: LicenseRef-Northline
+    name: Proprietary
+  title: Northline BFF · consumer-bff session
+  version: v1
+servers:
+- url: /
+security:
+- bffSession: []
+paths:
+  /bff/login:
+    get:
+      description: "Sign-in hand-off after the app's own sign-in at northline-auth:\
+        \ the authorization request comes straight back with a code, and the user\
+        \ lands on `next` (a same-origin path; anything else is replaced by `/`)."
+      operationId: sessionLogin
+      parameters:
+      - in: query
+        name: next
+        required: false
+        schema:
+          type: string
+      responses:
+        "302":
+          description: To `/oauth2/authorization/northline`.
+      security: []
+      tags:
+      - session-controller
+  /bff/logout:
+    post:
+      description: "Revokes the refresh token at northline-auth (which ends that sign-in\
+        \ for every client sharing it, S-20) and drops the session."
+      operationId: logout
+      responses:
+        "204":
+          description: Signed out.
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          description: Missing or wrong CSRF header.
+      security:
+      - bffSession: []
+        csrf: []
+      summary: Sign out
+      tags:
+      - session
+  /bff/session:
+    get:
+      operationId: sessionSession
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+          description: OK
+        "401":
+          description: Signed out (the studio-bff). The response still sets the CSRF
+            cookie.
+      security: []
+      tags:
+      - session-controller
+components:
+  schemas:
+    Location:
+      type: object
+      properties:
+        city:
+          type: string
+    MoneyCents:
+      type: integer
+      format: int64
+      description: An amount in cents of Canadian dollars (CAD); 12345 = $123.45.
+        Never a decimal.
+      example: 12345
+    Problem:
+      type: object
+      description: RFC 9457 problem details. 403 and 409 carry a machine-readable
+        `code`.
+      properties:
+        code:
+          type: string
+          description: "Stable reason, e.g. `mfa_required`, `not_a_member`, `insufficient_role`,\
+            \ `partner_not_allowed`, `not_bound`, `stale`, `duplicate`, `rate_limited`."
+          example: mfa_required
+        detail:
+          type: string
+          example: Your sign-in doesn't allow this.
+        instance:
+          type: string
+          format: uri-reference
+        status:
+          type: integer
+          format: int32
+          example: 403
+        title:
+          type: string
+          example: Forbidden
+        type:
+          type: string
+          format: uri
+          example: https://northline.ca/problems/forbidden
+      required:
+      - status
+      - title
+      - type
+    SessionResponse:
+      type: object
+      properties:
+        acr:
+          type: string
+        guestId:
+          type: string
+        location:
+          $ref: "#/components/schemas/Location"
+        sid:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+    Ulid:
+      type: string
+      description: "A ULID: 26 characters, Crockford base 32, sortable by creation\
+        \ time."
+      example: 01J9ZD3V00000000000000PWM1
+      pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
+    User:
+      type: object
+      properties:
+        email:
+          type: string
+        firstName:
+          type: string
+        id:
+          type: string
+        initials:
+          type: string
+        lastName:
+          type: string
+        locale:
+          type: string
+        memberSince:
+          type: string
+        phone:
+          type: string
+    ValidationError:
+      type: object
+      properties:
+        field:
+          type: string
+          description: "JSON property path of the request, e.g. `displayName` or `lines[2].amount`."
+          example: displayName
+        message:
+          type: string
+          description: "The exact message of docs/spec/validation-rules.md, in the\
+            \ caller's locale."
+          example: At least 2 characters.
+        rule:
+          type: string
+          description: "The failed rule: `required`, `format`, `length`, `range`,\
+            \ or a named rule (snake_case), e.g. `gst_number`."
+          example: length
+      required:
+      - field
+      - message
+      - rule
+    ValidationErrors:
+      type: object
+      description: "422: one error per field, the most basic failing rule first."
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ValidationError"
+      required:
+      - errors
+  securitySchemes:
+    bffSession:
+      description: "Browsers only (the Studio, the consumer web): the BFF's HttpOnly\
+        \ session cookie (`__Host-` prefixed in the cloud). The BFF relays each call\
+        \ to the api with the user's access token; the browser never sees a token.\
+        \ Unsafe methods also need the `csrf` header."
+      in: cookie
+      name: NL_CONSUMER
+      type: apiKey
+    csrf:
+      description: "Copy of the `XSRF-TOKEN` cookie (`__Host-XSRF-TOKEN` in the cloud)\
+        \ on POST, PUT, PATCH and DELETE."
+      in: header
+      name: X-XSRF-TOKEN
+      type: apiKey

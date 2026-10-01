@@ -127,4 +127,50 @@ class BffSessionTest {
     void api_signedOut_is401_notARedirect() throws Exception {
         mvc.perform(get("/api/v1/me")).andExpect(status().isUnauthorized());
     }
+
+    // ---- S-125: the session API as OpenAPI 3.1 under /bff ----------------------------------------------------------
+
+    @Test
+    void openApi_committedSpecMatchesTheCode() throws Exception {
+        ca.northline.openapi.OpenApiSnapshot.verify(mvc, "/bff/v3/api-docs", "bff", java.util.List.of("internal"));
+    }
+
+    @Test
+    void openApi_viewersRenderUnderBffWithTheirCsp_andTheSessionApiKeepsDefaultSrcNone() throws Exception {
+        var landing = mvc.perform(get("/bff/docs")).andReturn().getResponse();
+        assertThat(landing.getStatus()).isEqualTo(200);
+        assertThat(landing.getHeader("Content-Security-Policy")).contains("script-src 'self'");
+        assertThat(landing.getContentAsString())
+                .contains("/bff/swagger-ui.html?urls.primaryName=internal")
+                .contains("/bff/docs/scalar")
+                .contains("/bff/docs/redoc?group=internal");
+        for (var path : java.util.List.of(
+                "/bff/docs/redoc",
+                "/bff/docs/redoc/redoc.standalone.js",
+                "/bff/docs/scalar",
+                "/bff/swagger-ui/index.html",
+                "/bff/v3/api-docs/internal")) {
+            assertThat(mvc.perform(get(path)).andReturn().getResponse().getStatus())
+                    .as(path)
+                    .isEqualTo(200);
+        }
+        var spec = mvc.perform(get("/bff/v3/api-docs/internal"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(spec).contains("\"/bff/session\"", "\"/bff/logout\"", "\"NL_STUDIO\"", "X-XSRF-TOKEN");
+        mvc.perform(get("/bff/session"))
+                .andExpect(header().string(
+                                "Content-Security-Policy", org.hamcrest.Matchers.startsWith("default-src 'none'")));
+    }
+
+    @Test
+    void openApi_productionPublishesNothing() throws Exception {
+        var prod = new org.springframework.boot.env.YamlPropertySourceLoader()
+                .load("prod", new org.springframework.core.io.ClassPathResource("application-prod.yml"))
+                .getFirst();
+        assertThat(prod.getProperty("springdoc.api-docs.enabled")).isEqualTo(false);
+        assertThat(prod.getProperty("scalar.enabled")).isEqualTo(false);
+        assertThat(prod.getProperty("northline.docs.enabled")).isEqualTo(false);
+    }
 }
