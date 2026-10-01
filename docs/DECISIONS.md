@@ -3382,9 +3382,10 @@ conventions, under the conditions of "AI provider and data residency" above.
 - **Data policy on every request:** `provider: {data_collection: "deny", zdr: true}` (configurable, default on), usage
   accounting on, attribution headers `HTTP-Referer` (Studio origin) and `X-Title: Northline`. Account settings
   (logging off, ZDR guardrail) are in docs/runbooks/ai.md.
-- **Redaction on the port:** the only `LlmClient` bean is `ObservedLlmClient` around the chosen adapter. It masks card
-  numbers and SINs (Luhn), bank accounts (cheque format, "account …", IBAN), emails, phones and API keys in every
-  message, then records an observation `northline.ai.completion` (span + timer; tags provider, model, feature, outcome,
+- **Redaction on the port:** the only `LlmClient` bean is `ObservedLlmClient` around the chosen adapter. Every message
+  goes through `PrivacyRedactor`, which reuses the logging `Redactor` (S-112: secrets and keys, emails, card numbers
+  with the last 4 kept, phones, one-time codes, postal codes to the area) and adds SINs (Luhn) and bank accounts
+  (cheque format, "account …", IBAN). It then records an observation `northline.ai.completion` (span + timer; tags provider, model, feature, outcome,
   streamed) and counters `northline.ai.tokens`, `northline.ai.cost` (USD) and the per-call summary
   `northline.ai.call.cost`. The feature reaches the port through a `ScopedValue`, not a parameter. samop used a
   BeanPostProcessor; a plain wrapper in the configuration is enough here since there is one bean.

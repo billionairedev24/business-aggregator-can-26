@@ -18,7 +18,8 @@ import tools.jackson.databind.node.ObjectNode;
  * The port as every module sees it: whichever adapter {@code northline.ai.provider} chose, wrapped with
  *
  * <ul>
- *   <li><b>redaction</b> — every message's content goes through {@link PrivacyRedactor} before it leaves;
+ *   <li><b>redaction</b> — every message's content goes through {@link PrivacyRedactor} (the S-112 logging redactor plus
+ *       SINs and bank accounts) before it leaves;
  *   <li><b>traces and latency</b> — an observation {@code northline.ai.completion} (a span, and the timer
  *       {@code northline_ai_completion_seconds}) tagged provider, model, feature, streamed and outcome;
  *   <li><b>tokens and cost</b> — counters {@code northline.ai.tokens} (kind prompt|completion) and
