@@ -125,7 +125,7 @@ A feature folder per story area, named after the design: `home`, `location`, `se
 | `/quotes/requests/$requestId` | book (quote mode, "N quotes received") | S-56 (**built**) | compare the request's quotes; guest banner |
 | `/quotes/$quoteId` | quote | S-56 (**built**) | every line, versions, accept with the escrow deposit; guest banner |
 | `/account/orders` | orders | S-58 (**built**) | Orders & bookings — from the account menu only; `?view=active\|past\|cases` |
-| `/account?tab=` | account | S-58 (**built**: wallet, favourites), S-59, S-60 | tabs: wallet, payments, profile, addresses, favourites, security, notifications, language, dietary, plus, help |
+| `/account?tab=` | account | S-58 (**built**: wallet, favourites), S-59 (**built**: payments, profile, addresses, security, notifications, language, dietary, plus), S-60 | tabs: wallet, payments, profile, addresses, favourites, security, notifications, language, dietary, plus, help |
 | `/sign-in?next=`, `/register?next=` | auth | S-62 (**built**) | no account buttons in the header there; `features/auth` |
 | `/legal/terms.html`, `/legal/privacy.html` | — | S-63 (**built**) | static, verbatim (design 09/10): `web/packages/legal` (one copy for the Studio and this app, its Vite plugin serves `/legal/`) |
 
@@ -330,7 +330,7 @@ Both endpoints are `GET`, public, JSON, camelCase; money in cents; errors as eve
 | `GET /api/v1/public/providers/{slug}/slots`, `POST/DELETE /api/v1/me/bookings/holds`, `POST /api/v1/me/bookings/checkout` (Idempotency-Key, X-Step-Up), `POST /api/v1/me/bookings/holds/{id}/confirm`, `GET /api/v1/me/bookings/{id}` | **exists** (S-55, module `hire`) | S-55 |
 | `POST /api/v1/me/quote-requests`, `GET /api/v1/me/quote-requests/{id}`, `GET /api/v1/me/quotes/{id}`, `POST /api/v1/me/quotes/{id}/decline`, `POST /api/v1/me/quotes/{id}/accept` (Idempotency-Key, X-Step-Up), `POST /api/v1/me/quotes/{id}/accept/confirm` | **exists** (S-56, module `hire`) | S-56 |
 | `GET /api/v1/me/account-summary`, `GET /api/v1/me/activity`, `GET /api/v1/me/upcoming`, `GET /api/v1/me/wallet`, `GET\|PUT\|DELETE /api/v1/me/favourites[/{businessId}]` | **exists** (S-58, module `account`) | menu values, orders & bookings, Your week, wallet, favourites |
-| addresses, payment methods, notifications, profile, preferences | missing | S-59 |
+| `GET\|PATCH /api/v1/me/profile`, `/me/addresses…`, `/me/household`, `/me/plus`, `/me/payment-methods…` (SetupIntents), `/me/billing-history`, `/me/notifications`, `/me/preferences`, `/me/export` | **exists** (S-59: identity, payments, messaging, account) | account tabs |
 | refunds / "something's wrong" (consumer side) | missing (merchant side exists) | S-60 |
 
 New public reads go under `/api/v1/public/**` (GET, open in `SecurityConfig`) or the already-open `/api/v1/search/**`,

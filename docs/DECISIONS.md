@@ -4061,3 +4061,87 @@ Branch `web/s-58-account-activity` (not stacked).
   `features/account/account.test.tsx` (design copy and columns, actions navigate, Past / Refunds & cases filters,
   empty, error + Retry, guest sign-in, skeleton, French; wallet balance/value/chart/Plus, error, no points; favourites
   meta, buttons, Remove, empty, guest, French).
+
+## 2026-10-01 — S-59 Account area: profile, addresses, payment methods (SetupIntent), security, notifications, language, dietary & accessibility, Plus
+
+Branch `web/s-59-account-settings`, **stacked on S-58** (`web/s-58-account-activity`, #90).
+
+- **Tabs built:** Payment methods, Profile, Addresses & household, Security & sign-in, Notifications, Language & region,
+  Dietary & accessibility, Northline Plus (design 06 `at.*`); the wallet's "Payment methods" section now lists the
+  cards. Help & cases is S-60. Every tab has a skeleton, an empty line where a list can be empty, a rosehip error with
+  Retry, en + fr-CA copy, 44 px targets and no horizontal scroll (the notification table scrolls inside its own box
+  below ~360 px rather than the page).
+- **Endpoints** (all `/api/v1/me`, single-factor sessions accepted):
+  - identity — `GET|PATCH /profile`, `POST /erasure-request`, `GET|POST /addresses`, `PATCH|DELETE /addresses/{id}`,
+    `POST /addresses/{id}/default`, `GET /household`, `POST|DELETE /plus`;
+  - payments — `GET /payment-methods`, `POST /payment-methods/setup-intents`, `POST /payment-methods {setupIntentId}`,
+    `POST /payment-methods/{id}/default`, `DELETE /payment-methods/{id}`, `GET /billing-history`;
+  - messaging — `GET|PUT /notifications`;
+  - account — `GET|PATCH /preferences`, `GET /export`; `GET /account-summary` now also fills `paymentMethod`,
+    `addresses {count, members}`, `signIn`, `quietHours` ("10 pm" / "22 h"), `dietary` (words in the caller's
+    language) and `province` (the S-45 menu contract is complete).
+- **Saved cards = Stripe SetupIntents** (new port `payments.application.SavedCardGateway`; `StripeSavedCards` with
+  stripe-java, `FakeSavedCards` without a key — a test Visa ending 4242, in memory). Stripe is the source of truth;
+  every list refreshes `payments.customer_cards` (brand, last four, expiry, default — never the number), which feeds
+  the menu and the billing history's card column. The first saved card becomes the default; removing the default
+  promotes the newest remaining card. A SetupIntent or card that isn't the caller's is 404. The card form is the
+  Payment Element (`confirmSetup`, `redirect: if_required`) when the api says Stripe, else the read-only test-card
+  stand-in (S-51's pattern). Apple Pay / Google Pay rows of the design are not offered (cards only, S-51).
+  **Never run against real Stripe** — `StripeSavedCardsStripeMockTest` checks the requests against stripe-mock.
+- **Billing history** = the caller's escrows (label, order number, amount + tax + Northline's own charges, state) and
+  S-51's delivery-fee PaymentIntents, newest first, 50 at most; "Northline Plus · monthly" rows of the design don't
+  exist (Plus isn't billed).
+- **Profile:** first/last name and the receipts email (registration's messages; another account's email → 422 "That
+  email is already used by another account."), pronouns (she / he / they / prefer not to say), birthday as month-day
+  ("Enter a birthday like 03/14 (month / day)."). The verified mobile is read-only (changing it needs a code at
+  northline-auth — not in this story). **Not built:** profile photo upload / remove (no avatar storage; initials are
+  shown) and the reliability breakdown ("0 no-shows · 0 disputes lost · 14 jobs rated 5★") — only the score and its
+  explanation. **"Delete account…"** records `identity.users.erasure_requested_at` after a confirmation; staff erase
+  the account (no automated erasure job yet).
+- **Addresses:** checkout's validation messages; a name ("Mum") is new (`label`); a saved address can be renamed and
+  its unit/note changed — moving it means a new address; removal keeps the row (`deleted_at`, orders may point at it)
+  and the next address becomes the default. S-51's `DeliveryAddresses` now ignores removed addresses. Household
+  members are listed (names, "own login", "shares Plus"); **invitations are not built** ("Manage" shows the members).
+- **Plus — free trial only, no billing:** "Start 30-day free trial" creates the person's household when needed and
+  sets `plus_plan`, `plus_since` and `renews_at` = now + 30 days; a plan past `renews_at` is no longer active
+  (`PlusMemberships`, wallet, menu). Cancel sets `none`. No Stripe Billing subscription, no charge after the trial, no
+  Plus pricing at checkout yet.
+- **Security tab = northline-auth's S-19 API through `@northline/auth-kit`:** the schemas, query and changes
+  (`securityQuery`, add/remove passkey, revoke session, revoke others, `securityChangeError`) moved from the Studio's
+  settings API into `packages/auth-kit/src/security.ts`; the Studio re-exports them unchanged. A phone-code session has
+  no second-factor auth session, so the tab first asks to confirm with the passkey / authenticator (S-51's step-up
+  endpoints renew the session's factor) — or, for an account without one, to add a passkey on this device (S-51's
+  enrolment, only within 15 minutes of signing in; otherwise "sign in again"). A change answered `step_up_required`
+  opens the same confirmation and is retried. "Security key (FIDO2) · Add" registers a WebAuthn credential labelled
+  "Security key". **Deviations:** the design's "Require Face ID / passkey for payments over $100" would misstate S-51's
+  rule (every payment from a phone-code session steps up), so the row reads "Require Face ID / passkey for payments ·
+  Always"; "login alerts on" is not claimed (no sign-in alerts are sent); setting up an authenticator app after
+  registration isn't offered (no such auth endpoint — the row shows Enabled / Not set up). "Sign out everywhere" signs
+  every other session out (step-up as needed) and then this browser.
+- **Download my data** (`GET /me/export`, `Content-Disposition: attachment`): profile, addresses, preferences,
+  favourites, orders & bookings, wallet, refund cases. Not included: notification settings, saved-card summaries,
+  messages, and northline-auth's data (passkeys, sessions — shown on the tab).
+- **Notifications:** the design's seven rows × push/SMS/email with its defaults; security alerts are on everywhere and
+  can't be turned off (422 "Security alerts always go to every channel."). Quiet hours share the person's
+  `quiet_from` / `quiet_to` with their Studio matrix (one person, one night); `quiet_on`, the notification language
+  (same as app / English / Français) and marketing email (weekly / rewards only / none — CASL) are customer-only
+  columns. Changes are kept on the page until "Save preferences". **Stored only — no customer notification is sent
+  yet** (the S-27 worker has no customer events); the SMS number and email shown are the profile's (read-only here).
+- **Language & region:** English / Français switch the app in place on Save and set `identity.users.locale`
+  (receipts, notifications). The design's "ਪੰਜਾਬੀ · Punjabi (beta)" is not offered: the app has no Punjabi copy.
+  Province choices are the region model's live and pilot provinces (S-134; pilots marked "(pilot)"), plus "Follow my
+  location"; units and time format are stored (nothing formats with them yet); currency is CAD only.
+- **Dietary & accessibility:** codes stored in `account.preferences`; the menu shows the dietary words. **Not yet
+  used:** shop filtering by diet, flagging products, sharing notes with visiting providers, and applying the display
+  choices (larger text, high contrast, reduce motion) to the page.
+- **Schema (V162):** `identity.users.pronouns`, `birthday_month`, `birthday_day`, `erasure_requested_at`;
+  `identity.addresses.label`, `created_at`, `deleted_at`; `account.preferences`; `payments.customer_cards`; index
+  `payments.payment_intents(customer_id)`; `messaging.notification_prefs.customer_matrix`, `quiet_on`, `notify_lang`,
+  `marketing`. Dev seed V163: Amara's two addresses (design copy), Kofi in her household, her dietary/accessibility
+  choices.
+- **Tests:** `AccountSettingsApiTest` (profile read/update and messages, email taken, erasure idempotent; addresses
+  add/rename/default/remove, someone else's 404, messages; Plus trial start/conflict/cancel and the wallet; saved
+  cards through the fake SetupIntents, default, remove, someone else's 404; billing history; notifications defaults,
+  changes, security locked, quiet hours validation and the menu value; preferences incl. locale and menu values;
+  export; 401s), `StripeSavedCardsStripeMockTest`; vitest `features/account/settings.test.tsx` (every tab's main path,
+  validation messages, step-up prompt, French).
