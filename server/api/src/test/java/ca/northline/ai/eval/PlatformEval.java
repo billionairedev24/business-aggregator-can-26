@@ -141,7 +141,12 @@ public final class PlatformEval implements EvalSuite {
                 var answer = kit.completions.converse(
                         request,
                         tools(),
-                        new ToolContext("eval-merchant", "eval-owner", MerchantRole.OWNER, Locale.CANADA, java.time.ZoneOffset.UTC),
+                        new ToolContext(
+                                "eval-merchant",
+                                "eval-owner",
+                                MerchantRole.OWNER,
+                                Locale.CANADA,
+                                java.time.ZoneOffset.UTC),
                         null);
                 model = answer.model();
                 var actual = answer.toolRuns().isEmpty()

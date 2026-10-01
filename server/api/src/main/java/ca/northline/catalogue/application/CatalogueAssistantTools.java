@@ -2,7 +2,6 @@ package ca.northline.catalogue.application;
 
 import ca.northline.ai.api.AssistantTool;
 import ca.northline.catalogue.domain.ListingKind;
-import ca.northline.shared.CodedEnums;
 import ca.northline.shared.security.MerchantPermission;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -49,7 +48,10 @@ final class CatalogueAssistantTools {
         @Override
         public Result run(Call call) {
             var kindCode = call.text("kind");
-            var kind = kindCode == null ? null : CodedEnums.fromCode(ListingKind.class, kindCode);
+            var kind = java.util.Arrays.stream(ListingKind.values())
+                    .filter(k -> k.code().equals(kindCode))
+                    .findFirst()
+                    .orElse(null);
             var rows = listings.list(call.merchantId(), kind, 60, call.locale()).stream()
                     .map(l -> {
                         var m = new LinkedHashMap<String, Object>();

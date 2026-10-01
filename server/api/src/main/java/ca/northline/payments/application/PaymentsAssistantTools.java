@@ -40,7 +40,9 @@ final class PaymentsAssistantTools {
 
         @Override
         public Map<String, Object> parameters() {
-            return Map.of("lines", Map.of("type", "integer", "minimum", 0, "maximum", 30, "description", "Ledger lines (default 10)"));
+            return Map.of(
+                    "lines",
+                    Map.of("type", "integer", "minimum", 0, "maximum", 30, "description", "Ledger lines (default 10)"));
         }
 
         @Override

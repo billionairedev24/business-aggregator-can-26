@@ -88,6 +88,20 @@ are in memory.
 
 Rotation: create a new key, update the secret, restart the api, delete the old key.
 
+## Studio assistant (S-130)
+
+- **Endpoints, under `/api/v1/merchants/{merchantId}/assistant`:**
+  - `POST /chat` (JSON) and `POST /chat/stream` (SSE: `tool`, `delta`, `done` | `error`);
+  - `GET /insights/{dashboard|earnings|listings}`;
+  - `POST /actions` (a confirmed write).
+- Every endpoint needs membership and `acr=mfa`. Tools run with the caller's role.
+- **Through the BFF:** SSE needs no setting (Gateway MVC streams `text/event-stream`). If an ingress or proxy in front
+  buffers responses, turn its buffering off for `/api/`. The api sends `X-Accel-Buffering: no` and
+  `Cache-Control: no-cache, no-transform`.
+- **Turning it off:** unset `OPENROUTER_API_KEY` (or set `AI_PROVIDER=openrouter` without a key). The Studio hides the
+  button and the insight cards.
+- **Audit:** confirmed writes appear in Settings › Security › Audit log as `assistant.action_confirmed`.
+
 ## Dashboards and alerts
 
 The port is wrapped by `ObservedLlmClient` (redaction, traces, metrics). Tags: `provider`, `model`, `feature`,

@@ -6,7 +6,6 @@ import ca.northline.ai.api.AiCompletions.StreamSink;
 import ca.northline.ai.api.AiCompletions.ToolRun;
 import ca.northline.ai.api.AiRateLimited;
 import ca.northline.ai.api.AiUnavailable;
-import ca.northline.shared.CodedEnums;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.security.CurrentMember;
 import ca.northline.shared.security.RequiresMerchant;
@@ -67,15 +66,22 @@ class AssistantController {
     private final JsonMapper json;
 
     record TurnBody(
-            @NotNull @Pattern(regexp = "user|assistant", message = "Role is user or assistant.") String role,
-            @NotBlank(message = EMPTY) @Size(max = 4000, message = TOO_LONG) String content) {}
+            @NotNull @Pattern(regexp = "user|assistant", message = "Role is user or assistant.")
+            String role,
+
+            @NotBlank(message = EMPTY) @Size(max = 4000, message = TOO_LONG)
+            String content) {}
 
     record ChatBody(
-            @NotEmpty(message = EMPTY) @Size(max = 20, message = TOO_MANY) List<@Valid TurnBody> messages,
+            @NotEmpty(message = EMPTY) @Size(max = 20, message = TOO_MANY)
+            List<@Valid TurnBody> messages,
+
             @Nullable @Size(max = 40) String screen) {}
 
     record ActionBody(
-            @NotBlank(message = "Choose an action.") @Size(max = 60) String tool,
+            @NotBlank(message = "Choose an action.") @Size(max = 60)
+            String tool,
+
             @Nullable Map<String, Object> arguments) {}
 
     private StudioAssistant.Question question(CurrentMember member, ChatBody body, Locale locale) {
@@ -138,10 +144,10 @@ class AssistantController {
     @RequiresMerchant(VIEW)
     StudioAssistant.Insight insight(
             @PathVariable String merchantId, @PathVariable String screen, CurrentMember member, Locale locale) {
-        var which = CodedEnums.fromCode(InsightScreen.class, screen);
-        if (which == null) {
-            throw new NotFound("insight", screen);
-        }
+        var which = java.util.Arrays.stream(InsightScreen.values())
+                .filter(v -> v.code().equals(screen))
+                .findFirst()
+                .orElseThrow(() -> new NotFound("insight", screen));
         return assistant.insight(member, which, locale);
     }
 
@@ -149,8 +155,7 @@ class AssistantController {
     @RequiresMerchant(VIEW)
     StudioAssistant.ActionResult confirm(
             @PathVariable String merchantId, @Valid @RequestBody ActionBody body, CurrentMember member, Locale locale) {
-        return assistant.confirm(
-                member, body.tool(), body.arguments() == null ? Map.of() : body.arguments(), locale);
+        return assistant.confirm(member, body.tool(), body.arguments() == null ? Map.of() : body.arguments(), locale);
     }
 
     /** Writes SSE frames straight to the response, flushing each one (the BFF relays text/event-stream unbuffered). */

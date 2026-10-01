@@ -22,7 +22,6 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -111,7 +110,8 @@ class StudioAssistantService implements StudioAssistant {
         messages.add(Message.system(prompt.render(vars)));
         q.turns().stream()
                 .skip(Math.max(0, q.turns().size() - MAX_TURNS))
-                .forEach(t -> messages.add(new Message(t.role().equals("assistant") ? "assistant" : "user", t.content())));
+                .forEach(t ->
+                        messages.add(new Message(t.role().equals("assistant") ? "assistant" : "user", t.content())));
         var request = new Request(
                 AiFeature.ASSISTANT,
                 Caller.member(member.userId(), member.merchantId()),
@@ -178,23 +178,27 @@ class StudioAssistantService implements StudioAssistant {
         if (data.isEmpty()) {
             throw new MerchantAccessDenied(
                     MerchantAccessDenied.Reason.INSUFFICIENT_ROLE,
-                    "Your role (%s) can't see this screen's data.".formatted(member.role().code()));
+                    "Your role (%s) can't see this screen's data."
+                            .formatted(member.role().code()));
         }
         var prompt = prompts.get("studio-insight");
         var vars = vars(member, who, locale);
         vars.put("screen", screen.name().toLowerCase(Locale.ROOT));
         var answer = ai.complete(Request.of(
-                                AiFeature.INSIGHT,
-                                Caller.member(member.userId(), member.merchantId()),
-                                prompt,
-                                prompt.render(vars),
-                                "Data: " + json.writeValueAsString(data))
-                        .asJson()
-                        .withMaxTokens(400));
+                        AiFeature.INSIGHT,
+                        Caller.member(member.userId(), member.merchantId()),
+                        prompt,
+                        prompt.render(vars),
+                        "Data: " + json.writeValueAsString(data))
+                .asJson()
+                .withMaxTokens(400));
         var parsed = answer.json();
         if (parsed.isEmpty()) {
             return new Insight(
-                    "", answer.text().length() > 400 ? answer.text().substring(0, 400) : answer.text(), List.of(), answer.model());
+                    "",
+                    answer.text().length() > 400 ? answer.text().substring(0, 400) : answer.text(),
+                    List.of(),
+                    answer.model());
         }
         var node = parsed.get();
         var bullets = new ArrayList<String>();
@@ -219,13 +223,13 @@ class StudioAssistantService implements StudioAssistant {
                 member.merchantId(), member.userId(), member.role(), json.valueToTree(arguments), locale, who.zone());
         var result = tool.run(call);
         audit.record(AuditTrail.Entry.of(
-                                member.merchantId(),
-                                member.userId(),
-                                member.role().code(),
-                                "assistant.action_confirmed",
-                                "assistant_action",
-                                toolName)
-                        .withChange(null, Map.of("tool", toolName, "summary", result.summary())));
+                        member.merchantId(),
+                        member.userId(),
+                        member.role().code(),
+                        "assistant.action_confirmed",
+                        "assistant_action",
+                        toolName)
+                .withChange(null, Map.of("tool", toolName, "summary", result.summary())));
         return new ActionResult(toolName, result.summary(), tool.screen());
     }
 }

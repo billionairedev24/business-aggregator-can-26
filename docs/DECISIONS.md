@@ -3345,3 +3345,84 @@ conventions, under the conditions of "AI provider and data residency" above.
 - **Never run against real clients:** the OAuth + MCP session is tested with the MCP Java SDK client and tokens minted
   in the test, and auth's flow in MockMvc (WireMock for metadata documents). It has not been tried with Claude or the
   MCP Inspector against a deployed environment.
+
+## 2026-10-01 — S-130 Studio AI assistant: chat with tools that run as the caller, streamed, plus screen insights
+
+Stacked on S-129 (#82, branch `ai/s-129-platform`).
+
+- **Where it lives:**
+  - The assistant is in the `studio` composition module: `StudioAssistant` / `StudioAssistantService` and
+    `AssistantController`. It already composes the dashboard, and it may read `merchants.api` (business name, type,
+    province) and `region.api.Markets` (the business's time zone).
+  - The tools live in the modules that own the data, as `AssistantTool` beans in each `application` package, over the
+    same use cases the REST controllers and the S-127 MCP server call:
+    - orders: `list_orders`, `pack_order` (write);
+    - booking: `list_jobs`, `start_travel` (write);
+    - catalogue: `list_listings`;
+    - availability: `get_availability`;
+    - payments: `earnings_overview`, `payouts_overview` (read-only, `FINANCE_READ`);
+    - messaging: `list_threads`;
+    - trust: `reviews_summary`.
+- **The prompt carries only who the caller is and what they may do** (`studio-assistant.v1`): the business name and
+  type, the role, the role's permissions in words, today's date and the time zone. Every fact comes from tool results.
+- **As the caller:**
+  - The platform offers a tool only to roles that hold its permission, and runs `MerchantAccess.require` again before
+    each run.
+  - Tools receive the authorized `merchantId`, plus the caller's id and role. Technicians see only their own jobs and
+    threads, as on the screens.
+  - A test proves that another business's lines on a shared order never reach the model.
+- **Minimum data sent:**
+  - No customer names, addresses or contact details, no message bodies, no bank details. Payouts say only
+    `bankAccountOnFile`.
+  - Review texts are cut at 400 characters, without author names.
+  - The port's redaction still applies.
+- **Time zone (region-neutral):** `ToolContext` and `AssistantTool.Call` gained `zone`, the business's market zone
+  (`Markets.zone(province)`). Tools show local times and "today" in it. S-129's API changed accordingly, in this
+  branch.
+- **Writes need explicit confirmation:**
+  - The loop never runs a `write()` tool. The answer carries `pending` (`tool`, `arguments`, a `preview` in the
+    person's language), and the drawer shows Confirm / Cancel.
+  - Confirm calls `POST …/assistant/actions`, which re-checks the tool's permission (`OPERATE` for both writes), runs
+    it, and records `assistant.action_confirmed` in the audit trail.
+  - No signed token binds the confirmation to the proposal. The caller could make the same change through the REST
+    endpoint with the same permission, so the confirmation is a guarantee that the *model* never acts on its own, not
+    an authorization.
+- **Streaming:**
+  - `POST …/assistant/chat/stream` writes SSE frames straight to the response, as samop does: `tool`, `delta`, then
+    `done` or `error`. Nothing is written before the first frame, so a refusal up front is an ordinary 403 / 422 / 429
+    / 503.
+  - **The BFF relays it unbuffered.** Gateway MVC flushes `text/event-stream` by default
+    (`streaming-media-types`). `SseRelayTest` proves this on a real server: the first frame arrives while the upstream
+    is still writing.
+  - The JSON endpoint `POST …/assistant/chat` stays for clients without SSE.
+- **Insights** (`GET …/assistant/insights/{dashboard|earnings|listings}`, prompt `studio-insight.v1`, light model, JSON
+  `{title, body, bullets}`):
+  - They read the screen's data through the same tools as the caller. A technician gets 403 on earnings.
+  - **Fetched only when the person clicks "Explain this screen"**, then cached 15 minutes in the browser. Each one is
+    a model call, so loading one on every visit would spend the budget for nothing.
+  - Shown under the screen and labelled "AI-generated from this screen's data · check before acting".
+- **Usage (tokens, cost, latency)** is returned to owners only (`MANAGE`). Every role's calls are metered and recorded
+  in `ai.usage`.
+- **UI addition the product owner asked for:** the design (`design/02`) has no AI screens.
+  - The addition is kept minimal and consistent with the locked design system:
+    - an "Assistant" button with a Phosphor duotone `Sparkle` in the top bar, before the account menu;
+    - the kit's right `Drawer` (440 px), with the kit's `ChatLog` / `ChatBubble`, `TextArea`, `Button`, `Alert` and
+      `nl-chip` suggestions;
+    - an `InsightCard` `Panel` at the foot of the dashboard, earnings and listings screens.
+  - Tokens only (`Assistant.css`), en + fr-CA copy, 44 px targets.
+  - The drawer always shows "AI-generated. It can be wrong — check before acting. Changes always need your
+    confirmation."
+  - With the fake model it says "Test model: answers are canned, not real."
+  - Hidden entirely when `GET /api/v1/ai/status` says AI is unavailable.
+- **Evals:** `ai-eval/assistant.json` holds 17 top questions across roles (owner, technician, bookkeeper), en/fr:
+  - tool choice and content, including the two writes, which must be proposed and never run;
+  - a technician's earnings question, which must be refused without leaking;
+  - an out-of-scope request.
+  `AssistantEval` drives the real `StudioAssistantService` (prompt, role filtering, loop) with stub tools mirroring the
+  real tools' names and permissions. `AssistantToolsCatalogueTest` checks the mirror against the beans in the context.
+- **No schema change.** Audit action `assistant.action_confirmed` (`developer.audit_log`).
+- **Not done / not verified:**
+  - The drawer keeps the conversation in memory only (closed tab = gone). Nothing is stored server-side.
+  - No live-model run (no OpenRouter key yet).
+  - The UI was tested with Testing Library, not in a browser.
+  - No Storybook story: the drawer is a Studio feature composed from kit components that already have stories.

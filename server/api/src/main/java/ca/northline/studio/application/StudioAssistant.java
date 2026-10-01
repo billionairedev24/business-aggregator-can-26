@@ -19,7 +19,11 @@ public interface StudioAssistant {
     record Turn(String role, String content) {}
 
     /** @param screen the Studio screen the person has open ({@code orders}), or null */
-    record Question(CurrentMember member, List<Turn> turns, @Nullable String screen, Locale locale) {}
+    record Question(
+            CurrentMember member,
+            List<Turn> turns,
+            @Nullable String screen,
+            Locale locale) {}
 
     /**
      * @param usage tokens, cost and latency — shown to owners only
@@ -49,7 +53,8 @@ public interface StudioAssistant {
     Insight insight(CurrentMember member, InsightScreen screen, Locale locale);
 
     /** The outcome of a confirmed write. */
-    record ActionResult(String tool, String summary, @Nullable String screen) {}
+    record ActionResult(
+            String tool, String summary, @Nullable String screen) {}
 
     /** Runs a write the assistant proposed, now that the person confirmed it; audited. */
     ActionResult confirm(CurrentMember member, String tool, Map<String, Object> arguments, Locale locale);

@@ -151,13 +151,15 @@ final class BookingAssistantTools {
         @Override
         public Result run(Call call) {
             var ref = String.valueOf(call.text("ref")).strip();
-            var today = LocalDate.now(clock.withZone(call.zone())).atStartOfDay(call.zone()).toInstant();
+            var today = LocalDate.now(clock.withZone(call.zone()))
+                    .atStartOfDay(call.zone())
+                    .toInstant();
             var job = jobs.list(new ListJobs.Query(member(call), today, today.plus(Duration.ofDays(1)))).stream()
                     .filter(j -> ref.equalsIgnoreCase(j.ref()) || ref.equals(j.id()))
                     .findFirst()
                     .orElseThrow(() -> new NotFound("job", ref));
-            var detail = advance.advance(
-                    new AdvanceJob.Command(member(call), job.id(), AdvanceJob.Step.START_TRAVEL, null, List.of(), null));
+            var detail = advance.advance(new AdvanceJob.Command(
+                    member(call), job.id(), AdvanceJob.Step.START_TRAVEL, null, List.of(), null));
             return new Result(Map.of("ref", ref, "state", detail.state()), "on the way to " + ref);
         }
     }

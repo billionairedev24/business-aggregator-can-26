@@ -38,16 +38,62 @@ public final class AssistantEval implements EvalSuite {
 
     /** The real tools' names, permissions and whether they write (kept in step with the modules' AssistantTools). */
     static final Map<String, Object[]> TOOLS = Map.of(
-            "list_orders", new Object[] {MerchantPermission.VIEW, false, "Shop orders with counts per status, items, totals and run cut-offs."},
-            "pack_order", new Object[] {MerchantPermission.OPERATE, true, "Propose marking one order (ref) as packed. The person must confirm."},
-            "list_jobs", new Object[] {MerchantPermission.VIEW, false, "Booked jobs from a date (from, days): ref, service, local times, state, who is assigned."},
-            "start_travel", new Object[] {MerchantPermission.OPERATE, true, "Propose starting travel to a job today (ref). The person must confirm."},
-            "list_listings", new Object[] {MerchantPermission.VIEW, false, "Listings: name, kind, price, stock, sales in 30 days, vetting state and flags, live or hidden."},
-            "get_availability", new Object[] {MerchantPermission.VIEW, false, "Weekly hours per team member, time off and holiday closures."},
-            "earnings_overview", new Object[] {MerchantPermission.FINANCE_READ, false, "Earnings: releasing with the next payout, available, escrow, on hold, next payout, ledger."},
-            "payouts_overview", new Object[] {MerchantPermission.FINANCE_READ, false, "Payouts: available, payable, next payout time, schedule, recent payouts."},
-            "list_threads", new Object[] {MerchantPermission.VIEW, false, "Message threads: ref, subject, kind, unread, last activity."},
-            "reviews_summary", new Object[] {MerchantPermission.VIEW, false, "Reviews: average, count, distribution, latest reviews (rating, job, text, replied)."});
+            "list_orders",
+                    new Object[] {
+                        MerchantPermission.VIEW,
+                        false,
+                        "Shop orders with counts per status, items, totals and run cut-offs."
+                    },
+            "pack_order",
+                    new Object[] {
+                        MerchantPermission.OPERATE,
+                        true,
+                        "Propose marking one order (ref) as packed. The person must confirm."
+                    },
+            "list_jobs",
+                    new Object[] {
+                        MerchantPermission.VIEW,
+                        false,
+                        "Booked jobs from a date (from, days): ref, service, local times, state, who is assigned."
+                    },
+            "start_travel",
+                    new Object[] {
+                        MerchantPermission.OPERATE,
+                        true,
+                        "Propose starting travel to a job today (ref). The person must confirm."
+                    },
+            "list_listings",
+                    new Object[] {
+                        MerchantPermission.VIEW,
+                        false,
+                        "Listings: name, kind, price, stock, sales in 30 days, vetting state and flags, live or hidden."
+                    },
+            "get_availability",
+                    new Object[] {
+                        MerchantPermission.VIEW, false, "Weekly hours per team member, time off and holiday closures."
+                    },
+            "earnings_overview",
+                    new Object[] {
+                        MerchantPermission.FINANCE_READ,
+                        false,
+                        "Earnings: releasing with the next payout, available, escrow, on hold, next payout, ledger."
+                    },
+            "payouts_overview",
+                    new Object[] {
+                        MerchantPermission.FINANCE_READ,
+                        false,
+                        "Payouts: available, payable, next payout time, schedule, recent payouts."
+                    },
+            "list_threads",
+                    new Object[] {
+                        MerchantPermission.VIEW, false, "Message threads: ref, subject, kind, unread, last activity."
+                    },
+            "reviews_summary",
+                    new Object[] {
+                        MerchantPermission.VIEW,
+                        false,
+                        "Reviews: average, count, distribution, latest reviews (rating, job, text, replied)."
+                    });
 
     private final LabelledSet set = LabelledSet.load("assistant");
 
@@ -110,10 +156,12 @@ public final class AssistantEval implements EvalSuite {
     StudioAssistantService service(AiTestKit kit) {
         var business = set.root().path("business");
         var directory = mock(MerchantDirectory.class);
-        when(directory.profile(any())).thenReturn(Optional.of(new MerchantDirectory.MerchantProfile(
-                "eval-merchant", business.path("type").asString(), "master", "active", null, "XX")));
+        when(directory.profile(any()))
+                .thenReturn(Optional.of(new MerchantDirectory.MerchantProfile(
+                        "eval-merchant", business.path("type").asString(), "master", "active", null, "XX")));
         var names = mock(BusinessNames.class);
-        when(names.displayName(any())).thenReturn(Optional.of(business.path("name").asString()));
+        when(names.displayName(any()))
+                .thenReturn(Optional.of(business.path("name").asString()));
         var markets = mock(Markets.class);
         when(markets.zone(any())).thenReturn(ZoneId.of("UTC-06:00"));
         return new StudioAssistantService(
@@ -135,21 +183,28 @@ public final class AssistantEval implements EvalSuite {
         var cases = new ArrayList<EvalReport.Case>();
         var model = kit.client.model();
         for (var c : set.cases()) {
-            var role = CodedEnums.fromCode(MerchantRole.class, c.path("role").asString("owner"));
-            var member = new CurrentMember("eval-merchant", "eval-" + c.path("role").asString(), role == null ? MerchantRole.OWNER : role);
+            var role = CodedEnums.fromCode(c.path("role").asString("owner"), MerchantRole.class);
+            var member = new CurrentMember(
+                    "eval-merchant", "eval-" + c.path("role").asString(), role == null ? MerchantRole.OWNER : role);
             var locale = Locale.forLanguageTag(c.path("locale").asString("en") + "-CA");
             var expected = c.path("expected").asString();
             try {
                 var answer = assistant.ask(
                         new StudioAssistant.Question(
-                                member, List.of(new StudioAssistant.Turn("user", c.path("input").asString())), null, locale),
+                                member,
+                                List.of(new StudioAssistant.Turn(
+                                        "user", c.path("input").asString())),
+                                null,
+                                locale),
                         null);
                 model = answer.model();
                 var actual = answer.pending() != null
                         ? "pending:" + answer.pending().tool()
-                        : answer.toolRuns().isEmpty() ? "none" : answer.toolRuns().getFirst().tool();
+                        : answer.toolRuns().isEmpty()
+                                ? "none"
+                                : answer.toolRuns().getFirst().tool();
                 var misses = LabelledSet.contentMisses(c, answer.content());
-                var toolOk = expected.equals(actual) || any(c.path("expectedAny"), actual);
+                var toolOk = expected.equals(actual) || matchesAny(c.path("expectedAny"), actual);
                 var tokens = answer.usage() == null ? 0 : answer.usage().totalTokens();
                 cases.add(new EvalReport.Case(
                         c.path("id").asString(),
@@ -158,7 +213,9 @@ public final class AssistantEval implements EvalSuite {
                         toolOk && misses.isEmpty(),
                         misses.isEmpty() ? answer.content() : misses + " → " + answer.content(),
                         tokens,
-                        answer.usage() == null || answer.usage().costUsd() == null ? 0 : answer.usage().costUsd()));
+                        answer.usage() == null || answer.usage().costUsd() == null
+                                ? 0
+                                : answer.usage().costUsd()));
             } catch (RuntimeException e) {
                 cases.add(new EvalReport.Case(c.path("id").asString(), expected, "error", false, e.toString(), 0, 0));
             }
@@ -166,7 +223,7 @@ public final class AssistantEval implements EvalSuite {
         return new EvalReport(name(), mode, model, cases);
     }
 
-    private static boolean any(JsonNode alternatives, String actual) {
+    private static boolean matchesAny(JsonNode alternatives, String actual) {
         for (var a : alternatives) {
             if (a.asString().equals(actual)) {
                 return true;

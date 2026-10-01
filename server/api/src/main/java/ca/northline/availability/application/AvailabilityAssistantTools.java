@@ -50,9 +50,13 @@ final class AvailabilityAssistantTools {
             var members = hours.view(call.merchantId()).members().stream()
                     .map(m -> {
                         var days = new LinkedHashMap<String, Object>();
-                        m.hours().days().forEach((day, ranges) -> days.put(
-                                day.name().toLowerCase(java.util.Locale.ROOT),
-                                ranges.stream().map(r -> r.start() + "–" + r.end()).toList()));
+                        m.hours()
+                                .days()
+                                .forEach((day, ranges) -> days.put(
+                                        day.name().toLowerCase(java.util.Locale.ROOT),
+                                        ranges.stream()
+                                                .map(r -> r.start() + "–" + r.end())
+                                                .toList()));
                         return Map.of(
                                 "member", m.member().name(),
                                 "bookable", m.member().bookable(),

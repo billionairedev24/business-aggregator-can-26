@@ -32,7 +32,9 @@ final class TrustAssistantTools {
 
         @Override
         public Map<String, Object> parameters() {
-            return Map.of("latest", Map.of("type", "integer", "minimum", 0, "maximum", 20, "description", "Reviews (default 10)"));
+            return Map.of(
+                    "latest",
+                    Map.of("type", "integer", "minimum", 0, "maximum", 20, "description", "Reviews (default 10)"));
         }
 
         @Override
@@ -53,8 +55,14 @@ final class TrustAssistantTools {
                         var m = new LinkedHashMap<String, Object>();
                         m.put("rating", r.rating());
                         m.put("job", r.jobLabel());
-                        m.put("text", r.text() == null ? null : r.text().length() > 400 ? r.text().substring(0, 400) + "…" : r.text());
-                        m.put("date", r.createdAt().atZone(call.zone()).toLocalDate().toString());
+                        m.put(
+                                "text",
+                                r.text() == null
+                                        ? null
+                                        : r.text().length() > 400 ? r.text().substring(0, 400) + "…" : r.text());
+                        m.put(
+                                "date",
+                                r.createdAt().atZone(call.zone()).toLocalDate().toString());
                         m.put("replied", r.reply() != null);
                         return m;
                     })

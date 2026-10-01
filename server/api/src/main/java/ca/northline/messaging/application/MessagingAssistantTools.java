@@ -62,11 +62,16 @@ final class MessagingAssistantTools {
                                 "lastMessageAt",
                                 t.lastMessageAt() == null
                                         ? null
-                                        : t.lastMessageAt().atZone(call.zone()).toOffsetDateTime().toString());
+                                        : t.lastMessageAt()
+                                                .atZone(call.zone())
+                                                .toOffsetDateTime()
+                                                .toString());
                         return m;
                     })
                     .toList();
-            var unread = threads.stream().filter(t -> Boolean.TRUE.equals(t.get("unread"))).count();
+            var unread = threads.stream()
+                    .filter(t -> Boolean.TRUE.equals(t.get("unread")))
+                    .count();
             return new Result(Map.of("unread", unread, "threads", threads), "threads → " + unread + " unread");
         }
     }

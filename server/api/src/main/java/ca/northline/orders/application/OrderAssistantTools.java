@@ -95,8 +95,10 @@ final class OrderAssistantTools {
                                     "awaitingPickup", counts.awaitingPickup(),
                                     "deliveredToday", counts.deliveredToday(),
                                     "issues", counts.issues()),
-                            "nextCutoff", String.valueOf(local(counts.nextCutoff(), call)),
-                            "orders", rows),
+                            "nextCutoff",
+                            String.valueOf(local(counts.nextCutoff(), call)),
+                            "orders",
+                            rows),
                     "orders → " + rows.size() + (status == null ? "" : " " + status));
         }
     }

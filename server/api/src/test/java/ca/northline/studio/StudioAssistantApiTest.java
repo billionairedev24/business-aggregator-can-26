@@ -102,13 +102,19 @@ class StudioAssistantApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.pending").value(nullValue()))
                 .andExpect(jsonPath("$.usage.modelCalls").value(2));
 
-        var system = MODEL.requests.getFirst().path("messages").path(0).path("content").asString();
+        var system = MODEL.requests
+                .getFirst()
+                .path("messages")
+                .path(0)
+                .path("content")
+                .asString();
         assertThat(system).contains("Prairie Wrench Parts").contains("owner").contains("see earnings");
         assertThat(system).doesNotContain("Ravi");
         JsonNode toolResult = MODEL.lastRequest().path("messages").path(3);
         var result = toolResult.path("content").asString();
         assertThat(result).contains(s.ref()).contains("Wiper blades").contains("3990");
-        assertThat(result).as("no other merchant's lines, no customer name")
+        assertThat(result)
+                .as("no other merchant's lines, no customer name")
                 .doesNotContain("Floor mats")
                 .doesNotContain("Osei");
         assertThat(jdbc.sql("select count(*) from ai.usage where merchant_id = ? and feature = 'assistant'")
@@ -140,7 +146,9 @@ class StudioAssistantApiTest extends IntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(ask("hi")))
                 .andExpect(status().isOk());
-        assertThat(offeredTools(1)).contains("pack_order", "list_orders").doesNotContain("earnings_overview", "payouts_overview");
+        assertThat(offeredTools(1))
+                .contains("pack_order", "list_orders")
+                .doesNotContain("earnings_overview", "payouts_overview");
     }
 
     @Test
@@ -166,7 +174,8 @@ class StudioAssistantApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.tool").value("pack_order"))
                 .andExpect(jsonPath("$.screen").value("orders"));
         assertThat(lineState(s)).isEqualTo("packed");
-        assertThat(jdbc.sql("select count(*) from developer.audit_log where merchant_id = ? and action = 'assistant.action_confirmed'")
+        assertThat(jdbc.sql(
+                                "select count(*) from developer.audit_log where merchant_id = ? and action = 'assistant.action_confirmed'")
                         .param(s.merchantId())
                         .query(Long.class)
                         .single())
@@ -244,7 +253,8 @@ class StudioAssistantApiTest extends IntegrationTest {
                 .andExpect(content().string(containsString("event: tool\ndata: {\"tool\":\"list_orders\"")))
                 .andExpect(content().string(containsString("event: delta\ndata: {\"text\":")))
                 .andExpect(content().string(containsString("event: done\ndata: {\"content\":\"One order to pack.\"")));
-        assertThat(MODEL.requests).allSatisfy(r -> assertThat(r.path("stream").asBoolean()).isTrue());
+        assertThat(MODEL.requests)
+                .allSatisfy(r -> assertThat(r.path("stream").asBoolean()).isTrue());
     }
 
     @Test
@@ -262,9 +272,8 @@ class StudioAssistantApiTest extends IntegrationTest {
     @Test
     void insightsReadTheScreensDataAsTheCaller() throws Exception {
         var s = seller();
-        MODEL.enqueue(MockOpenRouter.answer(
-                "{\"title\":\"1 order to pack\",\"body\":\"" + s.ref() + " is still to pack.\",\"bullets\":[\"Pack " + s.ref()
-                        + "\"]}"));
+        MODEL.enqueue(MockOpenRouter.answer("{\"title\":\"1 order to pack\",\"body\":\"" + s.ref()
+                + " is still to pack.\",\"bullets\":[\"Pack " + s.ref() + "\"]}"));
         mvc.perform(get("/api/v1/merchants/{m}/assistant/insights/dashboard", s.merchantId())
                         .with(TestJwt.member(s.owner())))
                 .andExpect(status().isOk())
