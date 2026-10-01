@@ -29,6 +29,7 @@ azure-storage-blob = "12.35.1"
 wiremock = "3.13.2"
 greenmail = "2.1.14"
 otel-proto = "1.10.0-alpha"
+pdfbox = "3.0.8"
 datasource-micrometer = "2.3.0"
 
 [libraries]
@@ -57,6 +58,7 @@ aws-sesv2 = { module = "software.amazon.awssdk:sesv2", version.ref = "aws-sdk" }
 aws-sms-voice = { module = "software.amazon.awssdk:pinpointsmsvoicev2", version.ref = "aws-sdk" }
 greenmail-junit5 = { module = "com.icegreen:greenmail-junit5", version.ref = "greenmail" }
 datasource-micrometer = { module = "net.ttddyy.observation:datasource-micrometer-spring-boot", version.ref = "datasource-micrometer" } # S-111: JDBC spans
+pdfbox = { module = "org.apache.pdfbox:pdfbox", version.ref = "pdfbox" } # S-41: tax documents as PDF
 otel-proto = { module = "io.opentelemetry.proto:opentelemetry-proto", version.ref = "otel-proto" } # S-111 tests: decode OTLP exports
 wiremock = { module = "org.wiremock:wiremock-standalone", version.ref = "wiremock" }
 gcp-kms = { module = "com.google.cloud:google-cloud-kms", version.ref = "gcp-kms" }

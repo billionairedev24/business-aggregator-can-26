@@ -148,9 +148,22 @@ describe('Reports', () => {
     expect(screen.getByText('Everything else')).toBeTruthy();
     expect(screen.getByText('Your website embed (API)')).toBeTruthy();
     expect((screen.getByRole('link', { name: 'Export CSV' })).getAttribute('href')).toBe('/api/v1/merchants/PWM1/reports/export.csv?period=90d');
+    const year = new Date().getFullYear();
+    expect((screen.getByRole('link', { name: 'Tax summary (GST)' })).getAttribute('href')).toBe(`/api/v1/merchants/PWM1/reports/gst-summary.pdf?year=${year}&lang=en`);
     await ui.click(screen.getByRole('radio', { name: '30 d' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Last 30 days' })).toBeTruthy();
     await waitFor(() => expect(calls.some(c => c.path === '/api/v1/merchants/PWM1/reports?period=30d')).toBe(true));
+  });
+});
+
+describe('Tax documents (S-41)', () => {
+  it('offers each document as PDF in the Studio language, and as CSV', async () => {
+    renderScreen(<PayoutsScreen />, 'fr');
+    const year = new Date().getFullYear();
+    const pdf = await screen.findByRole('link', { name: `Télécharger Relevé annuel ${year - 1} en PDF` });
+    expect(pdf.getAttribute('href')).toBe(`/api/v1/merchants/PWM1/reports/annual-statement.pdf?year=${year - 1}&lang=fr`);
+    expect(screen.getByRole('link', { name: `Télécharger Relevé annuel ${year - 1} en CSV` }).getAttribute('href')).toBe(`/api/v1/merchants/PWM1/reports/annual-statement.csv?year=${year - 1}`);
+    expect(screen.getByRole('link', { name: `Télécharger Sommaire de la TPS perçue ${year} (cumul annuel) en PDF` }).getAttribute('href')).toContain('gst-summary.pdf');
   });
 });
 

@@ -1,6 +1,7 @@
 package ca.northline.payments.application;
 
 import ca.northline.payments.api.PayoutPlan;
+import ca.northline.payments.api.RecentPayouts;
 import ca.northline.payments.domain.Fees;
 import ca.northline.payments.domain.LedgerEntry;
 import ca.northline.payments.domain.Payout;
@@ -30,7 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-class PayoutService implements ViewPayouts, MovePayouts, PayoutPlan {
+class PayoutService implements ViewPayouts, MovePayouts, PayoutPlan, RecentPayouts {
 
     static final String PAYOUTS_DISABLED =
             "Stripe has paused payouts on this account. Finish the steps in Settings › Stripe & compliance.";
@@ -70,6 +71,18 @@ class PayoutService implements ViewPayouts, MovePayouts, PayoutPlan {
     @Override
     public List<Payout> history(String merchantId, int limit) {
         return payouts.history(merchantId, Math.clamp(limit, 1, 500));
+    }
+
+    @Override
+    public List<PayoutRef> recent(String merchantId, int limit) {
+        return history(merchantId, limit).stream()
+                .map(p -> new PayoutRef(
+                        p.getId(),
+                        p.getAmountCents(),
+                        p.getKind().code(),
+                        p.getState().code(),
+                        p.getArrivesAt()))
+                .toList();
     }
 
     @Override

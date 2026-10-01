@@ -307,6 +307,44 @@ class HelpApiTest extends MessagingApiTest {
                     .andExpect(jsonPath("$.items[0].type").value("booking"));
         }
 
+        /** S-66: finance's payouts and compliance's ledger documents are offered too, in the caller's language. */
+        @Test
+        void relatedOffersPayoutsAndComplianceDocuments() throws Exception {
+            var biz = data.business(MerchantRole.OWNER);
+            var payout = ca.northline.shared.Ids.next();
+            jdbc.sql("""
+                            insert into payments.payouts (id, merchant_id, amount_cents, kind, fee_cents, state, arrives_at)
+                            values (?, ?, 123456, 'scheduled', 0, 'paid', '2026-09-26T18:00:00Z')
+                            """).params(payout, biz.merchantId()).update();
+            var document = ca.northline.shared.Ids.next();
+            jdbc.sql("""
+                            insert into merchants.verifications (id, merchant_id, check_key, check_type, status, expires_at)
+                            values (?, ?, 'insurance', 'insurance', 'verified', '2027-01-15T18:00:00Z')
+                            """).params(document, biz.merchantId()).update();
+
+            mvc.perform(get(HELP + "/related", biz.merchantId()).with(TestJwt.member(biz.userId())))
+                    .andExpect(jsonPath("$.items[?(@.type=='payout')].id").value(payout))
+                    .andExpect(jsonPath("$.items[?(@.type=='payout')].label").value("Payout · $1,234.56 · Sep 26"))
+                    .andExpect(jsonPath("$.items[?(@.type=='document')].id").value(document))
+                    .andExpect(jsonPath("$.items[?(@.type=='document')].label")
+                            .value("Liability insurance · exp. Jan 2027"));
+            mvc.perform(get(HELP + "/related", biz.merchantId())
+                            .header("Accept-Language", "fr-CA")
+                            .with(TestJwt.member(biz.userId())))
+                    .andExpect(jsonPath("$.items[?(@.type=='payout')].label")
+                            .value("Versement · 1\u00a0234,56\u00a0$ · 26 sept."))
+                    .andExpect(jsonPath("$.items[?(@.type=='document')].label")
+                            .value("Assurance responsabilité · exp. janv. 2027"));
+
+            var body = CASE.replace(
+                    "\"refType\":\"document\",\"refId\":\"DOC-1\"",
+                    "\"refType\":\"payout\",\"refId\":\"" + payout + "\"");
+            mvc.perform(postJson(CASES, body, biz.merchantId()).with(TestJwt.member(biz.userId())))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.refType").value("payout"))
+                    .andExpect(jsonPath("$.refId").value(payout));
+        }
+
         /** Help › Contact support — every message. */
         @ParameterizedTest(name = "[{index}] {0} → {2}")
         @CsvSource(

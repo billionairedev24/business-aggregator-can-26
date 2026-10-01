@@ -3,7 +3,9 @@ package ca.northline.food.application;
 import ca.northline.food.api.KitchenPaused;
 import ca.northline.food.api.KitchenResumed;
 import ca.northline.food.application.KitchenTicketStore.LiveOrderRow;
+import ca.northline.food.application.KitchenUseCases.AutoPause;
 import ca.northline.food.application.KitchenUseCases.Handoff;
+import ca.northline.food.application.KitchenUseCases.KitchenAutoPause;
 import ca.northline.food.application.KitchenUseCases.KitchenLive;
 import ca.northline.food.application.KitchenUseCases.LiveBoard;
 import ca.northline.food.application.KitchenUseCases.LiveCounts;
@@ -19,12 +21,14 @@ import ca.northline.identity.api.PersonDirectory.Person;
 import ca.northline.shared.Ids;
 import ca.northline.shared.NotFound;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +44,7 @@ class KitchenLiveService implements KitchenLive {
     private final ApplicationEventPublisher events;
     private final Clock clock;
     private final KitchenMetrics metrics;
+    private final KitchenAutoPause autoPause;
 
     @Override
     public LiveBoard board(String merchantId) {
@@ -65,7 +70,20 @@ class KitchenLiveService implements KitchenLive {
                         count(items, KitchenStage.COOKING),
                         count(items, KitchenStage.READY)),
                 new PrepShown(s.defaultPrepMin(), s.prepBumpMin(), s.defaultPrepMin() + s.prepBumpMin()),
-                KitchenPause.paused(s.pausedUntil(), now) ? s.pausedUntil() : null);
+                KitchenPause.paused(s.pausedUntil(), now) ? s.pausedUntil() : null,
+                autoPauseOf(rows, s.autoPauseLate(), now));
+    }
+
+    /** S-67: late = accepted (cooking) and past its ready-by time, as the customer side counts it. */
+    static AutoPause autoPauseOf(List<LiveOrderRow> rows, @Nullable Integer threshold, Instant now) {
+        int late = (int) rows.stream()
+                .filter(r -> r.stage() == KitchenStage.COOKING)
+                .filter(r -> {
+                    var by = r.readyBy();
+                    return by != null && by.isBefore(now);
+                })
+                .count();
+        return new AutoPause(late, threshold, threshold != null && late >= threshold);
     }
 
     @Override
@@ -90,6 +108,7 @@ class KitchenLiveService implements KitchenLive {
         tickets.save(ticket);
         events.publishEvent(event);
         metrics.ready(ticket);
+        autoPause.check(merchantId);
         return board(merchantId);
     }
 
@@ -101,6 +120,7 @@ class KitchenLiveService implements KitchenLive {
         tickets.save(ticket);
         events.publishEvent(event);
         metrics.handedOff(ticket);
+        autoPause.check(merchantId);
         return board(merchantId);
     }
 

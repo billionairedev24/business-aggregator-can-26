@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { toMinutes } from '../../lib/time';
+import type { FrenchMessages } from '../../lib/validation';
 import { DAYS, type Days } from './api';
 
 /** Same messages as the server (WeeklyHours / TimeOff, docs/DECISIONS.md "Operations"). */
@@ -15,6 +16,17 @@ export const TIME_OFF_MESSAGES = {
   specialRequired: "Add the hours you're open.",
   reasonTooLong: 'At most 120 characters.',
 } as const;
+
+/** fr-CA of the hours and time-off messages — the api's French (docs/spec/validation-messages.fr-CA.tsv). */
+export const AVAILABILITY_MESSAGES_FR: FrenchMessages = {
+  [HOURS_MESSAGES.endBeforeStart]: 'L’heure de fin doit suivre l’heure de début.',
+  [HOURS_MESSAGES.overlap]: 'Ces heures chevauchent une autre plage le même jour.',
+  [HOURS_MESSAGES.effectiveInPast]: 'Choisissez aujourd’hui ou une date ultérieure.',
+  [TIME_OFF_MESSAGES.fromRequired]: 'Choisissez le premier jour.',
+  [TIME_OFF_MESSAGES.toBeforeFrom]: 'Le dernier jour ne peut pas précéder le premier.',
+  [TIME_OFF_MESSAGES.specialRequired]: 'Ajoutez vos heures d’ouverture.',
+  [TIME_OFF_MESSAGES.reasonTooLong]: 'Au plus 120 caractères.',
+};
 
 /** Field key "mon[1]" → message, for every broken range (same order as the server). */
 export function validateDays(days: Days): Record<string, string> {

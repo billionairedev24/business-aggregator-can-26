@@ -55,17 +55,17 @@ export const MSG = {
   INCLUDED_TOO_LONG: 'At most 2000 characters.',
 } as const;
 
-const FR: Record<string, string> = {
+export const FR: Record<string, string> = {
   [MSG.TITLE_REQUIRED]: 'Entrez un titre de produit.',
-  [MSG.TOO_LONG_80]: '80 caractères au maximum.',
+  [MSG.TOO_LONG_80]: 'Au plus 80 caractères.',
   [MSG.TITLE_PROMO]: 'Retirez les mots promotionnels comme solde, gratuit ou meilleur.',
   [MSG.CATEGORY_REQUIRED]: 'Choisissez une catégorie.',
   [MSG.CATEGORY_LEAF]: "Choisissez une catégorie jusqu'au dernier niveau.",
   [MSG.CATEGORY_WRONG_ROOT]: 'Catégorie non permise dans la Boutique',
   [MSG.CATEGORY_WRONG_ROOT_SERVICE]: 'Choisissez une catégorie de service.',
   [MSG.BULLETS_TOO_MANY]: "Jusqu'à 5 points clés.",
-  [MSG.BULLET_TOO_LONG]: '250 caractères au maximum.',
-  [MSG.DESCRIPTION_TOO_LONG]: '4000 caractères au maximum.',
+  [MSG.BULLET_TOO_LONG]: 'Au plus 250 caractères.',
+  [MSG.DESCRIPTION_TOO_LONG]: 'Au plus 4000 caractères.',
   [MSG.GTIN_REQUIRED]: 'Entrez le GTIN ou choisissez Aucun (fait main / local).',
   [MSG.GTIN_FORMAT]: 'Le GTIN compte 8, 12, 13 ou 14 chiffres.',
   [MSG.GTIN_CHECK_DIGIT]: 'Chiffre de contrôle du GTIN invalide',
@@ -73,7 +73,7 @@ const FR: Record<string, string> = {
   [MSG.VARIANT_VALUE_REQUIRED]: 'Nommez cette variante.',
   [MSG.VARIANT_DUPLICATE]: 'Chaque variante doit avoir sa propre valeur.',
   [MSG.SKU_REQUIRED]: 'Entrez une UGS.',
-  [MSG.SKU_TOO_LONG]: '40 caractères au maximum.',
+  [MSG.SKU_TOO_LONG]: 'Au plus 40 caractères.',
   [MSG.SKU_TAKEN]: 'Cette UGS est déjà utilisée par une autre annonce.',
   [MSG.SKU_DUPLICATE]: 'Chaque variante doit avoir sa propre UGS.',
   [MSG.IMAGES_REQUIRED]: 'Ajoutez une image principale sur fond blanc, d’au moins 1000 px.',
@@ -99,8 +99,8 @@ const FR: Record<string, string> = {
   [MSG.DURATION_RANGE]: 'Choisissez une durée entre 15 minutes et 12 heures.',
   [MSG.BUFFER_RANGE]: 'Le battement doit être entre 0 et 120 minutes.',
   [MSG.INCLUDED_REQUIRED]: 'Décrivez ce qui est inclus.',
-  [MSG.INCLUDED_TOO_LONG]: '2000 caractères au maximum.',
-  'That image is no longer available — upload it again.': "Cette image n'est plus disponible — téléversez-la de nouveau.",
+  [MSG.INCLUDED_TOO_LONG]: 'Au plus 2000 caractères.',
+  'That image is no longer available — upload it again.': 'Cette image n’est plus disponible — téléversez-la de nouveau.',
 };
 
 /** Localises a validation message (client-side or from a 422). Unknown messages pass through. */

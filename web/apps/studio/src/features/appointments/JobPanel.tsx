@@ -10,6 +10,8 @@ import { useSession } from '../../lib/session';
 import { clock } from '../../lib/time';
 import { jobQuery, useAdvanceJob, useRequestApproval, useUploadMedia, type JobDetail, type Media, type Step } from './api';
 import { useAppointmentsT } from './messages';
+import { APPROVAL_MESSAGES, QUOTE_MESSAGES_FR } from './quote';
+import { useLocalizeMessage } from '../../lib/validation';
 
 type T = ReturnType<typeof useAppointmentsT>;
 
@@ -137,9 +139,8 @@ function CompleteDialog({ open, onClose, job }: { open: boolean; onClose: () => 
   );
 }
 
-const APPROVAL_MESSAGES = { description: 'Describe the extra parts or work.', amount: 'Enter an amount.' } as const;
 const approvalSchema = z.object({
-  description: z.string().trim().min(1, APPROVAL_MESSAGES.description).max(160, 'At most 160 characters.'),
+  description: z.string().trim().min(1, APPROVAL_MESSAGES.description).max(160, APPROVAL_MESSAGES.tooLong),
   amount: z.string().refine(v => Math.round(parseFloat(v.replace(/[^0-9.]/g, '')) * 100) > 0, APPROVAL_MESSAGES.amount),
 });
 
@@ -154,7 +155,8 @@ function ApprovalDialog({ open, onClose, jobId }: { open: boolean; onClose: () =
   const errs: Record<string, string> = {};
   if (!r.success) for (const i of r.error.issues) errs[String(i.path[0])] ??= i.message;
   const server = request.error instanceof ValidationError ? request.error.byField() : {};
-  const show = (k: 'description' | 'amount', sk: string) => (tried || touched[k] ? errs[k] : undefined) ?? server[sk];
+  const lm = useLocalizeMessage(QUOTE_MESSAGES_FR);
+  const show = (k: 'description' | 'amount', sk: string) => lm((tried || touched[k] ? errs[k] : undefined) ?? server[sk]);
   const count = Object.keys(errs).length;
   const submit = () => {
     setTried(true);

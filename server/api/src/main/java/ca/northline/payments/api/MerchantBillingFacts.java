@@ -13,6 +13,13 @@ public interface MerchantBillingFacts {
 
     Optional<Billing> billing(String merchantId);
 
+    /** S-41: who a tax statement is for — the legal entity, its trading name and GST/HST number. */
+    Optional<StatementParty> statementParty(String merchantId);
+
+    /** @param gstNumber the GST/HST registration ({@code 123456789 RT0001}), or null when the business has none */
+    record StatementParty(
+            String legalName, String displayName, @Nullable String gstNumber) {}
+
     /**
      * @param tier {@code registered|trusted|master}
      * @param takeRateBps the business's own rate, or null for the tier's default

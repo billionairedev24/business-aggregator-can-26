@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { FrenchMessages } from '../../lib/validation';
 import type { DepositKind, LineKind, Media, Quote, QuoteBody, QuoteRequest, Warranty } from './api';
 
 /** validation-rules.md § Quote — exact messages, shared with the server (QuoteContent.java). */
@@ -11,6 +12,21 @@ export const QUOTE_MESSAGES = {
   qty: 'Quantity must be more than 0.',
   discount: "Discounts can't be more than the other lines.",
 } as const;
+
+/** Extra-work approval (JobPanel): BookingApprovals.java's messages. */
+export const APPROVAL_MESSAGES = { description: 'Describe the extra parts or work.', amount: 'Enter an amount.', tooLong: 'At most 160 characters.' } as const;
+
+/** fr-CA of the quote and approval messages — the api's French (docs/spec/validation-messages.fr-CA.tsv). */
+export const QUOTE_MESSAGES_FR: FrenchMessages = {
+  [QUOTE_MESSAGES.description]: 'Décrivez cette ligne — les clients doivent voir ce qu’ils paient.',
+  [QUOTE_MESSAGES.amount]: 'Entrez un montant.',
+  [QUOTE_MESSAGES.scope]: 'Décrivez la portée des travaux.',
+  [QUOTE_MESSAGES.lines]: 'Ajoutez au moins une ligne.',
+  [QUOTE_MESSAGES.tooLong]: 'Au plus 160 caractères.',
+  [QUOTE_MESSAGES.qty]: 'La quantité doit être supérieure à 0.',
+  [QUOTE_MESSAGES.discount]: 'Les rabais ne peuvent pas dépasser les autres lignes.',
+  [APPROVAL_MESSAGES.description]: 'Décrivez les pièces ou les travaux supplémentaires.',
+};
 
 export const GST_BPS = 500;
 export const VALID_HOURS = [24, 72, 168, 336] as const;

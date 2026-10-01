@@ -9,7 +9,7 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * Outbound port: the kitchen's tickets ({@code food.kitchen_tickets}) over the food orders that have lines of this
- * kitchen ({@code orders.*}, read-only) and their courier legs ({@code fulfilment.*}, read-only).
+ * kitchen (the orders module's {@code KitchenOrderFeed}) and their courier legs (fulfilment's {@code CourierPickups}).
  */
 public interface KitchenTicketStore {
 

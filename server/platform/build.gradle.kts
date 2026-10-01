@@ -28,6 +28,11 @@ dependencies {
     testImplementation(libs.otel.proto)
 }
 
+// S-40: the fr-CA wording of the API's validation messages (MessageCatalogue), shared by the api and northline-auth.
+tasks.processResources {
+    from(rootProject.file("../docs/spec/validation-messages.fr-CA.tsv")) { into("i18n") }
+}
+
 tasks.named("bootJar") { enabled = false }
 tasks.named("bootRun") { enabled = false }
 tasks.named<Jar>("jar") { archiveClassifier.set("") }

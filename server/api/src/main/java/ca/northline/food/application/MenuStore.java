@@ -4,6 +4,7 @@ import ca.northline.food.application.MenuViews.MenuSchedule;
 import ca.northline.food.domain.ItemStatus;
 import ca.northline.food.domain.ItemWindow;
 import ca.northline.food.domain.MenuStatus;
+import ca.northline.food.domain.PriceCheck;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -86,5 +87,13 @@ public interface MenuStore {
             int sort,
             List<String> modifierGroupIds,
             @Nullable Instant publishedAt,
-            @Nullable Instant updatedAt) {}
+            @Nullable Instant updatedAt,
+            @Nullable Long priceMedianCents,
+            @Nullable Long priceConfirmedCents) {
+
+        /** S-67: the price against comparable dishes. */
+        public PriceCheck priceCheck() {
+            return new PriceCheck(priceCents, priceMedianCents, priceConfirmedCents);
+        }
+    }
 }

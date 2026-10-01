@@ -18,6 +18,7 @@ import ca.northline.food.application.MenuViews.MenuSchedule;
 import ca.northline.food.application.MenuViews.MenuSummary;
 import ca.northline.food.application.MenuViews.ModifierRef;
 import ca.northline.food.application.MenuViews.Photo;
+import ca.northline.food.application.MenuViews.PriceFlag;
 import ca.northline.food.application.MenuViews.SectionDetail;
 import ca.northline.food.application.MenuViews.SectionRef;
 import ca.northline.food.domain.ItemStatus;
@@ -72,6 +73,7 @@ class MenuBuilderService
     private final ApplicationEventPublisher events;
     private final Clock clock;
     private final MerchantPlaces places;
+    private final PriceBenchmarks prices;
 
     // ── menus ─────────────────────────────────────────────────────────────────
 
@@ -271,6 +273,17 @@ class MenuBuilderService
 
     @Override
     @Transactional
+    public ItemView confirmPrice(String merchantId, String itemId) {
+        var before = requireItem(merchantId, itemId);
+        var approved = merchant.approved(merchantId);
+        var confirmed = before.withPriceConfirmedCents(before.priceCents());
+        var row = confirmed.withVetting(visibility(confirmed, approved).vetting());
+        menus.updateItem(row);
+        return afterWrite(row, visible(before, approved));
+    }
+
+    @Override
+    @Transactional
     public void delete(String merchantId, String itemId) {
         var before = requireItem(merchantId, itemId);
         var wasVisible = visible(before, merchant.approved(merchantId));
@@ -330,12 +343,16 @@ class MenuBuilderService
     public void reaudit(String merchantId) {
         var approved = merchant.approved(merchantId);
         var today = today(merchantId);
+        var median = prices.median(merchantId); // S-67: re-checked against today's comparable dishes
         for (var item : menus.publishedItems(merchantId)) {
-            var vetting = visibility(item, approved).vetting();
-            if (!vetting.equals(item.vetting())) {
-                var row = item.withVetting(vetting);
+            var checked = item.withPriceMedianCents(median);
+            var vetting = visibility(checked, approved).vetting();
+            if (!vetting.equals(item.vetting()) || !Objects.equals(median, item.priceMedianCents())) {
+                var row = checked.withVetting(vetting);
                 menus.updateItem(row);
-                publishAvailability(row, approved, today);
+                if (!vetting.equals(item.vetting())) {
+                    publishAvailability(row, approved, today);
+                }
             }
         }
     }
@@ -423,6 +440,12 @@ class MenuBuilderService
                                         : clock.instant())
                                 : null)
                 .updatedAt(clock.instant())
+                // S-67: a published dish is checked against comparable dishes; a confirmed price stays confirmed
+                .priceMedianCents(
+                        status == ItemStatus.PUBLISHED
+                                ? prices.median(merchantId)
+                                : before == null ? null : before.priceMedianCents())
+                .priceConfirmedCents(before == null ? null : before.priceConfirmedCents())
                 .build();
         return draft.withVetting(
                 visibility(draft, merchant.approved(merchantId)).vetting());
@@ -473,7 +496,12 @@ class MenuBuilderService
     }
 
     private static ItemVisibility visibility(ItemRow row, boolean approved) {
-        return ItemVisibility.of(row.status(), row.allergens() != null, row.photoKey() != null, approved);
+        return ItemVisibility.of(
+                row.status(),
+                row.allergens() != null,
+                row.photoKey() != null,
+                row.priceCheck().flagged(),
+                approved);
     }
 
     private static boolean soldOut(ItemRow row, LocalDate today) {
@@ -504,7 +532,16 @@ class MenuBuilderService
                 i.status(),
                 visibility(i, approved),
                 i.photoKey() != null,
-                i.updatedAt());
+                i.updatedAt(),
+                priceFlag(i));
+    }
+
+    private static @Nullable PriceFlag priceFlag(ItemRow i) {
+        var check = i.priceCheck();
+        var median = i.priceMedianCents();
+        return median == null || !check.outlier()
+                ? null
+                : new PriceFlag(median, check.deviationPct(), !check.flagged());
     }
 
     private Map<String, String> groupNames(String merchantId) {
