@@ -37,6 +37,12 @@ export const useFinanceT = defineMessages({
     reconcileTax: 'Reconcile Stripe Tax', taxReport: '{checked} checked · {mismatched} differ · {pending} still pending',
     exportAccounting: 'Export to accounting',
     loadError: "Finance couldn't load. Try again.",
+    refundsTitle: 'Refund requests from support',
+    refundsSub: 'An agent asks; someone other than that agent approves. Approving refunds the case’s refund cases that wait for an agent.',
+    rr_line: '{code} · {requester} · {amount}', rr_asked: 'Asked by {who} · {age} ago',
+    rr_own: 'You asked for this one; someone else decides.',
+    rr_none: 'No refund request is waiting.', rr_error: "Refund requests couldn't load. Try again.",
+    decisionNote: 'Note (optional)', approve: 'Approve', decline: 'Decline', staff: 'Northline staff',
   },
   fr: {
     kicker: 'Finances',
@@ -73,6 +79,12 @@ export const useFinanceT = defineMessages({
     reconcileTax: 'Rapprocher Stripe Tax', taxReport: '{checked} vérifiées · {mismatched} différentes · {pending} encore en attente',
     exportAccounting: 'Exporter vers la comptabilité',
     loadError: 'Les finances n’ont pas pu être chargées. Réessayez.',
+    refundsTitle: 'Demandes de remboursement du soutien',
+    refundsSub: 'Un agent demande; une autre personne approuve. L’approbation rembourse les dossiers de remboursement du cas qui attendent un agent.',
+    rr_line: '{code} · {requester} · {amount}', rr_asked: 'Demandé par {who} · il y a {age}',
+    rr_own: 'Vous avez fait cette demande; une autre personne décide.',
+    rr_none: 'Aucune demande de remboursement en attente.', rr_error: 'Les demandes de remboursement n’ont pas pu être chargées. Réessayez.',
+    decisionNote: 'Note (facultative)', approve: 'Approuver', decline: 'Refuser', staff: 'Personnel de Northline',
   },
 });
 export type FinanceT = ReturnType<typeof useFinanceT>;

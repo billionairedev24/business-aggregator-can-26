@@ -350,7 +350,11 @@ GET  /api/v1/console/payments/reconciliation/ledger-export?from=&to= text/csv (a
 POST /api/v1/console/payments/reconciliation/run {day}               (finance · payouts) Day
 POST /api/v1/console/payments/reconciliation/{day}/resolve {note}    (finance · payouts) Day   409 not_mismatched
 Day: {day, stripeCents, ledgerCents, varianceCents, feeCents, items, mismatches, status: matched|mismatch|resolved, …}
+GET  /api/v1/console/support/refund-requests                         (screen finance; S-83's) {items: [{request, ticket}]}
+POST /api/v1/console/support/refund-requests/{id}/decision {decision: approve|decline, note?}  (finance · refund; S-83's)
 ```
+
+The screen lists support's pending refund requests under "Refund requests from support" and decides them there.
 
 Rules: DECISIONS "S-85"; operations: runbooks/stripe.md § 10.
 
@@ -367,9 +371,9 @@ Rules: DECISIONS "S-85"; operations: runbooks/stripe.md § 10.
 | vetting | `GET /api/v1/console/vetting`, `POST …/listings/{id}/decision`, `POST …/dishes/{id}/decision` (S-92) | — |
 | trust | `GET /api/v1/console/trust/flags`, `POST …/{id}/decision` (S-133); `GET …/flags/queue`, `POST …/flags/{id}/action`, `GET/PUT …/trust/rules[/{key}]`, `GET …/rules/rating_floor/impact` (S-93) | S-82 enforces the rating floor (hide from search) and warning-then-suspension; instant book off after no-shows and the photo delay have no state to act on |
 | taxonomy | `db/seed/categories.json` (seed only) | categories CRUD with regulators, limits, per-province rules (S-94) |
-| support | `GET /api/v1/console/support/tickets[/{id}]`, `POST …/tickets/{id}/reply\|take\|escalate\|refund-requests`, `GET …/refund-requests`, `POST …/refund-requests/{id}/decision`, `GET/POST/PUT/DELETE …/macros` (S-83) | the finance screen's list of refund requests (S-85 reads `GET …/support/refund-requests`); CSAT collection (no survey sends it yet) |
+| support | `GET /api/v1/console/support/tickets[/{id}]`, `POST …/tickets/{id}/reply\|take\|escalate\|refund-requests`, `GET …/refund-requests`, `POST …/refund-requests/{id}/decision`, `GET/POST/PUT/DELETE …/macros` (S-83) | CSAT collection (no survey sends it yet); the finance screen lists and decides refund requests (S-85) |
 | regions | S-84: stages with a confirmation and the go-live checklist, markets, zones (GeoJSON), courier model | the co-sign of a second admin, dry-run as customer, categories per province, drawing zones on a map |
-| finance | S-21 tax reconciliation; S-85: escrow, payouts in flight, revenue mix, take by tier, Stripe ↔ ledger reconciliation and exports | Plus subscriptions and rewards (not recorded) |
+| finance | S-21 tax reconciliation; S-85: escrow, payouts in flight, revenue mix, take by tier, Stripe ↔ ledger reconciliation and exports, support's refund requests | Plus subscriptions and rewards (not recorded) |
 | reports | — | funnels, cohorts, top categories, supply gaps (S-95) |
 | api | `developer` module (merchants' keys and webhooks) | platform-wide API clients and rate limits (S-96) |
 | team, profile | `developer.api.AuditTrail` (write); auth `GET /api/auth/security` (sessions, passkeys) | roles and people, audit log views ("My audit trail"), sessions (S-96) |

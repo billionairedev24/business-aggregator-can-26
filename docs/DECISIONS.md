@@ -5745,6 +5745,15 @@ server environment variable. Runbook: [runbooks/courier-app.md](runbooks/courier
   share of the week's money held; tax of the current quarter (platform-zone) from S-21's read model — GST/HST on
   Northline's fees and what Northline remits as marketplace facilitator — with the GST/HST return due the last day of
   the month after the quarter.
+- **Support's refund requests (coordinator: S-85 owns the finance list).** The screen lists S-83's pending requests
+  (`GET /api/v1/console/support/refund-requests`, already there, `finance` screen) under "Refund requests from support":
+  case code, requester, amount, subject, who asked and when, the agent's note. Approve / decline with an optional note
+  uses S-83's `POST …/refund-requests/{id}/decision` (`refund`: admin, finance); one's own request shows "You asked for
+  this one; someone else decides." (the api refuses it, 409 `request_self`). No new endpoint, role or audit code —
+  S-83's `support.refund_approved | refund_declined` apply. The heading, the note and the empty text are ours (design
+  03 has no such list). The province / market filter the endpoint takes is not offered (the finance screen has none).
+- **Nightly run:** `PAYMENTS_RECONCILE_CRON` (`northline.payments.reconcile-cron`, default `0 41 4 * * *`, platform
+  zone; prod runbook variables table, `.env.example`).
 - **Not done / never run:** Plus subscriptions and provider-funded rewards are not recorded anywhere (shown "—").
   The real balance-transaction call has never run against Stripe (stripe-mock only). Exports are CSV only (the Data
   Table still offers its own CSV/XLSX/PDF of what is on screen).

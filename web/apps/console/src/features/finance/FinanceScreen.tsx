@@ -5,6 +5,7 @@ import { ApiError, ValidationError } from '../../lib/http';
 import { useGrant } from '../shell/grant';
 import { dayQuery, daysQuery, exportUrl, financeQuery, ledgerExportUrl, useReconcileTax, useResolveDay, useRunDay, type Day, type Finance, type Item } from './api';
 import { useFinanceT, type FinanceKey } from './messages';
+import { RefundRequests } from './RefundRequests';
 import './finance.css';
 
 const STATUS_TONE: Record<Day['status'], DataTableTone> = { matched: 'tag-accent', mismatch: 'tag-accent-2', resolved: 'tag-neutral' };
@@ -17,7 +18,8 @@ const dayLabel = (day: string, locale: Locale) => new Intl.DateTimeFormat(locale
 /**
  * Finance (S-85, design 03 `finance`): escrow held, payouts in flight, the week's net revenue and its mix, take rate by
  * tier, the daily Stripe ↔ ledger reconciliation with drill-down, resolution and export, and the quarter's tax with S-21's
- * Stripe Tax reconciliation. Admin and finance; changes need `payouts`.
+ * Stripe Tax reconciliation, and support's refund requests waiting for finance. Admin and finance; changes need
+ * `payouts`, refund decisions `refund`.
  */
 export function FinanceScreen() {
   const t = useFinanceT();
@@ -72,6 +74,9 @@ function FinanceView({ data, days }: { data: Finance; days: Day[] }) {
           <TaxBlock data={data} />
         </div>
       </div>
+      <h2 className="nl-fi-h2 nl-fi-gap">{t('refundsTitle')}</h2>
+      <p className="nl-fi-sub">{t('refundsSub')}</p>
+      <RefundRequests />
     </div>
   );
 }

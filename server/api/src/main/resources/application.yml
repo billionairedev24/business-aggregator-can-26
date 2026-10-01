@@ -172,6 +172,7 @@ northline:
     stripe-connect-webhook-secret: ${STRIPE_CONNECT_WEBHOOK_SECRET:}  # whsec_… of …/webhooks/stripe/connect
     stripe-webhook-tolerance: ${STRIPE_WEBHOOK_TOLERANCE:PT5M} # oldest signed delivery accepted (replay protection)
     webhook-rate-limit: ${STRIPE_WEBHOOK_RATE_LIMIT:600}       # deliveries per minute and client address
+    reconcile-cron: ${PAYMENTS_RECONCILE_CRON:0 41 4 * * *}   # S-85 Stripe ↔ ledger, yesterday, platform zone
   stripe:                                                      # Stripe Connect (merchants) outside local/test
     secret-key: ${STRIPE_SECRET_KEY:}
     api-base: ${STRIPE_API_BASE:}

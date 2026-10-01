@@ -1,6 +1,7 @@
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { http } from '../../lib/http';
+import { RefundRequest, Ticket } from '../support/api';
 
 /** `GET /api/v1/console/finance` (S-85; api `ViewFinance.Finance`). Money in cents. */
 export const Finance = z.object({
@@ -26,6 +27,15 @@ export const Item = z.object({
 export type Item = z.infer<typeof Item>;
 
 const RECON = '/api/v1/console/payments/reconciliation';
+
+/** A support refund request waiting for finance (S-83's `GET /api/v1/console/support/refund-requests`, api `PendingRefund`). */
+export const PendingRefund = z.object({ request: RefundRequest, ticket: Ticket });
+export type PendingRefund = z.infer<typeof PendingRefund>;
+/** Under the support desk's key, so its decide mutation refreshes this list too. */
+export const refundRequestsQuery = queryOptions({
+  queryKey: ['console', 'support', 'refund-requests'],
+  queryFn: () => http('/api/v1/console/support/refund-requests', {}, z.object({ items: z.array(PendingRefund) })).then(r => r.items),
+});
 
 export const financeQuery = queryOptions({ queryKey: ['console', 'finance'], queryFn: () => http('/api/v1/console/finance', {}, Finance) });
 export const daysQuery = queryOptions({
