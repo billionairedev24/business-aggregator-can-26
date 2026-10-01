@@ -74,11 +74,11 @@ class DispatchHandover {
                 log.warn("Order {}: run window {} not found; not dispatched", e.aggregateId(), e.windowId());
                 return null;
             }
-            market = run.market();
+            // a window without a market (the dev seed's R-611/R-612) serves every market: the order's city decides
+            market = run.market().isBlank() ? marketOf(f) : run.market();
             window = new Window(run.windowId(), run.label(), run.startsAt(), run.endsAt(), run.orderBy(), run.packBy());
         } else {
-            var area = Objects.requireNonNullElse(f.deliveryArea(), "");
-            market = runs.market(area).orElse(area);
+            market = marketOf(f);
         }
         var address = f.customerId() == null || f.addressId() == null
                 ? null
@@ -98,6 +98,11 @@ class DispatchHandover {
                 dropoff,
                 f.customerId(),
                 null);
+    }
+
+    private String marketOf(DispatchFacts.Facts f) {
+        var area = Objects.requireNonNullElse(f.deliveryArea(), "");
+        return runs.market(area).orElse(area);
     }
 
     private DeliveryRequests.@Nullable Request food(OrderPlaced e, DispatchFacts.Facts f) {

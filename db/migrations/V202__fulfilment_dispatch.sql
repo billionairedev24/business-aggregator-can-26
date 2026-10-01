@@ -45,7 +45,9 @@ ALTER TABLE fulfilment.couriers
   ADD COLUMN active boolean NOT NULL DEFAULT true,
   ADD COLUMN last_assigned_at timestamptz,
   ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
-CREATE UNIQUE INDEX ux_couriers_user ON fulfilment.couriers (user_id);
+-- one courier record per person among those ops onboards (market set); V108's dev seed has two rows for one person
+-- without a market, which this leaves alone
+CREATE UNIQUE INDEX ux_couriers_user ON fulfilment.couriers (user_id) WHERE market IS NOT NULL;
 CREATE INDEX ix_couriers_market_status ON fulfilment.couriers (market, status) WHERE active;
 
 -- Shifts: scheduled by ops, started and ended by the courier.

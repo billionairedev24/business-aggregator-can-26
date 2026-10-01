@@ -25,7 +25,9 @@ class CourierStoreJdbc implements CourierStore {
 
     @Override
     public Optional<Courier> byUser(String userId) {
-        return jdbc.sql("select " + COURIER + " from fulfilment.couriers where user_id = :u")
+        return jdbc.sql(
+                        "select " + COURIER
+                                + " from fulfilment.couriers where user_id = :u order by active desc, market nulls last, id limit 1")
                 .param("u", userId)
                 .query(CourierStoreJdbc::courier)
                 .optional();
@@ -44,7 +46,7 @@ class CourierStoreJdbc implements CourierStore {
         return jdbc.sql("""
                         insert into fulfilment.couriers (id, user_id, market, vehicle, status, active)
                         values (:id, :user, :market, :vehicle, :status, :active)
-                        on conflict (user_id) do nothing""")
+                        on conflict (user_id) where market is not null do nothing""")
                         .param("id", c.id())
                         .param("user", c.userId())
                         .param("market", c.market())
