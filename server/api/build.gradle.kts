@@ -23,6 +23,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-kafka")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-opentelemetry")
+    implementation(libs.datasource.micrometer) // S-111: a span per SQL statement (no parameter values)
     implementation("org.springframework.modulith:spring-modulith-starter-core")
     implementation("org.springframework.modulith:spring-modulith-starter-jdbc")
     implementation("org.springframework.modulith:spring-modulith-events-kafka")
@@ -66,6 +67,7 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-kafka") // S-26: the real wire format of externalized events
     testImplementation("org.testcontainers:testcontainers-elasticsearch") // S-44: the search API on Elasticsearch 9
     testImplementation(libs.archunit)
+    testImplementation(testFixtures(project(":platform"))) // S-111: OtlpReceiver
     testImplementation(libs.wiremock) // S-23: registry adapters against recorded HTTP stand-ins
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

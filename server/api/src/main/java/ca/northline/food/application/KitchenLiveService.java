@@ -39,6 +39,7 @@ class KitchenLiveService implements KitchenLive {
     private final PersonDirectory people;
     private final ApplicationEventPublisher events;
     private final Clock clock;
+    private final KitchenMetrics metrics;
 
     @Override
     public LiveBoard board(String merchantId) {
@@ -77,6 +78,7 @@ class KitchenLiveService implements KitchenLive {
         var event = ticket.accept(actorId, clock.instant(), policy.promiseFor(load.slowestItemAddMin(), load.cents()));
         tickets.save(ticket);
         events.publishEvent(event);
+        metrics.accepted(ticket);
         return board(merchantId);
     }
 
@@ -87,6 +89,7 @@ class KitchenLiveService implements KitchenLive {
         var event = ticket.ready(actorId, clock.instant());
         tickets.save(ticket);
         events.publishEvent(event);
+        metrics.ready(ticket);
         return board(merchantId);
     }
 
@@ -97,6 +100,7 @@ class KitchenLiveService implements KitchenLive {
         var event = ticket.handOff(actorId, clock.instant());
         tickets.save(ticket);
         events.publishEvent(event);
+        metrics.handedOff(ticket);
         return board(merchantId);
     }
 
