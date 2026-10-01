@@ -67,6 +67,37 @@ public record KitchenCalendar(
         return new State(false, autoPaused() ? null : nextOpening(resume), null, paused && current.isPresent());
     }
 
+    /** Length of a scheduled-order window (design 06: "Pick a 30-min window"). */
+    public static final java.time.Duration WINDOW = java.time.Duration.ofMinutes(30);
+
+    /**
+     * Starts of the 30-minute windows a scheduled order may pick, today and the next {@code days - 1} days: inside the
+     * opening ranges (the whole window), on the half hour, at least {@code lead} from now. Pauses don't matter (they
+     * end long before), but a kitchen without a live menu offers none.
+     */
+    public java.util.List<Instant> slots(Instant now, java.time.Duration lead, int days) {
+        var out = new java.util.ArrayList<Instant>();
+        if (!menuLive) {
+            return out;
+        }
+        var earliest = now.plus(lead);
+        var today = now.atZone(zone).toLocalDate();
+        for (int d = 0; d < days; d++) {
+            var date = today.plusDays(d);
+            for (var range : day(date).ranges()) {
+                var from = range.from().toSecondOfDay() / 60;
+                var to = range.to().toSecondOfDay() / 60;
+                for (var m = (from + 29) / 30 * 30; m + 30 <= to; m += 30) {
+                    var start = date.atTime(m / 60, m % 60).atZone(zone).toInstant();
+                    if (!start.isBefore(earliest)) {
+                        out.add(start);
+                    }
+                }
+            }
+        }
+        return out;
+    }
+
     private boolean autoPaused() {
         return autoPauseLate != null && lateOrders >= autoPauseLate;
     }

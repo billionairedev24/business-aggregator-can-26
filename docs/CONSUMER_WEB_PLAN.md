@@ -102,17 +102,17 @@ A feature folder per story area, named after the design: `home`, `location`, `se
 | route | design 06 state | story | notes |
 |---|---|---|---|
 | `/` | home | S-46 (**built**) | no search in the header on this page; its tiles link to `/shop/<department>` (the leaf slug of the category id, e.g. `bakery`), `/services/<category>` (e.g. `mobile-mechanic`) and `/food?cuisine=<code>` — S-49 / S-53 / S-57 take those parameters |
-| `/location` | location | S-47 | saves with `useDeliveryLocation().save()` |
+| `/location?next=` | location | S-47 (**built**) | saves with `useDeliveryLocation().save()`, then goes to `next` (local path) or home |
 | `/search?q=&scope=` | search | S-48 | header / hero search lands here; `scope` all \| services \| shop \| food |
 | `/shop` | shop | S-49 | landing page, not results |
 | `/shop/$department` | category | S-49 | SSR + SEO |
 | `/products/$productId` | product | S-50 | SSR + SEO |
 | `/cart` | cart | S-51 | cart + checkout; guest banner |
 | `/orders/$orderId` | confirmed | S-52 | confirmed + tracking (SSE) |
-| `/food` | food | S-57 | |
-| `/food/$kitchen` | restaurant | S-57 | SSR + SEO |
-| `/food/checkout` | foodCheckout | S-57 | guest banner |
-| `/food/orders/$orderId` | foodTrack | S-57 | |
+| `/food` | food | S-57 (**built**) | `?cuisine=<code>` preselects a cuisine; loads in the browser once the location is known |
+| `/food/$kitchen` | restaurant | S-57 (**built**) | SSR + SEO; the food order lives in the browser (`nl.foodCart`, one kitchen) |
+| `/food/checkout` | foodCheckout | S-57 (**built**) | guest banner; signed in to pay; S-51's step-up |
+| `/food/orders/$orderId` | foodTrack | S-57 (**built**) | polls every 15 s |
 | `/services` | services | S-53 | landing page |
 | `/services/$category` | svcCategory | S-53 | SSR + SEO |
 | `/services/$category/providers` | providers | S-53 | |
@@ -157,13 +157,25 @@ Storefront pages on `pages.<zone>` and merchants' own domains (by `Host`) are S-
 
 ### Location
 
-`useDeliveryLocation()` (`features/location`) → `{ location: { status, label, city, lat?, lng?, source }, save, forget }`.
-Order: saved (`localStorage['nl.location']`, written by `save({ label, city, lat?, lng?, placeId? })` on the Location
-screen) → the device's geolocation, named by `GET /api/v1/geo/reverse?lat&lng → { label, city }` when the api has it
-(S-47), else the nearest live market (Calgary, Edmonton, Airdrie within 40 km) → the IP city → Calgary. Statuses map to
-the pill's copy: `locating`, `detected` ("Detected · deliver to"), `fallback` / `saved` ("Deliver to"). Screens filter
-by `location.city` (and `lat/lng` when present). Server-side the location is unknown: render location-independent
-content or a skeleton.
+`useDeliveryLocation()` (`features/location`) → `{ location: { status, label, city, lat?, lng?, source, province?, street?,
+unit?, postalCode?, placeId?, marketId?, zoneId?, zone? }, save, forget }`.
+Order: saved (`localStorage['nl.location']`, written by `save({ label, city, lat?, lng?, placeId?, street?, unit?,
+province?, postalCode?, marketId?, zoneId?, zone? })` on the Location screen — S-47 added everything after `placeId`,
+all optional) → the device's geolocation, named by `GET /api/v1/geo/reverse?lat&lng → { label, city, province?,
+market?: {id, city, province, stage}, zone?: {id, name, …} }` (S-47; 404 when nothing is known there; a `market` that is
+null or not live/pilot counts as outside every market, as does no answer) → the IP city → the api's fallback market
+(`GET /api/v1/geo/markets` → `fallback`, from region configuration; none → "Set location"). Statuses map to the pill's copy: `locating`, `detected` ("Detected · deliver to"),
+`fallback` / `saved` ("Deliver to"). Screens filter by `location.city` (and `lat/lng` when present); checkout reads the
+saved address parts (`street`, `unit`, `postalCode`, `province` — the province is the place of supply for tax, S-21).
+Server-side the location is unknown: render location-independent content or a skeleton. `/location?next=/path` comes
+back to `next` after Save (checkout's "Change").
+
+**Geo api (S-47, public under `/api/v1/geo`, the Google key on the server):** `GET /markets` → `{items, fallback}` (provinces,
+served ones first, with stage, `taxBps` and markets with stage and centre; `fallback` = the pill's market when nothing
+is known), `GET /autocomplete?q=&session=&lat=&lng=` (Canada only; ≥ 3 characters; one `session` token per address
+search), `GET /places/{placeId}?session=` (the address + `resolution: { market, zone, waitlist }`), `GET /reverse`,
+`GET /resolve?lat=&lng=`, `POST /waitlist { regionId, email? }` (guests give an email; 201, or 200 when already on it).
+Lookups are limited per browsing session (429 `rate_limited`); Google failures are 503 `places_unavailable`.
 
 ### Account menu
 
@@ -291,8 +303,7 @@ Both endpoints are `GET`, public, JSON, camelCase; money in cents; errors as eve
 | `GET /api/v1/storefronts/{slug}`, `/logo`, `GET /api/v1/public/storefronts/by-host?host=` | exists, public | S-54, S-63 |
 | `GET /api/v1/onboarding/taxonomy` | exists (signed in) | S-61 |
 | northline-auth JSON API (`/api/auth/register…`, `/api/auth/sign-in…`, `/api/auth/sign-out`) + S-62's `/api/auth/sign-in/code[/verify]`, `/api/auth/register/complete` | exists | S-62 (built) |
-| `GET /api/v1/geo/reverse` | **missing** (the path is already public in the api) | S-47 (header falls back without it) |
-| markets / zones for an address (`/api/v1/geo/…`) | missing | S-47 |
+| `GET /api/v1/geo/reverse`, `/markets`, `/autocomplete`, `/places/{id}`, `/resolve`, `POST /waitlist` | **exists** (S-47) | pill, Location screen, checkout |
 | `GET /api/v1/public/home?city=` → section counts, businesses per category id, open kitchens per cuisine, trusted providers | **exists** (S-46, module `discovery`) | home |
 | `GET /api/v1/search`, `GET /api/v1/search/suggest` | **exists** (S-44; contract above, § Search) | S-48, home |
 | Shop landing + departments: `GET /api/v1/public/shop?market=&lang=`, `GET /api/v1/public/shop/departments/{slug}?market=&lang=` | **exists** (S-49) | S-49 (S-46 may reuse the landing's departments) |
@@ -300,7 +311,7 @@ Both endpoints are `GET`, public, JSON, camelCase; money in cents; errors as eve
 | product detail + offers: `GET /api/v1/public/shop/products/{id}?market=&lang=` | **exists** (S-50) | S-50 |
 | cart: `GET /api/v1/cart`, `POST /api/v1/cart/items`, `PATCH`/`DELETE /api/v1/cart/items/{id}` (guest-keyed by `X-Northline-Guest`); checkout: `GET /api/v1/me/checkout?market=`, `POST /api/v1/me/checkout/quote`, `POST /api/v1/me/checkouts` (Idempotency-Key, X-Step-Up), `POST /api/v1/me/checkouts/{id}/place` (Idempotency-Key) | **exists** (S-51) | S-51 (S-57 food checkout may reuse the step-up and payment parts) |
 | consumer order + tracking: `GET /api/v1/me/orders/{id}`, `GET /api/v1/me/orders/{id}/events` (SSE, event `order`) | **exists** (S-52); the orders list is missing | S-52, S-58 (list), S-57 (food tracking may reuse the stream) |
-| public menus / kitchens, food checkout | missing | S-57 |
+| food: `GET /api/v1/public/kitchens?city=&lat=&lng=`, `GET /api/v1/public/kitchens/{slug}`; `POST /api/v1/me/food-orders/quote`, `POST /api/v1/me/food-orders` (Idempotency-Key, X-Step-Up), `POST /api/v1/me/food-orders/{id}/confirm` (Idempotency-Key), `GET /api/v1/me/food-orders/{id}` | **exists** (S-57) | food landing, restaurant, food checkout, tracking |
 | providers by category, availability slots, booking create, quote request / accept (consumer side) | missing (merchant side exists) | S-53, S-55, S-56 |
 | `GET /api/v1/me/account-summary`, wallet, addresses, payment methods, notifications, favourites | missing | S-45 menu values, S-58, S-59 |
 | refunds / "something's wrong" (consumer side) | missing (merchant side exists) | S-60 |

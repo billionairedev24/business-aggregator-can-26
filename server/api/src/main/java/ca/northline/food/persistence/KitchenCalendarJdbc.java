@@ -51,7 +51,13 @@ class KitchenCalendarJdbc implements KitchenCalendarStore {
                                          join food.menu_sections sec on sec.menu_id = m.id
                                          join food.menu_items i on i.section_id = sec.id
                                         where m.merchant_id = s.merchant_id and m.status = 'live'
-                                          and i.status = 'published' and i.vetting = 'approved') as menu_live
+                                          and i.status = 'published' and i.vetting = 'approved') as menu_live,
+                               s.radius_km, s.scheduled_days,
+                               coalesce((select avg(i.price_cents)::bigint from food.menus m
+                                          join food.menu_sections sec on sec.menu_id = m.id
+                                          join food.menu_items i on i.section_id = sec.id
+                                         where m.merchant_id = s.merchant_id and m.status = 'live'
+                                           and i.status = 'published' and i.vetting = 'approved'), 0) as avg_item
                           from food.kitchen_settings s
                          where s.merchant_id in (:ids)
                         """)
@@ -69,7 +75,10 @@ class KitchenCalendarJdbc implements KitchenCalendarStore {
                             week.getOrDefault(id, Map.of()),
                             holidays.getOrDefault(id, Map.of()),
                             rs.getInt("late"),
-                            rs.getBoolean("menu_live"));
+                            rs.getBoolean("menu_live"),
+                            rs.getObject("radius_km") == null ? null : rs.getDouble("radius_km"),
+                            rs.getLong("avg_item"),
+                            rs.getInt("scheduled_days"));
                 })
                 .list();
     }

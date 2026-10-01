@@ -20,12 +20,17 @@ public interface PublicDirectory {
     /** An active business by its storefront slug. */
     Optional<PublicBusiness> bySlug(String slug);
 
+    /** An active business by id. */
+    Optional<PublicBusiness> byId(String merchantId);
+
     /**
      * @param slug the storefront's slug ({@code /providers/<slug>}, {@code /food/<slug>}), or null without a storefront
      * @param categoryIds approved categories, the one chosen first leading
      * @param cuisines a kitchen's cuisine codes ({@code vietnamese}, {@code pizza} … as onboarding offers them)
      * @param dietary a kitchen's dietary guarantees from onboarding ({@code halal}, {@code vegan} …)
      * @param address the kitchen's / pickup address the business gave at onboarding, or null
+     * @param lat where the business is ({@code merchants.locations}, S-43), or null when not located yet
+     * @param serviceRadiusKm how far it travels or delivers, or null (a kitchen then uses its own delivery radius)
      */
     record PublicBusiness(
             String merchantId,
@@ -39,7 +44,10 @@ public interface PublicDirectory {
             List<String> categoryIds,
             List<String> cuisines,
             List<String> dietary,
-            @Nullable String address) {
+            @Nullable String address,
+            @Nullable Double lat,
+            @Nullable Double lng,
+            @Nullable Double serviceRadiusKm) {
 
         public PublicBusiness {
             categoryIds = List.copyOf(categoryIds);
