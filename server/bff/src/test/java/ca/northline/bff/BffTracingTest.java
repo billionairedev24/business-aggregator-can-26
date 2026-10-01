@@ -52,7 +52,6 @@ class BffTracingTest {
     @AfterAll
     static void stop() {
         API.stop();
-        OTLP.close();
     }
 
     @Autowired

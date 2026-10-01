@@ -42,9 +42,10 @@ describe('http', () => {
     await http('/api/v1/categories');
     await http('https://auth.example/api/auth/session');
     const sent = fetch.mock.calls.map(c => ((c as unknown[])[1] as RequestInit).headers as Record<string, string>);
-    expect(sent[0].traceparent).toMatch(/^00-[0-9a-f]{32}-[0-9a-f]{16}-01$/);
-    expect(sent[1].traceparent).not.toBe(sent[0].traceparent);
-    expect(sent[2].traceparent).toBeUndefined();
+    const [first, second, other] = sent.map(h => h?.traceparent);
+    expect(first).toMatch(/^00-[0-9a-f]{32}-[0-9a-f]{16}-01$/);
+    expect(second).not.toBe(first);
+    expect(other).toBeUndefined();
   });
 
   it('makes a trace id that is never all zeros and a fresh one each time', () => {

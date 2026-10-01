@@ -100,7 +100,8 @@ class TracingTest extends IntegrationTest {
         var metrics = OTLP.awaitMetrics(
                 m -> m.service().equals("northline-api") && m.name().equals("http.server.requests"),
                 Duration.ofSeconds(20));
-        assertThat(metrics.getFirst().unit()).isEqualTo("s");
+        assertThat(metrics.getFirst().unit())
+                .isEqualTo("seconds"); // base-time-unit: seconds → *_seconds_* in Prometheus
     }
 
     @Test

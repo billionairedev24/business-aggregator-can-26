@@ -2782,3 +2782,63 @@ Stacked on S-46 (#66, kitchen availability, `PublicDirectory`), S-47 (#67, locat
 - **Request records:** a component that Bean Validation requires (`@NotNull`) is now non-null for NullAway and has no `@Nullable` next to it (`PayoutRequests`, `CaseRequests.GoodwillOffer`). The 422 messages and their tests are unchanged, because a missing field still binds to `null` and `@Valid` rejects it before the handler runs. The convention is in BACKEND_CONVENTIONS § 5.
 - **Nested types with the same name** (`Command`, `Outcome`) are qualified where they are used, not renamed. Durations are now `ofDays(2)` / `ofDays(3)`; a `Duration` day is exactly 24 h, so behaviour is unchanged. Weekly earnings buckets use an `EnumMap` instead of `ordinal()`. The SMS `azure` provider returns its "not implemented" exception from the switch instead of a public method that always throws.
 - **Proposal, not enabled:** once the in-flight feature branches have merged, make Error Prone warnings errors: add `-Werror` to the `JavaCompile` compiler args in `server/build.gradle.kts`, keeping `disableWarningsInGeneratedCode` and the excluded generated paths. javac then fails on any warning, Error Prone's included; the javac varargs warnings are fixed here too. Then a new warning fails `./gradlew build` instead of piling up. It is not switched on in this change because open branches would stop compiling. Until then: keep the count at 0 (BACKEND_CONVENTIONS § 10).
+
+## 2026-10-01 — S-111 OpenTelemetry tracing and metrics across api, auth, bff, worker
+
+- **One stack, every app.** `spring-boot-starter-opentelemetry` (Micrometer Observation → OpenTelemetry SDK, OTLP/HTTP)
+  in api, auth, bff (both BFFs) and worker; the worker keeps its Prometheus endpoint (S-26), the api its own. Shared
+  wiring lives in `server/platform` (`ca.northline.platform.observability`): an `EnvironmentPostProcessor` adds
+  `classpath:northline/observability-defaults.yml` with the **lowest** precedence (export behind
+  `OTEL_EXPORT_ENABLED`, W3C only, Kafka template + listener observations, histograms, `service.namespace=northline`,
+  `base-time-unit: seconds`, Spring Security's filter-chain spans off, JDBC settings), a `Sampler`, a
+  `ContextPropagatingTaskDecorator` and an `ObservationPredicate` that skips `/actuator/**`. Defaults in a library
+  instead of four `application.yml` edits keep the apps uniform and the change additive; any app file or variable
+  still wins. The api's `application-cloud.yml` export switches moved there.
+- **Vendor-neutral by construction:** the apps speak only OTLP to `OTEL_EXPORTER_OTLP_ENDPOINT` (Spring Boot 4.1 maps
+  the standard `OTEL_*` variables). An **OpenTelemetry Collector in the Helm chart** (`templates/otel-collector.yaml`,
+  contrib image pinned by digest) is the only component that knows the backend; exporters and pipelines are values
+  (`observability.collector.exporters/pipelines`), set per cloud overlay: AWS X-Ray + CloudWatch EMF + CloudWatch Logs,
+  Google Cloud Trace + Managed Prometheus + Cloud Logging, Azure Monitor; any OTLP backend via
+  `test-values/observability-otlp.yaml` (Grafana Cloud shown). In the chart rather than an Argo CD add-on: it belongs
+  to the environment's release (its ServiceAccount, NetworkPolicy, ExternalSecret), it is namespaced, and the
+  AppProject already allows every kind it needs. The ADOT image works as a drop-in (`observability.collector.image`).
+- **Sampling = `ConsistentSampling`:** trace-id ratio for spans with a remote parent too (parent-based only for local
+  parents), so a browser's `-01` can't force sampling at the public edge, and BFF/api/worker reach the same decision
+  for the same trace. One ratio for all apps (`observability.tracesSampleRatio` → `OTEL_TRACES_SAMPLER_ARG`): dev 1.0,
+  staging 0.5, prod 0.1. Ratio 1.0 maps to always-on (OpenTelemetry's ratio sampler drops ids at exactly
+  `Long.MAX_VALUE`). No tail sampling by default; documented as an extra processor.
+- **Browser → BFF:** `@northline/client`'s `http()` sends a fresh `traceparent` on same-origin calls only (another
+  origin's CORS may refuse the header). The browser exports **no** spans: that would need a public OTLP ingestion
+  endpoint (abuse, cost) and the OpenTelemetry web SDK in both apps; the BFF's server span is the first stored one.
+  Envoy Gateway tracing (an EnvoyProxy `telemetry.tracing` to the Collector) can add the edge hop later.
+- **DB spans:** `net.ttddyy.observation:datasource-micrometer-spring-boot` 2.3.0 (built for Boot 4.1.1) in api, auth,
+  worker; `jdbc.includes: [query]` (no connection/fetch spans), parameter values never recorded; the Collector deletes
+  `jdbc.params*` anyway. **Kafka:** template and listener observations carry `traceparent` next to S-26's `nl-event-*`
+  headers (auth's `user.registered` now gets one too).
+- **Business metrics** (no ids in labels; counted after commit): `northline.auth.sign_ins{method,mfa,outcome}` and
+  `northline.auth.lockouts{action}` in `JdbcSignInLog`; `northline.checkouts{ref_type,status}` when a checkout opens its
+  escrow PaymentIntent (`CheckoutPaymentService` — the one call every checkout makes); `northline.payouts{outcome,kind}`
+  and `northline.payouts.amount` (CAD dollars) from `PayoutSent`/`PayoutFailed` via a plain `@EventListener` (no
+  outbox row per event); KDS latency from the ticket's own timestamps (`KitchenMetrics`, called by
+  `KitchenLiveService`): promised minutes, accepted → ready (`late`), ready → handed off (`mode`). Consumer lag and DLQ
+  counts were already there (Kafka client metrics, S-26's counters). Not measured: order placed → accepted (the
+  ticket has no placed time; the live board's row does).
+- **Dashboards as code:** a Python generator (`deploy/observability/grafana/dashboards.py`, `--check` for drift) writes
+  10 Grafana JSON dashboards (overview, one per service incl. consumer-bff, sign-in, checkout and payouts, kitchens,
+  events), PromQL on a `datasource` variable, viewer's time zone. **Alerts:** Prometheus rules with `promtool` unit
+  tests (`deploy/observability/prometheus`), run through Docker by `scripts/observability.sh check`.
+- **Local:** compose profile `observability` = the same Collector processors (`collector-local.yaml`) in front of
+  `grafana/otel-lgtm:0.34.0`, Grafana on **3300** (3000 is the consumer app). `make up OBS=1` starts it and exports the
+  `OTEL_*` variables to every app; `make obs-*` targets wrap `scripts/observability.sh` (callable without make).
+- **Terraform:** workload identity `otel-collector` in the three stacks; AWS role gets `AWSXrayWriteOnlyAccess` +
+  `CloudWatchAgentServerPolicy`; GCP gets `cloudtrace.agent`, `monitoring.metricWriter`, `logging.logWriter` and the
+  three APIs; secrets `otel-backend-auth` (all clouds) and `applicationinsights-connection-string` (Azure) created empty.
+- **Tests:** `OtlpReceiver` (platform test fixture, `java-test-fixtures`) decodes OTLP/protobuf
+  (`io.opentelemetry.proto:opentelemetry-proto` 1.10.0-alpha, tests only). api `TracingTest` (caller's trace → SQL
+  spans without values → Kafka `traceparent` + PRODUCER span; metrics exported; probes untraced), bff `BffTracingTest`
+  (browser → SERVER → CLIENT → the api receives the same trace), worker `WorkerTracingTest` (the Kafka hop: CONSUMER
+  span continues the producer's), auth `AuthTelemetryTest`, unit tests for sampling, defaults, payment and kitchen
+  metrics, client `traceparent`.
+- **Never run against the real services:** no backend account exists. The exporters' configurations pass
+  `otelcol-contrib validate` (0.161.0) for AWS, Google Cloud and Azure, but no span has reached X-Ray, Cloud Trace,
+  Application Insights or Grafana Cloud. The Terraform additions are `fmt`-checked, not applied.
