@@ -61,7 +61,7 @@ without one answers 404 "no endpoints", which the app shows as 503), then run th
 | `OPENROUTER_DATA_COLLECTION`, `OPENROUTER_ZDR` | `deny`, `true` | keep |
 | `OPENROUTER_CONNECT_TIMEOUT`, `OPENROUTER_READ_TIMEOUT` | `5s`, `60s` | read = until the first byte (streams keep going) |
 | `AI_MAX_TOOL_ROUNDS` | `4` | assistant tool rounds per question; the last round must answer |
-| `AI_BUDGET_PERSON_TOKENS_PER_DAY` | `200000` | per person per America/Edmonton day |
+| `AI_BUDGET_PERSON_TOKENS_PER_DAY` | `200000` | per person per day (UTC days: a cost window, no market time zone) |
 | `AI_BUDGET_MERCHANT_TOKENS_PER_DAY` | `1000000` | per business (its whole team) per day |
 | `AI_REQUESTS_PER_MINUTE` | `20` | AI requests (questions, drafts) one person may start per minute |
 | `AI_FAKE_LATENCY_MS`, `AI_FAKE_USD_PER_MTOK` | `0` | fake only: make local dashboards look like a real model |

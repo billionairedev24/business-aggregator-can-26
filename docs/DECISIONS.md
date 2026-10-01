@@ -3255,8 +3255,8 @@ conventions, under the conditions of "AI provider and data residency" above.
   streamed) and counters `northline.ai.tokens`, `northline.ai.cost` (USD) and the per-call summary
   `northline.ai.call.cost`. The feature reaches the port through a `ScopedValue`, not a parameter. samop used a
   BeanPostProcessor; a plain wrapper in the configuration is enough here since there is one bean.
-- **Budgets:** per person requests/minute (20) and tokens/day (200k), per business tokens/day (1M), America/Edmonton
-  days. Valkey keys `nl:ai:{p:<user>}:rpm:<minute>`, `…:tok:<day>`, `nl:ai:{m:<merchant>}:tok:<day>`; memory under
+- **Budgets:** per person requests/minute (20) and tokens/day (200k), per business tokens/day (1M), UTC
+  days (a cost window needs no market time zone; region-neutral). Valkey keys `nl:ai:{p:<user>}:rpm:<minute>`, `…:tok:<day>`, `nl:ai:{m:<merchant>}:tok:<day>`; memory under
   local/test (like the DPoP replay cache). Checked before a request, charged after; Valkey down = 503 (fail closed: AI
   costs money). Over budget = 429 `ai_rate_limited` with `Retry-After` and `limit`. A person is a user id; a signed-out
   visitor (S-132) will be a hashed key.

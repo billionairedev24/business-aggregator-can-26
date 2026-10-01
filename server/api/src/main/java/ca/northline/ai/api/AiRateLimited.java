@@ -12,7 +12,7 @@ public final class AiRateLimited extends RuntimeException {
 
     public static final String CODE = "ai_rate_limited";
 
-    /** Which limit: {@code person_rate}, {@code person_tokens}, {@code merchant_tokens} or {@code provider}. */
+    // Which limit: person_rate, person_tokens, merchant_tokens or provider.
     private final String limit;
 
     private final Duration retryAfter;

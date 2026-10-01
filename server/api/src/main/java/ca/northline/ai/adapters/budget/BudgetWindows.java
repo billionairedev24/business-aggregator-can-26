@@ -5,12 +5,16 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 
-/** Day and minute windows shared by both budget stores: days are America/Edmonton days. */
+/**
+ * Day and minute windows shared by both budget stores. Days are UTC days: a budget is a cost window, not a business day,
+ * so it needs no market time zone (DECISIONS "Region-neutral by design").
+ */
 final class BudgetWindows {
     private BudgetWindows() {}
 
-    static final ZoneId ZONE = ZoneId.of("America/Edmonton");
+    static final ZoneId ZONE = ZoneOffset.UTC;
 
     static LocalDate day(Clock clock) {
         return LocalDate.now(clock.withZone(ZONE));
@@ -36,13 +40,13 @@ final class BudgetWindows {
 
     static AiRateLimited personSpent(Clock clock) {
         return new AiRateLimited(
-                "person_tokens", untilTomorrow(clock), "You've used today's AI allowance; it resets at midnight.");
+                "person_tokens", untilTomorrow(clock), "You've used today's AI allowance; try again later.");
     }
 
     static AiRateLimited merchantSpent(Clock clock) {
         return new AiRateLimited(
                 "merchant_tokens",
                 untilTomorrow(clock),
-                "This business has used today's AI allowance; it resets at midnight.");
+                "This business has used today's AI allowance; try again later.");
     }
 }

@@ -28,7 +28,7 @@
     {"id": "fr-orders", "input": "Combien de commandes dois-je encore emballer ?", "expected": "list_orders",
      "mustInclude": [["2", "deux"]],
      "mock": {"calls": [["list_orders", {}]], "answer": "Vous avez 2 commandes à emballer : {{t0.orders[0].ref}} et {{t0.orders[1].ref}}."}},
-    {"id": "no-tool", "input": "What will the weather be in Calgary tomorrow?", "expected": "none",
+    {"id": "no-tool", "input": "What will the weather be like tomorrow?", "expected": "none",
      "mustInclude": [["can't", "cannot", "can not", "unable", "don't have", "do not have", "not able"]],
      "mock": {"text": "I can't answer that from your business's data."}}
   ]

@@ -30,7 +30,7 @@ public record AiProperties(
     }
 
     /**
-     * @param personTokensPerDay tokens one person may use per day (America/Edmonton) — {@code AI_BUDGET_PERSON_TOKENS_PER_DAY}
+     * @param personTokensPerDay tokens one person may use per (UTC) day — {@code AI_BUDGET_PERSON_TOKENS_PER_DAY}
      * @param merchantTokensPerDay tokens one business may use per day, all its team — {@code AI_BUDGET_MERCHANT_TOKENS_PER_DAY}
      * @param personRequestsPerMinute model requests one person may start per minute — {@code AI_REQUESTS_PER_MINUTE}
      */

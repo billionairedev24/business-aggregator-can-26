@@ -11,7 +11,6 @@ import ca.northline.shared.Ids;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
@@ -47,9 +46,9 @@ class AiBudgetsTest {
             budgets().charge(caller, 1_000);
             assertThatThrownBy(() -> budgets().admit(caller)).isInstanceOfSatisfying(AiRateLimited.class, e -> {
                 org.assertj.core.api.Assertions.assertThat(e.getLimit()).isEqualTo("person_tokens");
-                // 15:00 UTC = 09:00 in Edmonton: 15 h to midnight
+                // budget days are UTC days: 15:00:30 → 8 h 59 min to midnight
                 org.assertj.core.api.Assertions.assertThat(e.getRetryAfter().toHours())
-                        .isEqualTo(14);
+                        .isEqualTo(8);
             });
         }
 
@@ -83,32 +82,24 @@ class AiBudgetsTest {
     @SuppressWarnings("resource")
     static final GenericContainer<?> VALKEY = new GenericContainer<>("valkey/valkey:8").withExposedPorts(6379);
 
-    static LettuceConnectionFactory factory;
+    /** Started on first use; Testcontainers removes the container when the JVM ends. */
+    static final class Shared {
+        static final LettuceConnectionFactory FACTORY = start();
 
-    @AfterAll
-    static void stop() {
-        if (factory != null) {
-            factory.destroy();
+        private static LettuceConnectionFactory start() {
+            VALKEY.start();
+            var factory = new LettuceConnectionFactory(
+                    new RedisStandaloneConfiguration(VALKEY.getHost(), VALKEY.getMappedPort(6379)));
+            factory.afterPropertiesSet();
+            factory.start();
+            return factory;
         }
-        VALKEY.stop();
     }
 
     @Nested
     class Valkey extends Contract {
-        private final ValkeyAiBudgets budgets;
-
-        Valkey() {
-            synchronized (AiBudgetsTest.class) {
-                if (factory == null) {
-                    VALKEY.start();
-                    factory = new LettuceConnectionFactory(
-                            new RedisStandaloneConfiguration(VALKEY.getHost(), VALKEY.getMappedPort(6379)));
-                    factory.afterPropertiesSet();
-                    factory.start();
-                }
-            }
-            budgets = new ValkeyAiBudgets(new StringRedisTemplate(factory), LIMITS, CLOCK);
-        }
+        private final ValkeyAiBudgets budgets =
+                new ValkeyAiBudgets(new StringRedisTemplate(Shared.FACTORY), LIMITS, CLOCK);
 
         @Override
         AiBudgets budgets() {

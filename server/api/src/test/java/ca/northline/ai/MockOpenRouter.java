@@ -3,6 +3,7 @@ package ca.northline.ai;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
@@ -44,7 +45,7 @@ public final class MockOpenRouter implements AutoCloseable {
 
     public MockOpenRouter() {
         try {
-            server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+            server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
