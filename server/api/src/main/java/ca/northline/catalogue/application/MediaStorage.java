@@ -8,4 +8,7 @@ public interface MediaStorage {
     void put(String key, byte[] bytes, String contentType);
 
     Optional<byte[]> get(String key);
+
+    /** Removes the object; nothing happens when it is already gone (S-65: a deleted compliance document). */
+    void delete(String key);
 }

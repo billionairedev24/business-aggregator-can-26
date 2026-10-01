@@ -275,8 +275,13 @@ class SalesReportService implements ViewSalesReport {
 
     /** Every month of the year up to the current one, zero-filled. */
     private List<SalesReadModel.Month> months(String merchantId, int year) {
-        var zone = time.of(merchantId);
-        var current = YearMonth.from(LocalDate.ofInstant(clock.instant(), zone));
+        return yearMonths(sales, merchantId, year, time.of(merchantId), clock.instant());
+    }
+
+    /** Every month of {@code year} up to the one {@code now} is in, zero-filled (CSV and PDF tax documents). */
+    static List<SalesReadModel.Month> yearMonths(
+            SalesReadModel sales, String merchantId, int year, ZoneId zone, Instant now) {
+        var current = YearMonth.from(LocalDate.ofInstant(now, zone));
         var found = sales.months(merchantId, year, zone).stream()
                 .collect(Collectors.toMap(SalesReadModel.Month::month, Function.identity()));
         var out = new ArrayList<SalesReadModel.Month>();

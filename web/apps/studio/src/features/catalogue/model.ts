@@ -1,4 +1,4 @@
-import type { Category, CatalogMatch, Fulfilment, HandlingTime, IdentifierType, ItemCondition, ListingItem, Media, PricingMode, ProductDetail, ProductPayload, ReturnsPolicy, ServiceDetail, ServicePayload, VariantTheme } from './api';
+import type { Category, CatalogMatch, Fulfilment, HandlingTime, IdentifierType, ItemCondition, ListingItem, Media, OfferType, PricingMode, ProductDetail, ProductPayload, ReturnsPolicy, ServiceDetail, ServicePayload, VariantTheme } from './api';
 import type { MerchantType } from '../shell/api';
 import { MSG, PROMO, centsToInput, gtinProblem, issuesByField, parseCount, parseMoney, productDraftSchema, serviceDraftSchema } from './validation';
 
@@ -21,7 +21,10 @@ export const vetState = (l: Pick<ListingItem, 'vetting' | 'vettingFlags'>): VetS
 export const minutesSince = (iso: string | null | undefined, now = Date.now()) => (iso ? Math.max(0, Math.round((now - new Date(iso).getTime()) / 60_000)) : 0);
 
 // ── product form ──────────────────────────────────────────────────────────────────────────────────────────────────
-export interface VariantRow { key: string; id?: string | null; value: string; sku: string; gtin: string; price: string; stock: string }
+/** `images`: the variant's own (S-65); empty = it inherits the listing's. */
+export interface VariantRow { key: string; id?: string | null; value: string; sku: string; gtin: string; price: string; stock: string; images: Media[] }
+/** S-65: one item of a bundle; name, option, price and stock are shown, not sent. */
+export interface BundleRow { key: string; offerId: string; variantId: string | null; qty: string; name: string; option: string | null; unitPriceCents: number; stock: number }
 
 export interface ProductForm {
   identifierType: IdentifierType; gtin: string; title: string; brand: string; mpn: string; categoryId: string;
@@ -31,6 +34,7 @@ export interface ProductForm {
   sku: string; price: string; compareAt: string; cost: string; condition: ItemCondition; stock: string; lowStockAt: string;
   fulfilment: Fulfilment[]; handlingTime: HandlingTime | ''; returnsPolicy: ReturnsPolicy | '';
   countryOfOrigin: string; restrictedOk: boolean; bilingualOk: boolean; warranty: boolean; searchKeywords: string;
+  type: OfferType; bundle: BundleRow[];
 }
 
 /** The shared catalogue record behind the listing (after a GTIN lookup, or from the saved listing). */
@@ -39,19 +43,22 @@ export interface CatalogueLink { ref: string; title: string; sellerCount: number
 let rowSeq = 0;
 export const rowKey = () => `v${++rowSeq}`;
 
-export const emptyProduct = (): ProductForm => ({
-  identifierType: 'gtin', gtin: '', title: '', brand: '', mpn: '', categoryId: '', attributes: {}, description: '', bullets: [],
+export const emptyProduct = (type: OfferType = 'product'): ProductForm => ({
+  type, bundle: [],
+  identifierType: type === 'bundle' ? 'none' : 'gtin', gtin: '', title: '', brand: '', mpn: '', categoryId: '', attributes: {}, description: '', bullets: [],
   variantTheme: 'none', variants: [], imageSource: 'own', images: [],
   sku: '', price: '', compareAt: '', cost: '', condition: 'new', stock: '', lowStockAt: '5',
   fulfilment: ['pooled'], handlingTime: 'same_day', returnsPolicy: 'standard_14',
   countryOfOrigin: '', restrictedOk: false, bilingualOk: false, warranty: false, searchKeywords: '',
+  ...(type === 'bundle' ? { stock: '0', lowStockAt: '' } : {}),
 });
 
 export const productFromDetail = (d: ProductDetail): ProductForm => ({
   identifierType: d.identifierType, gtin: d.gtin ?? '', title: d.title, brand: d.brand ?? '', mpn: d.mpn ?? '', categoryId: d.categoryId ?? '',
   attributes: { ...d.attributes }, description: d.description ?? '', bullets: [...d.bullets],
   variantTheme: d.variantTheme,
-  variants: d.variants.map(v => ({ key: rowKey(), id: v.id, value: v.value, sku: v.sku, gtin: v.gtin ?? '', price: centsToInput(v.priceCents), stock: String(v.stock) })),
+  variants: d.variants.map(v => ({ key: rowKey(), id: v.id, value: v.value, sku: v.sku, gtin: v.gtin ?? '', price: centsToInput(v.priceCents), stock: String(v.stock), images: v.images })),
+  type: d.type, bundle: d.bundleItems.map(b => ({ key: rowKey(), offerId: b.offerId, variantId: b.variantId ?? null, qty: String(b.qty), name: b.name, option: b.option ?? null, unitPriceCents: b.unitPriceCents, stock: b.stock })),
   imageSource: d.imageSource, images: d.images,
   sku: d.sku ?? '', price: centsToInput(d.priceCents), compareAt: centsToInput(d.compareAtCents), cost: centsToInput(d.costCents), condition: d.condition,
   stock: String(d.stock), lowStockAt: d.lowStockAt == null ? '' : String(d.lowStockAt),
@@ -78,10 +85,11 @@ export function productPayload(f: ProductForm): ProductPayload {
     identifierType: f.identifierType, gtin: hasId ? nullIfBlank(f.gtin) : null, title: f.title.trim(), brand: nullIfBlank(f.brand), mpn: nullIfBlank(f.mpn),
     categoryId: f.categoryId, attributes: f.attributes, description: nullIfBlank(f.description), bullets: f.bullets.map(b => b.trim()).filter(Boolean),
     variantTheme: f.variantTheme,
-    variants: f.variantTheme === 'none' ? [] : f.variants.map(v => ({ id: v.id ?? null, value: v.value.trim(), sku: v.sku.trim(), gtin: nullIfBlank(v.gtin), priceCents: parseMoney(v.price) ?? Number.NaN, stock: parseCount(v.stock) ?? Number.NaN })),
+    variants: f.variantTheme === 'none' || f.type === 'bundle' ? [] : f.variants.map(v => ({ id: v.id ?? null, value: v.value.trim(), sku: v.sku.trim(), gtin: nullIfBlank(v.gtin), priceCents: parseMoney(v.price) ?? Number.NaN, stock: parseCount(v.stock) ?? Number.NaN, imageIds: v.images.map(i => i.id) })),
+    type: f.type, bundleItems: f.type === 'bundle' ? f.bundle.map(b => ({ offerId: b.offerId, variantId: b.variantId, qty: parseCount(b.qty) ?? Number.NaN })) : [],
     imageSource: f.imageSource, imageIds: f.images.map(i => i.id),
     sku: nullIfBlank(f.sku), priceCents: parseMoney(f.price) ?? Number.NaN, compareAtCents: parseMoney(f.compareAt), costCents: parseMoney(f.cost), condition: f.condition,
-    stock: parseCount(f.stock) ?? Number.NaN, lowStockAt: parseCount(f.lowStockAt), fulfilment: f.fulfilment,
+    stock: f.type === 'bundle' ? 0 : parseCount(f.stock) ?? Number.NaN, lowStockAt: f.type === 'bundle' ? null : parseCount(f.lowStockAt), fulfilment: f.fulfilment,
     handlingTime: f.handlingTime || null, returnsPolicy: f.returnsPolicy || null,
     countryOfOrigin: nullIfBlank(f.countryOfOrigin), restrictedOk: f.restrictedOk, bilingualOk: f.bilingualOk, warranty: f.warranty, searchKeywords: nullIfBlank(f.searchKeywords),
   };
@@ -103,6 +111,12 @@ export function validateProductDraft(f: ProductForm, category: Category | undefi
   }
   if (p.compareAtCents != null && !Number.isNaN(p.priceCents) && p.compareAtCents <= p.priceCents) add('compareAtCents', MSG.COMPARE_AT_HIGHER);
   if (f.returnsPolicy === 'final_sale' && !category?.perishable) add('returnsPolicy', MSG.FINAL_SALE_PERISHABLE);
+  const seen = new Set<string>();
+  p.bundleItems.forEach((b, i) => {
+    const k = `${b.offerId}/${b.variantId ?? ''}`;
+    if (seen.has(k)) add(`bundleItems[${i}].offerId`, MSG.BUNDLE_ITEM_DUPLICATE);
+    seen.add(k);
+  });
   const values = new Set<string>(); const skus = new Set<string>();
   p.variants.forEach((v, i) => {
     if (v.value && values.has(v.value.toLowerCase())) add(`variants[${i}].value`, MSG.VARIANT_DUPLICATE);
@@ -122,13 +136,22 @@ export function productCompleteness(f: ProductForm, category: Category | undefin
   const price = parseMoney(f.price);
   const done: Record<Section, boolean> = {
     identity: !!f.title.trim() && !!category?.leaf && category.attributes.every(a => !a.required || !!f.attributes[a.key]),
-    variants: f.variantTheme === 'none' || f.variants.length > 0,
+    variants: f.type === 'bundle' ? bundleUnits(f) >= 2 : f.variantTheme === 'none' || f.variants.length > 0,
     images: f.imageSource === 'shared' ? (link?.images.length ?? 0) > 0 : f.images.length > 0,
     offer: price !== null && price > 0 && f.fulfilment.length > 0,
     compliance: !!f.countryOfOrigin && f.restrictedOk && f.bilingualOk,
   };
   const count = SECTIONS.filter(s => done[s]).length + 1;
   return { done, percent: Math.round((count / 6) * 100), complete: count === 6 };
+}
+
+/** Units in a bundle (2 × socks + 1 × hat = 3). */
+export const bundleUnits = (f: Pick<ProductForm, 'bundle'>) => f.bundle.reduce((n, b) => n + (parseCount(b.qty) || 0), 0);
+/** Whole bundles the items' stock allows, and what the items cost bought one by one. */
+export function bundleFacts(f: Pick<ProductForm, 'bundle'>) {
+  const rows = f.bundle.map(b => ({ qty: parseCount(b.qty) || 0, b }));
+  const available = rows.length ? Math.min(...rows.map(r => (r.qty > 0 ? Math.floor(Math.max(0, r.b.stock) / r.qty) : 0))) : 0;
+  return { available, separateCents: rows.reduce((sum, r) => sum + r.qty * r.b.unitPriceCents, 0) };
 }
 
 export const variantReady = (v: VariantRow) => !!v.gtin.trim() && !gtinProblem(v.gtin);

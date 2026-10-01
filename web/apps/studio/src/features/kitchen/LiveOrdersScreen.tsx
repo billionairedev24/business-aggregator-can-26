@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Alert, EmptyState, ErrorState, PageSkeleton, useLocale, timeZone } from '@northline/ui';
 import { useMerchant, useMerchantId, useRole } from '../shell/api';
-import { liveQuery, useKitchenToggle, useLiveAction, type Ticket } from './api';
+import { useLivePoll } from '../../lib/live';
+import { LIVE_POLL_MS, liveQuery, useKitchenToggle, useLiveAction, type Ticket } from './api';
 import { useKitchenT } from './messages';
 import { lineText, mealOf, minutesUntil, prepText, weekdayIn, whereText, whoText } from './model';
 import './Kitchen.css';
@@ -16,7 +17,7 @@ export function LiveOrdersScreen() {
   const role = useRole();
   const t = useKitchenT();
   const { locale } = useLocale();
-  const q = useQuery(liveQuery(merchantId));
+  const q = useQuery({ ...liveQuery(merchantId), refetchInterval: useLivePoll(LIVE_POLL_MS) });
   const act = useLiveAction(merchantId);
   const toggle = useKitchenToggle(merchantId);
   const canOperate = role !== 'bookkeeper';
@@ -49,6 +50,7 @@ export function LiveOrdersScreen() {
           ) : null}
         </div>
       </div>
+      {b.autoPause?.active && b.autoPause.threshold ? <div className="nl-k-paused" role="status"><strong>{t('autoPausedStrong')}</strong> {t('autoPausedText', { late: b.autoPause.lateOrders, limit: b.autoPause.threshold })}</div> : null}
       {paused ? <div className="nl-k-paused" role="status"><strong>{t('pausedStrong')}</strong> {t('pausedText', { n: Math.max(1, minutesUntil(b.pausedUntil!, now)) })}</div> : null}
       {act.isError || toggle.isError ? <Alert tone="error" role="alert">{t('actionError')}</Alert> : null}
       {b.items.length === 0 ? <EmptyState>{t('liveEmpty')}</EmptyState> : (

@@ -420,14 +420,15 @@ function BankPanel({ o, onClose }: { o: PayoutOverview; onClose: () => void }) {
 
 function TaxDocuments() {
   const t = useFinanceT();
+  const { locale } = useLocale();
   const merchantId = useMerchantId();
   const year = new Date().getFullYear();
   return (
     <>
       <h3 className="fin-h3">{t('taxDocuments')}</h3>
       <div className="fin-rows">
-        <div className="fin-row fin-row-40"><span>{t('gstYtd', { year })}</span><a href={downloads.gst(merchantId, year)} download>{t('download')}</a></div>
-        <div className="fin-row fin-row-40"><span>{t('annualStatement', { year: year - 1 })}</span><a href={downloads.annual(merchantId, year - 1)} download>{t('download')}</a></div>
+        <div className="fin-row fin-row-40"><span>{t('gstYtd', { year })}</span><span className="fin-doc-links"><a href={downloads.gstPdf(merchantId, year, locale)} download aria-label={t('downloadPdfOf', { doc: t('gstYtd', { year }) })}>{t('pdf')}</a> · <a href={downloads.gst(merchantId, year)} download aria-label={t('downloadCsvOf', { doc: t('gstYtd', { year }) })}>{t('csv')}</a></span></div>
+        <div className="fin-row fin-row-40"><span>{t('annualStatement', { year: year - 1 })}</span><span className="fin-doc-links"><a href={downloads.annualPdf(merchantId, year - 1, locale)} download aria-label={t('downloadPdfOf', { doc: t('annualStatement', { year: year - 1 }) })}>{t('pdf')}</a> · <a href={downloads.annual(merchantId, year - 1)} download aria-label={t('downloadCsvOf', { doc: t('annualStatement', { year: year - 1 }) })}>{t('csv')}</a></span></div>
       </div>
     </>
   );

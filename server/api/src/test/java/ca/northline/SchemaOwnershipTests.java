@@ -54,12 +54,25 @@ class SchemaOwnershipTests {
      * and a follow-up. A new entry needs a DECISIONS.md line.
      */
     static final Map<String, Set<String>> ALLOWED = Map.of(
-            // The kitchen live board joins orders, order lines, group orders and courier stops in one query per
-            // refresh. orders already depends on food, so moving it behind orders.api needs its own design (a
-            // read model or an SPI). Follow-up to S-37.
-            "ca.northline.food.persistence.KitchenTicketJdbc", Set.of("orders", "fulfilment"),
-            "ca.northline.food.persistence.KitchenOrderLinesJdbc", Set.of("orders"),
-            "ca.northline.food.persistence.KitchenNavBadges", Set.of("orders"));
+            // None. S-64 removed the last ones: the kitchen live board, its order lines and its badge read orders
+            // through food.api.KitchenOrderFeed (implemented by orders) and courier pickups through fulfilment.api.
+            );
+
+    /**
+     * S-64: the kitchen reads food orders only through {@code food.api.KitchenOrderFeed} (which orders implements) and
+     * courier pickups only through {@code fulfilment.api}; it never reaches into the orders or fulfilment modules.
+     */
+    @ArchTest
+    static final ArchRule kitchenReadsOrdersThroughTheFeed = noClasses()
+            .that()
+            .resideInAPackage("ca.northline.food..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAnyPackage(
+                    "ca.northline.orders..",
+                    "ca.northline.fulfilment.persistence..",
+                    "ca.northline.fulfilment.application..")
+            .because("orders depends on food; food reads orders through KitchenOrderFeed (S-64)");
 
     static final Pattern SQL = Pattern.compile("(?is)\\b(select|insert\\s+into|update|delete\\s+from|join|from)\\b");
     static final Pattern SCHEMA_REF = Pattern.compile("\\b(" + String.join("|", MODULE_SCHEMAS) + ")\\.[a-z_]+\\b");

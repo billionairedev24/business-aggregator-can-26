@@ -21,13 +21,16 @@ export const SectionRef = z.object({ id: z.string(), name: z.string(), sort: z.n
 export const MenuSummary = z.object({ id: z.string(), name: z.string(), status: MenuStatus, schedule: MenuSchedule, sort: z.number(), publishedAt: z.string().nullish(), sections: z.array(SectionRef) });
 export type MenuSummary = z.infer<typeof MenuSummary>;
 
-export const Visibility = z.enum(['draft', 'needs_photo', 'awaiting_approval', 'live']);
+export const Visibility = z.enum(['draft', 'needs_photo', 'price_check', 'awaiting_approval', 'live']);
+/** S-67: price more than 40 % off comparable dishes; `confirmed` = the owner kept it (live). */
+export const PriceCheck = z.object({ medianCents: z.number(), deviationPct: z.number(), confirmed: z.boolean() });
 export type Visibility = z.infer<typeof Visibility>;
 export const MenuItem = z.object({
   id: z.string(), menuId: z.string(), sectionId: z.string(), name: z.string(), description: z.string().nullish(), priceCents: z.number(),
   allergens: z.array(z.string()).nullable(), dietary: z.array(z.string()), prepAddMin: z.number(), dailyLimit: z.number().nullish(), soldToday: z.number(),
   soldOut: z.boolean(), availability: z.enum(WINDOWS), comboEligible: z.boolean(), modifierGroups: z.array(z.object({ id: z.string(), name: z.string() })),
   status: z.enum(['draft', 'published']), visibility: Visibility, hasPhoto: z.boolean(), updatedAt: z.string().nullish(),
+  priceCheck: PriceCheck.nullish(),
 });
 export type MenuItem = z.infer<typeof MenuItem>;
 export const MenuDetail = z.object({
@@ -84,13 +87,15 @@ export type Ticket = z.infer<typeof Ticket>;
 export const LiveBoard = z.object({
   items: z.array(Ticket), counts: z.object({ open: z.number(), fresh: z.number(), cooking: z.number(), ready: z.number() }),
   prep: z.object({ defaultPrepMin: z.number(), bumpMin: z.number(), shownMin: z.number() }), pausedUntil: z.string().nullish(),
+  /** S-67: "Auto-pause if late orders ≥ threshold" — active while that many accepted orders are past their ready-by. */
+  autoPause: z.object({ lateOrders: z.number(), threshold: z.number().nullish(), active: z.boolean() }).optional(),
 });
 export type LiveBoard = z.infer<typeof LiveBoard>;
 
 // ── queries ─────────────────────────────────────────────────────────────────
 
 export const kitchenKey = (merchantId: string, ...rest: string[]): QueryKey => ['merchant', merchantId, 'kitchen', ...rest];
-/** Live orders refresh every 15 s (the kitchen display polls; tickets also print). */
+/** New and moved orders arrive over the live stream (S-68); while it is down the kitchen display polls every 15 s. */
 export const LIVE_POLL_MS = 15_000;
 
 export const liveQuery = (merchantId: string) => queryOptions({ queryKey: kitchenKey(merchantId, 'live'), queryFn: () => http(`${m(merchantId)}/kitchen/live`, {}, LiveBoard), refetchInterval: LIVE_POLL_MS });
@@ -150,6 +155,9 @@ function useMenuMutation<V, R>(merchantId: string, fn: (v: V) => Promise<R>) {
 
 export const useSaveItem = (merchantId: string) => useMenuMutation(merchantId, ({ id, body }: { id?: string; body: ItemBody }) =>
   http(id ? `${m(merchantId)}/menu-items/${id}` : `${m(merchantId)}/menu-items`, { method: id ? 'PUT' : 'POST', body }, MenuItem));
+/** S-67: "Keep this price" for a dish the ±40 % check flagged. */
+export const useConfirmPrice = (merchantId: string) => useMenuMutation(merchantId, (id: string) =>
+  http(`${m(merchantId)}/menu-items/${id}/confirm-price`, { method: 'POST' }, MenuItem));
 export const useDeleteItem = (merchantId: string) => useMenuMutation(merchantId, (id: string) => http(`${m(merchantId)}/menu-items/${id}`, { method: 'DELETE' }));
 export const useUploadPhoto = (merchantId: string) => useMenuMutation(merchantId, ({ id, file }: { id: string; file: File }) => {
   const form = new FormData(); form.append('file', file);

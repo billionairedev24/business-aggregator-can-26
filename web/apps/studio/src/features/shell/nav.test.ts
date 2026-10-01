@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildNav, homeScreen, screenFromPath, screensFor } from './nav';
+import { homeScreen, screenFromPath, screensFor } from './nav';
+import { buildNav } from './navMenu';
 
 const t = ((k: string) => k) as never;
 

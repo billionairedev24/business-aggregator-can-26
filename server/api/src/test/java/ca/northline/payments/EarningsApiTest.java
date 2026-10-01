@@ -2,6 +2,7 @@ package ca.northline.payments;
 
 import static ca.northline.payments.PaymentsFixture.hoursAgo;
 import static ca.northline.payments.PaymentsFixture.inHours;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.startsWith;
@@ -25,6 +26,9 @@ class EarningsApiTest extends IntegrationTest {
 
     @Autowired
     PaymentsFixture fx;
+
+    @Autowired
+    org.springframework.jdbc.core.simple.JdbcClient jdbc;
 
     PaymentsFixture.Shop shop;
 
@@ -155,5 +159,75 @@ class EarningsApiTest extends IntegrationTest {
                         .with(TestJwt.member(shop.ownerId())))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Total 2025,0.00,0.00,0.00,0.00,0.00")));
+    }
+
+    /** S-41: the tax documents as PDF statements, in either language, for the business's own province. */
+    @Test
+    void taxDocumentsArePdfStatements_inEnglishAndFrench() throws Exception {
+        jdbc.sql("update merchants.merchants set province = 'NS', legal_name = 'Prairie Wrench Mobile Mechanics Ltd.',"
+                        + " gst_number = '123456789 RT0001' where id = ?")
+                .param(shop.merchantId())
+                .update();
+        var en = mvc.perform(get("/api/v1/merchants/{id}/reports/gst-summary.pdf", shop.merchantId())
+                        .param("year", "2025")
+                        .param("lang", "en")
+                        .with(TestJwt.member(shop.ownerId())))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", "application/pdf"))
+                .andExpect(header().string("Content-Disposition", containsString("northline-gst-summary-2025.pdf")))
+                .andReturn()
+                .getResponse()
+                .getContentAsByteArray();
+        assertThat(new String(en, 0, 5, java.nio.charset.StandardCharsets.US_ASCII))
+                .isEqualTo("%PDF-");
+        assertThat(pdfText(en))
+                .contains("2025 GST/HST collected summary")
+                .contains("Prairie Wrench Mobile Mechanics Ltd.")
+                .contains("Operating as Prairie Wrench")
+                .contains("GST/HST number: 123456789 RT0001")
+                .contains("Province: Nova Scotia")
+                .contains("Sales-tax rate in Nova Scotia:")
+                .contains("January 2025")
+                .contains("Total 2025 $0.00")
+                .contains("marketplace facilitator");
+
+        var fr = mvc.perform(get("/api/v1/merchants/{id}/reports/annual-statement.pdf", shop.merchantId())
+                        .param("year", "2025")
+                        .header("Accept-Language", "fr-CA")
+                        .with(TestJwt.member(shop.ownerId())))
+                .andExpect(status().isOk())
+                .andExpect(header().string(
+                                "Content-Disposition", containsString("northline-annual-statement-2025-fr.pdf")))
+                .andReturn()
+                .getResponse()
+                .getContentAsByteArray();
+        assertThat(pdfText(fr))
+                .contains("Relevé annuel 2025")
+                .contains("Province : Nouvelle-Écosse")
+                .contains("Janvier 2025")
+                .contains("Frais Northline")
+                .containsPattern("0,00[\\s\\u00a0]\\$");
+
+        var gstFr = mvc.perform(get("/api/v1/merchants/{id}/reports/gst-summary.pdf", shop.merchantId())
+                        .param("year", "2025")
+                        .param("lang", "fr")
+                        .with(TestJwt.member(shop.ownerId())))
+                .andReturn()
+                .getResponse()
+                .getContentAsByteArray();
+        assertThat(pdfText(gstFr))
+                .contains("Taux de taxe de vente en Nouvelle-Écosse")
+                .contains("No de TPS/TVH");
+
+        // finance only: a technician can't download it
+        mvc.perform(get("/api/v1/merchants/{id}/reports/gst-summary.pdf", shop.merchantId())
+                        .with(TestJwt.member(fx.member(shop, MerchantRole.TECHNICIAN))))
+                .andExpect(status().isForbidden());
+    }
+
+    private static String pdfText(byte[] pdf) throws Exception {
+        try (var doc = org.apache.pdfbox.Loader.loadPDF(pdf)) {
+            return new org.apache.pdfbox.text.PDFTextStripper().getText(doc).replaceAll("[ \t]+", " ");
+        }
     }
 }

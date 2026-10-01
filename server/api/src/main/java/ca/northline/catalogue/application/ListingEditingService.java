@@ -1,14 +1,22 @@
 package ca.northline.catalogue.application;
 
+import static ca.northline.catalogue.domain.ListingMessages.BUNDLE_ITEM_BUNDLE;
+import static ca.northline.catalogue.domain.ListingMessages.BUNDLE_ITEM_UNKNOWN;
+import static ca.northline.catalogue.domain.ListingMessages.BUNDLE_VARIANT_REQUIRED;
 import static ca.northline.catalogue.domain.ListingMessages.IMAGE_UNKNOWN;
 import static ca.northline.catalogue.domain.ListingMessages.SKU_TAKEN;
 
+import ca.northline.catalogue.application.ListingRepository.BundleComponent;
+import ca.northline.catalogue.application.ListingRepository.VariantFact;
+import ca.northline.catalogue.application.ListingView.BundleLine;
 import ca.northline.catalogue.application.ListingView.ProductView;
 import ca.northline.catalogue.application.ListingView.ServiceView;
 import ca.northline.catalogue.domain.CatalogRecord;
 import ca.northline.catalogue.domain.CategoryProfile;
 import ca.northline.catalogue.domain.ListingMessages;
+import ca.northline.catalogue.domain.OfferType;
 import ca.northline.catalogue.domain.ProductDetails;
+import ca.northline.catalogue.domain.ProductDetails.BundleItem;
 import ca.northline.catalogue.domain.ProductListing;
 import ca.northline.catalogue.domain.ServiceDetails;
 import ca.northline.catalogue.domain.ServiceListing;
@@ -18,8 +26,11 @@ import ca.northline.shared.RuleViolation;
 import ca.northline.shared.RuleViolation.Violation;
 import java.time.Clock;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.context.ApplicationEventPublisher;
@@ -65,7 +76,7 @@ class ListingEditingService implements EditProduct, EditService, ViewListing, Qu
                 record,
                 clock.instant());
         listings.save(listing);
-        media.attach(details.ownImageIds(), OFFER, listing.getId());
+        media.attach(details.allOwnImageIds(), OFFER, listing.getId());
         return productView(listing);
     }
 
@@ -79,7 +90,7 @@ class ListingEditingService implements EditProduct, EditService, ViewListing, Qu
         var revet = listing.revise(
                 effective(command.merchantId(), details, record), record, command.actorId(), clock.instant());
         listings.save(listing);
-        media.attach(details.ownImageIds(), OFFER, listing.getId());
+        media.attach(details.allOwnImageIds(), OFFER, listing.getId());
         revet.forEach(events::publishEvent);
         return productView(listing);
     }
@@ -102,6 +113,9 @@ class ListingEditingService implements EditProduct, EditService, ViewListing, Qu
             case ProductListing p -> {
                 if (!p.getDetails().variants().isEmpty()) {
                     throw RuleViolation.of("priceCents", "variants", ListingMessages.QUICK_UPDATE_VARIANTS);
+                }
+                if (p.getDetails().isBundle() && stock != null) {
+                    throw RuleViolation.of("stock", "bundle", ListingMessages.QUICK_UPDATE_BUNDLE_STOCK);
                 }
                 var revet = p.restock(
                         price == null ? p.getDetails().priceCents() : price,
@@ -134,12 +148,90 @@ class ListingEditingService implements EditProduct, EditService, ViewListing, Qu
                 || own.stream().anyMatch(m -> !merchantId.equals(m.merchantId()))) {
             problems.add(new Violation("images", "unknown", IMAGE_UNKNOWN));
         }
+        for (int i = 0; i < details.variants().size(); i++) { // S-65: a variant's own images
+            var ids = details.variants().get(i).imageIds();
+            var found = media.findAll(ids);
+            if (found.size() != ids.size() || found.stream().anyMatch(m -> !merchantId.equals(m.merchantId()))) {
+                problems.add(new Violation("variants[" + i + "].imageIds", "unknown", IMAGE_UNKNOWN));
+            }
+        }
+        problems.addAll(bundleProblems(merchantId, listingId, details));
         if (!problems.isEmpty()) {
             throw new RuleViolation(problems);
         }
         return details.sku() != null
                 ? details
                 : details.withSku(SkuGenerator.product(details.title(), s -> taken(merchantId, s)));
+    }
+
+    /**
+     * S-65: every bundle item is one of the business's own products (not a bundle, not the bundle itself), of one of
+     * its variants when it has some. Drafts may hold unapproved items; submitting needs them approved
+     * ({@code ListingLifecycleService}).
+     */
+    private List<Violation> bundleProblems(String merchantId, @Nullable String listingId, ProductDetails details) {
+        var items = details.bundleItems();
+        if (items.isEmpty()) {
+            return List.of();
+        }
+        var found = components(merchantId, items);
+        var out = new ArrayList<Violation>();
+        for (int i = 0; i < items.size(); i++) {
+            var item = items.get(i);
+            var at = "bundleItems[" + i + "].";
+            var c = found.get(item.offerId());
+            if (c == null || item.offerId().equals(listingId)) {
+                out.add(new Violation(at + "offerId", "unknown", BUNDLE_ITEM_UNKNOWN));
+            } else if (c.type() == OfferType.BUNDLE) {
+                out.add(new Violation(at + "offerId", "bundle", BUNDLE_ITEM_BUNDLE));
+            } else if (c.variants().isEmpty()
+                    ? item.variantId() != null
+                    : c.variants().stream().noneMatch(v -> v.id().equals(item.variantId()))) {
+                out.add(new Violation(at + "variantId", "required", BUNDLE_VARIANT_REQUIRED));
+            }
+        }
+        return out;
+    }
+
+    private Map<String, BundleComponent> components(String merchantId, List<BundleItem> items) {
+        return listings
+                .bundleComponents(
+                        merchantId,
+                        items.stream().map(BundleItem::offerId).distinct().toList())
+                .stream()
+                .collect(Collectors.toMap(BundleComponent::offerId, c -> c));
+    }
+
+    /**
+     * The editor's lines of a bundle and how many whole bundles the items' stock allows (0 when it has no items).
+     */
+    List<BundleLine> bundleLines(ProductListing p) {
+        var items = p.getDetails().bundleItems();
+        if (items.isEmpty()) {
+            return List.of();
+        }
+        var found = components(p.getMerchantId(), items);
+        return items.stream()
+                .map(item -> {
+                    var c = found.get(item.offerId());
+                    if (c == null) {
+                        return new BundleLine(item.offerId(), item.variantId(), item.qty(), "", null, 0, 0, 0);
+                    }
+                    var variant = c.variants().stream()
+                            .filter(v -> v.id().equals(item.variantId()))
+                            .findFirst();
+                    var stock = variant.map(VariantFact::stock).orElse(c.stock());
+                    return new BundleLine(
+                            item.offerId(),
+                            item.variantId(),
+                            item.qty(),
+                            c.name(),
+                            variant.map(VariantFact::value).orElse(null),
+                            variant.map(VariantFact::priceCents).orElse(c.priceCents()),
+                            stock,
+                            Math.max(0, stock) / item.qty());
+                })
+                .toList();
     }
 
     /**
@@ -199,13 +291,22 @@ class ListingEditingService implements EditProduct, EditService, ViewListing, Qu
 
     ProductView productView(ProductListing p) {
         var category = profile(p.categoryId());
+        var lines = bundleLines(p);
         return new ProductView(
                 p,
                 category,
                 p.contentShared(),
                 media.findAll(p.getDetails().ownImageIds()),
                 visibility.visibleTo(p.getMerchantId(), media.findAll(p.catalogueImageIds())),
-                p.completeness(category));
+                p.completeness(category),
+                media.findAll(p.getDetails().variants().stream()
+                        .flatMap(v -> v.imageIds().stream())
+                        .distinct()
+                        .toList()),
+                lines,
+                p.getDetails().isBundle()
+                        ? lines.stream().mapToInt(BundleLine::available).min().orElse(0)
+                        : p.getDetails().stock());
     }
 
     // ── services ───────────────────────────────────────────────────────────────────────────────────────────────────

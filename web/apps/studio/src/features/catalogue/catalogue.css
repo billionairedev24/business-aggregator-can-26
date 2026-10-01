@@ -105,3 +105,9 @@
 .nl-cat-integration-body { min-width: 0; flex: 1 1 220px; display: flex; flex-direction: column; gap: 2px; }
 .nl-cat-sync-errors { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
 .nl-cat-linkish { border: 0; background: none; padding: 0; font: inherit; color: var(--color-accent-700); text-decoration: underline; cursor: pointer; min-height: 44px; }
+
+/* S-65: a variant's own photos (variants table) and the Compliance documents list */
+.nl-cat-variant-images { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.nl-cat-variant-images .nl-cat-thumb { width: 32px; height: 32px; border-radius: var(--radius-md); }
+.nl-cat-documents { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.nl-cat-documents a { color: var(--color-accent); overflow-wrap: anywhere; }

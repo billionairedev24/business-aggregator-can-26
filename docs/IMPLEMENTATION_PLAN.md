@@ -27,6 +27,7 @@ web/apps/studio       TanStack Router SPA for the Studio
 - App structure: `src/features/<feature>/{api.ts, messages.ts, *.tsx}`; routes in `src/routes/` (thin: loader + component from the feature). `api.ts` exposes zod schemas, `queryOptions` factories and mutation hooks; the HTTP client is `src/lib/http.ts`.
 - Every screen: skeleton loading state, empty state (one line + primary action), error state (rosehip inline + Retry), no horizontal scroll at ≥ 320 px, focus ring, 44 px targets.
 - Validation: zod schemas mirror `docs/spec/validation-rules.md` with the exact messages; server 422 `{ errors: [{ field, rule, message }] }` is mapped onto the same fields.
+  French (S-40): `http()` sends the Studio's language as `Accept-Language` (`setRequestLocale`), so 422 messages arrive in it; client-side messages are translated with a feature dictionary keyed by the English (`lib/validation.ts`), worded as in `docs/spec/validation-messages.fr-CA.tsv`.
 
 ## Backend conventions (server/)
 See `docs/BACKEND_CONVENTIONS.md` (written by the backend foundation) — layering, module API packages, error format, security (`MerchantAccess`), testing base classes.
@@ -50,7 +51,9 @@ See `docs/BACKEND_CONVENTIONS.md` (written by the backend foundation) — layeri
 | V120–V129 | search |
 | V130–V139 | region platform (S-134: region profiles, launch markets) |
 | V150–V159 | AI (S-129–S-133) |
+| V170–V179 | Studio follow-ups (S-40, S-41, S-64, S-66, S-67, S-73) — the next free range above V164 (ordering rule below) |
 | V160–V169 | consumer account (S-58–S-60: `account` schema, favourites, points read model, preferences, customer cases; dev seed V161…) — moved from V140–V149 by the ordering rule below |
+| V180–V189 | Studio follow-ups, batch B (S-65, S-70, S-72, S-75, S-76, S-77) — above batch A's V170–V179 by the ordering rule below |
 
 **Ordering rule (2026-10-01):** Flyway applies versions in order and, outside the `local` profile, refuses a version lower than one already applied. A new migration must therefore be numbered **above the highest version on main** when it merges, not just inside its workstream's range. If a range is behind, take the next free range above the maximum and record it here (S-129/S-133's V125/V126 became V150/V151 for this reason).
 

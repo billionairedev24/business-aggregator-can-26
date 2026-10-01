@@ -7,7 +7,8 @@ import org.jspecify.annotations.Nullable;
 /**
  * Bulk-upload templates ({@code catalogue.imports.template}). Columns are the header row of the downloadable .xlsx;
  * attribute columns are the category's attribute keys in snake_case ({@code partType} → {@code part_type}).
- * Rows sharing a {@code parent_sku} become variants of one listing.
+ * Rows sharing a {@code parent_sku} become variants of one listing. {@code image_urls} (S-72): up to 9 links, main
+ * first, separated by spaces, new lines or {@code |}.
  */
 public enum ImportTemplate implements CodedEnum {
     AUTO_PARTS(
@@ -24,11 +25,22 @@ public enum ImportTemplate implements CodedEnum {
                     "stock",
                     "part_type",
                     "length",
-                    "position")),
+                    "position",
+                    "image_urls")),
     GROCERIES(
             ListingKind.PRODUCT,
             "shop.food-and-grocery.groceries",
-            List.of("sku", "title", "gtin", "brand", "category_id", "price", "stock", "volume", "storage")),
+            List.of(
+                    "sku",
+                    "title",
+                    "gtin",
+                    "brand",
+                    "category_id",
+                    "price",
+                    "stock",
+                    "volume",
+                    "storage",
+                    "image_urls")),
     CLOTHING(
             ListingKind.PRODUCT,
             "shop.apparel.clothing",
@@ -44,7 +56,8 @@ public enum ImportTemplate implements CodedEnum {
                     "department",
                     "material",
                     "size",
-                    "colour")),
+                    "colour",
+                    "image_urls")),
     SERVICES(
             ListingKind.SERVICE,
             null,

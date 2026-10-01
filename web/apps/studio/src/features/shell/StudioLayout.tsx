@@ -7,7 +7,8 @@ import { useSession, useSignOut } from '../../lib/session';
 import { businessesQuery, navBadgesQuery, type MerchantSummary } from './api';
 import { useShellT } from './messages';
 import { AssistantButton } from '../assistant/AssistantDrawer';
-import { buildNav, homeScreen, screenFromPath, screenHref } from './nav';
+import { homeScreen, screenFromPath, screenHref } from './nav';
+import { buildNav } from './navMenu';
 
 const RAIL_KEY = 'nl.studio.rail';
 const readRail = () => { try { return localStorage.getItem(RAIL_KEY) === '1'; } catch { return false; } };

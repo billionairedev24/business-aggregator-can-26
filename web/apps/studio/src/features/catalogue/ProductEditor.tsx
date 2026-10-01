@@ -6,11 +6,12 @@ import { Alert, Button, Checkbox, Chip, Field, FormGrid, OptionCard, Select, Tex
 import { useMerchant, useMerchantId, useRole } from '../shell/api';
 import { tierTag } from '../shell/StudioLayout';
 import { useShellT } from '../shell/messages';
-import { categoriesQuery, lookupGtin, useSaveProduct, useSubmitListing, useUploadImage, type Category, type Fulfilment, type IdentifierType, type Media, type ProductDetail, type VariantTheme } from './api';
+import { categoriesQuery, lookupGtin, useSaveProduct, useSubmitListing, useUploadImage, type Category, type Fulfilment, type IdentifierType, type Media, type OfferType, type ProductDetail, type VariantTheme } from './api';
+import { BundlePrice, BundleTab, DocumentsField, VariantImages } from './EditorExtras';
 import { AttentionSummary, CategoryPicker, CompletenessPanel, EditorHeader, EditorTabs, FeesPanel, RevetNotice, Side, VettingPanel, draftTag, useEditorForm } from './EditorParts';
 import { imageProblem } from './imageFile';
 import { useCatalogueT } from './messages';
-import { SECTIONS, applyMatch, emptyProduct, linkFromDetail, linkFromMatch, permissions, productCompleteness, productFromDetail, productPayload, rowKey, validateProductDraft, variantReady, variantSku, vettingChecks, type CatalogueLink, type Portal, type ProductForm, type Section, type VariantRow } from './model';
+import { SECTIONS, applyMatch, bundleFacts, emptyProduct, linkFromDetail, linkFromMatch, permissions, productCompleteness, productFromDetail, productPayload, rowKey, validateProductDraft, variantReady, variantSku, vettingChecks, type CatalogueLink, type Portal, type ProductForm, type Section, type VariantRow } from './model';
 import { gtinProblem, parseMoney, useMessageT } from './validation';
 import { ValidationError } from '../../lib/http';
 import { ListingCopyButton } from '../writing/WritingHelp';
@@ -19,7 +20,7 @@ type Tab = Section | 'preview';
 const FULFILMENT: Fulfilment[] = ['pooled', 'install', 'pickup', 'ship'];
 const COUNTRIES = ['DE', 'CA', 'US', 'CN', 'JP', 'MX', 'GB', 'IT', 'FR', 'KR', 'OTHER'] as const;
 const SECTION_OF = (field: string): Section => {
-  if (field.startsWith('variants')) return 'variants';
+  if (field.startsWith('variants') || field.startsWith('bundleItems')) return 'variants';
   if (field === 'images' || field === 'imageIds') return 'images';
   if (['sku', 'priceCents', 'compareAtCents', 'costCents', 'stock', 'lowStockAt', 'fulfilment', 'returnsPolicy', 'handlingTime', 'condition'].includes(field)) return 'offer';
   if (['countryOfOrigin', 'restrictedOk', 'bilingualOk', 'warranty', 'searchKeywords'].includes(field)) return 'compliance';
@@ -30,7 +31,7 @@ const SECTION_OF = (field: string): Section => {
  * Product editor (design: product_new) — six tabs, completeness meter, Save draft separate from Submit for vetting,
  * GTIN lookup against the shared catalogue (matched products inherit title, attributes and images).
  */
-export function ProductEditor({ detail, portal, typePicker }: { detail?: ProductDetail; portal: Portal; typePicker?: React.ReactNode }) {
+export function ProductEditor({ detail, portal, typePicker, type = 'product' }: { detail?: ProductDetail; portal: Portal; typePicker?: React.ReactNode; type?: OfferType }) {
   const t = useCatalogueT();
   const mt = useMessageT();
   const shellT = useShellT();
@@ -51,16 +52,18 @@ export function ProductEditor({ detail, portal, typePicker }: { detail?: Product
   const [lookup, setLookup] = useState<'idle' | 'loading' | 'nomatch' | 'error'>('idle');
   const [failure, setFailure] = useState<string | null>(null);
   const validate = useCallback((f: ProductForm) => validateProductDraft(f, byId.get(f.categoryId)), [byId]);
-  const fm = useEditorForm<ProductForm>(detail ? productFromDetail(detail) : emptyProduct(), validate);
+  const fm = useEditorForm<ProductForm>(detail ? productFromDetail(detail) : emptyProduct(type), validate);
   const { form, update, touch, error } = fm;
   const category = byId.get(form.categoryId);
   const readOnlyContent = !!link?.readOnly;
+  const isBundle = form.type === 'bundle';
+  const bundle = bundleFacts(form);
   const save = useSaveProduct(merchantId);
   const submit = useSubmitListing(merchantId);
 
   const completeness = productCompleteness(form, category, link);
   const canSubmit = !saved || saved.vetting === 'draft' || saved.vetting === 'rejected';
-  const tabName: Record<Tab, string> = { identity: t('tabIdentity'), variants: t('tabVariants'), images: t('tabImages'), offer: t('tabOffer'), compliance: t('tabCompliance'), preview: t('tabPreview') };
+  const tabName: Record<Tab, string> = { identity: t('tabIdentity'), variants: isBundle ? t('tabBundle') : t('tabVariants'), images: t('tabImages'), offer: t('tabOffer'), compliance: t('tabCompliance'), preview: t('tabPreview') };
   const err = (field: string) => mt(error(field));
 
   const firstErrorTab = (errors: Record<string, string>) => { const first = Object.keys(errors)[0]; if (first) setTab(SECTION_OF(first)); };
@@ -106,7 +109,7 @@ export function ProductEditor({ detail, portal, typePicker }: { detail?: Product
 
   return (
     <>
-      <EditorHeader kicker={kicker} title={saved?.title || form.title || t('newProduct')} tag={draftTag(saved, t, time)} canEdit={perms.update} roleName={shellT(`role_${role}` as Parameters<typeof shellT>[0])}
+      <EditorHeader kicker={kicker} title={saved?.title || form.title || (isBundle ? t('newBundle') : t('newProduct'))} tag={draftTag(saved, t, time)} canEdit={perms.update} roleName={shellT(`role_${role}` as Parameters<typeof shellT>[0])}
         saveLabel={saved?.vetting === 'approved' ? t('saveChanges') : t('saveDraft')} saving={save.isPending} submitting={submit.isPending}
         cannotSubmit={!completeness.complete || !canSubmit} onSave={() => void persist()} onSubmit={() => void onSubmit()} />
       <EditorTabs tabs={tabs} value={tab} onChange={setTab} label={t('editorTabs')} />
@@ -117,7 +120,7 @@ export function ProductEditor({ detail, portal, typePicker }: { detail?: Product
         <fieldset className="nl-cat-main" disabled={!perms.update} role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
           {tab === 'identity' && <>
             {typePicker}
-            <Field label={t('identifier')} error={err('gtin')}>
+            {!isBundle && <Field label={t('identifier')} error={err('gtin')}>
               <div className="nl-cat-row">
                 <Select aria-label={t('identifierType')} className="nl-cat-idtype" value={form.identifierType} disabled={readOnlyContent}
                   options={(['gtin', 'ean', 'isbn', 'none'] as IdentifierType[]).map(v => ({ value: v, label: t(({ gtin: 'idGtin', ean: 'idEan', isbn: 'idIsbn', none: 'idNone' } as const)[v]) }))}
@@ -126,7 +129,7 @@ export function ProductEditor({ detail, portal, typePicker }: { detail?: Product
                   onChange={e => { update({ gtin: e.target.value }); setLookup('idle'); }} onBlur={() => touch('gtin')} aria-invalid={!!err('gtin') || undefined} />
                 <Button variant="secondary" onClick={() => void onLookup()} disabled={form.identifierType === 'none' || lookup === 'loading' || readOnlyContent}>{lookup === 'loading' ? t('lookingUp') : t('lookUp')}</Button>
               </div>
-            </Field>
+            </Field>}
             {link && <div className="nl-cat-match" role="status">
               <CatalogueThumb media={link.images[0]} size={44} />
               <span><strong>{t('matched', { ref: link.ref })}</strong> · {t('matchedBody', { title: link.title, count: link.sellerCount })}</span>
@@ -166,7 +169,9 @@ export function ProductEditor({ detail, portal, typePicker }: { detail?: Product
               onUse={c => update({ title: c.title, description: c.description, bullets: c.bullets }, ['title', 'description', 'bullets'])} />
           </>}
 
-          {tab === 'variants' && <VariantsTab form={form} update={update} category={category} error={err} />}
+          {tab === 'variants' && (isBundle
+            ? <BundleTab form={form} update={update} error={err} listingId={saved?.id} />
+            : <VariantsTab form={form} update={update} category={category} error={err} />)}
           {tab === 'images' && <ImagesTab form={form} update={update} link={link} error={err('images')} />}
 
           {tab === 'offer' && <>
@@ -177,9 +182,14 @@ export function ProductEditor({ detail, portal, typePicker }: { detail?: Product
             </FormGrid>
             <FormGrid min={150}>
               <Field label={t('condition')}><Select value={form.condition} options={(['new', 'open_box', 'refurbished', 'used_good'] as const).map(c => ({ value: c, label: t(`cond_${c}`) }))} onChange={e => update({ condition: e.target.value as ProductForm['condition'] })} /></Field>
-              <Field label={t('stockOnHand')} error={err('stock')}><TextInput inputMode="numeric" value={form.stock} onChange={e => update({ stock: e.target.value })} onBlur={() => touch('stock')} /></Field>
-              <Field label={t('lowStock')} error={err('lowStockAt')}><TextInput inputMode="numeric" value={form.lowStockAt} onChange={e => update({ lowStockAt: e.target.value })} onBlur={() => touch('lowStockAt')} /></Field>
+              {isBundle
+                ? <Field label={t('stockOnHand')} hint={t('stockFollows')}><TextInput readOnly value={String(bundle.available)} /></Field>
+                : <>
+                  <Field label={t('stockOnHand')} error={err('stock')}><TextInput inputMode="numeric" value={form.stock} onChange={e => update({ stock: e.target.value })} onBlur={() => touch('stock')} /></Field>
+                  <Field label={t('lowStock')} error={err('lowStockAt')}><TextInput inputMode="numeric" value={form.lowStockAt} onChange={e => update({ lowStockAt: e.target.value })} onBlur={() => touch('lowStockAt')} /></Field>
+                </>}
             </FormGrid>
+            {isBundle && form.bundle.length > 0 && <BundlePrice separateCents={bundle.separateCents} priceCents={parseMoney(form.price)} />}
             <Field label={t('skuLabel')} hint={t('skuHint')} error={err('sku')}><TextInput value={form.sku} maxLength={60} onChange={e => update({ sku: e.target.value })} onBlur={() => touch('sku')} style={{ maxWidth: 240 }} /></Field>
             <div className="field"><span className="nl-label">{t('tax')}</span><div style={{ fontSize: 14 }}>{t('taxAuto')} <strong>GST 5%</strong> · {t('taxBody')}</div></div>
             <div className="nl-field" role="group" aria-labelledby="ful-label">
@@ -211,9 +221,7 @@ export function ProductEditor({ detail, portal, typePicker }: { detail?: Product
                 <Checkbox checked={form.warranty} onChange={v => update({ warranty: v })} label={t('warranty')} />
               </div>
             </div>
-            <Field label={t('documents')} hint={t('documentsHint')}>
-              <div className="nl-cat-row"><Button variant="secondary" disabled>{t('specSheet')}</Button><Button variant="secondary" disabled>{t('invoice')}</Button></div>
-            </Field>
+            <DocumentsField listingId={saved?.id} canEdit={perms.update} />
             <Field label={t('keywords')} error={err('searchKeywords')}><TextInput value={form.searchKeywords} onChange={e => update({ searchKeywords: e.target.value })} onBlur={() => touch('searchKeywords')} /></Field>
           </>}
 
@@ -222,7 +230,7 @@ export function ProductEditor({ detail, portal, typePicker }: { detail?: Product
 
         <Side>
           <CompletenessPanel t={t} percent={completeness.percent} items={SECTIONS.map(s => ({ name: tabName[s], done: completeness.done[s] }))} />
-          <VettingPanel t={t} checks={vettingChecks({ category, priceCents: parseMoney(form.price), images: form.images, imageSource: form.imageSource, link, text: `${form.title} ${form.searchKeywords}`, gtin: { type: form.identifierType, value: form.gtin }, money })} />
+          <VettingPanel t={t} checks={vettingChecks({ category, priceCents: parseMoney(form.price), images: form.images, imageSource: form.imageSource, link, text: `${form.title} ${form.searchKeywords}`, gtin: isBundle ? null : { type: form.identifierType, value: form.gtin }, money })} />
           <FeesPanel priceCents={parseMoney(form.price)} costCents={parseMoney(form.cost)} tier={merchant.tier} />
           <p className="nl-cat-note"><strong>{t('howImages')}</strong> {t('howImagesBody')}</p>
         </Side>
@@ -265,7 +273,7 @@ function VariantsTab({ form, update, category, error }: { form: ProductForm; upd
   const addValue = () => {
     const v = value.trim();
     if (!v || form.variants.some(r => r.value.toLowerCase() === v.toLowerCase())) return;
-    update({ variants: [...form.variants, { key: rowKey(), value: v, sku: variantSku(form.sku, v), gtin: '', price: form.price, stock: '0' }] });
+    update({ variants: [...form.variants, { key: rowKey(), value: v, sku: variantSku(form.sku, v), gtin: '', price: form.price, stock: '0', images: [] }] });
     setValue('');
   };
   return <>
@@ -307,7 +315,7 @@ function VariantsTab({ form, update, category, error }: { form: ProductForm; upd
                   {cell('gtin', t('colGtin'), 'gtin', 'numeric')}
                   {cell('price', t('colPrice'), 'priceCents', 'decimal')}
                   {cell('stock', t('colStock'), 'stock', 'numeric')}
-                  <td data-label={t('colImages')} className="nl-small">{t('inherits')}</td>
+                  <td data-label={t('colImages')} className="nl-small"><VariantImages row={r} onChange={images => setRow(r.key, { images })} error={error(`variants[${i}].imageIds`)} /></td>
                   <td data-label={t('colStatus')}><span className={`tag ${ready ? 'tag-accent' : 'tag-neutral'}`}>{ready ? t('ready') : t('needsGtin')}</span></td>
                 </tr>
               );

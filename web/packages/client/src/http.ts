@@ -54,6 +54,15 @@ export function traceparent(): string {
   return `00-${hex.slice(0, 32)}-${hex.slice(32)}-01`;
 }
 
+let language: string | undefined;
+/**
+ * The UI's language (S-40), sent as `Accept-Language` on every call so the api answers 422 messages (and 403/409
+ * details) in it — the app's language switch, not the browser's, decides. `undefined` leaves the browser's header.
+ */
+export function setRequestLocale(locale: 'en' | 'fr' | undefined) {
+  language = locale === 'fr' ? 'fr-CA' : locale === 'en' ? 'en-CA' : undefined;
+}
+
 export interface RequestOptions { method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; body?: unknown; idempotencyKey?: string; signal?: AbortSignal; headers?: Record<string, string> }
 
 /**
@@ -66,6 +75,7 @@ export async function http<T = unknown>(path: string, opts: RequestOptions = {},
   if (opts.body !== undefined && !(opts.body instanceof FormData)) headers['content-type'] = 'application/json';
   if (method !== 'GET') { const t = xsrfToken(); if (t) headers['x-xsrf-token'] = t; }
   if (opts.idempotencyKey) headers['idempotency-key'] = opts.idempotencyKey;
+  if (language && !Object.keys(headers).some(h => h.toLowerCase() === 'accept-language')) headers['accept-language'] = language;
   // Same-origin (the BFF) only: another origin's CORS policy may not allow the header.
   if (path.startsWith('/') && !headers.traceparent) headers.traceparent = traceparent();
   const res = await fetch(resolve(path), { method, headers, credentials: 'include', signal: opts.signal, body: opts.body === undefined ? undefined : opts.body instanceof FormData ? opts.body : JSON.stringify(opts.body) });

@@ -4403,6 +4403,362 @@ only with DPoP.
 - **Not changed:** the disabled checks (`StringSplitter`, `MissingSummary`, `JavaTimeDefaultTimeZone`) and NullAway
   being off in tests.
 
+## 2026-09-30 — S-40 French validation messages across Studio forms
+- **One catalogue, English keys.** Messages stay English in the code — validation-rules.md's exact text and the modules' own constants — and `docs/spec/validation-messages.fr-CA.tsv` maps each to fr-CA (`English<TAB>French<TAB>status`, 579 lines). A TSV rather than ICU keys: nothing in the 250+ throw sites changes, the English stays the single source of the rule ids and tests, and a translator can work on it in a spreadsheet. The platform library packages it (`i18n/…`) and `ca.northline.platform.MessageCatalogue` resolves it for the api and northline-auth.
+- **Server language = `Accept-Language`.** `ApiExceptionHandler` (api) and `AuthExceptionHandler` (northline-auth) translate the 422 messages, and the 403/409 ProblemDetail `detail`s they produce, when the header's highest-weighted `en`/`fr` range is French (`fr`, `fr-CA`, `fr;q=0.9` before `en;q=0.8`). No header, `*`, English first or an unreadable header → the spec's English, byte for byte (existing tests unchanged). Rule ids and fields never change. 429/503 details written by module-level advices (geo, search, Stripe webhooks) and 404 details stay English.
+- **Run-time messages are templates.** A message built with `formatted`/`replace`/concatenation is a catalogue line with placeholders: the code's own (`%s`, `%d`, `%02d`, `%1$s`) or `{name}` for concatenations and Bean Validation attributes (`At most {max} characters.`). Parts are captured from the English and put into the French; exact lines win, longer templates are tried first. Amounts in a part are rewritten (`$1,234.50` → `1 234,50 $`). `{province:in}` asks for the place with its French preposition: the new `ca.northline.shared.PlaceNames` port, implemented by the region module from the province profiles (`nameFr`, `inFr`), so "Northline isn't open in Nova Scotia yet." becomes "Northline n’est pas encore offert en Nouvelle-Écosse." — no place name in code (region-neutral rule). Unknown places keep their name ("à {name}" with a preposition).
+- **Status column / translator review.** `shipped` (210 lines) = the French the Studio or consumer web already showed, kept so a 422 and a client check read the same; `new` (341) = first French wording, ours; `review` (28) = new wording a translator must settle first: lines that carry API codes (`price_asc`, `lat`/`lng`, `delivery=tonight`, `mon, tue…`), English state or role codes inside French sentences (`This quote is %s…`, `Your role (%s)…`), labels of choices the UI names differently, and `Choose %s.` (gender of the attribute). **No line has been signed off by a professional translator** — the backlog's "reviewed by a translator" is not met by this PR and needs a translator pass over the TSV (start with `review`, then `new`).
+- **Coverage is enforced.** `ValidationMessageCatalogueTests` (api) reads the api and auth sources and fails on any message without French: `message = …` of Bean Validation annotations, the message argument of `RuleViolation.of`, `new Violation`, `new Conflict` (literal or constant, ternaries included) and every constant of a `*Messages` class. `MessageCatalogueTest` (platform) checks the file parses, placeholders match between English and French, and the templates. Messages assembled from parts the scanner can't see must be added by hand (the food/search concatenations are).
+- **Studio.** `http()` (`@northline/client`) sends `Accept-Language: fr-CA|en-CA` from the Studio's language switch (`setRequestLocale`, set at start and on every change) — the switch decides, not the browser. A call that sets its own header (messages, help) keeps it. Client checks keep the English zod messages and translate them at display through a per-feature dictionary keyed by the English (`lib/validation.ts` `useLocalizeMessage`; the existing `useMessageT`s of catalogue, messages and reviews follow the same idea): added for the quote composer, the extra-work approval and availability hours / time off, which showed English in French. `lib/validation.test.ts` fails when a client dictionary's French differs from the catalogue's for the same English. Aligned on the way: "At most N characters." is "Au plus N caractères." everywhere (the catalogue editor said "N caractères au maximum."), "Files can be up to 10 MB." is "Les fichiers peuvent faire jusqu’à 10 Mo.".
+- **Not done.** Consumer web does not call `setRequestLocale` yet (its 422s follow the browser's `Accept-Language`, which is French for French browsers); email/SMS texts, MCP tool descriptions and AI errors are not validation messages and are not in the catalogue. Bulk-import row errors ("Price $4 is 92% below…") are report rows, not 422s, and stay as S-35 left them.
+
+## 2026-09-30 — S-73 Guard kitchen endpoints to kitchen businesses
+- **404, not 403.** A business whose type isn't `kitchen` (provider, seller, both) gets **404** `not_found` ("No kitchen with id …") on every Studio kitchen endpoint. Reason: 403 in this API means "you can't do this here" and carries `not_a_member` / `insufficient_role` / `mfa_required`, all fixable by who signs in; for a non-kitchen there is simply no kitchen resource, and no sign-in changes that. The Studio already treats 404 on `…/menus` and `…/modifier-groups` as "none" (onboarding `listingsApi.ts`), and its nav never shows kitchen screens to other types, so nothing in the web app changes.
+- **Which endpoints.** All handlers of the kitchen controllers: `…/kitchen/*` (live board, prep bump, pause, setup, prep, fulfilment, hours, holiday hours, promos) and the other kitchen-only Studio resources, which returned empty data the same way: `…/menus`, `…/menu-items`, `…/modifier-groups`, `…/combos`, POS import (`…/pos/*`, `…/menus/{id}/pos-imports`, `…/pos-imports/*`). Public food endpoints (`/api/v1/public/kitchens`) and checkout are untouched.
+- **Order of checks.** `food.web.KitchenOnlyAdvice` (`@ControllerAdvice` limited to those controllers, a `@ModelAttribute` method) runs after the `@RequiresMerchant` interceptor — a non-member still gets 403 and learns nothing about the business type — and before the request body is bound and validated, so a non-kitchen never sees a kitchen's 422s. The check is the use case `KitchenUseCases.RequireKitchen` over `KitchenMerchantFacts.kitchen(merchantId)` (merchants' `MerchantDirectory`, one indexed read per request).
+- MCP and Studio-assistant tools call the food services directly, not these controllers, so this guard does not cover them (outside the story's `/kitchen/*` scope).
+
+## 2026-09-30 — S-64 Orders public API for order lines; remove direct orders SQL from food
+- **An SPI in `food.api`, implemented by orders — not a call into `orders.api`.** orders depends on food (it prices dishes with `FoodMenuPricing`, reads `FoodCheckoutFacts` / `KitchenProgress` and moves order state on the kitchen events), so food calling `orders.api` would be a module cycle that `ModularityTests` rejects. The query is therefore declared where it's used, as BACKEND_CONVENTIONS § 2 and the S-37 follow-up note prescribe: `food.api.KitchenOrderFeed` (`open(merchantId, dueBy)`, `order(merchantId, orderId)`, `lines(merchantId, orderIds)`), implemented by `orders.persistence.KitchenOrderFeedJdbc` on `orders.orders`, `orders.group_orders` and `orders.order_lines`. It is the orders module's public read of its order lines for the kitchen; the backlog's "food uses orders.api" is met in substance (orders owns and answers the query), not by package name. Modifier JSON is parsed on the orders side (`Line.modifiers` is a list of names).
+- **fulfilment gets its first code.** The courier's pickup leg (`fulfilment.stops` / `runs` / `couriers`) was the other half of the live board's join. `fulfilment.api.CourierPickups.of(orderIds)` (first pickup stop per order: courier assigned, courier user, ETA, arrived) with `fulfilment.persistence.CourierPickupsJdbc`; fulfilment depends on nothing, so food may call it.
+- **food keeps only its own tables.** `KitchenTicketJdbc` composes the feed, the pickups and `food.kitchen_tickets` / `food.menu_items` in memory: the same rows as the old single query (states placed/accepted/packing/ready, a line of this kitchen, scheduled orders 60 min ahead, handed-off tickets dropped, line titles falling back to the menu item's name, then "Item"). The order load (Σ qty × unit, slowest item's extra prep) and the escrow release's line ids (`FeedKitchenOrderLines`, replacing `KitchenOrderLinesJdbc`) use the feed; the `kds` badge counts the feed's placed/accepted/packing orders minus those whose ticket is past cooking, with the injected `Clock` instead of the database's `now()`. Cost: the live board is up to 5 queries per refresh instead of 2 (orders, tickets, lines, item names when a line has no title, pickups), each by merchant and/or a list of order ids.
+- **Rule.** `SchemaOwnershipTests.ALLOWED` is empty (the three food exceptions are gone), and a new ArchUnit rule `kitchenReadsOrdersThroughTheFeed` forbids food from depending on any orders class or on fulfilment internals. BACKEND_CONVENTIONS updated.
+- Outside the api monolith, the worker's and auth's reads of `merchants.*` (S-37 note) are unchanged.
+
+## 2026-09-30 — S-66 Finance and compliance implement CaseReferences for the help form
+- **Who implements what.** The plan said finance and compliance implement `messaging.api.CaseReferences` themselves. They can't: messaging already depends on payments (it listens to `DisputeDecided`, `RefundIssued`, `PayoutAccountChanged` …) and on merchants (`MerchantDirectory`, `TeamRoster`), so payments or merchants implementing a messaging SPI would be a module cycle (`ModularityTests`). So each owner publishes the read in its own `api` and messaging turns it into "Related to" entries:
+  - payments: `payments.api.RecentPayouts.recent(merchantId, limit)` (implemented by `PayoutService` over the payout history) → `messaging.application.PayoutCaseReferences`: the 5 latest payouts, "Payout · $1,234.56 · Sep 26" / « Versement · 1 234,56 $ · 26 sept. » ("Instant payout" / « Versement instantané » for instant ones), dated in the business's time zone (region model: its market, else province, else the platform zone).
+  - merchants (compliance ledger): `merchants.api.ComplianceDocuments.documents(merchantId)` (implemented by `ComplianceLedgerService` over the ledger rows the Compliance screen lists: licences, insurance, WCB, permits, certificates, inspections, attestations, GST; not KYC/bank/MFA/site visit) → `messaging.application.DocumentCaseReferences`: earliest expiry first, "Liability insurance · exp. Jan 2027" / « Assurance responsabilité · exp. janv. 2027 ».
+- **Document names** are the row's recorded label, else a generic name per check type (en/fr), with the registry or reference where it identifies the document ("AMVIC licence", "Food permit · #FS-…", "GST/HST registration"). Generic on purpose — no provincial agency in code (region-neutral rule); the Studio's Compliance screen still uses its own names.
+- Nothing else changes: the case form already accepted `refType` `payout | document`, and the Studio's "Related to" select shows whatever the endpoint returns (no web change). As before, the api does not check that a submitted `refId` is one of the offered records (the label is stored as sent).
+
+## 2026-09-30 — S-67 Enforce kitchen auto-pause on late orders and the ±40 % menu price vetting rule
+- **Auto-pause.** Since S-46 the customer side already refused orders at read time while "late orders ≥ N" (`KitchenCalendar`, checkout's `kitchen_closed`), but nothing recorded it, nothing told search or the kitchen, and the setting looked unenforced in the Studio. Now:
+  - `food.kitchen_settings.auto_paused_at` (V170) marks the state; `KitchenUseCases.KitchenAutoPause.check` compares the late orders (accepted tickets past their ready-by time — the same count as the customer side) with the threshold and, on a change only, sets / clears the mark with a conditional update and publishes **`kitchen.auto_paused`** (`lateOrders`, `threshold`) or **`kitchen.auto_resumed`** on topic `food.kitchen` (new events + JSON schemas; the search indexer already refreshes the whole merchant on any `food.kitchen` event). Two replicas can't publish the same transition.
+  - When: every minute (`KitchenAutoPauseScheduler`, not under `test`) — orders become late as time passes — and immediately after "Mark ready" / "Handed off", so catching up reopens the kitchen at once. Turning the setting off resumes on the next sweep.
+  - The Studio's live board returns `autoPause {lateOrders, threshold, active}` and shows "Auto-paused. N orders are past the ready-by time (your limit is N)…" (en/fr). The manual 30-minute pause is unchanged and independent.
+  - Late = cooking past ready-by; a new order not accepted in time doesn't count (no promise was made yet) — as S-46 defined it.
+- **±40 % price vetting** (design 02c "prices within ±40 % of the cuisine median"):
+  - Comparable dishes = live, approved dishes of the *other* active kitchens in the same city (the market key) that share one of the kitchen's public cuisines (`merchants.api.PublicDirectory`). The median needs at least 5 such dishes; with fewer, or for a kitchen with no public cuisine yet (not approved), there is no check. `food.application.PriceBenchmarks` / `PriceBenchmarksJdbc`.
+  - A published dish whose price is outside ±40 % of that median is **held**: new visibility `price_check` (vetting `pending`, hidden from customers) until the owner (or a cook — EDIT) confirms the price with `POST …/menu-items/{id}/confirm-price` ("Keep this price"), or changes it to one inside the band. A changed price is checked again; a confirmed price stays confirmed. Item JSON gains `priceCheck {medianCents, deviationPct, confirmed}` when the price is an outlier.
+  - Checked when a dish is saved as published (the median at that time is stored in `food.menu_items.price_median_cents`, V170; the confirmed price in `price_confirmed_cents`) and again for every published dish when Northline approves the kitchen (`reaudit`). Medians are not refreshed on their own as other kitchens change prices.
+  - Order of the menu builder's status: Draft → Needs photo → **Price check** → Hidden until approved → Live.
+  - "Flagged" is to the merchant, not to a staff queue: trust can't hear food's events (food already depends on `trust.api` — a cycle), and a console review queue for menu prices is a console story. Recorded as open.
+- Migration **V170** (`V170__kitchen_autopause_price_check.sql`, range V170–V179 added to IMPLEMENTATION_PLAN by the ordering rule): `food.kitchen_settings.auto_paused_at`, `food.menu_items.price_median_cents`, `price_confirmed_cents`. Additive.
+
+## 2026-09-30 — S-41 Tax documents as PDF (the GST reversal on refunds was done in S-21)
+- **Library: Apache PDFBox 3.0.8** (`org.apache.pdfbox:pdfbox`, version in `libs.versions.toml`). Why: Apache-2.0 (iText 7+ is AGPL, ruled out for a closed platform; OpenPDF is LGPL/MPL), pure Java with no native or font-server dependencies (runs the same on every cloud and in the distroless image), actively maintained by the ASF, and the library the team already uses in samop, so its quirks are known. It only draws; the layout (one title, party lines, a table, notes, page footer) is ours in `payments.infra.PdfBoxStatementRenderer`. Fonts are the PDF standard Helvetica / Helvetica-Bold (nothing embedded; WinAnsi covers English and French — the narrow no-break space Java uses in French numbers is printed as a no-break space).
+- **Documents and endpoints** (FINANCE_READ, like the CSVs): `GET …/reports/gst-summary.pdf?year=&lang=` ("{year} GST/HST collected summary" / « Sommaire de la TPS/TVH perçue {year} ») and `GET …/reports/annual-statement.pdf?year=&lang=` ("{year} annual statement" / « Relevé annuel {year} »), the same months and figures as the CSVs (`SalesReportService.yearMonths`, shared). `lang=en|fr` decides the language (a download link can't send headers), else `Accept-Language`; French only when asked for. File names `northline-gst-summary-2026.pdf`, `…-fr.pdf` for French. The CSVs stay as they are (accountants import them).
+- **Bilingual for real:** month names, amounts ($1,234.56 / 1 234,56 $), dates and every label in the request's language; the PDF's `/Lang` is `en-CA` / `fr-CA` for screen readers.
+- **Province from the merchant (region-neutral):** the header reads the business's legal name, its trading name when different, its GST/HST number, "Province: {name}" in the language and, on the GST/HST summary, "Sales-tax rate in {province}: {rate}" / « Taux de taxe de vente {en Nouvelle-Écosse | au Québec} : … » — the province, its French preposition and the rate come from the region model (`MerchantPlaces`, `ProvinceProfile.nameIn`, `TaxRates`). No province, tax name or zone is in code; tax is labelled "GST/HST" (« TPS/TVH ») everywhere, as the CSV and CRA do. Months are cut in the business's time zone.
+- **Schema/API additions:** `payments.api.MerchantBillingFacts.statementParty(merchantId)` → `StatementParty(legalName, displayName, gstNumber)`, implemented by the merchants module from Settings › Business (payments can't call merchants.api — merchants depends on payments). `payments.application.TaxStatements` (use case), `StatementDocument` (print model) and `StatementRenderer` (port). No migration.
+- **Studio:** Reports' "Tax summary (GST)" now downloads the PDF in the Studio's language; Payouts › Tax documents offers "PDF · CSV" for both documents (labelled links, en/fr).
+- Not done: Quebec's QST (TVQ) is not split out — the read model has one tax total per month (S-21); a QST column would come with a QST-registered marketplace setup. The statements are not signed or archived; they are generated on request from the live read model.
+
+## 2026-09-30 — S-68 Server-sent events for messages and live orders (replace polling)
+
+- **One stream per Studio tab, not one per screen.** `GET /api/v1/merchants/{merchantId}/live` (`studio` module,
+  `@RequiresMerchant(VIEW)`) carries every live screen's signals: `message` (data `{"ref": threadId}`), `kitchen`
+  (`{"ref": orderId|null}`), `orders` (`{"ref": orderId}`), plus `ready` on open. The Studio shell opens it
+  (`useStudioLive` in `routes/b.$merchantId.tsx`) so a new message refreshes the Messages badge on every screen. The
+  planned `…/threads/stream` (messaging's "Real time" note above) is folded into it.
+- **Signals, not data.** Events carry a topic and an id, never message text, names or amounts; the browser invalidates
+  the matching TanStack queries and refetches with its own permissions. A technician therefore learns nothing from the
+  id of a thread they cannot open, and the stream needs no per-role filtering or payload versioning.
+- **Where signals come from.** `StudioLiveEvents` (module listeners, after commit, so the refetch sees the change):
+  `message.sent` → `message`; `order.placed` → `kitchen` for `orderType=food`, else `orders`; `order.packed` →
+  `orders`; `order.accepted` / `order.ready` / `order.handed_off` / kitchen paused / resumed → `kitchen`. Help cases'
+  messages publish `message.sent` too, so open cases refresh as well.
+- **Across replicas: Valkey pub/sub** behind the `StudioLive` port, chosen by `northline.live.bus` (`LIVE_BUS`):
+  `redis` (channel `nl:studio:<merchantId>`, message `<topic>[:<id>]`; the cloud default) or `memory` (local, test;
+  refused under staging/prod like `MCP_STORE`). Nothing is stored: a signal published while no replica holds a stream
+  for the business is dropped, and a reconnecting browser catches up with one refetch (below). Publishing failures are
+  logged, never thrown — a live hint must not fail the change it reports.
+- **Stream lifetime 10 minutes** (`LIVE_STREAM`), keep-alive comment every 25 s, `retry: 3000`. Ending the stream makes
+  EventSource reconnect through the BFF, which re-checks the session, refreshes the access token and re-reads the
+  membership — so a removed member stops getting signals within 10 minutes. The BFF relays `text/event-stream` as it
+  arrives (S-130's `streaming-media-types`, S-135's relay fix); nothing changed there.
+- **Fallback to polling.** While the stream is not open (connecting, dropped, refused, or no EventSource) the screens
+  poll at their old intervals (threads 15 s, open thread 5 s, KDS 15 s, help cases 30 s / 10 s). While it is open they
+  keep a 60 s safety refresh (`LIVE_SAFETY_MS`) for changes that send no signal (another member reading a thread, a
+  courier assigned, a scheduled order entering its 60-minute window, a prep bump on another tablet). The first `ready`
+  needs no catch-up; every later one (a reconnect) invalidates messages, kitchen and orders once. If the server closes
+  the stream for good (EventSource `CLOSED`: 403, or an api without the endpoint), the Studio retries after 30 s.
+- **Orders screen too.** Goods orders (`orders`) refresh the Orders board, nav badges and dashboard; the story names the
+  KDS, but the same signal costs nothing for sellers.
+- **Not done:** no signal for thread reads/assignments, courier assignment or prep bumps (covered by the 60 s safety
+  refresh); no per-event replay (`Last-Event-ID`) — reconnects refetch instead. The Valkey adapter is tested against a
+  real Valkey 8 (Testcontainers, two adapter instances standing in for two replicas); a multi-replica deployment has not
+  been exercised.
+
+## 2026-09-30 — S-65 Per-variant images, bundles and compliance documents in the product editor
+
+### Schema additions (V180, additive)
+- `catalogue.offers.listing_type` (`product` | `bundle`, default `product`).
+- New `catalogue.bundle_items` (bundle offer, position, item offer, variant, qty 1–99), FK to `offers` with cascade
+  from the bundle and an index on the item offer.
+- New `catalogue.listing_documents` (purpose `spec_sheet` | `invoice`, file name, PDF/PNG/JPEG type, size, storage key,
+  uploader), cascading from the offer.
+- Function `catalogue.bundle_stock(bundle)`: the smallest of item stock / qty.
+- Per-variant images use the baseline `catalogue.variants.image_set` (V005), which was never written before.
+
+### Variant images
+- **Model:** each variant row keeps its own media ids, main first, at most 9 (the listing's rule). An empty list means
+  the variant "inherits" the listing's images; that is the cell's text, and an image count shows as "main + N" as in
+  design 02 (`varRows.img`).
+- **Rules:**
+  - Uploads go through the existing `POST …/media`, and only the business's own media are accepted (422
+    `variants[i].imageIds`).
+  - Images count as visible to customers once the offer is approved (`MediaRepository.approved` now also looks at
+    variants), the same as S-123.
+  - Automated vetting runs its duplicate-image check on variant images too.
+  - Adding, removing or reordering a variant's images on an approved listing is an `images` change (S-39 re-vetting).
+- **Customers:** the product page's variants carry `images` (approved URLs only). The consumer app shows the chosen
+  option's photos, falling back to the offer's, and the cart shows the variant's first photo.
+
+### Bundles
+- **A bundle is a product listing** (`ProductDetails.type = bundle`) that names 1–10 of the business's own product
+  offers with a quantity, and a variant when the product has variants. It reuses the product editor: identity and
+  category, images, price and fulfilment, compliance and vetting all work as for products.
+- **What a bundle has and doesn't have:**
+  - It has no identifier (GTIN), no variants and no stock of its own. The compact constructor forces this.
+  - Its stock is computed wherever stock is read: the editor, the listings table, the cart, shop pages and the search
+    indexer (`bundle_stock`). It is not stored.
+  - Quick price and stock updates refuse a stock for a bundle ("A bundle's stock follows its items.").
+- **Rules:**
+  - Each item must be the business's own product. Bundles inside bundles and the bundle itself are refused.
+  - An item needs a variant when its product has variants, and the same item may not appear twice.
+  - Completeness needs at least 2 units ("Add at least two items to the bundle."), so a single item with qty 1 is not
+    a bundle.
+  - Submitting for vetting needs every item to be an approved listing.
+  - A product that is part of a bundle can't be deleted (409 `listing_in_bundle`).
+  - A bundle's contents count as its **price** for S-39 re-vetting: they are what the price buys.
+- **Purchasable:** the cart and checkout see a bundle like any offer, through the `SellableOffers` port.
+  - Its stock is the whole bundles its items allow.
+  - Taking stock locks the item rows in a stable order, then decrements every item, or none when one is short.
+  - Giving stock back (a checkout that fails after taking it) returns every item.
+  - Order lines reference the bundle offer, and sales count against the bundle.
+- **Who can create a bundle:** the design's type picker shows Product · Service · Bundle for businesses that sell
+  both. A seller-only business sees Product · Bundle, because a bundle is goods. That is a deviation from
+  `showTypePicker: !sellerOnly && !provOnly`, made because sellers are the ones with products to bundle.
+- **Editor:**
+  - The Variants tab becomes "Bundle contents": a picker of the business's own products (not bundles), the variant,
+    the quantity, each item's price and stock.
+  - The offer tab shows the derived stock read-only, plus "Bought separately: $X · Customers save $Y".
+  - The listings table's meta line starts with "Bundle".
+- **Not done:** a bundle has no customer-facing "what's in the box" list beyond its own description, and the consumer
+  pages show it as a plain product. Sales of a bundle do not count toward its items' `sales_30d`.
+
+### Compliance documents
+- **Endpoints:** `GET|POST …/listings/{id}/documents` and `GET|DELETE …/listings/{id}/documents/{documentId}`, for
+  products only.
+- **Upload rules:**
+  - Multipart `file` plus `purpose` (`spec_sheet` | `invoice`), the design's two buttons.
+  - PDF, PNG or JPEG, judged by the file's first bytes, at most 10 MB and 10 per listing. These are the onboarding
+    documents' rules and message ("Upload a PDF, PNG or JPEG under 10 MB.").
+  - The file name is cut to its last path segment and at most 200 characters.
+- **Storage and access:** stored through the catalogue's `MediaStorage` (now with `delete`) under the business's
+  prefix. The files are private: members with VIEW can list and download them (`no-store`, as an attachment), and
+  members with EDIT can upload and remove them. Customers never see them.
+- **Not done:** the console's vetting queue doesn't show them yet, so a reviewer reads them through the database or
+  storage. No virus scan beyond what the object store does (S-10's scanner applies when configured). Documents are
+  not required for submission: the design shows them as optional uploads.
+
+## 2026-09-30 — S-69 Studio bundle size and code splitting
+
+Measured on the production build. Sizes are gzip -9 in kB (1000 B). "Initial JS" means the entry script, the chunks
+`index.html` preloads, and everything they import statically. `apps/studio/scripts/bundle-budget.mjs` computes it.
+
+| | before | after |
+|---|---|---|
+| entry script | 184.1 kB (597 kB raw) | 159.6 kB (500 kB raw) |
+| initial JS (incl. preloads) | 184.1 kB, 1 file | 202.0 kB, 18 files (the landing preloads) |
+| JS fetched to show the dashboard | 209.6 kB, 17 files | 202.1 kB, 19 files |
+| Lighthouse mobile, dashboard: FCP · LCP · Speed Index | 2.6 s · 3.1–3.4 s · 4.3–4.5 s | 0.8–1.0 s · 2.9–3.0 s · 1.1–1.3 s |
+| Lighthouse performance score | 79–86 (6 runs) | 79–94 (8 runs); 94 with TBT 140 ms |
+
+- **The main chunk was already under the target.** The backlog's "~550 kB" is raw size: the entry was 597 kB raw but
+  184 kB gzip, under the 250 kB gzip goal before this story. The work went into what was in it and into the
+  dashboard's critical path.
+- **Icons out of the entry.** The menu's 22 Phosphor icons (69 kB raw; every Phosphor component carries all six
+  weights) were in `features/shell/nav.ts`, which the route guards import. The menu moved to `navMenu.ts`, which only
+  the layout imports. `nav.ts` keeps the screen and path rules.
+- **Loaders travel with their screen.** The router plugin's `codeSplittingOptions.defaultBehavior` groups `loader` with
+  `component`, so the features' `api.ts` modules and their zod schemas leave the entry (kitchen, settings,
+  availability, appointments …).
+  - Exceptions: the `/b/$merchantId` layout and the dashboard keep their loaders unsplit (per-route
+    `codeSplitGroupings`), so the business and the dashboard data are requested together with the session check, not
+    after a chunk download.
+  - `SETTINGS_TABS` moved to `features/settings/tabs.ts`, because the settings route's search validation pulled in the
+    whole settings api.
+- **The landing chunks are preloaded.** A small Vite plugin (`preloadLanding` in `vite.config.ts`) adds
+  `<link rel="modulepreload">` for the layout and dashboard chunks and their imports. The browser fetches them while
+  the entry runs. Signed-out pages pay about 40 kB gzip for this, deliberately.
+- **Nothing blocks the first paint any more.**
+  - `/config.js` is `defer`, and still runs before the module script.
+  - Google Fonts are preloaded in `index.html` and applied by `main.tsx`. The usual `onload="this.media='all'"`
+    trick is an inline handler, which the Studio's CSP (`script-src 'self'`) forbids.
+  - `index.html` paints a boot screen ("Northline Studio" on the page background) that React replaces.
+- **Budget in the build.** `pnpm --filter @northline/studio build` now runs `scripts/bundle-budget.mjs` after
+  `vite build`. It fails when the initial JS passes 250 kB gzip and names the biggest files. The Docker image build
+  runs the same script.
+- **Lighthouse ≥ 90 is met only on a quiet machine.**
+  - The FCP, LCP and Speed Index gains are stable across runs.
+  - Total Blocking Time is not: it varied 140–500 ms with the load of the shared build machine, because the simulated
+    4× CPU slowdown multiplies contention. Its long tasks are the entry's evaluation and the first render.
+  - Moving FCP earlier with the boot screen also moves those tasks after FCP, where TBT counts them.
+  - The method: Lighthouse 12 (mobile, simulated throttling) against the built dist served gzip by a fixture server
+    with a populated dashboard.
+- **Not done:**
+  - zod (95 kB raw) stays in the entry: the session and business checks that every route runs parse with it, and a
+    `zod/mini` split would mean two zod copies.
+  - intl-messageformat's parser (38 kB raw) stays too: precompiling the messages would change `defineMessages`.
+
+## 2026-09-30 — S-70 Remaining schema TODO constraints and indexes
+
+Every `-- TODO indexes/constraints` comment of the V002–V015 baseline was checked against a database migrated to
+main (V164). Each one is now one of three things:
+- **done earlier:** it exists from a later migration;
+- **V181:** added by this story;
+- **dropped:** with the reason given below.
+
+The baseline files keep their comments, because applied migrations are never edited, so this list is the reference.
+
+| table | TODO | status |
+|---|---|---|
+| identity.users | unique(phone), unique(email) | done earlier (V020, partial unique) |
+| identity.users | RLS: self or admin | **dropped**. Every query runs as the api's database role and the module services enforce "self or staff" (CurrentUser / staff role). Row-level security would need a role per request and session variables on every pooled connection, for no rule the services don't already apply. |
+| identity.passkeys | index(user_id) | done earlier |
+| identity.sessions | index(user_id) | done earlier (V021) |
+| identity.sessions | TTL job | **dropped**. The rows are the sign-in history that Settings › Security lists (S-19), not live sessions; those are in Valkey with their own TTL. How long the history is kept is a retention decision for the privacy policy, not an index. |
+| identity.household_members | PK(household_id,user_id) | done earlier |
+| identity.addresses | index(user_id) | done earlier (partial, `deleted_at is null`) |
+| identity.addresses | GiST(geom) | **V181** `ix_addresses_geom` (partial, geom not null) |
+| region.regions | unique(province) | done earlier (V130, partial on `kind = 'province'`) |
+| region.zones | GiST(polygon) | done earlier |
+| region.feature_flags | PK(key,region_id) | done earlier |
+| merchants.merchants | index(type,status), index(tier), unique(business_number) | done earlier |
+| merchants.merchant_principals | index(merchant_id), role check per structure | done earlier (V031 trigger `trg_principal_role`) |
+| merchants.merchant_categories | PK, count ≤ limit trigger | done earlier (V016 `trg_category_limit`) |
+| merchants.merchant_members | PK(merchant_id,user_id) | done earlier |
+| merchants.verifications | index(merchant_id,status), index(expires_at) | done earlier |
+| merchants.storefronts | unique(slug), unique(custom_domain) | done earlier (V030, V085) |
+| merchants.storefront_sections | unique(storefront_id,position), kind allowed for page_kind | done earlier (V016 `trg_section_kind`) |
+| merchants.service_areas | PK(merchant_id,zone_id) | done earlier |
+| catalogue.categories | index(parent_id), gin(search_terms) | **V181** `ix_categories_parent`, `ix_categories_search_terms` |
+| catalogue.catalog_products | unique(gtin) | done earlier (V050, partial) |
+| catalogue.catalog_products | GIN(attributes) | **dropped**. No SQL query filters on attributes: attribute facets and filters are served by the Elasticsearch read model (S-44). A GIN index would cost every catalogue write for no reader. |
+| catalogue.offers | unique(merchant_id,sku), index(product_id) | done earlier |
+| catalogue.variants | unique(offer_id,sku) | done earlier |
+| catalogue.services | index(merchant_id), index(category_id) | **V181** `ix_services_merchant`, `ix_services_category`. The (merchant_id, sku) unique index is partial, so it can't serve "every service of a business". |
+| catalogue.media | index(phash), index(owner_type,owner_id) | done earlier |
+| food.menus | index(merchant_id) | done earlier ((merchant_id, sort)) |
+| food.menu_items | index(merchant_id,available) | done earlier |
+| food.item_modifiers | PK(item_id,group_id) | done earlier |
+| availability.availability_rules | index(merchant_id,member_user_id) | done earlier: the leading columns of the unique (merchant_id, member_user_id, weekday, effective_from) |
+| availability.time_off | index(merchant_id,starts_on) | done earlier |
+| booking.bookings | index(merchant_id,starts_at), index(customer_id) | done earlier |
+| booking.bookings | exclusion constraint on member/time | **dropped**. Reasons below the table. |
+| booking.booking_events | index(booking_id,at) | done earlier |
+| booking.quotes | index(request_id), index(merchant_id,state) | done earlier |
+| booking.quote_lines | unique(quote_id,position), discount/amount check | done earlier (V040) |
+| orders.carts | index(customer_id) | done earlier (unique partial) |
+| orders.orders | index(customer_id), index(state,window_id) | done earlier |
+| orders.order_lines | index(order_id), index(merchant_id,state) | done earlier |
+| orders.delivery_windows | index(zone_id,starts_at) | done earlier |
+| orders.group_orders | unique(link_code) | **V181** `ux_group_orders_link_code` (partial) |
+| fulfilment.runs | index(courier_id,state) | **V181** `ix_runs_courier_state` |
+| fulfilment.stops | index(run_id,seq) | **V181** `ix_stops_run_seq` |
+| fulfilment.couriers | Redis Streams · TTL 24 h | **dropped**. Not a database item: live courier positions travel over Valkey pub/sub (S-52 tracking), never through this table. |
+| payments.payment_intents | unique(stripe_pi) | done earlier |
+| payments.escrows | index(release_at), index(merchant_id,state) | done earlier |
+| payments.payouts | index(merchant_id,at) | done earlier: (merchant_id, created_at desc). The table has no `at` column. |
+| payments.ledger_entries | index(account,at), append-only | done earlier (V061 trigger) |
+| payments.refunds, payments.disputes | index(state) | done earlier |
+| trust.reviews | unique(ref_id,author_id), index(target_type,target_id) | done earlier (unique per target type) |
+| trust.quality_scores | PK(merchant_id,date) | done earlier |
+| trust.flags | index(state) | done earlier |
+| trust.points_ledger | index(user_id) | done earlier ((user_id, created_at)) |
+| messaging.threads | index(ref_type,ref_id) | done earlier |
+| messaging.messages | index(thread_id,at) | done earlier |
+| messaging.notifications | index(user_id,sent_at) | **V181** `ix_notifications_user_sent` |
+| messaging.tickets | index(state,sla_due_at), index(agent_id) | done earlier (V071) |
+| i18n.translations | PK(key,locale) | done earlier |
+| i18n.translations | published as CDN bundles | **dropped**. Not a database item. UI strings ship in the web bundles (`defineMessages`), and this table has no writer. |
+| i18n.content_translations | PK | done earlier |
+| developer.api_keys | index(key_hash) | done earlier (unique) |
+| developer.webhook_deliveries | index(endpoint_id,at) | done earlier |
+| developer.outbox | Debezium reads WAL; rows purged after publish | **dropped**. Obsolete: the Modulith JDBC registry (`events.event_publication`) is the outbox, Debezium was removed, and nothing writes this table. Dropping the table itself is left out: migrations here are additive. |
+| developer.audit_log | append-only | **V181** trigger `audit_log_append_only`: UPDATE and DELETE are refused. The one exception is a transaction that sets `northline.audit_retention = 'on'` and deletes rows older than seven years. |
+| developer.audit_log | nightly export to cold storage · 7-year retention | **dropped** as a schema item. The export and the purge job are operations work that no story covers yet. The trigger above already admits the purge. |
+
+**Why the bookings exclusion constraint was dropped.**
+- Customer bookings already serialise per team member and refuse overlaps: `CustomerBookingJdbc.lockAndCheckOverlap`
+  takes an advisory lock and runs an overlap query.
+- The availability holds in Valkey (S-55) go further, with travel buffers that a plain time-range exclusion can't
+  express.
+- The constraint would need `btree_gist`.
+- Only the customer booking path runs that check. Rows written by other paths (quote acceptance, the dev seed, older
+  data) aren't guaranteed overlap-free, and any overlapping row in a deployed database would make the migration fail
+  at deploy. That is a risk an additive migration must not take.
+
+**Tests.** `SchemaTodosTest` checks the V181 indexes on the migrated test database, the group-order link uniqueness,
+and the audit log rules: no update, no delete, and a retention delete only past seven years with the setting.
+
+## 2026-09-30 — S-72 Bulk import: validate image URLs and support full updates on re-import
+
+- **One set of SSRF rules.** The S-33 `EgressPolicy` and `HostResolver` moved from the worker to the shared `platform`
+  library (`ca.northline.platform`). They are joined by `EgressDnsResolver`, the HttpClient 5 resolver that
+  checks every resolved address and pins the connection to them, and `EgressPolicy.refuseLiteral` for IP-literal
+  hosts. The worker's webhook transport uses the same classes, so its behaviour is unchanged. The api's new
+  `SafeRemoteImages` (port `RemoteImages`) fetches import images with them.
+- **Fetch rules:**
+  - https only, no credentials in the URL, public addresses only;
+  - no redirects: a redirect could point anywhere, so the merchant gives the final URL;
+  - no cookies, no retries;
+  - timeouts of 5 s to connect, 10 s per read and 20 s in all;
+  - at most 15 MB, the upload limit.
+  - `IMPORT_IMAGES_ALLOW_LOCAL=true` allows http:// and loopback, for local development and the tests. The cloud
+    profiles refuse to start with it, the same rule as `WEBHOOKS_ALLOW_LOCAL`.
+- **The `image_urls` column.** The three product templates gain it: up to 9 links, main first, separated by spaces,
+  new lines or `|` (commas would split a CSV cell). Validation fetches every distinct URL once, 8 at a time on virtual
+  threads, at most 500 per file ("Up to 500 image URLs per file."). It runs outside a database transaction, so no
+  connection is held while fetching. A row whose image fails becomes an error row, with the first failing image's
+  message:
+  - "Image URL unreachable" — the design's text: an HTTP error, a timeout, a redirect, or an image too large;
+  - "Image URL must be a public https:// link" — refused by the SSRF rules;
+  - "Image URL is not a JPG or PNG image";
+  - "Image URL is under 1000 px on the longest side";
+  - "Image URL is not a valid link";
+  - "Up to 9 image URLs per row".
+
+  The report is kept in row order.
+- **Importing images.** On import the URLs are fetched again and stored through the normal media upload, as the
+  business's own images in order, and the listing's image source becomes `own`. An image that no longer loads at that
+  moment is left out instead of failing the whole import; the completeness meter then shows it missing. Variant
+  rows' images go to the listing: the first row of a parent supplies them. Per-variant images arrive with S-65.
+- **Full updates on re-import.**
+  - **Category templates:** a row for an existing SKU now updates every column it fills in: title, GTIN, brand, MPN,
+    category, attributes, price, stock and images. An empty cell keeps the current value, so a sheet exported with
+    blanks never wipes data.
+  - **Validation for updates:** an update row checks the attributes it names against the listing's category, or the
+    new category when the row changes it. Price and stock may be empty.
+  - **Services template:** updates name, category, pricing mode, price, duration, buffer, what's included and
+    instant book in the same way.
+  - **Price & stock template:** still changes price and stock only.
+  - **How it is saved:** updates go through the editor's use cases (`EditProduct`/`EditService.update`), so the
+    editor's validation, S-39 re-vetting and events apply as in the Studio.
+- **Variants on re-import.** Rows whose `parent_sku` is an existing product listing no longer fail ("Parent SKU
+  already exists …").
+  - Each row updates the variant with its SKU (price, stock, GTIN, and the name when size or colour is filled) or
+    adds a new variant. A new variant needs a price and stock.
+  - The first row's listing-level columns apply to the listing.
+  - The offer shows the lowest variant price and the total stock, as the S-35 sync does.
+  - Variants missing from the file are kept, not removed.
+- **Not done:** the row errors stay English, like the existing import messages, which the design shows verbatim.
+  Nothing has fetched a real third-party image host: the tests use WireMock on loopback, and the SSRF refusals are
+  unit-tested with made-up addresses.
+
 ## 2026-09-30 — S-75 Storefront analytics (visits, bookings) and the provider-funded reward
 
 - **Visits are a daily count, nothing else.** The consumer's provider and restaurant pages call

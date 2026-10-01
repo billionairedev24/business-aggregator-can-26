@@ -34,6 +34,7 @@ dependencies {
     implementation("org.yaml:snakeyaml") // S-128: reads the committed OpenAPI documents (version from Spring Boot)
     implementation(libs.ulid)
     implementation(libs.stripe)
+    implementation(libs.pdfbox) // S-41: tax documents as PDF (Apache-2.0; docs/DECISIONS.md)
     implementation(libs.mapstruct)
     // Object storage (S-10): only the provider selected by northline.storage.provider is instantiated.
     implementation(libs.aws.s3) { exclude(group = "software.amazon.awssdk", module = "netty-nio-client") }
@@ -68,6 +69,8 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-elasticsearch") // S-44: the search API on Elasticsearch 9
     testImplementation(libs.archunit)
     testImplementation(testFixtures(project(":platform"))) // S-111: OtlpReceiver
+    // S-72: bulk-import image URLs are fetched under the S-33 SSRF rules (platform EgressDnsResolver pins addresses)
+    implementation("org.apache.httpcomponents.client5:httpclient5")
     testImplementation(libs.wiremock) // S-23: registry adapters against recorded HTTP stand-ins
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

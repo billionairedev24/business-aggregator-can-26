@@ -29,6 +29,11 @@ class UnconfiguredAdapters {
             public Optional<byte[]> get(String key) {
                 return Optional.empty();
             }
+
+            @Override
+            public void delete(String key) {
+                // nothing was ever stored
+            }
         };
     }
 }
