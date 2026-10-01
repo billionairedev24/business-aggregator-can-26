@@ -5446,3 +5446,57 @@ Stacked on S-80 (#123) → S-92 (#122) → S-79 (#121).
   can be warned.".
 - **Not done:** the automatic consequences themselves (removing a business from search below the floor, instant book
   off after no-shows, the photo delay) — the rules are their configuration, the jobs are S-82's; appeals.
+
+## 2026-10-01 — S-83 Support desk: agent queue, EN/FR macros, role-gated case actions
+
+Stacked on S-93 → S-80 → S-92 → S-79.
+
+- **The queue** (`messaging.application.SupportDesk`, `GET /api/v1/console/support/tickets`): every open helpdesk case
+  (`messaging.tickets` — businesses' Help › Contact support, S-60 customer cases) of the businesses in the province /
+  market scope; with no filter also customers' and couriers' cases (they have no business, so a province filter leaves
+  them out). Sorted by SLA due time. The design's chips are filters with counts (All, Urgent, Unassigned, Mine, SLA at
+  risk, Providers, Kitchens, Customers — plus **Sellers**, since sellers write in too). "SLA at risk" = waiting for
+  Northline (not `waiting` on the requester) and due within 30 min. KPIs: open, urgent, median first reply (30 days,
+  from the new `first_replied_at`), SLA at risk, resolved without escalation (30 days), CSAT (30 days, `tickets.csat` —
+  nothing collects it yet, so it shows "—"), share of open cases in French. The design's "Québec pilot prep" note is
+  left out (region-neutral).
+- **Requester context** is what the case was opened with (`tickets.context`: portal, tier, role, recent events; a
+  customer case's refund cases and triage summary) plus the reference label — no new lookups.
+- **Case actions** (all need `support`; every one writes the audit log with the acting role, `target_type = ticket`):
+  - reply → an `agent` message in the case conversation (the `case` thread the business sees under Help and the
+    customer under their cases, created if an old case has none), state `waiting` ("Send & keep open") or `resolved`
+    ("Send & resolve"); unassigned cases are assigned to the replier; `support.replied[_resolved]` records the macro
+    used.
+  - take → assigned to me (`new` → `in_progress`), `support.assigned`.
+  - escalate to trust & safety → `escalated_at/by` and a `system` message "Escalated to trust & safety." (+ note) the
+    requester sees; once (409 `already_escalated`). It does not create a trust flag (the T&S queue is flags; a case
+    becomes one when T&S raises it) — open question.
+  - Any action on a resolved case → 409 `case_resolved`.
+- **Refund request to finance** (never an automatic refund): an agent asks with an amount and a reason
+  (`messaging.support_refund_requests`, `pending`); someone with `refund` on the **finance screen** (finance, admin)
+  approves or declines it, **never the person who asked** (409 `request_self`) — that is the design's "second approver",
+  so no amount threshold applies here. An approved request decides the S-60 refund cases the case points at that are
+  waiting for an agent (state `agent`, no co-sign pending) through `DisputeDecisions.decideRefund` — they become
+  `approved` and the refund queue pays them; eligibility is checked first because an exception from payments would roll
+  the whole decision back. For any other case the approval is finance's instruction on record (audit
+  `support.refund_approved` with the cases it moved); the money movement for business-fee refunds has no path yet.
+  `GET /api/v1/console/support/refund-requests` lists pending ones for the finance screen (S-85); in the support desk an
+  admin can decide in place. The design's "Refunds > $50 … need a lead's co-sign" is replaced by this finance approval.
+- **Macros**: canned replies with a title and text in English and French (`messaging.macros`, topic `support`, new
+  `title_i18n`, `updated_by/at`), seeded with the design's six. Agents pick one and its text is inserted in the
+  **requester's language** (`tickets.lang`), then edit before sending. Writing them needs the new action `macros`.
+- **New role `support_lead`** ("macros EN/FR … editable by support leads"): the support screens and actions plus
+  `macros`; admins also have `macros`. The CHECK on `identity.platform_roles.role` is widened (V214); the dev seed
+  gives Priya the role (seed-dev V215). Grant it with SQL like the others (runbooks README § Console BFF).
+- **Schema V214:** role check widened; `tickets.first_replied_at`, `escalated_at`, `escalated_by` and an open-cases
+  index; `macros.title_i18n`, `updated_by`, `updated_at` + six seeded support macros; `messaging.support_refund_requests`.
+  Seed-dev V215. No new configuration variables.
+- **Messages (fr in the catalogue):** "Write a reply.", "Keep your reply under 5,000 characters.", "Enter an amount more
+  than $0.", "Use lower-case letters, digits, dots and dashes for the key.", "Give the macro a title in English and
+  French.", "Write the macro in English and French.", "That key is already used.", "Another person must decide this
+  refund request.", "This refund request was already decided.", "This case is already with trust & safety.", "This case
+  is resolved.", "Pick a filter from the list.".
+- **Not done:** the requester isn't emailed or pushed about an agent reply (they see it in Help / their cases); CSAT
+  survey; the design's per-case "one-click" suggestions (re-verify WCB, restore
+  instant book, force-dispatch…) belong to the screens that own those actions — the desk offers assign / refund request
+  / escalate; the finance screen's list of refund requests (S-85).

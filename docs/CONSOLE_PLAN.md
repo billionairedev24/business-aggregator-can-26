@@ -105,16 +105,16 @@ member.
 |---|---|---|---|---|---|
 | `/sign-in` | signed out | — | anyone | S-90 | built (`?next=`, `?error=staff_only\|mfa_required\|signin`) |
 | `/?province=&market=` | `overview` | `overview` | all six | S-91 | built |
-| `/orders` | `orders` | `orders` | admin, dispatch, support | S-81 | stand-in |
-| `/disputes?province=&market=&case=kind:id` | `disputes` | `disputes` | admin, trust_safety, finance, support | S-80 | built |
+| `/orders` | `orders` | `orders` | admin, dispatch, support, support_lead | S-81 | stand-in |
+| `/disputes?province=&market=&case=kind:id` | `disputes` | `disputes` | admin, trust_safety, finance, support, support_lead | S-80 | built |
 | `/delivery` | `delivery` | `delivery` | admin, dispatch | S-81 | stand-in |
-| `/sellers` | `sellers` | `sellers` | admin, trust_safety, support | S-82 | stand-in |
-| `/sellers/$sellerId` | `seller_detail` | `sellers` | admin, trust_safety, support | S-82 | stand-in |
+| `/sellers` | `sellers` | `sellers` | admin, trust_safety, support, support_lead | S-82 | stand-in |
+| `/sellers/$sellerId` | `seller_detail` | `sellers` | admin, trust_safety, support, support_lead | S-82 | stand-in |
 | `/verification?province=&market=&application=` | `verify` | `verify` | admin, trust_safety | S-79 | built |
 | `/vetting?province=&market=` | `vetting` | `vetting` | admin, trust_safety | S-92 | built |
 | `/trust?province=&market=` | `trust` | `trust` | admin, trust_safety | S-93 | built |
 | `/catalogue` | `taxonomy` | `taxonomy` | admin | S-94 | stand-in |
-| `/support` | `support` | `support` | admin, trust_safety, dispatch, support | S-83 | stand-in |
+| `/support?province=&market=&filter=&ticket=` | `support` | `support` | admin, trust_safety, dispatch, support, support_lead | S-83 | built |
 | `/provinces` | `regions` | `regions` | admin | S-84 | stand-in |
 | `/finance` | `finance` | `finance` | admin, finance | S-85 | stand-in |
 | `/reports` | `reports` | `reports` | admin, finance, analyst | S-95 | stand-in |
@@ -128,11 +128,12 @@ member.
 
 | role (`StaffRole`, token code) | design name | screens | actions |
 |---|---|---|---|
-| `admin` | Admin | all | all (`suspend`, `decide`, `refund`, `province`, `payouts`, `keys`, `verify`, `vet`, `dispatch`, `support`) |
+| `admin` | Admin | all | all (`suspend`, `decide`, `refund`, `province`, `payouts`, `keys`, `verify`, `vet`, `dispatch`, `support`, `macros`) |
 | `trust_safety` | Trust & safety | overview, disputes, sellers, verify, vetting, trust, support, team | suspend, decide, verify, vet, support |
 | `dispatch` | Ops dispatcher | overview, orders, delivery, support | dispatch |
 | `finance` | Finance | overview, disputes, finance, reports, team | refund, payouts |
 | `support` | Support | overview, orders, disputes, sellers, support | support |
+| `support_lead` | Support lead (S-83; design: "macros … editable by support leads") | as support | support, macros |
 | `analyst` | Read-only analyst | overview, reports | — |
 
 Not modelled yet (later stories): the design's co-signatures ("province Off↔Live needs 2 admins", "Suspend requires a
@@ -204,6 +205,23 @@ GET /api/v1/console/trust/flags/queue[?province=&market=]        → {items: [Fl
 POST /api/v1/console/trust/flags/{id}/action {action: warn|coach|confirm|suspend_listings|escalate, note?}  (decide; suspend)
 ```
 
+### Support desk (S-83)
+
+```
+GET    /api/v1/console/support/tickets[?filter=all|urgent|unassigned|mine|sla_risk|providers|sellers|kitchens|customers][&province=&market=]
+       → {kpis: {open, urgent, medianFirstReplyMinutes?, slaAtRisk, resolvedWithoutEscalation?, csat?, frenchShare?}, counts: {<filter>: n}, items: [Ticket]}
+GET    /api/v1/console/support/tickets/{id}                → {ticket, context, refLabel?, notes: [{by, name?, body, at}], refundRequests}
+POST   /api/v1/console/support/tickets/{id}/reply {body, resolve?, macroKey?}   (support) → waiting | resolved
+POST   /api/v1/console/support/tickets/{id}/take                                (support)
+POST   /api/v1/console/support/tickets/{id}/escalate {note?}                     (support) 409 already_escalated
+POST   /api/v1/console/support/tickets/{id}/refund-requests {amountCents, note?} (support)
+GET    /api/v1/console/support/refund-requests[?province=&market=]   (screen finance) → {items: [{request, ticket}]}
+POST   /api/v1/console/support/refund-requests/{id}/decision {decision: approve|decline, note?}  (screen finance, refund) 409 request_self · request_closed
+GET    /api/v1/console/support/macros                                    → {items: [{id, key, title: {en, fr}, body: {en, fr}}]}
+POST   /api/v1/console/support/macros {key, title, body}  · PUT …/macros/{id} · DELETE …/macros/{id}   (macros)
+409 case_resolved on any action on a resolved case
+```
+
 ### Overview (S-91)
 
 ```
@@ -268,7 +286,7 @@ stopsDone, stopsTotal, nextEta, late, heuristic}` (`late`: a pending stop more t
 | vetting | `GET /api/v1/console/vetting`, `POST …/listings/{id}/decision`, `POST …/dishes/{id}/decision` (S-92) | — |
 | trust | `GET /api/v1/console/trust/flags`, `POST …/{id}/decision` (S-133); `GET …/flags/queue`, `POST …/flags/{id}/action`, `GET/PUT …/trust/rules[/{key}]`, `GET …/rules/rating_floor/impact` (S-93) | the consequences' jobs (S-82) |
 | taxonomy | `db/seed/categories.json` (seed only) | categories CRUD with regulators, limits, per-province rules (S-94) |
-| support | customer cases (`account`, `messaging.api`) for their owners | tickets queue, macros en/fr, case actions (S-83) |
+| support | `GET /api/v1/console/support/tickets[/{id}]`, `POST …/tickets/{id}/reply\|take\|escalate\|refund-requests`, `GET …/refund-requests`, `POST …/refund-requests/{id}/decision`, `GET/POST/PUT/DELETE …/macros` (S-83) | the finance screen's list of refund requests (S-85 reads `GET …/support/refund-requests`); CSAT collection (no survey sends it yet) |
 | regions | `region.api.Regions` reads; `GET /api/v1/geo/regions` | province / market / zone stage changes with co-sign (S-84) |
 | finance | `POST /api/v1/console/payments/tax-reconciliations` (S-21) | escrow / payouts / reconciliation / take rate by tier / revenue mix (S-85) |
 | reports | — | funnels, cohorts, top categories, supply gaps (S-95) |
