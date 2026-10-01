@@ -4402,3 +4402,30 @@ only with DPoP.
   them that adds a warning will fail its build after this merges. The fix is in the code, as above.
 - **Not changed:** the disabled checks (`StringSplitter`, `MissingSummary`, `JavaTimeDefaultTimeZone`) and NullAway
   being off in tests.
+
+## 2026-09-30 — S-74 Appointments calendar: 'Open slot' and 'Held for quote' cells
+
+- **One endpoint for both cells.** `GET /api/v1/merchants/{merchantId}/calendar-cells?from=<date>&days=1..31&durationMin=15..720`
+  (VIEW; defaults 7 days and 60 min) returns `{ openSlots: [{startsAt}], quoteHolds: [{quoteId, requestId, ref,
+  customerName, startsAt, durationMin}] }`.
+  - It lives in the `studio` module because it composes two modules: availability already depends on booking, so
+    booking can't call availability.
+  - The day view asks for one day, the week view for seven. The jobs keep their own endpoint, and a failure of the
+    cells leaves the calendar as it was.
+- **"Open slot" is what a customer could book.**
+  - It comes from `availability.api.ProviderSlots`, the same calendar customers book from (S-55): weekly hours minus
+    time off, jobs, connected calendars and other customers' slot holds, with travel buffers and the booking rules
+    (notice, cut-off, horizon).
+  - A run of consecutive free start times shows once, at its first time ("Open slot 10:00"), at most 3 a day. The
+    design shows one or two per day, not one per interval.
+  - The default job length is 60 minutes; the client can pass another. Past days have no open slots.
+- **"Held for quote · M. Tran" is a sent quote's proposed time.**
+  - It covers the latest version of a quote that is still open: sent or viewed, not past `valid_until`, with
+    `proposed_at` in the range (`BookingCalendar.quoteHolds`).
+  - The customer shows in the short form (`PersonDirectory.shortName`). Without a name, the cell reads "Held for
+    quote".
+  - The cell is information only: it is not a booking and doesn't take the time from other customers. The design
+    marks it dim like the open slot.
+- **Rendering.** Both cells use the design's dim style (`neutral-200` background), as `<div>`s rather than buttons.
+  They sit between the jobs in time order, and Sunday's column appears when it has any. Copy: en "Open slot" /
+  "Held for quote · {name}", fr "Plage libre" / "Réservé pour un devis · {name}".

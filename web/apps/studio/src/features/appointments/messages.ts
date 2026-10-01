@@ -4,7 +4,7 @@ export const useAppointmentsT = defineMessages({
   en: {
     kicker: 'Appointments', weekOf: 'Week of {date}', dayTitle: '{date}',
     view: 'Calendar view', viewDay: 'Day', viewWeek: 'Week', viewList: 'List', prev: 'Previous', next: 'Next', prevWeek: 'Previous week', nextWeek: 'Next week', prevDay: 'Previous day', nextDay: 'Next day', thisWeek: 'This week',
-    noJobsWeek: 'No jobs this week.', noJobsDay: 'No jobs this day.', blocked: 'Blocked · {why}', loadJobsError: "We couldn't load your jobs.",
+    noJobsWeek: 'No jobs this week.', noJobsDay: 'No jobs this day.', blocked: 'Blocked · {why}', openSlot: 'Open slot', heldForQuote: 'Held for quote{name, select, none {} other { · {name}}}', loadJobsError: "We couldn't load your jobs.",
     jobWithMember: '{title} · {member}',
     entity: 'job', plural: 'jobs', colWhen: 'When', colJob: 'Job', colCustomer: 'Customer', colMember: 'Member', colStatus: 'Status',
     state_requested: 'Requested', state_confirmed: 'Confirmed', state_en_route: 'En route', state_on_site: 'On site', state_completed: 'Completed', state_signed_off: 'Signed off', state_disputed: 'Disputed', state_cancelled: 'Cancelled',
@@ -51,7 +51,7 @@ export const useAppointmentsT = defineMessages({
   fr: {
     kicker: 'Rendez-vous', weekOf: 'Semaine du {date}', dayTitle: '{date}',
     view: 'Vue du calendrier', viewDay: 'Jour', viewWeek: 'Semaine', viewList: 'Liste', prev: 'Précédent', next: 'Suivant', prevWeek: 'Semaine précédente', nextWeek: 'Semaine suivante', prevDay: 'Jour précédent', nextDay: 'Jour suivant', thisWeek: 'Cette semaine',
-    noJobsWeek: 'Aucun travail cette semaine.', noJobsDay: 'Aucun travail ce jour-là.', blocked: 'Bloqué · {why}', loadJobsError: 'Impossible de charger vos travaux.',
+    noJobsWeek: 'Aucun travail cette semaine.', noJobsDay: 'Aucun travail ce jour-là.', blocked: 'Bloqué · {why}', openSlot: 'Plage libre', heldForQuote: 'Réservé pour un devis{name, select, none {} other { · {name}}}', loadJobsError: 'Impossible de charger vos travaux.',
     jobWithMember: '{title} · {member}',
     entity: 'travail', plural: 'travaux', colWhen: 'Quand', colJob: 'Travail', colCustomer: 'Client', colMember: 'Membre', colStatus: 'Statut',
     state_requested: 'Demandé', state_confirmed: 'Confirmé', state_en_route: 'En route', state_on_site: 'Sur place', state_completed: 'Terminé', state_signed_off: 'Approuvé', state_disputed: 'En litige', state_cancelled: 'Annulé',

@@ -59,6 +59,17 @@ export const jobsQuery = (m: string, from: string, to: string) => queryOptions({
   queryFn: () => http(`${base(m)}/jobs?${new URLSearchParams({ from, to })}`, {}, list(Job)),
   placeholderData: prev => prev,
 });
+/** S-74: GET …/calendar-cells — "Open slot" (free bookable time) and "Held for quote" cells for days from `from`. */
+export const CalendarCells = z.object({
+  openSlots: z.array(z.object({ startsAt: z.string() })),
+  quoteHolds: z.array(z.object({ quoteId: z.string(), requestId: z.string(), ref: z.string().nullish(), customerName: z.string(), startsAt: z.string(), durationMin: z.number() })),
+});
+export type CalendarCells = z.infer<typeof CalendarCells>;
+export const calendarCellsQuery = (m: string, from: string, days: number) => queryOptions({
+  queryKey: ['merchant', m, 'calendar-cells', from, days],
+  queryFn: () => http(`${base(m)}/calendar-cells?${new URLSearchParams({ from, days: String(days) })}`, {}, CalendarCells),
+  placeholderData: prev => prev,
+});
 export const jobQuery = (m: string, id: string) => queryOptions({ queryKey: ['merchant', m, 'job', id], queryFn: () => http(`${base(m)}/jobs/${id}`, {}, JobDetail) });
 export const quoteRequestsQuery = (m: string) => queryOptions({ queryKey: ['merchant', m, 'quote-requests'], queryFn: () => http(`${base(m)}/quote-requests`, {}, list(QuoteRequest)) });
 export const quoteQuery = (m: string, id: string) => queryOptions({ queryKey: ['merchant', m, 'quote', id], queryFn: () => http(`${base(m)}/quotes/${id}`, {}, Quote) });

@@ -6,7 +6,7 @@ import { useMerchantId } from '../shell/api';
 import { useSession } from '../../lib/session';
 import { timeOffQuery } from '../availability/api';
 import { addDays, clock, localDate, localInstant, mondayOf, today } from '../../lib/time';
-import { jobsQuery, type Job } from './api';
+import { calendarCellsQuery, jobsQuery, type CalendarCells, type Job } from './api';
 import { JobPanel } from './JobPanel';
 import { useAppointmentsT } from './messages';
 import { QuoteRequests } from './QuoteRequests';
@@ -15,6 +15,7 @@ import './Appointments.css';
 type View = 'day' | 'week' | 'list';
 type T = ReturnType<typeof useAppointmentsT>;
 const DONE = new Set(['completed', 'signed_off', 'cancelled']);
+const NO_CELLS: CalendarCells = { openSlots: [], quoteHolds: [] };
 
 const fmt = (date: string, locale: Locale, o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { ...o, timeZone: 'UTC' }).format(new Date(`${date}T12:00:00Z`)).replace('.', '');
 
@@ -29,6 +30,9 @@ export function AppointmentsScreen() {
   const range = view === 'day' ? [anchor, addDays(anchor, 1)] : [monday, addDays(monday, 7)];
   const q = useQuery(jobsQuery(merchantId, localInstant(range[0]!), localInstant(range[1]!)));
   const timeOff = useQuery(timeOffQuery(merchantId));
+  // S-74: open slots and quote holds — extras; the calendar shows without them when they fail
+  const cellsQ = useQuery(calendarCellsQuery(merchantId, range[0]!, view === 'day' ? 1 : 7));
+  const cells: CalendarCells = cellsQ.data ?? NO_CELLS;
   const jobs = useMemo(() => q.data ?? [], [q.data]);
 
   useEffect(() => {
@@ -58,8 +62,8 @@ export function AppointmentsScreen() {
 
       {q.isPending ? <div className="nl-appt-week" aria-busy="true">{Array.from({ length: 6 }, (_, i) => <div key={i}><Skeleton height={14} width={60} style={{ marginBottom: 8 }} /><Skeleton height={56} style={{ marginBottom: 6 }} /><Skeleton height={56} /></div>)}</div>
         : q.isError ? <ErrorState message={t('loadJobsError')} onRetry={() => void q.refetch()} />
-        : view === 'week' ? <WeekGrid t={t} locale={locale} monday={monday} jobs={jobs} selected={selected} onSelect={setSelected} blocked={blocked} />
-        : view === 'day' ? <DayList t={t} locale={locale} jobs={jobs} selected={selected} onSelect={setSelected} blocked={blocked(anchor)} />
+        : view === 'week' ? <WeekGrid t={t} locale={locale} monday={monday} jobs={jobs} cells={cells} selected={selected} onSelect={setSelected} blocked={blocked} />
+        : view === 'day' ? <DayList t={t} locale={locale} jobs={jobs} cells={dayCells(cells, anchor)} selected={selected} onSelect={setSelected} blocked={blocked(anchor)} />
         : <JobTable t={t} locale={locale} jobs={jobs} onOpen={setSelected} />}
 
       <div className="nl-appt-cols">
@@ -79,30 +83,47 @@ function JobButton({ j, t, locale, selected, onSelect }: { j: Job; t: T; locale:
   );
 }
 
-function WeekGrid({ t, locale, monday, jobs, selected, onSelect, blocked }: { t: T; locale: Locale; monday: string; jobs: Job[]; selected: string | null; onSelect: (id: string) => void; blocked: (d: string) => { reason?: string | null }[] }) {
+/** S-74: one day's open slots and quote holds. */
+const dayCells = (cells: CalendarCells, day: string): CalendarCells => ({
+  openSlots: cells.openSlots.filter(c => localDate(c.startsAt) === day),
+  quoteHolds: cells.quoteHolds.filter(c => localDate(c.startsAt) === day),
+});
+const hasCells = (c: CalendarCells) => c.openSlots.length > 0 || c.quoteHolds.length > 0;
+
+/** A day's column: jobs, open slots and quote holds in time order (design 02 week view; the cells are dim). */
+function DayEntries({ t, locale, jobs, cells, selected, onSelect }: { t: T; locale: Locale; jobs: Job[]; cells: CalendarCells; selected: string | null; onSelect: (id: string) => void }) {
+  const entries = [
+    ...jobs.map(j => ({ at: j.startsAt, key: `j-${j.id}`, node: <JobButton key={`j-${j.id}`} j={j} t={t} locale={locale} selected={selected === j.id} onSelect={onSelect} /> })),
+    ...cells.openSlots.map(c => ({ at: c.startsAt, key: `o-${c.startsAt}`, node: <div key={`o-${c.startsAt}`} className="nl-appt-job nl-appt-cell" data-dim="true"><strong>{clock(c.startsAt, locale)}</strong><br />{t('openSlot')}</div> })),
+    ...cells.quoteHolds.map(h => ({ at: h.startsAt, key: `q-${h.quoteId}`, node: <div key={`q-${h.quoteId}`} className="nl-appt-job nl-appt-cell" data-dim="true"><strong>{clock(h.startsAt, locale)}</strong><br />{t('heldForQuote', { name: h.customerName || 'none' })}</div> })),
+  ].sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || a.key.localeCompare(b.key));
+  return <>{entries.map(e => e.node)}</>;
+}
+
+function WeekGrid({ t, locale, monday, jobs, cells, selected, onSelect, blocked }: { t: T; locale: Locale; monday: string; jobs: Job[]; cells: CalendarCells; selected: string | null; onSelect: (id: string) => void; blocked: (d: string) => { reason?: string | null }[] }) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
   const sunday = days[6]!;
-  const shown = jobs.some(j => localDate(j.startsAt) === sunday) ? days : days.slice(0, 6);
-  if (jobs.length === 0 && shown.every(d => blocked(d).length === 0)) return <p className="nl-muted nl-appt-empty">{t('noJobsWeek')}</p>;
+  const shown = jobs.some(j => localDate(j.startsAt) === sunday) || hasCells(dayCells(cells, sunday)) ? days : days.slice(0, 6);
+  if (jobs.length === 0 && !hasCells(cells) && shown.every(d => blocked(d).length === 0)) return <p className="nl-muted nl-appt-empty">{t('noJobsWeek')}</p>;
   return (
     <div className="nl-appt-week" style={{ ['--nl-days' as string]: shown.length }}>
       {shown.map(d => (
         <div key={d} role="group" aria-label={fmt(d, locale, { weekday: 'long', month: 'long', day: 'numeric' })}>
           <div className="nl-appt-dayname">{fmt(d, locale, { weekday: 'short', day: 'numeric' })}</div>
           {blocked(d).map((b, i) => <div key={i} className="nl-appt-job nl-appt-blocked" data-dim="true">{t('blocked', { why: b.reason ?? '—' })}</div>)}
-          {jobs.filter(j => localDate(j.startsAt) === d).map(j => <JobButton key={j.id} j={j} t={t} locale={locale} selected={selected === j.id} onSelect={onSelect} />)}
+          <DayEntries t={t} locale={locale} jobs={jobs.filter(j => localDate(j.startsAt) === d)} cells={dayCells(cells, d)} selected={selected} onSelect={onSelect} />
         </div>
       ))}
     </div>
   );
 }
 
-function DayList({ t, locale, jobs, selected, onSelect, blocked }: { t: T; locale: Locale; jobs: Job[]; selected: string | null; onSelect: (id: string) => void; blocked: { reason?: string | null }[] }) {
-  if (jobs.length === 0 && blocked.length === 0) return <p className="nl-muted nl-appt-empty">{t('noJobsDay')}</p>;
+function DayList({ t, locale, jobs, cells, selected, onSelect, blocked }: { t: T; locale: Locale; jobs: Job[]; cells: CalendarCells; selected: string | null; onSelect: (id: string) => void; blocked: { reason?: string | null }[] }) {
+  if (jobs.length === 0 && !hasCells(cells) && blocked.length === 0) return <p className="nl-muted nl-appt-empty">{t('noJobsDay')}</p>;
   return (
     <div className="nl-appt-day">
       {blocked.map((b, i) => <div key={i} className="nl-appt-job nl-appt-blocked" data-dim="true">{t('blocked', { why: b.reason ?? '—' })}</div>)}
-      {jobs.map(j => <JobButton key={j.id} j={j} t={t} locale={locale} selected={selected === j.id} onSelect={onSelect} />)}
+      <DayEntries t={t} locale={locale} jobs={jobs} cells={cells} selected={selected} onSelect={onSelect} />
     </div>
   );
 }
