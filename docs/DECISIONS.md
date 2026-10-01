@@ -4402,3 +4402,76 @@ only with DPoP.
   them that adds a warning will fail its build after this merges. The fix is in the code, as above.
 - **Not changed:** the disabled checks (`StringSplitter`, `MissingSummary`, `JavaTimeDefaultTimeZone`) and NullAway
   being off in tests.
+
+## 2026-09-30 — S-65 Per-variant images, bundles and compliance documents in the product editor
+
+### Schema additions (V180, additive)
+- `catalogue.offers.listing_type` (`product` | `bundle`, default `product`).
+- New `catalogue.bundle_items` (bundle offer, position, item offer, variant, qty 1–99), FK to `offers` with cascade
+  from the bundle and an index on the item offer.
+- New `catalogue.listing_documents` (purpose `spec_sheet` | `invoice`, file name, PDF/PNG/JPEG type, size, storage key,
+  uploader), cascading from the offer.
+- Function `catalogue.bundle_stock(bundle)`: the smallest of item stock / qty.
+- Per-variant images use the baseline `catalogue.variants.image_set` (V005), which was never written before.
+
+### Variant images
+- **Model:** each variant row keeps its own media ids, main first, at most 9 (the listing's rule). An empty list means
+  the variant "inherits" the listing's images; that is the cell's text, and an image count shows as "main + N" as in
+  design 02 (`varRows.img`).
+- **Rules:**
+  - Uploads go through the existing `POST …/media`, and only the business's own media are accepted (422
+    `variants[i].imageIds`).
+  - Images count as visible to customers once the offer is approved (`MediaRepository.approved` now also looks at
+    variants), the same as S-123.
+  - Automated vetting runs its duplicate-image check on variant images too.
+  - Adding, removing or reordering a variant's images on an approved listing is an `images` change (S-39 re-vetting).
+- **Customers:** the product page's variants carry `images` (approved URLs only). The consumer app shows the chosen
+  option's photos, falling back to the offer's, and the cart shows the variant's first photo.
+
+### Bundles
+- **A bundle is a product listing** (`ProductDetails.type = bundle`) that names 1–10 of the business's own product
+  offers with a quantity, and a variant when the product has variants. It reuses the product editor: identity and
+  category, images, price and fulfilment, compliance and vetting all work as for products.
+- **What a bundle has and doesn't have:**
+  - It has no identifier (GTIN), no variants and no stock of its own. The compact constructor forces this.
+  - Its stock is computed wherever stock is read: the editor, the listings table, the cart, shop pages and the search
+    indexer (`bundle_stock`). It is not stored.
+  - Quick price and stock updates refuse a stock for a bundle ("A bundle's stock follows its items.").
+- **Rules:**
+  - Each item must be the business's own product. Bundles inside bundles and the bundle itself are refused.
+  - An item needs a variant when its product has variants, and the same item may not appear twice.
+  - Completeness needs at least 2 units ("Add at least two items to the bundle."), so a single item with qty 1 is not
+    a bundle.
+  - Submitting for vetting needs every item to be an approved listing.
+  - A product that is part of a bundle can't be deleted (409 `listing_in_bundle`).
+  - A bundle's contents count as its **price** for S-39 re-vetting: they are what the price buys.
+- **Purchasable:** the cart and checkout see a bundle like any offer, through the `SellableOffers` port.
+  - Its stock is the whole bundles its items allow.
+  - Taking stock locks the item rows in a stable order, then decrements every item, or none when one is short.
+  - Giving stock back (a checkout that fails after taking it) returns every item.
+  - Order lines reference the bundle offer, and sales count against the bundle.
+- **Who can create a bundle:** the design's type picker shows Product · Service · Bundle for businesses that sell
+  both. A seller-only business sees Product · Bundle, because a bundle is goods. That is a deviation from
+  `showTypePicker: !sellerOnly && !provOnly`, made because sellers are the ones with products to bundle.
+- **Editor:**
+  - The Variants tab becomes "Bundle contents": a picker of the business's own products (not bundles), the variant,
+    the quantity, each item's price and stock.
+  - The offer tab shows the derived stock read-only, plus "Bought separately: $X · Customers save $Y".
+  - The listings table's meta line starts with "Bundle".
+- **Not done:** a bundle has no customer-facing "what's in the box" list beyond its own description, and the consumer
+  pages show it as a plain product. Sales of a bundle do not count toward its items' `sales_30d`.
+
+### Compliance documents
+- **Endpoints:** `GET|POST …/listings/{id}/documents` and `GET|DELETE …/listings/{id}/documents/{documentId}`, for
+  products only.
+- **Upload rules:**
+  - Multipart `file` plus `purpose` (`spec_sheet` | `invoice`), the design's two buttons.
+  - PDF, PNG or JPEG, judged by the file's first bytes, at most 10 MB and 10 per listing. These are the onboarding
+    documents' rules and message ("Upload a PDF, PNG or JPEG under 10 MB.").
+  - The file name is cut to its last path segment and at most 200 characters.
+- **Storage and access:** stored through the catalogue's `MediaStorage` (now with `delete`) under the business's
+  prefix. The files are private: members with VIEW can list and download them (`no-store`, as an attachment), and
+  members with EDIT can upload and remove them. Customers never see them.
+- **Not done:** the console's vetting queue doesn't show them yet, so a reviewer reads them through the database or
+  storage. No virus scan beyond what the object store does (S-10's scanner applies when configured). Documents are
+  not required for submission: the design shows them as optional uploads.
