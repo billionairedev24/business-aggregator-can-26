@@ -67,7 +67,7 @@ env: ## Create .env, server/.env and the web apps' .env from their .env.example 
 		else cp "$(ROOT)/$$f.example" "$(ROOT)/$$f" && echo "  created $$f (from $$f.example)"; fi; \
 	done
 
-##@ Run (apps: api auth bff bff-consumer worker studio consumer storybook)
+##@ Run (apps: api auth bff bff-consumer worker studio consumer storybook docs)
 
 .PHONY: up
 up: standins-up ## Stand-ins (PROFILES) + migrate + seed, then SERVICES in the background, waiting until each answers
@@ -161,7 +161,7 @@ help: ## This list, and the common variables
 	@printf '\n\033[1mVariables\033[0m\n'
 	@awk '/^##> / { l = substr($$0, 5); i = index(l, "  "); printf "  \033[33m%-22s\033[0m %s\n", substr(l, 1, i - 1), substr(l, i + 2) }' $(MAKEFILE_LIST)
 	@echo
-	@echo 'Apps: api auth bff bff-consumer worker studio consumer storybook — e.g. make up SERVICES="auth api bff studio"'
+	@echo 'Apps: api auth bff bff-consumer worker studio consumer storybook docs — e.g. make up SERVICES="auth api bff studio"'
 
 ##> SERVICES  apps for up/run/down/restart/logs (default "api studio"; all = every app)
 ##> PROFILES  compose stand-ins for up, e.g. db,cache,events or all; none = your own Postgres (default: .env)

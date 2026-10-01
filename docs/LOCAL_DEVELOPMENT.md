@@ -89,6 +89,7 @@ holds (and names the holder), and restarts an app whose command line changed (an
 | `studio` | 3100 | `pnpm --filter @northline/studio dev`; with `NL_DEV_USER=$DEV_USER` unless `bff` runs |
 | `consumer` | 3000 | `pnpm --filter @northline/consumer dev`; with `NL_DEV_USER=$CONSUMER_DEV_USER` unless `bff-consumer` runs |
 | `storybook` | 6006 | `pnpm --filter @northline/ui storybook` |
+| `docs` | 3300 | `pnpm --filter @northline/docs start` — the documentation site's dev server (internal variant, English) |
 
 `DEV_AUTH=1` or `DEV_AUTH=0` forces dev auth on or off for the web apps; `SPRING_PROFILE=local,valkey` keeps sessions
 in Valkey (`PROFILES=db,cache`). Single apps in the foreground without the runner: `make run-api`, `run-auth`,
@@ -105,11 +106,12 @@ The profiles are docker-compose.yml's: `db`, `cache`, `events` (Kafka + topic cr
 | http://localhost:3100 | Studio (dev server, proxies `/api` to the api or the studio-bff) |
 | http://localhost:3000 | consumer web (SSR) |
 | http://localhost:8080/api/v1/… | api (`curl -H 'X-Dev-User: 01J9ZD3V00000000000000RAV1' localhost:8080/api/v1/me/businesses`) |
-| http://localhost:8080/swagger-ui.html | api's Swagger UI (local, dev, staging; S-125 adds Scalar and Redoc) |
+| http://localhost:8080/docs | the api's API documentation: every audience in Swagger UI (`/swagger-ui.html`), Scalar (`/docs/scalar`) and Redoc (`/docs/redoc`); auth's on :9000/docs, the BFFs' on :8082/bff/docs and :8081/bff/docs ([runbooks/api-docs.md](runbooks/api-docs.md)) |
 | http://localhost:9000/.well-known/openid-configuration | northline-auth |
 | http://localhost:8082, :8081 | studio-bff, consumer-bff (reached through the web dev servers) |
 | http://localhost:8084/actuator/health | worker health |
 | http://localhost:6006 | Storybook |
+| http://localhost:3300 | documentation site (`make up SERVICES=docs`, or `make docs docs-serve` for the full build with search and French; [runbooks/docs-site.md](runbooks/docs-site.md)) |
 | http://localhost:8025 | Mailpit inbox (`PROFILES=…,mail`) |
 | http://localhost:8190, :5601 | Kafka UI, Kibana (`make kafka-ui`, `make kibana`) |
 
@@ -127,6 +129,8 @@ The profiles are docker-compose.yml's: `db`, `cache`, `events` (Kafka + topic cr
 | `make web-build` · `web-build-consumer` | every web build · the consumer's |
 | `make web-storybook-test` | Storybook build + interaction and a11y tests (Playwright Chromium: `pnpm --filter @northline/ui exec playwright install chromium`) |
 | `make web-format` | Prettier on the web files you changed since `BASE` (default `origin/main`); `WEB_FORMAT_ALL=1` formats everything |
+| `make openapi` · `openapi-check` · `openapi-lint` | regenerate the committed OpenAPI specs from the code · compare · Redocly lint ([runbooks/api-docs.md](runbooks/api-docs.md)) |
+| `make docs [DOCS_VARIANT=public]` · `docs-serve` · `docs-dev` | build the documentation site and check every page · serve it · live dev server |
 | `make e2e` | the Studio smoke sweep against a **disposable** database ([runbooks/ci.md](runbooks/ci.md)) |
 | `make all` · `make build` · `make test` · `make lint` · `make format` | both stacks |
 | `make clean` · `make clean-all` | build outputs and runner logs · also `node_modules` and `server/.gradle` |

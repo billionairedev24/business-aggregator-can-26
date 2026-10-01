@@ -17,6 +17,8 @@ docs/spec/legal-details.schema.json   per-structure legal fields (sole … nonpr
 docs/spec/storefront-sections.json    page-builder section library with on/off semantics
 docs/spec/validation-rules.md         every validation rule and its exact message
 docs/DECISIONS.md             log anything the spec didn't decide
+docs/api/openapi/             OpenAPI 3.1 documents per service and audience, generated and drift-checked (S-125)
+web/apps/docs                 the documentation site (Docusaurus; `make docs`, docs.<zone>; S-126)
 docs/runbooks/                how to run each environment: local, dev, staging, prod (services, variables, secrets per cloud)
 design/                       HTML design references (open in a browser) + design tokens
 ```

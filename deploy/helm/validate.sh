@@ -34,6 +34,7 @@ for env in dev staging prod; do
   done
 done
 check "prod × aws + partners (S-30)" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml -f test-values/partners.yaml
+check "staging × aws + internal docs behind an IP allowlist (S-126)" -f "$CHART/values-staging.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml --set apps.docs-internal.enabled=true --set "edge.docsInternal.allowedCIDRs={203.0.113.0/24}"
 check "local-kind" -f "$CHART/values-local-kind.yaml"
 check "local-kind + External Secrets (fake)" -f "$CHART/values-local-kind.yaml" -f "$CHART/values-local-kind-eso.yaml"
 check "local-kind + edge (local CA)" -f "$CHART/values-local-kind.yaml" -f "$CHART/values-local-kind-edge.yaml"
@@ -86,6 +87,8 @@ refuse "wildcard without DNS-01" -f "$CHART/values-prod.yaml" -f "$CHART/values-
 refuse "DNS-01 without the cloud's solver" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" --set edge.certManager.issuer.solver=dns01
 refuse "a CA issuer in prod" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" --set edge.certManager.issuer.type=ca --set edge.certManager.issuer.caSecretName=x
 refuse "edge without routes" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" --set gateway.enabled=false
+refuse "API documentation routes in prod (S-125)" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" --set apps.api.docsRoutes=true
+refuse "internal docs site without an IP allowlist (S-126)" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" --set apps.docs-internal.enabled=true
 
 # S-31: merchants' own domains. The api reconciles them (Role limited to Gateways, HTTPRoutes and Certificates in its
 # namespace, token mounted only in the api), certificates from Let's Encrypt staging outside prod, and the refusals.

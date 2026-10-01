@@ -1,1 +1,7 @@
 # Production (also activates `cloud`, see application-cloud.yml). Nothing differs from staging yet.
+# S-125: no spec and no viewer in production.
+springdoc:
+  api-docs.enabled: false
+  swagger-ui.enabled: false
+scalar.enabled: false
+northline.docs.enabled: false

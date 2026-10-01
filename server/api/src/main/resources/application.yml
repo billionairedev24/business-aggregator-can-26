@@ -60,9 +60,29 @@ spring:
       completion-mode: archive
 server.port: ${SERVER_PORT:8080}
 management.endpoints.web.exposure.include: health,info,prometheus,modulith
+# S-125 (docs/runbooks/api-docs.md): one OpenAPI 3.1 document per audience (config/OpenApiConfig), in Swagger UI
+# (/swagger-ui.html), Scalar (/docs/scalar) and Redoc (/docs/redoc); landing page /docs. Off in prod (application-prod.yml).
 springdoc:
   api-docs.path: /v3/api-docs
-  paths-to-match: /api/**
+  writer-with-order-by-keys: true          # stable output: the committed specs are compared byte for byte
+  override-with-generic-response: false    # error responses come from ApiDocs conventions, not every @ExceptionHandler
+  swagger-ui:
+    path: /swagger-ui.html
+    urls-primary-name: public
+    display-request-duration: true
+    persist-authorization: false
+    oauth:
+      use-pkce-with-authorization-code-grant: true
+scalar:                                    # springdoc's Scalar starter (bundled, nothing from a CDN)
+  enabled: true
+  path: /docs/scalar
+  page-title: Northline api · Scalar
+  show-sidebar: true
+  hide-client-button: false
+northline.docs:
+  title: Northline api
+  issuer: ${AUTH_ISSUER:http://localhost:9000}
+  servers: ${API_PUBLIC_URL:http://localhost:8080}
 northline:
   studio.base-url: ${STUDIO_ORIGIN:http://localhost:3100}      # invitation links, Stripe return URLs
   # Pooled delivery runs per market (S-49; DeliveryProperties). Times are America/Edmonton; `cutoff` = shops pack by,

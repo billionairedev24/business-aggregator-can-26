@@ -1,0 +1,36 @@
+# OpenAPI lint (S-125, docs/runbooks/api-docs.md): Redocly CLI, the same tool and layout as the user's samop repository.
+#   make openapi-lint          # = pnpm dlx @redocly/cli@<pinned> lint (version in make/docs.mk)
+# Every committed spec of docs/api/openapi is listed; `make openapi` regenerates them from the code.
+extends:
+  - recommended
+apis:
+  api-console:
+    root: docs/api/openapi/api-console.yaml
+  api-internal:
+    root: docs/api/openapi/api-internal.yaml
+  api-partner:
+    root: docs/api/openapi/api-partner.yaml
+  api-public:
+    root: docs/api/openapi/api-public.yaml
+  api-studio:
+    root: docs/api/openapi/api-studio.yaml
+  api-webhooks:
+    root: docs/api/openapi/api-webhooks.yaml
+  auth-internal:
+    root: docs/api/openapi/auth-internal.yaml
+  auth-public:
+    root: docs/api/openapi/auth-public.yaml
+  bff-consumer-internal:
+    root: docs/api/openapi/bff-consumer-internal.yaml
+  bff-internal:
+    root: docs/api/openapi/bff-internal.yaml
+rules:
+  # Summaries and tag descriptions are not written per operation yet: the generated specs carry descriptions from the
+  # code and the group texts (OpenApiConfig). Revisit when controllers get @Operation summaries.
+  operation-summary: off
+  tag-description: off
+  info-license-strict: off       # proprietary: no SPDX URL
+  no-server-example.com: off
+  operation-4xx-response: warn
+  security-defined: error        # every operation has security (an empty list = public, on purpose)
+  no-unused-components: warn
