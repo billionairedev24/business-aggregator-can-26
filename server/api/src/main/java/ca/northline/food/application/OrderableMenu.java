@@ -6,13 +6,13 @@ import ca.northline.food.application.MenuStore.MenuRow;
 import ca.northline.food.application.MenuStore.SectionRow;
 import ca.northline.food.domain.ComboStatus;
 import ca.northline.food.domain.ItemStatus;
-import ca.northline.food.domain.KitchenTime;
 import ca.northline.food.domain.MenuStatus;
 import ca.northline.food.domain.ModifierGroup;
 import ca.northline.food.domain.OrderingWindow;
 import ca.northline.food.domain.PickCheck;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZonedDateTime;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -60,9 +60,12 @@ class OrderableMenu {
                     || (i.dailyLimit() != null && i.soldToday() >= i.dailyLimit());
         }
 
-        /** Orderable for a kitchen cooking at {@code at}: not sold out, inside its own window and its menu's. */
-        boolean orderable(ItemRow i, Instant at, LocalDate today) {
-            var local = LocalDateTime.ofInstant(at, KitchenTime.ZONE);
+        /**
+         * Orderable for a kitchen cooking at {@code at} (in the time zone of its market): not sold out, inside its own
+         * window and its menu's.
+         */
+        boolean orderable(ItemRow i, ZonedDateTime at, LocalDate today) {
+            var local = at.toLocalDateTime();
             var menu = menus.get(i.menuId());
             return menu != null
                     && !soldOut(i, today)
@@ -76,18 +79,18 @@ class OrderableMenu {
         }
 
         /** A live combo, or a scheduled one inside its window. */
-        static boolean comboOpen(ComboRow c, Instant at) {
+        static boolean comboOpen(ComboRow c, ZonedDateTime at) {
             if (c.status() == ComboStatus.LIVE) {
                 return c.schedule() == null || window(c, at);
             }
             return c.status() == ComboStatus.SCHEDULED && c.schedule() != null && window(c, at);
         }
 
-        private static boolean window(ComboRow c, Instant at) {
+        private static boolean window(ComboRow c, ZonedDateTime at) {
             var w = c.schedule();
             return w == null
                     || OrderingWindow.menu(
-                            "window", w.days(), w.from(), w.to(), LocalDateTime.ofInstant(at, KitchenTime.ZONE));
+                            "window", w.days(), w.from(), w.to(), at.toLocalDateTime());
         }
 
         List<ModifierGroup> groupsOf(ItemRow i) {

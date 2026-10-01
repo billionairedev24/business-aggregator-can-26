@@ -26,6 +26,7 @@ import ca.northline.payments.api.PaymentAuthorizations;
 import ca.northline.payments.api.PaymentSettings;
 import ca.northline.payments.api.PaymentStepUp;
 import ca.northline.payments.api.TaxCalculations;
+import ca.northline.region.api.Markets;
 import ca.northline.region.api.TaxRates;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.Ids;
@@ -75,6 +76,7 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
     private final SecondFactors secondFactors;
     private final PaymentStepUp stepUp;
     private final PaymentSettings settings;
+    private final Markets markets;
     private final JsonMapper json = JsonMapper.builder().build();
 
     FoodCheckoutService(
@@ -91,7 +93,8 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
             Clock clock,
             SecondFactors secondFactors,
             PaymentStepUp stepUp,
-            PaymentSettings settings) {
+            PaymentSettings settings,
+            Markets markets) {
         this.pricing = pricing;
         this.kitchens = kitchens;
         this.progress = progress;
@@ -106,6 +109,7 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
         this.secondFactors = secondFactors;
         this.stepUp = stepUp;
         this.settings = settings;
+        this.markets = markets;
     }
 
     /** Everything decided before any money moves: the kitchen, the priced lines, fees, tip, place of supply. */
@@ -356,7 +360,11 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
             throw RuleViolation.of(
                     "items", "minimum", FoodOrderRules.belowMinimum(kitchen.minOrderCents() - dishes.subtotalCents()));
         }
-        var province = delivery != null ? delivery.province() : Objects.requireNonNullElse(kitchen.province(), "AB");
+        // place of supply: the delivery address, else (pickup) the kitchen, else the default market's province
+        var province = delivery != null
+                ? delivery.province()
+                : Objects.requireNonNullElse(
+                        kitchen.province(), Objects.requireNonNullElse(markets.defaultProvince(), ""));
         if (!FoodOrderRules.PROVINCE.matcher(province).matches()) {
             throw RuleViolation.of("delivery.province", "format", FoodOrderRules.PROVINCE_FORMAT);
         }

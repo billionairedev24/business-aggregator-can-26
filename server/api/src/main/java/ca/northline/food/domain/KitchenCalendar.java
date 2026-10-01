@@ -81,7 +81,7 @@ public record KitchenCalendar(
             return out;
         }
         var earliest = now.plus(lead);
-        var today = now.atZone(KitchenTime.ZONE).toLocalDate();
+        var today = now.atZone(zone).toLocalDate();
         for (int d = 0; d < days; d++) {
             var date = today.plusDays(d);
             for (var range : day(date).ranges()) {
@@ -89,7 +89,7 @@ public record KitchenCalendar(
                 var to = range.to().toSecondOfDay() / 60;
                 for (var m = (from + 29) / 30 * 30; m + 30 <= to; m += 30) {
                     var start =
-                            date.atTime(m / 60, m % 60).atZone(KitchenTime.ZONE).toInstant();
+                            date.atTime(m / 60, m % 60).atZone(zone).toInstant();
                     if (!start.isBefore(earliest)) {
                         out.add(start);
                     }

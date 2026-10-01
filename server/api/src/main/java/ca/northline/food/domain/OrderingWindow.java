@@ -7,7 +7,7 @@ import java.util.List;
 import org.jspecify.annotations.Nullable;
 
 /**
- * When a dish or a menu can be ordered (S-57), in Edmonton local time: the dish's availability (editor
+ * When a dish or a menu can be ordered (S-57), in the kitchen's local time (its market's time zone): the dish's availability (editor
  * "Availability": always · lunch 11–2 · after 5 pm · weekends) and its menu's schedule (open hours · a window on some
  * weekdays · catering by quote, never through checkout).
  */

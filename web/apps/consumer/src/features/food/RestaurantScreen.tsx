@@ -8,8 +8,6 @@ import { CUISINE_NAMES, containsLabel, TAGS, useFoodT } from './messages';
 import { choiceNames, defaults, deltaOf, pickProblems, toggle, visibleGroups } from './modifiers';
 
 type T = ReturnType<typeof useFoodT>;
-/** Alberta's GST for the aside's estimate; checkout prices the tax on the server for the delivery address. */
-const GST_BPS = 500;
 
 /**
  * Restaurant (design 06 `restaurant`, S-57): the kitchen's banner, its live menus by section (combos first), a dish's
@@ -225,11 +223,13 @@ function ComboRow({ t, c, data, open, disabled, onToggle, onAdd }: {
 
 function OrderAside({ t, data, cart, onRemove }: { t: T; data: Restaurant; cart: FoodCart | null; onRemove: (key: string) => void }) {
   const { money } = useFormatters();
+  const { locale } = useLocale();
   const navigate = useNavigate();
   const k = data.kitchen;
   const sub = subtotalOf(cart);
   const service = Math.round(sub * data.serviceFeeBps / 10_000);
-  const tax = Math.round((sub + service) * GST_BPS / 10_000);
+  // an estimate at the kitchen province's rate (api `taxBps`); checkout prices the tax for the delivery address
+  const tax = Math.round((sub + service) * data.taxBps / 10_000);
   const total = sub + k.deliveryFeeCents + service + tax;
   const below = sub < data.minOrderCents;
   return (
@@ -252,7 +252,7 @@ function OrderAside({ t, data, cart, onRemove }: { t: T; data: Restaurant; cart:
             <div><dt>{t('items')}</dt><dd>{money(sub)}</dd></div>
             <div><dt>{t('deliveryDirect')}</dt><dd>{money(k.deliveryFeeCents)}</dd></div>
             <div><dt>{t('serviceFee')}</dt><dd>{money(service)}</dd></div>
-            <div><dt>{t('gst', { rate: 5 })}</dt><dd>{money(tax)}</dd></div>
+            <div><dt>{t('taxRate', { rate: (data.taxBps / 100).toLocaleString(locale === 'fr' ? 'fr-CA' : 'en-CA', { maximumFractionDigits: 3 }) })}</dt><dd>{money(tax)}</dd></div>
             <div className="nl-rest-total"><dt>{t('total')}</dt><dd>{money(total)}</dd></div>
           </dl>
           <Button block disabled={below} onClick={() => void navigate({ to: '/food/checkout' })}>

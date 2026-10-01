@@ -16,7 +16,8 @@ import ca.northline.food.application.PublicKitchenViews.Section;
 import ca.northline.food.application.PublicKitchenViews.Slot;
 import ca.northline.food.domain.ComboPrice;
 import ca.northline.food.domain.FoodFees;
-import ca.northline.food.domain.KitchenTime;
+import ca.northline.region.api.Markets;
+import ca.northline.region.api.TaxRates;
 import ca.northline.merchants.api.PublicDirectory;
 import ca.northline.merchants.api.PublicDirectory.PublicBusiness;
 import ca.northline.shared.NotFound;
@@ -24,6 +25,10 @@ import ca.northline.trust.api.RatingQuery;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -58,12 +63,14 @@ class PublicKitchenService implements PublicKitchenUseCases, FoodCheckoutFacts {
     private final KitchenMerchantFacts facts;
     private final OrderableMenu menus;
     private final Clock clock;
+    private final Markets markets;
+    private final TaxRates taxes;
 
     @Override
     public Kitchens kitchens(String city, @Nullable Double lat, @Nullable Double lng) {
         var kitchens = directory.active(Set.of("kitchen"), city);
         var ids = kitchens.stream().map(PublicBusiness::merchantId).toList();
-        var status = availability.now(ids);
+        var status = availability.now(kitchens.stream().map(PublicKitchenService::ref).toList());
         var rows = calendarsOf(ids);
         var cards = kitchens.stream()
                 .flatMap(k -> Optional.ofNullable(rows.get(k.merchantId()))
@@ -87,12 +94,13 @@ class PublicKitchenService implements PublicKitchenUseCases, FoodCheckoutFacts {
             throw new NotFound("kitchen", slug);
         }
         var status = availability
-                .now(List.of(business.merchantId()))
+                .now(List.of(ref(business)))
                 .getOrDefault(business.merchantId(), KitchenStatus.CLOSED);
         var card = card(business, status, row, lat, lng);
         var snapshot = menus.load(business.merchantId());
-        var now = clock.instant();
-        var today = KitchenTime.today(clock);
+        var zone = markets.zone(business.province());
+        var now = clock.instant().atZone(zone);
+        var today = now.toLocalDate();
         var sections = snapshot.sections().stream()
                 .map(s -> new Section(
                         s.id(),
@@ -115,7 +123,8 @@ class PublicKitchenService implements PublicKitchenUseCases, FoodCheckoutFacts {
                 "verified".equals(permit.status()),
                 FoodFees.MIN_ORDER_CENTS,
                 FoodFees.SERVICE_FEE_BPS,
-                slots(row, card),
+                taxBps(business.province()),
+                slots(row, card, zone),
                 sections,
                 combos);
     }
@@ -130,7 +139,7 @@ class PublicKitchenService implements PublicKitchenUseCases, FoodCheckoutFacts {
         if (row == null) {
             return Optional.empty();
         }
-        var status = availability.now(List.of(merchantId)).getOrDefault(merchantId, KitchenStatus.CLOSED);
+        var status = availability.now(List.of(ref(business.get()))).getOrDefault(merchantId, KitchenStatus.CLOSED);
         var c = card(business.get(), status, row, lat, lng);
         return Optional.of(new Kitchen(
                 merchantId,
@@ -150,22 +159,33 @@ class PublicKitchenService implements PublicKitchenUseCases, FoodCheckoutFacts {
                 c.pickupToMin(),
                 FoodFees.MIN_ORDER_CENTS,
                 FoodFees.SERVICE_FEE_BPS,
-                slots(row, c)));
+                slots(row, c, markets.zone(business.get().province()))));
     }
 
     private Map<String, CalendarRow> calendarsOf(List<String> ids) {
         if (ids.isEmpty()) {
             return Map.of();
         }
-        return calendars.calendars(ids, KitchenTime.today(clock), clock.instant()).stream()
+        // holidays from yesterday (UTC) cover "today" in every Canadian zone
+        var from = LocalDate.ofInstant(clock.instant(), ZoneOffset.UTC).minusDays(1);
+        return calendars.calendars(ids, from, clock.instant()).stream()
                 .collect(Collectors.toMap(CalendarRow::merchantId, Function.identity()));
     }
 
-    private List<Instant> slots(CalendarRow row, Card card) {
+    private int taxBps(@Nullable String province) {
+        var code = province != null ? province : markets.defaultProvince();
+        return code == null ? 0 : taxes.bpsFor(code);
+    }
+
+    private static KitchenAvailability.Kitchen ref(PublicBusiness b) {
+        return new KitchenAvailability.Kitchen(b.merchantId(), b.province());
+    }
+
+    private List<Instant> slots(CalendarRow row, Card card, ZoneId zone) {
         if (!card.fulfilment().contains("scheduled")) {
             return List.of();
         }
-        return KitchenAvailabilityService.calendar(row)
+        return KitchenAvailabilityService.calendar(row, zone)
                 .slots(
                         clock.instant(),
                         SCHEDULE_LEAD.plusMinutes(card.prepMin()),
@@ -209,7 +229,7 @@ class PublicKitchenService implements PublicKitchenUseCases, FoodCheckoutFacts {
     }
 
     private static Dish dish(
-            OrderableMenu.Snapshot snapshot, MenuStore.ItemRow i, Instant now, java.time.LocalDate today) {
+            OrderableMenu.Snapshot snapshot, MenuStore.ItemRow i, ZonedDateTime now, java.time.LocalDate today) {
         return new Dish(
                 i.id(),
                 i.name(),
@@ -241,7 +261,7 @@ class PublicKitchenService implements PublicKitchenUseCases, FoodCheckoutFacts {
 
     /** A combo whose every slot has an orderable dish; priced from the cheapest dish per slot. */
     private static Optional<Combo> combo(
-            OrderableMenu.Snapshot snapshot, ComboRow c, Instant now, java.time.LocalDate today) {
+            OrderableMenu.Snapshot snapshot, ComboRow c, ZonedDateTime now, java.time.LocalDate today) {
         long reference = 0;
         var slots = new java.util.ArrayList<Slot>();
         for (var slot : c.slots()) {

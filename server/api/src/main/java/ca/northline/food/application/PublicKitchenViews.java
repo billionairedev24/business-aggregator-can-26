@@ -54,6 +54,7 @@ public final class PublicKitchenViews {
      * The restaurant page (design 06 {@code restaurant}): the card, the kitchen's address, food-safety, minimum, the
      * scheduled-order windows, its live menus' sections with dishes, and the combos on offer.
      */
+    /** {@code taxBps} = the sales tax on food in the kitchen's province (the page's estimate; checkout prices it). */
     public record Restaurant(
             Card kitchen,
             @Nullable String address,
@@ -61,6 +62,7 @@ public final class PublicKitchenViews {
             boolean ahsVerified,
             long minOrderCents,
             int serviceFeeBps,
+            int taxBps,
             List<Instant> slots,
             List<Section> sections,
             List<Combo> combos) {

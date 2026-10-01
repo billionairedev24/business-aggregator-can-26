@@ -63,7 +63,7 @@ export function CheckoutScreen() {
       tip: pickup ? { kind: 'none', value: 0 } : TIPS[tip]!,
       delivery: pickup || !hasAddress ? null : {
         street: location.street!, ...(location.unit ? { unit: location.unit } : {}), ...(location.city ? { city: location.city } : {}),
-        province: location.province ?? 'AB', ...(location.postalCode ? { postalCode: location.postalCode } : {}),
+        province: location.province ?? data.province ?? '', ...(location.postalCode ? { postalCode: location.postalCode } : {}),
         lat: location.lat!, lng: location.lng!, ...(location.zoneId ? { zoneId: location.zoneId } : {}), ...(location.zone ? { zone: location.zone } : {}),
         dropoff, ...(note.trim() ? { note: note.trim() } : {}), extras: [...extras],
       },

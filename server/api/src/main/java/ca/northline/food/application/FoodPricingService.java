@@ -3,7 +3,8 @@ package ca.northline.food.application;
 import ca.northline.food.api.FoodMenuPricing;
 import ca.northline.food.domain.ComboPrice;
 import ca.northline.food.domain.FoodOrderMessages;
-import ca.northline.food.domain.KitchenTime;
+import ca.northline.merchants.api.PublicDirectory;
+import ca.northline.region.api.Markets;
 import ca.northline.food.domain.ModifierGroup;
 import ca.northline.food.domain.PickCheck;
 import ca.northline.shared.Conflict;
@@ -33,6 +34,8 @@ class FoodPricingService implements FoodMenuPricing {
 
     private final OrderableMenu menus;
     private final java.time.Clock clock;
+    private final PublicDirectory directory;
+    private final Markets markets;
 
     @Override
     public Priced price(Request request) {
@@ -43,7 +46,10 @@ class FoodPricingService implements FoodMenuPricing {
             throw RuleViolation.of("items", "length", FoodOrderMessages.TOO_MANY_LINES);
         }
         var menu = menus.load(request.merchantId());
-        var today = KitchenTime.today(clock);
+        // the kitchen's hours, windows and "sold out today" are in the time zone of its market
+        var zone = markets.zone(directory.byId(request.merchantId()).map(PublicDirectory.PublicBusiness::province).orElse(null));
+        var at = request.at().atZone(zone);
+        var today = clock.instant().atZone(zone).toLocalDate();
         var violations = new ArrayList<Violation>();
         var lines = new ArrayList<Line>();
         var prepAdd = 0;
@@ -60,7 +66,7 @@ class FoodPricingService implements FoodMenuPricing {
                 violations.add(new Violation(field + ".note", "length", FoodOrderMessages.NOTE_LONG));
             }
             var item = menu.item(line.itemId()).orElseThrow(() -> unavailable("This dish"));
-            if (!menu.orderable(item, request.at(), today)) {
+            if (!menu.orderable(item, at, today)) {
                 throw unavailable(item.name());
             }
             var groups = menu.groupsOf(item);
@@ -81,7 +87,7 @@ class FoodPricingService implements FoodMenuPricing {
             var combo = menu.combos().stream()
                     .filter(c -> c.id().equals(line.comboId()))
                     .findFirst()
-                    .filter(c -> OrderableMenu.Snapshot.comboOpen(c, request.at()))
+                    .filter(c -> OrderableMenu.Snapshot.comboOpen(c, at))
                     .orElseThrow(() -> unavailable("This combo"));
             var units = combo.slots().stream().mapToInt(ComboStore.Slot::qty).sum();
             if (line.itemIds().size() != units) {
@@ -101,7 +107,7 @@ class FoodPricingService implements FoodMenuPricing {
                         ok = false;
                         continue;
                     }
-                    if (!menu.orderable(dish.get(), request.at(), today)) {
+                    if (!menu.orderable(dish.get(), at, today)) {
                         throw unavailable(dish.get().name());
                     }
                     separately += dish.get().priceCents();

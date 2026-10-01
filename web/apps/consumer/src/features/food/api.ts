@@ -43,7 +43,7 @@ export const Combo = z.object({
 export type Combo = z.infer<typeof Combo>;
 export const Restaurant = z.object({
   kitchen: Card, address: z.string().nullish(), province: z.string().nullish(), ahsVerified: z.boolean(),
-  minOrderCents: z.number().int(), serviceFeeBps: z.number().int(), slots: z.array(z.string()),
+  minOrderCents: z.number().int(), serviceFeeBps: z.number().int(), taxBps: z.number().int(), slots: z.array(z.string()),
   sections: z.array(Section), combos: z.array(Combo),
 });
 export type Restaurant = z.infer<typeof Restaurant>;
