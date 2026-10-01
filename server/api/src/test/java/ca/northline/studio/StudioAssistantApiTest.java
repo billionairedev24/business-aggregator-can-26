@@ -11,49 +11,28 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ca.northline.ai.MockOpenRouter;
 import ca.northline.shared.security.MerchantRole;
-import ca.northline.support.IntegrationTest;
+import ca.northline.ai.ScriptedModelTest;
 import ca.northline.support.OperationsFixtures;
 import ca.northline.support.OperationsFixtures.Line;
 import ca.northline.support.TestJwt;
 import java.time.Duration;
 import java.util.List;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import tools.jackson.databind.JsonNode;
 
 /**
  * S-130 end to end: the Studio assistant with OpenRouter pointed at the local stand-in, tools running against the real
  * modules as the caller (membership, role, {@code acr=mfa}), writes proposed and confirmed, insights, streaming.
  */
-class StudioAssistantApiTest extends IntegrationTest {
+class StudioAssistantApiTest extends ScriptedModelTest {
 
-    static final MockOpenRouter MODEL = new MockOpenRouter();
-
-    @DynamicPropertySource
-    static void openRouter(DynamicPropertyRegistry registry) {
-        registry.add("northline.ai.provider", () -> "openrouter");
-        registry.add("northline.ai.openrouter.base-url", MODEL::baseUrl);
-        registry.add("northline.ai.openrouter.api-key", () -> "sk-or-v1-FAKE-studio-test");
-    }
-
-    @AfterAll
-    static void stop() {
-        MODEL.close();
-    }
 
     @Autowired
     JdbcClient jdbc;
 
-    @BeforeEach
-    void reset() {
-        MODEL.reset();
-    }
 
     record Seller(String merchantId, String owner, String order, String ref) {}
 
