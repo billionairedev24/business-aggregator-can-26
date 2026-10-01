@@ -5,7 +5,7 @@
   "scripts": {
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings=0",
     "courier": "pnpm --filter @northline/courier start"
   },
   "devDependencies": {
