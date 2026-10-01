@@ -265,12 +265,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ReviewView"
-    MoneyCents:
-      type: integer
-      format: int64
-      description: An amount in cents of Canadian dollars (CAD); 12345 = $123.45.
-        Never a decimal.
-      example: 12345
     Problem:
       type: object
       description: RFC 9457 problem details. 403 and 409 carry a machine-readable
@@ -372,12 +366,6 @@ components:
           type: string
         subject:
           type: string
-    Ulid:
-      type: string
-      description: "A ULID: 26 characters, Crockford base 32, sortable by creation\
-        \ time."
-      example: 01J9ZD3V00000000000000PWM1
-      pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
     ValidationError:
       type: object
       properties:
@@ -424,19 +412,6 @@ components:
       in: header
       name: X-XSRF-TOKEN
       type: apiKey
-    dpop:
-      bearerFormat: JWT
-      description: "The mobile and courier apps (S-29): `Authorization: DPoP <access\
-        \ token>` together with the `DPoP` proof header. A DPoP-bound token (`cnf.jkt`)\
-        \ sent as a Bearer token is refused."
-      scheme: DPoP
-      type: http
-    dpopProof:
-      description: "DPoP proof JWT (`typ: dpop+jwt`, `htm`, `htu`, `iat`, `jti`, `ath`);\
-        \ a server nonce may be demanded with `DPoP-Nonce`."
-      in: header
-      name: DPoP
-      type: apiKey
     oauth2:
       description: "OAuth 2.1 authorization code with PKCE (S256 only) at northline-auth;\
         \ ES256 JWT access tokens valid 10 minutes with claims `sub`, `scope`, `roles`,\
@@ -453,21 +428,3 @@ components:
             profile: "name, locale"
           tokenUrl: http://localhost:9000/oauth2/token
       type: oauth2
-    partnerClientCredentials:
-      description: "Partner integrations (S-30): client `partner:<name>` gets a token\
-        \ with `grant_type=client_credentials`, authenticating with `private_key_jwt`\
-        \ — `client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer`\
-        \ and a `client_assertion` JWT signed by a key registered for the partner\
-        \ (ES256, RS256 or PS256; `iss` = `sub` = client id, `aud` = issuer or token\
-        \ endpoint, ≤ 5 min, single-use `jti`). Tokens last 15 minutes and open only\
-        \ the businesses bound to the partner. 60 tokens per hour per partner (429\
-        \ with Retry-After)."
-      flows:
-        clientCredentials:
-          scopes:
-            api.read: read the bound businesses' data
-            api.write: change it
-          tokenUrl: http://localhost:9000/oauth2/token
-      type: oauth2
-      x-token-endpoint-auth-methods:
-      - private_key_jwt

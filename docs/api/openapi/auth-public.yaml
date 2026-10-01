@@ -346,12 +346,6 @@ paths:
       summary: OIDC UserInfo
 components:
   schemas:
-    MoneyCents:
-      type: integer
-      format: int64
-      description: An amount in cents of Canadian dollars (CAD); 12345 = $123.45.
-        Never a decimal.
-      example: 12345
     OAuthError:
       type: object
       description: RFC 6749 § 5.2 error.
@@ -421,12 +415,6 @@ components:
       - access_token
       - expires_in
       - token_type
-    Ulid:
-      type: string
-      description: "A ULID: 26 characters, Crockford base 32, sortable by creation\
-        \ time."
-      example: 01J9ZD3V00000000000000PWM1
-      pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
     ValidationError:
       type: object
       properties:
@@ -459,12 +447,6 @@ components:
       required:
       - errors
   securitySchemes:
-    dpopProof:
-      description: "DPoP proof JWT (`typ: dpop+jwt`, `htm`, `htu`, `iat`, `jti`, `ath`);\
-        \ a server nonce may be demanded with `DPoP-Nonce`."
-      in: header
-      name: DPoP
-      type: apiKey
     oauth2:
       description: "OAuth 2.1 authorization code with PKCE (S256 only) at northline-auth;\
         \ ES256 JWT access tokens valid 10 minutes with claims `sub`, `scope`, `roles`,\

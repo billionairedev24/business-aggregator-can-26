@@ -71,12 +71,6 @@ components:
       - type
       - version
       title: Northline webhook booking.completed v1
-    MoneyCents:
-      type: integer
-      format: int64
-      description: An amount in cents of Canadian dollars (CAD); 12345 = $123.45.
-        Never a decimal.
-      example: 12345
     OrderPlacedWebhookV1:
       type: object
       additionalProperties: false
@@ -259,37 +253,6 @@ components:
       - type
       - version
       title: Northline webhook payment.released v1
-    Problem:
-      type: object
-      description: RFC 9457 problem details. 403 and 409 carry a machine-readable
-        `code`.
-      properties:
-        code:
-          type: string
-          description: "Stable reason, e.g. `mfa_required`, `not_a_member`, `insufficient_role`,\
-            \ `partner_not_allowed`, `not_bound`, `stale`, `duplicate`, `rate_limited`."
-          example: mfa_required
-        detail:
-          type: string
-          example: Your sign-in doesn't allow this.
-        instance:
-          type: string
-          format: uri-reference
-        status:
-          type: integer
-          format: int32
-          example: 403
-        title:
-          type: string
-          example: Forbidden
-        type:
-          type: string
-          format: uri
-          example: https://northline.ca/problems/forbidden
-      required:
-      - status
-      - title
-      - type
     RefundIssuedWebhookV1:
       type: object
       additionalProperties: false
@@ -360,43 +323,6 @@ components:
       - type
       - version
       title: Northline webhook refund.issued v1
-    Ulid:
-      type: string
-      description: "A ULID: 26 characters, Crockford base 32, sortable by creation\
-        \ time."
-      example: 01J9ZD3V00000000000000PWM1
-      pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
-    ValidationError:
-      type: object
-      properties:
-        field:
-          type: string
-          description: "JSON property path of the request, e.g. `displayName` or `lines[2].amount`."
-          example: displayName
-        message:
-          type: string
-          description: "The exact message of docs/spec/validation-rules.md, in the\
-            \ caller's locale."
-          example: At least 2 characters.
-        rule:
-          type: string
-          description: "The failed rule: `required`, `format`, `length`, `range`,\
-            \ or a named rule (snake_case), e.g. `gst_number`."
-          example: length
-      required:
-      - field
-      - message
-      - rule
-    ValidationErrors:
-      type: object
-      description: "422: one error per field, the most basic failing rule first."
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: "#/components/schemas/ValidationError"
-      required:
-      - errors
     WebhookTestWebhookV1:
       type: object
       additionalProperties: false
@@ -442,6 +368,14 @@ components:
       - type
       - version
       title: Northline webhook webhook.test v1
+  securitySchemes:
+    webhookSignature:
+      description: "Northline signs each delivery: `t=<unix seconds>,v1=<hex HMAC-SHA256\
+        \ of \"<t>.<raw body>\" keyed with the endpoint's whsec_… secret>`. Your endpoint\
+        \ verifies it."
+      in: header
+      name: Northline-Signature
+      type: apiKey
 webhooks:
   booking.completed:
     post:
@@ -498,6 +432,8 @@ webhooks:
           description: Received. The body is ignored.
         default:
           description: "Anything else (and timeouts, TLS errors, redirects) is retried."
+      security:
+      - webhookSignature: []
       summary: booking.completed
       tags:
       - webhooks
@@ -556,6 +492,8 @@ webhooks:
           description: Received. The body is ignored.
         default:
           description: "Anything else (and timeouts, TLS errors, redirects) is retried."
+      security:
+      - webhookSignature: []
       summary: order.placed
       tags:
       - webhooks
@@ -614,6 +552,8 @@ webhooks:
           description: Received. The body is ignored.
         default:
           description: "Anything else (and timeouts, TLS errors, redirects) is retried."
+      security:
+      - webhookSignature: []
       summary: payment.released
       tags:
       - webhooks
@@ -672,6 +612,8 @@ webhooks:
           description: Received. The body is ignored.
         default:
           description: "Anything else (and timeouts, TLS errors, redirects) is retried."
+      security:
+      - webhookSignature: []
       summary: refund.issued
       tags:
       - webhooks
@@ -730,6 +672,8 @@ webhooks:
           description: Received. The body is ignored.
         default:
           description: "Anything else (and timeouts, TLS errors, redirects) is retried."
+      security:
+      - webhookSignature: []
       summary: webhook.test
       tags:
       - webhooks

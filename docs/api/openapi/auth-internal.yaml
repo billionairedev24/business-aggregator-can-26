@@ -1247,12 +1247,6 @@ components:
           deprecated: true
         valueNode:
           type: boolean
-    MoneyCents:
-      type: integer
-      format: int64
-      description: An amount in cents of Canadian dollars (CAD); 12345 = $123.45.
-        Never a decimal.
-      example: 12345
     Overview:
       type: object
       properties:
@@ -1475,12 +1469,6 @@ components:
           type: string
         secret:
           type: string
-    Ulid:
-      type: string
-      description: "A ULID: 26 characters, Crockford base 32, sortable by creation\
-        \ time."
-      example: 01J9ZD3V00000000000000PWM1
-      pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
     User:
       type: object
       properties:

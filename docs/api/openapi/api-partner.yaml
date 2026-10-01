@@ -282,12 +282,6 @@ components:
           type: string
         message:
           type: string
-    MoneyCents:
-      type: integer
-      format: int64
-      description: An amount in cents of Canadian dollars (CAD); 12345 = $123.45.
-        Never a decimal.
-      example: 12345
     Problem:
       type: object
       description: RFC 9457 problem details. 403 and 409 carry a machine-readable
@@ -564,37 +558,6 @@ components:
         \ time."
       example: 01J9ZD3V00000000000000PWM1
       pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
-    ValidationError:
-      type: object
-      properties:
-        field:
-          type: string
-          description: "JSON property path of the request, e.g. `displayName` or `lines[2].amount`."
-          example: displayName
-        message:
-          type: string
-          description: "The exact message of docs/spec/validation-rules.md, in the\
-            \ caller's locale."
-          example: At least 2 characters.
-        rule:
-          type: string
-          description: "The failed rule: `required`, `format`, `length`, `range`,\
-            \ or a named rule (snake_case), e.g. `gst_number`."
-          example: length
-      required:
-      - field
-      - message
-      - rule
-    ValidationErrors:
-      type: object
-      description: "422: one error per field, the most basic failing rule first."
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: "#/components/schemas/ValidationError"
-      required:
-      - errors
     VariantResponse:
       type: object
       properties:
@@ -614,49 +577,6 @@ components:
         value:
           type: string
   securitySchemes:
-    bffSession:
-      description: "Browsers only (the Studio, the consumer web): the BFF's HttpOnly\
-        \ session cookie (`__Host-` prefixed in the cloud). The BFF relays each call\
-        \ to the api with the user's access token; the browser never sees a token.\
-        \ Unsafe methods also need the `csrf` header."
-      in: cookie
-      name: NL_STUDIO
-      type: apiKey
-    csrf:
-      description: "Copy of the `XSRF-TOKEN` cookie (`__Host-XSRF-TOKEN` in the cloud)\
-        \ on POST, PUT, PATCH and DELETE."
-      in: header
-      name: X-XSRF-TOKEN
-      type: apiKey
-    dpop:
-      bearerFormat: JWT
-      description: "The mobile and courier apps (S-29): `Authorization: DPoP <access\
-        \ token>` together with the `DPoP` proof header. A DPoP-bound token (`cnf.jkt`)\
-        \ sent as a Bearer token is refused."
-      scheme: DPoP
-      type: http
-    dpopProof:
-      description: "DPoP proof JWT (`typ: dpop+jwt`, `htm`, `htu`, `iat`, `jti`, `ath`);\
-        \ a server nonce may be demanded with `DPoP-Nonce`."
-      in: header
-      name: DPoP
-      type: apiKey
-    oauth2:
-      description: "OAuth 2.1 authorization code with PKCE (S256 only) at northline-auth;\
-        \ ES256 JWT access tokens valid 10 minutes with claims `sub`, `scope`, `roles`,\
-        \ `merchants`, `acr`. Business and staff calls need `acr=mfa` (passkey or\
-        \ TOTP). Confidential clients: the BFFs; public clients: the mobile apps (with\
-        \ DPoP)."
-      flows:
-        authorizationCode:
-          authorizationUrl: http://localhost:9000/oauth2/authorize
-          refreshUrl: http://localhost:9000/oauth2/token
-          scopes:
-            merchant: "the Studio: businesses the user is a member of (acr=mfa required)"
-            openid: OpenID Connect sign-in
-            profile: "name, locale"
-          tokenUrl: http://localhost:9000/oauth2/token
-      type: oauth2
     partnerClientCredentials:
       description: "Partner integrations (S-30): client `partner:<name>` gets a token\
         \ with `grant_type=client_credentials`, authenticating with `private_key_jwt`\

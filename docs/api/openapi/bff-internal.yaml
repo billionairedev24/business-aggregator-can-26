@@ -89,12 +89,6 @@ components:
       properties:
         city:
           type: string
-    MoneyCents:
-      type: integer
-      format: int64
-      description: An amount in cents of Canadian dollars (CAD); 12345 = $123.45.
-        Never a decimal.
-      example: 12345
     Problem:
       type: object
       description: RFC 9457 problem details. 403 and 409 carry a machine-readable
@@ -139,12 +133,6 @@ components:
           type: string
         user:
           $ref: "#/components/schemas/User"
-    Ulid:
-      type: string
-      description: "A ULID: 26 characters, Crockford base 32, sortable by creation\
-        \ time."
-      example: 01J9ZD3V00000000000000PWM1
-      pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
     User:
       type: object
       properties:
@@ -164,37 +152,6 @@ components:
           type: string
         phone:
           type: string
-    ValidationError:
-      type: object
-      properties:
-        field:
-          type: string
-          description: "JSON property path of the request, e.g. `displayName` or `lines[2].amount`."
-          example: displayName
-        message:
-          type: string
-          description: "The exact message of docs/spec/validation-rules.md, in the\
-            \ caller's locale."
-          example: At least 2 characters.
-        rule:
-          type: string
-          description: "The failed rule: `required`, `format`, `length`, `range`,\
-            \ or a named rule (snake_case), e.g. `gst_number`."
-          example: length
-      required:
-      - field
-      - message
-      - rule
-    ValidationErrors:
-      type: object
-      description: "422: one error per field, the most basic failing rule first."
-      properties:
-        errors:
-          type: array
-          items:
-            $ref: "#/components/schemas/ValidationError"
-      required:
-      - errors
   securitySchemes:
     bffSession:
       description: "Browsers only (the Studio, the consumer web): the BFF's HttpOnly\

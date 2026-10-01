@@ -12,6 +12,7 @@ import io.swagger.v3.oas.models.parameters.HeaderParameter;
 import io.swagger.v3.oas.models.parameters.RequestBody;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -27,6 +28,9 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
  * body, and the signature headers. The schemas are used as they are, so the reference can't drift from the deliveries.
  */
 public final class WebhookDocs {
+
+    /** The signature scheme of the deliveries (the receiver checks it, like an API key it holds the secret of). */
+    public static final String SIGNATURE = "webhookSignature";
 
     private WebhookDocs() {}
 
@@ -58,6 +62,16 @@ public final class WebhookDocs {
         schema.set$id(null);
         var schemaName = schemaName(name);
         openApi.getComponents().addSchemas(schemaName, schema);
+        openApi.getComponents()
+                .addSecuritySchemes(
+                        SIGNATURE,
+                        new SecurityScheme()
+                                .type(SecurityScheme.Type.APIKEY)
+                                .in(SecurityScheme.In.HEADER)
+                                .name("Northline-Signature")
+                                .description(
+                                        "Northline signs each delivery: `t=<unix seconds>,v1=<hex HMAC-SHA256 of \"<t>.<raw "
+                                                + "body>\" keyed with the endpoint's whsec_… secret>`. Your endpoint verifies it."));
         var operation = new Operation()
                 .operationId("webhook_" + name.replace('.', '_'))
                 .summary(type)
@@ -67,6 +81,7 @@ public final class WebhookDocs {
                         + "minutes) and deduplicate on the event `id`. Any 2xx acknowledges; everything else is "
                         + "retried with back-off for about 3 days (docs/runbooks/webhooks.md).")
                 .tags(java.util.List.of("webhooks"))
+                .security(java.util.List.of(ApiDocs.requirement(SIGNATURE)))
                 .addParametersItem(header(
                         "Northline-Signature",
                         "`t=<unix seconds>,v1=<hex HMAC-SHA256>` — one "

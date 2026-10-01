@@ -1,5 +1,7 @@
 package ca.northline.openapi;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import io.swagger.v3.core.util.Json31;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;
@@ -28,7 +30,70 @@ final class ApiConventions implements OpenApiCustomizer {
         if (openApi.getComponents() != null && openApi.getComponents().getSchemas() != null) {
             openApi.getComponents().getSchemas().values().forEach(ApiConventions::money);
         }
+        pruneUnusedShared(openApi);
     }
+
+    /**
+     * Every group starts with all shared schemas and the app's security schemes; drop the ones this document never
+     * references, so each spec lists only what it uses (Redocly's no-unused-components).
+     */
+    private static void pruneUnusedShared(OpenAPI openApi) {
+        var components = openApi.getComponents();
+        if (components == null) {
+            return;
+        }
+        String json;
+        try {
+            json = Json31.mapper().writeValueAsString(openApi);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException(e);
+        }
+        // Schemas reference each other (ValidationErrors → ValidationError): repeat until nothing changes.
+        var removed = true;
+        while (removed && components.getSchemas() != null) {
+            removed = false;
+            for (var name : SHARED_SCHEMAS) {
+                if (components.getSchemas().containsKey(name)
+                        && !json.contains("\"#/components/schemas/" + name + "\"")) {
+                    components.getSchemas().remove(name);
+                    removed = true;
+                }
+            }
+            try {
+                json = Json31.mapper().writeValueAsString(openApi);
+            } catch (JsonProcessingException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+        if (components.getSecuritySchemes() != null) {
+            var used = new java.util.HashSet<String>();
+            if (openApi.getSecurity() != null) {
+                openApi.getSecurity().forEach(r -> used.addAll(r.keySet()));
+            }
+            if (openApi.getPaths() != null) {
+                openApi.getPaths()
+                        .values()
+                        .forEach(item -> item.readOperations().forEach(o -> {
+                            if (o.getSecurity() != null) {
+                                o.getSecurity().forEach(r -> used.addAll(r.keySet()));
+                            }
+                        }));
+            }
+            if (openApi.getWebhooks() != null) {
+                openApi.getWebhooks()
+                        .values()
+                        .forEach(item -> item.readOperations().forEach(o -> {
+                            if (o.getSecurity() != null) {
+                                o.getSecurity().forEach(r -> used.addAll(r.keySet()));
+                            }
+                        }));
+            }
+            components.getSecuritySchemes().keySet().removeIf(name -> !used.contains(name));
+        }
+    }
+
+    private static final java.util.List<String> SHARED_SCHEMAS = java.util.List.of(
+            ApiDocs.VALIDATION_ERRORS, ApiDocs.VALIDATION_ERROR, ApiDocs.PROBLEM, ApiDocs.ULID, ApiDocs.MONEY_CENTS);
 
     private static void apply(OpenAPI openApi, String path, PathItem.HttpMethod method, Operation operation) {
         if (operation.getParameters() != null) {

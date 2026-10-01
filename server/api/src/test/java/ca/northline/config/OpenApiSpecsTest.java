@@ -65,14 +65,15 @@ class OpenApiSpecsTest extends IntegrationTest {
         assertThat(JsonPath.<String>read(studio, "$.openapi")).startsWith("3.1");
         assertThat(JsonPath.<String>read(studio, "$.servers[0].url")).isEqualTo("http://localhost:8080");
         assertThat(JsonPath.<Map<String, Object>>read(studio, "$.components.securitySchemes"))
-                .containsKeys("bffSession", "csrf", "oauth2", "dpop", "dpopProof", "partnerClientCredentials");
-        assertThat(JsonPath.<String>read(studio, "$.components.securitySchemes.dpop.scheme"))
+                .containsOnlyKeys("bffSession", "csrf", "oauth2"); // only what the document uses
+        assertThat(JsonPath.<String>read(json("/v3/api-docs/public"), "$.components.securitySchemes.dpop.scheme"))
                 .isEqualTo("DPoP");
         assertThat(JsonPath.<String>read(
                         studio, "$.components.securitySchemes.oauth2.flows.authorizationCode.tokenUrl"))
                 .isEqualTo("http://localhost:9000/oauth2/token");
         assertThat(JsonPath.<List<String>>read(
-                        studio, "$.components.securitySchemes.partnerClientCredentials.x-token-endpoint-auth-methods"))
+                        json("/v3/api-docs/partner"),
+                        "$.components.securitySchemes.partnerClientCredentials.x-token-endpoint-auth-methods"))
                 .containsExactly("private_key_jwt");
         assertThat(JsonPath.<String>read(studio, "$.components.schemas.Ulid.pattern"))
                 .isEqualTo("^[0-9A-HJKMNP-TV-Z]{26}$");
