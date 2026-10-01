@@ -1,0 +1,49 @@
+# Northline documentation site (S-126): the static Docusaurus build behind an unprivileged nginx (port 8080). One image
+# per variant (docs = public, docs-internal = everything; web/Dockerfile). Rendered at container start (only NL_*
+# variables are substituted): NL_DOCS_SWAGGER lists the running services' viewers for the non-prod environments
+# ("label|url,label|url", empty in prod), NL_DOCS_CONNECT the origins Scalar's "Try it" may call.
+server {
+    listen 8080;
+    server_name _;
+    root /usr/share/nginx/html;
+    server_tokens off;
+    absolute_redirect off;
+    charset utf-8;
+
+    gzip on;
+    gzip_static on;
+    gzip_vary on;
+    gzip_comp_level 6;
+    gzip_min_length 1024;
+    gzip_types text/css application/javascript text/javascript application/json image/svg+xml text/plain;
+
+    include /etc/nginx/conf.d/docs-security-headers.inc;
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    # Runtime configuration (src/runtimeConfig.ts).
+    location = /config.js {
+        default_type application/javascript;
+        add_header Cache-Control "no-store" always;
+        include /etc/nginx/conf.d/docs-security-headers.inc;
+        return 200 'window.__NL_DOCS__ = { swagger: "${NL_DOCS_SWAGGER}".split(",").filter(Boolean) };\n';
+    }
+
+    # Hashed, immutable build output.
+    location /assets/ {
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        include /etc/nginx/conf.d/docs-security-headers.inc;
+        try_files $uri =404;
+    }
+
+    location / {
+        add_header Cache-Control "no-cache" always;
+        include /etc/nginx/conf.d/docs-security-headers.inc;
+        try_files $uri $uri/ $uri/index.html =404;
+        error_page 404 /404.html;
+    }
+}

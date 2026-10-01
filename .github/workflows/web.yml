@@ -12,6 +12,10 @@ on:
         description: Build Storybook and run its interaction + a11y tests (headless Chromium)
         type: boolean
         default: true
+      docs:
+        description: Build the documentation site (both variants) and check every page (S-126)
+        type: boolean
+        default: true
       studio-smoke:
         description: Studio smoke sweep (Postgres + api + auth + studio dev server + Playwright; slower)
         type: boolean
@@ -80,6 +84,21 @@ jobs:
           path: web/packages/ui/storybook-static/
           retention-days: 7
           if-no-files-found: ignore
+
+  docs:
+    name: docs site build (public + internal) + page check
+    if: ${{ inputs.docs }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/pnpm-setup
+      # make docs = pnpm --filter @northline/docs build + test:build (scripts/check-build.mjs: every runbook and spec
+      # page in en and fr; no internal page in the public variant)
+      - name: make docs (public)
+        run: make -C .. docs DOCS_VARIANT=public
+      - name: make docs (internal)
+        run: make -C .. docs DOCS_VARIANT=internal
 
   studio-smoke:
     name: studio smoke sweep

@@ -24,11 +24,12 @@ Other runbooks: [dev](dev.md) · [staging](staging.md) · [prod](prod.md) · [in
 | `worker` | `server/worker` — Jib | same | 65532 | 8084 (health only) | same |
 | `studio` | `web/Dockerfile` target `studio` | `nginxinc/nginx-unprivileged:1.29-alpine` | 101 | 8080 | `/healthz` |
 | `consumer` | `web/Dockerfile` target `consumer` | `gcr.io/distroless/nodejs22-debian13:nonroot` | 65532 | 3000 | `/healthz` |
+| `docs`, `docs-internal` | `web/Dockerfile` targets `docs`, `docs-internal` (`--build-context repo-docs=docs`) | `nginxinc/nginx-unprivileged:1.29-alpine` | 101 | 8080 | `/healthz` — the documentation site, public / internal variant (S-126, [docs-site.md](docs-site.md)) |
 | `console` | — | the console app (E-8) doesn't exist yet: `apps.console` in the chart is a disabled placeholder | | | |
 
 - **Names are registry-agnostic:** `<REGISTRY>/<app>:<IMAGE_TAG>`, where `REGISTRY` includes any path and
   `IMAGE_TAG` is the git sha. Terraform's `registry.repository_urls` are exactly these repositories (`api`, `auth`,
-  `bff`, `worker`, `studio`, `consumer`):
+  `bff`, `worker`, `studio`, `consumer`, `docs`, `docs-internal`):
 
   | cloud | `REGISTRY` |
   |---|---|

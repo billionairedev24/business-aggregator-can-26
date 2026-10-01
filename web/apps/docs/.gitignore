@@ -1,0 +1,5 @@
+# Docusaurus output and caches; static/openapi is copied from docs/api/openapi by scripts/sync.mjs at every build.
+build/
+.docusaurus/
+static/openapi/
+static/scalar/

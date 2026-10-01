@@ -1,6 +1,6 @@
 # Backlog
 
-`northline-backlog.csv` is the full remaining-work backlog after the Studio build: 14 epics, 134 stories, 786 story points, laid out over 20 two-week sprints (5 Oct 2026 → 9 Jul 2027).
+`northline-backlog.csv` is the full remaining-work backlog after the Studio build: 14 epics, 139 stories, 796 story points, laid out over 20 two-week sprints (5 Oct 2026 → 9 Jul 2027).
 
 ## Importing into Jira
 Jira → *Settings › System › External system import › CSV* (Cloud: *Import issues from CSV*). Map the columns:
@@ -27,7 +27,7 @@ Jira → *Settings › System › External system import › CSV* (Cloud: *Impor
   4. Mobile app.
   5. Security and observability.
   6. Pilot and Calgary launch.
-- **Stable ids:** regenerating keeps every existing Issue Id; new stories get the next free number (e.g. S-134).
+- **Stable ids:** regenerating keeps every existing Issue Id; new stories get the next free number (e.g. S-139).
 - **Holidays:** no allowance is made for holidays. Expect the late-December sprint to slip.
 - **Sources:** stories come from the gaps recorded in `docs/DECISIONS.md`, the screen inventory in `docs/SCREENS.md` (consumer web, mobile app, console) and the architecture in `docs/ARCHITECTURE.md`.
 
@@ -42,3 +42,4 @@ Jira → *Settings › System › External system import › CSV* (Cloud: *Impor
 - The epic is appended last so existing epic ids (E-1…E-13) stay stable.
 - AI (added 2026-09-30, user decision): OpenRouter behind an `LlmClient` port on the Spring AI stack, following billionairedev24/samop-inv-ship-26. S-129 AI platform, S-130 Studio assistant, S-131 writing help, S-132 consumer natural-language search and triage, S-133 trust & safety assist. S-127 (MCP) uses springdoc's OpenAPI-to-MCP tools on Spring AI's MCP server, as samop does.
 - Region-neutral (added 2026-09-30, user direction): Northline starts in Alberta but is built for every province. S-134 moves provinces and markets into configuration and removes hardcoded Alberta/Calgary/Edmonton from code and messages.
+- Follow-ups found while merging phase 2 (2026-10-01): S-135 BFF relay race, S-136 calendar disconnect deadlock, S-137 indexer refresh before stale lookup, S-138 Error Prone -Werror, S-139 docs OAuth client.

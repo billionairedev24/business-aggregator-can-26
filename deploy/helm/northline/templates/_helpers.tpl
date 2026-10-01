@@ -137,6 +137,16 @@ their own variables. (dict "root" $ "name" "<app>" "app" $appValues)
 {{- $env = merge (deepCopy (default (dict) .app.env)) (deepCopy (default (dict) $v.env)) $env -}}
 {{- else if eq .app.type "static" -}}
 {{- $_ := set $env "NL_AUTH_ORIGIN" $v.urls.auth -}}
+{{- if or (eq .name "docs") (eq .name "docs-internal") -}}
+{{- /* S-126: links to the services' own viewers where they serve them (S-125: dev and staging, never prod), and the
+       origins Scalar's "Try it" may call. */ -}}
+{{- $swagger := list -}}
+{{- if and $v.apps.api.docsRoutes (ne $v.global.environment "prod") -}}
+{{- $swagger = list (printf "api|%s/docs" $v.urls.api) (printf "auth|%s/docs" $v.urls.auth) (printf "studio-bff|%s/bff/docs" $v.urls.studio) -}}
+{{- end -}}
+{{- $_ := set $env "NL_DOCS_SWAGGER" (join "," $swagger) -}}
+{{- $_ := set $env "NL_DOCS_CONNECT" (join " " (list $v.urls.api $v.urls.auth)) -}}
+{{- end -}}
 {{- $env = merge (deepCopy (default (dict) .app.env)) $env -}}
 {{- else -}}
 {{- $_ := set $env "PORT" (toString .app.port) -}}

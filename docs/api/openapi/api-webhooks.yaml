@@ -1,0 +1,832 @@
+openapi: 3.1.0
+info:
+  contact:
+    name: Northline
+    url: https://northline.ca
+  description: "The events Northline POSTs to the endpoints a business subscribes\
+    \ in Studio › Settings › API (S-33). Payloads carry ids and amounts only, never\
+    \ customer data. Each body is validated against the schema shown here before it\
+    \ is sent."
+  license:
+    identifier: LicenseRef-Northline
+    name: Proprietary
+  title: Northline api · Webhooks
+  version: v1
+servers:
+- url: http://localhost:8080
+paths: {}
+components:
+  schemas:
+    BookingCompletedWebhookV1:
+      type: object
+      additionalProperties: false
+      description: A job was marked complete by a team member. Escrow releases on
+        the customer's sign-off or 48 h later (payment.released).
+      properties:
+        createdAt:
+          type: string
+          format: date-time
+          description: When it happened (UTC).
+        data:
+          type: object
+          additionalProperties: false
+          properties:
+            bookingId:
+              type: string
+              description: The booking (Studio › Appointments).
+            completedBy:
+              type: string
+              description: User id of the team member who completed it.
+            photoCount:
+              type: integer
+              description: Completion photos attached.
+              minimum: 0
+          required:
+          - bookingId
+          - completedBy
+          - photoCount
+        id:
+          type: string
+          description: "Event id (ULID). The same event keeps its id on every retry\
+            \ and resend: deduplicate on it."
+          pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
+        merchantId:
+          type: string
+          description: Your business (Studio URL /b/<merchantId>).
+          pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
+        type:
+          type: string
+          enum:
+          - booking.completed
+        version:
+          type: integer
+          description: Payload version; a breaking change ships as a new version.
+          enum:
+          - 1
+      required:
+      - createdAt
+      - data
+      - id
+      - merchantId
+      - type
+      - version
+      title: Northline webhook booking.completed v1
+    BookingConfirmedWebhookV1:
+      type: object
+      additionalProperties: false
+      description: "A customer booked and paid (the money is held in escrow), or accepted\
+        \ a quote with its deposit. The time is booked for the team member."
+      properties:
+        createdAt:
+          type: string
+          format: date-time
+          description: When it happened (UTC).
+        data:
+          type: object
+          additionalProperties: false
+          properties:
+            bookingId:
+              type: string
+              description: The booking (Studio › Appointments).
+            bookingType:
+              type: string
+              enum:
+              - visit
+              - home
+              - event
+              - appointment
+              - consult
+            currency:
+              type: string
+              enum:
+              - CAD
+            depositCents:
+              type: integer
+              description: What is held now (the whole price unless a quote asked
+                for a deposit).
+              minimum: 0
+            endsAt:
+              type: string
+              format: date-time
+            memberUserId:
+              type:
+              - string
+              - "null"
+              description: User id of the team member doing the job.
+            priceCents:
+              type: integer
+              description: The job's price before tax.
+              minimum: 0
+            quoteId:
+              type:
+              - string
+              - "null"
+              description: "The accepted quote, when the booking came from one."
+            serviceId:
+              type:
+              - string
+              - "null"
+              description: The service booked (Listings).
+            startsAt:
+              type: string
+              format: date-time
+          required:
+          - bookingId
+          - bookingType
+          - currency
+          - depositCents
+          - endsAt
+          - priceCents
+          - startsAt
+        id:
+          type: string
+          description: "Event id (ULID). The same event keeps its id on every retry\
+            \ and resend: deduplicate on it."
+          pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
+        merchantId:
+          type: string
+          description: Your business (Studio URL /b/<merchantId>).
+          pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
+        type:
+          type: string
+          enum:
+          - booking.confirmed
+        version:
+          type: integer
+          description: Payload version; a breaking change ships as a new version.
+          enum:
+          - 1
+      required:
+      - createdAt
+      - data
+      - id
+      - merchantId
+      - type
+      - version
+      title: Northline webhook booking.confirmed v1
+    OrderPlacedWebhookV1:
+      type: object
+      additionalProperties: false
+      description: "A customer paid (card authorized, held in escrow) for an order\
+        \ with lines from your business. Only your lines; no customer details."
+      properties:
+        createdAt:
+          type: string
+          format: date-time
+          description: When it happened (UTC).
+        data:
+          type: object
+          additionalProperties: false
+          properties:
+            currency:
+              type: string
+              enum:
+              - CAD
+            delivery:
+              type: string
+              enum:
+              - pooled
+              - direct
+              - pickup
+            lines:
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                properties:
+                  amountCents:
+                    type: integer
+                    minimum: 0
+                  lineId:
+                    type: string
+                  offerId:
+                    type: string
+                    description: Your listing.
+                  qty:
+                    type: integer
+                    minimum: 1
+                  variantId:
+                    type:
+                    - string
+                    - "null"
+                required:
+                - amountCents
+                - lineId
+                - offerId
+                - qty
+            orderId:
+              type: string
+            orderRef:
+              type: string
+              description: The reference the customer and your Studio show (NL-50000).
+            orderType:
+              type: string
+              enum:
+              - goods
+              - food
+            subtotalCents:
+              type: integer
+              minimum: 0
+            taxCents:
+              type: integer
+              minimum: 0
+            windowId:
+              type:
+              - string
+              - "null"
+              description: "The pooled run's delivery window, when pooled."
+          required:
+          - currency
+          - delivery
+          - lines
+          - orderId
+          - orderRef
+          - orderType
+          - subtotalCents
+          - taxCents
+        id:
+          type: string
+          description: "Event id (ULID). The same event keeps its id on every retry\
+            \ and resend: deduplicate on it."
+          pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
+        merchantId:
+          type: string
+          description: Your business (Studio URL /b/<merchantId>).
+          pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
+        type:
+          type: string
+          enum:
+          - order.placed
+        version:
+          type: integer
+          description: Payload version; a breaking change ships as a new version.
+          enum:
+          - 1
+      required:
+      - createdAt
+      - data
+      - id
+      - merchantId
+      - type
+      - version
+      title: Northline webhook order.placed v1
+    PaymentReleasedWebhookV1:
+      type: object
+      additionalProperties: false
+      description: "Money held in escrow for a job or an order line moved to your\
+        \ Northline balance, net of the take rate."
+      properties:
+        createdAt:
+          type: string
+          format: date-time
+          description: When it happened (UTC).
+        data:
+          type: object
+          additionalProperties: false
+          properties:
+            currency:
+              type: string
+              enum:
+              - CAD
+            escrowId:
+              type: string
+            feeCents:
+              type: integer
+              minimum: 0
+            grossCents:
+              type: integer
+              minimum: 0
+            netCents:
+              type: integer
+              minimum: 0
+            reference:
+              type: object
+              additionalProperties: false
+              properties:
+                id:
+                  type: string
+                type:
+                  type: string
+                  enum:
+                  - booking
+                  - order_line
+              required:
+              - id
+              - type
+          required:
+          - currency
+          - escrowId
+          - feeCents
+          - grossCents
+          - netCents
+          - reference
+        id:
+          type: string
+          description: "Event id (ULID). The same event keeps its id on every retry\
+            \ and resend: deduplicate on it."
+          pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
+        merchantId:
+          type: string
+          description: Your business (Studio URL /b/<merchantId>).
+          pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
+        type:
+          type: string
+          enum:
+          - payment.released
+        version:
+          type: integer
+          description: Payload version; a breaking change ships as a new version.
+          enum:
+          - 1
+      required:
+      - createdAt
+      - data
+      - id
+      - merchantId
+      - type
+      - version
+      title: Northline webhook payment.released v1
+    RefundIssuedWebhookV1:
+      type: object
+      additionalProperties: false
+      description: A refund was paid back to the customer's original payment method.
+      properties:
+        createdAt:
+          type: string
+          format: date-time
+          description: When it happened (UTC).
+        data:
+          type: object
+          additionalProperties: false
+          properties:
+            amountCents:
+              type: integer
+              minimum: 1
+            caseNumber:
+              type:
+              - string
+              - "null"
+              description: RF-… as shown in Refunds & disputes.
+            chargedTo:
+              type: string
+              description: Who bears the refund.
+              enum:
+              - merchant
+              - platform
+            currency:
+              type: string
+              enum:
+              - CAD
+            escrowId:
+              type:
+              - string
+              - "null"
+            refundId:
+              type: string
+          required:
+          - amountCents
+          - caseNumber
+          - chargedTo
+          - currency
+          - escrowId
+          - refundId
+        id:
+          type: string
+          description: "Event id (ULID). The same event keeps its id on every retry\
+            \ and resend: deduplicate on it."
+          pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
+        merchantId:
+          type: string
+          description: Your business (Studio URL /b/<merchantId>).
+          pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
+        type:
+          type: string
+          enum:
+          - refund.issued
+        version:
+          type: integer
+          description: Payload version; a breaking change ships as a new version.
+          enum:
+          - 1
+      required:
+      - createdAt
+      - data
+      - id
+      - merchantId
+      - type
+      - version
+      title: Northline webhook refund.issued v1
+    WebhookTestWebhookV1:
+      type: object
+      additionalProperties: false
+      description: "Sent from Studio › Settings › API & integrations (Send test event).\
+        \ Not a business event: acknowledge it with 2xx."
+      properties:
+        createdAt:
+          type: string
+          format: date-time
+          description: When it happened (UTC).
+        data:
+          type: object
+          additionalProperties: false
+          properties:
+            endpointId:
+              type: string
+              description: The endpoint the test was sent to.
+          required:
+          - endpointId
+        id:
+          type: string
+          description: "Event id (ULID). The same event keeps its id on every retry\
+            \ and resend: deduplicate on it."
+          pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
+        merchantId:
+          type: string
+          description: Your business (Studio URL /b/<merchantId>).
+          pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
+        type:
+          type: string
+          enum:
+          - webhook.test
+        version:
+          type: integer
+          description: Payload version; a breaking change ships as a new version.
+          enum:
+          - 1
+      required:
+      - createdAt
+      - data
+      - id
+      - merchantId
+      - type
+      - version
+      title: Northline webhook webhook.test v1
+  securitySchemes:
+    webhookSignature:
+      description: "Northline signs each delivery: `t=<unix seconds>,v1=<hex HMAC-SHA256\
+        \ of \"<t>.<raw body>\" keyed with the endpoint's whsec_… secret>`. Your endpoint\
+        \ verifies it."
+      in: header
+      name: Northline-Signature
+      type: apiKey
+webhooks:
+  booking.completed:
+    post:
+      description: |-
+        A job was marked complete by a team member. Escrow releases on the customer's sign-off or 48 h later (payment.released).
+
+        Sent as `POST` to each endpoint subscribed to `booking.completed` in Studio › Settings › API. Verify `Northline-Signature` (HMAC-SHA256 of `<t>.<raw body>` with the endpoint's `whsec_…` secret; reject timestamps older than 5 minutes) and deduplicate on the event `id`. Any 2xx acknowledges; everything else is retried with back-off for about 3 days (docs/runbooks/webhooks.md).
+      operationId: webhook_booking_completed_v1
+      parameters:
+      - description: "`t=<unix seconds>,v1=<hex HMAC-SHA256>` — one `v1` per valid\
+          \ secret while a rotated secret overlaps."
+        example: "t=1790790312,v1=5257a869e7…"
+        in: header
+        name: Northline-Signature
+        required: true
+        schema:
+          type: string
+      - description: "Event id (ULID), the same on every retry."
+        example: 01J9ZD3V00000000000000EVT1
+        in: header
+        name: Northline-Event-Id
+        required: true
+        schema:
+          type: string
+      - description: The event type.
+        example: booking.completed
+        in: header
+        name: Northline-Event-Type
+        required: true
+        schema:
+          type: string
+      - description: This delivery (a resend gets a new one).
+        example: 01J9ZD3V00000000000000DLV1
+        in: header
+        name: Northline-Delivery-Id
+        required: true
+        schema:
+          type: string
+      - description: 1 for the first attempt.
+        example: "1"
+        in: header
+        name: Northline-Delivery-Attempt
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingCompletedWebhookV1"
+        required: true
+      responses:
+        "2XX":
+          description: Received. The body is ignored.
+        default:
+          description: "Anything else (and timeouts, TLS errors, redirects) is retried."
+      security:
+      - webhookSignature: []
+      summary: booking.completed
+      tags:
+      - webhooks
+  booking.confirmed:
+    post:
+      description: |-
+        A customer booked and paid (the money is held in escrow), or accepted a quote with its deposit. The time is booked for the team member.
+
+        Sent as `POST` to each endpoint subscribed to `booking.confirmed` in Studio › Settings › API. Verify `Northline-Signature` (HMAC-SHA256 of `<t>.<raw body>` with the endpoint's `whsec_…` secret; reject timestamps older than 5 minutes) and deduplicate on the event `id`. Any 2xx acknowledges; everything else is retried with back-off for about 3 days (docs/runbooks/webhooks.md).
+      operationId: webhook_booking_confirmed_v1
+      parameters:
+      - description: "`t=<unix seconds>,v1=<hex HMAC-SHA256>` — one `v1` per valid\
+          \ secret while a rotated secret overlaps."
+        example: "t=1790790312,v1=5257a869e7…"
+        in: header
+        name: Northline-Signature
+        required: true
+        schema:
+          type: string
+      - description: "Event id (ULID), the same on every retry."
+        example: 01J9ZD3V00000000000000EVT1
+        in: header
+        name: Northline-Event-Id
+        required: true
+        schema:
+          type: string
+      - description: The event type.
+        example: booking.confirmed
+        in: header
+        name: Northline-Event-Type
+        required: true
+        schema:
+          type: string
+      - description: This delivery (a resend gets a new one).
+        example: 01J9ZD3V00000000000000DLV1
+        in: header
+        name: Northline-Delivery-Id
+        required: true
+        schema:
+          type: string
+      - description: 1 for the first attempt.
+        example: "1"
+        in: header
+        name: Northline-Delivery-Attempt
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingConfirmedWebhookV1"
+        required: true
+      responses:
+        "2XX":
+          description: Received. The body is ignored.
+        default:
+          description: "Anything else (and timeouts, TLS errors, redirects) is retried."
+      security:
+      - webhookSignature: []
+      summary: booking.confirmed
+      tags:
+      - webhooks
+  order.placed:
+    post:
+      description: |-
+        A customer paid (card authorized, held in escrow) for an order with lines from your business. Only your lines; no customer details.
+
+        Sent as `POST` to each endpoint subscribed to `order.placed` in Studio › Settings › API. Verify `Northline-Signature` (HMAC-SHA256 of `<t>.<raw body>` with the endpoint's `whsec_…` secret; reject timestamps older than 5 minutes) and deduplicate on the event `id`. Any 2xx acknowledges; everything else is retried with back-off for about 3 days (docs/runbooks/webhooks.md).
+      operationId: webhook_order_placed_v1
+      parameters:
+      - description: "`t=<unix seconds>,v1=<hex HMAC-SHA256>` — one `v1` per valid\
+          \ secret while a rotated secret overlaps."
+        example: "t=1790790312,v1=5257a869e7…"
+        in: header
+        name: Northline-Signature
+        required: true
+        schema:
+          type: string
+      - description: "Event id (ULID), the same on every retry."
+        example: 01J9ZD3V00000000000000EVT1
+        in: header
+        name: Northline-Event-Id
+        required: true
+        schema:
+          type: string
+      - description: The event type.
+        example: order.placed
+        in: header
+        name: Northline-Event-Type
+        required: true
+        schema:
+          type: string
+      - description: This delivery (a resend gets a new one).
+        example: 01J9ZD3V00000000000000DLV1
+        in: header
+        name: Northline-Delivery-Id
+        required: true
+        schema:
+          type: string
+      - description: 1 for the first attempt.
+        example: "1"
+        in: header
+        name: Northline-Delivery-Attempt
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderPlacedWebhookV1"
+        required: true
+      responses:
+        "2XX":
+          description: Received. The body is ignored.
+        default:
+          description: "Anything else (and timeouts, TLS errors, redirects) is retried."
+      security:
+      - webhookSignature: []
+      summary: order.placed
+      tags:
+      - webhooks
+  payment.released:
+    post:
+      description: |-
+        Money held in escrow for a job or an order line moved to your Northline balance, net of the take rate.
+
+        Sent as `POST` to each endpoint subscribed to `payment.released` in Studio › Settings › API. Verify `Northline-Signature` (HMAC-SHA256 of `<t>.<raw body>` with the endpoint's `whsec_…` secret; reject timestamps older than 5 minutes) and deduplicate on the event `id`. Any 2xx acknowledges; everything else is retried with back-off for about 3 days (docs/runbooks/webhooks.md).
+      operationId: webhook_payment_released_v1
+      parameters:
+      - description: "`t=<unix seconds>,v1=<hex HMAC-SHA256>` — one `v1` per valid\
+          \ secret while a rotated secret overlaps."
+        example: "t=1790790312,v1=5257a869e7…"
+        in: header
+        name: Northline-Signature
+        required: true
+        schema:
+          type: string
+      - description: "Event id (ULID), the same on every retry."
+        example: 01J9ZD3V00000000000000EVT1
+        in: header
+        name: Northline-Event-Id
+        required: true
+        schema:
+          type: string
+      - description: The event type.
+        example: payment.released
+        in: header
+        name: Northline-Event-Type
+        required: true
+        schema:
+          type: string
+      - description: This delivery (a resend gets a new one).
+        example: 01J9ZD3V00000000000000DLV1
+        in: header
+        name: Northline-Delivery-Id
+        required: true
+        schema:
+          type: string
+      - description: 1 for the first attempt.
+        example: "1"
+        in: header
+        name: Northline-Delivery-Attempt
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentReleasedWebhookV1"
+        required: true
+      responses:
+        "2XX":
+          description: Received. The body is ignored.
+        default:
+          description: "Anything else (and timeouts, TLS errors, redirects) is retried."
+      security:
+      - webhookSignature: []
+      summary: payment.released
+      tags:
+      - webhooks
+  refund.issued:
+    post:
+      description: |-
+        A refund was paid back to the customer's original payment method.
+
+        Sent as `POST` to each endpoint subscribed to `refund.issued` in Studio › Settings › API. Verify `Northline-Signature` (HMAC-SHA256 of `<t>.<raw body>` with the endpoint's `whsec_…` secret; reject timestamps older than 5 minutes) and deduplicate on the event `id`. Any 2xx acknowledges; everything else is retried with back-off for about 3 days (docs/runbooks/webhooks.md).
+      operationId: webhook_refund_issued_v1
+      parameters:
+      - description: "`t=<unix seconds>,v1=<hex HMAC-SHA256>` — one `v1` per valid\
+          \ secret while a rotated secret overlaps."
+        example: "t=1790790312,v1=5257a869e7…"
+        in: header
+        name: Northline-Signature
+        required: true
+        schema:
+          type: string
+      - description: "Event id (ULID), the same on every retry."
+        example: 01J9ZD3V00000000000000EVT1
+        in: header
+        name: Northline-Event-Id
+        required: true
+        schema:
+          type: string
+      - description: The event type.
+        example: refund.issued
+        in: header
+        name: Northline-Event-Type
+        required: true
+        schema:
+          type: string
+      - description: This delivery (a resend gets a new one).
+        example: 01J9ZD3V00000000000000DLV1
+        in: header
+        name: Northline-Delivery-Id
+        required: true
+        schema:
+          type: string
+      - description: 1 for the first attempt.
+        example: "1"
+        in: header
+        name: Northline-Delivery-Attempt
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefundIssuedWebhookV1"
+        required: true
+      responses:
+        "2XX":
+          description: Received. The body is ignored.
+        default:
+          description: "Anything else (and timeouts, TLS errors, redirects) is retried."
+      security:
+      - webhookSignature: []
+      summary: refund.issued
+      tags:
+      - webhooks
+  webhook.test:
+    post:
+      description: |-
+        Sent from Studio › Settings › API & integrations (Send test event). Not a business event: acknowledge it with 2xx.
+
+        Sent as `POST` to each endpoint subscribed to `webhook.test` in Studio › Settings › API. Verify `Northline-Signature` (HMAC-SHA256 of `<t>.<raw body>` with the endpoint's `whsec_…` secret; reject timestamps older than 5 minutes) and deduplicate on the event `id`. Any 2xx acknowledges; everything else is retried with back-off for about 3 days (docs/runbooks/webhooks.md).
+      operationId: webhook_webhook_test_v1
+      parameters:
+      - description: "`t=<unix seconds>,v1=<hex HMAC-SHA256>` — one `v1` per valid\
+          \ secret while a rotated secret overlaps."
+        example: "t=1790790312,v1=5257a869e7…"
+        in: header
+        name: Northline-Signature
+        required: true
+        schema:
+          type: string
+      - description: "Event id (ULID), the same on every retry."
+        example: 01J9ZD3V00000000000000EVT1
+        in: header
+        name: Northline-Event-Id
+        required: true
+        schema:
+          type: string
+      - description: The event type.
+        example: webhook.test
+        in: header
+        name: Northline-Event-Type
+        required: true
+        schema:
+          type: string
+      - description: This delivery (a resend gets a new one).
+        example: 01J9ZD3V00000000000000DLV1
+        in: header
+        name: Northline-Delivery-Id
+        required: true
+        schema:
+          type: string
+      - description: 1 for the first attempt.
+        example: "1"
+        in: header
+        name: Northline-Delivery-Attempt
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookTestWebhookV1"
+        required: true
+      responses:
+        "2XX":
+          description: Received. The body is ignored.
+        default:
+          description: "Anything else (and timeouts, TLS errors, redirects) is retried."
+      security:
+      - webhookSignature: []
+      summary: webhook.test
+      tags:
+      - webhooks

@@ -27,7 +27,7 @@ dependencies {
     implementation("org.springframework.modulith:spring-modulith-starter-jdbc")
     implementation("org.springframework.modulith:spring-modulith-events-kafka")
     implementation("org.springframework.modulith:spring-modulith-events-jackson")
-    implementation(libs.springdoc.webmvc.ui)
+    implementation(project(":openapi")) // S-125: springdoc + Swagger UI + Scalar + Redoc, groups per audience
     implementation(libs.ulid)
     implementation(libs.stripe)
     implementation(libs.mapstruct)
@@ -53,6 +53,7 @@ dependencies {
 
     testImplementation(tools.output)
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation(testFixtures(project(":openapi"))) // S-125: OpenApiSnapshot (spec drift check)
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testImplementation("org.springframework.boot:spring-boot-starter-security-test")
     testImplementation("org.springframework.modulith:spring-modulith-starter-test")

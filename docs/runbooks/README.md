@@ -26,6 +26,8 @@ say where a step is still manual or missing.
 | [webhooks.md](webhooks.md) | partner webhooks: payloads and signature for integrators, delivery design (per-endpoint scheduling, retries, auto-disable), SSRF rules, operations (S-33) |
 | [search.md](search.md) | the Elasticsearch read model: index layout and naming, analyzers per language, synonyms, the search-indices Job, least-privilege access (S-42); the indexer, visibility rules, versions, the reconcile sweep, merchant locations (S-43); the search API and its contract for the consumer web (S-44); the full reindex with an alias swap (S-71) |
 | [events.md](events.md) | domain events: wire format, the worker's consumer framework (dedupe, retries, DLQ), alerts and metrics, DLQ replay (S-25/S-26) |
+| [docs-site.md](docs-site.md) | the Docusaurus documentation site: public variant on docs.<zone>, internal variant behind an IP allowlist, build, images, Pages export (S-126) |
+| [api-docs.md](api-docs.md) | OpenAPI 3.1 documents per audience (api, auth, BFFs), Swagger UI / Scalar / Redoc in local, dev and staging, the committed specs and their drift check, Redocly lint, none in prod (S-125) |
 | [ci.md](ci.md) | CI pipelines on GitHub Actions and GitLab CI, manual trigger only (S-4/S-5, infra checks S-2/S-3) |
 | [mobile-auth.md](mobile-auth.md) | the consumer and courier apps: sign-in with PKCE, DPoP-bound tokens, nonces, rotating refresh tokens and reuse detection, calling the api, sign-out, sessions (S-29) |
 | [partners.md](partners.md) | partner API clients: `client_credentials` with `private_key_jwt`, keys (JWK Set URL or registered), scopes, business binding, rotation, revocation, rate limits, audit (S-30) |
@@ -197,6 +199,9 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `SESSION_CHECK_INTERVAL` | | | ✓ | | no (`60s`: how often the BFF checks its session wasn't revoked) |
 | `OTEL_EXPORT_ENABLED` | ✓ | | | | no (false until S-111) |
 | `SERVER_PORT` | ✓ | ✓ | ✓ | | no (8080 / 9000 / 8082; the consumer-bff 8081) |
+
+Documentation site (S-126, [docs-site.md](docs-site.md)): the `docs` / `docs-internal` images read `NL_DOCS_SWAGGER` and
+`NL_DOCS_CONNECT`, which the chart derives from `urls.*` and `apps.api.docsRoutes`; nothing to set by hand.
 
 Studio (web): the container image reads `NL_AUTH_ORIGIN` (= `AUTH_ISSUER`; the chart sets it from `urls.auth`) at
 start and serves it as `/config.js`, so one Studio image serves every environment (S-14). `VITE_NL_AUTH_ORIGIN` is

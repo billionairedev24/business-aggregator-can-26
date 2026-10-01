@@ -2783,6 +2783,197 @@ Stacked on S-46 (#66, kitchen availability, `PublicDirectory`), S-47 (#67, locat
 - **Nested types with the same name** (`Command`, `Outcome`) are qualified where they are used, not renamed. Durations are now `ofDays(2)` / `ofDays(3)`; a `Duration` day is exactly 24 h, so behaviour is unchanged. Weekly earnings buckets use an `EnumMap` instead of `ordinal()`. The SMS `azure` provider returns its "not implemented" exception from the switch instead of a public method that always throws.
 - **Proposal, not enabled:** once the in-flight feature branches have merged, make Error Prone warnings errors: add `-Werror` to the `JavaCompile` compiler args in `server/build.gradle.kts`, keeping `disableWarningsInGeneratedCode` and the excluded generated paths. javac then fails on any warning, Error Prone's included; the javac varargs warnings are fixed here too. Then a new warning fails `./gradlew build` instead of piling up. It is not switched on in this change because open branches would stop compiling. Until then: keep the count at 0 (BACKEND_CONVENTIONS § 10).
 
+## 2026-10-01 — S-125 OpenAPI 3.1 for every HTTP service, with Swagger UI, Scalar and Redoc
+
+Runbook: [docs/runbooks/api-docs.md](runbooks/api-docs.md). Stacked on S-124 (Makefiles, merged as #59).
+
+- **A shared library `server/openapi`** (like `platform`, `email`) used by the api, northline-auth and the BFF, not by
+  the worker:
+  - springdoc 3.1.1 with its UI starter and, as the user asked, **springdoc's own Scalar starter**
+    (`springdoc-openapi-starter-webmvc-scalar`, which brings `com.scalar.maven:scalar-webmvc` 0.5.55);
+  - the Redoc page; the shared conventions and security schemes; the docs-path CSP;
+  - the `OpenApiSnapshot` test fixture.
+
+  It is auto-configured and off with `northline.docs.enabled=false`. Versions checked on 2026-09-30: springdoc 3.1.1
+  is the latest release, and Redoc 2.5.4 is the latest on npm.
+- **Redoc is self-hosted from the npm tarball** with a pinned version and the registry's sha512 integrity, as in samop
+  (Maven there, Gradle here). The webjar stops at 2.5.0, and a CDN would need the CSP to allow another origin. The
+  page has no inline script: `redoc-init.js` reads the group from `?group=`. The pages are WebMvc.fn routes rather than
+  a `@Controller`, because the api component-scans `ca.northline.**` and would register an annotated controller twice.
+- **Scalar shows every group on one page.** springdoc's Scalar controller turns the groups into Scalar *sources*, with
+  a switcher. There is no per-group Scalar URL, so the landing page links Scalar once per service.
+- **Groups per audience.** The api has `public` (public reads + the signed-in customer, incl. `/me/**`, `/cart/**`),
+  `studio`, `partner`, `console`, `webhooks` and `internal`:
+  - `partner` is a method filter on `@PartnerAccess`, with the annotation's scope as the operation's security, so the
+    partner document can never list an endpoint partners can't call.
+  - `webhooks` is S-33's JSON Schemas (`docs/spec/webhooks`, already on the api classpath) as OpenAPI 3.1 `webhooks`,
+    used verbatim (`$schema` / `$id` dropped). The reference is the same contract the worker validates deliveries
+    against; it includes `order.placed` from main.
+  - A test fails when an `/api/**` path is in no group.
+
+  northline-auth has `public` (the OAuth 2.1 / OIDC endpoints, described by hand because Spring Authorization Server
+  serves them from filters) and `internal` (the `/api/auth/**` JSON API). The BFF has one `internal` document per
+  profile (studio-bff, consumer-bff), and `/bff/logout` is described by hand because it is a filter. The worker has no
+  HTTP API besides actuator, so it has no document.
+- **Global `springdoc.paths-to-match` removed from the api.** springdoc ORs it with each group's `pathsToMatch`, so
+  every group got every path. Groups don't share an `OpenAPI` bean either: springdoc reuses and mutates one for every
+  group, so each group starts with its own `ApiDocs.base(props)` customizer and ends with `ApiDocs.conventions()`.
+- **Conventions instead of annotations on ~200 handlers:**
+  - `*Id` path parameters → `Ulid`;
+  - writes with a body → `422 ValidationErrors` (with the validation-rules example);
+  - secured operations → `401`/`403 Problem` (RFC 9457 with `code`);
+  - parameterised paths → `404`;
+  - `*Cents` → int64 cents of CAD.
+
+  `override-with-generic-response=false` keeps springdoc from attaching every `@ExceptionHandler` response to every
+  operation. Unused shared schemas and security schemes are pruned per document. Operation ids are
+  `<controller><Method>`, so adding a `list` method elsewhere doesn't renumber `list_5` in every spec.
+- **Security schemes:**
+  - `bffSession` (cookie) + `csrf` (`X-XSRF-TOKEN`);
+  - `oauth2`: authorization code + PKCE, with the auth issuer's URLs;
+  - `dpop`: `http` scheme `DPoP`, plus `dpopProof` for the `DPoP` header (RFC 9449, S-29);
+  - `partnerClientCredentials`: OAuth 2 client credentials with `x-token-endpoint-auth-methods: [private_key_jwt]`
+    and the S-30 assertion rules in the description;
+  - `authSession`: northline-auth's cookie;
+  - `webhookSignature`: S-33.
+
+  Public reads carry `security: []`.
+- **Generated at build time and committed, with a drift check.** Each app's `OpenApiSpecsTest` boots the application
+  context and fetches `<api-docs>.yaml/<group>`:
+  - the api uses its own test class; auth uses its own; the BFF tests are added to `BffSessionTest` /
+    `ConsumerBffTest`, so no extra Spring context;
+  - `-Popenapi.write=true` (`make openapi`) writes `docs/api/openapi/<service>-<group>.yaml`;
+  - otherwise the test compares, so `./gradlew build` fails on a difference.
+
+  Output is stable thanks to `writer-with-order-by-keys` and fixed `servers`/issuer pinned in each
+  `application-test.yml`. YAML only: it is easier to review in diffs than JSON, and JSON is one URL away. The
+  springdoc Gradle plugin was not used: it needs a running app with all its stand-ins and doesn't fit
+  `./gradlew build`.
+- **Lint: Redocly CLI 2.57.0 with a root `redocly.yaml`** (samop's tool and layout), run through `pnpm dlx`, pinned in
+  `make/docs.mk`, with no lockfile change. `recommended`, with `security-defined` as an error. Currently 0 errors and
+  17 warnings: public GETs without a 4xx, and redirects without a 2xx. Manual CI: GitHub `openapi.yml`
+  (lint + check) and GitLab `openapi:lint` (new `PIPELINE_PART=openapi`, also in `all`).
+- **Where the viewers run (S-17 routes, S-20 CSP).** auth and the BFFs answer with `default-src 'none'`.
+  - **CSP:** instead of relaxing it, or serving everything from the api only (the api host isn't routed for browsers
+    beyond `/api/v1`), the viewer paths get their own filter chain (order 0). Its narrow CSP allows `'self'` scripts
+    and styles (+ `'unsafe-inline'` for Swagger UI's and Scalar's initialisers), `connect-src 'self' <issuer>`,
+    `frame-ancestors 'none'`. Every other path keeps `default-src 'none'`, and the tests check both.
+  - **Routes:** auth's host already routes everything. The BFFs serve their documentation under `/bff` (`/bff/docs`,
+    `/bff/swagger-ui.html`, `/bff/docs/scalar`, `/bff/v3/api-docs`), the prefix the edge already sends them. The api
+    host gets `/docs`, `/swagger-ui(.html)` and `/v3/api-docs` through the new chart value `apps.api.docsRoutes`
+    (true in `values-dev.yaml` / `values-staging.yaml`, false by default). The chart refuses it in prod, and
+    `validate.sh` checks the refusal.
+- **Prod exposes nothing:** all three `application-prod.yml` turn off springdoc, Swagger UI, Scalar and
+  `northline.docs` (and with it the pages and the CSP chain), and each app's test asserts it. The public, partner and
+  webhook references reach production through the docs site (S-126), from the committed files.
+- **No new environment variable or secret, and no schema change.** `northline.docs.*` reads the existing
+  `AUTH_ISSUER`, `API_PUBLIC_URL` and `AUTH_PUBLIC_URL`.
+- **Not done:**
+  - per-operation `@Operation` summaries and response examples beyond the conventions (descriptions come from the
+    group texts);
+  - Scalar's and Swagger UI's "Authorize" against a real northline-auth: no docs OAuth client is registered, so
+    "Try it" uses pasted tokens. A public `docs` client with the viewers' redirect URIs is follow-up work.
+  - the viewers were checked by status and content in MockMvc, not clicked through in a browser;
+- **Found, not fixed: a JDK HttpClient race in the gateway relay (bff).**
+  - **Symptom:** `ConsumerBffTest`'s relay tests fail intermittently with an NPE in `Http1Exchange.requestMoreBody`
+    (the body subscriber is not set yet when Spring's empty `OutputStreamPublisher` completes).
+  - **When:** whenever an OpenAPI document had been generated in the same Spring context first, and more often when
+    Swagger UI's webjar files had been served in the JVM. Main is stable: 4 of 4 runs passed. This branch failed 4 of
+    6 runs before the change below.
+  - **Mitigation:** the consumer-bff spec is checked in its own context (`ConsumerBffOpenApiTest`), and the BFF test
+    checks Swagger UI through its redirect and `swagger-config` instead of the webjar files. Since then the suite
+    passes (3 of 3).
+  - **Production:** never affected, because springdoc is off in prod.
+  - **Follow-up for the lead:** dev/staging could hit the race after someone opens `/bff/docs`. Candidate fixes are a
+    gateway MVC `ClientHttpRequestFactory` without a body for GET, or the JDK fix.
+
+## 2026-10-01 — S-126 Docusaurus documentation site (docs., en/fr)
+
+Runbook: [docs/runbooks/docs-site.md](runbooks/docs-site.md). Stacked on S-125 (#74), whose committed specs it renders.
+
+- **`web/apps/docs`, Docusaurus 3.10.2**, in the pnpm workspace (`@northline/docs`). Versions checked on 2026-09-30:
+  - redocusaurus 2.5.2 for the Redoc view;
+  - `@scalar/docusaurus` 0.8.46 for the Scalar view;
+  - `@easyops-cn/docusaurus-search-local` 0.55.3, a local index with no Algolia account.
+- **docs/ is rendered where it is committed, nothing is copied.** The repository's docs are a named docs-plugin
+  instance (`repo`, `path: ../../../docs`) with `include`/`exclude` globs:
+  - no `spec/`;
+  - no `api/` (rendered as the API reference instead);
+  - no backlog CSV;
+  - no agents' workstream brief.
+
+  `markdown.format: 'detect'` keeps `.md` files CommonMark, so no existing page needed MDX escaping. The site's own
+  guides are the default instance, so the theme and search always have one, whatever the variant. The only copies
+  are build artefacts: the variant's specs in `static/openapi` (Scalar and the download links fetch them) and
+  Scalar's standalone bundle.
+- **Two builds instead of an edge-protected section: `public` and `internal`** (`NORTHLINE_DOCS_VARIANT`,
+  `src/content.ts`).
+  - The public build physically lacks the internal pages and specs, so a routing or edge mistake can't expose them.
+    The page check fails the build if one appears.
+  - `docs` (public) runs on `docs.<zone>` in every environment. `docs-internal` runs on `internal-docs.<zone>` only
+    when enabled, behind an **IP allowlist** (an Envoy Gateway `SecurityPolicy`, `edge.docsInternal.allowedCIDRs`).
+    The chart refuses it outside `local` without CIDRs or without the Envoy edge, and `validate.sh` checks both the
+    render and the refusal.
+  - SSO through northline-auth (`SecurityPolicy` `oidc` with a `docs` client) is the planned upgrade. It is not built
+    because it needs an OAuth client registration and a session at the edge, which is more than this story.
+  - Off by default in every environment: enabling it needs the operators' CIDRs.
+- **Redoc and Scalar for every spec.**
+  - Redoc pages come from redocusaurus. Its bundled Redoc 2.4 differs from the server's self-hosted 2.5.4, which is
+    acceptable.
+  - Scalar pages come from `@scalar/docusaurus`. The plugin loads the *unpinned latest* `@scalar/api-reference` from
+    jsDelivr by default; the site serves the pinned 1.72.3 standalone bundle itself (`cdn` option), with telemetry,
+    the hosted "Ask AI" agent and the "Generate SDKs" toolbar off. No page loads anything from another origin.
+  - The API reference page links to the services' own Swagger UI / Scalar / Redoc in dev and staging through
+    `/config.js` (`NL_DOCS_SWAGGER`, derived by the chart; empty in prod), following the Studio's runtime-config
+    pattern (S-14).
+- **i18n en + fr:**
+  - UI chrome is translated (`i18n/fr`; the theme and search ship their own French);
+  - the guides have French pages;
+  - the repository docs are English, and the French site falls back to them, as the story allows.
+
+  The Northline tokens theme Infima through `@northline/tokens/tokens.css` and `color-mix`, with no new hex in
+  components. The hex-colour lint now also scans `apps/docs/src`.
+- **The AI section.** `docs/ai/README.md` is a short placeholder: the in-product AI features (Spring AI with
+  OpenRouter) are another story. Any page added under `docs/ai/` appears under **AI** in the internal sidebar.
+- **Versioning not enabled.** The docs follow `main`, and the API documents carry their own version (`v1`). Cutting a
+  docs version (`docusaurus docs:version`) is documented as an option, not done.
+- **Container.** `web/Dockerfile` targets `docs` and `docs-internal` on nginx-unprivileged, like the Studio, and take
+  the repository's `docs/` as the named build context `repo-docs`, since the web build context stays `web/`.
+  - Both variants are built once in a shared stage, and the page check runs inside the image build.
+  - The CSP allows only `'self'` (+ `'unsafe-inline'` scripts for Docusaurus' colour-mode and Scalar's init snippets)
+    and `connect-src` to the api and auth origins (`NL_DOCS_CONNECT`).
+  - Checked in headless Chromium against nginx with that CSP: the home page, the API index, Redoc, Scalar, guides,
+    French and search render, and Scalar needs no `'unsafe-eval'`.
+- **Fixed during that check:**
+  - Prism `additionalLanguages` load only on the client in Docusaurus 3.10 and caused hydration mismatches (React
+    #418) on every page with a code block. They were dropped: bash and Java blocks are now unhighlighted.
+- **Known and left:** the Redoc pages still log one recoverable hydration mismatch (redocusaurus' server render vs
+  client), and Redoc's sidebar badge from `cdn.redoc.ly` is blocked by the CSP (Redoc then hides it).
+- **Deploy:**
+  - chart: `apps.docs`, `apps.docs-internal`, `urls.docs`, `urls.docsInternal` (dev, staging, prod; empty on kind,
+    where `docs` is off), routes and certificates through the S-17 edge;
+  - Argo CD: the `SecurityPolicy` kind is whitelisted; `docs` / `docs-internal` added to the promotion files and
+    `promote.sh`, so Argo CD deploys docs to dev once its digest is promoted;
+  - Terraform: `docs` and `docs-internal` added to the registry repositories of all three clouds;
+  - CI: the web image matrix (GitHub `deploy.yml`, GitLab `images:web`) builds both.
+
+  Static export: `make docs-pages` plus manual GitHub `docs-pages.yml` (Pages from Actions) and GitLab `pages`
+  (`PIPELINE_PART=pages`, not in `all`), public variant only.
+- **Checks:**
+  - `make docs [DOCS_VARIANT=public]` = build + `scripts/check-build.mjs`, which requires every runbook and every
+    spec's Redoc and Scalar page in en and fr, and no internal page in the public variant;
+  - vitest unit tests: content per variant, a spec list matching `redocly.yaml`, runtime config;
+  - manual CI: GitHub `web.yml` › `docs`, GitLab `web:docs`.
+- **No schema change, no secret.** New container variables `NL_DOCS_SWAGGER` and `NL_DOCS_CONNECT` are derived by the
+  chart (runbooks README).
+- **Not done / never run:**
+  - no image was built here: the build is ~3 GB of Docker layers and the machine has ~4 GB free. The nginx
+    configuration was run against the local build output in nginx-unprivileged 1.29 instead;
+  - nothing is deployed, and no Pages site was published;
+  - the IP allowlist was rendered and schema-validated, not enforced by a live Envoy Gateway;
+  - French translations of the repository docs;
+  - SSO for the internal site.
+
 ## 2026-09-30 — S-53 Services landing, service category, provider list
 
 Branch `web/s-53-services-landing` (from main). Contracts: [CONSUMER_WEB_PLAN.md](CONSUMER_WEB_PLAN.md).

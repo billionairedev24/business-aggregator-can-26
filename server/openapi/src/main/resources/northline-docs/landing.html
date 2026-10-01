@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{title}} · API documentation</title>
+  <link rel="stylesheet" href="{{base}}/docs/assets/docs.css">
+</head>
+<body>
+  <header class="masthead"><div class="brand">{{title}} <small>API documentation</small></div></header>
+  <main>
+    <h1>API documentation</h1>
+    <p class="lead">One OpenAPI 3.1 document per audience, each in three viewers. Generated from the running code;
+      the committed copies live in <code>docs/api/openapi/</code>. Not served in production: the public and partner
+      references are on the documentation site.</p>
+    <table>
+      <thead><tr><th scope="col">Audience</th><th scope="col">Viewers</th><th scope="col">Spec</th></tr></thead>
+      <tbody>
+{{rows}}      </tbody>
+    </table>
+  </main>
+</body>
+</html>
