@@ -2842,3 +2842,42 @@ Stacked on S-46 (#66, kitchen availability, `PublicDirectory`), S-47 (#67, locat
 - **Never run against the real services:** no backend account exists. The exporters' configurations pass
   `otelcol-contrib validate` (0.161.0) for AWS, Google Cloud and Azure, but no span has reached X-Ray, Cloud Trace,
   Application Insights or Grafana Cloud. The Terraform additions are `fmt`-checked, not applied.
+
+## 2026-10-01 — S-112 Centralised logging with PII redaction
+
+- **One redaction layer for every app:** `ca.northline.platform.logging.Redactor` (platform library, so api, auth,
+  both BFFs and the worker share it). Two layers, as in the user's other services: a field with a sensitive *name*
+  is masked whole; every other string is scanned for secrets (PEM keys, Authorization/Cookie echoes, bearer/basic/DPoP,
+  JWTs, `sk_`/`rk_`/`whsec_`/`sk-…`/AWS/GitHub keys, `key=value` pairs), then emails, Luhn-valid card-like numbers
+  (last four kept), North American and E.164 phone numbers, one-time codes after "verification / sign-in / security /
+  backup / OTP code" (en/fr), Canadian postal codes (forward sortation area kept). Numbers glued to letters or `_`
+  (ULIDs, Stripe ids, trace ids) are never touched; dates, amounts and the SMS adapters' masked numbers stay.
+- **Format:** Spring Boot's structured logging, **ECS** by default under dev/staging/prod (`LOG_FORMAT` = `ecs` |
+  `logstash` | `gelf` | `text`; anything else stops start-up), plain text under local/test where people read the
+  console. The redaction is a `StructuredLoggingJsonMembersCustomizer` value processor over every string member
+  (message, MDC, key-values, `error.message`, `error.stack_trace`). `traceId`/`spanId` are renamed `trace.id`/`span.id`
+  (ECS names; top-level dotted keys — Boot's rename keeps them flat). Set by `LoggingDefaults` (an
+  `EnvironmentPostProcessor`, lowest precedence) — no app yml changed.
+- **Shipping through the Collector = OTLP, from the app:** `OtlpLogAppender` (Northline's own Logback appender over the
+  OpenTelemetry logs bridge) is attached to the root logger when `management.logging.export.enabled` (i.e.
+  `OTEL_EXPORT_ENABLED=true`); records carry the current trace context, logger, thread, MDC and exception, all
+  redacted. Not the OpenTelemetry Logback instrumentation (it sends the raw message) and not a node-level
+  `filelog` DaemonSet (cluster-wide hostPath access, a second add-on, and logs that bypass the in-app redaction's
+  trace linkage). The console keeps the same redacted JSON for `kubectl logs` and cloud node agents.
+- **Collector, second line:** `transform/redact` (OTTL `replace_pattern` / `replace_all_patterns`) on log bodies and
+  log and span attributes, chart and local config generated from one list (`northline.redactPatterns`); RE2 has no
+  look-behind or Luhn, so it is coarser. Run against a sample record with otelcol-contrib 0.161.0.
+- **The S-20 local SMS case:** `LoggingSmsSender` (auth) and `LoggingSmsTransport` (shared library: api invitations,
+  worker notifications) write the code / text **only under the `local` and `test` profiles**; elsewhere they log that it
+  was withheld, and start-up warns. Consequence: a `dev` environment that keeps `SMS_PROVIDER=local` can no longer
+  complete phone verification — dev needs Twilio or AWS for sign-ups (documented in README § SMS, logging.md). No
+  escape hatch on purpose (the story: "make sure it can't happen outside local").
+- **Tests:** `RedactorTest` (28 cases incl. the S-20 log line, the SMS text in English and French, and what must stay),
+  `StructuredLogsTest` (a `dev` start logs redacted ECS JSON incl. MDC and exception; `local` stays text; `LOG_FORMAT`
+  overrides), `OtlpLogAppenderTest`; `RedactionCheck` (platform test fixture) on **every app** — api `TracingTest`,
+  auth `AuthTelemetryTest`, consumer-bff `BffTracingTest`, worker `WorkerTracingTest`: a PII-laden line logged in a
+  span comes out redacted on the console (ECS) and over OTLP, the OTLP record linked to the span's trace;
+  `SmsConfigTest` / `SmsTransportsTest` prove the stand-ins withhold under `dev`.
+- **Not done:** log retention and deletion are the backend's (documented per backend, not automated); no log-based
+  alerts (the metrics alerts of S-111 cover the same failures). **Never run against a real backend** (CloudWatch Logs,
+  Cloud Logging, Azure Monitor, Loki/Grafana Cloud).
