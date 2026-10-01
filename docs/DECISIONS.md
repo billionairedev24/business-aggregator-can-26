@@ -3996,3 +3996,30 @@ Stacked on S-132 (#87) → S-131 (#85) → S-130 (#83) → S-129 (#82).
 - **Not done / never exercised:** no live model run (precision and recall are measured only against the simulated
   model); no console UI; the scheduler's cron and interval were not run in a deployed environment (tests call the use
   cases directly).
+
+## 2026-10-01 — S-137 Indexer refreshes before finding stale documents
+
+- **Cause:** a whole-merchant refresh finds the documents of rows deleted from Postgres by *searching* the index for
+  the merchant's ids. A search sees only refreshed segments, so a dish indexed less than a second before its deletion
+  was invisible to it and survived until a later refresh of the same merchant. The reconcile sweep did not help,
+  because a deleted row changes no `updated_at`.
+- **Fix: `_refresh` the index before the id lookup** (`SearchProjection.indexedIds`, the language whose ids the lookup
+  reads). A refresh of an index with nothing new is a no-op, and otherwise it writes one small segment, as the
+  1-second refresh interval does anyway. Whole-merchant refreshes come from merchant-wide events and the reconcile
+  sweep, at a rate in the order of the refresh interval.
+- **The reindex backfill skips the lookup** (`SearchProjection.backfill`): it writes a merchant's first documents to
+  indices created by that run, which hold nothing of the merchant yet, and those indices load with refresh off, so a
+  refresh per merchant would only make thousands of tiny segments. The catch-up and the post-swap sweep of a reindex
+  use the normal path and do get the refresh, which also fixes a deletion during a reindex being missed on the
+  still-unrefreshed new index.
+- **Rejected alternatives:**
+  - `refresh=wait_for` on every write would hold every indexer event up to a second, which throttles consumption.
+  - A Postgres table of indexed ids per merchant would give a deterministic lookup, at the cost of a migration and a
+    write per document. It is the follow-up if refresh load ever shows up in the cluster's metrics.
+- **Tests:**
+  - `SearchIndexerTest.kitchenDishes_…` no longer republishes `menu_published` every 3 seconds: one event, then the
+    deletion.
+  - The new `aJustIndexedDish_deletedFromPostgres_isRemovedOnTheFirstMenuPublished` turns refresh off on the live
+    indices, so only the projection's own refresh can make the new dish searchable. It indexes a dish, deletes the
+    row and publishes one event; the dish is gone and its neighbour is kept. It failed without the fix (1 of 1 run); with it, `SearchIndexerTest` and `SearchReindexTest` passed 5 of 5 consecutive runs.
+- **No schema, configuration or API change.**
