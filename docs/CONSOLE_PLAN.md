@@ -117,7 +117,7 @@ member.
 | `/support?province=&market=&filter=&ticket=` | `support` | `support` | admin, trust_safety, dispatch, support, support_lead | S-83 | built |
 | `/provinces?province=` | `regions` | `regions` | admin | S-84 | built |
 | `/finance` | `finance` | `finance` | admin, finance | S-85 | stand-in |
-| `/reports` | `reports` | `reports` | admin, finance, analyst | S-95 | stand-in |
+| `/reports?province=` | `reports` | `reports` | admin, finance, analyst | S-95 | built |
 | `/integrations` | `api` | `api` | admin | S-96 | stand-in |
 | `/team` | `team` | `team` | admin, trust_safety, finance | S-96 | stand-in |
 | `/profile?tab=security\|sessions\|audit\|prefs` | `profile` | `profile` | every staff member | S-96 | stand-in |
@@ -336,6 +336,18 @@ DELETE /api/v1/console/regions/zones/{zoneId}                                   
 
 Every change is audited (`region.*`) and re-reads the region model after commit (DECISIONS "S-84").
 
+### Reports & analytics (S-95)
+
+```
+GET /api/v1/console/reports[?province=AB]                     (screen reports; admin, finance, analyst)
+→ { asOf, province, from, weeks: [{week, customers, previous}] (13),
+    funnel: [{step: app_opens|browsed|cart|checkout|paid, count, recorded}],
+    cohorts: [{month, customers, m1, m2, m3}] (4), topCategories: [{categoryId, names, salesCents}] (≤ 6),
+    waitlist: [{province, people}] }
+```
+
+Counts only; any count from 1 to 4 is null (withheld). DECISIONS "S-95".
+
 ## API: what exists, what's missing
 
 | screen | exists | missing (the screen's story adds it) |
@@ -352,7 +364,7 @@ Every change is audited (`region.*`) and re-reads the region model after commit 
 | support | `GET /api/v1/console/support/tickets[/{id}]`, `POST …/tickets/{id}/reply\|take\|escalate\|refund-requests`, `GET …/refund-requests`, `POST …/refund-requests/{id}/decision`, `GET/POST/PUT/DELETE …/macros` (S-83) | the finance screen's list of refund requests (S-85 reads `GET …/support/refund-requests`); CSAT collection (no survey sends it yet) |
 | regions | S-84: stages with a confirmation and the go-live checklist, markets, zones (GeoJSON), courier model | the co-sign of a second admin, dry-run as customer, categories per province, drawing zones on a map |
 | finance | `POST /api/v1/console/payments/tax-reconciliations` (S-21) | escrow / payouts / reconciliation / take rate by tier / revenue mix (S-85) |
-| reports | — | funnels, cohorts, top categories, supply gaps (S-95) |
+| reports | S-95: weekly active customers, shop funnel, signup-month cohorts, top categories, waitlist demand (counts only) | app opens and zero-result searches (nothing records them), scheduled email |
 | api | `developer` module (merchants' keys and webhooks) | platform-wide API clients and rate limits (S-96) |
 | team, profile | `developer.api.AuditTrail` (write); auth `GET /api/auth/security` (sessions, passkeys) | roles and people, audit log views ("My audit trail"), sessions (S-96) |
 | oncall | — | rota, incidents, escalation paths (S-96) |

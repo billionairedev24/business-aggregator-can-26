@@ -5718,3 +5718,32 @@ server environment variable. Runbook: [runbooks/courier-app.md](runbooks/courier
   the model), sellers per market, and the re-matching of addresses when a zone is removed (addresses are matched when
   saved; nothing stores a zone on an address). The lede and footer were reworded where the design promised these
   ("Flags propagate in 30 s" → "within a minute", the region cache period).
+
+## 2026-10-01 — S-95 Reports & analytics: funnels and cohorts from privacy-safe aggregates
+
+- **Counts only, computed where the data lives.** `GET /api/v1/console/reports[?province=]` (screen `reports`: admin,
+  finance, analyst; read only) is composed in the console module from ports that answer with counts or opaque ids:
+  `shared.CustomerActivity` (orders and booking: paid purchases as customer id + instant, sales by listing),
+  `orders.api.ShopFunnel` (carts, checkouts started and paid), `merchants.api.StorefrontVisits.total`,
+  `catalogue.api.ListingCategories`, `identity.api.SignupDates` (created-at only) and `region.api.WaitlistDemand`.
+  Opaque customer ids exist only in memory while the counts are made; nothing is stored and the answer carries no id,
+  name, contact or address (the API test checks a customer id is absent from the response).
+- **Small-cell suppression:** any count from 1 to 4 (weekly active customers, funnel steps, a cohort's size, waitlist
+  people) comes back null and the screen says "fewer than 5"; a withheld cohort also withholds its rates.
+- **Region filter:** the region model's live and pilot provinces + All (design "Alberta | All"); a province means the
+  businesses there (`shared.PlaceFilter`, as on every console screen), weeks and months in the province's zone.
+- **Definitions.** Weekly active customers: distinct customers with a paid order (not cancelled) or a booking past
+  "requested" (not cancelled) in each of the last 13 weeks (Monday first), against the 13 before (dotted). Funnel · shop
+  over 90 days: storefront visits ("Searched / browsed"), carts with an item added, checkouts started, checkouts placed
+  (paid). Cohorts: customers who bought (in scope) by the month their account was created, for the four months before
+  this one, and the share who bought in each of the next three months (a month still to come shows "—"). Top
+  categories: sales of the last 90 days by the listing's category (goods by their catalogue product's), top six.
+  Supply & demand gaps: waitlist people in provinces not live yet.
+- **Not recorded (shown as such, not invented):** "App opens" (no app telemetry exists), carts by province (a cart's
+  items are offers; which business sells one is the catalogue's), "Searches with 0 results" and "Providers needed" (the
+  search API doesn't count queries). "Schedule email" is not built. No migration.
+- **Scaling note:** the ports read the source tables on each request (90 days, four months of cohorts). A nightly
+  rollup table is the follow-up once volume needs it.
+- **Charts:** the design system's `LineChart` (solid accent this period, dotted neutral previous, legend), meter bars
+  for the funnel and `BarList` for categories; the weekly figures also open as a table ("Show as table"); cohort cells
+  are tinted by rate with the number always printed.
