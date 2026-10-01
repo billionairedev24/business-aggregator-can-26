@@ -3277,3 +3277,27 @@ Branch `web/s-56-quotes`, stacked on `web/s-55-booking-wizard` (and so on S-54, 
 - **Never run against real clients:** the OAuth + MCP session is tested with the MCP Java SDK client and tokens minted
   in the test, and auth's flow in MockMvc (WireMock for metadata documents). It has not been tried with Claude or the
   MCP Inspector against a deployed environment.
+
+## 2026-10-01 — S-128 Developer docs MCP server
+
+- **A second MCP server in the same app, at `/mcp/docs`**, not more tools on S-127's `/mcp`. It has its own resource
+  URI (`MCP_DOCS_RESOURCE`, already accepted by auth since S-127), metadata (`/.well-known/oauth-protected-resource/mcp/docs`)
+  and access rule. A merchant's agent shouldn't see internal runbooks, and a coding agent shouldn't need a business
+  sign-in. It is built directly with the MCP Java SDK (stateless Streamable HTTP servlet,
+  `HttpServletStatelessServerTransport`). Spring AI's auto-configuration serves one server, and a read-only docs
+  server needs no session.
+- **Content is packaged at build time.** `processResources` copies `docs/**/*.md` (not the backlog) and
+  `docs/api/openapi/*.yaml` into `northline-devdocs/` on the api's classpath (about 2 MB). The image therefore serves
+  the docs of the code it runs, with no repository checkout or network at runtime. S-125's committed OpenAPI
+  documents are the source; the springdoc runtime model is not used (it isn't published in prod, and the committed
+  specs are what the docs site shows). The YAML is parsed with SnakeYAML (Boot's) into Jackson 3 trees.
+- **Tools:** `search_docs` (every word must match; ranked by occurrences, with headings ×3 and titles ×2 — plain and
+  predictable, no index or embeddings), `list_documents`, `get_document` (by section, or in 24 000-character pages),
+  `list_operations`, `get_operation` (schemas with `$ref`s inlined to depth 6; recursive ones keep their `$ref`). All
+  are annotated read-only. Each document and spec is also an MCP resource.
+- **Access:** `open` locally (no auth, as the story asks); `staff` in the cloud. Internal-only in prod means
+  Northline staff with a second factor and a token for the docs resource, refused for anyone else with RFC 9728/9470
+  challenges. `MCP_DOCS_ACCESS=open` is refused under staging/prod. Docs tokens are confined: `/api/**` answers
+  `403 mcp_token`, and `/mcp` rejects them by audience.
+- **Never run against real clients:** tested with the MCP Java SDK client in the api's tests; not tried with Claude
+  Code or an IDE against a deployed environment.

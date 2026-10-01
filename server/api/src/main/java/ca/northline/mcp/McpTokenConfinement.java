@@ -14,15 +14,18 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * S-127: a token issued for the MCP server ({@code aud} contains {@code northline.mcp.resource}) works on {@code /api}
  * only for the MCP server's own tool calls ({@link McpAgentHeaderFilter}'s secret header). Taken out of the agent and
  * sent to the REST api directly, it is refused ({@code 403 mcp_token}) — what the person consented to is the agent's
- * tools, not the whole api. Runs after Spring Security (the token is already validated).
+ * tools, not the whole api. A token for the developer docs server (S-128) never works on {@code /api}. Runs after
+ * Spring Security (the token is already validated).
  */
 public class McpTokenConfinement extends OncePerRequestFilter {
 
     private final McpProperties props;
+    private final String docsResource;
     private final McpAgentHeaderFilter agentHeader;
 
-    public McpTokenConfinement(McpProperties props, McpAgentHeaderFilter agentHeader) {
+    public McpTokenConfinement(McpProperties props, DevDocsProperties docs, McpAgentHeaderFilter agentHeader) {
         this.props = props;
+        this.docsResource = docs.resource();
         this.agentHeader = agentHeader;
     }
 
@@ -36,8 +39,9 @@ public class McpTokenConfinement extends OncePerRequestFilter {
             throws ServletException, IOException {
         if (SecurityContextHolder.getContext().getAuthentication() instanceof JwtAuthenticationToken token
                 && token.getToken().getAudience() != null
-                && token.getToken().getAudience().contains(props.resource())
-                && !agentHeader.fromMcpServer(request.getHeader(McpAgentHeaderFilter.HEADER))) {
+                && (token.getToken().getAudience().contains(docsResource)
+                        || (token.getToken().getAudience().contains(props.resource())
+                                && !agentHeader.fromMcpServer(request.getHeader(McpAgentHeaderFilter.HEADER))))) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
             response.getWriter().write("""

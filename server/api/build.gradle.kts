@@ -30,6 +30,7 @@ dependencies {
     implementation(project(":openapi")) // S-125: springdoc + Swagger UI + Scalar + Redoc, groups per audience
     implementation(libs.springdoc.webmvc.mcp) // S-127: MCP tools from the OpenAPI model (docs/runbooks/mcp.md)
     implementation(libs.spring.ai.mcp.server.webmvc) // S-127: the MCP server and its Streamable HTTP transport
+    implementation("org.yaml:snakeyaml") // S-128: reads the committed OpenAPI documents (version from Spring Boot)
     implementation(libs.ulid)
     implementation(libs.stripe)
     implementation(libs.mapstruct)
@@ -84,6 +85,13 @@ tasks.processResources {
     from(rootProject.file("../db/seed")) { into("db/seed") }
     // Machine-readable rules (legal-details.schema.json, storefront-sections.json) are validated against at runtime.
     from(rootProject.file("../docs/spec")) { into("spec") }
+    // S-128: the developer docs MCP server (/mcp/docs) reads the docs of the code it runs: Markdown and the committed
+    // OpenAPI documents (S-125). Backlog CSVs and the machine-readable spec files are left out.
+    from(rootProject.file("../docs")) {
+        include("**/*.md", "api/openapi/*.yaml")
+        exclude("backlog/**")
+        into("northline-devdocs")
+    }
 }
 
 // S-16: the dev seed (db/seed-dev, V1xx personas) is NOT a main resource, so it can't reach the boot jar or the image.

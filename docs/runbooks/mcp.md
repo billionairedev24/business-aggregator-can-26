@@ -191,9 +191,50 @@ closed (S-125's `northline.docs.enabled: false`).
 - **`401 invalid_token` with a fresh token:** `MCP_RESOURCE` differs between api and auth.
 - **Long tool calls:** responses are plain JSON (no long-lived streams). The edge's default timeouts are enough.
 
+## Developer docs (S-128)
+
+A second, read-only MCP server at **`/mcp/docs`** gives coding agents (Claude Code, IDE assistants) this
+repository's documentation: every Markdown file under `docs/` (runbooks, architecture, backend conventions, data
+model, decisions; not the backlog) and the committed OpenAPI documents in `docs/api/openapi/` (S-125: the api,
+northline-auth and the BFFs by audience). The build copies them into the api's classpath (`northline-devdocs/`,
+`processResources`), so a deployed api serves the docs of exactly the code it runs. No database, no network calls.
+
+| tool | |
+|---|---|
+| `search_docs` | `query` (every word must occur), `limit`: sections ranked by matches (headings count more), with path, anchor and a snippet |
+| `list_documents` | every document (path, title) and OpenAPI document (name) |
+| `get_document` | `path` (e.g. `runbooks/stripe.md`), optional `section` (heading or anchor) or `offset` for the next 24 000-character page |
+| `list_operations` | `spec` (e.g. `api-studio`, `api-partner`, `auth-public`), `query` (part of a path, id, summary or tag) |
+| `get_operation` | `operationId`, or `method` + `path`; parameters, request body and responses with every `$ref` inlined (a recursive schema keeps its `$ref`) |
+
+Resources: `northline-docs://docs/<path>` (Markdown) and `northline-docs://openapi/<name>.yaml`.
+
+**Access.** It is a separate MCP server, with its own endpoint and resource URI (`MCP_DOCS_RESOURCE`, default
+`${API_PUBLIC_URL}/mcp/docs`), so a merchant's agent never sees internal runbooks and a coding agent needs no
+business sign-in.
+
+| `MCP_DOCS_ACCESS` (api) | where | who |
+|---|---|---|
+| `open` | default; `local` | anyone who reaches the api, no token |
+| `staff` | the cloud profiles (dev, staging, prod); `open` is refused under staging/prod | a token whose `aud` is `MCP_DOCS_RESOURCE` (auth accepts it as a resource indicator), with the `staff` role and `acr=mfa`. Anyone else gets `401 invalid_token` or `403` (`insufficient_scope` / `insufficient_user_authentication`), each with `resource_metadata` |
+
+Its protected resource metadata is at `/.well-known/oauth-protected-resource/mcp/docs`, with scopes `openid mcp`. A
+token for the docs server works nowhere else: not on `/mcp`, not on `/api/**` (`403 mcp_token`). The route is the
+api host's `/mcp` prefix (`apps.api.mcp`), so in the cloud staff connect through the edge with their own sign-in.
+Nothing in the docs is secret by policy (secrets live in the secrets manager), but internal runbooks describe the
+platform's operations, so they are internal.
+
+Connect locally:
+
+```sh
+claude mcp add --transport http northline-docs http://localhost:8080/mcp/docs
+```
+
+`northline.devdocs.enabled: false` turns the docs server off (`/mcp/docs` then answers `404`, or `401` without a token in the cloud).
+
 ## What has not run against the real services
 
-The OAuth flow and the MCP session are tested end to end with the MCP Java SDK client against the api, with tokens
+The docs server (S-128) is tested with the MCP Java SDK client against the packaged docs. The OAuth flow and the MCP session are tested end to end with the MCP Java SDK client against the api, with tokens
 minted in the test and auth's flow in MockMvc. They have **not** been tried with Claude (claude.ai, Desktop or Code)
 or the MCP Inspector against a deployed environment. Claude's callback URLs and its Client ID Metadata Document
 behaviour are taken from the MCP specification, not observed.
