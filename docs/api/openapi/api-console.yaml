@@ -295,6 +295,11 @@ paths:
         required: true
         schema:
           type: string
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
       requestBody:
         content:
           application/json:
@@ -505,8 +510,353 @@ paths:
           description: "Validation failed: one error per field with the exact message."
       tags:
       - trust-flag-queue-controller
+  /api/v1/console/verification/applications:
+    get:
+      operationId: verificationQueueQueue
+      parameters:
+      - in: query
+        name: province
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: market
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Queue"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - verification-queue-controller
+  /api/v1/console/verification/applications/{businessId}:
+    get:
+      operationId: verificationQueueApplication
+      parameters:
+      - in: path
+        name: businessId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApplicationDetail"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - verification-queue-controller
+  /api/v1/console/verification/applications/{businessId}/decision:
+    post:
+      operationId: verificationQueueDecide
+      parameters:
+      - in: path
+        name: businessId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DecisionRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApplicationDetail"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - verification-queue-controller
+  /api/v1/console/verification/applications/{businessId}/identity-reviews/{checkId}/decision:
+    post:
+      operationId: verificationQueueDecideIdentity
+      parameters:
+      - in: path
+        name: businessId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: path
+        name: checkId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewDecisionRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApplicationDetail"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - verification-queue-controller
 components:
   schemas:
+    ApplicationDetail:
+      type: object
+      properties:
+        application:
+          $ref: "#/components/schemas/ApplicationRow"
+        decisions:
+          type: array
+          items:
+            $ref: "#/components/schemas/DecisionRow"
+        owners:
+          type: array
+          items:
+            $ref: "#/components/schemas/OwnerReview"
+        registryReviews:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewView"
+    ApplicationRow:
+      type: object
+      properties:
+        businessName:
+          type: string
+        categories:
+          type: array
+          items:
+            type: string
+        checks:
+          type: array
+          items:
+            $ref: "#/components/schemas/CheckRow"
+        city:
+          type: string
+        decidedAt:
+          type: string
+          format: date-time
+        decision:
+          type: string
+          enum:
+          - approved
+          - info_requested
+        legalName:
+          type: string
+        merchantId:
+          type: string
+        province:
+          type: string
+        risk:
+          type: string
+          enum:
+          - low
+          - medium
+          - high
+        status:
+          type: string
+        structure:
+          type: string
+        submittedAt:
+          type: string
+          format: date-time
+        type:
+          type: string
     Backlog:
       type: object
       properties:
@@ -516,6 +866,31 @@ components:
         oldest:
           type: string
           format: date-time
+    CheckRow:
+      type: object
+      properties:
+        expiresAt:
+          type: string
+          format: date-time
+        id:
+          type: string
+        key:
+          type: string
+        reference:
+          type: string
+        registry:
+          type: string
+        state:
+          type: string
+          enum:
+          - passed
+          - review
+          - waiting
+          - failed
+        status:
+          type: string
+        type:
+          type: string
     CurrentStaff:
       type: object
       properties:
@@ -548,16 +923,41 @@ components:
     DecisionRequest:
       type: object
       properties:
+        checkKeys:
+          type: array
+          items:
+            type: string
         decision:
           type: string
           minLength: 1
-          pattern: dismissed|actioned
+          pattern: approve|request_info
         note:
           type: string
           maxLength: 500
           minLength: 0
       required:
       - decision
+    DecisionRow:
+      type: object
+      properties:
+        checkKeys:
+          type: array
+          items:
+            type: string
+        decidedAt:
+          type: string
+          format: date-time
+        decidedBy:
+          type: string
+        decision:
+          type: string
+          enum:
+          - approved
+          - info_requested
+        id:
+          type: string
+        note:
+          type: string
     FlagView:
       type: object
       properties:
@@ -735,6 +1135,33 @@ components:
             $ref: "#/components/schemas/Week"
         workQueue:
           $ref: "#/components/schemas/WorkQueue"
+    OwnerReview:
+      type: object
+      properties:
+        attempts:
+          type: integer
+          format: int32
+        checkId:
+          type: string
+        dobMatch:
+          type: string
+        lastError:
+          type: string
+        nameMatch:
+          type: string
+        ownershipPct:
+          type: number
+        principalName:
+          type: string
+        reviewNote:
+          type: string
+        reviewedAt:
+          type: string
+          format: date-time
+        role:
+          type: string
+        status:
+          type: string
     Pool:
       type: object
       properties:
@@ -784,6 +1211,19 @@ components:
       - status
       - title
       - type
+    Queue:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApplicationRow"
+        medianDecisionHours:
+          type: number
+          format: double
+        pending:
+          type: integer
+          format: int64
     ReconcileRequest:
       type: object
       properties:
@@ -809,6 +1249,19 @@ components:
         stillPending:
           type: integer
           format: int32
+    ReviewDecisionRequest:
+      type: object
+      properties:
+        decision:
+          type: string
+          minLength: 1
+          pattern: approve|reject
+        note:
+          type: string
+          maxLength: 500
+          minLength: 0
+      required:
+      - decision
     ReviewView:
       type: object
       properties:
@@ -929,6 +1382,12 @@ components:
         oldestOverdue:
           type: string
           format: date-time
+    Ulid:
+      type: string
+      description: "A ULID: 26 characters, Crockford base 32, sortable by creation\
+        \ time."
+      example: 01J9ZD3V00000000000000PWM1
+      pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
     ValidationError:
       type: object
       properties:

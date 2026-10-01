@@ -40,6 +40,9 @@ export const useShellT = defineMessages({
     k_support: 'Support desk · agents', k_regions: 'Province switchboard', k_finance: 'Finance', k_reports: 'Reports & analytics',
     k_api: 'Headless API & webhooks', k_team: 'Team, roles & audit', k_profile: 'My profile', k_oncall: 'On-call & escalations', k_overview: 'Overview',
     role_admin: 'Admin', role_trust_safety: 'Trust & safety', role_dispatch: 'Ops dispatcher', role_finance: 'Finance', role_support: 'Support', role_analyst: 'Read-only analyst',
+    filterProvince: 'Province', filterMarket: 'Market', allProvinces: 'All provinces', allMarkets: 'All markets',
+    regionPilot: '{code} pilot',
+    ageMin: '{n} min', ageH: '{n} h', ageD: '{n} d',
     a_suspend: 'suspend', a_decide: 'decide', a_refund: 'refund', a_province: 'province', a_payouts: 'payouts', a_keys: 'keys', a_verify: 'verify', a_vet: 'vet', a_dispatch: 'dispatch', a_support: 'support',
   },
   fr: {
@@ -80,6 +83,9 @@ export const useShellT = defineMessages({
     k_support: 'Bureau de soutien · agents', k_regions: 'Tableau des provinces', k_finance: 'Finances', k_reports: 'Rapports et analyses',
     k_api: 'API sans tête et webhooks', k_team: 'Équipe, rôles et audit', k_profile: 'Mon profil', k_oncall: 'Garde et escalades', k_overview: 'Vue d’ensemble',
     role_admin: 'Administrateur', role_trust_safety: 'Confiance et sécurité', role_dispatch: 'Répartiteur', role_finance: 'Finances', role_support: 'Soutien', role_analyst: 'Analyste (lecture seule)',
+    filterProvince: 'Province', filterMarket: 'Marché', allProvinces: 'Toutes les provinces', allMarkets: 'Tous les marchés',
+    regionPilot: '{code} pilote',
+    ageMin: '{n} min', ageH: '{n} h', ageD: '{n} j',
     a_suspend: 'suspendre', a_decide: 'trancher', a_refund: 'rembourser', a_province: 'provinces', a_payouts: 'versements', a_keys: 'clés', a_verify: 'vérifier', a_vet: 'contrôler', a_dispatch: 'répartir', a_support: 'soutien',
   },
 });

@@ -1,0 +1,22 @@
+/* Console screens built on design 03's screen frame (kicker, h1, lede) — shared by the review queues. Token values only. */
+.nl-q-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.nl-q-kicker { display: block; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-neutral-700); }
+.nl-q-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+.nl-q-filters .input { min-height: 40px; width: auto; max-width: 100%; }
+.nl-q-title { font-size: clamp(30px, 3.5vw, 44px); margin: 0 0 8px; letter-spacing: -0.02em; }
+.nl-q-lede { max-width: 62ch; color: var(--color-neutral-700); margin: 0 0 20px; }
+.nl-q-h2 { font-size: 22px; margin: 0 0 10px; }
+.nl-q-gap { margin-top: 28px; }
+.nl-q-note { color: var(--color-neutral-700); font-size: 13px; }
+.nl-q-error { color: var(--color-accent-2-700); font-size: 14px; }
+.nl-q-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 36px clamp(28px, 4vw, 64px); }
+.nl-q-panel { padding: 16px 18px; background: var(--color-surface); border: 1px solid var(--color-divider); border-radius: var(--radius-md); }
+.nl-q-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.nl-q-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 0; border-bottom: 1px solid var(--color-divider); }
+.nl-q-row:last-child { border-bottom: 0; }
+.nl-q-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.nl-q-actions .btn { min-height: 44px; }
+.nl-q-checks { display: flex; flex-wrap: wrap; gap: 6px; }
+.nl-q-field { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; font-size: 14px; }
+.nl-q-field textarea { min-height: 70px; }
+.nl-q-chips { display: flex; gap: 6px; flex-wrap: wrap; }

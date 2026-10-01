@@ -110,7 +110,7 @@ member.
 | `/delivery` | `delivery` | `delivery` | admin, dispatch | S-81 | stand-in |
 | `/sellers` | `sellers` | `sellers` | admin, trust_safety, support | S-82 | stand-in |
 | `/sellers/$sellerId` | `seller_detail` | `sellers` | admin, trust_safety, support | S-82 | stand-in |
-| `/verification` | `verify` | `verify` | admin, trust_safety | S-79 | stand-in |
+| `/verification?province=&market=&application=` | `verify` | `verify` | admin, trust_safety | S-79 | built |
 | `/vetting` | `vetting` | `vetting` | admin, trust_safety | S-92 | stand-in |
 | `/trust` | `trust` | `trust` | admin, trust_safety | S-93 | stand-in |
 | `/catalogue` | `taxonomy` | `taxonomy` | admin | S-94 | stand-in |
@@ -158,6 +158,19 @@ POST /api/v1/console/me/role-view {role}   → { role, screens, actions }   403 
 
 `GET /api/v1/console/me` is sent without `X-Console-Role` (the stored view may name a role taken away since).
 
+### Verification queue (S-79)
+
+```
+GET  /api/v1/console/verification/applications[?province=&market=]      → { items: [Application], pending, medianDecisionHours? }
+GET  /api/v1/console/verification/applications/{businessId}             → { application, owners, registryReviews, decisions }
+POST /api/v1/console/verification/applications/{businessId}/decision    {decision: approve|request_info, checkKeys?, note?}  (verify)
+POST /api/v1/console/verification/applications/{businessId}/identity-reviews/{checkId}/decision {decision: approve|reject, note?}
+409 not_pending · reviews_open · review_closed
+```
+
+Every console screen that filters by place resolves `?province=&market=` through `shared.PlaceFilter` (same rules and
+422s as the overview) and shows the shell's `PlaceFilters`.
+
 ### Overview (S-91)
 
 ```
@@ -198,7 +211,7 @@ GET /api/v1/console/overview[?province=AB][&market=<region market id>]   (screen
 | orders, delivery | — (`orders.api`, `fulfilment` read models for merchants only) | console orders monitor, runs, couriers, zone economics (S-81) |
 | disputes | `payments.api.DisputeDecisions` (decide, decideRefund) | the agents' queue and evidence endpoints (S-80) |
 | sellers | `merchants.api.MerchantDirectory`, `trust.api.QualityQuery` | directory with filters, seller detail, oversight actions (coach, instant book off, hide, demote, suspend) (S-82) |
-| verify | `GET/POST /api/v1/console/registry-reviews` (S-23) | the application queue with KYC / licence / insurance checks, approve / request info (S-79; replaces the local "Simulate approval") |
+| verify | `GET/POST /api/v1/console/registry-reviews` (S-23); `GET /api/v1/console/verification/applications[/{id}]`, `POST …/{id}/decision`, `POST …/{id}/identity-reviews/{checkId}/decision` (S-79) | — |
 | vetting | — | flagged listings queue, approve / reject (S-92) |
 | trust | `GET /api/v1/console/trust/flags`, `POST …/{id}/decision` (S-133) | tier rules, automatic consequences, rating floor tuning (S-93) |
 | taxonomy | `db/seed/categories.json` (seed only) | categories CRUD with regulators, limits, per-province rules (S-94) |

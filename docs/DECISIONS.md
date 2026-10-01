@@ -5002,3 +5002,55 @@ and the audit log rules: no update, no delete, and a retention delete only past 
   - Console vitest `overview.test.tsx`: design copy and formats, links by role, filters writing the query with the
     role header, empty figures, error and retry, French money.
 
+
+## 2026-10-01 — S-79 Verification queue: review merchant checks, approve/reject with reasons
+
+- **One queue of applications, built on the S-23/S-22 reviews** (merchants module, `/api/v1/console/verification/applications`;
+  screen `verify`, deciding needs `verify` — admin and trust & safety): submitted businesses (status `pending`, oldest
+  submission first) plus those decided in the last 7 days with their latest decision, each with its checklist, a risk
+  and the waiting time. `GET …/{businessId}` adds the owners' Stripe Identity results (S-22), every registry lookup that
+  went to an agent (S-23, open or decided) and the decision history. The path variable is `businessId`, not
+  `merchantId`, because `{merchantId}` handlers are member endpoints (`@RequiresMerchant`).
+- **Decisions = the design's two buttons.** "Approve" (pending → active at Registered: the existing
+  `ApproveApplication`, which confirms submitted checks and publishes `merchant.approved`) and "Request info", which is
+  how the backlog's "reject with reasons" is drawn: the agent picks the checks to redo and writes a note (both
+  required); the application goes back to `applicant` at the Verification step and those rows become `rejected`, so
+  the owner redoes them and submits again (and `ComplianceStatus` lists them). Requesting identity (`kyc`) also sends
+  every owner whose Stripe check was handed in back to Stripe (`last_error = agent_rejected`; the Studio words it "A
+  Northline agent couldn't confirm it"). Declining a business for good isn't in the design and isn't built (suspension
+  is S-82). **Approve waits for the manual reviews:** 409 `reviews_open` while a registry lookup or an identity
+  mismatch of the business is open.
+- **Manual reviews:** registry lookups keep their S-23 endpoint (now with `CurrentStaff` and the audit log); identity
+  mismatches get `POST …/{businessId}/identity-reviews/{checkId}/decision {approve|reject, note?}` — approve → owner
+  verified (the agent checked the person), reject → the owner verifies again; the `kyc` row is re-derived.
+- **Risk** (the design's Low / Medium / "High · no licence"): high when a licence or permit row (`licence`,
+  `ahs_permit` types) isn't verified; medium when another check waits for an agent's review or failed; low otherwise.
+  **Check states:** passed (verified), review (open registry review / identity mismatch), waiting (submitted evidence
+  a human reads — uploads, numbers without an API), failed. The table shows ✓ / ✗ as designed and ○ for waiting.
+- **Headline:** "{n} applications · median {d} days · SLA 2" — n = pending in scope; the median is submission → decision
+  over the last 30 days (`application_decisions.submitted_at`); without decisions the median part is left out. SLA 2 is
+  the design's copy.
+- **Audit:** every decision writes `developer.audit_log` in its transaction (`merchant_id` = the business, role = the
+  console role(s) acted with): `verification.application_approved`, `verification.info_requested`,
+  `verification.identity_approved|identity_rejected`, `verification.registry_approved|registry_rejected`.
+- **Notification (S-27 channels):** a new in-process event `merchants.api.ApplicationDecided` (decision, check keys,
+  the agent's note; not externalized) → the messaging module emails every owner (`application-decision` template,
+  en/fr, transactional — the answer to their own submission, so not subject to the notification matrix). SMS/push: the
+  S-27 worker has no row for application decisions; not added.
+- **Region filter:** `?province=&market=` (S-134). The overview's resolution moved to a shared kernel port
+  `shared.PlaceFilter` (implemented by merchants, which knows where each business operates) so every queue resolves
+  places and answers the same 422s. The console's `PlaceFilters` component (shell) is shared too.
+- **Schema V192:** `merchants.application_decisions` (decision, check keys, note ≤ 500, agent, role, submitted/decided
+  times); `owner_identity_checks.reviewed_by|reviewed_at|review_note`; partial indexes for pending businesses and open
+  identity reviews.
+- **"Simulate approval" (local only) is kept** for Studio development: design 02 draws the button, and it exists only
+  under the `local` profile. Every other environment approves through this queue.
+- **Data Table:** `onAction` may resolve to `false` to skip the "done" toast (Request info opens the console's own
+  dialog).
+- **Messages (fr in the catalogue):** "Choose approve or request info.", "Choose what the business needs to fix.",
+  "Pick checks from this application.", "Tell the business what to fix.", 409 "This application isn't waiting for a
+  decision." / "Decide the open registry and identity reviews first." / "Only a submitted application can be sent
+  back."
+- **Not done:** the design's "welcome call fast-tracks Trusted" (tiers are S-93/S-82); sanctions screening and
+  insurance OCR named in the lede (no provider exists — the lede is the design's copy); assigning applications to an
+  agent; the Studio doesn't show the agent's note in the wizard (it is in the email).

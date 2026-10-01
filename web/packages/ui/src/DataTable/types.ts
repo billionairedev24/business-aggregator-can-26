@@ -110,8 +110,11 @@ export interface DataTableProps<T extends object> {
   onUpdate?: (row: T, values: Partial<T>) => Promise<unknown> | void;
   /** Called after the viewer confirms; the caller writes the audit log entry. */
   onDelete?: (rows: T[]) => Promise<unknown> | void;
-  /** Custom row / bulk action. `rows` already excludes rows the `when` guard rejects. */
-  onAction?: (action: DataTableAction<T>, rows: T[]) => Promise<unknown> | void;
+  /**
+   * Custom row / bulk action. `rows` already excludes rows the `when` guard rejects. Resolve to `false` when the
+   * action continues elsewhere (a dialog of the caller's) and no "done" toast should show.
+   */
+  onAction?: (action: DataTableAction<T>, rows: T[]) => Promise<unknown> | unknown;
 
   /** Accessible name for the table. Default: capitalised plural. */
   'aria-label'?: string;
