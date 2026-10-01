@@ -50,7 +50,8 @@ class OpenApiConfig {
         "/api/v1/me",
         "/api/v1/me/businesses",
         "/api/v1/onboarding/**",
-        "/api/v1/team-invitations/**"
+        "/api/v1/team-invitations/**",
+        "/api/v1/ai/**"
     };
     static final String[] CONSOLE = {"/api/v1/console/**"};
     static final String[] INTERNAL = {
