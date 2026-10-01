@@ -118,6 +118,22 @@ class RegistrationApiTest extends AuthIntegrationTest {
                     .andExpect(jsonPath("$.errors[?(@.field=='phone')].rule").value("required"));
         }
 
+        /** S-40: the same messages in French when the browser (or the Studio's language switch) asks for it. */
+        @Test
+        void emptyForm_inFrench() throws Exception {
+            mvc.perform(post("/api/auth/register")
+                            .session(new MockHttpSession())
+                            .header("Accept-Language", "fr-CA,fr;q=0.9")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}"))
+                    .andExpect(status().isUnprocessableContent())
+                    .andExpect(jsonPath("$.errors[?(@.field=='firstName')].message")
+                            .value("Le prénom est obligatoire."))
+                    .andExpect(jsonPath("$.errors[?(@.field=='email')].message").value("Le courriel est obligatoire."))
+                    .andExpect(jsonPath("$.errors[?(@.field=='terms')].message")
+                            .value("Vous devez accepter les Conditions et la Politique de confidentialité."));
+        }
+
         @Test
         void blankNames_areTrimmedAndRequired() throws Exception {
             postJson("/api/auth/register", new MockHttpSession(), """

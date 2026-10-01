@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, http, setHttpBase, traceparent, ValidationError, xsrfToken } from './http';
+import { ApiError, http, setHttpBase, setRequestLocale, traceparent, ValidationError, xsrfToken } from './http';
 
-afterEach(() => { vi.unstubAllGlobals(); setHttpBase(''); });
+afterEach(() => { vi.unstubAllGlobals(); setHttpBase(''); setRequestLocale(undefined); });
 
 const respond = (status: number, body?: unknown) =>
   vi.fn(async () => new Response(body === undefined ? '' : JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }));
@@ -12,6 +12,19 @@ describe('http', () => {
     const err = await http('/api/v1/x', { method: 'POST', body: {} }).catch(e => e);
     expect(err).toBeInstanceOf(ValidationError);
     expect((err as ValidationError).byField()).toEqual({ phone: 'Enter a mobile number.' });
+  });
+
+  it('asks for the UI language, unless the call names its own (S-40)', async () => {
+    const fetch = respond(200, { ok: true });
+    vi.stubGlobal('fetch', fetch);
+    await http('/api/v1/x');
+    setRequestLocale('fr');
+    await http('/api/v1/x');
+    await http('/api/v1/x', { headers: { 'Accept-Language': 'en-CA' } });
+    setRequestLocale('en');
+    await http('/api/v1/x');
+    const sent = fetch.mock.calls.map(c => ((c as unknown[])[1] as RequestInit).headers as Record<string, string>);
+    expect(sent.map(h => h['accept-language'] ?? h['Accept-Language'])).toEqual([undefined, 'fr-CA', 'en-CA', 'en-CA']);
   });
 
   it('maps other failures to ApiError with the problem detail', async () => {

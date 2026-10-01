@@ -1,5 +1,7 @@
 # Validation rules (client AND server)
 
+French (fr-CA) wording of every message, the spec's and the modules' own: `validation-messages.fr-CA.tsv` (S-40). The API answers in French when `Accept-Language` prefers it; the English here stays the exact text.
+
 Every rule here is displayed inline in the UI (magenta text under the field, `role="alert"`, field border `--color-accent-2`), shown after the field is touched or on submit, plus a summary banner "N things need attention." on a failed submit. The server returns the same rule ids as `422 { errors: [{ field, rule, message }] }`.
 
 ## Registration (identity)

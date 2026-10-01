@@ -6,7 +6,8 @@ import { ValidationError } from '../../lib/http';
 import { hhmmLabel, today } from '../../lib/time';
 import { conflictsQuery, hoursQuery, timeOffQuery, useAddTimeOff, useRemoveTimeOff, useSetHoliday, type TimeOffEntry } from './api';
 import { useAvailabilityT } from './messages';
-import { TIME_OPTIONS, timeOffSchema, type TimeOffForm } from './rules';
+import { AVAILABILITY_MESSAGES_FR, TIME_OPTIONS, timeOffSchema, type TimeOffForm } from './rules';
+import { useLocalizeMessage } from '../../lib/validation';
 
 type T = ReturnType<typeof useAvailabilityT>;
 const EMPTY: TimeOffForm = { startsOn: '', endsOn: '', kind: 'closed', specialFrom: '08:00', specialTo: '12:00', reason: '' };
@@ -36,7 +37,8 @@ export function TimeOffTab() {
   const errors: Record<string, string> = {};
   if (!parsed.success) for (const i of parsed.error.issues) errors[String(i.path[0])] ??= i.message;
   const server = add.error instanceof ValidationError ? add.error.byField() : {};
-  const shown = (k: string) => (tried || touched[k] ? errors[k] ?? server[k] : server[k]);
+  const lm = useLocalizeMessage(AVAILABILITY_MESSAGES_FR);
+  const shown = (k: string) => lm(tried || touched[k] ? errors[k] ?? server[k] : server[k]);
   const set = (patch: Partial<TimeOffForm>, field?: string) => { setForm(f => ({ ...f, ...patch })); if (field) setTouched(x => ({ ...x, [field]: true })); };
 
   const submit = () => {
