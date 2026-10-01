@@ -48,6 +48,8 @@ docs-dev: $(WEB_INSTALLED) ## Docusaurus dev server on http://localhost:3300 wit
 .PHONY: docs-pages
 docs-pages: ## Static export of the public site for GitHub/GitLab Pages into web/apps/docs/build (DOCS_URL, DOCS_BASE_URL)
 	$(MAKE) docs DOCS_VARIANT=public
+	@# Pages have no running services: no Swagger UI links (static/config.js lists the local ones).
+	printf 'window.__NL_DOCS__ = { swagger: [] };\n' > $(ROOT)/web/apps/docs/build/config.js
 
 .PHONY: docs-clean
 docs-clean:
