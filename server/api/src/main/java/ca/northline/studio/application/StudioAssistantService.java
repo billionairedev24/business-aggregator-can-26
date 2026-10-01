@@ -12,7 +12,7 @@ import ca.northline.ai.api.Prompts;
 import ca.northline.developer.api.AuditTrail;
 import ca.northline.merchants.api.BusinessNames;
 import ca.northline.merchants.api.MerchantDirectory;
-import ca.northline.region.api.Markets;
+import ca.northline.region.api.MerchantPlaces;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.security.CurrentMember;
 import ca.northline.shared.security.MerchantAccess;
@@ -48,22 +48,38 @@ class StudioAssistantService implements StudioAssistant {
     private final MerchantAccess access;
     private final MerchantDirectory directory;
     private final BusinessNames names;
-    private final Markets markets;
+    private final MerchantPlaces places;
     private final AuditTrail audit;
     private final JsonMapper json;
     private final Clock clock;
 
     /** Who is asking, in the words the prompts use. */
-    private record Who(String business, String type, ZoneId zone, LocalDate today) {}
+    private record Who(String business, String type, MerchantPlaces.MerchantPlace place, LocalDate today) {
+        ZoneId zone() {
+            return place.zone();
+        }
+    }
 
+    /** The business, and where it is from the region model (S-134): place names and the zone are never in code. */
     private Who who(String merchantId) {
         var profile = directory.profile(merchantId).orElseThrow(() -> new NotFound("merchant", merchantId));
-        var zone = markets.zone(profile.province());
+        var place = places.of(merchantId);
         return new Who(
                 names.displayName(merchantId).orElse("this business"),
                 profile.type(),
-                zone,
-                LocalDate.now(clock.withZone(zone)));
+                place,
+                LocalDate.now(clock.withZone(place.zone())));
+    }
+
+    private static String place(MerchantPlaces.MerchantPlace place, Locale locale) {
+        var parts = new ArrayList<String>();
+        if (place.city() != null) {
+            parts.add(place.city());
+        }
+        if (place.ownProvince() && !place.provinceName(locale).isEmpty()) {
+            parts.add(place.provinceName(locale));
+        }
+        return parts.isEmpty() ? "" : " in " + String.join(", ", parts);
     }
 
     private static String language(Locale locale) {
@@ -88,6 +104,7 @@ class StudioAssistantService implements StudioAssistant {
         var vars = new LinkedHashMap<String, Object>();
         vars.put("business", who.business());
         vars.put("businessType", who.type());
+        vars.put("place", place(who.place(), locale));
         vars.put("role", member.role().code());
         vars.put("permissions", permissions(member));
         vars.put(

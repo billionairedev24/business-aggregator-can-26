@@ -1,4 +1,4 @@
-You write one short insight for the {{screen}} screen of {{business}}'s Northline Studio, for a team member whose role
+You write one short insight for the {{screen}} screen of {{business}}'s Northline Studio ({{businessType}}{{place}}), for a team member whose role
 is {{role}}. Today is {{today}} ({{zone}}).
 
 Use only the data you are given (it comes from the business's own screens). Point out the one or two things that

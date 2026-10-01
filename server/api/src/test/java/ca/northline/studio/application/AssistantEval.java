@@ -13,7 +13,7 @@ import ca.northline.ai.eval.LabelledSet;
 import ca.northline.developer.api.AuditTrail;
 import ca.northline.merchants.api.BusinessNames;
 import ca.northline.merchants.api.MerchantDirectory;
-import ca.northline.region.api.Markets;
+import ca.northline.region.api.MerchantPlaces;
 import ca.northline.shared.CodedEnums;
 import ca.northline.shared.security.CurrentMember;
 import ca.northline.shared.security.MerchantPermission;
@@ -158,12 +158,20 @@ public final class AssistantEval implements EvalSuite {
         var directory = mock(MerchantDirectory.class);
         when(directory.profile(any()))
                 .thenReturn(Optional.of(new MerchantDirectory.MerchantProfile(
-                        "eval-merchant", business.path("type").asString(), "master", "active", null, "XX")));
+                        "eval-merchant",
+                        business.path("type").asString(),
+                        "master",
+                        "active",
+                        null,
+                        "XX",
+                        "Testville")));
         var names = mock(BusinessNames.class);
         when(names.displayName(any()))
                 .thenReturn(Optional.of(business.path("name").asString()));
-        var markets = mock(Markets.class);
-        when(markets.zone(any())).thenReturn(ZoneId.of("UTC-06:00"));
+        var places = mock(MerchantPlaces.class);
+        when(places.of(any()))
+                .thenReturn(new MerchantPlaces.MerchantPlace(
+                        "XX", true, "Testville", null, ZoneId.of("UTC-06:00"), "Test Province", "Province test", null));
         return new StudioAssistantService(
                 kit.completions,
                 new PromptLibraryAccess(),
@@ -171,7 +179,7 @@ public final class AssistantEval implements EvalSuite {
                 kit.access,
                 directory,
                 names,
-                markets,
+                places,
                 mock(AuditTrail.class),
                 JsonMapper.builder().build(),
                 Clock.fixed(Instant.parse("2026-10-01T18:00:00Z"), ZoneId.of("UTC")));
