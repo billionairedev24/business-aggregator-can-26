@@ -665,6 +665,5 @@ The radius is 1 to 200 km.	Le rayon est de 1 à 200 km.	new
 Enter the zone's name, 1 to 60 characters.	Entrez le nom de la zone, de 1 à 60 caractères.	new
 Choose one of the province's markets.	Choisissez un des marchés de la province.	new
 Pooled runs a day are 0 to 24.	Les tournées groupées par jour vont de 0 à 24.	new
-Enter an amount of $0 or more.	Entrez un montant de 0 $ ou plus.	new
 Paste a GeoJSON polygon (lng, lat) for the boundary.	Collez un polygone GeoJSON (lng, lat) pour la limite.	new
 A live market keeps at least one zone. Lower its stage first.	Un marché en service garde au moins une zone. Abaissez d’abord son étape.	new

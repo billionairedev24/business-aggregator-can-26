@@ -1,13 +1,16 @@
-package ca.northline.region.application;
+package ca.northline.console.application;
 
-import ca.northline.region.domain.Stage;
+import ca.northline.region.api.LaunchStatus;
+import ca.northline.region.api.RegionEditor.Market;
+import ca.northline.region.api.RegionEditor.Zone;
+import ca.northline.region.api.RegionEditor.ZoneInput;
 import java.util.List;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
 
 /**
  * The console's province switchboard (S-84, design 03 {@code regions}): provinces, their markets and delivery zones
- * with their stages (off · waitlist · pilot · live). Changes go to {@code region.regions} / {@code region.zones}, are
+ * with their stages (off · waitlist · pilot · live). Changes go to {@code region.regions} / {@code region.zones} (through {@code region.api.RegionEditor}), are
  * audited, and the region model is re-read after commit ({@code Regions.refresh()}). Admins only.
  */
 public interface Switchboard {
@@ -32,11 +35,11 @@ public interface Switchboard {
 
     Board board();
 
-    Province provinceStage(String code, Stage stage, String confirm, Actor actor);
+    Province provinceStage(String code, LaunchStatus stage, String confirm, Actor actor);
 
     Province courierModel(String code, String model, Actor actor);
 
-    Province marketStage(String marketId, Stage stage, String confirm, Actor actor);
+    Province marketStage(String marketId, LaunchStatus stage, String confirm, Actor actor);
 
     Province addMarket(NewMarket market, Actor actor);
 
@@ -49,18 +52,6 @@ public interface Switchboard {
     record Actor(String userId, String role) {}
 
     record NewMarket(String province, String city, double lat, double lng, double radiusKm) {}
-
-    /**
-     * @param boundary a GeoJSON Polygon (or a Feature with one), lng/lat; null keeps the current boundary (none when new)
-     */
-    record ZoneInput(
-            String marketId,
-            String name,
-            @Nullable Integer runsPerDay,
-            @Nullable Long feeStdCents,
-            @Nullable Long feePlusCents,
-            @Nullable Long minBasketCents,
-            @Nullable String boundary) {}
 
     record Board(List<Province> provinces) {
         public Board {
@@ -80,7 +71,7 @@ public interface Switchboard {
             String id,
             String code,
             Map<String, String> names,
-            Stage stage,
+            LaunchStatus stage,
             List<String> languages,
             @Nullable String courierModel,
             Map<String, Integer> tax,
@@ -109,25 +100,4 @@ public interface Switchboard {
             return checklist.values().stream().allMatch(Boolean::booleanValue);
         }
     }
-
-    record Market(
-            String id,
-            String city,
-            Stage stage,
-            @Nullable Double lat,
-            @Nullable Double lng,
-            @Nullable Double radiusKm,
-            int zones,
-            long waitlist) {}
-
-    /** @param areaKm2 the boundary's area, null without one */
-    record Zone(
-            String id,
-            String marketId,
-            String name,
-            @Nullable Integer runsPerDay,
-            @Nullable Long feeStdCents,
-            @Nullable Long feePlusCents,
-            @Nullable Long minBasketCents,
-            @Nullable Double areaKm2) {}
 }

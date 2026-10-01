@@ -54,10 +54,12 @@ class SwitchboardApiTest extends IntegrationTest {
 
     @AfterEach
     void reset() {
-        jdbc.sql("delete from region.zones where region_id in (select id from region.regions where parent_id = 'prov-pe')")
+        jdbc.sql(
+                        "delete from region.zones where region_id in (select id from region.regions where parent_id = 'prov-pe')")
                 .update();
         jdbc.sql("delete from region.regions where parent_id = 'prov-pe'").update();
-        jdbc.sql("update region.regions set stage = 'off', registries = '{}', courier_model = null where id = 'prov-pe'")
+        jdbc.sql(
+                        "update region.regions set stage = 'off', registries = '{}', courier_model = null where id = 'prov-pe'")
                 .update();
         regions.refresh();
     }
@@ -65,22 +67,21 @@ class SwitchboardApiTest extends IntegrationTest {
     long audited(String action, String target) {
         return jdbc.sql("""
                         select count(*) from developer.audit_log
-                         where action = ? and target_id = ? and actor_id = ? and merchant_id is null""")
-                .params(action, target, admin)
-                .query(Long.class)
-                .single();
+                         where action = ? and target_id = ? and actor_id = ? and merchant_id is null""").params(action, target, admin).query(Long.class).single();
     }
 
     String market(String city) throws Exception {
         var body = mvc.perform(json(
                                 post("/api/v1/console/regions/markets"),
-                                "{\"province\":\"PE\",\"city\":\"%s\",\"lat\":46.238,\"lng\":-63.131,\"radiusKm\":15}".formatted(city))
+                                "{\"province\":\"PE\",\"city\":\"%s\",\"lat\":46.238,\"lng\":-63.131,\"radiusKm\":15}"
+                                        .formatted(city))
                         .with(TestJwt.staff(admin, StaffRole.ADMIN)))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
-        return JsonPath.<java.util.List<String>>read(body, "$.markets[?(@.city == '%s')].id".formatted(city)).getFirst();
+        return JsonPath.<java.util.List<String>>read(body, "$.markets[?(@.city == '%s')].id".formatted(city))
+                .getFirst();
     }
 
     @Test
@@ -89,10 +90,14 @@ class SwitchboardApiTest extends IntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.provinces[?(@.code == 'PE')].stage").value("off"))
                 .andExpect(jsonPath("$.provinces[?(@.code == 'PE')].tax.hst").value(1500))
-                .andExpect(jsonPath("$.provinces[?(@.code == 'PE')].checklist.taxProfile").value(true))
-                .andExpect(jsonPath("$.provinces[?(@.code == 'PE')].checklist.holidays").value(true))
-                .andExpect(jsonPath("$.provinces[?(@.code == 'PE')].checklist.registries").value(false))
-                .andExpect(jsonPath("$.provinces[?(@.code == 'PE')].checklist.marketWithZones").value(false));
+                .andExpect(jsonPath("$.provinces[?(@.code == 'PE')].checklist.taxProfile")
+                        .value(true))
+                .andExpect(jsonPath("$.provinces[?(@.code == 'PE')].checklist.holidays")
+                        .value(true))
+                .andExpect(jsonPath("$.provinces[?(@.code == 'PE')].checklist.registries")
+                        .value(false))
+                .andExpect(jsonPath("$.provinces[?(@.code == 'PE')].checklist.marketWithZones")
+                        .value(false));
 
         // not ready: no registries, no market with zones
         mvc.perform(json(post("/api/v1/console/regions/provinces/PE/stage"), "{\"stage\":\"live\",\"confirm\":\"PE\"}")
@@ -111,12 +116,16 @@ class SwitchboardApiTest extends IntegrationTest {
         var market = market("Charlottetown");
         assertThat(audited("region.market_added", market)).isEqualTo(1);
         assertThat(regions.marketById(market)).isPresent();
-        mvc.perform(json(post("/api/v1/console/regions/markets/{id}/stage", market), "{\"stage\":\"live\",\"confirm\":\"Charlottetown\"}")
+        mvc.perform(json(
+                                post("/api/v1/console/regions/markets/{id}/stage", market),
+                                "{\"stage\":\"live\",\"confirm\":\"Charlottetown\"}")
                         .with(TestJwt.staff(admin, StaffRole.ADMIN)))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.errors[0].field").value("stage"))
                 .andExpect(jsonPath("$.errors[0].message").value("A market can't be more open than its province."));
-        mvc.perform(json(post("/api/v1/console/regions/markets/{id}/stage", market), "{\"stage\":\"pilot\",\"confirm\":\"charlottetown\"}")
+        mvc.perform(json(
+                                post("/api/v1/console/regions/markets/{id}/stage", market),
+                                "{\"stage\":\"pilot\",\"confirm\":\"charlottetown\"}")
                         .with(TestJwt.staff(admin, StaffRole.ADMIN)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.markets[0].stage").value("pilot"));
@@ -125,14 +134,18 @@ class SwitchboardApiTest extends IntegrationTest {
         mvc.perform(json(
                                 post("/api/v1/console/regions/zones"),
                                 "{\"marketId\":\"%s\",\"name\":\"Downtown\",\"runsPerDay\":2,\"feeStdCents\":299,\"feePlusCents\":0,\"minBasketCents\":2500,\"boundary\":%s}"
-                                        .formatted(market, quote("{\"type\":\"Feature\",\"properties\":{},\"geometry\":" + POLYGON + "}")))
+                                        .formatted(
+                                                market,
+                                                quote("{\"type\":\"Feature\",\"properties\":{},\"geometry\":" + POLYGON
+                                                        + "}")))
                         .with(TestJwt.staff(admin, StaffRole.ADMIN)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.zones", hasSize(1)))
                 .andExpect(jsonPath("$.zones[0].name").value("Downtown"))
                 .andExpect(jsonPath("$.zones[0].areaKm2").isNumber())
                 .andExpect(jsonPath("$.checklist.marketWithZones").value(true));
-        jdbc.sql("update region.regions set registries = '{manual}' where id = 'prov-pe'").update();
+        jdbc.sql("update region.regions set registries = '{manual}' where id = 'prov-pe'")
+                .update();
         mvc.perform(json(post("/api/v1/console/regions/provinces/PE/stage"), "{\"stage\":\"live\",\"confirm\":\"PE\"}")
                         .with(TestJwt.staff(admin, StaffRole.ADMIN)))
                 .andExpect(status().isOk())
@@ -142,46 +155,54 @@ class SwitchboardApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.provinces[?(@.code == 'PE')].status").value("live"));
 
         // lowering the province brings its markets down with it
-        mvc.perform(json(post("/api/v1/console/regions/provinces/PE/stage"), "{\"stage\":\"waitlist\",\"confirm\":\"PE\"}")
+        mvc.perform(json(
+                                post("/api/v1/console/regions/provinces/PE/stage"),
+                                "{\"stage\":\"waitlist\",\"confirm\":\"PE\"}")
                         .with(TestJwt.staff(admin, StaffRole.ADMIN)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.markets[0].stage").value("waitlist"));
         assertThat(jdbc.sql("""
                         select after -> 'marketsLowered' ->> ? from developer.audit_log
-                         where action = 'region.stage_changed' and target_id = 'prov-pe' and after ->> 'stage' = 'waitlist'""")
-                        .params(market)
-                        .query(String.class)
-                        .single())
-                .isEqualTo("pilot");
+                         where action = 'region.stage_changed' and target_id = 'prov-pe' and after ->> 'stage' = 'waitlist'""").params(market).query(String.class).single()).isEqualTo("pilot");
     }
 
     @Test
     void zonesAreEditedAndRemovedButALiveMarketKeepsOne() throws Exception {
-        jdbc.sql("update region.regions set stage = 'live', registries = '{manual}' where id = 'prov-pe'").update();
+        jdbc.sql("update region.regions set stage = 'live', registries = '{manual}' where id = 'prov-pe'")
+                .update();
         var market = market("Summerside");
         var created = mvc.perform(json(
                                 post("/api/v1/console/regions/zones"),
-                                "{\"marketId\":\"%s\",\"name\":\"Waterfront\",\"boundary\":%s}".formatted(market, quote(POLYGON)))
+                                "{\"marketId\":\"%s\",\"name\":\"Waterfront\",\"boundary\":%s}"
+                                        .formatted(market, quote(POLYGON)))
                         .with(TestJwt.staff(admin, StaffRole.ADMIN)))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
-        String zone = JsonPath.<java.util.List<String>>read(created, "$.zones[?(@.name == 'Waterfront')].id").getFirst();
-        mvc.perform(json(put("/api/v1/console/regions/zones/{id}", zone), "{\"marketId\":\"%s\",\"name\":\"Waterfront East\",\"feeStdCents\":399}".formatted(market))
+        String zone = JsonPath.<java.util.List<String>>read(created, "$.zones[?(@.name == 'Waterfront')].id")
+                .getFirst();
+        mvc.perform(json(
+                                put("/api/v1/console/regions/zones/{id}", zone),
+                                "{\"marketId\":\"%s\",\"name\":\"Waterfront East\",\"feeStdCents\":399}"
+                                        .formatted(market))
                         .with(TestJwt.staff(admin, StaffRole.ADMIN)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.zones[0].name").value("Waterfront East"))
                 .andExpect(jsonPath("$.zones[0].feeStdCents").value(399))
                 .andExpect(jsonPath("$.zones[0].areaKm2").isNumber());
         assertThat(audited("region.zone_updated", zone)).isEqualTo(1);
-        mvc.perform(json(post("/api/v1/console/regions/markets/{id}/stage", market), "{\"stage\":\"live\",\"confirm\":\"Summerside\"}")
+        mvc.perform(json(
+                                post("/api/v1/console/regions/markets/{id}/stage", market),
+                                "{\"stage\":\"live\",\"confirm\":\"Summerside\"}")
                         .with(TestJwt.staff(admin, StaffRole.ADMIN)))
                 .andExpect(status().isOk());
         mvc.perform(delete("/api/v1/console/regions/zones/{id}", zone).with(TestJwt.staff(admin, StaffRole.ADMIN)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("last_zone"));
-        mvc.perform(json(post("/api/v1/console/regions/markets/{id}/stage", market), "{\"stage\":\"pilot\",\"confirm\":\"Summerside\"}")
+        mvc.perform(json(
+                                post("/api/v1/console/regions/markets/{id}/stage", market),
+                                "{\"stage\":\"pilot\",\"confirm\":\"Summerside\"}")
                         .with(TestJwt.staff(admin, StaffRole.ADMIN)))
                 .andExpect(status().isOk());
         mvc.perform(delete("/api/v1/console/regions/zones/{id}", zone).with(TestJwt.staff(admin, StaffRole.ADMIN)))
@@ -209,29 +230,43 @@ class SwitchboardApiTest extends IntegrationTest {
                         .with(TestJwt.staff(admin, StaffRole.ADMIN)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.courierModel").value("hybrid"));
-        mvc.perform(json(post("/api/v1/console/regions/markets"), "{\"province\":\"PE\",\"city\":\"X\",\"lat\":46.2,\"lng\":-63.1,\"radiusKm\":10}")
+        mvc.perform(json(
+                                post("/api/v1/console/regions/markets"),
+                                "{\"province\":\"PE\",\"city\":\"X\",\"lat\":46.2,\"lng\":-63.1,\"radiusKm\":10}")
                         .with(TestJwt.staff(admin, StaffRole.ADMIN)))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.errors[0].message").value("Enter the city or area, 2 to 60 characters."));
-        mvc.perform(json(post("/api/v1/console/regions/markets"), "{\"province\":\"PE\",\"city\":\"Swapped\",\"lat\":-63.1,\"lng\":46.2,\"radiusKm\":10}")
+        mvc.perform(json(
+                                post("/api/v1/console/regions/markets"),
+                                "{\"province\":\"PE\",\"city\":\"Swapped\",\"lat\":-63.1,\"lng\":46.2,\"radiusKm\":10}")
                         .with(TestJwt.staff(admin, StaffRole.ADMIN)))
                 .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.errors[0].message").value("Give the market's centre as a latitude and longitude in Canada."));
+                .andExpect(jsonPath("$.errors[0].message")
+                        .value("Give the market's centre as a latitude and longitude in Canada."));
         var market = market("Montague");
-        mvc.perform(json(post("/api/v1/console/regions/markets"), "{\"province\":\"PE\",\"city\":\"montague\",\"lat\":46.2,\"lng\":-62.6,\"radiusKm\":10}")
+        mvc.perform(json(
+                                post("/api/v1/console/regions/markets"),
+                                "{\"province\":\"PE\",\"city\":\"montague\",\"lat\":46.2,\"lng\":-62.6,\"radiusKm\":10}")
                         .with(TestJwt.staff(admin, StaffRole.ADMIN)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("market_exists"));
-        mvc.perform(json(post("/api/v1/console/regions/zones"), "{\"marketId\":\"%s\",\"name\":\"Bad\",\"boundary\":\"{not json\"}".formatted(market))
+        mvc.perform(json(
+                                post("/api/v1/console/regions/zones"),
+                                "{\"marketId\":\"%s\",\"name\":\"Bad\",\"boundary\":\"{not json\"}".formatted(market))
                         .with(TestJwt.staff(admin, StaffRole.ADMIN)))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.errors[0].field").value("boundary"))
-                .andExpect(jsonPath("$.errors[0].message").value("Paste a GeoJSON polygon (lng, lat) for the boundary."));
-        mvc.perform(json(post("/api/v1/console/regions/zones"), "{\"marketId\":\"%s\",\"name\":\"Runs\",\"runsPerDay\":30}".formatted(market))
+                .andExpect(
+                        jsonPath("$.errors[0].message").value("Paste a GeoJSON polygon (lng, lat) for the boundary."));
+        mvc.perform(json(
+                                post("/api/v1/console/regions/zones"),
+                                "{\"marketId\":\"%s\",\"name\":\"Runs\",\"runsPerDay\":30}".formatted(market))
                         .with(TestJwt.staff(admin, StaffRole.ADMIN)))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.errors[0].message").value("Pooled runs a day are 0 to 24."));
-        mvc.perform(json(post("/api/v1/console/regions/markets/{id}/stage", market), "{\"stage\":\"off\",\"confirm\":\"Charlottetown\"}")
+        mvc.perform(json(
+                                post("/api/v1/console/regions/markets/{id}/stage", market),
+                                "{\"stage\":\"off\",\"confirm\":\"Charlottetown\"}")
                         .with(TestJwt.staff(admin, StaffRole.ADMIN)))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.errors[0].message").value("Type the market's name to confirm."));
@@ -239,14 +274,20 @@ class SwitchboardApiTest extends IntegrationTest {
 
     @Test
     void onlyAdminsOpenTheSwitchboard() throws Exception {
-        for (var role : new StaffRole[] {StaffRole.TRUST_SAFETY, StaffRole.DISPATCH, StaffRole.FINANCE, StaffRole.SUPPORT, StaffRole.ANALYST}) {
+        for (var role : new StaffRole[] {
+            StaffRole.TRUST_SAFETY, StaffRole.DISPATCH, StaffRole.FINANCE, StaffRole.SUPPORT, StaffRole.ANALYST
+        }) {
             mvc.perform(get("/api/v1/console/regions").with(TestJwt.staff(admin, role)))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.code").value("insufficient_role"));
-            mvc.perform(json(post("/api/v1/console/regions/provinces/PE/stage"), "{\"stage\":\"pilot\",\"confirm\":\"PE\"}")
+            mvc.perform(json(
+                                    post("/api/v1/console/regions/provinces/PE/stage"),
+                                    "{\"stage\":\"pilot\",\"confirm\":\"PE\"}")
                             .with(TestJwt.staff(admin, role)))
                     .andExpect(status().isForbidden());
-            mvc.perform(json(post("/api/v1/console/regions/markets"), "{\"province\":\"PE\",\"city\":\"Nope\",\"lat\":46.2,\"lng\":-63.1,\"radiusKm\":10}")
+            mvc.perform(json(
+                                    post("/api/v1/console/regions/markets"),
+                                    "{\"province\":\"PE\",\"city\":\"Nope\",\"lat\":46.2,\"lng\":-63.1,\"radiusKm\":10}")
                             .with(TestJwt.staff(admin, role)))
                     .andExpect(status().isForbidden());
             mvc.perform(delete("/api/v1/console/regions/zones/{id}", "z").with(TestJwt.staff(admin, role)))
