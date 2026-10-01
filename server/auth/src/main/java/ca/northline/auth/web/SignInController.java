@@ -1,5 +1,6 @@
 package ca.northline.auth.web;
 
+import ca.northline.auth.application.AuthProperties;
 import ca.northline.auth.application.PhoneCodeSignInService;
 import ca.northline.auth.application.SignInService;
 import ca.northline.auth.domain.Factor;
@@ -46,6 +47,7 @@ class SignInController {
     private final PhoneCodeSignInService phoneCodes;
     private final SessionSignIn sessions;
     private final AppAuthorizationResume apps;
+    private final AuthProperties props;
 
     @PostMapping
     AuthResponses.SignInStarted start(@Valid @RequestBody AuthRequests.Identifier body) {
@@ -106,6 +108,7 @@ class SignInController {
             SignInService.SignedIn done, HttpServletRequest request, HttpServletResponse response) {
         var factors = List.of(done.factor());
         sessions.signIn(done.account().id(), factors, done.sessionId(), request, response);
-        return AuthResponses.Session.of(done.account(), factors).continuingTo(apps.resume(request));
+        return AuthResponses.Session.of(done.account(), factors, props.platformZone())
+                .continuingTo(apps.resume(request));
     }
 }

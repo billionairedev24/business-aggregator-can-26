@@ -34,8 +34,8 @@ class PaymentsScheduler {
         step("payouts", jobs::runPayouts);
     }
 
-    /** Nightly at 03:17 Edmonton: the Stripe Tax reconciliation (S-21). */
-    @Scheduled(cron = "${northline.tax.reconcile-cron:0 17 3 * * *}", zone = "America/Edmonton")
+    /** Nightly at 03:17 in the platform zone (REGION_PLATFORM_ZONE): the Stripe Tax reconciliation (S-21). */
+    @Scheduled(cron = "${northline.tax.reconcile-cron:0 17 3 * * *}", zone = "${northline.region.platform-zone}")
     void reconcileTax() {
         step("stripe tax reconciliation", jobs::reconcileTax);
     }

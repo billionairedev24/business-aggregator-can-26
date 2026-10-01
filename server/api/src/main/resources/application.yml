@@ -68,9 +68,9 @@ northline:
   # The region model (S-134, docs/runbooks/regions.md): provinces and markets are rows in region.regions (V130/V131,
   # edited by the console later); this is the configuration on top. Code never names a province, city or zone.
   region:
-    # Provinces served whatever their row says, CODE or CODE=Zone/Id (a zone here replaces the row's). S-44's
-    # SEARCH_MARKETS / SEARCH_DEFAULT_MARKET are still read when the REGION_ ones are unset.
-    provinces: ${REGION_PROVINCES:${SEARCH_MARKETS:AB=America/Edmonton,BC=America/Vancouver,ON=America/Toronto,QC=America/Toronto}}
+    # Served provinces = the live rows (V131: Alberta) plus any listed here, CODE or CODE=Zone/Id (a zone here replaces
+    # the row's). S-44's SEARCH_MARKETS / SEARCH_DEFAULT_MARKET are still read when the REGION_ ones are unset.
+    provinces: ${REGION_PROVINCES:${SEARCH_MARKETS:}}
     default-province: ${REGION_DEFAULT_PROVINCE:${SEARCH_DEFAULT_MARKET:AB}}
     platform-zone: ${REGION_PLATFORM_ZONE:America/Edmonton}   # nightly jobs, support hours: work with no market
     cache-ttl: ${REGION_CACHE_TTL:60s}
@@ -115,7 +115,8 @@ northline:
   identity:
     provider: ${IDENTITY_PROVIDER:local}
   # Business registry lookups (S-23, docs/runbooks/registries.md). provider per source: fixtures (local/test default;
-  # refused under staging/prod) · manual (every lookup to an agent) · the source's API.
+  # refused under staging/prod) · manual (every lookup to an agent) · the source's API. Which sources serve a business
+  # is region data (region.regions.registries of its province and city market, S-134), never a default.
   registries:
     corporations-canada:                  # ISED Federal Corporation API (GC API Store)
       provider: ${REGISTRY_CORPORATIONS_CANADA_PROVIDER:fixtures}   # fixtures | api | manual
@@ -131,6 +132,7 @@ northline:
       url: ${REGISTRY_CALGARY_URL:https://data.calgary.ca}
       dataset: ${REGISTRY_CALGARY_DATASET:vdjc-pybd}
       key: ${REGISTRY_CALGARY_APP_TOKEN:}                           # Socrata app token (optional, secret)
+      licences: ${REGISTRY_CALGARY_LICENCES:mobile permit,calgary business licence}   # licence names the dataset answers
     recheck-after: ${REGISTRY_RECHECK_AFTER:P30D}
     recheck-cron: ${REGISTRY_RECHECK_CRON:0 41 3 * * *}             # daily, platform zone
   # Google and Microsoft calendar two-way sync (S-32, docs/runbooks/calendar-sync.md): local (fake Google and Outlook;
@@ -255,6 +257,7 @@ northline:
     reply-to: ${EMAIL_REPLY_TO:}
     mailing-address: ${EMAIL_MAILING_ADDRESS:Northline Marketplace Inc. · 1200 – 8th Avenue SW, Calgary, Alberta T2P 1B5, Canada}
     contact: ${EMAIL_CONTACT:support@northline.ca}
+    time-zone: ${EMAIL_TIME_ZONE:${REGION_PLATFORM_ZONE:America/Edmonton}}   # dates in emails (S-134)
     region: ${EMAIL_REGION:}                     # ses: ca-central-1
     endpoint: ${EMAIL_ENDPOINT:}                 # azure: https://<resource>.communication.azure.com; tests/VPC endpoints
     api-key: ${EMAIL_API_KEY:}                   # sendgrid: SG.…; azure: access key (blank = Entra ID)

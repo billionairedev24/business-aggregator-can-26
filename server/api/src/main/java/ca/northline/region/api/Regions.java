@@ -46,7 +46,8 @@ public interface Regions {
 
     /** The next {@code count} holidays of the province on or after {@code from}. */
     default List<Holiday> upcomingHolidays(@Nullable String province, LocalDate from, int count) {
-        return Stream.concat(holidays(province, from.getYear()).stream(), holidays(province, from.getYear() + 1).stream())
+        return Stream.concat(
+                        holidays(province, from.getYear()).stream(), holidays(province, from.getYear() + 1).stream())
                 .filter(h -> !h.date().isBefore(from))
                 .sorted(Comparator.comparing(Holiday::date))
                 .limit(count)

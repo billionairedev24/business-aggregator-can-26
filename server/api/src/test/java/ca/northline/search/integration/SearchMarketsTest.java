@@ -1,16 +1,12 @@
 package ca.northline.search.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import ca.northline.search.application.SearchMoment;
-import ca.northline.search.application.SearchSettings;
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 /** "Now" is the market's local time; markets and their zones are the region model's (S-134, RegionCatalogueTest). */

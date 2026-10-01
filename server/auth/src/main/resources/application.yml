@@ -61,6 +61,7 @@ management:
 northline:
   auth:
     terms-version: "3.0"               # design/09 Terms of Service · Version 3.0 · Effective 1 October 2026
+    platform-zone: ${REGION_PLATFORM_ZONE:America/Edmonton}   # "member since" dates (region configuration, S-134)
     totp-key: ${TOTP_KEY}              # base64 AES-256; no default outside local/test (secrets manager)
     login-page: ${STUDIO_ORIGIN:http://localhost:3100}/sign-in
     # S-62: the consumer web app's sign-in page (consumer-bff's unauthenticated authorization requests, Google / Apple

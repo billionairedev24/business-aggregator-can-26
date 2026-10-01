@@ -1,6 +1,7 @@
 package ca.northline.auth.application;
 
 import java.time.Duration;
+import java.time.ZoneId;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -29,6 +30,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param mfaRequiredClients S-62: OAuth clients that get a code only for a sign-in with a second factor (the Studio's and
  *     the console's BFFs) — a consumer's phone-code sign-in is sent to their sign-in page instead
  */
+// platformZone: the zone account dates ("member since") are shown in — an account belongs to no market
+// (REGION_PLATFORM_ZONE, region configuration; S-134)
 @ConfigurationProperties("northline.auth")
 public record AuthProperties(
         @DefaultValue("3.0") String termsVersion,
@@ -47,7 +50,8 @@ public record AuthProperties(
         @Nullable String clientCityHeader,
         @Nullable String consumerLoginPage,
         @DefaultValue("consumer-bff") List<String> consumerClients,
-        @DefaultValue({"studio-bff", "console-bff"}) List<String> mfaRequiredClients) {
+        @DefaultValue({"studio-bff", "console-bff"}) List<String> mfaRequiredClients,
+        ZoneId platformZone) {
 
     /** WebAuthn relying party: id (registrable domain) and the origins allowed in client data. */
     public record WebAuthn(

@@ -13,6 +13,7 @@ import ca.northline.booking.domain.Quote;
 import ca.northline.booking.domain.QuoteContent;
 import ca.northline.booking.domain.QuoteEnums.QuoteState;
 import ca.northline.identity.api.PersonDirectory;
+import ca.northline.region.api.MerchantPlaces;
 import ca.northline.region.api.TaxRates;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.NotFound;
@@ -36,9 +37,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 class QuoteService implements ListQuoteRequests, SendQuote, ReviseQuote, DeclineQuoteRequest, ViewQuote, AcceptQuote {
 
-    /** Every business on Northline is in Alberta for now (only live region: Calgary). See docs/DECISIONS.md. */
-    static final String PROVINCE = "AB";
-
     static final String ATTACHMENT_NOT_FOUND = "This file wasn't uploaded to this business.";
 
     private final QuoteRequests requests;
@@ -46,6 +44,7 @@ class QuoteService implements ListQuoteRequests, SendQuote, ReviseQuote, Decline
     private final MediaCatalog media;
     private final PersonDirectory people;
     private final TaxRates taxRates;
+    private final MerchantPlaces places;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
@@ -90,7 +89,7 @@ class QuoteService implements ListQuoteRequests, SendQuote, ReviseQuote, Decline
             throw new Conflict("request_expired", "This request has expired.");
         }
         requireAttachments(command.merchantId(), command.content());
-        int taxBps = taxRates.bpsFor(PROVINCE);
+        int taxBps = taxBps(command.merchantId());
         var current = quotes.current(command.merchantId(), List.of(request.id())).stream()
                 .findFirst();
         Quote quote;
@@ -127,7 +126,7 @@ class QuoteService implements ListQuoteRequests, SendQuote, ReviseQuote, Decline
         var prior = quotes.find(command.merchantId(), command.quoteId())
                 .orElseThrow(() -> new NotFound("quote", command.quoteId()));
         requireAttachments(command.merchantId(), command.content());
-        var next = prior.revise(command.content(), taxRates.bpsFor(PROVINCE), command.actorId(), now);
+        var next = prior.revise(command.content(), taxBps(command.merchantId()), command.actorId(), now);
         quotes.updateLifecycle(prior);
         quotes.insertDraft(next);
         var sent = next.send(command.actorId(), now, prior.getId());
@@ -186,5 +185,11 @@ class QuoteService implements ListQuoteRequests, SendQuote, ReviseQuote, Decline
                 .collect(Collectors.toMap(MediaCatalog.MediaInfo::id, Function.identity()));
         return new QuoteView(
                 quote, ids.stream().map(byId::get).filter(Objects::nonNull).toList());
+    }
+
+    /** The rate of the business's own province (else the configured default province; region model, S-134). */
+    private int taxBps(String merchantId) {
+        var province = places.of(merchantId).province();
+        return province == null ? taxRates.bpsFor("") : taxRates.bpsFor(province);
     }
 }

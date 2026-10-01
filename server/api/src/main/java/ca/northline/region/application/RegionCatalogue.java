@@ -53,9 +53,9 @@ class RegionCatalogue implements Regions, Markets {
         this.store = store;
         this.overrides = parse(properties.provinces());
         var code = properties.defaultProvince().strip().toUpperCase(Locale.ROOT);
-        if (!code.isEmpty() && !overrides.containsKey(code)) {
-            throw new IllegalStateException("REGION_DEFAULT_PROVINCE " + code
-                    + " is not one of REGION_PROVINCES " + overrides.keySet());
+        if (!code.isEmpty() && !CODE.matcher(code).matches()) {
+            throw new IllegalStateException(
+                    "REGION_DEFAULT_PROVINCE is a two-letter province or territory code, not: " + code);
         }
         this.defaultProvince = code.isEmpty() ? null : code;
         this.platformZone = properties.platformZone();
@@ -112,7 +112,8 @@ class RegionCatalogue implements Regions, Markets {
         var name = city.strip();
         return data().markets().stream()
                 .filter(m -> m.city().equalsIgnoreCase(name))
-                .filter(m -> province == null || province.isBlank() || m.province().equalsIgnoreCase(province.strip()))
+                .filter(m ->
+                        province == null || province.isBlank() || m.province().equalsIgnoreCase(province.strip()))
                 .findFirst();
     }
 
@@ -219,10 +220,17 @@ class RegionCatalogue implements Regions, Markets {
         }
         var served = new LinkedHashSet<String>();
         overrides.keySet().stream().filter(byCode::containsKey).forEach(served::add);
-        byCode.values().stream().filter(p -> p.status().live()).map(ProvinceProfile::code).forEach(served::add);
-        var unknown = overrides.keySet().stream().filter(c -> !byCode.containsKey(c)).toList();
+        byCode.values().stream()
+                .filter(p -> p.status().live())
+                .map(ProvinceProfile::code)
+                .forEach(served::add);
+        var unknown =
+                overrides.keySet().stream().filter(c -> !byCode.containsKey(c)).toList();
         if (!unknown.isEmpty()) {
             log.warn("REGION_PROVINCES names provinces without a region row: {}", unknown);
+        }
+        if (defaultProvince != null && !byCode.containsKey(defaultProvince)) {
+            log.warn("REGION_DEFAULT_PROVINCE {} has no region row", defaultProvince);
         }
         var provinces = new ArrayList<>(byCode.values());
         var order = List.copyOf(served);
@@ -262,9 +270,7 @@ class RegionCatalogue implements Regions, Markets {
                 r.nameFr() == null ? r.nameEn() : r.nameFr(),
                 zones,
                 status,
-                row.privacyLaw() == null
-                        ? PrivacyLaw.PIPEDA
-                        : CodedEnum.fromCode(PrivacyLaw.class, row.privacyLaw()),
+                row.privacyLaw() == null ? PrivacyLaw.PIPEDA : CodedEnum.fromCode(PrivacyLaw.class, row.privacyLaw()),
                 row.registries(),
                 row.holidays(),
                 row.taxBps() == null ? 0 : row.taxBps());

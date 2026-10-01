@@ -1,9 +1,9 @@
 package ca.northline.merchants.application;
 
 import ca.northline.merchants.api.MerchantDirectory;
-import ca.northline.merchants.api.MerchantPlaces;
 import ca.northline.region.api.MarketProfile;
 import ca.northline.region.api.Markets;
+import ca.northline.region.api.MerchantPlaces;
 import ca.northline.region.api.Regions;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;

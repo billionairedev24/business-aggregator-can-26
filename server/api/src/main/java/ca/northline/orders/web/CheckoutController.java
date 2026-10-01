@@ -9,6 +9,7 @@ import ca.northline.orders.application.CheckoutUseCases.SetUpCheckout;
 import ca.northline.orders.application.CheckoutUseCases.Setup;
 import ca.northline.orders.application.CheckoutUseCases.StartCheckout;
 import ca.northline.payments.api.IdempotentRequests;
+import ca.northline.region.api.FallbackMarket;
 import ca.northline.shared.security.CurrentUser;
 import java.util.Locale;
 import java.util.Objects;
@@ -50,6 +51,7 @@ class CheckoutController {
     private final StartCheckout start;
     private final PlaceOrder place;
     private final IdempotentRequests idempotent;
+    private final FallbackMarket fallback;
 
     /** The checkout form: {@code kind} pooled | direct, the address saved or new, the substitution choice. */
     record CheckoutRequest(
@@ -71,12 +73,16 @@ class CheckoutController {
     @GetMapping("/checkout")
     ResponseEntity<Setup> setup(
             CurrentUser user,
-            @RequestParam(defaultValue = "Calgary") String market,
+            @RequestParam(required = false) @Nullable String market,
             @RequestParam(required = false) @Nullable String lang,
             Locale locale) {
+        // no market named: the region's fallback market (S-47), never a city chosen here
+        var city = market != null && !market.isBlank()
+                ? market
+                : fallback.fallback().map(FallbackMarket.City::city).orElse("");
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
-                .body(setUp.setup(user.userId(), user.mfa(), market, ConsumerCallers.lang(lang, locale)));
+                .body(setUp.setup(user.userId(), user.mfa(), city, ConsumerCallers.lang(lang, locale)));
     }
 
     @PostMapping("/checkout/quote")

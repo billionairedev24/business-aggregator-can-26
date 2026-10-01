@@ -2,6 +2,7 @@ package ca.northline.payments.web;
 
 import static ca.northline.shared.security.MerchantPermission.FINANCE_READ;
 
+import ca.northline.payments.application.BusinessTime;
 import ca.northline.payments.application.ViewEarnings;
 import ca.northline.payments.application.ViewSalesReport;
 import ca.northline.shared.ListResponse;
@@ -44,6 +45,7 @@ class EarningsController {
     private final ViewSalesReport reports;
     private final PaymentsWebMapper mapper;
     private final Clock clock;
+    private final BusinessTime time;
 
     @GetMapping("/earnings")
     @RequiresMerchant(FINANCE_READ)
@@ -69,25 +71,25 @@ class EarningsController {
     @RequiresMerchant(FINANCE_READ)
     ResponseEntity<String> export(@PathVariable String merchantId, @RequestParam(defaultValue = "90d") String period) {
         var p = ViewSalesReport.Period.of(period);
-        return csv("northline-sales-" + p.code() + "-" + today() + ".csv", reports.exportCsv(merchantId, p));
+        return csv("northline-sales-" + p.code() + "-" + today(merchantId) + ".csv", reports.exportCsv(merchantId, p));
     }
 
     @GetMapping("/reports/gst-summary.csv")
     @RequiresMerchant(FINANCE_READ)
     ResponseEntity<String> gst(@PathVariable String merchantId, @RequestParam @Nullable Integer year) {
-        var y = year == null ? today().getYear() : year;
+        var y = year == null ? today(merchantId).getYear() : year;
         return csv("northline-gst-summary-" + y + ".csv", reports.gstSummaryCsv(merchantId, y));
     }
 
     @GetMapping("/reports/annual-statement.csv")
     @RequiresMerchant(FINANCE_READ)
     ResponseEntity<String> annual(@PathVariable String merchantId, @RequestParam @Nullable Integer year) {
-        var y = year == null ? today().getYear() - 1 : year;
+        var y = year == null ? today(merchantId).getYear() - 1 : year;
         return csv("northline-annual-statement-" + y + ".csv", reports.annualStatementCsv(merchantId, y));
     }
 
-    private LocalDate today() {
-        return LocalDate.ofInstant(clock.instant(), ca.northline.payments.domain.Zones.EDMONTON);
+    private LocalDate today(String merchantId) {
+        return LocalDate.ofInstant(clock.instant(), time.of(merchantId));
     }
 
     private static ResponseEntity<String> csv(String filename, String body) {

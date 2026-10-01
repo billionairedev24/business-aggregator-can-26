@@ -34,12 +34,10 @@ import org.mapstruct.Mapper;
 @Mapper
 interface OnboardingWebMapper {
 
-    ZoneId EDMONTON = ZoneId.of("America/Edmonton");
-
     default OnboardingResponse toResponse(OnboardingView view) {
         var a = view.application();
         var checks = view.verifications().stream()
-                .map(v -> toCheck(v, view.documents()))
+                .map(v -> toCheck(v, view.documents(), view.zone()))
                 .toList();
         return new OnboardingResponse(
                 a.getId(),
@@ -79,7 +77,7 @@ interface OnboardingWebMapper {
                 legalDocs);
     }
 
-    default CheckResponse toCheck(Verification v, Map<String, Document> documents) {
+    default CheckResponse toCheck(Verification v, Map<String, Document> documents, ZoneId zone) {
         var docId = v.getDocumentId();
         var doc = docId == null ? null : documents.get(docId);
         return new CheckResponse(
@@ -91,7 +89,7 @@ interface OnboardingWebMapper {
                 v.getStatus(),
                 v.getReference(),
                 doc == null ? null : toDocument(doc),
-                localDate(v.getExpiresAt()),
+                localDate(v.getExpiresAt(), zone),
                 v.getUpdatedAt());
     }
 
@@ -132,7 +130,7 @@ interface OnboardingWebMapper {
         return new ItemResponse(item.id(), item.name(lang), item.regulator());
     }
 
-    default @Nullable LocalDate localDate(@Nullable Instant instant) {
-        return instant == null ? null : LocalDate.ofInstant(instant, EDMONTON);
+    default @Nullable LocalDate localDate(@Nullable Instant instant, ZoneId zone) {
+        return instant == null ? null : LocalDate.ofInstant(instant, zone);
     }
 }

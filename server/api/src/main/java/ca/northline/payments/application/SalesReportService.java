@@ -2,7 +2,6 @@ package ca.northline.payments.application;
 
 import ca.northline.payments.api.EscrowKind;
 import ca.northline.payments.application.SalesReadModel.Sale;
-import ca.northline.payments.domain.Zones;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
@@ -10,6 +9,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -37,13 +37,20 @@ class SalesReportService implements ViewSalesReport {
 
     private final SalesReadModel sales;
     private final Clock clock;
+    private final BusinessTime time;
 
     /** A period's window: {@code [from, to)} and the same-length window before it. */
-    record Window(Instant from, Instant to, Instant previousFrom, Granularity granularity, List<LocalDate> starts) {}
+    record Window(
+            Instant from,
+            Instant to,
+            Instant previousFrom,
+            Granularity granularity,
+            List<LocalDate> starts,
+            ZoneId zone) {}
 
-    Window window(Period period) {
+    Window window(Period period, ZoneId zone) {
         var now = clock.instant();
-        var today = LocalDate.ofInstant(now, Zones.EDMONTON);
+        var today = LocalDate.ofInstant(now, zone);
         return switch (period) {
             case D30, D90 -> {
                 var days = period == Period.D30 ? 30 : 90;
@@ -53,13 +60,14 @@ class SalesReportService implements ViewSalesReport {
                 for (var d = first; !d.isAfter(today); d = d.plusDays(step)) {
                     starts.add(d);
                 }
-                var from = first.atStartOfDay(Zones.EDMONTON).toInstant();
+                var from = first.atStartOfDay(zone).toInstant();
                 yield new Window(
                         from,
                         now,
                         from.minus(Duration.ofDays(days)),
                         period == Period.D30 ? Granularity.DAY : Granularity.WEEK,
-                        starts);
+                        starts,
+                        zone);
             }
             case M12 -> {
                 var first = YearMonth.from(today).minusMonths(11).atDay(1);
@@ -68,18 +76,19 @@ class SalesReportService implements ViewSalesReport {
                     starts.add(first.plusMonths(i));
                 }
                 yield new Window(
-                        first.atStartOfDay(Zones.EDMONTON).toInstant(),
+                        first.atStartOfDay(zone).toInstant(),
                         now,
-                        first.minusMonths(12).atStartOfDay(Zones.EDMONTON).toInstant(),
+                        first.minusMonths(12).atStartOfDay(zone).toInstant(),
                         Granularity.MONTH,
-                        starts);
+                        starts,
+                        zone);
             }
         };
     }
 
     @Override
     public Report report(String merchantId, Period period) {
-        var w = window(period);
+        var w = window(period, time.of(merchantId));
         var all = sales.sales(merchantId, w.previousFrom(), w.to());
         var current =
                 all.stream().filter(s -> !s.occurredAt().isBefore(w.from())).toList();
@@ -122,7 +131,7 @@ class SalesReportService implements ViewSalesReport {
     }
 
     private static int bucket(Window w, List<LocalDate> starts, Instant at) {
-        var day = LocalDate.ofInstant(at, Zones.EDMONTON);
+        var day = LocalDate.ofInstant(at, w.zone());
         if (w.granularity() == Granularity.MONTH) {
             var month = YearMonth.from(day);
             for (int i = 0; i < starts.size(); i++) {
@@ -203,12 +212,12 @@ class SalesReportService implements ViewSalesReport {
 
     @Override
     public String exportCsv(String merchantId, Period period) {
-        var w = window(period);
+        var w = window(period, time.of(merchantId));
         var csv = new Csv(
                 "Date", "Job / order", "Customer", "Listing", "Source", "Gross", "Fee", "Net", "GST/HST", "State");
         for (var s : sales.sales(merchantId, w.from(), w.to())) {
             csv.row(
-                    DAY.format(s.occurredAt().atZone(Zones.EDMONTON)),
+                    DAY.format(s.occurredAt().atZone(w.zone())),
                     s.orderNumber() == null ? s.label() : s.label() + " · " + s.orderNumber(),
                     Objects.requireNonNullElse(s.customerName(), ""),
                     Objects.requireNonNullElse(s.listingName(), ""),
@@ -266,8 +275,9 @@ class SalesReportService implements ViewSalesReport {
 
     /** Every month of the year up to the current one, zero-filled. */
     private List<SalesReadModel.Month> months(String merchantId, int year) {
-        var current = YearMonth.from(LocalDate.ofInstant(clock.instant(), Zones.EDMONTON));
-        var found = sales.months(merchantId, year).stream()
+        var zone = time.of(merchantId);
+        var current = YearMonth.from(LocalDate.ofInstant(clock.instant(), zone));
+        var found = sales.months(merchantId, year, zone).stream()
                 .collect(Collectors.toMap(SalesReadModel.Month::month, Function.identity()));
         var out = new ArrayList<SalesReadModel.Month>();
         for (int m = 1; m <= 12; m++) {

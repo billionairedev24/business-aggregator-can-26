@@ -10,7 +10,7 @@ import org.jspecify.annotations.Nullable;
 /**
  * Everything the Studio dashboard shows, for every portal: the client picks the provider, seller or "both" variant
  * (headline, KPIs, "Today" vs "Tonight's run", "Needs you"). Money in CAD cents; instants ISO-8601; the client formats
- * in America/Edmonton. Sections whose owning module has no data yet are empty / null.
+ * in the business's time zone (region model). Sections whose owning module has no data yet are empty / null.
  */
 public record Dashboard(
         LocalDate today,

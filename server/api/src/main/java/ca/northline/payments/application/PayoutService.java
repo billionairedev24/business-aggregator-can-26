@@ -7,7 +7,6 @@ import ca.northline.payments.domain.Payout;
 import ca.northline.payments.domain.PayoutAccount;
 import ca.northline.payments.domain.PayoutMessages;
 import ca.northline.payments.domain.PayoutSchedule;
-import ca.northline.payments.domain.Zones;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.RuleViolation;
 import ca.northline.shared.stripe.StripeIdempotencyKeys;
@@ -43,6 +42,7 @@ class PayoutService implements ViewPayouts, MovePayouts, PayoutPlan {
     private final PaymentGateway charges;
     private final ApplicationEventPublisher events;
     private final Clock clock;
+    private final BusinessTime time;
 
     @Override
     public Overview overview(String merchantId) {
@@ -59,7 +59,7 @@ class PayoutService implements ViewPayouts, MovePayouts, PayoutPlan {
                 available,
                 available - reserve,
                 reserve,
-                schedule.nextAfter(now, pausedUntil).orElse(null),
+                schedule.nextAfter(now, pausedUntil, time.of(merchantId)).orElse(null),
                 schedule,
                 payouts.activeAccount(merchantId).orElse(null),
                 pending,
@@ -79,7 +79,8 @@ class PayoutService implements ViewPayouts, MovePayouts, PayoutPlan {
                 .orElse(null);
         var available = balances.of(merchantId).availableCents();
         return new Preview(
-                schedule.nextAfter(clock.instant(), pausedUntil).orElse(null),
+                schedule.nextAfter(clock.instant(), pausedUntil, time.of(merchantId))
+                        .orElse(null),
                 available - schedule.reserve().heldBack(available));
     }
 
@@ -159,16 +160,18 @@ class PayoutService implements ViewPayouts, MovePayouts, PayoutPlan {
     @Transactional
     int runScheduled() {
         var now = clock.instant();
-        var today = LocalDate.ofInstant(now, Zones.EDMONTON);
-        var payoutTime =
-                today.atTime(PayoutSchedule.PAYOUT_TIME).atZone(Zones.EDMONTON).toInstant();
-        if (now.isBefore(payoutTime)) {
-            return 0;
-        }
-        var dayStart = today.atStartOfDay(Zones.EDMONTON).toInstant();
-        var dayEnd = today.plusDays(1).atStartOfDay(Zones.EDMONTON).toInstant();
         int sent = 0;
         for (var merchantId : payouts.merchantsWithSchedules()) {
+            // each business's own day and 9:00 (region model): a run sweeps every zone it has reached
+            var zone = time.of(merchantId);
+            var today = LocalDate.ofInstant(now, zone);
+            var payoutTime =
+                    today.atTime(PayoutSchedule.PAYOUT_TIME).atZone(zone).toInstant();
+            if (now.isBefore(payoutTime)) {
+                continue;
+            }
+            var dayStart = today.atStartOfDay(zone).toInstant();
+            var dayEnd = today.plusDays(1).atStartOfDay(zone).toInstant();
             var schedule = schedule(merchantId);
             if (!schedule.isPayoutDay(today) || payouts.scheduledBetween(merchantId, dayStart, dayEnd)) {
                 continue;
@@ -313,7 +316,7 @@ class PayoutService implements ViewPayouts, MovePayouts, PayoutPlan {
                     "payouts_paused",
                     "Payouts are paused until %s after the bank account change."
                             .formatted(DateTimeFormatter.ofPattern("MMM d 'at' h:mm a", Locale.CANADA)
-                                    .withZone(Zones.EDMONTON)
+                                    .withZone(time.of(merchantId))
                                     .format(until)));
         }
     }

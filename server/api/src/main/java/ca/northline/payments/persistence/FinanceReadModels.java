@@ -9,6 +9,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.OptionalInt;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +17,7 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
-/** SQL read models behind Earnings, Reports, tax documents and the dashboard. Months / weeks are Edmonton time. */
+/** SQL read models behind Earnings, Reports, tax documents and the dashboard. Months / weeks are the business's time zone. */
 @Repository
 @RequiredArgsConstructor
 class FinanceReadModels implements EarningsReadModel, SalesReadModel {
@@ -182,26 +183,26 @@ class FinanceReadModels implements EarningsReadModel, SalesReadModel {
     }
 
     @Override
-    public List<Month> months(String merchantId, int year) {
+    public List<Month> months(String merchantId, int year, ZoneId zone) {
         return jdbc.sql("""
                         with months as (
-                          select to_char(occurred_at at time zone 'America/Edmonton', 'YYYY-MM') as ym,
+                          select to_char(occurred_at at time zone :tz, 'YYYY-MM') as ym,
                                  sum(amount_cents) as gross, sum(coalesce(fee_cents, 0)) as fee, sum(tax_cents) as tax
                             from payments.escrows
-                           where merchant_id = :m and extract(year from occurred_at at time zone 'America/Edmonton') = :y
+                           where merchant_id = :m and extract(year from occurred_at at time zone :tz) = :y
                            group by 1),
                         refunds as (
-                          select to_char(created_at at time zone 'America/Edmonton', 'YYYY-MM') as ym, sum(amount_cents) as refunded,
+                          select to_char(created_at at time zone :tz, 'YYYY-MM') as ym, sum(amount_cents) as refunded,
                                  sum(tax_cents) as tax_refunded
                             from payments.refunds
                            where merchant_id = :m and state = 'paid'
-                             and extract(year from created_at at time zone 'America/Edmonton') = :y
+                             and extract(year from created_at at time zone :tz) = :y
                            group by 1),
                         payouts as (
-                          select to_char(created_at at time zone 'America/Edmonton', 'YYYY-MM') as ym, sum(amount_cents) as paid
+                          select to_char(created_at at time zone :tz, 'YYYY-MM') as ym, sum(amount_cents) as paid
                             from payments.payouts
                            where merchant_id = :m and state in ('in_transit', 'paid')
-                             and extract(year from created_at at time zone 'America/Edmonton') = :y
+                             and extract(year from created_at at time zone :tz) = :y
                            group by 1),
                         keys as (select ym from months union select ym from refunds union select ym from payouts)
                         select k.ym, coalesce(m.gross, 0) as gross, coalesce(m.fee, 0) as fee, coalesce(m.tax, 0) as tax,
@@ -211,6 +212,7 @@ class FinanceReadModels implements EarningsReadModel, SalesReadModel {
                          order by k.ym""")
                 .param("m", merchantId)
                 .param("y", year)
+                .param("tz", zone.getId())
                 .query((rs, _) -> new Month(
                         YearMonth.parse(rs.getString("ym")),
                         rs.getLong("gross"),

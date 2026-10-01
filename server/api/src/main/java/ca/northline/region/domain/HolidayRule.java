@@ -22,10 +22,11 @@ public enum HolidayRule {
     GOOD_FRIDAY("Good Friday", "Vendredi saint", y -> easterSunday(y).minusDays(2)),
     EASTER_MONDAY("Easter Monday", "Lundi de Pâques", y -> easterSunday(y).plusDays(1)),
     VICTORIA_DAY("Victoria Day", "Fête de la Reine", y -> mondayOnOrBefore(y, 5, 24)),
-    PATRIOTS_DAY(
-            "National Patriots' Day", "Journée nationale des patriotes", y -> mondayOnOrBefore(y, 5, 24)),
+    PATRIOTS_DAY("National Patriots' Day", "Journée nationale des patriotes", y -> mondayOnOrBefore(y, 5, 24)),
     INDIGENOUS_PEOPLES_DAY(
-            "National Indigenous Peoples Day", "Journée nationale des peuples autochtones", y -> LocalDate.of(y, 6, 21)),
+            "National Indigenous Peoples Day",
+            "Journée nationale des peuples autochtones",
+            y -> LocalDate.of(y, 6, 21)),
     SAINT_JEAN_BAPTISTE("Saint-Jean-Baptiste Day", "Fête nationale (Saint-Jean-Baptiste)", y -> LocalDate.of(y, 6, 24)),
     CANADA_DAY("Canada Day", "Fête du Canada", y -> LocalDate.of(y, 7, 1)),
     NUNAVUT_DAY("Nunavut Day", "Jour du Nunavut", y -> LocalDate.of(y, 7, 9)),

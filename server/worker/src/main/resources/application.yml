@@ -61,12 +61,18 @@ northline:
   # Notifications (S-27, docs/runbooks/notifications.md): the payout.failed email through the shared email library
   # (same settings as the api, docs/runbooks/email.md) and SMS through the shared SMS library (same settings as
   # northline-auth). `local` = Mailpit / the log; staging and prod refuse `local` for both.
+  # Region configuration the worker needs (S-134; the api's northline.region, docs/runbooks/regions.md): nightly jobs
+  # run in the platform zone; quiet hours use each business's own zone from the region rows.
+  region:
+    default-province: ${REGION_DEFAULT_PROVINCE:${SEARCH_DEFAULT_MARKET:AB}}
+    platform-zone: ${REGION_PLATFORM_ZONE:America/Edmonton}
   email:
     provider: ${EMAIL_PROVIDER:local}
     from: ${EMAIL_FROM:Northline <no-reply@northline.ca>}
     reply-to: ${EMAIL_REPLY_TO:}
     mailing-address: ${EMAIL_MAILING_ADDRESS:Northline Marketplace Inc. · 1200 – 8th Avenue SW, Calgary, Alberta T2P 1B5, Canada}
     contact: ${EMAIL_CONTACT:support@northline.ca}
+    time-zone: ${EMAIL_TIME_ZONE:${REGION_PLATFORM_ZONE:America/Edmonton}}   # dates in emails (S-134)
     region: ${EMAIL_REGION:}
     endpoint: ${EMAIL_ENDPOINT:}
     api-key: ${EMAIL_API_KEY:}

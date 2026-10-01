@@ -1,6 +1,7 @@
 package ca.northline.worker.notifications;
 
 import ca.northline.email.EmailContent;
+import java.time.ZoneId;
 import java.util.Locale;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
@@ -41,11 +42,11 @@ public record Notice(
 
     /** The words of this notice for one reader. */
     public interface Texts {
-        /** One short message for SMS and the push body (ids and amounts only, no personal data). */
-        String text(String business, Locale locale);
+        /** One short message for SMS and the push body (ids and amounts only, no personal data); dates in {@code zone}. */
+        String text(String business, Locale locale, ZoneId zone);
 
         /** The push title. */
-        String title(String business, Locale locale);
+        String title(String business, Locale locale, ZoneId zone);
 
         /**
          * The email, when the worker owns this notice's email ({@code payout.failed}, {@code webhook disabled});

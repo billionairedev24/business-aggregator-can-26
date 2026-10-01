@@ -43,7 +43,7 @@ class RegistryRulesTest {
     }
 
     static RegistryCheck check(Answer answer, Trigger trigger) {
-        return RegistryCheck.of("c", "m", "v", query(), answer, trigger, T);
+        return RegistryCheck.of("c", "m", "v", query(), answer, trigger, T, java.time.ZoneId.of("America/Edmonton"));
     }
 
     static Answer found(String name, RegistryRecord.Standing standing, LocalDate expires) {

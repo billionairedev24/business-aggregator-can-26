@@ -9,15 +9,14 @@ import java.util.Currency;
 import java.util.Locale;
 
 /**
- * How values read in the recipient's language: money in CAD, dates and times in {@code America/Edmonton}
- * (CLAUDE.md § Conventions). Templates receive these strings, never raw numbers or instants.
+ * How values read in the recipient's language: money in CAD, dates and times in {@code zone} — the configured email
+ * time zone ({@code northline.email.time-zone}, the platform zone by default) or the business's own (region model,
+ * S-134). Templates receive these strings, never raw numbers or instants.
  */
 public record EmailFormat(Locale locale, ZoneId zone) {
 
-    public static final ZoneId EDMONTON = ZoneId.of("America/Edmonton");
-
-    public static EmailFormat of(Locale locale) {
-        return new EmailFormat(EmailLocales.supported(locale), EDMONTON);
+    public static EmailFormat of(Locale locale, ZoneId zone) {
+        return new EmailFormat(EmailLocales.supported(locale), zone);
     }
 
     /** {@code $1,234.56} / {@code 1 234,56 $}. */

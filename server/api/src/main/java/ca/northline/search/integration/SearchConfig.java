@@ -1,20 +1,14 @@
 package ca.northline.search.integration;
 
+import ca.northline.region.api.Markets;
 import ca.northline.search.application.SearchCache;
 import ca.northline.search.application.SearchIndex;
 import ca.northline.search.application.SearchRateLimit;
-import ca.northline.region.api.Markets;
 import ca.northline.search.application.SearchSettings;
-import ca.northline.search.domain.SearchQuery;
 import ca.northline.shared.WebhookRateLimiter;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import java.time.Clock;
-import java.time.DateTimeException;
-import java.time.ZoneId;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;

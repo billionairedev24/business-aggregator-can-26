@@ -8,6 +8,7 @@ import ca.northline.merchants.domain.Document;
 import ca.northline.merchants.domain.GstNumber;
 import ca.northline.merchants.domain.MerchantApplication;
 import ca.northline.merchants.domain.Verification;
+import ca.northline.region.api.MerchantPlaces;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
@@ -15,7 +16,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.Objects;
 import java.util.Set;
@@ -43,7 +43,6 @@ class OnboardingVerificationService implements CompleteVerification {
     static final String PERMITS = "Enter your permit numbers, or confirm none are required.";
     static final String ALCOHOL = "Enter the licence number, or confirm you don't sell alcohol.";
     static final String SLOT = "Pick one of the offered visit slots.";
-    static final ZoneId EDMONTON = ZoneId.of("America/Edmonton");
 
     private final ApplicationRepository applications;
     private final VerificationRepository verifications;
@@ -52,6 +51,7 @@ class OnboardingVerificationService implements CompleteVerification {
     private final BankLinking bank;
     private final ViewOnboarding viewOnboarding;
     private final Clock clock;
+    private final MerchantPlaces places;
 
     @Override
     public OnboardingView complete(Command command) {
@@ -124,10 +124,11 @@ class OnboardingVerificationService implements CompleteVerification {
         }
         Instant expires = null;
         if (command.expiresOn() != null) {
-            if (!command.expiresOn().isAfter(LocalDate.ofInstant(now, EDMONTON))) {
+            var zone = places.of(command.merchantId()).zone();
+            if (!command.expiresOn().isAfter(LocalDate.ofInstant(now, zone))) {
                 throw RuleViolation.of(EXPIRES, "range", EXPIRED);
             }
-            expires = command.expiresOn().atStartOfDay(EDMONTON).toInstant();
+            expires = command.expiresOn().atStartOfDay(zone).toInstant();
         }
         check.submit(null, docId, expires, now);
     }

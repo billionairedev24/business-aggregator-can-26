@@ -31,7 +31,8 @@ class TaxRateQueries implements TaxRates {
                 .param("province", province)
                 .query(BigDecimal.class)
                 .optional()
-                .map(rate -> rate.movePointRight(4).setScale(0, RoundingMode.HALF_UP).intValueExact())
+                .map(rate ->
+                        rate.movePointRight(4).setScale(0, RoundingMode.HALF_UP).intValueExact())
                 .orElse(FEDERAL_GST_BPS);
     }
 }

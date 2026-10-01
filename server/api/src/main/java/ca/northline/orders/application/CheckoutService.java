@@ -48,6 +48,7 @@ import ca.northline.payments.api.PaymentAuthorizations;
 import ca.northline.payments.api.PaymentSettings;
 import ca.northline.payments.api.PaymentStepUp;
 import ca.northline.payments.api.TaxCalculations;
+import ca.northline.region.api.Regions;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.Ids;
 import ca.northline.shared.NotFound;
@@ -93,10 +94,7 @@ class CheckoutService
                 CheckoutUseCases.PlaceOrder,
                 CheckoutUseCases.ExpireCheckouts {
 
-    static final ZoneId ZONE = ZoneId.of("America/Edmonton");
     static final Duration HOLD = Duration.ofMinutes(30);
-    static final Set<String> PROVINCES =
-            Set.of("AB", "BC", "MB", "NB", "NL", "NS", "NT", "NU", "ON", "PE", "QC", "SK", "YT");
     static final Set<String> SUBSTITUTIONS = Set.of("similar", "refund", "ask");
     static final Pattern POSTAL_CODE = Pattern.compile("[A-Z]\\d[A-Z] ?\\d[A-Z]\\d");
     static final String DIRECT = "direct";
@@ -118,6 +116,7 @@ class CheckoutService
     private final CheckoutStore checkouts;
     private final ApplicationEventPublisher events;
     private final Clock clock;
+    private final Regions regions;
 
     // ── set-up and quote ──────────────────────────────────────────────────────────────────────────────────────────
 
@@ -458,15 +457,16 @@ class CheckoutService
         var out = new ArrayList<Option>();
         if (handling.stream().allMatch(Objects::nonNull)) {
             var days = handling.stream().mapToInt(Integer::intValue).max().orElse(0);
-            var today = LocalDate.ofInstant(now, ZONE);
+            var zone = runs.zone(market);
+            var today = LocalDate.ofInstant(now, zone);
             runs.upcoming(market, now).stream()
-                    .filter(r -> ChronoUnit.DAYS.between(today, LocalDate.ofInstant(r.startsAt(), ZONE)) >= days)
+                    .filter(r -> ChronoUnit.DAYS.between(today, LocalDate.ofInstant(r.startsAt(), zone)) >= days)
                     .limit(2)
                     .forEach(r -> out.add(new Option(
                             r.windowId(),
                             POOLED,
                             r.windowId(),
-                            day(today, r.startsAt()),
+                            day(today, r.startsAt(), zone),
                             r.startsAt(),
                             r.endsAt(),
                             r.orderBy(),
@@ -483,8 +483,8 @@ class CheckoutService
         return out;
     }
 
-    private static String day(LocalDate today, Instant at) {
-        var days = ChronoUnit.DAYS.between(today, LocalDate.ofInstant(at, ZONE));
+    private static String day(LocalDate today, Instant at, ZoneId zone) {
+        var days = ChronoUnit.DAYS.between(today, LocalDate.ofInstant(at, zone));
         return days <= 0 ? "today" : days == 1 ? "tomorrow" : "later";
     }
 
@@ -512,7 +512,7 @@ class CheckoutService
             violations.add(new Violation("address.city", "required", CITY));
         }
         var provinceCode = province == null ? null : province.toUpperCase(Locale.ROOT);
-        if (provinceCode == null || !PROVINCES.contains(provinceCode)) {
+        if (provinceCode == null || regions.province(provinceCode).isEmpty()) {
             violations.add(new Violation("address.province", "format", PROVINCE));
         }
         var postalCode = postal == null ? null : postal.toUpperCase(Locale.ROOT).replace('-', ' ');

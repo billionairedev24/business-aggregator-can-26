@@ -86,6 +86,9 @@ interface AvailabilityWebMapper {
     @Mapping(target = "serviceAreas", source = "rules.serviceAreas")
     RulesResponse toResponse(RulesView view);
 
+    @Mapping(
+            target = "province",
+            expression = "java(new AvailabilityDtos.Names(view.provinceNameEn(), view.provinceNameFr()))")
     TimeOffListResponse toResponse(TimeOffView view);
 
     @Mapping(target = "id", source = "timeOff.id")
@@ -99,6 +102,9 @@ interface AvailabilityWebMapper {
 
     @Mapping(target = "key", source = "holiday.key")
     @Mapping(target = "date", source = "holiday.date")
+    @Mapping(
+            target = "name",
+            expression = "java(new AvailabilityDtos.Names(view.holiday().nameEn(), view.holiday().nameFr()))")
     HolidayResponse toResponse(HolidayView view);
 
     CalendarResponse toResponse(CalendarView view);

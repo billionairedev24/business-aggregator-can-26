@@ -1,6 +1,7 @@
 package ca.northline.availability.persistence;
 
 import ca.northline.availability.api.ServiceAreas;
+import ca.northline.availability.application.MarketZones;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -10,17 +11,44 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
-/** {@link ServiceAreas} over {@code availability.service_areas} and the zone geometry of V114. */
+/**
+ * {@link ServiceAreas} over {@code availability.service_areas} and the zone geometry of V114; {@link MarketZones}: the
+ * zones each market offers (V131).
+ */
 @Repository
 @RequiredArgsConstructor
-class ServiceAreaQueries implements ServiceAreas {
+class ServiceAreaQueries implements ServiceAreas, MarketZones {
 
     private static final String POINT = "ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography";
 
     private final JdbcClient jdbc;
+
+    @Override
+    public List<String> offered(@Nullable String marketId) {
+        if (marketId == null) {
+            return List.of();
+        }
+        return jdbc.sql("select name from availability.service_zones where market_id = :m order by sort, name")
+                .param("m", marketId)
+                .query((rs, _) -> rs.getString("name"))
+                .list();
+    }
+
+    @Override
+    public Set<String> defaults(@Nullable String marketId) {
+        if (marketId == null) {
+            return Set.of();
+        }
+        return Set.copyOf(jdbc.sql(
+                        "select name from availability.service_zones where market_id = :m and default_on order by sort")
+                .param("m", marketId)
+                .query((rs, _) -> rs.getString("name"))
+                .list());
+    }
 
     @Override
     public Map<String, List<String>> zones(Collection<String> merchantIds) {

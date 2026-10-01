@@ -13,14 +13,15 @@ import org.junit.jupiter.api.Test;
 /** Fees, payout schedules and release rules — plain domain tests. */
 class PayoutRulesTest {
 
+    /** Test data: a business in a Mountain-time market. */
+    static final java.time.ZoneId ZONE = java.time.ZoneId.of("America/Edmonton");
+
     private static java.time.Instant edmonton(String localDateTime) {
-        return LocalDateTime.parse(localDateTime).atZone(Zones.EDMONTON).toInstant();
+        return LocalDateTime.parse(localDateTime).atZone(ZONE).toInstant();
     }
 
     private static String local(java.time.Instant instant) {
-        return ZonedDateTime.ofInstant(instant, Zones.EDMONTON)
-                .toLocalDateTime()
-                .toString();
+        return ZonedDateTime.ofInstant(instant, ZONE).toLocalDateTime().toString();
     }
 
     @Test
@@ -44,14 +45,17 @@ class PayoutRulesTest {
     void weekly_nextFridayAtNine() {
         var friday = PayoutSchedule.DEFAULT;
         // Tuesday Sep 8 2026, 10:00 → Friday Sep 11, 09:00
-        assertThat(local(friday.nextAfter(edmonton("2026-09-08T10:00"), null).orElseThrow()))
+        assertThat(local(friday.nextAfter(edmonton("2026-09-08T10:00"), null, ZONE)
+                        .orElseThrow()))
                 .isEqualTo("2026-09-11T09:00");
         // Friday 09:30, after the run → next Friday
-        assertThat(local(friday.nextAfter(edmonton("2026-09-11T09:30"), null).orElseThrow()))
+        assertThat(local(friday.nextAfter(edmonton("2026-09-11T09:30"), null, ZONE)
+                        .orElseThrow()))
                 .isEqualTo("2026-09-18T09:00");
         // Monday Sep 14 as in the design's preview
         var monday = new PayoutSchedule(PayoutSchedule.Frequency.WEEKLY, 1, null, PayoutSchedule.Reserve.NONE);
-        assertThat(local(monday.nextAfter(edmonton("2026-09-08T10:00"), null).orElseThrow()))
+        assertThat(local(monday.nextAfter(edmonton("2026-09-08T10:00"), null, ZONE)
+                        .orElseThrow()))
                 .isEqualTo("2026-09-14T09:00");
     }
 
@@ -59,7 +63,7 @@ class PayoutRulesTest {
     void bankChangeHold_skipsPayoutDaysInsideIt() {
         var friday = PayoutSchedule.DEFAULT;
         // hold ends Friday 14:14 → that Friday's 09:00 run is skipped
-        assertThat(local(friday.nextAfter(edmonton("2026-09-10T14:14"), edmonton("2026-09-11T14:14"))
+        assertThat(local(friday.nextAfter(edmonton("2026-09-10T14:14"), edmonton("2026-09-11T14:14"), ZONE)
                         .orElseThrow()))
                 .isEqualTo("2026-09-18T09:00");
     }
@@ -67,21 +71,24 @@ class PayoutRulesTest {
     @Test
     void daily_monthly_manual() {
         var daily = new PayoutSchedule(PayoutSchedule.Frequency.DAILY, null, null, PayoutSchedule.Reserve.NONE);
-        assertThat(local(daily.nextAfter(edmonton("2026-09-11T10:00"), null).orElseThrow()))
+        assertThat(local(daily.nextAfter(edmonton("2026-09-11T10:00"), null, ZONE)
+                        .orElseThrow()))
                 .isEqualTo("2026-09-14T09:00");
         var first = new PayoutSchedule(
                 PayoutSchedule.Frequency.MONTHLY,
                 null,
                 PayoutSchedule.MonthlyAnchor.FIRST,
                 PayoutSchedule.Reserve.NONE);
-        assertThat(local(first.nextAfter(edmonton("2026-09-08T10:00"), null).orElseThrow()))
+        assertThat(local(first.nextAfter(edmonton("2026-09-08T10:00"), null, ZONE)
+                        .orElseThrow()))
                 .isEqualTo("2026-10-01T09:00");
         var last = new PayoutSchedule(
                 PayoutSchedule.Frequency.MONTHLY, null, PayoutSchedule.MonthlyAnchor.LAST, PayoutSchedule.Reserve.NONE);
-        assertThat(local(last.nextAfter(edmonton("2026-02-10T10:00"), null).orElseThrow()))
+        assertThat(local(
+                        last.nextAfter(edmonton("2026-02-10T10:00"), null, ZONE).orElseThrow()))
                 .isEqualTo("2026-02-28T09:00");
         var manual = new PayoutSchedule(PayoutSchedule.Frequency.MANUAL, 3, null, PayoutSchedule.Reserve.NONE);
-        assertThat(manual.nextAfter(edmonton("2026-09-08T10:00"), null)).isEmpty();
+        assertThat(manual.nextAfter(edmonton("2026-09-08T10:00"), null, ZONE)).isEmpty();
         assertThat(manual.weekday()).isNull();
     }
 

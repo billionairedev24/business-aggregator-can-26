@@ -134,10 +134,14 @@ final class AvailabilityDtos {
             List<List<String>> specialRanges,
             @Nullable String reason) {}
 
-    record HolidayResponse(String key, LocalDate date, boolean open) {}
+    /** {@code name}: the holiday's name in English and French (region model; S-134). */
+    record HolidayResponse(String key, LocalDate date, Names name, boolean open) {}
 
+    record Names(String en, String fr) {}
+
+    /** {@code province}: the province whose statutory holidays these are, en and fr (blank when none is known). */
     record TimeOffListResponse(
-            List<TimeOffResponse> entries, List<HolidayResponse> holidays, long holidayPremiumCents) {}
+            List<TimeOffResponse> entries, List<HolidayResponse> holidays, long holidayPremiumCents, Names province) {}
 
     record ConflictsResponse(int bookings) {}
 
