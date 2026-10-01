@@ -5024,6 +5024,9 @@ Branch `fulfil/s-86-dispatch`, **stacked on S-78** (#116, itself on S-89 #115): 
   due 6:10 pm", "Courier is here", "Picked up 6:12 pm" and "Finding a courier · pickup about …" (en + fr-CA).
   `CourierPickups` gains `atMerchant(merchantId, orderIds)` plus `pickedUpAt` and `runLabel`.
 - **OpenAPI:** the courier paths are in the `public` document (the mobile apps' audience), not a new group.
+- **Dev seed compatibility:** the V108 dev seed has two courier rows for one person and no market, and seed files
+  aren't edited. The one-courier-per-person index therefore covers only couriers ops onboards (`market` set). A
+  window without a market (the seed's R-611/R-612 serve every market) takes the order's delivery city as its market.
 - **Schema (V202):**
   - new `fulfilment.deliveries`, `delivery_pickups` and `shifts`;
   - `couriers` + `market, active, last_assigned_at, created_at`, with unique `user_id`;
