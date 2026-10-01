@@ -651,3 +651,20 @@ This business isn't suspended.	Cette entreprise n’est pas suspendue.	new
 The business is already on that tier.	L’entreprise est déjà à ce niveau.	new
 Only an approved business has a tier to change.	Seule une entreprise approuvée a un niveau à changer.	new
 Only a verified or submitted check can be asked for again.	Seule une vérification approuvée ou soumise peut être redemandée.	new
+Type the province code to confirm.	Tapez le code de la province pour confirmer.	new
+Type the market's name to confirm.	Tapez le nom du marché pour confirmer.	new
+Choose off, waitlist, pilot or live.	Choisissez fermée, liste d’attente, pilote ou en service.	new
+A market can't be more open than its province.	Un marché ne peut pas être plus ouvert que sa province.	new
+Complete the checklist before going live.	Terminez la liste de vérification avant la mise en service.	new
+Add a delivery zone with a boundary before the market goes live.	Ajoutez une zone de livraison avec une limite avant la mise en service du marché.	new
+Choose own fleet, contracted or hybrid.	Choisissez flotte interne, sous-traitée ou hybride.	new
+Enter the city or area, 2 to 60 characters.	Entrez la ville ou le secteur, de 2 à 60 caractères.	new
+That province already has a market with this name.	Cette province a déjà un marché de ce nom.	new
+Give the market's centre as a latitude and longitude in Canada.	Indiquez le centre du marché par une latitude et une longitude au Canada.	new
+The radius is 1 to 200 km.	Le rayon est de 1 à 200 km.	new
+Enter the zone's name, 1 to 60 characters.	Entrez le nom de la zone, de 1 à 60 caractères.	new
+Choose one of the province's markets.	Choisissez un des marchés de la province.	new
+Pooled runs a day are 0 to 24.	Les tournées groupées par jour vont de 0 à 24.	new
+Enter an amount of $0 or more.	Entrez un montant de 0 $ ou plus.	new
+Paste a GeoJSON polygon (lng, lat) for the boundary.	Collez un polygone GeoJSON (lng, lat) pour la limite.	new
+A live market keeps at least one zone. Lower its stage first.	Un marché en service garde au moins une zone. Abaissez d’abord son étape.	new

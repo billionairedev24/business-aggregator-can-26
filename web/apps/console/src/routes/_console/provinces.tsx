@@ -1,4 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { ScreenPending } from '../../features/shell/ScreenPending';
+import { z } from 'zod';
+import { Switchboard } from '../../features/regions/Switchboard';
 
-export const Route = createFileRoute('/_console/provinces')({ component: () => <ScreenPending screen="regions" /> });
+/** The province switchboard (S-84): `?province=<code>`. Admins only. */
+export const Route = createFileRoute('/_console/provinces')({
+  validateSearch: z.object({ province: z.string().optional() }),
+  component: Switchboard,
+});
