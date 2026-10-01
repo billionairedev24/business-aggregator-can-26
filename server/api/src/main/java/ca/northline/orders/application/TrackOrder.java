@@ -20,6 +20,7 @@ public interface TrackOrder {
      * @param deliveryProof the courier's proof at drop-off: {@code photo} | {@code signature} | {@code pin} (S-78)
      * @param canConfirm the customer can confirm receipt now ({@link ConfirmDelivery}; S-78)
      * @param paysShopsAt when the shops are paid without a confirmation: 7 days after delivery (goods, S-78)
+     * @param courier the courier bringing it, live (S-88); null before fulfilment has the order
      */
     record OrderTracking(
             String orderId,
@@ -38,7 +39,8 @@ public interface TrackOrder {
             @Nullable String deliveryProof,
             @Nullable Instant confirmedAt,
             boolean canConfirm,
-            @Nullable Instant paysShopsAt) {
+            @Nullable Instant paysShopsAt,
+            @Nullable CourierProgress courier) {
 
         public OrderTracking {
             shops = List.copyOf(shops);

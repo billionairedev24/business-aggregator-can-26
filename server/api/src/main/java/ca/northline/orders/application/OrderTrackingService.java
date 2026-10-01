@@ -33,6 +33,7 @@ class OrderTrackingService implements TrackOrder {
     private final DeliveryRuns runs;
     private final BusinessNames names;
     private final Clock clock;
+    private final CourierProgressReader couriers;
 
     @Override
     public OrderTracking view(String customerId, String orderId) {
@@ -69,7 +70,8 @@ class OrderTrackingService implements TrackOrder {
                 "goods".equals(o.type()) && OrderDelivery.confirmable(o.state()),
                 "goods".equals(o.type()) && o.deliveredAt() != null && o.confirmedAt() == null
                         ? EscrowKind.GOODS.releaseAt(o.deliveredAt())
-                        : null);
+                        : null,
+                couriers.of(o.id()));
     }
 
     private Delivery delivery(TrackingStore.Header o) {

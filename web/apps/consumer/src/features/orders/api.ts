@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { http } from '@northline/client';
+import { CourierProgress } from '../tracking/courier';
 
 /**
  * The customer's order (S-52): `GET /api/v1/me/orders/{id}` and its live stream `…/events` (text/event-stream, event
@@ -23,6 +24,8 @@ export const OrderTracking = z.object({
   confirmedAt: z.string().nullish(),
   canConfirm: z.boolean().optional(),
   paysShopsAt: z.string().nullish(),
+  // S-88: the courier bringing it, live
+  courier: CourierProgress.nullish(),
 });
 export type OrderTracking = z.infer<typeof OrderTracking>;
 

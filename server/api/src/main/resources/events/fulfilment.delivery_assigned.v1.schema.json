@@ -1,14 +1,16 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "northline:fulfilment.delivery_assigned:1",
-  "description": "delivery.assigned — topic fulfilment.run, key = run id. A courier on shift was given the run.",
+  "description": "delivery.assigned \u2014 topic fulfilment.run, key = run id. A courier on shift was given the run.",
   "type": "object",
   "required": [
     "eventId",
     "occurredAt",
     "aggregateId",
     "courierId",
-    "orderIds"
+    "orderIds",
+    "merchantIds",
+    "orderType"
   ],
   "additionalProperties": true,
   "properties": {
@@ -33,6 +35,19 @@
       "items": {
         "type": "string"
       }
+    },
+    "merchantIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "merchants.merchants.id of each pickup"
+    },
+    "orderType": {
+      "enum": [
+        "goods",
+        "food"
+      ]
     }
   }
 }

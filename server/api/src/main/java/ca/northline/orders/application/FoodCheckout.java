@@ -183,7 +183,8 @@ public final class FoodCheckout {
             @Nullable Instant deliveredAt,
             @Nullable Instant eta,
             long totalCents,
-            List<Line> lines) {
+            List<Line> lines,
+            @Nullable CourierProgress courier) {
         public Tracking {
             lines = List.copyOf(lines);
         }

@@ -5,6 +5,7 @@ import { signInHref, useViewer } from '../session/api';
 import { clock, runWhen, weekday, windowRange } from '../shop/format';
 import { useConfirmDelivery, useOrder, useOrderStream, type OrderTracking } from './api';
 import { useOrderT } from './messages';
+import { CourierStatus } from '../tracking/CourierStatus';
 
 /**
  * Order confirmed and tracking (S-52, design 06 `confirmed`): the check mark, "Order placed. Arriving tonight 6–9
@@ -82,6 +83,7 @@ function OrderView({ order }: { order: OrderTracking }) {
               ))}
             </ol>
           ) : null}
+          <CourierStatus courier={order.courier} />
           {order.deliveryProof ? <p className="order-note">{t(`proof_${order.deliveryProof}`)}</p> : null}
           {order.confirmedAt ? <p className="order-note">{t('confirmed')}</p> : paysOn ? <p className="order-note">{t('paysShops', { date: paysOn })}</p> : null}
           {confirm.isError ? <p className="order-error" role="alert">{t('confirmError')}</p> : null}
@@ -102,6 +104,9 @@ function OrderView({ order }: { order: OrderTracking }) {
             <circle cx="40" cy="260" r="8" className="order-stop" />
             <circle cx="120" cy="180" r="8" className="order-stop" />
             <circle cx="330" cy="100" r="9" className="order-home" />
+            {order.courier?.state === 'picked_up'
+              ? <circle cx={order.courier.stopsBefore > 0 ? 250 : 300} cy={order.courier.stopsBefore > 0 ? 140 : 100} r="11" className="order-courier" />
+              : null}
           </svg>
           <figcaption className="order-map-note">
             {d.kind === 'pooled' && d.startsAt

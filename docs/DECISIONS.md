@@ -5059,3 +5059,71 @@ Branch `fulfil/s-86-dispatch`, **stacked on S-78** (#116, itself on S-89 #115): 
   - `RoutePlannerTest` (heuristic, ETAs, determinism).
   - `DpopResourceServerTest.theCourierApi_takesOnlyAKeyBoundCourierToken` (real proof).
   - vitest: the Studio order's courier pickup (en, wording).
+
+## 2026-10-01 — S-88 Live tracking via SSE and Redis pub/sub
+
+Branch `fulfil/s-88-live-tracking`, **stacked on S-86**. No migration.
+
+- **Privacy decision (recorded per the story):** courier positions are kept **only as the latest one per courier**, in
+  Valkey (`nl:courier-pos:<courierId>`, TTL 5 min, replaced on every ping). They are **never written to Postgres**:
+  - no table or column holds them (test: no coordinate column in the `fulfilment` schema);
+  - no position history or trail exists anywhere;
+  - events carry no position.
+
+  This deliberately departs from V010's comment ("Redis Streams · TTL 24 h"): a 24-hour trail isn't needed for
+  tracking, and proof of delivery is the stop's photo/signature/PIN and time (S-86), not a GPS trail.
+
+  The customer sees the position only while their order is on its way (picked up, not delivered). Before pickup they
+  see the courier's first name, the planned ETA and their drop-off PIN; after delivery, neither the position nor the
+  PIN. Ops sees the latest position per courier (console couriers list) for S-81's ops map.
+- **Pings:** `POST /api/v1/courier/location` (DPoP courier token):
+  - only while on shift (409 `not_on_shift`);
+  - rate-limited to one per `ping-interval` (2 s) per courier across replicas (`SET NX PX` in Valkey); a faster ping
+    gets 429 `too_many_pings` with `Retry-After`.
+  - The app is expected to send every 4 s, so customers' updates are ≤ 5 s apart (the acceptance criterion).
+  - lat/lng are range-checked (422 "Send a latitude and longitude on the map.").
+- **Fan-out:** a ping publishes "moved" on channel `nl:courier:<orderId>` for each on-its-way order on the courier's
+  run. The same Valkey pub/sub pattern as S-52's `nl:order:*` and S-68's `nl:studio:*`. It is selected by the same
+  `LIVE_BUS` switch (`redis` | `memory`; memory refused under staging/prod), so there is no new variable.
+- **Module direction kept:** `fulfilment.api.CourierLocations` (`forOrder`, `subscribe`) is read by orders. orders'
+  new `TrackingStreams` (extracted from S-52's controller) subscribes each stream to both the order's tracking bus
+  and the courier's moves.
+- **Live ETA:** from the position, the run's own leg rules (S-86 `RoutePlanner.leg`) through the drop-offs still
+  before this one, plus their dwell. Without a recent position the planned stop ETA stands.
+- **Customer screens:**
+  - **Goods tracking (S-52)** and **food tracking (S-57)** both carry `courier` (state, run, first name, ETA, stops
+    before, position, time, PIN).
+  - Food tracking gets its own stream, `GET /api/v1/me/food-orders/{id}/events` (event `food`, also pushed by the
+    kitchen steps). The page now listens and keeps its 15 s polling as the fallback.
+  - The consumer pages show "Kai is on the way. 2 stops before yours. At your door about 7:10 pm.", "Live · updated
+    7:02 pm" and "Drop-off PIN 4821 · Give it to the courier if they ask." (ours, en + fr-CA), plus a courier marker on
+    the route illustration. There are still no map tiles: no map provider is set up for the web.
+- **Consumer BFF:** the streams take the consumer-bff's existing streaming relay. `SseRelayTest` now also proves an
+  order tracking stream's first event arrives before the api finishes.
+- **Kitchen courier status:**
+  - `delivery.assigned` gains `merchantIds` and `orderType`.
+  - New `delivery.courier_arrived` (pickup arrival; topic `fulfilment.delivery`).
+  - The Studio's live stream (S-68) turns both into `kitchen` / `orders` signals, so the kitchen display's "courier
+    arriving / waiting" and Orders' courier pickup update at once, instead of after the 60 s safety refresh.
+- **Tests:**
+  - `LiveTrackingApiTest` (market "Pingville", movable clock):
+    - off-shift ping 409;
+    - before pickup: name, PIN, no position;
+    - after pickup: a ping is pushed on the customer's open stream; a second ping within 2 s gets 429 with
+      `Retry-After: 2`, and 2 s later it is accepted and pushed again;
+    - position, ETA and stops on the order; others' 404;
+    - after delivery: no position, no PIN;
+    - 422 messages; the ops courier list's position; no coordinate column or position table in Postgres; a
+      non-courier 403.
+  - `LivePositionsTest`: a real Valkey 8 with two adapter instances — the rate limit holds across replicas, only one
+    key per courier, TTL, expiry, a move crosses replicas to that order only; the memory adapter on the app clock.
+  - `FoodOrderingApiTest.aFoodDeliveryIsDispatchedAndItsTrackingStreams`: the food delivery reaches fulfilment with
+    its coordinates, the stream pushes the kitchen's accept, the planned run shows "finding a courier" on the kitchen
+    display, and the food tracking carries the courier part.
+  - `SseRelayTest.theOrderTrackingStreamIsRelayedAsItIsWritten`.
+  - vitest: goods and food courier progress, live from the stream, PIN gone after delivery, French.
+- **Not done / never run:**
+  - No real phone has sent positions.
+  - A multi-replica deployment hasn't been exercised (two adapter instances against one Valkey stand in for it).
+  - No map tiles or geocoding on the web.
+  - The courier app's background-location permission flow is S-87's.

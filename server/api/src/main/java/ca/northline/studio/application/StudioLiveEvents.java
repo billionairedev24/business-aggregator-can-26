@@ -1,5 +1,7 @@
 package ca.northline.studio.application;
 
+import ca.northline.fulfilment.api.CourierArrived;
+import ca.northline.fulfilment.api.DeliveryAssigned;
 import ca.northline.food.api.FoodOrderHandedOff;
 import ca.northline.food.api.KitchenOrderAccepted;
 import ca.northline.food.api.KitchenOrderReady;
@@ -65,5 +67,20 @@ class StudioLiveEvents {
     @ApplicationModuleListener
     void on(KitchenResumed e) {
         live.signal(e.aggregateId(), new Signal(Topic.KITCHEN, null));
+    }
+
+    /** S-88: a courier was given a run — the shops' and kitchens' screens show who is coming. */
+    @ApplicationModuleListener
+    void on(DeliveryAssigned e) {
+        var topic = "food".equals(e.orderType()) ? Topic.KITCHEN : Topic.ORDERS;
+        e.merchantIds().forEach(m -> live.signal(m, new Signal(topic, null)));
+    }
+
+    /** S-88: the courier is at the counter ("Courier is here"). */
+    @ApplicationModuleListener
+    void on(CourierArrived e) {
+        live.signal(
+                e.merchantId(),
+                new Signal("food".equals(e.orderType()) ? Topic.KITCHEN : Topic.ORDERS, e.aggregateId()));
     }
 }

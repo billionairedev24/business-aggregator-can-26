@@ -141,4 +141,25 @@ describe('Order confirmed and tracking (design 06 confirmed)', () => {
     open('fr');
     expect(await screen.findByRole('button', { name: 'J’ai tout reçu' })).toBeInTheDocument();
   });
+
+  it('shows the courier coming, then live on the way, with the drop-off PIN (S-88)', async () => {
+    const courier = { state: 'planned', runLabel: 'R-611', courierName: 'Kai', eta: '2026-10-01T01:10:00Z', stopsBefore: 3, lat: null, lng: null, positionAt: null, pin: '4821' };
+    order = () => ({ body: { ...ORDER, courier } });
+    open();
+    expect(await screen.findByText(/^Kai will bring your order\. At your door about /)).toBeInTheDocument();
+    expect(screen.getByText('Drop-off PIN 4821')).toBeInTheDocument();
+    act(() => FakeEventSource.last!.emit('order', { ...ORDER, state: 'picked_up', steps: steps(3), courier: { ...courier, state: 'picked_up', stopsBefore: 2, lat: 50.01, lng: -100, positionAt: '2026-10-01T00:55:00Z' } }));
+    expect(await screen.findByText(/^Kai is on the way\. 2 stops before yours\. At your door about /)).toBeInTheDocument();
+    expect(screen.getByText(/^Live · updated /)).toBeInTheDocument();
+    act(() => FakeEventSource.last!.emit('order', { ...ORDER, state: 'delivered', steps: steps(4), courier: { ...courier, state: 'delivered', pin: null } }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Delivered.' })).toBeInTheDocument();
+    expect(screen.queryByText(/Drop-off PIN/)).not.toBeInTheDocument();
+  });
+
+  it('words the courier in French', async () => {
+    order = () => ({ body: { ...ORDER, state: 'picked_up', steps: steps(3), courier: { state: 'picked_up', runLabel: null, courierName: 'Kai', eta: null, stopsBefore: 1, lat: null, lng: null, positionAt: null, pin: '0042' } } });
+    open('fr');
+    expect(await screen.findByText('Kai est en route. 1 arrêt avant le vôtre.')).toBeInTheDocument();
+    expect(screen.getByText('NIP de livraison 0042')).toBeInTheDocument();
+  });
 });

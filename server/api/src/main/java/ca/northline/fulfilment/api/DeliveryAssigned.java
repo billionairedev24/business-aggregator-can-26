@@ -11,13 +11,22 @@ import org.springframework.modulith.events.Externalized;
  *
  * @param courierId {@code fulfilment.couriers.id}
  * @param orderIds the orders on the run
+ * @param merchantIds the shops / kitchens the courier picks up from (S-88: their live screens refresh)
+ * @param orderType {@code goods} | {@code food}
  */
 @Externalized("fulfilment.run::#{aggregateId()}")
 public record DeliveryAssigned(
-        String eventId, Instant occurredAt, String aggregateId, String courierId, List<String> orderIds)
+        String eventId,
+        Instant occurredAt,
+        String aggregateId,
+        String courierId,
+        List<String> orderIds,
+        List<String> merchantIds,
+        String orderType)
         implements DomainEvent {
 
     public DeliveryAssigned {
         orderIds = List.copyOf(orderIds);
+        merchantIds = List.copyOf(merchantIds);
     }
 }

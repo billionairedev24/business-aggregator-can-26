@@ -1,5 +1,7 @@
 package ca.northline.fulfilment.application;
 
+import ca.northline.fulfilment.api.CourierArrived;
+import ca.northline.fulfilment.api.CourierLocations;
 import ca.northline.fulfilment.api.DeliveryCompleted;
 import ca.northline.fulfilment.api.DeliveryPickedUp;
 import ca.northline.fulfilment.application.CourierStore.Courier;
@@ -7,6 +9,7 @@ import ca.northline.fulfilment.application.CourierStore.Shift;
 import ca.northline.fulfilment.application.DeliveryStore.Delivery;
 import ca.northline.fulfilment.application.DispatchUseCases.CourierApp;
 import ca.northline.fulfilment.application.DispatchUseCases.CourierView;
+import ca.northline.fulfilment.application.DispatchUseCases.Ping;
 import ca.northline.fulfilment.application.DispatchUseCases.RunView;
 import ca.northline.fulfilment.application.DispatchUseCases.ShiftView;
 import ca.northline.fulfilment.application.RunStore.Run;
@@ -54,6 +57,8 @@ class CourierAppService implements CourierApp {
     private final DeliveryStore deliveries;
     private final ProofStorage proofs;
     private final RunViews views;
+    private final LivePositions live;
+    private final FulfilmentProperties props;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
@@ -125,9 +130,15 @@ class CourierAppService implements CourierApp {
     public RunView arrive(String userId, String stopId) {
         var at = clock.instant();
         var mine = ownStop(userId, stopId);
-        if (!mine.stop().state().equals("done")) {
+        var stop = mine.stop();
+        if (!stop.state().equals("done")) {
             runs.arrived(stopId, at);
             start(mine.run(), at);
+            var merchantId = stop.merchantId();
+            if (stop.kind().equals("pickup") && stop.arrivedAt() == null && merchantId != null) {
+                events.publishEvent(new CourierArrived(
+                        Ids.next(), at, stop.orderId(), merchantId, delivery(stop.orderId()).orderType(), mine.run().id()));
+            }
         }
         return reload(mine.run());
     }
@@ -253,6 +264,24 @@ class CourierAppService implements CourierApp {
             couriers.status(mine.courier().id(), onShift ? "available" : "offline");
         }
         return reload(mine.run());
+    }
+
+    @Override
+    public Ping ping(String userId, double lat, double lng, @Nullable Double heading) {
+        var c = courier(userId);
+        if (couriers.onShift(c.id()).isEmpty()) {
+            throw new Conflict("not_on_shift", DeliveryRules.NOT_ON_SHIFT);
+        }
+        var interval = props.pingInterval();
+        if (!live.allow(c.id(), interval)) {
+            throw new TooManyPings(interval);
+        }
+        var now = clock.instant();
+        live.put(c.id(), new CourierLocations.Position(lat, lng, heading, now), props.positionTtl());
+        runs.openRunOf(c.id()).ifPresent(run -> deliveries.onRun(run.id()).stream()
+                .filter(d -> d.state().equals("picked_up"))
+                .forEach(d -> live.moved(d.orderId())));
+        return new Ping(now, interval.toMillis());
     }
 
     // ── helpers ─────────────────────────────────────────────────────────────────────────────────────────────

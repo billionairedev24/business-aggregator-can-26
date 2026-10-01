@@ -17,6 +17,8 @@ public final class DeliveryRules {
     public static final String PROOF_FILE = "Upload a JPG, PNG or WebP image under 5 MB.";
     public static final String NOT_YOUR_RUN = "This stop isn't on your run.";
     public static final String SHIFT_NOT_STARTABLE = "This shift can't be started now.";
+    public static final String NOT_ON_SHIFT = "Start your shift to share your position.";
+    public static final String POSITION = "Send a latitude and longitude on the map.";
     public static final String RUN_OPEN = "Finish your run before ending the shift.";
     public static final String NOT_A_COURIER = "This account isn't a Northline courier.";
     public static final String COURIER_BUSY = "This courier isn't available.";

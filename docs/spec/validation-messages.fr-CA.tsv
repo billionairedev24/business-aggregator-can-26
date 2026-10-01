@@ -384,6 +384,7 @@ Search isn't available in {market} yet.	La recherche n’est pas encore offerte 
 Secrets can't be stored here yet (no encryption key).	Les secrets ne peuvent pas encore être stockés ici (aucune clé de chiffrement).	new
 Security alerts always go to every channel.	Les alertes de sécurité sont toujours envoyées sur tous les canaux.	new
 Send a code first.	Envoyez d’abord un code.	new
+Send a latitude and longitude on the map.	Envoyez une latitude et une longitude valides.	new
 Send both lat and lng, or neither.	Envoyez lat et lng, ou aucun des deux.	review
 Send every section of the menu, in the new order.	Envoyez toutes les sections du menu, dans le nouvel ordre.	new
 Send every section of this page exactly once.	Envoyez chaque section de cette page une seule fois.	new
@@ -410,6 +411,7 @@ Start the passkey set-up again.	Recommencez la configuration de la clé d’acc�
 Start the passkey sign-in again.	Recommencez la connexion par clé d’accès.	new
 Start the payment first.	Lancez d’abord le paiement.	new
 Start the registration again.	Recommencez l’inscription.	new
+Start your shift to share your position.	Commencez votre quart pour partager votre position.	new
 Stock can't be negative.	Le stock ne peut pas être négatif.	shipped
 Stripe collects the SIN — confirm to continue.	Stripe recueille le NAS — confirmez pour continuer.	new
 Stripe could not be reached. Try again.	Impossible de joindre Stripe. Réessayez.	new

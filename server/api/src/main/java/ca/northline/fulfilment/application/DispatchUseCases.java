@@ -50,7 +50,16 @@ public final class DispatchUseCases {
 
         /** @param proof {@code photo} | {@code signature} (uploaded first) | {@code pin} (the customer's 4 digits) */
         RunView dropOff(String userId, String stopId, String proof, @Nullable String pin);
+
+        /**
+         * S-88: the phone's position while on shift — kept only as the latest one, in Valkey; at most one per
+         * {@code ping-interval} ({@link TooManyPings} otherwise). Customers whose order the courier carries see it.
+         */
+        Ping ping(String userId, double lat, double lng, @Nullable Double heading);
     }
+
+    /** @param nextAfterMs when the app may send the next position */
+    public record Ping(Instant acceptedAt, long nextAfterMs) {}
 
     /** The console's orders monitor and delivery ops (S-81 builds the screens; the contract is docs). */
     public interface DispatchConsole {
@@ -204,5 +213,6 @@ public final class DispatchUseCases {
             String status,
             boolean active,
             @Nullable ShiftView shift,
-            @Nullable String runId) {}
+            @Nullable String runId,
+            ca.northline.fulfilment.api.CourierLocations.@Nullable Position position) {}
 }

@@ -149,6 +149,18 @@ public final class RoutePlanner {
         return out;
     }
 
+    /**
+     * S-88: one leg under these settings, e.g. from the courier's live position to the next door; the unknown-leg time
+     * when either end has no coordinates.
+     */
+    public Duration leg(@Nullable Double fromLat, @Nullable Double fromLng, @Nullable Double toLat, @Nullable Double toLng) {
+        return leg(new Point(fromLat, fromLng), new Point(toLat, toLng), false);
+    }
+
+    public Duration dropoffDwell() {
+        return settings.dropoffDwell();
+    }
+
     private Duration leg(@Nullable Point from, Point to, boolean first) {
         if (first) {
             return Duration.ZERO; // the run starts at its first stop

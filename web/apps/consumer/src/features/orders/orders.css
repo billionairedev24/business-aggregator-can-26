@@ -23,3 +23,4 @@
 .order-map-note:empty { display: none; }
 .order-note { margin: 16px 0 0; color: var(--color-neutral-700); font-size: 14px; }
 .order-error { margin: 12px 0 0; color: var(--color-accent-2-700); font-size: 14px; }
+.order-courier { fill: var(--color-accent-2); }

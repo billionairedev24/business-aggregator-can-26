@@ -14,6 +14,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param minutesPerKm straight-line minutes per km for ETAs
  * @param addressRetention how long a drop-off address is kept after the delivery ends
  * @param proofDir where proofs go under {@code local}/{@code test} (default {@code $TMPDIR/northline-proofs})
+ * @param pingInterval S-88: the fastest a courier's app may send its position (customers see updates ≤ 5 s apart)
+ * @param positionTtl S-88: how long the latest position is kept in Valkey (no history)
  */
 @ConfigurationProperties("northline.fulfilment")
 public record FulfilmentProperties(
@@ -25,4 +27,6 @@ public record FulfilmentProperties(
         @DefaultValue("5m") Duration pickupDwell,
         @DefaultValue("3m") Duration dropoffDwell,
         @DefaultValue("30d") Duration addressRetention,
-        @Nullable Path proofDir) {}
+        @Nullable Path proofDir,
+        @DefaultValue("2s") Duration pingInterval,
+        @DefaultValue("5m") Duration positionTtl) {}

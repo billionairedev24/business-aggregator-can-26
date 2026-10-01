@@ -140,3 +140,35 @@ fail loudly.
 - **Events** carry ids only.
 - **The PIN** is stored in clear, so that the customer's order can show it (S-88). It proves a hand-over, not an
   identity.
+
+## Live tracking (S-88)
+
+- **Courier pings:** `POST /api/v1/courier/location` with `{lat, lng, heading?}` returns `{acceptedAt, nextAfterMs}`.
+  - The courier must be on shift (409 `not_on_shift`).
+  - At most one ping every `ping-interval` (2 s) per courier, across replicas. A faster ping gets 429
+    `too_many_pings` with `Retry-After`.
+  - The app should send every 4 s while a run is open. Customers then see updates at most 5 s apart.
+- **Storage:** only the latest position is kept, in Valkey `nl:courier-pos:<courierId>` with a TTL of
+  `position-ttl` (5 min). Each ping replaces the last one. There is **no history**, and nothing is ever written to
+  Postgres; a test checks the fulfilment schema has no coordinate column. Proof of delivery is the stop's
+  photo/signature/PIN and time (S-86), not a GPS trail.
+- **Who sees it:**
+  - The customer, only while their order is **on its way** (picked up, not yet delivered).
+  - Ops, on the console's couriers list (`position`), for the delivery ops map.
+  - Before pickup the customer sees the courier's first name, the planned ETA and their PIN. After delivery they see
+    neither the position nor the PIN.
+- **Fan-out:** every accepted ping publishes "moved" on Valkey channel `nl:courier:<orderId>` for each order on the
+  run that is on its way. Every api replica wakes its open tracking streams for that order; each stream re-reads the
+  order with the customer's own rights. Locally (`LIVE_BUS=memory`) this all happens in memory.
+- **Streams:**
+  - Goods: `GET /api/v1/me/orders/{id}/events` (S-52; event `order`).
+  - Food: new `GET /api/v1/me/food-orders/{id}/events` (event `food`; the page polled every 15 s before).
+  - Both go through the consumer-bff's streaming relay (`SseRelayTest`).
+  - The JSON gains `courier: {state, runLabel, courierName, eta, stopsBefore, lat, lng, positionAt, pin}`. The ETA
+    is live from the position: the run's leg rules from the position through the drop-offs still before this one.
+- **Kitchen and shop screens:** `delivery.assigned` (now with `merchantIds`, `orderType`) and the new
+  `delivery.courier_arrived` (topic `fulfilment.delivery`) signal the Studio's live stream (`kitchen` / `orders`).
+  The kitchen display and Orders show "courier assigned / arriving / here" at once, instead of after the 60 s safety
+  refresh.
+- **Configuration:** `northline.fulfilment.ping-interval` (2s) and `position-ttl` (5m). The adapter follows `LIVE_BUS`
+  (S-68), so there is no new variable.

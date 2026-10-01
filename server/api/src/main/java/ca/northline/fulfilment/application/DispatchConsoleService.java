@@ -53,6 +53,7 @@ class DispatchConsoleService implements DispatchConsole {
     private final PersonDirectory people;
     private final BusinessNames names;
     private final Clock clock;
+    private final LivePositions live;
 
     @Override
     @Transactional(readOnly = true)
@@ -198,6 +199,7 @@ class DispatchConsoleService implements DispatchConsole {
                 c.status(),
                 c.active(),
                 couriers.onShift(c.id()).map(CourierAppService::view).orElse(null),
-                runs.openRunOf(c.id()).map(RunStore.Run::id).orElse(null));
+                runs.openRunOf(c.id()).map(RunStore.Run::id).orElse(null),
+                live.latest(c.id()).orElse(null));
     }
 }

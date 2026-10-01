@@ -61,6 +61,9 @@ class FoodOrderingApiTest extends IntegrationTest {
     @Autowired
     Markets markets;
 
+    @Autowired
+    ca.northline.fulfilment.application.DispatchUseCases.PlanRuns plan;
+
     KitchenFixtures fx;
     Kitchen k;
     String city;
@@ -516,5 +519,50 @@ class FoodOrderingApiTest extends IntegrationTest {
                         .params(id)
                         .update())
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    /** S-86/S-88: a food delivery goes to fulfilment with its coordinates; its tracking streams every kitchen step. */
+    @Test
+    void aFoodDeliveryIsDispatchedAndItsTrackingStreams() throws Exception {
+        var orderId = startDelivery();
+        confirm(orderId, TestJwt.customerWithMfa(customer)).andExpect(status().isOk());
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(10))
+                .until(() -> jdbc.sql("""
+                                        select count(*) from fulfilment.deliveries
+                                         where order_id = ? and order_type = 'food' and kind = 'direct'
+                                           and (dropoff ->> 'lat')::float = ?""")
+                                .params(orderId, NEAR_LAT)
+                                .query(Long.class)
+                                .single()
+                        == 1);
+        var me = TestJwt.customer(customer);
+        var stream = mvc.perform(get("/api/v1/me/food-orders/{id}/events", orderId).with(me))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.request().asyncStarted())
+                .andReturn();
+        var response = stream.getResponse();
+        assertThat(response.getContentAsString()).contains("event:food").contains("\"stage\":\"paid\"");
+        mvc.perform(get("/api/v1/me/food-orders/{id}/events", orderId).with(TestJwt.customer(data.user("Other"))))
+                .andExpect(status().isNotFound());
+
+        var cook = TestJwt.member(fx.member(k, MerchantRole.COOK));
+        mvc.perform(post(k.base() + "/kitchen/live/{o}/accept", orderId).with(cook)).andExpect(status().isOk());
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(10))
+                .untilAsserted(() -> assertThat(response.getContentAsString()).contains("\"stage\":\"cooking\""));
+        // accepted: fulfilment knows when it's ready and plans the courier's run, due at the kitchen then
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(10))
+                .until(() -> jdbc.sql("select ready_by is not null from fulfilment.deliveries where order_id = ?")
+                        .params(orderId)
+                        .query(Boolean.class)
+                        .single());
+        plan.plan(null);
+        mvc.perform(get(k.base() + "/kitchen/live").with(cook))
+                .andExpect(jsonPath("$.items[?(@.orderId == '%s')].handoff.party".formatted(orderId)).value("courier"))
+                .andExpect(jsonPath("$.items[?(@.orderId == '%s')].handoff.state".formatted(orderId)).value("finding"));
+        mvc.perform(get("/api/v1/me/food-orders/{id}", orderId).with(me))
+                .andExpect(jsonPath("$.courier.state").value("planned"))
+                .andExpect(jsonPath("$.courier.pin").isNotEmpty());
     }
 }

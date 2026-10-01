@@ -3,7 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { isNotFound } from '@northline/client';
 import { EmptyState, ErrorState, Skeleton, SiteLink, useFormatters } from '@northline/ui';
 import { signInHref, useViewer } from '../session/api';
-import { trackingQuery, type Tracking } from './api';
+import { Tracking, trackingQuery, trackingStreamUrl } from './api';
+import { CourierStatus } from '../tracking/CourierStatus';
+import { useTrackingStream } from '../tracking/courier';
 import { useFoodT } from './messages';
 
 type T = ReturnType<typeof useFoodT>;
@@ -13,13 +15,15 @@ const DOT: Record<number, [number, number]> = { 0: [70, 90], 1: [70, 90], 2: [70
 
 /**
  * Food tracking (design 06 `foodTrack`, S-57): the order's stage as the kitchen display moves it (accepted → cooking,
- * ready, handed off → on the way / picked up, delivered), the steps, the ETA, and the route illustration. Polls every
- * 15 s (live courier positions over SSE are S-52's).
+ * ready, handed off → on the way / picked up, delivered), the steps, the ETA, and the route illustration. Live over
+ * the order's event stream (S-88: kitchen steps and courier moves, with the courier's ETA and the drop-off PIN); polls
+ * every 15 s while the stream is down.
  */
 export function TrackScreen({ orderId }: { orderId: string }) {
   const t = useFoodT();
   const { user, loading } = useViewer();
   const q = useQuery({ ...trackingQuery(orderId), enabled: !!user, retry: false });
+  useTrackingStream(trackingStreamUrl(orderId), 'food', Tracking, trackingQuery(orderId).queryKey, !!user && q.isSuccess);
   if (loading || (user && q.isPending)) return <div className="nl-page"><Skeleton width={120} height={20} /><Skeleton width={360} height={36} style={{ marginTop: 12 }} /><Skeleton height={180} style={{ marginTop: 20 }} /></div>;
   if (!user) return <div className="nl-page"><EmptyState action={<SiteLink href={signInHref(`/food/orders/${orderId}`)} className="btn btn-primary">{t('signIn')}</SiteLink>}>{t('trackMissing')}</EmptyState></div>;
   if (q.isError) {
@@ -54,6 +58,7 @@ function Track({ t, o }: { t: T; o: Tracking }) {
         <ol className="nl-track-steps">
           {steps.map((s, i) => <li key={i} data-done={done(i) || undefined} aria-current={done(i) && !done(i + 1) ? 'step' : undefined}><span aria-hidden className="nl-track-dot" />{s}</li>)}
         </ol>
+        {pickup ? null : <CourierStatus courier={o.courier} />}
         <p className="nl-fco-muted">{t('liveNote')}</p>
         <div className="nl-track-actions">
           {o.stage === 'delivered' || o.stage === 'on_the_way'
