@@ -308,7 +308,9 @@ class BookingCheckoutApiTest extends IntegrationTest {
                             .content(JSON.writeValueAsString(request(holdId))))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.code").value("second_factor_required"));
-            jdbc.sql("update identity.users set mfa_primary = 'totp' where id = ?").params(customer).update();
+            jdbc.sql("update identity.users set mfa_primary = 'totp' where id = ?")
+                    .params(customer)
+                    .update();
             mvc.perform(post("/api/v1/me/bookings/checkout")
                             .with(TestJwt.customer(customer))
                             .header("Idempotency-Key", "s-" + holdId)
@@ -462,7 +464,11 @@ class BookingCheckoutApiTest extends IntegrationTest {
                                     "consult",
                                     Map.of("goal", "Buy"),
                                     "addressLine",
-                                    "1204 17 Ave SW"))))
+                                    "1204 17 Ave SW",
+                                    "agreePolicies",
+                                    true,
+                                    "agreeTerms",
+                                    true))))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status").value("confirmed"))
                     .andExpect(jsonPath("$.totalCents").value(0))

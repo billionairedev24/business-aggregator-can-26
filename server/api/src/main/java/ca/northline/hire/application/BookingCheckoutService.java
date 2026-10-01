@@ -22,10 +22,10 @@ import ca.northline.hire.domain.Pricing;
 import ca.northline.hire.domain.ServiceKind;
 import ca.northline.identity.api.PersonDirectory;
 import ca.northline.merchants.api.PublicProviders;
-import ca.northline.payments.api.PaymentSettings;
 import ca.northline.payments.api.EscrowKind;
 import ca.northline.payments.api.EscrowLifecycle;
 import ca.northline.payments.api.PaymentAuthorizations;
+import ca.northline.payments.api.PaymentSettings;
 import ca.northline.region.api.TaxRates;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.NotFound;
@@ -88,7 +88,8 @@ class BookingCheckoutService
             @Nullable String paymentIntent) {}
 
     @Override
-    public Calendar calendar(String slug, String serviceId, @Nullable LocalDate from, int days, @Nullable String customerId) {
+    public Calendar calendar(
+            String slug, String serviceId, @Nullable LocalDate from, int days, @Nullable String customerId) {
         var provider = provider(slug);
         var offer = offer(provider, serviceId);
         var today = LocalDate.now(clock.withZone(region.timeZone()));
@@ -143,14 +144,28 @@ class BookingCheckoutService
                 .filter(o -> o.merchantId().equals(hold.merchantId()))
                 .orElseThrow(() -> new NotFound("service", request.serviceId()));
         var kind = kind(offer);
-        var pricing =
-                Pricing.of(kind, offer.pricingMode(), offer.priceCents(), request.hours(), taxRates.bpsFor(province(hold.merchantId())));
+        var pricing = Pricing.of(
+                kind,
+                offer.pricingMode(),
+                offer.priceCents(),
+                request.hours(),
+                taxRates.bpsFor(province(hold.merchantId())));
         request.validate(kind, vehicle(offer), pricing.free());
         if (pricing.free()) {
             var booked = book(hold, request, offer, kind, pricing.priceCents(), pricing.taxCents(), null);
             holds.release(hold.id());
             return new Checkout(
-                    hold.id(), hold.bookingId(), 0, 0, 0, "confirmed", null, null, paymentSettings.provider(), null, booked);
+                    hold.id(),
+                    hold.bookingId(),
+                    0,
+                    0,
+                    0,
+                    "confirmed",
+                    null,
+                    null,
+                    paymentSettings.provider(),
+                    null,
+                    booked);
         }
         gate.require(customerId, mfa, stepUpProof);
         var started = payments.start(new PaymentAuthorizations.Request(
