@@ -16,10 +16,10 @@ import ca.northline.food.application.PublicKitchenViews.Section;
 import ca.northline.food.application.PublicKitchenViews.Slot;
 import ca.northline.food.domain.ComboPrice;
 import ca.northline.food.domain.FoodFees;
-import ca.northline.region.api.Markets;
-import ca.northline.region.api.TaxRates;
 import ca.northline.merchants.api.PublicDirectory;
 import ca.northline.merchants.api.PublicDirectory.PublicBusiness;
+import ca.northline.region.api.Markets;
+import ca.northline.region.api.TaxRates;
 import ca.northline.shared.NotFound;
 import ca.northline.trust.api.RatingQuery;
 import java.time.Clock;
@@ -70,7 +70,8 @@ class PublicKitchenService implements PublicKitchenUseCases, FoodCheckoutFacts {
     public Kitchens kitchens(String city, @Nullable Double lat, @Nullable Double lng) {
         var kitchens = directory.active(Set.of("kitchen"), city);
         var ids = kitchens.stream().map(PublicBusiness::merchantId).toList();
-        var status = availability.now(kitchens.stream().map(PublicKitchenService::ref).toList());
+        var status = availability.now(
+                kitchens.stream().map(PublicKitchenService::ref).toList());
         var rows = calendarsOf(ids);
         var cards = kitchens.stream()
                 .flatMap(k -> Optional.ofNullable(rows.get(k.merchantId()))
@@ -93,9 +94,7 @@ class PublicKitchenService implements PublicKitchenUseCases, FoodCheckoutFacts {
         if (row == null) {
             throw new NotFound("kitchen", slug);
         }
-        var status = availability
-                .now(List.of(ref(business)))
-                .getOrDefault(business.merchantId(), KitchenStatus.CLOSED);
+        var status = availability.now(List.of(ref(business))).getOrDefault(business.merchantId(), KitchenStatus.CLOSED);
         var card = card(business, status, row, lat, lng);
         var snapshot = menus.load(business.merchantId());
         var zone = markets.zone(business.province());

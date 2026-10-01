@@ -109,10 +109,10 @@ A feature folder per story area, named after the design: `home`, `location`, `se
 | `/products/$productId` | product | S-50 | SSR + SEO |
 | `/cart` | cart | S-51 | cart + checkout; guest banner |
 | `/orders/$orderId` | confirmed | S-52 | confirmed + tracking (SSE) |
-| `/food` | food | S-57 | |
-| `/food/$kitchen` | restaurant | S-57 | SSR + SEO |
-| `/food/checkout` | foodCheckout | S-57 | guest banner |
-| `/food/orders/$orderId` | foodTrack | S-57 | |
+| `/food` | food | S-57 (**built**) | `?cuisine=<code>` preselects a cuisine; loads in the browser once the location is known |
+| `/food/$kitchen` | restaurant | S-57 (**built**) | SSR + SEO; the food order lives in the browser (`nl.foodCart`, one kitchen) |
+| `/food/checkout` | foodCheckout | S-57 (**built**) | guest banner; signed in to pay; S-51's step-up |
+| `/food/orders/$orderId` | foodTrack | S-57 (**built**) | polls every 15 s |
 | `/services` | services | S-53 | landing page |
 | `/services/$category` | svcCategory | S-53 | SSR + SEO |
 | `/services/$category/providers` | providers | S-53 | |
@@ -311,7 +311,7 @@ Both endpoints are `GET`, public, JSON, camelCase; money in cents; errors as eve
 | product detail + offers: `GET /api/v1/public/shop/products/{id}?market=&lang=` | **exists** (S-50) | S-50 |
 | cart: `GET /api/v1/cart`, `POST /api/v1/cart/items`, `PATCH`/`DELETE /api/v1/cart/items/{id}` (guest-keyed by `X-Northline-Guest`); checkout: `GET /api/v1/me/checkout?market=`, `POST /api/v1/me/checkout/quote`, `POST /api/v1/me/checkouts` (Idempotency-Key, X-Step-Up), `POST /api/v1/me/checkouts/{id}/place` (Idempotency-Key) | **exists** (S-51) | S-51 (S-57 food checkout may reuse the step-up and payment parts) |
 | consumer order + tracking: `GET /api/v1/me/orders/{id}`, `GET /api/v1/me/orders/{id}/events` (SSE, event `order`) | **exists** (S-52); the orders list is missing | S-52, S-58 (list), S-57 (food tracking may reuse the stream) |
-| public menus / kitchens, food checkout | missing | S-57 |
+| food: `GET /api/v1/public/kitchens?city=&lat=&lng=`, `GET /api/v1/public/kitchens/{slug}`; `POST /api/v1/me/food-orders/quote`, `POST /api/v1/me/food-orders` (Idempotency-Key, X-Step-Up), `POST /api/v1/me/food-orders/{id}/confirm` (Idempotency-Key), `GET /api/v1/me/food-orders/{id}` | **exists** (S-57) | food landing, restaurant, food checkout, tracking |
 | providers by category, availability slots, booking create, quote request / accept (consumer side) | missing (merchant side exists) | S-53, S-55, S-56 |
 | `GET /api/v1/me/account-summary`, wallet, addresses, payment methods, notifications, favourites | missing | S-45 menu values, S-58, S-59 |
 | refunds / "something's wrong" (consumer side) | missing (merchant side exists) | S-60 |

@@ -62,17 +62,18 @@ public final class FoodOrderRules {
         return switch (orderState) {
             case "delivered", "confirmed" -> "delivered";
             case "picked_up" -> "on_the_way";
-            case "ready" -> "ready";
-            case "accepted", "packing" -> "cooking";
             case "refunded", "cancelled" -> orderState;
+            // the kitchen display's ticket moves first; the order's state follows when the orders listener has run
             default -> {
                 if ("handed_off".equals(ticketStage)) {
                     yield mode.equals("pickup") ? "delivered" : "on_the_way";
                 }
-                if ("ready".equals(ticketStage)) {
+                if ("ready".equals(ticketStage) || orderState.equals("ready")) {
                     yield "ready";
                 }
-                yield "cooking".equals(ticketStage) ? "cooking" : "paid";
+                yield "cooking".equals(ticketStage) || orderState.equals("accepted") || orderState.equals("packing")
+                        ? "cooking"
+                        : "paid";
             }
         };
     }

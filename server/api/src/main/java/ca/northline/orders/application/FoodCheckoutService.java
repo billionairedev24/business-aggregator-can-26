@@ -235,7 +235,7 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
                 row.ref(),
                 null,
                 lines.isEmpty() ? null : lines.getFirst().title(),
-                "consumer_web",
+                "search", // attribution (payments.escrows.source), as S-51
                 row.paymentIntent(),
                 now,
                 new EscrowLifecycle.PlatformCharges(

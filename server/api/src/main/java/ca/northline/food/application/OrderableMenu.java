@@ -10,10 +10,8 @@ import ca.northline.food.domain.MenuStatus;
 import ca.northline.food.domain.ModifierGroup;
 import ca.northline.food.domain.OrderingWindow;
 import ca.northline.food.domain.PickCheck;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZonedDateTime;
-import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -88,9 +86,7 @@ class OrderableMenu {
 
         private static boolean window(ComboRow c, ZonedDateTime at) {
             var w = c.schedule();
-            return w == null
-                    || OrderingWindow.menu(
-                            "window", w.days(), w.from(), w.to(), at.toLocalDateTime());
+            return w == null || OrderingWindow.menu("window", w.days(), w.from(), w.to(), at.toLocalDateTime());
         }
 
         List<ModifierGroup> groupsOf(ItemRow i) {

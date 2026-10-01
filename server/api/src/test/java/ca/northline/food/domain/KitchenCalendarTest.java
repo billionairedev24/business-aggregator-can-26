@@ -104,8 +104,7 @@ class KitchenCalendarTest {
         assertThat(late).hasSize(20);
         // 18:10 + 45 min = 18:55 → 19:00, 19:30, 20:00, 20:30 today
         var evening = open().slots(at(WED, "18:10"), java.time.Duration.ofMinutes(45), 1);
-        assertThat(evening)
-                .containsExactly(at(WED, "19:00"), at(WED, "19:30"), at(WED, "20:00"), at(WED, "20:30"));
+        assertThat(evening).containsExactly(at(WED, "19:00"), at(WED, "19:30"), at(WED, "20:00"), at(WED, "20:30"));
     }
 
     @Test

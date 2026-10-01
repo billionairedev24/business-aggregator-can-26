@@ -2706,3 +2706,71 @@ Built on S-45's shell and location pill (docs/CONSUMER_WEB_PLAN.md § Location).
   field names of Places API (New) — `placePrediction.structuredFormat`, `addressComponents[].longText/shortText` — are
   unverified live); the zones are approximate boxes; no console screen for markets/zones/waitlist; waitlist emails
   aren't sent when a market opens (no job yet); the rate limit is per api instance.
+
+## 2026-09-30 — S-57 Food: landing, restaurant menu, food checkout (delivery or pickup) and tracking
+
+Stacked on S-46 (#66, kitchen availability, `PublicDirectory`), S-47 (#67, location, `region.api.Markets`) and S-51
+(merged: step-up rule, `IdempotentRequests`, `order.placed`).
+
+- **Food cart is separate from the shop cart** (the story asks to record it): one kitchen at a time, kept in the
+  browser (`localStorage['nl.foodCart']`, `features/food/foodCart.ts`), priced again by the server at checkout. A food
+  order goes to one kitchen by direct courier or pickup and must never join a pooled goods run, so it can't share S-51's
+  multi-shop, window-based cart. Adding from another kitchen asks first ("Start a new order?").
+- **Region-neutral:** a kitchen's hours, item windows, combo windows, "sold out today" and scheduled windows are read in
+  the time zone of **its market** (`region.api.Markets.zone(province)`, i.e. `SEARCH_MARKETS`); the restaurant's tax
+  estimate uses its province's rate (`TaxRates`, `taxBps` in the api); the pickup place of supply is the kitchen's
+  province, else the default market's — no province, city or zone in code or messages.
+- **Landing** `GET /api/v1/public/kitchens?city=&lat=&lng=` (public, 30 s cache): the city's active kitchens with open
+  state (S-46's `KitchenAvailability`: hours, holidays, pause, **auto-pause**), next opening, fulfilment, prep, ETA
+  (prep + ride: 3 min/km + 5, 10 when the distance is unknown; range +10), pickup ready time, distance (haversine from
+  `merchants.locations`), `delivers` (courier and within the kitchen's radius, else the location's service radius, else
+  8 km), delivery fee, price level ($ < $12 average dish, $$ < $25, $$$), rating. Open first, then nearest. Filters
+  (open now, under 30 min, halal, vegan, $, nut-free) and cuisines are applied in the browser; "Family packs" and
+  "Free delivery (Plus)" have no data and aren't shown.
+- **Restaurant** `GET /api/v1/public/kitchens/{slug}` (SSR, SEO): live menus' sections with published, approved dishes,
+  their modifier groups with the Studio's pick rules (exactly / at least / up to N, required, nested groups shown for an
+  option, sold-out options), dish windows (always, lunch 11–2, after 5, weekends) and menu schedules (open hours, a
+  window, by quote = never orderable here), live/scheduled combos with their slots, the AHS permit state, $15 minimum,
+  8 % service fee, `taxBps`, and 30-minute scheduled windows (today and tomorrow within the kitchen's "scheduled days",
+  ≥ 45 min + prep ahead, whole window inside the hours).
+- **Fees (ours, the spec has no numbers beyond the design):** delivery $1.99 ≤ 1 km, $2.99 ≤ 2 km, $3.99 ≤ 4 km, then
+  +$1 per 2 km ($2.99 when the distance is unknown); service fee 8 % of the dishes; tips No tip · $2 · $4 · 15 % · $6
+  (up to $100 or 30 %); 100 % of the tip goes to the courier. Pickup: no delivery fee, no tip.
+- **Checkout** (`/api/v1/me/food-orders`, signed in only): `POST /quote` (tax estimated from the province's rates),
+  `POST /` (Idempotency-Key, X-Step-Up — **S-51's rule unchanged**: a phone-code-only session confirms its passkey or
+  authenticator first → 403 `step_up_required`, or `second_factor_required` without one; the web reuses S-51's
+  `StepUpDialog` and Payment Element), `POST /{id}/confirm` (Idempotency-Key), `GET /{id}` (tracking). Validation and
+  conflict messages: "Pick 1 for Size." (and at least / up to), "Choose each option once.", "That choice isn't on this
+  dish any more. Open it again.", "{dish} is sold out.", "Add $x.xx to reach the $15 minimum.", "Add your delivery
+  address first.", "Choose delivery or pickup.", "Choose one of the windows offered.", "Choose a tip between $0 and
+  $100, or up to 30 %.", "Choose how to hand it over.", "Choose from the extras offered.", 409 `kitchen_closed` /
+  `out_of_range` / `no_delivery` / `no_pickup` / `checkout_closed`.
+- **Payment = S-11 escrow, one PaymentIntent per food order** (`ref_type = 'food_order'`, manual capture). Unlike S-51
+  (one intent per line + an uncaptured delivery-fee intent), a food order has one kitchen and one courier, so the intent
+  carries the dishes + their tax (the kitchen's escrow) **plus Northline's own charges**: delivery + service fee, their
+  GST/HST and the tip. Additive in payments: `PaymentAuthorizations.Request.platformCents`, `EscrowLifecycle.Hold.platform`
+  (`PlatformCharges(feeCents, feeTaxCents, tipCents)`, old constructors kept), `payments.escrows.platform_fee_cents /
+  platform_tax_cents / tip_cents` (V118); at capture the ledger credits the fee to revenue, the fees' tax to tax
+  payable and the tip to a new `courier_tips` account. The hold is accepted only once the card is authorized; it is
+  **released on hand-off** (`order.handed_off` → `KitchenEscrowRelease` now also releases `food_order` escrows).
+  Finance should review this split.
+- **`order.placed` is S-51's event**, not a second one: published once per food order with `orderType = "food"`,
+  `delivery = "direct"` (hot courier) or `"pickup"`, no window. Additive: `Line.itemKind` (`offer` | `menu_item` |
+  `combo`; S-51's 5-argument constructor defaults to `offer`) and the optional `itemKind` in
+  `orders.order_placed.v1.schema.json`. No PII in the payload.
+- **Schema V118 (orders, payments):** sequence `orders.food_order_numbers` (refs `FD-10000…`, like the kitchen display's food refs), `orders.food_checkouts`
+  (the pending checkout: kitchen, mode, schedule, `customer_eta` for pickup, ETA range, priced lines jsonb, every
+  amount with a sum check, province, tax calculation, PaymentIntent, delivery jsonb — address, drop-off, note, extras),
+  the three escrow columns, `food_order` added to the `ref_type` checks of `payments.escrows`, `payments.payment_intents` and
+  `payments.tax_calculations` (each check dropped and re-created wider — a relaxation, nothing existing changes). Placing writes `orders.orders` (`type = 'food'`) and `orders.order_lines` (menu item or
+  combo, title, the choices + note as the kitchen display's modifiers), so the order reaches S-38's kitchen display as
+  before. V118 sorts before S-43's V120 (Flyway's out-of-order setting already covers the ranges).
+- **Tracking** follows the kitchen display: paid (not accepted) → cooking (`order.accepted`) → ready (`order.ready`)
+  → on the way / picked up (`order.handed_off`) → delivered. ETA = ready-by + the ride (delivery) or ready-by (pickup),
+  else placed + the quoted range. The web polls every 15 s; S-52's order SSE stream can replace the polling later.
+- **Not done:** group orders; live courier positions (S-52's map); "Family packs" / "Free delivery (Plus)" filters;
+  Plus pricing ($0 service fee) — no membership read yet; loyalty points on food. The checkout's pay note reads "The
+  kitchen is paid once your order is handed off; until then the money is held in escrow." instead of the design's
+  wording (escrow on hand-off is the story's rule).
+- **Never run against the real service:** Stripe (PaymentIntent with platform charges, capture, the Payment Element)
+  ran only against the local fake gateway; nothing here calls Google.

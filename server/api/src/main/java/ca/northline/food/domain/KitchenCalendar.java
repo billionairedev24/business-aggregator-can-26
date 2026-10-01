@@ -88,8 +88,7 @@ public record KitchenCalendar(
                 var from = range.from().toSecondOfDay() / 60;
                 var to = range.to().toSecondOfDay() / 60;
                 for (var m = (from + 29) / 30 * 30; m + 30 <= to; m += 30) {
-                    var start =
-                            date.atTime(m / 60, m % 60).atZone(zone).toInstant();
+                    var start = date.atTime(m / 60, m % 60).atZone(zone).toInstant();
                     if (!start.isBefore(earliest)) {
                         out.add(start);
                     }

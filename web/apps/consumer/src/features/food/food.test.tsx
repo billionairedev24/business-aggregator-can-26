@@ -33,7 +33,7 @@ const DISH_ROLLS = { id: 'D2', name: 'Spring rolls', description: null, priceCen
 const DISH_GONE = { ...DISH_ROLLS, id: 'D3', name: 'Banh mi', soldOut: true };
 const COMBO = { id: 'CB1', name: 'Lunch for one', pricing: 'fixed', priceCents: 2000, discountBps: null, fromCents: 2000, saveCents: 400, availableNow: true, slots: [{ label: 'Soup', qty: 1, itemIds: ['D1'] }, { label: 'Side', qty: 1, itemIds: ['D2'] }] };
 const restaurant = (kitchen = {}, extra = {}) => ({
-  kitchen: card(kitchen), address: '1129 Edmonton Tr NE', province: 'AB', ahsVerified: true, minOrderCents: 1500, serviceFeeBps: 800,
+  kitchen: card(kitchen), address: '1129 Edmonton Tr NE', province: 'AB', ahsVerified: true, minOrderCents: 1500, serviceFeeBps: 800, taxBps: 500,
   slots: ['2026-10-01T01:00:00Z', '2026-10-01T01:30:00Z'], sections: [{ id: 'S1', name: 'Soups & rolls', menu: 'Main', items: [DISH_PHO, DISH_ROLLS, DISH_GONE] }], combos: [COMBO], ...extra,
 });
 

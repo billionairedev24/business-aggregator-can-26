@@ -3,10 +3,10 @@ package ca.northline.food.application;
 import ca.northline.food.api.FoodMenuPricing;
 import ca.northline.food.domain.ComboPrice;
 import ca.northline.food.domain.FoodOrderMessages;
-import ca.northline.merchants.api.PublicDirectory;
-import ca.northline.region.api.Markets;
 import ca.northline.food.domain.ModifierGroup;
 import ca.northline.food.domain.PickCheck;
+import ca.northline.merchants.api.PublicDirectory;
+import ca.northline.region.api.Markets;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.RuleViolation;
 import ca.northline.shared.RuleViolation.Violation;
@@ -47,7 +47,10 @@ class FoodPricingService implements FoodMenuPricing {
         }
         var menu = menus.load(request.merchantId());
         // the kitchen's hours, windows and "sold out today" are in the time zone of its market
-        var zone = markets.zone(directory.byId(request.merchantId()).map(PublicDirectory.PublicBusiness::province).orElse(null));
+        var zone = markets.zone(directory
+                .byId(request.merchantId())
+                .map(PublicDirectory.PublicBusiness::province)
+                .orElse(null));
         var at = request.at().atZone(zone);
         var today = clock.instant().atZone(zone).toLocalDate();
         var violations = new ArrayList<Violation>();
