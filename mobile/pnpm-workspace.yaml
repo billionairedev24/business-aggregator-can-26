@@ -1,0 +1,6 @@
+# Northline's native apps (S-87 courier; the consumer app, S-97+, joins in phase 4). A workspace of its own, apart
+# from web/: Expo and React Native pin their own React, Metro and Jest, and web developers never install them.
+# Shared design tokens come from web/packages/tokens (linked, not copied): docs/runbooks/courier-app.md.
+packages:
+  - "apps/*"
+  - "packages/*"
