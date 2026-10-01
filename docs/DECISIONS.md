@@ -3236,7 +3236,8 @@ conventions, under the conditions of "AI provider and data residency" above.
   OpenRouter's `usage.cost` and `provider` routing fields (`data_collection`, `zdr`) are first-class here, the tool loop
   must stay ours (tools run as the caller with our permission checks, writes stop for confirmation; Spring AI executes
   tools itself unless told not to), and streaming needs no reactive stack. Both sit behind the same port, so switching
-  later is one adapter. MCP (S-127) uses Spring AI's MCP server separately. `@HttpExchange` (code standards) is not
+  later is one adapter. MCP (S-127) uses Spring AI's MCP server separately; the version catalog's single `spring-ai`
+  entry (2.0.0, added by S-127) is the one to use if the adapter ever moves to Spring AI's OpenAI model. `@HttpExchange` (code standards) is not
   used: a streamed body can't be returned through the proxy; one `RestClient` serves both calls.
 - **Provider selection** `northline.ai.provider` = `fake` (default) | `openrouter`; staging/prod refuse `fake` at
   start-up (`AiConfiguration`, same pattern as tax/calendar/POS) and require `AI_PROVIDER`. `OPENROUTER_API_KEY` is
