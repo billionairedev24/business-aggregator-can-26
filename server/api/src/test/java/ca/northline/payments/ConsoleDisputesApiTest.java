@@ -77,7 +77,8 @@ class ConsoleDisputesApiTest extends IntegrationTest {
     }
 
     String escrowOf(String disputeId) {
-        return jdbc.sql("select e.state from payments.escrows e join payments.disputes d on d.ref_id = e.id where d.id = ?")
+        return jdbc.sql(
+                        "select e.state from payments.escrows e join payments.disputes d on d.ref_id = e.id where d.id = ?")
                 .params(disputeId)
                 .query(String.class)
                 .single();
@@ -113,15 +114,18 @@ class ConsoleDisputesApiTest extends IntegrationTest {
                         update payments.disputes set evidence = cast(? as jsonb) where id = ?""")
                 .params(
                         "[{\"id\":\"E1\",\"kind\":\"report\",\"name\":\"inspection.pdf\",\"contentType\":\"application/pdf\","
-                                + "\"size\":15,\"by\":\"merchant\",\"at\":\"2026-09-06T20:00:00Z\",\"storageKey\":\"" + key + "\"}]",
+                                + "\"size\":15,\"by\":\"merchant\",\"at\":\"2026-09-06T20:00:00Z\",\"storageKey\":\""
+                                + key + "\"}]",
                         id)
                 .update();
 
         mvc.perform(get(DESK).with(TestJwt.staff(agent, StaffRole.SUPPORT)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.summary.forAgent").isNumber())
-                .andExpect(jsonPath("$.items[?(@.row.id == '%s')].row.state".formatted(id)).value("agent"))
-                .andExpect(jsonPath("$.items[?(@.row.id == '%s')].businessName".formatted(id)).value("Prairie Wrench"));
+                .andExpect(jsonPath("$.items[?(@.row.id == '%s')].row.state".formatted(id))
+                        .value("agent"))
+                .andExpect(jsonPath("$.items[?(@.row.id == '%s')].businessName".formatted(id))
+                        .value("Prairie Wrench"));
         mvc.perform(get(DESK + "/dispute/{id}", id).with(TestJwt.staff(agent, StaffRole.FINANCE)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.item.row.customerStatement")
@@ -146,7 +150,10 @@ class ConsoleDisputesApiTest extends IntegrationTest {
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.errors[0].message").value("Choose an outcome."));
 
-        decide("dispute", id, "{\"outcome\":\"partial\",\"refundCents\":8000,\"note\":\"Half: the leak was borderline.\"}",
+        decide(
+                        "dispute",
+                        id,
+                        "{\"outcome\":\"partial\",\"refundCents\":8000,\"note\":\"Half: the leak was borderline.\"}",
                         StaffRole.TRUST_SAFETY)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.row.state").value("decided"))
@@ -154,12 +161,19 @@ class ConsoleDisputesApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.row.decision.refundCents").value(8000));
         assertThat(escrowOf(id)).isEqualTo("released");
         // never instant: the refund waits in the approved queue until the job pays it
-        assertThat(jdbc.sql("select state from payments.refunds where dispute_id = ?").params(id).query(String.class).single())
+        assertThat(jdbc.sql("select state from payments.refunds where dispute_id = ?")
+                        .params(id)
+                        .query(String.class)
+                        .single())
                 .isEqualTo("approved");
         jobs.payRefundQueue();
-        assertThat(jdbc.sql("select state from payments.refunds where dispute_id = ?").params(id).query(String.class).single())
+        assertThat(jdbc.sql("select state from payments.refunds where dispute_id = ?")
+                        .params(id)
+                        .query(String.class)
+                        .single())
                 .isEqualTo("paid");
-        assertThat(events.stream(DisputeDecided.class).filter(e -> e.aggregateId().equals(id)))
+        assertThat(events.stream(DisputeDecided.class)
+                        .filter(e -> e.aggregateId().equals(id)))
                 .singleElement()
                 .satisfies(e -> assertThat(e.note()).isEqualTo("Half: the leak was borderline."));
         assertThat(audit(id)).containsExactly("disputes.decided:trust_safety");
@@ -175,7 +189,8 @@ class ConsoleDisputesApiTest extends IntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.row.decision.outcome").value("goodwill_credit"));
         assertThat(escrowOf(id)).isEqualTo("released");
-        assertThat(jdbc.sql("select kind || ':' || charged_to || ':' || amount_cents from payments.refunds where dispute_id = ?")
+        assertThat(jdbc.sql(
+                                "select kind || ':' || charged_to || ':' || amount_cents from payments.refunds where dispute_id = ?")
                         .params(id)
                         .query(String.class)
                         .single())
@@ -245,7 +260,8 @@ class ConsoleDisputesApiTest extends IntegrationTest {
         var escrow = fx.escrow(
                 shop.merchantId(), "goods", "held", 3_100, 1500, "Meat", "R. Diaz", hoursAgo(30), inHours(100));
         var refund = fx.refundCase(shop.merchantId(), escrow, 3_100, PaymentsFixture.caseNumber("RF"));
-        jdbc.sql("update payments.refunds set state = 'agent_review', contest_reason = 'Packed cold at 5:40' where id = ?")
+        jdbc.sql(
+                        "update payments.refunds set state = 'agent_review', contest_reason = 'Packed cold at 5:40' where id = ?")
                 .params(refund)
                 .update();
         mvc.perform(get(DESK + "/refund/{id}", refund).with(TestJwt.staff(agent, StaffRole.SUPPORT)))

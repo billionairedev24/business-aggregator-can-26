@@ -73,7 +73,14 @@ class AgentCaseService implements AgentCases {
         var seller = store.merchantDisputes(dispute.getMerchantId(), caseId);
         var evidence = dispute.getEvidence().stream()
                 .map(e -> new EvidenceItem(
-                        e.id(), e.kind().code(), e.name(), e.contentType(), e.size(), e.by(), e.at(), e.storageKey() != null))
+                        e.id(),
+                        e.kind().code(),
+                        e.name(),
+                        e.contentType(),
+                        e.size(),
+                        e.by(),
+                        e.at(),
+                        e.storageKey() != null))
                 .toList();
         return Optional.of(new CaseDetail(
                 row.get(),
@@ -152,7 +159,9 @@ class AgentCaseService implements AgentCases {
                         needsCosign ? "disputes.decision_awaiting_cosign" : "disputes.decided",
                         c.kind(),
                         c.caseId())
-                .withChange(null, Map.of("outcome", c.outcome().code(), "refundCents", returned, "decision", decision.id())));
+                .withChange(
+                        null,
+                        Map.of("outcome", c.outcome().code(), "refundCents", returned, "decision", decision.id())));
         if (!needsCosign) {
             apply(c.kind(), c.caseId(), c.outcome(), returned, c.staffId(), note);
         }
@@ -182,9 +191,17 @@ class AgentCaseService implements AgentCases {
                         c.approve() ? "disputes.cosigned" : "disputes.cosign_declined",
                         stored.kind(),
                         stored.caseId())
-                .withChange(Map.of("decision", d.id(), "state", d.state()), Map.of("state", c.approve() ? "applied" : "declined")));
+                .withChange(
+                        Map.of("decision", d.id(), "state", d.state()),
+                        Map.of("state", c.approve() ? "applied" : "declined")));
         if (c.approve()) {
-            apply(stored.kind(), stored.caseId(), Outcome.valueOf(d.outcome().toUpperCase(java.util.Locale.ROOT)), d.refundCents(), d.decidedBy(), d.note());
+            apply(
+                    stored.kind(),
+                    stored.caseId(),
+                    Outcome.valueOf(d.outcome().toUpperCase(java.util.Locale.ROOT)),
+                    d.refundCents(),
+                    d.decidedBy(),
+                    d.note());
         }
         return row(stored.kind(), stored.caseId()).orElseThrow();
     }
@@ -192,14 +209,17 @@ class AgentCaseService implements AgentCases {
     @Override
     public Optional<EvidenceFile> evidence(String disputeId, String evidenceId) {
         return cases.dispute(disputeId)
-                .flatMap(d -> d.getEvidence().stream().filter(e -> e.id().equals(evidenceId)).findFirst())
+                .flatMap(d -> d.getEvidence().stream()
+                        .filter(e -> e.id().equals(evidenceId))
+                        .findFirst())
                 .flatMap(e -> e.storageKey() == null
                         ? Optional.empty()
                         : storage.get(e.storageKey()).map(f -> new EvidenceFile(f.bytes(), f.contentType(), e.name())));
     }
 
     /** Moves the money for an agent's decision (the decider is the agent of record, whoever co-signed). */
-    private void apply(String kind, String caseId, Outcome outcome, long returned, String agentId, @Nullable String note) {
+    private void apply(
+            String kind, String caseId, Outcome outcome, long returned, String agentId, @Nullable String note) {
         if (REFUND.equals(kind)) {
             decisions.decideRefund(caseId, outcome == Outcome.FULL_REFUND, agentId);
             return;
@@ -224,38 +244,42 @@ class AgentCaseService implements AgentCases {
         var pending = store.pending(kind, caseId).orElse(null);
         var applied = store.applied(kind, caseId).orElse(null);
         if (DISPUTE.equals(kind)) {
-            return cases.dispute(caseId).map(d -> new CaseRow(
-                    DISPUTE,
-                    d.getId(),
-                    d.getCaseNumber(),
-                    d.getMerchantId(),
-                    d.getSubject(),
-                    d.getAmountCents(),
-                    d.getCustomerName(),
-                    d.getCustomerStatement(),
-                    d.getResponse(),
-                    pending != null ? "awaiting_cosign" : stateOf(d.getState()),
-                    d.getOpenedAt(),
-                    pending,
-                    applied));
+            return cases.dispute(caseId)
+                    .map(d -> new CaseRow(
+                            DISPUTE,
+                            d.getId(),
+                            d.getCaseNumber(),
+                            d.getMerchantId(),
+                            d.getSubject(),
+                            d.getAmountCents(),
+                            d.getCustomerName(),
+                            d.getCustomerStatement(),
+                            d.getResponse(),
+                            pending != null ? "awaiting_cosign" : stateOf(d.getState()),
+                            d.getOpenedAt(),
+                            pending,
+                            applied));
         }
         if (REFUND.equals(kind)) {
-            return cases.refund(caseId).map(r -> new CaseRow(
-                    REFUND,
-                    r.getId(),
-                    r.getCaseNumber(),
-                    r.getMerchantId(),
-                    r.getWhat(),
-                    r.getAmountCents(),
-                    r.getCustomerName(),
-                    null,
-                    r.getContestReason(),
-                    pending != null
-                            ? "awaiting_cosign"
-                            : r.getState() == Refund.State.AGENT_REVIEW ? "agent" : r.getState().code(),
-                    r.getCreatedAt(),
-                    pending,
-                    applied));
+            return cases.refund(caseId)
+                    .map(r -> new CaseRow(
+                            REFUND,
+                            r.getId(),
+                            r.getCaseNumber(),
+                            r.getMerchantId(),
+                            r.getWhat(),
+                            r.getAmountCents(),
+                            r.getCustomerName(),
+                            null,
+                            r.getContestReason(),
+                            pending != null
+                                    ? "awaiting_cosign"
+                                    : r.getState() == Refund.State.AGENT_REVIEW
+                                            ? "agent"
+                                            : r.getState().code(),
+                            r.getCreatedAt(),
+                            pending,
+                            applied));
         }
         return Optional.empty();
     }

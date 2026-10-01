@@ -148,7 +148,8 @@ public class Refund {
      * S-80 "Goodwill credit (platform pays)": the seller keeps the money; Northline gives the customer a credit for
      * {@code amountCents}, approved by the agent's decision and posted by the refund queue (no card money moves).
      */
-    public static Refund goodwillCredit(String caseNumber, Dispute dispute, Escrow escrow, long amountCents, Instant now) {
+    public static Refund goodwillCredit(
+            String caseNumber, Dispute dispute, Escrow escrow, long amountCents, Instant now) {
         return Refund.builder()
                 .id(Ids.next())
                 .paymentIntentId(escrow.getPaymentIntentId())

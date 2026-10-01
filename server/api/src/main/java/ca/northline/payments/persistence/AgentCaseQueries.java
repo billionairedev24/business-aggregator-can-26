@@ -77,7 +77,8 @@ class AgentCaseQueries implements AgentCaseStore {
                 .param("everyone", scope.everyone())
                 .param("merchants", scope.ids())
                 .param("week", ts(weekAgo))
-                .query((rs, _) -> new Summary(rs.getLong("for_agent"), rs.getLong("seller_window"), rs.getLong("closed")))
+                .query((rs, _) ->
+                        new Summary(rs.getLong("for_agent"), rs.getLong("seller_window"), rs.getLong("closed")))
                 .single();
     }
 
@@ -132,7 +133,8 @@ class AgentCaseQueries implements AgentCaseStore {
     }
 
     @Override
-    public boolean cosign(String decisionId, String state, String staffId, String role, @Nullable String note, Instant at) {
+    public boolean cosign(
+            String decisionId, String state, String staffId, String role, @Nullable String note, Instant at) {
         return jdbc.sql("""
                         update payments.agent_decisions
                            set state = :state, cosigned_by = :by, cosign_role = :role, cosigned_at = :at,

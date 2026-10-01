@@ -58,7 +58,8 @@ class DisputesController {
             @Pattern(regexp = "full_refund|partial|release|goodwill_credit", message = AgentCases.OUTCOME_REQUIRED)
             String outcome,
 
-            @Nullable @Min(value = 0, message = AgentCases.PARTIAL_RANGE) Long refundCents,
+            @Nullable @Min(value = 0, message = AgentCases.PARTIAL_RANGE)
+            Long refundCents,
 
             @Nullable @Size(max = 1000, message = "At most 1,000 characters.")
             String note) {}
@@ -92,7 +93,12 @@ class DisputesController {
         var file = desk.evidence(id, evidenceId).orElseThrow(() -> new NotFound("evidence", evidenceId));
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(file.contentType()))
-                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.inline().filename(file.name()).build().toString())
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.inline()
+                                .filename(file.name())
+                                .build()
+                                .toString())
                 .header("X-Content-Type-Options", "nosniff")
                 .body(file.bytes().toArray());
     }

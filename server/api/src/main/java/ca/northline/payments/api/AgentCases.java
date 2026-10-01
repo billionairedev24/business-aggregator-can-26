@@ -63,7 +63,8 @@ public interface AgentCases {
             String staffId,
             String role) {}
 
-    record Cosign(String decisionId, boolean approve, @Nullable String note, String staffId, String role) {}
+    record Cosign(
+            String decisionId, boolean approve, @Nullable String note, String staffId, String role) {}
 
     /**
      * One case.
@@ -118,9 +119,20 @@ public interface AgentCases {
         }
     }
 
-    /** @param kind {@code photo | report | gps | document}; @param by {@code merchant | customer} */
+    /**
+     * @param kind {@code photo | report | gps | document}
+     * @param by {@code merchant | customer}
+     * @param file whether a stored file can be downloaded
+     */
     record EvidenceItem(
-            String id, String kind, String name, @Nullable String contentType, long size, String by, Instant at, boolean file) {}
+            String id,
+            String kind,
+            String name,
+            @Nullable String contentType,
+            long size,
+            String by,
+            Instant at,
+            boolean file) {}
 
     record EvidenceFile(Bytes bytes, String contentType, String name) {}
 }

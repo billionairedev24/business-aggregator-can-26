@@ -106,7 +106,7 @@ member.
 | `/sign-in` | signed out | — | anyone | S-90 | built (`?next=`, `?error=staff_only\|mfa_required\|signin`) |
 | `/?province=&market=` | `overview` | `overview` | all six | S-91 | built |
 | `/orders` | `orders` | `orders` | admin, dispatch, support | S-81 | stand-in |
-| `/disputes` | `disputes` | `disputes` | admin, trust_safety, finance, support | S-80 | stand-in |
+| `/disputes?province=&market=&case=kind:id` | `disputes` | `disputes` | admin, trust_safety, finance, support | S-80 | built |
 | `/delivery` | `delivery` | `delivery` | admin, dispatch | S-81 | stand-in |
 | `/sellers` | `sellers` | `sellers` | admin, trust_safety, support | S-82 | stand-in |
 | `/sellers/$sellerId` | `seller_detail` | `sellers` | admin, trust_safety, support | S-82 | stand-in |
@@ -136,7 +136,7 @@ member.
 | `analyst` | Read-only analyst | overview, reports | — |
 
 Not modelled yet (later stories): the design's co-signatures ("province Off↔Live needs 2 admins", "Suspend requires a
-T&S lead co-sign", "refunds > $500 need a 2nd approver"), the per-role second factor ("Passkey" / "App 2FA" / "SSO" —
+T&S lead co-sign"; "refunds > $500 need a 2nd approver" is built for disputes by S-80), the per-role second factor ("Passkey" / "App 2FA" / "SSO" —
 today every role needs `acr=mfa`), and granting roles from the Team screen (SQL until S-96 —
 `docs/runbooks/README.md` § Console BFF).
 
@@ -181,6 +181,17 @@ Item: { id, kind: product|service|dish, merchantId, businessName, province?, nam
         deviationPct?, regulator?, flags[], revetReasons[], trustFlags[{flagId, rule, source, explanation, categories}],
         state: pending|approved|rejected, submittedAt?, decidedAt?, reasons[], note? }
 409 not_in_review
+```
+
+### Disputes & refunds (S-80)
+
+```
+GET  /api/v1/console/disputes[?province=&market=]          → { summary: {forAgent, inSellerWindow, closedThisWeek}, items: [{row, businessName, province}] }
+GET  /api/v1/console/disputes/{dispute|refund}/{id}        → { item, detail: {evidence, customerPriorDisputes, sellerPriorDisputes, sellerPriorWon}, sellerQuality? }
+GET  /api/v1/console/disputes/dispute/{id}/evidence/{evidenceId}   the stored file
+POST /api/v1/console/disputes/{dispute|refund}/{id}/decision {outcome: full_refund|partial|release|goodwill_credit, refundCents?, note?}  (decide)
+POST /api/v1/console/disputes/decisions/{decisionId}/cosign  {decision: approve|decline, note?}   (refund; not the decider)
+409 not_with_agent · awaiting_cosign · cosign_self · cosign_closed
 ```
 
 ### Overview (S-91)
@@ -241,7 +252,7 @@ stopsDone, stopsTotal, nextEta, late, heuristic}` (`late`: a pending stop more t
 | shell | `GET /api/v1/console/me`, `POST …/me/role-view` (S-90); `GET /api/v1/geo/regions` (S-134) | nav badge counts (`GET /api/v1/console/nav-badges`, design: "14", "1 stuck", "23 open"…); global search (`GET /api/v1/console/search?q=` across merchants, orders, cases — the design shows the pill only, no results; no story owns it yet) |
 | overview | `GET /api/v1/console/overview` (S-91, below) | — |
 | orders, delivery | `/api/v1/console/fulfilment/**` (S-86, § Delivery below): runs by market/time with `late`, run detail with stops, an order's delivery, couriers with shift and run, onboard a courier, schedule a shift, plan now, reassign a run | the orders list itself (search, filters by state/market), the ops map's geometry, zone economics (S-81) |
-| disputes | `payments.api.DisputeDecisions` (decide, decideRefund) | the agents' queue and evidence endpoints (S-80) |
+| disputes | `GET /api/v1/console/disputes`, `GET …/{kind}/{id}`, evidence download, `POST …/{kind}/{id}/decision`, `POST …/decisions/{id}/cosign` (S-80) | — |
 | sellers | `merchants.api.MerchantDirectory`, `trust.api.QualityQuery` | directory with filters, seller detail, oversight actions (coach, instant book off, hide, demote, suspend) (S-82) |
 | verify | `GET/POST /api/v1/console/registry-reviews` (S-23); `GET /api/v1/console/verification/applications[/{id}]`, `POST …/{id}/decision`, `POST …/{id}/identity-reviews/{checkId}/decision` (S-79) | — |
 | vetting | `GET /api/v1/console/vetting`, `POST …/listings/{id}/decision`, `POST …/dishes/{id}/decision` (S-92) | — |

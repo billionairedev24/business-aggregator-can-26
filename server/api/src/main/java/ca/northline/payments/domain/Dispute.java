@@ -325,7 +325,17 @@ public class Dispute {
         decidedBy = by;
         decidedAt = now;
         return new DisputeDecided(
-                Ids.next(), now, id, merchantId, caseNumber, amountCents, escrowId, outcome.code(), refund, by, decisionNote);
+                Ids.next(),
+                now,
+                id,
+                merchantId,
+                caseNumber,
+                amountCents,
+                escrowId,
+                outcome.code(),
+                refund,
+                by,
+                decisionNote);
     }
 
     private void requireOpen() {

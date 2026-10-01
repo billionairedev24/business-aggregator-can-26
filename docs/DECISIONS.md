@@ -5362,3 +5362,47 @@ Stacked on S-79 (it uses S-79's `shared.PlaceFilter`, the console's `PlaceFilter
   screening (no keyword list in vetting yet — S-93 makes keyword lists configuration); the "SLA 4 business hours" is the
   design's copy, not computed; the Studio doesn't show the reviewer's reasons on a rejected listing (they are in the
   email).
+
+## 2026-10-01 — S-80 Disputes: evidence review and decisions (DisputeDecisions)
+
+Stacked on S-92 (#122), itself on S-79 (#121).
+
+- **The agents' queue** (`GET /api/v1/console/disputes?province=&market=`, screen `disputes`: admin, trust & safety,
+  finance, support): disputes with an agent (`agent`, `appealed` — the seller contested, or the goodwill offer was
+  declined / expired) and **S-60 refund cases escalated after the seller's 24 h** (`agent_review`), oldest first, then
+  cases agents decided in the last 7 days. Headline counts: cases for an agent, refund cases still in the seller window,
+  disputes and refund cases closed in the last 7 days. Payments owns the data (`payments.api.AgentCases`); the console
+  module adds the business name, province and S-38 quality score (`trust.api.QualityQuery`) — payments can't depend on
+  trust (trust → messaging → payments).
+- **Case view:** both parties' statements (the dispute's customer statement and seller response; a refund case's
+  contest reason), the evidence list with downloads of stored files
+  (`GET …/dispute/{id}/evidence/{evidenceId}`, `nosniff`), the customer's other disputes, the seller's prior disputes
+  and how many were released to it. The design's "Reliability 4.9" and "message thread (14)" have no source yet and are
+  left out.
+- **Decisions = the design's four outcomes** (`POST …/{dispute|refund}/{id}/decision {outcome, refundCents?, note?}`,
+  action `decide`): full refund, partial (any amount between $0 and the escrow; the console pre-fills 50 %), release to
+  seller, **goodwill credit (platform pays)** — the escrow is released to the seller and the customer gets a Northline
+  credit for the chosen amount (`payments.refunds` kind `credit`, charged to the platform). Money moves only through the
+  existing case paths (S-11): refunds become `approved` and the refund queue job pays them; releases let the escrow go.
+  **Never auto-refund:** nothing pays out at decision time. Refund cases take only full refund or release (they have
+  no partial path).
+- **Finance co-sign above $500** (design 03 Team: Finance — "refunds > $500 · Passkey + 2nd approver"): a decision that
+  returns more than $500 (card refund or credit) is stored `awaiting_cosign`; nothing moves and the escrow stays on hold
+  until another person with the `refund` action (finance, admin) co-signs (`POST …/decisions/{id}/cosign {approve |
+  decline, note?}`). The decider can't co-sign (409 `cosign_self`). Declining returns the case to the agents. The $500
+  is the design's number, a constant (`AgentCases.COSIGN_ABOVE_CENTS`), not configuration. The design's "Passkey"
+  step-up is not modelled (every console session already has a second factor).
+- **The note "visible to both parties"** is stored with the decision (`agent_decisions.note`,
+  `payments.disputes.decision_note`) and carried by `dispute.decided` as an **optional `note`** (additive schema change)
+  so the merchant's "dispute decided" email shows it. Customer-facing display of the note (consumer Help & cases) is not
+  built.
+- **Audit:** `disputes.decided`, `disputes.decision_awaiting_cosign`, `disputes.cosigned`, `disputes.cosign_declined`
+  (target `dispute|refund`, the business's id, the console role).
+- **Schema V212:** `payments.agent_decisions`; `payments.disputes.decision_note`; partial indexes on agent cases.
+- **Messages (fr in the catalogue):** "Choose an outcome.", "A partial refund is more than $0 and less than the amount
+  in escrow.", "A refund case is refunded in full or released to the seller.", "Choose approve or decline.", 409s
+  "This case isn't waiting for an agent.", "This case already has a decision waiting for a finance co-sign.", "This
+  decision was already co-signed or declined.", "Another person must co-sign this decision.".
+- **Not done:** seller appeals ("seller may appeal once" is the design's copy; the `appealed` state exists but no
+  appeal flow); "quality scores update tonight" relies on the existing nightly quality job; Stripe card disputes
+  (chargebacks) stay with the issuer and don't appear in the queue.

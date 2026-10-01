@@ -38,16 +38,21 @@ class DisputeDeskService implements DisputeDesk {
         var businesses = new Businesses();
         return new Queue(
                 cases.summary(scope, weekAgo),
-                cases.queue(scope, weekAgo, LIMIT).stream().map(businesses::item).toList());
+                cases.queue(scope, weekAgo, LIMIT).stream()
+                        .map(businesses::item)
+                        .toList());
     }
 
     @Override
     public Optional<Detail> detail(String kind, String caseId) {
         var businesses = new Businesses();
-        return cases.detail(kind, caseId).map(d -> new Detail(
-                businesses.item(d.row()),
-                d,
-                quality.latest(d.row().merchantId()).map(QualityQuery.QualityScore::score).orElse(null)));
+        return cases.detail(kind, caseId)
+                .map(d -> new Detail(
+                        businesses.item(d.row()),
+                        d,
+                        quality.latest(d.row().merchantId())
+                                .map(QualityQuery.QualityScore::score)
+                                .orElse(null)));
     }
 
     @Override

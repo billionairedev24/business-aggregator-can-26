@@ -14,7 +14,7 @@ the provider is called — the api's S-13 `Mailer` and the worker use the same c
 | `payout_account.changed` (`payments.payout_account`) | — security | owners | email, always | **SMS, always** — whatever the matrix, even in quiet hours |
 | `payout.sent` (`payments.payout`) | `payout` | owners, bookkeepers | email | SMS, push |
 | `payout.failed` (`payments.payout`) | `payout` | owners, bookkeepers | — | **email** (template `payout-failed`), SMS, push |
-| `dispute.updated`, `dispute.decided` (`payments.dispute`) | `dispute` | owners | email | SMS, push |
+| `dispute.updated`, `dispute.decided` (`payments.dispute`; the agent's note in the email since S-80) | `dispute` | owners | email | SMS, push |
 | `refund.case_updated`, `refund.issued` (`payments.refund`) | `dispute` | owners | email | SMS, push |
 | team invitation to a mobile number | — | the invitee | **SMS** (the link's token never leaves the api) | — |
 | `custom_domain.changed` with a `notice` (`merchants.storefront`, S-31): the page's own domain went live, stopped pointing at Northline (with the grace deadline), was disconnected, failed its certificate, expired or was claimed by another business | — service notice | owners | **email** (template `custom-domain`), whatever the matrix — [custom-domains.md](custom-domains.md) | — |
