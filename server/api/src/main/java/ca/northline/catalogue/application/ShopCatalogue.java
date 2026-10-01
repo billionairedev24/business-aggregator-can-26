@@ -33,7 +33,10 @@ public interface ShopCatalogue {
     /** Distinct products live in {@code categoryId}. */
     int productCount(Collection<String> merchantIds, String categoryId);
 
-    /** A shop product's record, if some shop sells it (approved and live) anywhere. */
+    /**
+     * A shop product's record, if some shop sells it (approved and live) anywhere. {@code productId} may also be one of
+     * its offers' ids: search results (S-44) are offers, and the record carries the product's own id (S-48).
+     */
     Optional<ProductRecord> product(String productId, String lang);
 
     /** Live offers of the product by the given merchants. */

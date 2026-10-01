@@ -133,7 +133,8 @@ class ShopCatalogueAdapter implements ShopCatalogue {
                                cp.bullets, coalesce(cp.attributes ->> 'volume', cp.attributes ->> 'size') as unit,
                                cp.category_id, cp.image_set
                           from catalogue.catalog_products cp
-                         where cp.id = :id and cp.category_id like 'shop.%'
+                         where cp.id in (:id, (select o.product_id from catalogue.offers o where o.id = :id))
+                           and cp.category_id like 'shop.%'
                            and exists (select 1 from catalogue.offers o where o.product_id = cp.id
                                           and o.vetting = 'approved' and o.status = 'live')
                         """)

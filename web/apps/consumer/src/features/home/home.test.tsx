@@ -84,7 +84,7 @@ describe('home', () => {
     mockFetch(api());
     const user = userEvent.setup({ delay: null });
     const { router } = renderApp('/', { routes: home });
-    await user.type(await screen.findByRole('searchbox', { name: 'Search' }), 'sourdough');
+    await user.type(await screen.findByRole('combobox', { name: 'Search' }), 'sourdough');
     await user.click(screen.getByRole('button', { name: 'Search' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/search'));
     expect(router.state.location.search).toEqual({ q: 'sourdough' });

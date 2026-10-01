@@ -1,6 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router';
 import homeCss from '../features/home/home.css?url';
 import { HomeScreen } from '../features/home/HomeScreen';
+import { seo } from '../lib/seo';
+import { siteJsonLd } from '../lib/structuredData';
 
 const DESCRIPTION = {
   en: 'Groceries and goods on a shared run, hot food in 30 minutes, verified providers for anything at home — every job paid into escrow, every seller vetted.',
@@ -9,12 +11,13 @@ const DESCRIPTION = {
 
 /** Home (S-46): search-first hero, Services / Shop / Food entry points. The header has no search here. */
 export const Route = createFileRoute('/')({
-  head: ({ match }) => ({
-    meta: [
-      { title: match.context.locale === 'fr' ? 'Northline · Tous les commerçants de confiance, à un geste de votre porte' : 'Northline · Every trusted local, one tap from the door' },
-      { name: 'description', content: DESCRIPTION[match.context.locale] },
-    ],
-    links: [{ rel: 'stylesheet', href: homeCss }],
-  }),
+  head: ({ match }) => {
+    const { locale, config } = match.context;
+    const tags = seo(match.context, {
+      title: locale === 'fr' ? 'Northline · Tous les commerçants de confiance, à un geste de votre porte' : 'Northline · Every trusted local, one tap from the door',
+      description: DESCRIPTION[locale], path: '/', jsonLd: siteJsonLd(config.siteOrigin, config.legalEntity),
+    });
+    return { ...tags, links: [...tags.links, { rel: 'stylesheet', href: homeCss }] };
+  },
   component: HomeScreen,
 });

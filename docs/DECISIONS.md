@@ -3602,6 +3602,164 @@ conventions, under the conditions of "AI provider and data residency" above.
   alerts (the metrics alerts of S-111 cover the same failures). **Never run against a real backend** (CloudWatch Logs,
   Cloud Logging, Azure Monitor, Loki/Grafana Cloud).
 
+## 2026-10-01 — S-48 Search results with predictions and filters
+
+Built on the S-44 contract (docs/CONSUMER_WEB_PLAN.md § Search) and S-47's location.
+
+- **`/search` is server-rendered, the same HTML for everyone.** The URL carries the text, scope, sort and filters
+  (`q`, `scope`, `category`, `sort`, `tier`, `maxPrice`, `delivery`, `openNow`, `instantBook`, `dietary`,
+  `allergenFree`, `radiusKm` — the API's own names, so a shared link reproduces the search; anything malformed is
+  dropped). The loader fetches the first page with no place (the API's default province); once the browser knows the
+  location it asks again with `market` = the location's province and `lat`/`lng` (results stay on screen, dimmed,
+  while it does). A failing first page doesn't fail the route: the page shows its own error state with Retry.
+- **The design's filter list** ("On tonight's run", "Under $10", "Master sellers", "Halal", "Gluten-free") is what the
+  header search lands on (`scope` all) and the Shop scope. **"Organic" is not offered**: the index has no organic data
+  (S-44). The services scope shows the providers screen's chips (Master tier, Instant book, Available today = open now,
+  Under $80), the food scope the food screen's (Open now, Halal, Vegan, Nut-free = peanuts + tree nuts). Additions
+  where the design is silent (recorded): a "Show" group (Everything / Services / Shop / Food, with counts from the
+  kinds facet when searching everything; changing scope drops the other scope's filters), a "Categories" group from
+  the categories facet (toggles `category`), a "Distance" group (Any / under 3, 10, 25 km) only when the browser has
+  coordinates, and "Clear all". The design's static "Shops" list is the merchants facet (top five, text as designed;
+  labelled Providers / Kitchens / Businesses by scope — the API has no merchant filter, so they don't filter).
+- **Sort** is the design's "Sorted by relevance ▾" as a native select (relevance, distance, price both ways, rating);
+  distance appears only with coordinates. A URL asking for distance (sort or radius) without a location leaves it out
+  of the API call (the API would 422) and says "Set your location to sort and filter by distance." with a link.
+- **Cards** as designed (picture, name and price, "business · detail", one tag): detail = category, rating with count,
+  distance; tag by priority sold out → on tonight's run → open now (food) → instant book (services) → Master/Trusted
+  tier. "Quote" for quote-priced or unpriced listings, "from $" for businesses, "$/h" for hourly. Pictures: a catalogue
+  image (`media:`) through the public media endpoint; dish photos (`object:`) have no public URL yet → the design's
+  halftone placeholder in the merchant's swatch colour.
+- **Where a result goes:** product → `/products/<offer id>?offer=<offer id>` (see the api change below), service →
+  the provider page, dish → the kitchen page, business → provider or kitchen page; a shop has no page of its own yet
+  (S-49), so it searches the Shop scope by its name. Categories from suggestions go to the services category or shop
+  department page (leaf slug); others search within the category.
+- **Paging:** "Show more results" with the API's `next` token (TanStack infinite query); "Showing N of M" (M shown as
+  "10000+" past the API's exact count). A dead `after` (422 on `after`) shows the API's sentence; 429 → "Too many
+  searches at once — try again in a minute."
+- **Empty state:** "Nothing matches “{q}” here yet." with one action — "Clear filters" when filters are on, else
+  "Browse services".
+- **Predictions as you type** (header and home hero, design 06 `suggestions`): the UI kit's `SearchBar` gained an
+  optional ARIA combobox (`suggestions` groups + `onPick`, ↑/↓/Enter/Esc, mousedown picks, highlighted ranges via
+  `Highlighted`; stories `HeaderPredictions` / `HeroPredictions`). `features/search/SiteSearch` feeds it from
+  `/search/suggest` (150 ms debounce, the visitor's province, the page language, previous list kept while typing) and
+  "Your recent" from `localStorage['nl.recentSearches']` (last five, read after hydration; written when a search runs
+  or a suggestion is opened; nothing is sent). Item meta: listings "{business} · {price}", businesses "{type} ·
+  {tier} · ★ {rating}", categories their side ("Service", "Shop"…), recent "searched today/yesterday/N days ago". The
+  prototype's footnote ("Elasticsearch completion suggester · fr/en synonyms…") is technical and not shown; the
+  "fr → sourdough" synonym rows aren't returned by the API (S-44). On the results page the header field shows the
+  searched text.
+- **`robots: noindex, follow`** on `/search`: result pages are endless and query-specific; the listings themselves are
+  indexed (S-63).
+- **SSR and the per-client rate limit (S-44):** `server/node-server.mjs` now passes the visitor's address chain to the
+  app as `x-nl-forwarded-for` (the ingress's `X-Forwarded-For` when `TRUST_PROXY=true`, then the peer; a browser's own
+  header is dropped) and the server-side search sends it as `X-Forwarded-For` through the consumer-bff, so the api's
+  limit counts the visitor rather than the SSR pod. The consumer-bff relays the header as is.
+- **api change (catalogue, S-50's endpoint):** search results are offers, the product page takes a product. `GET
+  /api/v1/public/shop/products/{id}` now also accepts one of the product's offer ids and answers the product (its own
+  `productId` in the body); the consumer's product route redirects (301) such a URL to `/products/<productId>`, keeping
+  the offer preselected (`?offer=`). No schema change. Test: `ProductPageApiTest.anOfferIdFromSearchNamesItsProduct`.
+- **No migration, no new configuration.**
+- **Tests:** `features/search/search.test.tsx` — the design's heading, filters, facets and cards in English and
+  French; filters/sort/category/clear through the URL and onto the API query; scopes with their own chips; the
+  location's province and coordinates, the distance group and sort; distance left out without a location; paging;
+  empty, error + Retry and rate-limit states; recent searches; suggestions (listings, businesses, categories, recent
+  in both languages, highlighting, keyboard pick, Escape, Enter); links per kind; malformed URL parameters. Shell and
+  home tests now find the field as a combobox.
+- **Not done:** Storybook interaction/a11y runs of the new stories (no browser in the sandbox; `pnpm test-storybook` in
+  CI); multi-select facets (S-44 counts the whole filtered result); filtering by a merchant from the "Shops" list;
+  "Organic", "Free delivery (Plus)" and "EV certified" (no data); the redirect of offer URLs is exercised by the api
+  test only (no router-level test).
+
+## 2026-10-01 — S-63 Legal pages and footer; SEO, sitemap, structured data
+
+- **Legal pages: one copy, reused.** The Studio already served `/legal/terms.html` and `/legal/privacy.html` (design
+  09/10 verbatim, generated by `scripts/legal-pages.mjs`); S-45 had generated a second copy into the consumer app.
+  Both now come from a new workspace package `web/packages/legal` (`pages/terms.html`, `privacy.html`, `northline.css`)
+  whose Vite plugin `legalPages()` serves `/legal/*` in development and writes the files into each app's browser build
+  (Studio nginx and the consumer's Node server then serve them as static files). The generator writes there (an
+  optional out dir), and the package's `node --test` regenerates the pages from the design and fails if the committed
+  files differ — the verbatim rule is now checked. The documents stay English only (the design has no French
+  version); the footer links carry `hreflang="en-CA"`. No React legal pages: they would be a second rendering of the
+  same text.
+- **Footer as designed** (company line, Privacy, Terms, language switch, Sell on Northline, Offer a service, Run a
+  kitchen): the S-45 placeholder already matched; the company line is `NL_LEGAL_ENTITY` (S-134; the design's
+  "Northline Marketplace Inc. · Calgary" is configuration, not code). Tests for both languages.
+- **Language URLs (hreflang).** The language was cookie / Accept-Language only, so English and French shared a URL.
+  `?lang=en|fr` now wins over both on the server and in the browser and is written to the cookie; English is the plain
+  URL and `x-default`, French adds `lang=fr`; a page's canonical is its own language's URL. (Not done: the FR/EN toggle
+  doesn't rewrite a `?lang=` already in the address bar; the next full load of that URL uses it again.)
+- **`seo()` (`src/lib/seo.ts`)** builds each public route's head: title, description (whitespace collapsed, ≤ 300
+  chars), canonical, hreflang en-CA / fr-CA / x-default, Open Graph (`og:locale` + alternate, `og:url`, `og:image`),
+  `twitter:card`, JSON-LD scripts (`<` escaped). Applied to home, services landing, service category, provider list,
+  provider page, shop landing and department (keeping `market`), product (keeping `market`), food landing (keeping
+  `cuisine`) and restaurant. A business page with a live custom domain is canonical there (`https://<domain>/`). Screens
+  not built yet (`pending()`) are `noindex` like the personal ones already were.
+- **JSON-LD (`src/lib/structuredData.ts`):** provider `LocalBusiness` (address locality/region/country, area served,
+  `OfferCatalog` of `Service` offers — fixed price, hourly as `UnitPriceSpecification` `HUR`, quotes without a price —
+  and `AggregateRating` only when there are reviews); product `Product` with an `Offer` (one shop: availability,
+  condition, seller) or `AggregateOffer` (low/high price, count) and a review-weighted `AggregateRating`; kitchen
+  `Restaurant` (address, cuisines in the page's language, price range, delivery `OrderAction`, `Menu` → `MenuSection`
+  → `MenuItem` with `Offer` and `suitableForDiet` from the dietary codes); home `Organization` (legal name =
+  `NL_LEGAL_ENTITY`) and `WebSite` with a `SearchAction`. Prices in CAD as decimals.
+- **Sitemap data (api, module `discovery`):** `GET /api/v1/public/sitemap` → `{pageSize: 5000, sections: [{name,
+  count, pages}]}`, `GET /api/v1/public/sitemap/{section}?page=n` → `{items: [{key, customDomain, updatedAt}]}` (404
+  unknown section, 422 "Choose a page between 1 and 50000.", `Cache-Control: public, max-age=3600`). Sections come from
+  a new shared contract `ca.northline.shared.PublicPages` (like `NavBadgeContributor`) implemented by the owning
+  modules on their own schema: merchants `providers` (active provider/both with a published page; the live custom
+  domain) and `kitchens`; catalogue `products` (shop products with a live approved offer, not banned — what the product
+  page shows), `departments` (shop leaf categories with such a product) and `services` (service leaf categories with a
+  live approved service). Offset pages ordered by key (stable; sitemaps need random access). No migration.
+- **robots.txt and sitemaps (consumer server, `server/seo.mjs`):** per host (`page-hosts.mjs` gained `hostKind`). Site:
+  disallow personal/transactional/endless paths, `Sitemap:` the index; `/sitemap.xml` = index of
+  `/sitemaps/pages.xml` (landing pages with alternates, legal documents without) and `/sitemaps/<section>-<n>.xml`
+  (lastmod when known, hreflang alternates). A merchant's live domain: its own robots.txt and a one-URL sitemap, and
+  its page is left out of the site's sitemap (cross-host sitemap entries would need both hosts verified).
+  `pages.<zone>`: crawlable, no sitemap (its pages canonicalise elsewhere). Unknown domain 404, api down 503. The api's
+  answers are cached ten minutes in the server; responses an hour. The dev server serves the same (site host).
+- **`/search`** is S-48's (it sets `noindex, follow` there); robots.txt disallows `/search` here.
+- **Tests:** api `SitemapApiTest` (sections, counts/pages, what's listed and what isn't — drafts, unpublished, inactive,
+  banned, another type —, the custom domain, 404/422, cache header); web `src/lib/seo.test.ts` (tags, French
+  canonical, own domain, noindex, script escaping, `?lang=`; every JSON-LD builder), `src/lib/routeHeads.test.ts` (the
+  heads of the provider page — on the site and on its own domain in French —, product, restaurant, department, home and
+  a pending screen, from loader data), `src/lib/sitemap.test.ts` (robots per host, index, sections, alternates, custom
+  domain exclusion and host sitemap, 404/503, cache, XML escaping), footer en/fr; `@northline/legal` verbatim test.
+- **Not done:** the legal documents in French (no French source in the design); `Vary` headers / an edge cache for
+  cookie-negotiated pages; image sitemaps; listing every kitchen's dishes or services as their own URLs (they have no
+  pages); validation against Google's Rich Results tool (never run — no network to it).
+
+## 2026-10-01 — S-61 Sell or offer a service: entry into Studio onboarding (07a–07d)
+
+- **`/sell` is design 06's account › `sell` panel as its own page** (the route S-45 reserved; the account menu's "Sell
+  or offer a service" and the footer's Sell / Offer / Run a kitchen link there). Server-rendered and indexable (title,
+  description); the account line is the only part that depends on the visitor and starts as a skeleton.
+- **Into the Studio, never a second onboarding:** the three cards link to the Studio's existing onboarding
+  (`/onboarding?type=provider|seller|kitchen`, 07a–07c) at the new public config `studioOrigin` (`NL_STUDIO_ORIGIN`,
+  the chart's `urls.studio`; default the Studio dev server :3100). **Signed in** on the consumer site → the studio-bff's
+  sign-in hand-off `/bff/login?next=/onboarding?type=…` (S-20/S-62): northline-auth already holds the person's session,
+  so the authorization completes at once and they arrive in onboarding with the same account ("same login, same
+  passkey"; the Studio then asks for the second factor business accounts need). **A guest** → `/onboarding?type=…`
+  directly; the Studio's guard sends them to its own sign-in / register and back (`next`). The design's "Not a
+  customer yet? Start fresh." → Studio `/register?next=/onboarding?…&new=1` (07d, the brand-new-account path),
+  keeping the chosen type. Guests also get "Already shop on Northline? Sign in first — …" to the consumer sign-in
+  coming back to `/sell` (ours; the design only draws the signed-in line).
+- **`?type=`** outlines the chosen card (accent ring, "Chosen" for screen readers) — the design has no chosen state;
+  order and copy stay as designed. The CTAs are plain links (another origin), named "… (opens the Studio)" for screen
+  readers.
+- **Copy:** as designed except place-specific words (region rule, DECISIONS 2026-09-30): "trade licence (AMVIC,
+  RECA…)" → "trade licence for regulated trades" (those are one province's regulators); "AHS Food Handling Permit" →
+  "{province} Food Handling Permit" from the visitor's province (the S-134 ambient values; "Food Handling Permit" before
+  the region model answers). The design's figures ("Take rate 15% → 9% at Master", "Median 1.4 days") are kept as
+  copy. French is ours (design/i18n-fr.js has none of these lines).
+- **Configuration:** `NL_STUDIO_ORIGIN` (consumer web, optional; chart from `urls.studio`) — README, local, dev,
+  staging, prod runbooks, `web/apps/consumer/.env.example`, chart helper. No server change, no migration.
+- **Tests:** `features/sell/sell.test.tsx` — the three cards' copy, guest links (Studio onboarding per type, consumer
+  sign-in back to `/sell?type=`, Start fresh with `new=1`), signed-in links through the studio-bff hand-off and the
+  "Logged in as" line, the chosen card, the province's permit (BC) and French (QC), reached from the footer and the
+  account menu; the link builders.
+- **Not exercised end to end:** the cross-origin hand-off was not run against a live auth + both BFFs here (the BFF's
+  `next` rule and the Studio's onboarding parameters are unchanged and covered by their own tests). If northline-auth's
+  session has expired while the consumer-bff's has not, the Studio's sign-in asks again — accepted.
+
 ## 2026-10-01 — S-130 Studio AI assistant: chat with tools that run as the caller, streamed, plus screen insights
 
 Stacked on S-129 (#82, branch `ai/s-129-platform`).

@@ -59,9 +59,29 @@ export function createPageRouter({ siteOrigin = '', pagesHost = '', bffUrl = 'ht
   /**
    * @returns {Promise<{ type: 'app', page?: { mode: 'custom' | 'pages', host: string, slug: string } } | { type: 'redirect', location: string } | { type: 'notFound' } | { type: 'unavailable' }>}
    */
-  return async function route(rawHost, pathname, search = '') {
+  const local = host => !pages || !site || !host || host === siteHost || host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
+
+  /**
+   * What a host is, for robots.txt and the sitemaps (S-63): the site, the pages host, a merchant's live domain serving
+   * a business page (`custom`), a domain serving nothing here (`none`), or unknown for now (`unavailable`).
+   * @returns {Promise<{ kind: 'site' } | { kind: 'pages', host: string } | { kind: 'custom', host: string, slug: string } | { kind: 'none' } | { kind: 'unavailable' }>}
+   */
+  async function hostKind(rawHost) {
     const host = normalizeHost(rawHost);
-    if (!pages || !site || !host || host === siteHost || host === 'localhost' || host === '127.0.0.1' || host === '[::1]') return { type: 'app' };
+    if (local(host)) return { kind: 'site' };
+    if (host === pages) return { kind: 'pages', host };
+    const found = await byHost(host);
+    if (found?.error) return { kind: 'unavailable' };
+    if (!found || found.kind !== 'business_page') return { kind: 'none' };
+    return { kind: 'custom', host, slug: found.slug };
+  }
+
+  route.hostKind = hostKind;
+  return route;
+
+  async function route(rawHost, pathname, search = '') {
+    const host = normalizeHost(rawHost);
+    if (local(host)) return { type: 'app' };
     if (host === pages) {
       const slug = pathname.replace(/^\/+|\/+$/g, '');
       if (SLUG.test(slug)) return { type: 'app', page: { mode: 'pages', host, slug } };
@@ -73,5 +93,5 @@ export function createPageRouter({ siteOrigin = '', pagesHost = '', bffUrl = 'ht
     if (found.kind !== 'business_page') return toSite('/');
     if (pathname === '/' || pathname === '') return { type: 'app', page: { mode: 'custom', host, slug: found.slug } };
     return toSite(pathname + search);
-  };
+  }
 }

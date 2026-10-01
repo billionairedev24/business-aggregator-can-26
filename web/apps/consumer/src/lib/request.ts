@@ -1,16 +1,16 @@
 import { createIsomorphicFn } from '@tanstack/react-start';
-import { getCookie, getRequestHeader } from '@tanstack/react-start/server';
+import { getCookie, getRequestHeader, getRequestUrl } from '@tanstack/react-start/server';
 import type { Locale } from '@northline/ui';
 import { FALLBACK_CONFIG, type PublicConfig } from './config';
-import { LOCALE_COOKIE, pickLocale, readCookie } from './locale';
+import { LOCALE_COOKIE, pickLocale, readCookie, urlLocale } from './locale';
 import type { PageHost } from './pages';
 
 export type { PublicConfig } from './config';
 
 /** The locale of this request: on the server from the cookie / Accept-Language, in the browser from the cookie. */
 export const requestLocale = createIsomorphicFn()
-  .server((): Locale => pickLocale(getCookie(LOCALE_COOKIE), getRequestHeader('accept-language')))
-  .client((): Locale => pickLocale(readCookie(LOCALE_COOKIE), navigator.language));
+  .server((): Locale => pickLocale(getCookie(LOCALE_COOKIE), getRequestHeader('accept-language'), urlLocale(getRequestUrl().href)))
+  .client((): Locale => pickLocale(readCookie(LOCALE_COOKIE), navigator.language, urlLocale(window.location.href)));
 
 /** Which business page this request is on another host (headers set by server/page-hosts.mjs only). */
 function pageFromHeaders(): PageHost | null {
@@ -24,11 +24,24 @@ function pageFromHeaders(): PageHost | null {
   }
 }
 
+/**
+ * The visitor's address chain for the api's per-client search limit (S-44: "the SSR server should add the browser's
+ * address to X-Forwarded-For", otherwise every server-rendered search counts against the SSR pod). Set by
+ * server/node-server.mjs only (`x-nl-forwarded-for`; a browser's own is dropped); the browser sends nothing — the
+ * consumer-bff sees it directly.
+ */
+export const forwardedFor = createIsomorphicFn()
+  .server((): string | undefined => {
+    try { return getRequestHeader('x-nl-forwarded-for') || undefined; } catch { return undefined; }
+  })
+  .client((): string | undefined => undefined);
+
 export const publicConfig = createIsomorphicFn()
   .server((): PublicConfig => ({
     authOrigin: process.env.NL_AUTH_ORIGIN ?? FALLBACK_CONFIG.authOrigin,
     siteOrigin: (process.env.NL_SITE_ORIGIN ?? FALLBACK_CONFIG.siteOrigin).replace(/\/$/, ''),
     legalEntity: process.env.NL_LEGAL_ENTITY?.trim() || FALLBACK_CONFIG.legalEntity,
+    studioOrigin: (process.env.NL_STUDIO_ORIGIN ?? FALLBACK_CONFIG.studioOrigin).replace(/\/$/, ''),
     page: pageFromHeaders(),
   }))
   .client((): PublicConfig => ({ ...FALLBACK_CONFIG, ...window.__NL_CONFIG__ }));

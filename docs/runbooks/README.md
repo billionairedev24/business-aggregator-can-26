@@ -223,11 +223,19 @@ only the build-time fallback (the Vite dev server). Worker: `SERVER_PORT` 8084, 
 
 Consumer web (S-45, `web/apps/consumer`, TanStack Start SSR on Node): `PORT` (3000), `NL_BFF_URL` (the consumer-bff for
 server-side rendering; the chart sets `http://northline-consumer-bff:8081`), `NL_AUTH_ORIGIN` (= `urls.auth`; the
-browser signs out of northline-auth there), `TRUST_PROXY` (`true` behind the Gateway). `GET /healthz` answers `ok`.
+browser signs out of northline-auth there), `TRUST_PROXY` (`true` behind the Gateway; it also makes server-rendered searches pass the visitor's `X-Forwarded-For` on to the api's per-client limit, S-48). `GET /healthz` answers `ok`.
 S-54: `NL_SITE_ORIGIN` (= `urls.consumer`, the site's own origin; business pages served elsewhere link back to it) and
 `NL_PAGES_HOST` (= the host of `urls.pages`): with it set, `pages.<zone>/<slug>` and merchants' own domains (looked up
 with `GET /api/v1/public/storefronts/by-host`, S-31) serve the business's public page; without it (local) every host is
-the site. Both optional, set by the chart.
+the site. Both optional, set by the chart. S-63: `NL_SITE_ORIGIN` is also the origin of every canonical URL, hreflang
+alternate and sitemap entry, and the server answers `/robots.txt`, `/sitemap.xml` and `/sitemaps/*.xml` itself (from
+`GET {NL_BFF_URL}/api/v1/public/sitemap`; a merchant's domain gets its own robots.txt and one-page sitemap) — set it to
+the public origin in every environment that should be indexed. Nothing to configure for the legal pages (they are in
+the image).
+
+the site. Both optional, set by the chart. S-61: `NL_STUDIO_ORIGIN` (= `urls.studio`, set by the chart; default
+`http://localhost:3100`) — `/sell` links into the Studio's onboarding there (signed in: the Studio BFF's
+`/bff/login?next=/onboarding?type=…` hand-off; a guest: `/onboarding?type=…`, which signs in on the Studio).
 
 ## Consumer BFF (S-45)
 

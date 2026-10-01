@@ -5,6 +5,7 @@ import { serviceCategoryQuery } from '../../../features/services/api';
 import { ServiceCategory, ServiceCategorySkeleton } from '../../../features/services/ServiceCategory';
 import { categoryName } from '../../../features/services/taxonomy';
 import { pageTitle } from '../../../features/shell/messages';
+import { seo } from '../../../lib/seo';
 
 /** Service category (S-53): design 06 `svcCategory` (visit / home / event / appointment / consult); server-rendered. */
 export const Route = createFileRoute('/services/$category/')({
@@ -16,18 +17,17 @@ export const Route = createFileRoute('/services/$category/')({
       throw e;
     }
   },
-  head: ({ match, loaderData }) => {
+  head: ({ match, loaderData, params }) => {
     const locale = match.context.locale;
     const name = loaderData ? categoryName(loaderData.slug, loaderData.names, locale).text : undefined;
-    return {
-      meta: [
-        { title: name ? `${name} · Northline` : pageTitle(locale, 'svcCategory') },
-        ...(name ? [{ name: 'description', content: locale === 'fr'
-          ? `${name} : prestataires vérifiés, prix typiques, paiement en fiducie.`
-          : `${name}: verified providers, typical prices, every job paid into escrow.` }] : []),
-      ],
-      links: [{ rel: 'stylesheet', href: servicesCss }],
-    };
+    const tags = seo(match.context, {
+      title: name ? `${name} · Northline` : pageTitle(locale, 'svcCategory'),
+      path: `/services/${params.category}`,
+      description: name && (locale === 'fr'
+        ? `${name} : prestataires vérifiés, prix typiques, paiement en fiducie.`
+        : `${name}: verified providers, typical prices, every job paid into escrow.`),
+    });
+    return { ...tags, links: [...tags.links, { rel: 'stylesheet', href: servicesCss }] };
   },
   pendingComponent: ServiceCategorySkeleton,
   component: CategoryRoute,

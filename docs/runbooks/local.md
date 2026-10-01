@@ -167,6 +167,11 @@ every department has its name. The pages are rendered for `?market=` (default Ca
 seeded shops, so their pages show the empty state). Pooled runs are created on demand from
 `northline.orders.delivery.runs` (application.yml): tonight 6–9 pm, tomorrow 8–11 am.
 
+Sell or offer a service (S-61): `/sell` links into the Studio's onboarding at `NL_STUDIO_ORIGIN` (default
+`http://localhost:3100`, the Studio dev server — `pnpm dev` in `web/apps/studio` with its BFF on :8082). Signed in on
+the consumer site, "Start as …" goes through the studio-bff's `/bff/login?next=/onboarding?type=…`, which completes at
+once because northline-auth already has the session.
+
 Business pages on other hosts (S-54): the built server serves `pages.<zone>/<slug>` and merchants' own domains when
 `NL_PAGES_HOST` is set (the Vite dev server doesn't). Try it with `pnpm --filter @northline/consumer build`, then
 `NL_SITE_ORIGIN=http://localhost:3000 NL_PAGES_HOST=pages.localhost NL_BFF_URL=http://localhost:8080 node

@@ -37,7 +37,7 @@ describe('consumer header', () => {
   it('has the search field off the home page and searches on Enter', async () => {
     mockFetch(guest);
     const { router } = renderApp('/shop');
-    const box = await screen.findByRole('searchbox', { name: 'Search' });
+    const box = await screen.findByRole('combobox', { name: 'Search' });
     expect(box).toHaveAttribute('placeholder', 'Search “sourdough”, “mobile mechanic”, “DJ”…');
     await userEvent.type(box, 'sourdough{Enter}');
     await waitFor(() => expect(router.state.location.pathname).toBe('/search'));
@@ -66,7 +66,7 @@ describe('consumer header', () => {
     expect(screen.getByRole('button', { name: /Changer de langue/ })).toHaveTextContent('FR');
     expect(within(screen.getByRole('banner')).getByRole('link', { name: 'Se connecter' })).toBeInTheDocument();
     expect(screen.getByRole('note')).toHaveTextContent("Vous naviguez en tant qu'invité.");
-    expect(screen.getByRole('searchbox')).toHaveAttribute('placeholder', 'Rechercher « pain au levain », « mécanicien mobile », « DJ »…');
+    expect(screen.getByRole('combobox')).toHaveAttribute('placeholder', 'Rechercher « pain au levain », « mécanicien mobile », « DJ »…');
     expect(document.cookie).toContain('nl.locale=fr');
     expect(document.documentElement.lang).toBe('fr-CA');
   });
@@ -167,13 +167,27 @@ describe('screens and states', () => {
     expect(screen.getByText('This screen is being built (S-57).')).toBeInTheDocument();
   });
 
-  it('has a skip link and the footer placeholder with the legal documents', async () => {
+  it('has a skip link and the footer with the legal documents', async () => {
     mockFetch(guest);
     renderApp('/');
     expect(await screen.findByRole('link', { name: 'Skip to content' })).toHaveAttribute('href', '#main');
     const footer = screen.getByRole('contentinfo');
     expect(within(footer).getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/legal/privacy.html');
     expect(within(footer).getByRole('link', { name: 'Terms' })).toHaveAttribute('href', '/legal/terms.html');
+    expect(within(footer).getByRole('link', { name: 'Terms' })).toHaveAttribute('hreflang', 'en-CA');
     expect(within(footer).getByRole('link', { name: 'Offer a service' })).toHaveAttribute('href', '/sell?type=provider');
+    expect(within(footer).getByRole('link', { name: 'Sell on Northline' })).toHaveAttribute('href', '/sell?type=seller');
+    expect(within(footer).getByRole('link', { name: 'Run a kitchen' })).toHaveAttribute('href', '/sell?type=kitchen');
+    expect(within(footer).getByText('Northline Marketplace Inc.')).toBeInTheDocument();
+  });
+
+  it('has the footer in French', async () => {
+    mockFetch(guest);
+    renderApp('/', { locale: 'fr' });
+    const footer = await screen.findByRole('contentinfo');
+    for (const name of ['Confidentialité', 'Conditions', 'Vendre sur Northline', 'Offrir un service', 'Gérer une cuisine']) {
+      expect(within(footer).getByRole('link', { name })).toBeInTheDocument();
+    }
+    expect(within(footer).getByRole('button', { name: 'English' })).toHaveAttribute('lang', 'en-CA');
   });
 });
