@@ -79,7 +79,13 @@ public interface ShopCatalogue {
             @Nullable Integer handlingDays,
             List<String> imageIds) {}
 
-    record VariantRow(String offerId, String variantId, String value, long priceCents, int stock) {}
+    /** @param imageIds S-65: the variant's own images (empty = the offer's), unchecked for approval */
+    record VariantRow(
+            String offerId, String variantId, String value, long priceCents, int stock, List<String> imageIds) {
+        public VariantRow {
+            imageIds = List.copyOf(imageIds);
+        }
+    }
 
     record MoreRow(String merchantId, String productId, String name, long priceCents) {}
 

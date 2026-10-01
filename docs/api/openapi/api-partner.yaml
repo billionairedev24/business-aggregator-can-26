@@ -255,6 +255,27 @@ paths:
       - listing-controller
 components:
   schemas:
+    BundleItemResponse:
+      type: object
+      properties:
+        name:
+          type: string
+        offerId:
+          type: string
+        option:
+          type: string
+        qty:
+          type: integer
+          format: int32
+        stock:
+          type: integer
+          format: int32
+        unitPriceCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        variantId:
+          type: string
     CompletenessResponse:
       type: object
       properties:
@@ -282,6 +303,8 @@ components:
     ListingItem:
       type: object
       properties:
+        bundle:
+          type: boolean
         categoryId:
           type: string
         id:
@@ -435,6 +458,10 @@ components:
             type: array
             items:
               type: string
+          bundleItems:
+            type: array
+            items:
+              $ref: "#/components/schemas/BundleItemResponse"
           catalogRef:
             type: string
           catalogTitle:
@@ -550,6 +577,11 @@ components:
             format: date-time
           title:
             type: string
+          type:
+            type: string
+            enum:
+            - product
+            - bundle
           updatedAt:
             type: string
             format: date-time
@@ -701,6 +733,10 @@ components:
           type: string
         id:
           type: string
+        images:
+          type: array
+          items:
+            $ref: "#/components/schemas/MediaResponse"
         priceCents:
           type: integer
           format: int64

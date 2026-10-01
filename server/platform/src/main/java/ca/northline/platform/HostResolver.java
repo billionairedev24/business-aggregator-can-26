@@ -1,4 +1,4 @@
-package ca.northline.worker.webhooks;
+package ca.northline.platform;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;

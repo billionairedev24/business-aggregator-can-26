@@ -33,7 +33,7 @@ class ShopCatalogueAdapter implements ShopCatalogue {
             case when (o.fulfilment is null or cardinality(o.fulfilment) = 0 or 'pooled' = any(o.fulfilment))
                   and (case when exists (select 1 from catalogue.variants v where v.offer_id = o.id)
                             then exists (select 1 from catalogue.variants v where v.offer_id = o.id and v.stock > 0)
-                            else coalesce(o.stock, 0) > 0 end)
+                            else coalesce(case when o.listing_type = 'bundle' then catalogue.bundle_stock(o.id) else o.stock end, 0) > 0 end)
                  then case o.handling_time when 'next_day' then 1 when 'two_days' then 2 else 0 end
             end""";
 
@@ -161,7 +161,7 @@ class ShopCatalogueAdapter implements ShopCatalogue {
                         select o.id, o.merchant_id, o.price_cents, o.compare_at_cents, o.condition, o.low_stock_at,
                                o.returns_policy, o.variant_theme, o.image_source, o.own_images,
                                coalesce((select sum(v.stock) from catalogue.variants v where v.offer_id = o.id),
-                                        o.stock, 0) as available,
+                                        case when o.listing_type = 'bundle' then catalogue.bundle_stock(o.id) else o.stock end, 0) as available,
                         """ + HANDLING + " as handling " + LIVE + " and o.product_id = :product")
                 .param("merchants", Sql.array(merchantIds))
                 .param("excluded", new String[0])
@@ -186,7 +186,7 @@ class ShopCatalogueAdapter implements ShopCatalogue {
     public List<VariantRow> variants(Collection<String> offerIds) {
         return jdbc.sql("""
                         select offer_id, id, coalesce(attrs ->> 'value', sku, '') as value,
-                               coalesce(price_cents, 0) as price_cents, coalesce(stock, 0) as stock
+                               coalesce(price_cents, 0) as price_cents, coalesce(stock, 0) as stock, image_set
                           from catalogue.variants where offer_id = any(:ids) order by offer_id, position, sku
                         """)
                 .param("ids", Sql.array(offerIds))
@@ -195,7 +195,8 @@ class ShopCatalogueAdapter implements ShopCatalogue {
                         rs.getString("id"),
                         rs.getString("value"),
                         rs.getLong("price_cents"),
-                        rs.getInt("stock")))
+                        rs.getInt("stock"),
+                        Sql.strings(rs, "image_set")))
                 .list();
     }
 

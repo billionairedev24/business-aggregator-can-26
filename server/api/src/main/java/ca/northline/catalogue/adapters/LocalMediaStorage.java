@@ -50,6 +50,15 @@ class LocalMediaStorage implements MediaStorage {
         }
     }
 
+    @Override
+    public void delete(String key) {
+        try {
+            Files.deleteIfExists(resolve(key));
+        } catch (IOException ex) {
+            throw new UncheckedIOException(ex);
+        }
+    }
+
     private Path resolve(String key) {
         var file = root.resolve(key).normalize();
         if (!file.startsWith(root)) {

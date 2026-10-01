@@ -1,9 +1,11 @@
 package ca.northline.worker.webhooks;
 
+import ca.northline.platform.EgressDnsResolver;
+import ca.northline.platform.EgressPolicy;
+import ca.northline.platform.HostResolver;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.ConnectException;
-import java.net.InetAddress;
 import java.net.NoRouteToHostException;
 import java.net.SocketTimeoutException;
 import java.net.URI;
@@ -13,9 +15,7 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -32,7 +32,6 @@ import org.apache.hc.core5.http.ClassicHttpResponse;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.io.SocketConfig;
 import org.apache.hc.core5.http.io.entity.ByteArrayEntity;
-import org.apache.hc.core5.net.InetAddressUtils;
 import org.apache.hc.core5.util.Timeout;
 import org.jspecify.annotations.Nullable;
 
@@ -61,7 +60,7 @@ public final class HttpWebhookTransport implements WebhookTransport, AutoCloseab
         this.policy = policy;
         this.settings = settings;
         var connections = PoolingHttpClientConnectionManagerBuilder.create()
-                .setDnsResolver(new CheckingResolver(policy, resolver))
+                .setDnsResolver(new EgressDnsResolver(policy, resolver))
                 .setDefaultConnectionConfig(ConnectionConfig.custom()
                         .setConnectTimeout(timeout(settings.connectTimeout()))
                         .setSocketTimeout(timeout(settings.responseTimeout()))
@@ -91,7 +90,7 @@ public final class HttpWebhookTransport implements WebhookTransport, AutoCloseab
     @Override
     public Result post(URI url, Map<String, String> headers, byte[] body) {
         var started = System.nanoTime();
-        var refused = policy.refuseUrl(url).or(() -> refuseLiteral(url.getHost()));
+        var refused = policy.refuseUrl(url).or(() -> policy.refuseLiteral(url.getHost()));
         if (refused.isPresent()) {
             return new Result(null, 0, "refused: " + refused.get(), null);
         }
@@ -122,26 +121,13 @@ public final class HttpWebhookTransport implements WebhookTransport, AutoCloseab
                 snippet = snippet(bytes);
             }
             return new Result(code, elapsed(started), null, snippet);
-        } catch (RefusedAddress e) {
+        } catch (EgressDnsResolver.Refused e) {
             return new Result(null, elapsed(started), "refused: " + e.getMessage(), null);
         } catch (IOException | RuntimeException e) {
             return new Result(null, elapsed(started), describe(e, timedOut.get()), null);
         } finally {
             deadline.cancel(false);
             closeQuietly(response);
-        }
-    }
-
-    /** An IP literal is checked here as well: the client may connect to a literal without asking the resolver. */
-    private Optional<String> refuseLiteral(String host) {
-        var bare = host.startsWith("[") && host.endsWith("]") ? host.substring(1, host.length() - 1) : host;
-        if (!InetAddressUtils.isIPv4(bare) && !InetAddressUtils.isIPv6(bare)) {
-            return Optional.empty();
-        }
-        try {
-            return policy.refuseAddresses(bare, List.of(InetAddress.getByName(bare)));
-        } catch (UnknownHostException e) {
-            return Optional.of(host + " is not a valid address");
         }
     }
 
@@ -204,33 +190,5 @@ public final class HttpWebhookTransport implements WebhookTransport, AutoCloseab
 
     private static Timeout timeout(Duration duration) {
         return Timeout.ofMilliseconds(duration.toMillis());
-    }
-
-    /** The SSRF check at resolution time; its message is the delivery log's reason. */
-    static final class RefusedAddress extends UnknownHostException {
-        private static final long serialVersionUID = 1L;
-
-        RefusedAddress(String reason) {
-            super(reason);
-        }
-    }
-
-    /** Resolves, checks every address, and returns only checked ones (the connection uses exactly these). */
-    private record CheckingResolver(EgressPolicy policy, HostResolver resolver) implements DnsResolver {
-
-        @Override
-        public InetAddress[] resolve(String host) throws UnknownHostException {
-            var addresses = resolver.resolve(host);
-            var refused = policy.refuseAddresses(host, addresses);
-            if (refused.isPresent()) {
-                throw new RefusedAddress(refused.get());
-            }
-            return addresses.toArray(InetAddress[]::new);
-        }
-
-        @Override
-        public String resolveCanonicalHostname(String host) {
-            return host; // never used for the connection; no reverse lookups
-        }
     }
 }

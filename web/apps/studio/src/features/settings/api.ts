@@ -8,8 +8,7 @@ import { ApiError, http } from '../../lib/http';
  * developer module, the notification matrix in messaging — all under `/api/v1/merchants/{id}/settings/…`. Security
  * talks to northline-auth (`/api/auth/security`, `/api/auth/backup-codes`), which owns passkeys and second factors.
  */
-export const SETTINGS_TABS = ['business', 'team', 'security', 'notifications', 'api'] as const;
-export type SettingsTab = (typeof SETTINGS_TABS)[number];
+export { SETTINGS_TABS, type SettingsTab } from './tabs';
 
 const base = (m: string) => `/api/v1/merchants/${m}/settings`;
 export const settingsKey = (m: string, ...rest: string[]) => ['merchant', m, 'settings', ...rest];

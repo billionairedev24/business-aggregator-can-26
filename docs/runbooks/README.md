@@ -163,6 +163,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `REGISTRY_CORPORATIONS_CANADA_URL`/`_KEY`/`_KEY_HEADER`, `REGISTRY_ALBERTA_URL`/`_KEY`, `REGISTRY_CALGARY_URL`/`_DATASET`/`_APP_TOKEN`, `REGISTRY_RECHECK_AFTER`, `REGISTRY_RECHECK_CRON` | ✓ | | | | per provider ([registries.md](registries.md#set-up-per-environment)) |
 | `WEBHOOK_SECRET_KEY` | ✓ | | | ✓ | yes (the same value in both: the api encrypts partner webhook secrets, the worker decrypts them to sign — S-33) |
 | `WEBHOOKS_ALLOW_LOCAL` | | | | ✓ | no (`false`; `true` only locally — http://localhost endpoints; refused in the cloud) |
+| `IMPORT_IMAGES_ALLOW_LOCAL` | ✓ | | | | no (`false`; `true` only locally — bulk-import image URLs on http:// or loopback, never private or metadata addresses; refused in the cloud — S-72, [webhooks.md § SSRF rules](webhooks.md#ssrf-rules-platform-egresspolicy)) |
 | `SEARCH_PROVIDER` | ✓ | | | | no (`elasticsearch`; `local` = no index, the `local` profile's default, refused in staging/prod — [search.md § 7](search.md#7-the-search-api-s-44)) |
 | `SEARCH_CACHE_TTL`, `SEARCH_RATE_LIMIT` | ✓ | | | | no (`30s`, `120`/min per address) |
 | `REGION_PROVINCES`, `REGION_DEFAULT_PROVINCE`, `REGION_CACHE_TTL` | ✓ | | | ✓ (`REGION_DEFAULT_PROVINCE`) | no (none extra — the live region rows are served, V131: Alberta; `AB`; `60s`) — S-134, [regions.md](regions.md); S-44's `SEARCH_MARKETS` / `SEARCH_DEFAULT_MARKET` are still read as their fallbacks |
@@ -211,6 +212,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `MCP_DOCS_RESOURCE` | ✓ | ✓ | | | no (`${API_PUBLIC_URL}/mcp/docs`, the developer docs MCP server — S-128; same value in both) |
 | `MCP_DOCS_ACCESS` | ✓ | | | | no (`staff` in the cloud — `open` refused under staging/prod; `open` locally — [mcp.md § Developer docs](mcp.md#developer-docs-s-128)) |
 | `MCP_STORE`, `MCP_CALLS_PER_MINUTE`, `MCP_WRITES_PER_MINUTE` | ✓ | | | | no (`redis` in the cloud, `memory` locally — refused in staging/prod; 60 tool calls and 10 changes per person per minute — [mcp.md](mcp.md#limits)) |
+| `LIVE_BUS`, `LIVE_STREAM` | ✓ | | | | no (`redis` in the cloud — Valkey pub/sub so the Studio's live stream works on every api replica; `memory` locally — refused in staging/prod; `10m` per stream before the browser reconnects — S-68) |
 | `MCP_CLIENT_METADATA_DOCUMENTS`, `MCP_CLIENT_METADATA_HOSTS` | | ✓ | | | no (`true`: agents may identify with a Client ID Metadata Document; empty = from any public HTTPS host — [mcp.md](mcp.md#client-registration)) |
 | `LOG_FORMAT` | ✓ | ✓ | ✓ | ✓ | no — `ecs` JSON under dev/staging/prod, plain `text` under local/test (S-112, [logging.md](logging.md)) |
 | `OTEL_EXPORT_ENABLED`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_TRACES_SAMPLER_ARG`, `OTEL_RESOURCE_ATTRIBUTES` | ✓ | ✓ | ✓ | ✓ | no — the chart sets them when its Collector is on (S-111, [observability.md](observability.md)); locally `make up OBS=1` |

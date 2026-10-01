@@ -78,6 +78,17 @@ describe('Product detail (design 06 product)', () => {
     expect(calls.find(c => c.url === '/api/v1/cart/items')?.body).toEqual({ offerId: 'O1', variantId: 'V2', qty: 2 });
   });
 
+  it("shows the chosen option's own photos (S-65), else the offer's", async () => {
+    const withPhotos = { ...GLENMORE, images: ['/img/loaf.jpg'], variants: [GLENMORE.variants[0], { ...GLENMORE.variants[1], images: ['/img/sliced.jpg', '/img/sliced-2.jpg'] }] };
+    api = c => (c.url.startsWith('/api/v1/public/shop/products/P1') ? { body: { ...PRODUCT, offers: [withPhotos] } } : undefined);
+    open('/products/P1');
+    const gallery = await screen.findByRole('group', { name: 'Photos' });
+    expect(within(gallery).getByRole('img', { name: 'Country sourdough' })).toHaveAttribute('src', '/img/loaf.jpg');
+    await userEvent.setup({ delay: null }).click(screen.getByRole('button', { name: 'Sliced' }));
+    expect(within(gallery).getByRole('img', { name: 'Country sourdough' })).toHaveAttribute('src', '/img/sliced.jpg');
+    expect(within(gallery).getByRole('button', { name: 'Show photo 2' })).toBeInTheDocument();
+  });
+
   it('never lets the quantity pass the stock', async () => {
     open('/products/P1?offer=O2');
     const user = userEvent.setup({ delay: null });
