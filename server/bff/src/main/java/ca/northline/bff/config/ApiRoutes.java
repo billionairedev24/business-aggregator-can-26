@@ -19,7 +19,7 @@ import org.springframework.web.servlet.function.ServerResponse;
  * when needed). The browser's cookies, its own {@code Authorization} and any {@code X-Northline-Guest} /
  * {@code X-Dev-User} it sends are not forwarded. S-45: with {@code northline.bff.guests} a request without a signed-in
  * session goes on without a token (the api answers its public endpoints and 401 for the rest), and the session's guest
- * id is added as {@value Guests#HEADER}.
+ * id is added as {@value Guests#HEADER}. S-135: a body is forwarded only when the browser sent one ({@link RelayBody}).
  */
 @Configuration(proxyBeanMethods = false)
 class ApiRoutes {
@@ -28,6 +28,7 @@ class ApiRoutes {
     RouterFunction<ServerResponse> api(BffProperties props) {
         var route = route("api")
                 .route(RequestPredicates.path("/api/**"), http())
+                .before(RelayBody::lookAhead)
                 .before(uri(props.apiUri()))
                 .before(removeRequestHeader(HttpHeaders.COOKIE))
                 .before(removeRequestHeader(HttpHeaders.AUTHORIZATION))
