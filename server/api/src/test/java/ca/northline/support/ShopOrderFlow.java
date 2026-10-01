@@ -49,26 +49,25 @@ public final class ShopOrderFlow {
                             .content("{\"offerId\":\"%s\",\"qty\":1}".formatted(l.offerId())))
                     .andExpect(status().isCreated());
         }
-        var setup = json(mvc.perform(get("/api/v1/me/checkout").param("market", market).with(auth))
-                .andExpect(status().isOk())
-                .andReturn()
-                .getResponse()
-                .getContentAsString());
+        var setup = json(
+                mvc.perform(get("/api/v1/me/checkout").param("market", market).with(auth))
+                        .andExpect(status().isOk())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString());
         String windowId = "";
         for (var option : setup.path("options")) {
             if (option.path("kind").asString().equals(kind)) {
-                windowId = option.path("windowId").isNull() ? "" : option.path("windowId").asString();
+                windowId = option.path("windowId").isNull()
+                        ? ""
+                        : option.path("windowId").asString();
                 break;
             }
         }
         var address = """
-                {"street":"1204 17 Ave SW","unit":"Apt 804","city":"%s","province":"AB","postal":"t2t0b8","note":"Buzz 0804"}"""
-                .formatted(market);
-        var body = kind.equals("pooled")
-                ? """
-                        {"kind":"pooled","windowId":"%s","address":%s,"substitution":"similar"}"""
-                        .formatted(windowId, address)
-                : """
+                {"street":"1204 17 Ave SW","unit":"Apt 804","city":"%s","province":"AB","postal":"t2t0b8","note":"Buzz 0804"}""".formatted(market);
+        var body = kind.equals("pooled") ? """
+                        {"kind":"pooled","windowId":"%s","address":%s,"substitution":"similar"}""".formatted(windowId, address) : """
                         {"kind":"direct","address":%s,"substitution":"similar"}""".formatted(address);
         var started = json(mvc.perform(post("/api/v1/me/checkouts")
                         .with(auth)
@@ -79,7 +78,9 @@ public final class ShopOrderFlow {
                 .andReturn()
                 .getResponse()
                 .getContentAsString());
-        var placed = json(mvc.perform(post("/api/v1/me/checkouts/{id}/place", started.path("checkoutId").asString())
+        var placed = json(mvc.perform(post(
+                                "/api/v1/me/checkouts/{id}/place",
+                                started.path("checkoutId").asString())
                         .with(auth)
                         .header("Idempotency-Key", Ids.next()))
                 .andExpect(status().isCreated())

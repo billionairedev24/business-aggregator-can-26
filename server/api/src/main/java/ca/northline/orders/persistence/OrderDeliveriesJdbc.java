@@ -68,7 +68,7 @@ class OrderDeliveriesJdbc implements OrderDeliveries {
                          order by id
                         """)
                 .param("id", orderId)
-                .query(String.class)
+                .query((rs, _) -> rs.getString("id"))
                 .list();
     }
 }

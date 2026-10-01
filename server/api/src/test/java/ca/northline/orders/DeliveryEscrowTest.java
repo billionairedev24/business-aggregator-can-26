@@ -89,7 +89,10 @@ class DeliveryEscrowTest extends IntegrationTest {
 
     // ── helpers ─────────────────────────────────────────────────────────────────────────────────────────────
 
-    private record EscrowRow(String state, @Nullable Instant fulfilledAt, @Nullable Instant releaseAt) {}
+    private record EscrowRow(
+            String state,
+            @Nullable Instant fulfilledAt,
+            @Nullable Instant releaseAt) {}
 
     private EscrowRow escrow(String lineId) {
         return jdbc.sql("""
@@ -120,26 +123,19 @@ class DeliveryEscrowTest extends IntegrationTest {
     private String deliveryIntentState(String orderId) {
         return jdbc.sql("""
                         select state from payments.payment_intents
-                         where ref_type = 'order_delivery' and ref_id = ? and replaced_by is null""")
-                .params(orderId)
-                .query(String.class)
-                .single();
+                         where ref_type = 'order_delivery' and ref_id = ? and replaced_by is null""").params(orderId).query(String.class).single();
     }
 
     private Map<String, Long> deliveryFeeCredits(String orderId) {
         return jdbc.sql("""
                         select account, sum(credit_cents) as credit from payments.ledger_entries
-                         where ref_type = 'order_delivery' and ref_id = ? and credit_cents > 0 group by account""")
-                .params(orderId)
-                .query((rs, _) -> Map.entry(rs.getString(1), rs.getLong(2)))
-                .list()
-                .stream()
+                         where ref_type = 'order_delivery' and ref_id = ? and credit_cents > 0 group by account""").params(orderId).query((rs, _) -> Map.entry(rs.getString(1), rs.getLong(2))).list().stream()
                 .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     private void dropOff(String orderId, Instant at) {
-        tx.executeWithoutResult(_ -> publisher.publishEvent(
-                new DeliveryCompleted(Ids.next(), at, orderId, null, null, null, "photo")));
+        tx.executeWithoutResult(
+                _ -> publisher.publishEvent(new DeliveryCompleted(Ids.next(), at, orderId, null, null, null, "photo")));
     }
 
     private Instant now() {
@@ -180,8 +176,8 @@ class DeliveryEscrowTest extends IntegrationTest {
             assertThat(Duration.between(at, e.releaseAt())).isEqualTo(Duration.ofDays(7));
         }
         // the delivery fee's hold (S-51) is captured: Northline's revenue and the fee's GST
-        await().atMost(Duration.ofSeconds(10)).until(() -> deliveryIntentState(order.orderId())
-                .equals("captured"));
+        await().atMost(Duration.ofSeconds(10))
+                .until(() -> deliveryIntentState(order.orderId()).equals("captured"));
         var fee = jdbc.sql("select delivery_fee_cents from orders.orders where id = ?")
                 .params(order.orderId())
                 .query(Long.class)
@@ -195,7 +191,8 @@ class DeliveryEscrowTest extends IntegrationTest {
                 .andExpect(jsonPath("$.state").value("delivered"))
                 .andExpect(jsonPath("$.deliveryProof").value("photo"))
                 .andExpect(jsonPath("$.canConfirm").value(true))
-                .andExpect(jsonPath("$.paysShopsAt").value(at.plus(Duration.ofDays(7)).toString()));
+                .andExpect(jsonPath("$.paysShopsAt")
+                        .value(at.plus(Duration.ofDays(7)).toString()));
 
         // a minute before the window ends nothing is released; after it, both lines are
         clock.advance(Duration.ofDays(7).minusMinutes(1));
@@ -210,18 +207,16 @@ class DeliveryEscrowTest extends IntegrationTest {
     void theCustomersConfirmationReleasesAtOnce() throws Exception {
         var order = delivered();
         clock.advance(Duration.ofDays(1));
-        mvc.perform(post("/api/v1/me/orders/{id}/confirm", order.orderId())
-                        .with(TestJwt.customer(order.customerId())))
+        mvc.perform(post("/api/v1/me/orders/{id}/confirm", order.orderId()).with(TestJwt.customer(order.customerId())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("confirmed"))
                 .andExpect(jsonPath("$.canConfirm").value(false))
                 .andExpect(jsonPath("$.steps[3].state").value("done"));
         await().atMost(Duration.ofSeconds(10))
-                .until(() -> order.lineIds().stream()
-                        .allMatch(l -> escrow(l).state().equals("released")));
+                .until(() ->
+                        order.lineIds().stream().allMatch(l -> escrow(l).state().equals("released")));
         // confirming again changes nothing
-        mvc.perform(post("/api/v1/me/orders/{id}/confirm", order.orderId())
-                        .with(TestJwt.customer(order.customerId())))
+        mvc.perform(post("/api/v1/me/orders/{id}/confirm", order.orderId()).with(TestJwt.customer(order.customerId())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("confirmed"));
         // a late or replayed drop-off doesn't move a confirmed order back
@@ -252,8 +247,8 @@ class DeliveryEscrowTest extends IntegrationTest {
                 .andExpect(jsonPath("$.deliveredAt").isNotEmpty());
         await().atMost(Duration.ofSeconds(10))
                 .until(() -> escrow(order.lineIds().getFirst()).state().equals("released"));
-        await().atMost(Duration.ofSeconds(10)).until(() -> deliveryIntentState(order.orderId())
-                .equals("captured"));
+        await().atMost(Duration.ofSeconds(10))
+                .until(() -> deliveryIntentState(order.orderId()).equals("captured"));
 
         var cancelled = flow.pooled(MARKET, bread);
         jdbc.sql("update orders.orders set state = 'cancelled' where id = ?")

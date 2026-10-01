@@ -149,7 +149,8 @@ class EscrowService implements EscrowLifecycle {
         escrows.recordCapture(intent.id(), charge);
         var tax = Math.min(
                 intent.amountCents(),
-                deliveryTax.calculationFor(LedgerEntry.DELIVERY_FEE, orderId)
+                deliveryTax
+                        .calculationFor(LedgerEntry.DELIVERY_FEE, orderId)
                         .map(TaxRepository.Calculation::taxCents)
                         .orElse(0L));
         ledger.post(LedgerEntry.deliveryFeeCaptured(orderId, intent.amountCents(), tax, at));
