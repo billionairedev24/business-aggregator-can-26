@@ -33,6 +33,15 @@ Steps: account → business (legal fields per `docs/spec/legal-details.schema.js
 ## Platform console — `design/03 Platform Console.dc.html` (`role` prop)
 overview · orders · disputes · delivery · sellers · seller_detail · verify · vetting · trust · taxonomy · support · regions · finance · reports · api · team · profile (security, sessions, audit, prefs) · oncall · denied (role gate)
 
+## Courier app — addition (S-87; no design in `design/`, DECISIONS 2026-10-01 — S-87)
+`mobile/apps/courier`, iOS/Android (Expo). Northline tokens, Newsreader headings, Instrument Sans body, 48 dp targets; a
+stack (no bottom tabs: three levels). Copy en + fr-CA ours.
+sign-in (browser sign-in, language) · shift (status, start/end, next shift, the open run) · run (stops in order, next
+marked, unsent marked, location card) · stop (address, unit, note, order ref, maps, arrive / pick up / hand over; no
+customer contact) · pickup (sealed-bag confirm) · dropoff (photo · signature · PIN) · account (language, privacy note,
+sign out with an unsent-actions warning). States: loading, offline, saved on phone, refused (the api's message), not a
+courier, sign-in ended.
+
 ## Legal — ship verbatim
 `09 Terms of Service`, `10 Privacy Policy`
 

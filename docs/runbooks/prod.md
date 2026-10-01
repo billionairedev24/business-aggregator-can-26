@@ -174,6 +174,7 @@ docker run --rm httpd:2.4-alpine htpasswd -bnBC 12 "" "$SECRET" | tr -d ':\n' | 
 | Elastic Cloud (unless ECK) | search | subscription (or the cloud marketplace's) + an API key exported as `EC_API_KEY` for Terraform; the deployment is created in the chosen cloud's Canadian region |
 | Cloud account with startup credits (AWS / Google Cloud / Azure) | everything else | one provider per environment |
 | Domain registrar for `northline.ca` | DNS delegation to the cloud's DNS (NS records from `terraform output dns`, [edge.md](edge.md#dns-delegation)) | S-17 |
+| Expo (EAS), Apple Developer Program, Google Play Console (organisation accounts) | the courier app's store builds (S-87) | required for the courier app; store declarations for background location in [courier-app.md](courier-app.md#permissions-and-their-texts) — no server variable |
 
 ## Canadian data residency
 
