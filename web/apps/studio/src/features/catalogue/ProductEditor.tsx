@@ -13,6 +13,7 @@ import { useCatalogueT } from './messages';
 import { SECTIONS, applyMatch, emptyProduct, linkFromDetail, linkFromMatch, permissions, productCompleteness, productFromDetail, productPayload, rowKey, validateProductDraft, variantReady, variantSku, vettingChecks, type CatalogueLink, type Portal, type ProductForm, type Section, type VariantRow } from './model';
 import { gtinProblem, parseMoney, useMessageT } from './validation';
 import { ValidationError } from '../../lib/http';
+import { ListingCopyButton } from '../writing/WritingHelp';
 
 type Tab = Section | 'preview';
 const FULFILMENT: Fulfilment[] = ['pooled', 'install', 'pickup', 'ship'];
@@ -160,6 +161,9 @@ export function ProductEditor({ detail, portal, typePicker }: { detail?: Product
             )}
             <Field label={t('description')} error={err('description')}><TextArea rows={4} value={form.description} disabled={readOnlyContent} onChange={e => update({ description: e.target.value })} /></Field>
             <Bullets form={form} update={update} disabled={readOnlyContent} error={err('bullets')} />
+            <ListingCopyButton merchantId={merchantId} disabled={readOnlyContent}
+              facts={{ kind: 'product', name: form.title, categoryId: form.categoryId, brand: form.brand, attributes: form.attributes }}
+              onUse={c => update({ title: c.title, description: c.description, bullets: c.bullets }, ['title', 'description', 'bullets'])} />
           </>}
 
           {tab === 'variants' && <VariantsTab form={form} update={update} category={category} error={err} />}

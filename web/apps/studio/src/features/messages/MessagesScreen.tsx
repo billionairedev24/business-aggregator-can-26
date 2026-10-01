@@ -113,6 +113,7 @@ function ThreadPane({ merchantId, summary, canSend, role }: { merchantId: string
         )}
         {canSend ? (
           <Composer merchantId={merchantId} label={t('replyLabel', { name })} quickReplies={q.data?.quickReplies ?? []}
+            replySuggestionsFor={summary.id}
             onSend={draft => send.mutateAsync(draft)} />
         ) : (
           <p className="nl-msg-note">{t('viewOnly', { role: shellT(`role_${role}` as 'role_owner') })}</p>

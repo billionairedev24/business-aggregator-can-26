@@ -61,6 +61,7 @@ say where a step is still manual or missing.
 | Catalogue sync (`COMMERCE_PROVIDER`) | `local`: fake Shopify / Square / Lightspeed with fixture catalogues | `local`, or `oauth` with the dev apps (Square sandbox) | **`oauth`** (`local` refused) | same |
 | POS menu import (`POS_PROVIDER`) | `local`: fake Square / Clover / Toast with a fixture menu | `local`, or `oauth` with the dev apps (sandboxes) | **`oauth`** (`local` refused) | same |
 | Addresses (`PLACES_PROVIDER`) | `local`: fixture Canadian addresses | `local`, or `google` with the dev key | **`google`** (`local` refused) | same |
+| AI (`AI_PROVIDER`, S-129) | `fake`: deterministic answers, no key | `fake`, or `openrouter` with the dev key | **`openrouter`** (`fake` refused; no key yet = AI answers 503) | same |
 | Identity verification (`IDENTITY_PROVIDER`) | `local`: pick the outcome on a page | `local` (owners can't finish) or `stripe` with test keys | **`stripe`**, test mode | **`stripe`**, live mode |
 | SMS / email | logged | *no provider yet (S-8, S-13)* | same | same |
 | Required variables checked at start-up | none | yes | yes (+ Stripe, storage) | yes (+ Stripe, storage) |
@@ -107,6 +108,7 @@ say where a step is still manual or missing.
   | `northline.commerce.provider` | `COMMERCE_PROVIDER` | `local` (fake Shopify, Square and Lightspeed) · `oauth` (Shopify Admin GraphQL, Square Catalog + Inventory, Lightspeed X-Series; each once its app is set) | **done** (S-35, catalogue sync — [commerce-sync.md](commerce-sync.md)) |
   | `northline.pos.provider` | `POS_PROVIDER` | `local` (fake Square, Clover and Toast) · `oauth` (Square Catalog, Clover REST v3, Toast menus v2; each once its credentials are set) | **done** (S-36, kitchens' POS menu import — [pos-menu-import.md](pos-menu-import.md)) |
   | `northline.places.provider` | `PLACES_PROVIDER` | `local` (fixture addresses) · `google` (Places API (New) + Geocoding API with `GOOGLE_MAPS_API_KEY`) | **done** (S-47, consumer Location screen and pill — [google-maps.md](google-maps.md)) |
+  | `northline.ai.provider` | `AI_PROVIDER` | `fake` (deterministic, offline) · `openrouter` (OpenRouter's OpenAI-compatible API; 503 without `OPENROUTER_API_KEY`) | **done** (S-129, the `LlmClient` port for every AI feature — [ai.md](ai.md)) |
   | `northline.email.provider` | `EMAIL_PROVIDER` | `local` (SMTP to Mailpit) · `smtp` · `ses` · `sendgrid` · `azure` | **done** (S-13, api invitations and money notices — [email.md](email.md); S-27 worker: `payout.failed`) |
   | `northline.tax.provider` | `TAX_PROVIDER` | `local` (fixed Canadian rates) · `stripe` (Stripe Tax) | **done** (S-21, api sales tax — [stripe.md § 6](stripe.md#6-stripe-tax-s-21)) |
   | `northline.identity.provider` | `IDENTITY_PROVIDER` | `local` (fake with an outcome page) · `stripe` (Stripe Identity) | **done** (S-22, owners' identity verification — [stripe.md § Identity](stripe.md#8-identity-s-22)) |
@@ -187,6 +189,9 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `CLOVER_CLIENT_ID`/`_SECRET`, `CLOVER_AUTH_URL`, `CLOVER_API_URL`, `TOAST_CLIENT_ID`/`_SECRET`, `TOAST_API_URL` | ✓ | | | | no — empty = that POS shows "Not available yet" ([pos-menu-import.md](pos-menu-import.md#variables-api)) |
 | `PLACES_PROVIDER`, `GOOGLE_MAPS_API_KEY` | ✓ | | | | staging and prod: `google` + the key (`local` refused there — S-47, [google-maps.md](google-maps.md)) |
 | `PLACES_RATE_LIMIT` | ✓ | | | | no (60 address lookups per browsing session and minute) |
+| `AI_PROVIDER` | ✓ | | | | staging and prod: `openrouter` (`fake` refused there — S-129, [ai.md](ai.md)) |
+| `OPENROUTER_API_KEY` | ✓ | | | | no — empty = every AI feature answers 503 `ai_unavailable` (secret; [ai.md](ai.md#variables)) |
+| `OPENROUTER_MODEL`, `OPENROUTER_LIGHT_MODEL`, `OPENROUTER_MODEL_<FEATURE>`, `OPENROUTER_BASE_URL`, `OPENROUTER_REFERER`, `OPENROUTER_TITLE`, `OPENROUTER_DATA_COLLECTION`, `OPENROUTER_ZDR`, `OPENROUTER_*_TIMEOUT`, `AI_MAX_TOOL_ROUNDS`, `AI_BUDGET_*`, `AI_REQUESTS_PER_MINUTE`, `AI_FAKE_*` | ✓ | | | | no (`google/gemini-3.7-flash`, `google/gemini-3.5-flash-lite`, blank, openrouter.ai, `STUDIO_ORIGIN`, `Northline`, `deny`, `true`, 5 s / 60 s, 4, 200k / 1M tokens a day, 20/min, off — [ai.md](ai.md#variables)) |
 | `EMAIL_PROVIDER`, `EMAIL_FROM` | ✓ | | | ✓ | staging and prod (`local` refused there — S-13, [email.md](email.md)) |
 | `EMAIL_UNSUBSCRIBE_KEY`, `API_PUBLIC_URL` | ✓ | | | ✓ | staging and prod (unsubscribe links; the worker signs them for `payout.failed`, S-27 — [email.md](email.md#variables); S-32 calendar notification URLs) |
 | `EMAIL_REPLY_TO`, `EMAIL_MAILING_ADDRESS`, `EMAIL_CONTACT`, `EMAIL_REGION`, `EMAIL_ENDPOINT`, `EMAIL_API_KEY`, `EMAIL_CONFIGURATION_SET`, `EMAIL_RETRY_*`, `SMTP_*` | ✓ | | | ✓ | per provider: `EMAIL_API_KEY` with `sendgrid`, `EMAIL_ENDPOINT` with `azure`, `SMTP_HOST` with `smtp` ([email.md](email.md#variables)) |

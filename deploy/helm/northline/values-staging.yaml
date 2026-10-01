@@ -58,6 +58,9 @@ apps:
       POS_PROVIDER: oauth
       # S-47 addresses: Google Places API (New) + Geocoding API; the key is the secret google-maps-api-key
       PLACES_PROVIDER: google
+      # S-129 AI: OpenRouter (`fake` is refused here). Until OPENROUTER_API_KEY exists AI features answer 503; then set
+      # secretEnv.OPENROUTER_API_KEY: true and add it to externalSecrets.optionalKeys (docs/runbooks/ai.md).
+      AI_PROVIDER: openrouter
       EMAIL_FROM: "Northline <no-reply@staging.northline.ca>"
     autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 4 }
     secretEnv:

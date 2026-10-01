@@ -49,6 +49,10 @@ See `docs/BACKEND_CONVENTIONS.md` (written by the backend foundation) — layeri
 | V110–V119 | consumer web (CONSUMER_WEB_PLAN.md) |
 | V120–V129 | search |
 | V130–V139 | region platform (S-134: region profiles, launch markets) |
+| V140–V149 | consumer account (S-58–S-60) |
+| V150–V159 | AI (S-129–S-133) |
+
+**Ordering rule (2026-10-01):** Flyway applies versions in order and, outside the `local` profile, refuses a version lower than one already applied. A new migration must therefore be numbered **above the highest version on main** when it merges, not just inside its workstream's range. If a range is behind, take the next free range above the maximum and record it here (S-129/S-133's V125/V126 became V150/V151 for this reason).
 
 ## Studio app (`web/apps/studio`) — what exists
 - `pnpm dev` (port 3100). Dev without auth/bff: `NL_DEV_USER=<seeded user id> pnpm dev` → `/api` is proxied to the api (`:8080`) with `X-Dev-User` (accepted only by the api `local` profile) and `/bff/session` is answered by the dev server. Without `NL_DEV_USER`, `/api`, `/bff`, `/oauth2`, `/login` go to the studio BFF (`:8082`).

@@ -75,6 +75,8 @@ locals {
     GOOGLE_MAPS_API_KEY = "google-maps-api-key"
     # S-111: an OTLP backend's credentials (e.g. Grafana Cloud "Basic <base64 instance:token>"); empty = the cloud's own.
     OTEL_BACKEND_AUTH = "otel-backend-auth"
+    # S-129 AI platform: the OpenRouter API key (empty until created; AI features answer 503 without it).
+    OPENROUTER_API_KEY = "openrouter-api-key"
   }
 
 

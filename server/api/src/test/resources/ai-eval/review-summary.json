@@ -1,0 +1,14 @@
+{
+  "about": "S-131 review summary eval: reviews → English and French summaries with themes (ReviewSummaryEval). Passes when both languages are present, every `mustInclude` group appears in the English summary or themes, and nothing in `mustNotInclude` does (reviewer names, invented praise or prices). `input` is a phrase from the first review the simulated model matches on.",
+  "cases": [
+    {"id": "mostly-positive", "input": "Explained everything clearly", "reviews": [[5, "brake inspection", "Explained everything clearly and was on time."], [5, "alternator", "On time, fair, explained the options."], [3, "oil & filter", "Good work but took longer than quoted."], [5, "tires", "Quick and clear."]],
+     "mustInclude": [["clear", "explain"], ["on time", "punctual", "on-time"], ["longer", "time", "slow"]], "mustNotInclude": ["$", "best in", "Dana"],
+     "mock": {"json": {"en": {"summary": "Customers praise clear explanations and on-time visits. One mentions a job that took longer than quoted.", "themes": ["clear explanations", "on time", "took longer than quoted"]}, "fr": {"summary": "Les clients apprécient les explications claires et la ponctualité. Un client note un travail plus long que prévu.", "themes": ["explications claires", "ponctualité", "plus long que prévu"]}}}},
+    {"id": "food", "input": "Broth was rich", "reviews": [[5, "pho tai", "Broth was rich and the portion big."], [4, "spring rolls", "Fresh, a bit late on delivery."], [5, "pho", "Best broth, hot when it arrived."]],
+     "mustInclude": [["broth"]], "mustNotInclude": ["$", "healthy"],
+     "mock": {"json": {"en": {"summary": "Customers love the rich broth and generous portions. One delivery arrived a bit late.", "themes": ["rich broth", "generous portions", "late delivery"]}, "fr": {"summary": "Les clients adorent le bouillon riche et les portions généreuses. Une livraison est arrivée un peu en retard.", "themes": ["bouillon riche", "portions généreuses", "livraison en retard"]}}}},
+    {"id": "mixed", "input": "Wrong size sent", "reviews": [[2, "wiper blades", "Wrong size sent, return was easy though."], [5, "brake pads", "Exactly what I ordered."], [4, "oil", "Fast packing."]],
+     "mustInclude": [["size", "wrong"]], "mustNotInclude": ["$"],
+     "mock": {"json": {"en": {"summary": "Most customers got exactly what they ordered, packed fast. One received the wrong size, and found the return easy.", "themes": ["accurate orders", "fast packing", "wrong size once"]}, "fr": {"summary": "La plupart des clients ont reçu exactement leur commande, emballée rapidement. Un client a reçu la mauvaise taille, mais le retour a été facile.", "themes": ["commandes exactes", "emballage rapide", "mauvaise taille une fois"]}}}}
+  ]
+}

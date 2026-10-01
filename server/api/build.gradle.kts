@@ -171,4 +171,6 @@ tasks.matching { it.name.startsWith("jib") && it.name != "jibTools" }.configureE
 
 // S-44: the search module pulls the Elasticsearch client's (large) type model into ArchUnit's / Modulith's class
 // import, on top of every cached test context; 768m (the root default) ran out of heap at the end of the suite.
-tasks.named<Test>("test") { maxHeapSize = "1g" }
+// S-130: the AI features' scripted-model context (ScriptedModelTest, one for all of them) tipped 1g at the end of
+// the suite too.
+tasks.named<Test>("test") { maxHeapSize = "1280m" }

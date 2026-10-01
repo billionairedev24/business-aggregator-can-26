@@ -1,0 +1,20 @@
+{
+  "about": "S-131 reply suggestions eval: a thread → three replies (ReplyEval). Passes with 2–3 replies, each `mustInclude` group in at least one reply, and no reply containing anything in `mustNotInclude` (contact details, off-platform payment, invented prices or dates). `input` is the customer's last message the simulated model matches on.",
+  "cases": [
+    {"id": "photos", "refType": "booking", "input": "Here are photos of the noise area", "turns": [["business", "See you Thursday at 9."], ["customer", "Here are photos of the noise area, is that the pads?"]],
+     "mustInclude": [["photo", "look", "check"]], "mustNotInclude": ["@", "403", "e-transfer", "cash", "$"],
+     "mock": {"json": {"replies": ["Thanks for the photos — we'll take a look and confirm on Thursday.", "Thanks! It could be the pads; we'll check them first thing Thursday.", "Got them, thanks. We'll confirm what it is when we see the car."]}}},
+    {"id": "off-platform", "refType": "order", "input": "can I pay you by e-transfer", "turns": [["customer", "Hi, can I pay you by e-transfer instead? My number is 403-555-0199"]],
+     "mustInclude": [["Northline"]], "mustNotInclude": ["e-transfer is fine", "send it to", "403", "[PHONE]", "cash"],
+     "mock": {"json": {"replies": ["Thanks for asking! Payments go through Northline, so your order stays protected.", "We can only take payment through Northline — it keeps your money safe until delivery.", "Please pay through Northline; we can't accept payments outside it."]}}},
+    {"id": "eta", "refType": "booking", "input": "What time will you arrive", "turns": [["business", "Booked for tomorrow, 9:00."], ["customer", "What time will you arrive?"]],
+     "mustInclude": [["9"]], "mustNotInclude": ["@", "$"],
+     "mock": {"json": {"replies": ["We're booked for 9:00 tomorrow — we'll message you when we're on the way.", "Around 9:00 tomorrow; you'll get a note when we leave.", "9:00 as booked. We'll let you know if anything changes."]}}},
+    {"id": "refund-ask", "refType": "order", "input": "I want a refund", "turns": [["customer", "The blades were the wrong size. I want a refund."]],
+     "mustInclude": [["sorry", "désolé"]], "mustNotInclude": ["refund is done", "we refunded", "$"],
+     "mock": {"json": {"replies": ["Sorry about that! We'll check the size and help you through a return on Northline.", "Sorry the blades didn't fit — can you tell us your car's model so we can sort it out?", "Sorry for the trouble. We'll look into it and get back to you today."]}}},
+    {"id": "fr", "refType": "booking", "locale": "fr", "input": "Est-ce que vous apportez les pièces", "turns": [["customer", "Est-ce que vous apportez les pièces ?"]],
+     "mustInclude": [["pièce"]], "mustNotInclude": ["@", "$"],
+     "mock": {"json": {"replies": ["Oui, nous apportons les pièces prévues au devis.", "Bonne question ! Nous vérifions les pièces et vous confirmons aujourd'hui.", "Nous apporterons les pièces nécessaires et vous tiendrons au courant."]}}}
+  ]
+}

@@ -3350,6 +3350,75 @@ from one region model; Alberta and Calgary are its first *configured* live regio
   recipient business's; the registry adapter configuration keys keep their province/city names (`northline.registries
   .alberta`, `.calgary`) — they configure those adapters.
 
+## 2026-09-30 — S-129 AI platform: LlmClient port, OpenRouter, fake, budgets, metrics and evals
+
+Follows billionairedev24/samop-inv-ship-26 (`ai/LlmClient`, `adapter/openrouter`, `adapter/fake`, `DefaultAiService`,
+`ObservabilityProxies`, `MockOpenRouter`, `AiEval`/`SimulatedModel`/`AiEvalLiveTest`), translated to Northline's
+conventions, under the conditions of "AI provider and data residency" above.
+
+- **Module `ca.northline.ai`, a platform with no business dependency.** `ai.api` holds the port (`LlmClient`,
+  OpenAI chat-completions shape with tool calling, `complete` / `stream`, `configured()`, `model()`), `AiCompletions`
+  (what features call), the tool SPI `AssistantTool`, `Prompts`, `AiFeature` and the errors. It depends only on
+  `shared` (security). Features live in the module that owns their data and depend on `ai.api` alone (acceptance:
+  "every AI feature depends only on the port"); the other direction would make cycles (payments → ai → merchants →
+  payments). Tools are contributed the same way `NavBadgeContributor` badges are: beans in each module, over that
+  module's own use cases.
+- **Spring AI: not inside the adapter.** Spring AI 2.0 (GA 2026-06-12) supports Boot 4.0/4.1, and its OpenAI model now
+  wraps the OpenAI Java SDK. The OpenRouter adapter stays a thin RestClient over `POST /chat/completions`, as in samop:
+  OpenRouter's `usage.cost` and `provider` routing fields (`data_collection`, `zdr`) are first-class here, the tool loop
+  must stay ours (tools run as the caller with our permission checks, writes stop for confirmation; Spring AI executes
+  tools itself unless told not to), and streaming needs no reactive stack. Both sit behind the same port, so switching
+  later is one adapter. MCP (S-127) uses Spring AI's MCP server separately; the version catalog's single `spring-ai`
+  entry (2.0.0, added by S-127) is the one to use if the adapter ever moves to Spring AI's OpenAI model. `@HttpExchange` (code standards) is not
+  used: a streamed body can't be returned through the proxy; one `RestClient` serves both calls.
+- **Provider selection** `northline.ai.provider` = `fake` (default) | `openrouter`; staging/prod refuse `fake` at
+  start-up (`AiConfiguration`, same pattern as tax/calendar/POS) and require `AI_PROVIDER`. `OPENROUTER_API_KEY` is
+  **not** required: until a key exists every AI call answers 503 `ai_unavailable` (the pending item of the residency
+  decision); `GET /api/v1/ai/status` lets the apps hide AI actions.
+- **Models (researched 2026-09-30, OpenRouter prices):** standard tier `google/gemini-3.7-flash` ($0.75 / $3.75 per M
+  in/out), light tier `google/gemini-3.5-flash-lite` ($0.30 / $2.50). Each `AiFeature` has a tier; any feature can be
+  overridden with `OPENROUTER_MODEL_<FEATURE>`. Cheaper than Claude Haiku 4.5 ($1 / $5) with tool calling and good
+  French; to be confirmed by the live eval once a key exists.
+- **Data policy on every request:** `provider: {data_collection: "deny", zdr: true}` (configurable, default on), usage
+  accounting on, attribution headers `HTTP-Referer` (Studio origin) and `X-Title: Northline`. Account settings
+  (logging off, ZDR guardrail) are in docs/runbooks/ai.md.
+- **Redaction on the port:** the only `LlmClient` bean is `ObservedLlmClient` around the chosen adapter. Every message
+  goes through `PrivacyRedactor`, which reuses the logging `Redactor` (S-112: secrets and keys, emails, card numbers
+  with the last 4 kept, phones, one-time codes, postal codes to the area) and adds SINs (Luhn) and bank accounts
+  (cheque format, "account …", IBAN). It then records an observation `northline.ai.completion` (span + timer; tags provider, model, feature, outcome,
+  streamed) and counters `northline.ai.tokens`, `northline.ai.cost` (USD) and the per-call summary
+  `northline.ai.call.cost`. The feature reaches the port through a `ScopedValue`, not a parameter. samop used a
+  BeanPostProcessor; a plain wrapper in the configuration is enough here since there is one bean.
+- **Budgets:** per person requests/minute (20) and tokens/day (200k), per business tokens/day (1M), UTC
+  days (a cost window needs no market time zone; region-neutral). Valkey keys `nl:ai:{p:<user>}:rpm:<minute>`, `…:tok:<day>`, `nl:ai:{m:<merchant>}:tok:<day>`; memory under
+  local/test (like the DPoP replay cache). Checked before a request, charged after; Valkey down = 503 (fail closed: AI
+  costs money). Over budget = 429 `ai_rate_limited` with `Retry-After` and `limit`. A person is a user id; a signed-out
+  visitor (S-132) will be a hashed key.
+- **Errors:** `AiUnavailable` → 503 `ai_unavailable`, `AiRateLimited` → 429 `ai_rate_limited` (ProblemDetail with
+  `code`, global `AiWebAdvice`). Provider 429 → 429 `limit=provider`; 402/404/5xx, timeouts and broken streams → 503.
+- **Tool loop:** at most `AI_MAX_TOOL_ROUNDS` (4) tool rounds, the last round offers no tools. Tools are offered only
+  to roles that hold the tool's permission and `MerchantAccess.require` runs again before every run (fresh membership,
+  `acr=mfa`). Domain errors and refusals go back to the model as `{error, detail}`. A `write()` tool is never run by
+  the loop: it returns a `PendingAction` for the UI to confirm (S-130). Tool results are cut at 12k characters.
+- **Schema (V150, first numbered V125):** schema `ai`, table `ai.usage` — one row per request (feature, person, business, provider, model,
+  prompt version, calls, tokens, cost in micro-USD, latency, tool runs, outcome). No content. `ai` added to
+  `SchemaOwnershipTests`.
+- **Prompts** are versioned files `ai/prompts/<name>.v<N>.md`; the highest version is served and `name@vN` is recorded.
+- **Evals:** `ca.northline.ai.eval` — `LabelledSet` (JSON sets in `src/test/resources/ai-eval/`), `SimulatedModel`
+  (replays each case's `mock` through the mock OpenRouter and the real adapter), `EvalReport` (pass rate,
+  precision/recall per label, tokens, cost; `build/ai-eval/*.md|json`), `EvalSuites` (every feature registers its
+  suite), `AiEvalLiveTest` (only with `OPENROUTER_API_KEY`; each suite's gate, 0.8 by default). S-129's own set,
+  `platform.json`, checks tool choice and grounding with stub tools (10 cases, en/fr, one "no tool covers it").
+- **Config everywhere (S-23/S-32 pattern):** `server/.env.example`, runbooks README/local/dev/staging/prod,
+  secrets.md, infrastructure.md, Helm (`secretNames.OPENROUTER_API_KEY`, `secretEnv` false, `AI_PROVIDER: openrouter`
+  in staging/prod values), Terraform `secret_env` in the AWS, Google Cloud and Azure stacks (`openrouter-api-key`),
+  new runbook `docs/runbooks/ai.md`, Grafana dashboard `deploy/observability/dashboards/northline-ai.json` (S-111 may
+  move it next to its own dashboards).
+- **Not done / never exercised:** no call has ever reached openrouter.ai (blocked from the build sandbox; the adapter
+  is tested against a stand-in built from OpenRouter's documented API); the live eval has never run; the dashboard
+  JSON was not loaded into a Grafana; the Valkey budget store is tested against a Valkey container, not a managed one.
+  The Privacy Policy / PIA disclosure of OpenRouter is for the SEC stories.
+
 ## 2026-10-01 — S-127 Built-in MCP server (OAuth 2.1) for merchants, partners and ops
 
 - **Inside the api, not a separate app.** The MCP server is module `ca.northline.mcp` in `server/api`. springdoc
@@ -3690,3 +3759,240 @@ Built on the S-44 contract (docs/CONSUMER_WEB_PLAN.md § Search) and S-47's loca
 - **Not exercised end to end:** the cross-origin hand-off was not run against a live auth + both BFFs here (the BFF's
   `next` rule and the Studio's onboarding parameters are unchanged and covered by their own tests). If northline-auth's
   session has expired while the consumer-bff's has not, the Studio's sign-in asks again — accepted.
+
+## 2026-10-01 — S-130 Studio AI assistant: chat with tools that run as the caller, streamed, plus screen insights
+
+Stacked on S-129 (#82, branch `ai/s-129-platform`).
+
+- **Where it lives:**
+  - The assistant is in the `studio` composition module: `StudioAssistant` / `StudioAssistantService` and
+    `AssistantController`. It already composes the dashboard, and it may read `merchants.api` (business name, type,
+    province) and `region.api.Markets` (the business's time zone).
+  - The tools live in the modules that own the data, as `AssistantTool` beans in each `application` package, over the
+    same use cases the REST controllers and the S-127 MCP server call:
+    - orders: `list_orders`, `pack_order` (write);
+    - booking: `list_jobs`, `start_travel` (write);
+    - catalogue: `list_listings`;
+    - availability: `get_availability`;
+    - payments: `earnings_overview`, `payouts_overview` (read-only, `FINANCE_READ`);
+    - messaging: `list_threads`;
+    - trust: `reviews_summary`.
+- **The prompt carries only who the caller is and what they may do** (`studio-assistant.v1`): the business name and
+  type, the role, the role's permissions in words, today's date and the time zone. Every fact comes from tool results.
+- **As the caller:**
+  - The platform offers a tool only to roles that hold its permission, and runs `MerchantAccess.require` again before
+    each run.
+  - Tools receive the authorized `merchantId`, plus the caller's id and role. Technicians see only their own jobs and
+    threads, as on the screens.
+  - A test proves that another business's lines on a shared order never reach the model.
+- **Minimum data sent:**
+  - No customer names, addresses or contact details, no message bodies, no bank details. Payouts say only
+    `bankAccountOnFile`.
+  - Review texts are cut at 400 characters, without author names.
+  - The port's redaction still applies.
+- **Time zone (region-neutral):** `ToolContext` and `AssistantTool.Call` gained `zone`, the business's market zone
+  (`Markets.zone(province)`). Tools show local times and "today" in it. S-129's API changed accordingly, in this
+  branch.
+- **Writes need explicit confirmation:**
+  - The loop never runs a `write()` tool. The answer carries `pending` (`tool`, `arguments`, a `preview` in the
+    person's language), and the drawer shows Confirm / Cancel.
+  - Confirm calls `POST …/assistant/actions`, which re-checks the tool's permission (`OPERATE` for both writes), runs
+    it, and records `assistant.action_confirmed` in the audit trail.
+  - No signed token binds the confirmation to the proposal. The caller could make the same change through the REST
+    endpoint with the same permission, so the confirmation is a guarantee that the *model* never acts on its own, not
+    an authorization.
+- **Streaming:**
+  - `POST …/assistant/chat/stream` writes SSE frames straight to the response, as samop does: `tool`, `delta`, then
+    `done` or `error`. Nothing is written before the first frame, so a refusal up front is an ordinary 403 / 422 / 429
+    / 503.
+  - **The BFF relays it unbuffered.** Gateway MVC flushes `text/event-stream` by default
+    (`streaming-media-types`). `SseRelayTest` proves this on a real server: the first frame arrives while the upstream
+    is still writing.
+  - The JSON endpoint `POST …/assistant/chat` stays for clients without SSE.
+- **Insights** (`GET …/assistant/insights/{dashboard|earnings|listings}`, prompt `studio-insight.v1`, light model, JSON
+  `{title, body, bullets}`):
+  - They read the screen's data through the same tools as the caller. A technician gets 403 on earnings.
+  - **Fetched only when the person clicks "Explain this screen"**, then cached 15 minutes in the browser. Each one is
+    a model call, so loading one on every visit would spend the budget for nothing.
+  - Shown under the screen and labelled "AI-generated from this screen's data · check before acting".
+- **Usage (tokens, cost, latency)** is returned to owners only (`MANAGE`). Every role's calls are metered and recorded
+  in `ai.usage`.
+- **UI addition the product owner asked for:** the design (`design/02`) has no AI screens.
+  - The addition is kept minimal and consistent with the locked design system:
+    - an "Assistant" button with a Phosphor duotone `Sparkle` in the top bar, before the account menu;
+    - the kit's right `Drawer` (440 px), with the kit's `ChatLog` / `ChatBubble`, `TextArea`, `Button`, `Alert` and
+      `nl-chip` suggestions;
+    - an `InsightCard` `Panel` at the foot of the dashboard, earnings and listings screens.
+  - Tokens only (`Assistant.css`), en + fr-CA copy, 44 px targets.
+  - The drawer always shows "AI-generated. It can be wrong — check before acting. Changes always need your
+    confirmation."
+  - With the fake model it says "Test model: answers are canned, not real."
+  - Hidden entirely when `GET /api/v1/ai/status` says AI is unavailable.
+- **Evals:** `ai-eval/assistant.json` holds 17 top questions across roles (owner, technician, bookkeeper), en/fr:
+  - tool choice and content, including the two writes, which must be proposed and never run;
+  - a technician's earnings question, which must be refused without leaking;
+  - an out-of-scope request.
+  `AssistantEval` drives the real `StudioAssistantService` (prompt, role filtering, loop) with stub tools mirroring the
+  real tools' names and permissions. `AssistantToolsCatalogueTest` checks the mirror against the beans in the context.
+- **No schema change.** Audit action `assistant.action_confirmed` (`developer.audit_log`).
+- **Not done / not verified:**
+  - The drawer keeps the conversation in memory only (closed tab = gone). Nothing is stored server-side.
+  - No live-model run (no OpenRouter key yet).
+  - The UI was tested with Testing Library, not in a browser.
+  - No Storybook story: the drawer is a Studio feature composed from kit components that already have stories.
+
+## 2026-10-01 — S-131 AI writing help: listing copy, quote lines, message replies, review summaries (en/fr)
+
+Stacked on S-130 (#83), which is stacked on S-129 (#82). It reuses S-130's `ScriptedModelTest` and test heap.
+
+- **Each feature lives in the module that owns its data** and depends only on `ai.api`. Each has a versioned prompt, a
+  labelled eval set and suite, and an endpoint guarded like its screen:
+
+  | Feature | Module | Endpoint | Permission | Prompt and model |
+  |---|---|---|---|---|
+  | listing copy | catalogue | `POST /api/v1/merchants/{id}/listing-copy` | EDIT | `listing-copy@v1`, standard |
+  | quote lines | booking | `POST …/quote-requests/{requestId}/line-suggestions` | EDIT | `quote-lines@v1`, standard |
+  | reply suggestions | messaging | `POST …/threads/{threadId}/reply-suggestions` | OPERATE; technicians only for their own jobs' threads, through `BrowseInbox` | `message-reply@v1`, light |
+  | review summary | trust | `POST …/reviews/summary-draft` | EDIT | `review-summary@v1`, light |
+
+- **Always a draft the person edits; never sent, saved or published by the AI:**
+  - No endpoint writes anything. Every answer carries `aiAssisted: true` and the Studio labels it:
+    - "AI-assisted draft … every listing is still vetted by Northline";
+    - "AI-suggested lines … set the prices and check each one";
+    - "AI-suggested replies — pick one to edit it before sending";
+    - "AI-assisted summary … nothing is published automatically".
+  - Listing copy fills the editor's fields only when the person picks the English or the French draft. Saving and
+    submitting go through the normal flow, so **vetting is unchanged**.
+  - A suggested reply only fills the message box.
+  - Suggested quote lines are added as editable rows **without prices**: the prompt never asks for them, and the
+    response has no price field. Discount lines are dropped.
+- **French drafts are not stored.** Listings have one set of text fields. `i18n.content_translations` (`source`,
+  `approved`, "MT draft → approved") exists, but catalogue has no write path for it yet. Both drafts are shown and the
+  person picks one. Saving the other language as a translation is a follow-up with the catalogue workstream.
+- **Review summary on the provider page:** the backlog says "on the provider page". A summary published there
+  automatically would contradict "never auto-published", so it is drafted on the Studio Reviews screen. The owner or
+  staff copy and edit it, and can put it on their page through the storefront editor. It needs at least 3 reviews
+  (409 `too_few_reviews`). It reads the 40 latest reviews: rating, job and text cut at 500 characters, **without author
+  names**.
+- **Minimum data per feature:**
+  - Listing copy sends the editor's facts: kind, name, category name, brand, attributes, included, duration, notes.
+  - Quote lines send the request's title, description and area. The customer's name is never sent.
+  - Replies send the last 8 messages as `{from: customer|business|northline, text}`, without names.
+  - The port's redaction masks contact details anyway, and the prompts forbid contact details and off-platform payment
+    in the output.
+- **Output is clamped to the domain rules**, so a draft never fails the editor's validation:
+  - listings: title ≤ 80, bullets ≤ 5 × 250, description ≤ 4,000;
+  - quote lines ≤ 6, description ≤ 80, quantity 0.01–999;
+  - three replies of ≤ 600 characters;
+  - four themes.
+- **Evals:**
+  - `listing-copy.json` (6 cases, including notes with a phone number and "cash discount" that must not leak);
+  - `quote-lines.json` (5, including en/fr and a vague request);
+  - `message-reply.json` (5, including an e-transfer request that must be answered "through Northline", a refund ask
+    that must not promise one, and French);
+  - `review-summary.json` (3).
+  `WritingHelpEvalTest` runs them against the simulated model, and `AiEvalLiveTest` runs them live.
+- **No schema change.** Usage is recorded in `ai.usage` per feature (`listing_copy`, `quote_lines`, `message_reply`,
+  `review_summary`).
+- **Not done:**
+  - French translations are not persisted (above).
+  - Nothing is audited per draft, since nothing changed; the usage row is the record.
+  - No live-model run.
+  - UI tested with Testing Library only.
+
+## 2026-10-01 — S-132 Consumer AI: natural-language search and help triage
+
+Stacked on S-131 (#85) → S-130 (#83) → S-129 (#82).
+
+- **Natural-language search** (`search` module, `POST /api/v1/search/interpret`, prompt `search-filters@v1`, light
+  model):
+  - It turns the typed text into **the S-44 search API's own parameters** (`GET /api/v1/search`, which is on main):
+    `q`, `kind`, `minPrice` / `maxPrice` (cents), `minRating`, `tier`, `instantBook`, `openNow`, `delivery=tonight`,
+    `dietary`, `allergenFree`, `radiusKm` and `sort`, plus a one-line `explanation` in the person's language.
+  - The model only proposes. `SearchInterpreter` keeps only values the search API accepts:
+    - codes from its enums; dietary tags and Health Canada allergen codes from the index's list;
+    - prices ≥ 0 (swapped when reversed); rating 1–5; radius 1–100;
+    - `sort=distance` and `radiusKm` only when the person shared a location (`hasLocation`), as the search API requires;
+    - `relevance` and `registered` are dropped as no-ops.
+  - It never runs the search and never sees results. The consumer app shows the filters as removable chips and calls
+    `GET /api/v1/search` itself.
+  - **Public, like search:**
+    - The AI budget is per visitor: the user id when signed in, else `visitor:` plus a SHA-256 of the BFF's guest id,
+      else of the client address. The raw values are never stored.
+    - Search's per-address rate limit counts it too (429 `rate_limited`).
+  - **UI:** the consumer search results page (S-48) isn't built yet (`routes/search.tsx` is pending). The contract is
+    recorded in CONSUMER_WEB_PLAN.md for S-48 to call.
+- **Help triage** (`messaging` module, help cases; `POST /api/v1/me/help/triage`, signed-in customers; prompt
+  `help-triage@v1`, light model):
+  - "Something's wrong" text (10–2,000 characters, optional `refType` order | booking) becomes a `category`:
+    `missing_item`, `wrong_item`, `damaged`, `not_as_described`, `late`, `not_delivered`, `service_not_done`,
+    `service_quality`, `no_show`, `billing`, `safety`, `account` or `other`. It also returns `urgent` and a neutral
+    English `summary` for staff (≤ 300 characters).
+  - **The route is a rule, not the model's**: `refund_request` (goods problems), `dispute` (late, service, no-show,
+    billing) or `support` (safety, account, other).
+  - **Never decides refunds:** it opens nothing and names no amount. The S-60 flow shows the suggestion, and the
+    customer opens the case through the existing `payments.api.CustomerCases`, where merchants or staff decide as
+    today. Safety is always urgent. An unknown category from the model becomes `other`.
+  - Only the report text is sent; the order or booking itself isn't read. The categories are new: no case category
+    existed, and S-60 adopts them. **UI left to S-60**, as agreed.
+- **Evals:**
+  - `search-filters.json` (10 cases): en/fr, location-dependent sorting, invented values (`keto`, `platinum`,
+    `spaceship`) that must be dropped, and a plain query that must stay unfiltered.
+  - `help-triage.json` (12 cases): precision and recall per category, safety recall and precision 1.0 in CI, summaries
+    that must not decide ("approved", "refunded") or carry a phone number.
+- `SimulatedModel` now matches a case on its **redacted** input, which is what the model receives.
+- **No schema change.** Usage is recorded as `search_filters` and `help_triage`.
+- **Not done:** no consumer UI (S-48 / S-60); no live model run.
+
+## 2026-10-01 — S-133 AI trust & safety assist: screening, weekly anomaly scan, staff queue
+
+Stacked on S-132 (#87) → S-131 (#85) → S-130 (#83) → S-129 (#82).
+
+- **Suggestions only, staff decide.** The model can only open `trust.flags` with an explanation, for the console
+  queue. It never changes vetting, hides a listing or review, blocks a message or penalizes a business.
+  - The automated vetting still decides by its own rules. AI screening of a submitted listing runs
+    alongside it and does not hold the listing.
+  - Deciding a flag (`dismissed` | `actioned`) records who, when and why (V151 `decided_by`, `decided_at`,
+    `decision_note`; audit `trust.flag_decided`, platform-level, so it isn't listed in the business's own audit log).
+    What "actioned" means is a separate staff action.
+- **Screening by polling, not by events.** One job (`TrustScreeningService`, every 15 min) reads each source after its
+  mark (`trust.ai_screening_marks`: time + id). Two reasons:
+  - Reviews have no creation event; they are generated from completed jobs by imports and seeds.
+  - When the AI is down or over budget, the mark doesn't move and nothing is skipped. An event listener would have
+    needed its own retry store.
+  - Each source runs under a Postgres advisory lock (one replica at a time). The AI calls for a batch (default 25)
+    run inside that transaction; this is acceptable at this batch size.
+- **Module boundaries:** trust needs listing texts, but catalogue already depends on `trust.api` (ratings). So the
+  reader is declared in `trust.api.ListingTexts` and implemented by catalogue (`ListingTextService`). The reverse
+  would be a module cycle. Messages come from the new `messaging.api.MessageTexts`, since trust already depends on
+  messaging. Reviews are trust's own.
+- **Minimum data** (DECISIONS "AI provider and data residency"): only the item's own words plus one context line
+  (kind, stars, who wrote to whom, category, price, vetting codes). No names, ids, thread subject or other items; see
+  docs/ai/trust-safety.md for the table. The anomaly scan sends letters and counts only, never names, places or text.
+  `trust.ai_screenings` stores no item text, only the verdict, categories and (for flags) the explanation.
+- **System caller budget:** jobs call as `Caller.system(job)` (`system:trust-screening`, `system:anomaly-scan`). They
+  have no per-minute rate and their own daily tokens, `AI_BUDGET_SYSTEM_TOKENS_PER_DAY` (2M). They are not throttled
+  like a person, and a runaway job cannot spend a person's or business's budget.
+- **Anomaly scan:**
+  - The signals are deterministic (`AnomalyRules`: review burst, rating drop, ≥ 3 off-platform flags, ≥ 3 screening
+    flags in the week, against the previous 8 weeks). The model only explains them.
+  - Without the model, flags still go out with the rules' own explanation. "Every flag explains itself" holds either
+    way.
+  - Weeks are Monday–Sunday **UTC** (a cost and reporting window, region-neutral).
+  - Markets: the region market id, else the business's own province, else `unplaced` (from `MerchantPlaces`).
+  - Each market and week is claimed once (`trust.anomaly_scans` unique).
+- **Dedup:** a screening flag is raised unless an *open* one exists for the same target and rule. A listing that is
+  resubmitted after a dismissal can be flagged again. Detector flags keep their stricter "once ever" rule.
+- **Schema (V151, first numbered V126):** `trust.ai_screenings`, `trust.ai_screening_marks`, `trust.anomaly_scans`, and the decision
+  columns plus an index on `trust.flags`.
+- **Console API** (`/api/v1/console/trust/flags`, staff with MFA by the path rule). Every flag gets an `explanation`:
+  the model's, or one derived from its rule (off-platform detector, business report). **No console web app exists
+  yet**, so this is API only.
+- **Evals:**
+  - `trust-screen.json`: 18 cases (11 flag, 7 tempting-but-fine), precision and recall of "flag", the expected
+    category, and the explanation not repeating an address.
+  - `anomaly-scan.json`: 6 market weeks, 8 businesses; the rules must pick the labelled ones with the right signals,
+    and explanations must cite the numbers. Both are in `EvalSuites` for the live eval.
+- **Not done / never exercised:** no live model run (precision and recall are measured only against the simulated
+  model); no console UI; the scheduler's cron and interval were not run in a deployed environment (tests call the use
+  cases directly).

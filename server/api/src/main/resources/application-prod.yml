@@ -14,6 +14,7 @@ northline.required-env:
   pos: POS_PROVIDER   # S-36: oauth; `local` is refused at start-up
   places: PLACES_PROVIDER, GOOGLE_MAPS_API_KEY   # S-47: google (Places + Geocoding); `local` is refused at start-up
   kms-envelope: KMS_PROVIDER, KMS_ENCRYPTION_KEY_ID   # S-32 refresh tokens sealed by the cloud key service; `local` refused
+  ai: AI_PROVIDER   # S-129: openrouter (`fake` refused at start-up); no OPENROUTER_API_KEY yet = AI answers 503 (docs/runbooks/ai.md)
 # S-125: no spec and no viewer in production (the internal specs never; public/partner ones are on the docs site).
 # S-127: springdoc still builds the model — the MCP server's tools come from it — but nothing publishes it: with
 # northline.docs.enabled=false the docs chain is absent and the api's own chains deny /v3/api-docs.

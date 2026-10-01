@@ -203,6 +203,146 @@ paths:
           description: "Validation failed: one error per field with the exact message."
       tags:
       - registry-review-controller
+  /api/v1/console/trust/flags:
+    get:
+      operationId: trustFlagQueueList
+      parameters:
+      - in: query
+        name: state
+        required: false
+        schema:
+          type: string
+          default: open
+          pattern: open|dismissed|actioned|all
+      - in: query
+        name: source
+        required: false
+        schema:
+          type: string
+          pattern: ai|rules
+      - in: query
+        name: limit
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 50
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ListResponseFlagView"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - trust-flag-queue-controller
+  /api/v1/console/trust/flags/{id}/decision:
+    post:
+      operationId: trustFlagQueueDecide
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DecisionRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/FlagView"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - trust-flag-queue-controller
 components:
   schemas:
     DecisionRequest:
@@ -211,20 +351,57 @@ components:
         decision:
           type: string
           minLength: 1
-          pattern: approve|reject
-        expiresOn:
-          type: string
-          format: date
+          pattern: dismissed|actioned
         note:
           type: string
           maxLength: 500
           minLength: 0
-        reference:
-          type: string
-          maxLength: 120
-          minLength: 0
       required:
       - decision
+    FlagView:
+      type: object
+      properties:
+        categories:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        decidedAt:
+          type: string
+          format: date-time
+        decidedBy:
+          type: string
+        decisionNote:
+          type: string
+        evidence:
+          type: object
+          additionalProperties:
+            type: string
+        explanation:
+          type: string
+        id:
+          type: string
+        merchantId:
+          type: string
+        rule:
+          type: string
+        source:
+          type: string
+        state:
+          type: string
+        targetId:
+          type: string
+        targetType:
+          type: string
+    ListResponseFlagView:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/FlagView"
     ListResponseReviewView:
       type: object
       properties:
