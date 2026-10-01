@@ -129,7 +129,10 @@ Every app reads its configuration from environment variables; nothing environmen
 | `SEARCH_MARKETS`, `SEARCH_DEFAULT_MARKET`, `SEARCH_CACHE_TTL`, `SEARCH_RATE_LIMIT` | api (S-44) | no (`AB=America/Edmonton,BC=America/Vancouver,ON=America/Toronto,QC=America/Toronto`, `AB`, `30s`, `120`) | set `SEARCH_MARKETS` when a province opens (region config until S-134) | markets served and each one's time zone (`CODE=Zone/Id,…`; open-now, cut-offs); the market searched when none is sent (blank = required, must be in `SEARCH_MARKETS`); hot-query cache; requests per minute per client address |
 | `SEARCH_RECONCILE_ENABLED`, `SEARCH_RECONCILE_EVERY` | worker (S-43) | no (`true`, `1m`) | leave unset | the sweep that brings edits without an event into search ([search.md § 6](search.md#6-the-indexer-s-43)) |
 | `WEBHOOKS_MAX_IN_FLIGHT`, `WEBHOOKS_CONNECT_TIMEOUT`, `WEBHOOKS_RESPONSE_TIMEOUT`, `WEBHOOKS_TOTAL_TIMEOUT`, `WEBHOOKS_DISABLE_AFTER`, `WEBHOOKS_LOG_RETENTION` | worker (S-33) | no (`64`, `5s`, `10s`, `15s`, `3d`, `30d`) | leave unset | partner webhook delivery ([webhooks.md](webhooks.md)); `WEBHOOKS_ALLOW_LOCAL` must stay unset (`true` is refused in the cloud) |
-| `OTEL_EXPORT_ENABLED` | api | no | `false` until a collector exists (S-111) | deployment manifest |
+| `OTEL_EXPORT_ENABLED`, `OTEL_EXPORTER_OTLP_ENDPOINT` | api, auth, bff, worker (S-111) | no (`true`, `http://northline-otel-collector:4318` with the chart's Collector) | leave to the chart | traces, metrics and logs over OTLP to the environment's OpenTelemetry Collector ([observability.md](observability.md)) |
+| `OTEL_TRACES_SAMPLER_ARG`, `OTEL_RESOURCE_ATTRIBUTES` | api, auth, bff, worker (S-111) | no (`0.1`; `deployment.environment.name=prod,service.version=<tag>`) | chart `observability.tracesSampleRatio` | share of traces kept — one value for every app ([observability.md § Sampling](observability.md#sampling)) |
+| `OTEL_BACKEND_AUTH` | otel-collector (S-111) | with an OTLP backend that needs credentials (Grafana Cloud…) | `Basic <base64 instance:token>` | secrets manager `otel-backend-auth` → External Secrets ([observability.md § Any OTLP backend](observability.md#any-otlp-backend)) |
+| `APPLICATIONINSIGHTS_CONNECTION_STRING` | otel-collector (S-111) | Azure only | `InstrumentationKey=…;IngestionEndpoint=https://canadacentral-…` | Key Vault `applicationinsights-connection-string` ([observability.md § Azure](observability.md#azure)) |
 | `VITE_NL_AUTH_ORIGIN` (Studio build) | web/apps/studio | no since S-14: the Studio image reads `NL_AUTH_ORIGIN` at start (chart: `urls.auth`); the build-time value is only a fallback | `https://auth.northline.ca` | CI build argument; one Studio build per environment |
 
 Generating the secrets:
@@ -157,7 +160,7 @@ docker run --rm httpd:2.4-alpine htpasswd -bnBC 12 "" "$SECRET" | tr -d ':\n' | 
 - Every data service — Postgres (and its backups and snapshots), Valkey, Kafka, Elasticsearch, object storage, KMS keys, secrets, logs — lives in a Canadian region (list above). Cross-region copies go only to the other Canadian region.
 - Elastic Cloud: the deployment is created by Terraform in the Canadian region of the chosen cloud (`aws-ca-central-1`, `gcp-northamerica-northeast1`, `azure-canadacentral`).
 - Leave Canada by design, disclosed in the Privacy Policy (`design/10`): Stripe (payments, identity), the SMS provider, Google/Apple sign-in, and the email provider unless it runs in Canada (Amazon SES in `ca-central-1` does).
-- No personal data in event payloads (CLAUDE.md), so Kafka holds ids only; logs must not carry PII (S-112).
+- No personal data in event payloads (CLAUDE.md), so Kafka holds ids only; logs must not carry PII (S-112). Telemetry (traces, metrics, logs) goes to a backend in a Canadian region: X-Ray / CloudWatch in `ca-central-1`, Cloud Trace / Monitoring / Logging with the project's Canadian location, Application Insights in Canada Central, or an OTLP backend hosted in Canada ([observability.md](observability.md#canadian-data-residency)).
 - Privacy obligations: PIPEDA and Alberta PIPA at launch; access/erasure requests (S-105), retention jobs (S-107).
 
 ## Blockers
