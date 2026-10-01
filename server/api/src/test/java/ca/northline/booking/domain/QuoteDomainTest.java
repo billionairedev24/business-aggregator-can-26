@@ -51,7 +51,7 @@ class QuoteDomainTest {
         var q = Quote.draft(
                 "r", "m", "QT-1", 1, content(DepositKind.PCT, 2500, line(LineKind.LABOUR, "1", 10000)), 500, "u", now);
         q.send("u", now, null);
-        assertThat(q.getValidUntil()).isEqualTo(now.plus(Duration.ofHours(72)));
+        assertThat(q.getValidUntil()).isEqualTo(now.plus(Duration.ofDays(3)));
         assertThat(q.getTotals().depositCents()).isEqualTo(2625);
         assertThatThrownBy(() -> q.redraft(q.getContent(), 500)).isInstanceOf(Conflict.class);
 

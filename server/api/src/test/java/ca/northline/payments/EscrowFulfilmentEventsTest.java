@@ -84,7 +84,7 @@ class EscrowFulfilmentEventsTest extends IntegrationTest {
                 new BookingCompleted(Ids.next(), at, bookingId, shop.merchantId(), shop.ownerId(), 2)));
 
         await().atMost(Duration.ofSeconds(10)).until(() -> releaseAt(escrowId) != null);
-        assertThat(Duration.between(at, releaseAt(escrowId))).isEqualTo(Duration.ofHours(48));
+        assertThat(Duration.between(at, releaseAt(escrowId))).isEqualTo(Duration.ofDays(2));
     }
 
     @Test
