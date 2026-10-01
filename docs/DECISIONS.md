@@ -3996,3 +3996,68 @@ Stacked on S-132 (#87) → S-131 (#85) → S-130 (#83) → S-129 (#82).
 - **Not done / never exercised:** no live model run (precision and recall are measured only against the simulated
   model); no console UI; the scheduler's cron and interval were not run in a deployed environment (tests call the use
   cases directly).
+
+## 2026-09-30 — S-58 Account area: orders & bookings, quotes, favourites, wallet & points
+
+Branch `web/s-58-account-activity` (not stacked).
+
+- **New module `account`** (`ca.northline.account`, schema `account`): the consumer's own area under `/api/v1/me`,
+  single-factor sessions allowed. It owns only favourites and composes everything else from the other modules' `api`
+  packages, which gained small read interfaces (each implemented by that module's own JDBC, so `SchemaOwnershipTests`
+  holds — `account` was added to its schema list):
+  `orders.api.CustomerOrders` (shop and food orders with lines, shops, window/ETA), `booking.api.CustomerHistory`
+  (bookings with the `completed` event time; quote requests without an accepted quote, with each provider's latest open
+  version), `payments.api.CustomerCaseQuery` (refund cases through `escrows.customer_id`, disputes through
+  `opened_by`), `trust.api.LoyaltyPoints`, `identity.api.PlusMemberships`.
+- **Endpoints:** `GET /me/activity` (Orders & bookings), `GET /me/upcoming` (the S-46 "Your week" contract, texts in
+  the caller's language), `GET /me/wallet`, `GET /me/account-summary` (the S-45 menu contract — S-58 fills
+  `reliability`, `points`, `plus`, `activeOrders`, `favourites`, `openCases`), `GET /me/favourites`,
+  `PUT|DELETE /me/favourites/{businessId}` (idempotent; 404 when the business isn't active). All `no-store`.
+- **One list, three filters:** design 06's "Active · 3 / Past / Refunds & cases · 1" tags filter one Data Table
+  (`?view=active|past|cases`). Active = orders not yet delivered (placed → picked up), bookings not yet completed
+  (requested → on site), quote requests waiting for or holding open quotes; active rows sort soonest first, past rows
+  newest first, at most 100. A request with an accepted quote is not listed — its booking is (status "Deposit held"
+  when only the quote's deposit was held). "Refunds & cases" = rows with a refund case or dispute on any of their escrow
+  references (an order's lines, a food order, a booking); an open one turns the row's status into "Case RF-…" and its
+  action into "View case" (`/account?tab=help&case=<id>`, S-60's tab).
+- **Statuses** are codes the web words (en/fr): orders packing / ready / on the way / delivered / done; food paid /
+  cooking / ready / on the way / done; bookings booked (nothing paid), escrow, deposit held, on the way, on site,
+  completed, done; requests waiting / quote ready / declined / expired. Row titles follow the design: "Grocery run ·
+  N shops" for pooled runs (also for non-grocery shops — the design's wording), "Delivery · N shops" for direct
+  couriers, the kitchen's name for food, the job or request title otherwise. Actions: Track (orders under way), Details
+  (a booking's confirmation `/providers/<slug>/book?step=done&booking=`, a past order), View quote (`/quotes/<id>` when
+  one quote is open, else the comparison), Re-book (`/providers/<slug>`), View case.
+- **"Done ★5"** isn't shown: there is no consumer review flow writing `trust.reviews` for these jobs yet.
+- **Your week** (server-written, en/fr): active rows within seven days, plus requests with a quote ready; times in
+  the default market's zone (`region.api.Markets.zone(null)` — no zone in code), money with the locale's CAD format.
+- **Wallet & points — minimal read model (stubbed earning):** no loyalty backend existed. `trust.points_ledger` (V012)
+  got `created_at` and `note` (V160); `LoyaltyPoints` reads the balance (not-yet-expired credits minus debits) and the
+  points earned in each of the last eight weeks. **Nothing writes the ledger** (no earning, redemption or expiry
+  rules; checkout's points line stays hidden, S-51) — the dev seed (V161) stands in. 100 points = $1 (design 06:
+  1,240 pts = $12.40). Plus reads `identity.households.plus_plan` through `household_members`; V160 adds
+  `plus_since` ("Active since …"). Nothing bills Plus (no subscription backend).
+- **Wallet's "Payment methods" section** links to the Payment methods tab until S-59 lists the cards there.
+- **Favourites:** `account.favourites (user_id, merchant_id, created_at)`. A card shows the business's tier, its
+  main category (the leaf of the category id; French from the services taxonomy's `FR_NAMES`), how many of the
+  person's own bookings/orders were with it and the last one, and one button: View quote (an open quote from it), Book
+  (provider page), Order (kitchen page), Shop (a Shop-scope search by its name — shops have no pages yet, S-48's rule).
+  The design's brand colour per card and "3× points this week" (merchant rewards) are not shown: no rewards data.
+  "Offered first when you book" and "notified when they fund rewards or open new slots" are **not implemented** (no
+  booking-order or notification hook reads favourites yet). ♡ was added to the provider page's header (signed-in
+  only; it renders nothing until the browser knows who is signed in, so the SSR HTML is unchanged).
+- **Other tabs** of `/account` (payments, profile, addresses, security, notifications, language, dietary, plus, help)
+  show "This part of your account is on its way (S-59/S-60)." until those stories land. The tab list wraps into pills
+  under 720 px (no horizontal scroll); `Sell or offer a service` links to S-61's `/sell`.
+- **UI kit:** `@northline/ui` exports `./DataTable.css` so a server-rendered route can link the table's stylesheet
+  (the consumer app's first Data Table).
+- **Schema (V160, consumer-account range V160–V169 — renumbered from V140 by the ordering rule):** schema `account` +
+  `account.favourites`; `trust.points_ledger.created_at`, `.note` + index `(user_id, created_at)`;
+  `identity.households.plus_since`; indexes `identity.household_members(user_id)`, `booking.bookings(customer_id,
+  starts_at desc)`, `payments.escrows(customer_id)`, `payments.disputes(opened_by)`. Dev seed V161: Amara's three
+  favourites and 1,240 points.
+- **Tests:** `AccountActivityApiTest` (orders, bookings and quotes with statuses, actions and hrefs, active first,
+  someone else's rows hidden; a refund case on an order line; Your week in en and fr; wallet points/weeks/Plus and an
+  empty wallet; favourites add/list/remove, idempotent, 404 for an inactive business; 401 signed out). vitest
+  `features/account/account.test.tsx` (design copy and columns, actions navigate, Past / Refunds & cases filters,
+  empty, error + Retry, guest sign-in, skeleton, French; wallet balance/value/chart/Plus, error, no points; favourites
+  meta, buttons, Remove, empty, guest, French).

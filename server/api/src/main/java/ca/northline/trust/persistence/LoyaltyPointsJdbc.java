@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
-/** {@link LoyaltyPoints} over {@code trust.points_ledger} (V140 added {@code created_at} and the user index). */
+/** {@link LoyaltyPoints} over {@code trust.points_ledger} (V160 added {@code created_at} and the user index). */
 @Repository
 @RequiredArgsConstructor
 class LoyaltyPointsJdbc implements LoyaltyPoints {

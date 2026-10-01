@@ -124,8 +124,8 @@ A feature folder per story area, named after the design: `home`, `location`, `se
 | `/providers/$slug/book` | book | S-55 (**built**) | `?step=details\|location\|schedule\|pay\|done&service=&booking=`; provider SSR, calendar/hold/payment client-side; sign-in from the hold on; guest banner |
 | `/quotes/requests/$requestId` | book (quote mode, "N quotes received") | S-56 (**built**) | compare the request's quotes; guest banner |
 | `/quotes/$quoteId` | quote | S-56 (**built**) | every line, versions, accept with the escrow deposit; guest banner |
-| `/account/orders` | orders | S-58 | Orders & bookings — from the account menu only |
-| `/account?tab=` | account | S-58, S-59 | tabs: wallet, payments, profile, addresses, favourites, security, notifications, language, dietary, plus, help |
+| `/account/orders` | orders | S-58 (**built**) | Orders & bookings — from the account menu only; `?view=active\|past\|cases` |
+| `/account?tab=` | account | S-58 (**built**: wallet, favourites), S-59, S-60 | tabs: wallet, payments, profile, addresses, favourites, security, notifications, language, dietary, plus, help |
 | `/sign-in?next=`, `/register?next=` | auth | S-62 (**built**) | no account buttons in the header there; `features/auth` |
 | `/legal/terms.html`, `/legal/privacy.html` | — | S-63 (**built**) | static, verbatim (design 09/10): `web/packages/legal` (one copy for the Studio and this app, its Vite plugin serves `/legal/`) |
 
@@ -195,8 +195,7 @@ value invalidate `accountSummaryQuery`.
 
 The home page's "Your week" (S-46) lists the signed-in person's orders, bookings and quotes of the next seven days from
 `GET /api/v1/me/upcoming` → `{ items: [{ id, title, subtitle?, state, tone: accent|neutral|accent-2, href }] }` — texts
-in the caller's language (`Accept-Language`), `href` a consumer route (`/orders/…`, `/quotes/…`). S-58 provides it;
-until then (404) the section shows its empty line. The points line under it reads `points` of the account summary.
+in the caller's language (`Accept-Language`), `href` a consumer route (`/orders/…`, `/quotes/…`). S-58 provides it (module `account`). The points line under it reads `points` of the account summary.
 
 ### Market (S-49)
 
@@ -330,7 +329,8 @@ Both endpoints are `GET`, public, JSON, camelCase; money in cents; errors as eve
 | `GET /api/v1/public/services`, `/services/{slug}`, `/services/{slug}/providers?lat&lng&city` | **exists** (S-53, module `hire`) | S-53 |
 | `GET /api/v1/public/providers/{slug}/slots`, `POST/DELETE /api/v1/me/bookings/holds`, `POST /api/v1/me/bookings/checkout` (Idempotency-Key, X-Step-Up), `POST /api/v1/me/bookings/holds/{id}/confirm`, `GET /api/v1/me/bookings/{id}` | **exists** (S-55, module `hire`) | S-55 |
 | `POST /api/v1/me/quote-requests`, `GET /api/v1/me/quote-requests/{id}`, `GET /api/v1/me/quotes/{id}`, `POST /api/v1/me/quotes/{id}/decline`, `POST /api/v1/me/quotes/{id}/accept` (Idempotency-Key, X-Step-Up), `POST /api/v1/me/quotes/{id}/accept/confirm` | **exists** (S-56, module `hire`) | S-56 |
-| `GET /api/v1/me/account-summary`, wallet, addresses, payment methods, notifications, favourites | missing | S-45 menu values, S-58, S-59 |
+| `GET /api/v1/me/account-summary`, `GET /api/v1/me/activity`, `GET /api/v1/me/upcoming`, `GET /api/v1/me/wallet`, `GET\|PUT\|DELETE /api/v1/me/favourites[/{businessId}]` | **exists** (S-58, module `account`) | menu values, orders & bookings, Your week, wallet, favourites |
+| addresses, payment methods, notifications, profile, preferences | missing | S-59 |
 | refunds / "something's wrong" (consumer side) | missing (merchant side exists) | S-60 |
 
 New public reads go under `/api/v1/public/**` (GET, open in `SecurityConfig`) or the already-open `/api/v1/search/**`,
@@ -343,6 +343,7 @@ accept single-factor tokens. Anything a guest may do (cart) must read `X-Northli
 |---|---|
 | V110–V119 | consumer web (cart, favourites, addresses, wallet, account preferences…) |
 | V120–V129 | search (E-6 read-model bookkeeping, synonyms, recent searches) |
+| V160–V169 | consumer account (S-58–S-60; see IMPLEMENTATION_PLAN.md's ordering rule) |
 | `db/seed-dev/V109__consumer.sql` | the consumer persona data (Amara Osei `01J9ZD3V0000000000000C0001` and her household, cart, favourites) |
 
 Additive only; record each addition in `docs/DECISIONS.md` under the story's heading.

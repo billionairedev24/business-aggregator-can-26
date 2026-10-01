@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
-/** {@link FavouriteStore} over {@code account.favourites} (V140). */
+/** {@link FavouriteStore} over {@code account.favourites} (V160). */
 @Repository
 @RequiredArgsConstructor
 class FavouritesJdbc implements FavouriteStore {

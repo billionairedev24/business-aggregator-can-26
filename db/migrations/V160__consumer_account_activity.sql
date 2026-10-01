@@ -1,4 +1,4 @@
--- S-58 Account area: orders & bookings, favourites, wallet & points (consumer-account range V140–V149). Additive only.
+-- S-58 Account area: orders & bookings, favourites, wallet & points (consumer-account range V160–V169). Additive only.
 -- See docs/DECISIONS.md "S-58".
 
 -- ── account: what only the consumer's account area keeps ────────────────────────────────────────────────────────
