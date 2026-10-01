@@ -1,4 +1,7 @@
-/** Public API of the region module (tax profiles). Added by the operations workstream for quote tax. */
+/**
+ * Public API of the region module: the region model ({@link ca.northline.region.api.Regions}), the served markets
+ * ({@link ca.northline.region.api.Markets}), the fallback market and the tax profiles.
+ */
 @NamedInterface("api")
 @NullMarked
 package ca.northline.region.api;

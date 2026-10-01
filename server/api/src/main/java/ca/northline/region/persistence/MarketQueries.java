@@ -95,6 +95,36 @@ class MarketQueries implements MarketStore {
     }
 
     @Override
+    public List<ProfileRow> profiles() {
+        return jdbc.sql("""
+                        select r.id, r.kind, r.parent_id, r.province, r.city, r.name_i18n ->> 'en' as name_en,
+                               r.name_i18n ->> 'fr' as name_fr, coalesce(r.stage, 'off') as stage,
+                               ST_Y(r.center::geometry) as lat, ST_X(r.center::geometry) as lng,
+                               coalesce(r.time_zones, '{}') as time_zones, r.holidays, r.privacy_law, r.registries,
+                               (select round((coalesce(t.gst, 0) + coalesce(t.pst, 0) + coalesce(t.hst, 0)
+                                              + coalesce(t.qst, 0)) * 10000)::int
+                                  from region.tax_profiles t
+                                 where t.id = r.tax_profile_id
+                                   and (t.effective_from is null or t.effective_from <= current_date)) as tax_bps
+                          from region.regions r
+                         order by r.kind desc, r.sort, r.id
+                        """)
+                .query((rs, _) -> new ProfileRow(
+                        region(rs),
+                        texts(rs, "time_zones"),
+                        texts(rs, "holidays"),
+                        rs.getString("privacy_law"),
+                        texts(rs, "registries"),
+                        rs.getObject("tax_bps", Integer.class)))
+                .list();
+    }
+
+    private static List<String> texts(ResultSet rs, String column) throws SQLException {
+        var array = rs.getArray(column);
+        return array == null ? List.of() : List.of((String[]) array.getArray());
+    }
+
+    @Override
     public boolean joinWaitlist(
             String id, String regionId, @Nullable String userId, @Nullable String email, String locale) {
         var conflict = userId != null

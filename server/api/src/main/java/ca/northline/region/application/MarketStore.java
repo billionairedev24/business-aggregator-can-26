@@ -25,6 +25,9 @@ public interface MarketStore {
     /** The zone of the market that contains the point. */
     Optional<ZoneRow> zoneAt(String marketId, GeoPoint point);
 
+    /** Every province and market with its profile columns (V130), provinces first, each by sort. */
+    List<ProfileRow> profiles();
+
     /** Adds the entry; false when the person (user id, else email) is already on that list. */
     boolean joinWaitlist(String id, String regionId, @Nullable String userId, @Nullable String email, String locale);
 
@@ -48,6 +51,20 @@ public interface MarketStore {
             return kind.equals("market");
         }
     }
+
+    /**
+     * A {@code region.regions} row with its profile (S-134).
+     *
+     * @param timeZones IANA zone ids as stored (a market's may be empty: it keeps its province's)
+     * @param taxBps the province's current combined tax rate, null without a tax profile
+     */
+    record ProfileRow(
+            RegionRow region,
+            List<String> timeZones,
+            List<String> holidays,
+            @Nullable String privacyLaw,
+            List<String> registries,
+            @Nullable Integer taxBps) {}
 
     record ZoneRow(
             String id,
