@@ -40,11 +40,6 @@ paths:
         required: false
         schema:
           type: string
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       responses:
         "200":
           description: OK
@@ -381,23 +376,6 @@ paths:
       - stripe-webhook-controller
 components:
   schemas:
-    CurrentUser:
-      type: object
-      properties:
-        mfa:
-          type: boolean
-        roles:
-          type: array
-          items:
-            type: string
-          uniqueItems: true
-        scopes:
-          type: array
-          items:
-            type: string
-          uniqueItems: true
-        userId:
-          type: string
     Problem:
       type: object
       description: RFC 9457 problem details. 403 and 409 carry a machine-readable

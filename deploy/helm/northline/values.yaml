@@ -405,6 +405,9 @@ apps:
     # prod profile turns springdoc and the viewers off anyway. auth serves the same paths on its host (all of auth is
     # routed); the BFFs serve theirs under /bff.
     docsRoutes: false
+    # S-127: route /mcp (the MCP server for AI agents: Claude, IDEs; OAuth 2.1 tokens from auth with the mcp scope and
+    # acr=mfa) and /.well-known/oauth-protected-resource on the api host. false = agents can't reach it (docs/runbooks/mcp.md).
+    mcp: true
     allowFrom: [bff, consumer-bff]
     extraVolumes: []
     extraVolumeMounts: []

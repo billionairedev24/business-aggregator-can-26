@@ -54,8 +54,14 @@ public class LoginPages {
         return signInPage.replace("/sign-in", "/register");
     }
 
-    /** Whether {@code clientId} may only get a code after a second factor. */
+    /**
+     * Whether {@code clientId} may only get a code after a second factor. S-127: agents registered by a Client ID
+     * Metadata Document ({@code client_id} = an HTTPS URL) act for a business, so they need one too.
+     */
     public boolean requiresMfa(@Nullable String clientId) {
-        return clientId != null && props.mfaRequiredClients().contains(clientId);
+        return clientId != null
+                && (props.mfaRequiredClients().contains(clientId)
+                        || clientId.startsWith("https://")
+                        || clientId.startsWith("http://"));
     }
 }

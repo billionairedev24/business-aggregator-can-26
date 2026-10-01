@@ -7,6 +7,7 @@ import ca.northline.catalogue.application.ListingView.ProductView;
 import ca.northline.catalogue.application.ListingView.ServiceView;
 import ca.northline.catalogue.domain.CatalogRecord;
 import ca.northline.catalogue.domain.CategoryProfile;
+import ca.northline.catalogue.domain.ListingMessages;
 import ca.northline.catalogue.domain.ProductDetails;
 import ca.northline.catalogue.domain.ProductListing;
 import ca.northline.catalogue.domain.ServiceDetails;
@@ -29,7 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-class ListingEditingService implements EditProduct, EditService, ViewListing {
+class ListingEditingService implements EditProduct, EditService, ViewListing, QuickUpdateListing {
 
     static final String OFFER = "offer";
     static final String CATALOG_PRODUCT = "catalog_product";
@@ -81,6 +82,46 @@ class ListingEditingService implements EditProduct, EditService, ViewListing {
         media.attach(details.ownImageIds(), OFFER, listing.getId());
         revet.forEach(events::publishEvent);
         return productView(listing);
+    }
+
+    @Override
+    @Transactional
+    public ListingView update(QuickUpdateListing.Command command) {
+        var listing = listings.find(command.merchantId(), command.listingId())
+                .orElseThrow(() -> new NotFound("listing", command.listingId()));
+        var price = command.priceCents();
+        if (price != null && (price <= 0 || price > ListingMessages.PRICE_MAX_CENTS)) {
+            throw RuleViolation.of("priceCents", "range", ListingMessages.PRICE_POSITIVE);
+        }
+        var stock = command.stock();
+        if (stock != null && stock < 0) {
+            throw RuleViolation.of("stock", "range", ListingMessages.STOCK_NEGATIVE);
+        }
+        var now = clock.instant();
+        var events = switch (listing) {
+            case ProductListing p -> {
+                if (!p.getDetails().variants().isEmpty()) {
+                    throw RuleViolation.of("priceCents", "variants", ListingMessages.QUICK_UPDATE_VARIANTS);
+                }
+                var revet = p.restock(
+                        price == null ? p.getDetails().priceCents() : price,
+                        stock == null ? p.getDetails().stock() : stock,
+                        command.actorId(),
+                        now);
+                listings.save(p);
+                yield revet;
+            }
+            case ServiceListing s -> {
+                if (stock != null) {
+                    throw RuleViolation.of("stock", "service", ListingMessages.QUICK_UPDATE_SERVICE_STOCK);
+                }
+                var revet = s.reprice(price == null ? s.getDetails().priceCents() : price, command.actorId(), now);
+                listings.save(s);
+                yield revet;
+            }
+        };
+        events.forEach(this.events::publishEvent);
+        return view(command.merchantId(), command.listingId());
     }
 
     /** Validates a save and fills in a SKU when there is none. */

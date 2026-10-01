@@ -94,6 +94,10 @@ cd web && pnpm install && pnpm dev          # http://localhost:3100 — already 
 Dev auth exists only under the `local` profile (`DevAuthFilter`); it logs a banner at start-up. Settings › Security
 needs the auth server (step 5).
 
+The MCP server for AI agents (S-127) is at `http://localhost:8080/mcp`. The same header works there: point the MCP
+Inspector or Claude Code at it with `X-Dev-User`, or sign in through the auth server (step 5) as an agent would
+([mcp.md](mcp.md#connecting-an-agent)).
+
 ## 5. Studio with real sign-in (auth + api + bff, still Postgres only)
 
 `make up SERVICES="auth api bff studio"` — the Studio then goes through the studio-bff (no `NL_DEV_USER`). By hand:

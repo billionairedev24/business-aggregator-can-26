@@ -30,6 +30,7 @@ say where a step is still manual or missing.
 | [api-docs.md](api-docs.md) | OpenAPI 3.1 documents per audience (api, auth, BFFs), Swagger UI / Scalar / Redoc in local, dev and staging, the committed specs and their drift check, Redocly lint, none in prod (S-125) |
 | [ci.md](ci.md) | CI pipelines on GitHub Actions and GitLab CI, manual trigger only (S-4/S-5, infra checks S-2/S-3) |
 | [mobile-auth.md](mobile-auth.md) | the consumer and courier apps: sign-in with PKCE, DPoP-bound tokens, nonces, rotating refresh tokens and reuse detection, calling the api, sign-out, sessions (S-29) |
+| [mcp.md](mcp.md) | the built-in MCP server for AI agents (Claude, IDEs, the MCP Inspector): connecting, OAuth 2.1 sign-in and consent, scopes, tools and confirmations, limits, audit, operations (S-127) |
 | [partners.md](partners.md) | partner API clients: `client_credentials` with `private_key_jwt`, keys (JWK Set URL or registered), scopes, business binding, rotation, revocation, rate limits, audit (S-30) |
 | [federation.md](federation.md) | Google and Apple sign-in: console set-up, redirect URIs per environment, secrets, the Apple client secret (S-18) |
 | [secrets.md](secrets.md) | secrets in AWS Secrets Manager / Secret Manager / Key Vault through External Secrets Operator: inventory, set-up, rotation (S-6) |
@@ -193,6 +194,10 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `CLIENT_CITY_HEADER` | | ✓ | ✓ (`consumer` profile) | | no (empty: no city in the session list — S-19; no IP guess for the consumer location pill — S-45) |
 | `SESSION_STEP_UP_MAX_AGE` | | ✓ | | | no (`10m`: how recent a second factor revoking sessions / removing passkeys needs) |
 | `SESSION_CHECK_INTERVAL` | | | ✓ | | no (`60s`: how often the BFF checks its session wasn't revoked) |
+| `MCP_RESOURCE` | ✓ | ✓ | | | no (`${API_PUBLIC_URL}/mcp`: the MCP server's canonical URI — the api checks token audiences against it, auth accepts it as a resource indicator; set both to the same value — S-127, [mcp.md](mcp.md)) |
+| `MCP_DOCS_RESOURCE` | | ✓ | | | no (`${API_PUBLIC_URL}/mcp/docs`, the developer docs MCP server — S-128) |
+| `MCP_STORE`, `MCP_CALLS_PER_MINUTE`, `MCP_WRITES_PER_MINUTE` | ✓ | | | | no (`redis` in the cloud, `memory` locally — refused in staging/prod; 60 tool calls and 10 changes per person per minute — [mcp.md](mcp.md#limits)) |
+| `MCP_CLIENT_METADATA_DOCUMENTS`, `MCP_CLIENT_METADATA_HOSTS` | | ✓ | | | no (`true`: agents may identify with a Client ID Metadata Document; empty = from any public HTTPS host — [mcp.md](mcp.md#client-registration)) |
 | `OTEL_EXPORT_ENABLED` | ✓ | | | | no (false until S-111) |
 | `SERVER_PORT` | ✓ | ✓ | ✓ | | no (8080 / 9000 / 8082; the consumer-bff 8081) |
 
@@ -270,6 +275,8 @@ the database but not in configuration is logged as `stored but not in configurat
 | `console-bff` | confidential | `CONSOLE_BFF_SECRET_HASH` set (`optional: true`) | `${CONSOLE_ORIGIN}/login/oauth2/code/console` | openid profile console |
 | `mobile-consumer` ("Northline") | public (PKCE S256, no secret), **DPoP required** (S-29) | always | `${CONSUMER_ORIGIN}/app/oauth2redirect` (App Link / Universal Link), `ca.northline.app:/oauth2redirect` | openid profile orders bookings offline_access; refresh 30 d |
 | `partner:<name>` (S-30) | client credentials, `private_key_jwt` (no secret) | when declared under `northline.oauth.partners` (chart value `partners`) | — | `api.read` / `api.write`, bound to named businesses; 15 min tokens — [partners.md](partners.md) |
+| `northline-mcp` ("Northline MCP (AI agents)", S-127) | public (PKCE S256), **consent screen**, needs `acr=mfa` | always | `http://127.0.0.1/callback`, `http://127.0.0.1/oauth/callback` (any port), `https://claude.ai/api/mcp/auth_callback`, `https://claude.com/api/mcp/auth_callback` | openid profile merchant mcp mcp.write mcp.ops; 1 h access tokens, no refresh token — [mcp.md](mcp.md) |
+| `https://…` (any HTTPS URL, S-127) | public (PKCE S256), consent screen, needs `acr=mfa` | registered on first use from the agent's [Client ID Metadata Document](mcp.md#client-registration) | from the document | at most openid profile merchant mcp mcp.write |
 | `courier-app` ("Northline Courier") | public (PKCE S256, no secret), **DPoP required** (S-29) | always | `${CONSUMER_ORIGIN}/courier/oauth2redirect`, `ca.northline.courier:/oauth2redirect` | openid courier deliveries; refresh 12 h |
 
 Defaults for anything not set: grant types `authorization_code` + `refresh_token`, PKCE required, no consent screen,
@@ -284,7 +291,7 @@ clients (DPoP proofs, nonces, refresh, reuse detection, sign-out): [mobile-auth.
 | confidential secret | an encoded value: `{bcrypt}…`, `{noop}…` | same; `{noop}` logs a warning | encoded and hashed — `{noop}` refused |
 
 Everywhere: no wildcards or fragments; a public client may also use a reverse-domain private-use scheme
-(`ca.northline.app:/…`, RFC 8252) and has no secret; a confidential client needs `secret-hash` (a plain secret is
+(`ca.northline.app:/…`, RFC 8252) or `http` on a loopback IP literal (`127.0.0.1`, `[::1]`, any port — desktop agents, S-127) and has no secret; a confidential client needs `secret-hash` (a plain secret is
 refused; use bcrypt cost ≥ 10, e.g. `htpasswd -bnBC 12`); clients may not share a secret; `authorization_code` needs a redirect URI and PKCE; staging/prod need at
 least one client.
 

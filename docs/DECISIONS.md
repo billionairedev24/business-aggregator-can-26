@@ -3217,3 +3217,63 @@ Branch `web/s-56-quotes`, stacked on `web/s-55-booking-wizard` (and so on S-54, 
   acceptance; messages on a quote ("Ask a question first", the design's thread) — no customer↔provider messaging API
   yet; notifying providers of a new request (the Studio column polls; push/e-mail are the notifications stories); a
   `quote.requested` event; photos on a request; the customer's list of requests (`/account/orders` is S-58).
+
+## 2026-10-01 — S-127 Built-in MCP server (OAuth 2.1) for merchants, partners and ops
+
+- **Inside the api, not a separate app.** The MCP server is module `ca.northline.mcp` in `server/api`. springdoc
+  3.1.1's MCP support (`springdoc-openapi-starter-webmvc-mcp`) turns selected operations into tools, and Spring AI
+  2.0.0's `spring-ai-starter-mcp-server-webmvc` serves them over Streamable HTTP on `/mcp` (SYNC, protocol
+  2025-11-25). This is the pattern used in the samop reference. A tool call is an HTTP request back to the same api
+  with the caller's own token and a per-process agent header. Tools are therefore exactly the Studio operations,
+  with their merchant binding (S-30), roles, validation, idempotency and audit, and no business logic is duplicated.
+  A separate app would need its own deploy, token exchange and network path for no gain at this size.
+- **The tool list is an allowlist** (`AgentTools.ALL`, 33 tools: listings, orders and fulfilment, kitchen board,
+  appointments, availability, messages, earnings/payouts read-only, reviews, two staff tools). Every other api
+  operation is excluded from the MCP model by the `McpToolCustomizer`. **Refunds, payouts, checkout/payments, team,
+  security and deletes are not tools.** `kitchen_hand_off` stays in: it is a fulfilment step that releases that order's
+  escrow as it does in the Studio.
+- **Scopes:** `mcp` (reads + resources), `mcp.write` (writes), `mcp.ops` (staff tools, also needs the `staff` role and
+  `acr=mfa`), each next to `merchant`. Partners (S-30) map `api.read`/`api.write` onto the same split. springdoc's
+  built-in guardrails (`require-approval`) are off; `McpGatewayFilter` enforces the policy in one place, before the
+  MCP server: audience, second factor, scopes, rate limits, confirmations and audit.
+- **Confirmation is two calls with identical arguments.** The first answers `confirmation_required` and changes
+  nothing; the second, within 5 min, runs. The same change within 10 min after that is `already_done`. The change is
+  marked done when it is confirmed, not when it succeeds: a confirmed call that fails is retried by changing an
+  argument or after the window. That is the safer side for a client that retries blindly. MCP elicitation would be
+  nicer, but clients support it unevenly; the two-step also works in clients without it. State is in Valkey
+  (`nl:mcp:*`, `MCP_STORE=redis`; memory is refused under staging/prod).
+- **Authorization per MCP 2025-11-25.** Protected resource metadata (RFC 9728) is served at the path form
+  `/.well-known/oauth-protected-resource/mcp` and the root form. A `401` carries `resource_metadata` and `scope`. A
+  missing scope is `403 insufficient_scope`, and a missing second factor is `403 insufficient_user_authentication`
+  with `acr_values="mfa"` (RFC 9470). auth accepts `resource` (RFC 8707) in the authorization and token requests,
+  only for the configured MCP resources (`invalid_target` otherwise; a token request may narrow but not widen). The
+  resource goes into the access token's `aud`, and the api's MCP endpoint accepts only tokens addressed to it. Access
+  tokens now also carry `client_id` (RFC 9068 § 2.2), for the audit trail.
+- **No token passthrough the other way:** an MCP-audience token on `/api/**` without the MCP server's internal header
+  is `403 mcp_token`. An agent can't use its token for operations outside the tool list.
+- **Client registration: Client ID Metadata Documents, not Dynamic Client Registration.** DCR would let anyone write
+  client rows. With CIMD the client is identified by an HTTPS URL that auth fetches under SSRF rules (public addresses
+  only, no redirects, 5 s, 5 KB, optional host allowlist) and registers as a public PKCE client with consent, capped
+  at `mcp`/`mcp.write` (never `mcp.ops`). `auth.oauth2_registered_client.client_id` is widened to `varchar(2048)`
+  (**V025**, additive). A registered client `northline-mcp` covers clients that let you type a client id. Public
+  clients may now use `http` loopback-IP redirects (RFC 8252) in every environment.
+- **No refresh tokens for MCP clients.** Public clients refresh only with DPoP (S-29), and MCP clients don't do DPoP.
+  Access tokens live 1 h, and the auth session makes the next sign-in silent. Consent uses Spring Authorization
+  Server's default page for now; a branded consent screen in the Studio's design is a follow-up.
+- **acr=mfa** is required for people: `northline-mcp` and URL clients are in `mfa-required-clients`, and the gateway
+  checks it again.
+- **Audit:** `mcp.tool_call` / `mcp.tool_confirmation` / `mcp.tool_refused` rows in `developer.audit_log`, with the
+  client id. `AuditTrail.Entry.merchantId` became `@Nullable` for staff calls that have no business.
+- **New operation** `PATCH /api/v1/merchants/{id}/listings/{listingId}/price-stock` (`QuickUpdateListing`), so the
+  agent can't overwrite a whole listing to change a price. Products with variants and stock on services are refused
+  with clear messages (`ListingMessages.QUICK_UPDATE_*`).
+- **OpenAPI model:** `springdoc.pre-loading-enabled: true` (the MCP tools register only once the OpenAPI document is
+  built), and `CurrentUser`/`CurrentMember` are ignored as request parameters in the document (they are resolved
+  from the token; before, they showed up as a bogus `user` query parameter). Under prod the document is still
+  generated (`springdoc.api-docs.enabled: true`, S-125 had it off) but not published: S-125's
+  `northline.docs.enabled: false` removes the docs chain, and the api's own chains deny `/v3/api-docs`.
+- **Edge:** `apps.api.mcp: true` routes `/mcp` and `/.well-known/oauth-protected-resource` on the api host. No new
+  secret: the agent header is random per process.
+- **Never run against real clients:** the OAuth + MCP session is tested with the MCP Java SDK client and tokens minted
+  in the test, and auth's flow in MockMvc (WireMock for metadata documents). It has not been tried with Claude or the
+  MCP Inspector against a deployed environment.

@@ -13,11 +13,12 @@ public interface AuditTrail {
     void record(Entry entry);
 
     /**
-     * @param merchantId the business the action belongs to (Settings › Security › Audit log)
+     * @param merchantId the business the action belongs to (Settings › Security › Audit log); {@code null} for a
+     *     platform action that belongs to no business (S-127: Northline staff's agent tools)
      * @param action dotted verb, e.g. {@code team.role_changed}, {@code api_key.revoked}
      */
     record Entry(
-            String merchantId,
+            @Nullable String merchantId,
             String actorId,
             String role,
             String action,
