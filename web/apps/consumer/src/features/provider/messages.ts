@@ -7,6 +7,7 @@ import { defineMessages } from '@northline/ui';
 export const useProviderT = defineMessages({
   en: {
     tierVerified: '{tier} tier · verified',
+    reward: '{multiplier}× points until {until}', rewardOn: '{multiplier}× points on {label} until {until}',
     since: 'since {year}',
     verifiedReviews: '{count, plural, one {# verified review} other {# verified reviews}}',
     newOnNorthline: 'New on Northline — verified',
@@ -38,6 +39,7 @@ export const useProviderT = defineMessages({
   },
   fr: {
     tierVerified: 'Niveau {tier} · vérifié',
+    reward: 'Points ×{multiplier} jusqu’au {until}', rewardOn: 'Points ×{multiplier} sur {label} jusqu’au {until}',
     since: 'depuis {year}',
     verifiedReviews: '{count, plural, one {# avis vérifié} other {# avis vérifiés}}',
     newOnNorthline: 'Nouveau sur Northline — vérifié',

@@ -51,6 +51,30 @@ class BookingInsightsQueries implements BookingCalendar, BookingInsights, Servic
     }
 
     @Override
+    public List<QuoteHold> quoteHolds(String merchantId, Instant from, Instant to) {
+        return jdbc.sql("""
+                        select q.id, q.request_id, q.ref, r.customer_id, q.proposed_at, coalesce(q.duration_min, 60) as duration
+                          from booking.quotes q join booking.quote_requests r on r.id = q.request_id
+                         where q.merchant_id = :merchantId and q.state in ('sent', 'viewed')
+                           and (q.valid_until is null or q.valid_until > :now)
+                           and q.proposed_at >= :from and q.proposed_at < :to
+                         order by q.proposed_at, q.id
+                        """)
+                .param("merchantId", merchantId)
+                .param("from", JdbcTimes.ts(from))
+                .param("to", JdbcTimes.ts(to))
+                .param("now", JdbcTimes.ts(clock.instant()))
+                .query((rs, _) -> new QuoteHold(
+                        rs.getString("id"),
+                        rs.getString("request_id"),
+                        rs.getString("ref"),
+                        rs.getString("customer_id"),
+                        JdbcTimes.requiredInstant(rs, "proposed_at"),
+                        rs.getInt("duration")))
+                .list();
+    }
+
+    @Override
     public List<Job> jobs(String merchantId, String memberUserId, Instant from, Instant to) {
         return jdbc.sql("""
                         select id, ref, coalesce(title, 'Job') as title, customer_id, address_line, starts_at,
@@ -112,6 +136,19 @@ class BookingInsightsQueries implements BookingCalendar, BookingInsights, Servic
         return jdbc.sql("""
                         select count(*) from booking.bookings
                          where merchant_id = :merchantId and starts_at >= :from and starts_at < :to and state <> 'cancelled'
+                        """)
+                .param("merchantId", merchantId)
+                .param("from", JdbcTimes.ts(from))
+                .param("to", JdbcTimes.ts(to))
+                .query(Long.class)
+                .single();
+    }
+
+    @Override
+    public long bookingsMade(String merchantId, Instant from, Instant to) {
+        return jdbc.sql("""
+                        select count(*) from booking.bookings
+                         where merchant_id = :merchantId and created_at >= :from and created_at < :to and state <> 'cancelled'
                         """)
                 .param("merchantId", merchantId)
                 .param("from", JdbcTimes.ts(from))

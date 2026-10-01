@@ -20,6 +20,20 @@ public interface BookingCalendar {
      */
     List<Job> jobs(String merchantId, String memberUserId, Instant from, Instant to);
 
+    /**
+     * S-74: the times sent quotes propose in [from, to) — "Held for quote" on the Studio calendar. Only the latest
+     * version of a quote that is still open (sent or viewed, not past its validity); ids only, no customer details.
+     */
+    List<QuoteHold> quoteHolds(String merchantId, Instant from, Instant to);
+
+    record QuoteHold(
+            String quoteId,
+            String requestId,
+            @Nullable String ref,
+            @Nullable String customerId,
+            Instant startsAt,
+            int durationMin) {}
+
     record Busy(String bookingId, @Nullable String memberUserId, Instant startsAt, Instant endsAt) {}
 
     record Job(

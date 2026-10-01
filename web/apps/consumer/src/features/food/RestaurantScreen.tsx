@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { Alert, Button, Dialog, Field, Tag, TextInput, useFormatters, useLocale } from '@northline/ui';
+import { useStorefrontVisit } from '../../lib/visits';
 import { restaurantQuery, type Combo, type Dish, type Restaurant } from './api';
 import { subtotalOf, useFoodCart, type FoodCart } from './foodCart';
 import { CUISINE_NAMES, containsLabel, TAGS, useFoodT } from './messages';
@@ -19,6 +20,7 @@ export function RestaurantScreen({ slug }: { slug: string }) {
   const { locale } = useLocale();
   const { money, date } = useFormatters();
   const { data } = useSuspenseQuery(restaurantQuery(slug));
+  useStorefrontVisit(slug); // S-75: the kitchen's public page counts like any business page
   const { cart, add, remove, clear } = useFoodCart();
   const [openId, setOpenId] = useState<string | null>(null);
   const [pending, setPending] = useState<null | (() => void)>(null);

@@ -14,6 +14,9 @@ public interface BookingInsights {
     /** Number of jobs (not cancelled) starting in [from, to). */
     long jobCount(String merchantId, Instant from, Instant to);
 
+    /** S-75: bookings made (created, not cancelled) in [from, to) — the "booked" side of the storefront's visits. */
+    long bookingsMade(String merchantId, Instant from, Instant to);
+
     /** Quote requests still waiting for this merchant's quote. */
     QuoteInbox quoteInbox(String merchantId, Instant now);
 

@@ -3886,6 +3886,35 @@ paths:
       security: []
       tags:
       - public-media-controller
+  /api/v1/public/embed:
+    get:
+      operationId: publicEmbedEmbed
+      parameters:
+      - in: query
+        name: key
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: store
+        required: true
+        schema:
+          type: string
+      - in: header
+        name: Origin
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: object
+          description: OK
+      security: []
+      tags:
+      - public-embed-controller
   /api/v1/public/home:
     get:
       operationId: homeHome
@@ -3981,6 +4010,39 @@ paths:
       security: []
       tags:
       - public-kitchen-controller
+  /api/v1/public/merchants/{id}/reward:
+    get:
+      operationId: rewardPublicReward
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Reward"
+          description: OK
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      security: []
+      tags:
+      - reward-controller
   /api/v1/public/providers/{slug}:
     get:
       operationId: publicProvidersProvider
@@ -4412,6 +4474,40 @@ paths:
               schema:
                 $ref: "#/components/schemas/PublicStorefrontResponse"
           description: OK
+      security: []
+      tags:
+      - public-storefront-controller
+  /api/v1/public/storefronts/{slug}/visits:
+    post:
+      operationId: publicStorefrontVisit
+      parameters:
+      - in: path
+        name: slug
+        required: true
+        schema:
+          type: string
+      - in: header
+        name: User-Agent
+        required: false
+        schema:
+          type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
       security: []
       tags:
       - public-storefront-controller
@@ -7602,6 +7698,17 @@ components:
           items:
             $ref: "#/components/schemas/PublicReview"
         nextOffset:
+          type: integer
+          format: int32
+    Reward:
+      type: object
+      properties:
+        endsOn:
+          type: string
+          format: date
+        label:
+          type: string
+        multiplier:
           type: integer
           format: int32
     Row:
