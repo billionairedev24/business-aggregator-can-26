@@ -19,6 +19,26 @@ class BookingMonitorJdbc implements BookingMonitor {
     private final JdbcClient jdbc;
 
     @Override
+    public java.util.Map<String, Sales> salesByMerchant(java.util.Collection<String> merchantIds, Instant from, Instant to) {
+        if (merchantIds.isEmpty()) {
+            return java.util.Map.of();
+        }
+        var out = new java.util.HashMap<String, Sales>();
+        jdbc.sql("""
+                        select b.merchant_id, coalesce(sum(b.price_cents), 0) as gmv, count(*) as n from booking.bookings b
+                         where b.merchant_id = any(:ids) and b.created_at >= :from and b.created_at < :to
+                           and b.state is distinct from 'cancelled'
+                         group by b.merchant_id
+                        """)
+                .param("ids", merchantIds.toArray(String[]::new))
+                .param("from", JdbcTimes.ts(from))
+                .param("to", JdbcTimes.ts(to))
+                .query((rs, _) -> out.put(rs.getString("merchant_id"), new Sales(rs.getLong("gmv"), rs.getLong("n"))))
+                .list();
+        return java.util.Map.copyOf(out);
+    }
+
+    @Override
     public List<MonitoredBooking> bookings(MerchantScope scope, Instant since, @Nullable String ref, int limit) {
         return jdbc.sql("""
                         select b.id, b.ref, b.state, b.customer_id, b.merchant_id, coalesce(b.price_cents, 0) as price,

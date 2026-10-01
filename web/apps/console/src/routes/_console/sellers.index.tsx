@@ -1,4 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { ScreenPending } from '../../features/shell/ScreenPending';
+import { z } from 'zod';
+import { SellersDirectory } from '../../features/sellers/SellersDirectory';
 
-export const Route = createFileRoute('/_console/sellers/')({ component: () => <ScreenPending screen="sellers" /> });
+/** Sellers & providers (S-82): `?q=&province=&market=&risk=`. */
+export const Route = createFileRoute('/_console/sellers/')({
+  validateSearch: z.object({ q: z.string().optional(), province: z.string().optional(), market: z.string().optional(), risk: z.boolean().optional().catch(undefined) }),
+  component: SellersDirectory,
+});

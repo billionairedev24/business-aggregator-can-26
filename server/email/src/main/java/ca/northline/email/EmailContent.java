@@ -501,6 +501,63 @@ public sealed interface EmailContent {
         }
     }
 
+    // ── Console oversight ────────────────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * S-82: Northline staff acted on the business from the console — suspended or reinstated it, asked for one of its
+     * checks again, or changed its tier — with the reason they gave. Transactional: an account notice to the owners,
+     * always sent.
+     *
+     * @param fromTier / {@code toTier}: the tiers ({@code tier_changed}); {@code checkType} the check asked for again
+     *     ({@code reverification_required}); null otherwise
+     * @param link Studio › Help (suspension, reinstatement, tier) or Compliance (re-verification)
+     */
+    record SellerOversightNotice(
+            String businessName,
+            SellerOversightNotice.Action action,
+            String reason,
+            @Nullable String fromTier,
+            @Nullable String toTier,
+            @Nullable String checkType,
+            URI link)
+            implements EmailContent {
+
+        public enum Action {
+            SUSPENDED,
+            REINSTATED,
+            REVERIFICATION_REQUIRED,
+            TIER_CHANGED
+        }
+
+        @Override
+        public String template() {
+            return "seller-oversight";
+        }
+
+        @Override
+        public String variant() {
+            return code(action);
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.TRANSACTIONAL;
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            var v = new LinkedHashMap<String, Object>();
+            v.put("businessName", businessName);
+            v.put("action", code(action));
+            v.put("reason", reason);
+            v.put("fromTier", fromTier == null ? "" : fromTier);
+            v.put("toTier", toTier == null ? "" : toTier);
+            v.put("checkType", checkType == null ? "" : checkType);
+            v.put("link", link.toString());
+            return v;
+        }
+    }
+
     // ── Samples (preview endpoint, rendering tests) ──────────────────────────────────────────────────────────────
 
     /**
@@ -596,6 +653,18 @@ public sealed interface EmailContent {
                             change,
                             change == CustomDomainNotice.Change.DNS_LOST ? at.plus(Duration.ofDays(3)) : null,
                             URI.create(studio + "/page")));
+        }
+        for (var action : SellerOversightNotice.Action.values()) {
+            all.put(
+                    "seller-oversight." + code(action),
+                    new SellerOversightNotice(
+                            business,
+                            action,
+                            "Quality 78 is below the Trusted floor (80) for the third week.",
+                            action == SellerOversightNotice.Action.TIER_CHANGED ? "trusted" : null,
+                            action == SellerOversightNotice.Action.TIER_CHANGED ? "registered" : null,
+                            action == SellerOversightNotice.Action.REVERIFICATION_REQUIRED ? "insurance" : null,
+                            URI.create(studio + "/help")));
         }
         return java.util.Collections.unmodifiableMap(all);
     }

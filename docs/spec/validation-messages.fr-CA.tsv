@@ -643,3 +643,11 @@ Choose a market from the list.	Choisissez un marché dans la liste.	new
 Say why the courier is paused.	Indiquez pourquoi le livreur est mis en pause.	new
 Keep the reason under 500 characters.	Limitez la raison à 500 caractères.	new
 Choose needs attention, live, escrow, late or all.	Choisissez à traiter, en cours, séquestre, en retard ou tout.	new
+Give the reason the business will see.	Indiquez la raison que l’entreprise verra.	new
+Choose Registered, Trusted or Master.	Choisissez Inscrit, Fiable ou Maître.	new
+Choose the check to verify again.	Choisissez la vérification à refaire.	new
+Only an active or paused business can be suspended.	Seule une entreprise active ou en pause peut être suspendue.	new
+This business isn't suspended.	Cette entreprise n’est pas suspendue.	new
+The business is already on that tier.	L’entreprise est déjà à ce niveau.	new
+Only an approved business has a tier to change.	Seule une entreprise approuvée a un niveau à changer.	new
+Only a verified or submitted check can be asked for again.	Seule une vérification approuvée ou soumise peut être redemandée.	new

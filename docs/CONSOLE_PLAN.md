@@ -108,8 +108,8 @@ member.
 | `/orders?view=&q=&province=&market=` | `orders` | `orders` | admin, dispatch, support | S-81 | built |
 | `/disputes` | `disputes` | `disputes` | admin, trust_safety, finance, support | S-80 | stand-in |
 | `/delivery?market=` | `delivery` | `delivery` | admin, dispatch | S-81 | built |
-| `/sellers` | `sellers` | `sellers` | admin, trust_safety, support | S-82 | stand-in |
-| `/sellers/$sellerId` | `seller_detail` | `sellers` | admin, trust_safety, support | S-82 | stand-in |
+| `/sellers?q=&province=&market=&risk=` | `sellers` | `sellers` | admin, trust_safety, support | S-82 | built |
+| `/sellers/$sellerId` | `seller_detail` | `sellers` | admin, trust_safety, support | S-82 | built |
 | `/verification` | `verify` | `verify` | admin, trust_safety | S-79 | stand-in |
 | `/vetting` | `vetting` | `vetting` | admin, trust_safety | S-92 | stand-in |
 | `/trust` | `trust` | `trust` | admin, trust_safety | S-93 | stand-in |
@@ -226,6 +226,27 @@ POST /api/v1/console/fulfilment/couriers/{courierId}/resume                     
 Rules (attention, late, stuck, escrow > 48 h) and the map provider: DECISIONS "S-81". Pause / resume are audited
 (`fulfilment.courier_paused` with the reason, `fulfilment.courier_resumed`); a paused courier gets no run.
 
+### Sellers directory and seller detail (S-82)
+
+```
+GET  /api/v1/console/sellers?q=&province=&market=            (screen sellers)
+→ { asOf, active, atRisk, truncated, items: [Row] }
+Row: { id, name, category: {id, names}, type, province, city, tier, status, quality, gmv90Cents, disputeRate,
+       flags: [{ kind: quality_below|disputes_above|trust_flag|check_expiring|check_due|check_pending, rule?, checkType?,
+                 registry?, status?, value?, floor?, days? }] }
+GET  /api/v1/console/sellers/{sellerId}
+→ { asOf, seller: Row, joinedAt, approvedAt, stripeAccount, ratingAverage, ratingCount, quality, onTime, disputes
+    ({value, floor}), signals: [{key, value, bar, barFloor, inverted}], checks: [Check], trail: [{id, action, reason,
+    detail, actorName, actorRole, at}] }
+POST /api/v1/console/merchants/{businessId}/suspend {reason}                      (sellers · suspend) 409 not_active
+POST /api/v1/console/merchants/{businessId}/reinstate {reason}                    (sellers · suspend) 409 not_suspended
+POST /api/v1/console/merchants/{businessId}/reverification {verificationId, reason} (sellers · verify) 409 not_verifiable
+POST /api/v1/console/merchants/{businessId}/tier {tier, reason}                   (sellers · suspend) 409 same_tier · not_approved
+```
+
+Audit `merchant.<action>`; events `merchant.suspended|reinstated|tier_changed|reverification_required`; the owners are
+emailed with the reason (DECISIONS "S-82").
+
 ## API: what exists, what's missing
 
 | screen | exists | missing (the screen's story adds it) |
@@ -234,7 +255,7 @@ Rules (attention, late, stuck, escrow > 48 h) and the map provider: DECISIONS "S
 | overview | `GET /api/v1/console/overview` (S-91, below) | — |
 | orders, delivery | `/api/v1/console/fulfilment/**` (S-86, § Delivery below): runs by market/time with `late`, run detail with stops, an order's delivery, couriers with shift and run, onboard a courier, schedule a shift, plan now, reassign a run; S-81: the orders monitor, the map's geometry, pause / resume a courier | zone economics' cost per stop (no courier cost model), paging a courier, bulk customer notices |
 | disputes | `payments.api.DisputeDecisions` (decide, decideRefund) | the agents' queue and evidence endpoints (S-80) |
-| sellers | `merchants.api.MerchantDirectory`, `trust.api.QualityQuery` | directory with filters, seller detail, oversight actions (coach, instant book off, hide, demote, suspend) (S-82) |
+| sellers | S-82: directory, detail, suspend / reinstate, re-verification, tier | coaching, instant book off, hide from search, bulk message, impersonation |
 | verify | `GET/POST /api/v1/console/registry-reviews` (S-23) | the application queue with KYC / licence / insurance checks, approve / request info (S-79; replaces the local "Simulate approval") |
 | vetting | — | flagged listings queue, approve / reject (S-92) |
 | trust | `GET /api/v1/console/trust/flags`, `POST …/{id}/decision` (S-133) | tier rules, automatic consequences, rating floor tuning (S-93) |

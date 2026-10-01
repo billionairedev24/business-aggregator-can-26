@@ -18,6 +18,14 @@ public interface OrderMonitor {
     List<MonitoredOrder> orders(MerchantScope scope, Instant since, @Nullable String ref, int limit);
 
     /**
+     * S-82: per business, the goods and food sold in [from, to) — its own lines (quantity × unit price; refunded lines
+     * and cancelled orders out) by placed time — and the number of those orders. Businesses without sales are absent.
+     */
+    java.util.Map<String, Sales> salesByMerchant(java.util.Collection<String> merchantIds, Instant from, Instant to);
+
+    record Sales(long gmvCents, long orders) {}
+
+    /**
      * @param type {@code goods} | {@code food}
      * @param state the order's state ({@code placed} … {@code cancelled})
      * @param merchantIds the businesses with a line on it, first line first

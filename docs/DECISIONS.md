@@ -5387,3 +5387,40 @@ server environment variable. Runbook: [runbooks/courier-app.md](runbooks/courier
   (stops already picked up are with the courier); moving the rest of a stuck run is a follow-up.
 - **No migration.** Migration range for the console's second batch (S-81, S-82, S-84, S-85, S-94, S-95, S-96):
   **V230–V239** (the console queues hold V210–V219; IMPLEMENTATION_PLAN).
+
+## 2026-10-01 — S-82 Sellers directory and seller detail with oversight actions and audit
+
+- **Where things live.** The directory and detail (`GET /api/v1/console/sellers`, `/{sellerId}`) are composed in the
+  `console` module from new query ports of the owners: `merchants.api.SellerDirectory` (profile, categories, the checks
+  that need attention, the oversight trail), `trust.api.SellerStanding` (latest quality score, open flag rules, in bulk),
+  `orders.api.OrderMonitor.salesByMerchant` and `booking.api.BookingMonitor.salesByMerchant` (90-day GMV and counts),
+  `payments.api.DisputeCounts`, plus `QualityQuery`, `RatingQuery`, `CategorySource` (names) and `PersonDirectory`
+  (who acted). The actions belong to the merchants module: `POST /api/v1/console/merchants/{businessId}/suspend |
+  reinstate | reverification | tier` (`{businessId}`, not `{merchantId}`: that name is reserved for `@RequiresMerchant`).
+- **Role gates (design 03 `CAN`: the sellers table's perm is `suspend`).** Suspend, reinstate and change tier need the
+  `suspend` action (admin, trust & safety); require re-verification needs `verify` (admin, trust & safety). Support
+  opens the directory and detail read-only. The design's T&S lead co-sign ("Suspend requires a T&S lead co-sign") is
+  not modelled (no lead role exists; CONSOLE_PLAN "Not modelled yet").
+- **Each action takes a reason (1–500 characters) the business sees.** It is kept in the new
+  `merchants.oversight_actions` (**V230**: action, reason, codes-only detail, actor, roles, time) — the detail page's
+  "Timeline & audit" — and the platform audit log gets `merchant.suspended | reinstated | reverification_required |
+  tier_changed` with the business id, the oversight id and the codes (no free text in `developer.audit_log`).
+- **Effects.** Suspend: status `active|paused → suspended` (every public read already requires `active`: page,
+  listings, search, checkout); open orders, jobs and escrow are untouched (escrow stays held until settled).
+  Reinstate: `suspended → active`. Re-verification: a `verified` or `submitted` check (not `kyc`, which is the owners'
+  S-22 identity flow) becomes `expired` now, so Compliance shows it due and the usual grace period applies. Tier:
+  `merchants.tier` changes; the take rate follows the tier unless the business has its own (`take_rate_bps`).
+- **Events → search and email.** `merchant.suspended`, `merchant.reinstated`, `merchant.tier_changed`,
+  `merchant.reverification_required` on `merchants.merchant` (schemas v1; search re-reads the business on any event of
+  that topic). The reason is not in the payload (free text): events carry `actionId`, and messaging's new
+  `OversightEmailNotices` reads it back through `SellerDirectory.action` and emails the **owners** (template
+  `seller-oversight`, en + fr, an account notice always sent).
+- **"At risk" (the design's Flags column):** quality below the tier's floor, dispute rate above it (design 03 tier
+  rules: Trusted ≥ 80 / ≤ 1.5 %, Master ≥ 85 / ≤ 1 %; S-93 makes the rules configurable — read them from there once it
+  lands), an open trust flag, or a check that is due (to do, expired, rejected), under review (licences, registries,
+  permits) or expiring within 30 days. Dispute rate = disputes opened ÷ orders + bookings, 90 days. The headline counts
+  active businesses and the active ones at risk.
+- **Not done (design 03 shows them):** Coaching plan, Instant book off, Hide from search (no such states exist yet),
+  "Bulk message", "Message" and "Impersonate (read-only)" (no staff-to-business messaging or impersonation exists).
+  The design's "Coaching" status has no equivalent. The directory returns at most 2,000 businesses (`truncated`;
+  search by name finds the others).

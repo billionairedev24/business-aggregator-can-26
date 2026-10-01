@@ -17,6 +17,14 @@ public interface BookingMonitor {
      */
     List<MonitoredBooking> bookings(MerchantScope scope, Instant since, @Nullable String ref, int limit);
 
+    /**
+     * S-82: per business, the price of the bookings made in [from, to) (cancelled out) and their number. Businesses
+     * without bookings are absent.
+     */
+    java.util.Map<String, Sales> salesByMerchant(java.util.Collection<String> merchantIds, Instant from, Instant to);
+
+    record Sales(long gmvCents, long bookings) {}
+
     /** @param state {@code requested} … {@code cancelled} */
     record MonitoredBooking(
             String id,
