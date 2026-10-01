@@ -5,13 +5,31 @@ import { EmptyState, SiteLink, Skeleton } from '@northline/ui';
 import { signInHref, useViewer } from '../session/api';
 import { useAccountT } from './messages';
 import { ACCOUNT_TABS, isAccountTab, tabHref, type AccountTab } from './tabs';
+import { AddressesTab } from './AddressesTab';
+import { DietaryTab } from './DietaryTab';
 import { FavouritesTab } from './FavouritesTab';
+import { LanguageTab } from './LanguageTab';
+import { NotificationsTab } from './NotificationsTab';
+import { CardList, PaymentsTab } from './PaymentsTab';
+import { PlusTab } from './PlusTab';
+import { ProfileTab } from './ProfileTab';
+import { SecurityTab } from './SecurityTab';
 import { WalletTab } from './WalletTab';
 
 /** Which story builds a tab that isn't here yet. */
-const PENDING: Partial<Record<AccountTab, string>> = {
-  payments: 'S-59', profile: 'S-59', addresses: 'S-59', security: 'S-59', notifications: 'S-59', language: 'S-59', dietary: 'S-59',
-  plus: 'S-59', help: 'S-60',
+const PENDING: Partial<Record<AccountTab, string>> = { help: 'S-60' };
+
+const TABS: Partial<Record<AccountTab, () => ReactNode>> = {
+  wallet: () => <WalletTab cards={<CardList />} />,
+  favourites: () => <FavouritesTab />,
+  payments: () => <PaymentsTab />,
+  profile: () => <ProfileTab />,
+  addresses: () => <AddressesTab />,
+  security: () => <SecurityTab />,
+  notifications: () => <NotificationsTab />,
+  language: () => <LanguageTab />,
+  dietary: () => <DietaryTab />,
+  plus: () => <PlusTab />,
 };
 
 /**
@@ -33,9 +51,7 @@ export function AccountScreen() {
   }
   return (
     <AccountLayout tab={tab}>
-      {tab === 'wallet' ? <WalletTab />
-        : tab === 'favourites' ? <FavouritesTab />
-          : <TabPending tab={tab} />}
+      {TABS[tab]?.() ?? <TabPending tab={tab} />}
     </AccountLayout>
   );
 }
