@@ -411,6 +411,8 @@ northline:
   # health). `none` = every signal unknown (local, test, or no metrics store yet).
   # S-81 delivery ops map: an XYZ raster basemap under the zones and couriers (docs/runbooks/README.md § Console map).
   # Empty = no basemap: the console draws the zones on its own grid (design 03). The browser fetches the tiles.
+  # S-82: the trust rules' consequences (rating floor → hidden from search; off-platform after a warning → suspended).
+  console.trust-enforcement-cron: ${CONSOLE_TRUST_ENFORCEMENT_CRON:0 23 5 * * *}  # nightly, platform zone
   console.map:
     tiles: ${CONSOLE_MAP_TILES:}
     attribution: ${CONSOLE_MAP_ATTRIBUTION:}

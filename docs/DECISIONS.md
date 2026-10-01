@@ -5667,7 +5667,7 @@ server environment variable. Runbook: [runbooks/courier-app.md](runbooks/courier
   audit `merchant.search_hidden` / `merchant.search_restored`, owners emailed. The directory's Flags column and the
   detail header say "Hidden from search" (with "· rating floor" when the rules hid it).
 - **The trust rules' consequences are enforced here (coordinator: S-93 left them as configuration).** A nightly job
-  (`TrustEnforcementScheduler`, `northline.console.trust-enforcement-cron`, default `0 23 5 * * *`, off under the
+  (`TrustEnforcementScheduler`, `CONSOLE_TRUST_ENFORCEMENT_CRON`, default `0 23 5 * * *` platform zone, off under the
   `test` profile) runs `console.application.TrustEnforcementService`: trust decides who
   (`trust.api.TrustConsequences`), merchants applies (`merchants.api.SellerSanctions`), so neither module depends on
   the other.
@@ -5689,8 +5689,10 @@ server environment variable. Runbook: [runbooks/courier-app.md](runbooks/courier
 
 ## 2026-10-01 — S-84 Provinces, markets and zones switchboard (Off/Waitlist/Pilot/Live)
 
-- **A UI over the S-134 region model, no new table.** `region.application.Switchboard` edits `region.regions` (stage,
-  courier model, new markets) and `region.zones` (delivery zones, GeoJSON boundaries), writes the platform audit log in
+- **A UI over the S-134 region model, no new table.** `console.application.Switchboard` edits `region.regions` (stage,
+  courier model, new markets) and `region.zones` (delivery zones, GeoJSON boundaries) through the new write port
+  `region.api.RegionEditor` — it lives in the console module because region writing the audit log itself would make a
+  module cycle (region → developer → identity → region) — writes the platform audit log in
   the same transaction (`region.stage_changed` — with the markets brought down —, `region.courier_model_changed`,
   `region.market_added`, `region.zone_created | zone_updated | zone_removed`; `merchant_id` null, codes only) and calls
   `Regions.refresh()` after commit, so the instance serves the change at once and the others within
