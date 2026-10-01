@@ -101,7 +101,7 @@ A feature folder per story area, named after the design: `home`, `location`, `se
 
 | route | design 06 state | story | notes |
 |---|---|---|---|
-| `/` | home | S-46 | no search in the header on this page |
+| `/` | home | S-46 (**built**) | no search in the header on this page; its tiles link to `/shop/<department>` (the leaf slug of the category id, e.g. `bakery`), `/services/<category>` (e.g. `mobile-mechanic`) and `/food?cuisine=<code>` — S-49 / S-53 / S-57 take those parameters |
 | `/location` | location | S-47 | saves with `useDeliveryLocation().save()` |
 | `/search?q=&scope=` | search | S-48 | header / hero search lands here; `scope` all \| services \| shop \| food |
 | `/shop` | shop | S-49 | landing page, not results |
@@ -172,6 +172,13 @@ Items and routes in `features/shell/AccountArea.tsx` (`ACCOUNT_LINKS`). Values c
 openCases?, paymentMethod?: {brand, last4}, addresses?: {count, members}, signIn?: passkey|totp|sms, quietHours?:
 {from, to}, dietary?: string[], province? }` (every field optional; S-58/S-59 provide it). Mutations that change a
 value invalidate `accountSummaryQuery`.
+
+### Your week (home)
+
+The home page's "Your week" (S-46) lists the signed-in person's orders, bookings and quotes of the next seven days from
+`GET /api/v1/me/upcoming` → `{ items: [{ id, title, subtitle?, state, tone: accent|neutral|accent-2, href }] }` — texts
+in the caller's language (`Accept-Language`), `href` a consumer route (`/orders/…`, `/quotes/…`). S-58 provides it;
+until then (404) the section shows its empty line. The points line under it reads `points` of the account summary.
 
 ### Market (S-49)
 
@@ -286,9 +293,10 @@ Both endpoints are `GET`, public, JSON, camelCase; money in cents; errors as eve
 | northline-auth JSON API (`/api/auth/register…`, `/api/auth/sign-in…`, `/api/auth/sign-out`) + S-62's `/api/auth/sign-in/code[/verify]`, `/api/auth/register/complete` | exists | S-62 (built) |
 | `GET /api/v1/geo/reverse` | **missing** (the path is already public in the api) | S-47 (header falls back without it) |
 | markets / zones for an address (`/api/v1/geo/…`) | missing | S-47 |
+| `GET /api/v1/public/home?city=` → section counts, businesses per category id, open kitchens per cuisine, trusted providers | **exists** (S-46, module `discovery`) | home |
 | `GET /api/v1/search`, `GET /api/v1/search/suggest` | **exists** (S-44; contract above, § Search) | S-48, home |
 | Shop landing + departments: `GET /api/v1/public/shop?market=&lang=`, `GET /api/v1/public/shop/departments/{slug}?market=&lang=` | **exists** (S-49) | S-49 (S-46 may reuse the landing's departments) |
-| service categories / home landing content (public catalogue reads) | missing | S-46, S-53 |
+| service categories landing content (public catalogue reads) | missing | S-53 |
 | product detail + offers: `GET /api/v1/public/shop/products/{id}?market=&lang=` | **exists** (S-50) | S-50 |
 | cart: `GET /api/v1/cart`, `POST /api/v1/cart/items`, `PATCH`/`DELETE /api/v1/cart/items/{id}` (guest-keyed by `X-Northline-Guest`); checkout: `GET /api/v1/me/checkout?market=`, `POST /api/v1/me/checkout/quote`, `POST /api/v1/me/checkouts` (Idempotency-Key, X-Step-Up), `POST /api/v1/me/checkouts/{id}/place` (Idempotency-Key) | **exists** (S-51) | S-51 (S-57 food checkout may reuse the step-up and payment parts) |
 | consumer order + tracking: `GET /api/v1/me/orders/{id}`, `GET /api/v1/me/orders/{id}/events` (SSE, event `order`) | **exists** (S-52); the orders list is missing | S-52, S-58 (list), S-57 (food tracking may reuse the stream) |
