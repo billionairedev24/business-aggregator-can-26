@@ -13,6 +13,7 @@ import ca.northline.catalogue.domain.Vetting;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
+import ca.northline.trust.api.ListingKeywordRules;
 import java.time.Clock;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +43,7 @@ class ListingLifecycleService implements ManageListing, VetListing {
     private final ViewListing viewListing;
     private final ApplicationEventPublisher events;
     private final Clock clock;
+    private final ListingKeywordRules keywords;
 
     @Override
     public ListingView submit(String merchantId, String listingId, String actorId) {
@@ -136,11 +138,37 @@ class ListingLifecycleService implements ManageListing, VetListing {
             }
         }
         var flags = AutomatedVetting.check(new AutomatedVetting.Subject(
-                listing.kind(), category, listing.priceCents(), licenceOk, duplicate, mainOnWhite));
+                listing.kind(),
+                category,
+                listing.priceCents(),
+                licenceOk,
+                duplicate,
+                mainOnWhite,
+                keywords.restrictedTerm(text(listing)).orElse(null)));
         var outcome = listing.vetted(flags, clock.instant());
         save(listing);
         outcome.ifPresent(events::publishEvent);
         log.debug("Vetted listing {}: {}", listingId, flags.isEmpty() ? "approved" : flags);
+    }
+
+    /** The listing's own words the restricted-keyword rule reads (S-93): name, then details. */
+    private static String text(Listing listing) {
+        var parts = new java.util.ArrayList<String>();
+        parts.add(listing.displayName());
+        switch (listing) {
+            case ServiceListing s -> {
+                if (s.getDetails().included() != null) {
+                    parts.add(s.getDetails().included());
+                }
+            }
+            case ProductListing p -> {
+                if (p.getDetails().description() != null) {
+                    parts.add(p.getDetails().description());
+                }
+                parts.addAll(p.getDetails().bullets());
+            }
+        }
+        return String.join("\n", parts);
     }
 
     private Listing load(String merchantId, String listingId) {

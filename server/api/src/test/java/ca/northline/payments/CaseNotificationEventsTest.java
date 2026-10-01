@@ -94,7 +94,7 @@ class CaseNotificationEventsTest extends IntegrationTest {
     @Test
     void aDispute_isPublishedWhenOpened_andDecidedWithItsCaseNumberAndAmount() {
         var disputeId = customers.openDispute(escrowId, "cust-P. Nguyen", "Wrong size", "They don't fit.");
-        decisions.decide(disputeId, DisputeDecisions.Decision.PARTIAL, 1_900, data.user("Agent"));
+        decisions.decide(disputeId, DisputeDecisions.Decision.PARTIAL, 1_900, data.user("Agent"), null);
 
         assertThat(events.stream(DisputeUpdated.class)
                         .filter(e -> e.aggregateId().equals(disputeId)))

@@ -1,4 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { ScreenPending } from '../../features/shell/ScreenPending';
+import { z } from 'zod';
+import { TrustSafety } from '../../features/trust/TrustSafety';
 
-export const Route = createFileRoute('/_console/trust')({ component: () => <ScreenPending screen="trust" /> });
+/** Trust & safety (S-93): province and market of the region model. */
+export const Route = createFileRoute('/_console/trust')({
+  validateSearch: z.object({ province: z.string().optional(), market: z.string().optional() }),
+  component: TrustSafety,
+});

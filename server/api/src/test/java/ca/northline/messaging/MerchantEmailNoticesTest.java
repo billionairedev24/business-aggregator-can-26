@@ -141,7 +141,17 @@ class MerchantEmailNoticesTest extends IntegrationTest {
         publish(new DisputeUpdated(
                 Ids.next(), AT, Ids.next(), t.merchantId(), "DS-9001", "opened", 38_900, AT.plusSeconds(259_200)));
         publish(new DisputeDecided(
-                Ids.next(), AT, Ids.next(), t.merchantId(), "DS-9001", 38_900, "esc", "partial", 19_450, "agent"));
+                Ids.next(),
+                AT,
+                Ids.next(),
+                t.merchantId(),
+                "DS-9001",
+                38_900,
+                "esc",
+                "partial",
+                19_450,
+                "agent",
+                null));
         publish(new RefundCaseUpdated(
                 Ids.next(), AT, Ids.next(), t.merchantId(), "RF-9002", "requested", 4_500, AT.plusSeconds(86_400)));
         publish(new RefundIssued(Ids.next(), AT, Ids.next(), t.merchantId(), "RF-9002", null, 4_500, "merchant"));

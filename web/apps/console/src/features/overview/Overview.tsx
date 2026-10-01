@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import { ErrorState, formatDate, formatMoney, formatNumber, Kpi, KpiRow, PageSkeleton, Select, StackedBarChart, useLocale, type Locale } from '@northline/ui';
+import { Link, useSearch } from '@tanstack/react-router';
+import { ErrorState, formatDate, formatMoney, formatNumber, Kpi, KpiRow, PageSkeleton, StackedBarChart, useLocale, type Locale } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { meQuery, opens, useRegions, type Regions } from '../shell/api';
 import { useActiveGrant } from '../shell/ConsoleLayout';
+import { PlaceFilters } from '../shell/PlaceFilters';
 import { SCREEN_PATH, type ScreenKey } from '../shell/screens';
 import { overviewQuery, type Overview as OverviewData } from './api';
 import { useOverviewT, type OverviewKey, type OverviewT } from './messages';
@@ -162,18 +163,6 @@ function WorkQueue({ data }: { data: OverviewData }) {
 }
 
 /** Province and market from the region model (`?province=&market=`; S-91 region-aware). */
-function Filters({ filter, regions }: { filter: { province?: string; market?: string }; regions: Regions | undefined }) {
-  const t = useOverviewT();
-  const navigate = useNavigate();
-  const provinces = (regions?.provinces ?? []).filter(p => p.status !== 'off');
-  const markets = (regions?.markets ?? []).filter(m => m.status !== 'off' && (!filter.province || m.province === filter.province));
-  const go = (next: { province?: string; market?: string }) => void navigate({ to: SCREEN_PATH.overview, search: { province: next.province || undefined, market: next.market || undefined } as never });
-  return (
-    <div className="nl-ov-filters">
-      <Select aria-label={t('filterProvince')} value={filter.province ?? ''} placeholder={t('allProvinces')}
-        options={provinces.map(p => ({ value: p.code, label: p.name }))} onChange={e => go({ province: e.target.value })} />
-      <Select aria-label={t('filterMarket')} value={filter.market ?? ''} placeholder={t('allMarkets')}
-        options={markets.map(m => ({ value: m.id, label: m.city }))} onChange={e => go({ province: filter.province, market: e.target.value })} />
-    </div>
-  );
+function Filters({ filter }: { filter: { province?: string; market?: string }; regions?: Regions | undefined }) {
+  return <PlaceFilters to={SCREEN_PATH.overview} filter={filter} />;
 }

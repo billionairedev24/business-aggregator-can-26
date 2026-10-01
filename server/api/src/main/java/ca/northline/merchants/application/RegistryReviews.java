@@ -19,11 +19,13 @@ public final class RegistryReviews {
         /**
          * @param reference what the agent checked (registry-agent search number, licence number); approve only
          * @param expiresOn the licence's expiry the agent saw; approve only
+         * @param role the console role(s) the agent acts with, for the audit log (S-79)
          */
         record Command(
                 String checkId,
                 boolean approve,
                 String agentId,
+                String role,
                 @Nullable String note,
                 @Nullable String reference,
                 @Nullable LocalDate expiresOn) {}

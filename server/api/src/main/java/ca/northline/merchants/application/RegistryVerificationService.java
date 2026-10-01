@@ -1,5 +1,6 @@
 package ca.northline.merchants.application;
 
+import ca.northline.developer.api.AuditTrail;
 import ca.northline.merchants.application.RegistryReviews.DecideReview;
 import ca.northline.merchants.application.RegistryReviews.ListReviews;
 import ca.northline.merchants.application.RegistryReviews.ReviewView;
@@ -56,6 +57,7 @@ class RegistryVerificationService implements ListReviews, DecideReview, RecheckR
     private final Clock clock;
     private final MerchantPlaces places;
     private final Regions regions;
+    private final AuditTrail audit;
     private final Duration recheckAfter;
 
     RegistryVerificationService(
@@ -66,6 +68,7 @@ class RegistryVerificationService implements ListReviews, DecideReview, RecheckR
             Clock clock,
             MerchantPlaces places,
             Regions regions,
+            AuditTrail audit,
             @Value("${northline.registries.recheck-after:P30D}") Duration recheckAfter) {
         adapters.forEach(a -> registries.put(a.source(), a));
         this.store = store;
@@ -74,6 +77,7 @@ class RegistryVerificationService implements ListReviews, DecideReview, RecheckR
         this.clock = clock;
         this.places = places;
         this.regions = regions;
+        this.audit = audit;
         this.recheckAfter = recheckAfter;
     }
 
@@ -257,6 +261,14 @@ class RegistryVerificationService implements ListReviews, DecideReview, RecheckR
             store.markRechecked(row.getId(), now);
         }
         verifications.save(row);
+        audit.record(AuditTrail.Entry.of(
+                        check.getMerchantId(),
+                        command.agentId(),
+                        command.role(),
+                        command.approve() ? "verification.registry_approved" : "verification.registry_rejected",
+                        "registry_check",
+                        check.getId())
+                .withChange(Map.of("review", "open"), Map.of("review", command.approve() ? "approved" : "rejected")));
         return view(check);
     }
 

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout.html :: email(#{listing-rejected.preheader}, ~{::content})}">
+<body>
+<div th:fragment="content">
+  <h1 th:style="${s.h1}" th:text="#{listing-rejected.heading}">Heading</h1>
+  <p th:style="${s.p}" th:text="#{__${'listing-rejected.body.' + kind}__(${listingName}, ${businessName})}">Body</p>
+  <ul th:style="${s.p}">
+    <li th:each="r : ${reasons}" th:text="#{__${'listing-rejected.why.' + r}__}">Reason</li>
+  </ul>
+  <p th:if="${note != ''}" th:style="${s.notice}" th:text="#{listing-rejected.note(${note})}">Note</p>
+  <p th:style="${s.p}" th:text="#{listing-rejected.next}">Next</p>
+  <th:block th:replace="~{button.html :: button(#{listing-rejected.cta}, ${link})}"/>
+</div>
+</body>
+</html>

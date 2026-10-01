@@ -274,7 +274,7 @@ class RefundCaseApiTest extends IntegrationTest {
 
         @Test
         void agentDecidesRelease_escrowReleased() {
-            decisions.decide(disputeId, DisputeDecisions.Decision.RELEASE, 0, data.user("Agent"));
+            decisions.decide(disputeId, DisputeDecisions.Decision.RELEASE, 0, data.user("Agent"), null);
             assertThat(escrowState()).isEqualTo("released");
             assertThat(events.stream(DisputeDecided.class))
                     .anyMatch(e -> e.decision().equals("release"));

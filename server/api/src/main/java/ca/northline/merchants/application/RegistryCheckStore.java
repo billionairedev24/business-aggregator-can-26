@@ -20,6 +20,9 @@ public interface RegistryCheckStore {
 
     boolean hasOpenReview(String verificationId);
 
+    /** Every lookup of one business that went to an agent (open or decided), newest first (S-79). */
+    List<RegistryCheck> reviewsOf(String merchantId);
+
     /** The latest lookups of one checklist row, newest first. */
     List<RegistryCheck> latest(String verificationId, int limit);
 

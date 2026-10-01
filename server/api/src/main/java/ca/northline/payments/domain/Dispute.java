@@ -91,6 +91,9 @@ public class Dispute {
     private @Nullable Instant stripeUpdatedAt;
     private final Instant openedAt;
     private @Nullable Instant decidedAt;
+    /** S-80: the agent's note on the decision, "visible to both parties". */
+    private @Nullable String decisionNote;
+
     private final @Nullable Integer version;
 
     public static Dispute open(
@@ -293,8 +296,8 @@ public class Dispute {
                 "opened".equals(change) ? respondBy : null);
     }
 
-    /** A Northline agent decides. */
-    public DisputeDecided decide(Decision outcome, long refund, String agentId, Instant now) {
+    /** A Northline agent decides; {@code note} is shown to both parties (S-80). */
+    public DisputeDecided decide(Decision outcome, long refund, String agentId, @Nullable String note, Instant now) {
         if (state == State.DECIDED) {
             throw new Conflict("case_closed", CaseMessages.CASE_CLOSED);
         }
@@ -311,6 +314,7 @@ public class Dispute {
         if (offerState == OfferState.PENDING) {
             offerState = OfferState.EXPIRED;
         }
+        decisionNote = note;
         return close(outcome, cents, agentId, now);
     }
 
@@ -321,7 +325,17 @@ public class Dispute {
         decidedBy = by;
         decidedAt = now;
         return new DisputeDecided(
-                Ids.next(), now, id, merchantId, caseNumber, amountCents, escrowId, outcome.code(), refund, by);
+                Ids.next(),
+                now,
+                id,
+                merchantId,
+                caseNumber,
+                amountCents,
+                escrowId,
+                outcome.code(),
+                refund,
+                by,
+                decisionNote);
     }
 
     private void requireOpen() {
