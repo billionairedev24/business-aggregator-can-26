@@ -186,10 +186,12 @@ class KitchenApiTest extends IntegrationTest {
         var fx = fx();
         var k = fx.kitchen();
         var owner = TestJwt.member(k.ownerId());
-        mvc.perform(put(k.base() + "/kitchen/prep")
-                        .with(owner)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"defaultPrepMin\":25,\"maxOrdersPer15\":8,\"largeOrderCents\":20000,\"autoPauseLate\":3}"))
+        mvc.perform(
+                        put(k.base() + "/kitchen/prep")
+                                .with(owner)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        "{\"defaultPrepMin\":25,\"maxOrdersPer15\":8,\"largeOrderCents\":20000,\"autoPauseLate\":3}"))
                 .andExpect(status().isOk());
         var menu = fx.menu(k, "live");
         var dish = fx.item(k, menu.mainsId(), "Pho", 1700, 0);
@@ -204,13 +206,11 @@ class KitchenApiTest extends IntegrationTest {
         }
 
         autoPause.check(k.merchantId());
-        assertThat(events.stream(KitchenAutoPaused.class))
-                .singleElement()
-                .satisfies(e -> {
-                    assertThat(e.aggregateId()).isEqualTo(k.merchantId());
-                    assertThat(e.lateOrders()).isEqualTo(3);
-                    assertThat(e.threshold()).isEqualTo(3);
-                });
+        assertThat(events.stream(KitchenAutoPaused.class)).singleElement().satisfies(e -> {
+            assertThat(e.aggregateId()).isEqualTo(k.merchantId());
+            assertThat(e.lateOrders()).isEqualTo(3);
+            assertThat(e.threshold()).isEqualTo(3);
+        });
         autoPause.check(k.merchantId()); // no change, no second event
         assertThat(events.stream(KitchenAutoPaused.class)).hasSize(1);
         mvc.perform(get(k.base() + "/kitchen/live").with(owner))
@@ -224,10 +224,12 @@ class KitchenApiTest extends IntegrationTest {
                 .isTrue();
 
         // one order ready: 2 late < 3 → resumed at once
-        mvc.perform(post(k.base() + "/kitchen/live/{id}/ready", orders.getFirst()).with(owner))
+        mvc.perform(post(k.base() + "/kitchen/live/{id}/ready", orders.getFirst())
+                        .with(owner))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.autoPause.active").value(false));
-        assertThat(events.stream(KitchenAutoResumed.class)).singleElement()
+        assertThat(events.stream(KitchenAutoResumed.class))
+                .singleElement()
                 .satisfies(e -> assertThat(e.aggregateId()).isEqualTo(k.merchantId()));
     }
 
@@ -235,18 +237,20 @@ class KitchenApiTest extends IntegrationTest {
     void autoPauseOffNeverPauses() throws Exception {
         var fx = fx();
         var k = fx.kitchen();
-        mvc.perform(put(k.base() + "/kitchen/prep")
-                        .with(TestJwt.member(k.ownerId()))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"defaultPrepMin\":25,\"maxOrdersPer15\":8,\"largeOrderCents\":20000,\"autoPauseLate\":null}"))
+        mvc.perform(
+                        put(k.base() + "/kitchen/prep")
+                                .with(TestJwt.member(k.ownerId()))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        "{\"defaultPrepMin\":25,\"maxOrdersPer15\":8,\"largeOrderCents\":20000,\"autoPauseLate\":null}"))
                 .andExpect(status().isOk());
         var menu = fx.menu(k, "live");
         var dish = fx.item(k, menu.mainsId(), "Pho", 1700, 0);
         for (int i = 0; i < 6; i++) {
             var order = fx.foodOrder(k, data.user("C" + i), "pickup", dish, 1700, 1);
             jdbc.sql("""
-                            insert into food.kitchen_tickets (order_id, merchant_id, stage, ready_by)
-                            values (?, ?, 'cooking', now() - interval '10 minutes')
+                            insert into food.kitchen_tickets (order_id, merchant_id, stage, accepted_at, ready_by)
+                            values (?, ?, 'cooking', now() - interval '40 minutes', now() - interval '10 minutes')
                             """).params(order, k.merchantId()).update();
         }
         autoPause.check(k.merchantId());

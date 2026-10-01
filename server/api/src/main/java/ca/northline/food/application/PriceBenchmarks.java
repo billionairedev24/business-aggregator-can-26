@@ -11,5 +11,6 @@ public interface PriceBenchmarks {
 
     int MIN_DISHES = 5;
 
-    @Nullable Long median(String merchantId);
+    @Nullable
+    Long median(String merchantId);
 }

@@ -434,7 +434,8 @@ class MenuApiTest extends IntegrationTest {
     /** Kitchens of one fresh cuisine (no other test's dishes compare). */
     private KitchenFixtures.Kitchen kitchenOf(KitchenFixtures fx, String cuisine) {
         var k = fx.kitchen();
-        jdbc.sql("update merchants.merchants set profile = jsonb_build_object('cuisines', jsonb_build_array(?::text)) where id = ?")
+        jdbc.sql(
+                        "update merchants.merchants set profile = jsonb_build_object('cuisines', jsonb_build_array(?::text)) where id = ?")
                 .params(cuisine, k.merchantId())
                 .update();
         return k;
@@ -460,7 +461,8 @@ class MenuApiTest extends IntegrationTest {
                         .content(item(menu.menuId(), menu.mainsId(), "[]").replace("1700", "2300")))
                 .andExpect(status().isCreated())
                 .andReturn();
-        var itemId = com.jayway.jsonpath.JsonPath.read(created.getResponse().getContentAsString(), "$.id").toString();
+        var itemId = com.jayway.jsonpath.JsonPath.read(created.getResponse().getContentAsString(), "$.id")
+                .toString();
         mvc.perform(multipart(k.base() + "/menu-items/{id}/photo", itemId)
                         .file(new MockMultipartFile("file", "pho.png", "image/png", png(1000)))
                         .with(owner))
@@ -518,7 +520,8 @@ class MenuApiTest extends IntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(item(menu.menuId(), menu.mainsId(), "[]").replace("1700", "9900")))
                 .andReturn();
-        var itemId = com.jayway.jsonpath.JsonPath.read(created.getResponse().getContentAsString(), "$.id").toString();
+        var itemId = com.jayway.jsonpath.JsonPath.read(created.getResponse().getContentAsString(), "$.id")
+                .toString();
         mvc.perform(multipart(k.base() + "/menu-items/{id}/photo", itemId)
                         .file(new MockMultipartFile("file", "pho.png", "image/png", png(1000)))
                         .with(owner))

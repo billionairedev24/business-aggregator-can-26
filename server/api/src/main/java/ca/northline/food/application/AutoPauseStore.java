@@ -27,5 +27,9 @@ public interface AutoPauseStore {
      * @param threshold "Auto-pause if late orders ≥" (null = never)
      * @param pausedAt when the kitchen was auto-paused, null when it isn't
      */
-    record AutoPauseRow(String merchantId, @Nullable Integer threshold, @Nullable Instant pausedAt, int lateOrders) {}
+    record AutoPauseRow(
+            String merchantId,
+            @Nullable Integer threshold,
+            @Nullable Instant pausedAt,
+            int lateOrders) {}
 }

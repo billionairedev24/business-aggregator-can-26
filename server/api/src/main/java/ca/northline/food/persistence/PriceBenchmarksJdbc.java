@@ -28,7 +28,10 @@ class PriceBenchmarksJdbc implements PriceBenchmarks {
 
     @Override
     public @Nullable Long median(String merchantId) {
-        var city = merchants.profile(merchantId).map(MerchantDirectory.MerchantProfile::city).orElse(null);
+        var city = merchants
+                .profile(merchantId)
+                .map(MerchantDirectory.MerchantProfile::city)
+                .orElse(null);
         if (city == null || city.isBlank()) {
             return null;
         }

@@ -57,8 +57,7 @@ class KitchenAutoPauseService implements KitchenAutoPause {
         var threshold = row.threshold();
         var late = threshold != null && row.lateOrders() >= threshold;
         if (threshold != null && late && row.pausedAt() == null && store.markPaused(row.merchantId(), now)) {
-            events.publishEvent(
-                    new KitchenAutoPaused(Ids.next(), now, row.merchantId(), row.lateOrders(), threshold));
+            events.publishEvent(new KitchenAutoPaused(Ids.next(), now, row.merchantId(), row.lateOrders(), threshold));
             return true;
         }
         if (!late && row.pausedAt() != null && store.markResumed(row.merchantId())) {

@@ -10,6 +10,5 @@ import org.springframework.modulith.events.Externalized;
  * up ({@link KitchenAutoResumed}). Scheduled orders still come in. Topic {@code food.kitchen}, key = merchant id.
  */
 @Externalized("food.kitchen::#{aggregateId()}")
-public record KitchenAutoPaused(
-        String eventId, Instant occurredAt, String aggregateId, int lateOrders, int threshold)
+public record KitchenAutoPaused(String eventId, Instant occurredAt, String aggregateId, int lateOrders, int threshold)
         implements DomainEvent {}

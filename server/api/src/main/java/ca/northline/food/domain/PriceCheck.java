@@ -11,7 +11,10 @@ import org.jspecify.annotations.Nullable;
  * @param medianCents the comparable median, or null
  * @param confirmedCents the price the owner confirmed, or null
  */
-public record PriceCheck(long priceCents, @Nullable Long medianCents, @Nullable Long confirmedCents) {
+public record PriceCheck(
+        long priceCents,
+        @Nullable Long medianCents,
+        @Nullable Long confirmedCents) {
 
     public static final int BAND_PCT = 40;
 

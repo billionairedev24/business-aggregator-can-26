@@ -59,10 +59,7 @@ class AutoPauseJdbc implements AutoPauseStore {
         return jdbc.sql("""
                         update food.kitchen_settings set auto_paused_at = null
                          where merchant_id = :m and auto_paused_at is not null
-                        """)
-                        .param("m", merchantId)
-                        .update()
-                == 1;
+                        """).param("m", merchantId).update() == 1;
     }
 
     private static AutoPauseRow row(ResultSet rs) throws SQLException {
