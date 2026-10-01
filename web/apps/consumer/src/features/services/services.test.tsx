@@ -60,9 +60,15 @@ function api(over: Record<string, unknown> = {}) {
     if (path === '/api/v1/public/services/plumber') return { body: plumber };
     if (path === '/api/v1/public/services/real-estate-agent') return { body: realtor };
     if (path === '/api/v1/public/services/mobile-mechanic/providers') return { body: list };
+    // S-47's location contract: the api names the device's place and gives the fallback market (never the web app)
+    if (path === '/api/v1/geo/reverse') return { body: { label: 'Beltline', city: 'Calgary', province: 'AB', market: { id: 'mkt-1', stage: 'live' }, zone: null } };
+    if (path === '/api/v1/geo/markets') return { body: { items: [], fallback: FALLBACK_MARKET } };
     return undefined;
   })();
 }
+
+/** The api's fallback market in these tests (region configuration — any city). */
+const FALLBACK_MARKET = { id: 'mkt-2', city: 'Red Deer', province: 'AB', stage: 'live', lat: 52.27, lng: -113.81 };
 
 function geo(lat: number, lng: number) {
   return { getCurrentPosition: (ok: PositionCallback) => ok({ coords: { latitude: lat, longitude: lng, accuracy: 20 } } as GeolocationPosition) } as unknown as Geolocation;
@@ -184,13 +190,25 @@ describe('provider list (design 06 providers)', () => {
     expect(applyFilters([card({ nextAvailable: null })], new Set(['today']))).toHaveLength(0);
   });
 
-  it('with only the Calgary fallback, asks by city and says so', async () => {
-    const calls = mockFetch(api({ '/api/v1/public/services/mobile-mechanic/providers': { ...list, area: null } }));
+  it('with only the api’s fallback market, asks by its city (never its centre) and says so', async () => {
+    const calls = mockFetch(api({ '/api/v1/public/services/mobile-mechanic/providers': { ...list, area: null, city: 'Red Deer' } }));
     renderApp('/services/mobile-mechanic/providers', { routes, geolocation: denied });
-    expect(await screen.findByRole('heading', { level: 1, name: 'Mobile mechanics · 2 come to Calgary' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Mobile mechanics · 2 come to Red Deer' })).toBeInTheDocument();
     const url = calls.find(c => c.url.startsWith('/api/v1/public/services/mobile-mechanic/providers'))!.url;
-    expect(url).toBe('/api/v1/public/services/mobile-mechanic/providers?lang=en&city=Calgary');
-    expect(placeOf({ status: 'fallback', city: 'Calgary', lat: 51, lng: -114, source: 'default' })).toEqual({ city: 'Calgary' });
+    expect(url).toBe('/api/v1/public/services/mobile-mechanic/providers?lang=en&city=Red+Deer');
+    expect(placeOf({ status: 'fallback', city: 'Red Deer', lat: 52.27, lng: -113.81, source: 'default' })).toEqual({ city: 'Red Deer' });
+  });
+
+  it('outside every market and without a fallback market, leaves the place to the api', async () => {
+    const calls = mockFetch(api({
+      '/api/v1/geo/reverse': { label: 'Parkdale, Toronto', city: 'Toronto', province: 'ON', market: null, zone: null },
+      '/api/v1/geo/markets': { items: [], fallback: null },
+      '/api/v1/public/services/mobile-mechanic/providers': { ...list, area: null, city: 'Red Deer' },
+    }));
+    renderApp('/services/mobile-mechanic/providers', { routes, geolocation: geo(43.64, -79.43) });
+    expect(await screen.findByRole('heading', { level: 1, name: 'Mobile mechanics · 2 come to Red Deer' })).toBeInTheDocument();
+    const url = calls.find(c => c.url.startsWith('/api/v1/public/services/mobile-mechanic/providers'))!.url;
+    expect(url).toBe('/api/v1/public/services/mobile-mechanic/providers?lang=en');
   });
 
   it('shows the empty and error states', async () => {
@@ -224,8 +242,8 @@ describe('formatting', () => {
     expect(price(t, 'en', 'fixed', 6450)).toBe('$64.50');
     expect(price(t, 'en', 'quote', null)).toBe('Quote');
   });
-  it('says today / tomorrow / weekday in Calgary time', () => {
-    const now = new Date('2026-09-30T18:00:00Z'); // noon in Calgary
+  it('says today / tomorrow / weekday in the market’s time zone', () => {
+    const now = new Date('2026-09-30T18:00:00Z'); // noon, UTC−6
     expect(nextAvailable(t, 'en', '2026-09-30T21:00:00Z', now)).toBe('Today 3 pm');
     expect(nextAvailable(t, 'en', '2026-10-01T15:30:00Z', now)).toBe('Tomorrow 9:30 am');
     expect(nextAvailable(t, 'en', '2026-10-02T15:00:00Z', now)).toBe('Fri 9 am');
