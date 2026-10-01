@@ -105,9 +105,9 @@ member.
 |---|---|---|---|---|---|
 | `/sign-in` | signed out | — | anyone | S-90 | built (`?next=`, `?error=staff_only\|mfa_required\|signin`) |
 | `/?province=&market=` | `overview` | `overview` | all six | S-91 | built |
-| `/orders` | `orders` | `orders` | admin, dispatch, support | S-81 | stand-in |
+| `/orders?view=&q=&province=&market=` | `orders` | `orders` | admin, dispatch, support | S-81 | built |
 | `/disputes` | `disputes` | `disputes` | admin, trust_safety, finance, support | S-80 | stand-in |
-| `/delivery` | `delivery` | `delivery` | admin, dispatch | S-81 | stand-in |
+| `/delivery?market=` | `delivery` | `delivery` | admin, dispatch | S-81 | built |
 | `/sellers` | `sellers` | `sellers` | admin, trust_safety, support | S-82 | stand-in |
 | `/sellers/$sellerId` | `seller_detail` | `sellers` | admin, trust_safety, support | S-82 | stand-in |
 | `/verification` | `verify` | `verify` | admin, trust_safety | S-79 | stand-in |
@@ -209,13 +209,30 @@ Full contract, payloads and the planning rules: [runbooks/fulfilment.md](runbook
 `RunSummary` = `{id, label, part, market, kind, state, startsAt, endsAt, packBy, courier: {id, userId, name}, orders,
 stopsDone, stopsTotal, nextEta, late, heuristic}` (`late`: a pending stop more than 15 min past its ETA).
 
+### Orders monitor and delivery ops (S-81)
+
+```
+GET  /api/v1/console/orders?view=attention|live|escrow|late|all&q=&province=&market=      (screen orders)
+→ { asOf, week, counts: { attention, live, escrow, late, all }, truncated,
+    items: [{ id, ref, kind: order|booking, type: goods|food|service, customer, sellers: [name], amountCents, state,
+              status: new|live|escrow|escrow_48h|late|stuck|issue|delivered|done|cancelled, attention, at, since }] }
+GET  /api/v1/console/delivery/map?market=<region market id>                              (screen delivery)
+→ { market: { id, city, province, lat, lng }, zones: [{ id, marketId, name, ring: [{lat, lng}], runsPerDay, feeStdCents,
+    feePlusCents, minBasketCents }], basemap: { tiles, attribution } | null }
+POST /api/v1/console/fulfilment/couriers/{courierId}/pause {reason}                        (delivery · dispatch)
+POST /api/v1/console/fulfilment/couriers/{courierId}/resume                                (delivery · dispatch)
+```
+
+Rules (attention, late, stuck, escrow > 48 h) and the map provider: DECISIONS "S-81". Pause / resume are audited
+(`fulfilment.courier_paused` with the reason, `fulfilment.courier_resumed`); a paused courier gets no run.
+
 ## API: what exists, what's missing
 
 | screen | exists | missing (the screen's story adds it) |
 |---|---|---|
 | shell | `GET /api/v1/console/me`, `POST …/me/role-view` (S-90); `GET /api/v1/geo/regions` (S-134) | nav badge counts (`GET /api/v1/console/nav-badges`, design: "14", "1 stuck", "23 open"…); global search (`GET /api/v1/console/search?q=` across merchants, orders, cases — the design shows the pill only, no results; no story owns it yet) |
 | overview | `GET /api/v1/console/overview` (S-91, below) | — |
-| orders, delivery | `/api/v1/console/fulfilment/**` (S-86, § Delivery below): runs by market/time with `late`, run detail with stops, an order's delivery, couriers with shift and run, onboard a courier, schedule a shift, plan now, reassign a run | the orders list itself (search, filters by state/market), the ops map's geometry, zone economics (S-81) |
+| orders, delivery | `/api/v1/console/fulfilment/**` (S-86, § Delivery below): runs by market/time with `late`, run detail with stops, an order's delivery, couriers with shift and run, onboard a courier, schedule a shift, plan now, reassign a run; S-81: the orders monitor, the map's geometry, pause / resume a courier | zone economics' cost per stop (no courier cost model), paging a courier, bulk customer notices |
 | disputes | `payments.api.DisputeDecisions` (decide, decideRefund) | the agents' queue and evidence endpoints (S-80) |
 | sellers | `merchants.api.MerchantDirectory`, `trust.api.QualityQuery` | directory with filters, seller detail, oversight actions (coach, instant book off, hide, demote, suspend) (S-82) |
 | verify | `GET/POST /api/v1/console/registry-reviews` (S-23) | the application queue with KYC / licence / insurance checks, approve / request info (S-79; replaces the local "Simulate approval") |
@@ -232,7 +249,7 @@ stopsDone, stopsTotal, nextEta, late, heuristic}` (`late`: a pending stop more t
 
 ## Migration and seed ranges
 
-**V190–V199** (IMPLEMENTATION_PLAN.md, the next free range above V183). S-90: V190 (`identity.platform_roles` console
+**V190–V199** (IMPLEMENTATION_PLAN.md, the next free range above V183); the console queues (S-79, S-80, S-83, S-92, S-93) **V210–V219**; the second batch (S-81, S-82, S-84, S-85, S-94–S-96) **V230–V239**. S-90: V190 (`identity.platform_roles` console
 roles, `granted_by`; `ix_audit_log_platform`), dev seed V191 (Priya Natarajan, staff with every role). Later console
 stories take the next numbers in the range; a seed stays in `db/seed-dev/`.
 

@@ -265,6 +265,8 @@ Notes:
   `db/seed-dev/V119__dev_markets.sql`, a few outside every market for the waitlist) and
   names the device's position when it is within 3 km of one. To try Google from a laptop:
   `PLACES_PROVIDER=google GOOGLE_MAPS_API_KEY=…` in `server/.env` ([google-maps.md](google-maps.md)).
+- **Console delivery map (S-81):** without `CONSOLE_MAP_TILES` the ops map draws the zones and couriers on a plain
+  grid. To see a basemap, set an https XYZ tile template in `server/.env` ([README § Console map](README.md#console-map-s-81)).
 - **Your own Kafka:** create the topics with `make kafka-topics` (`-plan`, `-verify`; `make kafka-topics-list` prints
   them), or
   `KAFKA_TOPICS_CMD=kafka-topics.sh KAFKA_TOPICS_BOOTSTRAP=localhost:9092 scripts/topics.sh`, or with the provisioner

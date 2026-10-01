@@ -197,6 +197,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `PLACES_RATE_LIMIT` | ✓ | | | | no (60 address lookups per browsing session and minute) |
 | `CONSOLE_HEALTH_PROVIDER`, `CONSOLE_HEALTH_PROMETHEUS_URL`, `CONSOLE_HEALTH_PROMETHEUS_TIMEOUT` | ✓ | | | | no (`none` = the console overview's system health shows unknown; `prometheus` + the URL — S-91, [observability.md § Console health](observability.md#console-health-s-91)) |
 | `CONSOLE_HEALTH_PROMETHEUS_TOKEN` | ✓ | | | | no — secret, when the metrics store needs a bearer token |
+| `CONSOLE_MAP_TILES`, `CONSOLE_MAP_ATTRIBUTION` | ✓ | | | | no (empty = the console's delivery ops map draws the zones on its own grid; an `https://…/{z}/{x}/{y}.png` XYZ tile template + the provider's credit — S-81, [§ Console map](#console-map-s-81)) |
 | `AI_PROVIDER` | ✓ | | | | staging and prod: `openrouter` (`fake` refused there — S-129, [ai.md](ai.md)) |
 | `OPENROUTER_API_KEY` | ✓ | | | | no — empty = every AI feature answers 503 `ai_unavailable` (secret; [ai.md](ai.md#variables)) |
 | `OPENROUTER_MODEL`, `OPENROUTER_LIGHT_MODEL`, `OPENROUTER_MODEL_<FEATURE>`, `OPENROUTER_BASE_URL`, `OPENROUTER_REFERER`, `OPENROUTER_TITLE`, `OPENROUTER_DATA_COLLECTION`, `OPENROUTER_ZDR`, `OPENROUTER_*_TIMEOUT`, `AI_MAX_TOOL_ROUNDS`, `AI_BUDGET_*`, `AI_REQUESTS_PER_MINUTE`, `AI_FAKE_*` | ✓ | | | | no (`google/gemini-3.7-flash`, `google/gemini-3.5-flash-lite`, blank, openrouter.ai, `STUDIO_ORIGIN`, `Northline`, `deny`, `true`, 5 s / 60 s, 4, 200k / 1M tokens a day, 20/min, off — [ai.md](ai.md#variables)) |
@@ -309,6 +310,21 @@ DELETE FROM identity.platform_roles WHERE user_id = '<user id>' AND role = 'fina
   value, auth) in the secrets manager — Terraform creates both empty ([secrets.md](secrets.md)). Rotate like the
   Studio's (below), with the `CONSOLE_` variables.
 - **Health:** `/actuator/health/{liveness,readiness}` on 8083; dashboard `northline-console-bff` (S-111).
+
+## Console map (S-81)
+
+The console's delivery ops map (design 03 `delivery`) draws a market's delivery zones (`region.zones` polygons) and
+the couriers' latest positions itself, in Web Mercator fitted to the data. A raster basemap under them is optional:
+
+| variable | value |
+|---|---|
+| `CONSOLE_MAP_TILES` | empty (default: the design's grid, no third party) · an **https** XYZ tile URL template with `{z}`, `{x}`, `{y}` — a self-hosted OpenStreetMap tile server, or a commercial one (MapTiler, Stadia, Thunderforest…). The api refuses another shape at start |
+| `CONSOLE_MAP_ATTRIBUTION` | the provider's required credit, shown on the map (e.g. `© OpenStreetMap contributors`) |
+
+The staff member's browser fetches the tiles (the console's CSP allows `img-src https:`), so a key in the template is
+visible to staff: use a key the provider restricts to the console's origin, never S-47's Google server key. Respect
+the provider's usage policy (the public `tile.openstreetmap.org` is not for production use). Nothing was tried against
+a real tile server.
 
 ## OAuth clients (S-122)
 

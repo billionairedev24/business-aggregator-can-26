@@ -115,12 +115,14 @@ Changes are written to the platform audit log (`developer.audit_log`, no busines
 |---|---|
 | `GET /api/v1/console/fulfilment/runs?market=&from=&to=` | `{items: [RunSummary]}`; the default range is yesterday to 2 days ahead |
 | `GET /api/v1/console/fulfilment/runs/{runId}` | `{run: RunSummary, stops: [stop as above]}` |
-| `POST /api/v1/console/fulfilment/runs/{runId}/assign` `{courierId}` | RunSummary; the previous courier is freed. 409 `courier_busy` / `run_started` |
+| `POST /api/v1/console/fulfilment/runs/{runId}/assign` `{courierId}` | RunSummary; the previous courier is freed. 409 `courier_busy` (also a paused courier, S-81) / `run_started` |
 | `GET /api/v1/console/fulfilment/orders/{orderId}` | `{orderId, orderRef, orderType, kind, market, state, orderBy, packBy, run, pickups: [{merchantId, name, packedAt, pickedUpAt}], dropoffEta, deliveredAt, proofKind}` |
 | `GET /api/v1/console/fulfilment/couriers?market=` | `{items: [{id, userId, name, market, vehicle, status, active, shift, runId}]}` |
 | `POST /api/v1/console/fulfilment/couriers` `{userId, market, vehicle: bike\|ebike\|car\|van}` | 201; 409 `already_a_courier` |
 | `POST /api/v1/console/fulfilment/couriers/{courierId}/shifts` `{startsAt, endsAt}` | 201; at most 12 h |
 | `POST /api/v1/console/fulfilment/plan` `{market?}` | `{runs, assigned}` |
+| `POST /api/v1/console/fulfilment/couriers/{courierId}/pause` `{reason}` | CourierSummary with `active: false`: no new run, automatic or by hand (S-81); the run they have stays theirs. Audited `fulfilment.courier_paused` with the reason |
+| `POST /api/v1/console/fulfilment/couriers/{courierId}/resume` | CourierSummary with `active: true`. Audited `fulfilment.courier_resumed` |
 
 `RunSummary` is:
 

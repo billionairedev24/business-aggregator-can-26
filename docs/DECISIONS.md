@@ -5342,3 +5342,48 @@ server environment variable. Runbook: [runbooks/courier-app.md](runbooks/courier
   location reviews. The acceptance criterion (a run end to end in staging) is not met yet: it needs an EAS project, a
   build and a test phone (runbook § Staging acceptance). Hardware-backed key, courier contact, pickup item lists, App
   Links: follow-ups above.
+
+## 2026-10-01 — S-81 Orders monitor and delivery ops map
+
+- **Orders monitor = orders and bookings in one list** (design 03 `orders`: "BK-7712 · Service", "NL-48188 · Order").
+  `GET /api/v1/console/orders?view=&q=&province=&market=` lives in the `console` module and composes new query ports of
+  the owning modules: `orders.api.OrderMonitor`, `booking.api.BookingMonitor`, `fulfilment.api.DeliveryAlerts`, plus
+  identity's `PersonDirectory` (customer short names, "A. Osei") and merchants' `BusinessNames`. No cross-module SQL.
+  Rows: everything placed or booked in the last 7 days, and every one still open, at most 500 per source and 300 shown
+  (`truncated` says so; a reference search reaches older ones). "This week" = `MarketplaceOrders.placed` +
+  `MarketplaceBookings.made` (cancelled out, as on the overview).
+- **What "needs attention" means** (the spec only shows examples): **issue** — an order line with a reported issue
+  (`issue_note`) or short / refunded, or a disputed booking; **stuck** — the order's run has a pending stop more than
+  10 min past its ETA (the overview's "stuck" threshold); **late** — a pooled order past its window's end and not
+  delivered, or a confirmed booking 15 min past its start with no en-route / on-site; **escrow > 48 h** — a completed
+  booking whose customer hasn't signed off 48 h after the job's end. Goods' 7-day release window is not flagged (it is
+  the rule, not a problem). The Issue column is built from these codes, never from the customer's own words.
+- **Chips are views** with counts (`attention`, `live` = new + in progress + late + stuck, `escrow`, `late` = late +
+  stuck, `all`); the default is "Needs attention", as in the design. Province / market filters use the overview's rule
+  (`console.application.PlaceScope`, same 422 messages).
+- **Opening an order** shows its delivery from S-86's `GET /api/v1/console/fulfilment/orders/{id}` in a drawer; a
+  booking shows its row. The monitor itself is read-only (the design's table has no actions for these roles).
+- **Ops map provider: no third-party map by default; an optional XYZ tile basemap.** The design's map is a schematic
+  (grid, zone polygons, courier dots, legend), so the console draws the market's delivery zones (`region.zones`
+  PostGIS polygons, new `region.api.DeliveryZones`) and the couriers' latest positions (S-88) in Web Mercator, fitted
+  to the data — no place, centre or zoom in code. `CONSOLE_MAP_TILES` (an https XYZ template) + `CONSOLE_MAP_ATTRIBUTION`
+  add raster tiles under it (any OSM-compatible or commercial tile server; served to the browser through
+  `GET /api/v1/console/delivery/map`). **Google Maps was not used:** S-47's key is a server key restricted to Places
+  and Geocoding by IP, and the Maps JavaScript API needs a key in the browser, against "keys server-side". The tile
+  provider is configuration only; nothing was tried against a real tile server (CSP already allows `img-src https:`).
+- **Dispatcher actions:** *Reassign* uses S-86's assign (a run that hasn't started; 409 `run_started` / `courier_busy`
+  shown in the dialog). *Pause / Resume a courier* are new: `POST /api/v1/console/fulfilment/couriers/{id}/pause
+  {reason}` and `/resume`, screen delivery + action `dispatch`, audited as `fulfilment.courier_paused` (with the reason)
+  / `fulfilment.courier_resumed`. Paused = `fulfilment.couriers.active = false` (V202's column, already excluded from
+  automatic assignment); manual assignment now refuses a paused courier too (409 `courier_busy`). A run the courier
+  has stays theirs. The pause reason is a staff note in the platform audit log (`after.reason`), never shown to the
+  courier or customers.
+- **Couriers table** (name, vehicle, status, shift, run, with Pause / Resume) is an addition to design 03's delivery
+  screen: the design has no place to act on a courier, and the story asks for it.
+- **Not done:** the design's "Page Sam" and "Notify 7 customers" (no paging or bulk-notice integration exists) and
+  "Publish pricing" (zone pricing edits belong to S-84's region switchboard; "Edit zones (GeoJSON)" links there for
+  admins). Runs are planned per market window, not per zone, so the runs table's Zone column shows the run's market.
+  **Cost/stop and margin** show "—": no courier cost model is recorded anywhere. A started run can't be reassigned
+  (stops already picked up are with the courier); moving the rest of a stuck run is a follow-up.
+- **No migration.** Migration range for the console's second batch (S-81, S-82, S-84, S-85, S-94, S-95, S-96):
+  **V230–V239** (the console queues hold V210–V219; IMPLEMENTATION_PLAN).

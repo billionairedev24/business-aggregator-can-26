@@ -18,6 +18,52 @@ security:
 - oauth2:
   - openid
 paths:
+  /api/v1/console/delivery/map:
+    get:
+      operationId: deliveryMapMap
+      parameters:
+      - in: query
+        name: market
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DeliveryMap"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - delivery-map-controller
   /api/v1/console/fulfilment/couriers:
     get:
       operationId: dispatchConsoleCouriers
@@ -126,6 +172,155 @@ paths:
               schema:
                 $ref: "#/components/schemas/ValidationErrors"
           description: "Validation failed: one error per field with the exact message."
+      tags:
+      - dispatch-console-controller
+  /api/v1/console/fulfilment/couriers/{courierId}/pause:
+    post:
+      operationId: dispatchConsolePause
+      parameters:
+      - in: path
+        name: courierId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PauseRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CourierSummary"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - dispatch-console-controller
+  /api/v1/console/fulfilment/couriers/{courierId}/resume:
+    post:
+      operationId: dispatchConsoleResume
+      parameters:
+      - in: path
+        name: courierId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CourierSummary"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
       tags:
       - dispatch-console-controller
   /api/v1/console/fulfilment/couriers/{courierId}/shifts:
@@ -649,6 +844,68 @@ paths:
           description: "Validation failed: one error per field with the exact message."
       tags:
       - staff-profile-controller
+  /api/v1/console/orders:
+    get:
+      operationId: ordersMonitorMonitor
+      parameters:
+      - in: query
+        name: view
+        required: false
+        schema:
+          type: string
+          default: attention
+      - in: query
+        name: q
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: province
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: market
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Monitor"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - orders-monitor-controller
   /api/v1/console/overview:
     get:
       operationId: overviewView
@@ -1044,6 +1301,31 @@ components:
         oldest:
           type: string
           format: date-time
+    Basemap:
+      type: object
+      properties:
+        attribution:
+          type: string
+        tiles:
+          type: string
+    Counts:
+      type: object
+      properties:
+        all:
+          type: integer
+          format: int64
+        attention:
+          type: integer
+          format: int64
+        escrow:
+          type: integer
+          format: int64
+        late:
+          type: integer
+          format: int64
+        live:
+          type: integer
+          format: int64
     CourierRef:
       type: object
       properties:
@@ -1135,6 +1417,17 @@ components:
           minLength: 0
       required:
       - decision
+    DeliveryMap:
+      type: object
+      properties:
+        basemap:
+          $ref: "#/components/schemas/Basemap"
+        market:
+          $ref: "#/components/schemas/Market"
+        zones:
+          type: array
+          items:
+            $ref: "#/components/schemas/Zone"
     DeliveryView:
       type: object
       properties:
@@ -1342,6 +1635,21 @@ components:
         providersOnJobs:
           type: integer
           format: int64
+    Market:
+      type: object
+      properties:
+        city:
+          type: string
+        id:
+          type: string
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        province:
+          type: string
     MeResponse:
       type: object
       properties:
@@ -1351,6 +1659,23 @@ components:
             $ref: "#/components/schemas/RoleGrant"
         userId:
           type: string
+    Monitor:
+      type: object
+      properties:
+        asOf:
+          type: string
+          format: date-time
+        counts:
+          $ref: "#/components/schemas/Counts"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Row"
+        truncated:
+          type: boolean
+        week:
+          type: integer
+          format: int64
     Overview:
       type: object
       properties:
@@ -1380,6 +1705,15 @@ components:
             $ref: "#/components/schemas/Week"
         workQueue:
           $ref: "#/components/schemas/WorkQueue"
+    PauseRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 500
+          minLength: 0
+      required:
+      - reason
     PickupView:
       type: object
       properties:
@@ -1422,6 +1756,15 @@ components:
         runs:
           type: integer
           format: int32
+    Point:
+      type: object
+      properties:
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
     Pool:
       type: object
       properties:
@@ -1613,6 +1956,50 @@ components:
           minLength: 1
       required:
       - role
+    Row:
+      type: object
+      properties:
+        amountCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        at:
+          type: string
+          format: date-time
+        attention:
+          type: boolean
+        customer:
+          type: string
+        id:
+          type: string
+        kind:
+          type: string
+        ref:
+          type: string
+        sellers:
+          type: array
+          items:
+            type: string
+        since:
+          type: string
+          format: date-time
+        state:
+          type: string
+        status:
+          type: string
+          enum:
+          - new
+          - live
+          - escrow
+          - escrow_48h
+          - late
+          - stuck
+          - issue
+          - delivered
+          - done
+          - cancelled
+        type:
+          type: string
     RunDetail:
       type: object
       properties:
@@ -1814,6 +2201,34 @@ components:
           $ref: "#/components/schemas/Flags"
         verifications:
           $ref: "#/components/schemas/Backlog"
+    Zone:
+      type: object
+      properties:
+        feePlusCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        feeStdCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        id:
+          type: string
+        marketId:
+          type: string
+        minBasketCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        name:
+          type: string
+        ring:
+          type: array
+          items:
+            $ref: "#/components/schemas/Point"
+        runsPerDay:
+          type: integer
+          format: int32
   securitySchemes:
     bffSession:
       description: "Browsers only (the Studio, the consumer web): the BFF's HttpOnly\
