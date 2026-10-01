@@ -104,7 +104,7 @@ class MerchantEmailNotices {
                 OWNERS,
                 "dispute",
                 business -> new DisputeUpdate(
-                        business, event.caseNumber(), change, event.amountCents(), event.respondBy(), null, 0, cases));
+                        business, event.caseNumber(), change, event.amountCents(), event.respondBy(), null, 0, cases, null));
     }
 
     @ApplicationModuleListener
@@ -123,7 +123,8 @@ class MerchantEmailNotices {
                         null,
                         event.decision(),
                         event.refundCents(),
-                        cases));
+                        cases,
+                        event.note()));
     }
 
     @ApplicationModuleListener

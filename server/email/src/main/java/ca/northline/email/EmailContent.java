@@ -298,7 +298,8 @@ public sealed interface EmailContent {
             @Nullable Instant respondBy,
             @Nullable String decision,
             long refundCents,
-            URI casesLink)
+            URI casesLink,
+            @Nullable String note)
             implements EmailContent {
 
         public enum Change {
@@ -334,6 +335,7 @@ public sealed interface EmailContent {
             v.put("decision", decision == null ? "" : decision);
             v.put("refund", format.money(refundCents));
             v.put("link", casesLink.toString());
+            v.put("note", note == null ? "" : note);
             return v;
         }
 
@@ -671,7 +673,8 @@ public sealed interface EmailContent {
                     change == DisputeUpdate.Change.OPENED ? at.plus(Duration.ofDays(3)) : null,
                     decided ? "partial" : null,
                     decided ? 19_450 : 0,
-                    cases);
+                    cases,
+                    decided ? "Photos show the leak after the visit; half the fee is refunded." : null);
             all.put(key(sample), sample);
         }
         for (var decision : List.of("release", "goodwill", "full_refund")) {
@@ -689,7 +692,8 @@ public sealed interface EmailContent {
                                 case "goodwill" -> 19_450;
                                 default -> 38_900;
                             },
-                            cases));
+                            cases,
+                            null));
         }
         for (var change : RefundCaseUpdate.Change.values()) {
             var sample = new RefundCaseUpdate(

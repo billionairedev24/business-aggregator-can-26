@@ -144,6 +144,32 @@ public class Refund {
                 .build();
     }
 
+    /**
+     * S-80 "Goodwill credit (platform pays)": the seller keeps the money; Northline gives the customer a credit for
+     * {@code amountCents}, approved by the agent's decision and posted by the refund queue (no card money moves).
+     */
+    public static Refund goodwillCredit(String caseNumber, Dispute dispute, Escrow escrow, long amountCents, Instant now) {
+        return Refund.builder()
+                .id(Ids.next())
+                .paymentIntentId(escrow.getPaymentIntentId())
+                .merchantId(escrow.getMerchantId())
+                .escrowId(escrow.getId())
+                .disputeId(dispute.getId())
+                .caseNumber(caseNumber)
+                .what(dispute.getSubject())
+                .customerName(dispute.getCustomerName())
+                .amountCents(amountCents)
+                .taxCents(0)
+                .reason("goodwill")
+                .chargedTo(ChargedTo.PLATFORM)
+                .kind(Kind.CREDIT)
+                .auto(false)
+                .state(State.APPROVED)
+                .createdAt(now)
+                .decidedAt(now)
+                .build();
+    }
+
     /** What goes back to the customer's card: the amount plus the tax on it (a credit gives back no tax). */
     public long cardCents() {
         return amountCents + taxCents;

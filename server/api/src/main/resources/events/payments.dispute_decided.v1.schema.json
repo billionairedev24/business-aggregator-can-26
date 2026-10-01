@@ -56,6 +56,10 @@
     "decidedBy": {
       "type": "string",
       "description": "identity.users id (agent, owner or customer), or \"stripe\" when the card issuer decided a card dispute"
+    },
+    "note": {
+      "type": ["string", "null"],
+      "description": "the Northline agent's note to both parties (added by S-80; absent or null otherwise)"
     }
   }
 }

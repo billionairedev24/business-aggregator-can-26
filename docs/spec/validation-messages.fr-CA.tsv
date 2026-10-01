@@ -651,3 +651,11 @@ Choose why the listing is rejected.	Choisissez pourquoi l’annonce est refusée
 Pick reasons from the list.	Choisissez des raisons dans la liste.	new
 This listing isn't waiting for a decision.	Cette annonce n’attend pas de décision.	new
 This dish isn't waiting for a price decision.	Ce plat n’attend pas de décision sur son prix.	new
+Choose an outcome.	Choisissez une issue.	new
+A partial refund is more than $0 and less than the amount in escrow.	Un remboursement partiel est de plus de 0 $ et de moins que le montant en fiducie.	new
+A refund case is refunded in full or released to the seller.	Un dossier de remboursement est remboursé en entier ou libéré au vendeur.	new
+Another person must co-sign this decision.	Une autre personne doit cosigner cette décision.	new
+This case isn't waiting for an agent.	Ce dossier n’attend pas d’agent.	new
+This case already has a decision waiting for a finance co-sign.	Ce dossier a déjà une décision qui attend la cosignature des finances.	new
+This decision was already co-signed or declined.	Cette décision a déjà été cosignée ou refusée.	new
+Choose approve or decline.	Choisissez Approuver ou Refuser.	new
