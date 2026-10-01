@@ -66,6 +66,9 @@ subprojects {
         maxHeapSize = "768m"
         maxParallelForks = 1
         jvmArgs("-XX:+EnableDynamicAgentLoading", "-Xshare:off")
+        // A developer's server/.env (make setup) must never reach a test: the apps import .env from
+        // ${NORTHLINE_DOTENV_DIR:.}, and some tests boot cloud profiles where that import is active.
+        environment("NORTHLINE_DOTENV_DIR", layout.buildDirectory.dir("no-dotenv").get().asFile.absolutePath)
         testLogging { events("failed"); exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL }
     }
 

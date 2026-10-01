@@ -2340,6 +2340,50 @@ Built on S-49 (branch `web/s-50-product-detail` from `web/s-49-shop-landing`).
   - Disclose the processor in the Privacy Policy and in the PIPEDA / Law 25 assessment (SEC stories), together with the other processors.
 - **Pending:** an OpenRouter API key per environment. Until it exists, `northline.ai.provider=fake` locally, and AI features answer `503 ai_unavailable` in the cloud.
 
+## 2026-09-30 — S-46 Home: search-first hero and Services/Shop/Food entry points
+
+Built on S-45's shell (docs/CONSUMER_WEB_PLAN.md). No migration.
+
+- **Server-rendered layout, numbers in the browser.** The SSR HTML (the same for everyone) carries the hero, the tile
+  names and links, the four promises and the section titles; the counts, greeting, trusted providers and "Your week"
+  load after hydration, once the location (S-45 pill) and session are known. Until the place is known the heading reads
+  "What do you need today?" / « De quoi avez-vous besoin aujourd'hui ? » (ours) instead of guessing a city; counts show
+  skeletons.
+- **Search** submits to `/search?q=` (S-48 renders results). No typeahead on the hero yet: the design's suggestions
+  come from the search API (E-6), which S-48 wires to the same input.
+- **New public read `GET /api/v1/public/home?city=`** in a new module **`discovery`** (the consumer site's
+  cross-module landing reads; it only uses other modules' `api` packages): `providers` (active provider + both),
+  `shops` (seller + both), `kitchensOpen`, `categories` (active businesses per approved category id), `cuisines` (open
+  kitchens per cuisine code, plus `meal_kits` = open kitchens offering meal kits), `trusted` (three providers: best
+  average rating, then most reviews, then higher tier, then name). Unknown cities answer zeros (the page then says
+  "Northline isn't in {city} yet." and links to the Location screen); blank city → 422 "Choose a city.", > 60
+  characters → "At most 60 characters.". `Cache-Control: public, max-age=60` (the same for everyone in a city).
+- **Shared-contract additions (additive):** `merchants.api.PublicDirectory` (active businesses with their published
+  storefront slug and brand colour, approved categories, public profile cuisines/dietary and kitchen address — never the
+  legal name, contacts or documents); `food.api.KitchenAvailability` (open now, next opening, pause, fulfilment, prep).
+- **"Open" for a kitchen** (`food.domain.KitchenCalendar`): inside today's opening range (in the time zone of the kitchen's market —
+  new `region.api.Markets`, read from the existing `SEARCH_MARKETS` / `SEARCH_DEFAULT_MARKET`, no new list; a
+  province that isn't served uses the default market's zone; a holiday entry replaces the weekday), not paused, **auto-pause enforced at read time** — the Studio's "Auto-pause if late orders ≥ N"
+  (stored but not enforced since the kitchen workstream) now closes the kitchen to customers while N or more accepted
+  orders are past their ready-by time, and reopens it as soon as the kitchen catches up (no write, no event) — and a
+  live menu with at least one approved, published dish. Ranges end exclusive. "Opens …" looks a week ahead.
+- **Tiles** are the design's lists (9 departments, 8 cuisines, 9 service categories) mapped to category ids of
+  `db/seed/categories.json` / onboarding's cuisine codes (`features/home/catalog.ts`): Pharmacy = "Pharmacy (OTC)",
+  Gifts = "Gifts & crafts", Home cleaning = "House cleaning", Tutor = K–12 + post-secondary (summed), Meal kits = the
+  `meal_kits` fulfilment. The design's hard-coded "All 62 categories" reads "All categories" (the taxonomy has more,
+  and the number would drift). Counts use ICU plurals ("1 shop"). Tile names are the design's en/fr pairs; category
+  names from the database (English only today) are marked `lang="en"`.
+- **Trusted near you:** providers come to the customer, so "near" = the same city and no distance is shown (the design's
+  "1.2 km" has no source); the meta line is the first approved category (the design's "from $79" needs pricing reads
+  that don't exist). Providers without a published page aren't links. No reviews → "New".
+- **Your week** = contract `GET /api/v1/me/upcoming` for S-58 (CONSUMER_WEB_PLAN.md § Your week); until it exists the
+  signed-in section says "Nothing booked or on its way this week." with "Book a service", guests get "Sign in to see
+  your orders, bookings and quotes here." (ours). The points line uses the account summary's `points`; the design's
+  "Glenmore Bakery is funding 3× this week" has no source and isn't shown.
+- **Greeting** by the hour on the visitor's own clock, computed after mount (no time zone in code): morning 5–12, afternoon 12–17, evening otherwise ("Good
+  evening, Amara · {area}"; guests "Good evening · {city}"; French « Bonsoir Amara · … »).
+- **Not done:** hero typeahead (S-48), prices on trusted providers, distances.
+
 ## 2026-09-30 — S-124 Makefiles for every developer and operator workflow
 
 - **Root `Makefile` + one include per area** (`make/server.mk`, `web.mk`, `db.mk`, `kafka.mk`, `search.mk`, `docs.mk`,
@@ -2587,6 +2631,149 @@ Built on S-49 (branch `web/s-50-product-detail` from `web/s-49-shop-landing`).
 - **No migration.**
 - **Tests:** `SearchReindexTest` on Kafka 4 + PostGIS + Elasticsearch 9 with the whole worker running: a listing indexed live, a ghost document Postgres doesn't have, a live listing whose event was lost; during the backfill a new listing is published (the live indexer writes the old index) — after the run the alias points at a new versioned index with the layout's `_meta`, the old index is gone, the ghost is gone, the lost and the late listings are there, searches answered the kept listing at every phase, and the live indexer keeps writing through the alias. A second concurrent run is refused; a failure after the backfill deletes the half-built indices and leaves the live alias as it was; `--keep-old` keeps the previous indices.
 - **Not done / never run for real:** nothing has run against Elastic Cloud; no throttling of the backfill (Elasticsearch bulk per merchant; add one if a large catalogue loads a small cluster); a scheduled periodic rebuild (on demand only).
+
+## 2026-09-30 — S-47 Location screen with Google Places autocomplete (Canada) and market/zone resolution
+
+Built on S-45's shell and location pill (docs/CONSUMER_WEB_PLAN.md § Location).
+
+- **Port `region.application.PlacesAutocomplete`** (autocomplete, place details, reverse geocoding), chosen by
+  `northline.places.provider` (`PLACES_PROVIDER`): `local` (default; `FakePlaces`, fixture addresses read from
+  `places-fixtures/addresses.json` — design 06's "1204 17 …" suggestions, one per dev-seed market and a few outside them;
+  refused under staging/prod) or `google` (`GooglePlaces`: **Places API (New)** autocomplete + details and the **Geocoding API** for
+  reverse, key `GOOGLE_MAPS_API_KEY`, required with `google`). The browser never sees the key: it calls
+  `/api/v1/geo/*` through the consumer-bff. **Never run against Google** (no account) — WireMock tests only.
+- **Google usage:** Canada only (`includedRegionCodes: ["ca"]`), address types only (`street_address`, `premise`,
+  `subpremise`, `route`), 50 km location bias around the visitor when known, the browser's **session token** on every
+  suggestion and on the details call (one billed session per search), nothing below 3 characters, a 250 ms debounce,
+  3 s time-outs and no retries (a late suggestion is useless) → 503 `places_unavailable`. The Geocoding API takes the
+  key only as a query parameter, so its errors are rethrown without the request (the URI would put the key in logs).
+  Nothing Google returns is stored.
+- **Abuse limit:** address lookups cost money, so each browsing session (the consumer-bff's `X-Northline-Guest`), else
+  the caller's address, gets `PLACES_RATE_LIMIT` (60) lookups a minute per api instance → 429 `rate_limited`
+  (the shared `WebhookRateLimiter`, in memory). Markets and resolve aren't limited (no Google call).
+- **Region-neutral markets (DECISIONS "Region-neutral by design"; no city, province or zone in code).** Which
+  provinces are served is **configuration we already have**: `SEARCH_MARKETS` / `SEARCH_DEFAULT_MARKET` (S-44), read
+  through a new shared `region.api.Markets` (`region.config.MarketSettings`; the same parsing and start-up checks as
+  search; S-46 uses it for kitchen hours). A province listed there is `live` whatever its row says; the others keep
+  their row's stage (`off`, `waitlist`, `pilot`). City markets and their delivery zones are **region data**, not code
+  or migrations: operations add them (SQL until the console's Regions screen; S-134 brings the region configuration).
+- **Schema (V117, additive):** `region.regions` holds provinces **and** their city markets (`kind`, `parent_id`,
+  `city`, `center geography(Point)`, `radius_km`, `sort`; unique province rows); a market covers addresses within
+  `radius_km` of its centre and the nearest covering centre wins (a satellite town next to a large city). The migration
+  only lists Canada's 13 provinces and territories (names en/fr, all `off`). `region.zones` got `sort`, a name CHECK and
+  a GiST index. New `region.waitlist` (region, user id or a guest's own email, language; one entry per person and
+  region).
+- **Local dev seed `db/seed-dev/V119__dev_markets.sql`** (profile `local` only, like the personas): design 06's
+  Location examples — markets live / pilot / waitlist with approximate neighbourhood zones priced as the design ("3
+  pooled runs / day", $4.99, free with Plus, $35 minimum), one pilot and two waitlist provinces. `GeoApiTest` loads the
+  same file.
+- **`GET /markets`** answers `{items, fallback}`: provinces shown = served ones first (configuration order), then any
+  other with a stage or a market; each with `taxBps` (sales tax on goods from `region.api.TaxRates`, shown as "Sales
+  tax {rate}%") and its markets (with centre `lat`/`lng`). `fallback` = the first live market of the default market's
+  province (else of any served province) — the pill's "nowhere known" place, replacing S-45's hardcoded list
+  (`features/location/markets.ts` is deleted). With none configured the pill says "Set location".
+- **Resolution** (`resolution: {market, zone, waitlist}`): the covering market (any stage); its zone when the market is
+  live or pilot; the waitlist ("An address outside a live market joins the waitlist for its nearest one") = the
+  covering market when it isn't live, else the province's nearest market, else the province (Toronto → Ontario). Pilot
+  = invite only, so a pilot address also gets the waitlist (with the pilot wording) and can't be saved.
+- **Endpoints** (`/api/v1/geo/**`, already public; guests allowed): `GET /markets` (cached 5 min), `GET /autocomplete`,
+  `GET /places/{placeId}`, `GET /reverse` (S-45's missing endpoint), `GET /resolve`, `POST /waitlist` (201 joined, 200
+  already listed; signed in → user id, guest → email required; a live market → 409 `region_live`; a served province can still be joined for an address outside its markets).
+- **Pill contract (additive):** `/reverse` answers `{label, city, province?, market?, zone?}`; the pill treats a `market`
+  that is null or not live/pilot as "outside every market" (the api's fallback market), and an unreachable `/reverse`
+  the same (S-45's client-side nearest-market guess is gone with its hardcoded list), and remembers province,
+  market and zone with the detected place. `SavedLocation` gained `street`, `unit`, `province`, `postalCode`,
+  `marketId`, `zoneId`, `zone` (all optional; older saved values still parse). Label: "{neighbourhood}, {city}" = the
+  provider's neighbourhood, else the zone, then the market's city; a saved address shows "{street}, {city}".
+- **Screen details the design leaves open:** the province buttons come from `/markets`, in its order — "Live · {first two
+  live markets}" reproduces the design's note. The design's hardcoded paragraph ("In Alberta: … are live; … pilot; …
+  waitlist") is built from the chosen province's markets ("Live in {province}: {cities}. Pilot: … Waitlist: …"). Choosing a province only sets what's highlighted; the picked address's province
+  wins. The address field is an ARIA combobox (↑/↓/Enter/Esc). The prototype's technical footer ("Google Places
+  Autocomplete · restricted to CA · session token") isn't shown; "powered by Google" is (Google's terms). The parts
+  row (Street, City, Province, Postal, Place ID) and the tags (Market · city · stage, Zone, pooled runs, tax) appear once
+  an address is chosen; the tax tag is the province's total rate ("Sales tax 5%"; the design's per-tax names like "GST 5% + PST 7%"
+  would need tax components per province, which `TaxRates` doesn't expose). "Save and continue" without a chosen address → "Choose your address from the list."
+  (ours). `?next=` returns there after saving (checkout's "Change"). The address stays in this browser only
+  (`localStorage`); account addresses are S-59's.
+- **Messages** (server `region.domain.GeoMessages`, English; web en + fr-CA): "At most 200 characters.", "Start the
+  address search again." (bad session token), "Choose an address in Canada.", "Choose where you'd like Northline.",
+  and validation-rules.md's "Email is required." / "That doesn't look like an email address.".
+- **Configuration:** `PLACES_PROVIDER`, `GOOGLE_MAPS_API_KEY` (secret `google-maps-api-key`: Terraform `secret_env` on
+  AWS, Google Cloud and Azure; chart `secretNames`, `apps.api.secretEnv`, required in values-staging/prod with
+  `PLACES_PROVIDER: google`), `PLACES_RATE_LIMIT`; required-env lists of staging/prod; runbooks README, local, dev,
+  staging, prod, secrets, infrastructure; new runbook `docs/runbooks/google-maps.md`; `server/.env.example`.
+- **Not done / never exercised:** no call to Google has ever been made (the adapter follows Google's documentation;
+  field names of Places API (New) — `placePrediction.structuredFormat`, `addressComponents[].longText/shortText` — are
+  unverified live); the zones are approximate boxes; no console screen for markets/zones/waitlist; waitlist emails
+  aren't sent when a market opens (no job yet); the rate limit is per api instance.
+
+## 2026-09-30 — S-57 Food: landing, restaurant menu, food checkout (delivery or pickup) and tracking
+
+Stacked on S-46 (#66, kitchen availability, `PublicDirectory`), S-47 (#67, location, `region.api.Markets`) and S-51
+(merged: step-up rule, `IdempotentRequests`, `order.placed`).
+
+- **Food cart is separate from the shop cart** (the story asks to record it): one kitchen at a time, kept in the
+  browser (`localStorage['nl.foodCart']`, `features/food/foodCart.ts`), priced again by the server at checkout. A food
+  order goes to one kitchen by direct courier or pickup and must never join a pooled goods run, so it can't share S-51's
+  multi-shop, window-based cart. Adding from another kitchen asks first ("Start a new order?").
+- **Region-neutral:** a kitchen's hours, item windows, combo windows, "sold out today" and scheduled windows are read in
+  the time zone of **its market** (`region.api.Markets.zone(province)`, i.e. `SEARCH_MARKETS`); the restaurant's tax
+  estimate uses its province's rate (`TaxRates`, `taxBps` in the api); the pickup place of supply is the kitchen's
+  province, else the default market's — no province, city or zone in code or messages.
+- **Landing** `GET /api/v1/public/kitchens?city=&lat=&lng=` (public, 30 s cache): the city's active kitchens with open
+  state (S-46's `KitchenAvailability`: hours, holidays, pause, **auto-pause**), next opening, fulfilment, prep, ETA
+  (prep + ride: 3 min/km + 5, 10 when the distance is unknown; range +10), pickup ready time, distance (haversine from
+  `merchants.locations`), `delivers` (courier and within the kitchen's radius, else the location's service radius, else
+  8 km), delivery fee, price level ($ < $12 average dish, $$ < $25, $$$), rating. Open first, then nearest. Filters
+  (open now, under 30 min, halal, vegan, $, nut-free) and cuisines are applied in the browser; "Family packs" and
+  "Free delivery (Plus)" have no data and aren't shown.
+- **Restaurant** `GET /api/v1/public/kitchens/{slug}` (SSR, SEO): live menus' sections with published, approved dishes,
+  their modifier groups with the Studio's pick rules (exactly / at least / up to N, required, nested groups shown for an
+  option, sold-out options), dish windows (always, lunch 11–2, after 5, weekends) and menu schedules (open hours, a
+  window, by quote = never orderable here), live/scheduled combos with their slots, the AHS permit state, $15 minimum,
+  8 % service fee, `taxBps`, and 30-minute scheduled windows (today and tomorrow within the kitchen's "scheduled days",
+  ≥ 45 min + prep ahead, whole window inside the hours).
+- **Fees (ours, the spec has no numbers beyond the design):** delivery $1.99 ≤ 1 km, $2.99 ≤ 2 km, $3.99 ≤ 4 km, then
+  +$1 per 2 km ($2.99 when the distance is unknown); service fee 8 % of the dishes; tips No tip · $2 · $4 · 15 % · $6
+  (up to $100 or 30 %); 100 % of the tip goes to the courier. Pickup: no delivery fee, no tip.
+- **Checkout** (`/api/v1/me/food-orders`, signed in only): `POST /quote` (tax estimated from the province's rates),
+  `POST /` (Idempotency-Key, X-Step-Up — **S-51's rule unchanged**: a phone-code-only session confirms its passkey or
+  authenticator first → 403 `step_up_required`, or `second_factor_required` without one; the web reuses S-51's
+  `StepUpDialog` and Payment Element), `POST /{id}/confirm` (Idempotency-Key), `GET /{id}` (tracking). Validation and
+  conflict messages: "Pick 1 for Size." (and at least / up to), "Choose each option once.", "That choice isn't on this
+  dish any more. Open it again.", "{dish} is sold out.", "Add $x.xx to reach the $15 minimum.", "Add your delivery
+  address first.", "Choose delivery or pickup.", "Choose one of the windows offered.", "Choose a tip between $0 and
+  $100, or up to 30 %.", "Choose how to hand it over.", "Choose from the extras offered.", 409 `kitchen_closed` /
+  `out_of_range` / `no_delivery` / `no_pickup` / `checkout_closed`.
+- **Payment = S-11 escrow, one PaymentIntent per food order** (`ref_type = 'food_order'`, manual capture). Unlike S-51
+  (one intent per line + an uncaptured delivery-fee intent), a food order has one kitchen and one courier, so the intent
+  carries the dishes + their tax (the kitchen's escrow) **plus Northline's own charges**: delivery + service fee, their
+  GST/HST and the tip. Additive in payments: `PaymentAuthorizations.Request.platformCents`, `EscrowLifecycle.Hold.platform`
+  (`PlatformCharges(feeCents, feeTaxCents, tipCents)`, old constructors kept), `payments.escrows.platform_fee_cents /
+  platform_tax_cents / tip_cents` (V118); at capture the ledger credits the fee to revenue, the fees' tax to tax
+  payable and the tip to a new `courier_tips` account. The hold is accepted only once the card is authorized; it is
+  **released on hand-off** (`order.handed_off` → `KitchenEscrowRelease` now also releases `food_order` escrows).
+  Finance should review this split.
+- **`order.placed` is S-51's event**, not a second one: published once per food order with `orderType = "food"`,
+  `delivery = "direct"` (hot courier) or `"pickup"`, no window. Additive: `Line.itemKind` (`offer` | `menu_item` |
+  `combo`; S-51's 5-argument constructor defaults to `offer`) and the optional `itemKind` in
+  `orders.order_placed.v1.schema.json`. No PII in the payload.
+- **Schema V118 (orders, payments):** sequence `orders.food_order_numbers` (refs `FD-10000…`, like the kitchen display's food refs), `orders.food_checkouts`
+  (the pending checkout: kitchen, mode, schedule, `customer_eta` for pickup, ETA range, priced lines jsonb, every
+  amount with a sum check, province, tax calculation, PaymentIntent, delivery jsonb — address, drop-off, note, extras),
+  the three escrow columns, `food_order` added to the `ref_type` checks of `payments.escrows`, `payments.payment_intents` and
+  `payments.tax_calculations` (each check dropped and re-created wider — a relaxation, nothing existing changes). Placing writes `orders.orders` (`type = 'food'`) and `orders.order_lines` (menu item or
+  combo, title, the choices + note as the kitchen display's modifiers), so the order reaches S-38's kitchen display as
+  before. V118 sorts before S-43's V120 (Flyway's out-of-order setting already covers the ranges).
+- **Tracking** follows the kitchen display: paid (not accepted) → cooking (`order.accepted`) → ready (`order.ready`)
+  → on the way / picked up (`order.handed_off`) → delivered. ETA = ready-by + the ride (delivery) or ready-by (pickup),
+  else placed + the quoted range. The web polls every 15 s; S-52's order SSE stream can replace the polling later.
+- **Not done:** group orders; live courier positions (S-52's map); "Family packs" / "Free delivery (Plus)" filters;
+  Plus pricing ($0 service fee) — no membership read yet; loyalty points on food. The checkout's pay note reads "The
+  kitchen is paid once your order is handed off; until then the money is held in escrow." instead of the design's
+  wording (escrow on hand-off is the story's rule).
+- **Never run against the real service:** Stripe (PaymentIntent with platform charges, capture, the Payment Element)
+  ran only against the local fake gateway; nothing here calls Google.
 
 ## 2026-10-01 — S-125 OpenAPI 3.1 for every HTTP service, with Swagger UI, Scalar and Redoc
 

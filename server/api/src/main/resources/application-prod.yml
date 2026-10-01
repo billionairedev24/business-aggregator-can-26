@@ -12,6 +12,7 @@ northline.required-env:
   domains: DOMAINS_DNS_PROVIDER, DOMAINS_EDGE_PROVIDER, DOMAINS_TARGET_HOST   # S-31: doh|jndi + kubernetes; `local` refused
   commerce: COMMERCE_PROVIDER, API_PUBLIC_URL   # S-35: oauth; `local` is refused at start-up
   pos: POS_PROVIDER   # S-36: oauth; `local` is refused at start-up
+  places: PLACES_PROVIDER, GOOGLE_MAPS_API_KEY   # S-47: google (Places + Geocoding); `local` is refused at start-up
   kms-envelope: KMS_PROVIDER, KMS_ENCRYPTION_KEY_ID   # S-32 refresh tokens sealed by the cloud key service; `local` refused
 # S-125: no spec and no viewer in production (the internal specs never; public/partner ones are on the docs site).
 springdoc:
