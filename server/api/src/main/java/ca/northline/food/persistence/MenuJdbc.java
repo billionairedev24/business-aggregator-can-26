@@ -14,6 +14,7 @@ import ca.northline.food.domain.ItemWindow;
 import ca.northline.food.domain.MenuStatus;
 import ca.northline.shared.CodedEnum;
 import ca.northline.shared.JdbcTimes;
+import ca.northline.shared.MerchantScope;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
@@ -106,6 +107,33 @@ class MenuJdbc implements MenuStore {
     public List<ItemRow> publishedItems(String merchantId) {
         return jdbc.sql("select " + ITEM_COLUMNS + ITEM_FROM + " where i.merchant_id = :m and i.status = 'published'")
                 .param("m", merchantId)
+                .query((rs, _) -> item(rs))
+                .list();
+    }
+
+    @Override
+    public Optional<ItemRow> itemById(String itemId) {
+        return jdbc.sql("select " + ITEM_COLUMNS + ITEM_FROM + " where i.id = :id")
+                .param("id", itemId)
+                .query((rs, _) -> item(rs))
+                .optional();
+    }
+
+    @Override
+    public List<ItemRow> heldForPrice(MerchantScope scope, int bandPct, int limit) {
+        return jdbc.sql("select " + ITEM_COLUMNS + ITEM_FROM + """
+                         where i.status = 'published' and i.price_median_cents > 0
+                           and (i.price_cents * 100 > i.price_median_cents * (100 + :band)
+                                or i.price_cents * 100 < i.price_median_cents * (100 - :band))
+                           and i.price_confirmed_cents is distinct from i.price_cents
+                           and (:everyone or i.merchant_id = any(:merchants))
+                         order by i.updated_at nulls first, i.id
+                         limit :n
+                        """)
+                .param("band", bandPct)
+                .param("everyone", scope.everyone())
+                .param("merchants", scope.ids())
+                .param("n", limit)
                 .query((rs, _) -> item(rs))
                 .list();
     }

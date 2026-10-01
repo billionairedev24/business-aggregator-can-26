@@ -41,11 +41,12 @@ export const SESSION = { user: { id: '01J9ZD3V00000000000000PNA1', firstName: 'P
 const ALL = ['overview', 'orders', 'disputes', 'delivery', 'sellers', 'verify', 'vetting', 'trust', 'taxonomy', 'support', 'regions', 'finance', 'reports', 'api', 'team', 'profile', 'oncall'];
 /** The api's grants (StaffRole), for `GET /api/v1/console/me`. */
 export const GRANTS: Record<RoleCode, { role: RoleCode; screens: string[]; actions: string[] }> = {
-  admin: { role: 'admin', screens: ALL, actions: ['suspend', 'decide', 'refund', 'province', 'payouts', 'keys', 'verify', 'vet', 'dispatch', 'support'] },
+  admin: { role: 'admin', screens: ALL, actions: ['suspend', 'decide', 'refund', 'province', 'payouts', 'keys', 'verify', 'vet', 'dispatch', 'support', 'macros'] },
   trust_safety: { role: 'trust_safety', screens: ['overview', 'disputes', 'sellers', 'verify', 'vetting', 'trust', 'support', 'team'], actions: ['suspend', 'decide', 'verify', 'vet', 'support'] },
   dispatch: { role: 'dispatch', screens: ['overview', 'orders', 'delivery', 'support'], actions: ['dispatch'] },
   finance: { role: 'finance', screens: ['overview', 'disputes', 'finance', 'reports', 'team'], actions: ['refund', 'payouts'] },
   support: { role: 'support', screens: ['overview', 'orders', 'disputes', 'sellers', 'support'], actions: ['support'] },
+  support_lead: { role: 'support_lead', screens: ['overview', 'orders', 'disputes', 'sellers', 'support'], actions: ['support', 'macros'] },
   analyst: { role: 'analyst', screens: ['overview', 'reports'], actions: [] },
 };
 

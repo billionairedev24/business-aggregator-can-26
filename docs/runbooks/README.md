@@ -297,7 +297,8 @@ sign-out revoking the refresh token, `next` limited to local paths, no framing. 
 (the console's role view) is relayed; the api checks the person holds that role.
 
 **Staff roles** live in `identity.platform_roles` (`staff` opens the console; `admin`, `trust_safety`, `dispatch`,
-`finance`, `support`, `analyst` decide the screens and actions — V190) and reach the api in the access token's `roles`
+`finance`, `support`, `support_lead` (S-83, V214: support plus editing the desk's macros), `analyst` decide the screens
+and actions — V190) and reach the api in the access token's `roles`
 claim (10 min). Grant or take one away with SQL until the Team screen (S-96) does it; it applies at the person's next
 token refresh:
 

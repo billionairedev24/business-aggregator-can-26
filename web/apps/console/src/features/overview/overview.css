@@ -1,8 +1,6 @@
 /* Console overview — design 03 lines 87–117. Token values only. */
 .nl-ov-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
 .nl-ov-kicker { display: block; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-neutral-700); }
-.nl-ov-filters { display: flex; gap: 8px; flex-wrap: wrap; }
-.nl-ov-filters .input { min-height: 40px; width: auto; max-width: 100%; }
 .nl-ov-title { font-size: clamp(30px, 3.5vw, 44px); margin: 0 0 28px; letter-spacing: -0.02em; }
 .nl-ov-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 36px clamp(28px, 4vw, 64px); margin-top: 44px; }
 .nl-ov-h2 { font-size: 22px; margin: 0 0 12px; }

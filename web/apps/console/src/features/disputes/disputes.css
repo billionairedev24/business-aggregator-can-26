@@ -1,0 +1,16 @@
+/* Disputes & refunds — design 03 lines 256–271. Token values only. */
+.nl-ds-cols { display: grid; grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); gap: 28px clamp(24px, 4vw, 56px); }
+@media (max-width: 720px) { .nl-ds-cols { grid-template-columns: minmax(0, 1fr); } }
+.nl-ds-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.nl-ds-case { display: block; width: 100%; text-align: left; font: inherit; font-size: 14px; padding: 10px 12px; min-height: 56px; border: 0; border-radius: var(--radius-md); cursor: pointer; color: var(--color-text); background: transparent; }
+.nl-ds-case[aria-current="true"] { background: var(--color-surface); outline: 1px solid var(--color-divider); }
+.nl-ds-case:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.nl-ds-case-head { display: flex; justify-content: space-between; gap: 8px; }
+.nl-ds-case-head span { font-size: 12px; }
+.nl-ds-case-title { display: block; font-size: 13px; opacity: .75; }
+.nl-ds-case-age { display: block; font-size: 12px; opacity: .6; }
+.nl-ds-parties { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 14px; font-size: 14px; margin-top: 16px; }
+.nl-ds-tags { margin-top: 8px; }
+.nl-ds-evidence { margin-top: 14px; font-size: 14px; }
+.nl-ds-outcomes { margin-top: 14px; }
+.nl-ds-note { margin-top: 12px; min-height: 70px; width: 100%; }

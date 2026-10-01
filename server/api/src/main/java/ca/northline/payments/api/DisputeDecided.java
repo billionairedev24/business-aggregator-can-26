@@ -2,6 +2,7 @@ package ca.northline.payments.api;
 
 import ca.northline.shared.DomainEvent;
 import java.time.Instant;
+import org.jspecify.annotations.Nullable;
 import org.springframework.modulith.events.Externalized;
 
 /**
@@ -13,6 +14,7 @@ import org.springframework.modulith.events.Externalized;
  * @param amountCents the disputed amount (added by S-13; additive)
  * @param decidedBy identity.users id of the agent, the merchant owner (full refund) or the customer (accepted offer);
  *     {@code stripe} when the card issuer decided a card dispute (S-12)
+ * @param note the Northline agent's note to both parties (S-80); null otherwise
  */
 @Externalized("payments.dispute::#{aggregateId()}")
 public record DisputeDecided(
@@ -25,5 +27,6 @@ public record DisputeDecided(
         String escrowId,
         String decision,
         long refundCents,
-        String decidedBy)
+        String decidedBy,
+        @Nullable String note)
         implements DomainEvent {}

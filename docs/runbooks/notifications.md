@@ -14,10 +14,13 @@ the provider is called — the api's S-13 `Mailer` and the worker use the same c
 | `payout_account.changed` (`payments.payout_account`) | — security | owners | email, always | **SMS, always** — whatever the matrix, even in quiet hours |
 | `payout.sent` (`payments.payout`) | `payout` | owners, bookkeepers | email | SMS, push |
 | `payout.failed` (`payments.payout`) | `payout` | owners, bookkeepers | — | **email** (template `payout-failed`), SMS, push |
-| `dispute.updated`, `dispute.decided` (`payments.dispute`) | `dispute` | owners | email | SMS, push |
+| `dispute.updated`, `dispute.decided` (`payments.dispute`; the agent's note in the email since S-80) | `dispute` | owners | email | SMS, push |
 | `refund.case_updated`, `refund.issued` (`payments.refund`) | `dispute` | owners | email | SMS, push |
 | team invitation to a mobile number | — | the invitee | **SMS** (the link's token never leaves the api) | — |
 | `custom_domain.changed` with a `notice` (`merchants.storefront`, S-31): the page's own domain went live, stopped pointing at Northline (with the grace deadline), was disconnected, failed its certificate, expired or was claimed by another business | — service notice | owners | **email** (template `custom-domain`), whatever the matrix — [custom-domains.md](custom-domains.md) | — |
+| application decided in the console's verification queue (in-process `ApplicationDecided`, S-79): approved, or sent back with the checks to redo and the agent's note | — answer to the owners' submission | owners | **email** (template `application-decision`), whatever the matrix | — |
+| a listing or dish rejected in the console's vetting queue (in-process `ListingRejectedNotice`, S-92) | — service notice | owners | **email** (template `listing-rejected`), whatever the matrix | — |
+| a trust & safety warning from a flag (in-process `TrustWarningNotice`, S-93) | — account notice | owners | **email** (template `trust-warning`), whatever the matrix | — |
 | a webhook endpoint turned off after 3 days of failures (worker dispatcher, not a Kafka event — S-33, [webhooks.md](webhooks.md)) | — service notice | owners | — | **email** (template `webhook-disabled`), whatever the matrix; claimed per owner under the endpoint's `disable_notice_id`, retried every minute for 2 days while the provider is down |
 
 The emails S-13 built stay in the api (they're tested there and send right after commit); the worker adds what S-13

@@ -41,8 +41,22 @@ public interface TrustFlagStore {
 
     Optional<StoredFlag> find(String id);
 
+    /** S-92: open flags on one kind of target (and one target, when given), oldest first. */
+    List<StoredFlag> openOn(String targetType, @Nullable String targetId, int limit);
+
     /** Records the staff decision on an open flag; false when it isn't open any more. */
-    boolean decide(String id, String state, String staffId, @Nullable String note, Instant at);
+    default boolean decide(String id, String state, String staffId, @Nullable String note, Instant at) {
+        return decide(id, state, state, staffId, note, at);
+    }
+
+    /**
+     * S-93: records the decision and what was done ({@code action}: the state itself, or a staff action such as
+     * {@code warn}); false when the flag isn't open any more.
+     */
+    boolean decide(String id, String state, String action, String staffId, @Nullable String note, Instant at);
+
+    /** S-93: open flags (any target) of the businesses in scope, oldest first, then decided since {@code since}. */
+    List<StoredFlag> queue(ca.northline.shared.MerchantScope scope, Instant since, int limit);
 
     record StoredFlag(
             String id,
@@ -55,5 +69,6 @@ public interface TrustFlagStore {
             Instant createdAt,
             @Nullable String decidedBy,
             @Nullable Instant decidedAt,
-            @Nullable String decisionNote) {}
+            @Nullable String decisionNote,
+            @Nullable String action) {}
 }

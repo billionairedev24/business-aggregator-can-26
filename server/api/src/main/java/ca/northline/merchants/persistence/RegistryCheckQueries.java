@@ -107,6 +107,15 @@ class RegistryCheckQueries implements RegistryCheckStore {
     }
 
     @Override
+    public List<RegistryCheck> reviewsOf(String merchantId) {
+        return jdbc.sql(COLUMNS
+                        + " where merchant_id = :m and review_state is not null order by checked_at desc, id desc")
+                .param("m", merchantId)
+                .query((rs, _) -> check(rs))
+                .list();
+    }
+
+    @Override
     public List<RegistryCheck> latest(String verificationId, int limit) {
         return jdbc.sql(COLUMNS + " where verification_id = :v order by checked_at desc, id desc limit :n")
                 .param("v", verificationId)

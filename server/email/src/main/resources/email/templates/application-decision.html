@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout.html :: email(#{__${'application-decision.preheader.' + decision}__}, ~{::content})}">
+<body>
+<div th:fragment="content">
+  <h1 th:style="${s.h1}" th:text="#{__${'application-decision.heading.' + decision}__}">Heading</h1>
+  <p th:style="${s.p}" th:text="#{__${'application-decision.body.' + decision}__(${businessName})}">Body</p>
+  <ul th:if="${!checks.isEmpty()}" th:style="${s.p}">
+    <li th:each="c : ${checks}" th:text="#{__${'application-decision.check.' + c.code}__(${c.arg})}">Check</li>
+  </ul>
+  <p th:if="${note != ''}" th:style="${s.notice}" th:text="#{application-decision.note(${note})}">Note</p>
+  <th:block th:replace="~{button.html :: button(#{__${'application-decision.cta.' + decision}__}, ${link})}"/>
+</div>
+</body>
+</html>
