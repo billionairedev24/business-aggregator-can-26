@@ -4378,3 +4378,27 @@ only with DPoP.
   - The api's `OpenApiSpecsTest` checks Swagger UI's `oauth2RedirectUrl` and Scalar's client id, redirect and PKCE.
 - **Not exercised:** a click-through in a real browser against a deployed dev environment (popups, the Studio
   sign-in hand-off back to `/oauth2/authorize`). The flow was checked with MockMvc only.
+
+## 2026-10-01 — S-138 Make Error Prone warnings errors (-Werror)
+
+- **Remaining warnings on main, fixed in the code:** a clean `compileJava compileTestJava compileTestFixturesJava
+  --rerun-tasks --continue` of every module found three, all in `:api`. Since #72, merged work had added them.
+  - `RedisSlotHoldStore` (`LongDoubleConversion`): an explicit `(double)` cast on the ZSET score's lower bound.
+    Epoch milliseconds are below 2^53, so they are exact as a double.
+  - `CustomerBookings` (`InvalidParam`): the javadoc names `booking.bookingId()`, not a parameter `bookingId`.
+  - `PublicKitchenService` (`BoxingComparator`): `thenComparingDouble` for the distance sort.
+
+  No suppression was added.
+- **`-Werror`** is added to every `JavaCompile` in `server/build.gradle.kts`, as the 2026-10-01 "warnings to zero"
+  section proposed. javac fails on any warning, Error Prone's and NullAway's included, in main, test and test-fixture
+  code. `disableWarningsInGeneratedCode` and the excluded `build/generated` paths stay, so MapStruct and Lombok output
+  can't fail the build.
+  - Proof: reintroducing the `LongDoubleConversion` warning makes `:api:compileJava` fail with
+    `error: warnings found and -Werror specified`.
+  - It is documented in BACKEND_CONVENTIONS § 10, with the command that lists every warning at once.
+- **Open branches checked before switching it on:** S-58, S-59 and S-60 (the account area; PRs #90, #93, #95) and
+  this run's S-135, S-136, S-137 and S-139 (#91, #92, #94, #96). Each branch tip was merged with this change, with no
+  conflict, and compiled cleanly with `--rerun-tasks`: 0 warnings, and all seven compile. A later commit on one of
+  them that adds a warning will fail its build after this merges. The fix is in the code, as above.
+- **Not changed:** the disabled checks (`StringSplitter`, `MissingSummary`, `JavaTimeDefaultTimeZone`) and NullAway
+  being off in tests.
