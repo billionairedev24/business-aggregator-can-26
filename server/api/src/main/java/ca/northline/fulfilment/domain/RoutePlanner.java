@@ -153,7 +153,8 @@ public final class RoutePlanner {
      * S-88: one leg under these settings, e.g. from the courier's live position to the next door; the unknown-leg time
      * when either end has no coordinates.
      */
-    public Duration leg(@Nullable Double fromLat, @Nullable Double fromLng, @Nullable Double toLat, @Nullable Double toLng) {
+    public Duration leg(
+            @Nullable Double fromLat, @Nullable Double fromLng, @Nullable Double toLat, @Nullable Double toLng) {
         return leg(new Point(fromLat, fromLng), new Point(toLat, toLng), false);
     }
 

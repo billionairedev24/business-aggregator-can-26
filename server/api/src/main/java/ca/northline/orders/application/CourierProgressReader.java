@@ -17,7 +17,8 @@ class CourierProgressReader {
     private final CourierLocations locations;
     private final PersonDirectory people;
 
-    @Nullable CourierProgress of(String orderId) {
+    @Nullable
+    CourierProgress of(String orderId) {
         var status = statuses.of(orderId).orElse(null);
         if (status == null) {
             return null;

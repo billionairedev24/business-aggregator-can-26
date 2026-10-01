@@ -56,7 +56,9 @@ class LiveTrackingApiTest extends IntegrationTest {
     @BeforeEach
     void market() {
         clock.reset();
-        jdbc.sql("update fulfilment.couriers set active = false where market = ?").params(MARKET).update();
+        jdbc.sql("update fulfilment.couriers set active = false where market = ?")
+                .params(MARKET)
+                .update();
         jdbc.sql("update fulfilment.deliveries set state = 'cancelled' where market = ? and state = 'waiting'")
                 .params(MARKET)
                 .update();
@@ -107,17 +109,15 @@ class LiveTrackingApiTest extends IntegrationTest {
 
         var courier = data.user("Kai Courier");
         var created = body(mvc.perform(json(
-                                post("/api/v1/console/fulfilment/couriers"),
-                                "{\"userId\":\"%s\",\"market\":\"%s\",\"vehicle\":\"bike\"}".formatted(courier, MARKET))
-                        .with(TestJwt.staff(staff))));
+                        post("/api/v1/console/fulfilment/couriers"),
+                        "{\"userId\":\"%s\",\"market\":\"%s\",\"vehicle\":\"bike\"}".formatted(courier, MARKET))
+                .with(TestJwt.staff(staff))));
         var now = clock.instant();
         var shift = body(mvc.perform(json(
-                                post(
-                                        "/api/v1/console/fulfilment/couriers/{id}/shifts",
-                                        JsonPath.<String>read(created, "$.id")),
-                                "{\"startsAt\":\"%s\",\"endsAt\":\"%s\"}"
-                                        .formatted(now.minus(Duration.ofMinutes(5)), now.plus(Duration.ofHours(4))))
-                        .with(TestJwt.staff(staff))));
+                        post("/api/v1/console/fulfilment/couriers/{id}/shifts", JsonPath.<String>read(created, "$.id")),
+                        "{\"startsAt\":\"%s\",\"endsAt\":\"%s\"}"
+                                .formatted(now.minus(Duration.ofMinutes(5)), now.plus(Duration.ofHours(4))))
+                .with(TestJwt.staff(staff))));
         // off shift, the app's position isn't taken
         ping(courier, 50.0, -100.0)
                 .andExpect(status().isConflict())
@@ -137,16 +137,14 @@ class LiveTrackingApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.courier.pin").value(org.hamcrest.Matchers.matchesPattern("\\d{4}")))
                 .andExpect(jsonPath("$.courier.lat").doesNotExist());
 
-        mvc.perform(post("/api/v1/merchants/{m}/orders/{o}/pack", bakery, order.orderId()).with(TestJwt.member(owner)))
+        mvc.perform(post("/api/v1/merchants/{m}/orders/{o}/pack", bakery, order.orderId())
+                        .with(TestJwt.member(owner)))
                 .andExpect(status().isOk());
         await().atMost(Duration.ofSeconds(10))
-                .until(() -> jdbc.sql("""
+                .until(() ->
+                        jdbc.sql("""
                                         select count(*) from fulfilment.delivery_pickups
-                                         where order_id = ? and packed_at is not null""")
-                                .params(order.orderId())
-                                .query(Long.class)
-                                .single()
-                        == 1);
+                                         where order_id = ? and packed_at is not null""").params(order.orderId()).query(Long.class).single() == 1);
         var run = body(mvc.perform(get("/api/v1/courier/run").with(TestJwt.courier(courier))));
         var pickup = ((JSONArray) JsonPath.read(run, "$.stops[?(@.kind == 'pickup')].id"))
                 .getFirst()
@@ -212,16 +210,18 @@ class LiveTrackingApiTest extends IntegrationTest {
                         "$.stops[?(@.kind == 'dropoff')].id"))
                 .getFirst()
                 .toString();
-        mvc.perform(json(post("/api/v1/courier/stops/{id}/dropoff", drop), "{\"proof\":\"pin\",\"pin\":\"%s\"}"
-                                .formatted(pin))
+        mvc.perform(json(
+                                post("/api/v1/courier/stops/{id}/dropoff", drop),
+                                "{\"proof\":\"pin\",\"pin\":\"%s\"}".formatted(pin))
                         .with(TestJwt.courier(courier)))
                 .andExpect(status().isOk());
         await().atMost(Duration.ofSeconds(10))
-                .untilAsserted(() -> mvc.perform(get("/api/v1/me/orders/{id}", orderId).with(customer))
-                        .andExpect(jsonPath("$.state").value("delivered"))
-                        .andExpect(jsonPath("$.courier.state").value("delivered"))
-                        .andExpect(jsonPath("$.courier.lat").doesNotExist())
-                        .andExpect(jsonPath("$.courier.pin").doesNotExist()));
+                .untilAsserted(
+                        () -> mvc.perform(get("/api/v1/me/orders/{id}", orderId).with(customer))
+                                .andExpect(jsonPath("$.state").value("delivered"))
+                                .andExpect(jsonPath("$.courier.state").value("delivered"))
+                                .andExpect(jsonPath("$.courier.lat").doesNotExist())
+                                .andExpect(jsonPath("$.courier.pin").doesNotExist()));
     }
 
     @Test
@@ -236,22 +236,18 @@ class LiveTrackingApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.errors[0].field").value("lng"));
         ping(it.get(2), 50.0447, -100.0719).andExpect(status().isOk());
         // the ops map sees the courier's latest position
-        mvc.perform(get("/api/v1/console/fulfilment/couriers").param("market", MARKET).with(TestJwt.staff(staff)))
+        mvc.perform(get("/api/v1/console/fulfilment/couriers")
+                        .param("market", MARKET)
+                        .with(TestJwt.staff(staff)))
                 .andExpect(jsonPath("$.items[?(@.userId == '%s')].position.lat".formatted(it.get(2)))
                         .value(50.0447));
         // no table or column of the fulfilment schema holds coordinates of couriers
         assertThat(jdbc.sql("""
                                 select count(*) from information_schema.columns
-                                 where table_schema = 'fulfilment' and column_name in ('lat', 'lng', 'position', 'geom')""")
-                        .query(Long.class)
-                        .single())
-                .isZero();
+                                 where table_schema = 'fulfilment' and column_name in ('lat', 'lng', 'position', 'geom')""").query(Long.class).single()).isZero();
         assertThat(jdbc.sql("""
                                 select count(*) from information_schema.tables
-                                 where table_schema = 'fulfilment' and table_name like '%position%'""")
-                        .query(Long.class)
-                        .single())
-                .isZero();
+                                 where table_schema = 'fulfilment' and table_name like '%position%'""").query(Long.class).single()).isZero();
         // a courier who isn't one can't send positions
         ping(data.user("Nobody"), 50, -100).andExpect(status().isForbidden());
     }

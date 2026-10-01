@@ -137,7 +137,12 @@ class CourierAppService implements CourierApp {
             var merchantId = stop.merchantId();
             if (stop.kind().equals("pickup") && stop.arrivedAt() == null && merchantId != null) {
                 events.publishEvent(new CourierArrived(
-                        Ids.next(), at, stop.orderId(), merchantId, delivery(stop.orderId()).orderType(), mine.run().id()));
+                        Ids.next(),
+                        at,
+                        stop.orderId(),
+                        merchantId,
+                        delivery(stop.orderId()).orderType(),
+                        mine.run().id()));
             }
         }
         return reload(mine.run());
@@ -278,9 +283,10 @@ class CourierAppService implements CourierApp {
         }
         var now = clock.instant();
         live.put(c.id(), new CourierLocations.Position(lat, lng, heading, now), props.positionTtl());
-        runs.openRunOf(c.id()).ifPresent(run -> deliveries.onRun(run.id()).stream()
-                .filter(d -> d.state().equals("picked_up"))
-                .forEach(d -> live.moved(d.orderId())));
+        runs.openRunOf(c.id())
+                .ifPresent(run -> deliveries.onRun(run.id()).stream()
+                        .filter(d -> d.state().equals("picked_up"))
+                        .forEach(d -> live.moved(d.orderId())));
         return new Ping(now, interval.toMillis());
     }
 

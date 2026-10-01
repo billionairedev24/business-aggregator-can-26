@@ -305,6 +305,65 @@ paths:
           description: "Validation failed: one error per field with the exact message."
       tags:
       - cart-controller
+  /api/v1/courier/location:
+    post:
+      operationId: courierLocation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LocationRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Ping"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - courier-controller
   /api/v1/courier/me:
     get:
       operationId: courierMe
@@ -2843,6 +2902,66 @@ paths:
             '*/*':
               schema:
                 type: string
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - food-order-controller
+  /api/v1/me/food-orders/{orderId}/events:
+    get:
+      operationId: foodOrderEvents
+      parameters:
+      - in: path
+        name: orderId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      responses:
+        "200":
+          content:
+            text/event-stream:
+              schema:
+                $ref: "#/components/schemas/SseEmitter"
           description: OK
         "401":
           content:
@@ -6401,6 +6520,32 @@ components:
           type: string
         title:
           type: string
+    CourierProgress:
+      type: object
+      properties:
+        courierName:
+          type: string
+        eta:
+          type: string
+          format: date-time
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        pin:
+          type: string
+        positionAt:
+          type: string
+          format: date-time
+        runLabel:
+          type: string
+        state:
+          type: string
+        stopsBefore:
+          type: integer
+          format: int32
     CourierView:
       type: object
       properties:
@@ -7143,6 +7288,27 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Upcoming"
+    LocationRequest:
+      type: object
+      properties:
+        heading:
+          type: number
+          format: double
+          maximum: 360
+          minimum: 0
+        lat:
+          type: number
+          format: double
+          maximum: 90
+          minimum: -90
+        lng:
+          type: number
+          format: double
+          maximum: 180
+          minimum: -180
+      required:
+      - lat
+      - lng
     Market:
       type: object
       properties:
@@ -7381,6 +7547,8 @@ components:
         confirmedAt:
           type: string
           format: date-time
+        courier:
+          $ref: "#/components/schemas/CourierProgress"
         deliveredAt:
           type: string
           format: date-time
@@ -7471,6 +7639,15 @@ components:
       properties:
         scanOk:
           type: boolean
+    Ping:
+      type: object
+      properties:
+        acceptedAt:
+          type: string
+          format: date-time
+        nextAfterMs:
+          type: integer
+          format: int64
     Place:
       type: object
       properties:
@@ -8880,6 +9057,8 @@ components:
         acceptedAt:
           type: string
           format: date-time
+        courier:
+          $ref: "#/components/schemas/CourierProgress"
         deliveredAt:
           type: string
           format: date-time

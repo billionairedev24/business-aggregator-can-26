@@ -75,7 +75,8 @@ class CourierController {
             @DecimalMax(value = "180", message = DeliveryRules.POSITION)
             Double lng,
 
-            @Nullable @DecimalMin(value = "0", message = DeliveryRules.POSITION)
+            @Nullable
+            @DecimalMin(value = "0", message = DeliveryRules.POSITION)
             @DecimalMax(value = "360", message = DeliveryRules.POSITION)
             Double heading) {}
 

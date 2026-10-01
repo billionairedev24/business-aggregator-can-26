@@ -537,8 +537,10 @@ class FoodOrderingApiTest extends IntegrationTest {
                                 .single()
                         == 1);
         var me = TestJwt.customer(customer);
-        var stream = mvc.perform(get("/api/v1/me/food-orders/{id}/events", orderId).with(me))
-                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.request().asyncStarted())
+        var stream = mvc.perform(
+                        get("/api/v1/me/food-orders/{id}/events", orderId).with(me))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.request()
+                        .asyncStarted())
                 .andReturn();
         var response = stream.getResponse();
         assertThat(response.getContentAsString()).contains("event:food").contains("\"stage\":\"paid\"");
@@ -546,7 +548,8 @@ class FoodOrderingApiTest extends IntegrationTest {
                 .andExpect(status().isNotFound());
 
         var cook = TestJwt.member(fx.member(k, MerchantRole.COOK));
-        mvc.perform(post(k.base() + "/kitchen/live/{o}/accept", orderId).with(cook)).andExpect(status().isOk());
+        mvc.perform(post(k.base() + "/kitchen/live/{o}/accept", orderId).with(cook))
+                .andExpect(status().isOk());
         Awaitility.await()
                 .atMost(Duration.ofSeconds(10))
                 .untilAsserted(() -> assertThat(response.getContentAsString()).contains("\"stage\":\"cooking\""));
@@ -559,8 +562,10 @@ class FoodOrderingApiTest extends IntegrationTest {
                         .single());
         plan.plan(null);
         mvc.perform(get(k.base() + "/kitchen/live").with(cook))
-                .andExpect(jsonPath("$.items[?(@.orderId == '%s')].handoff.party".formatted(orderId)).value("courier"))
-                .andExpect(jsonPath("$.items[?(@.orderId == '%s')].handoff.state".formatted(orderId)).value("finding"));
+                .andExpect(jsonPath("$.items[?(@.orderId == '%s')].handoff.party".formatted(orderId))
+                        .value("courier"))
+                .andExpect(jsonPath("$.items[?(@.orderId == '%s')].handoff.state".formatted(orderId))
+                        .value("finding"));
         mvc.perform(get("/api/v1/me/food-orders/{id}", orderId).with(me))
                 .andExpect(jsonPath("$.courier.state").value("planned"))
                 .andExpect(jsonPath("$.courier.pin").isNotEmpty());

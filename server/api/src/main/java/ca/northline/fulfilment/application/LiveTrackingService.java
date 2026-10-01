@@ -45,7 +45,10 @@ class LiveTrackingService implements CourierLocations {
 
     @Override
     public Optional<Live> forOrder(String orderId) {
-        var delivery = deliveries.find(orderId).filter(d -> d.state().equals("picked_up")).orElse(null);
+        var delivery = deliveries
+                .find(orderId)
+                .filter(d -> d.state().equals("picked_up"))
+                .orElse(null);
         var runId = delivery == null ? null : delivery.runId();
         var run = runId == null ? null : runs.find(runId).orElse(null);
         var courierId = run == null ? null : run.courierId();
@@ -61,7 +64,9 @@ class LiveTrackingService implements CourierLocations {
             return Optional.empty();
         }
         var before = stops.stream()
-                .filter(s -> s.kind().equals("dropoff") && s.seq() < target.seq() && !s.state().equals("done"))
+                .filter(s -> s.kind().equals("dropoff")
+                        && s.seq() < target.seq()
+                        && !s.state().equals("done"))
                 .toList();
         var position = live.latest(courierId).orElse(null);
         var user = couriers.find(courierId).map(CourierStore.Courier::userId).orElse(null);
@@ -88,7 +93,10 @@ class LiveTrackingService implements CourierLocations {
     private record Point(@Nullable Double lat, @Nullable Double lng) {}
 
     private Point coordinates(Stop stop) {
-        var drop = deliveries.find(stop.orderId()).map(DeliveryStore.Delivery::dropoff).orElse(null);
+        var drop = deliveries
+                .find(stop.orderId())
+                .map(DeliveryStore.Delivery::dropoff)
+                .orElse(null);
         return drop == null ? new Point(null, null) : new Point(drop.lat(), drop.lng());
     }
 

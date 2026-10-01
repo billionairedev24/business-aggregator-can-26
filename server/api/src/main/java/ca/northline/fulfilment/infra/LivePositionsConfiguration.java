@@ -29,7 +29,10 @@ class LivePositionsConfiguration {
             Clock clock,
             Environment env) {
         if (bus.toLowerCase(Locale.ROOT).equals("redis")) {
-            log.info("Courier positions in Valkey ({}*, channel {}*)", RedisLivePositions.POSITION, RedisLivePositions.CHANNEL);
+            log.info(
+                    "Courier positions in Valkey ({}*, channel {}*)",
+                    RedisLivePositions.POSITION,
+                    RedisLivePositions.CHANNEL);
             return new RedisLivePositions(redis.getObject(), connections.getObject());
         }
         if (env.matchesProfiles("staging | prod")) {

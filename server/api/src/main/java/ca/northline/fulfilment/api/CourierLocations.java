@@ -22,7 +22,11 @@ public interface CourierLocations {
      * @param eta the drop-off ETA: from the live position when there is one, else the run's plan
      * @param stopsBefore drop-offs left before this one
      */
-    record Live(@Nullable String courierUserId, @Nullable Position position, @Nullable Instant eta, int stopsBefore) {}
+    record Live(
+            @Nullable String courierUserId,
+            @Nullable Position position,
+            @Nullable Instant eta,
+            int stopsBefore) {}
 
     /** @param heading degrees from north, when the phone reports it */
     record Position(double lat, double lng, @Nullable Double heading, Instant at) {}

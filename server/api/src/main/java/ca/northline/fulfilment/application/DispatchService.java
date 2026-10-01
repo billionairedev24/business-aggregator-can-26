@@ -227,9 +227,17 @@ class DispatchService implements PlanRuns, AssignCouriers {
     /** The run goes to the courier (already claimed); {@code delivery.assigned}. */
     void give(Run run, String courierId, Instant now) {
         runs.assign(run.id(), courierId, now);
-        var orderIds =
-                deliveries.onRun(run.id()).stream().map(Delivery::orderId).toList();
-        events.publishEvent(new DeliveryAssigned(Ids.next(), now, run.id(), courierId, orderIds));
+        var onRun = deliveries.onRun(run.id());
+        var orderIds = onRun.stream().map(Delivery::orderId).toList();
+        var merchantIds = onRun.stream()
+                .flatMap(d -> d.pickups().stream())
+                .map(DeliveryStore.Pickup::merchantId)
+                .distinct()
+                .sorted()
+                .toList();
+        var orderType = onRun.stream().anyMatch(d -> d.orderType().equals("food")) ? "food" : "goods";
+        events.publishEvent(
+                new DeliveryAssigned(Ids.next(), now, run.id(), courierId, orderIds, merchantIds, orderType));
         log.info("Run {} assigned to courier {}", run.id(), courierId);
     }
 

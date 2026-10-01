@@ -1,12 +1,12 @@
 package ca.northline.studio.application;
 
-import ca.northline.fulfilment.api.CourierArrived;
-import ca.northline.fulfilment.api.DeliveryAssigned;
 import ca.northline.food.api.FoodOrderHandedOff;
 import ca.northline.food.api.KitchenOrderAccepted;
 import ca.northline.food.api.KitchenOrderReady;
 import ca.northline.food.api.KitchenPaused;
 import ca.northline.food.api.KitchenResumed;
+import ca.northline.fulfilment.api.CourierArrived;
+import ca.northline.fulfilment.api.DeliveryAssigned;
 import ca.northline.messaging.api.MessageSent;
 import ca.northline.orders.api.OrderPacked;
 import ca.northline.orders.api.OrderPlaced;

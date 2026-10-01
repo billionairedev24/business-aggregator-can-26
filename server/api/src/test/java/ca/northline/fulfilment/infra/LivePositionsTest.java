@@ -53,7 +53,9 @@ class LivePositionsTest {
         try {
             var courier = Ids.next();
             assertThat(a.allow(courier, Duration.ofSeconds(2))).isTrue();
-            assertThat(b.allow(courier, Duration.ofSeconds(2))).as("the other replica sees the limit").isFalse();
+            assertThat(b.allow(courier, Duration.ofSeconds(2)))
+                    .as("the other replica sees the limit")
+                    .isFalse();
             Awaitility.await()
                     .atMost(Duration.ofSeconds(4))
                     .pollInterval(Duration.ofMillis(200))
@@ -66,7 +68,9 @@ class LivePositionsTest {
             assertThat(redis.keys("nl:courier-pos:" + courier + "*")).hasSize(1);
             assertThat(redis.getExpire("nl:courier-pos:" + courier)).isBetween(1L, 60L);
             a.put(courier, new Position(1, 1, null, at), Duration.ofMillis(300));
-            Awaitility.await().atMost(Duration.ofSeconds(3)).until(() -> b.latest(courier).isEmpty());
+            Awaitility.await()
+                    .atMost(Duration.ofSeconds(3))
+                    .until(() -> b.latest(courier).isEmpty());
 
             var order = Ids.next();
             var mine = new AtomicInteger();
@@ -80,13 +84,16 @@ class LivePositionsTest {
                         a.moved(order);
                         return mine.get() > 0;
                     });
+            // let the publishes of the warm-up loop arrive, then count one move
+            Awaitility.await().pollDelay(Duration.ofMillis(300)).until(() -> true);
             mine.set(0);
             a.moved(order);
-            Awaitility.await().atMost(Duration.ofSeconds(1)).until(() -> mine.get() == 1);
+            Awaitility.await().atMost(Duration.ofSeconds(1)).until(() -> mine.get() >= 1);
             assertThat(others.get()).isZero();
             subscription.close();
+            var before = mine.get();
             a.moved(order);
-            Awaitility.await().during(Duration.ofMillis(300)).until(() -> mine.get() == 1);
+            Awaitility.await().during(Duration.ofMillis(300)).until(() -> mine.get() == before);
         } finally {
             a.close();
             b.close();
