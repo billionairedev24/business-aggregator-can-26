@@ -86,7 +86,7 @@ class Board:
         }] + self.variables
         return {
             "uid": self.uid, "title": self.title, "description": self.description, "tags": ["northline"] + self.tags,
-            "schemaVersion": 41, "version": 1, "editable": True, "graphTooltip": 1, "timezone": "America/Edmonton",
+            "schemaVersion": 41, "version": 1, "editable": True, "graphTooltip": 1, "timezone": "browser",
             "time": {"from": "now-6h", "to": "now"}, "refresh": "1m",
             "templating": {"list": templating},
             "links": [{"title": "Northline", "type": "dashboards", "tags": ["northline"], "asDropdown": True}],
