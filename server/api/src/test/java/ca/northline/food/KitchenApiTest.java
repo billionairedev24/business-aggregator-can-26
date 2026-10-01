@@ -183,8 +183,14 @@ class KitchenApiTest extends IntegrationTest {
             var owner = data.user("Owner");
             data.member(merchantId, owner, MerchantRole.OWNER);
             var base = "/api/v1/merchants/" + merchantId;
-            for (var path : List.of("/kitchen/live", "/kitchen/setup", "/kitchen/promos", "/menus", "/modifier-groups",
-                    "/combos", "/pos/connections")) {
+            for (var path : List.of(
+                    "/kitchen/live",
+                    "/kitchen/setup",
+                    "/kitchen/promos",
+                    "/menus",
+                    "/modifier-groups",
+                    "/combos",
+                    "/pos/connections")) {
                 mvc.perform(get(base + path).with(TestJwt.member(owner)))
                         .andExpect(status().isNotFound())
                         .andExpect(jsonPath("$.code").value("not_found"));

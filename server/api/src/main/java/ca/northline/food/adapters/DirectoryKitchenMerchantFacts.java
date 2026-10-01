@@ -24,7 +24,10 @@ class DirectoryKitchenMerchantFacts implements KitchenMerchantFacts {
 
     @Override
     public boolean kitchen(String merchantId) {
-        return directory.profile(merchantId).filter(p -> KITCHEN.equals(p.type())).isPresent();
+        return directory
+                .profile(merchantId)
+                .filter(p -> KITCHEN.equals(p.type()))
+                .isPresent();
     }
 
     @Override
