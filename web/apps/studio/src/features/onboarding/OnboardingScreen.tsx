@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { Navigate, useNavigate } from '@tanstack/react-router';
-import { ErrorState, PageSkeleton } from '@northline/ui';
+import { ErrorState, PageSkeleton, platformTimeZone } from '@northline/ui';
 import { useSession } from '../../lib/session';
 import { businessesQuery, type MerchantType } from '../shell/api';
+import { ProvincePlace } from '../shell/place';
 import { AccountStep } from './AccountStep';
 import { onboardingQuery } from './api';
 import { BusinessStep } from './BusinessStep';
@@ -20,7 +21,7 @@ function useIsNewAccount(flag: boolean | undefined) {
   if (flag) return true;
   const since = data?.user.memberSince;
   if (!since) return false;
-  const day = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Edmonton' }).format(d);
+  const day = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: platformTimeZone() }).format(d);
   return day(new Date(since)) === day(new Date());
 }
 
@@ -53,7 +54,11 @@ export function OnboardingScreen({ step, search }: { step: Step; search: Onboard
     void navigate({ to: '/onboarding/$step', params: { step: s }, search: { m: merchantId, type: t2, ...(search.new ? { new: true } : {}) } });
 
   if (!m && step !== 'account') return <Navigate to="/onboarding/$step" params={{ step: 'account' }} search={{ type: search.type }} replace />;
-  const layout = (body: React.ReactNode) => <OnboardingLayout step={step} type={type} onboarding={o} onGo={s => go(s)}>{body}</OnboardingLayout>;
+  const layout = (body: React.ReactNode) => (
+    <ProvincePlace code={o?.province} city={o?.city}>
+      <OnboardingLayout step={step} type={type} onboarding={o} onGo={s => go(s)}>{body}</OnboardingLayout>
+    </ProvincePlace>
+  );
   if (m && query.isPending) return layout(<PageSkeleton kpis={0} rows={6} />);
   if (m && query.isError) return layout(<ErrorState message={t('loadError')} onRetry={() => void query.refetch()} />);
   if (o && STEPS.indexOf(step) > reachable(o)) {

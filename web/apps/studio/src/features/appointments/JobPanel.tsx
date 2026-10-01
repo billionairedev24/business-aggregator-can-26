@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { z } from 'zod';
-import { Alert, Dialog, ErrorState, Field, Skeleton, TextArea, TextInput, useFormatters, useLocale, type Locale } from '@northline/ui';
+import { Alert, Dialog, ErrorState, Field, Skeleton, TextArea, TextInput, useFormatters, useLocale, type Locale, timeZone } from '@northline/ui';
 import { useMerchantId, useRole } from '../shell/api';
 import { screenHref } from '../shell/nav';
 import { ValidationError } from '../../lib/http';
@@ -23,7 +23,7 @@ function position(): Promise<{ lat: number; lng: number } | undefined> {
 }
 
 export function jobWhen(j: Pick<JobDetail, 'startsAt'>, locale: Locale) {
-  const day = new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { weekday: 'short', timeZone: 'America/Edmonton' }).format(new Date(j.startsAt)).replace('.', '');
+  const day = new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { weekday: 'short', timeZone: timeZone() }).format(new Date(j.startsAt)).replace('.', '');
   return `${day} ${clock(j.startsAt, locale)}`;
 }
 

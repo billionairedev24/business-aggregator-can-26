@@ -12,6 +12,7 @@ interface MerchantWebMapper {
 
     @Mapping(target = "role", ignore = true)
     @Mapping(target = "teamCount", ignore = true)
+    @Mapping(target = "region", ignore = true)
     MerchantResponse toResponse(Merchant merchant);
 
     @Mapping(target = "id", source = "merchantId")

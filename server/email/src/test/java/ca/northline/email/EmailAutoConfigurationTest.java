@@ -17,7 +17,24 @@ class EmailAutoConfigurationTest {
 
     final ApplicationContextRunner runner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(EmailAutoConfiguration.class))
-            .withSystemProperties("aws.accessKeyId=test-access-key", "aws.secretAccessKey=test-secret-key");
+            .withSystemProperties("aws.accessKeyId=test-access-key", "aws.secretAccessKey=test-secret-key")
+            // legal entity and time zone are configuration only (S-134): the apps' application.yml sets them
+            .withPropertyValues(
+                    "northline.email.mailing-address=Example Marketplace Inc. · 1 Test Street, Testville, Canada",
+                    "northline.email.time-zone=Etc/UTC");
+
+    @Test
+    void theMailingAddressAndTimeZoneAreRequiredConfiguration() {
+        new ApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(EmailAutoConfiguration.class))
+                .withPropertyValues("northline.email.time-zone=Etc/UTC")
+                .run(context -> assertThat(context)
+                        .hasFailed()
+                        .getFailure()
+                        .hasRootCauseMessage(
+                                "EMAIL_MAILING_ADDRESS is required: every email names the sender's mailing address"
+                                        + " (CASL; docs/runbooks/email.md)"));
+    }
 
     @Test
     void defaultIsLocal_smtpToMailpit_withTheLibraryBeans() {

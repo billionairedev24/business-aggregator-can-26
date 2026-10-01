@@ -11,11 +11,11 @@ import ca.northline.orders.application.OrderViews.OrderBoard;
 import ca.northline.orders.application.OrderViews.OrderSummary;
 import ca.northline.orders.domain.MerchantOrder;
 import ca.northline.orders.domain.OrderEnums.SellerStatus;
+import ca.northline.region.api.MerchantPlaces;
 import ca.northline.shared.NotFound;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -30,18 +30,18 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 class OrderService implements ListOrders, ViewOrder, PackOrder {
 
-    static final ZoneId ZONE = ZoneId.of("America/Edmonton");
-
     private final OrderQueries orders;
     private final PersonDirectory people;
     private final ApplicationEventPublisher events;
     private final Clock clock;
+    private final MerchantPlaces places;
 
     @Override
     public OrderBoard board(String merchantId) {
         var now = clock.instant();
+        var zone = places.of(merchantId).zone();
         var startOfToday =
-                LocalDate.now(clock.withZone(ZONE)).atStartOfDay(ZONE).toInstant();
+                LocalDate.now(clock.withZone(zone)).atStartOfDay(zone).toInstant();
         var rows = orders.board(merchantId, startOfToday);
         var names = people.people(
                 rows.stream().map(OrderRow::customerId).filter(Objects::nonNull).toList());

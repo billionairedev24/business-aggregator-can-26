@@ -175,8 +175,12 @@ class HelpApiTest extends MessagingApiTest {
             var due = Instant.parse(created.get("slaDueAt").asString());
             assertThat(due)
                     .isBetween(
-                            SupportSla.dueAt(before, TicketPriority.PRIORITY).minusSeconds(1),
-                            SupportSla.dueAt(Instant.now(), TicketPriority.PRIORITY)
+                            SupportSla.dueAt(before, TicketPriority.PRIORITY, java.time.ZoneId.of("America/Edmonton"))
+                                    .minusSeconds(1),
+                            SupportSla.dueAt(
+                                            Instant.now(),
+                                            TicketPriority.PRIORITY,
+                                            java.time.ZoneId.of("America/Edmonton"))
                                     .plusSeconds(1));
             var context = jdbc.sql("select context::text from messaging.tickets where id = ?")
                     .params(id)

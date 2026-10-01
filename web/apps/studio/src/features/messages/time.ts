@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { defineMessages, formatDate, TIME_ZONE, useLocale } from '@northline/ui';
+import { defineMessages, formatDate, useLocale, timeZone } from '@northline/ui';
 
 /** Compact relative times used by the design: "now", "1 h", "Yesterday", "2 d", "1 w" (older → "Sep 5"). */
 const useT = defineMessages({
@@ -7,7 +7,7 @@ const useT = defineMessages({
   fr: { now: 'maintenant', min: '{n} min', h: '{n} h', yesterday: 'Hier', d: '{n} j', w: '{n} sem.' },
 });
 
-const dayKey = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+const dayKey = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: timeZone(), year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
 
 export type Ago = { unit: 'now' | 'min' | 'h' | 'yesterday' | 'd' | 'w' | 'date'; n: number };
 

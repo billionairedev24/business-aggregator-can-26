@@ -13979,8 +13979,17 @@ components:
           enum:
           - AB
           - BC
+          - MB
+          - NB
+          - NL
+          - NS
+          - NT
+          - NU
           - "ON"
+          - PE
           - QC
+          - SK
+          - YT
         type:
           type: string
           enum:
@@ -15400,6 +15409,8 @@ components:
           format: date
         key:
           type: string
+        name:
+          $ref: "#/components/schemas/Names"
         open:
           type: boolean
     HolidayView:
@@ -16527,6 +16538,8 @@ components:
           type: string
         id:
           type: string
+        region:
+          $ref: "#/components/schemas/Region"
         role:
           type: string
         status:
@@ -16640,6 +16653,13 @@ components:
           type: string
         name:
           type: string
+    Names:
+      type: object
+      properties:
+        en:
+          type: string
+        fr:
+          type: string
     ObligationsView:
       type: object
       properties:
@@ -16692,8 +16712,17 @@ components:
           enum:
           - AB
           - BC
+          - MB
+          - NB
+          - NL
+          - NS
+          - NT
+          - NU
           - "ON"
+          - PE
           - QC
+          - SK
+          - YT
         status:
           type: string
           enum:
@@ -17911,6 +17940,21 @@ components:
           type: string
         type:
           type: string
+    Region:
+      type: object
+      properties:
+        privacyLaw:
+          type: string
+        province:
+          type: string
+        provinceIn:
+          $ref: "#/components/schemas/Names"
+        provinceName:
+          $ref: "#/components/schemas/Names"
+        provinceOf:
+          $ref: "#/components/schemas/Names"
+        timeZone:
+          type: string
     ReplyRequest:
       type: object
       properties:
@@ -18973,6 +19017,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/HolidayResponse"
+        province:
+          $ref: "#/components/schemas/Names"
     TimeOffResponse:
       type: object
       properties:

@@ -25,7 +25,7 @@ northline.bff:
   sign-in-page: /sign-in
   guests: true
   # Header in which the CDN / ingress puts the visitor's city (the location pill's IP guess before the browser's
-  # geolocation answers). Empty = no IP city; the app then falls back to Calgary. Only set it when the edge overwrites
+  # geolocation answers). Empty = no IP city; the app then falls back to the region's fallback market. Only set it when the edge overwrites
   # the header on every request (docs/runbooks/README.md § Consumer BFF).
   client-city-header: ${CLIENT_CITY_HEADER:}
 ---

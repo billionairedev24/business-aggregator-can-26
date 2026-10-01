@@ -1,4 +1,5 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
+import { useZone } from '../location/regions';
 import { DepartmentTile, EmptyState, SiteLink, Tag, TileGrid, useLocale } from '@northline/ui';
 import { landingQuery } from './api';
 import { clock, runWhen, weekday } from './format';
@@ -8,24 +9,24 @@ import { ProductCardTile, ShopCardTile } from './parts';
 
 /**
  * Shop landing (S-49, design 06 `shop`): a landing page, not results — the next pooled run, departments, the shops on
- * the run and what's popular. Server-rendered for the market in the URL (default Calgary); the visitor's own market
+ * the run and what's popular. Server-rendered for the market in the URL (none = the api's fallback market); the visitor's own market
  * follows once the browser knows where they are.
  */
 export function ShopLanding({ market: explicit }: { market?: string }) {
   const { locale } = useLocale();
   const t = useShopT();
-  const market = explicit ?? 'Calgary';
-  useMarketFollowsLocation(explicit);
-  const { data } = useSuspenseQuery(landingQuery(market, locale));
+  const { data } = useSuspenseQuery(landingQuery(explicit, locale));
+  const zone = useZone(data.market);
+  useMarketFollowsLocation(explicit, data.market);
   const area = useArea(data.market);
   const link = (path: string) => withMarket(path, explicit);
   const run = data.run;
-  const when = run ? runWhen(run) : null;
-  const day = run ? weekday(run.startsAt, locale) : '';
+  const when = run ? runWhen(run, zone) : null;
+  const day = run ? weekday(run.startsAt, locale, zone) : '';
 
-  const title = run && when ? t(`title_${when}`, { time: clock(run.startsAt, locale), weekday: day }) : t('titleNoRun');
+  const title = run && when ? t(`title_${when}`, { time: clock(run.startsAt, locale, zone), weekday: day }) : t('titleNoRun');
   const sub = run
-    ? t('sub', { time: clock(run.orderBy, locale), shops: data.shopCount, households: run.households })
+    ? t('sub', { time: clock(run.orderBy, locale, zone), shops: data.shopCount, households: run.households })
     : t('subNoRun', { shops: data.shopCount });
 
   return (

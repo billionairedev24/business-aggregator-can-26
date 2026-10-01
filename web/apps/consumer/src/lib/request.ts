@@ -28,6 +28,7 @@ export const publicConfig = createIsomorphicFn()
   .server((): PublicConfig => ({
     authOrigin: process.env.NL_AUTH_ORIGIN ?? FALLBACK_CONFIG.authOrigin,
     siteOrigin: (process.env.NL_SITE_ORIGIN ?? FALLBACK_CONFIG.siteOrigin).replace(/\/$/, ''),
+    legalEntity: process.env.NL_LEGAL_ENTITY?.trim() || FALLBACK_CONFIG.legalEntity,
     page: pageFromHeaders(),
   }))
   .client((): PublicConfig => ({ ...FALLBACK_CONFIG, ...window.__NL_CONFIG__ }));

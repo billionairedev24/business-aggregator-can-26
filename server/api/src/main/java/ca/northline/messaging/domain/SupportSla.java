@@ -6,8 +6,8 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 
 /**
- * First-reply targets from the help screen ({@code helpSlaNote}), counted in support hours — 7 am to 11 pm Mountain
- * time, every day ("Support in English and French · 7 am–11 pm MT"):
+ * First-reply targets from the help screen ({@code helpSlaNote}), counted in support hours — 7 am to 11 pm in
+ * Northline's support zone (the platform zone, region configuration), every day:
  *
  * <ul>
  *   <li>urgent (safety, payment stuck, live order failing): a human within 15 min;
@@ -17,7 +17,6 @@ import java.time.ZoneId;
  */
 public final class SupportSla {
 
-    public static final ZoneId ZONE = ZoneId.of("America/Edmonton");
     static final LocalTime OPENS = LocalTime.of(7, 0);
     static final LocalTime CLOSES = LocalTime.of(23, 0);
 
@@ -36,9 +35,9 @@ public final class SupportSla {
     }
 
     /** When Northline owes the next reply, counting only support hours from {@code from}. */
-    public static Instant dueAt(Instant from, TicketPriority priority) {
+    public static Instant dueAt(Instant from, TicketPriority priority, ZoneId zone) {
         var remaining = target(priority);
-        var at = from.atZone(ZONE);
+        var at = from.atZone(zone);
         while (true) {
             var time = at.toLocalTime();
             if (time.isBefore(OPENS)) {

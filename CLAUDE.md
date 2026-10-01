@@ -41,6 +41,6 @@ You are implementing the Northline marketplace from a finished design spec. **Do
 Mandatory — see `docs/ARCHITECTURE.md` § Code standards: proper encapsulation, abstraction and interfaces; Java 25 language features; Go 1.26 for any Go app; Lombok; no boilerplate.
 
 ## Conventions
-- IDs ULID text. Money `*_cents bigint` CAD. Time `timestamptz`, displayed in `America/Edmonton`.
+- IDs ULID text. Money `*_cents bigint` CAD. Time `timestamptz`, displayed in the merchant's or market's time zone from the region model (S-134, docs/runbooks/regions.md) — never a province, city or zone in code (lint).
 - REST + OpenAPI 3.1 under `/api/v1`. Idempotency-Key header on money-moving POSTs (stored in Redis 24 h).
 - Tests: `ModularityTests` must pass; every trigger has a failing-case test; every validation rule has a message test; Testcontainers for Postgres/Kafka/ES; Storybook interaction tests for every component state.

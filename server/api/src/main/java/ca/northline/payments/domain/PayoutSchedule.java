@@ -8,12 +8,13 @@ import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
 /**
  * When scheduled payouts run (design 02 Payouts → Change schedule): weekly on a weekday (default Friday), every
- * business day, monthly on the 1st / 15th / last day, or manual. Payouts run at 9:00 America/Edmonton. The optional
+ * business day, monthly on the 1st / 15th / last day, or manual. Payouts run at 9:00 in the business's time zone. The optional
  * reserve keeps money in the balance to cover refunds.
  *
  * @param weekday ISO day of week 1–5 (weekly only)
@@ -83,17 +84,17 @@ public record PayoutSchedule(
 
     /**
      * The next scheduled payout strictly after {@code now}, skipping payout days before {@code notBefore} (the 24 h
-     * hold after a bank change). Empty for manual payouts.
+     * hold after a bank change), payout days and the 9:00 run in {@code zone}. Empty for manual payouts.
      */
-    public Optional<Instant> nextAfter(Instant now, @Nullable Instant notBefore) {
+    public Optional<Instant> nextAfter(Instant now, @Nullable Instant notBefore, ZoneId zone) {
         if (frequency == Frequency.MANUAL) {
             return Optional.empty();
         }
         var floor = notBefore != null && notBefore.isAfter(now) ? notBefore : now;
-        var day = LocalDate.ofInstant(floor, Zones.EDMONTON);
+        var day = LocalDate.ofInstant(floor, zone);
         for (int i = 0; i < 400; i++, day = day.plusDays(1)) {
             if (isPayoutDay(day)) {
-                var at = day.atTime(PAYOUT_TIME).atZone(Zones.EDMONTON).toInstant();
+                var at = day.atTime(PAYOUT_TIME).atZone(zone).toInstant();
                 if (at.isAfter(now) && !at.isBefore(floor)) {
                     return Optional.of(at);
                 }

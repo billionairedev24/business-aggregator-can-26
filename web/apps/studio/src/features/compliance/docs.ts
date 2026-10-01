@@ -1,20 +1,20 @@
-import { TIME_ZONE, type Locale, type TagTone } from '@northline/ui';
+import { type Locale, type TagTone, timeZone } from '@northline/ui';
 import type { ComplianceDoc, Requirement } from './api';
 import type { ComplianceT } from './messages';
 
-/** "Jan 2027" / « janv. 2027 » in America/Edmonton. */
+/** "Jan 2027" / « janv. 2027 » in the merchant's time zone. */
 export function monthYear(iso: string, locale: Locale): string {
-  return new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { timeZone: TIME_ZONE, month: 'short', year: 'numeric' }).format(new Date(iso));
+  return new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { timeZone: timeZone(), month: 'short', year: 'numeric' }).format(new Date(iso));
 }
 
-/** "Aug 31" in America/Edmonton. */
+/** "Aug 31" in the merchant's time zone. */
 export function monthDay(iso: string, locale: Locale): string {
-  return new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { timeZone: TIME_ZONE, month: 'short', day: 'numeric' }).format(new Date(iso));
+  return new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { timeZone: timeZone(), month: 'short', day: 'numeric' }).format(new Date(iso));
 }
 
 /** "2027-01" (Settings › Business › Licences & insurance). */
 export function yearMonth(iso: string): string {
-  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE, year: 'numeric', month: '2-digit' }).formatToParts(new Date(iso));
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: timeZone(), year: 'numeric', month: '2-digit' }).formatToParts(new Date(iso));
   return `${parts.find(p => p.type === 'year')?.value}-${parts.find(p => p.type === 'month')?.value}`;
 }
 

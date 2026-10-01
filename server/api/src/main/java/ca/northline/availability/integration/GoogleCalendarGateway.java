@@ -55,7 +55,6 @@ class GoogleCalendarGateway implements CalendarGateway {
     static final String EVENTS_SCOPE = "https://www.googleapis.com/auth/calendar.events.owned";
     static final String LIST_SCOPE = "https://www.googleapis.com/auth/calendar.calendarlist.readonly";
     static final String BOOKING_PROPERTY = "northlineBookingId";
-    static final ZoneId ALL_DAY_ZONE = ZoneId.of("America/Edmonton");
 
     interface OAuthApi {
         @PostExchange(url = "/token", contentType = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
@@ -262,7 +261,8 @@ class GoogleCalendarGateway implements CalendarGateway {
      * time bounds (Google won't give a sync token for a bounded one); the service keeps only the window it needs.
      */
     @Override
-    public Changes changes(String accessToken, String calendarId, @Nullable String cursor, Instant from, Instant to) {
+    public Changes changes(
+            String accessToken, String calendarId, @Nullable String cursor, Instant from, Instant to, ZoneId zone) {
         var busy = new ArrayList<BusyEvent>();
         var removed = new ArrayList<String>();
         String page = null;
@@ -284,7 +284,7 @@ class GoogleCalendarGateway implements CalendarGateway {
                 throw new CursorExpired("Google sync token expired (410)");
             }
             for (var item : body.path("items")) {
-                classify(item, busy, removed);
+                classify(item, busy, removed, zone);
             }
             page = text(body, "nextPageToken");
             next = text(body, "nextSyncToken");
@@ -295,7 +295,7 @@ class GoogleCalendarGateway implements CalendarGateway {
         return new Changes(busy, removed, next, cursor == null);
     }
 
-    static void classify(JsonNode item, List<BusyEvent> busy, List<String> removed) {
+    static void classify(JsonNode item, List<BusyEvent> busy, List<String> removed, ZoneId zone) {
         var id = text(item, "id");
         if (id == null) {
             return;
@@ -309,8 +309,8 @@ class GoogleCalendarGateway implements CalendarGateway {
                 declined = true;
             }
         }
-        var start = time(item.path("start"), false);
-        var end = time(item.path("end"), true);
+        var start = time(item.path("start"), false, zone);
+        var end = time(item.path("end"), true, zone);
         if (cancelled || free || ours || declined || start == null || end == null || !end.isAfter(start)) {
             removed.add(id);
         } else {
@@ -318,16 +318,14 @@ class GoogleCalendarGateway implements CalendarGateway {
         }
     }
 
-    /** {@code dateTime} (RFC 3339) or, for all-day events, {@code date} at midnight in Calgary. */
-    static @Nullable Instant time(JsonNode node, boolean end) {
+    /** {@code dateTime} (RFC 3339) or, for all-day events, {@code date} at midnight in the business's zone. */
+    static @Nullable Instant time(JsonNode node, boolean end, ZoneId zone) {
         var dateTime = text(node, "dateTime");
         if (dateTime != null) {
             return OffsetDateTime.parse(dateTime).toInstant();
         }
         var date = text(node, "date");
-        return date == null
-                ? null
-                : LocalDate.parse(date).atStartOfDay(ALL_DAY_ZONE).toInstant();
+        return date == null ? null : LocalDate.parse(date).atStartOfDay(zone).toInstant();
     }
 
     // ── notifications ────────────────────────────────────────────────────────────

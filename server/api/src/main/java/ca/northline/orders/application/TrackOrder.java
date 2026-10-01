@@ -41,7 +41,7 @@ public interface TrackOrder {
 
     /**
      * @param kind {@code pooled} | {@code direct} | {@code pickup}
-     * @param day the run's day in Edmonton: {@code today} | {@code tomorrow} | {@code later}
+     * @param day the run's day in the market's time zone: {@code today} | {@code tomorrow} | {@code later}
      * @param etaAt the direct courier's expected arrival
      */
     record Delivery(

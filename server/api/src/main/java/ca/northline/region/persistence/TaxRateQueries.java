@@ -2,20 +2,21 @@ package ca.northline.region.persistence;
 
 import ca.northline.region.api.TaxRates;
 import java.math.BigDecimal;
-import java.util.Map;
+import java.math.RoundingMode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 /**
- * Reads the province's current tax profile (gst + pst + hst + qst, stored as fractions such as 0.05). Until the regions
- * are seeded, falls back to the statutory rates below (Alberta: GST 5 %). See docs/DECISIONS.md "Operations".
+ * Reads the province's current tax profile (gst + pst + hst + qst, stored as fractions such as 0.05; every province's
+ * is region data since V130). A province without one is charged the federal GST alone. See docs/DECISIONS.md "S-134".
  */
 @Repository
 @RequiredArgsConstructor
 class TaxRateQueries implements TaxRates {
 
-    private static final Map<String, Integer> STATUTORY_BPS = Map.of("AB", 500, "BC", 1200, "ON", 1300, "QC", 1498);
+    /** GST, charged in every province and territory. */
+    static final int FEDERAL_GST_BPS = 500;
 
     private final JdbcClient jdbc;
 
@@ -30,7 +31,8 @@ class TaxRateQueries implements TaxRates {
                 .param("province", province)
                 .query(BigDecimal.class)
                 .optional()
-                .map(rate -> rate.movePointRight(4).intValue())
-                .orElseGet(() -> STATUTORY_BPS.getOrDefault(province, 500));
+                .map(rate ->
+                        rate.movePointRight(4).setScale(0, RoundingMode.HALF_UP).intValueExact())
+                .orElse(FEDERAL_GST_BPS);
     }
 }

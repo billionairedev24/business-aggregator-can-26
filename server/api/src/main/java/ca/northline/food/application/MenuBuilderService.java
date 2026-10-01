@@ -27,6 +27,7 @@ import ca.northline.food.domain.KitchenTime;
 import ca.northline.food.domain.MenuStatus;
 import ca.northline.food.domain.ModifierGroup;
 import ca.northline.food.domain.OpeningRanges;
+import ca.northline.region.api.MerchantPlaces;
 import ca.northline.shared.Bytes;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.Ids;
@@ -70,6 +71,7 @@ class MenuBuilderService
     private final KitchenPhotoStore photos;
     private final ApplicationEventPublisher events;
     private final Clock clock;
+    private final MerchantPlaces places;
 
     // ── menus ─────────────────────────────────────────────────────────────────
 
@@ -97,7 +99,7 @@ class MenuBuilderService
         var menu = requireMenu(merchantId, menuId);
         var approved = merchant.approved(merchantId);
         var names = groupNames(merchantId);
-        var today = KitchenTime.today(clock);
+        var today = today(merchantId);
         var items = menus.items(merchantId, menuId);
         return new MenuDetail(
                 menu.id(),
@@ -256,7 +258,7 @@ class MenuBuilderService
     @Transactional
     public ItemView soldOut(String merchantId, String itemId, boolean soldOut) {
         var before = requireItem(merchantId, itemId);
-        var today = KitchenTime.today(clock);
+        var today = today(merchantId);
         var row = before.toBuilder()
                 .soldOutOn(soldOut ? today : null)
                 .available(!soldOut)
@@ -327,7 +329,7 @@ class MenuBuilderService
     @Transactional
     public void reaudit(String merchantId) {
         var approved = merchant.approved(merchantId);
-        var today = KitchenTime.today(clock);
+        var today = today(merchantId);
         for (var item : menus.publishedItems(merchantId)) {
             var vetting = visibility(item, approved).vetting();
             if (!vetting.equals(item.vetting())) {
@@ -443,7 +445,7 @@ class MenuBuilderService
 
     private ItemView afterWrite(ItemRow row, boolean wasVisible) {
         var approved = merchant.approved(row.merchantId());
-        var today = KitchenTime.today(clock);
+        var today = today(row.merchantId());
         if (visible(row, approved) != wasVisible) {
             publishAvailability(row, approved, today);
         }
@@ -464,7 +466,7 @@ class MenuBuilderService
     /** Customers can order it: live item on a live menu, not sold out. */
     private boolean visible(ItemRow row, boolean approved) {
         return visibility(row, approved) == ItemVisibility.LIVE
-                && !soldOut(row, KitchenTime.today(clock))
+                && !soldOut(row, today(row.merchantId()))
                 && menus.menu(row.merchantId(), row.menuId())
                         .map(m -> m.status() == MenuStatus.LIVE)
                         .orElse(false);
@@ -545,5 +547,10 @@ class MenuBuilderService
         } catch (IOException ex) {
             throw RuleViolation.of("file", "file", KitchenMessages.PHOTO_FILE);
         }
+    }
+
+    /** The kitchen's local date (its market's zone, region model). */
+    private LocalDate today(String merchantId) {
+        return KitchenTime.today(clock, places.of(merchantId).zone());
     }
 }

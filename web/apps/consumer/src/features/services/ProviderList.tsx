@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
+import { useZone } from '../location/regions';
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import { BrandMark, EmptyState, ErrorState, Skeleton, TIME_ZONE, useLocale, type Locale } from '@northline/ui';
+import { BrandMark, EmptyState, ErrorState, Skeleton, useLocale, type Locale, timeZone } from '@northline/ui';
 import { useDeliveryLocation, type DeliveryLocation } from '../location/useDeliveryLocation';
 import { providersQuery, serviceCategoryQuery, type ProviderCard, type ProviderPlace, type ServiceKind } from './api';
 import { nextAvailable, percent, price, rating } from './format';
@@ -21,14 +22,15 @@ export function placeOf(location: DeliveryLocation): ProviderPlace | null {
   return precise ? { lat: location.lat, lng: location.lng, city: location.city } : { city: location.city };
 }
 
-const sameDay = (iso: string | null | undefined, now: Date) =>
-  !!iso && new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE }).format(new Date(iso))
-    === new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE }).format(now);
+const sameDay = (iso: string | null | undefined, now: Date, zone: string) =>
+  !!iso && new Intl.DateTimeFormat('en-CA', { timeZone: zone }).format(new Date(iso))
+    === new Intl.DateTimeFormat('en-CA', { timeZone: zone }).format(now);
 
-export function applyFilters(items: ProviderCard[], filters: ReadonlySet<ProviderFilter>, now = new Date()): ProviderCard[] {
+/** @param zone the visitor's market's zone ("available today" is today there); the platform zone by default */
+export function applyFilters(items: ProviderCard[], filters: ReadonlySet<ProviderFilter>, now = new Date(), zone: string = timeZone()): ProviderCard[] {
   return items.filter(p => (!filters.has('master') || p.tier === 'master')
     && (!filters.has('instant') || p.instantBook)
-    && (!filters.has('today') || sameDay(p.nextAvailable, now))
+    && (!filters.has('today') || sameDay(p.nextAvailable, now, zone))
     && (!filters.has('under80') || (p.fromCents !== null && p.fromCents !== undefined && p.fromCents < 8000)));
 }
 
@@ -43,7 +45,8 @@ export function ProviderList({ slug }: { slug: string }) {
   const [filters, setFilters] = useState<ReadonlySet<ProviderFilter>>(new Set());
   const name = categoryName(category.slug, category.names, locale);
   const noun = nouns(familyOf(category.kind, category.slug, category.vehicle), name.text, locale).heading;
-  const shown = useMemo(() => applyFilters(list.data?.items ?? [], filters), [list.data, filters]);
+  const zone = useZone();
+  const shown = useMemo(() => applyFilters(list.data?.items ?? [], filters, new Date(), zone), [list.data, filters, zone]);
   const toggle = (f: ProviderFilter) => setFilters(prev => { const next = new Set(prev); if (next.has(f)) next.delete(f); else next.add(f); return next; });
   const area = list.data?.area ?? list.data?.city ?? location.city ?? '';
 
@@ -86,6 +89,7 @@ function heading(t: ReturnType<typeof useServicesT>, kind: ServiceKind, noun: st
 }
 
 function ProviderRow({ provider: p, locale }: { provider: ProviderCard; locale: Locale }) {
+  const zone = useZone();
   const t = useServicesT();
   const meta = [
     p.reviewCount > 0 ? t('rating', { rating: rating(p.rating, locale), count: p.reviewCount }) : t('newProvider'),
@@ -102,7 +106,7 @@ function ProviderRow({ provider: p, locale }: { provider: ProviderCard; locale: 
       </span>
       <span className="nl-svc-row-side">
         <span className="nl-svc-row-price">{price(t, locale, p.pricingMode, p.fromCents, true)}</span>
-        <span className="nl-svc-row-avail">{nextAvailable(t, locale, p.nextAvailable)}</span>
+        <span className="nl-svc-row-avail">{nextAvailable(t, locale, p.nextAvailable, new Date(), zone)}</span>
       </span>
     </Link>
   );

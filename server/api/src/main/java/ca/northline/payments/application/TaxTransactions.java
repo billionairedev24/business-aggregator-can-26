@@ -8,8 +8,10 @@ import ca.northline.payments.domain.CanadianTax;
 import ca.northline.payments.domain.CanadianTax.Province;
 import ca.northline.payments.domain.Escrow;
 import ca.northline.payments.domain.Refund;
+import ca.northline.region.api.Markets;
 import ca.northline.shared.Ids;
 import java.time.Instant;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -28,12 +30,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class TaxTransactions {
 
-    /** Where the merchant's province is unknown: Northline's launch market (Calgary). */
-    static final Province DEFAULT_PROVINCE = Province.AB;
-
     private final TaxRepository taxes;
     private final MerchantTiers merchants;
     private final ApplicationEventPublisher events;
+    private final Markets markets;
+    private final BusinessTime time;
 
     static String saleReference(String escrowId) {
         return "sale_" + escrowId;
@@ -49,10 +50,15 @@ class TaxTransactions {
         if (escrow.getTaxCents() == 0 && calculation.isEmpty()) {
             return; // nothing taxable was reported at checkout
         }
+        // the checkout's province of supply, else the merchant's, else the configured default province (region model)
         var province = calculation
                 .map(Calculation::province)
                 .or(() -> merchants.provinceOf(escrow.getMerchantId()))
-                .orElse(DEFAULT_PROVINCE);
+                .or(() -> Optional.ofNullable(markets.defaultProvince()).flatMap(Province::of));
+        if (province.isEmpty()) {
+            log.warn("Tax sale for escrow {} not reported: no province is known", escrow.getId());
+            return;
+        }
         queue(new Transaction(
                 Ids.next(),
                 saleReference(escrow.getId()),
@@ -62,10 +68,10 @@ class TaxTransactions {
                 escrow.getKind(),
                 null,
                 calculation.map(Calculation::id).orElse(null),
-                province,
+                province.get(),
                 escrow.getAmountCents(),
                 escrow.getTaxCents(),
-                CanadianTax.period(at),
+                CanadianTax.period(at, time.platform()),
                 at,
                 State.PENDING,
                 null,
@@ -109,7 +115,7 @@ class TaxTransactions {
                 sale.province(),
                 amountCents,
                 taxCents,
-                CanadianTax.period(at),
+                CanadianTax.period(at, time.platform()),
                 at,
                 State.PENDING,
                 null,

@@ -8,6 +8,7 @@ import ca.northline.merchants.api.ComplianceStatus;
 import ca.northline.orders.api.OrderInsights;
 import ca.northline.payments.api.EarningsQuery;
 import ca.northline.payments.api.EarningsSummary;
+import ca.northline.region.api.MerchantPlaces;
 import ca.northline.studio.application.Dashboard.ComplianceItem;
 import ca.northline.studio.application.Dashboard.Counts;
 import ca.northline.studio.application.Dashboard.Earnings;
@@ -48,7 +49,6 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 class DashboardService implements ViewDashboard {
 
-    static final ZoneId ZONE = ZoneId.of("America/Edmonton");
     static final int EARNING_WEEKS = 12;
     static final int COACHING_JOBS = 20;
 
@@ -62,15 +62,17 @@ class DashboardService implements ViewDashboard {
     private final CatalogueFacts catalogue;
     private final PersonDirectory people;
     private final Clock clock;
+    private final MerchantPlaces places;
 
     @Override
     public Dashboard view(String merchantId, String viewerUserId, Locale locale) {
         var now = clock.instant();
-        var today = LocalDate.now(clock.withZone(ZONE));
-        var dayStart = start(today);
-        var dayEnd = start(today.plusDays(1));
-        var monthStart = start(today.withDayOfMonth(1));
-        var nextMonth = start(today.withDayOfMonth(1).plusMonths(1));
+        var zone = places.of(merchantId).zone();
+        var today = LocalDate.now(clock.withZone(zone));
+        var dayStart = start(today, zone);
+        var dayEnd = start(today.plusDays(1), zone);
+        var monthStart = start(today.withDayOfMonth(1), zone);
+        var nextMonth = start(today.withDayOfMonth(1).plusMonths(1), zone);
 
         var jobs = bookings.jobs(merchantId, dayStart, dayEnd);
         var packing = orders.packing(merchantId, now);
@@ -121,7 +123,7 @@ class DashboardService implements ViewDashboard {
                 rating.count(),
                 score.map(QualityQuery.QualityScore::score).orElse(null),
                 components,
-                earnings.refundRateBps(merchantId, start(today.minusDays(90)), dayEnd)
+                earnings.refundRateBps(merchantId, start(today.minusDays(90), zone), dayEnd)
                         .orElse(null));
 
         var photos = bookings.photoCoverage(merchantId, COACHING_JOBS);
@@ -185,8 +187,8 @@ class DashboardService implements ViewDashboard {
                 .toList();
     }
 
-    private static Instant start(LocalDate day) {
-        return day.atStartOfDay(ZONE).toInstant();
+    private static Instant start(LocalDate day, ZoneId zone) {
+        return day.atStartOfDay(zone).toInstant();
     }
 
     private static void add(Set<String> ids, @Nullable String id) {

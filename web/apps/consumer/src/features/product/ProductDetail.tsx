@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useZone } from '../location/regions';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { Minus, Plus } from '@phosphor-icons/react';
@@ -17,8 +18,9 @@ import { useProductT } from './messages';
 export function ProductDetail({ productId, market: explicit, offerId }: { productId: string; market?: string; offerId?: string }) {
   const { locale } = useLocale();
   const t = useProductT();
-  useMarketFollowsLocation(explicit);
-  const { data } = useSuspenseQuery(productQuery(productId, explicit ?? 'Calgary', locale));
+  const { data } = useSuspenseQuery(productQuery(productId, explicit, locale));
+  const zone = useZone(data.market);
+  useMarketFollowsLocation(explicit, data.market);
   const link = (path: string) => withMarket(path, explicit);
   const offer = data.offers.find(o => o.offerId === offerId) ?? data.offers[0];
 
@@ -56,6 +58,7 @@ export function ProductDetail({ productId, market: explicit, offerId }: { produc
 function OfferView({ data, offer, link }: { data: ProductPage; offer: Offer; link: (p: string) => string }) {
   const t = useProductT();
   const { locale } = useLocale();
+  const zone = useZone(data.market);
   const { money, number } = useFormatters();
   const navigate = useNavigate();
   const add = useAddToCart();
@@ -70,15 +73,15 @@ function OfferView({ data, offer, link }: { data: ProductPage; offer: Offer; lin
   const run = offer.runs[0];
   const tier = t(`tier_${offer.tier as 'master'}`);
 
-  const windowText = (r: Offer['runs'][number]) => t(`win_${runWhen(r)}`, { range: windowRange(r.startsAt, r.endsAt, locale), weekday: weekday(r.startsAt, locale) });
+  const windowText = (r: Offer['runs'][number]) => t(`win_${runWhen(r, zone)}`, { range: windowRange(r.startsAt, r.endsAt, locale, zone), weekday: weekday(r.startsAt, locale, zone) });
   const delivery = useMemo(() => {
     if (stock <= 0) return t('deliveryOut', { shop: offer.shopName });
     const eta = data.direct ? String(data.direct.etaMinutes) : 'none';
     if (!run) return t('deliveryNoRun', { eta });
     const second = offer.runs[1];
     return t('delivery', {
-      orderBy: clock(run.orderBy, locale), first: windowText(run), fee: run.feeCents === 0 ? t('free') : money(run.feeCents),
-      second: second ? windowText(second) : 'none', eta, shop: offer.shopName, packBy: clock(run.packBy, locale),
+      orderBy: clock(run.orderBy, locale, zone), first: windowText(run), fee: run.feeCents === 0 ? t('free') : money(run.feeCents),
+      second: second ? windowText(second) : 'none', eta, shop: offer.shopName, packBy: clock(run.packBy, locale, zone),
     });
   }, [stock, run, offer, data.direct, locale]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -105,7 +108,7 @@ function OfferView({ data, offer, link }: { data: ProductPage; offer: Offer; lin
           {offer.ratingCount > 0 ? <>{' · '}{t('rating', { average: number(offer.rating, { minimumFractionDigits: 1, maximumFractionDigits: 1 }), count: offer.ratingCount })}</> : null}
         </div>
         <div className="product-tags">
-          {run && stock > 0 ? <Tag>{t(`tag_${runWhen(run)}`, { weekday: weekday(run.startsAt, locale) })}</Tag> : null}
+          {run && stock > 0 ? <Tag>{t(`tag_${runWhen(run, zone)}`, { weekday: weekday(run.startsAt, locale, zone) })}</Tag> : null}
           {stock <= 0 ? <Tag tone="neutral">{t('outOfStock')}</Tag> : offer.lowStock || stock <= 3 ? <Tag tone="accent-2">{t('lowStock', { count: stock })}</Tag> : null}
           {offer.returnsPolicy === 'standard_14' || offer.returnsPolicy === 'final_sale' ? <Tag tone="neutral">{t(`returns_${offer.returnsPolicy}`)}</Tag> : null}
         </div>
@@ -158,7 +161,7 @@ function OfferView({ data, offer, link }: { data: ProductPage; offer: Offer; lin
             <ul className="product-sellers">
               {others.map(o => {
                 const r = o.runs[0];
-                const when = o.stock <= 0 ? t('outOfStock') : r ? t(`tag_${runWhen(r)}`, { weekday: weekday(r.startsAt, locale) }) : t('notOnRunShort');
+                const when = o.stock <= 0 ? t('outOfStock') : r ? t(`tag_${runWhen(r, zone)}`, { weekday: weekday(r.startsAt, locale, zone) }) : t('notOnRunShort');
                 return (
                   <li key={o.offerId} className="product-seller">
                     <span className={`product-seller-mark nl-swatch-${swatchOf(o.merchantId)}`} aria-hidden>{o.shopName.charAt(0).toUpperCase()}</span>

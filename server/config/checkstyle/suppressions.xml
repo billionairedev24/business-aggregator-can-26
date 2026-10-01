@@ -8,4 +8,10 @@
   <!-- Nimbus JOSE takes java.util.Date for JWT/JWK times (iat, nbf, exp); converted from Instant at the call. -->
   <suppress checks="IllegalImport" files="[\\/]auth[\\/]signing[\\/](LocalFileSigningKeys|KeyStoreJwtEncoder)\.java$"/>
   <suppress checks="." files="[\\/]build[\\/]generated[\\/]"/>
+  <!-- S-134 region literals: tests, fixtures and seed tools may keep Calgary data. -->
+  <suppress id="RegionLiteral" files="[\\/]src[\\/](test|tools)[\\/]"/>
+  <!-- The region model's own data: the statutory holidays' names (which province observes which is region data). -->
+  <suppress id="RegionLiteral" files="[\\/]ca[\\/]northline[\\/]region[\\/]domain[\\/]HolidayRule\.java$"/>
+  <!-- Province- and city-specific registry adapters, selected by the business's province and city (DECISIONS S-134). -->
+  <suppress id="RegionLiteral" files="[\\/]merchants[\\/]integration[\\/](OpenCorporatesAlbertaRegistry|CalgaryBusinessLicences|RegistriesConfig)\.java$"/>
 </suppressions>

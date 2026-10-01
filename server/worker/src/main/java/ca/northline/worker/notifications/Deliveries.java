@@ -112,7 +112,9 @@ public final class Deliveries {
             return Outcome.ALREADY_SENT;
         }
         try {
-            sms.sendText(phone, notice.texts().text(business, to.locale()));
+            sms.sendText(
+                    phone,
+                    notice.texts().text(business, to.locale(), to.preferences().zone()));
             return Outcome.SENT;
         } catch (SmsDeliveryFailed e) {
             if (e.getKind() == SmsDeliveryFailed.Kind.UNDELIVERABLE_NUMBER) {
@@ -139,8 +141,8 @@ public final class Deliveries {
         try {
             push.send(
                     to.userId(),
-                    notice.texts().title(business, to.locale()),
-                    notice.texts().text(business, to.locale()));
+                    notice.texts().title(business, to.locale(), to.preferences().zone()),
+                    notice.texts().text(business, to.locale(), to.preferences().zone()));
             return Outcome.SENT;
         } catch (RuntimeException e) {
             release(Channel.PUSH, key);

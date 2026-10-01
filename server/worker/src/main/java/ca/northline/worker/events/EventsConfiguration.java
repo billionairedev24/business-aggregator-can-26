@@ -92,7 +92,7 @@ public class EventsConfiguration {
             this.retention = retention;
         }
 
-        @Scheduled(cron = "${northline.events.purge-cron:0 17 3 * * *}", zone = "America/Edmonton")
+        @Scheduled(cron = "${northline.events.purge-cron:0 17 3 * * *}", zone = "${northline.region.platform-zone}")
         void purge() {
             var deleted = processed.purgeOlderThan(retention);
             log.info("Purged {} processed-event claims older than {}", deleted, retention);

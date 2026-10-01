@@ -12,8 +12,6 @@ import org.jspecify.annotations.Nullable;
 /** JSON response bodies of the auth API. */
 final class AuthResponses {
 
-    private static final ZoneId EDMONTON = ZoneId.of("America/Edmonton");
-
     private AuthResponses() {}
 
     /** Where the registration is: {@code otp} (code sent) or {@code mfa} (phone verified). */
@@ -40,7 +38,8 @@ final class AuthResponses {
             String locale,
             String memberSince) {
 
-        static User of(UserAccount a) {
+        /** @param zone the platform zone: an account's "member since" date belongs to no market */
+        static User of(UserAccount a, ZoneId zone) {
             var first = a.givenName();
             var last = a.familyName();
             var initials = ((first.isEmpty() ? "" : first.substring(0, 1))
@@ -54,7 +53,7 @@ final class AuthResponses {
                     a.phone(),
                     initials.isEmpty() ? "NL" : initials,
                     a.locale() == null ? "en-CA" : a.locale(),
-                    a.createdAt().atZone(EDMONTON).toLocalDate().toString());
+                    a.createdAt().atZone(zone).toLocalDate().toString());
         }
     }
 
@@ -65,8 +64,8 @@ final class AuthResponses {
      */
     record Session(
             User user, @Nullable String acr, @Nullable String continueTo) {
-        static Session of(UserAccount account, Collection<Factor> factors) {
-            return new Session(User.of(account), Factor.isMfa(factors) ? UserClaimsService.MFA : null, null);
+        static Session of(UserAccount account, Collection<Factor> factors, ZoneId zone) {
+            return new Session(User.of(account, zone), Factor.isMfa(factors) ? UserClaimsService.MFA : null, null);
         }
 
         Session continuingTo(@Nullable String url) {

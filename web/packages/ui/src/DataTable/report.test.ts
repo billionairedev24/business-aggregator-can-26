@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { configurePlatformTimeZone } from '../i18n';
 import { normalizeColumns } from './model';
 import { buildReport, columnLetter, crc32, csvEscape, reportFileName, sheetName, toCsv, toPrintHtml, toXlsx, zipStore, type ReportMatrix } from './report';
 import type { DataTableColumn } from './types';
@@ -115,7 +116,8 @@ describe('print HTML', () => {
   });
 });
 
-it('reportFileName slugs accents and stamps the Edmonton date', () => {
+it('reportFileName slugs accents and stamps the platform date', () => {
+  configurePlatformTimeZone('America/Edmonton'); // test data: a Mountain-time platform zone
   // 2026-09-30 03:00 UTC is still Sep 29 in Edmonton (UTC−6).
   expect(reportFileName('Écritures du grand livre', 'csv', new Date('2026-09-30T03:00:00Z'))).toBe('ecritures-du-grand-livre-2026-09-29.csv');
   expect(reportFileName('***', 'xlsx', new Date('2026-01-05T18:00:00Z'))).toBe('report-2026-01-05.xlsx');

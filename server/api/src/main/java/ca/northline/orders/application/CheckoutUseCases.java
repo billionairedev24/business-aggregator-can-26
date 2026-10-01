@@ -101,7 +101,7 @@ public final class CheckoutUseCases {
      * courier · $9.99").
      *
      * @param id the window id, or {@code direct}
-     * @param day {@code today} | {@code tomorrow} | {@code later} (Edmonton)
+     * @param day {@code today} | {@code tomorrow} | {@code later} (in the market's time zone)
      */
     public record Option(
             String id,

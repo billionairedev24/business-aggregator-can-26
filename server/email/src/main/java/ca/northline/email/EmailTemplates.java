@@ -2,6 +2,7 @@ package ca.northline.email;
 
 import java.net.URI;
 import java.text.MessageFormat;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -30,14 +31,17 @@ public final class EmailTemplates {
     private final TemplateEngine engine;
     private final String mailingAddress;
     private final String contact;
+    private final ZoneId zone;
 
     /**
-     * @param mailingAddress {@code northline.email.mailing-address}
+     * @param mailingAddress {@code northline.email.mailing-address} (the legal entity's address: configuration)
      * @param contact {@code northline.email.contact}
+     * @param zone {@code northline.email.time-zone}: the zone dates and times are written in
      */
-    public EmailTemplates(String mailingAddress, String contact) {
+    public EmailTemplates(String mailingAddress, String contact, ZoneId zone) {
         this.mailingAddress = mailingAddress;
         this.contact = contact;
+        this.zone = zone;
         var resolver = new ClassLoaderTemplateResolver(EmailTemplates.class.getClassLoader());
         resolver.setPrefix("email/templates/");
         resolver.setCharacterEncoding("UTF-8");
@@ -59,7 +63,7 @@ public final class EmailTemplates {
                     content.template() + " is a " + content.purpose() + " email: it needs an unsubscribe link (CASL)");
         }
         var language = EmailLocales.supported(locale);
-        var format = EmailFormat.of(language);
+        var format = EmailFormat.of(language, zone);
         var subjectKey = content.template() + ".subject" + (content.variant().isEmpty() ? "" : "." + content.variant());
         var subject = message(language, subjectKey, content.subjectArgs(format));
         var variables = new HashMap<String, Object>(content.variables(format));

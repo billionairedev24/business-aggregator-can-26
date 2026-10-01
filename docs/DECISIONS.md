@@ -3218,6 +3218,138 @@ Branch `web/s-56-quotes`, stacked on `web/s-55-booking-wizard` (and so on S-54, 
   yet; notifying providers of a new request (the Studio column polls; push/e-mail are the notifications stories); a
   `quote.requested` event; photos on a request; the customer's list of requests (`/account/orders` is S-58).
 
+## 2026-10-01 — S-134 Region-neutral platform: provinces and markets as configuration
+
+User direction: "this is not just built for alberta, we just want to start for alberta". Every place fact now comes
+from one region model; Alberta and Calgary are its first *configured* live region. Runbook: docs/runbooks/regions.md.
+
+- **One model, extended from S-47 (no parallel model).** `region.api.Regions` (new) and `region.api.Markets` (S-44/S-47,
+  kept) are both implemented by `region.application.RegionCatalogue` (replaces `region.config.MarketSettings`): the
+  `region.regions` rows read through `MarketStore.profiles()`, cached `REGION_CACHE_TTL` (60 s) per instance with
+  `Regions.refresh()` for the console (phase 3), overlaid with configuration. `ProvinceProfile` = code, names (en, fr,
+  and the French forms "en Alberta"/"de l'Alberta"), time zones (first = default), launch status
+  (`region.api.LaunchStatus`), privacy law (`region.api.PrivacyLaw`: pipeda · ab_pipa · bc_pipa · qc_law25), registry
+  adapter keys, statutory holiday codes, tax bps. `MarketProfile` = city, province, zone (its own or its province's),
+  centre, status, registry adapter keys. Service zones stay in `availability.service_zones`, now keyed to a market.
+- **Where a business is:** `region.api.MerchantPlaces` (declared in region so booking and payments — which cannot depend
+  on merchants: merchants → payments → booking — can ask; merchants implements it from `merchants.merchants.province`
+  /`city`). Province = the business's own, else `REGION_DEFAULT_PROVINCE`; zone = its market's, else its province's,
+  else the platform zone. `MerchantDirectory.MerchantProfile` gained `city`.
+- **Configuration overrides:** `REGION_PROVINCES` (`CODE[=Zone/Id],…`: served whatever the row says; a zone given
+  replaces the row's), `REGION_DEFAULT_PROVINCE`, `REGION_PLATFORM_ZONE`, `REGION_CACHE_TTL`; S-44's `SEARCH_MARKETS` /
+  `SEARCH_DEFAULT_MARKET` are read as their fallbacks so existing deployments keep working. **Default change:** served
+  provinces were `AB,BC,ON,QC` by configuration; they are now the live rows (V131: Alberta) plus `REGION_PROVINCES`
+  (empty by default) — "we start in Alberta". The test profile keeps the four (`application-test.yml`). The default
+  province no longer has to be listed in the served set (it must be a two-letter code; an unknown one is logged).
+  Search reads served markets and zones from `Markets` (`SearchSettings` delegates; `SEARCH_MARKETS` parsing removed).
+- **Schema (V130–V139, a new range "region platform" in IMPLEMENTATION_PLAN):**
+  - V130 `region.regions` + `time_zones text[]`, `holidays text[]`, `privacy_law`, `registries text[]`; every province's
+    zones, holidays, law and French forms (`name_i18n.fr_in/fr_of`); `region.tax_profiles` for all 13 (rates in force
+    since 2025-04-01, the same as S-21's `CanadianTax`; a test keeps them equal) linked from the province rows. Zones per
+    province: BC lists Mountain-time areas, ON the north-west, NL Labrador, NU three zones, etc.
+  - V131 launch data: Alberta `live`; the Calgary, Edmonton, Airdrie markets (`ON CONFLICT DO NOTHING`, the dev seed
+    V119's ids); Calgary's `calgary_business_licences` registry; `availability.service_zones` + `market_id`, `sort`,
+    `default_on` with V114's nine zones assigned to Calgary (the five design defaults `default_on`). V117 had kept
+    markets out of migrations; launch markets are data every environment needs (delivery, fallback market, service
+    zones), so they are inserted here — as data, not code.
+  - V132 `merchants.merchants.province` CHECK widened from (AB, BC, ON, QC) to any two-letter code; the api checks the
+    province against the region model (it must be open: live, pilot or waitlist).
+- **Holidays:** `region.domain.HolidayRule` computes each Canadian statutory holiday (Family Day, Louis Riel Day,
+  Islander Day, Nova Scotia's February Heritage Day, Good Friday, Victoria Day, National Patriots' Day,
+  Saint-Jean-Baptiste, National Indigenous Peoples Day, Canada Day, Nunavut Day, Civic Holiday, BC/Saskatchewan/New
+  Brunswick Day, Discovery Day, Labour Day, National Day for Truth and Reconciliation, Thanksgiving, Remembrance Day,
+  Christmas, Boxing Day…) with en/fr names; which a province observes is V130 data (general/statutory holidays per the
+  provinces' employment standards; Alberta keeps the design's list incl. the optional Heritage Day and Boxing Day).
+  Observed-day shifts (Sunday → Monday) are not modelled (as before). `AlbertaHolidays` is gone; the time-off view sends
+  each holiday's name (en, fr) and the province's name. Message: "This day is not a statutory holiday in {province}."
+  (server English like the other api messages; the Studio shows the province in its own copy).
+- **Time zones:** a business's hours, slots, same-day cut-off, time off, holidays, calendar all-day events (the gateway
+  now gets the zone), booking/order/dashboard "today", sales reports, earnings weeks/months (`FinanceReadModels` takes
+  the zone as a parameter), payouts (`PayoutSchedule.nextAfter(…, zone)`; the scheduled run checks each business's own
+  9:00), compliance quarter, registry expiry days, kitchen "today" and onboarding expiry dates use the business's zone
+  (`MerchantPlaces`, payments' `BusinessTime`). A market's delivery runs, checkout options, order tracking and the
+  shop's run days use the market's zone (`DeliveryRuns.zone`). Platform-wide work uses `REGION_PLATFORM_ZONE`: the
+  nightly `@Scheduled` jobs (`zone = "${northline.region.platform-zone}"`), support SLA hours, account "member since"
+  (api and auth), Stripe Tax reporting quarters (Northline reports them), the fake Stripe payout arrival, team-invite
+  SMS. Worker quiet hours: the business's zone, read from the region rows in `JdbcRecipients` (the worker has no region
+  module; same rule: market → province → default province → platform zone). Emails: `EMAIL_TIME_ZONE` (default the
+  platform zone); `Notice.Texts` (SMS/push) use the recipient's quiet-hours zone.
+- **Tax:** quotes use the business's own province (else the default province), not `"AB"`; `TaxRates` rounds half-up
+  (QC 14.975 % = 1498 bps) and falls back to GST 5 % for a province without a profile (instead of a code map).
+  `TaxTransactions` without a calculation or a merchant province uses the configured default province, else logs and
+  skips the sale (no hard-coded launch market).
+- **Delivery markets** = the region's live markets plus `northline.orders.delivery.markets` (now "extra markets", empty
+  by default; the test profile lists its fictional cities). Shop and checkout without `?market=` use the region's
+  fallback market (S-47 `FallbackMarket`); a blank `market=` is still 422 "Choose a city.".
+- **Service zones** (Booking rules) = the business's market's `availability.service_zones`; the defaults are its
+  `default_on` zones. `BookingRules.ZONES` is gone; `BookingRules.offeredIn(zones, …)` keeps the "every problem at once"
+  422. Limit: `service_zones.name` is still the primary key (V114), so zone names must be unique across markets
+  (follow-up when two markets need the same name).
+- **Registries:** `RegistryPlan` takes `RegistryRoutes` (provincial adapter, municipal adapter, licence names it
+  answers) built from the business's province's and city market's `registries` keys; none → an agent (`manual`) for
+  provincial records and no municipal lookup. No more "no city counts as Calgary". Municipal licence names are
+  configuration (`REGISTRY_CALGARY_LICENCES`, `Licensed` wrapper over any provider). `BusinessDetails
+  .registryJurisdiction` = the business's province (CA for federal, the home jurisdiction for extra-provincial).
+  The business's city = the first region market city its addresses name (`Cities` no longer has a list).
+- **Onboarding provinces:** `merchants.domain.Province` lists all 13 codes; which may be picked is the region model's
+  status (live, pilot, waitlist — a closed province is 422 "Northline isn't open in {province} yet."). The Studio lists
+  live and pilot provinces (a brand-new account also waitlisted ones, 07d) from `GET /api/v1/geo/regions`.
+- **Legal entity:** the email footer's mailing address has no default in code any more (`EmailProperties`,
+  `EmailAutoConfiguration` refuses a blank one); `application.yml` keeps `EMAIL_MAILING_ADDRESS`'s default. The
+  consumer footer's company line is `NL_LEGAL_ENTITY` (configuration; fallback "Northline Marketplace Inc.").
+- **Web:** `@northline/ui` has no `TIME_ZONE`: `configurePlatformTimeZone` (from `GET /api/v1/geo/regions`; Studio:
+  `VITE_NL_PLATFORM_TIME_ZONE` until then), `setTimeZone` (the Studio sets the merchant's market zone in the
+  `/b/$merchantId` layout and the application's province zone in onboarding), `timeZone()` / `platformTimeZone()`,
+  `formatDate(…, zone)`. The consumer passes the market's zone explicitly (`useZone`, `MarketZone`) — never module
+  state, which SSR shares between requests. Ambient message values (`MessageValues`) fill `{province}`,
+  `{provinceIn}`, `{provinceOf}`, `{city}`, `{privacyLaw}`; a simple `{name}` nobody filled reads empty instead of
+  throwing (before the model loads).
+- **Copy parameterised (design-faithful; place names only — record of each):** Studio availability "Statutory holidays ·
+  {province}"; appointments "…under the {province} Consumer Protection Act" (fr "…Act {provinceOf}"); catalogue tax
+  "{province} · marketplace-facilitator remitted by Northline", "Category allowed {provinceIn}"; compliance tax rows
+  "{name} · GST 5%" per jurisdiction (the BC row lost "pilot": a status isn't part of a tax label), "{province} ·
+  regulated automotive", "WCB {province} clearance", "Privacy acknowledgement ({privacyLaw})", obligations "{province}
+  Consumer Protection Act" and "({privacyLaw})", the business's province from the region names; onboarding intros,
+  structures' laws ("{province} Partnership Act", "{province} Business Corporations Act", "{province} BCA Part 21",
+  "{province} Cooperatives Act", "{province} Societies Act"), "Corporation ({province})", "{province} corporation",
+  why-texts ("…registered {provinceIn}", "…operating {provinceIn}", "{province} requires a registered trade name"),
+  field labels/placeholders ("{province} corporate access #", "{province} Registries", "e.g. 2201456 {province} Ltd.",
+  "Attorney for service {provinceIn}", "e.g. {city} + 40 km"), checklist ("{province} corporate registry lookup",
+  "…+ {city} business licence", "Required for automotive services {provinceIn}.", "{province} Health Services permit",
+  "{province} Food Safety Basics"); French uses the region's forms ("des services de santé {provinceOf}", "exerçant
+  {provinceIn}"). Province option labels "{name} (pilot)/(waitlist)" and home-jurisdiction names come from the model.
+  Consumer: "Join Northline · {province}" and "Stored in ca-central-1 under {privacyLaw}." (the visitor's province,
+  else the default province; "PIPEDA and provincial privacy law" until known); the booking "Areas" placeholder became
+  "e.g. two or three neighbourhoods" (a neighbourhood list was Calgary's). Legal pages (design 09/10, verbatim) and the
+  legal-details schema's keys (`alberta_corporate_access_number`, structure `corp_ab`) are spec and unchanged.
+- **Lint (fails the build):** server — Checkstyle `IllegalTokenText` id `RegionLiteral` on string literals and text
+  blocks in every module (province and territory names, the launch cities, Canadian `America/…` zones, a bare
+  province code); allowed: `src/test`, `src/tools`, `HolidayRule` (the model's own data), the province-/city-specific
+  registry adapters (`OpenCorporatesAlbertaRegistry`, `CalgaryBusinessLicences`, `RegistriesConfig`). Chosen over an
+  ArchUnit constant-pool test so the same rule covers api, worker, auth, bff, email and platform without a test per
+  module; it also catches annotation values (`@Scheduled(zone = …)`, `@DefaultValue`). Web — `packages/ui/src/
+  regionLiterals.test.ts` scans every app's and package's `src/` (tests, stories, fixtures skipped) with an explicit
+  allowlist: Studio compliance "French required when serving Québec" (a fact about that province's language law) and
+  the legal-details schema's home-jurisdiction codes. Comments are not checked.
+- **Tests:** `SecondProvinceTest` opens Saskatchewan with region rows alone (no code, the console's future writes) and
+  runs a provider and a kitchen there end to end: holidays (Saskatchewan Day, no Boxing Day) and the message naming
+  the province, the Studio header's place, hours and slots in America/Regina, the market's service zones, quote tax
+  11 %, pooled runs at Saskatoon local times, onboarding a kitchen in Saskatoon (registry → agent, no municipal lookup),
+  and a closed province refused by name. `RegionCatalogueTest` shows a second province by configuration
+  (`REGION_PROVINCES`) on fictional codes; `RegionsApiTest` the endpoint, Alberta's configuration and the tax-rate
+  agreement; `HolidayRuleTest` the dates. Existing Alberta tests stay green (test merchants have no province → the
+  default province; Calgary is a V131 market). Web: place-parameter tests (BC, QC in French), the lint, and the test
+  helpers answer `/api/v1/geo/regions` with the launch configuration (`src/test/regions.ts`).
+- **Also fixed:** `AvailabilityJdbc.lastSaved` threw for a business that had saved nothing (a null single row);
+  Booking rules for a new business now load.
+- **Not done / follow-ups:** the console screens to edit provinces, markets, zones and holidays (phase 3;
+  `Regions.refresh()` is ready); `CanadianTax` (S-21's Stripe Tax fake and labels) still holds the rates beside
+  `region.tax_profiles` (kept equal by a test) — one source would mean payments reading region at calculation time;
+  observed-day holiday shifts; per-market zones on the consumer's provider list come from the visitor's market, not each
+  provider's; service-zone names unique across markets; email dates use the configured email zone rather than each
+  recipient business's; the registry adapter configuration keys keep their province/city names (`northline.registries
+  .alberta`, `.calgary`) — they configure those adapters.
+
 ## 2026-10-01 — S-127 Built-in MCP server (OAuth 2.1) for merchants, partners and ops
 
 - **Inside the api, not a separate app.** The MCP server is module `ca.northline.mcp` in `server/api`. springdoc

@@ -7,16 +7,17 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
 /**
- * {@code northline.orders.delivery}: the markets Northline delivers goods in and the pooled runs each gets every day
- * (design 06: "Tonight 6–9 pm · Pooled with 5 neighbours · $2.99", "Tomorrow 8–11 am · $1.99", "Now · 45 min · Direct
- * courier · $9.99"). Times are local to {@code America/Edmonton}.
+ * {@code northline.orders.delivery}: the pooled runs every market gets each day (design 06: "Tonight 6–9 pm · Pooled
+ * with 5 neighbours · $2.99", "Tomorrow 8–11 am · $1.99", "Now · 45 min · Direct courier · $9.99"). Times are local to
+ * each market's time zone. The markets are the region model's live markets (S-134).
  *
- * @param markets cities with pooled delivery (design 06 Location: Calgary, Edmonton, Airdrie)
+ * @param markets extra cities with pooled delivery on top of the live markets (configuration override; none by
+ *     default)
  * @param orderLead how long before a run's pack-by time customers must order (the shop's packing time)
  */
 @ConfigurationProperties("northline.orders.delivery")
 public record DeliveryProperties(
-        @DefaultValue({"Calgary", "Edmonton", "Airdrie"}) List<String> markets,
+        @DefaultValue List<String> markets,
         @DefaultValue("25m") Duration orderLead,
         @DefaultValue List<RunSlot> runs,
         @DefaultValue Direct direct) {

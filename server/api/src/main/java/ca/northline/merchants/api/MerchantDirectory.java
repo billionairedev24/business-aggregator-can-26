@@ -15,6 +15,7 @@ public interface MerchantDirectory {
     /**
      * @param takeRateBps the business's own take rate, or null for its tier's default
      * @param province two-letter code where the business operates, or null before onboarding sets it
+     * @param city the city the business trades in (its market), or null when not known
      */
     record MerchantProfile(
             String merchantId,
@@ -22,7 +23,8 @@ public interface MerchantDirectory {
             String tier,
             String status,
             @Nullable Integer takeRateBps,
-            @Nullable String province) {
+            @Nullable String province,
+            @Nullable String city) {
 
         /** Approved: the business may trade. */
         public boolean active() {

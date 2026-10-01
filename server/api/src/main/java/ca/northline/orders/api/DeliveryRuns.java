@@ -2,6 +2,7 @@ package ca.northline.orders.api;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
@@ -9,8 +10,8 @@ import org.jspecify.annotations.Nullable;
 /**
  * Pooled delivery runs (S-49/S-50/S-51, design 06 Shop: "Tonight's pooled run leaves 6:00 pm · order by 5:19"). Every
  * market gets the runs of {@code northline.orders.delivery.runs} each day (evening and next-morning by default); a run
- * is an {@code orders.delivery_windows} row, created the first time someone asks for it. Times are computed in
- * {@code America/Edmonton}.
+ * is an {@code orders.delivery_windows} row, created the first time someone asks for it. Times are computed in the
+ * market's time zone (region model).
  *
  * <ul>
  *   <li>{@code packBy} = the window's {@code cutoff_at}: shops have the order packed for the courier's pickup.
@@ -20,7 +21,7 @@ import org.jspecify.annotations.Nullable;
  */
 public interface DeliveryRuns {
 
-    /** The market for a city ("calgary" → "Calgary"), or empty where Northline doesn't deliver. */
+    /** The market for a city, in its display form (any case in), or empty where Northline doesn't deliver. */
     Optional<String> market(String city);
 
     /**
@@ -28,6 +29,9 @@ public interface DeliveryRuns {
      * first. Empty for a city that isn't a market.
      */
     List<Run> upcoming(String market, Instant now);
+
+    /** The market's local time zone, the one its runs' days and times are in (region model). */
+    ZoneId zone(String market);
 
     /** One run by its window id (checkout, order tracking). */
     Optional<Run> run(String windowId);

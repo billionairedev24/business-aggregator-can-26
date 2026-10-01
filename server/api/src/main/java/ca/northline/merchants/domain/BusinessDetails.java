@@ -30,7 +30,7 @@ public record BusinessDetails(
         return legalDetails.get("business_number") instanceof String bn ? bn : null;
     }
 
-    /** Registry reference: Alberta corporate access #, corporation #, registration #. */
+    /** Registry reference: provincial corporate access #, corporation #, registration #. */
     public @Nullable String registryRef() {
         for (var key : List.of(
                 "alberta_corporate_access_number",
@@ -47,11 +47,16 @@ public record BusinessDetails(
         return null;
     }
 
-    public String registryJurisdiction() {
+    /**
+     * Where the business is registered: Canada for a federal corporation, the home jurisdiction of an extra-provincial
+     * one, else the province it operates in (null when it has none yet).
+     */
+    public @Nullable String registryJurisdiction(@Nullable String province) {
         return switch (structure) {
             case CORP_FED -> "CA";
-            case CORP_EX -> String.valueOf(legalDetails.getOrDefault("home_jurisdiction", "AB"));
-            default -> "AB";
+            case CORP_EX ->
+                legalDetails.get("home_jurisdiction") instanceof String home && !home.isBlank() ? home : province;
+            default -> province;
         };
     }
 

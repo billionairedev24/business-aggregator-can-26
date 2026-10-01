@@ -1,7 +1,5 @@
 package ca.northline.availability.application;
 
-import static ca.northline.availability.application.Team.ZONE;
-
 import ca.northline.availability.api.AvailabilityChanged;
 import ca.northline.availability.application.AvailabilityUseCases.AddTimeOff;
 import ca.northline.availability.application.AvailabilityUseCases.CountConflicts;
@@ -12,10 +10,10 @@ import ca.northline.availability.application.AvailabilityUseCases.SetHolidayOpen
 import ca.northline.availability.application.AvailabilityUseCases.TimeOffEntry;
 import ca.northline.availability.application.AvailabilityUseCases.TimeOffView;
 import ca.northline.availability.application.AvailabilityUseCases.ViewTimeOff;
-import ca.northline.availability.domain.AlbertaHolidays;
 import ca.northline.availability.domain.BookingRules;
 import ca.northline.availability.domain.TimeOff;
 import ca.northline.booking.api.BookingCalendar;
+import ca.northline.region.api.Regions;
 import ca.northline.shared.Ids;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
@@ -30,14 +28,17 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Time off, special hours and Alberta statutory holidays. */
+/** Time off, special hours and the statutory holidays of the business's province (region model, S-134). */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 class TimeOffService implements ViewTimeOff, AddTimeOff, RemoveTimeOff, CountConflicts, SetHolidayOpen {
 
     static final String NOT_A_MEMBER = "This person isn't on your team.";
-    static final String NOT_A_HOLIDAY = "This day is not a statutory holiday in Alberta.";
+    /** {@code {province}} = the business's province, by name (en and fr from the region model). */
+    static final String NOT_A_HOLIDAY = "This day is not a statutory holiday in {province}.";
+
+    static final String NOT_A_HOLIDAY_ANYWHERE = "This day is not a statutory holiday.";
     static final int HOLIDAYS_SHOWN = 5;
 
     private final TimeOffRepository timeOff;
@@ -45,21 +46,23 @@ class TimeOffService implements ViewTimeOff, AddTimeOff, RemoveTimeOff, CountCon
     private final Team team;
     private final BookingCalendar calendar;
     private final ApplicationEventPublisher events;
+    private final Regions regions;
     private final Clock clock;
 
     @Override
     public TimeOffView view(String merchantId) {
-        var today = LocalDate.now(clock.withZone(ZONE));
+        var place = team.place(merchantId);
+        var today = LocalDate.now(clock.withZone(place.zone()));
         var names = names(merchantId);
         var open = hours.openHolidays(merchantId);
-        var holidays = AlbertaHolidays.upcoming(today, HOLIDAYS_SHOWN).stream()
+        var holidays = regions.upcomingHolidays(place.province(), today, HOLIDAYS_SHOWN).stream()
                 .map(h -> new HolidayView(h, open.contains(h.date())))
                 .toList();
         var entries = timeOff.from(merchantId, today).stream()
                 .map(t -> new TimeOffEntry(t, name(names, t.memberUserId())))
                 .toList();
         long premium = hours.rules(merchantId).orElseGet(BookingRules::defaults).holidayPremiumCents();
-        return new TimeOffView(entries, holidays, premium);
+        return new TimeOffView(entries, holidays, premium, place.provinceNameEn(), place.provinceNameFr());
     }
 
     @Override
@@ -88,21 +91,26 @@ class TimeOffService implements ViewTimeOff, AddTimeOff, RemoveTimeOff, CountCon
     @Override
     public int count(String merchantId, @Nullable String memberUserId, LocalDate from, LocalDate to) {
         var last = to.isBefore(from) ? from : to;
+        var zone = team.zone(merchantId);
         return calendar.busy(
                         merchantId,
                         memberUserId,
-                        from.atStartOfDay(ZONE).toInstant(),
-                        last.plusDays(1).atStartOfDay(ZONE).toInstant())
+                        from.atStartOfDay(zone).toInstant(),
+                        last.plusDays(1).atStartOfDay(zone).toInstant())
                 .size();
     }
 
     @Override
     @Transactional
     public HolidayView set(String merchantId, String actorId, LocalDate date, boolean open) {
-        var holiday = AlbertaHolidays.of(date.getYear()).stream()
-                .filter(h -> h.date().equals(date))
-                .findFirst()
-                .orElseThrow(() -> RuleViolation.of("date", "holiday", NOT_A_HOLIDAY));
+        var place = team.place(merchantId);
+        var holiday = regions.holiday(place.province(), date)
+                .orElseThrow(() -> RuleViolation.of(
+                        "date",
+                        "holiday",
+                        place.provinceNameEn().isEmpty()
+                                ? NOT_A_HOLIDAY_ANYWHERE
+                                : NOT_A_HOLIDAY.replace("{province}", place.provinceNameEn())));
         hours.setHolidayOpen(merchantId, date, open);
         events.publishEvent(new AvailabilityChanged(Ids.next(), clock.instant(), merchantId, actorId, "holidays"));
         return new HolidayView(holiday, open);

@@ -5,7 +5,6 @@ import ca.northline.orders.api.DeliveryRuns;
 import ca.northline.shared.NotFound;
 import java.time.Clock;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -25,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 class OrderTrackingService implements TrackOrder {
 
-    static final ZoneId ZONE = ZoneId.of("America/Edmonton");
     static final List<String> FLOW =
             List.of("placed", "accepted", "packing", "ready", "picked_up", "delivered", "confirmed");
     static final Set<String> ENDED = Set.of("cancelled", "refunded");
@@ -73,8 +71,9 @@ class OrderTrackingService implements TrackOrder {
             var run = runs.run(windowId);
             if (run.isPresent()) {
                 var r = run.get();
+                var zone = runs.zone(r.market());
                 var days = ChronoUnit.DAYS.between(
-                        LocalDate.now(clock.withZone(ZONE)), LocalDate.ofInstant(r.startsAt(), ZONE));
+                        LocalDate.now(clock.withZone(zone)), LocalDate.ofInstant(r.startsAt(), zone));
                 var day = days <= 0 ? "today" : days == 1 ? "tomorrow" : "later";
                 return new Delivery("pooled", r.label(), day, r.startsAt(), r.endsAt(), r.households(), null);
             }

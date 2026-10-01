@@ -1,5 +1,6 @@
 package ca.northline.auth.web;
 
+import ca.northline.auth.application.AuthProperties;
 import ca.northline.auth.application.BackupCodeService;
 import ca.northline.auth.application.FlowRejected;
 import ca.northline.auth.application.SessionAuthentication;
@@ -40,6 +41,7 @@ class SessionController {
     private final BackupCodeService backupCodes;
     private final SessionSignIn sessions;
     private final SessionService sessionService;
+    private final AuthProperties props;
 
     @GetMapping("/session")
     ResponseEntity<AuthResponses.Session> session(
@@ -48,7 +50,8 @@ class SessionController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         return accounts.findById(user.getName())
-                .map(a -> ResponseEntity.ok(AuthResponses.Session.of(a, UserClaimsService.factorsOf(user))))
+                .map(a -> ResponseEntity.ok(
+                        AuthResponses.Session.of(a, UserClaimsService.factorsOf(user), props.platformZone())))
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
     }
 

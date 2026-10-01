@@ -3,6 +3,7 @@ package ca.northline.payments.domain;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -93,9 +94,12 @@ public final class CanadianTax {
         return lines.stream().mapToLong(Line::taxCents).sum();
     }
 
-    /** {@code 2026-Q3}: the Edmonton calendar quarter {@code at} falls in (GST/HST reporting periods are quarterly). */
-    public static String period(Instant at) {
-        var date = at.atZone(Zones.EDMONTON).toLocalDate();
+    /**
+     * {@code 2026-Q3}: the calendar quarter {@code at} falls in, in {@code zone} (Northline's platform zone: the GST/HST
+     * reporting periods are Northline's, quarterly).
+     */
+    public static String period(Instant at, ZoneId zone) {
+        var date = at.atZone(zone).toLocalDate();
         return date.getYear() + "-Q" + ((date.getMonthValue() - 1) / 3 + 1);
     }
 

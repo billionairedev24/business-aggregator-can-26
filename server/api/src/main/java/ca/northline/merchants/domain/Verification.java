@@ -98,7 +98,7 @@ public class Verification {
 
     /**
      * A registry (or an agent reviewing a registry lookup) confirmed the row — also again after a scheduled re-check:
-     * verified, with the registry's expiry when it has one (City of Calgary licences).
+     * verified, with the registry's expiry when it has one (municipal licences).
      */
     public void confirmByRegistry(@Nullable String newReference, @Nullable Instant expires, Instant at) {
         status = VerificationStatus.VERIFIED;

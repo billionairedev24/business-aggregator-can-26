@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Package } from '@phosphor-icons/react';
-import { Alert, DataTable, Drawer, ErrorState, PageHeader, PageSkeleton, Tag, formatDate, useFormatters, useLocale, type DataTableAction, type DataTableColumn, type DataTableTone, type Locale } from '@northline/ui';
+import { Alert, DataTable, Drawer, ErrorState, PageHeader, PageSkeleton, Tag, formatDate, useFormatters, useLocale, type DataTableAction, type DataTableColumn, type DataTableTone, type Locale, timeZone } from '@northline/ui';
 import { useMerchantId, useRole } from '../shell/api';
 import { addDays, clockWithPeriod, localDate, today } from '../../lib/time';
 import { ordersQuery, usePackOrder, type Order, type OrderBoard } from './api';
@@ -19,7 +19,7 @@ export function runText(o: Order, t: T, locale: Locale, now = new Date()): strin
   if (!o.windowStartsAt) return t('runNone');
   const day = localDate(o.windowStartsAt), d0 = today(now);
   const time = clockWithPeriod(o.windowStartsAt, locale);
-  const hour = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Edmonton', hour: 'numeric', hourCycle: 'h23' }).format(new Date(o.windowStartsAt)));
+  const hour = Number(new Intl.DateTimeFormat('en-US', { timeZone: timeZone(), hour: 'numeric', hourCycle: 'h23' }).format(new Date(o.windowStartsAt)));
   if (day === d0) return hour >= 17 ? t('runTonight', { time }) : t('runToday', { time });
   if (day === addDays(d0, 1)) return t('runTomorrow', { time });
   return t('runOn', { date: formatDate(o.windowStartsAt, locale), time });
@@ -32,7 +32,7 @@ export function headline(b: OrderBoard, t: T, locale: Locale, now = new Date()):
   if (!c || b.counts.toPack === 0) return t('titleNone');
   const time = clockWithPeriod(c, locale), d = localDate(c), d0 = today(now);
   if (d === d0) {
-    const tonight = b.items.some(o => o.status === 'to_pack' && o.windowStartsAt && localDate(o.windowStartsAt) === d0 && Number(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Edmonton', hour: 'numeric', hourCycle: 'h23' }).format(new Date(o.windowStartsAt))) >= 17);
+    const tonight = b.items.some(o => o.status === 'to_pack' && o.windowStartsAt && localDate(o.windowStartsAt) === d0 && Number(new Intl.DateTimeFormat('en-US', { timeZone: timeZone(), hour: 'numeric', hourCycle: 'h23' }).format(new Date(o.windowStartsAt))) >= 17);
     return tonight ? t('titleTonight', { time }) : t('titleToday', { time });
   }
   if (d === addDays(d0, 1)) return t('titleTomorrow', { time });

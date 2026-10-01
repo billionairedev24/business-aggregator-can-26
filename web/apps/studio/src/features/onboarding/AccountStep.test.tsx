@@ -56,7 +56,8 @@ describe('AccountStep', () => {
   it('brand-new account (07d): Business Terms must be accepted; waitlist provinces listed', async () => {
     mockFetch(c => (c.url === '/bff/session' ? { body: SESSION } : undefined));
     renderWithProviders(<AccountStep type="provider" onboarding={undefined} isNew onTypeChange={() => {}} onDone={() => {}} />);
-    expect(screen.getByRole('option', { name: 'Ontario (waitlist)' })).toBeTruthy();
+    // the provinces and their launch status come from the region model (S-134; test data: src/test/regions.ts)
+    expect(await screen.findByRole('option', { name: 'Ontario (waitlist)' })).toBeTruthy();
     await user().click(screen.getByRole('button', { name: /Continue as/ }));
     expect(screen.getByText('You need to accept the Business Terms.')).toBeTruthy();
     expect((screen.getByRole('link', { name: 'Business Terms' }) as HTMLAnchorElement).target).toBe('_blank');

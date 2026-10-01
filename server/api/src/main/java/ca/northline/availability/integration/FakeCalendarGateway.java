@@ -24,14 +24,13 @@ import org.jspecify.annotations.Nullable;
 /**
  * {@code northline.calendar.provider=local} (the {@code local} and {@code test} default; refused under staging/prod):
  * Google and Outlook without accounts. "Connect" goes straight back to the callback with a fake code, the member has a
- * "Work" and a "Family" calendar, the first read of the primary one has a lunch block tomorrow 12:00–13:00 (Calgary) so
+ * "Work" and a "Family" calendar, the first read of the primary one has a lunch block tomorrow 12:00–13:00 (the business's zone) so
  * the preview shows a blocked slot, and bookings written back are kept in memory and logged. Refresh tokens are
  * sealed like real ones; {@code fake-refresh-revoked} is refused, to try the "Reconnect" state.
  */
 @Slf4j
 class FakeCalendarGateway implements CalendarGateway {
 
-    static final ZoneId ZONE = ZoneId.of("America/Edmonton");
     static final String REVOKED = "fake-refresh-revoked";
 
     private final CalendarProvider provider;
@@ -104,16 +103,17 @@ class FakeCalendarGateway implements CalendarGateway {
     }
 
     @Override
-    public Changes changes(String accessToken, String calendarId, @Nullable String cursor, Instant from, Instant to) {
+    public Changes changes(
+            String accessToken, String calendarId, @Nullable String cursor, Instant from, Instant to, ZoneId zone) {
         var next = "fake-cursor-" + clock.millis();
         if (cursor != null || !"primary".equals(calendarId)) {
             return new Changes(List.of(), List.of(), next, cursor == null);
         }
-        var tomorrow = LocalDate.now(clock.withZone(ZONE)).plusDays(1);
+        var tomorrow = LocalDate.now(clock.withZone(zone)).plusDays(1);
         var lunch = new BusyEvent(
                 "fake-lunch-" + tomorrow,
-                tomorrow.atTime(LocalTime.NOON).atZone(ZONE).toInstant(),
-                tomorrow.atTime(13, 0).atZone(ZONE).toInstant());
+                tomorrow.atTime(LocalTime.NOON).atZone(zone).toInstant(),
+                tomorrow.atTime(13, 0).atZone(zone).toInstant());
         return new Changes(List.of(lunch), List.of(), next, true);
     }
 

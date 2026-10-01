@@ -141,7 +141,7 @@ public class WebhooksConfiguration {
             notices.send();
         }
 
-        @Scheduled(cron = "${northline.webhooks.purge-cron:0 37 3 * * *}", zone = "America/Edmonton")
+        @Scheduled(cron = "${northline.webhooks.purge-cron:0 37 3 * * *}", zone = "${northline.region.platform-zone}")
         void purge() {
             var deleted = store.purge(clock.instant().minus(settings.logRetention()));
             log.info("Purged {} webhook deliveries older than {}", deleted, settings.logRetention());

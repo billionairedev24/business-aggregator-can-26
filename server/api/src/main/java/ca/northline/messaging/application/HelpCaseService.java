@@ -20,6 +20,7 @@ import ca.northline.messaging.domain.SenderRole;
 import ca.northline.messaging.domain.SupportCase;
 import ca.northline.messaging.domain.SupportSla;
 import ca.northline.messaging.domain.ThreadKind;
+import ca.northline.region.api.Regions;
 import ca.northline.shared.Ids;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
@@ -53,6 +54,7 @@ class HelpCaseService implements ManageHelpCases {
     private final List<CaseReferences> references;
     private final ApplicationEventPublisher events;
     private final Clock clock;
+    private final Regions regions;
 
     @Override
     public List<CaseSummary> cases(String merchantId) {
@@ -80,7 +82,7 @@ class HelpCaseService implements ManageHelpCases {
         var now = clock.instant();
         var id = Ids.next();
         var priority = SupportSla.priority(command.urgent(), profile.masterTier());
-        var opened = SupportCase.open(id, 0, priority, now);
+        var opened = SupportCase.open(id, 0, priority, now, regions.platformZone());
         var subject = subjectOf(body);
         var context = new Context(
                 profile.type(), profile.tier(), command.role().code(), cases.recentEvents(command.merchantId(), 5));
@@ -147,7 +149,7 @@ class HelpCaseService implements ManageHelpCases {
             throw RuleViolation.of("body", "length", CASE_BODY_TOO_LONG);
         }
         var now = clock.instant();
-        var progressed = current.replied(now);
+        var progressed = current.replied(now, regions.platformZone());
         cases.update(progressed, now);
         var threadId = threads.findByRef(command.merchantId(), "ticket", command.caseId())
                 .orElseThrow(() -> new NotFound("case thread", command.caseId()));
