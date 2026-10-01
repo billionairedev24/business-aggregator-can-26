@@ -103,6 +103,8 @@ class WebSecurityConfig {
         config.setMaxAge(3600L);
         var source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/auth/**", config);
+        // S-139: the token endpoint's preflight (OPTIONS) lands in this chain
+        AuthorizationServerConfig.registerTokenEndpointCors(source, props.tokenEndpointOrigins());
         return source;
     }
 
