@@ -1,21 +1,16 @@
 package ca.northline.observability;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.TestPropertySource;
-import org.springframework.boot.test.system.OutputCaptureExtension;
-import org.springframework.boot.test.system.CapturedOutput;
-import org.junit.jupiter.api.extension.ExtendWith;
-import io.micrometer.observation.ObservationRegistry;
-import ca.northline.platform.logging.RedactionCheck;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ca.northline.platform.logging.RedactionCheck;
 import ca.northline.platform.observability.OtlpReceiver;
 import ca.northline.shared.security.MerchantRole;
 import ca.northline.support.IntegrationTest;
 import ca.northline.support.TestJwt;
+import io.micrometer.observation.ObservationRegistry;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
@@ -29,9 +24,14 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.TestPropertySource;
 import org.testcontainers.kafka.KafkaContainer;
 
 /**

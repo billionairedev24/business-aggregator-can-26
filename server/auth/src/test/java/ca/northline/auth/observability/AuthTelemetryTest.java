@@ -1,26 +1,26 @@
 package ca.northline.auth.observability;
 
-import org.springframework.test.context.TestPropertySource;
-import org.springframework.boot.test.system.OutputCaptureExtension;
-import org.springframework.boot.test.system.CapturedOutput;
-import org.junit.jupiter.api.extension.ExtendWith;
-import io.micrometer.observation.ObservationRegistry;
-import ca.northline.platform.logging.RedactionCheck;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ca.northline.auth.support.AuthIntegrationTest;
+import ca.northline.platform.logging.RedactionCheck;
 import ca.northline.platform.observability.OtlpReceiver;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.observation.ObservationRegistry;
 import java.time.Duration;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.TestPropertySource;
 
 /**
  * S-111 on northline-auth: requests are traced (continuing the caller's {@code traceparent}) with their SQL, exported

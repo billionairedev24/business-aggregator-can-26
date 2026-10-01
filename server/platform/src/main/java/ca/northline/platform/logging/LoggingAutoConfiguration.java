@@ -18,7 +18,8 @@ import org.springframework.context.annotation.Bean;
  * application context is ready, and detaching it on shutdown.
  */
 @AutoConfiguration(
-        afterName = "org.springframework.boot.opentelemetry.autoconfigure.logging.OpenTelemetryLoggingAutoConfiguration")
+        afterName =
+                "org.springframework.boot.opentelemetry.autoconfigure.logging.OpenTelemetryLoggingAutoConfiguration")
 @ConditionalOnClass({LoggerContext.class, OpenTelemetry.class})
 @ConditionalOnProperty(name = "management.logging.export.enabled", havingValue = "true")
 public class LoggingAutoConfiguration {

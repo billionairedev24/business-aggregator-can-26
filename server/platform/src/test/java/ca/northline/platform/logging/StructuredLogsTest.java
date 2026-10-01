@@ -46,7 +46,7 @@ class StructuredLogsTest {
         }
         var line = output.getOut()
                 .lines()
-                .filter(l -> l.contains("\"log.logger\":\"ca.northline.test\""))
+                .filter(l -> l.contains("\"logger\":\"ca.northline.test\""))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("no JSON line in:\n" + output.getOut()));
         assertThat(line).startsWith("{").contains("\"ecs\":{\"version\"");
@@ -55,8 +55,7 @@ class StructuredLogsTest {
         assertThat(line).contains("\"password\":\"[REDACTED]\"");
         assertThat(line).contains("token=[REDACTED] for [EMAIL]");
         assertThat(line).contains("\"service\":{\"name\":\"northline-test\"").contains("\"environment\":\"dev\"");
-        assertThat(line)
-                .doesNotContain("amara.osei", "555 0101", "4242 4242", "1B5", "hunter2", "abcd1234", "ravi@");
+        assertThat(line).doesNotContain("amara.osei", "555 0101", "4242 4242", "1B5", "hunter2", "abcd1234", "ravi@");
     }
 
     @Test

@@ -1,26 +1,26 @@
 package ca.northline.worker.observability;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.TestPropertySource;
-import org.springframework.boot.test.system.OutputCaptureExtension;
-import org.springframework.boot.test.system.CapturedOutput;
-import org.junit.jupiter.api.extension.ExtendWith;
-import io.micrometer.observation.ObservationRegistry;
-import ca.northline.platform.logging.RedactionCheck;
 import static ca.northline.worker.support.WorkerContainers.KAFKA;
 import static ca.northline.worker.support.WorkerContainers.TEST_TOPIC;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import ca.northline.platform.logging.RedactionCheck;
 import ca.northline.platform.observability.OtlpReceiver;
 import ca.northline.worker.support.Events;
 import ca.northline.worker.support.WorkerContainers;
 import ca.northline.worker.support.WorkerIntegrationTest;
+import io.micrometer.observation.ObservationRegistry;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.TestPropertySource;
 
 /**
  * S-111, the Kafka hop: a record produced with the api's {@code traceparent} (what its Kafka template observation

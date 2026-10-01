@@ -26,8 +26,10 @@ class LoggingSmsSender implements SmsSender {
         if (revealCodes) {
             log.warn("[{}] Verification code for {}: {} (not sent — local SMS fake)", channel, to.display(), code);
         } else {
-            log.warn("[{}] Verification code withheld (not sent — SMS_PROVIDER=local outside a local run; set"
-                    + " SMS_PROVIDER to twilio or aws to deliver codes)", channel);
+            log.warn(
+                    "[{}] Verification code withheld (not sent — SMS_PROVIDER=local outside a local run; set"
+                            + " SMS_PROVIDER to twilio or aws to deliver codes)",
+                    channel);
         }
     }
 }

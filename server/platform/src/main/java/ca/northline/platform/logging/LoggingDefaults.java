@@ -32,7 +32,8 @@ public final class LoggingDefaults implements EnvironmentPostProcessor, Ordered 
         props.put("logging.structured.json.rename.traceId", "trace.id");
         props.put("logging.structured.json.rename.spanId", "span.id");
         var deployed = environment.matchesProfiles("cloud | dev | staging | prod");
-        var format = environment.getProperty("LOG_FORMAT", deployed ? "ecs" : "text")
+        var format = environment
+                .getProperty("LOG_FORMAT", deployed ? "ecs" : "text")
                 .strip()
                 .toLowerCase(Locale.ROOT);
         if (FORMATS.contains(format)) {

@@ -40,7 +40,7 @@ class RedactorTest {
             amounts and dates stay    | 81437 cents at 2026-09-30T15:00:00Z, 10 minutes      | 81437 cents at 2026-09-30T15:00:00Z, 10 minutes
             trace ids stay            | trace 4bf92f3577b34da6a3ce929d0e0e4736 span 00f067aa0ba902b7 | trace 4bf92f3577b34da6a3ce929d0e0e4736 span 00f067aa0ba902b7
             """)
-    void masks(String _, String input, String expected) {
+    void masks(String rule, String input, String expected) {
         assertThat(Redactor.redact(input)).isEqualTo(expected);
     }
 

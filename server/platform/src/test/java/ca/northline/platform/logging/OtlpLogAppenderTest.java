@@ -65,7 +65,10 @@ class OtlpLogAppenderTest {
                     new Object[] {"amara@example.ca"});
             event.setMDCPropertyMap(Map.of("eventId", "01J9ZD3V0000000000000EVT01", "authorization", "Bearer x"));
             var span = SpanContext.create(
-                    "4bf92f3577b34da6a3ce929d0e0e4736", "00f067aa0ba902b7", TraceFlags.getSampled(), TraceState.getDefault());
+                    "4bf92f3577b34da6a3ce929d0e0e4736",
+                    "00f067aa0ba902b7",
+                    TraceFlags.getSampled(),
+                    TraceState.getDefault());
             try (var _ = Span.wrap(span).makeCurrent()) {
                 appender.doAppend(event);
             }
@@ -76,8 +79,10 @@ class OtlpLogAppenderTest {
         assertThat(record.getBodyValue().asString()).isEqualTo("Code for [EMAIL]: verification code [CODE]");
         assertThat(record.getSeverity()).isEqualTo(Severity.WARN);
         assertThat(record.getSpanContext().getTraceId()).isEqualTo("4bf92f3577b34da6a3ce929d0e0e4736");
-        assertThat(record.getAttributes().get(AttributeKey.stringKey("authorization"))).isEqualTo(Redactor.MASK);
-        assertThat(record.getAttributes().get(AttributeKey.stringKey("eventId"))).isEqualTo("01J9ZD3V0000000000000EVT01");
+        assertThat(record.getAttributes().get(AttributeKey.stringKey("authorization")))
+                .isEqualTo(Redactor.MASK);
+        assertThat(record.getAttributes().get(AttributeKey.stringKey("eventId")))
+                .isEqualTo("01J9ZD3V0000000000000EVT01");
         assertThat(record.getAttributes().get(AttributeKey.stringKey("exception.message")))
                 .isEqualTo("bad card [CARD …4242]");
         assertThat(record.getAttributes().get(AttributeKey.stringKey("exception.stacktrace")))

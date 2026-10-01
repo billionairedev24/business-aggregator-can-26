@@ -2,8 +2,10 @@ package ca.northline.platform.logging;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.regex.MatchResult;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 
@@ -77,11 +79,12 @@ public final class Redactor {
             Rule.fixed(NOT_WORD_BEFORE + "\\+[1-9]\\d{7,14}" + NOT_WORD_AFTER, "[PHONE]"),
             Rule.fixed(
                     "(?i)(\\b(?:verification|v[ée]rification|sign-in|one-time|security|s[ée]curit[ée]|backup|otp|mfa"
-                            + "|totp|authenticator)\\b[^\\r\\n]{0,80}?)" + NOT_WORD_BEFORE + "\\d{4,8}" + NOT_WORD_AFTER,
+                            + "|totp|authenticator)\\b[^\\r\\n]{0,80}?)" + NOT_WORD_BEFORE + "\\d{4,8}"
+                            + NOT_WORD_AFTER,
                     "$1[CODE]"),
             Rule.fixed(
-                    "(?i)" + NOT_WORD_BEFORE
-                            + "([ABCEGHJ-NPRSTVXY]\\d[ABCEGHJ-NPRSTV-Z])[ -]?\\d[ABCEGHJ-NPRSTV-Z]\\d" + NOT_WORD_AFTER,
+                    "(?i)" + NOT_WORD_BEFORE + "([ABCEGHJ-NPRSTVXY]\\d[ABCEGHJ-NPRSTV-Z])[ -]?\\d[ABCEGHJ-NPRSTV-Z]\\d"
+                            + NOT_WORD_AFTER,
                     "$1 ***"));
 
     private Redactor() {}
@@ -93,8 +96,14 @@ public final class Redactor {
         }
         var n = name.toLowerCase(Locale.ROOT);
         // Correlation ids and event metadata are not secrets even when they end in "id" or "code".
-        if (n.equals("trace.id") || n.equals("span.id") || n.equals("traceid") || n.equals("spanid")
-                || n.endsWith("event.id") || n.equals("error.code") || n.equals("status.code") || n.endsWith("status_code")) {
+        if (n.equals("trace.id")
+                || n.equals("span.id")
+                || n.equals("traceid")
+                || n.equals("spanid")
+                || n.endsWith("event.id")
+                || n.equals("error.code")
+                || n.equals("status.code")
+                || n.endsWith("status_code")) {
             return false;
         }
         return SENSITIVE_NAME.matcher(n).matches();
@@ -142,34 +151,31 @@ public final class Redactor {
         return sum % 10 == 0;
     }
 
-    private record Rule(Pattern pattern, Function<MatchResult, String> replacement) {
+    /** A pattern and what replaces each match: a {@code $n} template, or a function of the match. */
+    private record Rule(
+            Pattern pattern,
+            @Nullable String template,
+            @Nullable Function<MatchResult, String> function) {
 
-        static Rule fixed(String regex, String replacement) {
-            return new Rule(Pattern.compile(regex), m -> expand(m, replacement));
+        static Rule fixed(String regex, String template) {
+            return new Rule(Pattern.compile(regex), template, null);
         }
 
-        static Rule of(String regex, Function<MatchResult, String> replacement) {
-            return new Rule(Pattern.compile(regex), replacement);
+        static Rule of(String regex, Function<MatchResult, String> function) {
+            return new Rule(Pattern.compile(regex), null, function);
         }
 
         String apply(String input) {
             var matcher = pattern.matcher(input);
-            return matcher.find() ? matcher.reset().replaceAll(m -> java.util.regex.Matcher.quoteReplacement(
-                    replacement.apply(m))) : input;
-        }
-
-        private static String expand(MatchResult m, String template) {
-            var out = new StringBuilder();
-            for (var i = 0; i < template.length(); i++) {
-                var c = template.charAt(i);
-                if (c == '$' && i + 1 < template.length() && Character.isDigit(template.charAt(i + 1))) {
-                    var group = m.group(template.charAt(++i) - '0');
-                    out.append(group == null ? "" : group);
-                } else {
-                    out.append(c);
-                }
+            if (!matcher.find()) {
+                return input;
             }
-            return out.toString();
+            matcher.reset();
+            if (template != null) {
+                return matcher.replaceAll(template);
+            }
+            var replace = Objects.requireNonNull(function);
+            return matcher.replaceAll(m -> Matcher.quoteReplacement(replace.apply(m)));
         }
     }
 }

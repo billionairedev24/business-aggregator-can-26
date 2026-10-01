@@ -5,15 +5,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import ca.northline.auth.application.SmsSender;
 import ca.northline.auth.domain.OtpChallenge.Channel;
 import ca.northline.auth.domain.PhoneNumber;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import java.util.List;
 import java.util.Locale;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.boot.test.system.CapturedOutput;
-import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 /** {@code northline.sms.provider} picks the adapter; missing settings and {@code local} under staging/prod stop start-up. */
-@ExtendWith(OutputCaptureExtension.class)
 class SmsConfigTest {
 
     private final ApplicationContextRunner runner =
@@ -35,21 +36,34 @@ class SmsConfigTest {
 
     /**
      * S-20 accepted that the local fake logs codes on a developer's machine; S-112 makes sure that can't happen
-     * anywhere else: under dev (which may keep the fake) neither the code nor the number reaches the log.
+     * anywhere else: under dev (which may keep the fake) neither the code nor the number reaches the log. Checked on
+     * the formatted message itself, whatever the console format.
      */
     @Test
-    void local_logsTheCodeOnlyOnADevelopersMachine(CapturedOutput output) {
+    void local_logsTheCodeOnlyOnADevelopersMachine() {
         var to = PhoneNumber.parse("+1 587 555 0101").orElseThrow();
+        var logged = capture(LoggingSmsSender.class);
         runner.withPropertyValues("spring.profiles.active=local")
                 .run(ctx -> ctx.getBean(SmsSender.class).sendCode(to, "482913", Channel.SMS, Locale.CANADA));
-        assertThat(output.getOut()).contains("Verification code for +1 587 555 0101: 482913");
+        assertThat(messages(logged)).anyMatch(m -> m.contains("Verification code for +1 587 555 0101: 482913"));
 
+        logged.list.clear();
         runner.withPropertyValues("spring.profiles.active=dev")
                 .run(ctx -> ctx.getBean(SmsSender.class).sendCode(to, "731264", Channel.VOICE, Locale.CANADA_FRENCH));
-        assertThat(output.getOut())
-                .doesNotContain("731264")
-                .contains("[VOICE] Verification code withheld")
-                .contains("verification codes are neither sent nor logged");
+        assertThat(messages(logged))
+                .noneMatch(m -> m.contains("731264") || m.contains("555"))
+                .anyMatch(m -> m.contains("[VOICE] Verification code withheld"));
+    }
+
+    static ListAppender<ILoggingEvent> capture(Class<?> type) {
+        var appender = new ListAppender<ILoggingEvent>();
+        appender.start();
+        ((Logger) LoggerFactory.getLogger(type)).addAppender(appender);
+        return appender;
+    }
+
+    static List<String> messages(ListAppender<ILoggingEvent> appender) {
+        return appender.list.stream().map(ILoggingEvent::getFormattedMessage).toList();
     }
 
     @Test

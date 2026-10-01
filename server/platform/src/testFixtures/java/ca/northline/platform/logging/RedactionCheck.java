@@ -25,9 +25,7 @@ public final class RedactionCheck {
     public static final String LINE = "Sent to amara.osei@example.ca, mobile +1 587 555 0101, card 4242 4242 4242 4242,"
             + " postal T2P 1B5, verification code 482913, Authorization: Bearer abcdefgh12345678";
 
-    private static final String[] NEVER = {
-        "amara.osei", "555 0101", "4242 4242", "1B5", "482913", "abcdefgh12345678"
-    };
+    private static final String[] NEVER = {"amara.osei", "555 0101", "4242 4242", "1B5", "482913", "abcdefgh12345678"};
 
     private RedactionCheck() {}
 
@@ -43,7 +41,8 @@ public final class RedactionCheck {
                 .getFirst();
         assertThat(record.service()).isEqualTo(service);
         assertThat(record.traceId()).isEqualTo(span.traceId());
-        assertThat(record.body()).contains("[EMAIL]", "[PHONE]", "[CARD …4242]", "T2P ***", "[CODE]", "[REDACTED]")
+        assertThat(record.body())
+                .contains("[EMAIL]", "[PHONE]", "[CARD …4242]", "T2P ***", "[CODE]", "[REDACTED]")
                 .doesNotContain(NEVER);
 
         var line = console.get()
@@ -51,6 +50,9 @@ public final class RedactionCheck {
                 .filter(l -> l.contains(marker))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("no console line with " + marker));
-        assertThat(line).startsWith("{").contains("\"trace.id\":\"" + span.traceId() + "\"").doesNotContain(NEVER);
+        assertThat(line)
+                .startsWith("{")
+                .contains("\"trace.id\":\"" + span.traceId() + "\"")
+                .doesNotContain(NEVER);
     }
 }
