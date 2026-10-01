@@ -24,13 +24,13 @@ import { Route as FoodCheckoutRouteImport } from './routes/food/checkout'
 import { Route as OrdersOrderIdRouteImport } from './routes/orders/$orderId'
 import { Route as ProductsProductIdRouteImport } from './routes/products/$productId'
 import { Route as QuotesQuoteIdRouteImport } from './routes/quotes/$quoteId'
-import { Route as QuotesRequestsRequestIdRouteImport } from './routes/quotes/requests/$requestId'
 import { Route as ServicesIndexRouteImport } from './routes/services/index'
 import { Route as ShopIndexRouteImport } from './routes/shop/index'
 import { Route as ShopDepartmentRouteImport } from './routes/shop/$department'
 import { Route as FoodOrdersOrderIdRouteImport } from './routes/food/orders/$orderId'
 import { Route as ProvidersSlugIndexRouteImport } from './routes/providers/$slug/index'
 import { Route as ProvidersSlugBookRouteImport } from './routes/providers/$slug/book'
+import { Route as QuotesRequestsRequestIdRouteImport } from './routes/quotes/requests/$requestId'
 import { Route as ServicesCategoryIndexRouteImport } from './routes/services/$category/index'
 import { Route as ServicesCategoryProvidersRouteImport } from './routes/services/$category/providers'
 import { Route as ServicesCategoryQuoteRouteImport } from './routes/services/$category/quote'
@@ -110,11 +110,6 @@ const QuotesQuoteIdRoute = QuotesQuoteIdRouteImport.update({
   path: '/quotes/$quoteId',
   getParentRoute: () => rootRouteImport,
 } as any)
-const QuotesRequestsRequestIdRoute = QuotesRequestsRequestIdRouteImport.update({
-  id: '/quotes/requests/$requestId',
-  path: '/quotes/requests/$requestId',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ServicesIndexRoute = ServicesIndexRouteImport.update({
   id: '/services/',
   path: '/services/',
@@ -143,6 +138,11 @@ const ProvidersSlugIndexRoute = ProvidersSlugIndexRouteImport.update({
 const ProvidersSlugBookRoute = ProvidersSlugBookRouteImport.update({
   id: '/providers/$slug/book',
   path: '/providers/$slug/book',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QuotesRequestsRequestIdRoute = QuotesRequestsRequestIdRouteImport.update({
+  id: '/quotes/requests/$requestId',
+  path: '/quotes/requests/$requestId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ServicesCategoryIndexRoute = ServicesCategoryIndexRouteImport.update({
@@ -176,7 +176,6 @@ export interface FileRoutesByFullPath {
   '/orders/$orderId': typeof OrdersOrderIdRoute
   '/products/$productId': typeof ProductsProductIdRoute
   '/quotes/$quoteId': typeof QuotesQuoteIdRoute
-  '/quotes/requests/$requestId': typeof QuotesRequestsRequestIdRoute
   '/shop/$department': typeof ShopDepartmentRoute
   '/account/': typeof AccountIndexRoute
   '/food/': typeof FoodIndexRoute
@@ -184,6 +183,7 @@ export interface FileRoutesByFullPath {
   '/shop/': typeof ShopIndexRoute
   '/food/orders/$orderId': typeof FoodOrdersOrderIdRoute
   '/providers/$slug/book': typeof ProvidersSlugBookRoute
+  '/quotes/requests/$requestId': typeof QuotesRequestsRequestIdRoute
   '/services/$category/providers': typeof ServicesCategoryProvidersRoute
   '/services/$category/quote': typeof ServicesCategoryQuoteRoute
   '/providers/$slug/': typeof ProvidersSlugIndexRoute
@@ -203,7 +203,6 @@ export interface FileRoutesByTo {
   '/orders/$orderId': typeof OrdersOrderIdRoute
   '/products/$productId': typeof ProductsProductIdRoute
   '/quotes/$quoteId': typeof QuotesQuoteIdRoute
-  '/quotes/requests/$requestId': typeof QuotesRequestsRequestIdRoute
   '/shop/$department': typeof ShopDepartmentRoute
   '/account': typeof AccountIndexRoute
   '/food': typeof FoodIndexRoute
@@ -211,6 +210,7 @@ export interface FileRoutesByTo {
   '/shop': typeof ShopIndexRoute
   '/food/orders/$orderId': typeof FoodOrdersOrderIdRoute
   '/providers/$slug/book': typeof ProvidersSlugBookRoute
+  '/quotes/requests/$requestId': typeof QuotesRequestsRequestIdRoute
   '/services/$category/providers': typeof ServicesCategoryProvidersRoute
   '/services/$category/quote': typeof ServicesCategoryQuoteRoute
   '/providers/$slug': typeof ProvidersSlugIndexRoute
@@ -231,7 +231,6 @@ export interface FileRoutesById {
   '/orders/$orderId': typeof OrdersOrderIdRoute
   '/products/$productId': typeof ProductsProductIdRoute
   '/quotes/$quoteId': typeof QuotesQuoteIdRoute
-  '/quotes/requests/$requestId': typeof QuotesRequestsRequestIdRoute
   '/shop/$department': typeof ShopDepartmentRoute
   '/account/': typeof AccountIndexRoute
   '/food/': typeof FoodIndexRoute
@@ -239,6 +238,7 @@ export interface FileRoutesById {
   '/shop/': typeof ShopIndexRoute
   '/food/orders/$orderId': typeof FoodOrdersOrderIdRoute
   '/providers/$slug/book': typeof ProvidersSlugBookRoute
+  '/quotes/requests/$requestId': typeof QuotesRequestsRequestIdRoute
   '/services/$category/providers': typeof ServicesCategoryProvidersRoute
   '/services/$category/quote': typeof ServicesCategoryQuoteRoute
   '/providers/$slug/': typeof ProvidersSlugIndexRoute
@@ -260,7 +260,6 @@ export interface FileRouteTypes {
     | '/orders/$orderId'
     | '/products/$productId'
     | '/quotes/$quoteId'
-    | '/quotes/requests/$requestId'
     | '/shop/$department'
     | '/account/'
     | '/food/'
@@ -268,6 +267,7 @@ export interface FileRouteTypes {
     | '/shop/'
     | '/food/orders/$orderId'
     | '/providers/$slug/book'
+    | '/quotes/requests/$requestId'
     | '/services/$category/providers'
     | '/services/$category/quote'
     | '/providers/$slug/'
@@ -287,7 +287,6 @@ export interface FileRouteTypes {
     | '/orders/$orderId'
     | '/products/$productId'
     | '/quotes/$quoteId'
-    | '/quotes/requests/$requestId'
     | '/shop/$department'
     | '/account'
     | '/food'
@@ -295,6 +294,7 @@ export interface FileRouteTypes {
     | '/shop'
     | '/food/orders/$orderId'
     | '/providers/$slug/book'
+    | '/quotes/requests/$requestId'
     | '/services/$category/providers'
     | '/services/$category/quote'
     | '/providers/$slug'
@@ -314,7 +314,6 @@ export interface FileRouteTypes {
     | '/orders/$orderId'
     | '/products/$productId'
     | '/quotes/$quoteId'
-    | '/quotes/requests/$requestId'
     | '/shop/$department'
     | '/account/'
     | '/food/'
@@ -322,6 +321,7 @@ export interface FileRouteTypes {
     | '/shop/'
     | '/food/orders/$orderId'
     | '/providers/$slug/book'
+    | '/quotes/requests/$requestId'
     | '/services/$category/providers'
     | '/services/$category/quote'
     | '/providers/$slug/'
@@ -342,7 +342,6 @@ export interface RootRouteChildren {
   OrdersOrderIdRoute: typeof OrdersOrderIdRoute
   ProductsProductIdRoute: typeof ProductsProductIdRoute
   QuotesQuoteIdRoute: typeof QuotesQuoteIdRoute
-  QuotesRequestsRequestIdRoute: typeof QuotesRequestsRequestIdRoute
   ShopDepartmentRoute: typeof ShopDepartmentRoute
   AccountIndexRoute: typeof AccountIndexRoute
   FoodIndexRoute: typeof FoodIndexRoute
@@ -350,6 +349,7 @@ export interface RootRouteChildren {
   ShopIndexRoute: typeof ShopIndexRoute
   FoodOrdersOrderIdRoute: typeof FoodOrdersOrderIdRoute
   ProvidersSlugBookRoute: typeof ProvidersSlugBookRoute
+  QuotesRequestsRequestIdRoute: typeof QuotesRequestsRequestIdRoute
   ServicesCategoryProvidersRoute: typeof ServicesCategoryProvidersRoute
   ServicesCategoryQuoteRoute: typeof ServicesCategoryQuoteRoute
   ProvidersSlugIndexRoute: typeof ProvidersSlugIndexRoute
@@ -463,13 +463,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof QuotesQuoteIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/quotes/requests/$requestId': {
-      id: '/quotes/requests/$requestId'
-      path: '/quotes/requests/$requestId'
-      fullPath: '/quotes/requests/$requestId'
-      preLoaderRoute: typeof QuotesRequestsRequestIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/services/': {
       id: '/services/'
       path: '/services'
@@ -512,6 +505,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProvidersSlugBookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/quotes/requests/$requestId': {
+      id: '/quotes/requests/$requestId'
+      path: '/quotes/requests/$requestId'
+      fullPath: '/quotes/requests/$requestId'
+      preLoaderRoute: typeof QuotesRequestsRequestIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/services/$category/': {
       id: '/services/$category/'
       path: '/services/$category'
@@ -550,7 +550,6 @@ const rootRouteChildren: RootRouteChildren = {
   OrdersOrderIdRoute: OrdersOrderIdRoute,
   ProductsProductIdRoute: ProductsProductIdRoute,
   QuotesQuoteIdRoute: QuotesQuoteIdRoute,
-  QuotesRequestsRequestIdRoute: QuotesRequestsRequestIdRoute,
   ShopDepartmentRoute: ShopDepartmentRoute,
   AccountIndexRoute: AccountIndexRoute,
   FoodIndexRoute: FoodIndexRoute,
@@ -558,6 +557,7 @@ const rootRouteChildren: RootRouteChildren = {
   ShopIndexRoute: ShopIndexRoute,
   FoodOrdersOrderIdRoute: FoodOrdersOrderIdRoute,
   ProvidersSlugBookRoute: ProvidersSlugBookRoute,
+  QuotesRequestsRequestIdRoute: QuotesRequestsRequestIdRoute,
   ServicesCategoryProvidersRoute: ServicesCategoryProvidersRoute,
   ServicesCategoryQuoteRoute: ServicesCategoryQuoteRoute,
   ProvidersSlugIndexRoute: ProvidersSlugIndexRoute,
