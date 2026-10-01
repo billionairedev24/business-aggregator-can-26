@@ -106,7 +106,7 @@ class DefaultAiCompletionsTest {
     }
 
     ToolContext as(MerchantRole role) {
-        return new ToolContext(MERCHANT, USER, role, Locale.CANADA);
+        return new ToolContext(MERCHANT, USER, role, Locale.CANADA, java.time.ZoneOffset.UTC);
     }
 
     @Test

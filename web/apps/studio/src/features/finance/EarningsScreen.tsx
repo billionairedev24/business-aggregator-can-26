@@ -6,6 +6,7 @@ import { earningsQuery, ledgerQuery, type EarningsOverview, type LedgerLine } fr
 import { hoursUntil, pctFromBps, weekdayLong } from './format';
 import { useFinanceT, type FinanceKey, type FinanceT } from './messages';
 import { QueryState } from './QueryState';
+import { InsightCard } from '../assistant/InsightCard';
 import './finance.css';
 
 const TIERS = ['master', 'trusted', 'registered'] as const;
@@ -21,6 +22,7 @@ export function EarningsScreen() {
       <QueryState query={overview} skeleton={<PageSkeleton kpis={4} rows={0} />}>
         {o => <Overview o={o} />}
       </QueryState>
+      <InsightCard merchantId={merchantId} screen="earnings" />
       <Ledger />
     </>
   );

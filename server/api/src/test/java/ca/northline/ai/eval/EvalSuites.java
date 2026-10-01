@@ -7,6 +7,6 @@ public final class EvalSuites {
     private EvalSuites() {}
 
     public static List<EvalSuite> all() {
-        return List.of(new PlatformEval());
+        return List.of(new PlatformEval(), new ca.northline.studio.application.AssistantEval());
     }
 }

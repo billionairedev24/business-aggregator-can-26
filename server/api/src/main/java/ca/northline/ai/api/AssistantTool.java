@@ -2,6 +2,7 @@ package ca.northline.ai.api;
 
 import ca.northline.shared.security.MerchantPermission;
 import ca.northline.shared.security.MerchantRole;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -54,8 +55,8 @@ public interface AssistantTool {
     /** Runs the tool as the caller. Throw the usual domain errors (NotFound, RuleViolation…): the model reads them. */
     Result run(Call call);
 
-    /** The authorized business, the caller and the model's arguments. */
-    record Call(String merchantId, String userId, MerchantRole role, JsonNode args, Locale locale) {
+    /** The authorized business, the caller, the model's arguments, the reply language and the business's zone. */
+    record Call(String merchantId, String userId, MerchantRole role, JsonNode args, Locale locale, ZoneId zone) {
         public @Nullable String text(String key) {
             var v = args.get(key);
             return v == null || v.isNull() ? null : v.asString();

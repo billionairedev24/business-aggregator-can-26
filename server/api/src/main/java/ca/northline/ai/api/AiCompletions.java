@@ -1,6 +1,7 @@
 package ca.northline.ai.api;
 
 import ca.northline.shared.security.MerchantRole;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -87,8 +88,11 @@ public interface AiCompletions {
         }
     }
 
-    /** Where tools run: the business and the caller's membership (already authorized), and the reply language. */
-    record ToolContext(String merchantId, String userId, MerchantRole role, Locale locale) {}
+    /**
+     * Where tools run: the business and the caller's membership (already authorized), the reply language and the
+     * business's time zone (from its market, never a default), in which tools show times and "today".
+     */
+    record ToolContext(String merchantId, String userId, MerchantRole role, Locale locale, ZoneId zone) {}
 
     /** What a streamed conversation reports as it goes. */
     interface StreamSink {

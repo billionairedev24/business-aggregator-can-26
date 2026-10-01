@@ -98,7 +98,7 @@ public class DefaultAiCompletions implements AiCompletions {
                     var tool = offered.get(name);
                     var args = arguments(call);
                     var toolCall = new AssistantTool.Call(
-                            context.merchantId(), context.userId(), context.role(), args, context.locale());
+                            context.merchantId(), context.userId(), context.role(), args, context.locale(), context.zone());
                     if (tool != null && tool.write()) {
                         var pending = new PendingAction(
                                 name,

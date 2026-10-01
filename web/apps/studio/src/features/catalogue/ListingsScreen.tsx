@@ -9,6 +9,7 @@ import { listingsQuery, useListingActions, type ListingItem } from './api';
 import { useCatalogueT } from './messages';
 import { minutesSince, permissions, portalOf, vetState } from './model';
 import './catalogue.css';
+import { InsightCard } from '../assistant/InsightCard';
 
 interface Row {
   id: string; name: string; sku: string; type: string; price: number | null; quote: boolean; stock: number | null; sales: number;
@@ -80,6 +81,7 @@ export function ListingsScreen() {
         onAction={async (action, hit) => { await Promise.all(hit.map(r => visibility.mutateAsync({ id: r.id, action: action.id === 'pub' ? 'publish' : 'hide' }))); }}
         onDelete={async del => { await Promise.all(del.map(r => remove.mutateAsync(r.id))); }}
       />
+      <InsightCard merchantId={merchantId} screen="listings" />
     </>
   );
 }
