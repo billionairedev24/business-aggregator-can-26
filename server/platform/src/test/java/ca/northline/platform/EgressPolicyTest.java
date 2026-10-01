@@ -1,4 +1,4 @@
-package ca.northline.worker.webhooks;
+package ca.northline.platform;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -10,7 +10,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-/** S-33 SSRF rules: what a webhook may never reach, and the local-development exception. */
+/** S-33 SSRF rules: what a webhook or an imported image URL may never reach, and the local-development exception. */
 class EgressPolicyTest {
 
     private final EgressPolicy strict = new EgressPolicy(false);
@@ -87,5 +87,29 @@ class EgressPolicyTest {
         assertThat(local.refuse(InetAddress.ofLiteral("::1"))).isEmpty();
         assertThat(local.refuse(InetAddress.getByName("10.0.0.1"))).contains("private network");
         assertThat(local.refuse(InetAddress.getByName("169.254.169.254"))).contains("link-local / cloud metadata");
+    }
+
+    @Test
+    void ipLiteralHostsAreCheckedBeforeAnyRequest_namesAreLeftToTheResolver() {
+        assertThat(strict.refuseLiteral("10.1.2.3"))
+                .hasValueSatisfying(r -> assertThat(r).contains("private network"));
+        assertThat(strict.refuseLiteral("[fd00:ec2::254]")).isPresent();
+        assertThat(strict.refuseLiteral("169.254.169.254")).isPresent();
+        assertThat(strict.refuseLiteral("8.8.8.8")).isEmpty();
+        assertThat(strict.refuseLiteral("images.example.com")).isEmpty();
+    }
+
+    @Test
+    void theResolverReturnsOnlyCheckedAddresses_andRefusesAHostWithAnyRefusedOne() throws Exception {
+        HostResolver dns = host -> switch (host) {
+            case "public.example" -> List.of(InetAddress.ofLiteral("93.184.216.34"));
+            case "mixed.example" -> List.of(InetAddress.ofLiteral("93.184.216.34"), InetAddress.ofLiteral("10.0.0.7"));
+            default -> throw new java.net.UnknownHostException(host);
+        };
+        var resolver = new EgressDnsResolver(strict, dns);
+        assertThat(resolver.resolve("public.example")).containsExactly(InetAddress.ofLiteral("93.184.216.34"));
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> resolver.resolve("mixed.example"))
+                .isInstanceOf(EgressDnsResolver.Refused.class)
+                .hasMessageContaining("10.0.0.7");
     }
 }

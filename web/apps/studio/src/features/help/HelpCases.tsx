@@ -7,7 +7,8 @@ import { AttachmentLinks } from '../messages/AttachmentLinks';
 import { Composer } from '../messages/Composer';
 import { useAgo } from '../messages/time';
 import { LIMITS } from '../messages/validation';
-import { caseQuery, casesQuery, useReplyToCase, type CaseSummary } from './api';
+import { useLivePoll } from '../../lib/live';
+import { CASE_POLL_MS, CASES_POLL_MS, caseQuery, casesQuery, useReplyToCase, type CaseSummary } from './api';
 import { useCaseCells, useSlaNote } from './format';
 import { useHelpT } from './messages';
 
@@ -22,7 +23,7 @@ export function HelpCases({ merchantId, caseId, sent, onSelect, onCreate }: { me
   const role = useRole();
   const cells = useCaseCells();
   const sla = useSlaNote();
-  const q = useQuery(casesQuery(merchantId));
+  const q = useQuery({ ...casesQuery(merchantId), refetchInterval: useLivePoll(CASES_POLL_MS) });
   const cases = q.data ?? [];
   const byId = useMemo(() => new Map(cases.map(c => [c.id, c])), [cases]);
   const rows = useMemo<Row[]>(() => cases.map(c => {
@@ -63,7 +64,7 @@ function CaseConversation({ merchantId, summary }: { merchantId: string; summary
   const t = useHelpT();
   const ago = useAgo();
   const { date } = useFormatters();
-  const q = useQuery(caseQuery(merchantId, summary.id));
+  const q = useQuery({ ...caseQuery(merchantId, summary.id), refetchInterval: useLivePoll(CASE_POLL_MS) });
   const reply = useReplyToCase(merchantId, summary.id);
   const resolved = summary.state === 'resolved';
   return (

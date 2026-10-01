@@ -39,13 +39,20 @@ export const ListingItem = z.object({
   priceCents: z.number().nullish(), stock: z.number().nullish(), sales30d: z.number(),
   vetting: Vetting, status: ListingStatus, vettingFlags: z.array(z.string()).default([]), revetReasons: z.array(MaterialField).default([]),
   submittedAt: z.string().nullish(), categoryId: z.string().nullish(), pricingMode: PricingMode.nullish(), updatedAt: z.string(),
+  bundle: z.boolean().default(false),
 });
 export type ListingItem = z.infer<typeof ListingItem>;
 
 const Completeness = z.object({ percent: z.number(), done: z.number(), total: z.number(), missing: z.array(z.object({ field: z.string(), message: z.string() })) });
 export const Media = z.object({ id: z.string(), url: z.string(), width: z.number(), height: z.number(), onWhite: z.boolean() });
 export type Media = z.infer<typeof Media>;
-export const Variant = z.object({ id: z.string().nullish(), value: z.string(), sku: z.string(), gtin: z.string().nullish(), priceCents: z.number(), stock: z.number() });
+/** S-65: `images` = the variant's own (empty = it inherits the listing's). */
+export const Variant = z.object({ id: z.string().nullish(), value: z.string(), sku: z.string(), gtin: z.string().nullish(), priceCents: z.number(), stock: z.number(), images: z.array(Media).default([]) });
+/** S-65: one item of a bundle, with the product's name, variant, own price and stock. */
+export const BundleItem = z.object({ offerId: z.string(), variantId: z.string().nullish(), qty: z.number(), name: z.string(), option: z.string().nullish(), unitPriceCents: z.number(), stock: z.number() });
+export type BundleItem = z.infer<typeof BundleItem>;
+export const OfferType = z.enum(['product', 'bundle']);
+export type OfferType = z.infer<typeof OfferType>;
 export type Variant = z.infer<typeof Variant>;
 
 const lifecycle = {
@@ -63,6 +70,7 @@ export const ProductDetail = z.object({
   sku: z.string().nullish(), priceCents: z.number(), compareAtCents: z.number().nullish(), costCents: z.number().nullish(), condition: ItemCondition,
   stock: z.number(), lowStockAt: z.number().nullish(), fulfilment: z.array(Fulfilment), handlingTime: HandlingTime.nullish(), returnsPolicy: ReturnsPolicy.nullish(),
   countryOfOrigin: z.string().nullish(), restrictedOk: z.boolean(), bilingualOk: z.boolean(), warranty: z.boolean(), searchKeywords: z.string().nullish(),
+  type: OfferType.default('product'), bundleItems: z.array(BundleItem).default([]),
 });
 export type ProductDetail = z.infer<typeof ProductDetail>;
 
@@ -133,7 +141,11 @@ export async function lookupGtin(m: string, gtin: string): Promise<CatalogMatch 
 }
 
 // ── mutations ───────────────────────────────────────────────────────────────────────────────────────────────────────
-export type ProductPayload = Omit<ProductDetail, 'id' | 'kind' | 'vetting' | 'status' | 'vettingFlags' | 'revetReasons' | 'submittedAt' | 'updatedAt' | 'completeness' | 'catalogRef' | 'catalogTitle' | 'sharedRecord' | 'contentShared' | 'contentLocked' | 'sellerCount' | 'images' | 'catalogueImages'> & { imageIds: string[] };
+export type ProductPayload = Omit<ProductDetail, 'id' | 'kind' | 'vetting' | 'status' | 'vettingFlags' | 'revetReasons' | 'submittedAt' | 'updatedAt' | 'completeness' | 'catalogRef' | 'catalogTitle' | 'sharedRecord' | 'contentShared' | 'contentLocked' | 'sellerCount' | 'images' | 'catalogueImages' | 'variants' | 'bundleItems'> & {
+  imageIds: string[];
+  variants: (Omit<Variant, 'images'> & { imageIds: string[] })[];
+  bundleItems: { offerId: string; variantId: string | null; qty: number }[];
+};
 export type ServicePayload = Pick<ServiceDetail, 'name' | 'pricingMode' | 'durationMin' | 'bufferMin' | 'instantBook'> & { categoryId: string | null; priceCents: number | null; included: string | null; sku: string | null };
 
 function useInvalidateListings(m: string) {
@@ -191,6 +203,28 @@ export function useUploadImage(m: string) {
   return useMutation({
     mutationFn: (file: File) => { const form = new FormData(); form.append('file', file); return http(`${base(m)}/media`, { method: 'POST', body: form }, Media); },
   });
+}
+
+/** S-65: the Compliance tab's documents (spec sheet, invoice), private to the business and Northline staff. */
+export const DocumentPurpose = z.enum(['spec_sheet', 'invoice']);
+export type DocumentPurpose = z.infer<typeof DocumentPurpose>;
+export const ListingDocument = z.object({ id: z.string(), purpose: DocumentPurpose, fileName: z.string(), contentType: z.string(), byteSize: z.number(), url: z.string(), createdAt: z.string() });
+export type ListingDocument = z.infer<typeof ListingDocument>;
+const documentsKey = (m: string, id: string) => ['merchant', m, 'listings', 'documents', id] as const;
+export const documentsQuery = (m: string, id: string) => queryOptions({ queryKey: documentsKey(m, id), queryFn: () => http(`${base(m)}/listings/${id}/documents`, {}, items(ListingDocument)) });
+
+export function useListingDocuments(m: string, id: string) {
+  const qc = useQueryClient();
+  const refresh = () => qc.invalidateQueries({ queryKey: documentsKey(m, id) });
+  const upload = useMutation({
+    mutationFn: ({ file, purpose }: { file: File; purpose: DocumentPurpose }) => {
+      const form = new FormData(); form.append('file', file);
+      return http(`${base(m)}/listings/${id}/documents?purpose=${purpose}`, { method: 'POST', body: form }, ListingDocument);
+    },
+    onSuccess: refresh,
+  });
+  const remove = useMutation({ mutationFn: (docId: string) => http(`${base(m)}/listings/${id}/documents/${docId}`, { method: 'DELETE' }), onSettled: refresh });
+  return { upload, remove };
 }
 
 export function useUploadImport(m: string) {

@@ -17,6 +17,7 @@ import org.jspecify.annotations.Nullable;
  * @param pricingMode services only
  * @param stock products only (null for services)
  * @param revetReasons S-39: why an approved listing is back in vetting (empty otherwise)
+ * @param bundle S-65: a bundle of the business's products (its stock is what the items allow)
  */
 public record ListingSummary(
         String id,
@@ -36,7 +37,8 @@ public record ListingSummary(
         @Nullable PricingMode pricingMode,
         @Nullable Integer durationMin,
         boolean instantBook,
-        Instant updatedAt) {
+        Instant updatedAt,
+        boolean bundle) {
 
     public ListingSummary {
         flags = List.copyOf(flags);

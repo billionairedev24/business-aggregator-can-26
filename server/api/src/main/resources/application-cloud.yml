@@ -19,5 +19,7 @@ logging.level:
   ca.northline: info
 # S-127: MCP confirmations and rate limits shared by every api replica (Valkey); `memory` is refused in staging/prod.
 northline.mcp.store: ${MCP_STORE:redis}
+# S-68: Studio live signals (Messages, Orders, kitchen display) reach every api replica over Valkey pub/sub.
+northline.live.bus: ${LIVE_BUS:redis}
 # S-128: the developer docs MCP server (/mcp/docs) — Northline staff only (a token for it, staff role, acr=mfa).
 northline.devdocs.access: ${MCP_DOCS_ACCESS:staff}

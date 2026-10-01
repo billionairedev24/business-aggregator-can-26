@@ -109,7 +109,12 @@ The api creates `whsec_…`, shows it once and stores it AES-256-GCM encrypted (
 Rotation keeps the previous ciphertext in `secret_prev_enc` until `secret_prev_until`. Don't rotate
 `WEBHOOK_SECRET_KEY` itself without re-encrypting both columns ([secrets.md](secrets.md)).
 
-### SSRF rules (worker `EgressPolicy`, `HttpWebhookTransport`)
+### SSRF rules (platform `EgressPolicy`)
+
+The rules live in the shared `platform` library (`ca.northline.platform`, S-72) and apply to every request
+to a URL someone else chose: partner webhooks (worker `HttpWebhookTransport`) and bulk-import image URLs (api
+`SafeRemoteImages`, `IMPORT_IMAGES_ALLOW_LOCAL` as the local exception).
+
 
 - https only; no credentials in the URL. `WEBHOOKS_ALLOW_LOCAL=true` (local only; the cloud profiles refuse to start
   with it) allows `http://` and loopback — nothing else.
