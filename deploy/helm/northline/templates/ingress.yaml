@@ -3,7 +3,8 @@ Routes. The Studio host serves the Studio and, on the same origin, the studio-bf
 the consumer host likewise the consumer app and the consumer-bff (S-45; pages. only /api and /bff);
 auth, consumer, console and pages have their own hosts. The api host exposes only /api/v1/webhooks/stripe (+ /connect,
 S-12), /api/v1/webhooks/calendar (S-32 Google / Microsoft change notifications), /api/v1/webhooks/commerce and
-/api/v1/commerce/oauth (S-35 Shopify / Square / Lightspeed webhooks and OAuth redirect URI) and /api/v1/email/unsubscribe (S-13);
+/api/v1/commerce/oauth (S-35 Shopify / Square / Lightspeed webhooks and OAuth redirect URI), /api/v1/email/unsubscribe (S-13)
+and the MCP server (S-127: /mcp, /.well-known/oauth-protected-resource);
 the rest of the api is reached through the BFF. pages.<zone> and every
 verified merchant domain (edge.customDomains, S-31) serve storefronts from the consumer app.
 S-17 adds TLS (cert-manager), DNS (external-dns reads these hostnames) and the edge (templates/edge.yaml).
@@ -21,20 +22,27 @@ S-17 adds TLS (cert-manager), DNS (external-dns reads these hostnames) and the e
        verified per channel secret), commerce webhooks (S-35, HMAC) and OAuth callback (S-35, single-use state) and
        email unsubscribe (S-13); with
        apps.api.tokenClients (S-29) all of /api/v1 for the mobile apps' DPoP-bound tokens (and partners' tokens). */ -}}
+{{- $apiPaths := list -}}
 {{- if $v.apps.api.tokenClients -}}
-{{- $apiPaths := list (dict "path" "/api/v1" "app" "api") -}}
+{{- $apiPaths = list (dict "path" "/api/v1" "app" "api") -}}
 {{- if $v.apps.api.docsRoutes -}}
 {{- /* S-125: the API documentation (dev, staging; refused in prod by validate.yaml). */ -}}
 {{- $apiPaths = concat $apiPaths (list (dict "path" "/docs" "app" "api") (dict "path" "/swagger-ui" "app" "api")
       (dict "path" "/swagger-ui.html" "app" "api") (dict "path" "/v3/api-docs" "app" "api")) -}}
 {{- end -}}
-{{- $routes = append $routes (dict "host" (include "northline.host" $v.urls.api) "paths" $apiPaths) -}}
 {{- else -}}
-{{- $routes = append $routes (dict "host" (include "northline.host" $v.urls.api) "paths" (list
+{{- $apiPaths = list
       (dict "path" "/api/v1/webhooks/stripe" "app" "api") (dict "path" "/api/v1/webhooks/calendar" "app" "api")
       (dict "path" "/api/v1/webhooks/commerce" "app" "api") (dict "path" "/api/v1/commerce/oauth" "app" "api")
-      (dict "path" "/api/v1/email/unsubscribe" "app" "api"))) -}}
+      (dict "path" "/api/v1/email/unsubscribe" "app" "api") -}}
 {{- end -}}
+{{- /* S-127: the MCP server (Streamable HTTP, OAuth 2.1 bearer tokens; docs/runbooks/mcp.md) and its protected
+       resource metadata (RFC 9728), which MCP clients fetch before they sign in. */ -}}
+{{- if $v.apps.api.mcp -}}
+{{- $apiPaths = concat $apiPaths (list (dict "path" "/mcp" "app" "api")
+      (dict "path" "/.well-known/oauth-protected-resource" "app" "api")) -}}
+{{- end -}}
+{{- $routes = append $routes (dict "host" (include "northline.host" $v.urls.api) "paths" $apiPaths) -}}
 {{- end -}}
 {{- if $v.apps.auth.enabled -}}
 {{- $routes = append $routes (dict "host" (include "northline.host" $v.urls.auth) "paths" (list (dict "path" "/" "app" "auth"))) -}}

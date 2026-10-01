@@ -110,7 +110,8 @@ class OpenApiSpecsTest extends IntegrationTest {
         assertThat(paths)
                 .containsOnlyKeys(
                         "/api/v1/merchants/{merchantId}/listings",
-                        "/api/v1/merchants/{merchantId}/listings/{listingId}");
+                        "/api/v1/merchants/{merchantId}/listings/{listingId}",
+                        "/api/v1/merchants/{merchantId}/listings/{listingId}/price-stock"); // S-127, api.write
         assertThat(JsonPath.<List<String>>read(
                         partner,
                         "$.paths['/api/v1/merchants/{merchantId}/listings'].get.security[0].partnerClientCredentials"))
@@ -171,7 +172,9 @@ class OpenApiSpecsTest extends IntegrationTest {
         var prod = new YamlPropertySourceLoader()
                 .load("prod", new ClassPathResource("application-prod.yml"))
                 .getFirst();
-        assertThat(prod.getProperty("springdoc.api-docs.enabled")).isEqualTo(false);
+        // S-127: springdoc builds the model (the MCP tools come from it); nothing publishes it — the docs chain is
+        // off and the api's chains deny /v3/api-docs (McpServerTest runs with northline.docs.enabled=false).
+        assertThat(prod.getProperty("springdoc.api-docs.enabled")).isEqualTo(true);
         assertThat(prod.getProperty("springdoc.swagger-ui.enabled")).isEqualTo(false);
         assertThat(prod.getProperty("scalar.enabled")).isEqualTo(false);
         assertThat(prod.getProperty("northline.docs.enabled")).isEqualTo(false);

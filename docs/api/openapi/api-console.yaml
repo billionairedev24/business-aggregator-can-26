@@ -21,12 +21,6 @@ paths:
   /api/v1/console/payments/tax-reconciliations:
     post:
       operationId: taxReconciliationRun
-      parameters:
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       requestBody:
         content:
           application/json:
@@ -93,11 +87,6 @@ paths:
           type: integer
           format: int32
           default: 50
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       responses:
         "200":
           content:
@@ -144,11 +133,6 @@ paths:
         required: true
         schema:
           type: string
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       requestBody:
         content:
           application/json:
@@ -221,23 +205,6 @@ paths:
       - registry-review-controller
 components:
   schemas:
-    CurrentUser:
-      type: object
-      properties:
-        mfa:
-          type: boolean
-        roles:
-          type: array
-          items:
-            type: string
-          uniqueItems: true
-        scopes:
-          type: array
-          items:
-            type: string
-          uniqueItems: true
-        userId:
-          type: string
     DecisionRequest:
       type: object
       properties:

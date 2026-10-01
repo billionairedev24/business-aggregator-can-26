@@ -52,7 +52,10 @@ enum ClientPolicy {
         return switch (scheme) {
             case "https" -> parsed.getHost() == null ? "has no host" : null;
             case "http" ->
-                httpAllowed(parsed) ? null : "must use https outside local (http only on loopback under dev)";
+                httpAllowed(parsed) || (type == ClientSpec.Type.PUBLIC && loopbackIp(parsed))
+                        ? null
+                        : "must use https outside local (http only on loopback under dev; a public client may use a"
+                                + " loopback IP, RFC 8252)";
             default ->
                 type == ClientSpec.Type.PUBLIC && scheme.contains(".")
                         ? null
@@ -66,6 +69,14 @@ enum ClientPolicy {
             case DEV -> uri.getHost() != null && LOOPBACK_HOSTS.contains(uri.getHost());
             case STRICT -> false;
         };
+    }
+
+    /**
+     * S-127: native apps and desktop agents receive the code on a loopback IP literal on any port (RFC 8252 § 7.3,
+     * Spring Authorization Server ignores the port there) — allowed for public clients in every environment.
+     */
+    private static boolean loopbackIp(URI uri) {
+        return "127.0.0.1".equals(uri.getHost()) || "[::1]".equals(uri.getHost());
     }
 
     /** Whether a {@code {noop}} (unhashed) secret may be registered. */

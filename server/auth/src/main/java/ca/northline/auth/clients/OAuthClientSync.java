@@ -145,6 +145,8 @@ final class OAuthClientSync {
         }
         jdbc.queryForList("select client_id from oauth2_registered_client order by client_id", String.class).stream()
                 .filter(id -> !catalog.declares(id))
+                // S-127: agents registered at run time from their Client ID Metadata Document aren't configuration
+                .filter(id -> !id.startsWith("https://") && !id.startsWith("http://"))
                 .forEach(id -> outcomes.add(new Outcome(id, Action.NOT_IN_CONFIGURATION, List.of())));
         return List.copyOf(outcomes);
     }

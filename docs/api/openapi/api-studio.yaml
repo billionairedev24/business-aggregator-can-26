@@ -65,12 +65,6 @@ paths:
   /api/v1/me:
     get:
       operationId: meMe
-      parameters:
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       responses:
         "200":
           content:
@@ -111,12 +105,6 @@ paths:
   /api/v1/me/businesses:
     get:
       operationId: myBusinessesList
-      parameters:
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       responses:
         "200":
           content:
@@ -157,12 +145,6 @@ paths:
   /api/v1/merchants:
     post:
       operationId: onboardingStart
-      parameters:
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       requestBody:
         content:
           application/json:
@@ -228,11 +210,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -292,11 +269,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -381,11 +353,6 @@ paths:
         required: true
         schema:
           type: string
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -450,11 +417,6 @@ paths:
         required: true
         schema:
           type: string
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -520,11 +482,6 @@ paths:
         required: true
         schema:
           type: string
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -589,11 +546,6 @@ paths:
         required: true
         schema:
           type: string
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -679,11 +631,6 @@ paths:
         schema:
           type: string
           format: date
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -822,11 +769,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -1044,11 +986,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -1188,11 +1125,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -1258,11 +1190,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -1401,11 +1328,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -1567,11 +1489,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "204":
           description: No Content
@@ -2100,11 +2017,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -2184,11 +2096,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -2282,8 +2189,6 @@ paths:
                 file:
                   type: string
                   format: binary
-                member:
-                  $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -2357,11 +2262,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -2638,11 +2538,6 @@ paths:
         required: false
         schema:
           type: string
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -2713,11 +2608,6 @@ paths:
         required: false
         schema:
           type: string
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -3202,11 +3092,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -3356,11 +3241,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -3620,11 +3500,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -3690,11 +3565,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -3786,11 +3656,6 @@ paths:
         schema:
           type: string
           format: date-time
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -3860,8 +3725,6 @@ paths:
                 file:
                   type: string
                   format: binary
-                member:
-                  $ref: "#/components/schemas/CurrentMember"
               required:
               - file
       responses:
@@ -3942,11 +3805,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -4012,11 +3870,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -4101,11 +3954,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -4190,11 +4038,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -4278,11 +4121,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -4440,11 +4278,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -4733,11 +4566,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -4803,11 +4631,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -4873,11 +4696,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -4938,11 +4756,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -5002,11 +4815,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -5330,11 +5138,6 @@ paths:
         required: true
         schema:
           type: string
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -5619,8 +5422,6 @@ paths:
                 file:
                   type: string
                   format: binary
-                member:
-                  $ref: "#/components/schemas/CurrentMember"
               required:
               - file
       responses:
@@ -5701,11 +5502,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -5831,11 +5627,6 @@ paths:
         required: true
         schema:
           type: string
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -6049,11 +5840,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "204":
           description: No Content
@@ -6228,6 +6014,92 @@ paths:
           description: Not found.
       tags:
       - listing-controller
+  /api/v1/merchants/{merchantId}/listings/{listingId}/price-stock:
+    patch:
+      operationId: listingUpdatePriceAndStock
+      parameters:
+      - in: path
+        name: merchantId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: path
+        name: listingId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PriceStockRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                oneOf:
+                - $ref: "#/components/schemas/ProductResponse"
+                - $ref: "#/components/schemas/ServiceResponse"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - listing-controller
   /api/v1/merchants/{merchantId}/listings/{listingId}/publish:
     post:
       operationId: listingPublish
@@ -6303,11 +6175,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -7426,11 +7293,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -7514,11 +7376,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -7929,8 +7786,6 @@ paths:
                 file:
                   type: string
                   format: binary
-                member:
-                  $ref: "#/components/schemas/CurrentMember"
       responses:
         "201":
           content:
@@ -8436,11 +8291,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -8814,8 +8664,6 @@ paths:
                 file:
                   type: string
                   format: binary
-                member:
-                  $ref: "#/components/schemas/CurrentMember"
       responses:
         "201":
           content:
@@ -8955,11 +8803,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -9150,11 +8993,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -9282,11 +9120,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -9441,11 +9274,6 @@ paths:
         required: false
         schema:
           type: string
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -9516,11 +9344,6 @@ paths:
         required: false
         schema:
           type: string
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -9660,11 +9483,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -10086,11 +9904,6 @@ paths:
         required: true
         schema:
           type: string
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -10234,11 +10047,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -10323,11 +10131,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -10532,11 +10335,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "204":
           description: No Content
@@ -10598,11 +10396,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -10752,11 +10545,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -10906,11 +10694,6 @@ paths:
         required: false
         schema:
           type: string
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -11458,11 +11241,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -11547,11 +11325,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -11631,11 +11404,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -11720,11 +11488,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -11863,11 +11626,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -11952,11 +11710,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "204":
           description: No Content
@@ -12132,11 +11885,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -12276,11 +12024,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -12340,11 +12083,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -12424,11 +12162,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -12489,11 +12222,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -12578,11 +12306,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "204":
           description: No Content
@@ -12644,11 +12367,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "204":
           description: No Content
@@ -12709,11 +12427,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -12852,11 +12565,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -12941,11 +12649,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "204":
           description: No Content
@@ -13077,11 +12780,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "202":
           content:
@@ -13147,11 +12845,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -13217,11 +12910,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -13305,11 +12993,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "202":
           content:
@@ -13627,11 +13310,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -13771,11 +13449,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -13841,11 +13514,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "200":
           content:
@@ -13911,11 +13579,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       requestBody:
         content:
           application/json:
@@ -14000,11 +13663,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: member
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentMember"
       responses:
         "204":
           description: No Content
@@ -14191,11 +13849,6 @@ paths:
         required: true
         schema:
           type: string
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       responses:
         "200":
           content:
@@ -14256,11 +13909,6 @@ paths:
         required: true
         schema:
           type: string
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       responses:
         "200":
           content:
@@ -15384,37 +15032,6 @@ components:
         toPack:
           type: integer
           format: int32
-    CurrentMember:
-      type: object
-      properties:
-        merchantId:
-          type: string
-        role:
-          type: string
-          enum:
-          - owner
-          - technician
-          - cook
-          - bookkeeper
-        userId:
-          type: string
-    CurrentUser:
-      type: object
-      properties:
-        mfa:
-          type: boolean
-        roles:
-          type: array
-          items:
-            type: string
-          uniqueItems: true
-        scopes:
-          type: array
-          items:
-            type: string
-          uniqueItems: true
-        userId:
-          type: string
     CustomerResponse:
       type: object
       properties:
@@ -17593,6 +17210,22 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SlotResponse"
+    PriceStockRequest:
+      type: object
+      properties:
+        priceCents:
+          type: integer
+          format: int64
+          description: "New price in cents (CAD), tax excluded. Leave out to keep\
+            \ the current price."
+          exclusiveMinimum: 0
+          maximum: 1000000000
+        stock:
+          type: integer
+          format: int32
+          description: Units in stock (products only). Leave out to keep the current
+            stock.
+          minimum: 0
     PrincipalRequest:
       type: object
       properties:
