@@ -1,0 +1,75 @@
+# Northline alerts (S-111, docs/runbooks/observability.md § Alerts). Prometheus rule syntax, so they load unchanged into
+# Grafana Cloud / Mimir, Amazon Managed Service for Prometheus, Google Managed Prometheus (Rules / ClusterRules) and
+# Azure Monitor managed Prometheus (rule groups), or a Prometheus + Alertmanager of your own. Unit tests:
+# prometheus/tests (scripts/observability.sh test-rules → promtool test rules).
+# severity: page = someone acts now; ticket = next working day.
+groups:
+  - name: northline-http
+    rules:
+      - alert: NorthlineHighErrorRate
+        expr: |
+          sum by (application) (rate(http_server_requests_seconds_count{application=~"northline-.*",status=~"5.."}[5m]))
+            / sum by (application) (rate(http_server_requests_seconds_count{application=~"northline-.*"}[5m])) > 0.05
+          and sum by (application) (rate(http_server_requests_seconds_count{application=~"northline-.*"}[5m])) > 0.2
+        for: 5m
+        labels: { severity: page }
+        annotations:
+          summary: "{{ $labels.application }}: {{ $value | humanizePercentage }} of requests fail (5xx)"
+          runbook: docs/runbooks/observability.md#northlinehigherrorrate
+      - alert: NorthlineSlowRequests
+        expr: |
+          histogram_quantile(0.95, sum by (le, application) (rate(http_server_requests_seconds_bucket{application=~"northline-.*"}[5m]))) > 2
+        for: 10m
+        labels: { severity: ticket }
+        annotations:
+          summary: "{{ $labels.application }}: p95 latency {{ $value | humanizeDuration }}"
+          runbook: docs/runbooks/observability.md#northlineslowrequests
+  - name: northline-events
+    rules:
+      - alert: NorthlineEventDeadLettered
+        expr: sum by (consumer, topic) (increase(northline_events_dead_lettered_total[10m])) > 0
+        labels: { severity: page }
+        annotations:
+          summary: "{{ $labels.consumer }} dead-lettered an event from {{ $labels.topic }}"
+          runbook: docs/runbooks/events.md#3-dlq-investigate-and-replay
+      - alert: NorthlineConsumerLag
+        expr: max by (application, client_id) (kafka_consumer_fetch_manager_records_lag_max{application="northline-worker"}) > 1000
+        for: 10m
+        labels: { severity: ticket }
+        annotations:
+          summary: "{{ $labels.client_id }} is {{ $value }} records behind"
+          runbook: docs/runbooks/events.md#2-alerts-and-metrics
+  - name: northline-business
+    rules:
+      - alert: NorthlineSignInFailures
+        expr: |
+          sum(rate(northline_auth_sign_ins_total{outcome="failed"}[10m]))
+            / sum(rate(northline_auth_sign_ins_total[10m])) > 0.5
+          and sum(rate(northline_auth_sign_ins_total[10m])) > 0.05
+        for: 10m
+        labels: { severity: ticket }
+        annotations:
+          summary: "Half of the sign-ins fail ({{ $value | humanizePercentage }}) — an attack or a broken factor"
+          runbook: docs/runbooks/observability.md#northlinesigninfailures
+      - alert: NorthlineLockoutSpike
+        expr: sum by (action) (increase(northline_auth_lockouts_total[15m])) > 20
+        labels: { severity: ticket }
+        annotations:
+          summary: "{{ $value }} rate-limit lockouts on {{ $labels.action }} in 15 minutes"
+          runbook: docs/runbooks/README.md#rate-limits-s-9
+      - alert: NorthlinePayoutFailed
+        expr: sum by (outcome) (increase(northline_payouts_total{outcome!="sent"}[1h])) > 0
+        labels: { severity: ticket }
+        annotations:
+          summary: "{{ $value }} payouts {{ $labels.outcome }} in the last hour"
+          runbook: docs/runbooks/stripe.md
+      - alert: NorthlineKitchensLate
+        expr: |
+          sum(rate(northline_kds_prep_seconds_count{late="true"}[30m]))
+            / sum(rate(northline_kds_prep_seconds_count[30m])) > 0.3
+          and sum(rate(northline_kds_prep_seconds_count[30m])) > 0
+        for: 15m
+        labels: { severity: ticket }
+        annotations:
+          summary: "{{ $value | humanizePercentage }} of kitchen orders are ready after the promised time"
+          runbook: docs/runbooks/observability.md#northlinekitchenslate

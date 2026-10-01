@@ -14,11 +14,10 @@ northline.required-env:                 # checked before start-up (ca.northline.
   secrets: WEBHOOK_SECRET_KEY
 management:
   endpoint.health.probes.enabled: true  # /actuator/health/liveness and /readiness for Kubernetes
-  # OpenTelemetry export stays off until a collector exists (S-111); OTEL_EXPORT_ENABLED=true turns it on.
-  logging.export.enabled: ${OTEL_EXPORT_ENABLED:false}
-  otlp.metrics.export.enabled: ${OTEL_EXPORT_ENABLED:false}
-  tracing.export.enabled: ${OTEL_EXPORT_ENABLED:false}
+  # S-111: OTLP export (OTEL_EXPORT_ENABLED, OTEL_EXPORTER_OTLP_ENDPOINT) comes from the platform observability defaults.
 logging.level:
   ca.northline: info
 # S-127: MCP confirmations and rate limits shared by every api replica (Valkey); `memory` is refused in staging/prod.
 northline.mcp.store: ${MCP_STORE:redis}
+# S-128: the developer docs MCP server (/mcp/docs) — Northline staff only (a token for it, staff role, acr=mfa).
+northline.devdocs.access: ${MCP_DOCS_ACCESS:staff}

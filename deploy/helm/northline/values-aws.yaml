@@ -39,3 +39,29 @@ apps:
       # S-27: the notifications consumer emails payout.failed with the same provider as the api.
       EMAIL_PROVIDER: ses
       EMAIL_REGION: ca-central-1
+
+# S-111 (docs/runbooks/observability.md § AWS): traces → AWS X-Ray, metrics → CloudWatch (embedded metric format,
+# namespace Northline), logs → CloudWatch Logs, all in ca-central-1, as the Collector's IRSA role (Terraform:
+# workload identity otel-collector with AWSXrayWriteOnlyAccess + CloudWatchAgentServerPolicy). Prefer Amazon Managed
+# Grafana / Prometheus or Grafana Cloud instead? Replace the exporters with otlphttp (test-values/observability-otlp.yaml).
+observability:
+  collector:
+    env:
+      AWS_REGION: ca-central-1
+    exporters:
+      awsxray:
+        region: ca-central-1
+      awsemf:
+        region: ca-central-1
+        namespace: Northline
+        log_group_name: "/northline/${env:NORTHLINE_ENVIRONMENT}/metrics"
+        dimension_rollup_option: NoDimensionRollup
+        resource_to_telemetry_conversion: { enabled: true }
+      awscloudwatchlogs:
+        region: ca-central-1
+        log_group_name: "/northline/${env:NORTHLINE_ENVIRONMENT}/apps"
+        log_stream_name: otel
+    pipelines:
+      traces: [awsxray]
+      metrics: [awsemf]
+      logs: [awscloudwatchlogs]

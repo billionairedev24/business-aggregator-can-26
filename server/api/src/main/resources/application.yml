@@ -117,6 +117,11 @@ northline:
     store: ${MCP_STORE:memory}
     calls-per-minute: ${MCP_CALLS_PER_MINUTE:60}
     writes-per-minute: ${MCP_WRITES_PER_MINUTE:10}
+  # S-128: the developer docs MCP server (docs/runbooks/mcp.md § Developer docs): docs/ and the OpenAPI documents,
+  # read-only. open = no token (local); staff = a token for `resource` with the staff role and acr=mfa (cloud).
+  devdocs:
+    resource: ${MCP_DOCS_RESOURCE:${API_PUBLIC_URL:http://localhost:8080}/mcp/docs}
+    access: ${MCP_DOCS_ACCESS:open}
   studio.base-url: ${STUDIO_ORIGIN:http://localhost:3100}      # invitation links, Stripe return URLs
   # Pooled delivery runs per market (S-49; DeliveryProperties). Times are America/Edmonton; `cutoff` = shops pack by,
   # customers order by cutoff − order-lead. A cut-off after the start belongs to the day before.

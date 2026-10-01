@@ -46,6 +46,11 @@ for cloud in aws gcp azure; do
 done
 check "staging × aws, Ingress + cert-manager" -f "$CHART/values-staging.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml -f test-values/edge-ingress.yaml --set edge.domainReconciler.enabled=false
 check "defaults" 
+# S-111: the Collector with any OTLP backend (Grafana Cloud) instead of the cloud's own exporters.
+check "prod × aws, Collector → OTLP backend" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml -f test-values/observability-otlp.yaml
+if helm template northline "$CHART" -f "$CHART/values-dev.yaml" --set observability.collector.enabled=true --set 'observability.collector.pipelines.traces={nowhere}' >/dev/null 2>&1; then
+  echo "FAIL Collector pipeline with an undefined exporter accepted"; failed=1
+else echo "ok   Collector pipelines only use defined exporters"; fi
 
 # Refusals the chart must keep: secrets from values outside local, http URLs in prod.
 if helm template northline "$CHART" -f "$CHART/values-prod.yaml" --set secrets.create=true >/dev/null 2>&1; then

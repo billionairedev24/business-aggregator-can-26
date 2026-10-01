@@ -56,8 +56,53 @@ configEnv: {}
 existingInfraConfigMap: ""
 
 # Non-secret variables for every Spring app (api, auth, bff, worker); apps.<app>.env wins over these.
-env:
-  OTEL_EXPORT_ENABLED: "false"
+# S-111: OTEL_EXPORT_ENABLED, OTEL_EXPORTER_OTLP_ENDPOINT, OTEL_RESOURCE_ATTRIBUTES and OTEL_TRACES_SAMPLER_ARG come
+# from `observability` below; set them here only to send somewhere other than the chart's Collector.
+env: {}
+
+# S-111 (docs/runbooks/observability.md): traces, metrics and logs leave every Spring app over OTLP to one
+# OpenTelemetry Collector per environment (templates/otel-collector.yaml), which scrubs them (S-112) and forwards them
+# to whatever backend the environment uses — any OTLP backend (Grafana Cloud, Honeycomb, Elastic, a self-hosted
+# LGTM), AWS X-Ray + CloudWatch, Google Cloud Operations or Azure Monitor. Only the exporters change per environment
+# and cloud (values-<cloud>.yaml); the apps always speak OTLP to the Collector.
+observability:
+  # Share of traces kept, the same for every app (ConsistentSampling: one decision per trace id) → OTEL_TRACES_SAMPLER_ARG.
+  tracesSampleRatio: "1.0"
+  collector:
+    enabled: false
+    image:
+      repository: otel/opentelemetry-collector-contrib   # contrib: the X-Ray, CloudWatch, Google Cloud and Azure Monitor
+      tag: "0.161.0"                                     # exporters and the redaction/transform processors. ADOT
+      # (public.ecr.aws/aws-observability/aws-otel-collector) works too. Multi-arch index, 2026-09-16.
+      digest: "sha256:fd328de2552466ad78385e1b1289c3f2402b1c45f265b252aab1955b42845ac1"
+    replicas: 1
+    autoscaling: { enabled: false, minReplicas: 2, maxReplicas: 4, targetCPUUtilizationPercentage: 70 }
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits: { memory: 512Mi }
+    # memory_limiter: refuse data (the apps retry, then drop) before the pod is OOM-killed.
+    memoryLimitMiB: 400
+    # Exporters, in the Collector's own configuration syntax (https://opentelemetry.io/docs/collector/configuration/),
+    # and which pipeline uses which. ${env:VAR} reads the Collector's environment (env / secretEnv below). The default
+    # only prints a summary to the Collector's log — pick a backend per environment/cloud.
+    exporters:
+      debug: { verbosity: basic }
+    pipelines:
+      traces: [debug]
+      metrics: [debug]
+      logs: [debug]
+    # Extra processors (Collector syntax) run after the chart's own (memory limit, resource, scrub) and before batch,
+    # e.g. tail sampling. List their names in extraProcessorsIn.<signal>.
+    extraProcessors: {}
+    extraProcessorsIn: { traces: [], metrics: [], logs: [] }
+    env: {}
+    # Secret variables of the Collector (same rules as apps.<app>.secretEnv: true = required).
+    secretEnv: {}
+    podLabels: {}
+    podAnnotations: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
 
 # Volumes added to every Spring app and its Jobs (e.g. a CA certificate to trust — values-gcp.yaml).
 spring:
@@ -135,6 +180,8 @@ externalSecrets:
     CLOVER_CLIENT_SECRET: clover-client-secret                        # S-36 POS menu import (api)
     TOAST_CLIENT_SECRET: toast-client-secret                          # S-36 POS menu import (api), Toast partner credentials
     GOOGLE_MAPS_API_KEY: google-maps-api-key                          # S-47 address autocomplete / reverse geocoding (api)
+    OTEL_BACKEND_AUTH: otel-backend-auth                              # S-111: the OTLP backend's credentials (Collector)
+    APPLICATIONINSIGHTS_CONNECTION_STRING: applicationinsights-connection-string  # S-111: Azure Monitor (Collector)
     OPENROUTER_API_KEY: openrouter-api-key                            # S-129 AI platform (api)
   # Optional variables (secretEnv: false) to map as well. List only those that hold a value in the secrets manager:
   # one empty or missing remote secret fails the app's whole ExternalSecret. Required variables are always mapped.

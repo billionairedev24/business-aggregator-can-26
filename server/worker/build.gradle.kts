@@ -13,6 +13,8 @@ dependencies {
     // S-14: HTTP health for Kubernetes probes (/actuator/health/liveness, /readiness on SERVER_PORT 8084); no other endpoints.
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("org.springframework.boot:spring-boot-starter-opentelemetry") // S-111: traces, metrics, logs over OTLP
+    implementation(libs.datasource.micrometer) // S-111: a span per SQL statement (no parameter values)
     runtimeOnly("org.postgresql:postgresql")
     runtimeOnly("io.micrometer:micrometer-registry-prometheus") // S-26: /actuator/prometheus (consumer lag, DLQ counts)
     testImplementation("org.springframework.boot:spring-boot-starter-test")
@@ -24,6 +26,7 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-junit-jupiter")
     testImplementation("org.testcontainers:testcontainers-kafka")
     testImplementation("org.testcontainers:testcontainers-elasticsearch") // S-42: the search indices on Elasticsearch 9
+    testImplementation(testFixtures(project(":platform"))) // S-111: OtlpReceiver
     testImplementation(libs.wiremock) // S-33: partner endpoints (signature, retries, auto-disable)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

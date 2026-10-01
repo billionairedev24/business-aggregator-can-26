@@ -31,6 +31,9 @@ locals {
     # S-17 edge add-ons: DNS records for the public hosts, and DNS-01 challenges.
     external-dns = { namespace = "external-dns", service_account = "external-dns" }
     cert-manager = { namespace = "cert-manager", service_account = "cert-manager" }
+    # S-111: the OpenTelemetry Collector (chart: observability.collector) writes traces, metrics and logs to the
+    # cloud's own backend with this identity (docs/runbooks/observability.md).
+    otel-collector = { namespace = local.namespace, service_account = "northline-otel-collector" }
   }
 
   # Application secrets created empty; an operator sets the values (docs/runbooks/<env>.md § Environment variables).
@@ -70,6 +73,10 @@ locals {
     TOAST_CLIENT_SECRET  = "toast-client-secret"
     # S-47 addresses: the server-side Google Maps Platform key (Places API (New) + Geocoding API).
     GOOGLE_MAPS_API_KEY = "google-maps-api-key"
+    # S-111: an OTLP backend's credentials (e.g. Grafana Cloud "Basic <base64 instance:token>"); empty = the cloud's own.
+    OTEL_BACKEND_AUTH = "otel-backend-auth"
+    # S-111: Azure Monitor (Application Insights) connection string for the Collector's azuremonitor exporter.
+    APPLICATIONINSIGHTS_CONNECTION_STRING = "applicationinsights-connection-string"
     # S-129 AI platform: the OpenRouter API key (empty until created; AI features answer 503 without it).
     OPENROUTER_API_KEY = "openrouter-api-key"
   }

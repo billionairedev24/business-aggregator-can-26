@@ -1,0 +1,225 @@
+{{- /*
+S-111 (docs/runbooks/observability.md): one OpenTelemetry Collector per environment. The Spring apps export traces,
+metrics and logs over OTLP (OTEL_EXPORTER_OTLP_ENDPOINT, set in northline.appEnv); the Collector limits memory, stamps
+the environment, scrubs personal data and secrets a second time (S-112: the apps redact first) and batches, then sends
+to observability.collector.exporters — chosen per environment and cloud, never in the apps.
+*/ -}}
+{{- $c := .Values.observability.collector }}
+{{- if $c.enabled }}
+{{- $name := "otel-collector" }}
+{{- $labels := dict "root" $ "app" $name }}
+{{- $ctx := dict "root" $ "name" $name "app" $c }}
+{{- range $signal := list "traces" "metrics" "logs" }}
+{{- range (get $c.pipelines $signal) }}
+{{- if not (hasKey $c.exporters .) }}
+{{- fail (printf "observability.collector.pipelines.%s names exporter %q, which observability.collector.exporters does not define" $signal .) }}
+{{- end }}
+{{- end }}
+{{- end }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "northline.appName" $name }}
+  labels:
+    {{- include "northline.labels" $labels | nindent 4 }}
+  {{- with (include "northline.identityAnnotations" $ctx) }}
+  annotations:
+    {{- . | nindent 4 }}
+  {{- end }}
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "northline.appName" $name }}
+  labels:
+    {{- include "northline.labels" $labels | nindent 4 }}
+data:
+  collector.yaml: |
+    {{- include "northline.collectorConfig" . | nindent 4 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "northline.appName" $name }}
+  labels:
+    {{- include "northline.labels" $labels | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "northline.selectorLabels" $labels | nindent 4 }}
+  ports:
+    - { name: otlp-grpc, port: 4317, targetPort: otlp-grpc, protocol: TCP, appProtocol: grpc }
+    - { name: otlp-http, port: 4318, targetPort: otlp-http, protocol: TCP }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "northline.appName" $name }}
+  labels:
+    {{- include "northline.labels" $labels | nindent 4 }}
+spec:
+  {{- if not $c.autoscaling.enabled }}
+  replicas: {{ $c.replicas }}
+  {{- end }}
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      {{- include "northline.selectorLabels" $labels | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "northline.selectorLabels" $labels | nindent 8 }}
+        {{- with $.Values.global.podLabels }}{{ toYaml . | nindent 8 }}{{ end }}
+        {{- with $c.podLabels }}{{ toYaml . | nindent 8 }}{{ end }}
+        {{- with (include "northline.identityPodLabels" $ctx) }}{{ . | nindent 8 }}{{ end }}
+      annotations:
+        checksum/config: {{ list (include "northline.collectorConfig" .) (toYaml $c.env) (toYaml $c.secretEnv) | join "\n" | sha256sum }}
+        {{- with $.Values.global.podAnnotations }}{{ toYaml . | nindent 8 }}{{ end }}
+        {{- with $c.podAnnotations }}{{ toYaml . | nindent 8 }}{{ end }}
+    spec:
+      serviceAccountName: {{ include "northline.appName" $name }}
+      automountServiceAccountToken: false
+      {{- with $.Values.global.imagePullSecrets }}
+      imagePullSecrets: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml $.Values.podSecurityContext | nindent 8 }}
+        runAsUser: 10001
+        runAsGroup: 10001
+      {{- with $c.nodeSelector }}
+      nodeSelector: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $c.tolerations }}
+      tolerations: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $c.affinity }}
+      affinity: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: collector
+          {{- $image := printf "%s:%s" $c.image.repository $c.image.tag }}
+          image: {{ if $c.image.digest }}{{ printf "%s@%s" $image $c.image.digest | quote }}{{ else }}{{ $image | quote }}{{ end }}
+          imagePullPolicy: {{ $.Values.global.image.pullPolicy }}
+          args: ["--config=/conf/collector.yaml"]
+          ports:
+            - { name: otlp-grpc, containerPort: 4317, protocol: TCP }
+            - { name: otlp-http, containerPort: 4318, protocol: TCP }
+            - { name: health, containerPort: 13133, protocol: TCP }
+          env:
+            - name: NORTHLINE_ENVIRONMENT
+              value: {{ $.Values.global.environment | quote }}
+            - name: GOMEMLIMIT
+              value: {{ printf "%dMiB" (int $c.memoryLimitMiB) | quote }}
+            {{- range $key, $value := $c.env }}
+            - name: {{ $key }}
+              value: {{ $value | toString | quote }}
+            {{- end }}
+            {{- range $key, $required := $c.secretEnv }}
+            - name: {{ $key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "northline.secretName" (dict "root" $ "name" $name) }}
+                  key: {{ $key }}
+                  {{- if not $required }}
+                  optional: true
+                  {{- end }}
+            {{- end }}
+          livenessProbe:
+            httpGet: { path: /, port: health }
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: { path: /, port: health }
+            periodSeconds: 5
+          resources:
+            {{- toYaml $c.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml $.Values.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /conf
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "northline.appName" $name }}
+{{- if $c.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "northline.appName" $name }}
+  labels:
+    {{- include "northline.labels" $labels | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "northline.appName" $name }}
+  minReplicas: {{ $c.autoscaling.minReplicas }}
+  maxReplicas: {{ $c.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: { type: Utilization, averageUtilization: {{ $c.autoscaling.targetCPUUtilizationPercentage }} }
+{{- end }}
+{{- if $.Values.networkPolicy.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "northline.appName" $name }}
+  labels:
+    {{- include "northline.labels" $labels | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "northline.selectorLabels" $labels | nindent 6 }}
+  policyTypes: [Ingress]
+  ingress:
+    # Only Northline's own pods send telemetry; nothing outside the release can inject spans or logs.
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: northline
+              app.kubernetes.io/instance: {{ $.Release.Name }}
+      ports:
+        - { port: 4317, protocol: TCP }
+        - { port: 4318, protocol: TCP }
+{{- end }}
+{{- if and $.Values.externalSecrets.enabled $c.secretEnv }}
+{{- $keys := include "northline.externalKeys" (dict "root" $ "app" $c) | fromYamlArray }}
+{{- if $keys }}
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: {{ include "northline.appName" $name }}
+  labels:
+    {{- include "northline.labels" $labels | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"
+spec:
+  refreshInterval: {{ $.Values.externalSecrets.refreshInterval }}
+  secretStoreRef:
+    kind: {{ $.Values.externalSecrets.store.kind }}
+    name: {{ $.Values.externalSecrets.store.name }}
+  target:
+    name: {{ include "northline.secretName" (dict "root" $ "name" $name) }}
+    creationPolicy: Owner
+    deletionPolicy: Retain
+  data:
+    {{- range $keys }}
+    {{- $remote := include "northline.remoteKey" (dict "root" $ "key" .) }}
+    {{- if not $remote }}
+    {{- fail (printf "externalSecrets: no remote key for %s (otel-collector) — set externalSecrets.remoteKeys.%s or secretNames.%s" . . .) }}
+    {{- end }}
+    - secretKey: {{ . }}
+      remoteRef:
+        key: {{ $remote | quote }}
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

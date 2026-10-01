@@ -190,6 +190,7 @@ everything except `tools` (`make kafka-ui`, `make kibana`).
 | `storage` | S3-compatible storage (RustFS) + bucket `northline-local`; console http://localhost:9101 | `STORAGE_ENDPOINT=http://localhost:9100`, `STORAGE_ACCESS_KEY=northline`, `STORAGE_SECRET_KEY=northline-dev-secret`, `STORAGE_PATH_STYLE=true` | api with `STORAGE_PROVIDER=s3` (S-10) |
 | `payments` | stripe-mock | `STRIPE_SECRET_KEY=sk_test_123`, `STRIPE_API_BASE=http://localhost:12111` (+ `TAX_PROVIDER=stripe` for Stripe Tax, S-21) | api payments + Stripe Connect (+ Stripe Tax) instead of the fakes |
 | `tools` | Kafka UI :8190, Kibana :5601 | — | you |
+| `observability` | OpenTelemetry Collector (:4317 gRPC, :4318 HTTP) + Grafana LGTM — Grafana http://localhost:3300 (admin/admin) with Tempo, Loki, Prometheus and the Northline dashboards (S-111) | `make up OBS=1` sets `OTEL_EXPORT_ENABLED=true`, `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318` for every app it starts; own runs: `eval "$(scripts/observability.sh env)"` | traces, metrics, logs of every app ([observability.md § Local](observability.md#local)) |
 
 Notes:
 - **Storage:** by default (`STORAGE_PROVIDER=local`) uploads go to folders in the temp directory. To use the bucket,
