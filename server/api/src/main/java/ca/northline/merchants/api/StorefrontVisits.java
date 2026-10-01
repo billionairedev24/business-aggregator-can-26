@@ -12,5 +12,8 @@ public interface StorefrontVisits {
     /** Each day in [from, to) with its visits; days without visits are absent. */
     List<DayVisits> daily(String merchantId, LocalDate from, LocalDate to);
 
+    /** S-95: visits in [from, to) to every storefront in {@code scope} (the console's "browsed" funnel step). */
+    long total(ca.northline.shared.MerchantScope scope, LocalDate from, LocalDate to);
+
     record DayVisits(LocalDate day, int visits) {}
 }

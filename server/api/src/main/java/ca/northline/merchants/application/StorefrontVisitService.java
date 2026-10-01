@@ -49,4 +49,9 @@ class StorefrontVisitService implements StorefrontVisits, CountStorefrontVisit {
     public List<DayVisits> daily(String merchantId, LocalDate from, LocalDate to) {
         return visits.daily(merchantId, from, to);
     }
+
+    @Override
+    public long total(ca.northline.shared.MerchantScope scope, LocalDate from, LocalDate to) {
+        return visits.total(scope, from, to);
+    }
 }

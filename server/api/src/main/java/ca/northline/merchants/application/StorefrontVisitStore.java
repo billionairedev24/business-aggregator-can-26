@@ -10,4 +10,6 @@ public interface StorefrontVisitStore {
     void increment(String merchantId, LocalDate day);
 
     List<DayVisits> daily(String merchantId, LocalDate from, LocalDate to);
+
+    long total(ca.northline.shared.MerchantScope scope, LocalDate from, LocalDate to);
 }
