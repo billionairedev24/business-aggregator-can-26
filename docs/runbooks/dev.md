@@ -39,7 +39,7 @@ external-dns.
 | `https://auth.dev.northline.ca` | northline-auth (OIDC issuer, sign-in JSON API) |
 | `https://dev.northline.ca` | consumer web (S-45: TanStack Start SSR; `/api`, `/bff`, `/oauth2`, `/login` → the consumer-bff) |
 | `https://pages.dev.northline.ca` | storefronts (consumer app); merchants' own domains point here with a CNAME + an ownership TXT record ([custom-domains.md](custom-domains.md)) |
-| `https://console.dev.northline.ca` | platform console (placeholder until E-8: no route while `apps.console` is disabled) |
+| `https://console.dev.northline.ca` | platform console (S-90: static SPA; `/api`, `/bff`, `/oauth2`, `/login` → the console-bff; staff with a second factor only) |
 | `https://api.dev.northline.ca` | only `/api/v1/webhooks/stripe` (+ `/connect`), `/api/v1/webhooks/calendar/…` (S-32 Google / Microsoft change notifications), `/api/v1/webhooks/commerce/…` and `/api/v1/commerce/oauth/…` (S-35 Shopify / Square / Lightspeed webhooks and OAuth redirect URIs) and `/api/v1/email/unsubscribe`; the rest of the api is reached through the BFF |
 
 ## Environment variables
@@ -75,7 +75,8 @@ Every app reads its configuration from environment variables; nothing environmen
 | `STUDIO_BFF_SECRET_HASH` | auth | **yes** | `{bcrypt}$2y$12$…` of `STUDIO_BFF_SECRET` | secrets manager (secret created empty by Terraform, named in `secret_env`) → External Secrets (S-6, [secrets.md](secrets.md)) → Secret `northline-<app>-secrets`. The three BFF secrets must differ (the authorization server rejects duplicates) |
 | `CONSUMER_BFF_SECRET` | consumer-bff (S-45) | **yes** | `openssl rand -base64 32` | secrets manager `consumer-bff-secret` (created empty by Terraform) → External Secrets (S-6) → Secret `northline-consumer-bff-secrets` ([README § Consumer BFF](README.md#consumer-bff-s-45)) |
 | `CONSUMER_BFF_SECRET_HASH` | auth | **yes** (S-45) | `{bcrypt}…` of `CONSUMER_BFF_SECRET` | secrets manager `consumer-bff-secret-hash` → External Secrets (S-6) → Secret `northline-auth-secrets` |
-| `CONSOLE_BFF_SECRET_HASH` | auth | no | `{bcrypt}…` of its own secret | secrets manager (secret created empty by Terraform, named in `secret_env`) → External Secrets (S-6) → Kubernetes Secret, once the console BFF is deployed: the client is registered only when its hash is set ([README § OAuth clients](README.md#oauth-clients-s-122)) |
+| `CONSOLE_BFF_SECRET` | console-bff (S-90) | **yes** | `openssl rand -base64 32` | secrets manager `console-bff-secret` (created empty by Terraform) → External Secrets (S-6) → Secret `northline-console-bff-secrets` ([README § Console BFF](README.md#console-bff-s-90)) |
+| `CONSOLE_BFF_SECRET_HASH` | auth | **yes** (S-90) | `{bcrypt}…` of `CONSOLE_BFF_SECRET` | secrets manager `console-bff-secret-hash` → External Secrets (S-6) → Secret `northline-auth-secrets` |
 | `OAUTH_CLIENTS_SYNC_ON_STARTUP` | auth | no | `true` (default); `false` = clients only via the "Register OAuth clients" Job | deployment manifest |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | auth | no (S-18) | `…apps.googleusercontent.com` / `GOCSPX-…` | Google Cloud console → OAuth client ([federation.md](federation.md)); redirect `https://auth.dev.northline.ca/login/oauth2/code/google`; the secret → secrets manager `google-client-secret` |
 | `APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` | auth | no (S-18) | Services ID / team id / key id / the `.p8` PEM | Apple Developer → Sign in with Apple ([federation.md](federation.md)); redirect `https://auth.dev.northline.ca/login/oauth2/code/apple`; the key → secrets manager `apple-private-key` (the client secret JWT is generated and renewed by auth) |

@@ -21,11 +21,12 @@ Other runbooks: [dev](dev.md) · [staging](staging.md) · [prod](prod.md) · [in
 | `auth` | `server/auth` — Jib | same | 65532 | 9000 | same |
 | `bff` | `server/bff` — Jib | same | 65532 | 8082 | same |
 |  ↳ `consumer-bff` (S-45) | the `bff` image, Spring profile `consumer` added (chart `apps.consumer-bff.profiles`) — no image of its own; `promote.sh` pins it to the bff's digest | same | 65532 | 8081 | same |
+|  ↳ `console-bff` (S-90) | the `bff` image, Spring profile `console` added (chart `apps.console-bff.profiles`) — no image of its own; `promote.sh` pins it to the bff's digest | same | 65532 | 8083 | same |
 | `worker` | `server/worker` — Jib | same | 65532 | 8084 (health only) | same |
 | `studio` | `web/Dockerfile` target `studio` | `nginxinc/nginx-unprivileged:1.29-alpine` | 101 | 8080 | `/healthz` |
 | `consumer` | `web/Dockerfile` target `consumer` | `gcr.io/distroless/nodejs22-debian13:nonroot` | 65532 | 3000 | `/healthz` |
 | `docs`, `docs-internal` | `web/Dockerfile` targets `docs`, `docs-internal` (`--build-context repo-docs=docs`) | `nginxinc/nginx-unprivileged:1.29-alpine` | 101 | 8080 | `/healthz` — the documentation site, public / internal variant (S-126, [docs-site.md](docs-site.md)) |
-| `console` | — | the console app (E-8) doesn't exist yet: `apps.console` in the chart is a disabled placeholder | | | |
+| `console` (S-90) | `web/Dockerfile` target `console` (the Studio's nginx template; `NL_AUTH_ORIGIN` at start) | `nginxinc/nginx-unprivileged:1.29-alpine` | 101 | 8080 | `/healthz` |
 
 - **Names are registry-agnostic:** `<REGISTRY>/<app>:<IMAGE_TAG>`, where `REGISTRY` includes any path and
   `IMAGE_TAG` is the git sha. Terraform's `registry.repository_urls` are exactly these repositories (`api`, `auth`,

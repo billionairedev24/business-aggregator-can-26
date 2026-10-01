@@ -150,7 +150,8 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `STUDIO_BFF_SECRET_HASH` | | ✓ | | | yes |
 | `CONSUMER_BFF_SECRET` | | | ✓ (`consumer` profile) | | yes, for the consumer-bff (S-45, [Consumer BFF](#consumer-bff-s-45)) |
 | `CONSUMER_BFF_SECRET_HASH` | | ✓ | | | yes (S-45: the consumer-bff exists) |
-| `CONSOLE_BFF_SECRET_HASH` | | ✓ | | | no — the client is registered only once its hash is set ([OAuth clients](#oauth-clients-s-122)) |
+| `CONSOLE_BFF_SECRET` | | | ✓ (`console` profile) | | yes, for the console-bff (S-90, [Console BFF](#console-bff-s-90)) |
+| `CONSOLE_BFF_SECRET_HASH` | | ✓ | | | yes (S-90: the console-bff exists) |
 | `OAUTH_CLIENTS_SYNC_ON_STARTUP` | | ✓ | | | no (`true`; `false` = register only with the Job) |
 | `GOOGLE_CLIENT_ID`/`_SECRET`, `APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` | | ✓ | | | staging, prod (S-18, [federation.md](federation.md)); empty = that provider off |
 | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` | ✓ | | | | staging and prod |
@@ -269,6 +270,41 @@ S-19 revocation check, sign-out revoking the refresh token, `next` limited to lo
   value, auth) in the secrets manager — Terraform creates both empty ([secrets.md](secrets.md)). Rotate like the
   Studio's (below), with the `CONSUMER_` variables.
 
+## Console BFF (S-90)
+
+The platform console (`web/apps/console`, design 03, [CONSOLE_PLAN.md](../CONSOLE_PLAN.md)) has its own BFF: the **bff
+image with the `console` profile added last** (`SPRING_PROFILES_ACTIVE=dev,console`; locally
+`--spring.profiles.active=local,console`), deployed as `northline-console-bff` (chart `apps.console-bff`, port 8083). It
+serves `/api`, `/bff`, `/oauth2` and `/login` on `console.<zone>`; the console app (nginx, like the Studio) serves the
+rest. Compared with the Studio's:
+
+| | studio-bff | console-bff |
+|---|---|---|
+| OAuth client | `studio-bff`, scopes openid profile merchant | `console-bff` (registration `console`), scopes openid profile console |
+| client secret | `STUDIO_BFF_SECRET` | `CONSOLE_BFF_SECRET` (auth: `CONSOLE_BFF_SECRET_HASH`) |
+| session cookie | `__Host-NL_STUDIO` | `__Host-NL_CONSOLE`; sessions under `nl:console-bff:*` |
+| who gets a session | anyone signed in (the api checks memberships) | **staff with a second factor only**: the ID token (the `console` scope adds `roles`) must list `staff` and carry `acr=mfa`; otherwise the sign-in is ended at once (refresh token revoked) and the browser lands on `/sign-in?error=staff_only` or `?error=mfa_required` |
+| sign-in page | the Studio's | the console's own (`northline.auth.console-login-page` = `${CONSOLE_ORIGIN}/sign-in`; `CONSOLE_ORIGIN` may call the auth JSON API and use passkeys) |
+
+Same as the Studio's: CSRF double-submit (`__Host-XSRF-TOKEN`, header `X-XSRF-TOKEN` only), the S-19 revocation check,
+sign-out revoking the refresh token, `next` limited to local paths, no framing. The browser's `X-Console-Role` header
+(the console's role view) is relayed; the api checks the person holds that role.
+
+**Staff roles** live in `identity.platform_roles` (`staff` opens the console; `admin`, `trust_safety`, `dispatch`,
+`finance`, `support`, `analyst` decide the screens and actions — V190) and reach the api in the access token's `roles`
+claim (10 min). Grant or take one away with SQL until the Team screen (S-96) does it; it applies at the person's next
+token refresh:
+
+```sql
+INSERT INTO identity.platform_roles (user_id, role, granted_by) VALUES ('<user id>', 'staff', '<admin id>'), ('<user id>', 'finance', '<admin id>');
+DELETE FROM identity.platform_roles WHERE user_id = '<user id>' AND role = 'finance';
+```
+
+- **Secrets:** `console-bff-secret` (plain, the console-bff) and `console-bff-secret-hash` (`{bcrypt}` of the same
+  value, auth) in the secrets manager — Terraform creates both empty ([secrets.md](secrets.md)). Rotate like the
+  Studio's (below), with the `CONSOLE_` variables.
+- **Health:** `/actuator/health/{liveness,readiness}` on 8083; dashboard `northline-console-bff` (S-111).
+
 ## OAuth clients (S-122)
 
 northline-auth's OAuth clients are **configuration**: `northline.oauth.clients.<client-id>` in
@@ -297,7 +333,7 @@ the database but not in configuration is logged as `stored but not in configurat
 |---|---|---|---|---|
 | `studio-bff` | confidential (`client_secret_basic`) | always — `STUDIO_BFF_SECRET_HASH` is required | `${STUDIO_ORIGIN}/login/oauth2/code/studio` | openid profile merchant |
 | `consumer-bff` | confidential | always since S-45 — `CONSUMER_BFF_SECRET_HASH` is required | `${CONSUMER_ORIGIN}/login/oauth2/code/northline` (locally also the consumer dev server, `http://localhost:3000/…`) | openid profile orders bookings |
-| `console-bff` | confidential | `CONSOLE_BFF_SECRET_HASH` set (`optional: true`) | `${CONSOLE_ORIGIN}/login/oauth2/code/console` | openid profile console |
+| `console-bff` | confidential | always since S-90 — `CONSOLE_BFF_SECRET_HASH` is required | `${CONSOLE_ORIGIN}/login/oauth2/code/console` (locally also the console dev server, `http://localhost:3200/…`) | openid profile console (the ID token carries `roles` for this scope) |
 | `mobile-consumer` ("Northline") | public (PKCE S256, no secret), **DPoP required** (S-29) | always | `${CONSUMER_ORIGIN}/app/oauth2redirect` (App Link / Universal Link), `ca.northline.app:/oauth2redirect` | openid profile orders bookings offline_access; refresh 30 d |
 | `partner:<name>` (S-30) | client credentials, `private_key_jwt` (no secret) | when declared under `northline.oauth.partners` (chart value `partners`) | — | `api.read` / `api.write`, bound to named businesses; 15 min tokens — [partners.md](partners.md) |
 | `northline-mcp` ("Northline MCP (AI agents)", S-127) | public (PKCE S256), **consent screen**, needs `acr=mfa` | always | `http://127.0.0.1/callback`, `http://127.0.0.1/oauth/callback` (any port), `https://claude.ai/api/mcp/auth_callback`, `https://claude.com/api/mcp/auth_callback` | openid profile merchant mcp mcp.write mcp.ops; 1 h access tokens, no refresh token — [mcp.md](mcp.md) |
@@ -487,6 +523,7 @@ from `STUDIO_ORIGIN` / `CONSUMER_ORIGIN`.
 | auth server session | auth | `NL_AUTH` | `__Host-NL_AUTH` | HttpOnly, SameSite=Lax, Secure (not under `local`), host-only (`auth.<zone>`), 12 h idle |
 | BFF session | bff | `NL_STUDIO` | `__Host-NL_STUDIO` | HttpOnly, SameSite=Lax, Secure, host-only (`studio.<zone>`), 12 h idle |
 | consumer BFF session (S-45) | bff (`consumer`) | `NL_CONSUMER` | `__Host-NL_CONSUMER` | the same, host-only (the apex; `pages.` gets its own) |
+| console BFF session (S-90) | bff (`console`) | `NL_CONSOLE` | `__Host-NL_CONSOLE` | the same, host-only (`console.<zone>`) |
 | language (S-45) | consumer web | `nl.locale` | `nl.locale` | `en`/`fr`, readable, SameSite=Lax, 1 year — no personal data |
 | CSRF token | bff | `XSRF-TOKEN` | `__Host-XSRF-TOKEN` | readable by the Studio, SameSite=Strict, Secure in the cloud, path `/` |
 

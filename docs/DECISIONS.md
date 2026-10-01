@@ -4877,3 +4877,73 @@ and the audit log rules: no update, no delete, and a retention delete only past 
 - **Tests:** `LocalMediaStorageTest` (fallback, an upload wins, unknown or unsafe keys) and `SeedPhotosTest`
   (`local` profile: every seeded menu item and listing image key has bytes, every live seeded listing has an image,
   the public media endpoint serves one as image/jpeg).
+
+## 2026-09-30 — S-90 Console shell with role switch, role-filtered nav and denied screen
+
+- **App:** `web/apps/console`, a TanStack Router SPA like the Studio (static nginx image, port 8080; dev server :3200).
+  Nothing in the console is public or indexed, so the consumer site's SSR buys nothing here. Plan and conventions for
+  the later stories: `docs/CONSOLE_PLAN.md`.
+- **console-bff** is the bff jar under a `console` profile (port 8083, cookie `__Host-NL_CONSOLE`, client `console-bff`,
+  scopes `openid profile console`), like the consumer-bff. **Staff only, with a second factor:** northline-auth puts the
+  platform `roles` in the ID token for the `console` scope (not for other clients). The BFF ends any sign-in whose ID
+  token lacks `staff` or `acr=mfa`: it revokes the refresh token, drops the session and redirects to
+  `/sign-in?error=staff_only|mfa_required`. Every later request re-checks, and a session that fails gets a 401. The api
+  enforces the same anyway; the gate keeps non-staff out of the console entirely.
+- **northline-auth:** `console-bff` is now always registered; `CONSOLE_BFF_SECRET_HASH` is required in the cloud (was
+  optional until E-8). Its unauthenticated or single-factor authorization requests go to the console's own sign-in page
+  (`northline.auth.console-login-page`, `console-clients`). `CONSOLE_ORIGIN` joins the JSON API's allowed origins and the
+  WebAuthn origins.
+- **Staff role model (schema V190).** `identity.platform_roles` accepts `trust_safety`, `dispatch`, `finance`, `support`
+  and `analyst` next to `staff` and `admin` (CHECK widened only). It also gets `granted_by` and an index for platform
+  audit rows (`merchant_id IS NULL`). `staff` stays the on/off switch for the console: every console user holds it plus
+  one or more console roles. `StaffRole` (shared.security) maps roles to `ConsoleScreen`s and `ConsoleAction`s. The
+  screens are design 03 `ROLES.views`. The actions are `ROLES.can` plus the Data Table's `CAN`, which adds `dispatch`
+  for dispatchers and `support` for support and T&S. Admin has every action. Profile and on-call are open to any staff
+  member, even with no console role.
+- **Enforcement:** `@RequiresConsole(screen, actions)` on every `/api/v1/console/**` handler. `StaffAccessInterceptor`
+  enforces it, and a handler without it is denied (`ConsoleEndpointsTest`). The path-level rule (role `STAFF` + `acr=mfa`)
+  stays. 403 codes: `mfa_required`, `not_staff`, `role_not_held`, `insufficient_role`, `unguarded_endpoint`. The three
+  existing console endpoints now carry their screen: trust flags → `trust` (+ `decide`), registry reviews → `verify`
+  (+ `verify`), tax reconciliation → `finance` + `payouts`. Their tests now use role-bearing staff tokens
+  (`TestJwt.staff(id, StaffRole...)`).
+- **Role view:** the console acts with **one** held role at a time. It sends it as `X-Console-Role` and the api
+  authorizes with that role alone. The default is the remembered view (localStorage) if still held, else the first
+  held role in design order. The design shows one role name in the top bar, so a union view was not added. Switching
+  records `console.role_view_switched` in `developer.audit_log` (`merchant_id` null, `role` = the active roles), as the
+  design says "Logged". After a switch the console stays on the screen when the new role opens it, else goes to the
+  overview (design).
+- **Denied screen:** design `v.denied` renders the overview with the banner. The console shows the banner, then the
+  overview, at the requested URL, so switching role lets the person in without navigating. The sidebar highlights
+  nothing then.
+- **Top bar:** "Ops · Alberta + BC pilot" is built from `GET /api/v1/geo/regions`: live provinces by name, pilot
+  provinces by code + "pilot". The design's "Admin · Ops" (role · team) shows the role only: teams aren't modelled.
+  "← Direction" (the design file's own navigation) is left out. The global search pill is there as designed. The design
+  shows no results, so no search endpoint was added; CONSOLE_PLAN lists it as missing, with no owning story.
+- **Sign-in page:** design 03's copy and steps (email or mobile → passkey / authenticator / backup code → "Signed in."),
+  using northline-auth's JSON API through `@northline/auth-kit`, then the console-bff hand-off. **Staff SSO (Okta /
+  Google Workspace) is not built.** The design's two SSO buttons are left out, and the copy that mentions SSO is kept
+  verbatim (it is the target). "Welcome back, Priya. 7 verifications and 3 disputes are waiting." shows only the
+  greeting: the counts need the S-91 / nav-badge data.
+- **Account menu:** design items in order. "My audit trail" has no "today · 6" count yet (S-96). The role list shows
+  held roles only, with "N views · actions" from the api's grant; admin shows "all views".
+- **Not modelled yet:** co-signatures (two admins for a province, T&S lead for suspensions, a second approver for
+  refunds > $500), per-role factor rules (passkey / app 2FA / SSO), nav badge counts, granting roles in the UI (SQL in
+  the runbook until S-96).
+- **Paths:** API & webhooks is `/integrations`, because `/api` belongs to the console-bff on the console host. The dev
+  server proxies `^/api/` (not the `/api` prefix) for the same reason.
+- **Panels:** the console uses the Studio's `--color-surface: var(--color-bg)` (decision of 2026-09-29), so its sidebar
+  and panels match the Studio's.
+- **Dev:** seed V191 adds Priya Natarajan (staff, every console role, backup codes `priya-n-00001…10`). Dev auth (api,
+  `local`) now mints the `roles` claim from `identity.platform_roles` through a new `shared.security.PlatformRoles` port
+  (identity implements it). `make up SERVICES="api console"`, `run-console[-dev]`, `run-bff-console`.
+- **Deploy:** chart apps `console` (static, enabled) and `console-bff` (bff image + `console` profile, port 8083); the
+  console host routes `/api`, `/bff`, `/oauth2`, `/login` to the console-bff; `CONSOLE_BFF_SECRET` in the secret maps,
+  Terraform (created empty), the kind ESO store; Argo CD images and `promote.sh` (console-bff = the bff's digest); CI
+  image matrices (GitHub, GitLab) and the web check build the console; Grafana dashboard `northline-console-bff`.
+- **Tests:** api `ConsoleRolesApiTest` (me, role view + audit row, role not held, 422, screen/action refusals, role view
+  narrowing, admin), `ConsoleEndpointsTest`, `StaffRoleTest`; auth `TokenClaimsTest` (console ID token roles, console
+  sign-in page for no / single-factor sessions), `OAuthClientsStartupTest`; bff `ConsoleBffTest` (client, staff-only
+  gate with revocation, relay with role header and stripped credentials, CSRF header-only, sign-out, other clients
+  absent), `ConsoleBffOpenApiTest`, `SessionCookieSettingsTest`; console vitest (shell, role filter, denied, role switch,
+  language, sign-in hand-off, `next` safety, route list).
+
