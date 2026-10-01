@@ -7,6 +7,7 @@
 // GET /healthz answers "ok" for Kubernetes probes. Static files come from dist/client (hashed /assets/* are cached for
 // a year, everything else revalidates); every other request is rendered by the app. SIGTERM drains open connections.
 // Business pages on pages.<zone> and on merchants' own domains: page-hosts.mjs (S-54; NL_SITE_ORIGIN, NL_PAGES_HOST).
+// robots.txt and the sitemaps: seo.mjs (S-63).
 import { createServer } from 'node:http';
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
@@ -14,6 +15,7 @@ import { extname, join, normalize, sep } from 'node:path';
 import { Readable } from 'node:stream';
 import { fileURLToPath } from 'node:url';
 import { createPageRouter, PAGE_HEADERS } from './page-hosts.mjs';
+import { createSeo, isSeoPath } from './seo.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const clientDir = join(root, 'dist', 'client');
@@ -25,6 +27,8 @@ const host = process.env.HOST ?? '0.0.0.0';
 const trustProxy = process.env.TRUST_PROXY === 'true';
 const FORWARDED_HEADER = 'x-nl-forwarded-for';
 const pageRoute = createPageRouter({ siteOrigin: process.env.NL_SITE_ORIGIN, pagesHost: process.env.NL_PAGES_HOST, bffUrl: process.env.NL_BFF_URL });
+// robots.txt and the sitemaps (S-63): per host — the site, pages.<zone>, a merchant's own domain
+const seo = createSeo({ siteOrigin: process.env.NL_SITE_ORIGIN ?? 'http://localhost:3000', bffUrl: process.env.NL_BFF_URL ?? 'http://localhost:8081' });
 
 const types = {
   '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -112,6 +116,12 @@ const server = createServer(async (req, res) => {
         else createReadStream(found.file).pipe(res);
         return;
       }
+    }
+    if ((req.method === 'GET' || req.method === 'HEAD') && isSeoPath(pathname)) {
+      const answer = await seo(await pageRoute.hostKind(publicHost(req)), pathname);
+      res.writeHead(answer.status, { ...securityHeaders, 'content-type': answer.type, 'cache-control': answer.cache });
+      res.end(req.method === 'HEAD' ? undefined : answer.body);
+      return;
     }
     const url = new URL(req.url ?? '/', 'http://x');
     const route = await pageRoute(publicHost(req), pathname, url.search);

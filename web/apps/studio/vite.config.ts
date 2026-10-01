@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv, type Plugin, type ProxyOptions } from 'vite';
 import react from '@vitejs/plugin-react';
 import { tanstackRouter } from '@tanstack/router-plugin/vite';
+import { legalPages } from '@northline/legal/vite';
 
 /**
  * Local "dev auth": when NL_DEV_USER is set (a seeded identity.users id), /api calls go straight to the api with
@@ -30,7 +31,8 @@ export default defineConfig(({ mode }) => {
     ? { '/api': { target: env.NL_API ?? 'http://localhost:8080', headers: { 'X-Dev-User': env.NL_DEV_USER! } } }
     : { '/api': bff, '/bff': bff, '/oauth2': bff, '/login': bff };
   return {
-    plugins: [tanstackRouter({ target: 'react', autoCodeSplitting: true }), react(), devAuth(env)],
+    // /legal/terms.html, /legal/privacy.html: design 09/10 verbatim, shared with the consumer app (S-63)
+    plugins: [tanstackRouter({ target: 'react', autoCodeSplitting: true }), react(), devAuth(env), legalPages()],
     server: {
       port: 3100,
       proxy,

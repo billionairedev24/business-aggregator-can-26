@@ -1,19 +1,21 @@
 #!/usr/bin/env node
-// Regenerates the Studio's and the consumer app's static legal pages from the design (CLAUDE.md: ship 09 Terms of Service and 10 Privacy
+// Regenerates the web apps' static legal pages from the design (CLAUDE.md: ship 09 Terms of Service and 10 Privacy
 // Policy verbatim, opened from registration in a new tab). Keeps the design's markup and copy, drops the prototype
 // runtime (support.js, <x-dc>/<helmet>, icon font) and links the Northline stylesheet.
 //
-//   node scripts/legal-pages.mjs
+//   node scripts/legal-pages.mjs [out-dir]
+//
+// S-63: one copy in web/packages/legal/pages, served at /legal/ by the Studio and the consumer app (its Vite plugin);
+// web/packages/legal's test checks the committed files are this script's output.
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-// S-45: the consumer app serves the same files (registration's links, the footer) until S-63's legal pages.
-const outs = ['web/apps/studio/public/legal', 'web/apps/consumer/public/legal'];
+const outs = [process.argv[2] ?? join(root, 'web/packages/legal/pages')];
 for (const out of outs) {
-  mkdirSync(join(root, out), { recursive: true });
-  copyFileSync(join(root, 'design/theme/northline.css'), join(root, out, 'northline.css'));
+  mkdirSync(out, { recursive: true });
+  copyFileSync(join(root, 'design/theme/northline.css'), join(out, 'northline.css'));
 }
 
 const pages = [
@@ -51,7 +53,7 @@ ${body}
 </html>
 `;
   for (const out of outs) {
-    writeFileSync(join(root, out, page.dest), file);
+    writeFileSync(join(out, page.dest), file);
     console.log(`wrote ${join(out, page.dest)}`);
   }
 }

@@ -1,0 +1,13 @@
+{
+  "name": "@northline/legal",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Design 09 Terms of Service and 10 Privacy Policy, verbatim (scripts/legal-pages.mjs), served at /legal/ by every web app.",
+  "exports": {
+    "./vite": { "types": "./vite.d.mts", "default": "./vite.mjs" }
+  },
+  "scripts": {
+    "test": "node --test legal.test.mjs"
+  }
+}
