@@ -11,6 +11,8 @@ urls:
   consumer: https://dev.northline.ca
   console: https://console.dev.northline.ca
   pages: https://pages.dev.northline.ca
+  docs: https://docs.dev.northline.ca                   # S-126: the public documentation site
+  docsInternal: https://internal-docs.dev.northline.ca   # S-126: with apps.docs-internal + edge.docsInternal.allowedCIDRs
   webauthnRpId: dev.northline.ca
 
 # S-17: Gateway API with the chart's Gateway (Envoy Gateway), Let's Encrypt certificates per host over HTTP-01,

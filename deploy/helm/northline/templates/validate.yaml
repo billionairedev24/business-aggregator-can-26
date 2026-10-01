@@ -11,3 +11,10 @@
 {{- if and .Values.apps.api.docsRoutes (eq .Values.global.environment "prod") }}
 {{- fail "apps.api.docsRoutes exposes the API documentation and is not allowed in prod (S-125: prod publishes no spec; the docs site carries the public ones)" }}
 {{- end }}
+{{- $dint := get .Values.apps "docs-internal" }}
+{{- if and $dint $dint.enabled (ne .Values.global.environment "local") (not .Values.edge.docsInternal.allowedCIDRs) }}
+{{- fail "apps.docs-internal publishes runbooks, decisions and the internal API specs: set edge.docsInternal.allowedCIDRs (S-126) — it is never public" }}
+{{- end }}
+{{- if and $dint $dint.enabled (ne .Values.global.environment "local") (not (and .Values.edge.enabled .Values.gateway.enabled (eq .Values.edge.gateway.className "envoy"))) }}
+{{- fail "apps.docs-internal needs the Envoy Gateway edge (edge.enabled, gateway.enabled, className envoy) to enforce edge.docsInternal.allowedCIDRs" }}
+{{- end }}

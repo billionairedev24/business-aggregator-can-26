@@ -49,9 +49,9 @@ Merchants' domains (S-31): shard Gateways northline-custom-N + Certificates + HT
 
 | environment | zone (Terraform `dns_zone_name`) | hosts |
 |---|---|---|
-| prod | `northline.ca` | `northline.ca` (consumer), `studio.northline.ca`, `auth.northline.ca`, `api.northline.ca`, `pages.northline.ca`, `console.northline.ca` (placeholder) |
-| staging | `staging.northline.ca` | `staging.northline.ca`, `studio.`, `auth.`, `api.`, `pages.`, `console.` + `staging.northline.ca` |
-| dev | `dev.northline.ca` | `dev.northline.ca`, `studio.`, `auth.`, `api.`, `pages.`, `console.` + `dev.northline.ca` |
+| prod | `northline.ca` | `northline.ca` (consumer), `studio.northline.ca`, `auth.northline.ca`, `api.northline.ca`, `pages.northline.ca`, `docs.northline.ca` (S-126), `console.northline.ca` (placeholder) |
+| staging | `staging.northline.ca` | `staging.northline.ca`, `studio.`, `auth.`, `api.`, `pages.`, `docs.`, `console.` + `staging.northline.ca` |
+| dev | `dev.northline.ca` | `dev.northline.ca`, `studio.`, `auth.`, `api.`, `pages.`, `docs.`, `console.` + `dev.northline.ca` |
 
 - **Studio: `studio.`** (the backlog's name; earlier drafts said `business.`, nothing was ever deployed there).
   The passkey RP id stays the zone (`urls.webauthnRpId`), shared by the Studio and the consumer origins.
@@ -66,6 +66,9 @@ Merchants' domains (S-31): shard Gateways northline-custom-N + Certificates + HT
   (`https://studio.<zone>/api/v1/calendar/oauth/…`), which need the member's session. `tokenClients: false` narrows the route back
   to `/api/v1/webhooks/stripe` (+ `/connect`), `/api/v1/webhooks/calendar`, `/api/v1/webhooks/commerce`,
   `/api/v1/commerce/oauth` and `/api/v1/email/unsubscribe`.
+- **docs / internal-docs (S-126):** the documentation site; `internal-docs.` exists only with `apps.docs-internal`, and an
+  Envoy Gateway `SecurityPolicy` admits only `edge.docsInternal.allowedCIDRs` ([docs-site.md](docs-site.md)). S-125 also
+  routes `/docs`, `/swagger-ui(.html)` and `/v3/api-docs` on `api.` in dev and staging (`apps.api.docsRoutes`).
 - **console:** placeholder. No route, certificate or record exists until `apps.console.enabled` (E-8).
 - **consumer (the apex, S-45):** the consumer app on `/`; `/api`, `/bff`, `/oauth2` and `/login` go to the consumer-bff
   (the same shape as the Studio host), so the browser only ever talks to its own origin and holds `__Host-` cookies.

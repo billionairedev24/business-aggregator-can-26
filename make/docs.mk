@@ -28,9 +28,27 @@ api-docs: ## Where the viewers are: Swagger UI, Scalar and Redoc of each running
 	@printf '  auth  http://localhost:9000/docs   (same paths)\n'
 	@printf '  bff   http://localhost:8082/bff/docs, consumer-bff http://localhost:8081/bff/docs   (under /bff)\n'
 
+# S-126 (docs/runbooks/docs-site.md): web/apps/docs, Docusaurus. DOCS_VARIANT=internal (everything, default) or public
+# (guides + public/partner/webhook/OAuth references — what docs.<zone> serves in production).
+DOCS_VARIANT ?= internal
+
 .PHONY: docs
-docs: ## Build the documentation site (S-126)
-	@echo "make docs arrives with S-126 (Docusaurus documentation site)."; exit 2
+docs: $(WEB_INSTALLED) ## Build the documentation site (DOCS_VARIANT=internal|public; en + fr) and check every page exists
+	cd $(ROOT)/web && NORTHLINE_DOCS_VARIANT=$(DOCS_VARIANT) pnpm --filter @northline/docs build
+	cd $(ROOT)/web && NORTHLINE_DOCS_VARIANT=$(DOCS_VARIANT) pnpm --filter @northline/docs test:build
+
+.PHONY: docs-serve
+docs-serve: ## Serve the last make docs build on http://localhost:3300 (search works here, not in docs-dev)
+	$(PNPM) --filter @northline/docs serve
+
+.PHONY: docs-dev
+docs-dev: $(WEB_INSTALLED) ## Docusaurus dev server on http://localhost:3300 with live reload (English only)
+	cd $(ROOT)/web && NORTHLINE_DOCS_VARIANT=$(DOCS_VARIANT) pnpm --filter @northline/docs start
+
+.PHONY: docs-pages
+docs-pages: ## Static export of the public site for GitHub/GitLab Pages into web/apps/docs/build (DOCS_URL, DOCS_BASE_URL)
+	$(MAKE) docs DOCS_VARIANT=public
 
 .PHONY: docs-clean
 docs-clean:
+	rm -rf $(ROOT)/web/apps/docs/build $(ROOT)/web/apps/docs/.docusaurus $(ROOT)/web/apps/docs/static/openapi $(ROOT)/web/apps/docs/static/scalar

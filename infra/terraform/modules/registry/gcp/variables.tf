@@ -23,7 +23,7 @@ variable "context" {
 variable "repositories" {
   description = "Image repositories (one per deployable)."
   type        = list(string)
-  default     = ["api", "auth", "bff", "worker", "studio", "consumer"]
+  default     = ["api", "auth", "bff", "worker", "studio", "consumer", "docs", "docs-internal"]
 }
 
 variable "kms_key" {

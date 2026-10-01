@@ -8,7 +8,7 @@
 #   scripts/stack.sh logs [service…]    follow the logs, one prefix per service
 #   scripts/stack.sh dev [service…]     up + logs in the foreground; Ctrl-C stops what this run started
 #
-# Services: api auth bff bff-consumer worker studio consumer storybook  ("all" = every one of them)
+# Services: api auth bff bff-consumer worker studio consumer storybook docs  ("all" = every one of them)
 #   bff = studio-bff (:8082), bff-consumer = the same jar with the `consumer` profile (:8081).
 #   studio / consumer use dev auth (DEV_USER / CONSUMER_DEV_USER, no sign-in, only the api needed) unless their BFF is
 #   started with them or already runs; DEV_AUTH=1 or DEV_AUTH=0 forces it either way.
@@ -27,7 +27,7 @@ DEV_USER="${DEV_USER:-01J9ZD3V00000000000000RAV1}"                   # Ravi Sand
 CONSUMER_DEV_USER="${CONSUMER_DEV_USER:-01J9ZD3V0000000000000C0001}" # Amara Osei, the seeded consumer
 DEV_AUTH="${DEV_AUTH:-auto}"
 
-ALL_SERVICES="auth api bff bff-consumer worker studio consumer storybook"
+ALL_SERVICES="auth api bff bff-consumer worker studio consumer storybook docs"
 DEFAULT_SERVICES="api studio"
 JAVA_SERVICES="auth api bff bff-consumer worker"
 
@@ -39,7 +39,7 @@ die() { say "${c_bad}✗ $*${c_off}" >&2; exit 1; }
 port_of() {
   case "$1" in
     api) echo 8080 ;; auth) echo 9000 ;; bff) echo 8082 ;; bff-consumer) echo 8081 ;; worker) echo 8084 ;;
-    studio) echo 3100 ;; consumer) echo 3000 ;; storybook) echo 6006 ;;
+    studio) echo 3100 ;; consumer) echo 3000 ;; storybook) echo 6006 ;; docs) echo 3300 ;;
     *) die "unknown service '$1' (services: $ALL_SERVICES, or all)" ;;
   esac
 }
@@ -78,6 +78,7 @@ command_of() { # command_of <service> <services being started>
       if dev_auth bff-consumer "$2"; then echo "cd '$ROOT/web' && NL_DEV_USER=$CONSUMER_DEV_USER NL_BFF_URL=http://localhost:8080 pnpm --filter @northline/consumer dev"
       else echo "cd '$ROOT/web' && pnpm --filter @northline/consumer dev"; fi ;;
     storybook) echo "cd '$ROOT/web' && pnpm --filter @northline/ui storybook --no-open" ;;
+    docs) echo "cd '$ROOT/web' && pnpm --filter @northline/docs start" ;; # S-126, internal variant, English
   esac
 }
 
@@ -231,6 +232,7 @@ cmd_status() {
   fi
   running auth && say "  Auth       http://localhost:9000/.well-known/openid-configuration  (SMS codes: grep 'Verification code' .run/logs/auth.log)"
   running storybook && say "  Storybook  http://localhost:6006"
+  running docs && say "  Docs       http://localhost:3300 (dev server, English; make docs docs-serve for the full site with search)"
   say ""
 }
 

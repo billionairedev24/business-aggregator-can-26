@@ -1,0 +1,23 @@
+# S-126 — the PUBLIC documentation site as a static export on GitLab Pages (docs/runbooks/docs-site.md). Included from
+# .gitlab-ci.yml; pipelines exist only when started by hand: PIPELINE_PART=pages (never part of `all`). GitLab Pages
+# publishes the `public/` artifact of a job named `pages`. Only the public variant is ever published here.
+
+pages:
+  stage: build
+  needs: []
+  image: node:22-bookworm
+  timeout: 20m
+  rules:
+    - if: $PIPELINE_PART == "pages"
+  variables:
+    COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+    DOCS_URL: $CI_PAGES_URL
+  script:
+    - corepack enable
+    - export DOCS_BASE_URL="$(echo "$CI_PAGES_URL" | sed -E 's#^https?://[^/]+##')/"
+    - cd web && pnpm install --frozen-lockfile && cd ..
+    - make docs-pages
+    - mv web/apps/docs/build public
+  artifacts:
+    paths: [public]
+    expire_in: 7 days

@@ -41,6 +41,10 @@ urls:
   console: https://console.dev.northline.ca
   # Storefronts (the consumer app); merchants point their own domains here with a CNAME (edge.customDomains, S-31).
   pages: https://pages.dev.northline.ca
+  # S-126: the documentation site — docs (public variant, every environment) and docs-internal (runbooks,
+  # decisions, every spec; only behind edge.docsInternal.allowedCIDRs). Empty = no route.
+  docs: https://docs.dev.northline.ca
+  docsInternal: https://internal-docs.dev.northline.ca
   # Registrable domain shared by the Studio and consumer origins (passkeys). Changing it invalidates every passkey.
   webauthnRpId: dev.northline.ca
 
@@ -175,6 +179,11 @@ gateway:
 # from external-dns — the last two are cluster add-ons (deploy/argocd/addons/), this chart only declares what it needs.
 edge:
   enabled: false
+  # S-126: who may open urls.docsInternal (apps.docs-internal). Client CIDRs (office, VPN egress), enforced by an Envoy
+  # Gateway SecurityPolicy on its route; everyone else gets 403 at the edge. Required outside local when docs-internal
+  # is enabled (behind a CDN set edge.trustedProxyHops, or the CDN's address is all the edge sees).
+  docsInternal:
+    allowedCIDRs: []
   # DNS zone of the public hosts; empty = urls.webauthnRpId (dev.northline.ca, staging.northline.ca, northline.ca).
   zone: ""
   gateway:
@@ -592,6 +601,65 @@ apps:
       liveness: { path: /healthz, periodSeconds: 10, failureThreshold: 3 }
       readiness: { path: /healthz, periodSeconds: 5, failureThreshold: 3 }
     allowFrom: []
+    extraVolumes: []
+    extraVolumeMounts: []
+    podLabels: {}
+    podAnnotations: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+
+  # S-126: the documentation site (web/apps/docs, docs/runbooks/docs-site.md), static on nginx like the Studio.
+  # docs = the public variant (guides + the public, partner, webhook and OAuth references) on urls.docs;
+  # docs-internal = everything (docs/ of the repository, every OpenAPI document) on urls.docsInternal, reachable only
+  # from edge.docsInternal.allowedCIDRs (an Envoy Gateway SecurityPolicy; the chart refuses it without one outside
+  # local). NL_DOCS_SWAGGER (links to the services' viewers) and NL_DOCS_CONNECT are derived (templates/_helpers.tpl).
+  docs:
+    enabled: true
+    type: static
+    image: { repository: docs, tag: "", digest: "" }
+    port: 8080
+    service: true
+    public: true
+    replicas: 1
+    autoscaling: { enabled: false, minReplicas: 2, maxReplicas: 4, targetCPUUtilizationPercentage: 70 }
+    resources:
+      requests: { cpu: 20m, memory: 32Mi }
+      limits: { memory: 64Mi }
+    env: {}
+    runAsUser: 101
+    probes:
+      liveness: { path: /healthz, periodSeconds: 10, failureThreshold: 3 }
+      readiness: { path: /healthz, periodSeconds: 5, failureThreshold: 3 }
+    allowFrom: []
+    writableDirs: [/tmp, /etc/nginx/conf.d]
+    extraVolumes: []
+    extraVolumeMounts: []
+    podLabels: {}
+    podAnnotations: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+
+  docs-internal:
+    enabled: false
+    type: static
+    image: { repository: docs-internal, tag: "", digest: "" }
+    port: 8080
+    service: true
+    public: true
+    replicas: 1
+    autoscaling: { enabled: false, minReplicas: 2, maxReplicas: 4, targetCPUUtilizationPercentage: 70 }
+    resources:
+      requests: { cpu: 20m, memory: 32Mi }
+      limits: { memory: 64Mi }
+    env: {}
+    runAsUser: 101
+    probes:
+      liveness: { path: /healthz, periodSeconds: 10, failureThreshold: 3 }
+      readiness: { path: /healthz, periodSeconds: 5, failureThreshold: 3 }
+    allowFrom: []
+    writableDirs: [/tmp, /etc/nginx/conf.d]
     extraVolumes: []
     extraVolumeMounts: []
     podLabels: {}

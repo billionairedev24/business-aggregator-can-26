@@ -2886,3 +2886,90 @@ Runbook: [docs/runbooks/api-docs.md](runbooks/api-docs.md). Stacked on S-124 (Ma
   - **Production:** never affected, because springdoc is off in prod.
   - **Follow-up for the lead:** dev/staging could hit the race after someone opens `/bff/docs`. Candidate fixes are a
     gateway MVC `ClientHttpRequestFactory` without a body for GET, or the JDK fix.
+
+## 2026-10-01 — S-126 Docusaurus documentation site (docs., en/fr)
+
+Runbook: [docs/runbooks/docs-site.md](runbooks/docs-site.md). Stacked on S-125 (#74), whose committed specs it renders.
+
+- **`web/apps/docs`, Docusaurus 3.10.2**, in the pnpm workspace (`@northline/docs`). Versions checked on 2026-09-30:
+  - redocusaurus 2.5.2 for the Redoc view;
+  - `@scalar/docusaurus` 0.8.46 for the Scalar view;
+  - `@easyops-cn/docusaurus-search-local` 0.55.3, a local index with no Algolia account.
+- **docs/ is rendered where it is committed, nothing is copied.** The repository's docs are a named docs-plugin
+  instance (`repo`, `path: ../../../docs`) with `include`/`exclude` globs:
+  - no `spec/`;
+  - no `api/` (rendered as the API reference instead);
+  - no backlog CSV;
+  - no agents' workstream brief.
+
+  `markdown.format: 'detect'` keeps `.md` files CommonMark, so no existing page needed MDX escaping. The site's own
+  guides are the default instance, so the theme and search always have one, whatever the variant. The only copies
+  are build artefacts: the variant's specs in `static/openapi` (Scalar and the download links fetch them) and
+  Scalar's standalone bundle.
+- **Two builds instead of an edge-protected section: `public` and `internal`** (`NORTHLINE_DOCS_VARIANT`,
+  `src/content.ts`).
+  - The public build physically lacks the internal pages and specs, so a routing or edge mistake can't expose them.
+    The page check fails the build if one appears.
+  - `docs` (public) runs on `docs.<zone>` in every environment. `docs-internal` runs on `internal-docs.<zone>` only
+    when enabled, behind an **IP allowlist** (an Envoy Gateway `SecurityPolicy`, `edge.docsInternal.allowedCIDRs`).
+    The chart refuses it outside `local` without CIDRs or without the Envoy edge, and `validate.sh` checks both the
+    render and the refusal.
+  - SSO through northline-auth (`SecurityPolicy` `oidc` with a `docs` client) is the planned upgrade. It is not built
+    because it needs an OAuth client registration and a session at the edge, which is more than this story.
+  - Off by default in every environment: enabling it needs the operators' CIDRs.
+- **Redoc and Scalar for every spec.**
+  - Redoc pages come from redocusaurus. Its bundled Redoc 2.4 differs from the server's self-hosted 2.5.4, which is
+    acceptable.
+  - Scalar pages come from `@scalar/docusaurus`. The plugin loads the *unpinned latest* `@scalar/api-reference` from
+    jsDelivr by default; the site serves the pinned 1.72.3 standalone bundle itself (`cdn` option), with telemetry,
+    the hosted "Ask AI" agent and the "Generate SDKs" toolbar off. No page loads anything from another origin.
+  - The API reference page links to the services' own Swagger UI / Scalar / Redoc in dev and staging through
+    `/config.js` (`NL_DOCS_SWAGGER`, derived by the chart; empty in prod), following the Studio's runtime-config
+    pattern (S-14).
+- **i18n en + fr:**
+  - UI chrome is translated (`i18n/fr`; the theme and search ship their own French);
+  - the guides have French pages;
+  - the repository docs are English, and the French site falls back to them, as the story allows.
+
+  The Northline tokens theme Infima through `@northline/tokens/tokens.css` and `color-mix`, with no new hex in
+  components. The hex-colour lint now also scans `apps/docs/src`.
+- **The AI section.** `docs/ai/README.md` is a short placeholder: the in-product AI features (Spring AI with
+  OpenRouter) are another story. Any page added under `docs/ai/` appears under **AI** in the internal sidebar.
+- **Versioning not enabled.** The docs follow `main`, and the API documents carry their own version (`v1`). Cutting a
+  docs version (`docusaurus docs:version`) is documented as an option, not done.
+- **Container.** `web/Dockerfile` targets `docs` and `docs-internal` on nginx-unprivileged, like the Studio, and take
+  the repository's `docs/` as the named build context `repo-docs`, since the web build context stays `web/`.
+  - Both variants are built once in a shared stage, and the page check runs inside the image build.
+  - The CSP allows only `'self'` (+ `'unsafe-inline'` scripts for Docusaurus' colour-mode and Scalar's init snippets)
+    and `connect-src` to the api and auth origins (`NL_DOCS_CONNECT`).
+  - Checked in headless Chromium against nginx with that CSP: the home page, the API index, Redoc, Scalar, guides,
+    French and search render, and Scalar needs no `'unsafe-eval'`.
+- **Fixed during that check:**
+  - Prism `additionalLanguages` load only on the client in Docusaurus 3.10 and caused hydration mismatches (React
+    #418) on every page with a code block. They were dropped: bash and Java blocks are now unhighlighted.
+- **Known and left:** the Redoc pages still log one recoverable hydration mismatch (redocusaurus' server render vs
+  client), and Redoc's sidebar badge from `cdn.redoc.ly` is blocked by the CSP (Redoc then hides it).
+- **Deploy:**
+  - chart: `apps.docs`, `apps.docs-internal`, `urls.docs`, `urls.docsInternal` (dev, staging, prod; empty on kind,
+    where `docs` is off), routes and certificates through the S-17 edge;
+  - Argo CD: the `SecurityPolicy` kind is whitelisted; `docs` / `docs-internal` added to the promotion files and
+    `promote.sh`, so Argo CD deploys docs to dev once its digest is promoted;
+  - Terraform: `docs` and `docs-internal` added to the registry repositories of all three clouds;
+  - CI: the web image matrix (GitHub `deploy.yml`, GitLab `images:web`) builds both.
+
+  Static export: `make docs-pages` plus manual GitHub `docs-pages.yml` (Pages from Actions) and GitLab `pages`
+  (`PIPELINE_PART=pages`, not in `all`), public variant only.
+- **Checks:**
+  - `make docs [DOCS_VARIANT=public]` = build + `scripts/check-build.mjs`, which requires every runbook and every
+    spec's Redoc and Scalar page in en and fr, and no internal page in the public variant;
+  - vitest unit tests: content per variant, a spec list matching `redocly.yaml`, runtime config;
+  - manual CI: GitHub `web.yml` › `docs`, GitLab `web:docs`.
+- **No schema change, no secret.** New container variables `NL_DOCS_SWAGGER` and `NL_DOCS_CONNECT` are derived by the
+  chart (runbooks README).
+- **Not done / never run:**
+  - no image was built here: the build is ~3 GB of Docker layers and the machine has ~4 GB free. The nginx
+    configuration was run against the local build output in nginx-unprivileged 1.29 instead;
+  - nothing is deployed, and no Pages site was published;
+  - the IP allowlist was rendered and schema-validated, not enforced by a live Envoy Gateway;
+  - French translations of the repository docs;
+  - SSO for the internal site.
