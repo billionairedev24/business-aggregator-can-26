@@ -549,7 +549,7 @@ public sealed interface EmailContent {
             var v = new LinkedHashMap<String, Object>();
             v.put("businessName", businessName);
             v.put("action", code(action));
-            v.put("reason", reason);
+            v.put("staffReason", reason);
             v.put("fromTier", fromTier == null ? "" : fromTier);
             v.put("toTier", toTier == null ? "" : toTier);
             v.put("checkType", checkType == null ? "" : checkType);

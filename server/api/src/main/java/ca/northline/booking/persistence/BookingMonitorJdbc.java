@@ -19,7 +19,8 @@ class BookingMonitorJdbc implements BookingMonitor {
     private final JdbcClient jdbc;
 
     @Override
-    public java.util.Map<String, Sales> salesByMerchant(java.util.Collection<String> merchantIds, Instant from, Instant to) {
+    public java.util.Map<String, Sales> salesByMerchant(
+            java.util.Collection<String> merchantIds, Instant from, Instant to) {
         if (merchantIds.isEmpty()) {
             return java.util.Map.of();
         }

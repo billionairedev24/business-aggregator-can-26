@@ -8,7 +8,7 @@
               checkName=${checkType == '' ? '' : #messages.msg('seller-oversight.check.' + checkType)}">
   <h1 th:style="${s.h1}" th:text="#{__${'seller-oversight.heading.' + action}__}">Heading</h1>
   <p th:style="${s.p}" th:text="#{__${'seller-oversight.body.' + action}__(${businessName}, ${fromName}, ${toName}, ${checkName})}">Body</p>
-  <p th:style="${s.p}" th:text="#{seller-oversight.reason-given(${reason})}">Reason</p>
+  <p th:style="${s.p}" th:text="#{seller-oversight.reason-given(${staffReason})}">Reason</p>
   <p th:style="${s.p}" th:text="#{__${'seller-oversight.action.' + action}__}">What to do</p>
   <th:block th:replace="~{button.html :: button(#{__${'seller-oversight.cta.' + action}__}, ${link})}"/>
 </div>

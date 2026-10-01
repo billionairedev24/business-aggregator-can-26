@@ -69,7 +69,7 @@ class SellerOversightApiTest extends IntegrationTest {
         kyc = fx.verification(business, "kyc", null, null, "verified", null, null);
     }
 
-    String status() {
+    String merchantStatus() {
         return jdbc.sql("select status from merchants.merchants where id = ?")
                 .params(business)
                 .query(String.class)
@@ -92,16 +92,19 @@ class SellerOversightApiTest extends IntegrationTest {
 
     @Test
     void suspendAndReinstateAreAuditedAnnouncedAndEmailed() throws Exception {
-        mvc.perform(json(post("/api/v1/console/merchants/{id}/suspend", business), "{\"reason\":\"Off-platform payments, 3rd warning\"}")
+        mvc.perform(json(
+                                post("/api/v1/console/merchants/{id}/suspend", business),
+                                "{\"reason\":\"Off-platform payments, 3rd warning\"}")
                         .with(TestJwt.staff(staff, StaffRole.TRUST_SAFETY)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.action").value("suspended"))
                 .andExpect(jsonPath("$.reason").value("Off-platform payments, 3rd warning"))
                 .andExpect(jsonPath("$.detail.from").value("active"))
                 .andExpect(jsonPath("$.actorRole").value("trust_safety"));
-        assertThat(status()).isEqualTo("suspended");
+        assertThat(merchantStatus()).isEqualTo("suspended");
         assertThat(audited("merchant.suspended")).isEqualTo(1);
-        assertThat(events.stream(MerchantSuspended.class).filter(e -> e.aggregateId().equals(business)))
+        assertThat(events.stream(MerchantSuspended.class)
+                        .filter(e -> e.aggregateId().equals(business)))
                 .hasSize(1);
         var mail = awaitEmails(1).getFirst();
         assertThat(mail.subject()).isEqualTo("Bow River Mechanics is suspended on Northline");
@@ -117,9 +120,10 @@ class SellerOversightApiTest extends IntegrationTest {
                         .with(TestJwt.staff(staff, StaffRole.ADMIN)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.action").value("reinstated"));
-        assertThat(status()).isEqualTo("active");
+        assertThat(merchantStatus()).isEqualTo("active");
         assertThat(audited("merchant.reinstated")).isEqualTo(1);
-        assertThat(events.stream(MerchantReinstated.class).filter(e -> e.aggregateId().equals(business)))
+        assertThat(events.stream(MerchantReinstated.class)
+                        .filter(e -> e.aggregateId().equals(business)))
                 .hasSize(1);
         assertThat(awaitEmails(2).stream().map(EmailMessage::subject))
                 .contains("Bow River Mechanics is back on Northline");
@@ -138,7 +142,8 @@ class SellerOversightApiTest extends IntegrationTest {
     void requireReverificationExpiresTheCheckAndTellsTheOwner() throws Exception {
         mvc.perform(json(
                                 post("/api/v1/console/merchants/{id}/reverification", business),
-                                "{\"verificationId\":\"%s\",\"reason\":\"The certificate looks altered\"}".formatted(insurance))
+                                "{\"verificationId\":\"%s\",\"reason\":\"The certificate looks altered\"}"
+                                        .formatted(insurance))
                         .with(TestJwt.staff(staff, StaffRole.TRUST_SAFETY)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.action").value("reverification_required"))
@@ -149,7 +154,8 @@ class SellerOversightApiTest extends IntegrationTest {
                         .single())
                 .isEqualTo("expired");
         assertThat(audited("merchant.reverification_required")).isEqualTo(1);
-        assertThat(events.stream(ReverificationRequired.class).filter(e -> e.aggregateId().equals(business)))
+        assertThat(events.stream(ReverificationRequired.class)
+                        .filter(e -> e.aggregateId().equals(business)))
                 .singleElement()
                 .satisfies(e -> assertThat(e.checkType()).isEqualTo("insurance"));
         var mail = awaitEmails(1).getFirst();
@@ -174,7 +180,9 @@ class SellerOversightApiTest extends IntegrationTest {
 
     @Test
     void changeTierWithAReason() throws Exception {
-        mvc.perform(json(post("/api/v1/console/merchants/{id}/tier", business), "{\"tier\":\"registered\",\"reason\":\"Quality below the floor three weeks\"}")
+        mvc.perform(json(
+                                post("/api/v1/console/merchants/{id}/tier", business),
+                                "{\"tier\":\"registered\",\"reason\":\"Quality below the floor three weeks\"}")
                         .with(TestJwt.staff(staff, StaffRole.ADMIN)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.detail.from").value("trusted"))
@@ -184,11 +192,14 @@ class SellerOversightApiTest extends IntegrationTest {
                         .query(String.class)
                         .single())
                 .isEqualTo("registered");
-        assertThat(events.stream(MerchantTierChanged.class).filter(e -> e.aggregateId().equals(business)))
+        assertThat(events.stream(MerchantTierChanged.class)
+                        .filter(e -> e.aggregateId().equals(business)))
                 .singleElement()
                 .satisfies(e -> assertThat(e.toTier()).isEqualTo("registered"));
         assertThat(awaitEmails(1).getFirst().text()).contains("from Trusted to Registered");
-        mvc.perform(json(post("/api/v1/console/merchants/{id}/tier", business), "{\"tier\":\"registered\",\"reason\":\"x\"}")
+        mvc.perform(json(
+                                post("/api/v1/console/merchants/{id}/tier", business),
+                                "{\"tier\":\"registered\",\"reason\":\"x\"}")
                         .with(TestJwt.staff(staff, StaffRole.ADMIN)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("same_tier"));
@@ -201,7 +212,9 @@ class SellerOversightApiTest extends IntegrationTest {
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.errors[0].field").value("reason"))
                 .andExpect(jsonPath("$.errors[0].message").value("Give the reason the business will see."));
-        mvc.perform(json(post("/api/v1/console/merchants/{id}/suspend", business), "{\"reason\":\"%s\"}".formatted("x".repeat(501)))
+        mvc.perform(json(
+                                post("/api/v1/console/merchants/{id}/suspend", business),
+                                "{\"reason\":\"%s\"}".formatted("x".repeat(501)))
                         .with(TestJwt.staff(staff, StaffRole.ADMIN)))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.errors[0].message").value("Keep the reason under 500 characters."));
@@ -229,7 +242,9 @@ class SellerOversightApiTest extends IntegrationTest {
                         .andExpect(status().isForbidden())
                         .andExpect(jsonPath("$.code").value("insufficient_role"));
             }
-            mvc.perform(json(post("/api/v1/console/merchants/{id}/tier", business), "{\"tier\":\"master\",\"reason\":\"x\"}")
+            mvc.perform(json(
+                                    post("/api/v1/console/merchants/{id}/tier", business),
+                                    "{\"tier\":\"master\",\"reason\":\"x\"}")
                             .with(TestJwt.staff(staff, role)))
                     .andExpect(status().isForbidden());
             mvc.perform(json(
@@ -245,7 +260,7 @@ class SellerOversightApiTest extends IntegrationTest {
         mvc.perform(json(post("/api/v1/console/merchants/{id}/suspend", business), "{\"reason\":\"x\"}")
                         .with(TestJwt.member(staff)))
                 .andExpect(status().isForbidden());
-        assertThat(status()).isEqualTo("active");
+        assertThat(merchantStatus()).isEqualTo("active");
         assertThat(audited("merchant.suspended")).isZero();
     }
 }

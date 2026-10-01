@@ -42,7 +42,8 @@ class SellerOversightService implements SellerOversight {
         }
         var now = clock.instant();
         store.status(merchantId, "suspended", now);
-        var action = record(merchantId, "suspended", why, Map.of("from", state.status(), "to", "suspended"), actor, now);
+        var action =
+                record(merchantId, "suspended", why, Map.of("from", state.status(), "to", "suspended"), actor, now);
         events.publishEvent(new MerchantSuspended(Ids.next(), now, merchantId, actor.userId(), action.id()));
         return action;
     }
@@ -65,9 +66,10 @@ class SellerOversightService implements SellerOversight {
     public Oversight requireReverification(String merchantId, String verificationId, String reason, Actor actor) {
         var why = reason(reason);
         state(merchantId);
-        var check = store.check(merchantId, verificationId)
-                .orElseThrow(() -> new NotFound("verification", verificationId));
-        if (!Set.of("verified", "submitted").contains(check.status()) || check.checkType().equals("kyc")) {
+        var check =
+                store.check(merchantId, verificationId).orElseThrow(() -> new NotFound("verification", verificationId));
+        if (!Set.of("verified", "submitted").contains(check.status())
+                || check.checkType().equals("kyc")) {
             throw new Conflict("not_verifiable", NOT_VERIFIABLE);
         }
         var now = clock.instant();
@@ -92,7 +94,9 @@ class SellerOversightService implements SellerOversight {
             throw RuleViolation.of("tier", "format", TIER);
         }
         var state = state(merchantId);
-        if (state.tier() == null || state.status() == null || Set.of("applicant", "pending").contains(state.status())) {
+        if (state.tier() == null
+                || state.status() == null
+                || Set.of("applicant", "pending").contains(state.status())) {
             throw new Conflict("not_approved", NOT_APPROVED);
         }
         if (to.equals(state.tier())) {

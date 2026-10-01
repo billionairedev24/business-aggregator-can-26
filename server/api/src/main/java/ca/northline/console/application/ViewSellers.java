@@ -18,7 +18,10 @@ public interface ViewSellers {
     Detail detail(String sellerId);
 
     /** @param q a business's display or legal name, or part of it */
-    record Query(@Nullable String q, @Nullable String province, @Nullable String market) {}
+    record Query(
+            @Nullable String q,
+            @Nullable String province,
+            @Nullable String market) {}
 
     /**
      * What puts a business at risk (design: "Quality &lt; floor · insurance 21 d", "Off-platform payment mention",
@@ -110,7 +113,7 @@ public interface ViewSellers {
 
     /**
      * @param stripeAccount the Connect account id shortened ({@code acct_1Kx…}), null without one
-     * @param rating the review average and count
+     * @param ratingAverage the review average ({@code ratingCount} reviews)
      */
     record Detail(
             Instant asOf,

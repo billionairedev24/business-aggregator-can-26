@@ -76,7 +76,10 @@ class OversightEmailNotices {
             @Nullable String toTier,
             @Nullable String checkType,
             String page) {
-        var reason = directory.action(actionId).map(SellerDirectory.Oversight::reason).orElse("");
+        var reason = directory
+                .action(actionId)
+                .map(SellerDirectory.Oversight::reason)
+                .orElse("");
         var business = businesses.displayName(merchantId).orElse("Northline");
         var link = links.studio(merchantId, page);
         var owners = roster.members(merchantId).stream()

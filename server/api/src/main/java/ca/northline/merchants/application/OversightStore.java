@@ -23,5 +23,6 @@ public interface OversightStore {
 
     void insert(Oversight action, String merchantId);
 
-    record State(String id, @Nullable String status, @Nullable String tier) {}
+    record State(
+            String id, @Nullable String status, @Nullable String tier) {}
 }
