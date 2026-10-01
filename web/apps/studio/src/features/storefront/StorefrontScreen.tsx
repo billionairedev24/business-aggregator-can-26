@@ -5,6 +5,7 @@ import { ApiError } from '../../lib/http';
 import { useMerchant, useMerchantId, useRole } from '../shell/api';
 import { useShellT } from '../shell/messages';
 import { storefrontQuery, useCreateStorefront, usePublishStorefront, useUpdateStorefront, type Storefront } from './api';
+import { EmbedSnippet } from '../settings/EmbedSnippet';
 import { PageBuilder, serverError } from './PageBuilder';
 import { StorefrontPreview } from './StorefrontPreview';
 import { useStorefrontT } from './messages';
@@ -76,15 +77,10 @@ function Loaded({ storefront: s, kicker, canEdit, role }: { storefront: Storefro
 
 function EmbedDialog({ open, onClose, storefront }: { open: boolean; onClose: () => void; storefront: Storefront }) {
   const t = useStorefrontT();
-  const [copied, setCopied] = useState(false);
-  const code = `<script src="https://northline.ca/embed.js" data-page="${storefront.slug}" async></script>`;
+  // S-76: the snippet carries the business's publishable key (Settings › API also limits the websites)
   return (
-    <Dialog open={open} onClose={onClose} title={t('embedTitle')} actions={<>
-      <button type="button" className="btn btn-secondary" onClick={() => { void navigator.clipboard?.writeText(code).then(() => setCopied(true)); }}>{copied ? t('copied') : t('copy')}</button>
-      <button type="button" className="btn btn-primary" onClick={onClose}>{t('close')}</button>
-    </>}>
-      <p className="nl-muted">{t('embedHelp')}</p>
-      <pre className="nl-embed-code"><code>{code}</code></pre>
+    <Dialog open={open} onClose={onClose} title={t('embedTitle')} actions={<button type="button" className="btn btn-primary" onClick={onClose}>{t('close')}</button>}>
+      {open ? <EmbedSnippet slug={storefront.slug} /> : null}
     </Dialog>
   );
 }

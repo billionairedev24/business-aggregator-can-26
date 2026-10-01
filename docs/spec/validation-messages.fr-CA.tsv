@@ -207,6 +207,7 @@ Enter a quantity from 1 to 20.	Entrez une quantité de 1 à 20.	shipped
 Enter a radius from 1 to 25 km.	Entrez un rayon de 1 à 25 km.	shipped
 Enter a section name.	Entrez un nom de section.	shipped
 Enter a service name.	Entrez un nom de service.	shipped
+Enter a site address like https://www.example.com.	Entrez une adresse de site comme https://www.exemple.com.	new
 Enter a SKU.	Entrez une UGS.	shipped
 Enter a time like 09:00.	Entrez une heure comme 09:00.	new
 Enter a valid Canadian mobile, e.g. +1 403 555 0148.	Entrez un mobile canadien valide, p. ex. +1 403 555 0148.	shipped
@@ -467,6 +468,7 @@ This day is not a statutory holiday.	Ce jour n’est pas un jour férié.	new
 This delivery is still being retried.	Cette livraison est encore en cours de nouvelle tentative.	new
 This delivery predates the delivery log and can't be resent.	Cette livraison précède le journal des livraisons et ne peut pas être renvoyée.	new
 This document has expired.	Ce document a expiré.	new
+This embed key isn't set up for this website.	Cette clé d’intégration n’est pas configurée pour ce site Web.	new
 This endpoint is not available.	Ce point de terminaison n’est pas disponible.	new
 This endpoint is turned off. Turn it back on first.	Ce point de terminaison est désactivé. Réactivez-le d’abord.	new
 This endpoint isn't open to partners.	Ce point de terminaison n’est pas ouvert aux partenaires.	new
@@ -529,6 +531,7 @@ Too many tries. Send a new code.	Trop d’essais. Demandez un nouveau code.	ship
 Type a question.	Tapez une question.	new
 Type at least one letter.	Tapez au moins une lettre.	new
 Type what you're looking for.	Tapez ce que vous cherchez.	new
+Up to 10 sites.	Au plus 10 sites.	new
 Up to 10,000 rows per file.	Jusqu’à 10 000 lignes par fichier.	new
 Up to 12 photos.	Jusqu’à 12 photos.	new
 Up to 5 bullet points.	Jusqu'à 5 points clés.	shipped
