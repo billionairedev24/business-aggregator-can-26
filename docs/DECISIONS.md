@@ -3996,3 +3996,61 @@ Stacked on S-132 (#87) → S-131 (#85) → S-130 (#83) → S-129 (#82).
 - **Not done / never exercised:** no live model run (precision and recall are measured only against the simulated
   model); no console UI; the scheduler's cron and interval were not run in a deployed environment (tests call the use
   cases directly).
+
+## 2026-10-01 — S-135 BFF relay race: JDK HttpClient request factory in the api relay
+
+- **Root cause: an empty request body streamed into a JDK HttpClient race.** It is not the docs viewers.
+  - Gateway MVC (`RestClientProxyExchange`) streams a body whenever `getInputStream().isFinished()` is false. MockMvc
+    reports that for every request, GETs included, until the stream is read. Tomcat reports it for a chunked request
+    whose body is empty. Real GETs on Tomcat are already "finished" and go out without a body.
+  - Spring's `JdkClientHttpRequest` then publishes the body through `OutputStreamPublisher`, which runs the writer on
+    its own (virtual) thread. For an empty body the writer signals `onComplete` at once, without waiting for demand,
+    which Reactive Streams allows.
+  - In the JDK 25 client, `Http1Exchange.sendBodyAsync` subscribes first and stores `bodySubscriber` afterwards. A
+    completion that arrives in between runs the write path, and the write path calls `requestMoreBody()` on the null
+    field. The result is `NullPointerException: … "this.bodySubscriber" is null`, the S-125 symptom with the same stack.
+  - The window opens when the exchange runs on a **pooled keep-alive connection that the server has already closed**.
+    A stand-alone reproduction (`JdkClientHttpRequestFactory`, a server that drops each connection after answering)
+    failed 12 of 200 requests with an empty streamed body and 0 of 200 with no body. Healthy connections failed 0 of
+    2,000.
+  - S-125's correlation with "a spec had been generated in the same process" was timing: generating the spec and
+    serving the webjars left the WireMock api's kept-alive connections idle long enough to be closed. The guess that
+    dev/staging would hit the race after someone opens `/bff/docs` does not hold. What matters is an empty chunked body
+    on a stale connection, and it can happen with or without the docs.
+- **Suspects ruled out:**
+  - *A shared HttpClient:* the gateway's `RestClient` has its own request factory, and the failing state is one
+    exchange's field.
+  - *The HTTP/2 upgrade:* the stack is `Http1Exchange`, and the reproduction fails with an HTTP/1.1-only client.
+  - *Connection reuse on its own:* with no body it never failed. Reuse widens the window but does not cause the race.
+  - *Virtual threads:* they make the writer thread start immediately, so they make the race more likely but don't
+    cause it.
+- **Fix in the relay, not a global setting:** `bff.config.RelayBody` is the first `before` filter of the `/api/**`
+  route. It wraps the servlet request so that `isFinished()` reads one byte ahead.
+  - With no byte, the gateway sends no body (a GET is a plain GET, and an empty POST gets `Content-Length: 0`).
+  - With at least one byte, the publisher's first write waits for the client's demand, which comes only after
+    `bodySubscriber` is stored.
+  - The look-ahead blocks, which is fine because the relay is blocking (virtual threads) and reads the body straight
+    after.
+  - Rejected alternatives:
+    - `BufferingClientHttpRequestFactory` also buffers responses, which would break the S-130 assistant's SSE stream.
+    - A custom `ProxyExchange` would copy the gateway's response handling.
+    - `jdk.httpclient.*` system properties are JVM-wide.
+  - SSE streaming is unchanged: `SseRelayTest` still passes, because response handling is untouched.
+- **Tests:**
+  - `RelayRaceTest` (bff) runs in a context that has generated its OpenAPI document and served Swagger UI's webjar,
+    the Scalar page and `swagger-config`. Four workers send 400 requests each way:
+    - GETs through MockMvc, plain GETs and GETs with an empty chunked body over a real connection, all against an api
+      stand-in that closes every connection after answering, without saying so.
+    - DELETE, empty and JSON POSTs, and chunked (empty, 2-chunk, 5 kB) and `Content-Length` bodies against a
+      keep-alive stand-in, checking that the api receives exactly the bytes sent.
+  - Without the fix both tests failed with the NPE, 2 of 2 runs. With it, `RelayRaceTest`, `ConsumerBffTest`,
+    `SseRelayTest` and `BffSessionTest` passed **20 of 20 runs** in a row (`:bff:test --rerun`).
+  - S-125's workaround is undone: `BffSessionTest` checks Swagger UI's `index.html` and the Scalar page again.
+    `ConsumerBffOpenApiTest` keeps its own context, because the committed document shows the local cookie names.
+- **Not fixed (HTTP itself, recorded for the lead):** a relayed POST, PUT, PATCH or DELETE that lands on a pooled
+  connection the api has just closed fails with an `IOException` ("header parser received no bytes"). The browser sees
+  a 500. The JDK client retries only GET and HEAD on a connection that turned out to be closed
+  (`jdk.httpclient.enableAllMethodRetry` would retry everything, JVM-wide, which is unsafe for payments). Against the
+  api's Tomcat this needs Tomcat to close an idle connection at the moment the relay reuses it. The JDK client drops
+  idle connections after 30 s (`jdk.httpclient.keepalive.timeout`), so keeping the api's keep-alive timeout above
+  that makes it rarer still. Money-moving POSTs carry an `Idempotency-Key` anyway, so the browser can retry them.
