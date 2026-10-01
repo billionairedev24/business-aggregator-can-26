@@ -68,6 +68,8 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-elasticsearch") // S-44: the search API on Elasticsearch 9
     testImplementation(libs.archunit)
     testImplementation(testFixtures(project(":platform"))) // S-111: OtlpReceiver
+    // S-72: bulk-import image URLs are fetched under the S-33 SSRF rules (platform EgressDnsResolver pins addresses)
+    implementation("org.apache.httpcomponents.client5:httpclient5")
     testImplementation(libs.wiremock) // S-23: registry adapters against recorded HTTP stand-ins
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
