@@ -89,42 +89,44 @@ class KitchenTicketJdbc implements KitchenTicketStore {
 
     @Override
     public Optional<KitchenTicket> ticket(String merchantId, String orderId) {
-        return orders.order(merchantId, orderId).map(o -> jdbc.sql("""
+        return orders.order(merchantId, orderId)
+                .map(o -> jdbc.sql("""
                         select stage, prep_min, accepted_at, accepted_by, ready_by, ready_at, handed_off_at,
                                handed_off_by
                           from food.kitchen_tickets where order_id = :id and merchant_id = :m
                         """)
-                .param("m", merchantId)
-                .param("id", orderId)
-                .query((rs, _) -> KitchenTicket.builder()
-                        .orderId(o.id())
-                        .merchantId(merchantId)
-                        .fulfilmentMode(o.fulfilmentMode())
-                        .orderOpen(!List.of("cancelled", "refunded").contains(o.state()))
-                        .stage(CodedEnum.fromCode(KitchenStage.class, rs.getString("stage")))
-                        .prepMin(KitchenSql.intOrNull(rs, "prep_min"))
-                        .acceptedAt(JdbcTimes.instant(rs, "accepted_at"))
-                        .acceptedBy(rs.getString("accepted_by"))
-                        .readyBy(JdbcTimes.instant(rs, "ready_by"))
-                        .readyAt(JdbcTimes.instant(rs, "ready_at"))
-                        .handedOffAt(JdbcTimes.instant(rs, "handed_off_at"))
-                        .handedOffBy(rs.getString("handed_off_by"))
-                        .build())
-                .optional()
-                .orElseGet(() -> KitchenTicket.builder()
-                        .orderId(o.id())
-                        .merchantId(merchantId)
-                        .fulfilmentMode(o.fulfilmentMode())
-                        .orderOpen(!List.of("cancelled", "refunded").contains(o.state()))
-                        .stage(KitchenStage.NEW)
-                        .build()));
+                        .param("m", merchantId)
+                        .param("id", orderId)
+                        .query((rs, _) -> KitchenTicket.builder()
+                                .orderId(o.id())
+                                .merchantId(merchantId)
+                                .fulfilmentMode(o.fulfilmentMode())
+                                .orderOpen(!List.of("cancelled", "refunded").contains(o.state()))
+                                .stage(CodedEnum.fromCode(KitchenStage.class, rs.getString("stage")))
+                                .prepMin(KitchenSql.intOrNull(rs, "prep_min"))
+                                .acceptedAt(JdbcTimes.instant(rs, "accepted_at"))
+                                .acceptedBy(rs.getString("accepted_by"))
+                                .readyBy(JdbcTimes.instant(rs, "ready_by"))
+                                .readyAt(JdbcTimes.instant(rs, "ready_at"))
+                                .handedOffAt(JdbcTimes.instant(rs, "handed_off_at"))
+                                .handedOffBy(rs.getString("handed_off_by"))
+                                .build())
+                        .optional()
+                        .orElseGet(() -> KitchenTicket.builder()
+                                .orderId(o.id())
+                                .merchantId(merchantId)
+                                .fulfilmentMode(o.fulfilmentMode())
+                                .orderOpen(!List.of("cancelled", "refunded").contains(o.state()))
+                                .stage(KitchenStage.NEW)
+                                .build()));
     }
 
     @Override
     public OrderLoad load(String merchantId, String orderId) {
         var lines = orders.lines(merchantId, List.of(orderId));
         long cents = lines.stream().mapToLong(l -> l.qty() * l.unitCents()).sum();
-        var itemIds = lines.stream().map(Line::menuItemId).filter(Objects::nonNull).collect(Collectors.toSet());
+        var itemIds =
+                lines.stream().map(Line::menuItemId).filter(Objects::nonNull).collect(Collectors.toSet());
         int slowest = itemIds.isEmpty()
                 ? 0
                 : jdbc.sql("select coalesce(max(prep_add_min), 0) from food.menu_items where id in (:ids)")
@@ -162,7 +164,8 @@ class KitchenTicketJdbc implements KitchenTicketStore {
 
     private Map<String, TicketRow> tickets(String merchantId, Collection<String> orderIds) {
         var out = new HashMap<String, TicketRow>();
-        jdbc.sql("select order_id, stage, ready_by from food.kitchen_tickets where merchant_id = :m and order_id in (:ids)")
+        jdbc.sql(
+                        "select order_id, stage, ready_by from food.kitchen_tickets where merchant_id = :m and order_id in (:ids)")
                 .param("m", merchantId)
                 .param("ids", orderIds)
                 .query(rs -> {
@@ -212,14 +215,12 @@ class KitchenTicketJdbc implements KitchenTicketStore {
         jdbc.sql("""
                         select id, coalesce(name, name_i18n ->> 'en') as name
                           from food.menu_items where id in (:ids)
-                        """)
-                .param("ids", itemIds)
-                .query(rs -> {
-                    var name = rs.getString("name");
-                    if (name != null) {
-                        out.put(rs.getString("id"), name);
-                    }
-                });
+                        """).param("ids", itemIds).query(rs -> {
+            var name = rs.getString("name");
+            if (name != null) {
+                out.put(rs.getString("id"), name);
+            }
+        });
         return out;
     }
 }

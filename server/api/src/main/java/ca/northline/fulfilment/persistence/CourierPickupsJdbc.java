@@ -29,17 +29,15 @@ class CourierPickupsJdbc implements CourierPickups {
                           left join fulfilment.couriers cr on cr.id = r.courier_id
                          where st.order_id in (:ids) and st.kind = 'pickup'
                          order by st.order_id, st.seq nulls last
-                        """)
-                .param("ids", orderIds)
-                .query(rs -> {
-                    out.put(
-                        rs.getString("order_id"),
-                        new Pickup(
-                                rs.getString("courier_id") != null,
-                                rs.getString("user_id"),
-                                JdbcTimes.instant(rs, "eta"),
-                                JdbcTimes.instant(rs, "arrived_at")));
-                });
+                        """).param("ids", orderIds).query(rs -> {
+            out.put(
+                    rs.getString("order_id"),
+                    new Pickup(
+                            rs.getString("courier_id") != null,
+                            rs.getString("user_id"),
+                            JdbcTimes.instant(rs, "eta"),
+                            JdbcTimes.instant(rs, "arrived_at")));
+        });
         return out;
     }
 }
