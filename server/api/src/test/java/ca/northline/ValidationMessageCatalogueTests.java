@@ -142,14 +142,12 @@ class ValidationMessageCatalogueTests {
         int depth = 0;
         int start = from;
         boolean string = false;
+        boolean escaped = false;
         for (int i = from; i < text.length(); i++) {
             char c = text.charAt(i);
             if (string) {
-                if (c == '\\') {
-                    i++;
-                } else if (c == '"') {
-                    string = false;
-                }
+                string = escaped || c != '"';
+                escaped = !escaped && c == '\\';
                 continue;
             }
             switch (c) {
