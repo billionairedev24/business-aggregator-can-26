@@ -42,7 +42,12 @@ public interface ListingVetting {
      * @param note to the business (rejections) or for the record
      */
     record Decision(
-            String listingId, boolean approve, List<String> reasons, @Nullable String note, String staffId, String role) {
+            String listingId,
+            boolean approve,
+            List<String> reasons,
+            @Nullable String note,
+            String staffId,
+            String role) {
         public Decision {
             reasons = List.copyOf(reasons);
         }

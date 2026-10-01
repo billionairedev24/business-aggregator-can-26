@@ -111,16 +111,26 @@ class ListingVettingService implements ListingVetting {
             case PENDING, APPROVED ->
                 apply(listing, false, List.of(TRUST_FLAG_REASON), event.note(), event.actorId(), event.role());
             case DRAFT, REJECTED ->
-                log.debug("Listing {} isn't live or in review; flag {} changes nothing", event.targetId(), event.aggregateId());
+                log.debug(
+                        "Listing {} isn't live or in review; flag {} changes nothing",
+                        event.targetId(),
+                        event.aggregateId());
         }
     }
 
     private void apply(
-            Listing listing, boolean approve, List<String> reasons, @Nullable String note, String staffId, String role) {
+            Listing listing,
+            boolean approve,
+            List<String> reasons,
+            @Nullable String note,
+            String staffId,
+            String role) {
         var now = clock.instant();
         var before = listing.getState().getVetting().code();
-        var flags = listing.getState().getFlags().stream().map(VettingFlag::code).toList();
-        Optional<? extends DomainEvent> event = approve ? listing.approveByReviewer(now) : listing.rejectByReviewer(now);
+        var flags =
+                listing.getState().getFlags().stream().map(VettingFlag::code).toList();
+        Optional<? extends DomainEvent> event =
+                approve ? listing.approveByReviewer(now) : listing.rejectByReviewer(now);
         save(listing);
         event.ifPresent(events::publishEvent);
         var decision = approve ? "approved" : "rejected";

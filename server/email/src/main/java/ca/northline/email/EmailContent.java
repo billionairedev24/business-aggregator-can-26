@@ -584,8 +584,12 @@ public sealed interface EmailContent {
      * @param reasons {@code prohibited | misleading | pricing | licence | images | other}
      */
     record ListingRejected(
-            String businessName, String kind, String listingName, List<String> reasons, @Nullable String note, URI link)
-            implements EmailContent {
+            String businessName,
+            String kind,
+            String listingName,
+            List<String> reasons,
+            @Nullable String note,
+            URI link) implements EmailContent {
 
         public ListingRejected {
             reasons = List.copyOf(reasons);

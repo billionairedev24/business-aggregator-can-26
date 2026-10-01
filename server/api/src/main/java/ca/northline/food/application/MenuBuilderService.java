@@ -1,13 +1,8 @@
 package ca.northline.food.application;
 
 import ca.northline.developer.api.AuditTrail;
-import ca.northline.food.api.MenuPriceReviews;
-import ca.northline.food.domain.PriceCheck;
-import ca.northline.messaging.api.ListingRejectedNotice;
-import ca.northline.shared.Conflict;
-import ca.northline.shared.MerchantScope;
-
 import ca.northline.food.api.MenuItemAvailabilityChanged;
+import ca.northline.food.api.MenuPriceReviews;
 import ca.northline.food.api.MenuPublished;
 import ca.northline.food.application.MenuStore.ItemRow;
 import ca.northline.food.application.MenuStore.MenuRow;
@@ -35,10 +30,13 @@ import ca.northline.food.domain.KitchenTime;
 import ca.northline.food.domain.MenuStatus;
 import ca.northline.food.domain.ModifierGroup;
 import ca.northline.food.domain.OpeningRanges;
+import ca.northline.food.domain.PriceCheck;
+import ca.northline.messaging.api.ListingRejectedNotice;
 import ca.northline.region.api.MerchantPlaces;
 import ca.northline.shared.Bytes;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.Ids;
+import ca.northline.shared.MerchantScope;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
 import ca.northline.shared.RuleViolation.Violation;
@@ -347,7 +345,14 @@ class MenuBuilderService
     private static HeldDish held(ItemRow i, String state) {
         var check = i.priceCheck();
         return new HeldDish(
-                i.id(), i.merchantId(), i.name(), i.priceCents(), check.medianCents(), check.deviationPct(), i.updatedAt(), state);
+                i.id(),
+                i.merchantId(),
+                i.name(),
+                i.priceCents(),
+                check.medianCents(),
+                check.deviationPct(),
+                i.updatedAt(),
+                state);
     }
 
     @Override

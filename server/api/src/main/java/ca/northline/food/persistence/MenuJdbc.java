@@ -1,7 +1,5 @@
 package ca.northline.food.persistence;
 
-import ca.northline.shared.MerchantScope;
-
 import static ca.northline.food.persistence.KitchenSql.array;
 import static ca.northline.food.persistence.KitchenSql.i18n;
 import static ca.northline.food.persistence.KitchenSql.intOrNull;
@@ -16,6 +14,7 @@ import ca.northline.food.domain.ItemWindow;
 import ca.northline.food.domain.MenuStatus;
 import ca.northline.shared.CodedEnum;
 import ca.northline.shared.JdbcTimes;
+import ca.northline.shared.MerchantScope;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;

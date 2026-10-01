@@ -6,8 +6,8 @@ import ca.northline.food.api.MenuPriceReviews;
 import ca.northline.food.api.MenuPriceReviews.HeldDish;
 import ca.northline.merchants.api.BusinessNames;
 import ca.northline.region.api.MerchantPlaces;
-import ca.northline.shared.MerchantScope;
 import ca.northline.shared.Conflict;
+import ca.northline.shared.MerchantScope;
 import ca.northline.shared.NotFound;
 import ca.northline.trust.api.ListingFlags;
 import ca.northline.trust.api.ListingFlags.ListingFlag;
@@ -73,15 +73,18 @@ class VettingQueueService implements ListingVettingQueue {
                 var flags = trustFlags.open(500).stream()
                         .filter(f -> f.listingId().equals(d.id()))
                         .toList();
-                if (flags.isEmpty() && !("pending".equals(listing.vetting()) && !listing.flags().isEmpty())) {
+                if (flags.isEmpty()
+                        && !("pending".equals(listing.vetting())
+                                && !listing.flags().isEmpty())) {
                     throw new Conflict("not_in_review", NOT_IN_REVIEW);
                 }
-                var decided = listings.decide(new ListingVetting.Decision(
-                        d.id(), d.approve(), d.reasons(), d.note(), d.staffId(), d.role()));
+                var decided = listings.decide(
+                        new ListingVetting.Decision(d.id(), d.approve(), d.reasons(), d.note(), d.staffId(), d.role()));
                 trustFlags.resolve(d.id(), !d.approve(), d.staffId(), d.role(), d.note());
                 yield item(decided, List.of(), businesses);
             }
-            case "dish" -> item(dishes.decide(d.id(), d.approve(), d.reasons(), d.note(), d.staffId(), d.role()), businesses);
+            case "dish" ->
+                item(dishes.decide(d.id(), d.approve(), d.reasons(), d.note(), d.staffId(), d.role()), businesses);
             default -> throw new NotFound(d.kind(), d.id());
         };
     }
@@ -151,10 +154,12 @@ class VettingQueueService implements ListingVettingQueue {
         private final Map<String, MerchantPlaces.MerchantPlace> placeById = new HashMap<>();
 
         String name(String merchantId) {
-            return nameById.computeIfAbsent(merchantId, id -> names.displayName(id).orElse(id));
+            return nameById.computeIfAbsent(
+                    merchantId, id -> names.displayName(id).orElse(id));
         }
 
-        @Nullable String province(String merchantId) {
+        @Nullable
+        String province(String merchantId) {
             var place = placeById.computeIfAbsent(merchantId, places::of);
             return place.ownProvince() ? place.province() : null;
         }

@@ -38,7 +38,9 @@ class ListingVettingApiTest extends CatalogueApiTest {
 
     String ownerEmail(Business biz) {
         var email = "owner-" + biz.userId().toLowerCase(java.util.Locale.ROOT) + "@example.test";
-        jdbc.sql("update identity.users set email = ? where id = ?").params(email, biz.userId()).update();
+        jdbc.sql("update identity.users set email = ? where id = ?")
+                .params(email, biz.userId())
+                .update();
         return email;
     }
 
@@ -83,11 +85,16 @@ class ListingVettingApiTest extends CatalogueApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.flagged").isNumber())
                 .andExpect(jsonPath("$.autoApproved").isNumber())
-                .andExpect(jsonPath("$.items[?(@.id == '%s')].state".formatted(id)).value("pending"))
-                .andExpect(jsonPath("$.items[?(@.id == '%s')].kind".formatted(id)).value("service"))
-                .andExpect(jsonPath("$.items[?(@.id == '%s')].flags[0]".formatted(id)).value("missing_licence"))
-                .andExpect(jsonPath("$.items[?(@.id == '%s')].regulator".formatted(id)).value("AMVIC"))
-                .andExpect(jsonPath("$.items[?(@.id == '%s')].businessName".formatted(id)).value("Prairie Wrench provider"));
+                .andExpect(
+                        jsonPath("$.items[?(@.id == '%s')].state".formatted(id)).value("pending"))
+                .andExpect(
+                        jsonPath("$.items[?(@.id == '%s')].kind".formatted(id)).value("service"))
+                .andExpect(jsonPath("$.items[?(@.id == '%s')].flags[0]".formatted(id))
+                        .value("missing_licence"))
+                .andExpect(jsonPath("$.items[?(@.id == '%s')].regulator".formatted(id))
+                        .value("AMVIC"))
+                .andExpect(jsonPath("$.items[?(@.id == '%s')].businessName".formatted(id))
+                        .value("Prairie Wrench provider"));
 
         var path = QUEUE + "/listings/" + id + "/decision";
         decide(path, "{\"decision\":\"reject\"}", StaffRole.ADMIN)
@@ -102,7 +109,9 @@ class ListingVettingApiTest extends CatalogueApiTest {
                 .andExpect(jsonPath("$.errors[0].message").value("Choose approve or reject."));
         assertThat(audit(biz.merchantId(), "vetting.")).isEmpty();
 
-        decide(path, "{\"decision\":\"reject\",\"reasons\":[\"licence\",\"pricing\"],\"note\":\"Add your AMVIC licence.\"}",
+        decide(
+                        path,
+                        "{\"decision\":\"reject\",\"reasons\":[\"licence\",\"pricing\"],\"note\":\"Add your AMVIC licence.\"}",
                         StaffRole.TRUST_SAFETY)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("rejected"))
@@ -111,12 +120,15 @@ class ListingVettingApiTest extends CatalogueApiTest {
 
         mvc.perform(get(LISTING, biz.merchantId(), id).with(TestJwt.member(biz.userId())))
                 .andExpect(jsonPath("$.vetting").value("rejected"));
-        assertThat(audit(biz.merchantId(), "vetting.")).singleElement().satisfies(a -> assertThat(a)
-                .containsEntry("action", "vetting.listing_rejected")
-                .containsEntry("actor_id", staff)
-                .containsEntry("role", "trust_safety")
-                .containsEntry("target_id", id));
-        assertThat(jdbc.sql("select decision, array_to_string(reasons, ',') from catalogue.vetting_decisions where listing_id = ?")
+        assertThat(audit(biz.merchantId(), "vetting."))
+                .singleElement()
+                .satisfies(a -> assertThat(a)
+                        .containsEntry("action", "vetting.listing_rejected")
+                        .containsEntry("actor_id", staff)
+                        .containsEntry("role", "trust_safety")
+                        .containsEntry("target_id", id));
+        assertThat(jdbc.sql(
+                                "select decision, array_to_string(reasons, ',') from catalogue.vetting_decisions where listing_id = ?")
                         .param(id)
                         .query((rs, _) -> rs.getString(1) + ":" + rs.getString(2))
                         .single())
@@ -130,7 +142,8 @@ class ListingVettingApiTest extends CatalogueApiTest {
         }));
         // decided: it stays listed as rejected and can't be decided again
         mvc.perform(get(QUEUE).with(TestJwt.staff(staff, StaffRole.ADMIN)))
-                .andExpect(jsonPath("$.items[?(@.id == '%s')].state".formatted(id)).value("rejected"));
+                .andExpect(
+                        jsonPath("$.items[?(@.id == '%s')].state".formatted(id)).value("rejected"));
         decide(path, "{\"decision\":\"approve\"}", StaffRole.ADMIN)
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("not_in_review"));
@@ -140,14 +153,19 @@ class ListingVettingApiTest extends CatalogueApiTest {
     void approvingAFlaggedListing_publishesIt() throws Exception {
         var biz = provider(MerchantRole.OWNER);
         var id = flaggedService(biz, "Mobile oil change");
-        decide(QUEUE + "/listings/" + id + "/decision", "{\"decision\":\"approve\",\"note\":\"Licence checked by phone\"}", StaffRole.ADMIN)
+        decide(
+                        QUEUE + "/listings/" + id + "/decision",
+                        "{\"decision\":\"approve\",\"note\":\"Licence checked by phone\"}",
+                        StaffRole.ADMIN)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("approved"));
         mvc.perform(get(LISTING, biz.merchantId(), id).with(TestJwt.member(biz.userId())))
                 .andExpect(jsonPath("$.vetting").value("approved"))
                 .andExpect(jsonPath("$.status").value("live"));
         assertThat(captured.of(ListingPublished.class, id)).hasSize(1);
-        assertThat(audit(biz.merchantId(), "vetting.")).extracting(a -> a.get("action")).containsExactly("vetting.listing_approved");
+        assertThat(audit(biz.merchantId(), "vetting."))
+                .extracting(a -> a.get("action"))
+                .containsExactly("vetting.listing_approved");
     }
 
     void aiFlag(String flagId, String listingId, String merchantId) {
@@ -160,21 +178,21 @@ class ListingVettingApiTest extends CatalogueApiTest {
     }
 
     String flagState(String flagId) {
-        return jdbc.sql("select state from trust.flags where id = ?").param(flagId).query(String.class).single();
+        return jdbc.sql("select state from trust.flags where id = ?")
+                .param(flagId)
+                .query(String.class)
+                .single();
     }
 
     @Test
     void anAiFlagOnALiveListing_isReviewed_andRejectingActionsIt() throws Exception {
         var biz = provider(MerchantRole.OWNER);
         verifiedLicence(biz.merchantId(), "AMVIC");
-        var id = json(mvc.perform(postJson(
-                                        "/api/v1/merchants/{m}/services",
-                                        """
+        var id = json(mvc.perform(postJson("/api/v1/merchants/{m}/services", """
                                         {"name":"Guaranteed to pass inspection","categoryId":"%s","pricingMode":"fixed",
                                          "priceCents":18000,"durationMin":60,"bufferMin":15,"included":"Inspection",
                                          "instantBook":true}
-                                        """.formatted(MECHANIC),
-                                        biz.merchantId())
+                                        """.formatted(MECHANIC), biz.merchantId())
                                 .with(TestJwt.member(biz.userId())))
                         .andExpect(status().isCreated()))
                 .get("id")
@@ -186,12 +204,17 @@ class ListingVettingApiTest extends CatalogueApiTest {
         aiFlag(flag, id, biz.merchantId());
 
         mvc.perform(get(QUEUE).with(TestJwt.staff(staff, StaffRole.TRUST_SAFETY)))
-                .andExpect(jsonPath("$.items[?(@.id == '%s')].state".formatted(id)).value("pending"))
-                .andExpect(jsonPath("$.items[?(@.id == '%s')].trustFlags[0].source".formatted(id)).value("ai"))
+                .andExpect(
+                        jsonPath("$.items[?(@.id == '%s')].state".formatted(id)).value("pending"))
+                .andExpect(jsonPath("$.items[?(@.id == '%s')].trustFlags[0].source".formatted(id))
+                        .value("ai"))
                 .andExpect(jsonPath("$.items[?(@.id == '%s')].trustFlags[0].explanation".formatted(id))
                         .value("Guarantee language without terms."));
 
-        decide(QUEUE + "/listings/" + id + "/decision", "{\"decision\":\"reject\",\"reasons\":[\"misleading\"]}", StaffRole.ADMIN)
+        decide(
+                        QUEUE + "/listings/" + id + "/decision",
+                        "{\"decision\":\"reject\",\"reasons\":[\"misleading\"]}",
+                        StaffRole.ADMIN)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("rejected"));
         assertThat(flagState(flag)).isEqualTo("actioned");
@@ -227,18 +250,26 @@ class ListingVettingApiTest extends CatalogueApiTest {
         aiFlag(actioned, ids.get(0), biz.merchantId());
         aiFlag(dismissed, ids.get(1), biz.merchantId());
 
-        decide("/api/v1/console/trust/flags/" + actioned + "/decision", "{\"decision\":\"actioned\"}", StaffRole.TRUST_SAFETY)
+        decide(
+                        "/api/v1/console/trust/flags/" + actioned + "/decision",
+                        "{\"decision\":\"actioned\"}",
+                        StaffRole.TRUST_SAFETY)
                 .andExpect(status().isOk());
-        decide("/api/v1/console/trust/flags/" + dismissed + "/decision", "{\"decision\":\"dismissed\"}", StaffRole.TRUST_SAFETY)
+        decide(
+                        "/api/v1/console/trust/flags/" + dismissed + "/decision",
+                        "{\"decision\":\"dismissed\"}",
+                        StaffRole.TRUST_SAFETY)
                 .andExpect(status().isOk());
         await(() -> mvc.perform(get(LISTING, biz.merchantId(), ids.get(0)).with(TestJwt.member(biz.userId())))
                 .andExpect(jsonPath("$.vetting").value("rejected")));
         mvc.perform(get(LISTING, biz.merchantId(), ids.get(1)).with(TestJwt.member(biz.userId())))
                 .andExpect(jsonPath("$.vetting").value("approved"));
-        await(() -> assertThat(audit(biz.merchantId(), "vetting.")).singleElement().satisfies(a -> assertThat(a)
-                .containsEntry("action", "vetting.listing_rejected")
-                .containsEntry("role", "trust_safety")
-                .containsEntry("target_id", ids.get(0))));
+        await(() -> assertThat(audit(biz.merchantId(), "vetting."))
+                .singleElement()
+                .satisfies(a -> assertThat(a)
+                        .containsEntry("action", "vetting.listing_rejected")
+                        .containsEntry("role", "trust_safety")
+                        .containsEntry("target_id", ids.get(0))));
     }
 
     /** A published dish 70 % above its comparable median, price not confirmed: held by the S-67 price check. */
@@ -268,28 +299,43 @@ class ListingVettingApiTest extends CatalogueApiTest {
         var drop = heldDish(kitchen.merchantId());
 
         mvc.perform(get(QUEUE).with(TestJwt.staff(staff, StaffRole.ADMIN)))
-                .andExpect(jsonPath("$.items[?(@.id == '%s')].kind".formatted(keep)).value("dish"))
-                .andExpect(jsonPath("$.items[?(@.id == '%s')].flags[0]".formatted(keep)).value("price_check"))
-                .andExpect(jsonPath("$.items[?(@.id == '%s')].deviationPct".formatted(keep)).value(70))
-                .andExpect(jsonPath("$.items[?(@.id == '%s')].medianCents".formatted(keep)).value(2000));
+                .andExpect(jsonPath("$.items[?(@.id == '%s')].kind".formatted(keep))
+                        .value("dish"))
+                .andExpect(jsonPath("$.items[?(@.id == '%s')].flags[0]".formatted(keep))
+                        .value("price_check"))
+                .andExpect(jsonPath("$.items[?(@.id == '%s')].deviationPct".formatted(keep))
+                        .value(70))
+                .andExpect(jsonPath("$.items[?(@.id == '%s')].medianCents".formatted(keep))
+                        .value(2000));
 
         decide(QUEUE + "/dishes/" + keep + "/decision", "{\"decision\":\"approve\"}", StaffRole.TRUST_SAFETY)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("approved"));
-        assertThat(jdbc.sql("select price_confirmed_cents from food.menu_items where id = ?").param(keep).query(Long.class).single())
+        assertThat(jdbc.sql("select price_confirmed_cents from food.menu_items where id = ?")
+                        .param(keep)
+                        .query(Long.class)
+                        .single())
                 .isEqualTo(3400L);
-        decide(QUEUE + "/dishes/" + drop + "/decision", "{\"decision\":\"reject\",\"reasons\":[\"pricing\"]}", StaffRole.TRUST_SAFETY)
+        decide(
+                        QUEUE + "/dishes/" + drop + "/decision",
+                        "{\"decision\":\"reject\",\"reasons\":[\"pricing\"]}",
+                        StaffRole.TRUST_SAFETY)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("rejected"));
-        assertThat(jdbc.sql("select status from food.menu_items where id = ?").param(drop).query(String.class).single())
+        assertThat(jdbc.sql("select status from food.menu_items where id = ?")
+                        .param(drop)
+                        .query(String.class)
+                        .single())
                 .isEqualTo("draft");
         decide(QUEUE + "/dishes/" + drop + "/decision", "{\"decision\":\"approve\"}", StaffRole.ADMIN)
                 .andExpect(status().isConflict());
-        assertThat(audit(kitchen.merchantId(), "vetting.")).extracting(a -> a.get("action"))
+        assertThat(audit(kitchen.merchantId(), "vetting."))
+                .extracting(a -> a.get("action"))
                 .containsExactly("vetting.dish_approved", "vetting.dish_rejected");
-        await(() -> assertThat(emails.to(email)).singleElement().satisfies(m -> assertThat(m.text())
-                .contains("price of “Wagyu pho”")
-                .contains("/kitchen/menu")));
+        await(() -> assertThat(emails.to(email))
+                .singleElement()
+                .satisfies(m ->
+                        assertThat(m.text()).contains("price of “Wagyu pho”").contains("/kitchen/menu")));
     }
 
     @Test

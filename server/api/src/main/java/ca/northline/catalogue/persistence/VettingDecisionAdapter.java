@@ -47,7 +47,7 @@ class VettingDecisionAdapter implements VettingDecisionStore {
                 .param("since", ts(decidedSince))
                 .param("also", alsoIds.toArray(String[]::new))
                 .param("n", limit)
-                .query(String.class)
+                .query((rs, _) -> rs.getString("id"))
                 .list();
     }
 
@@ -94,7 +94,21 @@ class VettingDecisionAdapter implements VettingDecisionStore {
                         select id, listing_id, kind, merchant_id, decision, reasons, flags, note, decided_by, role,
                                decided_at
                           from catalogue.vetting_decisions where listing_id = :l
-                         order by decided_at desc, id desc limit 1""").param("l", listingId).query((rs, _) -> new Decision(rs.getString("id"), rs.getString("listing_id"), rs.getString("kind"), rs.getString("merchant_id"), rs.getString("decision"), strings(rs.getArray("reasons")), strings(rs.getArray("flags")), rs.getString("note"), rs.getString("decided_by"), rs.getString("role"), requiredInstant(rs, "decided_at"))).optional();
+                         order by decided_at desc, id desc limit 1""")
+                .param("l", listingId)
+                .query((rs, _) -> new Decision(
+                        rs.getString("id"),
+                        rs.getString("listing_id"),
+                        rs.getString("kind"),
+                        rs.getString("merchant_id"),
+                        rs.getString("decision"),
+                        strings(rs.getArray("reasons")),
+                        strings(rs.getArray("flags")),
+                        rs.getString("note"),
+                        rs.getString("decided_by"),
+                        rs.getString("role"),
+                        requiredInstant(rs, "decided_at")))
+                .optional();
     }
 
     private static List<String> strings(@Nullable Array array) throws SQLException {

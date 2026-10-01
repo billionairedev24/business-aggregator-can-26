@@ -1,15 +1,12 @@
 package ca.northline.trust.application;
 
-import ca.northline.shared.Ids;
-import ca.northline.trust.api.FlagDecided;
-import ca.northline.trust.api.ListingFlags;
-import ca.northline.trust.application.TrustFlagStore.StoredFlag;
-import org.springframework.context.ApplicationEventPublisher;
-
 import ca.northline.developer.api.AuditTrail;
 import ca.northline.shared.Conflict;
+import ca.northline.shared.Ids;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
+import ca.northline.trust.api.FlagDecided;
+import ca.northline.trust.api.ListingFlags;
 import ca.northline.trust.application.TrustFlagStore.StoredFlag;
 import java.time.Clock;
 import java.util.Arrays;
@@ -17,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -60,7 +58,13 @@ class TrustFlagQueueService implements TrustFlagQueue, ListingFlags {
                 .map(f -> {
                     var v = view(f);
                     return new ListingFlag(
-                            f.id(), f.targetId(), f.merchantId(), f.rule(), v.source(), v.explanation(), v.categories(),
+                            f.id(),
+                            f.targetId(),
+                            f.merchantId(),
+                            f.rule(),
+                            v.source(),
+                            v.explanation(),
+                            v.categories(),
                             f.createdAt());
                 })
                 .toList();

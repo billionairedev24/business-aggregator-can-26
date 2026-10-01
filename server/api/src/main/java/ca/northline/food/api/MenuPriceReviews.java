@@ -15,7 +15,8 @@ public interface MenuPriceReviews {
     List<HeldDish> held(MerchantScope scope, int limit);
 
     /** @param reasons {@code prohibited | misleading | pricing | licence | images | other}; required to reject */
-    HeldDish decide(String itemId, boolean approve, List<String> reasons, @Nullable String note, String staffId, String role);
+    HeldDish decide(
+            String itemId, boolean approve, List<String> reasons, @Nullable String note, String staffId, String role);
 
     /**
      * @param deviationPct how far from the median, in whole percent (+52 = above, −45 = below)

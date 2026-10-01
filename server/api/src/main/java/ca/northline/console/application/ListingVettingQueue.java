@@ -17,11 +17,17 @@ public interface ListingVettingQueue {
 
     Queue queue(MerchantScope scope);
 
-    /** @param kind {@code listing} (offer or service) or {@code dish} */
+    /** Decides a listing ({@code kind = listing}: offer or service) or a held dish ({@code kind = dish}). */
     Item decide(Decision decision);
 
     record Decision(
-            String kind, String id, boolean approve, List<String> reasons, @Nullable String note, String staffId, String role) {
+            String kind,
+            String id,
+            boolean approve,
+            List<String> reasons,
+            @Nullable String note,
+            String staffId,
+            String role) {
         public Decision {
             reasons = List.copyOf(reasons);
         }
