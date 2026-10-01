@@ -218,14 +218,14 @@ class RefundCaseService implements RespondToCases, CustomerCases, DisputeDecisio
     }
 
     @Override
-    public void decide(String disputeId, Decision decision, long refundCents, String agentId) {
+    public void decide(String disputeId, Decision decision, long refundCents, String agentId, @Nullable String note) {
         var dispute = cases.dispute(disputeId).orElseThrow(() -> new NotFound("dispute", disputeId));
         var outcome = switch (decision) {
             case RELEASE -> Dispute.Decision.RELEASE;
             case PARTIAL -> Dispute.Decision.PARTIAL;
             case FULL_REFUND -> Dispute.Decision.FULL_REFUND;
         };
-        var decided = dispute.decide(outcome, refundCents, agentId, clock.instant());
+        var decided = dispute.decide(outcome, refundCents, agentId, note, clock.instant());
         cases.update(dispute);
         settle(dispute, decided);
     }

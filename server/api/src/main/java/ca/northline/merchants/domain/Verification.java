@@ -124,6 +124,15 @@ public class Verification {
         }
     }
 
+    /**
+     * S-79 "Request info": an agent sends the check back to the business, which hands in new evidence (the onboarding
+     * wizard and {@code ComplianceStatus} show it as rejected).
+     */
+    public void reopen(Instant at) {
+        status = VerificationStatus.REJECTED;
+        updatedAt = at;
+    }
+
     private void requireOpen() {
         if (status == VerificationStatus.VERIFIED) {
             throw new Conflict("already_verified", "This check is already verified.");

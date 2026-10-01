@@ -28,6 +28,9 @@ public interface MenuStore {
 
     Optional<ItemRow> item(String merchantId, String itemId);
 
+    /** Any business's item (S-92: staff decisions outside a member request). */
+    Optional<ItemRow> itemById(String itemId);
+
     void insertMenu(MenuRow menu);
 
     void updateMenu(MenuRow menu);
@@ -48,6 +51,12 @@ public interface MenuStore {
 
     /** Published items of the merchant (for the re-audit when the kitchen is approved). */
     List<ItemRow> publishedItems(String merchantId);
+
+    /**
+     * S-92: published dishes held by the price check (outside ±{@code bandPct} % of their median, price not confirmed)
+     * of the businesses in scope, longest held first.
+     */
+    List<ItemRow> heldForPrice(ca.northline.shared.MerchantScope scope, int bandPct, int limit);
 
     @Builder(toBuilder = true)
     record MenuRow(

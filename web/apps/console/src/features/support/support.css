@@ -1,0 +1,23 @@
+/* Support desk — design 03 lines 118–140. Token values only. */
+.nl-sd-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); gap: 20px 32px; margin-bottom: 24px; }
+.nl-sd-kpi { font-size: 28px; font-weight: 600; }
+.nl-sd-chips { margin-bottom: 14px; }
+.nl-sd-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr)); gap: 28px clamp(24px, 4vw, 56px); align-items: start; }
+.nl-sd-table { min-width: 0; }
+.nl-sd-aside { padding: 18px; background: var(--color-surface); border-radius: var(--radius-md); min-width: 0; }
+.nl-sd-label { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-neutral-700); margin: 16px 0 6px; }
+.nl-sd-aside > .nl-sd-label:first-child { margin-top: 0; }
+.nl-sd-who { font-weight: 600; font-size: 16px; margin: 6px 0 0; }
+.nl-sd-ctx { font-size: 13px; margin-top: 4px; }
+.nl-sd-actions { display: flex; flex-direction: column; gap: 6px; }
+.nl-sd-actions .btn { justify-content: flex-start; background: var(--color-bg); min-height: 44px; }
+.nl-sd-decide { width: 100%; }
+.nl-sd-thread { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto; }
+.nl-sd-note { padding: 8px 10px; border-radius: var(--radius-md); background: var(--color-bg); font-size: 14px; }
+.nl-sd-note p { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.nl-sd-note-agent { border-left: 3px solid var(--color-accent); }
+.nl-sd-note-system { opacity: .8; }
+.nl-sd-reply { min-height: 80px; width: 100%; }
+.nl-sd-aside select.input { min-height: 36px; margin-bottom: 8px; width: 100%; }
+.nl-sd-foot { margin-top: 10px; font-size: 12px; }
+.nl-sd-macro-form { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }

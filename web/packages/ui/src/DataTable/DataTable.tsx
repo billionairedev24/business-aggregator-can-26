@@ -260,8 +260,8 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
     }
     setPendingAction(a.id);
     try {
-      await props.onAction?.(a, hit);
-      flash(t('toastAction', { action: a.label, count: hit.length, noun: noun(hit.length) }));
+      // `false`: the caller took the action elsewhere (e.g. opened its own dialog) and reports it itself
+      if ((await props.onAction?.(a, hit)) !== false) flash(t('toastAction', { action: a.label, count: hit.length, noun: noun(hit.length) }));
     } catch (e) {
       flash(t('actionFailed', { action: a.label, message: errMessage(e) || t('genericError') }), 'error');
     } finally {

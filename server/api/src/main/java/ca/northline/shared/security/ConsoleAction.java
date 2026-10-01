@@ -16,5 +16,7 @@ public enum ConsoleAction implements CodedEnum {
     VERIFY,
     VET,
     DISPATCH,
-    SUPPORT
+    SUPPORT,
+    /** S-83: write the support desk's reply macros (support leads, admins). */
+    MACROS
 }

@@ -24,6 +24,9 @@ import org.jspecify.annotations.Nullable;
 @ToString(onlyExplicitlyIncluded = true)
 public class OwnerIdentityCheck {
 
+    /** {@code last_error} when a Northline agent sends the owner back to Stripe (S-79; the Studio words it). */
+    public static final String AGENT_REJECTED = "agent_rejected";
+
     /** How the owner reaches Stripe's hosted flow. */
     public enum Delivery implements CodedEnum {
         /** The signed-in owner is this principal and opens the flow in their browser. */
@@ -63,6 +66,12 @@ public class OwnerIdentityCheck {
     private @Nullable Instant verifiedAt;
     private Instant updatedAt;
 
+    // S-79: the agent who decided a review (or sent the owner back), when, and what they wrote
+    private @Nullable String reviewedBy;
+
+    private @Nullable Instant reviewedAt;
+    private @Nullable String reviewNote;
+
     /** @param id chosen before the session is opened (it is the session's {@code client_reference_id}) */
     public static OwnerIdentityCheck start(
             String id,
@@ -88,7 +97,10 @@ public class OwnerIdentityCheck {
                 requestedBy,
                 null,
                 null,
-                at);
+                at,
+                null,
+                null,
+                null);
     }
 
     /** Guards a new session: nothing to redo once verified, and wait while Stripe is checking or an agent reviews. */
@@ -148,6 +160,40 @@ public class OwnerIdentityCheck {
                 verifiedAt = mismatch ? null : now;
             }
         }
+        return true;
+    }
+
+    /**
+     * S-79: a Northline agent decides a name / date of birth mismatch. Approve → verified (the agent checked the
+     * person); reject → the owner verifies again with Stripe ({@link #AGENT_REJECTED}).
+     */
+    public void decideReview(boolean approve, String agentId, @Nullable String note, Instant at) {
+        if (status != IdentityCheckStatus.REVIEW) {
+            throw new Conflict("review_closed", "This review was already decided.");
+        }
+        status = approve ? IdentityCheckStatus.VERIFIED : IdentityCheckStatus.RETRY;
+        lastError = approve ? null : AGENT_REJECTED;
+        verifiedAt = approve ? at : null;
+        reviewedBy = agentId;
+        reviewedAt = at;
+        reviewNote = note;
+        updatedAt = at;
+    }
+
+    /**
+     * S-79 "Request info" on identity: whatever Stripe said, the owner verifies again. Returns false when the owner
+     * already has to (no session handed in).
+     */
+    public boolean sendBack(String agentId, Instant at) {
+        if (!status.handedIn()) {
+            return false;
+        }
+        status = IdentityCheckStatus.RETRY;
+        lastError = AGENT_REJECTED;
+        verifiedAt = null;
+        reviewedBy = agentId;
+        reviewedAt = at;
+        updatedAt = at;
         return true;
     }
 

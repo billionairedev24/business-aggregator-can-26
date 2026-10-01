@@ -7,7 +7,7 @@ import org.jspecify.annotations.Nullable;
 /**
  * The automated checks a submitted listing goes through before it can go live: banned categories, price outlier
  * (±60 % of the category median), missing licence for a regulated category, duplicate images (perceptual hash) and the
- * main-image-on-white standard. No flags → approved; any flag → manual review in the console vetting queue.
+ * main-image-on-white standard, and (S-93) the restricted keywords of the trust &amp; safety rules. No flags → approved; any flag → manual review in the console vetting queue.
  */
 public final class AutomatedVetting {
 
@@ -22,6 +22,7 @@ public final class AutomatedVetting {
      * @param licenceOk the merchant holds a verified, unexpired licence for the category's registry (or none is needed)
      * @param duplicateImage one of the seller's own images matches another merchant's image
      * @param mainOnWhite the main image (own images only) has a white background; true when catalogue images are used
+     * @param restrictedTerm S-93: a restricted keyword (trust &amp; safety rules) found in the listing's words, or null
      */
     public record Subject(
             ListingKind kind,
@@ -29,7 +30,8 @@ public final class AutomatedVetting {
             @Nullable Long priceCents,
             boolean licenceOk,
             boolean duplicateImage,
-            boolean mainOnWhite) {}
+            boolean mainOnWhite,
+            @Nullable String restrictedTerm) {}
 
     public static List<VettingFlag> check(Subject s) {
         var flags = new ArrayList<VettingFlag>();
@@ -53,6 +55,9 @@ public final class AutomatedVetting {
         }
         if (!s.mainOnWhite()) {
             flags.add(VettingFlag.MAIN_NOT_ON_WHITE);
+        }
+        if (s.restrictedTerm() != null) {
+            flags.add(VettingFlag.RESTRICTED_KEYWORD);
         }
         return List.copyOf(flags);
     }
