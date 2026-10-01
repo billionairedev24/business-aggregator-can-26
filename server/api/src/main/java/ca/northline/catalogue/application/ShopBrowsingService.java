@@ -157,7 +157,9 @@ class ShopBrowsingService implements BrowseShop {
                 .map(record -> {
                     var ctx = context(market, locale);
                     var department = ctx.categories().get(record.categoryId());
-                    var rows = ctx.served() ? catalogue.offers(productId, ctx.merchantIds()) : List.<OfferRow>of();
+                    var rows = ctx.served()
+                            ? catalogue.offers(record.productId(), ctx.merchantIds())
+                            : List.<OfferRow>of();
                     var offerIds = rows.stream().map(OfferRow::offerId).toList();
                     var variants = offerIds.isEmpty()
                             ? Map.<String, List<VariantRow>>of()
@@ -166,7 +168,7 @@ class ShopBrowsingService implements BrowseShop {
                             rows.stream().map(OfferRow::merchantId).distinct().toList();
                     var more = merchants.isEmpty()
                             ? Map.<String, List<MoreRow>>of()
-                            : catalogue.moreFrom(merchants, productId, lang, MORE_FROM_SHOP).stream()
+                            : catalogue.moreFrom(merchants, record.productId(), lang, MORE_FROM_SHOP).stream()
                                     .collect(Collectors.groupingBy(MoreRow::merchantId));
                     var candidates = new HashSet<>(record.imageIds());
                     rows.forEach(r -> candidates.addAll(r.imageIds()));
