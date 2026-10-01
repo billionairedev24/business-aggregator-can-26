@@ -5,12 +5,12 @@ import ca.northline.region.domain.GeoPoint;
 import ca.northline.region.domain.PlaceParts;
 import java.text.Normalizer;
 import java.util.Comparator;
-import org.springframework.core.io.ClassPathResource;
-import tools.jackson.databind.json.JsonMapper;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
+import org.springframework.core.io.ClassPathResource;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * {@code PLACES_PROVIDER=local}: a fixed list of Canadian addresses read from {@code places-fixtures/addresses.json}

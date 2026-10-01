@@ -162,8 +162,7 @@ class GeoService implements SuggestAddresses, ChooseAddress, NamePlace, BrowseMa
                 .toList();
         var firstLive = provinces.stream()
                 .filter(p -> p.stage().live())
-                .sorted(java.util.Comparator.comparing(
-                        (Province p) -> !p.code().equals(served.defaultProvince())))
+                .sorted(java.util.Comparator.comparing((Province p) -> !p.code().equals(served.defaultProvince())))
                 .flatMap(p -> p.markets().stream().filter(m -> m.stage().live()))
                 .findFirst()
                 .orElse(null);

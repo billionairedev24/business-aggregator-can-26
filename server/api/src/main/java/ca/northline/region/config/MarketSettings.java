@@ -37,7 +37,8 @@ class MarketSettings implements Markets {
         var preferred = parsed.get(code);
         this.zones = parsed;
         this.defaultProvince = preferred == null ? null : code;
-        this.fallback = preferred != null ? preferred : parsed.values().iterator().next();
+        this.fallback =
+                preferred != null ? preferred : parsed.values().iterator().next();
     }
 
     static Map<String, ZoneId> parse(String spec) {

@@ -1,17 +1,8 @@
 package ca.northline.region;
 
-import static org.hamcrest.Matchers.not;
-
-import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
-
-import org.springframework.core.io.ClassPathResource;
-
-import org.junit.jupiter.api.BeforeEach;
-
-import javax.sql.DataSource;
-
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -22,11 +13,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import ca.northline.shared.Ids;
 import ca.northline.support.IntegrationTest;
 import ca.northline.support.TestJwt;
+import javax.sql.DataSource;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 
 /** S-47: the Location screen's endpoints with the local fixture addresses (PLACES_PROVIDER=local under test). */
 class GeoApiTest extends IntegrationTest {
@@ -83,14 +78,16 @@ class GeoApiTest extends IntegrationTest {
 
         @Test
         void aProvinceNotServedShowsItsOwnStageAfterTheServedOnes() throws Exception {
-            jdbc.sql("update region.regions set stage = 'waitlist' where id = 'prov-mb'").update();
+            jdbc.sql("update region.regions set stage = 'waitlist' where id = 'prov-mb'")
+                    .update();
             try {
                 mvc.perform(get("/api/v1/geo/markets"))
                         .andExpect(jsonPath("$.items[4].code").value("MB"))
                         .andExpect(jsonPath("$.items[4].stage").value("waitlist"))
                         .andExpect(jsonPath("$.items[4].markets", hasSize(0)));
             } finally {
-                jdbc.sql("update region.regions set stage = 'off' where id = 'prov-mb'").update();
+                jdbc.sql("update region.regions set stage = 'off' where id = 'prov-mb'")
+                        .update();
             }
         }
     }

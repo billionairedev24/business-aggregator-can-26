@@ -10,7 +10,12 @@ public final class GeoViews {
 
     /** A market; {@code lat}/{@code lng} = its centre. */
     public record Market(
-            String id, String city, String province, Stage stage, @Nullable Double lat, @Nullable Double lng) {}
+            String id,
+            String city,
+            String province,
+            Stage stage,
+            @Nullable Double lat,
+            @Nullable Double lng) {}
 
     /**
      * A delivery zone and its pooled-run pricing ("3 pooled runs / day").
