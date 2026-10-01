@@ -90,17 +90,10 @@ class CaseViewService implements ViewCases {
                             byRef.put("order_line:" + line, item);
                         }
                     });
-                case QUOTE -> {}
+                default -> {} // quote requests have no escrow
             }
         }
         return byRef;
-    }
-
-    private static Row row(CaseSummary c, Map<String, Item> subjects, Map<String, Businesses.Business> names) {
-        var name = names.containsKey(c.merchantId())
-                ? Objects.requireNonNull(names.get(c.merchantId())).name()
-                : "";
-        return row(c, subjects, name);
     }
 
     private static Row row(CaseSummary c, Map<String, Item> subjects, String merchantName) {

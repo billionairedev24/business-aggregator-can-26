@@ -1,5 +1,6 @@
 package ca.northline.account.application;
 
+import ca.northline.account.application.Problems.Card;
 import ca.northline.account.application.ViewActivity.Item;
 import ca.northline.messaging.api.CustomerCaseDesk.CaseThread;
 import java.time.Instant;
@@ -43,7 +44,7 @@ public final class Cases {
     public record Detail(
             Row row,
             List<Step> steps,
-            Problems.@Nullable Card card,
+            @Nullable Card card,
             @Nullable CaseThread thread) {
         public Detail {
             steps = List.copyOf(steps);
