@@ -35,7 +35,8 @@ class SeedPhotosTest extends IntegrationTest {
                 .query(String.class)
                 .list();
         assertThat(keys).hasSizeGreaterThanOrEqualTo(8);
-        assertThat(keys).allSatisfy(key -> assertThat(kitchenPhotos.get(key)).as(key).isPresent());
+        assertThat(keys)
+                .allSatisfy(key -> assertThat(kitchenPhotos.get(key)).as(key).isPresent());
     }
 
     @Test
@@ -44,9 +45,10 @@ class SeedPhotosTest extends IntegrationTest {
                 .query(String.class)
                 .list();
         assertThat(keys).contains("seed/nl-p-88120-1.jpg", "seed/country-sourdough.jpg", "seed/brake-pads-ceramic.jpg");
-        assertThat(keys).allSatisfy(key -> assertThat(media.get(key))
-                .as(key)
-                .hasValueSatisfying(bytes -> assertThat(bytes).hasSizeGreaterThan(1000)));
+        assertThat(keys)
+                .allSatisfy(key -> assertThat(media.get(key))
+                        .as(key)
+                        .hasValueSatisfying(bytes -> assertThat(bytes).hasSizeGreaterThan(1000)));
     }
 
     @Test
@@ -55,9 +57,7 @@ class SeedPhotosTest extends IntegrationTest {
                         select o.title from catalogue.offers o join catalogue.catalog_products p on p.id = o.product_id
                          where o.id like '01J9ZD3V%' and o.status = 'live' and o.vetting = 'approved'
                            and cardinality(o.own_images) = 0 and cardinality(p.image_set) = 0
-                        """)
-                .query(String.class)
-                .list();
+                        """).query(String.class).list();
         assertThat(withoutImage).isEmpty();
         mvc.perform(get("/api/v1/public/catalogue/media/{id}", "01J9ZD3V000000000000SMED01"))
                 .andExpect(status().isOk())
