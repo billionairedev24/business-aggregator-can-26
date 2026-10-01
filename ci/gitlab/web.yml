@@ -25,11 +25,11 @@ web:checks:
   image: node:22-bookworm
   timeout: 20m
   script:
-    # make web-check = web-lint (hex colours + typecheck) + web-test + web-build-studio (S-124)
+    # make web-check = web-lint (hex colours + typecheck) + web-test + web-build-studio + web-build-console (S-124, S-90)
     - make -C .. web-check
   artifacts:
     expire_in: 7 days
-    paths: [web/apps/studio/dist/]
+    paths: [web/apps/studio/dist/, web/apps/console/dist/]
 
 # Playwright's image: Node 22, Chromium and its system libraries, same Playwright version as @northline/ui.
 web:storybook:

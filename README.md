@@ -88,6 +88,7 @@ Open http://localhost:3100 → Sign in. Seeded credentials (`db/seed-dev/V101__a
 | Ravi Sandhu (owner, all three businesses) | `ravi.sandhu@example.com` · `+1 403 555 0148` | authenticator key `NORTHLINERAVIDEVTOTPSECRET234567` (add it to any authenticator app, or `oathtool --totp -b <key>`), or backup codes `ravis-00001` … `ravis-00010` (single use) |
 | Jas Gill (technician) | `jas.gill@example.com` · `+1 403 555 0172` | authenticator key `NORTHLINEJASDEVTOTPSECRET2345672` |
 | Priya Sandhu (bookkeeper) | `priya.sandhu@example.com` · `+1 403 555 0191` | backup codes `priya-00001` … `priya-00010` |
+| Priya Natarajan (Northline staff, every console role — S-90; sign in on the console, http://localhost:3200) | `priya.natarajan@example.com` · `+1 403 555 0123` | backup codes `priya-n-00001` … `priya-n-00010` (`db/seed-dev/V191__console_staff.sql`) |
 
 "Create account" works end to end: the 6-digit code is printed in the auth server's log (`Verification code for …`),
 passkeys work in any browser on `localhost` (WebAuthn RP id `localhost`). Google/Apple need real client registrations

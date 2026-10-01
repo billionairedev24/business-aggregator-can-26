@@ -15,7 +15,7 @@
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
-ALL_APPS="api auth bff worker studio consumer docs docs-internal"   # docs, docs-internal: S-126
+ALL_APPS="api auth bff worker studio consumer console docs docs-internal"   # docs, docs-internal: S-126; console: S-90
 usage() { sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
 
 [[ $# -ge 1 ]] || usage
@@ -99,6 +99,8 @@ done
   for app in $ALL_APPS; do echo "  $app: { image: { digest: \"${digest[$app]:-}\" } }"; done
   # S-45: the consumer-bff is the bff image under another Spring profile — always the bff's digest.
   echo "  consumer-bff: { image: { digest: \"${digest[bff]:-}\" } }"
+  # S-90: so is the console-bff.
+  echo "  console-bff: { image: { digest: \"${digest[bff]:-}\" } }"
 } >"$target.tmp"
 mv "$target.tmp" "$target"
 echo "wrote ${target#"$ROOT"/}"

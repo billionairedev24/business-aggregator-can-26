@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ca.northline.shared.Ids;
 import ca.northline.shared.security.MerchantRole;
+import ca.northline.shared.security.StaffRole;
 import ca.northline.support.TestJwt;
 import ca.northline.trust.application.ScanAnomalies;
 import ca.northline.trust.application.ScreenTrustContent;
@@ -223,7 +224,8 @@ class TrustAssistApiTest extends ScriptedModelTest {
                             """).params(ruleFlag, Ids.next(), biz.merchantId()).update();
             var staff = data.user("Sam");
 
-            mvc.perform(get("/api/v1/console/trust/flags?source=ai&limit=200").with(TestJwt.staff(staff)))
+            mvc.perform(get("/api/v1/console/trust/flags?source=ai&limit=200")
+                            .with(TestJwt.staff(staff, StaffRole.TRUST_SAFETY)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.items[?(@.id == '%s')].explanation", aiFlag)
                             .value("Insults the owner."))
@@ -231,7 +233,7 @@ class TrustAssistApiTest extends ScriptedModelTest {
                             .value("abuse"))
                     .andExpect(jsonPath("$.items[?(@.id == '%s')]", ruleFlag).isEmpty());
             mvc.perform(get("/api/v1/console/trust/flags?source=rules&limit=200")
-                            .with(TestJwt.staff(staff)))
+                            .with(TestJwt.staff(staff, StaffRole.TRUST_SAFETY)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.items[?(@.id == '%s')].source", ruleFlag)
                             .value("rules"))
@@ -240,7 +242,7 @@ class TrustAssistApiTest extends ScriptedModelTest {
                                     + " Northline."));
 
             mvc.perform(post("/api/v1/console/trust/flags/{id}/decision", aiFlag)
-                            .with(TestJwt.staff(staff))
+                            .with(TestJwt.staff(staff, StaffRole.TRUST_SAFETY))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"decision\":\"dismissed\",\"note\":\"Harsh but about the work.\"}"))
                     .andExpect(status().isOk())
@@ -248,18 +250,18 @@ class TrustAssistApiTest extends ScriptedModelTest {
                     .andExpect(jsonPath("$.decidedBy").value(staff))
                     .andExpect(jsonPath("$.decisionNote").value("Harsh but about the work."));
             mvc.perform(post("/api/v1/console/trust/flags/{id}/decision", aiFlag)
-                            .with(TestJwt.staff(staff))
+                            .with(TestJwt.staff(staff, StaffRole.TRUST_SAFETY))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"decision\":\"actioned\"}"))
                     .andExpect(status().isConflict())
                     .andExpect(jsonPath("$.code").value("flag_decided"));
             mvc.perform(post("/api/v1/console/trust/flags/{id}/decision", ruleFlag)
-                            .with(TestJwt.staff(staff))
+                            .with(TestJwt.staff(staff, StaffRole.TRUST_SAFETY))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"decision\":\"delete_business\"}"))
                     .andExpect(status().isUnprocessableContent());
             mvc.perform(get("/api/v1/console/trust/flags?state=dismissed&limit=200")
-                            .with(TestJwt.staff(staff)))
+                            .with(TestJwt.staff(staff, StaffRole.TRUST_SAFETY)))
                     .andExpect(
                             jsonPath("$.items[?(@.id == '%s')].state", aiFlag).value("dismissed"));
             assertThat(count(

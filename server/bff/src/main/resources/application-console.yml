@@ -1,0 +1,31 @@
+# console-bff (S-90): the same jar as the studio-bff, for the platform console (web/apps/console) on console.<zone>.
+# Add this profile last: `local,console` or `dev,console` (the chart does). Differences from the Studio
+# (docs/CONSOLE_PLAN.md § Session):
+#   - OAuth client console-bff (registration `console`: redirect /login/oauth2/code/console, as S-122 registers it),
+#     scopes openid profile console;
+#   - staff only, with a second factor: a sign-in whose ID token lacks the `staff` role or acr=mfa is ended at once
+#     (tokens revoked) and sent to /sign-in?error=staff_only | mfa_required (config/StaffGate);
+#   - session cookie NL_CONSOLE (__Host-NL_CONSOLE in the cloud), sessions under nl:console-bff, port 8083.
+# CSRF (__Host-XSRF-TOKEN, header only), the S-19 revocation check, sign-out and the api relay are the Studio's; the
+# api enforces each console endpoint by role (@RequiresConsole), and X-Console-Role is relayed as the browser sends it.
+spring:
+  application.name: northline-console-bff
+  session.data.redis.namespace: nl:console-bff
+  security.oauth2.client.registration:
+    console:
+      provider: northline
+      client-id: console-bff
+      client-secret: ${CONSOLE_BFF_SECRET:dev-console-bff}   # plain; northline-auth stores its hash (CONSOLE_BFF_SECRET_HASH)
+      client-authentication-method: client_secret_basic
+      authorization-grant-type: authorization_code
+      redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+      scope: openid,profile,console
+server.port: ${SERVER_PORT:8083}
+northline.bff:
+  registration-id: console
+  sign-in-page: /sign-in
+  staff-only: true
+---
+# Plain name over http (local); the cloud's is __Host-NL_CONSOLE (application-cloud.yml), which this must not override.
+spring.config.activate.on-profile: "!cloud"
+server.servlet.session.cookie.name: NL_CONSOLE

@@ -13,13 +13,14 @@ documentation site (S-126).
 | `api-public.yaml` | api · `public` | consumer web and mobile apps | none for public reads; consumer-bff session + CSRF, OAuth token, or DPoP (mobile) |
 | `api-studio.yaml` | api · `studio` | the business Studio | studio-bff session + CSRF, or OAuth `merchant` scope; `acr=mfa` |
 | `api-partner.yaml` | api · `partner` | partner integrations (S-30): exactly the `@PartnerAccess` handlers | client credentials with `private_key_jwt`, scope from the annotation |
-| `api-console.yaml` | api · `console` | platform staff | session or token, role STAFF, `acr=mfa` |
+| `api-console.yaml` | api · `console` | platform staff (web/apps/console, S-90) | console-bff session + CSRF, or token; role `staff` + the screen's console role (`@RequiresConsole`), `acr=mfa` |
 | `api-webhooks.yaml` | api · `webhooks` | partners receiving S-33 deliveries | `Northline-Signature` (HMAC), checked by the receiver |
 | `api-internal.yaml` | api · `internal` | nobody outside: provider callbacks, email links, local dev tools | provider signatures / single-use state |
 | `auth-public.yaml` | auth · `public` | every OAuth client: discovery, JWKS, authorize, token, revoke, userinfo | PKCE, DPoP, `private_key_jwt` |
 | `auth-internal.yaml` | auth · `internal` | the first-party sign-in pages (`/api/auth/**`) | auth session cookie, Origin allow-list |
 | `bff-internal.yaml` | studio-bff · `internal` | the Studio (`/bff/**`) | studio-bff session + CSRF |
 | `bff-consumer-internal.yaml` | consumer-bff · `internal` | the consumer web (`/bff/**`) | consumer-bff session (guests too) + CSRF |
+| `bff-console-internal.yaml` | console-bff · `internal` | the platform console (`/bff/**`, S-90) | console-bff session (staff with `acr=mfa` only) + CSRF |
 
 The worker has no HTTP API. It serves only `/actuator/health` and `/actuator/prometheus` on 8084, so it has no
 document.
@@ -53,7 +54,7 @@ documented somewhere.
 |---|---|---|---|---|---|
 | api (:8080, `api.<zone>`) | `/docs` | `/swagger-ui.html` | `/docs/scalar` | `/docs/redoc?group=…` | `/v3/api-docs/<group>`, `/v3/api-docs.yaml/<group>` |
 | auth (:9000, `auth.<zone>`) | `/docs` | `/swagger-ui.html` | `/docs/scalar` | `/docs/redoc` | `/v3/api-docs/<group>` |
-| studio-bff (:8082, `studio.<zone>`) / consumer-bff (:8081, apex) | `/bff/docs` | `/bff/swagger-ui.html` | `/bff/docs/scalar` | `/bff/docs/redoc` | `/bff/v3/api-docs/internal` |
+| studio-bff (:8082, `studio.<zone>`) / consumer-bff (:8081, apex) / console-bff (:8083, `console.<zone>`) | `/bff/docs` | `/bff/swagger-ui.html` | `/bff/docs/scalar` | `/bff/docs/redoc` | `/bff/v3/api-docs/internal` |
 
 `make api-docs` prints these. The landing page links every group in all three viewers. Swagger UI opens a group with
 `?urls.primaryName=<group>`. Scalar shows all of a service's groups on one page and has a document switcher.

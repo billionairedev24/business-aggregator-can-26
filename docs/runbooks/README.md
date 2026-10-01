@@ -108,6 +108,7 @@ say where a step is still manual or missing.
   | `northline.commerce.provider` | `COMMERCE_PROVIDER` | `local` (fake Shopify, Square and Lightspeed) · `oauth` (Shopify Admin GraphQL, Square Catalog + Inventory, Lightspeed X-Series; each once its app is set) | **done** (S-35, catalogue sync — [commerce-sync.md](commerce-sync.md)) |
   | `northline.pos.provider` | `POS_PROVIDER` | `local` (fake Square, Clover and Toast) · `oauth` (Square Catalog, Clover REST v3, Toast menus v2; each once its credentials are set) | **done** (S-36, kitchens' POS menu import — [pos-menu-import.md](pos-menu-import.md)) |
   | `northline.places.provider` | `PLACES_PROVIDER` | `local` (fixture addresses) · `google` (Places API (New) + Geocoding API with `GOOGLE_MAPS_API_KEY`) | **done** (S-47, consumer Location screen and pill — [google-maps.md](google-maps.md)) |
+  | `northline.console.health.provider` | `CONSOLE_HEALTH_PROVIDER` | `none` (system health unknown) · `prometheus` (PromQL over the HTTP API of any Prometheus-compatible store) | **done** (S-91, the console overview's system health — [observability.md](observability.md#console-health-s-91)) |
   | `northline.ai.provider` | `AI_PROVIDER` | `fake` (deterministic, offline) · `openrouter` (OpenRouter's OpenAI-compatible API; 503 without `OPENROUTER_API_KEY`) | **done** (S-129, the `LlmClient` port for every AI feature — [ai.md](ai.md)) |
   | `northline.email.provider` | `EMAIL_PROVIDER` | `local` (SMTP to Mailpit) · `smtp` · `ses` · `sendgrid` · `azure` | **done** (S-13, api invitations and money notices — [email.md](email.md); S-27 worker: `payout.failed`) |
   | `northline.tax.provider` | `TAX_PROVIDER` | `local` (fixed Canadian rates) · `stripe` (Stripe Tax) | **done** (S-21, api sales tax — [stripe.md § 6](stripe.md#6-stripe-tax-s-21)) |
@@ -150,7 +151,8 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `STUDIO_BFF_SECRET_HASH` | | ✓ | | | yes |
 | `CONSUMER_BFF_SECRET` | | | ✓ (`consumer` profile) | | yes, for the consumer-bff (S-45, [Consumer BFF](#consumer-bff-s-45)) |
 | `CONSUMER_BFF_SECRET_HASH` | | ✓ | | | yes (S-45: the consumer-bff exists) |
-| `CONSOLE_BFF_SECRET_HASH` | | ✓ | | | no — the client is registered only once its hash is set ([OAuth clients](#oauth-clients-s-122)) |
+| `CONSOLE_BFF_SECRET` | | | ✓ (`console` profile) | | yes, for the console-bff (S-90, [Console BFF](#console-bff-s-90)) |
+| `CONSOLE_BFF_SECRET_HASH` | | ✓ | | | yes (S-90: the console-bff exists) |
 | `OAUTH_CLIENTS_SYNC_ON_STARTUP` | | ✓ | | | no (`true`; `false` = register only with the Job) |
 | `GOOGLE_CLIENT_ID`/`_SECRET`, `APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` | | ✓ | | | staging, prod (S-18, [federation.md](federation.md)); empty = that provider off |
 | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` | ✓ | | | | staging and prod |
@@ -191,6 +193,8 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `CLOVER_CLIENT_ID`/`_SECRET`, `CLOVER_AUTH_URL`, `CLOVER_API_URL`, `TOAST_CLIENT_ID`/`_SECRET`, `TOAST_API_URL` | ✓ | | | | no — empty = that POS shows "Not available yet" ([pos-menu-import.md](pos-menu-import.md#variables-api)) |
 | `PLACES_PROVIDER`, `GOOGLE_MAPS_API_KEY` | ✓ | | | | staging and prod: `google` + the key (`local` refused there — S-47, [google-maps.md](google-maps.md)) |
 | `PLACES_RATE_LIMIT` | ✓ | | | | no (60 address lookups per browsing session and minute) |
+| `CONSOLE_HEALTH_PROVIDER`, `CONSOLE_HEALTH_PROMETHEUS_URL`, `CONSOLE_HEALTH_PROMETHEUS_TIMEOUT` | ✓ | | | | no (`none` = the console overview's system health shows unknown; `prometheus` + the URL — S-91, [observability.md § Console health](observability.md#console-health-s-91)) |
+| `CONSOLE_HEALTH_PROMETHEUS_TOKEN` | ✓ | | | | no — secret, when the metrics store needs a bearer token |
 | `AI_PROVIDER` | ✓ | | | | staging and prod: `openrouter` (`fake` refused there — S-129, [ai.md](ai.md)) |
 | `OPENROUTER_API_KEY` | ✓ | | | | no — empty = every AI feature answers 503 `ai_unavailable` (secret; [ai.md](ai.md#variables)) |
 | `OPENROUTER_MODEL`, `OPENROUTER_LIGHT_MODEL`, `OPENROUTER_MODEL_<FEATURE>`, `OPENROUTER_BASE_URL`, `OPENROUTER_REFERER`, `OPENROUTER_TITLE`, `OPENROUTER_DATA_COLLECTION`, `OPENROUTER_ZDR`, `OPENROUTER_*_TIMEOUT`, `AI_MAX_TOOL_ROUNDS`, `AI_BUDGET_*`, `AI_REQUESTS_PER_MINUTE`, `AI_FAKE_*` | ✓ | | | | no (`google/gemini-3.7-flash`, `google/gemini-3.5-flash-lite`, blank, openrouter.ai, `STUDIO_ORIGIN`, `Northline`, `deny`, `true`, 5 s / 60 s, 4, 200k / 1M tokens a day, 20/min, off — [ai.md](ai.md#variables)) |
@@ -269,6 +273,41 @@ S-19 revocation check, sign-out revoking the refresh token, `next` limited to lo
   value, auth) in the secrets manager — Terraform creates both empty ([secrets.md](secrets.md)). Rotate like the
   Studio's (below), with the `CONSUMER_` variables.
 
+## Console BFF (S-90)
+
+The platform console (`web/apps/console`, design 03, [CONSOLE_PLAN.md](../CONSOLE_PLAN.md)) has its own BFF: the **bff
+image with the `console` profile added last** (`SPRING_PROFILES_ACTIVE=dev,console`; locally
+`--spring.profiles.active=local,console`), deployed as `northline-console-bff` (chart `apps.console-bff`, port 8083). It
+serves `/api`, `/bff`, `/oauth2` and `/login` on `console.<zone>`; the console app (nginx, like the Studio) serves the
+rest. Compared with the Studio's:
+
+| | studio-bff | console-bff |
+|---|---|---|
+| OAuth client | `studio-bff`, scopes openid profile merchant | `console-bff` (registration `console`), scopes openid profile console |
+| client secret | `STUDIO_BFF_SECRET` | `CONSOLE_BFF_SECRET` (auth: `CONSOLE_BFF_SECRET_HASH`) |
+| session cookie | `__Host-NL_STUDIO` | `__Host-NL_CONSOLE`; sessions under `nl:console-bff:*` |
+| who gets a session | anyone signed in (the api checks memberships) | **staff with a second factor only**: the ID token (the `console` scope adds `roles`) must list `staff` and carry `acr=mfa`; otherwise the sign-in is ended at once (refresh token revoked) and the browser lands on `/sign-in?error=staff_only` or `?error=mfa_required` |
+| sign-in page | the Studio's | the console's own (`northline.auth.console-login-page` = `${CONSOLE_ORIGIN}/sign-in`; `CONSOLE_ORIGIN` may call the auth JSON API and use passkeys) |
+
+Same as the Studio's: CSRF double-submit (`__Host-XSRF-TOKEN`, header `X-XSRF-TOKEN` only), the S-19 revocation check,
+sign-out revoking the refresh token, `next` limited to local paths, no framing. The browser's `X-Console-Role` header
+(the console's role view) is relayed; the api checks the person holds that role.
+
+**Staff roles** live in `identity.platform_roles` (`staff` opens the console; `admin`, `trust_safety`, `dispatch`,
+`finance`, `support`, `analyst` decide the screens and actions — V190) and reach the api in the access token's `roles`
+claim (10 min). Grant or take one away with SQL until the Team screen (S-96) does it; it applies at the person's next
+token refresh:
+
+```sql
+INSERT INTO identity.platform_roles (user_id, role, granted_by) VALUES ('<user id>', 'staff', '<admin id>'), ('<user id>', 'finance', '<admin id>');
+DELETE FROM identity.platform_roles WHERE user_id = '<user id>' AND role = 'finance';
+```
+
+- **Secrets:** `console-bff-secret` (plain, the console-bff) and `console-bff-secret-hash` (`{bcrypt}` of the same
+  value, auth) in the secrets manager — Terraform creates both empty ([secrets.md](secrets.md)). Rotate like the
+  Studio's (below), with the `CONSOLE_` variables.
+- **Health:** `/actuator/health/{liveness,readiness}` on 8083; dashboard `northline-console-bff` (S-111).
+
 ## OAuth clients (S-122)
 
 northline-auth's OAuth clients are **configuration**: `northline.oauth.clients.<client-id>` in
@@ -297,7 +336,7 @@ the database but not in configuration is logged as `stored but not in configurat
 |---|---|---|---|---|
 | `studio-bff` | confidential (`client_secret_basic`) | always — `STUDIO_BFF_SECRET_HASH` is required | `${STUDIO_ORIGIN}/login/oauth2/code/studio` | openid profile merchant |
 | `consumer-bff` | confidential | always since S-45 — `CONSUMER_BFF_SECRET_HASH` is required | `${CONSUMER_ORIGIN}/login/oauth2/code/northline` (locally also the consumer dev server, `http://localhost:3000/…`) | openid profile orders bookings |
-| `console-bff` | confidential | `CONSOLE_BFF_SECRET_HASH` set (`optional: true`) | `${CONSOLE_ORIGIN}/login/oauth2/code/console` | openid profile console |
+| `console-bff` | confidential | always since S-90 — `CONSOLE_BFF_SECRET_HASH` is required | `${CONSOLE_ORIGIN}/login/oauth2/code/console` (locally also the console dev server, `http://localhost:3200/…`) | openid profile console (the ID token carries `roles` for this scope) |
 | `mobile-consumer` ("Northline") | public (PKCE S256, no secret), **DPoP required** (S-29) | always | `${CONSUMER_ORIGIN}/app/oauth2redirect` (App Link / Universal Link), `ca.northline.app:/oauth2redirect` | openid profile orders bookings offline_access; refresh 30 d |
 | `partner:<name>` (S-30) | client credentials, `private_key_jwt` (no secret) | when declared under `northline.oauth.partners` (chart value `partners`) | — | `api.read` / `api.write`, bound to named businesses; 15 min tokens — [partners.md](partners.md) |
 | `northline-mcp` ("Northline MCP (AI agents)", S-127) | public (PKCE S256), **consent screen**, needs `acr=mfa` | always | `http://127.0.0.1/callback`, `http://127.0.0.1/oauth/callback` (any port), `https://claude.ai/api/mcp/auth_callback`, `https://claude.com/api/mcp/auth_callback` | openid profile merchant mcp mcp.write mcp.ops; 1 h access tokens, no refresh token — [mcp.md](mcp.md) |
@@ -487,6 +526,7 @@ from `STUDIO_ORIGIN` / `CONSUMER_ORIGIN`.
 | auth server session | auth | `NL_AUTH` | `__Host-NL_AUTH` | HttpOnly, SameSite=Lax, Secure (not under `local`), host-only (`auth.<zone>`), 12 h idle |
 | BFF session | bff | `NL_STUDIO` | `__Host-NL_STUDIO` | HttpOnly, SameSite=Lax, Secure, host-only (`studio.<zone>`), 12 h idle |
 | consumer BFF session (S-45) | bff (`consumer`) | `NL_CONSUMER` | `__Host-NL_CONSUMER` | the same, host-only (the apex; `pages.` gets its own) |
+| console BFF session (S-90) | bff (`console`) | `NL_CONSOLE` | `__Host-NL_CONSOLE` | the same, host-only (`console.<zone>`) |
 | language (S-45) | consumer web | `nl.locale` | `nl.locale` | `en`/`fr`, readable, SameSite=Lax, 1 year — no personal data |
 | CSRF token | bff | `XSRF-TOKEN` | `__Host-XSRF-TOKEN` | readable by the Studio, SameSite=Strict, Secure in the cloud, path `/` |
 

@@ -5,7 +5,7 @@
 #   deploy/kind/down.sh          # removes all of it
 #
 # Needs docker, kind, kubectl, helm, and the images built locally as northline/<app>:$IMAGE_TAG
-# (cd server && ./gradlew jibDockerBuild; docker build --target studio|consumer web). Postgres runs next to the
+# (cd server && ./gradlew jibDockerBuild; docker build --target studio|consumer|console web). Postgres runs next to the
 # cluster (a container on the kind network, reached through a selector-less Service — the shape of a managed
 # database); Valkey runs in the cluster. Variables: KIND_CLUSTER (northline), NAMESPACE (northline-local),
 # IMAGE_TAG (dev), APPS (images to load), PG_IMAGE, VALKEY_IMAGE, HELM_EXTRA_ARGS, SKIP_HELM (stand-ins only).
@@ -14,7 +14,7 @@ set -euo pipefail
 CLUSTER=${KIND_CLUSTER:-northline}
 NS=${NAMESPACE:-northline-local}
 TAG=${IMAGE_TAG:-dev}
-APPS=${APPS-"api auth bff worker studio consumer"}   # APPS="" skips loading (already in the node)
+APPS=${APPS-"api auth bff worker studio consumer console"}   # APPS="" skips loading (already in the node)
 PG_IMAGE=${PG_IMAGE:-postgis/postgis:17-3.5}
 VALKEY_IMAGE=${VALKEY_IMAGE:-valkey/valkey:8-alpine}
 PG_CONTAINER="${CLUSTER}-postgres"
@@ -98,4 +98,5 @@ Ready. Port-forward and check:
   kubectl -n $NS port-forward svc/northline-auth 19000:9000 &  curl localhost:19000/.well-known/openid-configuration
   kubectl -n $NS port-forward svc/northline-bff 18082:8082 &   curl localhost:18082/actuator/health/readiness
   kubectl -n $NS port-forward svc/northline-studio 18080:8080 & open http://localhost:18080
+  kubectl -n $NS port-forward svc/northline-console 13200:8080 & open http://localhost:13200   # S-90
 MSG
