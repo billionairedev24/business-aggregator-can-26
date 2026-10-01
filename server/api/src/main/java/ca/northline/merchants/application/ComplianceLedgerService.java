@@ -180,11 +180,11 @@ class ComplianceLedgerService
     }
 
     @Override
-    public List<Document> documents(String merchantId) {
+    public List<LedgerDocument> documents(String merchantId) {
         return ledger.items(merchantId, clock.instant()).stream()
                 .sorted(Comparator.comparing(
                         ComplianceItem::expiresAt, Comparator.nullsLast(Comparator.naturalOrder())))
-                .map(i -> new Document(
+                .map(i -> new LedgerDocument(
                         i.id(),
                         i.checkType().code(),
                         i.registry(),

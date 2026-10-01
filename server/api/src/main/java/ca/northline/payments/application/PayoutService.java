@@ -77,7 +77,11 @@ class PayoutService implements ViewPayouts, MovePayouts, PayoutPlan, RecentPayou
     public List<PayoutRef> recent(String merchantId, int limit) {
         return history(merchantId, limit).stream()
                 .map(p -> new PayoutRef(
-                        p.getId(), p.getAmountCents(), p.getKind().code(), p.getState().code(), p.getArrivesAt()))
+                        p.getId(),
+                        p.getAmountCents(),
+                        p.getKind().code(),
+                        p.getState().code(),
+                        p.getArrivesAt()))
                 .toList();
     }
 

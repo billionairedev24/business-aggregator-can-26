@@ -1,7 +1,7 @@
 package ca.northline.messaging.application;
 
 import ca.northline.merchants.api.ComplianceDocuments;
-import ca.northline.merchants.api.ComplianceDocuments.Document;
+import ca.northline.merchants.api.ComplianceDocuments.LedgerDocument;
 import ca.northline.merchants.api.MerchantDirectory;
 import ca.northline.messaging.api.CaseReferences;
 import ca.northline.region.api.Regions;
@@ -39,14 +39,16 @@ class DocumentCaseReferences implements CaseReferences {
         return list.stream()
                 .map(d -> {
                     var expires = d.expiresAt();
-                    var label = expires == null ? name(d, fr) : "%s · exp. %s".formatted(name(d, fr), month.format(expires));
+                    var label = expires == null
+                            ? name(d, fr)
+                            : "%s · exp. %s".formatted(name(d, fr), month.format(expires));
                     return new Reference("document", d.id(), label);
                 })
                 .toList();
     }
 
     /** The recorded label, else a generic name for the check type with its registry / reference. */
-    static String name(Document d, boolean fr) {
+    static String name(LedgerDocument d, boolean fr) {
         var label = d.label();
         if (label != null && !label.isBlank()) {
             return label.strip();
@@ -54,7 +56,8 @@ class DocumentCaseReferences implements CaseReferences {
         var registry = d.registry();
         var reference = d.reference();
         return switch (d.checkType()) {
-            case "licence" -> registry == null ? (fr ? "Permis" : "Licence") : fr ? "Permis " + registry : registry + " licence";
+            case "licence" ->
+                registry == null ? (fr ? "Permis" : "Licence") : fr ? "Permis " + registry : registry + " licence";
             case "insurance" -> fr ? "Assurance responsabilité" : "Liability insurance";
             case "wcb" -> fr ? "Attestation d’indemnisation des travailleurs" : "Workers’ compensation clearance";
             case "ahs_permit" ->

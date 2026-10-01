@@ -336,7 +336,9 @@ class HelpApiTest extends MessagingApiTest {
                     .andExpect(jsonPath("$.items[?(@.type=='document')].label")
                             .value("Assurance responsabilité · exp. janv. 2027"));
 
-            var body = CASE.replace("\"refType\":\"document\",\"refId\":\"DOC-1\"", "\"refType\":\"payout\",\"refId\":\"" + payout + "\"");
+            var body = CASE.replace(
+                    "\"refType\":\"document\",\"refId\":\"DOC-1\"",
+                    "\"refType\":\"payout\",\"refId\":\"" + payout + "\"");
             mvc.perform(postJson(CASES, body, biz.merchantId()).with(TestJwt.member(biz.userId())))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.refType").value("payout"))

@@ -16,7 +16,7 @@ public interface ComplianceDocuments {
      * @param label the recorded name of the row, when it has one
      * @param status the row's status as of now ({@code verified | submitted | todo | expired | rejected})
      */
-    record Document(
+    record LedgerDocument(
             String id,
             String checkType,
             @Nullable String registry,
@@ -26,5 +26,5 @@ public interface ComplianceDocuments {
             @Nullable Instant expiresAt) {}
 
     /** The ledger's rows, the most urgent (earliest expiry) first. */
-    List<Document> documents(String merchantId);
+    List<LedgerDocument> documents(String merchantId);
 }
