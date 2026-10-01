@@ -1,0 +1,25 @@
+/* Delivery ops (S-81, design 03 lines 277–295). Token values only. */
+.nl-dl-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.nl-dl-top .input { min-height: 40px; width: auto; max-width: 100%; }
+.nl-dl-kicker { display: block; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-neutral-700); }
+.nl-dl-title { font-size: clamp(30px, 3.5vw, 44px); margin: 0 0 20px; letter-spacing: -0.02em; }
+.nl-dl-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 28px clamp(24px, 4vw, 56px); }
+.nl-dl-h2 { font-size: 22px; margin: 0 0 10px; }
+.nl-dl-gap { margin-top: 28px; }
+.nl-dl-note { color: var(--color-neutral-700); font-size: 13px; margin: 10px 0 0; }
+.nl-dl-error { color: var(--color-accent-2-700); font-size: 14px; }
+.nl-dl-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.nl-dl-map { position: relative; margin: 0; aspect-ratio: 1 / 1; border-radius: var(--radius-md); overflow: hidden; background-color: var(--color-neutral-200); }
+.nl-dl-map[data-basemap='grid'] {
+  background-image: linear-gradient(var(--color-neutral-300) 1px, transparent 1px), linear-gradient(90deg, var(--color-neutral-300) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+.nl-dl-map svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.nl-dl-zone polygon { fill: var(--color-accent); fill-opacity: 0.18; stroke: var(--color-accent); stroke-width: 2; }
+.nl-dl-zone text { font-family: var(--font-heading); font-size: 13px; fill: var(--color-accent-900); }
+.nl-dl-dot { fill: var(--color-text); }
+.nl-dl-dot[data-stuck='true'] { fill: var(--color-accent-2); }
+.nl-dl-legend { position: absolute; left: 14px; bottom: 14px; right: 14px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; width: fit-content; max-width: calc(100% - 28px);
+  font-size: 12px; background: var(--color-bg); padding: 6px 10px; border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
+.nl-dl-stuck { color: var(--color-accent-2); }
+.nl-dl-attr { color: var(--color-neutral-700); }
