@@ -15,6 +15,7 @@ const GROSS: Record<Report['granularity'], FinanceKey> = { day: 'grossDay', week
 export function ReportsScreen() {
   const merchantId = useMerchantId();
   const t = useFinanceT();
+  const { locale } = useLocale();
   const [period, setPeriod] = useState<Period>('90d');
   const report = useQuery({ ...reportQuery(merchantId, period), placeholderData: keepPreviousData });
   const year = new Date().getFullYear();
@@ -29,7 +30,7 @@ export function ReportsScreen() {
           <Segmented name="report-period" aria-label={t('periodLabel')} value={period} onChange={setPeriod}
             options={[{ value: '30d', label: t('p30d') }, { value: '90d', label: t('p90d') }, { value: '12mo', label: t('p12mo') }]} />
           <a className="btn btn-secondary" href={downloads.export(merchantId, period)} download>{t('exportCsv')}</a>
-          <a className="btn btn-secondary" href={downloads.gst(merchantId, year)} download>{t('taxSummary')}</a>
+          <a className="btn btn-secondary" href={downloads.gstPdf(merchantId, year, locale)} download>{t('taxSummary')}</a>
         </div>
       </div>
       <QueryState query={report} skeleton={<PageSkeleton kpis={5} rows={4} />}>
