@@ -137,6 +137,11 @@ northline:
   devdocs:
     resource: ${MCP_DOCS_RESOURCE:${API_PUBLIC_URL:http://localhost:8080}/mcp/docs}
     access: ${MCP_DOCS_ACCESS:open}
+  # S-68: the Studio's live stream (GET /merchants/{id}/live): signals between api replicas (memory | redis = Valkey
+  # pub/sub; memory is refused in staging/prod) and how long one stream stays open before the browser reconnects.
+  live:
+    bus: ${LIVE_BUS:memory}
+    stream: ${LIVE_STREAM:10m}
   studio.base-url: ${STUDIO_ORIGIN:http://localhost:3100}      # invitation links, Stripe return URLs
   # The region model (S-134, docs/runbooks/regions.md): provinces and markets are rows in region.regions (V130/V131,
   # edited by the console later); this is the configuration on top. Code never names a province, city or zone.

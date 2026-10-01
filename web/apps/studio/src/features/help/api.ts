@@ -56,8 +56,11 @@ export const articlesQuery = (m: string, l: string, q: string, topic: string) =>
 export const articleQuery = (m: string, l: string, slug: string) => queryOptions({ queryKey: helpKeys.article(m, l, slug), queryFn: () => http(`${base(m)}/articles/${slug}`, { headers: lang(l) }, Article) });
 export const statusQuery = (m: string, l: string) => queryOptions({ queryKey: helpKeys.status(m, l), refetchInterval: 60_000, queryFn: () => http(`${base(m)}/status`, { headers: lang(l) }, items(StatusComponent)) });
 export const relatedQuery = (m: string, l: string) => queryOptions({ queryKey: helpKeys.related(m, l), queryFn: () => http(`${base(m)}/related`, { headers: lang(l) }, items(Related)) });
-export const casesQuery = (m: string) => queryOptions({ queryKey: helpKeys.cases(m), refetchInterval: 30_000, queryFn: () => http(`${base(m)}/cases`, {}, items(CaseSummary)) });
-export const caseQuery = (m: string, id: string) => queryOptions({ queryKey: helpKeys.case(m, id), refetchInterval: 10_000, queryFn: () => http(`${base(m)}/cases/${id}`, {}, CaseDetail) });
+/** Case messages also arrive over the live stream (S-68); these are the intervals while it is down. */
+export const CASES_POLL_MS = 30_000;
+export const CASE_POLL_MS = 10_000;
+export const casesQuery = (m: string) => queryOptions({ queryKey: helpKeys.cases(m), refetchInterval: CASES_POLL_MS, queryFn: () => http(`${base(m)}/cases`, {}, items(CaseSummary)) });
+export const caseQuery = (m: string, id: string) => queryOptions({ queryKey: helpKeys.case(m, id), refetchInterval: CASE_POLL_MS, queryFn: () => http(`${base(m)}/cases/${id}`, {}, CaseDetail) });
 
 export interface OpenCaseInput { topic: string; related: Related | null; body: string; attachments: Attachment[]; channel: string; urgent: boolean }
 

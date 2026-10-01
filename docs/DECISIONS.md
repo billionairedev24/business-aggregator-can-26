@@ -4454,3 +4454,39 @@ only with DPoP.
 - **Schema/API additions:** `payments.api.MerchantBillingFacts.statementParty(merchantId)` → `StatementParty(legalName, displayName, gstNumber)`, implemented by the merchants module from Settings › Business (payments can't call merchants.api — merchants depends on payments). `payments.application.TaxStatements` (use case), `StatementDocument` (print model) and `StatementRenderer` (port). No migration.
 - **Studio:** Reports' "Tax summary (GST)" now downloads the PDF in the Studio's language; Payouts › Tax documents offers "PDF · CSV" for both documents (labelled links, en/fr).
 - Not done: Quebec's QST (TVQ) is not split out — the read model has one tax total per month (S-21); a QST column would come with a QST-registered marketplace setup. The statements are not signed or archived; they are generated on request from the live read model.
+
+## 2026-09-30 — S-68 Server-sent events for messages and live orders (replace polling)
+
+- **One stream per Studio tab, not one per screen.** `GET /api/v1/merchants/{merchantId}/live` (`studio` module,
+  `@RequiresMerchant(VIEW)`) carries every live screen's signals: `message` (data `{"ref": threadId}`), `kitchen`
+  (`{"ref": orderId|null}`), `orders` (`{"ref": orderId}`), plus `ready` on open. The Studio shell opens it
+  (`useStudioLive` in `routes/b.$merchantId.tsx`) so a new message refreshes the Messages badge on every screen. The
+  planned `…/threads/stream` (messaging's "Real time" note above) is folded into it.
+- **Signals, not data.** Events carry a topic and an id, never message text, names or amounts; the browser invalidates
+  the matching TanStack queries and refetches with its own permissions. A technician therefore learns nothing from the
+  id of a thread they cannot open, and the stream needs no per-role filtering or payload versioning.
+- **Where signals come from.** `StudioLiveEvents` (module listeners, after commit, so the refetch sees the change):
+  `message.sent` → `message`; `order.placed` → `kitchen` for `orderType=food`, else `orders`; `order.packed` →
+  `orders`; `order.accepted` / `order.ready` / `order.handed_off` / kitchen paused / resumed → `kitchen`. Help cases'
+  messages publish `message.sent` too, so open cases refresh as well.
+- **Across replicas: Valkey pub/sub** behind the `StudioLive` port, chosen by `northline.live.bus` (`LIVE_BUS`):
+  `redis` (channel `nl:studio:<merchantId>`, message `<topic>[:<id>]`; the cloud default) or `memory` (local, test;
+  refused under staging/prod like `MCP_STORE`). Nothing is stored: a signal published while no replica holds a stream
+  for the business is dropped, and a reconnecting browser catches up with one refetch (below). Publishing failures are
+  logged, never thrown — a live hint must not fail the change it reports.
+- **Stream lifetime 10 minutes** (`LIVE_STREAM`), keep-alive comment every 25 s, `retry: 3000`. Ending the stream makes
+  EventSource reconnect through the BFF, which re-checks the session, refreshes the access token and re-reads the
+  membership — so a removed member stops getting signals within 10 minutes. The BFF relays `text/event-stream` as it
+  arrives (S-130's `streaming-media-types`, S-135's relay fix); nothing changed there.
+- **Fallback to polling.** While the stream is not open (connecting, dropped, refused, or no EventSource) the screens
+  poll at their old intervals (threads 15 s, open thread 5 s, KDS 15 s, help cases 30 s / 10 s). While it is open they
+  keep a 60 s safety refresh (`LIVE_SAFETY_MS`) for changes that send no signal (another member reading a thread, a
+  courier assigned, a scheduled order entering its 60-minute window, a prep bump on another tablet). The first `ready`
+  needs no catch-up; every later one (a reconnect) invalidates messages, kitchen and orders once. If the server closes
+  the stream for good (EventSource `CLOSED`: 403, or an api without the endpoint), the Studio retries after 30 s.
+- **Orders screen too.** Goods orders (`orders`) refresh the Orders board, nav badges and dashboard; the story names the
+  KDS, but the same signal costs nothing for sellers.
+- **Not done:** no signal for thread reads/assignments, courier assignment or prep bumps (covered by the 60 s safety
+  refresh); no per-event replay (`Last-Event-ID`) — reconnects refetch instead. The Valkey adapter is tested against a
+  real Valkey 8 (Testcontainers, two adapter instances standing in for two replicas); a multi-replica deployment has not
+  been exercised.

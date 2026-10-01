@@ -8,6 +8,7 @@ import { useShellT } from '../features/shell/messages';
 import { homeScreen, screenFromPath, screenHref, screensFor } from '../features/shell/nav';
 import { StudioLayout } from '../features/shell/StudioLayout';
 import { PlaceValues } from '../features/shell/place';
+import { useStudioLive } from '../lib/live';
 
 export const Route = createFileRoute('/b/$merchantId')({
   beforeLoad: ({ context, location }) => requireSession(context.queryClient, location.href),
@@ -21,6 +22,7 @@ function StudioRoute() {
   const { merchantId } = Route.useParams();
   const merchant = useQuery(merchantQuery(merchantId)).data!;
   const { locale } = useLocale();
+  useStudioLive(merchantId);
   const pathname = useRouterState({ select: s => s.location.pathname });
   const screen = screenFromPath(pathname);
   if (!screensFor(merchant.type).includes(screen)) return <Navigate to={screenHref(merchant.id, homeScreen(merchant.type))} replace />;

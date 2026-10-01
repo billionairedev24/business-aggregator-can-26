@@ -5,7 +5,8 @@ import { ChatBubble, ChatLog, EmptyState, ErrorState, Skeleton, useFormatters, u
 import { useMerchantId, useRole } from '../shell/api';
 import { useShellT } from '../shell/messages';
 import { screenHref, type ScreenKey } from '../shell/nav';
-import { threadQuery, threadsQuery, useMarkRead, useSendMessage, type ThreadSummary } from './api';
+import { useLivePoll } from '../../lib/live';
+import { THREAD_POLL_MS, THREADS_POLL_MS, threadQuery, threadsQuery, useMarkRead, useSendMessage, type ThreadSummary } from './api';
 import { AttachmentLinks } from './AttachmentLinks';
 import { Composer } from './Composer';
 import { useMessagesT } from './messages';
@@ -18,13 +19,13 @@ const REF_SCREEN: Record<string, ScreenKey> = { booking: 'appointments', quote: 
 /**
  * /b/$merchantId/messages — design: messages. Thread list (the open one outlined like a panel), the open thread with
  * its booking/order context, quick replies and the composer. Technicians see only their own jobs' threads.
- * Polls (TanStack Query refetchInterval); `threadId` comes from `?thread=`.
+ * Refreshed by the live stream (S-68), polling while it is down; `threadId` comes from `?thread=`.
  */
 export function MessagesScreen({ threadId, onSelect }: { threadId?: string; onSelect: (id: string) => void }) {
   const t = useMessagesT();
   const merchantId = useMerchantId();
   const role = useRole();
-  const list = useQuery(threadsQuery(merchantId));
+  const list = useQuery({ ...threadsQuery(merchantId), refetchInterval: useLivePoll(THREADS_POLL_MS) });
   const ago = useAgo();
   const threads = list.data ?? [];
   const selectedId = threadId && threads.some(x => x.id === threadId) ? threadId : threads[0]?.id;
@@ -63,7 +64,7 @@ function ThreadPane({ merchantId, summary, canSend, role }: { merchantId: string
   const { locale } = useLocale();
   const { date } = useFormatters();
   const navigate = useNavigate();
-  const q = useQuery(threadQuery(merchantId, summary.id, locale));
+  const q = useQuery({ ...threadQuery(merchantId, summary.id, locale), refetchInterval: useLivePoll(THREAD_POLL_MS) });
   const markRead = useMarkRead(merchantId);
   const send = useSendMessage(merchantId, summary.id, locale);
   const ago = useAgo();
