@@ -111,6 +111,14 @@ Rotation: create a new key, update the secret, restart the api, delete the old k
 - Their usage appears in `ai.usage` as `listing_copy`, `quote_lines`, `message_reply` and `review_summary`.
 - Details: [docs/ai/writing-help.md](../ai/writing-help.md).
 
+## Consumer AI (S-132)
+
+- `POST /api/v1/search/interpret` is **public**, like search. Its budget is per visitor (user id, or a hashed guest
+  id or address), and search's per-address rate limit counts it too. If bots drive its cost up, lower
+  `AI_REQUESTS_PER_MINUTE` or turn AI off; plain search keeps working.
+- `POST /api/v1/me/help/triage` needs a signed-in customer. It opens nothing.
+- Details: [docs/ai/consumer.md](../ai/consumer.md).
+
 ## Dashboards and alerts
 
 The port is wrapped by `ObservedLlmClient` (redaction, traces, metrics). Tags: `provider`, `model`, `feature`,

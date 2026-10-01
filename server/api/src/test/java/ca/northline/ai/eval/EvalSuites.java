@@ -13,6 +13,8 @@ public final class EvalSuites {
                 new ca.northline.catalogue.application.ListingCopyEval(),
                 new ca.northline.booking.application.QuoteLinesEval(),
                 new ca.northline.messaging.application.ReplyEval(),
-                new ca.northline.trust.application.ReviewSummaryEval());
+                new ca.northline.trust.application.ReviewSummaryEval(),
+                new ca.northline.search.application.SearchFiltersEval(),
+                new ca.northline.messaging.application.HelpTriageEval());
     }
 }

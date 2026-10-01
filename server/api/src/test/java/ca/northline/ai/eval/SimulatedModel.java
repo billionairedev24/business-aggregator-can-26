@@ -1,6 +1,7 @@
 package ca.northline.ai.eval;
 
 import ca.northline.ai.MockOpenRouter;
+import ca.northline.ai.application.PrivacyRedactor;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
@@ -39,7 +40,10 @@ public final class SimulatedModel implements Function<JsonNode, String> {
         JsonNode match = null;
         for (var c : cases) {
             var input = c.path("input");
-            var key = input.isString() ? input.asString() : c.path("id").asString();
+            // The port redacts before the model sees anything: match the input as it arrives.
+            var key = input.isString()
+                    ? PrivacyRedactor.redact(input.asString())
+                    : c.path("id").asString();
             if (!key.isEmpty() && question.contains(key)) {
                 match = c;
                 break;

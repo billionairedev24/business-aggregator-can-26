@@ -3741,3 +3741,47 @@ Stacked on S-130 (#83), which is stacked on S-129 (#82). It reuses S-130's `Scri
   - Nothing is audited per draft, since nothing changed; the usage row is the record.
   - No live-model run.
   - UI tested with Testing Library only.
+
+## 2026-10-01 — S-132 Consumer AI: natural-language search and help triage
+
+Stacked on S-131 (#85) → S-130 (#83) → S-129 (#82).
+
+- **Natural-language search** (`search` module, `POST /api/v1/search/interpret`, prompt `search-filters@v1`, light
+  model):
+  - It turns the typed text into **the S-44 search API's own parameters** (`GET /api/v1/search`, which is on main):
+    `q`, `kind`, `minPrice` / `maxPrice` (cents), `minRating`, `tier`, `instantBook`, `openNow`, `delivery=tonight`,
+    `dietary`, `allergenFree`, `radiusKm` and `sort`, plus a one-line `explanation` in the person's language.
+  - The model only proposes. `SearchInterpreter` keeps only values the search API accepts:
+    - codes from its enums; dietary tags and Health Canada allergen codes from the index's list;
+    - prices ≥ 0 (swapped when reversed); rating 1–5; radius 1–100;
+    - `sort=distance` and `radiusKm` only when the person shared a location (`hasLocation`), as the search API requires;
+    - `relevance` and `registered` are dropped as no-ops.
+  - It never runs the search and never sees results. The consumer app shows the filters as removable chips and calls
+    `GET /api/v1/search` itself.
+  - **Public, like search:**
+    - The AI budget is per visitor: the user id when signed in, else `visitor:` plus a SHA-256 of the BFF's guest id,
+      else of the client address. The raw values are never stored.
+    - Search's per-address rate limit counts it too (429 `rate_limited`).
+  - **UI:** the consumer search results page (S-48) isn't built yet (`routes/search.tsx` is pending). The contract is
+    recorded in CONSUMER_WEB_PLAN.md for S-48 to call.
+- **Help triage** (`messaging` module, help cases; `POST /api/v1/me/help/triage`, signed-in customers; prompt
+  `help-triage@v1`, light model):
+  - "Something's wrong" text (10–2,000 characters, optional `refType` order | booking) becomes a `category`:
+    `missing_item`, `wrong_item`, `damaged`, `not_as_described`, `late`, `not_delivered`, `service_not_done`,
+    `service_quality`, `no_show`, `billing`, `safety`, `account` or `other`. It also returns `urgent` and a neutral
+    English `summary` for staff (≤ 300 characters).
+  - **The route is a rule, not the model's**: `refund_request` (goods problems), `dispute` (late, service, no-show,
+    billing) or `support` (safety, account, other).
+  - **Never decides refunds:** it opens nothing and names no amount. The S-60 flow shows the suggestion, and the
+    customer opens the case through the existing `payments.api.CustomerCases`, where merchants or staff decide as
+    today. Safety is always urgent. An unknown category from the model becomes `other`.
+  - Only the report text is sent; the order or booking itself isn't read. The categories are new: no case category
+    existed, and S-60 adopts them. **UI left to S-60**, as agreed.
+- **Evals:**
+  - `search-filters.json` (10 cases): en/fr, location-dependent sorting, invented values (`keto`, `platinum`,
+    `spaceship`) that must be dropped, and a plain query that must stay unfiltered.
+  - `help-triage.json` (12 cases): precision and recall per category, safety recall and precision 1.0 in CI, summaries
+    that must not decide ("approved", "refunded") or carry a phone number.
+- `SimulatedModel` now matches a case on its **redacted** input, which is what the model receives.
+- **No schema change.** Usage is recorded as `search_filters` and `help_triage`.
+- **Not done:** no consumer UI (S-48 / S-60); no live model run.

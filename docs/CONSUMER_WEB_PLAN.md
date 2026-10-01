@@ -340,3 +340,20 @@ Additive only; record each addition in `docs/DECISIONS.md` under the story's hea
 - consumer-bff: `apps.consumer-bff` (the bff image, `profiles: [consumer]`, port 8081, `CONSUMER_BFF_SECRET`);
   routes `/api`, `/bff`, `/oauth2`, `/login` on the consumer host, `/api`, `/bff` on `pages.`; reachable from the
   consumer app for SSR. auth needs `CONSUMER_BFF_SECRET_HASH`. `promote.sh` pins it to the bff digest.
+
+## AI contracts for search and "something's wrong" (S-132)
+
+Both are AI-assisted suggestions. When `GET /api/v1/ai/status` says `available: false`, the app hides them.
+
+- **Natural-language search (S-48):** `POST /api/v1/search/interpret`, body
+  `{ text, hasLocation?, lang? }` → `{ q, kind[], minPrice?, maxPrice?, minRating?, tier[], instantBook?, openNow?,
+  delivery?, dietary[], allergenFree[], radiusKm?, sort?, explanation, aiAssisted: true }`.
+  - These are exactly the `GET /api/v1/search` parameters. Show them as removable chips under "Searching for
+    {explanation}", then search with them.
+  - Errors: 422 on `text` ("Type what you're looking for." / "Keep it under 200 characters."), 429 `rate_limited`
+    (search's limit) or `ai_rate_limited`, 503 `ai_unavailable`. On any of them, fall back to a plain `q` search.
+- **"Something's wrong" triage (S-60):** `POST /api/v1/me/help/triage` (signed in), body `{ text, refType? }` →
+  `{ category, route: refund_request | dispute | support, urgent, summary, aiAssisted: true }`.
+  - Pre-select the case type from `route` and `category`; the customer can change it. When `urgent` is true, show
+    the urgent help first.
+  - The call opens nothing: the customer still submits the case.

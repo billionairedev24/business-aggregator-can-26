@@ -1,0 +1,29 @@
+{
+  "about": "S-132 help triage eval: a customer's 'something's wrong' text → case category (HelpTriageEval). Precision and recall per category, safety recall must be 1.0, the summary must not decide anything (mustNotInclude: approve, refunded, we will refund) and must not carry contact details. `input` is the report text.",
+  "cases": [
+    {"id": "missing", "input": "Only one of the two wiper blades I ordered was in the bag.", "expected": "missing_item", "mustNotInclude": ["approved", "refunded"],
+     "mock": {"json": {"category": "missing_item", "urgent": false, "summary": "One of two wiper blades in the order was missing; the customer wants the missing blade."}}},
+    {"id": "wrong-size", "input": "I got the 18 inch blades but ordered 22 inch.", "expected": "wrong_item",
+     "mock": {"json": {"category": "wrong_item", "urgent": false, "summary": "The customer received 18-inch blades instead of the 22-inch ones ordered."}}},
+    {"id": "damaged", "input": "The soup container was crushed and leaking all over the bag.", "expected": "damaged",
+     "mock": {"json": {"category": "damaged", "urgent": false, "summary": "The soup arrived crushed and leaking."}}},
+    {"id": "no-show", "input": "The plumber never showed up and didn't answer messages.", "expected": "no_show",
+     "mock": {"json": {"category": "no_show", "urgent": false, "summary": "The provider did not arrive for the booking and did not answer messages."}}},
+    {"id": "quality", "input": "After the brake job the car pulls left and squeals worse than before.", "expected": "service_quality",
+     "mock": {"json": {"category": "service_quality", "urgent": false, "summary": "After the brake job the car pulls left and squeals more than before."}}},
+    {"id": "safety-food", "input": "My daughter got sick after eating the shrimp, we went to the ER.", "expected": "safety", "urgentExpected": true,
+     "mock": {"json": {"category": "safety", "urgent": true, "summary": "The customer's daughter became ill after eating the shrimp and was taken to the emergency room."}}},
+    {"id": "safety-threat", "input": "The worker yelled at me and threatened me when I asked about the price.", "expected": "safety", "urgentExpected": true,
+     "mock": {"json": {"category": "safety", "urgent": true, "summary": "The customer reports the provider shouted and made threats when asked about the price."}}},
+    {"id": "billing", "input": "I was charged twice for the same order, call me at 403-555-0199.", "expected": "billing", "mustNotInclude": ["403", "refunded"],
+     "mock": {"json": {"category": "billing", "urgent": false, "summary": "The customer reports being charged twice for the same order."}}},
+    {"id": "late", "input": "Food arrived 50 minutes after the delivery window, cold.", "expected": "late",
+     "mock": {"json": {"category": "late", "urgent": false, "summary": "The food arrived 50 minutes after the window and was cold."}}},
+    {"id": "never-arrived", "input": "Tracking says delivered but nothing came to my door.", "expected": "not_delivered",
+     "mock": {"json": {"category": "not_delivered", "urgent": false, "summary": "Tracking shows delivered, but the customer received nothing."}}},
+    {"id": "fr-missing", "input": "Il manque un rouleau impérial dans ma commande.", "expected": "missing_item",
+     "mock": {"json": {"category": "missing_item", "urgent": false, "summary": "One spring roll was missing from the order."}}},
+    {"id": "bad-label", "input": "The app keeps logging me out when I try to pay.", "expected": "account",
+     "mock": {"json": {"category": "account", "urgent": false, "summary": "The customer is logged out when trying to pay."}}}
+  ]
+}
