@@ -1,5 +1,9 @@
 package ca.northline.merchants.persistence;
 
+import static ca.northline.shared.JdbcTimes.instant;
+import static ca.northline.shared.JdbcTimes.requiredInstant;
+import static ca.northline.shared.JdbcTimes.ts;
+
 import ca.northline.merchants.application.VerificationQueue.Decision;
 import ca.northline.merchants.application.VerificationQueue.DecisionRow;
 import ca.northline.merchants.application.VerificationQueueStore;
@@ -9,7 +13,6 @@ import ca.northline.shared.MerchantScope;
 import java.sql.Array;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
@@ -52,7 +55,7 @@ class VerificationQueueQueries implements VerificationQueueStore {
                         """)
                 .param("everyone", scope.everyone())
                 .param("merchants", scope.ids())
-                .param("since", Timestamp.from(decidedSince))
+                .param("since", ts(decidedSince))
                 .param("n", limit)
                 .query((rs, _) -> application(rs))
                 .list();
@@ -106,8 +109,8 @@ class VerificationQueueQueries implements VerificationQueueStore {
                 .param("note", d.note())
                 .param("by", d.decidedBy())
                 .param("role", role)
-                .param("submitted", submittedAt == null ? null : Timestamp.from(submittedAt))
-                .param("at", Timestamp.from(d.decidedAt()))
+                .param("submitted", ts(submittedAt))
+                .param("at", ts(d.decidedAt()))
                 .update();
     }
 
@@ -124,7 +127,7 @@ class VerificationQueueQueries implements VerificationQueueStore {
                         strings(rs.getArray("check_keys")),
                         rs.getString("note"),
                         rs.getString("decided_by"),
-                        rs.getTimestamp("decided_at").toInstant()))
+                        requiredInstant(rs, "decided_at")))
                 .list();
     }
 
@@ -137,7 +140,7 @@ class VerificationQueueQueries implements VerificationQueueStore {
                          where d.decided_at >= :since and d.submitted_at is not null
                            and (:everyone or d.merchant_id = any(:merchants))
                         """)
-                .param("since", Timestamp.from(since))
+                .param("since", ts(since))
                 .param("everyone", scope.everyone())
                 .param("merchants", scope.ids())
                 .query((rs, _) -> {
@@ -149,8 +152,6 @@ class VerificationQueueQueries implements VerificationQueueStore {
     }
 
     private static Application application(ResultSet rs) throws SQLException {
-        var submitted = rs.getTimestamp("submitted_at");
-        var decided = rs.getTimestamp("decided_at");
         return new Application(
                 rs.getString("id"),
                 rs.getString("display_name"),
@@ -160,10 +161,10 @@ class VerificationQueueQueries implements VerificationQueueStore {
                 rs.getString("province"),
                 rs.getString("city"),
                 rs.getString("status"),
-                submitted == null ? null : submitted.toInstant(),
+                instant(rs, "submitted_at"),
                 strings(rs.getArray("categories")),
                 CodedEnums.fromCode(rs.getString("decision"), Decision.class),
-                decided == null ? null : decided.toInstant());
+                instant(rs, "decided_at"));
     }
 
     private static List<String> strings(@Nullable Array array) throws SQLException {
