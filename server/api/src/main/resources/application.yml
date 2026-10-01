@@ -63,6 +63,8 @@ management.endpoints.web.exposure.include: health,info,prometheus,modulith
 springdoc:
   api-docs.path: /v3/api-docs
   paths-to-match: /api/**
+  # S-127: build the OpenAPI model at start-up (in the background); the MCP tools are registered from it.
+  pre-loading-enabled: true
   # S-127 (docs/runbooks/mcp.md): springdoc turns the operations listed in ca.northline.mcp.AgentTools into MCP tools.
   # Each tool call is an HTTP request back to this api (base-url) with the agent's own token. Writes are confirmed by
   # the MCP gateway itself, so springdoc's approval guardrail is off (one confirmation, per caller).

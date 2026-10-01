@@ -1,11 +1,14 @@
 package ca.northline.mcp;
 
 import ca.northline.developer.api.AuditTrail;
+import ca.northline.shared.security.CurrentMember;
+import ca.northline.shared.security.CurrentUser;
 import io.modelcontextprotocol.server.McpSyncServer;
 import java.time.Clock;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.ai.customizers.McpToolCustomizer;
 import org.springdoc.ai.mcp.OpenApiMcpToolCallbackProvider;
+import org.springdoc.core.utils.SpringDocUtils;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -21,6 +24,12 @@ import tools.jackson.databind.json.JsonMapper;
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(McpProperties.class)
 class McpConfiguration {
+
+    static {
+        // The caller is resolved from the token (CurrentUser, CurrentMember), never sent by a client: not a parameter
+        // of the documented operations — nor, therefore, an argument an agent would be asked for.
+        SpringDocUtils.getConfig().addRequestWrapperToIgnore(CurrentUser.class, CurrentMember.class);
+    }
 
     /** Filters registered after Spring Security's chain (order -100) see the validated token. */
     static final int AFTER_SECURITY = 0;

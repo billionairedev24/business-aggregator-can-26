@@ -36,3 +36,4 @@ northline:                               # a STRIPE_SECRET_KEY exported in the s
 # S-127: springdoc builds the MCP tools from the OpenAPI model at start-up; only the MCP tests need them (they turn
 # it on), so the other contexts start without generating the document.
 springdoc.ai.mcp.enabled: false
+springdoc.pre-loading-enabled: false

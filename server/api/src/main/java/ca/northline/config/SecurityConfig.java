@@ -29,6 +29,7 @@ import org.springframework.security.oauth2.server.resource.authentication.DPoPAu
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.session.DisableEncodeUrlFilter;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -61,8 +62,9 @@ class SecurityConfig {
                         "/mcp/**",
                         McpSecurityConfiguration.METADATA_PATH,
                         McpSecurityConfiguration.METADATA_PATH + "/**")
-                .addFilterBefore(
-                        McpSecurityConfiguration.metadataEndpoint(mcp, json), BearerTokenAuthenticationFilter.class)
+                // first in the chain: Spring Security's own resource metadata would answer without the authorization
+                // server
+                .addFilterBefore(McpSecurityConfiguration.metadataEndpoint(mcp, json), DisableEncodeUrlFilter.class)
                 .authorizeHttpRequests(a -> a.dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR)
                         .permitAll()
                         .requestMatchers(
