@@ -63,7 +63,40 @@ management.endpoints.web.exposure.include: health,info,prometheus,modulith
 springdoc:
   api-docs.path: /v3/api-docs
   paths-to-match: /api/**
+  # S-127 (docs/runbooks/mcp.md): springdoc turns the operations listed in ca.northline.mcp.AgentTools into MCP tools.
+  # Each tool call is an HTTP request back to this api (base-url) with the agent's own token. Writes are confirmed by
+  # the MCP gateway itself, so springdoc's approval guardrail is off (one confirmation, per caller).
+  ai.mcp:
+    enabled: true
+    mcp-endpoint: /mcp                   # = spring.ai.mcp.server.streamable-http.mcp-endpoint (header capture)
+    base-url: http://localhost:${server.port}
+    dashboard-enabled: false
+    guardrails.require-approval-for-mutating-tools: false
+    audit.redact: true
+# S-127: the MCP server (Spring AI, Streamable HTTP). Tools come from springdoc; resources from the MCP gateway.
+spring.ai.mcp.server:
+  name: northline
+  version: 1.0.0
+  type: SYNC
+  protocol: STREAMABLE
+  instructions: >-
+    Northline marketplace tools for a business you belong to (or, for partners, the businesses you are bound to).
+    Every tool is a documented Northline API operation run with your own sign-in, so you see and change only what your
+    role allows. Start with list_my_businesses. Tools that change data answer "confirmation_required" first: show the
+    person the change, and call again with the same arguments to apply it. Money never moves through these tools.
+  streamable-http.mcp-endpoint: /mcp
+  capabilities: { tool: true, resource: true, prompt: false, completion: false }
 northline:
+  # S-127 MCP server (docs/runbooks/mcp.md): its canonical URI (tokens must name it in aud, RFC 8707), the issuer
+  # agents get tokens from (RFC 9728 metadata), limits, and where confirmations and counters live (memory | redis).
+  mcp:
+    resource: ${MCP_RESOURCE:${API_PUBLIC_URL:http://localhost:8080}/mcp}
+    authorization-server: ${AUTH_ISSUER:http://localhost:9000}
+    store: ${MCP_STORE:memory}
+    calls-per-minute: ${MCP_CALLS_PER_MINUTE:60}
+    writes-per-minute: ${MCP_WRITES_PER_MINUTE:10}
+  # S-127: /v3/api-docs (and Swagger UI) open to anyone; prod closes them (the MCP tools still need the model).
+  docs.public: true
   studio.base-url: ${STUDIO_ORIGIN:http://localhost:3100}      # invitation links, Stripe return URLs
   # Pooled delivery runs per market (S-49; DeliveryProperties). Times are America/Edmonton; `cutoff` = shops pack by,
   # customers order by cutoff − order-lead. A cut-off after the start belongs to the day before.

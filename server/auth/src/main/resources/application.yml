@@ -67,7 +67,7 @@ northline:
     # started there), and which clients only get a code after a second factor.
     consumer-login-page: ${CONSUMER_ORIGIN:http://localhost:3000}/sign-in
     consumer-clients: [ consumer-bff ]
-    mfa-required-clients: [ studio-bff, console-bff ]
+    mfa-required-clients: [ studio-bff, console-bff, northline-mcp ]   # S-127: AI agents act for a business too
     allowed-origins: [ "${STUDIO_ORIGIN:http://localhost:3100}", "${CONSUMER_ORIGIN:http://localhost:3000}" ]   # CORS
     webauthn:
       rp-id: ${WEBAUTHN_RP_ID:localhost}
@@ -133,6 +133,15 @@ northline:
     # are refused (503): a proof that can't be checked for replay is never accepted.
     replay.store: ${REPLAY_STORE:redis}
     dpop.nonce-lifetime: ${DPOP_NONCE_LIFETIME:5m}   # a DPoP-Nonce is accepted for one to two of these
+  # S-127 MCP (docs/runbooks/mcp.md): the resources tokens may be requested for (RFC 8707) — the MCP server and the
+  # developer docs server — and agents identified by a Client ID Metadata Document (an HTTPS client_id).
+  auth.mcp:
+    resources:
+      - ${MCP_RESOURCE:${API_PUBLIC_URL:http://localhost:8080}/mcp}
+      - ${MCP_DOCS_RESOURCE:${API_PUBLIC_URL:http://localhost:8080}/mcp/docs}
+    metadata-documents:
+      enabled: ${MCP_CLIENT_METADATA_DOCUMENTS:true}
+      allowed-hosts: ${MCP_CLIENT_METADATA_HOSTS:}     # empty = any public HTTPS host
   # "or continue with" Google / Apple (S-18, docs/runbooks/federation.md). A provider without a client id is off (its
   # button answers "not available"); staging/prod require both. Redirect URI = <public auth URL>/login/oauth2/code/<provider>.
   auth.federation:
@@ -195,6 +204,25 @@ northline:
         scopes: [ openid, courier, deliveries ]
         refresh-token-ttl: 12h               # design 05: "device-bound, short refresh" — one shift
         dpop-required: true
+      # S-127 (docs/runbooks/mcp.md): AI agents (Claude and other MCP clients) acting for a person who signed in to the
+      # Studio with a second factor. Public, PKCE, consent screen (the person grants the agent its scopes), no refresh
+      # token (public clients refresh only with DPoP, which MCP clients don't do): 1 h access tokens. Loopback IP
+      # redirects on any port for desktop agents (RFC 8252) and Claude's hosted callback; other hosted agents: add their
+      # callback in an environment file (SPRING_CONFIG_ADDITIONAL_LOCATION, README § OAuth clients) or let them use a
+      # Client ID Metadata Document.
+      # Agents with no registration use a Client ID Metadata Document instead (northline.auth.mcp.metadata-documents).
+      northline-mcp:
+        type: public
+        name: Northline MCP (AI agents)
+        redirect-uris:
+          - http://127.0.0.1/callback
+          - http://127.0.0.1/oauth/callback
+          - https://claude.ai/api/mcp/auth_callback
+          - https://claude.com/api/mcp/auth_callback
+        scopes: [ openid, profile, merchant, mcp, mcp.write, mcp.ops ]
+        grant-types: [ authorization_code ]
+        require-consent: true
+        access-token-ttl: 1h
     # S-30 partner API clients (docs/runbooks/partners.md): northline.oauth.partners.<name> → client partner:<name>,
     # client_credentials with private_key_jwt (RFC 7523). None by default; declare them in an environment's extra
     # configuration file (SPRING_CONFIG_ADDITIONAL_LOCATION) and run the oauthClients Job:

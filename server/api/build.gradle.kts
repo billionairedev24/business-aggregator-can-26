@@ -28,6 +28,8 @@ dependencies {
     implementation("org.springframework.modulith:spring-modulith-events-kafka")
     implementation("org.springframework.modulith:spring-modulith-events-jackson")
     implementation(libs.springdoc.webmvc.ui)
+    implementation(libs.springdoc.webmvc.mcp) // S-127: MCP tools from the OpenAPI model (docs/runbooks/mcp.md)
+    implementation(libs.spring.ai.mcp.server.webmvc) // S-127: the MCP server and its Streamable HTTP transport
     implementation(libs.ulid)
     implementation(libs.stripe)
     implementation(libs.mapstruct)

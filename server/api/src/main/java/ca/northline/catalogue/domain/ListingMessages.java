@@ -64,6 +64,11 @@ public final class ListingMessages {
     public static final String COST_NEGATIVE = "Cost can't be negative.";
     public static final String STOCK_REQUIRED = "Enter stock on hand.";
     public static final String STOCK_NEGATIVE = "Stock can't be negative.";
+    /** S-127 quick update (price &amp; stock): not for a product with variants, nor stock on a service. */
+    public static final String QUICK_UPDATE_VARIANTS =
+            "This product has variants: change their prices and stock in the editor.";
+
+    public static final String QUICK_UPDATE_SERVICE_STOCK = "Services have no stock.";
     public static final String LOW_STOCK_NEGATIVE = "Alert level can't be negative.";
     public static final String FULFILMENT_REQUIRED = "Choose at least one fulfilment option.";
     public static final String FINAL_SALE_PERISHABLE = "Final sale is allowed only for perishables.";

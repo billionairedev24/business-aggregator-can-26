@@ -1,7 +1,11 @@
 package ca.northline.config;
 
+import ca.northline.mcp.McpProperties;
+import ca.northline.mcp.McpSecurityConfiguration;
 import ca.northline.shared.security.Authorities;
+import jakarta.servlet.DispatcherType;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -25,6 +29,7 @@ import org.springframework.security.oauth2.server.resource.authentication.DPoPAu
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Resource server: validates JWTs from northline-auth (claims mapped by {@link NorthlineJwtConverter}).
@@ -35,6 +40,43 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 @Configuration(proxyBeanMethods = false)
 @EnableMethodSecurity
 class SecurityConfig {
+
+    /**
+     * S-127: the MCP server (Streamable HTTP at {@code /mcp}) and its OAuth 2.0 Protected Resource Metadata (RFC 9728).
+     * A bearer token is required (the MCP gateway then checks its audience, second factor and scopes); a missing or
+     * invalid one is {@code 401} with {@code resource_metadata} and the scopes to ask for. Dev auth under {@code local}.
+     */
+    @Bean
+    @Order(0)
+    SecurityFilterChain mcp(
+            HttpSecurity http,
+            NorthlineJwtConverter converter,
+            ObjectProvider<DevAuthFilter> devAuth,
+            McpProperties mcp,
+            JsonMapper json) {
+        devAuth.ifAvailable(filter -> http.addFilterBefore(filter, BearerTokenAuthenticationFilter.class));
+        var entryPoint = McpSecurityConfiguration.entryPoint(mcp);
+        return http.securityMatcher(
+                        "/mcp",
+                        "/mcp/**",
+                        McpSecurityConfiguration.METADATA_PATH,
+                        McpSecurityConfiguration.METADATA_PATH + "/**")
+                .addFilterBefore(
+                        McpSecurityConfiguration.metadataEndpoint(mcp, json), BearerTokenAuthenticationFilter.class)
+                .authorizeHttpRequests(a -> a.dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR)
+                        .permitAll()
+                        .requestMatchers(
+                                McpSecurityConfiguration.METADATA_PATH, McpSecurityConfiguration.METADATA_PATH + "/**")
+                        .permitAll()
+                        .anyRequest()
+                        .authenticated())
+                .oauth2ResourceServer(
+                        o -> o.jwt(j -> j.jwtAuthenticationConverter(converter)).authenticationEntryPoint(entryPoint))
+                .exceptionHandling(e -> e.authenticationEntryPoint(entryPoint))
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .csrf(AbstractHttpConfigurer::disable)
+                .build();
+    }
 
     @Bean
     @Order(1)
@@ -112,16 +154,16 @@ class SecurityConfig {
     /** Actuator health/info and the OpenAPI docs are public; anything else outside /api is closed. */
     @Bean
     @Order(2)
-    SecurityFilterChain infrastructure(HttpSecurity http) {
-        return http.authorizeHttpRequests(a -> a.requestMatchers(
-                                "/actuator/health/**",
-                                "/actuator/info",
-                                "/v3/api-docs/**",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html")
-                        .permitAll()
-                        .anyRequest()
-                        .denyAll())
+    SecurityFilterChain infrastructure(HttpSecurity http, @Value("${northline.docs.public:true}") boolean docsPublic) {
+        return http.authorizeHttpRequests(a -> {
+                    a.requestMatchers("/actuator/health/**", "/actuator/info").permitAll();
+                    // S-127: prod keeps springdoc's model for the MCP tools but doesn't publish it
+                    if (docsPublic) {
+                        a.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+                                .permitAll();
+                    }
+                    a.anyRequest().denyAll();
+                })
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .csrf(AbstractHttpConfigurer::disable)
                 .build();

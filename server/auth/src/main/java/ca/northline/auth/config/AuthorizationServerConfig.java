@@ -8,6 +8,9 @@ import ca.northline.auth.application.SessionService;
 import ca.northline.auth.application.UserClaimsService;
 import ca.northline.auth.dpop.AppClientAuthentication;
 import ca.northline.auth.dpop.DpopTokens;
+import ca.northline.auth.mcp.ClientIdMetadataDocuments;
+import ca.northline.auth.mcp.McpAuthProperties;
+import ca.northline.auth.mcp.ResourceIndicators;
 import ca.northline.auth.partners.PartnerAssertions;
 import ca.northline.auth.partners.PartnerClaims;
 import ca.northline.auth.partners.PartnerTokenErrors;
@@ -26,6 +29,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.authorization.OAuth2AuthorizationServerConfigurer;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
 import org.springframework.security.oauth2.core.oidc.endpoint.OidcParameterNames;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
@@ -38,6 +42,11 @@ import org.springframework.security.oauth2.server.authorization.OAuth2Authorizat
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.security.oauth2.server.authorization.authentication.JwtClientAssertionAuthenticationProvider;
+import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationContext;
+import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationException;
+import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationProvider;
+import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationToken;
+import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AuthorizationCodeRequestAuthenticationValidator;
 import org.springframework.security.oauth2.server.authorization.authentication.OAuth2ClientCredentialsAuthenticationProvider;
 import org.springframework.security.oauth2.server.authorization.client.JdbcRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
@@ -51,6 +60,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.preauth.AbstractPreAuthenticatedProcessingFilter;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Spring Authorization Server: endpoints, JDBC storage (V017 {@code auth.oauth2_*}) and the token claims
@@ -77,12 +87,26 @@ class AuthorizationServerConfig {
             LoginPages pages,
             RegisteredClientRepository clients,
             PartnerAssertions partnerAssertions,
-            PartnerTokens partnerTokens) {
+            PartnerTokens partnerTokens,
+            ResourceIndicators resources) {
         var authorizationServer = new OAuth2AuthorizationServerConfigurer();
         return http.securityMatcher(authorizationServer.getEndpointsMatcher())
                 .with(
                         authorizationServer,
-                        as -> as.oidc(Customizer.withDefaults())
+                        as -> as.oidc(o -> o.providerConfigurationEndpoint(p -> p.providerConfigurationCustomizer(
+                                        b -> b.claim(CLIENT_ID_METADATA_DOCUMENTS, true))))
+                                // S-127 (MCP): agents without a registration name themselves with an HTTPS client id
+                                // (Client ID Metadata Documents); the resource they want a token for is checked
+                                // (RFC 8707) before the person is asked anything.
+                                .authorizationServerMetadataEndpoint(m -> m.authorizationServerMetadataCustomizer(
+                                        b -> b.claim(CLIENT_ID_METADATA_DOCUMENTS, true)))
+                                .authorizationEndpoint(a -> a.authenticationProviders(l -> l.forEach(p -> {
+                                    if (p instanceof OAuth2AuthorizationCodeRequestAuthenticationProvider codes) {
+                                        codes.setAuthenticationValidator(
+                                                new OAuth2AuthorizationCodeRequestAuthenticationValidator()
+                                                        .andThen(c -> checkResource(c, resources)));
+                                    }
+                                })))
                                 // S-29: the mobile apps refresh (their DPoP key is the proof) and sign out
                                 // (/oauth2/revoke) without a secret.
                                 .clientAuthentication(c -> c.authenticationConverters(
@@ -116,9 +140,28 @@ class AuthorizationServerConfig {
                 .build();
     }
 
+    /**
+     * The configured clients (S-122) in the database, plus S-127's agents that identify themselves with a Client ID
+     * Metadata Document ({@code client_id} = an HTTPS URL).
+     */
     @Bean
-    RegisteredClientRepository clients(JdbcOperations jdbc) {
-        return new JdbcRegisteredClientRepository(jdbc);
+    RegisteredClientRepository clients(JdbcOperations jdbc, McpAuthProperties mcp, JsonMapper json, Clock clock) {
+        return new ClientIdMetadataDocuments(
+                new JdbcRegisteredClientRepository(jdbc), mcp.metadataDocuments(), json, clock);
+    }
+
+    /** Authorization server metadata (RFC 8414 / OIDC discovery) field of the Client ID Metadata Document draft. */
+    static final String CLIENT_ID_METADATA_DOCUMENTS = "client_id_metadata_document_supported";
+
+    /** RFC 8707 at the authorization endpoint: an unknown resource is refused there, before sign-in or consent. */
+    private static void checkResource(
+            OAuth2AuthorizationCodeRequestAuthenticationContext context, ResourceIndicators resources) {
+        OAuth2AuthorizationCodeRequestAuthenticationToken request = context.getAuthentication();
+        try {
+            resources.requested(request.getAdditionalParameters());
+        } catch (OAuth2AuthenticationException e) {
+            throw new OAuth2AuthorizationCodeRequestAuthenticationException(e.getError(), request);
+        }
     }
 
     /**
@@ -169,11 +212,16 @@ class AuthorizationServerConfig {
      * factor) and {@code amr}; access tokens are also addressed to the api; ID tokens carry the profile.
      */
     @Bean
-    OAuth2TokenCustomizer<JwtEncodingContext> tokenClaims(UserClaimsService claims) {
+    OAuth2TokenCustomizer<JwtEncodingContext> tokenClaims(UserClaimsService claims, ResourceIndicators resources) {
         return ctx -> {
             ctx.getJwsHeader().algorithm(SignatureAlgorithm.ES256);
             if (!(ctx.getPrincipal() instanceof UsernamePasswordAuthenticationToken user)) {
                 PartnerClaims.add(ctx, API_AUDIENCE); // client_credentials (partners, S-30): no user claims
+                if (OAuth2TokenType.ACCESS_TOKEN.equals(ctx.getTokenType())) {
+                    // S-127: a partner may ask for a token for the MCP server too (resource indicator)
+                    var audience = ctx.getClaims().build().getAudience();
+                    resources.addAudience(ctx, audience == null ? List.of(API_AUDIENCE) : audience);
+                }
                 return;
             }
             var factors = UserClaimsService.factorsOf(user);
@@ -181,6 +229,7 @@ class AuthorizationServerConfig {
                 var audience = new ArrayList<>(List.of(ctx.getRegisteredClient().getClientId()));
                 audience.add(API_AUDIENCE);
                 ctx.getClaims().audience(audience);
+                resources.addAudience(ctx, audience); // S-127: + the MCP server when the client asked for it
                 // RFC 9068: space-delimited string (the api's NorthlineJwtConverter reads it that way).
                 ctx.getClaims().claim("scope", String.join(" ", ctx.getAuthorizedScopes()));
                 ctx.getClaims().claims(c -> c.putAll(claims.accessTokenClaims(user.getName(), factors)));

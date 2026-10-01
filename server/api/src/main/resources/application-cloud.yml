@@ -20,3 +20,5 @@ management:
   tracing.export.enabled: ${OTEL_EXPORT_ENABLED:false}
 logging.level:
   ca.northline: info
+# S-127: MCP confirmations and rate limits shared by every api replica (Valkey); `memory` is refused in staging/prod.
+northline.mcp.store: ${MCP_STORE:redis}
