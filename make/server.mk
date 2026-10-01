@@ -50,6 +50,10 @@ run-bff: ## Run the studio-bff on :8082 (local: in-memory sessions)
 run-bff-consumer: ## Run the consumer-bff on :8081 (profiles SPRING_PROFILE + consumer; guests allowed)
 	$(GRADLE) :bff:bootRun --args='--spring.profiles.active=$(SPRING_PROFILE),consumer'
 
+.PHONY: run-bff-console
+run-bff-console: ## Run the console-bff on :8083 (profiles SPRING_PROFILE + console; staff with a second factor only)
+	$(GRADLE) :bff:bootRun --args='--spring.profiles.active=$(SPRING_PROFILE),console'
+
 .PHONY: run-worker
 run-worker: ## Run the worker on :8084 (needs Postgres, Kafka, Elasticsearch: make up PROFILES=db,events,search)
 	$(GRADLE) :worker:bootRun $(if $(filter-out local,$(SPRING_PROFILE)),--args='--spring.profiles.active=$(SPRING_PROFILE)')

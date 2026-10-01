@@ -20,6 +20,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  *     them and {@code GET /bff/session} answers 200 with a guest id instead of 401 (false: the Studio's behaviour)
  * @param clientCityHeader S-45: request header with the visitor's city, set by the CDN / ingress (empty = none); shown
  *     as the location pill's first guess
+ * @param staffOnly S-90 console-bff: only Northline staff who signed in with a second factor get a session (ID token
+ *     {@code roles} contains {@code staff} and {@code acr=mfa}); anyone else is signed out at once ({@link StaffGate})
  */
 @ConfigurationProperties("northline.bff")
 public record BffProperties(
@@ -34,4 +36,5 @@ public record BffProperties(
         @DefaultValue("60s") Duration sessionCheckInterval,
         @DefaultValue("XSRF-TOKEN") String csrfCookieName,
         @DefaultValue("false") boolean guests,
-        @DefaultValue("") String clientCityHeader) {}
+        @DefaultValue("") String clientCityHeader,
+        @DefaultValue("false") boolean staffOnly) {}

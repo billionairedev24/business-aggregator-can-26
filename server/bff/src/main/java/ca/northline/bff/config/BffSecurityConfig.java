@@ -49,6 +49,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * <p>S-20: the CSRF token is accepted from the header only — never from a {@code _csrf} form field, which a page on a
  * sibling subdomain (same site, so {@code SameSite=Lax} doesn't stop it) could submit after planting its own cookie —
  * and every response forbids framing and carries a CSP that allows nothing (the BFF serves no pages).
+ *
+ * <p>S-90: under the {@code console} profile ({@code northline.bff.staff-only}) only Northline staff who signed in with a
+ * second factor keep a session ({@link StaffGate}).
  */
 @Configuration(proxyBeanMethods = false)
 class BffSecurityConfig {
@@ -64,6 +67,11 @@ class BffSecurityConfig {
             TokenIntrospection introspection,
             @Value("${server.servlet.session.cookie.name:NL_STUDIO}") String sessionCookie) {
         var resolver = new DefaultOAuth2AuthorizationRequestResolver(registrations, "/oauth2/authorization");
+        // S-90 console-bff: staff with a second factor only (StaffGate); everyone else goes on to `next`.
+        var signedIn = props.staffOnly() ? StaffGate.signIn(next, revoke, props) : next;
+        if (props.staffOnly()) {
+            http.addFilterBefore(StaffGate.filter(revoke), AuthorizationFilter.class);
+        }
         resolver.setAuthorizationRequestCustomizer(OAuth2AuthorizationRequestCustomizers.withPkce());
         return http.authorizeHttpRequests(a -> {
                     a.requestMatchers("/bff/session", "/bff/login", "/actuator/health/**", "/error")
@@ -74,7 +82,7 @@ class BffSecurityConfig {
                     a.anyRequest().authenticated();
                 })
                 .oauth2Login(o -> o.authorizationEndpoint(ae -> ae.authorizationRequestResolver(resolver))
-                        .successHandler(next)
+                        .successHandler(signedIn)
                         .failureHandler(
                                 (request, response, _) -> response.sendRedirect(props.signInPage() + "?error=signin")))
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))

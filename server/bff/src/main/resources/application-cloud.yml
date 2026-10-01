@@ -10,7 +10,7 @@ northline.bff.csrf-cookie-name: __Host-XSRF-TOKEN
 logging.level:
   ca.northline: info
 ---
-spring.config.activate.on-profile: "!consumer"
+spring.config.activate.on-profile: "!consumer & !console"
 northline.required-env.secrets: STUDIO_BFF_SECRET
 server.servlet.session.cookie.name: __Host-NL_STUDIO
 ---
@@ -18,3 +18,8 @@ server.servlet.session.cookie.name: __Host-NL_STUDIO
 spring.config.activate.on-profile: consumer
 northline.required-env.secrets: CONSUMER_BFF_SECRET
 server.servlet.session.cookie.name: __Host-NL_CONSUMER
+---
+# S-90 console-bff on console.<zone>: its own client secret and cookie.
+spring.config.activate.on-profile: console
+northline.required-env.secrets: CONSOLE_BFF_SECRET
+server.servlet.session.cookie.name: __Host-NL_CONSOLE
