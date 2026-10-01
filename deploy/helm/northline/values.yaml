@@ -389,6 +389,11 @@ apps:
     # S-29: route all of /api/v1 on the api host, for clients that hold their own tokens (the mobile apps, with DPoP;
     # partners). false = webhooks and unsubscribe only, as before. Every other endpoint still needs a token.
     tokenClients: true
+    # S-125: also route the API documentation on the api host — /docs (landing, Redoc, Scalar), /swagger-ui(.html) and
+    # /v3/api-docs — for dev and staging (values-dev/staging). Never in prod: the chart refuses it there, and the api's
+    # prod profile turns springdoc and the viewers off anyway. auth serves the same paths on its host (all of auth is
+    # routed); the BFFs serve theirs under /bff.
+    docsRoutes: false
     allowFrom: [bff, consumer-bff]
     extraVolumes: []
     extraVolumeMounts: []

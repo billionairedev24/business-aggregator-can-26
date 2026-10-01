@@ -25,6 +25,8 @@ edge:
     enabled: true
 
 apps:
+  api:
+    docsRoutes: true            # S-125: Swagger UI, Scalar, Redoc and the specs on the api host
   auth:
     env:
       # One replica may keep the signing keys in a file (KMS_PROVIDER=local) — set KMS_PROVIDER from Terraform instead.

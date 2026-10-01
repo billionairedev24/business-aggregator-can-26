@@ -2587,3 +2587,98 @@ Built on S-49 (branch `web/s-50-product-detail` from `web/s-49-shop-landing`).
 - **No migration.**
 - **Tests:** `SearchReindexTest` on Kafka 4 + PostGIS + Elasticsearch 9 with the whole worker running: a listing indexed live, a ghost document Postgres doesn't have, a live listing whose event was lost; during the backfill a new listing is published (the live indexer writes the old index) — after the run the alias points at a new versioned index with the layout's `_meta`, the old index is gone, the ghost is gone, the lost and the late listings are there, searches answered the kept listing at every phase, and the live indexer keeps writing through the alias. A second concurrent run is refused; a failure after the backfill deletes the half-built indices and leaves the live alias as it was; `--keep-old` keeps the previous indices.
 - **Not done / never run for real:** nothing has run against Elastic Cloud; no throttling of the backfill (Elasticsearch bulk per merchant; add one if a large catalogue loads a small cluster); a scheduled periodic rebuild (on demand only).
+
+## 2026-10-01 — S-125 OpenAPI 3.1 for every HTTP service, with Swagger UI, Scalar and Redoc
+
+Runbook: [docs/runbooks/api-docs.md](runbooks/api-docs.md). Stacked on S-124 (Makefiles, merged as #59).
+
+- **A shared library `server/openapi`** (like `platform`, `email`) used by the api, northline-auth and the BFF, not by
+  the worker:
+  - springdoc 3.1.1 with its UI starter and, as the user asked, **springdoc's own Scalar starter**
+    (`springdoc-openapi-starter-webmvc-scalar`, which brings `com.scalar.maven:scalar-webmvc` 0.5.55);
+  - the Redoc page; the shared conventions and security schemes; the docs-path CSP;
+  - the `OpenApiSnapshot` test fixture.
+
+  It is auto-configured and off with `northline.docs.enabled=false`. Versions checked on 2026-09-30: springdoc 3.1.1
+  is the latest release, and Redoc 2.5.4 is the latest on npm.
+- **Redoc is self-hosted from the npm tarball** with a pinned version and the registry's sha512 integrity, as in samop
+  (Maven there, Gradle here). The webjar stops at 2.5.0, and a CDN would need the CSP to allow another origin. The
+  page has no inline script: `redoc-init.js` reads the group from `?group=`. The pages are WebMvc.fn routes rather than
+  a `@Controller`, because the api component-scans `ca.northline.**` and would register an annotated controller twice.
+- **Scalar shows every group on one page.** springdoc's Scalar controller turns the groups into Scalar *sources*, with
+  a switcher. There is no per-group Scalar URL, so the landing page links Scalar once per service.
+- **Groups per audience.** The api has `public` (public reads + the signed-in customer, incl. `/me/**`, `/cart/**`),
+  `studio`, `partner`, `console`, `webhooks` and `internal`:
+  - `partner` is a method filter on `@PartnerAccess`, with the annotation's scope as the operation's security, so the
+    partner document can never list an endpoint partners can't call.
+  - `webhooks` is S-33's JSON Schemas (`docs/spec/webhooks`, already on the api classpath) as OpenAPI 3.1 `webhooks`,
+    used verbatim (`$schema` / `$id` dropped). The reference is the same contract the worker validates deliveries
+    against; it includes `order.placed` from main.
+  - A test fails when an `/api/**` path is in no group.
+
+  northline-auth has `public` (the OAuth 2.1 / OIDC endpoints, described by hand because Spring Authorization Server
+  serves them from filters) and `internal` (the `/api/auth/**` JSON API). The BFF has one `internal` document per
+  profile (studio-bff, consumer-bff), and `/bff/logout` is described by hand because it is a filter. The worker has no
+  HTTP API besides actuator, so it has no document.
+- **Global `springdoc.paths-to-match` removed from the api.** springdoc ORs it with each group's `pathsToMatch`, so
+  every group got every path. Groups don't share an `OpenAPI` bean either: springdoc reuses and mutates one for every
+  group, so each group starts with its own `ApiDocs.base(props)` customizer and ends with `ApiDocs.conventions()`.
+- **Conventions instead of annotations on ~200 handlers:**
+  - `*Id` path parameters → `Ulid`;
+  - writes with a body → `422 ValidationErrors` (with the validation-rules example);
+  - secured operations → `401`/`403 Problem` (RFC 9457 with `code`);
+  - parameterised paths → `404`;
+  - `*Cents` → int64 cents of CAD.
+
+  `override-with-generic-response=false` keeps springdoc from attaching every `@ExceptionHandler` response to every
+  operation. Unused shared schemas and security schemes are pruned per document. Operation ids are
+  `<controller><Method>`, so adding a `list` method elsewhere doesn't renumber `list_5` in every spec.
+- **Security schemes:**
+  - `bffSession` (cookie) + `csrf` (`X-XSRF-TOKEN`);
+  - `oauth2`: authorization code + PKCE, with the auth issuer's URLs;
+  - `dpop`: `http` scheme `DPoP`, plus `dpopProof` for the `DPoP` header (RFC 9449, S-29);
+  - `partnerClientCredentials`: OAuth 2 client credentials with `x-token-endpoint-auth-methods: [private_key_jwt]`
+    and the S-30 assertion rules in the description;
+  - `authSession`: northline-auth's cookie;
+  - `webhookSignature`: S-33.
+
+  Public reads carry `security: []`.
+- **Generated at build time and committed, with a drift check.** Each app's `OpenApiSpecsTest` boots the application
+  context and fetches `<api-docs>.yaml/<group>`:
+  - the api uses its own test class; auth uses its own; the BFF tests are added to `BffSessionTest` /
+    `ConsumerBffTest`, so no extra Spring context;
+  - `-Popenapi.write=true` (`make openapi`) writes `docs/api/openapi/<service>-<group>.yaml`;
+  - otherwise the test compares, so `./gradlew build` fails on a difference.
+
+  Output is stable thanks to `writer-with-order-by-keys` and fixed `servers`/issuer pinned in each
+  `application-test.yml`. YAML only: it is easier to review in diffs than JSON, and JSON is one URL away. The
+  springdoc Gradle plugin was not used: it needs a running app with all its stand-ins and doesn't fit
+  `./gradlew build`.
+- **Lint: Redocly CLI 2.57.0 with a root `redocly.yaml`** (samop's tool and layout), run through `pnpm dlx`, pinned in
+  `make/docs.mk`, with no lockfile change. `recommended`, with `security-defined` as an error. Currently 0 errors and
+  17 warnings: public GETs without a 4xx, and redirects without a 2xx. Manual CI: GitHub `openapi.yml`
+  (lint + check) and GitLab `openapi:lint` (new `PIPELINE_PART=openapi`, also in `all`).
+- **Where the viewers run (S-17 routes, S-20 CSP).** auth and the BFFs answer with `default-src 'none'`.
+  - **CSP:** instead of relaxing it, or serving everything from the api only (the api host isn't routed for browsers
+    beyond `/api/v1`), the viewer paths get their own filter chain (order 0). Its narrow CSP allows `'self'` scripts
+    and styles (+ `'unsafe-inline'` for Swagger UI's and Scalar's initialisers), `connect-src 'self' <issuer>`,
+    `frame-ancestors 'none'`. Every other path keeps `default-src 'none'`, and the tests check both.
+  - **Routes:** auth's host already routes everything. The BFFs serve their documentation under `/bff` (`/bff/docs`,
+    `/bff/swagger-ui.html`, `/bff/docs/scalar`, `/bff/v3/api-docs`), the prefix the edge already sends them. The api
+    host gets `/docs`, `/swagger-ui(.html)` and `/v3/api-docs` through the new chart value `apps.api.docsRoutes`
+    (true in `values-dev.yaml` / `values-staging.yaml`, false by default). The chart refuses it in prod, and
+    `validate.sh` checks the refusal.
+- **Prod exposes nothing:** all three `application-prod.yml` turn off springdoc, Swagger UI, Scalar and
+  `northline.docs` (and with it the pages and the CSP chain), and each app's test asserts it. The public, partner and
+  webhook references reach production through the docs site (S-126), from the committed files.
+- **No new environment variable or secret, and no schema change.** `northline.docs.*` reads the existing
+  `AUTH_ISSUER`, `API_PUBLIC_URL` and `AUTH_PUBLIC_URL`.
+- **Not done:**
+  - per-operation `@Operation` summaries and response examples beyond the conventions (descriptions come from the
+    group texts);
+  - Scalar's and Swagger UI's "Authorize" against a real northline-auth: no docs OAuth client is registered, so
+    "Try it" uses pasted tokens. A public `docs` client with the viewers' redirect URIs is follow-up work.
+  - the viewers were checked by status and content in MockMvc, not clicked through in a browser;
+  - `ConsumerBffTest`'s relay tests failed intermittently with a JDK HttpClient NPE when run together with
+    `BffSessionTest` under heavy machine load, and passed when run alone. The failing test changed from run to run,
+    and the failure is in the WireMock relay, not in the documentation.

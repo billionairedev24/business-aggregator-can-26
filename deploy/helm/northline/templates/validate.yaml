@@ -8,3 +8,6 @@
 {{- if and (has .Values.global.environment (list "staging" "prod")) (not (hasPrefix "https://" .Values.urls.auth)) }}
 {{- fail "urls.* must be https:// in staging and prod" }}
 {{- end }}
+{{- if and .Values.apps.api.docsRoutes (eq .Values.global.environment "prod") }}
+{{- fail "apps.api.docsRoutes exposes the API documentation and is not allowed in prod (S-125: prod publishes no spec; the docs site carries the public ones)" }}
+{{- end }}

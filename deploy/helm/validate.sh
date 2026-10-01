@@ -86,6 +86,7 @@ refuse "wildcard without DNS-01" -f "$CHART/values-prod.yaml" -f "$CHART/values-
 refuse "DNS-01 without the cloud's solver" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" --set edge.certManager.issuer.solver=dns01
 refuse "a CA issuer in prod" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" --set edge.certManager.issuer.type=ca --set edge.certManager.issuer.caSecretName=x
 refuse "edge without routes" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" --set gateway.enabled=false
+refuse "API documentation routes in prod (S-125)" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" --set apps.api.docsRoutes=true
 
 # S-31: merchants' own domains. The api reconciles them (Role limited to Gateways, HTTPRoutes and Certificates in its
 # namespace, token mounted only in the api), certificates from Let's Encrypt staging outside prod, and the refusals.
