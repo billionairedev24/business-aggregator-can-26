@@ -41,6 +41,10 @@ urls:
   console: https://console.dev.northline.ca
   # Storefronts (the consumer app); merchants point their own domains here with a CNAME (edge.customDomains, S-31).
   pages: https://pages.dev.northline.ca
+  # S-126: the documentation site — docs (public variant, every environment) and docs-internal (runbooks,
+  # decisions, every spec; only behind edge.docsInternal.allowedCIDRs). Empty = no route.
+  docs: https://docs.dev.northline.ca
+  docsInternal: https://internal-docs.dev.northline.ca
   # Registrable domain shared by the Studio and consumer origins (passkeys). Changing it invalidates every passkey.
   webauthnRpId: dev.northline.ca
 
@@ -130,6 +134,7 @@ externalSecrets:
     LIGHTSPEED_CLIENT_SECRET: lightspeed-client-secret                # S-35 catalogue sync (api); also signs webhooks
     CLOVER_CLIENT_SECRET: clover-client-secret                        # S-36 POS menu import (api)
     TOAST_CLIENT_SECRET: toast-client-secret                          # S-36 POS menu import (api), Toast partner credentials
+    GOOGLE_MAPS_API_KEY: google-maps-api-key                          # S-47 address autocomplete / reverse geocoding (api)
     OPENROUTER_API_KEY: openrouter-api-key                            # S-129 AI platform (api)
   # Optional variables (secretEnv: false) to map as well. List only those that hold a value in the secrets manager:
   # one empty or missing remote secret fails the app's whole ExternalSecret. Required variables are always mapped.
@@ -175,6 +180,11 @@ gateway:
 # from external-dns — the last two are cluster add-ons (deploy/argocd/addons/), this chart only declares what it needs.
 edge:
   enabled: false
+  # S-126: who may open urls.docsInternal (apps.docs-internal). Client CIDRs (office, VPN egress), enforced by an Envoy
+  # Gateway SecurityPolicy on its route; everyone else gets 403 at the edge. Required outside local when docs-internal
+  # is enabled (behind a CDN set edge.trustedProxyHops, or the CDN's address is all the edge sees).
+  docsInternal:
+    allowedCIDRs: []
   # DNS zone of the public hosts; empty = urls.webauthnRpId (dev.northline.ca, staging.northline.ca, northline.ca).
   zone: ""
   gateway:
@@ -302,6 +312,18 @@ searchIndices:
     requests: { cpu: 100m, memory: 256Mi }
     limits: { memory: 384Mi }
 
+# S-71 (docs/runbooks/search.md § 9): the full search reindex as a one-off Job with the worker's environment — new
+# indices from Postgres, Kafka catch-up, atomic alias swap, old indices deleted. Rendered only while runId is set; a new
+# runId (a DNS label, e.g. the date) runs it again. Safe while everything runs.
+searchReindex:
+  runId: ""
+  keepOld: false                  # keep the previous indices (to swap back by hand)
+  activeDeadlineSeconds: 7200
+  ttlSecondsAfterFinished: 604800
+  resources:
+    requests: { cpu: 250m, memory: 512Mi }
+    limits: { memory: 768Mi }
+
 # Registers the OAuth clients (S-122) after every install/upgrade: the auth image running OAuthClientsCommand sync
 # with the auth Deployment's environment. Idempotent; northline-auth also syncs at start unless
 # apps.auth.env.OAUTH_CLIENTS_SYNC_ON_STARTUP is "false".
@@ -369,6 +391,7 @@ apps:
       LIGHTSPEED_CLIENT_SECRET: false          # S-35: with LIGHTSPEED_CLIENT_ID (configEnv)
       CLOVER_CLIENT_SECRET: false              # S-36: with CLOVER_CLIENT_ID (configEnv); empty = Clover not offered
       TOAST_CLIENT_SECRET: false               # S-36: with TOAST_CLIENT_ID (configEnv), once Toast admits Northline as a partner
+      GOOGLE_MAPS_API_KEY: false               # S-47: with PLACES_PROVIDER=google (required in staging/prod)
       OPENROUTER_API_KEY: false                # S-129: empty = every AI feature answers 503; add to optionalKeys once the key exists
     runAsUser: 65532
     probes:
@@ -379,6 +402,11 @@ apps:
     # S-29: route all of /api/v1 on the api host, for clients that hold their own tokens (the mobile apps, with DPoP;
     # partners). false = webhooks and unsubscribe only, as before. Every other endpoint still needs a token.
     tokenClients: true
+    # S-125: also route the API documentation on the api host — /docs (landing, Redoc, Scalar), /swagger-ui(.html) and
+    # /v3/api-docs — for dev and staging (values-dev/staging). Never in prod: the chart refuses it there, and the api's
+    # prod profile turns springdoc and the viewers off anyway. auth serves the same paths on its host (all of auth is
+    # routed); the BFFs serve theirs under /bff.
+    docsRoutes: false
     allowFrom: [bff, consumer-bff]
     extraVolumes: []
     extraVolumeMounts: []
@@ -575,6 +603,65 @@ apps:
       liveness: { path: /healthz, periodSeconds: 10, failureThreshold: 3 }
       readiness: { path: /healthz, periodSeconds: 5, failureThreshold: 3 }
     allowFrom: []
+    extraVolumes: []
+    extraVolumeMounts: []
+    podLabels: {}
+    podAnnotations: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+
+  # S-126: the documentation site (web/apps/docs, docs/runbooks/docs-site.md), static on nginx like the Studio.
+  # docs = the public variant (guides + the public, partner, webhook and OAuth references) on urls.docs;
+  # docs-internal = everything (docs/ of the repository, every OpenAPI document) on urls.docsInternal, reachable only
+  # from edge.docsInternal.allowedCIDRs (an Envoy Gateway SecurityPolicy; the chart refuses it without one outside
+  # local). NL_DOCS_SWAGGER (links to the services' viewers) and NL_DOCS_CONNECT are derived (templates/_helpers.tpl).
+  docs:
+    enabled: true
+    type: static
+    image: { repository: docs, tag: "", digest: "" }
+    port: 8080
+    service: true
+    public: true
+    replicas: 1
+    autoscaling: { enabled: false, minReplicas: 2, maxReplicas: 4, targetCPUUtilizationPercentage: 70 }
+    resources:
+      requests: { cpu: 20m, memory: 32Mi }
+      limits: { memory: 64Mi }
+    env: {}
+    runAsUser: 101
+    probes:
+      liveness: { path: /healthz, periodSeconds: 10, failureThreshold: 3 }
+      readiness: { path: /healthz, periodSeconds: 5, failureThreshold: 3 }
+    allowFrom: []
+    writableDirs: [/tmp, /etc/nginx/conf.d]
+    extraVolumes: []
+    extraVolumeMounts: []
+    podLabels: {}
+    podAnnotations: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+
+  docs-internal:
+    enabled: false
+    type: static
+    image: { repository: docs-internal, tag: "", digest: "" }
+    port: 8080
+    service: true
+    public: true
+    replicas: 1
+    autoscaling: { enabled: false, minReplicas: 2, maxReplicas: 4, targetCPUUtilizationPercentage: 70 }
+    resources:
+      requests: { cpu: 20m, memory: 32Mi }
+      limits: { memory: 64Mi }
+    env: {}
+    runAsUser: 101
+    probes:
+      liveness: { path: /healthz, periodSeconds: 10, failureThreshold: 3 }
+      readiness: { path: /healthz, periodSeconds: 5, failureThreshold: 3 }
+    allowFrom: []
+    writableDirs: [/tmp, /etc/nginx/conf.d]
     extraVolumes: []
     extraVolumeMounts: []
     podLabels: {}

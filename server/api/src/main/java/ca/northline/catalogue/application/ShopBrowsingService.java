@@ -74,7 +74,9 @@ class ShopBrowsingService implements BrowseShop {
                         .map(c -> new DepartmentTile(
                                 c.slug(), c.name(), e.getValue().intValue())))
                 .flatMap(Optional::stream)
-                .sorted(Comparator.comparing(DepartmentTile::shops).reversed().thenComparing(DepartmentTile::name))
+                .sorted(Comparator.comparingInt(DepartmentTile::shops)
+                        .reversed()
+                        .thenComparing(DepartmentTile::name))
                 .toList();
         var cards = shopCards(ctx, stats);
         var onRun = cards.stream()

@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:orders.order_placed:1",
+  "description": "order.placed — a customer's payment for an order is authorized; one event per shop on the order, with that shop's lines (S-51); food orders (S-57) have one kitchen. Topic orders.order, key = order id. Ids and amounts only.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "merchantId",
+    "customerId",
+    "orderRef",
+    "orderType",
+    "delivery",
+    "subtotalCents",
+    "taxCents",
+    "lines"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "orders.orders.id"
+    },
+    "merchantId": {
+      "type": "string",
+      "description": "merchants.merchants.id — the shop these lines belong to"
+    },
+    "customerId": {
+      "type": "string",
+      "description": "identity.users.id (never sent to partners)"
+    },
+    "orderRef": {
+      "type": "string",
+      "description": "NL-50000"
+    },
+    "orderType": {
+      "enum": [
+        "goods",
+        "food"
+      ]
+    },
+    "delivery": {
+      "enum": [
+        "pooled",
+        "direct",
+        "pickup"
+      ]
+    },
+    "windowId": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "orders.delivery_windows.id when pooled"
+    },
+    "subtotalCents": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "taxCents": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "lines": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "lineId",
+          "offerId",
+          "qty",
+          "amountCents"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "lineId": {
+            "type": "string"
+          },
+          "offerId": {
+            "type": "string",
+            "description": "catalogue offer (goods); food: the menu item or combo id (see itemKind)"
+          },
+          "itemKind": {
+            "enum": [
+              "offer",
+              "menu_item",
+              "combo"
+            ],
+            "description": "S-57; absent = offer"
+          },
+          "variantId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "qty": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "amountCents": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    }
+  }
+}

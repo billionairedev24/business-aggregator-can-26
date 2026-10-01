@@ -31,9 +31,9 @@ import org.jspecify.annotations.Nullable;
 public class Dispute {
 
     /** Design 02: "Customer has 72 h to accept." Also the merchant's time to reply ("reply by Thu"). */
-    public static final Duration OFFER_WINDOW = Duration.ofHours(72);
+    public static final Duration OFFER_WINDOW = Duration.ofDays(3);
 
-    public static final Duration REPLY_WINDOW = Duration.ofHours(72);
+    public static final Duration REPLY_WINDOW = Duration.ofDays(3);
 
     public enum State implements CodedEnum {
         OPEN,

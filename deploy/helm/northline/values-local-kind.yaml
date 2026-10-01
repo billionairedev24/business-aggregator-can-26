@@ -18,6 +18,8 @@ urls:
   consumer: http://localhost:13000
   console: http://localhost:13200
   pages: ""
+  docs: ""
+  docsInternal: ""
   webauthnRpId: localhost
 
 # What Terraform's config_env would hold, for the in-cluster stand-ins.
@@ -46,6 +48,7 @@ secrets:
     CONSUMER_BFF_SECRET_HASH: "{noop}dev-consumer-bff"
 
 apps:
+  docs: { enabled: false }       # S-126: build web/Dockerfile --target docs and add it to deploy/kind/up.sh APPS to rehearse it
   api:
     resources:
       requests: { cpu: 100m, memory: 768Mi }

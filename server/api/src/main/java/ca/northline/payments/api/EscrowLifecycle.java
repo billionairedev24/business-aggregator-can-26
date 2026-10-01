@@ -34,7 +34,67 @@ public interface EscrowLifecycle {
             @Nullable String listingName,
             @Nullable String source,
             String stripePaymentIntent,
-            Instant occurredAt) {}
+            Instant occurredAt,
+            @Nullable PlatformCharges platform) {
+
+        /** Without platform charges (the pre-S-57 shape). */
+        public Hold(
+                String merchantId,
+                EscrowKind kind,
+                String refType,
+                String refId,
+                long amountCents,
+                long taxCents,
+                String customerId,
+                String customerName,
+                String label,
+                @Nullable String orderNumber,
+                @Nullable String listingId,
+                @Nullable String listingName,
+                @Nullable String source,
+                String stripePaymentIntent,
+                Instant occurredAt) {
+            this(
+                    merchantId,
+                    kind,
+                    refType,
+                    refId,
+                    amountCents,
+                    taxCents,
+                    customerId,
+                    customerName,
+                    label,
+                    orderNumber,
+                    listingId,
+                    listingName,
+                    source,
+                    stripePaymentIntent,
+                    occurredAt,
+                    null);
+        }
+
+        public long platformTotal() {
+            return platform == null ? 0 : platform.totalCents();
+        }
+    }
+
+    /**
+     * Northline's own charges on the same card payment (S-57 food): the courier and service fees ({@code feeCents},
+     * Northline's revenue), their GST/HST ({@code feeTaxCents}, owed to the CRA) and the courier's tip
+     * ({@code tipCents}, owed to the courier — "100% goes to them"). Captured with the escrow, never transferred to the
+     * merchant, not part of the take rate.
+     */
+    record PlatformCharges(long feeCents, long feeTaxCents, long tipCents) {
+        public PlatformCharges {
+            if (feeCents < 0 || feeTaxCents < 0 || tipCents < 0) {
+                throw new IllegalArgumentException("platform charges can't be negative");
+            }
+        }
+
+        public long totalCents() {
+            return feeCents + feeTaxCents + tipCents;
+        }
+    }
 
     /** Records the hold; returns the escrow id (the existing one when already held). */
     String hold(Hold hold);

@@ -18,13 +18,16 @@ say where a step is still manual or missing.
 | [calendar-sync.md](calendar-sync.md) | Google and Microsoft calendar two-way sync: Google Cloud and Microsoft Entra app registrations, redirect and notification URIs per environment, secrets, KMS envelope key, operations (S-32) |
 | [commerce-sync.md](commerce-sync.md) | Shopify, Square and Lightspeed catalogue sync: app registration per platform, redirect and webhook URLs on the api host, secrets, local fakes, operations (S-35) |
 | [pos-menu-import.md](pos-menu-import.md) | kitchens' POS menu import: Square (shared with S-35), Clover and Toast (partner-gated) set-up, the shared OAuth callback, preview and re-import diff, allergens, local fake (S-36) |
+| [google-maps.md](google-maps.md) | addresses on the consumer site: Google Maps Platform project, Places API (New) and Geocoding API, the server key and its restrictions, billing and quotas, local fixtures, operations (S-47) |
 | [registries.md](registries.md) | business registry lookups: Corporations Canada API, Alberta Corporate Registry (search service or registry-agent searches), City of Calgary licences (Socrata), manual review queue, re-checks (S-23) |
 | [stripe.md](stripe.md) | Stripe Connect Express: platform account setup (test/live), money flow, idempotency, local stripe-mock, operations (S-11), webhooks (S-12), Stripe Tax (S-21) |
 | [email.md](email.md) | transactional email: Mailpit locally, SES / SendGrid / Azure Communication Services / SMTP set-up, SPF/DKIM/DMARC, CASL (S-13) |
 | [notifications.md](notifications.md) | team notifications: who sends which email / SMS / push (api vs worker), matrix and quiet hours, failures, push stub (S-13/S-27) |
 | [webhooks.md](webhooks.md) | partner webhooks: payloads and signature for integrators, delivery design (per-endpoint scheduling, retries, auto-disable), SSRF rules, operations (S-33) |
-| [search.md](search.md) | the Elasticsearch read model: index layout and naming, analyzers per language, synonyms, the search-indices Job, least-privilege access (S-42); the indexer, visibility rules, versions, the reconcile sweep, merchant locations (S-43) |
+| [search.md](search.md) | the Elasticsearch read model: index layout and naming, analyzers per language, synonyms, the search-indices Job, least-privilege access (S-42); the indexer, visibility rules, versions, the reconcile sweep, merchant locations (S-43); the search API and its contract for the consumer web (S-44); the full reindex with an alias swap (S-71) |
 | [events.md](events.md) | domain events: wire format, the worker's consumer framework (dedupe, retries, DLQ), alerts and metrics, DLQ replay (S-25/S-26) |
+| [docs-site.md](docs-site.md) | the Docusaurus documentation site: public variant on docs.<zone>, internal variant behind an IP allowlist, build, images, Pages export (S-126) |
+| [api-docs.md](api-docs.md) | OpenAPI 3.1 documents per audience (api, auth, BFFs), Swagger UI / Scalar / Redoc in local, dev and staging, the committed specs and their drift check, Redocly lint, none in prod (S-125) |
 | [ci.md](ci.md) | CI pipelines on GitHub Actions and GitLab CI, manual trigger only (S-4/S-5, infra checks S-2/S-3) |
 | [mobile-auth.md](mobile-auth.md) | the consumer and courier apps: sign-in with PKCE, DPoP-bound tokens, nonces, rotating refresh tokens and reuse detection, calling the api, sign-out, sessions (S-29) |
 | [partners.md](partners.md) | partner API clients: `client_credentials` with `private_key_jwt`, keys (JWK Set URL or registered), scopes, business binding, rotation, revocation, rate limits, audit (S-30) |
@@ -54,6 +57,7 @@ say where a step is still manual or missing.
 | Custom domains (`DOMAINS_DNS_PROVIDER`, `DOMAINS_EDGE_PROVIDER`) | `local`: in-memory DNS zone ("Simulate DNS records →") and edge | `doh` + `kubernetes` (chart), Let's Encrypt **staging** | **`doh`/`jndi` + `kubernetes`** (`local` refused), Let's Encrypt staging | same, Let's Encrypt production |
 | Catalogue sync (`COMMERCE_PROVIDER`) | `local`: fake Shopify / Square / Lightspeed with fixture catalogues | `local`, or `oauth` with the dev apps (Square sandbox) | **`oauth`** (`local` refused) | same |
 | POS menu import (`POS_PROVIDER`) | `local`: fake Square / Clover / Toast with a fixture menu | `local`, or `oauth` with the dev apps (sandboxes) | **`oauth`** (`local` refused) | same |
+| Addresses (`PLACES_PROVIDER`) | `local`: fixture Canadian addresses | `local`, or `google` with the dev key | **`google`** (`local` refused) | same |
 | AI (`AI_PROVIDER`, S-129) | `fake`: deterministic answers, no key | `fake`, or `openrouter` with the dev key | **`openrouter`** (`fake` refused; no key yet = AI answers 503) | same |
 | Identity verification (`IDENTITY_PROVIDER`) | `local`: pick the outcome on a page | `local` (owners can't finish) or `stripe` with test keys | **`stripe`**, test mode | **`stripe`**, live mode |
 | SMS / email | logged | *no provider yet (S-8, S-13)* | same | same |
@@ -100,6 +104,7 @@ say where a step is still manual or missing.
   | `northline.domains.edge.provider` | `DOMAINS_EDGE_PROVIDER` | `local` (in memory) · `kubernetes` (shard Gateways, cert-manager Certificates, HTTPRoutes in the app's namespace) | **done** (S-31 — [custom-domains.md](custom-domains.md)) |
   | `northline.commerce.provider` | `COMMERCE_PROVIDER` | `local` (fake Shopify, Square and Lightspeed) · `oauth` (Shopify Admin GraphQL, Square Catalog + Inventory, Lightspeed X-Series; each once its app is set) | **done** (S-35, catalogue sync — [commerce-sync.md](commerce-sync.md)) |
   | `northline.pos.provider` | `POS_PROVIDER` | `local` (fake Square, Clover and Toast) · `oauth` (Square Catalog, Clover REST v3, Toast menus v2; each once its credentials are set) | **done** (S-36, kitchens' POS menu import — [pos-menu-import.md](pos-menu-import.md)) |
+  | `northline.places.provider` | `PLACES_PROVIDER` | `local` (fixture addresses) · `google` (Places API (New) + Geocoding API with `GOOGLE_MAPS_API_KEY`) | **done** (S-47, consumer Location screen and pill — [google-maps.md](google-maps.md)) |
   | `northline.ai.provider` | `AI_PROVIDER` | `fake` (deterministic, offline) · `openrouter` (OpenRouter's OpenAI-compatible API; 503 without `OPENROUTER_API_KEY`) | **done** (S-129, the `LlmClient` port for every AI feature — [ai.md](ai.md)) |
   | `northline.email.provider` | `EMAIL_PROVIDER` | `local` (SMTP to Mailpit) · `smtp` · `ses` · `sendgrid` · `azure` | **done** (S-13, api invitations and money notices — [email.md](email.md); S-27 worker: `payout.failed`) |
   | `northline.tax.provider` | `TAX_PROVIDER` | `local` (fixed Canadian rates) · `stripe` (Stripe Tax) | **done** (S-21, api sales tax — [stripe.md § 6](stripe.md#6-stripe-tax-s-21)) |
@@ -154,6 +159,8 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `REGISTRY_CORPORATIONS_CANADA_URL`/`_KEY`/`_KEY_HEADER`, `REGISTRY_ALBERTA_URL`/`_KEY`, `REGISTRY_CALGARY_URL`/`_DATASET`/`_APP_TOKEN`, `REGISTRY_RECHECK_AFTER`, `REGISTRY_RECHECK_CRON` | ✓ | | | | per provider ([registries.md](registries.md#set-up-per-environment)) |
 | `WEBHOOK_SECRET_KEY` | ✓ | | | ✓ | yes (the same value in both: the api encrypts partner webhook secrets, the worker decrypts them to sign — S-33) |
 | `WEBHOOKS_ALLOW_LOCAL` | | | | ✓ | no (`false`; `true` only locally — http://localhost endpoints; refused in the cloud) |
+| `SEARCH_PROVIDER` | ✓ | | | | no (`elasticsearch`; `local` = no index, the `local` profile's default, refused in staging/prod — [search.md § 7](search.md#7-the-search-api-s-44)) |
+| `SEARCH_MARKETS`, `SEARCH_DEFAULT_MARKET`, `SEARCH_CACHE_TTL`, `SEARCH_RATE_LIMIT` | ✓ | | | | no (`AB=America/Edmonton,BC=…,ON=…,QC=…` markets and their time zones, `AB`, `30s`, `120`/min per address) |
 | `SEARCH_RECONCILE_ENABLED`, `SEARCH_RECONCILE_EVERY` | | | | ✓ | no (`true`, `1m` — [search.md § 6](search.md#6-the-indexer-s-43)) |
 | `WEBHOOKS_MAX_IN_FLIGHT`, `WEBHOOKS_CONNECT_TIMEOUT`, `WEBHOOKS_RESPONSE_TIMEOUT`, `WEBHOOKS_TOTAL_TIMEOUT`, `WEBHOOKS_DISABLE_AFTER`, `WEBHOOKS_LOG_RETENTION` | | | | ✓ | no (64, 5s, 10s, 15s, 3d, 30d — [webhooks.md](webhooks.md)) |
 | `STORAGE_PROVIDER`, `STORAGE_BUCKET` | ✓ | | | | staging and prod (`local` refused there — S-10, [object-storage.md](object-storage.md)) |
@@ -173,6 +180,8 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `COMMERCE_POLL_INTERVAL`, `COMMERCE_RECONCILE_INTERVAL`, `COMMERCE_WEBHOOK_RATE_LIMIT` | ✓ | | | | no (`PT1H`, `P1D`, 600/min) |
 | `POS_PROVIDER` | ✓ | | | | staging and prod: `oauth` (`local` refused there — S-36, [pos-menu-import.md](pos-menu-import.md)) |
 | `CLOVER_CLIENT_ID`/`_SECRET`, `CLOVER_AUTH_URL`, `CLOVER_API_URL`, `TOAST_CLIENT_ID`/`_SECRET`, `TOAST_API_URL` | ✓ | | | | no — empty = that POS shows "Not available yet" ([pos-menu-import.md](pos-menu-import.md#variables-api)) |
+| `PLACES_PROVIDER`, `GOOGLE_MAPS_API_KEY` | ✓ | | | | staging and prod: `google` + the key (`local` refused there — S-47, [google-maps.md](google-maps.md)) |
+| `PLACES_RATE_LIMIT` | ✓ | | | | no (60 address lookups per browsing session and minute) |
 | `AI_PROVIDER` | ✓ | | | | staging and prod: `openrouter` (`fake` refused there — S-129, [ai.md](ai.md)) |
 | `OPENROUTER_API_KEY` | ✓ | | | | no — empty = every AI feature answers 503 `ai_unavailable` (secret; [ai.md](ai.md#variables)) |
 | `OPENROUTER_MODEL`, `OPENROUTER_LIGHT_MODEL`, `OPENROUTER_MODEL_<FEATURE>`, `OPENROUTER_BASE_URL`, `OPENROUTER_REFERER`, `OPENROUTER_TITLE`, `OPENROUTER_DATA_COLLECTION`, `OPENROUTER_ZDR`, `OPENROUTER_*_TIMEOUT`, `AI_MAX_TOOL_ROUNDS`, `AI_BUDGET_*`, `AI_REQUESTS_PER_MINUTE`, `AI_FAKE_*` | ✓ | | | | no (`google/gemini-3.7-flash`, `google/gemini-3.5-flash-lite`, blank, openrouter.ai, `STUDIO_ORIGIN`, `Northline`, `deny`, `true`, 5 s / 60 s, 4, 200k / 1M tokens a day, 20/min, off — [ai.md](ai.md#variables)) |
@@ -192,6 +201,9 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `OTEL_EXPORT_ENABLED` | ✓ | | | | no (false until S-111) |
 | `SERVER_PORT` | ✓ | ✓ | ✓ | | no (8080 / 9000 / 8082; the consumer-bff 8081) |
 
+Documentation site (S-126, [docs-site.md](docs-site.md)): the `docs` / `docs-internal` images read `NL_DOCS_SWAGGER` and
+`NL_DOCS_CONNECT`, which the chart derives from `urls.*` and `apps.api.docsRoutes`; nothing to set by hand.
+
 Studio (web): the container image reads `NL_AUTH_ORIGIN` (= `AUTH_ISSUER`; the chart sets it from `urls.auth`) at
 start and serves it as `/config.js`, so one Studio image serves every environment (S-14). `VITE_NL_AUTH_ORIGIN` is
 only the build-time fallback (the Vite dev server). Worker: `SERVER_PORT` 8084, health only (S-14).
@@ -199,6 +211,10 @@ only the build-time fallback (the Vite dev server). Worker: `SERVER_PORT` 8084, 
 Consumer web (S-45, `web/apps/consumer`, TanStack Start SSR on Node): `PORT` (3000), `NL_BFF_URL` (the consumer-bff for
 server-side rendering; the chart sets `http://northline-consumer-bff:8081`), `NL_AUTH_ORIGIN` (= `urls.auth`; the
 browser signs out of northline-auth there), `TRUST_PROXY` (`true` behind the Gateway). `GET /healthz` answers `ok`.
+S-54: `NL_SITE_ORIGIN` (= `urls.consumer`, the site's own origin; business pages served elsewhere link back to it) and
+`NL_PAGES_HOST` (= the host of `urls.pages`): with it set, `pages.<zone>/<slug>` and merchants' own domains (looked up
+with `GET /api/v1/public/storefronts/by-host`, S-31) serve the business's public page; without it (local) every host is
+the site. Both optional, set by the chart.
 
 ## Consumer BFF (S-45)
 

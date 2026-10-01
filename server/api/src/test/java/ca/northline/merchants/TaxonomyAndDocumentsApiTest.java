@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import ca.northline.support.IntegrationTest;
 import ca.northline.support.TestJwt;
 import ca.northline.tools.CategorySeeder;
+import java.nio.charset.StandardCharsets;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -75,7 +76,7 @@ class TaxonomyAndDocumentsApiTest extends IntegrationTest {
                         .with(TestJwt.member(owner)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("application/pdf"))
-                .andExpect(content().bytes(OnboardingFlow.PDF.getBytes()));
+                .andExpect(content().bytes(OnboardingFlow.PDF.getBytes(StandardCharsets.UTF_8)));
         mvc.perform(get("/api/v1/merchants/{id}/onboarding/documents/{doc}", id, doc)
                         .with(TestJwt.member(data.user("X"))))
                 .andExpect(status().isForbidden());

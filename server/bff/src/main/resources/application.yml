@@ -36,6 +36,23 @@ server:
     # Host-only (no Domain): only studio.<zone> ever sees it. The cloud profiles use the __Host- prefix (S-20).
     cookie: { name: NL_STUDIO, http-only: true, secure: true, same-site: lax }
 management.endpoints.web.exposure.include: health,info
+# S-125 (docs/runbooks/api-docs.md): the session endpoints as OpenAPI 3.1 (config/BffOpenApiConfig). Everything under
+# /bff, which the edge routes to the BFF on the Studio and consumer hosts: /bff/docs (landing), /bff/swagger-ui.html,
+# /bff/docs/scalar, /bff/docs/redoc. Their paths have their own CSP (northline-openapi). Off in prod.
+springdoc:
+  api-docs.path: /bff/v3/api-docs
+  writer-with-order-by-keys: true
+  override-with-generic-response: false
+  swagger-ui.path: /bff/swagger-ui.html
+scalar:
+  enabled: true
+  path: /bff/docs/scalar
+  page-title: Northline BFF · Scalar
+northline.docs:
+  base-path: /bff
+  title: Northline BFF
+  issuer: ${AUTH_PUBLIC_URL:${AUTH_ISSUER:http://localhost:9000}}
+  servers: /                             # same origin as the web app (the Studio or consumer host)
 northline.bff:
   registration-id: studio
   api-uri: ${API_URL:http://localhost:8080}
@@ -60,4 +77,4 @@ spring.security.oauth2.client.registration:
 ---
 # Local runs read server/.env (or .env next to the jar) — KEY=value lines, see server/.env.example. Never under `test`.
 spring.config.activate.on-profile: "!test"
-spring.config.import: optional:file:.env[.properties],optional:file:../.env[.properties]
+spring.config.import: optional:file:${NORTHLINE_DOTENV_DIR:.}/.env[.properties],optional:file:${NORTHLINE_DOTENV_DIR:..}/.env[.properties]

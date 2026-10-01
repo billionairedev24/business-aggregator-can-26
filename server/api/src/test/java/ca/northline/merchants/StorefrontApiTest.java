@@ -21,6 +21,8 @@ import ca.northline.support.IntegrationTest;
 import ca.northline.support.TestJwt;
 import ca.northline.tools.CategorySeeder;
 import com.jayway.jsonpath.JsonPath;
+import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -250,8 +252,9 @@ class StorefrontApiTest extends IntegrationTest {
             var other = flow.start(owner, "provider");
             flow.business(other, owner, soleBusiness("Other Co", "service.pets.dog-walker"))
                     .andExpect(status().isOk());
-            var domain = "book-" + merchantId.toLowerCase() + ".example.ca";
-            patchPage("{\"slug\":\"sf-%s\",\"customDomain\":\"%s\"}".formatted(merchantId.toLowerCase(), domain))
+            var domain = "book-" + merchantId.toLowerCase(Locale.ROOT) + ".example.ca";
+            patchPage("{\"slug\":\"sf-%s\",\"customDomain\":\"%s\"}"
+                            .formatted(merchantId.toLowerCase(Locale.ROOT), domain))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.customDomainStatus").value("pending"));
             // S-31: a pending holder keeps the domain only while its ownership record is there (else it is released)
@@ -266,7 +269,7 @@ class StorefrontApiTest extends IntegrationTest {
             mvc.perform(patch("/api/v1/merchants/{id}/storefront", other)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"slug\":\"sf-%s\",\"customDomain\":\"%s\"}"
-                                    .formatted(merchantId.toLowerCase(), domain))
+                                    .formatted(merchantId.toLowerCase(Locale.ROOT), domain))
                             .with(TestJwt.member(owner)))
                     .andExpect(status().isUnprocessableContent())
                     .andExpect(err("slug", "That address is taken."))
@@ -276,7 +279,10 @@ class StorefrontApiTest extends IntegrationTest {
         @Test
         void logoUploadsAndLinks() throws Exception {
             var file = new MockMultipartFile(
-                    "file", "logo.svg", "image/svg+xml", "<svg xmlns='http://www.w3.org/2000/svg'/>".getBytes());
+                    "file",
+                    "logo.svg",
+                    "image/svg+xml",
+                    "<svg xmlns='http://www.w3.org/2000/svg'/>".getBytes(StandardCharsets.UTF_8));
             String logoId = JsonPath.read(
                     mvc.perform(multipart("/api/v1/merchants/{id}/onboarding/documents", merchantId)
                                     .file(file)
@@ -432,7 +438,7 @@ class StorefrontApiTest extends IntegrationTest {
         @Test
         void customDomainMustBeVerifiedFirst() throws Exception {
             approve();
-            patchPage("{\"customDomain\":\"pending-%s.example.ca\"}".formatted(merchantId.toLowerCase()))
+            patchPage("{\"customDomain\":\"pending-%s.example.ca\"}".formatted(merchantId.toLowerCase(Locale.ROOT)))
                     .andExpect(jsonPath("$.customDomainStatus").value("pending"));
             mvc.perform(post("/api/v1/merchants/{id}/storefront/publish", merchantId)
                             .with(TestJwt.member(owner)))
@@ -443,7 +449,7 @@ class StorefrontApiTest extends IntegrationTest {
                             .with(TestJwt.member(owner)))
                     .andExpect(jsonPath("$.customDomainStatus").value("pending"));
 
-            var domain = "book-%s.example.ca".formatted(merchantId.toLowerCase());
+            var domain = "book-%s.example.ca".formatted(merchantId.toLowerCase(Locale.ROOT));
             patchPage("{\"customDomain\":\"%s\"}".formatted(domain));
             dns.publish(domain, DnsResolver.Type.CNAME, java.util.List.of("pages.test.northline.ca"));
             dns.publish(

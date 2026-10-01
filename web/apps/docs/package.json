@@ -1,0 +1,55 @@
+{
+  "name": "@northline/docs",
+  "private": true,
+  "description": "Northline documentation site (S-126): docs/ of the repository, the API reference (Redoc + Scalar) from docs/api/openapi, en + fr.",
+  "scripts": {
+    "sync": "node scripts/sync.mjs",
+    "prestart": "pnpm --filter @northline/tokens build && node scripts/sync.mjs",
+    "start": "docusaurus start --port 3300 --no-open",
+    "prebuild": "pnpm --filter @northline/tokens build && node scripts/sync.mjs",
+    "build": "docusaurus build",
+    "test:build": "node scripts/check-build.mjs",
+    "serve": "docusaurus serve --port 3300 --no-open",
+    "clear": "docusaurus clear",
+    "write-translations": "docusaurus write-translations --locale fr",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@docusaurus/core": "3.10.2",
+    "@docusaurus/preset-classic": "3.10.2",
+    "@easyops-cn/docusaurus-search-local": "0.55.3",
+    "@mdx-js/react": "^3.1.0",
+    "@northline/tokens": "workspace:*",
+    "@scalar/docusaurus": "0.8.46",
+    "clsx": "^2.1.1",
+    "prism-react-renderer": "^2.4.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "redocusaurus": "2.5.2"
+  },
+  "devDependencies": {
+    "@docusaurus/module-type-aliases": "3.10.2",
+    "@docusaurus/tsconfig": "3.10.2",
+    "@docusaurus/types": "3.10.2",
+    "@scalar/api-reference": "1.72.3",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  },
+  "browserslist": {
+    "production": [
+      ">0.5%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

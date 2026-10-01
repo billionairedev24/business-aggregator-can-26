@@ -28,6 +28,6 @@ class PublicMediaController {
                 .contentType(MediaType.parseMediaType(content.contentType()))
                 .cacheControl(CacheControl.maxAge(Duration.ofHours(1)).cachePublic())
                 .header("X-Content-Type-Options", "nosniff")
-                .body(content.bytes());
+                .body(content.bytes().toArray());
     }
 }

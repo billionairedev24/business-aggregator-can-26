@@ -65,6 +65,15 @@ tasks.register<JavaExec>("searchIndices") {
     mainClass.set("ca.northline.worker.search.SearchIndicesCommand")
 }
 
+// ./gradlew :worker:searchReindex [--args='--keep-old'] — DB_*, KAFKA_*, ES_* from the environment or server/.env
+// (docs/runbooks/search.md § Reindex). S-71: new indices from Postgres, Kafka catch-up, alias swap, old ones deleted.
+tasks.register<JavaExec>("searchReindex") {
+    group = "northline"
+    description = "rebuild listings_en / listings_fr from Postgres and swap the aliases (safe while live)"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("ca.northline.worker.search.SearchReindexCommand")
+}
+
 // ./gradlew :worker:dlqReplay --args='list|replay --topic=<topic>.dlq --group=<consumer group> [--event=<id>] [--force]'
 // (docs/runbooks/events.md § DLQ). KAFKA_* and DB_* from the environment or server/.env.
 tasks.register<JavaExec>("dlqReplay") {

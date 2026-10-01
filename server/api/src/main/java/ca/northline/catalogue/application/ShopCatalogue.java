@@ -15,13 +15,7 @@ public interface ShopCatalogue {
     /** The shop taxonomy (groups and leaves) with names in {@code lang} (French from {@code category_labels}). */
     List<Category> categories(String lang);
 
-    /**
-     * One row per merchant with live offers, restricted to {@code categoryId} when given.
-     *
-     * @param departmentId the leaf most of the merchant's live products are in
-     * @param handlingDays the shortest handling time (0 same day, 1 next day, 2) of an in-stock offer that goes on
-     *     pooled runs; null when there is none
-     */
+    /** One row per merchant with live offers, restricted to {@code categoryId} when given. */
     List<ShopStats> shops(Collection<String> merchantIds, @Nullable String categoryId, Collection<String> excluded);
 
     /**
@@ -98,6 +92,11 @@ public interface ShopCatalogue {
         }
     }
 
+    /**
+     * @param departmentId the leaf most of the merchant's live products are in
+     * @param handlingDays the shortest handling time (0 same day, 1 next day, 2) of an in-stock offer that goes on
+     *     pooled runs; null when there is none
+     */
     record ShopStats(
             String merchantId,
             String departmentId,

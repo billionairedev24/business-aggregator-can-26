@@ -9,6 +9,8 @@ urls:
   consumer: https://northline.ca
   console: https://console.northline.ca
   pages: https://pages.northline.ca
+  docs: https://docs.northline.ca                   # S-126: the public documentation site
+  docsInternal: https://internal-docs.northline.ca   # S-126: with apps.docs-internal + edge.docsInternal.allowedCIDRs
   webauthnRpId: northline.ca
 
 # S-17: Gateway API with the chart's Gateway (Envoy Gateway), Let's Encrypt certificates per host over HTTP-01,
@@ -56,6 +58,8 @@ apps:
       COMMERCE_PROVIDER: oauth
       # S-36 POS menu import: Square (the S-35 app), Clover (CLOVER_CLIENT_ID) and Toast (TOAST_CLIENT_ID, partner)
       POS_PROVIDER: oauth
+      # S-47 addresses: Google Places API (New) + Geocoding API; the key is the secret google-maps-api-key
+      PLACES_PROVIDER: google
       # S-129 AI: OpenRouter (`fake` is refused here). Until OPENROUTER_API_KEY exists AI features answer 503; then set
       # secretEnv.OPENROUTER_API_KEY: true and add it to externalSecrets.optionalKeys (docs/runbooks/ai.md).
       AI_PROVIDER: openrouter
@@ -70,6 +74,7 @@ apps:
       STRIPE_WEBHOOK_SECRET: true   # S-12
       STRIPE_CONNECT_WEBHOOK_SECRET: true
       EMAIL_UNSUBSCRIBE_KEY: true   # S-13: required under staging/prod
+      GOOGLE_MAPS_API_KEY: true     # S-47: PLACES_PROVIDER=google
   auth:
     secretEnv:
       GOOGLE_CLIENT_SECRET: true    # S-18: Google and Apple sign-in are required here (GOOGLE_CLIENT_ID, APPLE_CLIENT_ID,

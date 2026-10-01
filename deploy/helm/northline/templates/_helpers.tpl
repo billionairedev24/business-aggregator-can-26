@@ -137,6 +137,16 @@ their own variables. (dict "root" $ "name" "<app>" "app" $appValues)
 {{- $env = merge (deepCopy (default (dict) .app.env)) (deepCopy (default (dict) $v.env)) $env -}}
 {{- else if eq .app.type "static" -}}
 {{- $_ := set $env "NL_AUTH_ORIGIN" $v.urls.auth -}}
+{{- if or (eq .name "docs") (eq .name "docs-internal") -}}
+{{- /* S-126: links to the services' own viewers where they serve them (S-125: dev and staging, never prod), and the
+       origins Scalar's "Try it" may call. */ -}}
+{{- $swagger := list -}}
+{{- if and $v.apps.api.docsRoutes (ne $v.global.environment "prod") -}}
+{{- $swagger = list (printf "api|%s/docs" $v.urls.api) (printf "auth|%s/docs" $v.urls.auth) (printf "studio-bff|%s/bff/docs" $v.urls.studio) -}}
+{{- end -}}
+{{- $_ := set $env "NL_DOCS_SWAGGER" (join "," $swagger) -}}
+{{- $_ := set $env "NL_DOCS_CONNECT" (join " " (list $v.urls.api $v.urls.auth)) -}}
+{{- end -}}
 {{- $env = merge (deepCopy (default (dict) .app.env)) $env -}}
 {{- else -}}
 {{- $_ := set $env "PORT" (toString .app.port) -}}
@@ -148,6 +158,9 @@ their own variables. (dict "root" $ "name" "<app>" "app" $appValues)
 {{- if eq .name "consumer" -}}
 {{- /* S-45: sign-out (and S-62's sign-in pages) call northline-auth from the browser. */ -}}
 {{- $_ := set $env "NL_AUTH_ORIGIN" $v.urls.auth -}}
+{{- /* S-54: business pages on pages.<zone> and merchants' own domains link back to the site (server/page-hosts.mjs). */ -}}
+{{- $_ := set $env "NL_SITE_ORIGIN" $v.urls.consumer -}}
+{{- with $v.urls.pages }}{{- $_ := set $env "NL_PAGES_HOST" (urlParse .).host -}}{{- end -}}
 {{- end -}}
 {{- $env = merge (deepCopy (default (dict) .app.env)) $env -}}
 {{- end -}}

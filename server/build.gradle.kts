@@ -66,6 +66,9 @@ subprojects {
         maxHeapSize = "768m"
         maxParallelForks = 1
         jvmArgs("-XX:+EnableDynamicAgentLoading", "-Xshare:off")
+        // A developer's server/.env (make setup) must never reach a test: the apps import .env from
+        // ${NORTHLINE_DOTENV_DIR:.}, and some tests boot cloud profiles where that import is active.
+        environment("NORTHLINE_DOTENV_DIR", layout.buildDirectory.dir("no-dotenv").get().asFile.absolutePath)
         testLogging { events("failed"); exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL }
     }
 
@@ -155,5 +158,18 @@ configure(subprojects.filter { it.name in appImages }) {
             ))
             // Reproducible: Jib's defaults (epoch file times and creation time) are kept on purpose.
         }
+    }
+}
+
+// ---- OpenAPI specs (S-125, docs/runbooks/api-docs.md) ---------------------------------------------------------------
+// Each app's OpenApiSpecsTest compares the specs it serves with the committed docs/api/openapi/*.yaml (part of
+// `./gradlew build`); -Popenapi.write=true (make openapi) writes them instead.
+configure(subprojects.filter { it.name in setOf("api", "auth", "bff") }) {
+    tasks.withType<Test>().configureEach {
+        systemProperty("northline.repo", rootProject.file("..").absolutePath)
+        val write = providers.gradleProperty("openapi.write").getOrElse("false")
+        systemProperty("openapi.write", write)
+        inputs.property("openapi.write", write)
+        inputs.dir(rootProject.file("../docs/api/openapi")).withPropertyName("committedSpecs").optional()
     }
 }

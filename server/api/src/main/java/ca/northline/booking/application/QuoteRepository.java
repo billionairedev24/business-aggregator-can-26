@@ -19,6 +19,9 @@ public interface QuoteRepository {
     /** The highest version per request for this merchant (draft or sent), for the given requests. */
     List<Quote> current(String merchantId, Collection<String> requestIds);
 
+    /** Every version the customer received for a request (not drafts), all merchants, newest version first. */
+    List<Quote> sentOf(String requestId);
+
     /** Inserts a draft with its lines. */
     void insertDraft(Quote quote);
 

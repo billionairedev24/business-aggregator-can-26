@@ -27,6 +27,7 @@ import ca.northline.food.domain.KitchenTime;
 import ca.northline.food.domain.MenuStatus;
 import ca.northline.food.domain.ModifierGroup;
 import ca.northline.food.domain.OpeningRanges;
+import ca.northline.shared.Bytes;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.Ids;
 import ca.northline.shared.NotFound;
@@ -303,7 +304,7 @@ class MenuBuilderService
             return Optional.empty();
         }
         return photos.get(item.photoKey())
-                .map(b -> new Photo(b, Objects.requireNonNullElse(item.photoContentType(), "image/jpeg")));
+                .map(b -> new Photo(Bytes.of(b), Objects.requireNonNullElse(item.photoContentType(), "image/jpeg")));
     }
 
     // ── provisioning (listeners) ──────────────────────────────────────────────
@@ -341,12 +342,10 @@ class MenuBuilderService
 
     /** open_hours · window (days + from–to) · quote (notice hours). */
     private static MenuSchedule checked(MenuSchedule s) {
-        var errors = new ArrayList<Violation>();
-        switch (s.mode()) {
-            case "open_hours" -> {
-                return MenuSchedule.OPEN_HOURS;
-            }
+        return switch (s.mode()) {
+            case "open_hours" -> MenuSchedule.OPEN_HOURS;
             case "window" -> {
+                var errors = new ArrayList<Violation>();
                 if (s.days().isEmpty() || s.days().stream().anyMatch(d -> d < 1 || d > 7)) {
                     errors.add(new Violation("days", "required", KitchenMessages.DAYS));
                 }
@@ -357,17 +356,17 @@ class MenuBuilderService
                     throw new RuleViolation(errors);
                 }
                 var range = ranges.asText().getFirst();
-                return new MenuSchedule(
+                yield new MenuSchedule(
                         "window", s.days().stream().distinct().sorted().toList(), range.get(0), range.get(1), null);
             }
             case "quote" -> {
                 if (s.noticeHours() == null || s.noticeHours() < 1 || s.noticeHours() > 336) {
                     throw RuleViolation.of("noticeHours", "range", KitchenMessages.NOTICE_HOURS);
                 }
-                return new MenuSchedule("quote", List.of(), null, null, s.noticeHours());
+                yield new MenuSchedule("quote", List.of(), null, null, s.noticeHours());
             }
             default -> throw RuleViolation.of("mode", "option", KitchenMessages.OPTION);
-        }
+        };
     }
 
     private SectionRow validate(String merchantId, ItemCommand command) {

@@ -34,6 +34,7 @@ for env in dev staging prod; do
   done
 done
 check "prod × aws + partners (S-30)" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml -f test-values/partners.yaml
+check "staging × aws + internal docs behind an IP allowlist (S-126)" -f "$CHART/values-staging.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml --set apps.docs-internal.enabled=true --set "edge.docsInternal.allowedCIDRs={203.0.113.0/24}"
 check "local-kind" -f "$CHART/values-local-kind.yaml"
 check "local-kind + External Secrets (fake)" -f "$CHART/values-local-kind.yaml" -f "$CHART/values-local-kind-eso.yaml"
 check "local-kind + edge (local CA)" -f "$CHART/values-local-kind.yaml" -f "$CHART/values-local-kind-edge.yaml"
@@ -86,6 +87,8 @@ refuse "wildcard without DNS-01" -f "$CHART/values-prod.yaml" -f "$CHART/values-
 refuse "DNS-01 without the cloud's solver" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" --set edge.certManager.issuer.solver=dns01
 refuse "a CA issuer in prod" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" --set edge.certManager.issuer.type=ca --set edge.certManager.issuer.caSecretName=x
 refuse "edge without routes" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" --set gateway.enabled=false
+refuse "API documentation routes in prod (S-125)" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" --set apps.api.docsRoutes=true
+refuse "internal docs site without an IP allowlist (S-126)" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" --set apps.docs-internal.enabled=true
 
 # S-31: merchants' own domains. The api reconciles them (Role limited to Gateways, HTTPRoutes and Certificates in its
 # namespace, token mounted only in the api), certificates from Let's Encrypt staging outside prod, and the refusals.
@@ -149,6 +152,21 @@ else echo "FAIL prod × aws: search-indices Job does not run apply"; failed=1; f
 if helm template northline "$CHART" -f "$CHART/values-local-kind.yaml" --show-only templates/search-indices-job.yaml >/dev/null 2>&1; then
   echo "FAIL local-kind renders the search-indices Job without Elasticsearch"; failed=1
 else echo "ok   local-kind: no search-indices Job"; fi
+
+# S-71: the reindex Job exists only while a run id is set, and refuses a run id that isn't a DNS label.
+if [[ -n "$(helm template northline "$CHART" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml \
+    --show-only templates/search-reindex-job.yaml 2>/dev/null)" ]]; then
+  echo "FAIL the search reindex Job renders without a run id"; failed=1
+else echo "ok   no search reindex Job without a run id"; fi
+job=$(helm template northline "$CHART" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml \
+    --set searchReindex.runId=2026-10-01 --show-only templates/search-reindex-job.yaml)
+if grep -q 'name: northline-search-reindex-2026-10-01' <<<"$job" && grep -q '"ca.northline.worker.search.SearchReindexCommand"' <<<"$job"; then
+  echo "ok   searchReindex.runId renders the reindex Job"
+else echo "FAIL searchReindex.runId does not render the reindex Job"; failed=1; fi
+if helm template northline "$CHART" -f "$CHART/values-prod.yaml" --set searchReindex.runId=Not_A_Label >/dev/null 2>&1; then
+  echo "FAIL a run id that isn't a DNS label accepted"; failed=1
+else echo "ok   search reindex run id must be a DNS label"; fi
+check "prod × aws + search reindex Job (S-71)" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml --set searchReindex.runId=2026-10-01 --set searchReindex.keepOld=true
 
 rm -f /tmp/helm-lint.$$ /tmp/kubeconform.$$
 exit $failed

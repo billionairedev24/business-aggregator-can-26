@@ -86,20 +86,20 @@ class RefundCaseService implements RespondToCases, CustomerCases, DisputeDecisio
     @Override
     public Dispute addEvidence(String merchantId, String disputeId, Upload upload) {
         var dispute = dispute(merchantId, disputeId);
-        if (upload.bytes().length == 0) {
+        if (upload.bytes().isEmpty()) {
             throw RuleViolation.of("file", "required", CaseMessages.EVIDENCE_REQUIRED);
         }
         var kind = Evidence.kindOf(upload.contentType())
                 .orElseThrow(() -> RuleViolation.of("file", "type", CaseMessages.EVIDENCE_TYPE));
-        if (upload.bytes().length > Evidence.MAX_BYTES) {
+        if (upload.bytes().size() > Evidence.MAX_BYTES) {
             throw RuleViolation.of("file", "size", CaseMessages.EVIDENCE_SIZE);
         }
         var id = Ids.next();
         var key = ObjectKeys.merchantObject(merchantId, id, upload.contentType());
         var item = new Evidence(
-                id, kind, upload.name(), upload.contentType(), upload.bytes().length, "merchant", clock.instant(), key);
+                id, kind, upload.name(), upload.contentType(), upload.bytes().size(), "merchant", clock.instant(), key);
         dispute.addEvidence(item);
-        storage.put(key, upload.bytes(), upload.contentType());
+        storage.put(key, upload.bytes().toArray(), upload.contentType());
         cases.update(dispute);
         return dispute;
     }

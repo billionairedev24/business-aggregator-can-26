@@ -2340,6 +2340,884 @@ Built on S-49 (branch `web/s-50-product-detail` from `web/s-49-shop-landing`).
   - Disclose the processor in the Privacy Policy and in the PIPEDA / Law 25 assessment (SEC stories), together with the other processors.
 - **Pending:** an OpenRouter API key per environment. Until it exists, `northline.ai.provider=fake` locally, and AI features answer `503 ai_unavailable` in the cloud.
 
+## 2026-09-30 — S-46 Home: search-first hero and Services/Shop/Food entry points
+
+Built on S-45's shell (docs/CONSUMER_WEB_PLAN.md). No migration.
+
+- **Server-rendered layout, numbers in the browser.** The SSR HTML (the same for everyone) carries the hero, the tile
+  names and links, the four promises and the section titles; the counts, greeting, trusted providers and "Your week"
+  load after hydration, once the location (S-45 pill) and session are known. Until the place is known the heading reads
+  "What do you need today?" / « De quoi avez-vous besoin aujourd'hui ? » (ours) instead of guessing a city; counts show
+  skeletons.
+- **Search** submits to `/search?q=` (S-48 renders results). No typeahead on the hero yet: the design's suggestions
+  come from the search API (E-6), which S-48 wires to the same input.
+- **New public read `GET /api/v1/public/home?city=`** in a new module **`discovery`** (the consumer site's
+  cross-module landing reads; it only uses other modules' `api` packages): `providers` (active provider + both),
+  `shops` (seller + both), `kitchensOpen`, `categories` (active businesses per approved category id), `cuisines` (open
+  kitchens per cuisine code, plus `meal_kits` = open kitchens offering meal kits), `trusted` (three providers: best
+  average rating, then most reviews, then higher tier, then name). Unknown cities answer zeros (the page then says
+  "Northline isn't in {city} yet." and links to the Location screen); blank city → 422 "Choose a city.", > 60
+  characters → "At most 60 characters.". `Cache-Control: public, max-age=60` (the same for everyone in a city).
+- **Shared-contract additions (additive):** `merchants.api.PublicDirectory` (active businesses with their published
+  storefront slug and brand colour, approved categories, public profile cuisines/dietary and kitchen address — never the
+  legal name, contacts or documents); `food.api.KitchenAvailability` (open now, next opening, pause, fulfilment, prep).
+- **"Open" for a kitchen** (`food.domain.KitchenCalendar`): inside today's opening range (in the time zone of the kitchen's market —
+  new `region.api.Markets`, read from the existing `SEARCH_MARKETS` / `SEARCH_DEFAULT_MARKET`, no new list; a
+  province that isn't served uses the default market's zone; a holiday entry replaces the weekday), not paused, **auto-pause enforced at read time** — the Studio's "Auto-pause if late orders ≥ N"
+  (stored but not enforced since the kitchen workstream) now closes the kitchen to customers while N or more accepted
+  orders are past their ready-by time, and reopens it as soon as the kitchen catches up (no write, no event) — and a
+  live menu with at least one approved, published dish. Ranges end exclusive. "Opens …" looks a week ahead.
+- **Tiles** are the design's lists (9 departments, 8 cuisines, 9 service categories) mapped to category ids of
+  `db/seed/categories.json` / onboarding's cuisine codes (`features/home/catalog.ts`): Pharmacy = "Pharmacy (OTC)",
+  Gifts = "Gifts & crafts", Home cleaning = "House cleaning", Tutor = K–12 + post-secondary (summed), Meal kits = the
+  `meal_kits` fulfilment. The design's hard-coded "All 62 categories" reads "All categories" (the taxonomy has more,
+  and the number would drift). Counts use ICU plurals ("1 shop"). Tile names are the design's en/fr pairs; category
+  names from the database (English only today) are marked `lang="en"`.
+- **Trusted near you:** providers come to the customer, so "near" = the same city and no distance is shown (the design's
+  "1.2 km" has no source); the meta line is the first approved category (the design's "from $79" needs pricing reads
+  that don't exist). Providers without a published page aren't links. No reviews → "New".
+- **Your week** = contract `GET /api/v1/me/upcoming` for S-58 (CONSUMER_WEB_PLAN.md § Your week); until it exists the
+  signed-in section says "Nothing booked or on its way this week." with "Book a service", guests get "Sign in to see
+  your orders, bookings and quotes here." (ours). The points line uses the account summary's `points`; the design's
+  "Glenmore Bakery is funding 3× this week" has no source and isn't shown.
+- **Greeting** by the hour on the visitor's own clock, computed after mount (no time zone in code): morning 5–12, afternoon 12–17, evening otherwise ("Good
+  evening, Amara · {area}"; guests "Good evening · {city}"; French « Bonsoir Amara · … »).
+- **Not done:** hero typeahead (S-48), prices on trusted providers, distances.
+
+## 2026-09-30 — S-124 Makefiles for every developer and operator workflow
+
+- **Root `Makefile` + one include per area** (`make/server.mk`, `web.mk`, `db.mk`, `kafka.mk`, `search.mk`, `docs.mk`,
+  `deploy.mk`, `infra.mk`), self-documenting: `target: ## text` and `##@ Section` lines are what `make help` prints
+  (plus `##> VAR  text` for the common variables), so a target without a description is deliberately hidden
+  (internal helpers such as `server-clean`). Layout, target names, `SERVICES`, `up`/`run`/`down`/`status`/`logs`/
+  `restart` and the help format follow the user's other repository (samop), as asked. Guide: `docs/LOCAL_DEVELOPMENT.md`
+  (same role as samop's); `docs/runbooks/local.md` keeps the configuration detail and now shows the make target next to
+  each plain command.
+- **`make up` = stand-ins + database + apps in the background.** Compose profiles come from `PROFILES` (comma list) or,
+  when empty, `COMPOSE_PROFILES` in `.env` (`db`); `docker compose up -d --wait` (Compose ≥ 2.20, already the runbook's
+  minimum), then `db-migrate` (with the dev personas) and `db-seed` (`SKIP_DB=1` skips), then `scripts/stack.sh up
+  $(SERVICES)`. `make run` (alias `make dev`) is the foreground variant with merged, prefixed logs; Ctrl-C stops only what
+  that run started. So `make setup up run` (the acceptance criterion) starts Postgres, migrates, seeds, starts the api and
+  the Studio, and follows their logs. `make down` stops every app the runner started and every stand-in (data kept,
+  `VOLUMES=1` deletes it); `make down SERVICES=…` stops only those apps.
+- **App runner `scripts/stack.sh`** (samop's pattern): each app in its own session/process group (setsid, or Perl's
+  `POSIX::setsid` on macOS where util-linux is missing), pid + log in `.run/` (git-ignored), stopped by group id only;
+  refuses a port someone else holds and names the holder; restarts an app whose command changed; waits for
+  `/actuator/health` (Java, up to 6 min for a cold first start) or the dev server's `/`. It compiles the selected server
+  projects **once before** starting several `bootRun`s, because parallel Gradle builds compiling the same classes race.
+- **Default `SERVICES="api studio"` with dev auth:** the fastest path needs only Postgres. The web apps choose dev auth
+  (`NL_DEV_USER` = Ravi Sandhu / Amara Osei) automatically unless their BFF is being started or already runs;
+  `DEV_AUTH=1|0` forces it. Real sign-in is `make up SERVICES="auth api bff studio"`.
+- **Portable make:** GNU make 3.81 (macOS) — no `.ONESHELL`, `.SHELLFLAGS`, `::=`/`!=`, `undefine`, `$(file)`; bash 3.2 in
+  recipes and in `stack.sh` (no `mapfile`, no associative arrays); no GNU-only `sed -i`/`find -printf`/`readlink -f`.
+  Checked statically (grep) and run with GNU make 4.3; make 3.81 itself could not be downloaded here (the GNU mirrors are
+  blocked by the sandbox proxy) and nothing ran on macOS. `infra/terraform/scripts/validate.sh` itself uses `mapfile` and
+  `find -printf` (S-2): `make tf-validate` on macOS needs Homebrew bash + findutils, which `make doctor` and the guide say.
+- **Toolchain check** `make/toolchain.sh` (POSIX sh): JDK 25, Node 22+, pnpm are required (setup fails without them);
+  Docker/Compose ≥ 2.20, psql, helm ≥ 3.14, kubeconform, terraform ≥ 1.9, tflint, kubectl, kind and bash ≥ 4 only warn,
+  each with what it is needed for. The Makefile finds a JDK 25 even when `JAVA_HOME` points at another version.
+- **Gradle** always runs with `--max-workers=2` and CI's `ci/gradle/maven-mirror.init.gradle.kts` (a no-op without
+  `MAVEN_MIRROR_URL`), so laptop and CI builds are the same command. `server-lint` = `spotlessCheck checkstyleMain
+  checkstyleTest compileTestJava` (Error Prone/NullAway run in the compiler).
+- **`web-format` formats only the web files changed against `BASE` (default `origin/main`)** plus untracked ones: Prettier
+  was never applied to `web/` (139 Studio files differ), so a whole-tree format would bury real changes in every PR.
+  `WEB_FORMAT_ALL=1` does the whole tree when someone decides to. `web-lint` = the hex-colour lint + typecheck (the root
+  `pnpm lint` has no ESLint config and would fail). Web targets depend on `web/node_modules/.modules.yaml`, so they
+  install only when the lockfile is newer.
+- **`db-reset`** asks first (`YES=1` skips), refuses a non-local `PGHOST`, uses the compose `postgres` container when it
+  runs, else psql as a superuser (creating `postgis`, `citext`, `pgcrypto`), then migrates and seeds.
+- **Kafka/search targets wrap the existing provisioners** (`:worker:kafkaTopics`, `:worker:searchIndices`,
+  `:worker:dlqReplay`); `search-reindex` calls S-71's `:worker:searchReindex`, which exists once S-71 is merged (before
+  that Gradle says the task is unknown). `openapi` and `docs` are placeholders in this PR, filled by S-125 and S-126.
+- **CI calls the targets** (still `workflow_dispatch` / web-or-api pipelines only): GitHub server (`make server-build
+  TASKS=…`), web (`web-lint`, `web-test`, `web-build-studio`, `web-storybook-build`/`-test`, `e2e`), infra
+  (`tf-validate`, `tf-lint`), deploy (`images-java JIB_TASK=…`, `helm-validate`), gitops (`argocd-validate`), event-schemas
+  (`server-events`); GitLab likewise, installing `make` in images that lack it (Temurin, Playwright via apt; Alpine
+  helm/terraform/tflint via apk). Kept as they were: the web image job (docker/build-push-action with the GHA cache, a
+  buildx matrix on GitLab) and the promotion jobs (PR/MR creation is CI-specific).
+- **Verified here:** `make env`, `make up PROFILES=db` (an isolated compose project: stand-ins healthy, 182 categories
+  seeded, api + Studio up, `/api/v1/me/businesses` through the Studio's proxy as Ravi), `make status`, `make logs`,
+  `make down SERVICES=…`, `make run SERVICES=api` stopped by a signal (app stopped, pid files removed), a failed start
+  reported with the log's last lines, `make help`, and `-n` dry runs of the Gradle/compose/image targets.
+- **Not done:** `OBS=1` (samop's observability flag) waits for S-111/S-112, which bring the telemetry stack; the pipelines
+  were not run (manual only, no credits); nothing was run on macOS.
+
+## 2026-09-30 — S-51 Cart and checkout (server-side cart, step-up, tax, manual-capture payments, order.placed)
+
+- **Cart (orders, `/api/v1/cart`, open to guests):** `GET`, `POST /items` `{offerId, variantId?, qty}`,
+  `PATCH /items/{id}` `{qty}`, `DELETE /items/{id}`. A signed-in person's cart is keyed by their user id. A guest's
+  cart is keyed by the SHA-256 of the consumer-bff's `X-Northline-Guest` (the raw id is never stored). It is never
+  keyed by an identity, and it expires 30 days after its last change. On the first signed-in call that still carries
+  the guest id, the guest's lines are merged into the person's cart (quantities add, capped at 99) and the guest cart
+  is deleted. Every read checks each line against the catalogue (new `orders.api.SellableOffers`, implemented by
+  catalogue: only approved and live offers, variants and stock) and against the shops (`ShopDirectory`). A hidden
+  listing, a paused shop or sold-out stock therefore shows up at once as "This item isn't available any more." /
+  "This item is sold out." / "Only N left.". Lines are grouped by shop in the order the shops were first added (the
+  design's multi-shop cart). `orders.carts` (V009) is kept. The lines move from the `lines` jsonb to
+  `orders.cart_items`.
+- **Checkout needs a person** (`/api/v1/me/…`):
+  - `GET /checkout?market=` returns the saved addresses, the delivery options and `stepUp`.
+  - `POST /checkout/quote` returns totals with GST/HST.
+  - `POST /checkouts` (Idempotency-Key, X-Step-Up) takes the stock and opens the PaymentIntents.
+  - `POST /checkouts/{id}/place` (Idempotency-Key) checks the authorizations, holds escrow and creates the order.
+  - A guest who presses Pay is sent to `/sign-in?next=/cart`, and the cart follows them through the merge.
+- **Step-up rule (decided here):**
+  - A sign-in with a second factor (`acr=mfa`) pays directly.
+  - A phone-code sign-in (single factor) must send `X-Step-Up`: a fresh proof (≤ 5 minutes, single use) from
+    northline-auth's step-up with the account's passkey or authenticator (`identity.api.SecondFactors`: `mfa_primary`
+    is `passkey` | `totp`).
+  - An account with neither gets 403 `second_factor_required` ("Add a passkey to pay: payments sit behind a second
+    factor."). It then enrols a passkey at checkout. The new `POST /auth/step-up/enrol/passkey/options` +
+    `/enrol/passkey` are allowed only within 15 minutes of sign-in, and they issue the proof along with the new
+    passkey.
+  - The step-up endpoints now accept any signed-in session, not just MFA ones, because that is what they are for.
+  - Browsing and the cart stay single-factor.
+- **Delivery options:**
+  - Pooled runs come from `DeliveryRuns` (S-49): the next two the whole cart can make. The slowest handling time
+    decides, and a line that can't go pooled rules pooled runs out.
+  - The direct courier is offered when everything can go the same day.
+  - The address's city must be a served market, and every shop must be in it ("{shop} doesn't deliver to {city}.").
+  - Addresses are `identity.addresses`, read and written through the new `identity.api.DeliveryAddresses`. A new one
+    is saved when the checkout starts.
+- **Tax:** `TaxCalculations.calculate` (S-21) runs once per order line (the shop sells) and once for the delivery fee
+  (Northline sells). The province and postal code come from the delivery address. The quote shows GST/HST per rate
+  as the design's "GST (5%)".
+- **Payments (S-11 escrow model, unchanged):**
+  - One manual-capture PaymentIntent per order line (`order_line`) and one for the delivery fee (`order_delivery`,
+    merchant `PaymentAuthorizations.PLATFORM = "northline"`). They share `transfer_group=order:<id>`.
+  - The consumer app mounts the Stripe Payment Element for the first PaymentIntent and confirms the others with the
+    same PaymentMethod. It does this only when the api says `provider: stripe` (a secret key is set:
+    `payments.api.PaymentSettings`, publishable key `STRIPE_PUBLISHABLE_KEY`, an existing variable). Otherwise it
+    shows the local fake: a simulated card form ("Test payments · nothing is charged") whose intents are
+    already `requires_capture`.
+  - `place` checks each PaymentIntent (`PaymentAuthorizations.authorized`: `requires_capture` for at least the amount
+    plus tax), then `EscrowLifecycle.hold` for each line. Card data never reaches Northline.
+- **Stock:** `POST /checkouts` takes stock with conditional decrements (`stock >= qty`) in one transaction. If any line
+  can't be taken, nothing is taken: 409 "Something in your cart just sold out…". The checkout holds stock and
+  PaymentIntents for 30 minutes. `CheckoutJobs` (every minute, not under `test`) abandons expired checkouts, gives the
+  stock back and cancels the PaymentIntents. A new checkout by the same person abandons their previous open one.
+- **Idempotency:** both POSTs require `Idempotency-Key` (422 "Idempotency-Key header is required." when it is
+  missing). A replay returns the stored answer with `Idempotent-Replayed: true`. A different body with the same key
+  gets 409 `idempotency_key_reused`. The store is `payments.api.IdempotentRequests`
+  (the S-11 request guard, now shared; `PaymentsIdempotency` delegates to it). The key also goes to Stripe
+  (`nl1:…` keys, folded with the client key).
+- **`order.placed`:** placing publishes `orders.api.OrderPlaced` **once per shop** with that shop's lines
+  (`@Externalized` to `orders.order`; schema `events/orders.order_placed.v1.schema.json`, checked by S-34). It carries
+  ids and amounts only. The customer id is in the internal event, like other orders events, and is never in the
+  partner payload. The S-33 webhooks consumer now subscribes to `orders.order` (`deploy/kafka/topics.yaml`) and maps
+  it to public `order.placed` (`docs/spec/webhooks/order.placed.v1.schema.json`), so `order.placed` leaves
+  `NOT_YET_PUBLISHED`. S-38's `SalesListener` counts sales from it at once.
+- **Order rows:** `orders.orders` gets `checkout_id` (unique) and `delivery_kind`, and one `order_lines` row per line
+  (state `pending`). The reference comes from `orders.order_ref_seq` (NL-50000…, clear of the seed's NL-481xx).
+  `orders.checkouts` holds the snapshot (ids, amounts, PaymentIntent ids; no personal data).
+- **Not done / gaps:**
+  - The delivery-fee PaymentIntent is authorized but **nothing captures it yet**. Capture happens on delivery, and
+    the delivery flow (courier, "delivered") is a later story. Until then it lapses after 7 days like any
+    uncaptured authorization.
+  - The "points" line and "Plus" prices are not shown (no loyalty ledger writer, no membership).
+  - Substitution preference is stored on the checkout, but nothing uses it yet.
+  - No receipt email is claimed on screen.
+  - Apple Pay / Google Pay are not enabled (cards only, stripe.md § 11).
+- **Never exercised against real Stripe (only the local fake gateway and stripe-mock-shaped unit tests):**
+  - the Payment Element mount;
+  - `confirmPayment` / `confirmCardPayment` of several PaymentIntents with one PaymentMethod, including
+    `setup_future_usage` on the first;
+  - 3-D Secure on the second and later PaymentIntents;
+  - Stripe Tax calculations for the delivery fee under the platform;
+  - canceling PaymentIntents when a checkout expires.
+- **Schema (V112, consumer range):** `orders.carts` timestamps + unique keys, `orders.cart_items`, `orders.checkouts`,
+  `orders.orders.checkout_id` / `delivery_kind`, `orders.order_ref_seq`; the `ref_type` checks of
+  `payments.payment_intents` and `payments.tax_calculations` widened to allow `order_delivery` (the delivery fee's
+  PaymentIntent and tax calculation, referenced by the order id).
+- **Tests:**
+  - `CartCheckoutApiTest` covers:
+    - the cart: guest keyed by header, validation messages, quantity changes, merge at sign-in, unavailable lines;
+    - checkout: setup (runs, direct, step-up need), GST on items and delivery, address/choice validation, phone-code
+      sign-in needs step-up;
+    - idempotency: key required, replay, conflicting body;
+    - placing: escrow held per line, `order.placed` per shop, cart emptied; an unauthorized payment doesn't place;
+      an abandoned checkout returns stock and can't be placed; empty cart;
+    - a stock race: two checkouts for the last unit, exactly one wins.
+  - `StepUpApiTest` (auth, 3 new): a phone-code session steps up with TOTP, and passkey enrolment issues the proof
+    and needs a recent sign-in.
+  - `WebhookPayloadsTest.orderPlaced_theShopsLinesWithoutTheCustomer`.
+  - vitest `features/cart/cart.test.tsx`: design copy, guest banner and sign-in, multi-shop groups, quantity and
+    remove, delivery windows, tax lines, step-up dialog, fake card, errors, French.
+
+## 2026-09-30 — S-52 Order confirmed and tracking (design 06 confirmed)
+
+- **Endpoints (orders, `/api/v1/me/orders`, single-factor sessions allowed):**
+  - `GET /{orderId}` returns the order (ref, state, totals), its delivery (the pooled run's label, window and
+    households, or the direct courier's estimated time), one entry per shop (name, items, packed) and the timeline.
+    It is `Cache-Control: no-store`. Anyone other than the order's customer gets 404, not 403, so order ids can't be
+    probed.
+  - `GET /{orderId}/events` is `text/event-stream`: an `order` event with the same JSON at once and again on every
+    change. It sends a keep-alive comment every 25 s and ends after 30 minutes (the browser's EventSource
+    reconnects). The ownership check runs before the stream opens.
+- **The timeline follows the order's state**, since there are no courier or fulfilment events yet:
+  - Paid → Shops packing (`placed` / `accepted` / `packing`) → Courier picks up (`ready`) → Delivered (`picked_up`
+    is current, `delivered` / `confirmed` is done).
+  - A cancelled or refunded order shows only Paid plus the state sentence.
+  - "N of M packed" counts the shops whose lines have all left `pending`, which is the Studio's "Mark packed"
+    (`POST /api/v1/merchants/{m}/orders/{o}/pack`).
+  - The design's copy ("Shops packing · 1 of 3 packed", "Courier picks up · scan at each shop", "Delivered · photo
+    proof · you confirm, shops paid") is used as it stands, even though courier scans and photo proof don't exist
+    yet. That is the flow the design describes, and the steps advance when the order's state does.
+- **Live updates:** `OrderTrackingEvents` turns every event that changes what the customer sees (`OrderPlaced`,
+  `OrderPacked`, kitchen accepted/ready, food handed off) into a "changed" on the new `TrackingBus`.
+  - Under `local` / `test` the bus is in memory.
+  - Everywhere else it is Redis pub/sub (channel `nl:order:<id>`, message = the order id, nothing stored; CLAUDE.md
+    names Redis for order tracking). Every replica wakes its own open streams, and each stream re-reads the order,
+    so a message carries no data. No new configuration is needed (the existing `REDIS_*` variables).
+  - The page also refetches every 30 s, in case a stream is dropped by a proxy.
+- **Screen (`/orders/$orderId`):** checkout lands here after placing.
+  - The title comes from the delivery: "Order placed. Arriving tonight 6–9 pm." / "… by about 7:10 pm". It then
+    becomes "On the way…" and "Delivered.".
+  - The subtitle is "{ref} · {total} · N shops packing now…".
+  - The run card ("Pooled run R-701 · leaves 6:00 pm", households) and View orders / Back to home.
+  - Signed out: "Sign in to see your order." with Sign in (next = this page). An unknown order: "We couldn't find
+    this order.". en + fr-CA.
+- **Not done / gaps:**
+  - The design's map is a placeholder panel (no courier positions exist).
+  - "Receipt sent to …" and points earned are not shown (no receipt email, no loyalty ledger).
+  - "View orders" links to `/account/orders` (S-58).
+  - SSE through the consumer-bff (Spring Cloud Gateway MVC relay) and the TanStack Start server hasn't been run end
+    to end here. The api's stream is tested with MockMvc. If a proxy buffers it, the 30-second refetch still keeps
+    the page current.
+- **Schema:** none (reads `orders.orders` / `order_lines` and `orders.delivery_windows` through `DeliveryRuns`).
+- **Tests:**
+  - `OrderTrackingApiTest` (own market "Trackville"):
+    - the view and its timeline;
+    - only the customer sees it (401 / 404 for others, stream included);
+    - the timeline follows the state through delivered;
+    - the stream sends the order at once and again when a shop packs.
+  - vitest `features/orders/orders.test.tsx`: design copy for pooled and direct, packed count and the run, live update
+    from the stream, sign-in prompt, not found, skeleton, error + Retry, French.
+
+## 2026-09-30 — Region-neutral by design (user direction)
+
+- Northline **starts** in Alberta (Calgary first) but is built for every province.
+- Code must not hardcode a province, city or time zone. That covers messages, defaults, holiday calendars, time zones, service zones and legal copy. All of it comes from the region configuration: the provinces (time zones, statutory holidays, tax, privacy law, registries, launch status) and the markets (city, province, time zone, zones, live flag).
+- A message that names a place takes it as a parameter ({province}, {city}), in English and French.
+- Province-specific integrations, such as the Alberta corporate registry or the City of Calgary licences, stay as adapters. They are selected by the business's province and city, never by default.
+- S-134 moves the existing literals into that configuration and adds a lint rule. Until it lands, new code must not add region literals.
+
+## 2026-09-30 — S-44 Search API: query, filters, geo sort, trust/distance boosts, completion suggester
+
+- **Module `search` (api), hexagonal like the others:** `domain` (`SearchQuery`, `SuggestQuery` with every rule checked at once, `Coordinates`, `Highlight`, codes `SearchKind`/`SearchSort`/`TrustTier`), `application` (use cases `SearchListings`, `SuggestListings`; ports `SearchIndex`, `SearchCache`, `SearchRateLimit`; `SearchService` with the hot-query cache), `integration` (`ElasticsearchSearchIndex`, `LocalSearchIndex`, Redis/memory caches, `SearchConfig`), `web` (`SearchController`, `SearchParams`, DTOs, MapStruct `SearchWebMapper`). It reads the read model through the shared `ListingDocument` contract and never writes to Elasticsearch (ARCHITECTURE). No SQL at all (S-37's rule holds trivially).
+- **Provider port as elsewhere:** `SEARCH_PROVIDER=elasticsearch` (default) | `local` = no index, empty results, the `local`/`test` profiles' default so the api still starts without Elasticsearch; `local` is refused under staging/prod at start-up. `SearchApiTest` switches to Elasticsearch in its own context.
+- **Query DSL as JSON** (Jackson `ObjectNode`, sent with `withJson`), read back through the typed client: easier to read next to `deploy/search/listings.json` than the builder API. **Match:** `best_fields` on name ×4, merchant and category names ×2, keywords ×1.5, description with every word required; plus `cross_fields` (words spread over name, merchant, categories, keywords; ×0.5) and a `bool_prefix` on `name.prefix` for words still being typed. **Relevance:** `function_score` = text × (tier 1.5 master / 1.2 trusted / 1.0 registered + log10(2 + rating) + up to 2 for nearness: Gauss on `location`, full within 1 km, half at 6 km, only for documents that have a location). Summed rather than multiplied so a good match farther away still ranks (multiplying by the decay zeroed everything beyond ~10 km). Ties: trust rank, then id.
+- **Filters** map the design's chips (design 06: shop "On tonight's run", "Under $10", "Master sellers", "Halal"/"Gluten-free"; providers "Master tier", "Instant book", "Available today", "Under 3 km", "Under $80"; food "Open now", "Halal", "Vegan", "Nut-free"): `kind` (the web's `scope`), `category` (any level, on `categoryPath`), `minPrice`/`maxPrice`, `minRating`, `tier`, `instantBook`, `openNow`, `delivery=tonight`, `dietary`, `allergenFree`, `lat`/`lng` + `radiusKm`. Time-dependent ones are evaluated at query time against Edmonton time: `openNow` = the minute of the week inside `openHours`, no pause in force, not sold out today; `delivery=tonight` = pooled, before `deliveryCutoffMinute`, in stock. Market, `vetting=approved`, `status=live`, `merchantStatus=active` are always filtered. "Available today" for services = `openNow` for now (next free slot needs the booking calendar). "Organic", "Family packs", "EV certified", "Free delivery (Plus)" have no data yet.
+- **Location:** `lat`/`lng` (the consumer shell's names; both or neither); `market` = province/territory code (default `SEARCH_DEFAULT_MARKET`) — the location pill knows the province; no polygon lookup exists (`region.zones` is empty). `distanceKm` on every result that has a location (haversine, one decimal); `sort=distance` leaves out results without a location (their sort value would be infinite and can't round-trip in `search_after`).
+- **Pages:** `search_after` on the sort values + `id` (no point-in-time: pages may shift when the index changes between them, acceptable for a marketplace list); the `next` token is `<sort>.<base64url JSON>` and is refused (422 on `after`) for another sort or when damaged. Facets (kinds, categories with the leaf name, merchants with names via `top_hits`, tiers, price buckets under_10/10_25/25_50/50_100/100_plus, dietary) on the first page only; they count the whole filtered result (not multi-select). `total` exact up to 10 000.
+- **Suggestions** from the S-42 completion fields (`suggest` with contexts market + kind, `suggestCategory` with market), `skip_duplicates`, categories keep at most two places; **highlight** computed in the api (`Highlight`: case- and accent-insensitive, one char per char so offsets line up, only at a word start) as UTF-16 offsets. Types: `service` | `product` | `food` | `merchant` | `category`. Recent searches stay client-side; synonym rows ("fr → sourdough") aren't suggestions.
+- **Hot-query cache 30 s** (backlog): Redis/Valkey `nl:search:<q|s>:<sha-256 of the canonical parameters>` outside `local`/`test` (memory there); best effort — a cache failure is logged and the index answers. `SEARCH_CACHE_TTL`.
+- **Rate limit:** anonymous callers are welcome, so every client address gets `SEARCH_RATE_LIMIT` (120) requests a minute per api instance (the fixed-window `WebhookRateLimiter` already used for webhooks), then 429 `rate_limited` + `Retry-After: 60`. The address is the right-most public `X-Forwarded-For` hop when the peer is internal (ingress, BFFs, the consumer SSR server), else the peer — the api otherwise sees only the BFF's address and one limit would throttle every consumer. Per instance, not shared through Redis: good enough to stop scraping; a shared limit is a follow-up if needed.
+- **Validation messages** are ours (search has no form in `validation-rules.md`), English like the other API messages until S-40: "Search for 100 characters or fewer.", "Choose a province: AB, BC, ON or QC.", "Choose service, product, food or merchant.", "Choose registered, trusted or master.", "Sort by relevance, distance, price_asc, price_desc or rating.", "Latitude must be between -90 and 90.", "Longitude must be between -180 and 180.", "Send both lat and lng, or neither.", "Choose a distance between 1 and 100 km.", "A distance filter needs your location (lat and lng).", "Sorting by distance needs your location (lat and lng).", "Prices can't be negative.", "The lowest price is above the highest.", "Choose a rating between 1 and 5.", "Ask for 1 to 50 results.", "Ask for 1 to 10 suggestions.", "This page link no longer works. Start the search again.", "Type at least one letter.", "Use delivery=tonight or leave it out.".
+- **Contract** for the consumer web in `docs/CONSUMER_WEB_PLAN.md` § Contracts › Search (S-45's list of contracts; the search runbook links it), with the mapping of the web's `scope` and the design's chips to parameters, and the "exists" row in its public API table. OpenAPI: springdoc from `@Tag`/`@Operation`/`@Parameter` on the controller and `@ParameterObject SearchParams` (`/v3/api-docs`, tag *Search*).
+- **Region-neutral** (DECISIONS "Region-neutral by design"): the markets search serves and each one's time zone are configuration, `SEARCH_MARKETS` (`CODE=Zone/Id,…`; default `AB=America/Edmonton,BC=America/Vancouver,ON=America/Toronto,QC=America/Toronto`), not code. "Now" for open-now, the same-day cut-off and "sold out today" is taken in the requested market's zone (the index keeps local times). A malformed code → 422 `format`; a well-formed one not configured → 422 `unsupported` ("Search isn't available in {market} yet."); `SEARCH_DEFAULT_MARKET` blank = requests must name a market, and it must be one of `SEARCH_MARKETS` (checked at start). S-134 moves both into the region configuration.
+- **Variables (api):** `SEARCH_PROVIDER`, `SEARCH_MARKETS`, `SEARCH_DEFAULT_MARKET`, `SEARCH_CACHE_TTL`, `SEARCH_RATE_LIMIT` (all optional) — README, dev/staging/prod tables, `.env.example`.
+- **Tests:** `SearchApiTest` (Elasticsearch 9.1 in Testcontainers with the deploy/search layout, documents built with the shared `ListingDocument`, a fixed clock — Wednesday 12:00 in Edmonton, anonymous requests): text ranked by tier and rating, market isolation; `lang` and `Accept-Language` pick the index, French synonyms and accents; the card fields; open now vs sold out vs paused, weekly hours; tonight's run, dietary, allergens, price, rating, tier, instant book, category at any level; distances, distance sort, radius; nearness and tier boosts; `search_after` pages cover everything once in order (unpriced last); facets on the first page only; suggestions with highlights (products, category, merchant, French, kind context); every validation message; the rate limit per address including `X-Forwarded-For` behind a proxy and a spoofed left entry; the 30 s cache; the OpenAPI description; p95 < 150 ms over 60 uncached queries. `SearchLocalProviderTest`: empty results and the rules with `local`, highlight folding.
+- **Not done / never run for real:** nothing has run against Elastic Cloud; "Your recent" searches (client side); next free slot for services; image URLs (`imageKey` is opaque until a public media URL exists); multi-select facets; a shared (Redis) rate limit.
+
+## 2026-09-30 — S-71 Full reindex job and backfill from Postgres
+
+- **Blue/green by alias, fed from Postgres, caught up from Kafka** (`SearchReindex`, worker): note the end offsets of the `search-indexer` topics → create `listings_<lang>_v<schema>_<now>` beside the live indices (refresh off, no replica, `auto_expand_replicas` off while loading) → backfill every merchant through the live indexer's own `SearchProjection` → catch up the events published since the start, pass after pass until a pass applies nothing → restore the layout's refresh/replica settings, refresh, wait for yellow → **swap both aliases in one `_aliases` request** → catch up once more and re-read merchants changed since the start without an event (what the reconcile sweep wrote to the old index meanwhile) → delete the old indices (`--keep-old` keeps them). Readers never see a missing or partial index; the live indexer, the sweep and the API keep running.
+- **Why the extra passes are safe:** every write goes through the per-merchant advisory lock and the Postgres-clock versions of S-43, so the catch-up and the live indexer can apply the same event in any order (an older snapshot is refused, a 409 is `stale`, not an error). Events are only a list of scopes to re-read; the catch-up reads the main topics (retries and DLQs repeat those records) with a group-less consumer that commits nothing.
+- **One run at a time:** a Postgres *session* advisory lock (`search-reindex`) held on a dedicated connection for the whole run; a second run fails at once (exit 2). **Failure before the swap** deletes the new indices and leaves the aliases untouched (exit 1); after the swap the new indices are live and the indexer keeps them current.
+- **Index names** bump a second when the timestamped name is taken. Old indices of earlier failed runs aren't touched by name guessing: only the indices the aliases pointed at are deleted.
+- **Where it runs:** `SearchReindexCommand` (worker image, the worker's `DB_*`/`KAFKA_*`/`ES_*`), Gradle `:worker:searchReindex`, and a Helm one-off Job `northline-search-reindex-<runId>` rendered only while `searchReindex.runId` is set (a DNS label; the chart refuses others), `backoffLimit: 0`, 2 h deadline, Argo CD `Prune=false,Replace=false` so a later sync never kills a running rebuild. Not a deploy hook: a rebuild is an operator's decision (the search-indices Job only says `REINDEX REQUIRED`). `validate.sh` checks it renders only with a run id.
+- **Library additions** (`ListingIndices`): `putSettings`, `refreshAndWait`, atomic `swap`, `delete` (listings indices only), `count`.
+- **No migration.**
+- **Tests:** `SearchReindexTest` on Kafka 4 + PostGIS + Elasticsearch 9 with the whole worker running: a listing indexed live, a ghost document Postgres doesn't have, a live listing whose event was lost; during the backfill a new listing is published (the live indexer writes the old index) — after the run the alias points at a new versioned index with the layout's `_meta`, the old index is gone, the ghost is gone, the lost and the late listings are there, searches answered the kept listing at every phase, and the live indexer keeps writing through the alias. A second concurrent run is refused; a failure after the backfill deletes the half-built indices and leaves the live alias as it was; `--keep-old` keeps the previous indices.
+- **Not done / never run for real:** nothing has run against Elastic Cloud; no throttling of the backfill (Elasticsearch bulk per merchant; add one if a large catalogue loads a small cluster); a scheduled periodic rebuild (on demand only).
+
+## 2026-09-30 — S-47 Location screen with Google Places autocomplete (Canada) and market/zone resolution
+
+Built on S-45's shell and location pill (docs/CONSUMER_WEB_PLAN.md § Location).
+
+- **Port `region.application.PlacesAutocomplete`** (autocomplete, place details, reverse geocoding), chosen by
+  `northline.places.provider` (`PLACES_PROVIDER`): `local` (default; `FakePlaces`, fixture addresses read from
+  `places-fixtures/addresses.json` — design 06's "1204 17 …" suggestions, one per dev-seed market and a few outside them;
+  refused under staging/prod) or `google` (`GooglePlaces`: **Places API (New)** autocomplete + details and the **Geocoding API** for
+  reverse, key `GOOGLE_MAPS_API_KEY`, required with `google`). The browser never sees the key: it calls
+  `/api/v1/geo/*` through the consumer-bff. **Never run against Google** (no account) — WireMock tests only.
+- **Google usage:** Canada only (`includedRegionCodes: ["ca"]`), address types only (`street_address`, `premise`,
+  `subpremise`, `route`), 50 km location bias around the visitor when known, the browser's **session token** on every
+  suggestion and on the details call (one billed session per search), nothing below 3 characters, a 250 ms debounce,
+  3 s time-outs and no retries (a late suggestion is useless) → 503 `places_unavailable`. The Geocoding API takes the
+  key only as a query parameter, so its errors are rethrown without the request (the URI would put the key in logs).
+  Nothing Google returns is stored.
+- **Abuse limit:** address lookups cost money, so each browsing session (the consumer-bff's `X-Northline-Guest`), else
+  the caller's address, gets `PLACES_RATE_LIMIT` (60) lookups a minute per api instance → 429 `rate_limited`
+  (the shared `WebhookRateLimiter`, in memory). Markets and resolve aren't limited (no Google call).
+- **Region-neutral markets (DECISIONS "Region-neutral by design"; no city, province or zone in code).** Which
+  provinces are served is **configuration we already have**: `SEARCH_MARKETS` / `SEARCH_DEFAULT_MARKET` (S-44), read
+  through a new shared `region.api.Markets` (`region.config.MarketSettings`; the same parsing and start-up checks as
+  search; S-46 uses it for kitchen hours). A province listed there is `live` whatever its row says; the others keep
+  their row's stage (`off`, `waitlist`, `pilot`). City markets and their delivery zones are **region data**, not code
+  or migrations: operations add them (SQL until the console's Regions screen; S-134 brings the region configuration).
+- **Schema (V117, additive):** `region.regions` holds provinces **and** their city markets (`kind`, `parent_id`,
+  `city`, `center geography(Point)`, `radius_km`, `sort`; unique province rows); a market covers addresses within
+  `radius_km` of its centre and the nearest covering centre wins (a satellite town next to a large city). The migration
+  only lists Canada's 13 provinces and territories (names en/fr, all `off`). `region.zones` got `sort`, a name CHECK and
+  a GiST index. New `region.waitlist` (region, user id or a guest's own email, language; one entry per person and
+  region).
+- **Local dev seed `db/seed-dev/V119__dev_markets.sql`** (profile `local` only, like the personas): design 06's
+  Location examples — markets live / pilot / waitlist with approximate neighbourhood zones priced as the design ("3
+  pooled runs / day", $4.99, free with Plus, $35 minimum), one pilot and two waitlist provinces. `GeoApiTest` loads the
+  same file.
+- **`GET /markets`** answers `{items, fallback}`: provinces shown = served ones first (configuration order), then any
+  other with a stage or a market; each with `taxBps` (sales tax on goods from `region.api.TaxRates`, shown as "Sales
+  tax {rate}%") and its markets (with centre `lat`/`lng`). `fallback` = the first live market of the default market's
+  province (else of any served province) — the pill's "nowhere known" place, replacing S-45's hardcoded list
+  (`features/location/markets.ts` is deleted). With none configured the pill says "Set location".
+- **Resolution** (`resolution: {market, zone, waitlist}`): the covering market (any stage); its zone when the market is
+  live or pilot; the waitlist ("An address outside a live market joins the waitlist for its nearest one") = the
+  covering market when it isn't live, else the province's nearest market, else the province (Toronto → Ontario). Pilot
+  = invite only, so a pilot address also gets the waitlist (with the pilot wording) and can't be saved.
+- **Endpoints** (`/api/v1/geo/**`, already public; guests allowed): `GET /markets` (cached 5 min), `GET /autocomplete`,
+  `GET /places/{placeId}`, `GET /reverse` (S-45's missing endpoint), `GET /resolve`, `POST /waitlist` (201 joined, 200
+  already listed; signed in → user id, guest → email required; a live market → 409 `region_live`; a served province can still be joined for an address outside its markets).
+- **Pill contract (additive):** `/reverse` answers `{label, city, province?, market?, zone?}`; the pill treats a `market`
+  that is null or not live/pilot as "outside every market" (the api's fallback market), and an unreachable `/reverse`
+  the same (S-45's client-side nearest-market guess is gone with its hardcoded list), and remembers province,
+  market and zone with the detected place. `SavedLocation` gained `street`, `unit`, `province`, `postalCode`,
+  `marketId`, `zoneId`, `zone` (all optional; older saved values still parse). Label: "{neighbourhood}, {city}" = the
+  provider's neighbourhood, else the zone, then the market's city; a saved address shows "{street}, {city}".
+- **Screen details the design leaves open:** the province buttons come from `/markets`, in its order — "Live · {first two
+  live markets}" reproduces the design's note. The design's hardcoded paragraph ("In Alberta: … are live; … pilot; …
+  waitlist") is built from the chosen province's markets ("Live in {province}: {cities}. Pilot: … Waitlist: …"). Choosing a province only sets what's highlighted; the picked address's province
+  wins. The address field is an ARIA combobox (↑/↓/Enter/Esc). The prototype's technical footer ("Google Places
+  Autocomplete · restricted to CA · session token") isn't shown; "powered by Google" is (Google's terms). The parts
+  row (Street, City, Province, Postal, Place ID) and the tags (Market · city · stage, Zone, pooled runs, tax) appear once
+  an address is chosen; the tax tag is the province's total rate ("Sales tax 5%"; the design's per-tax names like "GST 5% + PST 7%"
+  would need tax components per province, which `TaxRates` doesn't expose). "Save and continue" without a chosen address → "Choose your address from the list."
+  (ours). `?next=` returns there after saving (checkout's "Change"). The address stays in this browser only
+  (`localStorage`); account addresses are S-59's.
+- **Messages** (server `region.domain.GeoMessages`, English; web en + fr-CA): "At most 200 characters.", "Start the
+  address search again." (bad session token), "Choose an address in Canada.", "Choose where you'd like Northline.",
+  and validation-rules.md's "Email is required." / "That doesn't look like an email address.".
+- **Configuration:** `PLACES_PROVIDER`, `GOOGLE_MAPS_API_KEY` (secret `google-maps-api-key`: Terraform `secret_env` on
+  AWS, Google Cloud and Azure; chart `secretNames`, `apps.api.secretEnv`, required in values-staging/prod with
+  `PLACES_PROVIDER: google`), `PLACES_RATE_LIMIT`; required-env lists of staging/prod; runbooks README, local, dev,
+  staging, prod, secrets, infrastructure; new runbook `docs/runbooks/google-maps.md`; `server/.env.example`.
+- **Not done / never exercised:** no call to Google has ever been made (the adapter follows Google's documentation;
+  field names of Places API (New) — `placePrediction.structuredFormat`, `addressComponents[].longText/shortText` — are
+  unverified live); the zones are approximate boxes; no console screen for markets/zones/waitlist; waitlist emails
+  aren't sent when a market opens (no job yet); the rate limit is per api instance.
+
+## 2026-09-30 — S-57 Food: landing, restaurant menu, food checkout (delivery or pickup) and tracking
+
+Stacked on S-46 (#66, kitchen availability, `PublicDirectory`), S-47 (#67, location, `region.api.Markets`) and S-51
+(merged: step-up rule, `IdempotentRequests`, `order.placed`).
+
+- **Food cart is separate from the shop cart** (the story asks to record it): one kitchen at a time, kept in the
+  browser (`localStorage['nl.foodCart']`, `features/food/foodCart.ts`), priced again by the server at checkout. A food
+  order goes to one kitchen by direct courier or pickup and must never join a pooled goods run, so it can't share S-51's
+  multi-shop, window-based cart. Adding from another kitchen asks first ("Start a new order?").
+- **Region-neutral:** a kitchen's hours, item windows, combo windows, "sold out today" and scheduled windows are read in
+  the time zone of **its market** (`region.api.Markets.zone(province)`, i.e. `SEARCH_MARKETS`); the restaurant's tax
+  estimate uses its province's rate (`TaxRates`, `taxBps` in the api); the pickup place of supply is the kitchen's
+  province, else the default market's — no province, city or zone in code or messages.
+- **Landing** `GET /api/v1/public/kitchens?city=&lat=&lng=` (public, 30 s cache): the city's active kitchens with open
+  state (S-46's `KitchenAvailability`: hours, holidays, pause, **auto-pause**), next opening, fulfilment, prep, ETA
+  (prep + ride: 3 min/km + 5, 10 when the distance is unknown; range +10), pickup ready time, distance (haversine from
+  `merchants.locations`), `delivers` (courier and within the kitchen's radius, else the location's service radius, else
+  8 km), delivery fee, price level ($ < $12 average dish, $$ < $25, $$$), rating. Open first, then nearest. Filters
+  (open now, under 30 min, halal, vegan, $, nut-free) and cuisines are applied in the browser; "Family packs" and
+  "Free delivery (Plus)" have no data and aren't shown.
+- **Restaurant** `GET /api/v1/public/kitchens/{slug}` (SSR, SEO): live menus' sections with published, approved dishes,
+  their modifier groups with the Studio's pick rules (exactly / at least / up to N, required, nested groups shown for an
+  option, sold-out options), dish windows (always, lunch 11–2, after 5, weekends) and menu schedules (open hours, a
+  window, by quote = never orderable here), live/scheduled combos with their slots, the AHS permit state, $15 minimum,
+  8 % service fee, `taxBps`, and 30-minute scheduled windows (today and tomorrow within the kitchen's "scheduled days",
+  ≥ 45 min + prep ahead, whole window inside the hours).
+- **Fees (ours, the spec has no numbers beyond the design):** delivery $1.99 ≤ 1 km, $2.99 ≤ 2 km, $3.99 ≤ 4 km, then
+  +$1 per 2 km ($2.99 when the distance is unknown); service fee 8 % of the dishes; tips No tip · $2 · $4 · 15 % · $6
+  (up to $100 or 30 %); 100 % of the tip goes to the courier. Pickup: no delivery fee, no tip.
+- **Checkout** (`/api/v1/me/food-orders`, signed in only): `POST /quote` (tax estimated from the province's rates),
+  `POST /` (Idempotency-Key, X-Step-Up — **S-51's rule unchanged**: a phone-code-only session confirms its passkey or
+  authenticator first → 403 `step_up_required`, or `second_factor_required` without one; the web reuses S-51's
+  `StepUpDialog` and Payment Element), `POST /{id}/confirm` (Idempotency-Key), `GET /{id}` (tracking). Validation and
+  conflict messages: "Pick 1 for Size." (and at least / up to), "Choose each option once.", "That choice isn't on this
+  dish any more. Open it again.", "{dish} is sold out.", "Add $x.xx to reach the $15 minimum.", "Add your delivery
+  address first.", "Choose delivery or pickup.", "Choose one of the windows offered.", "Choose a tip between $0 and
+  $100, or up to 30 %.", "Choose how to hand it over.", "Choose from the extras offered.", 409 `kitchen_closed` /
+  `out_of_range` / `no_delivery` / `no_pickup` / `checkout_closed`.
+- **Payment = S-11 escrow, one PaymentIntent per food order** (`ref_type = 'food_order'`, manual capture). Unlike S-51
+  (one intent per line + an uncaptured delivery-fee intent), a food order has one kitchen and one courier, so the intent
+  carries the dishes + their tax (the kitchen's escrow) **plus Northline's own charges**: delivery + service fee, their
+  GST/HST and the tip. Additive in payments: `PaymentAuthorizations.Request.platformCents`, `EscrowLifecycle.Hold.platform`
+  (`PlatformCharges(feeCents, feeTaxCents, tipCents)`, old constructors kept), `payments.escrows.platform_fee_cents /
+  platform_tax_cents / tip_cents` (V118); at capture the ledger credits the fee to revenue, the fees' tax to tax
+  payable and the tip to a new `courier_tips` account. The hold is accepted only once the card is authorized; it is
+  **released on hand-off** (`order.handed_off` → `KitchenEscrowRelease` now also releases `food_order` escrows).
+  Finance should review this split.
+- **`order.placed` is S-51's event**, not a second one: published once per food order with `orderType = "food"`,
+  `delivery = "direct"` (hot courier) or `"pickup"`, no window. Additive: `Line.itemKind` (`offer` | `menu_item` |
+  `combo`; S-51's 5-argument constructor defaults to `offer`) and the optional `itemKind` in
+  `orders.order_placed.v1.schema.json`. No PII in the payload.
+- **Schema V118 (orders, payments):** sequence `orders.food_order_numbers` (refs `FD-10000…`, like the kitchen display's food refs), `orders.food_checkouts`
+  (the pending checkout: kitchen, mode, schedule, `customer_eta` for pickup, ETA range, priced lines jsonb, every
+  amount with a sum check, province, tax calculation, PaymentIntent, delivery jsonb — address, drop-off, note, extras),
+  the three escrow columns, `food_order` added to the `ref_type` checks of `payments.escrows`, `payments.payment_intents` and
+  `payments.tax_calculations` (each check dropped and re-created wider — a relaxation, nothing existing changes). Placing writes `orders.orders` (`type = 'food'`) and `orders.order_lines` (menu item or
+  combo, title, the choices + note as the kitchen display's modifiers), so the order reaches S-38's kitchen display as
+  before. V118 sorts before S-43's V120 (Flyway's out-of-order setting already covers the ranges).
+- **Tracking** follows the kitchen display: paid (not accepted) → cooking (`order.accepted`) → ready (`order.ready`)
+  → on the way / picked up (`order.handed_off`) → delivered. ETA = ready-by + the ride (delivery) or ready-by (pickup),
+  else placed + the quoted range. The web polls every 15 s; S-52's order SSE stream can replace the polling later.
+- **Not done:** group orders; live courier positions (S-52's map); "Family packs" / "Free delivery (Plus)" filters;
+  Plus pricing ($0 service fee) — no membership read yet; loyalty points on food. The checkout's pay note reads "The
+  kitchen is paid once your order is handed off; until then the money is held in escrow." instead of the design's
+  wording (escrow on hand-off is the story's rule).
+- **Never run against the real service:** Stripe (PaymentIntent with platform charges, capture, the Payment Element)
+  ran only against the local fake gateway; nothing here calls Google.
+
+## 2026-10-01 — Error Prone warnings to zero
+
+- **Count:** a clean `compileJava compileTestJava --rerun-tasks` of every module went from **102 Error Prone warnings** (plus 2 javac varargs warnings) to **0**. 91 were in `:api`; the rest were in the worker tests (9), `:sms` (1, `DoNotCallSuggester`) and `:search-index` (1, `InvalidParam`). auth, bff, platform, email and event-contracts had none. Merging the latest main (S-47, S-57 and others) brought 9 more (food, discovery, region), fixed the same way. Each one was fixed in the code; no new suppression was added.
+- **`byte[]` in records → `ca.northline.shared.Bytes`** (11 records: uploads, stored objects, photos, evidence). It's an immutable wrapper that copies on the way in and out, compares by content, and whose `toString` shows only the size (Lombok-generated). We chose it over hand-written `equals`/`hashCode`/`toString` in every record because the code standards forbid that boilerplate. The ports (`ObjectStore.put`, the per-module storage ports) still take and return `byte[]`; the copies are acceptable at upload sizes of a few MB. The four records that already had a narrow `@SuppressWarnings("ArrayRecordComponent")` (`SecretSealer.Sealed`, `KeyWrapper.Wrapped`, the worker's `WebhookStore.Target`, `CommerceCatalogSource.WebhookRequest`) are unchanged: they hold key material and raw signed bodies that are never compared or logged, and the worker cannot see the api's `shared` package.
+- **Request records:** a component that Bean Validation requires (`@NotNull`) is now non-null for NullAway and has no `@Nullable` next to it (`PayoutRequests`, `CaseRequests.GoodwillOffer`). The 422 messages and their tests are unchanged, because a missing field still binds to `null` and `@Valid` rejects it before the handler runs. The convention is in BACKEND_CONVENTIONS § 5.
+- **Nested types with the same name** (`Command`, `Outcome`) are qualified where they are used, not renamed. Durations are now `ofDays(2)` / `ofDays(3)`; a `Duration` day is exactly 24 h, so behaviour is unchanged. Weekly earnings buckets use an `EnumMap` instead of `ordinal()`. The SMS `azure` provider returns its "not implemented" exception from the switch instead of a public method that always throws.
+- **Proposal, not enabled:** once the in-flight feature branches have merged, make Error Prone warnings errors: add `-Werror` to the `JavaCompile` compiler args in `server/build.gradle.kts`, keeping `disableWarningsInGeneratedCode` and the excluded generated paths. javac then fails on any warning, Error Prone's included; the javac varargs warnings are fixed here too. Then a new warning fails `./gradlew build` instead of piling up. It is not switched on in this change because open branches would stop compiling. Until then: keep the count at 0 (BACKEND_CONVENTIONS § 10).
+
+## 2026-10-01 — S-125 OpenAPI 3.1 for every HTTP service, with Swagger UI, Scalar and Redoc
+
+Runbook: [docs/runbooks/api-docs.md](runbooks/api-docs.md). Stacked on S-124 (Makefiles, merged as #59).
+
+- **A shared library `server/openapi`** (like `platform`, `email`) used by the api, northline-auth and the BFF, not by
+  the worker:
+  - springdoc 3.1.1 with its UI starter and, as the user asked, **springdoc's own Scalar starter**
+    (`springdoc-openapi-starter-webmvc-scalar`, which brings `com.scalar.maven:scalar-webmvc` 0.5.55);
+  - the Redoc page; the shared conventions and security schemes; the docs-path CSP;
+  - the `OpenApiSnapshot` test fixture.
+
+  It is auto-configured and off with `northline.docs.enabled=false`. Versions checked on 2026-09-30: springdoc 3.1.1
+  is the latest release, and Redoc 2.5.4 is the latest on npm.
+- **Redoc is self-hosted from the npm tarball** with a pinned version and the registry's sha512 integrity, as in samop
+  (Maven there, Gradle here). The webjar stops at 2.5.0, and a CDN would need the CSP to allow another origin. The
+  page has no inline script: `redoc-init.js` reads the group from `?group=`. The pages are WebMvc.fn routes rather than
+  a `@Controller`, because the api component-scans `ca.northline.**` and would register an annotated controller twice.
+- **Scalar shows every group on one page.** springdoc's Scalar controller turns the groups into Scalar *sources*, with
+  a switcher. There is no per-group Scalar URL, so the landing page links Scalar once per service.
+- **Groups per audience.** The api has `public` (public reads + the signed-in customer, incl. `/me/**`, `/cart/**`),
+  `studio`, `partner`, `console`, `webhooks` and `internal`:
+  - `partner` is a method filter on `@PartnerAccess`, with the annotation's scope as the operation's security, so the
+    partner document can never list an endpoint partners can't call.
+  - `webhooks` is S-33's JSON Schemas (`docs/spec/webhooks`, already on the api classpath) as OpenAPI 3.1 `webhooks`,
+    used verbatim (`$schema` / `$id` dropped). The reference is the same contract the worker validates deliveries
+    against; it includes `order.placed` from main.
+  - A test fails when an `/api/**` path is in no group.
+
+  northline-auth has `public` (the OAuth 2.1 / OIDC endpoints, described by hand because Spring Authorization Server
+  serves them from filters) and `internal` (the `/api/auth/**` JSON API). The BFF has one `internal` document per
+  profile (studio-bff, consumer-bff), and `/bff/logout` is described by hand because it is a filter. The worker has no
+  HTTP API besides actuator, so it has no document.
+- **Global `springdoc.paths-to-match` removed from the api.** springdoc ORs it with each group's `pathsToMatch`, so
+  every group got every path. Groups don't share an `OpenAPI` bean either: springdoc reuses and mutates one for every
+  group, so each group starts with its own `ApiDocs.base(props)` customizer and ends with `ApiDocs.conventions()`.
+- **Conventions instead of annotations on ~200 handlers:**
+  - `*Id` path parameters → `Ulid`;
+  - writes with a body → `422 ValidationErrors` (with the validation-rules example);
+  - secured operations → `401`/`403 Problem` (RFC 9457 with `code`);
+  - parameterised paths → `404`;
+  - `*Cents` → int64 cents of CAD.
+
+  `override-with-generic-response=false` keeps springdoc from attaching every `@ExceptionHandler` response to every
+  operation. Unused shared schemas and security schemes are pruned per document. Operation ids are
+  `<controller><Method>`, so adding a `list` method elsewhere doesn't renumber `list_5` in every spec.
+- **Security schemes:**
+  - `bffSession` (cookie) + `csrf` (`X-XSRF-TOKEN`);
+  - `oauth2`: authorization code + PKCE, with the auth issuer's URLs;
+  - `dpop`: `http` scheme `DPoP`, plus `dpopProof` for the `DPoP` header (RFC 9449, S-29);
+  - `partnerClientCredentials`: OAuth 2 client credentials with `x-token-endpoint-auth-methods: [private_key_jwt]`
+    and the S-30 assertion rules in the description;
+  - `authSession`: northline-auth's cookie;
+  - `webhookSignature`: S-33.
+
+  Public reads carry `security: []`.
+- **Generated at build time and committed, with a drift check.** Each app's `OpenApiSpecsTest` boots the application
+  context and fetches `<api-docs>.yaml/<group>`:
+  - the api uses its own test class; auth uses its own; the BFF tests are added to `BffSessionTest` /
+    `ConsumerBffTest`, so no extra Spring context;
+  - `-Popenapi.write=true` (`make openapi`) writes `docs/api/openapi/<service>-<group>.yaml`;
+  - otherwise the test compares, so `./gradlew build` fails on a difference.
+
+  Output is stable thanks to `writer-with-order-by-keys` and fixed `servers`/issuer pinned in each
+  `application-test.yml`. YAML only: it is easier to review in diffs than JSON, and JSON is one URL away. The
+  springdoc Gradle plugin was not used: it needs a running app with all its stand-ins and doesn't fit
+  `./gradlew build`.
+- **Lint: Redocly CLI 2.57.0 with a root `redocly.yaml`** (samop's tool and layout), run through `pnpm dlx`, pinned in
+  `make/docs.mk`, with no lockfile change. `recommended`, with `security-defined` as an error. Currently 0 errors and
+  17 warnings: public GETs without a 4xx, and redirects without a 2xx. Manual CI: GitHub `openapi.yml`
+  (lint + check) and GitLab `openapi:lint` (new `PIPELINE_PART=openapi`, also in `all`).
+- **Where the viewers run (S-17 routes, S-20 CSP).** auth and the BFFs answer with `default-src 'none'`.
+  - **CSP:** instead of relaxing it, or serving everything from the api only (the api host isn't routed for browsers
+    beyond `/api/v1`), the viewer paths get their own filter chain (order 0). Its narrow CSP allows `'self'` scripts
+    and styles (+ `'unsafe-inline'` for Swagger UI's and Scalar's initialisers), `connect-src 'self' <issuer>`,
+    `frame-ancestors 'none'`. Every other path keeps `default-src 'none'`, and the tests check both.
+  - **Routes:** auth's host already routes everything. The BFFs serve their documentation under `/bff` (`/bff/docs`,
+    `/bff/swagger-ui.html`, `/bff/docs/scalar`, `/bff/v3/api-docs`), the prefix the edge already sends them. The api
+    host gets `/docs`, `/swagger-ui(.html)` and `/v3/api-docs` through the new chart value `apps.api.docsRoutes`
+    (true in `values-dev.yaml` / `values-staging.yaml`, false by default). The chart refuses it in prod, and
+    `validate.sh` checks the refusal.
+- **Prod exposes nothing:** all three `application-prod.yml` turn off springdoc, Swagger UI, Scalar and
+  `northline.docs` (and with it the pages and the CSP chain), and each app's test asserts it. The public, partner and
+  webhook references reach production through the docs site (S-126), from the committed files.
+- **No new environment variable or secret, and no schema change.** `northline.docs.*` reads the existing
+  `AUTH_ISSUER`, `API_PUBLIC_URL` and `AUTH_PUBLIC_URL`.
+- **Not done:**
+  - per-operation `@Operation` summaries and response examples beyond the conventions (descriptions come from the
+    group texts);
+  - Scalar's and Swagger UI's "Authorize" against a real northline-auth: no docs OAuth client is registered, so
+    "Try it" uses pasted tokens. A public `docs` client with the viewers' redirect URIs is follow-up work.
+  - the viewers were checked by status and content in MockMvc, not clicked through in a browser;
+- **Found, not fixed: a JDK HttpClient race in the gateway relay (bff).**
+  - **Symptom:** `ConsumerBffTest`'s relay tests fail intermittently with an NPE in `Http1Exchange.requestMoreBody`
+    (the body subscriber is not set yet when Spring's empty `OutputStreamPublisher` completes).
+  - **When:** whenever an OpenAPI document had been generated in the same Spring context first, and more often when
+    Swagger UI's webjar files had been served in the JVM. Main is stable: 4 of 4 runs passed. This branch failed 4 of
+    6 runs before the change below.
+  - **Mitigation:** the consumer-bff spec is checked in its own context (`ConsumerBffOpenApiTest`), and the BFF test
+    checks Swagger UI through its redirect and `swagger-config` instead of the webjar files. Since then the suite
+    passes (3 of 3).
+  - **Production:** never affected, because springdoc is off in prod.
+  - **Follow-up for the lead:** dev/staging could hit the race after someone opens `/bff/docs`. Candidate fixes are a
+    gateway MVC `ClientHttpRequestFactory` without a body for GET, or the JDK fix.
+
+## 2026-10-01 — S-126 Docusaurus documentation site (docs., en/fr)
+
+Runbook: [docs/runbooks/docs-site.md](runbooks/docs-site.md). Stacked on S-125 (#74), whose committed specs it renders.
+
+- **`web/apps/docs`, Docusaurus 3.10.2**, in the pnpm workspace (`@northline/docs`). Versions checked on 2026-09-30:
+  - redocusaurus 2.5.2 for the Redoc view;
+  - `@scalar/docusaurus` 0.8.46 for the Scalar view;
+  - `@easyops-cn/docusaurus-search-local` 0.55.3, a local index with no Algolia account.
+- **docs/ is rendered where it is committed, nothing is copied.** The repository's docs are a named docs-plugin
+  instance (`repo`, `path: ../../../docs`) with `include`/`exclude` globs:
+  - no `spec/`;
+  - no `api/` (rendered as the API reference instead);
+  - no backlog CSV;
+  - no agents' workstream brief.
+
+  `markdown.format: 'detect'` keeps `.md` files CommonMark, so no existing page needed MDX escaping. The site's own
+  guides are the default instance, so the theme and search always have one, whatever the variant. The only copies
+  are build artefacts: the variant's specs in `static/openapi` (Scalar and the download links fetch them) and
+  Scalar's standalone bundle.
+- **Two builds instead of an edge-protected section: `public` and `internal`** (`NORTHLINE_DOCS_VARIANT`,
+  `src/content.ts`).
+  - The public build physically lacks the internal pages and specs, so a routing or edge mistake can't expose them.
+    The page check fails the build if one appears.
+  - `docs` (public) runs on `docs.<zone>` in every environment. `docs-internal` runs on `internal-docs.<zone>` only
+    when enabled, behind an **IP allowlist** (an Envoy Gateway `SecurityPolicy`, `edge.docsInternal.allowedCIDRs`).
+    The chart refuses it outside `local` without CIDRs or without the Envoy edge, and `validate.sh` checks both the
+    render and the refusal.
+  - SSO through northline-auth (`SecurityPolicy` `oidc` with a `docs` client) is the planned upgrade. It is not built
+    because it needs an OAuth client registration and a session at the edge, which is more than this story.
+  - Off by default in every environment: enabling it needs the operators' CIDRs.
+- **Redoc and Scalar for every spec.**
+  - Redoc pages come from redocusaurus. Its bundled Redoc 2.4 differs from the server's self-hosted 2.5.4, which is
+    acceptable.
+  - Scalar pages come from `@scalar/docusaurus`. The plugin loads the *unpinned latest* `@scalar/api-reference` from
+    jsDelivr by default; the site serves the pinned 1.72.3 standalone bundle itself (`cdn` option), with telemetry,
+    the hosted "Ask AI" agent and the "Generate SDKs" toolbar off. No page loads anything from another origin.
+  - The API reference page links to the services' own Swagger UI / Scalar / Redoc in dev and staging through
+    `/config.js` (`NL_DOCS_SWAGGER`, derived by the chart; empty in prod), following the Studio's runtime-config
+    pattern (S-14).
+- **i18n en + fr:**
+  - UI chrome is translated (`i18n/fr`; the theme and search ship their own French);
+  - the guides have French pages;
+  - the repository docs are English, and the French site falls back to them, as the story allows.
+
+  The Northline tokens theme Infima through `@northline/tokens/tokens.css` and `color-mix`, with no new hex in
+  components. The hex-colour lint now also scans `apps/docs/src`.
+- **The AI section.** `docs/ai/README.md` is a short placeholder: the in-product AI features (Spring AI with
+  OpenRouter) are another story. Any page added under `docs/ai/` appears under **AI** in the internal sidebar.
+- **Versioning not enabled.** The docs follow `main`, and the API documents carry their own version (`v1`). Cutting a
+  docs version (`docusaurus docs:version`) is documented as an option, not done.
+- **Container.** `web/Dockerfile` targets `docs` and `docs-internal` on nginx-unprivileged, like the Studio, and take
+  the repository's `docs/` as the named build context `repo-docs`, since the web build context stays `web/`.
+  - Both variants are built once in a shared stage, and the page check runs inside the image build.
+  - The CSP allows only `'self'` (+ `'unsafe-inline'` scripts for Docusaurus' colour-mode and Scalar's init snippets)
+    and `connect-src` to the api and auth origins (`NL_DOCS_CONNECT`).
+  - Checked in headless Chromium against nginx with that CSP: the home page, the API index, Redoc, Scalar, guides,
+    French and search render, and Scalar needs no `'unsafe-eval'`.
+- **Fixed during that check:**
+  - Prism `additionalLanguages` load only on the client in Docusaurus 3.10 and caused hydration mismatches (React
+    #418) on every page with a code block. They were dropped: bash and Java blocks are now unhighlighted.
+- **Known and left:** the Redoc pages still log one recoverable hydration mismatch (redocusaurus' server render vs
+  client), and Redoc's sidebar badge from `cdn.redoc.ly` is blocked by the CSP (Redoc then hides it).
+- **Deploy:**
+  - chart: `apps.docs`, `apps.docs-internal`, `urls.docs`, `urls.docsInternal` (dev, staging, prod; empty on kind,
+    where `docs` is off), routes and certificates through the S-17 edge;
+  - Argo CD: the `SecurityPolicy` kind is whitelisted; `docs` / `docs-internal` added to the promotion files and
+    `promote.sh`, so Argo CD deploys docs to dev once its digest is promoted;
+  - Terraform: `docs` and `docs-internal` added to the registry repositories of all three clouds;
+  - CI: the web image matrix (GitHub `deploy.yml`, GitLab `images:web`) builds both.
+
+  Static export: `make docs-pages` plus manual GitHub `docs-pages.yml` (Pages from Actions) and GitLab `pages`
+  (`PIPELINE_PART=pages`, not in `all`), public variant only.
+- **Checks:**
+  - `make docs [DOCS_VARIANT=public]` = build + `scripts/check-build.mjs`, which requires every runbook and every
+    spec's Redoc and Scalar page in en and fr, and no internal page in the public variant;
+  - vitest unit tests: content per variant, a spec list matching `redocly.yaml`, runtime config;
+  - manual CI: GitHub `web.yml` › `docs`, GitLab `web:docs`.
+- **No schema change, no secret.** New container variables `NL_DOCS_SWAGGER` and `NL_DOCS_CONNECT` are derived by the
+  chart (runbooks README).
+- **Not done / never run:**
+  - no image was built here: the build is ~3 GB of Docker layers and the machine has ~4 GB free. The nginx
+    configuration was run against the local build output in nginx-unprivileged 1.29 instead;
+  - nothing is deployed, and no Pages site was published;
+  - the IP allowlist was rendered and schema-validated, not enforced by a live Envoy Gateway;
+  - French translations of the repository docs;
+  - SSO for the internal site.
+
+## 2026-09-30 — S-53 Services landing, service category, provider list
+
+Branch `web/s-53-services-landing` (from main). Contracts: [CONSUMER_WEB_PLAN.md](CONSUMER_WEB_PLAN.md).
+
+- **New api module `hire`** (consumer side of the Services journey, S-53 … S-56): a composition module like `studio`
+  — no tables, only other modules' `api` packages (availability, catalogue, merchants, trust; booking and payments
+  from S-55), nothing depends on it. Chosen over putting the reads in `booking` (it can't depend on availability or
+  payments without a cycle: availability → booking, payments → booking) or `search` (projection only). Its read models
+  are serialized as they are (as the Studio dashboard does): they exist only for these screens.
+- **Public endpoints** (`GET /api/v1/public/**`, open since S-31; `?lang=en|fr`, default en):
+  `GET /api/v1/public/services` → `{liveCategories, providers, groups: [{id, key, names, note, items: [{slug, names,
+  kind, providers}]}]}` · `GET /api/v1/public/services/{slug}` → `{id, slug, names, group, kind, vehicle,
+  regulatedRegistry, providers, quoteable, jobs: [{name, included, pricingMode, priceCents, durationMin}]}` (404 for an
+  unknown slug) · `GET /api/v1/public/services/{slug}/providers?lat&lng&city` → `{categorySlug, kind, area, city,
+  items: [{merchantId, slug, name, tier, brandColor, blurb, rating, reviewCount, onTimePct, disputePct, rebookPct,
+  fromCents, pricingMode, instantBook, nextAvailable, zones}]}`. Landing and category: `Cache-Control: max-age=60,
+  public`; providers 30 s. The category `slug` is the leaf part of the CategorySeeder id (`mobile-mechanic`; unique
+  across the service root, checked). Validation (messages not in validation-rules.md, English in both locales like the
+  other server rules): one of `lat`/`lng` alone → 422 "Send both lat and lng, or neither."; out of range → "That
+  location is outside the map."; `city` over 60 → "At most 60 characters.".
+- **A category's providers** = active `provider`/`both` businesses with a published business page and at least one
+  live, approved service (`catalogue.services`) in that leaf. Counts on the landing and the category page are these,
+  not filtered by location (server-rendered pages are the same for everyone); "live categories" = leaves with at least
+  one. The design's "62 categories · 1,204 providers" are sample numbers.
+- **Booking type per category** (`hire.domain.ServiceKind`): `catalogue.categories.booking_type` wins when set, but
+  the seed sets none (and `seedCategories` owns the rows), so it comes from the group — automotive, home trades,
+  tech: visit · cleaning & property, pets, education, childcare: home · events: event · personal care: appointment ·
+  professional: consult — with leaf exceptions (movers → event as in the design; property management, career/life
+  coach, web design, photo editing → consult; mobile hair & makeup, home care aide → home; dog grooming →
+  appointment). `vehicle` (the wizard's vehicle questions) = the automotive group. Quotes for visits and events only
+  (the design's `quoteable`), events are quote-only.
+- **Service area = zones** (`availability.service_areas`, V041, names from Booking rules). **V114** adds
+  `availability.service_zones`: each of the nine names with its city, a centre and an approximate circular area
+  (Beltline 1.2 km … SE Calgary 10 km, Airdrie/Cochrane/Okotoks the towns) — reference data, the same everywhere, until
+  `region.zones` has Calgary polygons. A business covers the customer when one of its zones contains the device's
+  point, or, with only a city (the IP guess, the Calgary fallback, a saved address without coordinates), when one of
+  its zones is in that city; no location at all = the region's fallback market (S-47's `GET /api/v1/geo/markets` → `fallback`, through the new `region.api.FallbackMarket`; nobody is covered when none is configured). The web sends the fallback market's city itself (S-47's `useDeliveryLocation`). Appointments and consultations (the customer goes to them)
+  also match the business's own city. The heading's area is the zone the point is in (nearest centre when two
+  overlap), else the city. `availability.api.ServiceAreas`.
+- **Trust order** (design: "Sorted by trust · tier, on-time rate, dispute rate and re-book rate"): tier, then on-time
+  (higher), disputes (lower), re-book (higher), rating, name; a business without a nightly quality score yet sorts after
+  scored ones of its tier (`hire.domain.TrustRank`). The consult variant's "Sorted by recent sales…" isn't used: there
+  is no sales ranking, and the note must say what the list does.
+- **Next available** is computed live: `availability.api.ProviderSlots` (new, used again by S-55's calendar) = the
+  Studio preview's `SlotPlanner` over every bookable member (hours, time off, closed holidays, confirmed jobs, S-32
+  calendar busy blocks, travel buffer), merged, then minimum notice, "same day by 9 am", horizon and jobs per day. The
+  per-day part of `HoursService.preview` moved into `DaySchedule` so both use it (Studio behaviour unchanged). "Next
+  available" looks at most 14 days ahead. Cost: a few queries per member-day per provider — fine for a city's providers
+  in one category; the search projection's `next_slot` (E-6) should replace it on the list later.
+- **Not shown / not built from the design's list:** the distance ("1.2 km") — businesses have no base location, only
+  zones, so the filter "Under 3 km" isn't offered; "EV certified" (no such attribute). Filters kept: Master tier,
+  Instant book, Available today, Under $80 — applied in the browser to the covering providers (none on by default;
+  the prototype's pre-ticked "Master tier" is demo state). Rows show "★ rating (reviews) · on-time" or "New on
+  Northline", "from $79" / "from $45/h" / "Quote", and "Today 3 pm" / "Tomorrow 9 am" / "Thu 9 am" / "No openings in
+  the next 2 weeks".
+- **Copy:** the design details one category per booking type (mobile mechanic, cleaning, bar, barber, real estate).
+  Its text is used for that family (automotive; the cleaning leaves; cocktail bar and bartender; barber & hair;
+  real-estate agent) exactly; the other categories of a type get generic wording in the same shape (ours: blurb, "where",
+  CTA hint, first two steps of visits) — e.g. a plumber isn't "Licensed technicians who bring the shop to you". The
+  CTA noun ("See 14 mechanics") and the list heading noun ("Mobile mechanics · 14 come to Beltline") come from the
+  design's `nounBy` for those families, "providers" / the category name otherwise. Group lines: the design's for its
+  five groups, ours for pets, education, tech, childcare.
+- **French category names** live in the consumer app (`features/services/taxonomy.ts`, all 10 groups and 108 leaves):
+  `catalogue.categories.name_i18n` is English-only and `seedCategories` rewrites it, so a migration couldn't keep them.
+  The API still returns `names` so a translated table takes over by itself; names without French are marked
+  `lang="en"`.
+- **Pages:** landing and category render on the server (loader → `ensureQueryData`, the screen `useSuspenseQuery`,
+  title + description meta, 404 → the not-found screen); the provider list renders the category on the server and
+  loads the covering providers in the browser once the location is known (device/saved coordinates are sent; the
+  Calgary fallback and the IP city only as a city). Loading skeletons, empty ("No verified providers cover Beltline for
+  this service yet." + See all services; "No providers match these filters." + Clear filters) and error (Retry) states.
+- **Shared-contract changes (additive):** new route `/services/$category/quote` (screen key `quoteRequest`, S-56 —
+  the category's "Describe the job, get 3 quotes"; `ScreenPending` until then); UI kit `BrandMark` (a business's
+  initial on its brand colour, with a story); `availability.api.ServiceAreas`/`ProviderSlots`, `catalogue.api.
+  ServiceOffers`, `merchants.api.PublicProviders`.
+- **Not done:** search-backed ranking and `next_slot` (E-6); distance; per-category French taxonomy in the database;
+  structured data (S-63).
+- **Region-neutral** (the decision above): no province, city or time zone in this story's code or copy. The province
+  (tax) is the business's own, else the default market's, and the time zone the province's market's — both from S-47's
+  `region.api.Markets` (SEARCH_MARKETS / SEARCH_DEFAULT_MARKET); the city for a visitor without a location is the api's
+  fallback market (new, additive `region.api.FallbackMarket`, implemented by `GeoService` — the same answer as `GET
+  /api/v1/geo/markets`); `hire.application.RegionDefaults` reads them. The landing and a category return `provinces`
+  (their live providers' `merchants.province`) and the copy names them as a parameter ("4 categories live in
+  {region}"); registry names in the copy come from the category (`regulatedRegistry`). Existing literals still relied on
+  (S-134): the web's shared `TIME_ZONE` (`@northline/ui`), `AlbertaHolidays` and `Team.ZONE` in the availability
+  planner (moved into `DaySchedule`, unchanged), and the zone rows of V114 (reference data).
+
+## 2026-09-30 — S-54 Public provider page from the storefront API (sections, reviews, service area)
+
+Branch `web/s-54-provider-page`, **stacked on `web/s-53-services-landing`** (uses its `hire` module, service kinds and
+copy).
+
+- **Two public reads, one page.** The page itself is the storefront API as it was (`GET /api/v1/storefronts/{slug}`:
+  enabled sections in the owner's order, brand colour, logo, tagline, announcement, CTA label, verified facts); new
+  `GET /api/v1/public/providers/{slug}` (module `hire`) adds what Northline holds: rating and review count, the latest
+  quality score's on-time / dispute / re-book figures, the live approved services (with each one's category and
+  booking type), the service-area zones, the next free slot (S-53's `ProviderSlots`) and the three newest reviews;
+  `GET /api/v1/public/providers/{slug}/reviews?offset&limit` pages the rest (10 by default, at most 20). Both
+  `max-age=60, public`. 404 unless the business is an active `provider`/`both` with a published page. The loader
+  fetches both in parallel on the server.
+- **The business's kind** (visit, home, event, appointment, consult — the CTA title, the mode tag and the copy family)
+  comes from the category most of its services are in; a business without services is a visit.
+- **Sections in order** (storefront-sections.json): the hero (design `pv` hero: brand-colour band, logo or initial,
+  name, tagline + "since <year of approval>", "<tier> tier · verified") and the trust figures and credential tags
+  always open the page; then the enabled `about` (the Business-step description), `reviews` (three newest, "Show
+  more reviews", the business's public reply under a review, "New on Northline — verified" before the first), `area`
+  (the zones — "Comes to you in Beltline · Downtown."; appointments and consultations: "You go to them in <city>."),
+  `faq` (the builder's pairs as disclosure widgets) and `policies` in the owner's order. `services` + `cta` are the
+  aside (design): the service menu (name, duration, price or "Quote") only when `services` is enabled, as the spec says
+  ("Only the Book button remains"), the button labelled with the page's CTA label (Book a visit / Request a quote /
+  Order now / Reserve — the owner's choice wins over the design's per-type wording), "Not sure? Request a quote" for
+  quoteable kinds, "Next available: … · <note>". The announcement is a strip above the hero.
+- **Not rendered:** `gallery` (the builder can't add photos yet, S-53 preview shows the same), the map of the area
+  (no map provider; the zones are listed), and `featured`/`catalogue`/`delivery`/`menu`/`hours`/`fulfil`/`permit`
+  (store and menu sections; a `both` page's products belong to the shop pages, S-49/S-50). Credential tags from verified
+  checks: licence → "AMVIC licensed", insurance → "$2M insured" (the insurance check requires ≥ $2M, onboarding
+  decision), ID → "ID verified", site visit → "Site visited"; the design's "Red Seal journeyman" etc. are sample text
+  with no data behind them. The consult variant's "sales · 12 mo" figure has no source; re-book is shown for everyone.
+- **SEO-ready, structured data left to S-63:** server-rendered title ("Prairie Wrench · Mobile mechanic · Calgary ·
+  Northline"), description (the business's description, else its tagline), canonical (the live custom domain when there
+  is one — the owner's own address is the page's home — else `NL_SITE_ORIGIN/providers/<slug>`) and Open Graph tags.
+  No `hreflang`: the language is a cookie, not a URL (S-63 decides).
+- **Other hosts** (plan: "storefront pages on `pages.<zone>` and merchants' own domains are S-54/S-63 work"): the node
+  server (`server/page-hosts.mjs`) classifies the `Host`: the site; `pages.<zone>` (`NL_PAGES_HOST`) where `/<slug>` is
+  that page; any other host = a merchant's domain, resolved with S-31's `GET /api/v1/public/storefronts/by-host`
+  through the consumer-bff (cached 60 s like the endpoint's `Cache-Control`, a failed lookup isn't cached → 503 "Try
+  again in a moment."; unknown host → 404 "No Northline page is connected to this domain."). Only business pages are
+  served; other page kinds and every other path redirect (302) to `NL_SITE_ORIGIN`. The server passes the page as
+  `x-nl-page-mode/host/slug` headers (the browser's are dropped); the router's `rewrite` maps the host's `/` or
+  `/<slug>` onto `/providers/<slug>` and back, so SSR and hydration agree while the address bar keeps the merchant's
+  URL. Sign-in, booking and the cart live on the site (the consumer-bff client has one redirect URI; merchants' domains
+  get no `/api` route), so on those hosts the page's links are absolute to `NL_SITE_ORIGIN` (`siteHref`) and "Show
+  more reviews" becomes "See all reviews" on the site. Local development: the Vite dev server doesn't do host routing;
+  the built server does with `NL_PAGES_HOST` (runbooks/local.md). New variables `NL_SITE_ORIGIN`, `NL_PAGES_HOST`
+  (consumer app, optional, the chart sets them from `urls.consumer` / `urls.pages`); `publicConfig` carries `siteOrigin`
+  and `page`, `useSiteConfig()` reads them.
+- **New public API:** `trust.api.PublicReviews` (newest first; author display name, job label, reply — nothing else
+  about the author).
+- **Not done:** JSON-LD, sitemap, `hreflang` (S-63); the shell on a merchant's own domain still shows the site header,
+  whose links and session/cart calls go to the site or fail quietly (no BFF route there) — a slimmer page chrome for
+  other hosts is left to S-63; the CDN in front of these pages (edge caching) isn't configured.
+
+## 2026-09-30 — S-55 Booking wizard (job details → location & access → schedule → payment → confirmed)
+
+Branch `web/s-55-booking-wizard`, stacked on `web/s-54-provider-page` (itself on S-53) and on S-51
+(`web/s-51-cart-checkout`, #56) for the payment step-up, `IdempotentRequests` and `PaymentSettings`.
+
+- **Flow** (module `hire`, `BookingCheckoutService`): `GET /api/v1/public/providers/{slug}/slots?serviceId&from&days`
+  (public, ≤ 14 days) → `POST /api/v1/me/bookings/holds {slug, serviceId, startsAt, hours?}` (201; the slot and a
+  booking id chosen up front) → `POST /api/v1/me/bookings/checkout` (Idempotency-Key, `X-Step-Up`; validates every
+  answer, prices it, opens the manual-capture PaymentIntent for `booking:<id>`) → the Payment Element confirms the card
+  when the provider is Stripe (the fake gateway authorizes at once) → `POST /api/v1/me/bookings/holds/{holdId}/confirm`
+  (201; `EscrowLifecycle.hold` checks the authorization and writes the escrow row, S-11; the booking is written, the hold
+  freed) → `GET /api/v1/me/bookings/{id}`. Sign-in is required from the hold on (the calendar is public); the wizard
+  keeps the answers in `sessionStorage` across the trip to the sign-in page and clears them once booked.
+- **Real availability** = S-53's `ProviderSlots` (hours, time off, holidays, confirmed jobs, S-32 calendar busy blocks,
+  travel buffer, notice, same-day cutoff, horizon) **plus other customers' live holds**. A slot shows free when at least
+  one bookable member is free; the hold picks the first free member.
+- **Slot holds in Valkey** (`availability.api.SlotHolds`, 10 min): a Lua script checks overlap (with the travel buffer)
+  against the member's holds and places the hold atomically; keys share a `{m:<merchant>}` hash tag so the script is
+  cluster-safe. A customer has at most one hold per business (a new one replaces it). Profiles `local`/`test` use an
+  in-memory store with the same rules. At confirm, an advisory lock per member plus an overlap lookup on
+  `booking.bookings` is the last guard (409 `slot_taken`). 409 `hold_expired` ("Your 10-minute hold ended. Pick the
+  time again.") sends the wizard back to the calendar.
+- **Access notes are private**: V115 `booking.access_notes` holds the access instructions and the day's phone number
+  sealed with `SecretSealer` (context `booking.access_notes:<booking id>`); they never enter `bookings.details`, events
+  or webhooks. The provider's Studio job card shows them only from 1 h before to 1 h after the start (design:
+  "shared with the provider only for the two hours around the visit"). Between hold and confirm the answers ride with
+  the hold, sealed too.
+- **Payment step-up = S-51's rule** (`PaymentGate`): an `acr=mfa` sign-in pays directly; a phone-code sign-in sends an
+  `X-Step-Up` proof from `/auth/step-up/*`; an account with neither gets 403 `second_factor_required` and enrols a
+  passkey (the S-51 `StepUpDialog`). A free consultation holds no money and skips it.
+- **Pricing** (`hire.domain.Pricing`): fixed = the service price; hourly = rate × hours (home services ask the hours;
+  cleaning estimates them from bedrooms + add-ons, design 06); consultations free; quote-only services and services
+  without instant book answer 422 ("…ask for a quote instead", S-56). Sales tax from `region.api.TaxRates` for the provider's province. The whole
+  price + tax is held in escrow ("Hold $93.45 in escrow"). The rate is the provider's province's
+  (`merchants.province`, else the default market's, `region.api.Markets`); the provider page returns it (`taxBps`) so the
+  wizard's summary shows the same tax, labelled "Tax 5%" (the tax's name differs by province). Free cancellation until 12 h before is recorded on the
+  booking (`free_cancel_until`) and shown; charging late cancellations is not part of this story.
+- **Validation messages** (422, per field; en in both locales like the other server rules): "Describe the problem in
+  at least 10 characters.", "Tell us the vehicle year, make and model.", "Pick or enter the address.", "Add access
+  instructions (3+ characters).", "Enter a phone number like +1 403 555 0123.", "Accept the cancellation policy to
+  continue.", "Agree to the Northline terms to continue.", "Choose one of the options.", and for the hold "Pick a
+  time.".
+- **`booking.confirmed`** (`booking.api.BookingConfirmed`, schema `booking.booking_confirmed.v1`, topic
+  `booking.booking`): ids, type, times, price, deposit — no names, addresses, notes or phone numbers. The worker maps it
+  to the public webhook `booking.confirmed` (`docs/spec/webhooks/booking.confirmed.v1.schema.json`, without the
+  customer id) for S-33, and `CalendarSyncListener` writes it back to the member's connected calendar (S-32).
+- **Schema (V115, additive):** `booking.access_notes`; `bookings.source` (`studio`|`customer`), `tax_cents`,
+  `free_cancel_until`; index `ix_bookings_member_starts`.
+- **Region-neutral:** "today" and calendar days use the provider's province's time zone (`region.api.Markets.zone`, S-47) on the server and the shared
+  `TIME_ZONE` of `@northline/ui` in the browser (an existing literal, S-134); the planner underneath still uses
+  availability's `Team.ZONE` and `AlbertaHolidays` (existing, S-134).
+- **Not done:** cancelling the PaymentIntent when a hold expires after the card was confirmed but before `confirm`
+  (the authorization lapses at Stripe on its own; a sweeper is follow-up work); saved cards, points and promo codes on
+  bookings; photo upload in job details; late-cancellation fees; the customer's bookings list (`/account/orders`
+  shows orders only).
+
+## 2026-09-30 — S-56 Quotes: request from several providers, compare, accept with an escrow deposit
+
+Branch `web/s-56-quotes`, stacked on `web/s-55-booking-wizard` (and so on S-54, S-53 and S-51).
+
+- **Request** (`POST /api/v1/me/quote-requests`, module `hire` → `booking.api.CustomerQuotes`): the category, 1–3
+  providers (their page slugs), the description (10–1,000 characters), the vehicle for automotive categories, the
+  event date and guests for events, an optional budget, note, area and preferred date. Each provider must be published
+  and offer a live service in that category; only quoteable categories (visits and events, S-53's `quoteable`) take
+  requests. It is one `booking.quote_requests` row with `merchant_ids` — exactly what the Studio "Quote requests"
+  column (Operations) already lists — `respond_by` = now + 2 h (design: "Master-tier providers answer within 2
+  hours"), `expires_at` = now + 7 days. **Providers see the area only**: the street address, access instructions and
+  the day's phone number are given to the one provider whose quote is accepted, at acceptance (sealed with the booking,
+  S-55's `booking.access_notes`). Validation messages: "Choose 1 to 3 providers.", "Describe the job in at least 10
+  characters.", "Tell us the vehicle year, make and model.", "Pick a date from tomorrow on.", "Enter the number of
+  guests (1 to 2,000).", "One of these providers doesn't offer this service any more. Choose again.", "This service is
+  booked directly — pick a time on a provider's page.".
+- **Compare** (`GET /api/v1/me/quote-requests/{id}`): every provider asked, with its latest sent version (never a
+  draft), cheapest first, then "waiting" / "declined". **Read** (`GET /api/v1/me/quotes/{id}`): every line (kind,
+  description, note, qty, unit, amount), subtotal/GST/total, scope, exclusions, warranty, deposit (kind, rate, amount),
+  proposed time and duration, validity, and every version from that provider; opening it moves `sent` → `viewed` (the
+  provider sees it was read). Someone else's request or quote is 404.
+- **Versioning** is the merchant side's (V040: immutable once sent; a revision is a new row, version + 1, and the prior
+  one becomes `superseded`). A customer on an old version sees "revised — version N replaces it" with a link, and
+  accepting it answers 409 `quote_revised`; an expired quote 409 `quote_expired`.
+- **Accept = pay the escrow deposit** (S-11): `POST /api/v1/me/quotes/{id}/accept` (Idempotency-Key, `X-Step-Up`,
+  the S-51 rule via S-55's `PaymentGate`) opens a manual-capture PaymentIntent for the booking chosen up front — the
+  quote's deposit, or **the whole quote when it asks for none** (as instant bookings hold the whole price). The tax in
+  the held amount is the deposit's share of the quote's GST. `POST …/accept/confirm` (Idempotency-Key) then checks
+  the authorization (`EscrowLifecycle.hold`), accepts the quote (`quote.accepted`, existing v2 schema), and books the
+  proposed time — the quote's `proposedAt`, else the request's preferred date at 9 am in the default market's time zone (`region.api.Markets`) — with a free member
+  (`ProviderSlots.freeMember`; 409 `slot_taken` "The provider is no longer free at the proposed time…"), publishing
+  `booking.confirmed` with the `quoteId` (S-55). **V116** `booking.quote_acceptances` keeps the booking id, the
+  PaymentIntent and the amounts between the two calls (one row per quote version; replaced while not accepted).
+- **Decline** (`POST /api/v1/me/quotes/{id}/decline`): the quote becomes `declined`; the request's other quotes stay
+  open.
+- **Screens:** `/services/$category/quote` (the job → where & when → who should quote; `?provider=` pre-ticks the
+  business the customer came from — the provider page's "Not sure?" button, and the main button of event businesses,
+  which are quote-only), `/quotes/requests/$requestId` (new, screen key `quoteCompare`: "N quotes received") and
+  `/quotes/$quoteId` (design 06 `quote`). The request survives the trip to the sign-in page in `sessionStorage`.
+- **Region-neutral:** no place in the code or copy; tax labels read "Tax 5%" (the rate from the quote). Existing
+  literal relied on: `QuoteService.PROVINCE` ("AB", Operations) sets the tax of the quotes providers send (S-134).
+- **Not done:** the balance of a deposit quote ("balance held 48 h before the event") — only the deposit is held at
+  acceptance; messages on a quote ("Ask a question first", the design's thread) — no customer↔provider messaging API
+  yet; notifying providers of a new request (the Studio column polls; push/e-mail are the notifications stories); a
+  `quote.requested` event; photos on a request; the customer's list of requests (`/account/orders` is S-58).
+
 ## 2026-09-30 — S-129 AI platform: LlmClient port, OpenRouter, fake, budgets, metrics and evals
 
 Follows billionairedev24/samop-inv-ship-26 (`ai/LlmClient`, `adapter/openrouter`, `adapter/fake`, `DefaultAiService`,

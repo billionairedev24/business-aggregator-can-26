@@ -63,6 +63,7 @@ northline:
     - { group: external-secrets.io, kind: SecretStore }
     - { group: gateway.networking.k8s.io, kind: Gateway }          # S-17: the environment's Gateway
     - { group: gateway.envoyproxy.io, kind: ClientTrafficPolicy }   # S-17: TLS 1.2+, trusted proxy hops
+    - { group: gateway.envoyproxy.io, kind: SecurityPolicy }        # S-126: IP allowlist of the internal docs site
     - { group: cert-manager.io, kind: Issuer }                      # S-17: Let's Encrypt account per environment
     - { group: cert-manager.io, kind: Certificate }
     - { group: rbac.authorization.k8s.io, kind: Role }             # S-31: the api's custom-domain reconciler, this

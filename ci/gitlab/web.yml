@@ -25,10 +25,8 @@ web:checks:
   image: node:22-bookworm
   timeout: 20m
   script:
-    - pnpm lint:colors
-    - pnpm -r typecheck
-    - pnpm -r test
-    - pnpm --filter @northline/studio build
+    # make web-check = web-lint (hex colours + typecheck) + web-test + web-build-studio (S-124)
+    - make -C .. web-check
   artifacts:
     expire_in: 7 days
     paths: [web/apps/studio/dist/]
@@ -41,13 +39,24 @@ web:storybook:
   needs: []
   timeout: 25m
   script:
-    - pnpm --filter @northline/ui build-storybook
-    # Every story in headless Chromium: play functions + a11y addon (violations fail).
-    - pnpm --filter @northline/ui test-storybook
+    - command -v make >/dev/null || (apt-get update -qq && apt-get install -y -qq --no-install-recommends make >/dev/null)
+    # Every story in headless Chromium: play functions + a11y addon (violations fail). Builds Storybook first.
+    - make -C .. web-storybook-test
   artifacts:
     when: always
     expire_in: 7 days
     paths: [web/packages/ui/storybook-static/]
+
+# S-126: the documentation site, both variants, and the page check (scripts/check-build.mjs).
+web:docs:
+  extends: .web
+  stage: build
+  image: node:22-bookworm
+  needs: []
+  timeout: 20m
+  script:
+    - make -C .. docs DOCS_VARIANT=public
+    - make -C .. docs DOCS_VARIANT=internal
 
 # Optional: Run pipeline with RUN_STUDIO_SMOKE=true. Migrates + seeds an empty PostGIS, starts api + auth (local
 # profile) and the studio dev server, then sweeps every Studio screen (scripts/studio-smoke.mjs).
@@ -95,7 +104,8 @@ web:studio-smoke:
           | tar -xz --strip-components=1 -C "$JAVA_HOME"
       fi
     - export PATH="$JAVA_HOME/bin:$PATH" && java -version
-    - cd "$CI_PROJECT_DIR" && ci/studio-smoke.sh
+    - command -v make >/dev/null || (apt-get update -qq && apt-get install -y -qq --no-install-recommends make >/dev/null)
+    - cd "$CI_PROJECT_DIR" && make e2e
   artifacts:
     when: always
     expire_in: 7 days

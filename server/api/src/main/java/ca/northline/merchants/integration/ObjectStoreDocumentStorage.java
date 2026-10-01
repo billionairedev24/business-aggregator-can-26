@@ -30,7 +30,7 @@ class ObjectStoreDocumentStorage implements DocumentStorage {
     @Override
     public byte[] get(String storageKey) {
         return objects.get(storageKey)
-                .map(ObjectStore.ObjectContent::bytes)
+                .map(c -> c.bytes().toArray())
                 .orElseThrow(() -> new NotFound("file", storageKey));
     }
 }

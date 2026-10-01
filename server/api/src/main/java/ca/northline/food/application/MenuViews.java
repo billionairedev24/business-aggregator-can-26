@@ -4,6 +4,7 @@ import ca.northline.food.domain.ItemStatus;
 import ca.northline.food.domain.ItemVisibility;
 import ca.northline.food.domain.ItemWindow;
 import ca.northline.food.domain.MenuStatus;
+import ca.northline.shared.Bytes;
 import java.time.Instant;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
@@ -83,5 +84,5 @@ public final class MenuViews {
     /** CSV import result. */
     public record ImportResult(int itemsCreated, int sectionsCreated) {}
 
-    public record Photo(byte[] bytes, String contentType) {}
+    public record Photo(Bytes bytes, String contentType) {}
 }

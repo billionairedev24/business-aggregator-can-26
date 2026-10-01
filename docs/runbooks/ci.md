@@ -21,6 +21,7 @@ Docker executor that allows `docker:dind` (GitLab), plus public images and packa
 | gitops | `gitops.yml` › `validate` (`action=validate`) | `gitops:validate` (`PIPELINE_PART=gitops` or `all`) | S-15: `deploy/argocd/validate.sh` — the app of apps for dev/staging/prod × aws/gcp/azure \| `kubeconform -strict` against the Argo CD CRDs, the sync policy (only dev automated), the chart as each Application renders it, the Argo CD install kustomization ([gitops.md](gitops.md#checks-no-cluster)) |
 | gitops | `gitops.yml` › `promote` (`action=promote`) | `gitops:promote` (`PIPELINE_PART=promote` only) | S-15: `deploy/argocd/promote.sh` writes `deploy/argocd/envs/<env>/images.yaml` (digests looked up in the registry, or copied from another environment) and opens the promotion PR / merge request ([gitops.md § Promotion](gitops.md#promotion-build--digest--pr--sync)) |
 | events | `event-schemas.yml` › `event schemas` | `events:schemas` (`PIPELINE_PART=events` or `all`) | S-34: `./gradlew :event-contracts:eventSchemas` with the base branch (input `base` / `EVENT_SCHEMAS_BASE`, default `main`, fetched in full): schemas valid for the worker's validator, every `@Externalized` event ↔ a schema, sample payloads validate, no breaking change against the merge base without a version bump — required base (exit 2 without it). `server build` runs the first three and check 4 when the base is there ([events.md § Schema checks](events.md#7-schema-checks-s-34)). |
+| openapi | `openapi.yml` › `lint`, `check` | `openapi:lint` (`PIPELINE_PART=openapi` or `all`) | S-125: `make openapi-lint` (Redocly CLI over `docs/api/openapi`, `redocly.yaml`) and `make openapi-check` (the specs the code serves equal the committed ones; the server build runs the same tests) ([api-docs.md](api-docs.md)). |
 | web | `web.yml` › `studio-smoke` (optional) | `web:studio-smoke` (optional) | `ci/studio-smoke.sh`: PostGIS service → `:api:flywayMigrate -Pdb.devSeed=true` + `:api:seedCategories` → api and auth with the `local` profile → studio dev server (dev auth as Ravi Sandhu) → `scripts/studio-smoke.mjs` (135 screen/width/locale checks). Screenshots and logs in the `studio-smoke` artifact. |
 
 Expected durations (hosted runners; first run in brackets, before caches are warm):
@@ -123,6 +124,22 @@ Add `paths: [server/**, ci/**, .github/workflows/server.yml]` (or `web/**, scrip
 To limit jobs to what changed, add `changes: [server/**/*, ci/**/*]` (or the web paths) to the job rules in `ci/gitlab/*.yml`.
 
 ## Running the same checks locally
+The jobs call make targets (S-124), so the same targets run them on a laptop:
+
+| Job | Target |
+|---|---|
+| server build | `make server-build` (`PROJECT=api`, `TASKS=':api:build -x test'`) |
+| web checks | `make web-check` (= `web-lint` + `web-test` + `web-build-studio`) |
+| web storybook | `make web-storybook-test` |
+| studio smoke | `make e2e` (disposable database!) |
+| infra validate / tflint | `make tf-validate CLOUD=…` / `make tf-lint` |
+| chart / gitops validate | `make helm-validate` / `make argocd-validate` |
+| event schemas | `make server-events BASE=origin/main REQUIRE_BASE=1` |
+| openapi | `make openapi-lint` / `make openapi-check` |
+| java images | `make images-java` (`PUSH=1 REGISTRY=… IMAGE_TAG=…`) |
+
+GitLab jobs whose image lacks make install it first (`apt-get install make` / `apk add make`). The web image build
+(buildx with the GitHub Actions cache) and the promotion job keep their own steps. The underlying commands:
 ```
 # server (Docker running; Testcontainers starts its own PostGIS)
 cd server && ./gradlew build --init-script ../ci/gradle/maven-mirror.init.gradle.kts --max-workers=2

@@ -1,0 +1,2 @@
+ca.northline.openapi.NorthlineOpenApiAutoConfiguration
+ca.northline.openapi.DocsSecurityConfiguration

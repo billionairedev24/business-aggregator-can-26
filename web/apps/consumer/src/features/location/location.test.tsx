@@ -1,10 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, screen } from '@testing-library/react';
 import { mockFetch, renderApp, type Call } from '../../test/render';
-import { nearestMarket } from './markets';
 import { SAVED_KEY } from './useDeliveryLocation';
 
-const session = (location?: { city: string }) => (call: Call) => (call.url === '/bff/session' ? { body: { user: null, guestId: 'g_x', location } } : undefined);
+/** The api's fallback market (region configuration; test data). */
+const FALLBACK = { id: 'mkt-calgary', city: 'Calgary', province: 'AB', stage: 'live', lat: 51.0447, lng: -114.0719 };
+const session = (location?: { city: string }, fallback: unknown = FALLBACK) => (call: Call) =>
+  call.url === '/bff/session' ? { body: { user: null, guestId: 'g_x', location } }
+    : call.url === '/api/v1/geo/markets' ? { body: { items: [], fallback } } : undefined;
 const pill = () => screen.getByRole('link', { name: /deliver to|Locating|Set location/i });
 
 function fakeGeo(result: { lat: number; lng: number } | 'denied' | 'never') {
@@ -21,12 +24,18 @@ beforeEach(() => { localStorage.clear(); sessionStorage.clear(); });
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 
 describe('location pill', () => {
-  it('names the market the device is in when the api can’t reverse-geocode yet', async () => {
+  it('falls back to the api’s fallback market when it can’t name the device’s place', async () => {
     mockFetch(session());
     renderApp('/', { geolocation: fakeGeo({ lat: 53.54, lng: -113.5 }) });
-    expect(await screen.findByText('Edmonton')).toBeInTheDocument();
-    expect(pill()).toHaveTextContent('Detected · deliver to');
-    expect(sessionStorage.getItem('nl.location.detected')).toContain('Edmonton');
+    expect(await screen.findByText('Calgary')).toBeInTheDocument();
+    expect(pill()).not.toHaveTextContent('Detected');
+    expect(sessionStorage.getItem('nl.location.detected')).toBeNull();
+  });
+
+  it('asks for a location when no fallback market is configured', async () => {
+    mockFetch(session(undefined, null));
+    renderApp('/', { geolocation: fakeGeo('denied') });
+    expect(await screen.findByText('Set location')).toBeInTheDocument();
   });
 
   it('uses the api’s neighbourhood when it has one', async () => {
@@ -77,6 +86,20 @@ describe('location pill', () => {
     expect(pill()).toHaveAttribute('href', '/location');
   });
 
+  it('treats a place outside every market as unknown, even when the api can name it (S-47)', async () => {
+    mockFetch(c => session()(c) ?? (c.url.startsWith('/api/v1/geo/reverse') ? { body: { label: 'Parkdale, Toronto', city: 'Toronto', province: 'ON', market: null, zone: null } } : undefined));
+    renderApp('/', { geolocation: fakeGeo({ lat: 43.64, lng: -79.43 }) });
+    expect(await screen.findByText('Calgary')).toBeInTheDocument();
+    expect(pill()).not.toHaveTextContent('Detected');
+  });
+
+  it('keeps the market, zone and province the api resolved (S-47)', async () => {
+    mockFetch(c => session()(c) ?? (c.url.startsWith('/api/v1/geo/reverse') ? { body: { label: 'Beltline, Calgary', city: 'Calgary', province: 'AB', market: { id: 'mkt-calgary', stage: 'live' }, zone: { id: 'zone-yyc-beltline', name: 'Beltline' } } } : undefined));
+    renderApp('/', { geolocation: fakeGeo({ lat: 51.038, lng: -114.089 }) });
+    expect(await screen.findByText('Beltline, Calgary')).toBeInTheDocument();
+    expect(JSON.parse(sessionStorage.getItem('nl.location.detected')!)).toMatchObject({ city: 'Calgary', province: 'AB', marketId: 'mkt-calgary', zoneId: 'zone-yyc-beltline', zone: 'Beltline' });
+  });
+
   it('is in French too', async () => {
     mockFetch(session());
     renderApp('/', { locale: 'fr', geolocation: fakeGeo('denied') });
@@ -84,10 +107,3 @@ describe('location pill', () => {
   });
 });
 
-describe('nearestMarket', () => {
-  it('picks the closest live market within 40 km', () => {
-    expect(nearestMarket({ lat: 51.29, lng: -114.01 })?.city).toBe('Airdrie');
-    expect(nearestMarket({ lat: 51.0, lng: -114.1 })?.city).toBe('Calgary');
-    expect(nearestMarket({ lat: 52.27, lng: -113.81 })).toBeNull(); // Red Deer: pilot, not live
-  });
-});

@@ -33,6 +33,24 @@ class WebhookPayloadsTest {
     }
 
     @Test
+    void bookingConfirmed_withoutTheCustomer() {
+        var out = payloads.of(event("booking.booking_confirmed", 1, """
+                        {"eventId":"01J9ZD3V000000000000000EV4","occurredAt":"2026-09-30T18:00:00Z","aggregateId":"bk_2",
+                         "merchantId":"%s","customerId":"u_customer","memberUserId":"u_tech","serviceId":"svc_1",
+                         "quoteId":null,"bookingType":"visit","startsAt":"2026-10-02T15:00:00Z",
+                         "endsAt":"2026-10-02T16:00:00Z","priceCents":8900,"depositCents":8900}""".formatted(MERCHANT)))
+                .orElseThrow();
+
+        assertThat(out.type()).isEqualTo("booking.confirmed");
+        assertThat(out.payload().path("data").toString())
+                .isEqualTo("{\"bookingId\":\"bk_2\",\"memberUserId\":\"u_tech\",\"serviceId\":\"svc_1\","
+                        + "\"quoteId\":null,\"bookingType\":\"visit\",\"startsAt\":\"2026-10-02T15:00:00Z\","
+                        + "\"endsAt\":\"2026-10-02T16:00:00Z\",\"priceCents\":8900,\"depositCents\":8900,"
+                        + "\"currency\":\"CAD\"}");
+        assertThat(out.payload().toString()).doesNotContain("u_customer");
+    }
+
+    @Test
     void escrowReleasedIsPaymentReleased() {
         var out = payloads.of(event("payments.escrow_released", 1, """
                         {"eventId":"01J9ZD3V000000000000000EV2","occurredAt":"2026-09-30T18:00:00Z","aggregateId":"esc_1",
@@ -56,6 +74,25 @@ class WebhookPayloadsTest {
         assertThat(out.payload().path("data").toString())
                 .isEqualTo("{\"refundId\":\"rf_1\",\"caseNumber\":null,\"escrowId\":null,\"amountCents\":4500,"
                         + "\"currency\":\"CAD\",\"chargedTo\":\"merchant\"}");
+    }
+
+    @Test
+    void orderPlaced_theShopsLinesWithoutTheCustomer() {
+        var out = payloads.of(event("orders.order_placed", 1, """
+                        {"eventId":"01J9ZD3V000000000000000EV9","occurredAt":"2026-09-30T18:00:00Z","aggregateId":"ord_1",
+                         "merchantId":"%s","customerId":"u_customer","orderRef":"NL-50001","orderType":"goods",
+                         "delivery":"pooled","windowId":"win_1","subtotalCents":1500,"taxCents":75,
+                         "lines":[{"lineId":"ln_1","offerId":"of_1","variantId":null,"qty":2,"amountCents":1500}]}""".formatted(MERCHANT)))
+                .orElseThrow();
+
+        assertThat(out.type()).isEqualTo("order.placed");
+        assertThat(out.merchantId()).isEqualTo(MERCHANT);
+        assertThat(out.payload().path("data").toString())
+                .isEqualTo("{\"orderId\":\"ord_1\",\"orderRef\":\"NL-50001\",\"orderType\":\"goods\","
+                        + "\"delivery\":\"pooled\",\"windowId\":\"win_1\",\"lines\":[{\"lineId\":\"ln_1\","
+                        + "\"offerId\":\"of_1\",\"variantId\":null,\"qty\":2,\"amountCents\":1500}],"
+                        + "\"subtotalCents\":1500,\"taxCents\":75,\"currency\":\"CAD\"}");
+        assertThat(out.payload().toString()).doesNotContain("u_customer");
     }
 
     @Test

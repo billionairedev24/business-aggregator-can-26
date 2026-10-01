@@ -15,4 +15,6 @@ apps:
   worker: { image: { digest: "" } }
   studio: { image: { digest: "" } }
   consumer: { image: { digest: "" } }
+  docs: { image: { digest: "" } }
+  docs-internal: { image: { digest: "" } }
   consumer-bff: { image: { digest: "" } }

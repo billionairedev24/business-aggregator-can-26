@@ -1,0 +1,17 @@
+# S-125 — OpenAPI specs (docs/api/openapi, docs/runbooks/api-docs.md). Included from .gitlab-ci.yml; pipelines exist
+# only when started by hand: PIPELINE_PART=openapi (or all).
+
+openapi:lint:
+  stage: check
+  needs: []
+  image: node:22-bookworm
+  timeout: 10m
+  interruptible: true
+  variables:
+    COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+  rules:
+    - if: $PIPELINE_PART == "all" || $PIPELINE_PART == "openapi"
+  script:
+    - corepack enable
+    # Redocly CLI (pinned in make/docs.mk) over every committed spec, with redocly.yaml
+    - make openapi-lint

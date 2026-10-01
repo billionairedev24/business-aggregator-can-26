@@ -3,12 +3,17 @@
 #
 #   docker build --target studio   -t "$REGISTRY/studio:$IMAGE_TAG"   web
 #   docker build --target consumer -t "$REGISTRY/consumer:$IMAGE_TAG" web
+#   docker build --target docs          --build-context repo-docs=docs -t "$REGISTRY/docs:$IMAGE_TAG" web
+#   docker build --target docs-internal --build-context repo-docs=docs -t "$REGISTRY/docs-internal:$IMAGE_TAG" web
 #
 # studio   = the Vite SPA as static files behind nginx-unprivileged (uid 101, port 8080), SPA fallback, security
 #            headers, pre-compressed assets; NL_AUTH_ORIGIN is read at container start (/config.js), so one image
 #            serves every environment.
 # consumer = TanStack Start SSR (dist/server fetch handler + dist/client assets) on Node 22 distroless (uid 65532,
 #            port 3000) through apps/consumer/server/node-server.mjs.
+# docs, docs-internal = the Docusaurus site (S-126) as static files on nginx-unprivileged (port 8080): docs is the
+#            public variant (guides, public/partner/webhook/OAuth references), docs-internal everything (docs/ of the
+#            repository, every spec). The repository's docs/ comes in as the named build context `repo-docs`.
 # The console app (E-8) does not exist yet; its target goes here when it does.
 
 ARG NODE_IMAGE=node:22-bookworm-slim
@@ -53,6 +58,59 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store --mount=type=secret,id=e
  && pnpm --filter @northline/consumer deploy --prod --legacy /out \
  && cp -r apps/consumer/dist /out/dist \
  && cp -r apps/consumer/server /out/server
+
+# ---- docs builds (S-126) --------------------------------------------------------------------------------------------
+FROM deps AS docs-build
+ARG DOCS_URL=
+ARG DOCS_BASE_URL=/
+COPY --from=repo-docs . /docs
+ENV NORTHLINE_DOCS_DIR=/docs DOCS_URL=${DOCS_URL} DOCS_BASE_URL=${DOCS_BASE_URL} NODE_OPTIONS=--max-old-space-size=3072
+# The site build test (scripts/check-build.mjs) runs in the image build too: no image without every page.
+RUN NORTHLINE_DOCS_VARIANT=public pnpm --filter @northline/docs build \
+ && NORTHLINE_DOCS_VARIANT=public pnpm --filter @northline/docs test:build \
+ && mv apps/docs/build /out-public \
+ && NORTHLINE_DOCS_VARIANT=internal pnpm --filter @northline/docs build \
+ && NORTHLINE_DOCS_VARIANT=internal pnpm --filter @northline/docs test:build \
+ && mv apps/docs/build /out-internal \
+ && for d in /out-public /out-internal; do \
+      rm -f "$d/config.js"; \
+      find "$d" -type f \( -name '*.js' -o -name '*.css' -o -name '*.html' -o -name '*.svg' -o -name '*.json' -o -name '*.yaml' \) \
+        -size +1k -exec gzip -9 -k -n {} \; ; \
+    done
+
+FROM ${NGINX_IMAGE} AS docs-runtime
+ENV NGINX_ENVSUBST_FILTER=^NL_ NL_DOCS_SWAGGER= NL_DOCS_CONNECT=
+USER root
+RUN rm -f /etc/nginx/conf.d/default.conf
+COPY docker/docs.conf.template docker/docs-security-headers.inc.template /etc/nginx/templates/
+
+FROM docs-runtime AS docs
+ARG GIT_SHA=unknown
+ARG IMAGE_TAG=dev
+LABEL org.opencontainers.image.title="northline-docs" \
+      org.opencontainers.image.description="Northline documentation site, public variant (Docusaurus on nginx)" \
+      org.opencontainers.image.source="https://github.com/billionairedev24/business-aggregator-can-26" \
+      org.opencontainers.image.revision="${GIT_SHA}" \
+      org.opencontainers.image.version="${IMAGE_TAG}" \
+      org.opencontainers.image.vendor="Northline"
+COPY --from=docs-build /out-public /usr/share/nginx/html
+RUN chown -R 101:101 /etc/nginx/conf.d && chmod -R a+rX /usr/share/nginx/html
+USER 101
+EXPOSE 8080
+
+FROM docs-runtime AS docs-internal
+ARG GIT_SHA=unknown
+ARG IMAGE_TAG=dev
+LABEL org.opencontainers.image.title="northline-docs-internal" \
+      org.opencontainers.image.description="Northline documentation site, internal variant (runbooks, decisions, every spec)" \
+      org.opencontainers.image.source="https://github.com/billionairedev24/business-aggregator-can-26" \
+      org.opencontainers.image.revision="${GIT_SHA}" \
+      org.opencontainers.image.version="${IMAGE_TAG}" \
+      org.opencontainers.image.vendor="Northline"
+COPY --from=docs-build /out-internal /usr/share/nginx/html
+RUN chown -R 101:101 /etc/nginx/conf.d && chmod -R a+rX /usr/share/nginx/html
+USER 101
+EXPOSE 8080
 
 # ---- studio runtime ---------------------------------------------------------------------------------------------------
 FROM ${NGINX_IMAGE} AS studio

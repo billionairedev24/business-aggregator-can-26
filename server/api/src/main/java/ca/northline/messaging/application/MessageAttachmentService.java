@@ -8,6 +8,7 @@ import static ca.northline.messaging.domain.MessagingRules.FILE_TYPES;
 
 import ca.northline.messaging.application.AttachmentStore.StoredAttachment;
 import ca.northline.messaging.application.BrowseInbox.Attachment;
+import ca.northline.shared.Bytes;
 import ca.northline.shared.Ids;
 import ca.northline.shared.RuleViolation;
 import ca.northline.shared.storage.ObjectKeys;
@@ -31,14 +32,14 @@ class MessageAttachmentService implements ManageMessageAttachments {
     @Override
     @Transactional
     public Attachment upload(Upload upload) {
-        if (upload.bytes().length == 0) {
+        if (upload.bytes().isEmpty()) {
             throw RuleViolation.of("file", "required", FILE_REQUIRED);
         }
         var type = upload.contentType().toLowerCase(Locale.ROOT);
-        if (!FILE_TYPES.contains(type) || !signatureMatches(type, upload.bytes())) {
+        if (!FILE_TYPES.contains(type) || !signatureMatches(type, upload.bytes().toArray())) {
             throw RuleViolation.of("file", "format", FILE_TYPE);
         }
-        if (upload.bytes().length > FILE_MAX_BYTES) {
+        if (upload.bytes().size() > FILE_MAX_BYTES) {
             throw RuleViolation.of("file", "size", FILE_TOO_LARGE);
         }
         var id = Ids.next();
@@ -49,10 +50,10 @@ class MessageAttachmentService implements ManageMessageAttachments {
                 ObjectKeys.merchantObject(upload.merchantId(), id, type),
                 name.length() > 200 ? name.substring(name.length() - 200) : name,
                 type,
-                upload.bytes().length,
+                upload.bytes().size(),
                 upload.userId(),
                 clock.instant());
-        storage.put(attachment.storageKey(), upload.bytes(), type);
+        storage.put(attachment.storageKey(), upload.bytes().toArray(), type);
         store.insert(attachment);
         return attachment.view();
     }
@@ -60,8 +61,8 @@ class MessageAttachmentService implements ManageMessageAttachments {
     @Override
     public Optional<Content> content(String merchantId, String attachmentId) {
         return store.find(merchantId, attachmentId)
-                .flatMap(a ->
-                        storage.get(a.storageKey()).map(bytes -> new Content(bytes, a.contentType(), a.fileName())));
+                .flatMap(a -> storage.get(a.storageKey())
+                        .map(bytes -> new Content(Bytes.of(bytes), a.contentType(), a.fileName())));
     }
 
     /** The declared type must match the file's magic bytes (HEIC: an ISO-BMFF {@code ftyp} box). */

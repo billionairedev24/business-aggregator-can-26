@@ -41,6 +41,7 @@ class JobService implements ListJobs, ViewJob, AdvanceJob, RequestApproval {
     private final BookingRepository bookings;
     private final MediaCatalog media;
     private final PersonDirectory people;
+    private final AccessNotes access;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
@@ -89,7 +90,7 @@ class JobService implements ListJobs, ViewJob, AdvanceJob, RequestApproval {
                 customer,
                 card.addressLine(),
                 job.area(),
-                card.access(),
+                access.forProvider(job.id(), card.access(), job.startsAt(), clock.instant()),
                 card.vehicle(),
                 card.customerNote(),
                 job.priceCents(),

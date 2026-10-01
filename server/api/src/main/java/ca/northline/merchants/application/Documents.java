@@ -1,6 +1,7 @@
 package ca.northline.merchants.application;
 
 import ca.northline.merchants.domain.Document;
+import ca.northline.shared.Bytes;
 
 /** Uploading and reading merchant documents (legal documents, verification evidence, logos). */
 public final class Documents {
@@ -19,13 +20,13 @@ public final class Documents {
                 Document.Purpose purpose,
                 String fileName,
                 String contentType,
-                byte[] bytes) {}
+                Bytes bytes) {}
 
         Document upload(Command command);
     }
 
     public interface ReadDocument {
-        record Content(Document document, byte[] bytes) {}
+        record Content(Document document, Bytes bytes) {}
 
         Content read(String merchantId, String documentId);
     }

@@ -58,6 +58,23 @@ server:
     cookie: { name: NL_AUTH, http-only: true, secure: true, same-site: lax }
 management:
   endpoints.web.exposure.include: health,info
+# S-125 (docs/runbooks/api-docs.md): the OAuth 2.1 / OIDC endpoints (`public`) and the sign-in JSON API (`internal`) as
+# OpenAPI 3.1 (config/AuthOpenApiConfig), in Swagger UI (/swagger-ui.html), Scalar (/docs/scalar) and Redoc
+# (/docs/redoc); landing page /docs. Their paths have their own CSP (northline-openapi). Off in prod.
+springdoc:
+  writer-with-order-by-keys: true
+  override-with-generic-response: false
+  swagger-ui:
+    path: /swagger-ui.html
+    urls-primary-name: public
+scalar:
+  enabled: true
+  path: /docs/scalar
+  page-title: northline-auth · Scalar
+northline.docs:
+  title: northline-auth
+  issuer: ${AUTH_ISSUER:http://localhost:9000}
+  servers: ${AUTH_ISSUER:http://localhost:9000}
 northline:
   auth:
     terms-version: "3.0"               # design/09 Terms of Service · Version 3.0 · Effective 1 October 2026
@@ -226,4 +243,4 @@ northline:
 ---
 # Local runs read server/.env (or .env next to the jar) — KEY=value lines, see server/.env.example. Never under `test`.
 spring.config.activate.on-profile: "!test"
-spring.config.import: optional:file:.env[.properties],optional:file:../.env[.properties]
+spring.config.import: optional:file:${NORTHLINE_DOTENV_DIR:.}/.env[.properties],optional:file:${NORTHLINE_DOTENV_DIR:..}/.env[.properties]

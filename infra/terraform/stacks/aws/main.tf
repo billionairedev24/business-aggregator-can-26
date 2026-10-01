@@ -67,6 +67,8 @@ locals {
     # S-36 POS menu import: the Clover app secret and Toast partner credentials (Square reuses S-35's app).
     CLOVER_CLIENT_SECRET = "clover-client-secret"
     TOAST_CLIENT_SECRET  = "toast-client-secret"
+    # S-47 addresses: the server-side Google Maps Platform key (Places API (New) + Geocoding API).
+    GOOGLE_MAPS_API_KEY = "google-maps-api-key"
     # S-129 AI platform: the OpenRouter API key (empty until created; AI features answer 503 without it).
     OPENROUTER_API_KEY = "openrouter-api-key"
   }
