@@ -90,6 +90,26 @@ public final class ListingMessages {
     public static final String INCLUDED_TOO_LONG = "At most 2000 characters.";
     public static final int INCLUDED_MAX = 2000;
 
+    // bundles, variant images, compliance documents (S-65)
+    public static final int BUNDLE_ITEMS_MAX = 10;
+    public static final int BUNDLE_QTY_MAX = 99;
+    public static final String BUNDLE_ITEMS_REQUIRED = "Add at least two items to the bundle.";
+    public static final String BUNDLE_ITEMS_TOO_MANY = "A bundle holds up to 10 items.";
+    public static final String BUNDLE_ITEM_UNKNOWN = "Choose one of your own products.";
+    public static final String BUNDLE_ITEM_BUNDLE = "A bundle can't contain another bundle.";
+    public static final String BUNDLE_ITEM_DUPLICATE = "This item is already in the bundle — change its quantity.";
+    public static final String BUNDLE_VARIANT_REQUIRED = "Choose a variant.";
+    public static final String BUNDLE_QTY_RANGE = "Quantity must be between 1 and 99.";
+    public static final String BUNDLE_ITEMS_APPROVED = "Every item in a bundle must be an approved listing.";
+    public static final String QUICK_UPDATE_BUNDLE_STOCK = "A bundle's stock follows its items.";
+    public static final String LISTING_IN_BUNDLE = "This product is part of a bundle. Remove it from the bundle first.";
+    public static final String DOCUMENT_REQUIRED = "Choose a file to upload.";
+    public static final String DOCUMENT_TYPE = "Upload a PDF, PNG or JPEG under 10 MB.";
+    public static final String DOCUMENT_PURPOSE = "Choose spec sheet or invoice.";
+    public static final int DOCUMENT_MAX_BYTES = 10 * 1024 * 1024;
+    public static final int DOCUMENTS_MAX = 10;
+    public static final String DOCUMENTS_TOO_MANY = "Up to 10 documents per listing.";
+
     // lifecycle
     public static final String NOT_SUBMITTABLE = "Only drafts and rejected listings can be submitted for vetting.";
     public static final String DRAFT_CANNOT_PUBLISH = "Submit this listing for vetting before publishing it.";

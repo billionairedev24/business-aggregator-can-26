@@ -93,6 +93,8 @@ public final class ProductListing implements Listing {
             images.addAll(catalogueImageIds());
         }
         images.addAll(details.ownImageIds());
+        details.variants().forEach(v -> v.imageIds().forEach(id -> images.add(v.sku() + ":" + id)));
+        details.bundleItems().forEach(b -> prices.add("bundle:" + b.offerId() + "/" + b.variantId() + "×" + b.qty()));
         return new Snapshot(prices, details.categoryId(), images);
     }
 

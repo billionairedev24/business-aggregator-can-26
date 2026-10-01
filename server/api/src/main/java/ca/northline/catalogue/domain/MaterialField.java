@@ -17,6 +17,8 @@ import java.util.Set;
  *       the main image) or the catalogue record's, and the switch between the two.
  * </ul>
  *
+ * A bundle's contents (items and quantities) count as its {@link #PRICE} (S-65): they are what the price buys.
+ *
  * Nothing else is material: title, description, attributes, stock, SKU, fulfilment and compliance fields. The same
  * rule applies whoever makes the change: the editor, a bulk price update, or a platform sync (S-35). The sync only
  * ever changes price and stock of a submitted listing.

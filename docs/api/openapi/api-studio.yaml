@@ -6330,6 +6330,300 @@ paths:
           description: Not found.
       tags:
       - listing-controller
+  /api/v1/merchants/{merchantId}/listings/{listingId}/documents:
+    get:
+      operationId: listingDocumentList
+      parameters:
+      - in: path
+        name: merchantId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: path
+        name: listingId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ListResponseDocumentResponse"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - listing-document-controller
+    post:
+      operationId: listingDocumentUpload
+      parameters:
+      - in: path
+        name: merchantId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: path
+        name: listingId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: purpose
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+              required:
+              - file
+      responses:
+        "201":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DocumentResponse"
+          description: Created
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - listing-document-controller
+  /api/v1/merchants/{merchantId}/listings/{listingId}/documents/{documentId}:
+    delete:
+      operationId: listingDocumentDelete
+      parameters:
+      - in: path
+        name: merchantId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: path
+        name: listingId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: path
+        name: documentId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      responses:
+        "204":
+          description: No Content
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - listing-document-controller
+    get:
+      operationId: listingDocumentContent
+      parameters:
+      - in: path
+        name: merchantId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: path
+        name: listingId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: path
+        name: documentId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: byte
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - listing-document-controller
   /api/v1/merchants/{merchantId}/listings/{listingId}/hide:
     post:
       operationId: listingHide
@@ -14901,6 +15195,43 @@ components:
           type: boolean
       required:
       - bookable
+    BundleItemRequest:
+      type: object
+      properties:
+        offerId:
+          type: string
+          minLength: 1
+        qty:
+          type: integer
+          format: int32
+          maximum: 99
+          minimum: 1
+        variantId:
+          type: string
+      required:
+      - offerId
+      - qty
+    BundleItemResponse:
+      type: object
+      properties:
+        name:
+          type: string
+        offerId:
+          type: string
+        option:
+          type: string
+        qty:
+          type: integer
+          format: int32
+        stock:
+          type: integer
+          format: int32
+        unitPriceCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        variantId:
+          type: string
     Business:
       type: object
       properties:
@@ -16709,6 +17040,13 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ConnectionView"
+    ListResponseDocumentResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentResponse"
     ListResponseGroupView:
       type: object
       properties:
@@ -16839,6 +17177,8 @@ components:
     ListingItem:
       type: object
       properties:
+        bundle:
+          type: boolean
         categoryId:
           type: string
         id:
@@ -18028,6 +18368,12 @@ components:
             minLength: 0
           maxItems: 5
           minItems: 0
+        bundleItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/BundleItemRequest"
+          maxItems: 10
+          minItems: 0
         categoryId:
           type: string
           minLength: 1
@@ -18130,6 +18476,11 @@ components:
           type: string
           maxLength: 80
           minLength: 0
+        type:
+          type: string
+          enum:
+          - product
+          - bundle
         variantTheme:
           type: string
           enum:
@@ -18167,6 +18518,10 @@ components:
             type: array
             items:
               type: string
+          bundleItems:
+            type: array
+            items:
+              $ref: "#/components/schemas/BundleItemResponse"
           catalogRef:
             type: string
           catalogTitle:
@@ -18282,6 +18637,11 @@ components:
             format: date-time
           title:
             type: string
+          type:
+            type: string
+            enum:
+            - product
+            - bundle
           updatedAt:
             type: string
             format: date-time
@@ -20019,6 +20379,12 @@ components:
           minLength: 0
         id:
           type: string
+        imageIds:
+          type: array
+          items:
+            type: string
+          maxItems: 9
+          minItems: 0
         priceCents:
           type: integer
           format: int64
@@ -20047,6 +20413,10 @@ components:
           type: string
         id:
           type: string
+        images:
+          type: array
+          items:
+            $ref: "#/components/schemas/MediaResponse"
         priceCents:
           type: integer
           format: int64

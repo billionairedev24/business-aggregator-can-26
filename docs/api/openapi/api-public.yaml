@@ -8188,6 +8188,10 @@ components:
     Variant:
       type: object
       properties:
+        images:
+          type: array
+          items:
+            type: string
         priceCents:
           type: integer
           format: int64

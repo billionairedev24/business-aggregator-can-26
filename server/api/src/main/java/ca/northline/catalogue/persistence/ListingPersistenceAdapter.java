@@ -3,6 +3,8 @@ package ca.northline.catalogue.persistence;
 import static ca.northline.catalogue.persistence.Sql.*;
 
 import ca.northline.catalogue.application.ListingRepository;
+import ca.northline.catalogue.application.ListingRepository.BundleComponent;
+import ca.northline.catalogue.application.ListingRepository.VariantFact;
 import ca.northline.catalogue.domain.CatalogRecord;
 import ca.northline.catalogue.domain.Fulfilment;
 import ca.northline.catalogue.domain.HandlingTime;
@@ -12,8 +14,10 @@ import ca.northline.catalogue.domain.Listing;
 import ca.northline.catalogue.domain.ListingState;
 import ca.northline.catalogue.domain.ListingStatus;
 import ca.northline.catalogue.domain.MaterialField;
+import ca.northline.catalogue.domain.OfferType;
 import ca.northline.catalogue.domain.PricingMode;
 import ca.northline.catalogue.domain.ProductDetails;
+import ca.northline.catalogue.domain.ProductDetails.BundleItem;
 import ca.northline.catalogue.domain.ProductDetails.Variant;
 import ca.northline.catalogue.domain.ProductListing;
 import ca.northline.catalogue.domain.ReturnsPolicy;
@@ -26,9 +30,12 @@ import ca.northline.shared.CodedEnum;
 import ca.northline.shared.Ids;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -126,11 +133,11 @@ class ListingPersistenceAdapter implements ListingRepository {
                         insert into catalogue.offers (id, product_id, merchant_id, title, sku, price_cents, compare_at_cents,
                           cost_cents, stock, low_stock_at, condition, fulfilment, vetting, status, variant_theme, image_source,
                           own_images, handling_time, returns_policy, country_of_origin, restricted_ok, bilingual_ok, warranty,
-                          search_keywords, vetting_flags, revet_reasons, submitted_at, created_at, updated_at)
+                          search_keywords, vetting_flags, revet_reasons, submitted_at, created_at, updated_at, listing_type)
                         values (:id, :product, :merchant, :title, :sku, :price, :compareAt, :cost, :stock, :lowStock, :condition,
                           :fulfilment, :vetting, :status, :theme, :imageSource, :ownImages, :handling, :returns, :origin,
                           :restrictedOk, :bilingualOk, :warranty, :keywords, :flags, :revet, :submittedAt, :createdAt,
-                          :updatedAt)
+                          :updatedAt, :type)
                         on conflict (id) do update set product_id = excluded.product_id, title = excluded.title,
                           sku = excluded.sku, price_cents = excluded.price_cents, compare_at_cents = excluded.compare_at_cents,
                           cost_cents = excluded.cost_cents, stock = excluded.stock, low_stock_at = excluded.low_stock_at,
@@ -142,9 +149,10 @@ class ListingPersistenceAdapter implements ListingRepository {
                           bilingual_ok = excluded.bilingual_ok, warranty = excluded.warranty,
                           search_keywords = excluded.search_keywords, vetting_flags = excluded.vetting_flags,
                           revet_reasons = excluded.revet_reasons, submitted_at = excluded.submitted_at,
-                          updated_at = excluded.updated_at
+                          updated_at = excluded.updated_at, listing_type = excluded.listing_type
                         """)
                 .param("id", listing.getId())
+                .param("type", d.type().code())
                 .param("product", listing.getRecord().id())
                 .param("merchant", listing.getMerchantId())
                 .param("title", d.title())
@@ -181,7 +189,7 @@ class ListingPersistenceAdapter implements ListingRepository {
         for (var v : d.variants()) {
             jdbc.sql("""
                             insert into catalogue.variants (id, offer_id, sku, gtin, attrs, price_cents, stock, image_set, position)
-                            values (:id, :offer, :sku, :gtin, cast(:attrs as jsonb), :price, :stock, '{}', :position)
+                            values (:id, :offer, :sku, :gtin, cast(:attrs as jsonb), :price, :stock, :images, :position)
                             """)
                     .param("id", v.id() == null ? Ids.next() : v.id())
                     .param("offer", listing.getId())
@@ -190,9 +198,76 @@ class ListingPersistenceAdapter implements ListingRepository {
                     .param("attrs", json(Map.of("value", v.value())))
                     .param("price", v.priceCents())
                     .param("stock", v.stock())
+                    .param("images", array(v.imageIds()))
                     .param("position", position++)
                     .update();
         }
+        jdbc.sql("delete from catalogue.bundle_items where bundle_offer_id = :id")
+                .param("id", listing.getId())
+                .update();
+        var line = 0;
+        for (var item : d.bundleItems()) {
+            jdbc.sql("""
+                            insert into catalogue.bundle_items (bundle_offer_id, position, offer_id, variant_id, qty)
+                            values (:bundle, :position, :offer, :variant, :qty)
+                            """)
+                    .param("bundle", listing.getId())
+                    .param("position", line++)
+                    .param("offer", item.offerId())
+                    .param("variant", item.variantId())
+                    .param("qty", item.qty())
+                    .update();
+        }
+    }
+
+    @Override
+    public List<BundleComponent> bundleComponents(String merchantId, Collection<String> offerIds) {
+        if (offerIds.isEmpty()) {
+            return List.of();
+        }
+        var variants = jdbc
+                .sql("""
+                        select v.offer_id, v.id, coalesce(v.attrs ->> 'value', '') as value, coalesce(v.price_cents, 0) as price,
+                               coalesce(v.stock, 0) as stock
+                          from catalogue.variants v join catalogue.offers o on o.id = v.offer_id
+                         where v.offer_id = any(:ids) and o.merchant_id = :m
+                         order by v.position, v.sku
+                        """)
+                .param("ids", array(offerIds))
+                .param("m", merchantId)
+                .query((rs, _) -> Map.entry(
+                        rs.getString("offer_id"),
+                        new VariantFact(
+                                rs.getString("id"), rs.getString("value"), rs.getLong("price"), rs.getInt("stock"))))
+                .list()
+                .stream()
+                .collect(Collectors.groupingBy(
+                        Map.Entry::getKey, Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
+        return jdbc.sql("""
+                        select o.id, coalesce(nullif(o.title, ''), cp.title, '') as name, o.listing_type, o.vetting,
+                               coalesce(o.price_cents, 0) as price, coalesce(o.stock, 0) as stock
+                          from catalogue.offers o join catalogue.catalog_products cp on cp.id = o.product_id
+                         where o.id = any(:ids) and o.merchant_id = :m
+                        """)
+                .param("ids", array(offerIds))
+                .param("m", merchantId)
+                .query((rs, _) -> new BundleComponent(
+                        rs.getString("id"),
+                        rs.getString("name"),
+                        CodedEnum.fromCode(OfferType.class, rs.getString("listing_type")),
+                        CodedEnum.fromCode(Vetting.class, rs.getString("vetting")),
+                        rs.getLong("price"),
+                        rs.getInt("stock"),
+                        variants.getOrDefault(rs.getString("id"), List.of())))
+                .list();
+    }
+
+    @Override
+    public boolean inBundle(String offerId) {
+        return Boolean.TRUE.equals(jdbc.sql("select exists (select 1 from catalogue.bundle_items where offer_id = :id)")
+                .param("id", offerId)
+                .query(Boolean.class)
+                .single());
     }
 
     @Override
@@ -241,6 +316,9 @@ class ListingPersistenceAdapter implements ListingRepository {
     public void delete(Listing listing) {
         switch (listing) {
             case ProductListing p -> {
+                jdbc.sql("delete from catalogue.bundle_items where bundle_offer_id = :id")
+                        .param("id", p.getId())
+                        .update();
                 jdbc.sql("delete from catalogue.variants where offer_id = :id")
                         .param("id", p.getId())
                         .update();
@@ -281,6 +359,7 @@ class ListingPersistenceAdapter implements ListingRepository {
             boolean bilingualOk,
             boolean warranty,
             @Nullable String searchKeywords,
+            OfferType type,
             ListingState state) {}
 
     private OfferRow offerRow(ResultSet rs, int rowNum) throws SQLException {
@@ -307,6 +386,7 @@ class ListingPersistenceAdapter implements ListingRepository {
                 rs.getBoolean("bilingual_ok"),
                 rs.getBoolean("warranty"),
                 rs.getString("search_keywords"),
+                CodedEnum.fromCode(OfferType.class, rs.getString("listing_type")),
                 state(rs));
     }
 
@@ -321,8 +401,16 @@ class ListingPersistenceAdapter implements ListingRepository {
                         Objects.requireNonNullElse(rs.getString("sku"), ""),
                         rs.getString("gtin"),
                         rs.getLong("price_cents"),
-                        rs.getInt("stock")))
+                        rs.getInt("stock"),
+                        strings(rs, "image_set")))
                 .list();
+        var bundle = o.type() == OfferType.BUNDLE
+                ? jdbc.sql("select * from catalogue.bundle_items where bundle_offer_id = :id order by position")
+                        .param("id", o.id())
+                        .query((rs, _) ->
+                                new BundleItem(rs.getString("offer_id"), rs.getString("variant_id"), rs.getInt("qty")))
+                        .list()
+                : List.<BundleItem>of();
         var details = new ProductDetails(
                 record.identifierType(),
                 record.gtin(),
@@ -351,7 +439,9 @@ class ListingPersistenceAdapter implements ListingRepository {
                 o.restrictedOk(),
                 o.bilingualOk(),
                 o.warranty(),
-                o.searchKeywords());
+                o.searchKeywords(),
+                o.type(),
+                bundle);
         return ProductListing.builder()
                 .id(o.id())
                 .merchantId(o.merchantId())
