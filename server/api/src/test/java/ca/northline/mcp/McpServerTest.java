@@ -153,7 +153,7 @@ class McpServerTest extends McpTestServer {
                 .doesNotContain("10900");
 
         var applied = call(agent, "update_listing_price_stock", args);
-        assertThat(applied.isError()).isNotEqualTo(Boolean.TRUE);
+        assertThat(applied.isError()).isNotEqualTo(true);
         assertThat(text(call(agent, "get_listing", Map.of("merchantId", biz.merchantId(), "listingId", listing)))
                         .toString())
                 .contains("10900");
