@@ -8,8 +8,11 @@ import { useShellT } from '../features/shell/messages';
 import { homeScreen, screenFromPath, screenHref, screensFor } from '../features/shell/nav';
 import { StudioLayout } from '../features/shell/StudioLayout';
 import { PlaceValues } from '../features/shell/place';
+import { useStudioLive } from '../lib/live';
 
 export const Route = createFileRoute('/b/$merchantId')({
+  // S-69: the business is requested with the session check, not after the layout's chunk (see vite.config.ts).
+  codeSplitGroupings: [['component'], ['pendingComponent'], ['errorComponent'], ['notFoundComponent']],
   beforeLoad: ({ context, location }) => requireSession(context.queryClient, location.href),
   loader: ({ context, params }) => context.queryClient.ensureQueryData(merchantQuery(params.merchantId)),
   pendingComponent: () => <div style={{ padding: 32 }}><PageSkeleton /></div>,
@@ -21,6 +24,7 @@ function StudioRoute() {
   const { merchantId } = Route.useParams();
   const merchant = useQuery(merchantQuery(merchantId)).data!;
   const { locale } = useLocale();
+  useStudioLive(merchantId);
   const pathname = useRouterState({ select: s => s.location.pathname });
   const screen = screenFromPath(pathname);
   if (!screensFor(merchant.type).includes(screen)) return <Navigate to={screenHref(merchant.id, homeScreen(merchant.type))} replace />;

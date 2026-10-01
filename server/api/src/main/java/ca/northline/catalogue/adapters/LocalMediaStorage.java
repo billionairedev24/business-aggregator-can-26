@@ -55,6 +55,15 @@ class LocalMediaStorage implements MediaStorage {
         }
     }
 
+    @Override
+    public void delete(String key) {
+        try {
+            Files.deleteIfExists(resolve(key));
+        } catch (IOException ex) {
+            throw new UncheckedIOException(ex);
+        }
+    }
+
     private static Optional<byte[]> seedSample(String key) throws IOException {
         var name = key.startsWith(SEED_PREFIX) ? key.substring(SEED_PREFIX.length()) : "";
         if (!name.matches("[a-z0-9-]+\\.jpg")) {

@@ -2,6 +2,7 @@ package ca.northline.catalogue.web;
 
 import ca.northline.catalogue.application.ListingSummary;
 import ca.northline.catalogue.application.ListingView;
+import ca.northline.catalogue.application.ListingView.BundleLine;
 import ca.northline.catalogue.application.ListingView.ProductView;
 import ca.northline.catalogue.application.ListingView.ServiceView;
 import ca.northline.catalogue.application.LookupCatalogue;
@@ -10,6 +11,7 @@ import ca.northline.catalogue.domain.Completeness;
 import ca.northline.catalogue.domain.ListingKind;
 import ca.northline.catalogue.domain.MediaAsset;
 import ca.northline.catalogue.domain.PricingMode;
+import ca.northline.catalogue.web.ListingResponses.BundleItemResponse;
 import ca.northline.catalogue.web.ListingResponses.CatalogMatchResponse;
 import ca.northline.catalogue.web.ListingResponses.CategoryResponse;
 import ca.northline.catalogue.web.ListingResponses.CompletenessResponse;
@@ -19,8 +21,11 @@ import ca.northline.catalogue.web.ListingResponses.MediaResponse;
 import ca.northline.catalogue.web.ListingResponses.MissingField;
 import ca.northline.catalogue.web.ListingResponses.ProductResponse;
 import ca.northline.catalogue.web.ListingResponses.ServiceResponse;
+import ca.northline.catalogue.web.ListingResponses.VariantResponse;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
+import java.util.stream.Collectors;
 import org.mapstruct.Context;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -51,7 +56,31 @@ interface ListingWebMapper {
     @Mapping(target = "sellerCount", source = "listing.record.sellerCount")
     @Mapping(target = ".", source = "listing.details")
     @Mapping(target = "images", source = "ownImages")
+    @Mapping(target = "stock", source = "availableStock")
+    @Mapping(target = "variants", expression = "java(variants(view, merchantId))")
+    @Mapping(target = "bundleItems", source = "bundle")
     ProductResponse toResponse(ProductView view, @Context String merchantId);
+
+    /** S-65: each variant with its own images (empty = it inherits the listing's). */
+    default List<VariantResponse> variants(ProductView view, String merchantId) {
+        var byId = view.variantImages().stream().collect(Collectors.toMap(MediaAsset::id, m -> m, (a, _) -> a));
+        return view.listing().getDetails().variants().stream()
+                .map(v -> new VariantResponse(
+                        v.id(),
+                        v.value(),
+                        v.sku(),
+                        v.gtin(),
+                        v.priceCents(),
+                        v.stock(),
+                        v.imageIds().stream()
+                                .map(byId::get)
+                                .filter(Objects::nonNull)
+                                .map(m -> media(m, merchantId))
+                                .toList()))
+                .toList();
+    }
+
+    BundleItemResponse bundleItem(BundleLine line);
 
     @Mapping(target = "id", source = "listing.id")
     @Mapping(target = "kind", constant = "service")
@@ -97,7 +126,8 @@ interface ListingWebMapper {
     default String meta(ListingSummary s, Locale locale) {
         var fr = "fr".equals(locale.getLanguage());
         if (s.kind() == ListingKind.PRODUCT) {
-            return s.categoryName() == null ? "" : s.categoryName();
+            var category = s.categoryName() == null ? "" : s.categoryName();
+            return s.bundle() ? (fr ? "Ensemble" : "Bundle") + (category.isEmpty() ? "" : " · " + category) : category;
         }
         var duration = s.durationMin() == null ? "" : s.durationMin() + " min · ";
         var price = s.pricingMode() == PricingMode.QUOTE ? (fr ? "sur devis · " : "quote · ") : "";

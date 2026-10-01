@@ -70,6 +70,8 @@ function OfferView({ data, offer, link }: { data: ProductPage; offer: Offer; lin
   const [qty, setQty] = useState(1);
   useEffect(() => { setQty(q => Math.max(1, Math.min(q, Math.max(1, stock)))); }, [stock]);
   const [image, setImage] = useState(0);
+  const images = variant && variant.images.length ? variant.images : offer.images; // S-65: a variant's own photos
+  useEffect(() => { setImage(0); }, [variantId]);
   const run = offer.runs[0];
   const tier = t(`tier_${offer.tier as 'master'}`);
 
@@ -91,10 +93,10 @@ function OfferView({ data, offer, link }: { data: ProductPage; offer: Offer; lin
   return (
     <div className="product-grid">
       <div className="product-gallery" role="group" aria-label={t('gallery')}>
-        <div className="product-main halftone">{offer.images[image] ? <img src={offer.images[image]} alt={data.name} /> : null}</div>
+        <div className="product-main halftone">{images[image] ? <img src={images[image]} alt={data.name} /> : null}</div>
         <div className="product-thumbs">
-          {offer.images.length > 1
-            ? offer.images.slice(0, 4).map((src, i) => (
+          {images.length > 1
+            ? images.slice(0, 4).map((src, i) => (
               <button key={src} type="button" className="product-thumb halftone" aria-label={t('showImage', { n: i + 1 })} aria-pressed={i === image} onClick={() => setImage(i)}><img src={src} alt="" /></button>))
             : [0, 1, 2].map(i => <span key={i} className={`product-thumb halftone product-thumb-${i}`} aria-hidden />)}
         </div>

@@ -591,3 +591,13 @@ Your role (%s) can't see this screen's data.	Votre rôle (%s) ne permet pas de v
 {kitchen} doesn't deliver. Choose pickup.	{kitchen} ne livre pas. Choisissez le ramassage.	new
 {kitchen} doesn't offer pickup.	{kitchen} n’offre pas le ramassage.	new
 {name} is sold out.	{name} : épuisé.	new
+A bundle can't contain another bundle.	Un ensemble ne peut pas contenir un autre ensemble.	shipped
+A bundle holds up to 10 items.	Un ensemble contient jusqu'à 10 articles.	shipped
+A bundle's stock follows its items.	Le stock d'un ensemble suit ses articles.	shipped
+Add at least two items to the bundle.	Ajoutez au moins deux articles à l'ensemble.	shipped
+Every item in a bundle must be an approved listing.	Chaque article d'un ensemble doit être une annonce approuvée.	shipped
+Quantity must be between 1 and 99.	La quantité doit être entre 1 et 99.	shipped
+This item is already in the bundle — change its quantity.	Cet article est déjà dans l'ensemble — modifiez sa quantité.	shipped
+This product is part of a bundle. Remove it from the bundle first.	Ce produit fait partie d'un ensemble. Retirez-le de l'ensemble d'abord.	shipped
+Up to 10 documents per listing.	Jusqu'à 10 documents par annonce.	shipped
+Up to 500 image URLs per file.	Jusqu'à 500 URL d'images par fichier.	new

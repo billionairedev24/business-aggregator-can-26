@@ -4455,6 +4455,310 @@ only with DPoP.
 - **Studio:** Reports' "Tax summary (GST)" now downloads the PDF in the Studio's language; Payouts › Tax documents offers "PDF · CSV" for both documents (labelled links, en/fr).
 - Not done: Quebec's QST (TVQ) is not split out — the read model has one tax total per month (S-21); a QST column would come with a QST-registered marketplace setup. The statements are not signed or archived; they are generated on request from the live read model.
 
+## 2026-09-30 — S-68 Server-sent events for messages and live orders (replace polling)
+
+- **One stream per Studio tab, not one per screen.** `GET /api/v1/merchants/{merchantId}/live` (`studio` module,
+  `@RequiresMerchant(VIEW)`) carries every live screen's signals: `message` (data `{"ref": threadId}`), `kitchen`
+  (`{"ref": orderId|null}`), `orders` (`{"ref": orderId}`), plus `ready` on open. The Studio shell opens it
+  (`useStudioLive` in `routes/b.$merchantId.tsx`) so a new message refreshes the Messages badge on every screen. The
+  planned `…/threads/stream` (messaging's "Real time" note above) is folded into it.
+- **Signals, not data.** Events carry a topic and an id, never message text, names or amounts; the browser invalidates
+  the matching TanStack queries and refetches with its own permissions. A technician therefore learns nothing from the
+  id of a thread they cannot open, and the stream needs no per-role filtering or payload versioning.
+- **Where signals come from.** `StudioLiveEvents` (module listeners, after commit, so the refetch sees the change):
+  `message.sent` → `message`; `order.placed` → `kitchen` for `orderType=food`, else `orders`; `order.packed` →
+  `orders`; `order.accepted` / `order.ready` / `order.handed_off` / kitchen paused / resumed → `kitchen`. Help cases'
+  messages publish `message.sent` too, so open cases refresh as well.
+- **Across replicas: Valkey pub/sub** behind the `StudioLive` port, chosen by `northline.live.bus` (`LIVE_BUS`):
+  `redis` (channel `nl:studio:<merchantId>`, message `<topic>[:<id>]`; the cloud default) or `memory` (local, test;
+  refused under staging/prod like `MCP_STORE`). Nothing is stored: a signal published while no replica holds a stream
+  for the business is dropped, and a reconnecting browser catches up with one refetch (below). Publishing failures are
+  logged, never thrown — a live hint must not fail the change it reports.
+- **Stream lifetime 10 minutes** (`LIVE_STREAM`), keep-alive comment every 25 s, `retry: 3000`. Ending the stream makes
+  EventSource reconnect through the BFF, which re-checks the session, refreshes the access token and re-reads the
+  membership — so a removed member stops getting signals within 10 minutes. The BFF relays `text/event-stream` as it
+  arrives (S-130's `streaming-media-types`, S-135's relay fix); nothing changed there.
+- **Fallback to polling.** While the stream is not open (connecting, dropped, refused, or no EventSource) the screens
+  poll at their old intervals (threads 15 s, open thread 5 s, KDS 15 s, help cases 30 s / 10 s). While it is open they
+  keep a 60 s safety refresh (`LIVE_SAFETY_MS`) for changes that send no signal (another member reading a thread, a
+  courier assigned, a scheduled order entering its 60-minute window, a prep bump on another tablet). The first `ready`
+  needs no catch-up; every later one (a reconnect) invalidates messages, kitchen and orders once. If the server closes
+  the stream for good (EventSource `CLOSED`: 403, or an api without the endpoint), the Studio retries after 30 s.
+- **Orders screen too.** Goods orders (`orders`) refresh the Orders board, nav badges and dashboard; the story names the
+  KDS, but the same signal costs nothing for sellers.
+- **Not done:** no signal for thread reads/assignments, courier assignment or prep bumps (covered by the 60 s safety
+  refresh); no per-event replay (`Last-Event-ID`) — reconnects refetch instead. The Valkey adapter is tested against a
+  real Valkey 8 (Testcontainers, two adapter instances standing in for two replicas); a multi-replica deployment has not
+  been exercised.
+
+## 2026-09-30 — S-65 Per-variant images, bundles and compliance documents in the product editor
+
+### Schema additions (V180, additive)
+- `catalogue.offers.listing_type` (`product` | `bundle`, default `product`).
+- New `catalogue.bundle_items` (bundle offer, position, item offer, variant, qty 1–99), FK to `offers` with cascade
+  from the bundle and an index on the item offer.
+- New `catalogue.listing_documents` (purpose `spec_sheet` | `invoice`, file name, PDF/PNG/JPEG type, size, storage key,
+  uploader), cascading from the offer.
+- Function `catalogue.bundle_stock(bundle)`: the smallest of item stock / qty.
+- Per-variant images use the baseline `catalogue.variants.image_set` (V005), which was never written before.
+
+### Variant images
+- **Model:** each variant row keeps its own media ids, main first, at most 9 (the listing's rule). An empty list means
+  the variant "inherits" the listing's images; that is the cell's text, and an image count shows as "main + N" as in
+  design 02 (`varRows.img`).
+- **Rules:**
+  - Uploads go through the existing `POST …/media`, and only the business's own media are accepted (422
+    `variants[i].imageIds`).
+  - Images count as visible to customers once the offer is approved (`MediaRepository.approved` now also looks at
+    variants), the same as S-123.
+  - Automated vetting runs its duplicate-image check on variant images too.
+  - Adding, removing or reordering a variant's images on an approved listing is an `images` change (S-39 re-vetting).
+- **Customers:** the product page's variants carry `images` (approved URLs only). The consumer app shows the chosen
+  option's photos, falling back to the offer's, and the cart shows the variant's first photo.
+
+### Bundles
+- **A bundle is a product listing** (`ProductDetails.type = bundle`) that names 1–10 of the business's own product
+  offers with a quantity, and a variant when the product has variants. It reuses the product editor: identity and
+  category, images, price and fulfilment, compliance and vetting all work as for products.
+- **What a bundle has and doesn't have:**
+  - It has no identifier (GTIN), no variants and no stock of its own. The compact constructor forces this.
+  - Its stock is computed wherever stock is read: the editor, the listings table, the cart, shop pages and the search
+    indexer (`bundle_stock`). It is not stored.
+  - Quick price and stock updates refuse a stock for a bundle ("A bundle's stock follows its items.").
+- **Rules:**
+  - Each item must be the business's own product. Bundles inside bundles and the bundle itself are refused.
+  - An item needs a variant when its product has variants, and the same item may not appear twice.
+  - Completeness needs at least 2 units ("Add at least two items to the bundle."), so a single item with qty 1 is not
+    a bundle.
+  - Submitting for vetting needs every item to be an approved listing.
+  - A product that is part of a bundle can't be deleted (409 `listing_in_bundle`).
+  - A bundle's contents count as its **price** for S-39 re-vetting: they are what the price buys.
+- **Purchasable:** the cart and checkout see a bundle like any offer, through the `SellableOffers` port.
+  - Its stock is the whole bundles its items allow.
+  - Taking stock locks the item rows in a stable order, then decrements every item, or none when one is short.
+  - Giving stock back (a checkout that fails after taking it) returns every item.
+  - Order lines reference the bundle offer, and sales count against the bundle.
+- **Who can create a bundle:** the design's type picker shows Product · Service · Bundle for businesses that sell
+  both. A seller-only business sees Product · Bundle, because a bundle is goods. That is a deviation from
+  `showTypePicker: !sellerOnly && !provOnly`, made because sellers are the ones with products to bundle.
+- **Editor:**
+  - The Variants tab becomes "Bundle contents": a picker of the business's own products (not bundles), the variant,
+    the quantity, each item's price and stock.
+  - The offer tab shows the derived stock read-only, plus "Bought separately: $X · Customers save $Y".
+  - The listings table's meta line starts with "Bundle".
+- **Not done:** a bundle has no customer-facing "what's in the box" list beyond its own description, and the consumer
+  pages show it as a plain product. Sales of a bundle do not count toward its items' `sales_30d`.
+
+### Compliance documents
+- **Endpoints:** `GET|POST …/listings/{id}/documents` and `GET|DELETE …/listings/{id}/documents/{documentId}`, for
+  products only.
+- **Upload rules:**
+  - Multipart `file` plus `purpose` (`spec_sheet` | `invoice`), the design's two buttons.
+  - PDF, PNG or JPEG, judged by the file's first bytes, at most 10 MB and 10 per listing. These are the onboarding
+    documents' rules and message ("Upload a PDF, PNG or JPEG under 10 MB.").
+  - The file name is cut to its last path segment and at most 200 characters.
+- **Storage and access:** stored through the catalogue's `MediaStorage` (now with `delete`) under the business's
+  prefix. The files are private: members with VIEW can list and download them (`no-store`, as an attachment), and
+  members with EDIT can upload and remove them. Customers never see them.
+- **Not done:** the console's vetting queue doesn't show them yet, so a reviewer reads them through the database or
+  storage. No virus scan beyond what the object store does (S-10's scanner applies when configured). Documents are
+  not required for submission: the design shows them as optional uploads.
+
+## 2026-09-30 — S-69 Studio bundle size and code splitting
+
+Measured on the production build. Sizes are gzip -9 in kB (1000 B). "Initial JS" means the entry script, the chunks
+`index.html` preloads, and everything they import statically. `apps/studio/scripts/bundle-budget.mjs` computes it.
+
+| | before | after |
+|---|---|---|
+| entry script | 184.1 kB (597 kB raw) | 159.6 kB (500 kB raw) |
+| initial JS (incl. preloads) | 184.1 kB, 1 file | 202.0 kB, 18 files (the landing preloads) |
+| JS fetched to show the dashboard | 209.6 kB, 17 files | 202.1 kB, 19 files |
+| Lighthouse mobile, dashboard: FCP · LCP · Speed Index | 2.6 s · 3.1–3.4 s · 4.3–4.5 s | 0.8–1.0 s · 2.9–3.0 s · 1.1–1.3 s |
+| Lighthouse performance score | 79–86 (6 runs) | 79–94 (8 runs); 94 with TBT 140 ms |
+
+- **The main chunk was already under the target.** The backlog's "~550 kB" is raw size: the entry was 597 kB raw but
+  184 kB gzip, under the 250 kB gzip goal before this story. The work went into what was in it and into the
+  dashboard's critical path.
+- **Icons out of the entry.** The menu's 22 Phosphor icons (69 kB raw; every Phosphor component carries all six
+  weights) were in `features/shell/nav.ts`, which the route guards import. The menu moved to `navMenu.ts`, which only
+  the layout imports. `nav.ts` keeps the screen and path rules.
+- **Loaders travel with their screen.** The router plugin's `codeSplittingOptions.defaultBehavior` groups `loader` with
+  `component`, so the features' `api.ts` modules and their zod schemas leave the entry (kitchen, settings,
+  availability, appointments …).
+  - Exceptions: the `/b/$merchantId` layout and the dashboard keep their loaders unsplit (per-route
+    `codeSplitGroupings`), so the business and the dashboard data are requested together with the session check, not
+    after a chunk download.
+  - `SETTINGS_TABS` moved to `features/settings/tabs.ts`, because the settings route's search validation pulled in the
+    whole settings api.
+- **The landing chunks are preloaded.** A small Vite plugin (`preloadLanding` in `vite.config.ts`) adds
+  `<link rel="modulepreload">` for the layout and dashboard chunks and their imports. The browser fetches them while
+  the entry runs. Signed-out pages pay about 40 kB gzip for this, deliberately.
+- **Nothing blocks the first paint any more.**
+  - `/config.js` is `defer`, and still runs before the module script.
+  - Google Fonts are preloaded in `index.html` and applied by `main.tsx`. The usual `onload="this.media='all'"`
+    trick is an inline handler, which the Studio's CSP (`script-src 'self'`) forbids.
+  - `index.html` paints a boot screen ("Northline Studio" on the page background) that React replaces.
+- **Budget in the build.** `pnpm --filter @northline/studio build` now runs `scripts/bundle-budget.mjs` after
+  `vite build`. It fails when the initial JS passes 250 kB gzip and names the biggest files. The Docker image build
+  runs the same script.
+- **Lighthouse ≥ 90 is met only on a quiet machine.**
+  - The FCP, LCP and Speed Index gains are stable across runs.
+  - Total Blocking Time is not: it varied 140–500 ms with the load of the shared build machine, because the simulated
+    4× CPU slowdown multiplies contention. Its long tasks are the entry's evaluation and the first render.
+  - Moving FCP earlier with the boot screen also moves those tasks after FCP, where TBT counts them.
+  - The method: Lighthouse 12 (mobile, simulated throttling) against the built dist served gzip by a fixture server
+    with a populated dashboard.
+- **Not done:**
+  - zod (95 kB raw) stays in the entry: the session and business checks that every route runs parse with it, and a
+    `zod/mini` split would mean two zod copies.
+  - intl-messageformat's parser (38 kB raw) stays too: precompiling the messages would change `defineMessages`.
+
+## 2026-09-30 — S-70 Remaining schema TODO constraints and indexes
+
+Every `-- TODO indexes/constraints` comment of the V002–V015 baseline was checked against a database migrated to
+main (V164). Each one is now one of three things:
+- **done earlier:** it exists from a later migration;
+- **V181:** added by this story;
+- **dropped:** with the reason given below.
+
+The baseline files keep their comments, because applied migrations are never edited, so this list is the reference.
+
+| table | TODO | status |
+|---|---|---|
+| identity.users | unique(phone), unique(email) | done earlier (V020, partial unique) |
+| identity.users | RLS: self or admin | **dropped**. Every query runs as the api's database role and the module services enforce "self or staff" (CurrentUser / staff role). Row-level security would need a role per request and session variables on every pooled connection, for no rule the services don't already apply. |
+| identity.passkeys | index(user_id) | done earlier |
+| identity.sessions | index(user_id) | done earlier (V021) |
+| identity.sessions | TTL job | **dropped**. The rows are the sign-in history that Settings › Security lists (S-19), not live sessions; those are in Valkey with their own TTL. How long the history is kept is a retention decision for the privacy policy, not an index. |
+| identity.household_members | PK(household_id,user_id) | done earlier |
+| identity.addresses | index(user_id) | done earlier (partial, `deleted_at is null`) |
+| identity.addresses | GiST(geom) | **V181** `ix_addresses_geom` (partial, geom not null) |
+| region.regions | unique(province) | done earlier (V130, partial on `kind = 'province'`) |
+| region.zones | GiST(polygon) | done earlier |
+| region.feature_flags | PK(key,region_id) | done earlier |
+| merchants.merchants | index(type,status), index(tier), unique(business_number) | done earlier |
+| merchants.merchant_principals | index(merchant_id), role check per structure | done earlier (V031 trigger `trg_principal_role`) |
+| merchants.merchant_categories | PK, count ≤ limit trigger | done earlier (V016 `trg_category_limit`) |
+| merchants.merchant_members | PK(merchant_id,user_id) | done earlier |
+| merchants.verifications | index(merchant_id,status), index(expires_at) | done earlier |
+| merchants.storefronts | unique(slug), unique(custom_domain) | done earlier (V030, V085) |
+| merchants.storefront_sections | unique(storefront_id,position), kind allowed for page_kind | done earlier (V016 `trg_section_kind`) |
+| merchants.service_areas | PK(merchant_id,zone_id) | done earlier |
+| catalogue.categories | index(parent_id), gin(search_terms) | **V181** `ix_categories_parent`, `ix_categories_search_terms` |
+| catalogue.catalog_products | unique(gtin) | done earlier (V050, partial) |
+| catalogue.catalog_products | GIN(attributes) | **dropped**. No SQL query filters on attributes: attribute facets and filters are served by the Elasticsearch read model (S-44). A GIN index would cost every catalogue write for no reader. |
+| catalogue.offers | unique(merchant_id,sku), index(product_id) | done earlier |
+| catalogue.variants | unique(offer_id,sku) | done earlier |
+| catalogue.services | index(merchant_id), index(category_id) | **V181** `ix_services_merchant`, `ix_services_category`. The (merchant_id, sku) unique index is partial, so it can't serve "every service of a business". |
+| catalogue.media | index(phash), index(owner_type,owner_id) | done earlier |
+| food.menus | index(merchant_id) | done earlier ((merchant_id, sort)) |
+| food.menu_items | index(merchant_id,available) | done earlier |
+| food.item_modifiers | PK(item_id,group_id) | done earlier |
+| availability.availability_rules | index(merchant_id,member_user_id) | done earlier: the leading columns of the unique (merchant_id, member_user_id, weekday, effective_from) |
+| availability.time_off | index(merchant_id,starts_on) | done earlier |
+| booking.bookings | index(merchant_id,starts_at), index(customer_id) | done earlier |
+| booking.bookings | exclusion constraint on member/time | **dropped**. Reasons below the table. |
+| booking.booking_events | index(booking_id,at) | done earlier |
+| booking.quotes | index(request_id), index(merchant_id,state) | done earlier |
+| booking.quote_lines | unique(quote_id,position), discount/amount check | done earlier (V040) |
+| orders.carts | index(customer_id) | done earlier (unique partial) |
+| orders.orders | index(customer_id), index(state,window_id) | done earlier |
+| orders.order_lines | index(order_id), index(merchant_id,state) | done earlier |
+| orders.delivery_windows | index(zone_id,starts_at) | done earlier |
+| orders.group_orders | unique(link_code) | **V181** `ux_group_orders_link_code` (partial) |
+| fulfilment.runs | index(courier_id,state) | **V181** `ix_runs_courier_state` |
+| fulfilment.stops | index(run_id,seq) | **V181** `ix_stops_run_seq` |
+| fulfilment.couriers | Redis Streams · TTL 24 h | **dropped**. Not a database item: live courier positions travel over Valkey pub/sub (S-52 tracking), never through this table. |
+| payments.payment_intents | unique(stripe_pi) | done earlier |
+| payments.escrows | index(release_at), index(merchant_id,state) | done earlier |
+| payments.payouts | index(merchant_id,at) | done earlier: (merchant_id, created_at desc). The table has no `at` column. |
+| payments.ledger_entries | index(account,at), append-only | done earlier (V061 trigger) |
+| payments.refunds, payments.disputes | index(state) | done earlier |
+| trust.reviews | unique(ref_id,author_id), index(target_type,target_id) | done earlier (unique per target type) |
+| trust.quality_scores | PK(merchant_id,date) | done earlier |
+| trust.flags | index(state) | done earlier |
+| trust.points_ledger | index(user_id) | done earlier ((user_id, created_at)) |
+| messaging.threads | index(ref_type,ref_id) | done earlier |
+| messaging.messages | index(thread_id,at) | done earlier |
+| messaging.notifications | index(user_id,sent_at) | **V181** `ix_notifications_user_sent` |
+| messaging.tickets | index(state,sla_due_at), index(agent_id) | done earlier (V071) |
+| i18n.translations | PK(key,locale) | done earlier |
+| i18n.translations | published as CDN bundles | **dropped**. Not a database item. UI strings ship in the web bundles (`defineMessages`), and this table has no writer. |
+| i18n.content_translations | PK | done earlier |
+| developer.api_keys | index(key_hash) | done earlier (unique) |
+| developer.webhook_deliveries | index(endpoint_id,at) | done earlier |
+| developer.outbox | Debezium reads WAL; rows purged after publish | **dropped**. Obsolete: the Modulith JDBC registry (`events.event_publication`) is the outbox, Debezium was removed, and nothing writes this table. Dropping the table itself is left out: migrations here are additive. |
+| developer.audit_log | append-only | **V181** trigger `audit_log_append_only`: UPDATE and DELETE are refused. The one exception is a transaction that sets `northline.audit_retention = 'on'` and deletes rows older than seven years. |
+| developer.audit_log | nightly export to cold storage · 7-year retention | **dropped** as a schema item. The export and the purge job are operations work that no story covers yet. The trigger above already admits the purge. |
+
+**Why the bookings exclusion constraint was dropped.**
+- Customer bookings already serialise per team member and refuse overlaps: `CustomerBookingJdbc.lockAndCheckOverlap`
+  takes an advisory lock and runs an overlap query.
+- The availability holds in Valkey (S-55) go further, with travel buffers that a plain time-range exclusion can't
+  express.
+- The constraint would need `btree_gist`.
+- Only the customer booking path runs that check. Rows written by other paths (quote acceptance, the dev seed, older
+  data) aren't guaranteed overlap-free, and any overlapping row in a deployed database would make the migration fail
+  at deploy. That is a risk an additive migration must not take.
+
+**Tests.** `SchemaTodosTest` checks the V181 indexes on the migrated test database, the group-order link uniqueness,
+and the audit log rules: no update, no delete, and a retention delete only past seven years with the setting.
+
+## 2026-09-30 — S-72 Bulk import: validate image URLs and support full updates on re-import
+
+- **One set of SSRF rules.** The S-33 `EgressPolicy` and `HostResolver` moved from the worker to the shared `platform`
+  library (`ca.northline.platform`). They are joined by `EgressDnsResolver`, the HttpClient 5 resolver that
+  checks every resolved address and pins the connection to them, and `EgressPolicy.refuseLiteral` for IP-literal
+  hosts. The worker's webhook transport uses the same classes, so its behaviour is unchanged. The api's new
+  `SafeRemoteImages` (port `RemoteImages`) fetches import images with them.
+- **Fetch rules:**
+  - https only, no credentials in the URL, public addresses only;
+  - no redirects: a redirect could point anywhere, so the merchant gives the final URL;
+  - no cookies, no retries;
+  - timeouts of 5 s to connect, 10 s per read and 20 s in all;
+  - at most 15 MB, the upload limit.
+  - `IMPORT_IMAGES_ALLOW_LOCAL=true` allows http:// and loopback, for local development and the tests. The cloud
+    profiles refuse to start with it, the same rule as `WEBHOOKS_ALLOW_LOCAL`.
+- **The `image_urls` column.** The three product templates gain it: up to 9 links, main first, separated by spaces,
+  new lines or `|` (commas would split a CSV cell). Validation fetches every distinct URL once, 8 at a time on virtual
+  threads, at most 500 per file ("Up to 500 image URLs per file."). It runs outside a database transaction, so no
+  connection is held while fetching. A row whose image fails becomes an error row, with the first failing image's
+  message:
+  - "Image URL unreachable" — the design's text: an HTTP error, a timeout, a redirect, or an image too large;
+  - "Image URL must be a public https:// link" — refused by the SSRF rules;
+  - "Image URL is not a JPG or PNG image";
+  - "Image URL is under 1000 px on the longest side";
+  - "Image URL is not a valid link";
+  - "Up to 9 image URLs per row".
+
+  The report is kept in row order.
+- **Importing images.** On import the URLs are fetched again and stored through the normal media upload, as the
+  business's own images in order, and the listing's image source becomes `own`. An image that no longer loads at that
+  moment is left out instead of failing the whole import; the completeness meter then shows it missing. Variant
+  rows' images go to the listing: the first row of a parent supplies them. Per-variant images arrive with S-65.
+- **Full updates on re-import.**
+  - **Category templates:** a row for an existing SKU now updates every column it fills in: title, GTIN, brand, MPN,
+    category, attributes, price, stock and images. An empty cell keeps the current value, so a sheet exported with
+    blanks never wipes data.
+  - **Validation for updates:** an update row checks the attributes it names against the listing's category, or the
+    new category when the row changes it. Price and stock may be empty.
+  - **Services template:** updates name, category, pricing mode, price, duration, buffer, what's included and
+    instant book in the same way.
+  - **Price & stock template:** still changes price and stock only.
+  - **How it is saved:** updates go through the editor's use cases (`EditProduct`/`EditService.update`), so the
+    editor's validation, S-39 re-vetting and events apply as in the Studio.
+- **Variants on re-import.** Rows whose `parent_sku` is an existing product listing no longer fail ("Parent SKU
+  already exists …").
+  - Each row updates the variant with its SKU (price, stock, GTIN, and the name when size or colour is filled) or
+    adds a new variant. A new variant needs a price and stock.
+  - The first row's listing-level columns apply to the listing.
+  - The offer shows the lowest variant price and the total stock, as the S-35 sync does.
+  - Variants missing from the file are kept, not removed.
+- **Not done:** the row errors stay English, like the existing import messages, which the design shows verbatim.
+  Nothing has fetched a real third-party image host: the tests use WireMock on loopback, and the SSRF refusals are
+  unit-tested with made-up addresses.
+
 ## 2026-09-30 — S-77 Seed data photos for kitchen items and listings
 
 - **What #5 already did.** PR #5 bundled eight menu-item pictures (`server/api/src/main/resources/seed-media/kitchen`).

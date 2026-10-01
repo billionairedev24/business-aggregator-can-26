@@ -12,6 +12,8 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import ca.northline.platform.EgressPolicy;
+import ca.northline.platform.HostResolver;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import java.net.InetAddress;
 import java.net.URI;

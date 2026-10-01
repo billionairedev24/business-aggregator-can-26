@@ -3,9 +3,12 @@ import { z } from 'zod';
 import { http } from '../../lib/http';
 
 /**
- * Messages API (server: ca.northline.messaging). The Studio polls — the thread list every 15 s, the open thread every
- * 5 s — until server-sent events land (DECISIONS.md). Attachments are shared with help cases.
+ * Messages API (server: ca.northline.messaging). New messages arrive over the Studio's live stream (S-68,
+ * `lib/live.ts`); while it is down the screen polls — the thread list every 15 s, the open thread every 5 s.
+ * Attachments are shared with help cases.
  */
+export const THREADS_POLL_MS = 15_000;
+export const THREAD_POLL_MS = 5_000;
 const base = (merchantId: string) => `/api/v1/merchants/${merchantId}`;
 const lang = (locale: string) => ({ 'accept-language': locale === 'fr' ? 'fr-CA' : 'en-CA' });
 
@@ -40,13 +43,13 @@ export const messagesKeys = {
 export const threadsQuery = (m: string) => queryOptions({
   queryKey: messagesKeys.threads(m),
   queryFn: () => http(`${base(m)}/threads`, {}, z.object({ items: z.array(ThreadSummary) })).then(r => r.items),
-  refetchInterval: 15_000,
+  refetchInterval: THREADS_POLL_MS,
 });
 
 export const threadQuery = (m: string, id: string, locale: string) => queryOptions({
   queryKey: messagesKeys.thread(m, id, locale),
   queryFn: () => http(`${base(m)}/threads/${id}`, { headers: lang(locale) }, ThreadDetail),
-  refetchInterval: 5_000,
+  refetchInterval: THREAD_POLL_MS,
 });
 
 export const attachmentUrl = (m: string, id: string) => `${base(m)}/message-attachments/${id}`;

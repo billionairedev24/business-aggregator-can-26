@@ -11,7 +11,8 @@ import { cartQuery } from '../cart/api';
  * market's offers, best first, each with variants, stock and the pooled runs it can make (cut-off computed by the api
  * in the market's time zone). Public and server-rendered like the other Shop pages.
  */
-export const Variant = z.object({ variantId: z.string(), value: z.string(), priceCents: z.number().int(), stock: z.number().int() });
+/** `images`: the variant's own photos (S-65); empty = the offer's. */
+export const Variant = z.object({ variantId: z.string(), value: z.string(), priceCents: z.number().int(), stock: z.number().int(), images: z.array(z.string()).default([]) });
 export type Variant = z.infer<typeof Variant>;
 
 export const Offer = z.object({

@@ -7,11 +7,13 @@ import ca.northline.catalogue.domain.HandlingTime;
 import ca.northline.catalogue.domain.IdentifierType;
 import ca.northline.catalogue.domain.ImageSource;
 import ca.northline.catalogue.domain.ItemCondition;
+import ca.northline.catalogue.domain.OfferType;
 import ca.northline.catalogue.domain.ProductDetails;
 import ca.northline.catalogue.domain.ReturnsPolicy;
 import ca.northline.catalogue.domain.VariantTheme;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -79,7 +81,22 @@ record ProductRequest(
         @Nullable Boolean warranty,
 
         @Nullable @Size(max = KEYWORDS_MAX, message = KEYWORDS_TOO_LONG)
-        String searchKeywords) {
+        String searchKeywords,
+
+        // S-65: a bundle of the business's own products (type bundle); ignored for products
+        @Nullable OfferType type,
+
+        @Nullable @Size(max = BUNDLE_ITEMS_MAX, message = BUNDLE_ITEMS_TOO_MANY) @Valid
+        List<BundleItemRequest> bundleItems) {
+
+    record BundleItemRequest(
+            @NotBlank(message = BUNDLE_ITEM_UNKNOWN) String offerId,
+            @Nullable String variantId,
+
+            @NotNull(message = BUNDLE_QTY_RANGE)
+            @Min(value = 1, message = BUNDLE_QTY_RANGE)
+            @Max(value = BUNDLE_QTY_MAX, message = BUNDLE_QTY_RANGE)
+            Integer qty) {}
 
     record VariantRequest(
             @Nullable String id,
@@ -94,16 +111,20 @@ record ProductRequest(
             Long priceCents,
 
             @NotNull(message = STOCK_REQUIRED) @PositiveOrZero(message = STOCK_NEGATIVE)
-            Integer stock) {}
+            Integer stock,
+
+            // S-65: the variant's own images (media ids, main first); empty = it inherits the listing's
+            @Nullable @Size(max = IMAGES_MAX, message = IMAGES_TOO_MANY)
+            List<String> imageIds) {}
 
     /** Onboarding's quick form sends only a GTIN (or nothing): the identifier type follows from it. */
     ProductDetails toDetails() {
         var hasGtin = gtin != null && !gtin.isBlank();
-        var type = identifierType != null ? identifierType : hasGtin ? IdentifierType.GTIN : IdentifierType.NONE;
+        var idType = identifierType != null ? identifierType : hasGtin ? IdentifierType.GTIN : IdentifierType.NONE;
         var theme = Objects.requireNonNullElse(variantTheme, VariantTheme.NONE);
         return new ProductDetails(
-                type,
-                type == IdentifierType.NONE ? null : gtin,
+                idType,
+                idType == IdentifierType.NONE ? null : gtin,
                 title,
                 brand,
                 mpn,
@@ -116,7 +137,13 @@ record ProductRequest(
                         ? List.of()
                         : variants.stream()
                                 .map(v -> new ProductDetails.Variant(
-                                        v.id(), v.value(), v.sku(), v.gtin(), v.priceCents(), v.stock()))
+                                        v.id(),
+                                        v.value(),
+                                        v.sku(),
+                                        v.gtin(),
+                                        v.priceCents(),
+                                        v.stock(),
+                                        v.imageIds() == null ? List.of() : v.imageIds()))
                                 .toList(),
                 Objects.requireNonNullElse(imageSource, hasGtin ? ImageSource.SHARED : ImageSource.OWN),
                 imageIds == null ? List.of() : imageIds,
@@ -134,6 +161,15 @@ record ProductRequest(
                 Boolean.TRUE.equals(restrictedOk),
                 Boolean.TRUE.equals(bilingualOk),
                 Boolean.TRUE.equals(warranty),
-                searchKeywords == null || searchKeywords.isBlank() ? null : searchKeywords.strip());
+                searchKeywords == null || searchKeywords.isBlank() ? null : searchKeywords.strip(),
+                Objects.requireNonNullElse(type, OfferType.PRODUCT),
+                bundleItems == null
+                        ? List.of()
+                        : bundleItems.stream()
+                                .map(b -> new ProductDetails.BundleItem(
+                                        b.offerId(),
+                                        b.variantId() == null || b.variantId().isBlank() ? null : b.variantId(),
+                                        b.qty()))
+                                .toList());
     }
 }

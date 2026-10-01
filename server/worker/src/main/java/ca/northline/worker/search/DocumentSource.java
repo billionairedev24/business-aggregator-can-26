@@ -297,7 +297,8 @@ final class DocumentSource {
                         select o.id, p.category_id, o.price_cents, o.fulfilment, o.sales_30d,
                                greatest(o.updated_at, p.updated_at) as updated_at,
                                coalesce(o.vetting = 'approved' and o.status = 'live', false) as visible,
-                               coalesce(o.stock, 0)
+                               coalesce(case when o.listing_type = 'bundle' then catalogue.bundle_stock(o.id)
+                                             else o.stock end, 0)
                                  + coalesce((select sum(v.stock) from catalogue.variants v where v.offer_id = o.id), 0)
                                  as stock,
                                coalesce(nullif(o.title, ''), nullif(p.title_i18n->>'en', ''), p.title, '') as name_en,

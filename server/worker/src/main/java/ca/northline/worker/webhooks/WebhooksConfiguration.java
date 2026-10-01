@@ -1,5 +1,7 @@
 package ca.northline.worker.webhooks;
 
+import ca.northline.platform.EgressPolicy;
+import ca.northline.platform.HostResolver;
 import ca.northline.platform.WebhookSecretBox;
 import ca.northline.worker.events.EventSchemas;
 import ca.northline.worker.notifications.Notifier;
