@@ -22,7 +22,7 @@ final class CaseRequests {
 
     /** {@code POST /disputes/{id}/goodwill-offer} ("Send 50% goodwill offer"). */
     record GoodwillOffer(
-            @NotNull(message = OFFER_RANGE) @Positive(message = OFFER_RANGE) @Nullable
+            @NotNull(message = OFFER_RANGE) @Positive(message = OFFER_RANGE)
             Long amountCents) {}
 
     /** {@code POST /refunds/{id}/contest}. */

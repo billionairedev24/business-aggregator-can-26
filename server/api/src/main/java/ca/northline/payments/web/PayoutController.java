@@ -83,10 +83,7 @@ class PayoutController {
         return idempotency.run(scope(member, "instant-payout"), key, body, HttpStatus.CREATED, () -> {
             stepUp.verify(member.userId(), proof);
             var command = new MovePayouts.InstantCommand(
-                    merchantId,
-                    Objects.requireNonNull(body.amountCents()),
-                    member.userId(),
-                    Objects.requireNonNull(key));
+                    merchantId, body.amountCents(), member.userId(), Objects.requireNonNull(key));
             return mapper.toResponse(move.instant(command));
         });
     }
@@ -131,7 +128,7 @@ class PayoutController {
         body.requireManualFields();
         var draft = bank.prepare(new ChangeBankAccount.Prepare(
                 merchantId,
-                Objects.requireNonNull(body.method()),
+                body.method(),
                 body.linkedAccount(),
                 body.financialConnectionsAccount(),
                 body.institution(),

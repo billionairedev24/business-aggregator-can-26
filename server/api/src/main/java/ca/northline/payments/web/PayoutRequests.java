@@ -30,22 +30,18 @@ final class PayoutRequests {
 
     /** {@code POST /payouts/instant}. */
     record InstantPayout(
-            @NotNull(message = AMOUNT_REQUIRED) @Min(value = 100, message = AMOUNT_MIN) @Nullable
+            @NotNull(message = AMOUNT_REQUIRED) @Min(value = 100, message = AMOUNT_MIN)
             Long amountCents) {}
 
     /** {@code PUT /payouts/schedule} — weekly needs a weekday (1–5), monthly a day of the month. */
     record Schedule(
-            @NotNull(message = SCHEDULE_REQUIRED) PayoutSchedule.@Nullable Frequency frequency,
+            @NotNull(message = SCHEDULE_REQUIRED) PayoutSchedule.Frequency frequency,
             @Nullable Integer weekday,
             PayoutSchedule.@Nullable MonthlyAnchor monthlyAnchor,
-            @NotNull(message = RESERVE_REQUIRED) PayoutSchedule.@Nullable Reserve reserve) {
+            @NotNull(message = RESERVE_REQUIRED) PayoutSchedule.Reserve reserve) {
 
         PayoutSchedule toSchedule() {
-            return new PayoutSchedule(
-                    java.util.Objects.requireNonNull(frequency),
-                    weekday,
-                    monthlyAnchor,
-                    java.util.Objects.requireNonNull(reserve));
+            return new PayoutSchedule(frequency, weekday, monthlyAnchor, reserve);
         }
     }
 
@@ -55,7 +51,7 @@ final class PayoutRequests {
      * {@code manual}: institution (3 digits), transit (5), account (7–12) and holder.
      */
     record BankAccount(
-            @NotNull(message = METHOD_REQUIRED) PayoutAccount.@Nullable Method method,
+            @NotNull(message = METHOD_REQUIRED) PayoutAccount.Method method,
 
             @Size(max = 255, message = PayoutMessages.LINK_AGAIN) @Nullable
             String linkedAccount,
