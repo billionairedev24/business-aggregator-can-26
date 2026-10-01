@@ -133,7 +133,8 @@ class OnboardingService
 
         DisplayName displayName = collect(problems, () -> new DisplayName(command.displayName()));
         GstNumber gst = null;
-        if (command.gstNumber() instanceof String raw && !raw.isBlank()) {
+        var raw = command.gstNumber();
+        if (raw != null && !raw.isBlank()) {
             gst = collect(problems, () -> new GstNumber(raw));
         } else if (!command.structure().gstOptional()) {
             problems.add(new Violation(GstNumber.FIELD, "required", GstNumber.REQUIRED));

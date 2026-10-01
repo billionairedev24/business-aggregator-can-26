@@ -1,6 +1,7 @@
 package ca.northline.catalogue.application;
 
 import ca.northline.catalogue.domain.MediaAsset;
+import ca.northline.shared.Bytes;
 import java.util.Optional;
 
 /**
@@ -9,7 +10,7 @@ import java.util.Optional;
  */
 public interface ManageMedia {
 
-    record Content(byte[] bytes, String contentType) {}
+    record Content(Bytes bytes, String contentType) {}
 
     MediaAsset upload(String merchantId, byte[] bytes);
 

@@ -17,6 +17,7 @@ import ca.northline.worker.support.WorkerIntegrationTest;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import java.io.IOException;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
@@ -251,8 +252,7 @@ class SearchReindexTest extends WorkerIntegrationTest {
 
     private void send(String topic, String type, String payload) {
         var id = payload.substring(payload.indexOf("\"eventId\":\"") + 11, payload.indexOf("\"eventId\":\"") + 37);
-        producer.send(Events.record(topic, id, type, 1, payload));
-        producer.flush();
+        assertThat(producer.send(Events.record(topic, id, type, 1, payload))).succeedsWithin(Duration.ofSeconds(30));
     }
 
     private static String listing(String id, String merchantId) {

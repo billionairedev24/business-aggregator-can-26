@@ -1,7 +1,6 @@
 package ca.northline.sms;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import ca.northline.sms.aws.AwsSmsTransport;
 import ca.northline.sms.twilio.TwilioSmsTransport;
@@ -50,7 +49,12 @@ class SmsTransportsTest {
                         .hasMessageContaining("SMS_ACCOUNT_ID")
                         .hasMessageContaining("SMS_AUTH_TOKEN")
                         .hasMessageContaining("SMS_FROM"));
-        assertThatThrownBy(SmsTransports::azure).hasMessageContaining("not implemented yet");
+        runner.withPropertyValues("northline.sms.provider=azure")
+                .run(ctx -> assertThat(ctx)
+                        .hasFailed()
+                        .getFailure()
+                        .rootCause()
+                        .hasMessageContaining("not implemented yet"));
     }
 
     @Test

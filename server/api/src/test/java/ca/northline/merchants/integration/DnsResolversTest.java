@@ -62,8 +62,8 @@ class DnsResolversTest {
             return DnsMessages.response(query, DnsWire.SERVFAIL, List.of());
         }
         var records = zone(q);
-        var exists =
-                !records.isEmpty() || q.name().endsWith("aspen.ca") && !q.name().startsWith("gone.");
+        var exists = !records.isEmpty()
+                || (q.name().endsWith("aspen.ca") && !q.name().startsWith("gone."));
         return DnsMessages.response(query, exists ? DnsWire.NOERROR : DnsWire.NXDOMAIN, records);
     }
 

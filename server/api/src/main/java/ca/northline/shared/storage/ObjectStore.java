@@ -1,5 +1,6 @@
 package ca.northline.shared.storage;
 
+import ca.northline.shared.Bytes;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Optional;
@@ -45,5 +46,5 @@ public interface ObjectStore {
     record ObjectInfo(String key, String contentType, long size) {}
 
     /** An object with its bytes. */
-    record ObjectContent(ObjectInfo info, byte[] bytes) {}
+    record ObjectContent(ObjectInfo info, Bytes bytes) {}
 }

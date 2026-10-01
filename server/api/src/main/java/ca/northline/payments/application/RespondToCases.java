@@ -3,6 +3,7 @@ package ca.northline.payments.application;
 import ca.northline.payments.domain.Dispute;
 import ca.northline.payments.domain.Refund;
 import ca.northline.payments.domain.Tier;
+import ca.northline.shared.Bytes;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,7 +25,7 @@ public interface RespondToCases {
             SalesReadModel.DisputeRate disputeRate,
             Tier tier) {}
 
-    record Upload(String name, String contentType, byte[] bytes) {}
+    record Upload(String name, String contentType, Bytes bytes) {}
 
     Overview overview(String merchantId);
 

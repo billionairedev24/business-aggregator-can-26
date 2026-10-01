@@ -142,7 +142,7 @@ class SearchIndexerTest extends WorkerIntegrationTest {
         var fx = fx();
         var m = fx.merchant("provider", "registered", "Version Test Co");
         var service = fx.service(m, "Detailing", null, 12000, "live");
-        var future = (Instant.now().plus(Duration.ofHours(1)).toEpochMilli()) * 1000;
+        var future = Instant.now().plus(Duration.ofHours(1)).toEpochMilli() * 1000;
         var newer = ListingDocument.builder()
                 .id(service)
                 .kind("service")
@@ -318,8 +318,7 @@ class SearchIndexerTest extends WorkerIntegrationTest {
 
     private void send(String topic, String type, String json) {
         var id = json.substring(json.indexOf("\"eventId\":\"") + 11, json.indexOf("\"eventId\":\"") + 37);
-        producer.send(Events.record(topic, id, type, 1, json));
-        producer.flush();
+        assertThat(producer.send(Events.record(topic, id, type, 1, json))).succeedsWithin(Duration.ofSeconds(30));
     }
 
     private Optional<ListingDocument> doc(String index, String id) {

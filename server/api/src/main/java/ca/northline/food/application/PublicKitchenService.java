@@ -77,7 +77,7 @@ class PublicKitchenService implements PublicKitchenUseCases, FoodCheckoutFacts {
                 .flatMap(k -> Optional.ofNullable(rows.get(k.merchantId()))
                         .map(row -> card(k, status.getOrDefault(k.merchantId(), KitchenStatus.CLOSED), row, lat, lng))
                         .stream())
-                .sorted(Comparator.comparing((Card c) -> !c.open())
+                .sorted(Comparator.comparingInt((Card c) -> c.open() ? 0 : 1)
                         .thenComparing(c -> c.distanceKm() == null ? Double.MAX_VALUE : c.distanceKm())
                         .thenComparing(Card::name))
                 .toList();

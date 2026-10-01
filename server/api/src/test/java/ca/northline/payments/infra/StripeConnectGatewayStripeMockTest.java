@@ -8,6 +8,7 @@ import ca.northline.payments.domain.Payout;
 import ca.northline.shared.stripe.StripeClients;
 import ca.northline.shared.stripe.StripeIdempotencyKeys;
 import ca.northline.support.StripeMock;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -57,7 +58,7 @@ class StripeConnectGatewayStripeMockTest {
 
         var read = gateway.authorization(hold.paymentIntent());
         assertThat(read.paymentIntent()).startsWith("pi_");
-        assertThat(read.status()).isIn(IntentStatus.values());
+        assertThat(read.status()).isIn(List.of(IntentStatus.values()));
 
         var charge = gateway.capture(hold.paymentIntent(), 25_935, StripeIdempotencyKeys.of("capture", "ESC1", "PI1"));
         assertThat(recorder.sent().getLast().path()).endsWith("/capture");
@@ -126,7 +127,7 @@ class StripeConnectGatewayStripeMockTest {
 
     @Test
     void payoutReconciliation_readsTheStateOnTheConnectedAccount() {
-        assertThat(gateway.payoutState("acct_1", "po_123")).isIn(Payout.State.values());
+        assertThat(gateway.payoutState("acct_1", "po_123")).isIn(List.of(Payout.State.values()));
         assertThat(StripeConnectGateway.payoutState("paid")).isEqualTo(Payout.State.PAID);
         assertThat(StripeConnectGateway.payoutState("failed")).isEqualTo(Payout.State.FAILED);
         assertThat(StripeConnectGateway.payoutState("canceled")).isEqualTo(Payout.State.CANCELED);

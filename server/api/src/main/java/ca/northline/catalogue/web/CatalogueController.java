@@ -88,6 +88,6 @@ class CatalogueController {
                 .contentType(MediaType.parseMediaType(content.contentType()))
                 .cacheControl(CacheControl.maxAge(Duration.ofDays(30)).cachePrivate())
                 .header("X-Content-Type-Options", "nosniff")
-                .body(content.bytes());
+                .body(content.bytes().toArray());
     }
 }
