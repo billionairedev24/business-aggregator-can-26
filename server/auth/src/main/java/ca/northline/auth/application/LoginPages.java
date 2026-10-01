@@ -9,7 +9,8 @@ import org.springframework.stereotype.Component;
  * Studio ({@code northline.auth.login-page}) and the consumer site ({@code northline.auth.consumer-login-page}); S-90 adds
  * the platform console ({@code northline.auth.console-login-page}) for staff. An authorization request goes to its
  * client's page; a Google / Apple sign-in comes back to the app that started it
- * (the consumer's buttons add {@code ?app=consumer}, carried through the provider in the {@code state}).
+ * (the consumer's buttons add {@code ?app=consumer}, carried through the provider in the {@code state}). S-87: the
+ * courier app is a consumer client: couriers sign in on the consumer site's page, never the Studio's.
  */
 @Component
 public class LoginPages {

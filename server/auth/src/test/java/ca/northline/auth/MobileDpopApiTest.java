@@ -486,6 +486,36 @@ class MobileDpopApiTest extends AuthIntegrationTest {
         }
 
         @Test
+        void theCourierApp_signsInOnTheConsumerSitesPage_notTheStudios_andGoesBackToTheApp() throws Exception {
+            var user = register(newPerson());
+            var browser = new MockHttpSession();
+            mvc.perform(authorize(browser, COURIER, COURIER_REDIRECT, "openid courier deliveries"))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrl("http://localhost:3000/sign-in"));
+
+            clock.advanceSeconds(Totp.PERIOD_SECONDS);
+            postJson(
+                            "/api/auth/sign-in",
+                            browser,
+                            json(Map.of("identifier", user.person().email())))
+                    .andExpect(status().isOk());
+            var body = postJson("/api/auth/sign-in/totp", browser, json(Map.of("code", totpNow(user.totpSecret()))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.continueTo", startsWith("http://localhost/oauth2/authorize?")))
+                    .andReturn()
+                    .getResponse()
+                    .getContentAsString();
+            var location = mvc.perform(get(URI.create(JsonPath.read(body, "$.continueTo")))
+                            .session(browser)
+                            .accept(MediaType.TEXT_HTML))
+                    .andExpect(status().is3xxRedirection())
+                    .andReturn()
+                    .getResponse()
+                    .getRedirectedUrl();
+            assertThat(location).startsWith(COURIER_REDIRECT + "?code=").contains("state=s29");
+        }
+
+        @Test
         void theConsumerApp_cannotAskForCourierScopes() throws Exception {
             var user = register(newPerson());
             var location = mvc.perform(
