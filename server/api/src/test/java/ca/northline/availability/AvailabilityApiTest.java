@@ -10,7 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ca.northline.availability.api.AvailabilityChanged;
-import ca.northline.availability.domain.AlbertaHolidays;
+import ca.northline.region.api.Regions;
 import ca.northline.shared.security.MerchantRole;
 import ca.northline.support.IntegrationTest;
 import ca.northline.support.OperationsFixtures;
@@ -39,6 +39,9 @@ class AvailabilityApiTest extends IntegrationTest {
 
     @Autowired
     JdbcClient jdbc;
+
+    @Autowired
+    Regions regions;
 
     Business biz;
     String tech;
@@ -242,7 +245,8 @@ class AvailabilityApiTest extends IntegrationTest {
 
         @Test
         void openAHoliday() throws Exception {
-            var holiday = AlbertaHolidays.upcoming(today, 1).getFirst();
+            // test businesses have no province of their own: the configured default province's calendar applies
+            var holiday = regions.upcomingHolidays("AB", today, 1).getFirst();
             mvc.perform(json(put(path("/holidays/" + holiday.date())), "{\"open\":true}", biz.userId()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.open").value(true))
@@ -251,7 +255,14 @@ class AvailabilityApiTest extends IntegrationTest {
                             put(path("/holidays/" + today.withMonth(6).withDayOfMonth(3))),
                             "{\"open\":true}",
                             biz.userId()))
-                    .andExpect(status().isUnprocessableContent());
+                    .andExpect(status().isUnprocessableContent())
+                    .andExpect(
+                            jsonPath("$.errors[0].message").value("This day is not a statutory holiday in Alberta."));
+            mvc.perform(get(path("/time-off")).with(TestJwt.member(biz.userId())))
+                    .andExpect(jsonPath("$.province.en").value("Alberta"))
+                    .andExpect(jsonPath("$.holidays[0].key").value(holiday.key()))
+                    .andExpect(jsonPath("$.holidays[0].name.en").value(holiday.nameEn()))
+                    .andExpect(jsonPath("$.holidays[0].name.fr").value(holiday.nameFr()));
         }
     }
 

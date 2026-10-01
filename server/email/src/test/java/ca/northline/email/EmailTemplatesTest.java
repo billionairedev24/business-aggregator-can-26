@@ -17,7 +17,8 @@ class EmailTemplatesTest {
 
     static final EmailTemplates TEMPLATES = new EmailTemplates(
             "Northline Marketplace Inc. · 1200 – 8th Avenue SW, Calgary, Alberta T2P 1B5, Canada",
-            "support@northline.ca");
+            "support@northline.ca",
+            java.time.ZoneId.of("America/Edmonton"));
     static final URI UNSUBSCRIBE = URI.create("http://localhost:8080/api/v1/email/unsubscribe?t=token");
 
     static Stream<Arguments> samples() {

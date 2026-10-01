@@ -7,7 +7,7 @@ import ca.northline.merchants.domain.RegistrySource;
 
 /**
  * {@code northline.registries.<source>.provider=manual}: no API account for this source — every lookup goes to a
- * Northline agent (for Alberta: a registry-agent search), who records the search's reference when deciding the review.
+ * Northline agent (for a province without a registry API: a registry-agent search), who records the search's reference when deciding the review.
  */
 class ManualRegistry implements BusinessRegistry {
 

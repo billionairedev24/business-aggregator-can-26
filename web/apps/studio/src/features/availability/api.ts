@@ -34,9 +34,10 @@ export const TimeOffEntry = z.object({
   kind: z.enum(['closed', 'special']), specialRanges: z.array(RangeSchema), reason: z.string().nullish(),
 });
 export type TimeOffEntry = z.infer<typeof TimeOffEntry>;
-export const Holiday = z.object({ key: z.string(), date: z.string(), open: z.boolean() });
+/** A statutory holiday of the business's province (region model, S-134): its name comes with it, en and fr. */
+export const Holiday = z.object({ key: z.string(), date: z.string(), name: z.object({ en: z.string(), fr: z.string() }).nullish(), open: z.boolean() });
 export type Holiday = z.infer<typeof Holiday>;
-export const TimeOffView = z.object({ entries: z.array(TimeOffEntry), holidays: z.array(Holiday), holidayPremiumCents: z.number() });
+export const TimeOffView = z.object({ entries: z.array(TimeOffEntry), holidays: z.array(Holiday), holidayPremiumCents: z.number(), province: z.object({ en: z.string(), fr: z.string() }).nullish() });
 export type TimeOffView = z.infer<typeof TimeOffView>;
 
 /** S-32: `state` reconnect = the provider revoked the grant; `authorizationUrl` right after Connect (OAuth consent). */

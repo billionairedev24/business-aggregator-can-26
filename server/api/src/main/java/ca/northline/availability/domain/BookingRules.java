@@ -4,9 +4,11 @@ import ca.northline.shared.CodedEnum;
 import ca.northline.shared.RuleViolation;
 import ca.northline.shared.RuleViolation.Violation;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Supplier;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -45,17 +47,6 @@ public record BookingRules(
     public static final Set<Integer> RESCHEDULE = Set.of(180, 720, 1440);
     public static final Set<Long> LATE_FEES = Set.of(0L, 2500L, 3500L);
     public static final Set<Long> PREMIUMS = Set.of(2500L, 5000L);
-    /** Service areas offered in Calgary (zone names; see docs/DECISIONS.md). */
-    public static final List<String> ZONES = List.of(
-            "Beltline",
-            "Kensington",
-            "Inglewood",
-            "Downtown",
-            "NW Calgary",
-            "SE Calgary",
-            "Airdrie",
-            "Cochrane",
-            "Okotoks");
 
     /** instant = confirmed when paid · approve = confirm within 2 h · request = customer describes, you propose. */
     public enum AcceptMode implements CodedEnum {
@@ -92,29 +83,57 @@ public record BookingRules(
                         || (emergencyPremiumCents == null
                                 && Integer.valueOf(2500).equals(emergencyPremiumBps)));
         check(errors, "holidayPremiumCents", holidayPremiumCents >= 0 && holidayPremiumCents <= 100_000);
-        check(errors, "serviceAreas", ZONES.containsAll(serviceAreas));
         if (!errors.isEmpty()) {
             throw new RuleViolation(errors);
         }
     }
 
-    /** What a business gets before it saves its own rules (the design's defaults). */
-    public static BookingRules defaults() {
+    /**
+     * Rules whose service areas must be zones the business's market offers (region data, S-134), with every problem
+     * reported at once: the option checks of the record, then {@code serviceAreas}.
+     */
+    public static BookingRules offeredIn(Collection<String> zones, Supplier<BookingRules> rules, Set<String> areas) {
+        var errors = new ArrayList<Violation>();
+        BookingRules built = null;
+        try {
+            built = rules.get();
+        } catch (RuleViolation e) {
+            errors.addAll(e.getViolations());
+        }
+        if (!zones.containsAll(areas)) {
+            errors.add(new Violation("serviceAreas", "option", NOT_AN_OPTION));
+        }
+        if (built == null || !errors.isEmpty()) {
+            throw new RuleViolation(errors);
+        }
+        return built;
+    }
+
+    /** The same rules with other service areas. */
+    public BookingRules withServiceAreas(Set<String> areas) {
         return new BookingRules(
-                30,
-                20,
-                60,
-                null,
-                14,
-                5,
-                AcceptMode.INSTANT,
-                180,
-                0L,
-                null,
-                null,
-                null,
-                5000,
-                Set.of("Beltline", "Kensington", "Inglewood", "Downtown", "Airdrie"));
+                intervalMin,
+                bufferMin,
+                minNoticeMin,
+                sameDayCutoffMin,
+                horizonDays,
+                maxJobsPerDay,
+                acceptMode,
+                rescheduleFreeMin,
+                lateCancelFeeCents,
+                lateCancelFeeBps,
+                emergencyPremiumCents,
+                emergencyPremiumBps,
+                holidayPremiumCents,
+                areas);
+    }
+
+    /**
+     * What a business gets before it saves its own rules (the design's defaults). The service areas are its market's
+     * default zones, which the caller adds ({@link #withServiceAreas}); none here.
+     */
+    public static BookingRules defaults() {
+        return new BookingRules(30, 20, 60, null, 14, 5, AcceptMode.INSTANT, 180, 0L, null, null, null, 5000, Set.of());
     }
 
     private static void check(List<Violation> errors, String field, boolean ok) {

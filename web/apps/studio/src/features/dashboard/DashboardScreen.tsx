@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { ErrorState, Kpi, KpiRow, LinkRow, Meter, PageSkeleton, StackedBarChart, useFormatters, useLocale, type Locale } from '@northline/ui';
+import { ErrorState, Kpi, KpiRow, LinkRow, Meter, PageSkeleton, StackedBarChart, useFormatters, useLocale, type Locale, timeZone } from '@northline/ui';
 import { useMerchant, useMerchantId, type MerchantType } from '../shell/api';
 import { screenHref, type ScreenKey } from '../shell/nav';
 import { clock, clockWithPeriod } from '../../lib/time';
@@ -103,7 +103,7 @@ function headline(d: Dashboard, kind: 'provider' | 'seller' | 'both', t: T, f: F
   if (kind === 'seller') { const n = d.cases.filter(x => x.kind === 'refund').length; parts.push(t('cases', { count: n, word: word(n) })); }
   const e = d.earnings;
   parts.push(e.releasingCents != null && e.releasingAt
-    ? t('releasing', { money: f.money(e.releasingCents, { whole: true }), day: new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { weekday: 'long', timeZone: 'America/Edmonton' }).format(new Date(e.releasingAt)) })
+    ? t('releasing', { money: f.money(e.releasingCents, { whole: true }), day: new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { weekday: 'long', timeZone: timeZone() }).format(new Date(e.releasingAt)) })
     : t('nothingReleasing'));
   return `${parts.join(', ')}.`;
 }

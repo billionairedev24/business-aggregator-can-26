@@ -1,37 +1,36 @@
 package ca.northline.merchants.domain;
 
-import static ca.northline.merchants.domain.RegistrySource.ALBERTA_CORPORATE_REGISTRY;
-import static ca.northline.merchants.domain.RegistrySource.CALGARY_BUSINESS_LICENCES;
 import static ca.northline.merchants.domain.RegistrySource.CORPORATIONS_CANADA;
 import static ca.northline.merchants.domain.RegistrySource.MANUAL;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Which registries verify what the owner entered in onboarding (docs/runbooks/registries.md):
+ * Which registries verify what the owner entered in onboarding (docs/runbooks/registries.md), with the adapters the
+ * business's province and city have in the region model ({@link RegistryRoutes}, S-134):
  *
  * <ul>
- *   <li>the {@code registry} row: the business record per structure (legal-details.schema.json) — Alberta
+ *   <li>the {@code registry} row: the business record per structure (legal-details.schema.json) — provincial
  *       corporations, extra-provincial registrations, partnerships, trade names, co-operatives and societies in the
- *       Alberta Corporate Registry; federal corporations at Corporations Canada <em>and</em> their Alberta
- *       extra-provincial registration; plus, for kitchens, the City of Calgary business licence;
- *   <li>licence rows: Calgary's mobile vending permit in the Calgary dataset; every other regulator (AMVIC, AHS, AGLC,
- *       RECA, Safety Codes, …) has no API and goes to a Northline agent.
+ *       province's corporate registry; federal corporations at Corporations Canada <em>and</em> their
+ *       extra-provincial registration in the province; plus, for kitchens, the city's business licence where the city
+ *       has a licence source;
+ *   <li>licence rows: the licences the city's source answers (a mobile vending permit); every other regulator has no
+ *       API and goes to a Northline agent.
  * </ul>
+ *
+ * A province without a registry adapter sends its records to an agent; a city without a licence source has no
+ * municipal lookup. Nothing is assumed about where a business is.
  */
 public final class RegistryPlan {
     private RegistryPlan() {}
 
-    /** Licence registries answered by the City of Calgary dataset. */
-    static final Set<String> CALGARY_LICENCES = Set.of("mobile permit", "calgary business licence");
-
     /** The lookups behind the {@code registry} row; empty = nothing to register (a sole proprietor without a trade name). */
-    public static List<RegistryQuery> business(MerchantApplication a) {
+    public static List<RegistryQuery> business(MerchantApplication a, RegistryRoutes routes) {
+        var provincial = routes.provincialOrManual();
         var d = a.getLegalDetails();
         var names = names(a);
         var out = new ArrayList<RegistryQuery>();
@@ -43,7 +42,7 @@ public final class RegistryPlan {
                     if (tradeName != null) {
                         add(
                                 out,
-                                ALBERTA_CORPORATE_REGISTRY,
+                                provincial,
                                 RegistrySubject.TRADE_NAME,
                                 text(d, "trade_name_registration"),
                                 withFirst(tradeName, names));
@@ -52,14 +51,14 @@ public final class RegistryPlan {
                 case PARTNERSHIP ->
                     add(
                             out,
-                            ALBERTA_CORPORATE_REGISTRY,
+                            provincial,
                             RegistrySubject.PARTNERSHIP,
                             text(d, "partnership_registration"),
                             withFirst(text(d, "partnership_name"), names));
                 case CORP_AB ->
                     add(
                             out,
-                            ALBERTA_CORPORATE_REGISTRY,
+                            provincial,
                             RegistrySubject.CORPORATION,
                             text(d, "alberta_corporate_access_number"),
                             names);
@@ -72,7 +71,7 @@ public final class RegistryPlan {
                             names);
                     add(
                             out,
-                            ALBERTA_CORPORATE_REGISTRY,
+                            provincial,
                             RegistrySubject.EXTRA_PROVINCIAL,
                             text(d, "alberta_extra_provincial_registration"),
                             names);
@@ -80,39 +79,39 @@ public final class RegistryPlan {
                 case CORP_EX ->
                     add(
                             out,
-                            ALBERTA_CORPORATE_REGISTRY,
+                            provincial,
                             RegistrySubject.EXTRA_PROVINCIAL,
                             text(d, "alberta_extra_provincial_registration"),
                             names);
                 case COOP ->
                     add(
                             out,
-                            ALBERTA_CORPORATE_REGISTRY,
+                            provincial,
                             RegistrySubject.COOPERATIVE,
                             text(d, "cooperative_registration"),
                             withFirst(text(d, "registered_name"), names));
                 default -> // NONPROFIT
                     add(
                             out,
-                            ALBERTA_CORPORATE_REGISTRY,
+                            provincial,
                             RegistrySubject.SOCIETY,
                             text(d, "society_registration"),
                             withFirst(text(d, "registered_name"), names));
             }
         }
         var cityLicence = a.getProfile().cityLicenceNumber();
-        if (a.getType() == MerchantType.KITCHEN && cityLicence != null && !cityLicence.isBlank() && inCalgary(a)) {
-            add(out, CALGARY_BUSINESS_LICENCES, RegistrySubject.MUNICIPAL_LICENCE, cityLicence, names);
+        var municipal = routes.municipal();
+        if (a.getType() == MerchantType.KITCHEN && cityLicence != null && !cityLicence.isBlank() && municipal != null) {
+            add(out, municipal, RegistrySubject.MUNICIPAL_LICENCE, cityLicence, names);
         }
         return List.copyOf(out);
     }
 
     /** The lookup behind a licence row ({@code licence:<registry>}, {@code ahs_permit}, {@code aglc}). */
-    public static RegistryQuery licence(MerchantApplication a, String registry, String number) {
-        var source = CALGARY_LICENCES.contains(registry.toLowerCase(Locale.ROOT)) && inCalgary(a)
-                ? CALGARY_BUSINESS_LICENCES
-                : MANUAL;
-        var subject = source == CALGARY_BUSINESS_LICENCES ? RegistrySubject.MUNICIPAL_LICENCE : RegistrySubject.LICENCE;
+    public static RegistryQuery licence(MerchantApplication a, RegistryRoutes routes, String registry, String number) {
+        var municipal = routes.municipalAnswers(registry) ? routes.municipal() : null;
+        var source = municipal != null ? municipal : MANUAL;
+        var subject = municipal != null ? RegistrySubject.MUNICIPAL_LICENCE : RegistrySubject.LICENCE;
         return new RegistryQuery(source, subject, registry, number, names(a));
     }
 
@@ -132,11 +131,6 @@ public final class RegistryPlan {
             }
         }
         return names;
-    }
-
-    /** No city yet counts as Calgary: Calgary is the launch city and the only municipal source. */
-    static boolean inCalgary(MerchantApplication a) {
-        return a.getCity() == null || a.getCity().equalsIgnoreCase("Calgary");
     }
 
     private static void add(

@@ -2,21 +2,23 @@ package ca.northline.identity.persistence;
 
 import ca.northline.identity.application.UserProfiles;
 import ca.northline.identity.domain.UserProfile;
+import ca.northline.region.api.Regions;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
-/** {@code identity.users} → {@link UserProfile}. Member-since is the account's creation date in Edmonton time. */
+/**
+ * {@code identity.users} → {@link UserProfile}. Member-since is the account's creation date in the platform zone (an
+ * account belongs to no market; region configuration).
+ */
 @Repository
 @RequiredArgsConstructor
 class UserProfileQueries implements UserProfiles {
 
-    private static final ZoneId EDMONTON = ZoneId.of("America/Edmonton");
-
     private final JdbcClient jdbc;
+    private final Regions regions;
 
     @Override
     public Optional<UserProfile> find(String userId) {
@@ -36,7 +38,7 @@ class UserProfileQueries implements UserProfiles {
                         rs.getString("phone"),
                         rs.getString("locale"),
                         rs.getObject("created_at", OffsetDateTime.class)
-                                .atZoneSameInstant(EDMONTON)
+                                .atZoneSameInstant(regions.platformZone())
                                 .toLocalDate(),
                         rs.getString("mfa_primary")))
                 .optional();

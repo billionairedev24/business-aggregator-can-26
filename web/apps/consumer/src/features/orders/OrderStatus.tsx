@@ -1,4 +1,5 @@
 import { EmptyState, ErrorState, SiteLink, Skeleton, useFormatters, useLocale } from '@northline/ui';
+import { useZone } from '../location/regions';
 import { isNotFound } from '@northline/client';
 import { signInHref, useViewer } from '../session/api';
 import { clock, runWhen, weekday, windowRange } from '../shop/format';
@@ -38,11 +39,12 @@ export function OrderStatus({ orderId }: { orderId: string }) {
 function OrderView({ order }: { order: OrderTracking }) {
   const t = useOrderT();
   const { locale } = useLocale();
+  const zone = useZone();
   const { money } = useFormatters();
   const d = order.delivery;
   const when = d.startsAt && d.endsAt && d.day
-    ? t(`when_${runWhen({ day: d.day, startsAt: d.startsAt })}`, { range: windowRange(d.startsAt, d.endsAt, locale), weekday: weekday(d.startsAt, locale) })
-    : d.etaAt ? t('whenDirect', { time: clock(d.etaAt, locale) }) : t('whenSoon');
+    ? t(`when_${runWhen({ day: d.day, startsAt: d.startsAt }, zone)}`, { range: windowRange(d.startsAt, d.endsAt, locale, zone), weekday: weekday(d.startsAt, locale, zone) })
+    : d.etaAt ? t('whenDirect', { time: clock(d.etaAt, locale, zone) }) : t('whenSoon');
   // "… 6–9 p.m." already ends the sentence
   const title = (order.state === 'cancelled' ? t('cancelled')
     : order.state === 'refunded' ? t('refunded')
@@ -92,8 +94,8 @@ function OrderView({ order }: { order: OrderTracking }) {
           </svg>
           <figcaption className="order-map-note">
             {d.kind === 'pooled' && d.startsAt
-              ? <>{d.runLabel ? t('run', { label: d.runLabel, time: clock(d.startsAt, locale) }) : t('runNoLabel', { time: clock(d.startsAt, locale) })}{d.households > 1 ? ` · ${t('households', { count: d.households })}` : ''}</>
-              : d.etaAt ? t('direct', { time: clock(d.etaAt, locale) }) : null}
+              ? <>{d.runLabel ? t('run', { label: d.runLabel, time: clock(d.startsAt, locale, zone) }) : t('runNoLabel', { time: clock(d.startsAt, locale, zone) })}{d.households > 1 ? ` · ${t('households', { count: d.households })}` : ''}</>
+              : d.etaAt ? t('direct', { time: clock(d.etaAt, locale, zone) }) : null}
           </figcaption>
         </figure>
       </div>

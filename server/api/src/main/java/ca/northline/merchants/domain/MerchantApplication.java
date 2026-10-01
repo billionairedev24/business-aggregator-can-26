@@ -5,6 +5,7 @@ import ca.northline.merchants.api.MerchantSubmitted;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.Ids;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -138,8 +139,12 @@ public class MerchantApplication {
         return typeChanged;
     }
 
-    /** Business step. The details were validated against the structure's schema, principals rules and limits. */
-    public void saveBusiness(BusinessDetails details, Instant at) {
+    /**
+     * Business step. The details were validated against the structure's schema, principals rules and limits.
+     *
+     * @param cities the region model's market cities: the business's city is the first one its addresses name
+     */
+    public void saveBusiness(BusinessDetails details, Instant at, Collection<String> cities) {
         requireApplicant();
         displayName = details.displayName().value();
         legalName = details.legalName();
@@ -152,9 +157,11 @@ public class MerchantApplication {
         languages = details.profile().languages();
         businessNumber = details.businessNumber();
         registryRef = details.registryRef();
-        registryJurisdiction = details.registryJurisdiction();
-        city = Cities.find(Stream.concat(
-                        details.addresses().stream(), details.profile().places()))
+        registryJurisdiction = details.registryJurisdiction(province == null ? null : province.code());
+        city = Cities.find(
+                        cities,
+                        Stream.concat(
+                                details.addresses().stream(), details.profile().places()))
                 .orElse(null);
         step = step.furthest(OnboardingStep.VERIFICATION);
         updatedAt = at;

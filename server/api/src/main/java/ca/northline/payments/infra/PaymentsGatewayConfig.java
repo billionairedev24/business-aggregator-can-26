@@ -1,5 +1,6 @@
 package ca.northline.payments.infra;
 
+import ca.northline.payments.application.BusinessTime;
 import ca.northline.shared.stripe.StripeClients;
 import java.time.Clock;
 import java.util.Objects;
@@ -37,9 +38,9 @@ class PaymentsGatewayConfig {
 
     @Bean
     @ConditionalOnExpression(NO_KEY)
-    FakeStripeGateway fakeStripeGateway(Clock clock) {
+    FakeStripeGateway fakeStripeGateway(Clock clock, BusinessTime time) {
         log.info("Payments: no Stripe key configured — using the fake Stripe gateway (nothing leaves this process).");
-        return new FakeStripeGateway(clock);
+        return new FakeStripeGateway(clock, time);
     }
 
     @Bean

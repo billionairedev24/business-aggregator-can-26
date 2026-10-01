@@ -23,12 +23,13 @@ logging.level:
 northline:                               # a STRIPE_SECRET_KEY exported in the shell must never reach Stripe from tests
   # Consumer Shop (S-49…S-52): each test class browses its own market, so rows other tests leave in the shared
   # database (sellers in Calgary) never show up in its lists.
-  orders.delivery.markets: [Calgary, Edmonton, Airdrie, Shopville, Productville, Cartville, Trackville]
+  orders.delivery.markets: [Shopville, Productville, Cartville, Trackville]   # extra test markets; the live ones are region data
   payments.stripe-secret-key: ""
   payments.stripe-webhook-secret: whsec_test_platform_fake    # obviously fake: S-12 tests sign with these
   payments.stripe-connect-webhook-secret: whsec_test_connect_fake
   stripe.secret-key: ""
   search.provider: local                 # S-44: SearchApiTest switches to Elasticsearch (Testcontainers)
+  region.provinces: AB,BC=America/Vancouver,ON,QC   # S-134: served by configuration as well as the live rows
   domains:                               # S-31: tests call CustomDomainJobs; "Check now" answers at once
     check-cooldown: PT0S
     target-host: pages.test.northline.ca
@@ -37,6 +38,8 @@ northline:                               # a STRIPE_SECRET_KEY exported in the s
 # it on), so the other contexts start without generating the document.
 springdoc.ai.mcp.enabled: false
 springdoc.pre-loading-enabled: false
+# S-128: the developer docs server holds the docs and OpenAPI trees in memory; only the MCP tests (one context) turn it on.
+northline.devdocs.enabled: false
 # S-125: fixed so the committed docs/api/openapi specs never depend on the machine's AUTH_ISSUER / API_PUBLIC_URL.
 northline.docs:
   issuer: http://localhost:9000

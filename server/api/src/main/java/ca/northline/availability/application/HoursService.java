@@ -1,7 +1,5 @@
 package ca.northline.availability.application;
 
-import static ca.northline.availability.application.Team.ZONE;
-
 import ca.northline.availability.api.AvailabilityChanged;
 import ca.northline.availability.application.AvailabilityUseCases.HoursView;
 import ca.northline.availability.application.AvailabilityUseCases.ListPreviewServices;
@@ -49,6 +47,7 @@ class HoursService implements ViewHours, SaveHours, PreviewSlots, ListPreviewSer
     private final CatalogueFacts catalogue;
     private final ApplicationEventPublisher events;
     private final Clock clock;
+    private final MarketZones zones;
 
     @Override
     public HoursView view(String merchantId) {
@@ -67,7 +66,7 @@ class HoursService implements ViewHours, SaveHours, PreviewSlots, ListPreviewSer
     @Override
     @Transactional
     public HoursView save(SaveHours.Command command) {
-        var today = LocalDate.now(clock.withZone(ZONE));
+        var today = LocalDate.now(clock.withZone(team.zone(command.merchantId())));
         if (command.effectiveFrom().isBefore(today)) {
             throw RuleViolation.of("effectiveFrom", "range", EFFECTIVE_IN_PAST);
         }
@@ -112,15 +111,18 @@ class HoursService implements ViewHours, SaveHours, PreviewSlots, ListPreviewSer
 
     @Override
     public RulesView rules(String merchantId) {
+        var market = team.place(merchantId).marketId();
         return new RulesView(
-                hours.rules(merchantId).orElseGet(BookingRules::defaults),
-                BookingRules.ZONES,
+                hours.rules(merchantId)
+                        .orElseGet(() -> BookingRules.defaults().withServiceAreas(zones.defaults(market))),
+                zones.offered(market),
                 hours.lastSaved(merchantId).orElse(null));
     }
 
     @Override
     @Transactional
     public RulesView saveRules(String merchantId, String actorId, BookingRules rules) {
+        BookingRules.offeredIn(zones.offered(team.place(merchantId).marketId()), () -> rules, rules.serviceAreas());
         var at = clock.instant();
         hours.saveRules(merchantId, rules, at);
         events.publishEvent(new AvailabilityChanged(Ids.next(), at, merchantId, actorId, "rules"));

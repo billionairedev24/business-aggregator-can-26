@@ -1,7 +1,6 @@
 package ca.northline.payments.application;
 
 import ca.northline.payments.domain.PayoutSchedule;
-import ca.northline.payments.domain.Zones;
 import ca.northline.shared.NavBadgeContributor;
 import java.time.Clock;
 import java.time.format.DateTimeFormatter;
@@ -24,6 +23,7 @@ class PaymentsNavBadges implements NavBadgeContributor {
     private final PayoutRepository payouts;
     private final CaseRepository cases;
     private final Clock clock;
+    private final BusinessTime time;
 
     @Override
     @Transactional(readOnly = true)
@@ -33,8 +33,9 @@ class PaymentsNavBadges implements NavBadgeContributor {
         var badges = new LinkedHashMap<String, String>();
         var schedule = payouts.schedule(merchantId).orElse(PayoutSchedule.DEFAULT);
         if (payouts.pendingAccount(merchantId).isEmpty()) {
-            schedule.nextAfter(clock.instant(), null).ifPresent(next -> {
-                var day = next.atZone(Zones.EDMONTON);
+            var zone = time.of(merchantId);
+            schedule.nextAfter(clock.instant(), null, zone).ifPresent(next -> {
+                var day = next.atZone(zone);
                 badges.put(
                         "payouts",
                         schedule.frequency() == PayoutSchedule.Frequency.WEEKLY

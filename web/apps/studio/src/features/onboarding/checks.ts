@@ -1,4 +1,4 @@
-import { formatDate, type Locale } from '@northline/ui';
+import { formatDate, type Locale, timeZone } from '@northline/ui';
 import type { MerchantType } from '../shell/api';
 import type { Check } from './api';
 import type { OnboardingT } from './messages';
@@ -47,9 +47,9 @@ export function checkText(c: Check, type: MerchantType, t: OnboardingT, locale: 
   }
 }
 
-/** "Thu 10 a.m." in Calgary time. */
+/** "Thu 10 a.m." in the business's time zone. */
 export function slotLabel(iso: string, locale: Locale): string {
-  return new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/Edmonton' }).format(new Date(iso));
+  return new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: timeZone() }).format(new Date(iso));
 }
 
 export const isComplete = (c: Check) => c.status === 'submitted' || c.status === 'verified';

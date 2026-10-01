@@ -9,7 +9,7 @@ export const useShellT = defineMessages({
     signIn: 'Sign in', createAccount: 'Create account',
     guestNote: "You're browsing as a guest. Sign in to pay, book, track orders and earn points — your cart is kept.",
     skip: 'Skip to content',
-    footerCompany: 'Northline Marketplace Inc. · Calgary', privacy: 'Privacy', terms: 'Terms', langSwitch: 'Français',
+    privacy: 'Privacy', terms: 'Terms', langSwitch: 'Français',
     sell: 'Sell on Northline', offer: 'Offer a service', kitchen: 'Run a kitchen',
     // account menu
     activity: 'Activity', account: 'Account', preferences: 'Preferences',
@@ -33,7 +33,7 @@ export const useShellT = defineMessages({
     signIn: 'Se connecter', createAccount: 'Créer un compte',
     guestNote: "Vous naviguez en tant qu'invité. Connectez-vous pour payer, réserver, suivre vos commandes et gagner des points — votre panier est conservé.",
     skip: 'Aller au contenu',
-    footerCompany: 'Northline Marketplace Inc. · Calgary', privacy: 'Confidentialité', terms: 'Conditions', langSwitch: 'English',
+    privacy: 'Confidentialité', terms: 'Conditions', langSwitch: 'English',
     sell: 'Vendre sur Northline', offer: 'Offrir un service', kitchen: 'Gérer une cuisine',
     activity: 'Activité', account: 'Compte', preferences: 'Préférences',
     orders: 'Commandes et réservations', favourites: 'Favoris', wallet: 'Portefeuille et points', profile: 'Profil',

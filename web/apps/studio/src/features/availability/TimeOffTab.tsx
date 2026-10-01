@@ -92,11 +92,11 @@ export function TimeOffTab() {
         ) : null}
       </div>
       <div>
-        <h3 className="nl-av-h3">{t('holidaysTitle')}</h3>
+        <h3 className="nl-av-h3">{q.data.province?.[locale] ? t('holidaysTitle', { province: q.data.province[locale] }) : t('holidaysTitle')}</h3>
         <ul className="nl-av-list">
           {q.data.holidays.map(h => (
             <li key={h.date} className="nl-av-item nl-av-holiday">
-              <span>{t(`h_${h.key}` as Parameters<T>[0])} · {md(h.date, locale)}</span>
+              <span>{h.name?.[locale] ?? t(`h_${h.key}` as Parameters<T>[0])} · {md(h.date, locale)}</span>
               <button type="button" className="nl-chip nl-av-smallchip" aria-pressed={h.open} disabled={!canEdit} onClick={() => holiday.mutate({ date: h.date, open: !h.open })}>
                 {h.open ? (premium > 0 ? t('holidayOpen', { money: formatMoney(premium, locale, { whole: true }) }) : t('holidayOpenNoPremium')) : t('holidayClosed')}
               </button>

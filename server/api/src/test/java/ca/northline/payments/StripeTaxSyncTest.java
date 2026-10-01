@@ -22,6 +22,7 @@ import ca.northline.support.IntegrationTest;
 import ca.northline.support.TestJwt;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -63,7 +64,7 @@ class StripeTaxSyncTest extends IntegrationTest {
     @Autowired
     JdbcClient jdbc;
 
-    private static final String QUARTER = CanadianTax.period(Instant.now());
+    private static final String QUARTER = CanadianTax.period(Instant.now(), ZoneId.of("America/Edmonton"));
 
     /** A job paid at checkout with a tax quote for {@code province}, held and completed (captured). */
     private record Sale(String merchantId, String escrowId, String bookingId, TaxCalculations.Quote quote) {}

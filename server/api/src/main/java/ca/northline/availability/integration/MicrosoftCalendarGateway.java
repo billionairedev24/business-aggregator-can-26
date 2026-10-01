@@ -57,7 +57,6 @@ class MicrosoftCalendarGateway implements CalendarGateway {
     static final String SCOPES = "openid profile offline_access " + CALENDARS;
     static final List<String> PREFER = List.of("odata.maxpagesize=200", "outlook.timezone=\"UTC\"");
     static final String TRANSACTION_PREFIX = "nl-";
-    static final ZoneId ALL_DAY_ZONE = ZoneId.of("America/Edmonton");
 
     interface LoginApi {
         @PostExchange(url = "/{tenant}/oauth2/v2.0/token", contentType = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
@@ -249,7 +248,8 @@ class MicrosoftCalendarGateway implements CalendarGateway {
     }
 
     @Override
-    public Changes changes(String accessToken, String calendarId, @Nullable String cursor, Instant from, Instant to) {
+    public Changes changes(
+            String accessToken, String calendarId, @Nullable String cursor, Instant from, Instant to, ZoneId zone) {
         var busy = new ArrayList<BusyEvent>();
         var removed = new ArrayList<String>();
         JsonNode page;
@@ -264,7 +264,7 @@ class MicrosoftCalendarGateway implements CalendarGateway {
                     : authorized(() -> graph.follow(URI.create(cursor), bearer(accessToken), PREFER));
             while (true) {
                 for (var item : page.path("value")) {
-                    classify(item, busy, removed);
+                    classify(item, busy, removed, zone);
                 }
                 var next = text(page, "@odata.nextLink");
                 if (next == null) {
@@ -289,7 +289,7 @@ class MicrosoftCalendarGateway implements CalendarGateway {
         return new Changes(busy, removed, delta, cursor == null);
     }
 
-    static void classify(JsonNode item, List<BusyEvent> busy, List<String> removed) {
+    static void classify(JsonNode item, List<BusyEvent> busy, List<String> removed, ZoneId zone) {
         var id = text(item, "id");
         if (id == null) {
             return;
@@ -301,8 +301,8 @@ class MicrosoftCalendarGateway implements CalendarGateway {
         var transaction = text(item, "transactionId");
         var ours = transaction != null && transaction.startsWith(TRANSACTION_PREFIX);
         var allDay = item.path("isAllDay").asBoolean(false);
-        var start = time(item.path("start"), allDay);
-        var end = time(item.path("end"), allDay);
+        var start = time(item.path("start"), allDay, zone);
+        var end = time(item.path("end"), allDay, zone);
         if (gone || free || declined || ours || start == null || end == null || !end.isAfter(start)) {
             removed.add(id);
         } else {
@@ -311,7 +311,7 @@ class MicrosoftCalendarGateway implements CalendarGateway {
     }
 
     /** Graph date-times have no offset ({@code 2026-10-01T15:00:00.0000000}) and are in UTC (Prefer header). */
-    static @Nullable Instant time(JsonNode node, boolean allDay) {
+    static @Nullable Instant time(JsonNode node, boolean allDay, ZoneId zone) {
         var dateTime = text(node, "dateTime");
         if (dateTime == null) {
             return null;
@@ -320,7 +320,7 @@ class MicrosoftCalendarGateway implements CalendarGateway {
             return OffsetDateTime.parse(dateTime).toInstant();
         }
         var local = LocalDateTime.parse(dateTime);
-        return allDay ? local.toLocalDate().atStartOfDay(ALL_DAY_ZONE).toInstant() : local.toInstant(ZoneOffset.UTC);
+        return allDay ? local.toLocalDate().atStartOfDay(zone).toInstant() : local.toInstant(ZoneOffset.UTC);
     }
 
     // ── notifications ────────────────────────────────────────────────────────────

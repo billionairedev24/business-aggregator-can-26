@@ -7,7 +7,7 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * Earnings read model for the Studio dashboard ("Net earnings · 12 weeks" stacked by services vs parts, and the month
- * KPI). Net = released escrow minus Northline's fee, by the week / month it was released (America/Edmonton).
+ * KPI). Net = released escrow minus Northline's fee, by the week / month it was released (the business's time zone).
  */
 public interface EarningsQuery {
 

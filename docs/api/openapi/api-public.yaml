@@ -402,6 +402,25 @@ paths:
       security: []
       tags:
       - geo-controller
+  /api/v1/geo/regions:
+    get:
+      operationId: regionRegions
+      parameters:
+      - in: query
+        name: lang
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RegionsResponse"
+          description: OK
+      security: []
+      tags:
+      - region-controller
   /api/v1/geo/resolve:
     get:
       operationId: geoResolve
@@ -852,7 +871,6 @@ paths:
         required: false
         schema:
           type: string
-          default: Calgary
       - in: query
         name: lang
         required: false
@@ -2282,7 +2300,6 @@ paths:
         required: false
         schema:
           type: string
-          default: Calgary
       - in: query
         name: lang
         required: false
@@ -2312,7 +2329,6 @@ paths:
         required: false
         schema:
           type: string
-          default: Calgary
       - in: query
         name: lang
         required: false
@@ -2356,7 +2372,6 @@ paths:
         required: false
         schema:
           type: string
-          default: Calgary
       - in: query
         name: lang
         required: false
@@ -3933,6 +3948,30 @@ components:
           - waitlist
           - pilot
           - live
+    MarketResponse:
+      type: object
+      properties:
+        city:
+          type: string
+        id:
+          type: string
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        province:
+          type: string
+        status:
+          type: string
+          enum:
+          - "off"
+          - waitlist
+          - pilot
+          - live
+        timeZone:
+          type: string
     Markets:
       type: object
       properties:
@@ -4423,6 +4462,40 @@ components:
         taxBps:
           type: integer
           format: int32
+    ProvinceResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        nameIn:
+          type: string
+        nameOf:
+          type: string
+        privacyLaw:
+          type: string
+          enum:
+          - pipeda
+          - ab_pipa
+          - bc_pipa
+          - qc_law25
+        status:
+          type: string
+          enum:
+          - "off"
+          - waitlist
+          - pilot
+          - live
+        taxBps:
+          type: integer
+          format: int32
+        timeZone:
+          type: string
+        timeZones:
+          type: array
+          items:
+            type: string
     PublicReview:
       type: object
       properties:
@@ -4589,6 +4662,21 @@ components:
           type: string
         unit:
           type: string
+    RegionsResponse:
+      type: object
+      properties:
+        defaultProvince:
+          type: string
+        markets:
+          type: array
+          items:
+            $ref: "#/components/schemas/MarketResponse"
+        platformTimeZone:
+          type: string
+        provinces:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProvinceResponse"
     Requested:
       type: object
       properties:

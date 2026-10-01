@@ -72,7 +72,8 @@ describe('Shop landing (design 06 shop)', () => {
     expect(screen.getByText('Shop · groceries & goods')).toBeInTheDocument();
     expect(screen.getByText('order by 5:20 p.m. · 3 shops · 5 neighbours in · Calgary')).toBeInTheDocument();
     expect(screen.getByText('Pooled run · Calgary')).toBeInTheDocument();
-    expect(calls.some(c => url(c).pathname === '/api/v1/public/shop' && url(c).searchParams.get('market') === 'Calgary' && url(c).searchParams.get('lang') === 'en')).toBe(true);
+    // no market chosen: the page asks without one and the api renders its fallback market (region configuration)
+    expect(calls.some(c => url(c).pathname === '/api/v1/public/shop' && url(c).searchParams.get('market') === null && url(c).searchParams.get('lang') === 'en')).toBe(true);
 
     const depts = screen.getByRole('region', { name: 'Shop by department' });
     expect(within(depts).getByRole('link', { name: /Bakery\s*2 shops/ })).toHaveAttribute('href', '/shop/bakery');

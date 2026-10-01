@@ -1,19 +1,14 @@
 package ca.northline.search.integration;
 
+import ca.northline.region.api.Markets;
 import ca.northline.search.application.SearchCache;
 import ca.northline.search.application.SearchIndex;
 import ca.northline.search.application.SearchRateLimit;
 import ca.northline.search.application.SearchSettings;
-import ca.northline.search.domain.SearchQuery;
 import ca.northline.shared.WebhookRateLimiter;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import java.time.Clock;
-import java.time.DateTimeException;
-import java.time.ZoneId;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -36,37 +31,8 @@ import tools.jackson.databind.json.JsonMapper;
 class SearchConfig {
 
     @Bean
-    SearchSettings searchSettings(SearchProperties properties) {
-        return new SearchSettings(
-                properties.cacheTtl(),
-                properties.defaultMarket().isBlank()
-                        ? null
-                        : properties.defaultMarket().strip().toUpperCase(Locale.ROOT),
-                properties.rateLimit(),
-                markets(properties.markets()));
-    }
-
-    /** {@code AB=America/Edmonton,BC=America/Vancouver} → code → zone; a malformed entry stops the api at start. */
-    static Map<String, ZoneId> markets(String spec) {
-        var markets = new LinkedHashMap<String, ZoneId>();
-        for (var entry : spec.split(",")) {
-            if (entry.isBlank()) {
-                continue;
-            }
-            var pair = entry.split("=", 2);
-            var code = pair[0].strip().toUpperCase(Locale.ROOT);
-            if (pair.length != 2 || !SearchQuery.MARKET.matcher(code).matches()) {
-                throw new IllegalStateException(
-                        "SEARCH_MARKETS entries are CODE=Time/Zone (a two-letter province or territory code), not: "
-                                + entry.strip());
-            }
-            try {
-                markets.put(code, ZoneId.of(pair[1].strip()));
-            } catch (DateTimeException e) {
-                throw new IllegalStateException("SEARCH_MARKETS: " + code + " has no valid time zone: " + pair[1], e);
-            }
-        }
-        return markets;
+    SearchSettings searchSettings(SearchProperties properties, Markets markets) {
+        return new SearchSettings(properties.cacheTtl(), properties.rateLimit(), markets);
     }
 
     @Bean

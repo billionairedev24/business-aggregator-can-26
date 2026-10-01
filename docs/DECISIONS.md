@@ -3218,6 +3218,138 @@ Branch `web/s-56-quotes`, stacked on `web/s-55-booking-wizard` (and so on S-54, 
   yet; notifying providers of a new request (the Studio column polls; push/e-mail are the notifications stories); a
   `quote.requested` event; photos on a request; the customer's list of requests (`/account/orders` is S-58).
 
+## 2026-10-01 — S-134 Region-neutral platform: provinces and markets as configuration
+
+User direction: "this is not just built for alberta, we just want to start for alberta". Every place fact now comes
+from one region model; Alberta and Calgary are its first *configured* live region. Runbook: docs/runbooks/regions.md.
+
+- **One model, extended from S-47 (no parallel model).** `region.api.Regions` (new) and `region.api.Markets` (S-44/S-47,
+  kept) are both implemented by `region.application.RegionCatalogue` (replaces `region.config.MarketSettings`): the
+  `region.regions` rows read through `MarketStore.profiles()`, cached `REGION_CACHE_TTL` (60 s) per instance with
+  `Regions.refresh()` for the console (phase 3), overlaid with configuration. `ProvinceProfile` = code, names (en, fr,
+  and the French forms "en Alberta"/"de l'Alberta"), time zones (first = default), launch status
+  (`region.api.LaunchStatus`), privacy law (`region.api.PrivacyLaw`: pipeda · ab_pipa · bc_pipa · qc_law25), registry
+  adapter keys, statutory holiday codes, tax bps. `MarketProfile` = city, province, zone (its own or its province's),
+  centre, status, registry adapter keys. Service zones stay in `availability.service_zones`, now keyed to a market.
+- **Where a business is:** `region.api.MerchantPlaces` (declared in region so booking and payments — which cannot depend
+  on merchants: merchants → payments → booking — can ask; merchants implements it from `merchants.merchants.province`
+  /`city`). Province = the business's own, else `REGION_DEFAULT_PROVINCE`; zone = its market's, else its province's,
+  else the platform zone. `MerchantDirectory.MerchantProfile` gained `city`.
+- **Configuration overrides:** `REGION_PROVINCES` (`CODE[=Zone/Id],…`: served whatever the row says; a zone given
+  replaces the row's), `REGION_DEFAULT_PROVINCE`, `REGION_PLATFORM_ZONE`, `REGION_CACHE_TTL`; S-44's `SEARCH_MARKETS` /
+  `SEARCH_DEFAULT_MARKET` are read as their fallbacks so existing deployments keep working. **Default change:** served
+  provinces were `AB,BC,ON,QC` by configuration; they are now the live rows (V131: Alberta) plus `REGION_PROVINCES`
+  (empty by default) — "we start in Alberta". The test profile keeps the four (`application-test.yml`). The default
+  province no longer has to be listed in the served set (it must be a two-letter code; an unknown one is logged).
+  Search reads served markets and zones from `Markets` (`SearchSettings` delegates; `SEARCH_MARKETS` parsing removed).
+- **Schema (V130–V139, a new range "region platform" in IMPLEMENTATION_PLAN):**
+  - V130 `region.regions` + `time_zones text[]`, `holidays text[]`, `privacy_law`, `registries text[]`; every province's
+    zones, holidays, law and French forms (`name_i18n.fr_in/fr_of`); `region.tax_profiles` for all 13 (rates in force
+    since 2025-04-01, the same as S-21's `CanadianTax`; a test keeps them equal) linked from the province rows. Zones per
+    province: BC lists Mountain-time areas, ON the north-west, NL Labrador, NU three zones, etc.
+  - V131 launch data: Alberta `live`; the Calgary, Edmonton, Airdrie markets (`ON CONFLICT DO NOTHING`, the dev seed
+    V119's ids); Calgary's `calgary_business_licences` registry; `availability.service_zones` + `market_id`, `sort`,
+    `default_on` with V114's nine zones assigned to Calgary (the five design defaults `default_on`). V117 had kept
+    markets out of migrations; launch markets are data every environment needs (delivery, fallback market, service
+    zones), so they are inserted here — as data, not code.
+  - V132 `merchants.merchants.province` CHECK widened from (AB, BC, ON, QC) to any two-letter code; the api checks the
+    province against the region model (it must be open: live, pilot or waitlist).
+- **Holidays:** `region.domain.HolidayRule` computes each Canadian statutory holiday (Family Day, Louis Riel Day,
+  Islander Day, Nova Scotia's February Heritage Day, Good Friday, Victoria Day, National Patriots' Day,
+  Saint-Jean-Baptiste, National Indigenous Peoples Day, Canada Day, Nunavut Day, Civic Holiday, BC/Saskatchewan/New
+  Brunswick Day, Discovery Day, Labour Day, National Day for Truth and Reconciliation, Thanksgiving, Remembrance Day,
+  Christmas, Boxing Day…) with en/fr names; which a province observes is V130 data (general/statutory holidays per the
+  provinces' employment standards; Alberta keeps the design's list incl. the optional Heritage Day and Boxing Day).
+  Observed-day shifts (Sunday → Monday) are not modelled (as before). `AlbertaHolidays` is gone; the time-off view sends
+  each holiday's name (en, fr) and the province's name. Message: "This day is not a statutory holiday in {province}."
+  (server English like the other api messages; the Studio shows the province in its own copy).
+- **Time zones:** a business's hours, slots, same-day cut-off, time off, holidays, calendar all-day events (the gateway
+  now gets the zone), booking/order/dashboard "today", sales reports, earnings weeks/months (`FinanceReadModels` takes
+  the zone as a parameter), payouts (`PayoutSchedule.nextAfter(…, zone)`; the scheduled run checks each business's own
+  9:00), compliance quarter, registry expiry days, kitchen "today" and onboarding expiry dates use the business's zone
+  (`MerchantPlaces`, payments' `BusinessTime`). A market's delivery runs, checkout options, order tracking and the
+  shop's run days use the market's zone (`DeliveryRuns.zone`). Platform-wide work uses `REGION_PLATFORM_ZONE`: the
+  nightly `@Scheduled` jobs (`zone = "${northline.region.platform-zone}"`), support SLA hours, account "member since"
+  (api and auth), Stripe Tax reporting quarters (Northline reports them), the fake Stripe payout arrival, team-invite
+  SMS. Worker quiet hours: the business's zone, read from the region rows in `JdbcRecipients` (the worker has no region
+  module; same rule: market → province → default province → platform zone). Emails: `EMAIL_TIME_ZONE` (default the
+  platform zone); `Notice.Texts` (SMS/push) use the recipient's quiet-hours zone.
+- **Tax:** quotes use the business's own province (else the default province), not `"AB"`; `TaxRates` rounds half-up
+  (QC 14.975 % = 1498 bps) and falls back to GST 5 % for a province without a profile (instead of a code map).
+  `TaxTransactions` without a calculation or a merchant province uses the configured default province, else logs and
+  skips the sale (no hard-coded launch market).
+- **Delivery markets** = the region's live markets plus `northline.orders.delivery.markets` (now "extra markets", empty
+  by default; the test profile lists its fictional cities). Shop and checkout without `?market=` use the region's
+  fallback market (S-47 `FallbackMarket`); a blank `market=` is still 422 "Choose a city.".
+- **Service zones** (Booking rules) = the business's market's `availability.service_zones`; the defaults are its
+  `default_on` zones. `BookingRules.ZONES` is gone; `BookingRules.offeredIn(zones, …)` keeps the "every problem at once"
+  422. Limit: `service_zones.name` is still the primary key (V114), so zone names must be unique across markets
+  (follow-up when two markets need the same name).
+- **Registries:** `RegistryPlan` takes `RegistryRoutes` (provincial adapter, municipal adapter, licence names it
+  answers) built from the business's province's and city market's `registries` keys; none → an agent (`manual`) for
+  provincial records and no municipal lookup. No more "no city counts as Calgary". Municipal licence names are
+  configuration (`REGISTRY_CALGARY_LICENCES`, `Licensed` wrapper over any provider). `BusinessDetails
+  .registryJurisdiction` = the business's province (CA for federal, the home jurisdiction for extra-provincial).
+  The business's city = the first region market city its addresses name (`Cities` no longer has a list).
+- **Onboarding provinces:** `merchants.domain.Province` lists all 13 codes; which may be picked is the region model's
+  status (live, pilot, waitlist — a closed province is 422 "Northline isn't open in {province} yet."). The Studio lists
+  live and pilot provinces (a brand-new account also waitlisted ones, 07d) from `GET /api/v1/geo/regions`.
+- **Legal entity:** the email footer's mailing address has no default in code any more (`EmailProperties`,
+  `EmailAutoConfiguration` refuses a blank one); `application.yml` keeps `EMAIL_MAILING_ADDRESS`'s default. The
+  consumer footer's company line is `NL_LEGAL_ENTITY` (configuration; fallback "Northline Marketplace Inc.").
+- **Web:** `@northline/ui` has no `TIME_ZONE`: `configurePlatformTimeZone` (from `GET /api/v1/geo/regions`; Studio:
+  `VITE_NL_PLATFORM_TIME_ZONE` until then), `setTimeZone` (the Studio sets the merchant's market zone in the
+  `/b/$merchantId` layout and the application's province zone in onboarding), `timeZone()` / `platformTimeZone()`,
+  `formatDate(…, zone)`. The consumer passes the market's zone explicitly (`useZone`, `MarketZone`) — never module
+  state, which SSR shares between requests. Ambient message values (`MessageValues`) fill `{province}`,
+  `{provinceIn}`, `{provinceOf}`, `{city}`, `{privacyLaw}`; a simple `{name}` nobody filled reads empty instead of
+  throwing (before the model loads).
+- **Copy parameterised (design-faithful; place names only — record of each):** Studio availability "Statutory holidays ·
+  {province}"; appointments "…under the {province} Consumer Protection Act" (fr "…Act {provinceOf}"); catalogue tax
+  "{province} · marketplace-facilitator remitted by Northline", "Category allowed {provinceIn}"; compliance tax rows
+  "{name} · GST 5%" per jurisdiction (the BC row lost "pilot": a status isn't part of a tax label), "{province} ·
+  regulated automotive", "WCB {province} clearance", "Privacy acknowledgement ({privacyLaw})", obligations "{province}
+  Consumer Protection Act" and "({privacyLaw})", the business's province from the region names; onboarding intros,
+  structures' laws ("{province} Partnership Act", "{province} Business Corporations Act", "{province} BCA Part 21",
+  "{province} Cooperatives Act", "{province} Societies Act"), "Corporation ({province})", "{province} corporation",
+  why-texts ("…registered {provinceIn}", "…operating {provinceIn}", "{province} requires a registered trade name"),
+  field labels/placeholders ("{province} corporate access #", "{province} Registries", "e.g. 2201456 {province} Ltd.",
+  "Attorney for service {provinceIn}", "e.g. {city} + 40 km"), checklist ("{province} corporate registry lookup",
+  "…+ {city} business licence", "Required for automotive services {provinceIn}.", "{province} Health Services permit",
+  "{province} Food Safety Basics"); French uses the region's forms ("des services de santé {provinceOf}", "exerçant
+  {provinceIn}"). Province option labels "{name} (pilot)/(waitlist)" and home-jurisdiction names come from the model.
+  Consumer: "Join Northline · {province}" and "Stored in ca-central-1 under {privacyLaw}." (the visitor's province,
+  else the default province; "PIPEDA and provincial privacy law" until known); the booking "Areas" placeholder became
+  "e.g. two or three neighbourhoods" (a neighbourhood list was Calgary's). Legal pages (design 09/10, verbatim) and the
+  legal-details schema's keys (`alberta_corporate_access_number`, structure `corp_ab`) are spec and unchanged.
+- **Lint (fails the build):** server — Checkstyle `IllegalTokenText` id `RegionLiteral` on string literals and text
+  blocks in every module (province and territory names, the launch cities, Canadian `America/…` zones, a bare
+  province code); allowed: `src/test`, `src/tools`, `HolidayRule` (the model's own data), the province-/city-specific
+  registry adapters (`OpenCorporatesAlbertaRegistry`, `CalgaryBusinessLicences`, `RegistriesConfig`). Chosen over an
+  ArchUnit constant-pool test so the same rule covers api, worker, auth, bff, email and platform without a test per
+  module; it also catches annotation values (`@Scheduled(zone = …)`, `@DefaultValue`). Web — `packages/ui/src/
+  regionLiterals.test.ts` scans every app's and package's `src/` (tests, stories, fixtures skipped) with an explicit
+  allowlist: Studio compliance "French required when serving Québec" (a fact about that province's language law) and
+  the legal-details schema's home-jurisdiction codes. Comments are not checked.
+- **Tests:** `SecondProvinceTest` opens Saskatchewan with region rows alone (no code, the console's future writes) and
+  runs a provider and a kitchen there end to end: holidays (Saskatchewan Day, no Boxing Day) and the message naming
+  the province, the Studio header's place, hours and slots in America/Regina, the market's service zones, quote tax
+  11 %, pooled runs at Saskatoon local times, onboarding a kitchen in Saskatoon (registry → agent, no municipal lookup),
+  and a closed province refused by name. `RegionCatalogueTest` shows a second province by configuration
+  (`REGION_PROVINCES`) on fictional codes; `RegionsApiTest` the endpoint, Alberta's configuration and the tax-rate
+  agreement; `HolidayRuleTest` the dates. Existing Alberta tests stay green (test merchants have no province → the
+  default province; Calgary is a V131 market). Web: place-parameter tests (BC, QC in French), the lint, and the test
+  helpers answer `/api/v1/geo/regions` with the launch configuration (`src/test/regions.ts`).
+- **Also fixed:** `AvailabilityJdbc.lastSaved` threw for a business that had saved nothing (a null single row);
+  Booking rules for a new business now load.
+- **Not done / follow-ups:** the console screens to edit provinces, markets, zones and holidays (phase 3;
+  `Regions.refresh()` is ready); `CanadianTax` (S-21's Stripe Tax fake and labels) still holds the rates beside
+  `region.tax_profiles` (kept equal by a test) — one source would mean payments reading region at calculation time;
+  observed-day holiday shifts; per-market zones on the consumer's provider list come from the visitor's market, not each
+  provider's; service-zone names unique across markets; email dates use the configured email zone rather than each
+  recipient business's; the registry adapter configuration keys keep their province/city names (`northline.registries
+  .alberta`, `.calgary`) — they configure those adapters.
+
 ## 2026-09-30 — S-129 AI platform: LlmClient port, OpenRouter, fake, budgets, metrics and evals
 
 Follows billionairedev24/samop-inv-ship-26 (`ai/LlmClient`, `adapter/openrouter`, `adapter/fake`, `DefaultAiService`,
@@ -3345,3 +3477,126 @@ conventions, under the conditions of "AI provider and data residency" above.
 - **Never run against real clients:** the OAuth + MCP session is tested with the MCP Java SDK client and tokens minted
   in the test, and auth's flow in MockMvc (WireMock for metadata documents). It has not been tried with Claude or the
   MCP Inspector against a deployed environment.
+
+## 2026-10-01 — S-128 Developer docs MCP server
+
+- **A second MCP server in the same app, at `/mcp/docs`**, not more tools on S-127's `/mcp`. It has its own resource
+  URI (`MCP_DOCS_RESOURCE`, already accepted by auth since S-127), metadata (`/.well-known/oauth-protected-resource/mcp/docs`)
+  and access rule. A merchant's agent shouldn't see internal runbooks, and a coding agent shouldn't need a business
+  sign-in. It is built directly with the MCP Java SDK (stateless Streamable HTTP servlet,
+  `HttpServletStatelessServerTransport`). Spring AI's auto-configuration serves one server, and a read-only docs
+  server needs no session.
+- **Content is packaged at build time.** `processResources` copies `docs/**/*.md` (not the backlog) and
+  `docs/api/openapi/*.yaml` into `northline-devdocs/` on the api's classpath (about 2 MB). The image therefore serves
+  the docs of the code it runs, with no repository checkout or network at runtime. S-125's committed OpenAPI
+  documents are the source; the springdoc runtime model is not used (it isn't published in prod, and the committed
+  specs are what the docs site shows). The YAML is parsed with SnakeYAML (Boot's) into Jackson 3 trees.
+- **Tools:** `search_docs` (every word must match; ranked by occurrences, with headings ×3 and titles ×2 — plain and
+  predictable, no index or embeddings), `list_documents`, `get_document` (by section, or in 24 000-character pages),
+  `list_operations`, `get_operation` (schemas with `$ref`s inlined to depth 6; recursive ones keep their `$ref`). All
+  are annotated read-only. Each document and spec is also an MCP resource.
+- **Access:** `open` locally (no auth, as the story asks); `staff` in the cloud. Internal-only in prod means
+  Northline staff with a second factor and a token for the docs resource, refused for anyone else with RFC 9728/9470
+  challenges. `MCP_DOCS_ACCESS=open` is refused under staging/prod. Docs tokens are confined: `/api/**` answers
+  `403 mcp_token`, and `/mcp` rejects them by audience.
+- **Never run against real clients:** tested with the MCP Java SDK client in the api's tests; not tried with Claude
+  Code or an IDE against a deployed environment.
+
+## 2026-10-01 — S-111 OpenTelemetry tracing and metrics across api, auth, bff, worker
+
+- **One stack, every app.** `spring-boot-starter-opentelemetry` (Micrometer Observation → OpenTelemetry SDK, OTLP/HTTP)
+  in api, auth, bff (both BFFs) and worker; the worker keeps its Prometheus endpoint (S-26), the api its own. Shared
+  wiring lives in `server/platform` (`ca.northline.platform.observability`): an `EnvironmentPostProcessor` adds
+  `classpath:northline/observability-defaults.yml` with the **lowest** precedence (export behind
+  `OTEL_EXPORT_ENABLED`, W3C only, Kafka template + listener observations, histograms, `service.namespace=northline`,
+  `base-time-unit: seconds`, Spring Security's filter-chain spans off, JDBC settings), a `Sampler`, a
+  `ContextPropagatingTaskDecorator` and an `ObservationPredicate` that skips `/actuator/**`. Defaults in a library
+  instead of four `application.yml` edits keep the apps uniform and the change additive; any app file or variable
+  still wins. The api's `application-cloud.yml` export switches moved there.
+- **Vendor-neutral by construction:** the apps speak only OTLP to `OTEL_EXPORTER_OTLP_ENDPOINT` (Spring Boot 4.1 maps
+  the standard `OTEL_*` variables). An **OpenTelemetry Collector in the Helm chart** (`templates/otel-collector.yaml`,
+  contrib image pinned by digest) is the only component that knows the backend; exporters and pipelines are values
+  (`observability.collector.exporters/pipelines`), set per cloud overlay: AWS X-Ray + CloudWatch EMF + CloudWatch Logs,
+  Google Cloud Trace + Managed Prometheus + Cloud Logging, Azure Monitor; any OTLP backend via
+  `test-values/observability-otlp.yaml` (Grafana Cloud shown). In the chart rather than an Argo CD add-on: it belongs
+  to the environment's release (its ServiceAccount, NetworkPolicy, ExternalSecret), it is namespaced, and the
+  AppProject already allows every kind it needs. The ADOT image works as a drop-in (`observability.collector.image`).
+- **Sampling = `ConsistentSampling`:** trace-id ratio for spans with a remote parent too (parent-based only for local
+  parents), so a browser's `-01` can't force sampling at the public edge, and BFF/api/worker reach the same decision
+  for the same trace. One ratio for all apps (`observability.tracesSampleRatio` → `OTEL_TRACES_SAMPLER_ARG`): dev 1.0,
+  staging 0.5, prod 0.1. Ratio 1.0 maps to always-on (OpenTelemetry's ratio sampler drops ids at exactly
+  `Long.MAX_VALUE`). No tail sampling by default; documented as an extra processor.
+- **Browser → BFF:** `@northline/client`'s `http()` sends a fresh `traceparent` on same-origin calls only (another
+  origin's CORS may refuse the header). The browser exports **no** spans: that would need a public OTLP ingestion
+  endpoint (abuse, cost) and the OpenTelemetry web SDK in both apps; the BFF's server span is the first stored one.
+  Envoy Gateway tracing (an EnvoyProxy `telemetry.tracing` to the Collector) can add the edge hop later.
+- **DB spans:** `net.ttddyy.observation:datasource-micrometer-spring-boot` 2.3.0 (built for Boot 4.1.1) in api, auth,
+  worker; `jdbc.includes: [query]` (no connection/fetch spans), parameter values never recorded; the Collector deletes
+  `jdbc.params*` anyway. **Kafka:** template and listener observations carry `traceparent` next to S-26's `nl-event-*`
+  headers (auth's `user.registered` now gets one too).
+- **Business metrics** (no ids in labels; counted after commit): `northline.auth.sign_ins{method,mfa,outcome}` and
+  `northline.auth.lockouts{action}` in `JdbcSignInLog`; `northline.checkouts{ref_type,status}` when a checkout opens its
+  escrow PaymentIntent (`CheckoutPaymentService` — the one call every checkout makes); `northline.payouts{outcome,kind}`
+  and `northline.payouts.amount` (CAD dollars) from `PayoutSent`/`PayoutFailed` via a plain `@EventListener` (no
+  outbox row per event); KDS latency from the ticket's own timestamps (`KitchenMetrics`, called by
+  `KitchenLiveService`): promised minutes, accepted → ready (`late`), ready → handed off (`mode`). Consumer lag and DLQ
+  counts were already there (Kafka client metrics, S-26's counters). Not measured: order placed → accepted (the
+  ticket has no placed time; the live board's row does).
+- **Dashboards as code:** a Python generator (`deploy/observability/grafana/dashboards.py`, `--check` for drift) writes
+  10 Grafana JSON dashboards (overview, one per service incl. consumer-bff, sign-in, checkout and payouts, kitchens,
+  events), PromQL on a `datasource` variable, viewer's time zone. **Alerts:** Prometheus rules with `promtool` unit
+  tests (`deploy/observability/prometheus`), run through Docker by `scripts/observability.sh check`.
+- **Local:** compose profile `observability` = the same Collector processors (`collector-local.yaml`) in front of
+  `grafana/otel-lgtm:0.34.0`, Grafana on **3300** (3000 is the consumer app). `make up OBS=1` starts it and exports the
+  `OTEL_*` variables to every app; `make obs-*` targets wrap `scripts/observability.sh` (callable without make).
+- **Terraform:** workload identity `otel-collector` in the three stacks; AWS role gets `AWSXrayWriteOnlyAccess` +
+  `CloudWatchAgentServerPolicy`; GCP gets `cloudtrace.agent`, `monitoring.metricWriter`, `logging.logWriter` and the
+  three APIs; secrets `otel-backend-auth` (all clouds) and `applicationinsights-connection-string` (Azure) created empty.
+- **Tests:** `OtlpReceiver` (platform test fixture, `java-test-fixtures`) decodes OTLP/protobuf
+  (`io.opentelemetry.proto:opentelemetry-proto` 1.10.0-alpha, tests only). api `TracingTest` (caller's trace → SQL
+  spans without values → Kafka `traceparent` + PRODUCER span; metrics exported; probes untraced), bff `BffTracingTest`
+  (browser → SERVER → CLIENT → the api receives the same trace), worker `WorkerTracingTest` (the Kafka hop: CONSUMER
+  span continues the producer's), auth `AuthTelemetryTest`, unit tests for sampling, defaults, payment and kitchen
+  metrics, client `traceparent`.
+- **Never run against the real services:** no backend account exists. The exporters' configurations pass
+  `otelcol-contrib validate` (0.161.0) for AWS, Google Cloud and Azure, but no span has reached X-Ray, Cloud Trace,
+  Application Insights or Grafana Cloud. The Terraform additions are `fmt`-checked, not applied.
+
+## 2026-10-01 — S-112 Centralised logging with PII redaction
+
+- **One redaction layer for every app:** `ca.northline.platform.logging.Redactor` (platform library, so api, auth,
+  both BFFs and the worker share it). Two layers, as in the user's other services: a field with a sensitive *name*
+  is masked whole; every other string is scanned for secrets (PEM keys, Authorization/Cookie echoes, bearer/basic/DPoP,
+  JWTs, `sk_`/`rk_`/`whsec_`/`sk-…`/AWS/GitHub keys, `key=value` pairs), then emails, Luhn-valid card-like numbers
+  (last four kept), North American and E.164 phone numbers, one-time codes after "verification / sign-in / security /
+  backup / OTP code" (en/fr), Canadian postal codes (forward sortation area kept). Numbers glued to letters or `_`
+  (ULIDs, Stripe ids, trace ids) are never touched; dates, amounts and the SMS adapters' masked numbers stay.
+- **Format:** Spring Boot's structured logging, **ECS** by default under dev/staging/prod (`LOG_FORMAT` = `ecs` |
+  `logstash` | `gelf` | `text`; anything else stops start-up), plain text under local/test where people read the
+  console. The redaction is a `StructuredLoggingJsonMembersCustomizer` value processor over every string member
+  (message, MDC, key-values, `error.message`, `error.stack_trace`). `traceId`/`spanId` are renamed `trace.id`/`span.id`
+  (ECS names; top-level dotted keys — Boot's rename keeps them flat). Set by `LoggingDefaults` (an
+  `EnvironmentPostProcessor`, lowest precedence) — no app yml changed.
+- **Shipping through the Collector = OTLP, from the app:** `OtlpLogAppender` (Northline's own Logback appender over the
+  OpenTelemetry logs bridge) is attached to the root logger when `management.logging.export.enabled` (i.e.
+  `OTEL_EXPORT_ENABLED=true`); records carry the current trace context, logger, thread, MDC and exception, all
+  redacted. Not the OpenTelemetry Logback instrumentation (it sends the raw message) and not a node-level
+  `filelog` DaemonSet (cluster-wide hostPath access, a second add-on, and logs that bypass the in-app redaction's
+  trace linkage). The console keeps the same redacted JSON for `kubectl logs` and cloud node agents.
+- **Collector, second line:** `transform/redact` (OTTL `replace_pattern` / `replace_all_patterns`) on log bodies and
+  log and span attributes, chart and local config generated from one list (`northline.redactPatterns`); RE2 has no
+  look-behind or Luhn, so it is coarser. Run against a sample record with otelcol-contrib 0.161.0.
+- **The S-20 local SMS case:** `LoggingSmsSender` (auth) and `LoggingSmsTransport` (shared library: api invitations,
+  worker notifications) write the code / text **only under the `local` and `test` profiles**; elsewhere they log that it
+  was withheld, and start-up warns. Consequence: a `dev` environment that keeps `SMS_PROVIDER=local` can no longer
+  complete phone verification — dev needs Twilio or AWS for sign-ups (documented in README § SMS, logging.md). No
+  escape hatch on purpose (the story: "make sure it can't happen outside local").
+- **Tests:** `RedactorTest` (28 cases incl. the S-20 log line, the SMS text in English and French, and what must stay),
+  `StructuredLogsTest` (a `dev` start logs redacted ECS JSON incl. MDC and exception; `local` stays text; `LOG_FORMAT`
+  overrides), `OtlpLogAppenderTest`; `RedactionCheck` (platform test fixture) on **every app** — api `TracingTest`,
+  auth `AuthTelemetryTest`, consumer-bff `BffTracingTest`, worker `WorkerTracingTest`: a PII-laden line logged in a
+  span comes out redacted on the console (ECS) and over OTLP, the OTLP record linked to the span's trace;
+  `SmsConfigTest` / `SmsTransportsTest` prove the stand-ins withhold under `dev`.
+- **Not done:** log retention and deletion are the backend's (documented per backend, not automated); no log-based
+  alerts (the metrics alerts of S-111 cover the same failures). **Never run against a real backend** (CloudWatch Logs,
+  Cloud Logging, Azure Monitor, Loki/Grafana Cloud).

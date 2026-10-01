@@ -40,7 +40,19 @@ public class EmailAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     EmailTemplates emailTemplates(EmailProperties email) {
-        return new EmailTemplates(email.mailingAddress(), email.contact());
+        var address = email.mailingAddress();
+        var zone = email.timeZone();
+        if (address == null || address.isBlank()) {
+            throw new IllegalStateException(
+                    "EMAIL_MAILING_ADDRESS is required: every email names the sender's mailing address (CASL; "
+                            + RUNBOOK + ")");
+        }
+        if (zone == null) {
+            throw new IllegalStateException(
+                    "northline.email.time-zone (EMAIL_TIME_ZONE, else REGION_PLATFORM_ZONE) is required (" + RUNBOOK
+                            + ")");
+        }
+        return new EmailTemplates(address, email.contact(), zone);
     }
 
     @Bean

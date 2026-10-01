@@ -112,7 +112,8 @@ class RegistrationController {
                 ? List.of(Factor.PHONE_OTP)
                 : List.of(Factor.PHONE_OTP, created.secondFactor());
         sessions.signIn(created.account().id(), factors, created.sessionId(), request, response);
-        return AuthResponses.Session.of(created.account(), factors).continuingTo(apps.resume(request));
+        return AuthResponses.Session.of(created.account(), factors, props.platformZone())
+                .continuingTo(apps.resume(request));
     }
 
     private AuthResponses.RegistrationStep step(String step, PendingRegistration pending) {

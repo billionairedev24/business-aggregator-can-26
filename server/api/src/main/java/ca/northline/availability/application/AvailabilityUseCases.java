@@ -1,6 +1,5 @@
 package ca.northline.availability.application;
 
-import ca.northline.availability.domain.AlbertaHolidays.Holiday;
 import ca.northline.availability.domain.BookingRules;
 import ca.northline.availability.domain.CalendarLinkState;
 import ca.northline.availability.domain.CalendarProvider;
@@ -9,6 +8,7 @@ import ca.northline.availability.domain.TimeOff;
 import ca.northline.availability.domain.TimeRange;
 import ca.northline.availability.domain.WeeklyHours;
 import ca.northline.catalogue.api.CatalogueFacts.ServiceDuration;
+import ca.northline.region.api.Holiday;
 import ca.northline.shared.security.MerchantRole;
 import java.net.URI;
 import java.time.Instant;
@@ -98,7 +98,13 @@ public final class AvailabilityUseCases {
 
     public record HolidayView(Holiday holiday, boolean open) {}
 
-    public record TimeOffView(List<TimeOffEntry> entries, List<HolidayView> holidays, long holidayPremiumCents) {}
+    /** @param provinceNameEn / {@code provinceNameFr}: the province whose holidays these are ("" when none is known) */
+    public record TimeOffView(
+            List<TimeOffEntry> entries,
+            List<HolidayView> holidays,
+            long holidayPremiumCents,
+            String provinceNameEn,
+            String provinceNameFr) {}
 
     public interface ViewTimeOff {
         TimeOffView view(String merchantId);

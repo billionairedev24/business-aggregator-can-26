@@ -33,10 +33,12 @@ public class SmsConfig {
             throw new IllegalStateException("SMS_PROVIDER=local is not allowed under staging/prod: set SMS_PROVIDER to"
                     + " twilio or aws (docs/runbooks/README.md § SMS and voice codes)");
         }
-        if (environment.matchesProfiles("dev")) {
-            log.warn("SMS_PROVIDER=local: verification codes are written to the log, not sent");
+        var reveal = environment.matchesProfiles("local | test");
+        if (!reveal) {
+            log.warn("SMS_PROVIDER=local: verification codes are neither sent nor logged (S-112) — phone verification"
+                    + " can't be completed; set SMS_PROVIDER to twilio or aws");
         }
-        return new LoggingSmsSender();
+        return new LoggingSmsSender(reveal);
     }
 
     @Bean

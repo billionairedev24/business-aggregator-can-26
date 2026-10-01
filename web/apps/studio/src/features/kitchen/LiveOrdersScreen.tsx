@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, EmptyState, ErrorState, PageSkeleton, useLocale } from '@northline/ui';
+import { Alert, EmptyState, ErrorState, PageSkeleton, useLocale, timeZone } from '@northline/ui';
 import { useMerchant, useMerchantId, useRole } from '../shell/api';
 import { liveQuery, useKitchenToggle, useLiveAction, type Ticket } from './api';
 import { useKitchenT } from './messages';
@@ -61,7 +61,7 @@ export function LiveOrdersScreen() {
               <li key={o.orderId} className="nl-k-ticket">
                 <div className="nl-k-ticket-head"><strong>{o.ref ?? o.orderId}</strong><span className={`tag ${TAG[o.stage]}`}>{t(`stage_${o.stage}`)}</span></div>
                 <div className="nl-k-meta">{whoText(o, t, locale)}{prep ? ` · ${prep}` : ''}</div>
-                {o.scheduledFor ? <div className="nl-k-meta">{t('scheduledFor', { time: new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { timeZone: 'America/Edmonton', hour: 'numeric', minute: '2-digit' }).format(new Date(o.scheduledFor)) })}</div> : null}
+                {o.scheduledFor ? <div className="nl-k-meta">{t('scheduledFor', { time: new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { timeZone: timeZone(), hour: 'numeric', minute: '2-digit' }).format(new Date(o.scheduledFor)) })}</div> : null}
                 <div className="nl-k-lines">{o.lines.map((l, i) => <div key={i}>{lineText(l, t)}</div>)}</div>
                 <div className="nl-k-where">{whereText(o, t, locale, now)}</div>
                 {canOperate ? (

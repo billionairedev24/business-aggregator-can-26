@@ -181,7 +181,7 @@ describe('Cart and checkout (design 06 cart)', () => {
     let fail = true;
     routes['GET /api/v1/cart'] = () => (fail ? { status: 500, body: { detail: 'no' } } : { body: CART });
     open();
-    expect(await screen.findByText('We couldn’t load your cart.')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('We couldn’t load your cart.')).toBeInTheDocument());
     fail = false;
     await userEvent.setup({ delay: null }).click(screen.getByRole('button', { name: 'Retry' }));
     expect(await screen.findByText('4 items · 2 shops · one delivery')).toBeInTheDocument();

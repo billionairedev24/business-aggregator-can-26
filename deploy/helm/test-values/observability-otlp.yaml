@@ -1,0 +1,17 @@
+# S-111: any OTLP backend instead of the cloud's own — here Grafana Cloud (a Canadian or US stack; check the data
+# residency of the one you pick, docs/runbooks/observability.md § Any OTLP backend). OTEL_BACKEND_AUTH holds
+# "Basic <base64 of instance-id:token>" in the secrets manager (otel-backend-auth). Used by deploy/helm/validate.sh.
+observability:
+  collector:
+    exporters:
+      otlphttp/backend:
+        endpoint: https://otlp-gateway-prod-ca-east-0.grafana.net/otlp
+        headers:
+          Authorization: "${env:OTEL_BACKEND_AUTH}"
+        compression: gzip
+    pipelines:
+      traces: [otlphttp/backend]
+      metrics: [otlphttp/backend]
+      logs: [otlphttp/backend]
+    secretEnv:
+      OTEL_BACKEND_AUTH: true

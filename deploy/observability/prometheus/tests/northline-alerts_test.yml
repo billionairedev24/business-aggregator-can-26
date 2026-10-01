@@ -1,0 +1,86 @@
+# promtool test rules deploy/observability/prometheus/tests/northline-alerts_test.yml (scripts/observability.sh test-rules)
+rule_files:
+  - ../rules/northline-alerts.yml
+evaluation_interval: 1m
+tests:
+  - name: 5xx above 5 % pages; a quiet service does not
+    interval: 1m
+    input_series:
+      - series: 'http_server_requests_seconds_count{application="northline-api",status="200"}'
+        values: '0+540x20'
+      - series: 'http_server_requests_seconds_count{application="northline-api",status="503"}'
+        values: '0+60x20'
+      - series: 'http_server_requests_seconds_count{application="northline-auth",status="200"}'
+        values: '0+1x20'
+      - series: 'http_server_requests_seconds_count{application="northline-auth",status="500"}'
+        values: '0+1x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: NorthlineHighErrorRate
+        exp_alerts:
+          - exp_labels: { severity: page, application: northline-api }
+            exp_annotations:
+              summary: "northline-api: 10% of requests fail (5xx)"
+              runbook: docs/runbooks/observability.md#northlinehigherrorrate
+  - name: a dead-lettered event pages at once
+    interval: 1m
+    input_series:
+      - series: 'northline_events_dead_lettered_total{consumer="notifications",topic="payments.payout"}'
+        values: '0 0 1 1 1'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: NorthlineEventDeadLettered
+        exp_alerts:
+          - exp_labels: { severity: page, consumer: notifications, topic: payments.payout }
+            exp_annotations:
+              summary: "notifications dead-lettered an event from payments.payout"
+              runbook: docs/runbooks/events.md#3-dlq-investigate-and-replay
+      - eval_time: 30m
+        alertname: NorthlineEventDeadLettered
+        exp_alerts: []
+  - name: lag over 1000 for 10 minutes
+    interval: 1m
+    input_series:
+      - series: 'kafka_consumer_fetch_manager_records_lag_max{application="northline-worker",client_id="search-indexer-0"}'
+        values: '5000x15'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: NorthlineConsumerLag
+        exp_alerts: []
+      - eval_time: 12m
+        alertname: NorthlineConsumerLag
+        exp_alerts:
+          - exp_labels: { severity: ticket, application: northline-worker, client_id: search-indexer-0 }
+            exp_annotations:
+              summary: "search-indexer-0 is 5000 records behind"
+              runbook: docs/runbooks/events.md#2-alerts-and-metrics
+  - name: a failed payout opens a ticket
+    interval: 1m
+    input_series:
+      - series: 'northline_payouts_total{outcome="sent",kind="scheduled"}'
+        values: '0+1x10'
+      - series: 'northline_payouts_total{outcome="failed",kind="unknown"}'
+        values: '0 0 0 1 1 1'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: NorthlinePayoutFailed
+        exp_alerts:
+          - exp_labels: { severity: ticket, outcome: failed }
+            exp_annotations:
+              summary: "1 payouts failed in the last hour"
+              runbook: docs/runbooks/stripe.md
+  - name: most kitchen orders late
+    interval: 1m
+    input_series:
+      - series: 'northline_kds_prep_seconds_count{late="true"}'
+        values: '0+2x60'
+      - series: 'northline_kds_prep_seconds_count{late="false"}'
+        values: '0+1x60'
+    alert_rule_test:
+      - eval_time: 50m
+        alertname: NorthlineKitchensLate
+        exp_alerts:
+          - exp_labels: { severity: ticket }
+            exp_annotations:
+              summary: "66.67% of kitchen orders are ready after the promised time"
+              runbook: docs/runbooks/observability.md#northlinekitchenslate

@@ -34,6 +34,6 @@ public interface ServiceAreas {
     /** Those of {@code merchantIds} whose service area covers {@code place}. */
     Set<String> covering(Collection<String> merchantIds, Place place);
 
-    /** The zone the point lies in ("Beltline"), the one whose centre is nearest when zones overlap; empty without a point or outside. */
+    /** The zone the point lies in (a neighbourhood), the one whose centre is nearest when zones overlap; empty without a point or outside. */
     Optional<String> zoneAt(Place place);
 }

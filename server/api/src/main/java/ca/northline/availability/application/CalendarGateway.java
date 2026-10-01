@@ -4,6 +4,7 @@ import ca.northline.availability.domain.CalendarProvider;
 import ca.northline.availability.domain.CalendarScope;
 import java.net.URI;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -49,8 +50,10 @@ public interface CalendarGateway {
     /**
      * Busy events since {@code cursor} (null = a full read of [from, to)). Throws {@link CursorExpired} when the
      * provider no longer knows the cursor (Google 410, Graph {@code syncStateNotFound}): read again from scratch.
+     * All-day events cover their dates in {@code zone}, the business's time zone (region model).
      */
-    Changes changes(String accessToken, String calendarId, @Nullable String cursor, Instant from, Instant to);
+    Changes changes(
+            String accessToken, String calendarId, @Nullable String cursor, Instant from, Instant to, ZoneId zone);
 
     // ── change notifications ─────────────────────────────────────────────────────
 

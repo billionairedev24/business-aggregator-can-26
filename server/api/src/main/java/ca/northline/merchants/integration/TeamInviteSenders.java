@@ -6,11 +6,13 @@ import ca.northline.email.EmailFormat;
 import ca.northline.email.Mailer;
 import ca.northline.merchants.application.TeamInviteSender;
 import ca.northline.merchants.domain.TeamRules;
+import ca.northline.region.api.Regions;
 import ca.northline.shared.security.MerchantRole;
 import ca.northline.sms.PhoneNumbers;
 import ca.northline.sms.SmsDeliveryFailed;
 import ca.northline.sms.SmsTransport;
 import java.net.URI;
+import java.time.ZoneId;
 import java.util.Locale;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -41,9 +43,16 @@ class TeamInviteSenders implements TeamInviteSender {
     private final SmsTransport sms;
     private final JdbcClient jdbc;
     private final TransactionTemplate separately;
+    private final Regions regions;
 
-    TeamInviteSenders(Mailer mailer, SmsTransport sms, JdbcClient jdbc, PlatformTransactionManager transactions) {
+    TeamInviteSenders(
+            Mailer mailer,
+            SmsTransport sms,
+            JdbcClient jdbc,
+            PlatformTransactionManager transactions,
+            Regions regions) {
         this.mailer = mailer;
+        this.regions = regions;
         this.sms = sms;
         this.jdbc = jdbc;
         this.separately = new TransactionTemplate(transactions);
@@ -81,7 +90,7 @@ class TeamInviteSenders implements TeamInviteSender {
             return;
         }
         try {
-            sms.sendText(phone, text(invite));
+            sms.sendText(phone, text(invite, regions.platformZone()));
             log.info("Invitation SMS sent to {} ({})", PhoneNumbers.masked(phone), deliveryId);
         } catch (SmsDeliveryFailed e) {
             if (e.getKind() == SmsDeliveryFailed.Kind.UNDELIVERABLE_NUMBER) {
@@ -101,9 +110,9 @@ class TeamInviteSenders implements TeamInviteSender {
     }
 
     /** One text in the inviter's language; the link is the whole point, so it comes last and unbroken. */
-    static String text(Invite invite) {
+    static String text(Invite invite, ZoneId zone) {
         var french = "fr".equals(invite.locale().getLanguage());
-        var format = EmailFormat.of(invite.locale());
+        var format = EmailFormat.of(invite.locale(), zone);
         var role = (french ? ROLES_FR : ROLES_EN)
                 .getOrDefault(invite.role(), invite.role().code());
         var inviter = invite.inviterName().isBlank() ? (french ? "Une équipe" : "A team") : invite.inviterName();

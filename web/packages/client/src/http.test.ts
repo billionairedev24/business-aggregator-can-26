@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, http, setHttpBase, ValidationError, xsrfToken } from './http';
+import { ApiError, http, setHttpBase, traceparent, ValidationError, xsrfToken } from './http';
 
 afterEach(() => { vi.unstubAllGlobals(); setHttpBase(''); });
 
@@ -33,5 +33,24 @@ describe('http', () => {
   it('has no CSRF token where there is no document (server-side rendering)', () => {
     expect(typeof document).toBe('undefined');
     expect(xsrfToken()).toBeUndefined();
+  });
+
+  it('starts a W3C trace for each call to the BFF, never for another origin (S-111)', async () => {
+    const fetch = respond(200, { ok: true });
+    vi.stubGlobal('fetch', fetch);
+    await http('/api/v1/categories');
+    await http('/api/v1/categories');
+    await http('https://auth.example/api/auth/session');
+    const sent = fetch.mock.calls.map(c => ((c as unknown[])[1] as RequestInit).headers as Record<string, string>);
+    const [first, second, other] = sent.map(h => h?.traceparent);
+    expect(first).toMatch(/^00-[0-9a-f]{32}-[0-9a-f]{16}-01$/);
+    expect(second).not.toBe(first);
+    expect(other).toBeUndefined();
+  });
+
+  it('makes a trace id that is never all zeros and a fresh one each time', () => {
+    const ids = new Set(Array.from({ length: 50 }, () => traceparent().split('-')[1]));
+    expect(ids.size).toBe(50);
+    expect(ids.has('0'.repeat(32))).toBe(false);
   });
 });

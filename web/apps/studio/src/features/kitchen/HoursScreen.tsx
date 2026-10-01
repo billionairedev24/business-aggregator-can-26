@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import { Alert, ErrorState, Field, PageSkeleton, Select, useLocale } from '@northline/ui';
+import { Alert, ErrorState, Field, PageSkeleton, Select, useLocale, timeZone } from '@northline/ui';
 import { useMerchantId, useRole } from '../shell/api';
 import { setupQuery, useSavePrep, type Setup } from './api';
 import { FulfilmentDialog, HolidayDialog, HoursDialog, ScheduleDialog } from './HoursDialogs';
@@ -105,7 +105,7 @@ function evidenceTag(e: Setup['foodSafety']['permit'], t: KitchenT, date: (iso: 
 
 function FoodSafety({ setup, t, merchantId }: { setup: Setup; t: KitchenT; merchantId: string }) {
   const { locale } = useLocale();
-  const monthYear = (iso: string) => new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { month: 'short', year: 'numeric', timeZone: 'America/Edmonton' }).format(new Date(iso));
+  const monthYear = (iso: string) => new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { month: 'short', year: 'numeric', timeZone: timeZone() }).format(new Date(iso));
   const p = setup.foodSafety.permit, h = setup.foodSafety.handlers;
   const pt = evidenceTag(p, t, monthYear, 'ev_verified'), ht = evidenceTag(h, t, monthYear, 'ev_onFile');
   return (

@@ -5,9 +5,10 @@ import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
 /**
- * The markets Northline serves and the time zone each one keeps (DECISIONS "Region-neutral by design"). Read from the
- * same configuration as search ({@code SEARCH_MARKETS} = {@code CODE=Zone/Id,…}, {@code SEARCH_DEFAULT_MARKET}) until
- * S-134 moves it into the region configuration — one list, not one per feature.
+ * The provinces Northline serves and the time zone each one keeps (DECISIONS "Region-neutral by design"): those listed
+ * in {@code REGION_PROVINCES} ({@code CODE[=Zone/Id],…}; S-44's {@code SEARCH_MARKETS} still read as its fallback) plus
+ * those whose region row is live, with {@code REGION_DEFAULT_PROVINCE}. The same {@link Regions} model, by province —
+ * one list, not one per feature.
  */
 public interface Markets {
 
@@ -16,7 +17,7 @@ public interface Markets {
 
     boolean serves(@Nullable String province);
 
-    /** The market searched and shown when nothing else is known ({@code SEARCH_DEFAULT_MARKET}); null = none set. */
+    /** The province searched and shown when nothing else is known ({@code REGION_DEFAULT_PROVINCE}); null = none. */
     @Nullable
     String defaultProvince();
 

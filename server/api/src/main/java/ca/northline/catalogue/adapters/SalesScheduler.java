@@ -9,7 +9,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 
 /**
- * S-38: once a night (03:10 Calgary time) every merchant that still shows 30-day sales is recounted, so sales older
+ * S-38: once a night (03:10 in the platform zone) every merchant that still shows 30-day sales is recounted, so sales older
  * than 30 days drop out even when nothing new happens. Events keep the figures current in between. Every replica
  * runs it; a recount is derived and idempotent, so running it twice costs a few queries. Not under {@code test}
  * (tests call {@link RecountSales}).
@@ -23,7 +23,7 @@ class SalesScheduler {
 
     private final RecountSales sales;
 
-    @Scheduled(cron = "0 10 3 * * *", zone = "America/Edmonton")
+    @Scheduled(cron = "0 10 3 * * *", zone = "${northline.region.platform-zone}")
     void recountAll() {
         try {
             log.info("30-day sales recounted for {} merchant(s)", sales.recountAll());

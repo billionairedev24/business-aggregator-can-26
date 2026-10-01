@@ -1,8 +1,9 @@
 import { useRef, useState, type ReactNode } from 'react';
+import { useZone } from '../location/regions';
 import { useQuery, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
 import { ApiError, newIdempotencyKey, ValidationError } from '@northline/client';
-import { BrandMark, EmptyState, ErrorState, Field, Skeleton, TextArea, TextInput, TIME_ZONE, useFormatters, useLocale } from '@northline/ui';
+import { BrandMark, EmptyState, ErrorState, Field, Skeleton, TextArea, TextInput, useFormatters, useLocale, timeZone } from '@northline/ui';
 import { StepUpDialog } from '../cart/StepUpDialog';
 import { providerQuery, storefrontQuery, type ProviderFacts, type ProviderService } from '../provider/api';
 import { signInHref, useViewer } from '../session/api';
@@ -22,7 +23,7 @@ export function stepsFor(kind: string): Step[] {
   return kind === 'appointment' ? ['details', 'schedule', 'pay', 'done'] : ['details', 'location', 'schedule', 'pay', 'done'];
 }
 
-const dayKey = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+const dayKey = (d: Date, zone: string = timeZone()) => new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
 const addDays = (iso: string, n: number) => { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const mondayOf = (iso: string) => { const d = new Date(`${iso}T12:00:00Z`); return addDays(iso, -((d.getUTCDay() + 6) % 7)); };
 
@@ -260,7 +261,8 @@ function Schedule({ slug, facts, service, draft, update, notice, onNext, onBack,
   const { date } = useFormatters();
   const viewer = useViewer();
   const qc = useQueryClient();
-  const today = dayKey(new Date());
+  const zone = useZone();
+  const today = dayKey(new Date(), zone);
   const [week, setWeek] = useState(() => mondayOf(draft.day ?? today));
   const cal = useQuery(calendarQuery(slug, service.id, week, 7));
   const [error, setError] = useState<string | undefined>(notice);
@@ -304,7 +306,7 @@ function Schedule({ slug, facts, service, draft, update, notice, onNext, onBack,
                   const off = d.free === 0;
                   return (
                     <button key={d.date} type="button" className="nl-bk-day" aria-pressed={draft.day === d.date} disabled={off} onClick={() => update({ day: d.date, startsAt: undefined })}>
-                      <span className="nl-bk-dow">{new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { weekday: 'short', timeZone: TIME_ZONE }).format(at)}</span>
+                      <span className="nl-bk-dow">{new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { weekday: 'short', timeZone: zone }).format(at)}</span>
                       <span className="nl-bk-dnum">{Number(d.date.slice(8))}</span>
                       <span className="nl-bk-dfree">{d.closed ? t('dayClosed') : t('dayFree', { count: d.free })}</span>
                     </button>

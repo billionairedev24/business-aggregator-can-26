@@ -28,7 +28,7 @@ class MerchantDirectoryQueries implements MerchantDirectory, MerchantVerificatio
     @Override
     public Optional<MerchantProfile> profile(String merchantId) {
         return jdbc.sql("""
-                        select id, type, tier, status, take_rate_bps, province from merchants.merchants where id = :id
+                        select id, type, tier, status, take_rate_bps, province, city from merchants.merchants where id = :id
                         """)
                 .param("id", merchantId)
                 .query((rs, _) -> new MerchantProfile(
@@ -37,7 +37,8 @@ class MerchantDirectoryQueries implements MerchantDirectory, MerchantVerificatio
                         rs.getString("tier"),
                         rs.getString("status"),
                         rs.getObject("take_rate_bps", Integer.class),
-                        rs.getString("province")))
+                        rs.getString("province"),
+                        rs.getString("city")))
                 .optional();
     }
 

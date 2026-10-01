@@ -4,6 +4,7 @@ import ca.northline.payments.api.EscrowKind;
 import ca.northline.payments.domain.EscrowState;
 import java.time.Instant;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.OptionalInt;
 import org.jspecify.annotations.Nullable;
@@ -49,7 +50,7 @@ public interface SalesReadModel {
     DisputeRate disputeRate(String merchantId, Instant from, Instant to);
 
     /**
-     * Monthly totals of a year (tax documents), Edmonton months.
+     * Monthly totals of a year (tax documents), months in {@code zone} (the business's).
      *
      * @param taxRefundedCents GST/HST given back with refunds paid in the month (S-21)
      */
@@ -62,5 +63,5 @@ public interface SalesReadModel {
             long taxRefundedCents,
             long paidOutCents) {}
 
-    List<Month> months(String merchantId, int year);
+    List<Month> months(String merchantId, int year, ZoneId zone);
 }

@@ -5,8 +5,8 @@ import java.util.Optional;
 
 /**
  * The consumer Shop (S-49, design 06 {@code shop} and {@code category}): only approved, live offers of active sellers
- * of the market, in shop categories that aren't banned. A market is a city Northline delivers in (Calgary, Edmonton,
- * Airdrie); anywhere else the pages are empty.
+ * of the market, in shop categories that aren't banned. A market is a city Northline delivers in (a live market of
+ * the region model); anywhere else the pages are empty.
  */
 public interface BrowseShop {
 

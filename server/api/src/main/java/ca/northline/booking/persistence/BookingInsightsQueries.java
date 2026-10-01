@@ -3,12 +3,12 @@ package ca.northline.booking.persistence;
 import ca.northline.booking.api.BookingCalendar;
 import ca.northline.booking.api.BookingInsights;
 import ca.northline.booking.api.ServiceSales;
+import ca.northline.region.api.MerchantPlaces;
 import ca.northline.shared.JdbcTimes;
 import ca.northline.shared.NavBadgeContributor;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -19,16 +19,15 @@ import org.springframework.stereotype.Repository;
 
 /**
  * The booking module's public reads ({@link BookingCalendar}, {@link BookingInsights}) and the Appointments sidebar
- * badge: the number of jobs today (America/Edmonton), e.g. "3".
+ * badge: the number of jobs today (the business's zone), e.g. "3".
  */
 @Repository
 @RequiredArgsConstructor
 class BookingInsightsQueries implements BookingCalendar, BookingInsights, ServiceSales, NavBadgeContributor {
 
-    static final ZoneId ZONE = ZoneId.of("America/Edmonton");
-
     private final JdbcClient jdbc;
     private final Clock clock;
+    private final MerchantPlaces places;
 
     @Override
     public List<Busy> busy(String merchantId, @Nullable String memberUserId, Instant from, Instant to) {
@@ -170,11 +169,12 @@ class BookingInsightsQueries implements BookingCalendar, BookingInsights, Servic
     @Override
     public Map<String, String> badges(NavBadgeContributor.Context context) {
         var merchantId = context.merchantId();
-        var today = LocalDate.now(clock.withZone(ZONE));
+        var zone = places.of(merchantId).zone();
+        var today = LocalDate.now(clock.withZone(zone));
         long count = jobCount(
                 merchantId,
-                today.atStartOfDay(ZONE).toInstant(),
-                today.plusDays(1).atStartOfDay(ZONE).toInstant());
+                today.atStartOfDay(zone).toInstant(),
+                today.plusDays(1).atStartOfDay(zone).toInstant());
         return count == 0 ? Map.of() : Map.of("appointments", Long.toString(count));
     }
 

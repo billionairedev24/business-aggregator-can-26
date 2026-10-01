@@ -26,8 +26,6 @@ import org.jspecify.annotations.Nullable;
 @ToString(onlyExplicitlyIncluded = true)
 public class RegistryCheck {
 
-    static final ZoneId EDMONTON = ZoneId.of("America/Edmonton");
-
     public enum Trigger implements CodedEnum {
         INITIAL,
         RECHECK
@@ -82,7 +80,8 @@ public class RegistryCheck {
 
     /**
      * Compares the answer with the query: a found record matches when a name matches, it is active (or the source
-     * doesn't say) and it hasn't expired. Anything else opens a manual review.
+     * doesn't say) and it hasn't expired (on the day in {@code zone}, the business's). Anything else opens a manual
+     * review.
      */
     public static RegistryCheck of(
             String id,
@@ -91,7 +90,8 @@ public class RegistryCheck {
             RegistryQuery query,
             Answer answer,
             Trigger trigger,
-            Instant at) {
+            Instant at,
+            ZoneId zone) {
         var reasons = new ArrayList<String>();
         RegistryOutcome outcome;
         RegistryRecord found = null;
@@ -106,7 +106,7 @@ public class RegistryCheck {
                 if (found.standing() == RegistryRecord.Standing.INACTIVE) {
                     reasons.add("status");
                 }
-                if (found.expiresOn() != null && found.expiresOn().isBefore(LocalDate.ofInstant(at, EDMONTON))) {
+                if (found.expiresOn() != null && found.expiresOn().isBefore(LocalDate.ofInstant(at, zone))) {
                     reasons.add("expired");
                 }
                 outcome = reasons.isEmpty() ? RegistryOutcome.MATCHED : RegistryOutcome.MISMATCH;

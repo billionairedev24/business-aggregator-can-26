@@ -2,6 +2,7 @@ package ca.northline.catalogue.web;
 
 import ca.northline.catalogue.application.BrowseShop;
 import ca.northline.catalogue.application.ShopViews;
+import ca.northline.region.api.FallbackMarket;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
 import java.time.Duration;
@@ -22,7 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
  * visitor's session. The read models are purpose-built for these pages and serialized as they are.
  *
  * <pre>
- * GET /api/v1/public/shop?market=Calgary&amp;lang=fr                 the landing page
+ * GET /api/v1/public/shop?market=&amp;lang=fr                         the landing page (no market = the fallback market)
  * GET /api/v1/public/shop/departments/{slug}?market=&amp;lang=         a department (404 for an unknown slug)
  * GET /api/v1/public/shop/products/{productId}?market=&amp;lang=      a product and the market's offers (S-50)
  * </pre>
@@ -32,17 +33,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 class PublicShopController {
 
-    static final String DEFAULT_MARKET = "Calgary";
     static final int MAX_MARKET = 60;
     static final String MARKET_MESSAGE = "Choose a city.";
     private static final CacheControl CACHE =
             CacheControl.maxAge(Duration.ofSeconds(60)).cachePublic();
 
     private final BrowseShop shop;
+    private final FallbackMarket fallback;
 
     @GetMapping
     ResponseEntity<ShopViews.Landing> landing(
-            @RequestParam(defaultValue = DEFAULT_MARKET) String market,
+            @RequestParam(required = false) @Nullable String market,
             @RequestParam(required = false) @Nullable String lang,
             Locale locale) {
         return ResponseEntity.ok().cacheControl(CACHE).body(shop.landing(market(market), locale(lang, locale)));
@@ -51,7 +52,7 @@ class PublicShopController {
     @GetMapping("/departments/{slug}")
     ResponseEntity<ShopViews.Department> department(
             @PathVariable String slug,
-            @RequestParam(defaultValue = DEFAULT_MARKET) String market,
+            @RequestParam(required = false) @Nullable String market,
             @RequestParam(required = false) @Nullable String lang,
             Locale locale) {
         var department = shop.department(slug, market(market), locale(lang, locale))
@@ -62,7 +63,7 @@ class PublicShopController {
     @GetMapping("/products/{productId}")
     ResponseEntity<ShopViews.ProductPage> product(
             @PathVariable String productId,
-            @RequestParam(defaultValue = DEFAULT_MARKET) String market,
+            @RequestParam(required = false) @Nullable String market,
             @RequestParam(required = false) @Nullable String lang,
             Locale locale) {
         var product = shop.product(productId, market(market), locale(lang, locale))
@@ -70,8 +71,11 @@ class PublicShopController {
         return ResponseEntity.ok().cacheControl(CACHE).body(product);
     }
 
-    static String market(String market) {
-        var value = market.strip();
+    /** The URL's market, else the region's fallback market (S-47: the default province's first live market). */
+    String market(@Nullable String market) {
+        var value = market == null
+                ? fallback.fallback().map(FallbackMarket.City::city).orElse("")
+                : market.strip();
         if (value.isEmpty() || value.length() > MAX_MARKET) {
             throw RuleViolation.of("market", "length", MARKET_MESSAGE);
         }

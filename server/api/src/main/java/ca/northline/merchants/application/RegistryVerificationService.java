@@ -11,9 +11,12 @@ import ca.northline.merchants.domain.RegistryCheck.Trigger;
 import ca.northline.merchants.domain.RegistryOutcome;
 import ca.northline.merchants.domain.RegistryPlan;
 import ca.northline.merchants.domain.RegistryQuery;
+import ca.northline.merchants.domain.RegistryRoutes;
 import ca.northline.merchants.domain.RegistrySource;
 import ca.northline.merchants.domain.Verification;
 import ca.northline.merchants.domain.VerificationStatus;
+import ca.northline.region.api.MerchantPlaces;
+import ca.northline.region.api.Regions;
 import ca.northline.shared.Ids;
 import ca.northline.shared.NotFound;
 import java.time.Clock;
@@ -43,8 +46,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class RegistryVerificationService implements ListReviews, DecideReview, RecheckRegistries {
 
-    static final ZoneId EDMONTON = ZoneId.of("America/Edmonton");
-
     /** Reference of a {@code registry} row when nothing needs registering (a sole proprietor without a trade name). */
     static final String NOT_REQUIRED = "not_required";
 
@@ -53,6 +54,8 @@ class RegistryVerificationService implements ListReviews, DecideReview, RecheckR
     private final ApplicationRepository applications;
     private final VerificationRepository verifications;
     private final Clock clock;
+    private final MerchantPlaces places;
+    private final Regions regions;
     private final Duration recheckAfter;
 
     RegistryVerificationService(
@@ -61,23 +64,60 @@ class RegistryVerificationService implements ListReviews, DecideReview, RecheckR
             ApplicationRepository applications,
             VerificationRepository verifications,
             Clock clock,
+            MerchantPlaces places,
+            Regions regions,
             @Value("${northline.registries.recheck-after:P30D}") Duration recheckAfter) {
         adapters.forEach(a -> registries.put(a.source(), a));
         this.store = store;
         this.applications = applications;
         this.verifications = verifications;
         this.clock = clock;
+        this.places = places;
+        this.regions = regions;
         this.recheckAfter = recheckAfter;
     }
 
     /** The {@code registry} row: the business record(s) of the application's structure (+ a kitchen's city licence). */
     void business(MerchantApplication application, Verification row, Instant now) {
-        run(application, row, RegistryPlan.business(application), Trigger.INITIAL, now);
+        run(application, row, RegistryPlan.business(application, routes(application)), Trigger.INITIAL, now);
     }
 
     /** A licence row ({@code licence:<registry>}, {@code ahs_permit}, {@code aglc}) with the number the owner entered. */
     void licence(MerchantApplication application, Verification row, String registry, String number, Instant now) {
-        run(application, row, List.of(RegistryPlan.licence(application, registry, number)), Trigger.INITIAL, now);
+        run(
+                application,
+                row,
+                List.of(RegistryPlan.licence(application, routes(application), registry, number)),
+                Trigger.INITIAL,
+                now);
+    }
+
+    /**
+     * The registry adapters of the business's province and city (region model, S-134); a key the region names but no
+     * adapter serves is ignored, so its records go to an agent.
+     */
+    RegistryRoutes routes(MerchantApplication application) {
+        var place = places.of(application.getId());
+        var province = place.ownProvince() ? place.province() : null;
+        var provincial = regions.province(province).stream()
+                .flatMap(p -> p.registries().stream())
+                .flatMap(key -> source(key).stream())
+                .findFirst()
+                .orElse(null);
+        var municipal = regions.market(place.city(), province).stream()
+                .flatMap(m -> m.registries().stream())
+                .flatMap(key -> source(key).stream())
+                .findFirst()
+                .orElse(null);
+        var adapter = municipal == null ? null : registries.get(municipal);
+        var licences = adapter == null ? java.util.Set.<String>of() : adapter.licences();
+        return new RegistryRoutes(provincial, municipal, licences);
+    }
+
+    private java.util.Optional<RegistrySource> source(String key) {
+        return java.util.Arrays.stream(RegistrySource.values())
+                .filter(s -> s.code().equals(key) && registries.containsKey(s))
+                .findFirst();
     }
 
     private void run(
@@ -91,13 +131,15 @@ class RegistryVerificationService implements ListReviews, DecideReview, RecheckR
             store.markRechecked(row.getId(), now);
             return;
         }
+        var zone = places.of(application.getId()).zone();
         var checks = queries.stream()
-                .map(q -> RegistryCheck.of(Ids.next(), application.getId(), row.getId(), q, answer(q), trigger, now))
+                .map(q -> RegistryCheck.of(
+                        Ids.next(), application.getId(), row.getId(), q, answer(q), trigger, now, zone))
                 .toList();
         checks.forEach(store::insert);
         var reference = queries.getFirst().number();
         if (checks.stream().allMatch(RegistryCheck::matched)) {
-            row.confirmByRegistry(reference, expiry(checks), now);
+            row.confirmByRegistry(reference, expiry(checks, zone), now);
             store.markRechecked(row.getId(), now);
             return;
         }
@@ -140,18 +182,21 @@ class RegistryVerificationService implements ListReviews, DecideReview, RecheckR
         }
     }
 
-    /** The earliest registry expiry (Calgary licences), as that day in Calgary (the checklist's "expires on" rule). */
-    private static @Nullable Instant expiry(List<RegistryCheck> checks) {
+    /**
+     * The earliest registry expiry (municipal licences), as that day in the business's zone (the checklist's "expires
+     * on" rule).
+     */
+    private static @Nullable Instant expiry(List<RegistryCheck> checks, ZoneId zone) {
         return checks.stream()
                 .map(RegistryCheck::getRecordExpiresOn)
                 .filter(Objects::nonNull)
                 .min(Comparator.naturalOrder())
-                .map(RegistryVerificationService::onDay)
+                .map(day -> onDay(day, zone))
                 .orElse(null);
     }
 
-    private static Instant onDay(LocalDate day) {
-        return day.atStartOfDay(EDMONTON).toInstant();
+    private static Instant onDay(LocalDate day, ZoneId zone) {
+        return day.atStartOfDay(zone).toInstant();
     }
 
     // ── scheduled re-check ───────────────────────────────────────────────────────────────────────────────────────
@@ -167,9 +212,10 @@ class RegistryVerificationService implements ListReviews, DecideReview, RecheckR
                 continue;
             }
             var queries = row.kind() == CheckKind.REGISTRY
-                    ? RegistryPlan.business(application)
+                    ? RegistryPlan.business(application, routes(application))
                     : List.of(RegistryPlan.licence(
                             application,
+                            routes(application),
                             Objects.requireNonNullElse(
                                     row.getRegistry(), row.kind().key()),
                             Objects.requireNonNullElse(row.getReference(), "")));
@@ -206,7 +252,8 @@ class RegistryVerificationService implements ListReviews, DecideReview, RecheckR
             row.follow(VerificationStatus.REJECTED, reference, now);
         } else if (!store.hasOpenReview(row.getId())) {
             var expires = command.expiresOn() != null ? command.expiresOn() : check.getRecordExpiresOn();
-            row.confirmByRegistry(reference, expires == null ? null : onDay(expires), now);
+            var zone = places.of(check.getMerchantId()).zone();
+            row.confirmByRegistry(reference, expires == null ? null : onDay(expires, zone), now);
             store.markRechecked(row.getId(), now);
         }
         verifications.save(row);

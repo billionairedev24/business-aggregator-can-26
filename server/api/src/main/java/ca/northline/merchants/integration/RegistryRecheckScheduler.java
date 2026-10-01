@@ -10,7 +10,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 
 /**
  * Re-checks verified registry and licence rows (S-23; the design's "Registry checks re-run monthly"): daily at 03:41
- * Calgary time by default ({@code REGISTRY_RECHECK_CRON}), each row once {@code REGISTRY_RECHECK_AFTER} (30 days)
+ * the platform zone (REGION_PLATFORM_ZONE) by default ({@code REGISTRY_RECHECK_CRON}), each row once {@code REGISTRY_RECHECK_AFTER} (30 days)
  * passed. Replicas share the work (rows are claimed {@code FOR UPDATE SKIP LOCKED}). Not under {@code test}.
  */
 @Slf4j
@@ -24,7 +24,7 @@ class RegistryRecheckScheduler {
 
     private final RecheckRegistries rechecks;
 
-    @Scheduled(cron = "${northline.registries.recheck-cron:0 41 3 * * *}", zone = "America/Edmonton")
+    @Scheduled(cron = "${northline.registries.recheck-cron:0 41 3 * * *}", zone = "${northline.region.platform-zone}")
     void run() {
         try {
             // batches of 50 until a batch comes back short; rows whose source was down stay due, hence the bound

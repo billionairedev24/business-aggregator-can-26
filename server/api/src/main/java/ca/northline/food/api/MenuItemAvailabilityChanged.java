@@ -12,7 +12,7 @@ import org.springframework.modulith.events.Externalized;
  * {@code food.menu}, key = item id.
  *
  * @param visible the customer can order it now (published, approved, menu live, not sold out)
- * @param soldOutOn the Edmonton date it is sold out for, when sold out
+ * @param soldOutOn the kitchen's local date it is sold out for, when sold out
  */
 @EventType("food.item_availability")
 @Externalized("food.menu::#{aggregateId()}")

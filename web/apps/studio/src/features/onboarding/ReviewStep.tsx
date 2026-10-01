@@ -1,4 +1,4 @@
-import { Alert, useLocale } from '@northline/ui';
+import { Alert, useLocale, timeZone } from '@northline/ui';
 import { useSimulateApproval, useAdvanceStep, type Onboarding } from './api';
 import { checkText, isComplete } from './checks';
 import { useOnboardingT, type OnboardingT } from './messages';
@@ -60,7 +60,7 @@ export function ReviewStep({ onboarding: o, onNext }: ReviewStepProps) {
 }
 
 function submittedLabel(iso: string, locale: 'en' | 'fr', t: OnboardingT): string {
-  const tz = 'America/Edmonton';
+  const tz = timeZone();
   const d = new Date(iso);
   const day = (x: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(x);
   const fmt = (o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { timeZone: tz, ...o }).format(d);

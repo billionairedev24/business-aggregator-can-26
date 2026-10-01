@@ -16,7 +16,8 @@ export interface LegalField {
   ph?: Key;
   req: 'required' | 'optional' | 'if_trade' | 'if_charity';
   span?: boolean;
-  options?: readonly { value: string; label: Key }[];
+  /** `province`: the value is a province code, labelled with its name from the region model (S-134). */
+  options?: readonly { value: string; label: Key; province?: boolean }[];
   min?: 2 | 5;
   max?: number;
   pattern?: RegExp;
@@ -62,7 +63,7 @@ export const LEGAL_FIELDS: Record<Structure, readonly LegalField[]> = {
   ],
   corp_ex: [
     f('legal_corporate_name', 'input', 'lf_legal_corporate_name', 'required', NAME),
-    f('home_jurisdiction', 'select', 'lf_home_jurisdiction', 'required', { options: (['BC', 'SK', 'MB', 'ON', 'QC', 'OTHER_CA', 'US', 'OTHER'] as const).map(v => ({ value: v, label: `jur_${v}` as Key })) }),
+    f('home_jurisdiction', 'select', 'lf_home_jurisdiction', 'required', { options: (['BC', 'SK', 'MB', 'ON', 'QC', 'OTHER_CA', 'US', 'OTHER'] as const).map(v => (v.length === 2 ? { value: v, label: 'jur_province' as Key, province: true } : { value: v, label: `jur_${v}` as Key })) }),
     f('home_registration_number', 'input', 'lf_home_registration_number', 'required'),
     f('alberta_extra_provincial_registration', 'input', 'lf_alberta_extra_provincial_registration', 'required'),
     f('attorney_for_service', 'attorney', 'lf_attorney_for_service', 'required', { span: true, ph: 'lf_attorney_ph' }),
