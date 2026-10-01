@@ -56,9 +56,11 @@ describe('console shell (S-90, design 03)', () => {
   it('switches the role view among held roles: logged through the api, the sidebar narrows, later calls carry the role', async () => {
     const calls = staffApi(['trust_safety', 'finance']);
     const user = userEvent.setup({ delay: null });
-    const { router } = renderConsole('/sellers');
-    await screen.findByRole('heading', { level: 1, name: 'Sellers & providers' });
-    expect(navLabels()).toContain('Verification queue');
+    const { router } = renderConsole('/team');
+    await screen.findByRole('heading', { level: 1, name: 'Team & audit' });
+    // the accordion opens the current screen's group (Platform): trust & safety sees Team, not Finance
+    expect(navLabels()).toContain('Team & audit');
+    expect(navLabels()).not.toContain('Finance');
     expect(groupHeads()).toEqual(['Operations', 'Marketplace', 'Platform']);
 
     await user.click(screen.getByRole('button', { name: 'Account menu' }));
@@ -69,13 +71,13 @@ describe('console shell (S-90, design 03)', () => {
     expect(screen.queryByRole('menuitemradio', { name: /^Admin/ })).toBeNull();
     await user.click(finance);
 
-    await waitFor(() => expect(router.state.location.pathname).toBe('/'));
+    await waitFor(() => expect(navLabels()).toContain('Finance'));
+    expect(router.state.location.pathname).toBe('/team'); // finance opens Team too, so the screen stays
     const switched = calls.find(c => c.url.endsWith('/api/v1/console/me/role-view'));
     expect(switched?.method).toBe('POST');
     expect(switched?.body).toEqual({ role: 'finance' });
     expect(switched?.headers['X-Console-Role']).toBe('trust_safety');
     await waitFor(() => expect(groupHeads()).toEqual(['Operations', 'Platform']));
-    expect(navLabels()).not.toContain('Verification queue');
     const later = calls.filter(c => c.url.includes('/api/v1/geo/regions')).at(-1);
     expect(later?.headers['X-Console-Role']).toBe('finance');
   });
