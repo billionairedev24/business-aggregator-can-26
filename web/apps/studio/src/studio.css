@@ -3,3 +3,8 @@
 body { text-wrap: pretty; }
 a { color: var(--color-accent-700); }
 a:hover { color: var(--color-accent-800); }
+
+/* S-69: the boot screen in index.html, shown until the app renders (no script needed to paint it). */
+.nl-boot { min-height: 100vh; display: grid; place-items: center; background: var(--color-bg); }
+.nl-boot-brand { font-family: var(--font-heading); font-size: 28px; font-weight: var(--font-heading-weight); color: var(--color-text); }
+.nl-boot-brand span { font-weight: 400; color: var(--color-neutral-700); }

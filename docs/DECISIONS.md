@@ -4563,3 +4563,53 @@ only with DPoP.
 - **Not done:** the console's vetting queue doesn't show them yet, so a reviewer reads them through the database or
   storage. No virus scan beyond what the object store does (S-10's scanner applies when configured). Documents are
   not required for submission: the design shows them as optional uploads.
+
+## 2026-09-30 — S-69 Studio bundle size and code splitting
+
+Measured on the production build. Sizes are gzip -9 in kB (1000 B). "Initial JS" means the entry script, the chunks
+`index.html` preloads, and everything they import statically. `apps/studio/scripts/bundle-budget.mjs` computes it.
+
+| | before | after |
+|---|---|---|
+| entry script | 184.1 kB (597 kB raw) | 159.6 kB (500 kB raw) |
+| initial JS (incl. preloads) | 184.1 kB, 1 file | 202.0 kB, 18 files (the landing preloads) |
+| JS fetched to show the dashboard | 209.6 kB, 17 files | 202.1 kB, 19 files |
+| Lighthouse mobile, dashboard: FCP · LCP · Speed Index | 2.6 s · 3.1–3.4 s · 4.3–4.5 s | 0.8–1.0 s · 2.9–3.0 s · 1.1–1.3 s |
+| Lighthouse performance score | 79–86 (6 runs) | 79–94 (8 runs); 94 with TBT 140 ms |
+
+- **The main chunk was already under the target.** The backlog's "~550 kB" is raw size: the entry was 597 kB raw but
+  184 kB gzip, under the 250 kB gzip goal before this story. The work went into what was in it and into the
+  dashboard's critical path.
+- **Icons out of the entry.** The menu's 22 Phosphor icons (69 kB raw; every Phosphor component carries all six
+  weights) were in `features/shell/nav.ts`, which the route guards import. The menu moved to `navMenu.ts`, which only
+  the layout imports. `nav.ts` keeps the screen and path rules.
+- **Loaders travel with their screen.** The router plugin's `codeSplittingOptions.defaultBehavior` groups `loader` with
+  `component`, so the features' `api.ts` modules and their zod schemas leave the entry (kitchen, settings,
+  availability, appointments …).
+  - Exceptions: the `/b/$merchantId` layout and the dashboard keep their loaders unsplit (per-route
+    `codeSplitGroupings`), so the business and the dashboard data are requested together with the session check, not
+    after a chunk download.
+  - `SETTINGS_TABS` moved to `features/settings/tabs.ts`, because the settings route's search validation pulled in the
+    whole settings api.
+- **The landing chunks are preloaded.** A small Vite plugin (`preloadLanding` in `vite.config.ts`) adds
+  `<link rel="modulepreload">` for the layout and dashboard chunks and their imports. The browser fetches them while
+  the entry runs. Signed-out pages pay about 40 kB gzip for this, deliberately.
+- **Nothing blocks the first paint any more.**
+  - `/config.js` is `defer`, and still runs before the module script.
+  - Google Fonts are preloaded in `index.html` and applied by `main.tsx`. The usual `onload="this.media='all'"`
+    trick is an inline handler, which the Studio's CSP (`script-src 'self'`) forbids.
+  - `index.html` paints a boot screen ("Northline Studio" on the page background) that React replaces.
+- **Budget in the build.** `pnpm --filter @northline/studio build` now runs `scripts/bundle-budget.mjs` after
+  `vite build`. It fails when the initial JS passes 250 kB gzip and names the biggest files. The Docker image build
+  runs the same script.
+- **Lighthouse ≥ 90 is met only on a quiet machine.**
+  - The FCP, LCP and Speed Index gains are stable across runs.
+  - Total Blocking Time is not: it varied 140–500 ms with the load of the shared build machine, because the simulated
+    4× CPU slowdown multiplies contention. Its long tasks are the entry's evaluation and the first render.
+  - Moving FCP earlier with the boot screen also moves those tasks after FCP, where TBT counts them.
+  - The method: Lighthouse 12 (mobile, simulated throttling) against the built dist served gzip by a fixture server
+    with a populated dashboard.
+- **Not done:**
+  - zod (95 kB raw) stays in the entry: the session and business checks that every route runs parse with it, and a
+    `zod/mini` split would mean two zod copies.
+  - intl-messageformat's parser (38 kB raw) stays too: precompiling the messages would change `defineMessages`.
