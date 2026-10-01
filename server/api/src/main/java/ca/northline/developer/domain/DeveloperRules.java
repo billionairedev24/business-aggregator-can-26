@@ -28,6 +28,9 @@ public final class DeveloperRules {
     public static final int OVERLAP_MAX_HOURS = 168;
     public static final int OVERLAP_DEFAULT_HOURS = 24;
     public static final String OVERLAP_RANGE = "Keep the old secret for 0 to 168 hours.";
+    public static final int ORIGINS_MAX = 10;
+    public static final String ORIGIN_FORMAT = "Enter a site address like https://www.example.com.";
+    public static final String ORIGINS_TOO_MANY = "Up to 10 sites.";
 
     /** Scopes a merchant key may carry (design: "storefront:read booking:write", "payouts:read orders:read"). */
     public static final List<String> SCOPES = List.of(
@@ -99,6 +102,46 @@ public final class DeveloperRules {
             throw RuleViolation.of("url", "format", URL_HTTPS);
         }
         return url;
+    }
+
+    /**
+     * S-76: the sites a publishable key's embed answers on, as browser origins ({@code https://www.example.com}, port
+     * kept when not the default). A bare host gets https://; a path, query or credentials are refused; http only for
+     * localhost (local development). Duplicates collapse; at most {@value #ORIGINS_MAX}.
+     */
+    public static List<String> origins(List<String> raw) {
+        var out = new java.util.LinkedHashSet<String>();
+        for (var entry : raw) {
+            var value = entry.strip();
+            if (value.isEmpty()) {
+                continue;
+            }
+            out.add(origin(value.contains("://") ? value : "https://" + value));
+        }
+        if (out.size() > ORIGINS_MAX) {
+            throw RuleViolation.of("allowedOrigins", "size", ORIGINS_TOO_MANY);
+        }
+        return List.copyOf(out);
+    }
+
+    private static String origin(String value) {
+        try {
+            var uri = new URI(value);
+            var scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase(Locale.ROOT);
+            var host = uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.ROOT);
+            var path = uri.getRawPath() == null ? "" : uri.getRawPath();
+            var local = "localhost".equals(host) || "127.0.0.1".equals(host);
+            var bare = (path.isEmpty() || "/".equals(path)) && uri.getRawQuery() == null && uri.getRawFragment() == null
+                    && uri.getRawUserInfo() == null;
+            if (host.isEmpty() || !bare || !("https".equals(scheme) || ("http".equals(scheme) && local))
+                    || value.length() > 200) {
+                throw RuleViolation.of("allowedOrigins", "format", ORIGIN_FORMAT);
+            }
+            var defaultPort = "https".equals(scheme) ? 443 : 80;
+            return scheme + "://" + host + (uri.getPort() == -1 || uri.getPort() == defaultPort ? "" : ":" + uri.getPort());
+        } catch (URISyntaxException e) {
+            throw RuleViolation.of("allowedOrigins", "format", ORIGIN_FORMAT);
+        }
     }
 
     private static List<String> subset(
