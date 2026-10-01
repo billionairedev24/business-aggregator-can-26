@@ -1,6 +1,7 @@
 package ca.northline.merchants.application;
 
 import ca.northline.developer.api.AuditTrail;
+import ca.northline.merchants.api.ComplianceDocuments;
 import ca.northline.merchants.api.ComplianceStatus;
 import ca.northline.merchants.api.VerificationRenewalSubmitted;
 import ca.northline.merchants.application.ComplianceUseCases.AcceptObligations;
@@ -49,7 +50,12 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 class ComplianceLedgerService
-        implements ViewCompliance, RenewVerification, AcceptObligations, OpenStripeLink, ComplianceStatus {
+        implements ViewCompliance,
+                RenewVerification,
+                AcceptObligations,
+                OpenStripeLink,
+                ComplianceStatus,
+                ComplianceDocuments {
 
     private final ComplianceLedgerStore ledger;
     private final ConnectAccountGateway stripe;
@@ -171,6 +177,22 @@ class ComplianceLedgerService
         connectedAccounts.linked(actor.merchantId(), account);
         var back = links.compliance(actor.merchantId());
         return stripe.onboardingLink(account, back, back + "?stripe=refresh");
+    }
+
+    @Override
+    public List<LedgerDocument> documents(String merchantId) {
+        return ledger.items(merchantId, clock.instant()).stream()
+                .sorted(Comparator.comparing(
+                        ComplianceItem::expiresAt, Comparator.nullsLast(Comparator.naturalOrder())))
+                .map(i -> new LedgerDocument(
+                        i.id(),
+                        i.checkType().code(),
+                        i.registry(),
+                        i.reference(),
+                        i.label(),
+                        i.status().code(),
+                        i.expiresAt()))
+                .toList();
     }
 
     @Override
