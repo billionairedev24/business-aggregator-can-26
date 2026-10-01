@@ -1,4 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { ScreenPending } from '../../features/shell/ScreenPending';
+import { z } from 'zod';
+import { DeliveryOps } from '../../features/delivery/DeliveryOps';
 
-export const Route = createFileRoute('/_console/delivery')({ component: () => <ScreenPending screen="delivery" /> });
+/** Delivery ops (S-81): `?market=<region market id>`. */
+export const Route = createFileRoute('/_console/delivery')({
+  validateSearch: z.object({ market: z.string().optional() }),
+  component: DeliveryOps,
+});

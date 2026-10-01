@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout.html :: email(#{seller-oversight.preheader}, ~{::content})}">
+<body>
+<div th:fragment="content"
+     th:with="fromName=${fromTier == '' ? '' : #messages.msg('seller-oversight.tier.' + fromTier)},
+              toName=${toTier == '' ? '' : #messages.msg('seller-oversight.tier.' + toTier)},
+              checkName=${checkType == '' ? '' : #messages.msg('seller-oversight.check.' + checkType)}">
+  <h1 th:style="${s.h1}" th:text="#{__${'seller-oversight.heading.' + action}__}">Heading</h1>
+  <p th:style="${s.p}" th:text="#{__${'seller-oversight.body.' + action}__(${businessName}, ${fromName}, ${toName}, ${checkName})}">Body</p>
+  <p th:style="${s.p}" th:text="#{seller-oversight.reason-given(${staffReason})}">Reason</p>
+  <p th:style="${s.p}" th:text="#{__${'seller-oversight.action.' + action}__}">What to do</p>
+  <th:block th:replace="~{button.html :: button(#{__${'seller-oversight.cta.' + action}__}, ${link})}"/>
+</div>
+</body>
+</html>

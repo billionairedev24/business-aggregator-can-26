@@ -79,6 +79,38 @@ class TrustRuleJdbc implements TrustRuleStore {
                 .single();
     }
 
+    @Override
+    public java.util.List<ca.northline.trust.api.TrustConsequences.Below> averages(Instant since, int minReviews) {
+        return jdbc.sql("""
+                        select target_id, avg(rating)::float8 as avg_rating, count(*) as n from trust.reviews
+                         where target_type = 'merchant' and created_at >= :since
+                         group by target_id having count(*) >= :min
+                         order by target_id""")
+                .param("since", since.atOffset(ZoneOffset.UTC))
+                .param("min", minReviews)
+                .query((rs, _) -> new ca.northline.trust.api.TrustConsequences.Below(
+                        rs.getString("target_id"), rs.getDouble("avg_rating"), rs.getLong("n")))
+                .list();
+    }
+
+    @Override
+    public java.util.List<String> warnedAgain(Instant since) {
+        return jdbc.sql("""
+                        with flagged as (
+                          select coalesce(case when f.target_type = 'merchant' then f.target_id end, f.merchant_id) as m,
+                                 f.state, f.action, f.created_at, f.decided_at
+                            from trust.flags f where f.rule = 'off_platform_payment')
+                        select distinct o.m from flagged o
+                         where o.m is not null and coalesce(o.state, 'open') = 'open'
+                           and exists (select 1 from flagged w
+                                        where w.m = o.m and w.action = 'warn' and w.decided_at >= :since
+                                          and o.created_at > w.decided_at)
+                         order by o.m""")
+                .param("since", since.atOffset(ZoneOffset.UTC))
+                .query((rs, _) -> java.util.Objects.requireNonNull(rs.getString(1)))
+                .list();
+    }
+
     private static Stored stored(ResultSet rs) throws SQLException {
         return new Stored(
                 rs.getString("key"),

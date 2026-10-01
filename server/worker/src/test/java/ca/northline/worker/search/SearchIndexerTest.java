@@ -220,6 +220,31 @@ class SearchIndexerTest extends WorkerIntegrationTest {
         await().atMost(INDEXED).until(() -> doc("listings_fr", offer), Optional::isPresent);
     }
 
+    /** S-82: hidden from search (staff, or below the trust rules' rating floor) indexes like a paused business. */
+    @Test
+    void hiddenFromSearch_removesItsDocuments_andShownAgainBringsThemBack() {
+        var fx = fx();
+        var m = fx.merchant("seller", "trusted", "Hidden Test Shop");
+        var offer = fx.offer(m, "Floor mats", 4500, 3, "{pooled,pickup}");
+        send("merchants.merchant", "merchants.merchant_renamed", renamed(m.id()));
+        await().atMost(INDEXED).until(() -> doc("listings_en", offer), Optional::isPresent);
+
+        jdbc.sql(
+                        "update merchants.merchants set search_hidden_at = now(), search_hidden_cause = 'rating_floor' where id = :id")
+                .param("id", m.id())
+                .update();
+        send("merchants.merchant", "merchants.merchant_search_visibility_changed", visibility(m.id(), true));
+        await().atMost(INDEXED)
+                .until(() -> doc("listings_en", offer).isEmpty()
+                        && doc("listings_en", m.id()).isEmpty());
+
+        jdbc.sql("update merchants.merchants set search_hidden_at = null, search_hidden_cause = null where id = :id")
+                .param("id", m.id())
+                .update();
+        send("merchants.merchant", "merchants.merchant_search_visibility_changed", visibility(m.id(), false));
+        await().atMost(INDEXED).until(() -> doc("listings_en", offer), Optional::isPresent);
+    }
+
     @Test
     void vettingRejection_removesTheListing() {
         var fx = fx();
@@ -377,6 +402,12 @@ class SearchIndexerTest extends WorkerIntegrationTest {
     private static String listing(String id, String merchantId, String kind) {
         return """
                 {"eventId":"%s","occurredAt":"2026-09-30T18:00:00Z","aggregateId":"%s","merchantId":"%s","kind":"%s"}""".formatted(Events.id(), id, merchantId, kind);
+    }
+
+    private static String visibility(String merchantId, boolean hidden) {
+        return """
+                {"eventId":"%s","occurredAt":"2026-09-30T18:00:00Z","aggregateId":"%s","actorId":"system",\
+                "actionId":"%s","hidden":%s,"cause":"rating_floor"}""".formatted(Events.id(), merchantId, Events.id(), hidden);
     }
 
     private static String renamed(String merchantId) {

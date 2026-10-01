@@ -17,6 +17,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -47,6 +48,8 @@ import org.springframework.web.bind.annotation.RestController;
  * POST /api/v1/console/fulfilment/couriers {userId, market, vehicle}            201 CourierSummary
  * POST /api/v1/console/fulfilment/couriers/{courierId}/shifts {startsAt, endsAt} 201 ShiftView
  * POST /api/v1/console/fulfilment/plan {market?}                   {runs, assigned}
+ * POST /api/v1/console/fulfilment/couriers/{courierId}/pause {reason}  CourierSummary (S-81: no new runs)
+ * POST /api/v1/console/fulfilment/couriers/{courierId}/resume          CourierSummary
  * </pre>
  */
 @RestController
@@ -78,6 +81,11 @@ class DispatchConsoleController {
             @NotNull(message = DeliveryRules.SHIFT_TIMES) Instant endsAt) {}
 
     record PlanRequest(@Nullable String market) {}
+
+    record PauseRequest(
+            @NotBlank(message = DeliveryRules.PAUSE_REASON)
+            @Size(max = 500, message = DeliveryRules.PAUSE_REASON_LENGTH)
+            String reason) {}
 
     @GetMapping("/runs")
     ListResponse<RunSummary> runs(
@@ -125,6 +133,18 @@ class DispatchConsoleController {
     @RequiresConsole(value = ConsoleScreen.DELIVERY, actions = ConsoleAction.DISPATCH)
     ShiftView addShift(@PathVariable String courierId, @Valid @RequestBody ShiftRequest body, CurrentStaff staff) {
         return console.addShift(courierId, body.startsAt(), body.endsAt(), actor(staff));
+    }
+
+    @PostMapping("/couriers/{courierId}/pause")
+    @RequiresConsole(value = ConsoleScreen.DELIVERY, actions = ConsoleAction.DISPATCH)
+    CourierSummary pause(@PathVariable String courierId, @Valid @RequestBody PauseRequest body, CurrentStaff staff) {
+        return console.pause(courierId, body.reason(), actor(staff));
+    }
+
+    @PostMapping("/couriers/{courierId}/resume")
+    @RequiresConsole(value = ConsoleScreen.DELIVERY, actions = ConsoleAction.DISPATCH)
+    CourierSummary resume(@PathVariable String courierId, CurrentStaff staff) {
+        return console.resume(courierId, actor(staff));
     }
 
     @PostMapping("/plan")
