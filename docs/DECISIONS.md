@@ -4265,3 +4265,41 @@ Branch `web/s-60-something-wrong`, **stacked on S-59** (#93, itself on S-58 #90)
   api's Tomcat this needs Tomcat to close an idle connection at the moment the relay reuses it. The JDK client drops
   idle connections after 30 s (`jdk.httpclient.keepalive.timeout`), so keeping the api's keep-alive timeout above
   that makes it rarer still. Money-moving POSTs carry an `Idempotency-Key` anyway, so the browser can retry them.
+
+## 2026-10-01 — S-136 Calendar link disconnect deadlock
+
+- **The competing transactions** are a calendar read and the member's disconnect, with locks taken in opposite orders.
+  A read comes from the sync job, a notification or the read right after connecting or choosing calendars.
+  - **The read** locked the calendar's `calendar_sources` row (`FOR NO KEY UPDATE SKIP LOCKED`), called the provider,
+    rewrote the busy blocks and only then updated the parent `calendar_links` row: `last_sync_at`, plus a rotated
+    Microsoft refresh token or the `reconnect` state on the way.
+  - **The disconnect** deleted the `calendar_links` row first (`FOR UPDATE`), then, by `ON DELETE CASCADE`, the sources
+    and everything under them.
+  - The two locks were taken in opposite orders: source → link versus link → source. Postgres aborted one of the two
+    transactions. `CalendarSyncApiTest`'s "choose calendars, then disconnect" hit it when the read queued by the choice
+    was still running.
+  - The write-back already locked the link first, and the channel transactions touch only channel rows, so neither
+    took part.
+- **Fix: one lock order, the link first, in the strongest mode the transaction will need, so it never upgrades
+  later.**
+  - `CalendarLinkRepository.lockWaiting` (`FOR NO KEY UPDATE`, waiting) replaces the unlocked `byId` at the start of
+    a read and of "choose calendars".
+  - `lockForDelete` (`FOR UPDATE`) starts a disconnect, before it reads the channels and mirrors. A read or write-back
+    in flight therefore finishes first, and its mirrors are seen and deleted at the provider. None starts until the
+    link is gone: a read waits and then finds no link, and the job's write-back skips it.
+  - Rejected alternatives:
+    - A retry on deadlock would also have to retry the member's DELETE request, and it hides the cause.
+    - `FOR KEY SHARE` first and the update later deadlocks with any other transaction that updates the link and
+      then touches a source, such as "choose calendars" after a token refresh.
+- **Write-back now waits instead of skipping when it is asked for at once.** Reads hold the link for the length of
+  the provider call, so the S-55 write-back of a newly confirmed booking (`writeBackMember`) and the one after
+  connecting wait for a read in progress (`writeBack(link, wait = true)`) instead of skipping until the next 5-minute
+  run. The job's write-back keeps `SKIP LOCKED`, so replicas still share the work. Reads of one member's calendars now
+  run one after another; they already queued on the link update at the end.
+- **Tests:** `CalendarLockOrderTest`:
+  - **Forced interleaving:** a third transaction holds a busy block, so the read waits while holding the source. The
+    disconnect starts, and the test waits until Postgres shows it blocked. Then the busy block is released.
+  - **Unforced:** five rounds of four reads and a disconnect started together.
+  - Without the fix both tests failed with `deadlock detected`. With it, they and `CalendarSyncApiTest` passed 5 of 5
+    runs in a row, and `CalendarProvidersWireMockTest` passes.
+- **No schema, configuration or API change.**

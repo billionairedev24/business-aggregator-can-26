@@ -39,7 +39,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * The two directions of S-32 sync and the notification channels. Each unit of work (one calendar read, one member's
- * write-back, one channel) runs in its own transaction, so one failing provider call never undoes the others.
+ * write-back, one channel) runs in its own transaction, so one failing provider call never undoes the others. S-136:
+ * a read and a write-back lock the member's link before anything under it, like a disconnect does
+ * ({@link CalendarLinkRepository#lockWaiting}).
  *
  * <ul>
  *   <li><b>Inbound:</b> busy events of every chosen calendar, incrementally (Google sync token / Graph delta link), on
@@ -109,7 +111,7 @@ class CalendarSyncService implements CalendarJobs {
             read(linkId, source.calendarId());
             watch(linkId, source.calendarId());
         }
-        writeBack(linkId);
+        writeBack(linkId, true);
     }
 
     // ── inbound ──────────────────────────────────────────────────────────────────
@@ -131,10 +133,15 @@ class CalendarSyncService implements CalendarJobs {
     /**
      * Reads one calendar's changes; false when it was skipped: another replica is reading it, it was read after
      * {@code readBefore} meanwhile (jobs of two replicas), or the link is gone or needs a reconnect.
+     *
+     * <p>S-136: the link is locked first and waited for. The read ends by updating it ({@code last_sync_at}, and a
+     * rotated refresh token or the reconnect state on the way), while a disconnect deletes it and then its sources. With
+     * the source locked first, the two deadlocked.
      */
     boolean read(String linkId, String calendarId, @Nullable Instant readBefore) {
         return Boolean.TRUE.equals(tx.execute(_ -> {
-            var link = links.byId(linkId).filter(l -> !l.needsReconnect()).orElse(null);
+            var link =
+                    links.lockWaiting(linkId).filter(l -> !l.needsReconnect()).orElse(null);
             var source = link == null ? null : sync.lock(linkId, calendarId).orElse(null);
             if (link == null
                     || source == null
@@ -216,16 +223,26 @@ class CalendarSyncService implements CalendarJobs {
         return links.connected().stream()
                 .filter(l ->
                         l.merchantId().equals(merchantId) && l.memberUserId().equals(memberUserId))
-                .mapToInt(l -> writeBack(l.id()))
+                .mapToInt(l -> writeBack(l.id(), true))
                 .sum();
     }
 
-    /** Writes, rewrites and deletes the member's booking events; returns the number of provider writes. */
+    /** The job's write-back: skips a link another replica (or a read) holds; it comes round again next run. */
     int writeBack(String linkId) {
+        return writeBack(linkId, false);
+    }
+
+    /**
+     * Writes, rewrites and deletes the member's booking events; returns the number of provider writes. {@code wait}:
+     * wait for a read or disconnect that holds the link (S-136: reads lock it now) instead of skipping it, so a new
+     * booking still reaches the calendar at once.
+     */
+    private int writeBack(String linkId, boolean wait) {
         return Objects.requireNonNullElse(
                 tx.execute(_ -> {
-                    var link =
-                            links.lock(linkId).filter(l -> !l.needsReconnect()).orElse(null);
+                    var link = (wait ? links.lockWaiting(linkId) : links.lock(linkId))
+                            .filter(l -> !l.needsReconnect())
+                            .orElse(null);
                     if (link == null || link.writeCalendarId() == null) {
                         return 0;
                     }
