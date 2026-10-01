@@ -1,0 +1,16 @@
+{
+  "home.title": { "message": "Documentation" },
+  "home.heading": { "message": "Documentation Northline" },
+  "home.lead": { "message": "Guides et références d’API pour intégrer la place de marché Northline." },
+  "home.guides": { "message": "Guides" },
+  "home.guides.text": { "message": "Commencer, s’authentifier, recevoir les webhooks." },
+  "home.api": { "message": "Référence de l’API" },
+  "home.api.text": { "message": "Chaque document OpenAPI 3.1, dans Redoc et dans Scalar." },
+  "home.engineering": { "message": "Ingénierie" },
+  "home.engineering.text": { "message": "Architecture, modèle de données, procédures, décisions, sécurité, carnet de produit." },
+  "api.title": { "message": "Référence de l’API" },
+  "api.heading": { "message": "Référence de l’API" },
+  "api.lead": { "message": "OpenAPI 3.1, généré à partir du code. Redoc pour lire, Scalar pour essayer des requêtes." },
+  "api.internal": { "message": "Interne — non publié en production" },
+  "api.swagger.title": { "message": "Swagger UI des services en marche" }
+}
