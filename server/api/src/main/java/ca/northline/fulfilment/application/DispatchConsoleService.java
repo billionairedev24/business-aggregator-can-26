@@ -1,11 +1,13 @@
 package ca.northline.fulfilment.application;
 
+import ca.northline.developer.api.AuditTrail;
 import ca.northline.fulfilment.application.CourierStore.Courier;
 import ca.northline.fulfilment.application.CourierStore.Shift;
 import ca.northline.fulfilment.application.DispatchUseCases.AssignCouriers;
 import ca.northline.fulfilment.application.DispatchUseCases.CourierSummary;
 import ca.northline.fulfilment.application.DispatchUseCases.DeliveryView;
 import ca.northline.fulfilment.application.DispatchUseCases.DispatchConsole;
+import ca.northline.fulfilment.application.DispatchUseCases.DispatchConsole.Actor;
 import ca.northline.fulfilment.application.DispatchUseCases.PickupView;
 import ca.northline.fulfilment.application.DispatchUseCases.PlanRuns;
 import ca.northline.fulfilment.application.DispatchUseCases.Planned;
@@ -25,6 +27,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
@@ -53,6 +56,7 @@ class DispatchConsoleService implements DispatchConsole {
     private final PersonDirectory people;
     private final BusinessNames names;
     private final Clock clock;
+    private final AuditTrail auditTrail;
 
     @Override
     @Transactional(readOnly = true)
@@ -124,7 +128,7 @@ class DispatchConsoleService implements DispatchConsole {
     }
 
     @Override
-    public CourierSummary addCourier(String userId, String market, String vehicle) {
+    public CourierSummary addCourier(String userId, String market, String vehicle, Actor actor) {
         if (market.isBlank()) {
             throw RuleViolation.of("market", "required", DeliveryRules.MARKET_REQUIRED);
         }
@@ -139,11 +143,24 @@ class DispatchConsoleService implements DispatchConsole {
         if (!couriers.insert(courier)) {
             throw new Conflict("already_a_courier", DeliveryRules.ALREADY_A_COURIER);
         }
+        audit(
+                actor,
+                "fulfilment.courier_added",
+                "courier",
+                courier.id(),
+                null,
+                Map.of(
+                        "userId",
+                        userId,
+                        "market",
+                        courier.market() == null ? "" : courier.market(),
+                        "vehicle",
+                        vehicle));
         return summary(courier, person);
     }
 
     @Override
-    public ShiftView addShift(String courierId, Instant startsAt, Instant endsAt) {
+    public ShiftView addShift(String courierId, Instant startsAt, Instant endsAt, Actor actor) {
         if (couriers.find(courierId).isEmpty()) {
             throw new NotFound("courier", courierId);
         }
@@ -152,12 +169,19 @@ class DispatchConsoleService implements DispatchConsole {
         }
         var shift = new Shift(Ids.next(), courierId, startsAt, endsAt, "scheduled", null, null);
         couriers.insertShift(shift);
+        audit(
+                actor,
+                "fulfilment.shift_scheduled",
+                "shift",
+                shift.id(),
+                null,
+                Map.of("courierId", courierId, "startsAt", startsAt.toString(), "endsAt", endsAt.toString()));
         return CourierAppService.view(shift);
     }
 
     /** A run that hasn't started goes to this courier (any previous courier is freed); the courier must be free. */
     @Override
-    public RunSummary assign(String runId, String courierId) {
+    public RunSummary assign(String runId, String courierId, Actor actor) {
         var now = clock.instant();
         var run = runs.lock(runId).orElseThrow(() -> new NotFound("run", runId));
         if (couriers.find(courierId).isEmpty()) {
@@ -178,14 +202,40 @@ class DispatchConsoleService implements DispatchConsole {
             couriers.status(previous, couriers.onShift(previous).isPresent() ? "available" : "offline");
         }
         dispatch.give(run, courierId, now);
+        audit(
+                actor,
+                "fulfilment.run_assigned",
+                "run",
+                runId,
+                previous == null ? null : Map.of("courierId", previous),
+                Map.of("courierId", courierId));
         return views.summary(runs.find(runId).orElseThrow(), runs.stops(runId));
     }
 
     @Override
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
-    public Planned planNow(@Nullable String market) {
-        var planned = planRuns.plan(market);
-        return new Planned(planned, assignCouriers.assign(market));
+    public Planned planNow(@Nullable String market, Actor actor) {
+        var planned = new Planned(planRuns.plan(market), assignCouriers.assign(market));
+        audit(
+                actor,
+                "fulfilment.runs_planned",
+                "market",
+                market == null ? "*" : market,
+                null,
+                Map.of("runs", planned.runs(), "assigned", planned.assigned()));
+        return planned;
+    }
+
+    /** A platform audit row (no business; ids and codes only), in the transaction that made the change. */
+    private void audit(
+            Actor actor,
+            String action,
+            String targetType,
+            String targetId,
+            @Nullable Map<String, ?> before,
+            @Nullable Map<String, ?> after) {
+        auditTrail.record(
+                new AuditTrail.Entry(null, actor.userId(), actor.role(), action, targetType, targetId, before, after));
     }
 
     private CourierSummary summary(Courier c, PersonDirectory.@Nullable Person person) {

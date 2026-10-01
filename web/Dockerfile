@@ -3,6 +3,7 @@
 #
 #   docker build --target studio   -t "$REGISTRY/studio:$IMAGE_TAG"   web
 #   docker build --target consumer -t "$REGISTRY/consumer:$IMAGE_TAG" web
+#   docker build --target console  -t "$REGISTRY/console:$IMAGE_TAG"  web
 #   docker build --target docs          --build-context repo-docs=docs -t "$REGISTRY/docs:$IMAGE_TAG" web
 #   docker build --target docs-internal --build-context repo-docs=docs -t "$REGISTRY/docs-internal:$IMAGE_TAG" web
 #
@@ -14,7 +15,8 @@
 # docs, docs-internal = the Docusaurus site (S-126) as static files on nginx-unprivileged (port 8080): docs is the
 #            public variant (guides, public/partner/webhook/OAuth references), docs-internal everything (docs/ of the
 #            repository, every spec). The repository's docs/ comes in as the named build context `repo-docs`.
-# The console app (E-8) does not exist yet; its target goes here when it does.
+# console  = the platform console SPA (S-90), built and served exactly like the studio (same nginx template: SPA
+#            fallback, security headers, /config.js from NL_AUTH_ORIGIN).
 
 ARG NODE_IMAGE=node:22-bookworm-slim
 ARG NGINX_IMAGE=nginxinc/nginx-unprivileged:1.29-alpine
@@ -48,6 +50,15 @@ RUN pnpm --filter @northline/studio build \
  && find apps/studio/dist -type f \( -name '*.js' -o -name '*.css' -o -name '*.html' -o -name '*.svg' -o -name '*.json' \) \
       -size +1k -exec gzip -9 -k -n {} \; \
  && rm -f apps/studio/dist/config.js
+
+# ---- console build (S-90) -------------------------------------------------------------------------------------------
+FROM deps AS console-build
+ARG VITE_NL_AUTH_ORIGIN=
+ENV VITE_NL_AUTH_ORIGIN=${VITE_NL_AUTH_ORIGIN}
+RUN pnpm --filter @northline/console build \
+ && find apps/console/dist -type f \( -name '*.js' -o -name '*.css' -o -name '*.html' -o -name '*.svg' -o -name '*.json' \) \
+      -size +1k -exec gzip -9 -k -n {} \; \
+ && rm -f apps/console/dist/config.js
 
 # ---- consumer build -------------------------------------------------------------------------------------------------
 FROM deps AS consumer-build
@@ -129,6 +140,26 @@ USER root
 RUN rm -f /etc/nginx/conf.d/default.conf
 COPY docker/studio.conf.template docker/security-headers.inc.template /etc/nginx/templates/
 COPY --from=studio-build /web/apps/studio/dist /usr/share/nginx/html
+RUN chown -R 101:101 /etc/nginx/conf.d && chmod -R a+rX /usr/share/nginx/html
+USER 101
+EXPOSE 8080
+
+# ---- console runtime (S-90) -------------------------------------------------------------------------------------------
+FROM ${NGINX_IMAGE} AS console
+ARG GIT_SHA=unknown
+ARG IMAGE_TAG=dev
+LABEL org.opencontainers.image.title="northline-console" \
+      org.opencontainers.image.description="Northline platform console (static SPA on nginx)" \
+      org.opencontainers.image.source="https://github.com/billionairedev24/business-aggregator-can-26" \
+      org.opencontainers.image.revision="${GIT_SHA}" \
+      org.opencontainers.image.version="${IMAGE_TAG}" \
+      org.opencontainers.image.vendor="Northline"
+ENV NGINX_ENVSUBST_FILTER=^NL_ \
+    NL_AUTH_ORIGIN=http://localhost:9000
+USER root
+RUN rm -f /etc/nginx/conf.d/default.conf
+COPY docker/studio.conf.template docker/security-headers.inc.template /etc/nginx/templates/
+COPY --from=console-build /web/apps/console/dist /usr/share/nginx/html
 RUN chown -R 101:101 /etc/nginx/conf.d && chmod -R a+rX /usr/share/nginx/html
 USER 101
 EXPOSE 8080

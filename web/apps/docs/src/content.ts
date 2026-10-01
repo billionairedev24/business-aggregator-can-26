@@ -16,7 +16,7 @@ export type Locale = 'en' | 'fr';
 export interface ApiSpec {
   /** File name without extension in docs/api/openapi, also the route segment: /api/<id>/. */
   id: string;
-  service: 'api' | 'auth' | 'bff' | 'consumer-bff';
+  service: 'api' | 'auth' | 'bff' | 'consumer-bff' | 'console-bff';
   audience: 'public' | 'internal';
   title: Record<Locale, string>;
   summary: Record<Locale, string>;
@@ -104,6 +104,13 @@ export const SPECS: readonly ApiSpec[] = [
     audience: 'internal',
     title: { en: 'consumer-bff session API', fr: 'API de session du consumer-bff' },
     summary: { en: 'The consumer web’s session, guests included.', fr: 'La session du site consommateurs, invités compris.' },
+  },
+  {
+    id: 'bff-console-internal',
+    service: 'console-bff',
+    audience: 'internal',
+    title: { en: 'console-bff session API', fr: 'API de session du console-bff' },
+    summary: { en: 'The platform console’s session: staff with a second factor only.', fr: 'La session de la console de la plateforme : personnel avec deuxième facteur seulement.' },
   },
 ];
 

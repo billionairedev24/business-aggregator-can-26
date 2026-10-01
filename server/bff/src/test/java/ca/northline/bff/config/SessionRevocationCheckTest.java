@@ -42,7 +42,8 @@ class SessionRevocationCheckTest {
             Duration.ofMinutes(1),
             "XSRF-TOKEN",
             false,
-            "");
+            "",
+            false);
     private final SessionRevocationCheck filter =
             new SessionRevocationCheck(clients, introspection, props, Clock.systemUTC());
 

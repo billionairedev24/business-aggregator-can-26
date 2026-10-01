@@ -93,6 +93,8 @@ apps:
     resources:
       requests: { cpu: 250m, memory: 768Mi }
       limits: { memory: 768Mi }
+  console-bff:                      # S-90: staff only — two replicas for availability
+    autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 3 }
   worker:
     env:
       EMAIL_FROM: "Northline <no-reply@northline.ca>"   # S-27 notifications (payout.failed email)
@@ -104,6 +106,8 @@ apps:
       limits: { memory: 768Mi }
   studio:
     autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 4 }
+  console:
+    autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 3 }
   consumer:
     autoscaling: { enabled: true, minReplicas: 3, maxReplicas: 10 }
     resources:

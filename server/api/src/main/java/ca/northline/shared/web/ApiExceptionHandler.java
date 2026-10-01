@@ -7,6 +7,7 @@ import ca.northline.shared.PlaceNames;
 import ca.northline.shared.RuleViolation;
 import ca.northline.shared.RuleViolation.Violation;
 import ca.northline.shared.security.MerchantAccessDenied;
+import ca.northline.shared.security.StaffAccessDenied;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Path;
@@ -139,7 +140,11 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler
     ProblemDetail forbidden(AccessDeniedException ex, WebRequest request) {
-        var code = ex instanceof MerchantAccessDenied denied ? denied.reason().code() : "forbidden";
+        var code = switch (ex) {
+            case MerchantAccessDenied denied -> denied.reason().code();
+            case StaffAccessDenied denied -> denied.reason().code();
+            default -> "forbidden";
+        };
         return problem(
                 HttpStatus.FORBIDDEN,
                 code,

@@ -4,6 +4,7 @@ import ca.northline.orders.application.ConfirmDelivery;
 import ca.northline.orders.application.TrackOrder;
 import ca.northline.orders.application.TrackOrder.OrderTracking;
 import ca.northline.orders.application.TrackingBus;
+import ca.northline.orders.application.TrackingStreams;
 import ca.northline.shared.security.CurrentUser;
 import jakarta.annotation.PreDestroy;
 import java.io.IOException;
@@ -44,13 +45,16 @@ class ConsumerOrderController {
     private final TrackOrder track;
     private final ConfirmDelivery confirmDelivery;
     private final TrackingBus bus;
+    private final TrackingStreams streams;
     /** Spring's scheduler on virtual threads: one timer, each keep-alive on its own virtual thread. */
     private final SimpleAsyncTaskScheduler heartbeats = new SimpleAsyncTaskScheduler();
 
-    ConsumerOrderController(TrackOrder track, ConfirmDelivery confirmDelivery, TrackingBus bus) {
+    ConsumerOrderController(
+            TrackOrder track, ConfirmDelivery confirmDelivery, TrackingBus bus, TrackingStreams streams) {
         this.track = track;
         this.confirmDelivery = confirmDelivery;
         this.bus = bus;
+        this.streams = streams;
         heartbeats.setVirtualThreads(true);
         heartbeats.setThreadNamePrefix("order-stream-");
     }
@@ -78,6 +82,7 @@ class ConsumerOrderController {
         var emitter = new SseEmitter(STREAM.toMillis());
         Runnable push = () -> send(emitter, user.userId(), orderId);
         var subscription = bus.subscribe(orderId, push);
+        var counted = streams.opened(); // S-91: the console's "Tracking" health tile
         var beat = heartbeats.scheduleAtFixedRate(
                 () -> {
                     try {
@@ -90,6 +95,7 @@ class ConsumerOrderController {
                 HEARTBEAT);
         Runnable close = () -> {
             subscription.close();
+            counted.run();
             beat.cancel(false);
         };
         emitter.onCompletion(close);

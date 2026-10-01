@@ -9,6 +9,10 @@ import ca.northline.fulfilment.application.DispatchUseCases.RunSummary;
 import ca.northline.fulfilment.application.DispatchUseCases.ShiftView;
 import ca.northline.fulfilment.domain.DeliveryRules;
 import ca.northline.shared.ListResponse;
+import ca.northline.shared.security.ConsoleAction;
+import ca.northline.shared.security.ConsoleScreen;
+import ca.northline.shared.security.CurrentStaff;
+import ca.northline.shared.security.RequiresConsole;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -30,7 +34,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * The console's dispatch view (S-86 for the orders monitor, S-81). {@code /api/v1/console/**}: role staff + second
- * factor (SecurityConfig). Contract: docs/runbooks/fulfilment.md.
+ * factor (SecurityConfig), and S-90's console roles: the delivery screen (dispatch, admin) for runs and couriers, its
+ * {@code dispatch} action for changes, the orders screen (dispatch, support, admin) for an order's delivery. Changes are
+ * written to the platform audit log. Contract: docs/CONSOLE_PLAN.md § Delivery and docs/runbooks/fulfilment.md.
  *
  * <pre>
  * GET  /api/v1/console/fulfilment/runs?market=&amp;from=&amp;to=     {items: [RunSummary]} (default: today ± 1 day)
@@ -46,6 +52,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/console/fulfilment")
 @RequiredArgsConstructor
+@RequiresConsole(ConsoleScreen.DELIVERY)
 class DispatchConsoleController {
 
     private final DispatchConsole console;
@@ -90,11 +97,13 @@ class DispatchConsoleController {
     }
 
     @PostMapping("/runs/{runId}/assign")
-    RunSummary assign(@PathVariable String runId, @Valid @RequestBody AssignRequest body) {
-        return console.assign(runId, body.courierId());
+    @RequiresConsole(value = ConsoleScreen.DELIVERY, actions = ConsoleAction.DISPATCH)
+    RunSummary assign(@PathVariable String runId, @Valid @RequestBody AssignRequest body, CurrentStaff staff) {
+        return console.assign(runId, body.courierId(), actor(staff));
     }
 
     @GetMapping("/orders/{orderId}")
+    @RequiresConsole(ConsoleScreen.ORDERS)
     DeliveryView delivery(@PathVariable String orderId) {
         return console.delivery(orderId);
     }
@@ -106,18 +115,25 @@ class DispatchConsoleController {
 
     @PostMapping("/couriers")
     @ResponseStatus(HttpStatus.CREATED)
-    CourierSummary addCourier(@Valid @RequestBody CourierRequest body) {
-        return console.addCourier(body.userId(), body.market(), body.vehicle());
+    @RequiresConsole(value = ConsoleScreen.DELIVERY, actions = ConsoleAction.DISPATCH)
+    CourierSummary addCourier(@Valid @RequestBody CourierRequest body, CurrentStaff staff) {
+        return console.addCourier(body.userId(), body.market(), body.vehicle(), actor(staff));
     }
 
     @PostMapping("/couriers/{courierId}/shifts")
     @ResponseStatus(HttpStatus.CREATED)
-    ShiftView addShift(@PathVariable String courierId, @Valid @RequestBody ShiftRequest body) {
-        return console.addShift(courierId, body.startsAt(), body.endsAt());
+    @RequiresConsole(value = ConsoleScreen.DELIVERY, actions = ConsoleAction.DISPATCH)
+    ShiftView addShift(@PathVariable String courierId, @Valid @RequestBody ShiftRequest body, CurrentStaff staff) {
+        return console.addShift(courierId, body.startsAt(), body.endsAt(), actor(staff));
     }
 
     @PostMapping("/plan")
-    Planned plan(@RequestBody(required = false) @Nullable PlanRequest body) {
-        return console.planNow(body == null ? null : body.market());
+    @RequiresConsole(value = ConsoleScreen.DELIVERY, actions = ConsoleAction.DISPATCH)
+    Planned plan(@RequestBody(required = false) @Nullable PlanRequest body, CurrentStaff staff) {
+        return console.planNow(body == null ? null : body.market(), actor(staff));
+    }
+
+    private static DispatchConsole.Actor actor(CurrentStaff staff) {
+        return new DispatchConsole.Actor(staff.userId(), staff.roleCodes());
     }
 }

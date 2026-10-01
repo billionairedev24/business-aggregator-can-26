@@ -3,6 +3,7 @@ package ca.northline.support;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 
 import ca.northline.config.NorthlineJwtConverter;
+import ca.northline.shared.security.StaffRole;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor;
 
 /**
@@ -49,14 +50,17 @@ public final class TestJwt {
         return token(userId, "openid courier deliveries", null);
     }
 
-    /** Northline staff (platform console: role {@code staff}, {@code acr=mfa}). */
-    public static JwtRequestPostProcessor staff(String userId) {
-        return staffToken(userId, "mfa");
+    /**
+     * Northline staff (platform console: role {@code staff} plus the console roles given — S-90, none = the console
+     * opens only the profile and on-call screens — and {@code acr=mfa}).
+     */
+    public static JwtRequestPostProcessor staff(String userId, StaffRole... roles) {
+        return staffToken(userId, "mfa", roles);
     }
 
     /** Staff who signed in with a single factor. */
-    public static JwtRequestPostProcessor staffWithoutMfa(String userId) {
-        return staffToken(userId, null);
+    public static JwtRequestPostProcessor staffWithoutMfa(String userId, StaffRole... roles) {
+        return staffToken(userId, null, roles);
     }
 
     /**
@@ -71,11 +75,11 @@ public final class TestJwt {
                 .authorities(NorthlineJwtConverter::authorities);
     }
 
-    private static JwtRequestPostProcessor staffToken(String userId, String acr) {
+    private static JwtRequestPostProcessor staffToken(String userId, String acr, StaffRole... roles) {
+        var claim = new java.util.ArrayList<>(java.util.List.of(StaffRole.STAFF));
+        java.util.Arrays.stream(roles).map(StaffRole::code).forEach(claim::add);
         return jwt().jwt(j -> {
-                    j.subject(userId)
-                            .claim("scope", "openid profile console")
-                            .claim("roles", java.util.List.of("staff"));
+                    j.subject(userId).claim("scope", "openid profile console").claim("roles", claim);
                     if (acr != null) {
                         j.claim("acr", acr);
                     }

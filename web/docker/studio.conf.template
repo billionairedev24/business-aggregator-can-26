@@ -1,4 +1,4 @@
-# Northline Studio (S-14): static Vite build behind an unprivileged nginx. Rendered at container start by the image's
+# Northline Studio (S-14) and platform console (S-90, same image recipe): static Vite build behind an unprivileged nginx. Rendered at container start by the image's
 # envsubst step (only NL_* variables are substituted — NGINX_ENVSUBST_FILTER): NL_AUTH_ORIGIN is the northline-auth
 # origin the browser talks to (also allowed in the Content-Security-Policy, security-headers.inc.template). The BFF routes (/api, /bff, /oauth2,
 # /login) are sent to studio-bff by the ingress (Helm chart), never by this server.

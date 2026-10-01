@@ -78,7 +78,15 @@ S-17 adds TLS (cert-manager), DNS (external-dns reads these hostnames) and the e
 {{- $routes = append $routes (dict "host" (include "northline.host" $v.urls.docsInternal) "paths" (list (dict "path" "/" "app" "docs-internal")) "internal" true) -}}
 {{- end -}}
 {{- if $v.apps.console.enabled -}}
+{{- $conbff := get $v.apps "console-bff" -}}
+{{- if and $conbff $conbff.enabled -}}
+{{- /* S-90: the console host serves the console-bff on /api, /bff, /oauth2, /login (like the Studio host). */ -}}
+{{- $routes = append $routes (dict "host" (include "northline.host" $v.urls.console) "paths" (list
+      (dict "path" "/api" "app" "console-bff") (dict "path" "/bff" "app" "console-bff") (dict "path" "/oauth2" "app" "console-bff")
+      (dict "path" "/login" "app" "console-bff") (dict "path" "/" "app" "console"))) -}}
+{{- else -}}
 {{- $routes = append $routes (dict "host" (include "northline.host" $v.urls.console) "paths" (list (dict "path" "/" "app" "console"))) -}}
+{{- end -}}
 {{- end -}}
 {{- toYaml (dict "routes" $routes) -}}
 {{- end }}

@@ -6,7 +6,7 @@ and runs the courier's stops with proof of delivery. This page is the contract f
 - the courier app (S-87), which calls `/api/v1/courier/**`;
 - the console's orders monitor and delivery ops map (S-81), which calls `/api/v1/console/fulfilment/**`.
 
-`docs/CONSOLE_PLAN.md` did not exist when this was written, so the console contract lives here.
+The console part is also summarised in [CONSOLE_PLAN.md](../CONSOLE_PLAN.md) § Delivery and dispatch.
 
 ## How an order becomes a delivery
 
@@ -98,7 +98,13 @@ A stop has these fields:
 
 ## Console API (S-81's orders monitor and delivery ops map)
 
-`/api/v1/console/**` needs role staff and a second factor (403 `mfa_required`).
+`/api/v1/console/**` needs role staff and a second factor (403 `mfa_required`), and S-90's console roles:
+
+- runs and couriers need the delivery screen (dispatch, admin);
+- changes also need its `dispatch` action;
+- an order's delivery needs the orders screen (dispatch, support, admin).
+
+Changes are written to the platform audit log (`developer.audit_log`, no business).
 
 | call | answer |
 |---|---|

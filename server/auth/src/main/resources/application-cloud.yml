@@ -7,7 +7,7 @@ northline.required-env:                 # checked before start-up (ca.northline.
   cache: REDIS_HOST
   events: KAFKA_BOOTSTRAP                # S-28: user.registered is externalized to Kafka
   public-urls: AUTH_ISSUER, STUDIO_ORIGIN, CONSUMER_ORIGIN, CONSOLE_ORIGIN, WEBAUTHN_RP_ID
-  secrets: TOTP_KEY, STUDIO_BFF_SECRET_HASH, CONSUMER_BFF_SECRET_HASH  # CONSOLE_BFF_SECRET_HASH: optional until E-8
+  secrets: TOTP_KEY, STUDIO_BFF_SECRET_HASH, CONSUMER_BFF_SECRET_HASH, CONSOLE_BFF_SECRET_HASH  # S-90: the console-bff exists
   signing-provider: KMS_PROVIDER      # dev may use `local` + SIGNING_KEYS_DIR on a shared volume; staging/prod a KMS
 management.endpoint.health.probes.enabled: true
 # S-20: a __Host- cookie is Secure, path /, without a Domain — no sibling subdomain can plant or overwrite it.

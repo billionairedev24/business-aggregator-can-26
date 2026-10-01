@@ -40,14 +40,23 @@ class SessionCookieSettingsTest {
         return env;
     }
 
-    /** {@code spring.config.activate.on-profile} of one YAML document: absent, {@code p} or {@code !p}. */
+    /**
+     * {@code spring.config.activate.on-profile} of one YAML document: absent, {@code p}, {@code !p}, or several of those
+     * joined by {@code &} (S-90: {@code "!consumer & !console"}).
+     */
     private static boolean applies(PropertySource<?> doc, List<String> active) {
         var value = doc.getProperty("spring.config.activate.on-profile");
         if (value == null) {
             return true;
         }
-        var expr = value.toString();
-        return expr.startsWith("!") ? !active.contains(expr.substring(1)) : active.contains(expr);
+        for (var term : value.toString().split("&")) {
+            var expr = term.strip();
+            var ok = expr.startsWith("!") ? !active.contains(expr.substring(1)) : active.contains(expr);
+            if (!ok) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static String csrfCookie(String... profiles) throws Exception {
@@ -94,5 +103,19 @@ class SessionCookieSettingsTest {
         assertThat(cookie("local", "consumer"))
                 .containsEntry("name", "NL_CONSUMER")
                 .containsEntry("secure", false);
+    }
+
+    @Test
+    void theConsoleBff_hasItsOwnCookie_hostPrefixedInTheCloud() throws Exception {
+        assertThat(cookie("cloud", "console"))
+                .containsEntry("name", "__Host-NL_CONSOLE")
+                .containsEntry("secure", true)
+                .containsEntry("http-only", true)
+                .containsEntry("same-site", "lax")
+                .doesNotContainKey("domain");
+        assertThat(cookie("local", "console"))
+                .containsEntry("name", "NL_CONSOLE")
+                .containsEntry("secure", false);
+        assertThat(csrfCookie("cloud", "console")).isEqualTo("__Host-XSRF-TOKEN");
     }
 }

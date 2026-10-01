@@ -63,14 +63,21 @@ public final class DispatchUseCases {
 
         List<CourierSummary> couriers(@Nullable String market);
 
-        CourierSummary addCourier(String userId, String market, String vehicle);
+        CourierSummary addCourier(String userId, String market, String vehicle, Actor actor);
 
-        ShiftView addShift(String courierId, Instant startsAt, Instant endsAt);
+        ShiftView addShift(String courierId, Instant startsAt, Instant endsAt, Actor actor);
 
-        RunSummary assign(String runId, String courierId);
+        RunSummary assign(String runId, String courierId, Actor actor);
 
         /** Plans and assigns now, without waiting for the job. */
-        Planned planNow(@Nullable String market);
+        Planned planNow(@Nullable String market, Actor actor);
+
+        /**
+         * The staff member acting, for the platform audit log ({@code developer.audit_log}, no business).
+         *
+         * @param role the console roles acted with ({@code CurrentStaff.roleCodes()})
+         */
+        record Actor(String userId, String role) {}
     }
 
     // ── views ───────────────────────────────────────────────────────────────────────────────────────────────────

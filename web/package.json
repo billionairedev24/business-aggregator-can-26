@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "typecheck": "pnpm -r typecheck",
     "dev:consumer": "pnpm --filter @northline/consumer dev",
+    "dev:console": "pnpm --filter @northline/console dev",
     "lint:colors": "node scripts/check-hex-colors.mjs",
     "test-storybook": "pnpm --filter @northline/ui test-storybook"
   },

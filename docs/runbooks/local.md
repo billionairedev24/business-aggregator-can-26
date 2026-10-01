@@ -115,7 +115,7 @@ Leave `NL_DEV_USER` empty in `web/apps/studio/.env` and run `cd web && pnpm dev`
 Other personas and factors: README § Local sign-in. "Create account" works end to end: the 6-digit phone code is
 printed in the auth log (`Verification code for …`). Passkeys work on `localhost` (not `127.0.0.1`).
 
-**OAuth clients:** auth registers `studio-bff`, `consumer-bff`, `console-bff`, `mobile-consumer` and `courier-app` in
+**OAuth clients:** auth registers `studio-bff`, `consumer-bff`, `console-bff` (S-90), `mobile-consumer` and `courier-app` in
 its database at every start (local values in `application-local.yml`); `./gradlew :auth:oauthClients --args='list'`
 compares configuration and database without starting the server ([README § OAuth clients](README.md#oauth-clients-s-122)).
 The mobile apps (DPoP, S-29) sign in against a local auth too — redirect `http://localhost:3000/app/oauth2redirect` or
@@ -178,6 +178,28 @@ Business pages on other hosts (S-54): the built server serves `pages.<zone>/<slu
 web/apps/consumer/server/node-server.mjs` and open `http://pages.localhost:3000/prairie-wrench` (browsers resolve
 `*.localhost`). A custom domain needs a host name pointing at your machine and a live domain in the database (S-31's
 "Simulate DNS records →").
+
+
+## 5c. Platform console (S-90)
+
+`web/apps/console` is a TanStack Router SPA on :3200 ([CONSOLE_PLAN.md](../CONSOLE_PLAN.md)). Its BFF is the bff jar
+with the `console` profile, on :8083 — `make up SERVICES="auth api bff-console console"`, or with dev auth as Priya
+Natarajan (staff, every console role) and no BFF `make up SERVICES="api console"` (`make run-console-dev`). By hand:
+
+```sh
+cd server
+./gradlew :auth:bootRun --args='--spring.profiles.active=local'            # :9000
+./gradlew :api:bootRun  --args='--spring.profiles.active=local'            # :8080
+./gradlew :bff:bootRun  --args='--spring.profiles.active=local,console'    # :8083 — console-bff (staff with a second factor)
+cd ../web && pnpm dev:console                                              # http://localhost:3200
+```
+
+Sign in at http://localhost:3200/sign-in as `priya.natarajan@example.com` with a backup code `priya-n-00001` …
+`priya-n-00010` (single use; `db/seed-dev/V191__console_staff.sql`). Anyone without the `staff` role, or without a
+second factor, is sent back with "This is for Northline staff only." / "Sign in with your second factor to do this.".
+Without the bff and auth: `NL_DEV_USER=01J9ZD3V00000000000000PNA1` in `web/apps/console/.env` (see `.env.example`) —
+`/api` then goes to the api with `X-Dev-User`, whose token carries the person's `identity.platform_roles`. The account
+menu's "Switch role view" narrows the console to one held role (`X-Console-Role`, audit-logged).
 
 ## 6. Optional stand-ins
 

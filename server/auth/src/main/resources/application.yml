@@ -85,11 +85,14 @@ northline:
     # started there), and which clients only get a code after a second factor.
     consumer-login-page: ${CONSUMER_ORIGIN:http://localhost:3000}/sign-in
     consumer-clients: [ consumer-bff ]
+    # S-90: Northline staff sign in on the platform console (console-bff's authorization requests).
+    console-login-page: ${CONSOLE_ORIGIN:http://localhost:3200}/sign-in
+    console-clients: [ console-bff ]
     mfa-required-clients: [ studio-bff, console-bff, northline-mcp ]   # S-127: AI agents act for a business too
-    allowed-origins: [ "${STUDIO_ORIGIN:http://localhost:3100}", "${CONSUMER_ORIGIN:http://localhost:3000}" ]   # CORS
+    allowed-origins: [ "${STUDIO_ORIGIN:http://localhost:3100}", "${CONSUMER_ORIGIN:http://localhost:3000}", "${CONSOLE_ORIGIN:http://localhost:3200}" ]   # CORS (S-90: + the console)
     webauthn:
       rp-id: ${WEBAUTHN_RP_ID:localhost}
-      origins: [ "${STUDIO_ORIGIN:http://localhost:3100}", "${CONSUMER_ORIGIN:http://localhost:3000}" ]
+      origins: [ "${STUDIO_ORIGIN:http://localhost:3100}", "${CONSUMER_ORIGIN:http://localhost:3000}", "${CONSOLE_ORIGIN:http://localhost:3200}" ]
     # Load balancer / ingress CIDRs whose X-Forwarded-For/-Proto/-Host are believed (client IP for the rate limits and
     # the sign-in log). Narrow it to the ingress subnet in the cloud; anyone else's forwarded headers are dropped.
     trusted-proxies: ${TRUSTED_PROXIES:127.0.0.0/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7}
@@ -192,12 +195,11 @@ northline:
         redirect-uris: [ "${CONSUMER_ORIGIN:http://localhost:3000}/login/oauth2/code/northline" ]
         post-logout-redirect-uris: [ "${CONSUMER_ORIGIN:http://localhost:3000}/" ]
         scopes: [ openid, profile, orders, bookings ]
-      console-bff:                     # the console isn't built yet (E-8): registered only once its hash is set
+      console-bff:                     # S-90: the bff under its `console` profile (the platform console's BFF)
         type: confidential
-        optional: true
-        secret-hash: ${CONSOLE_BFF_SECRET_HASH:}
+        secret-hash: ${CONSOLE_BFF_SECRET_HASH:{noop}dev-console-bff}
         redirect-uris: [ "${CONSOLE_ORIGIN:http://localhost:3200}/login/oauth2/code/console" ]
-        post-logout-redirect-uris: [ "${CONSOLE_ORIGIN:http://localhost:3200}/" ]
+        post-logout-redirect-uris: [ "${CONSOLE_ORIGIN:http://localhost:3200}/sign-in" ]
         scopes: [ openid, profile, console ]
       # S-29 mobile apps (ARCHITECTURE.md § Identity, docs/runbooks/mobile-auth.md): public clients — PKCE S256, no
       # secret — whose every token request carries a DPoP proof, so access and refresh tokens are bound to the app's key

@@ -27,6 +27,9 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param consumerLoginPage S-62: the consumer web app's sign-in page — where an unauthenticated authorization request of
  *     a {@code consumerClients} client, and a Google / Apple sign-in started there, land (empty = {@code loginPage})
  * @param consumerClients S-62: OAuth clients whose people sign in on the consumer site ({@code consumer-bff})
+ * @param consoleLoginPage S-90: the platform console's sign-in page — where an unauthenticated (or single-factor)
+ *     authorization request of a {@code consoleClients} client lands (empty = {@code loginPage})
+ * @param consoleClients S-90: OAuth clients whose people (Northline staff) sign in on the console ({@code console-bff})
  * @param mfaRequiredClients S-62: OAuth clients that get a code only for a sign-in with a second factor (the Studio's and
  *     the console's BFFs) — a consumer's phone-code sign-in is sent to their sign-in page instead
  * @param tokenEndpointOrigins S-139: browser origins whose public clients call {@code /oauth2/token} and
@@ -53,6 +56,8 @@ public record AuthProperties(
         @Nullable String clientCityHeader,
         @Nullable String consumerLoginPage,
         @DefaultValue("consumer-bff") List<String> consumerClients,
+        @Nullable String consoleLoginPage,
+        @DefaultValue("console-bff") List<String> consoleClients,
         @DefaultValue({"studio-bff", "console-bff"}) List<String> mfaRequiredClients,
         ZoneId platformZone,
         @DefaultValue List<String> tokenEndpointOrigins) {
