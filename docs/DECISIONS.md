@@ -4402,3 +4402,34 @@ only with DPoP.
   them that adds a warning will fail its build after this merges. The fix is in the code, as above.
 - **Not changed:** the disabled checks (`StringSplitter`, `MissingSummary`, `JavaTimeDefaultTimeZone`) and NullAway
   being off in tests.
+
+## 2026-09-30 — S-75 Storefront analytics (visits, bookings) and the provider-funded reward
+
+- **Visits are a daily count, nothing else.** The consumer's provider and restaurant pages call
+  `POST /api/v1/public/storefronts/{slug}/visits` (204) once per tab session; the browser decides that with a
+  `sessionStorage` key (`nl.visit.<slug>`), which is cleared when the tab closes and is never sent anywhere. No cookie,
+  IP, user agent, user id or referrer is stored or logged by the feature: `merchants.storefront_visits` is
+  `(merchant_id, day, visits)`, with `day` in the business's time zone (S-134). Crawlers, link previews and monitors that
+  name themselves in the user agent (and requests with none) are not counted; unpublished or unknown pages are 404. The
+  endpoint is unauthenticated, so the count can be inflated by a script; it is a guide for the business, not a billing
+  number. The edge's general rate limits are the only protection (no per-IP limit, which would need the IP).
+- **Stats** (`GET /api/v1/merchants/{merchantId}/storefront-stats`, VIEW): visits over the last 30 days of the business,
+  the per-day series, and "booked" = bookings made in that window (not cancelled; `BookingInsights.bookingsMade`) plus
+  orders placed (`OrderInsights.volume`). The rate is booked / visits in basis points, null with no visits. Bookings and
+  orders aren't attributed to a visit (that would need tracking), so the rate counts every booking, including ones that
+  came from search or a repeat customer. The Studio page shows it in the design's lede ("1,204 visits last 30 days · 8.6%
+  booked").
+- **Provider-funded reward.** V012's `trust.merchant_rewards` gains `active`, `ends_on` (a date in the business's time
+  zone: the design's "until Oct 1"; the baseline `ends_at` instant can't say that), `label` (≤ 60, "brake jobs"; empty =
+  everything), `updated_at/by`, a 2-or-3 multiplier check and one row per business. `GET/PUT
+  /api/v1/merchants/{merchantId}/reward` (VIEW / MANAGE: the owner pays for the points), `GET
+  /api/v1/public/merchants/{merchantId}/reward` for the public page (204 when nothing runs today). Rules: 2× or 3×, an end
+  date from today to 90 days out; switching off is always allowed and keeps the terms. Each change is audit-logged
+  (`reward.started` / `reward.stopped`). The public provider page shows it as a credential tag.
+- **Not built: crediting the points.** Nothing writes `trust.points_ledger` yet (S-58: no earning rules), so a running
+  reward is shown but credits nothing, and `budget_cents`/`spent_cents` stay unused. The earning job will read
+  `trust.api.ActiveRewards.running(merchantId)`.
+- **Tests:** `StorefrontStatsApiTest` (people vs crawlers, only the number stored, 404 for unpublished pages, the 30-day
+  window and cancelled bookings, 403s, the reward's on/off, public view, audit and every validation message);
+  `StorefrontStats.test.tsx` (lede, reward switch, 422 next to the field, read-only technician, French);
+  `provider.test.tsx` (one beacon per tab session with no body, the reward tag in en and fr).

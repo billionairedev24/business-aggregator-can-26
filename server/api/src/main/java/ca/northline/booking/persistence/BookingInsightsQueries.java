@@ -121,6 +121,19 @@ class BookingInsightsQueries implements BookingCalendar, BookingInsights, Servic
     }
 
     @Override
+    public long bookingsMade(String merchantId, Instant from, Instant to) {
+        return jdbc.sql("""
+                        select count(*) from booking.bookings
+                         where merchant_id = :merchantId and created_at >= :from and created_at < :to and state <> 'cancelled'
+                        """)
+                .param("merchantId", merchantId)
+                .param("from", JdbcTimes.ts(from))
+                .param("to", JdbcTimes.ts(to))
+                .query(Long.class)
+                .single();
+    }
+
+    @Override
     public QuoteInbox quoteInbox(String merchantId, Instant now) {
         return jdbc.sql("""
                         select count(*) as open, min(r.respond_by) as earliest
