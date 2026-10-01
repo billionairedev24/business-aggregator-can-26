@@ -6,13 +6,14 @@ import { LocationScreen } from './LocationScreen';
 import { SAVED_KEY } from './useDeliveryLocation';
 
 const MARKETS = {
+  fallback: { id: 'mkt-calgary', city: 'Calgary', province: 'AB', stage: 'live', lat: 51.0447, lng: -114.0719 },
   items: [
-    { code: 'AB', name: 'Alberta', stage: 'live', markets: [
+    { code: 'AB', name: 'Alberta', stage: 'live', taxBps: 500, markets: [
       { id: 'mkt-calgary', city: 'Calgary', province: 'AB', stage: 'live' }, { id: 'mkt-edmonton', city: 'Edmonton', province: 'AB', stage: 'live' },
       { id: 'mkt-airdrie', city: 'Airdrie', province: 'AB', stage: 'live' }, { id: 'mkt-lethbridge', city: 'Lethbridge', province: 'AB', stage: 'waitlist' }] },
-    { code: 'BC', name: 'British Columbia', stage: 'pilot', markets: [{ id: 'mkt-vancouver', city: 'Vancouver', province: 'BC', stage: 'pilot' }] },
-    { code: 'ON', name: 'Ontario', stage: 'waitlist', markets: [] },
-    { code: 'QC', name: 'Québec', stage: 'waitlist', markets: [] },
+    { code: 'BC', name: 'British Columbia', stage: 'pilot', taxBps: 1200, markets: [{ id: 'mkt-vancouver', city: 'Vancouver', province: 'BC', stage: 'pilot' }] },
+    { code: 'ON', name: 'Ontario', stage: 'waitlist', taxBps: 1300, markets: [] },
+    { code: 'QC', name: 'Québec', stage: 'waitlist', taxBps: 1498, markets: [] },
   ],
 };
 const SUGGESTIONS = {
@@ -67,8 +68,10 @@ describe('location screen', () => {
     expect(alberta).toHaveAttribute('aria-pressed', 'true');
     expect(within(group).getByRole('button', { name: /British Columbia/ })).toHaveTextContent('Pilot · invite only');
     expect(within(group).getByRole('button', { name: /Ontario/ })).toBeDisabled();
-    expect(within(group).getByRole('button', { name: /Québec/ })).toHaveTextContent('Liste d’attente');
-    expect(screen.getByText(/Northline opens city by city\. In Alberta: Calgary, Edmonton and Airdrie are live/)).toBeInTheDocument();
+    expect(within(group).getByRole('button', { name: /Québec/ })).toHaveTextContent('Waitlist');
+    // the provinces and cities come from the api (region configuration), in its order
+    expect(within(group).getAllByRole('button').map(b => b.firstChild?.textContent)).toEqual(['Alberta', 'British Columbia', 'Ontario', 'Québec']);
+    expect(screen.getByText('Northline opens city by city. Live in Alberta: Calgary, Edmonton, Airdrie. Waitlist: Lethbridge. An address outside a live market joins the waitlist for its nearest one.')).toBeInTheDocument();
   });
 
   it('suggests addresses, resolves the chosen one and saves it', async () => {
@@ -90,7 +93,7 @@ describe('location screen', () => {
     expect(screen.getByText('Market · Calgary · live')).toBeInTheDocument();
     expect(screen.getByText('Zone · Beltline')).toBeInTheDocument();
     expect(screen.getByText('3 pooled runs / day')).toBeInTheDocument();
-    expect(screen.getByText('GST 5%')).toBeInTheDocument();
+    expect(screen.getByText('Sales tax 5%')).toBeInTheDocument();
     expect(screen.getByText('ChIJsw')).toBeInTheDocument();
 
     await user.type(screen.getByLabelText('Unit / buzzer / drop-off note'), 'Apt 804 · buzz 0804');
@@ -202,7 +205,7 @@ describe('location screen', () => {
     await typeAndPick(user, '1204 17 ave', /1204 17 Ave SW/, 'Adresse');
     expect(await screen.findByText('Marché · Calgary · en service')).toBeInTheDocument();
     expect(screen.getByText('3 tournées groupées / jour')).toBeInTheDocument();
-    expect(screen.getByText('TPS 5 %')).toBeInTheDocument();
+    expect(screen.getByText('Taxes de vente 5 %')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Enregistrer et continuer' })).toBeInTheDocument();
   });
 });

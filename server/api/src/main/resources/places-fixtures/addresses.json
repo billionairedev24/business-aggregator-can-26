@@ -1,0 +1,148 @@
+{
+ "_comment": "PLACES_PROVIDER=local (S-47): fixture addresses for local runs and tests; not region configuration. Design 06's \"1204 17 ...\" suggestions plus one address per dev-seed market and a few outside them.",
+ "addresses": [
+  {
+   "id": "-yyc-beltline",
+   "number": "1204",
+   "route": "17 Ave SW",
+   "neighbourhood": "Beltline",
+   "city": "Calgary",
+   "province": "AB",
+   "postalCode": "T2T 0B7",
+   "lat": 51.0379,
+   "lng": -114.0898
+  },
+  {
+   "id": "-yyc-capitol-hill",
+   "number": "1204",
+   "route": "17 Ave NW",
+   "neighbourhood": "Capitol Hill",
+   "city": "Calgary",
+   "province": "AB",
+   "postalCode": "T2M 0P8",
+   "lat": 51.0712,
+   "lng": -114.0921
+  },
+  {
+   "id": "-yyc-sunalta",
+   "number": "1204",
+   "route": "17 St SW",
+   "neighbourhood": "Sunalta",
+   "city": "Calgary",
+   "province": "AB",
+   "postalCode": "T3C 1A1",
+   "lat": 51.0417,
+   "lng": -114.1043
+  },
+  {
+   "id": "-yyc-inglewood",
+   "number": "1204",
+   "route": "17 Ave SE",
+   "neighbourhood": "Inglewood",
+   "city": "Calgary",
+   "province": "AB",
+   "postalCode": "T2G 1J6",
+   "lat": 51.0376,
+   "lng": -114.029
+  },
+  {
+   "id": "-yyc-forest-lawn",
+   "number": "3715",
+   "route": "17 Ave SE",
+   "neighbourhood": "Forest Lawn",
+   "city": "Calgary",
+   "province": "AB",
+   "postalCode": "T2A 0S1",
+   "lat": 51.0381,
+   "lng": -113.9858
+  },
+  {
+   "id": "-yyc-downtown",
+   "number": "220",
+   "route": "8 Ave SW",
+   "neighbourhood": "Downtown Commercial Core",
+   "city": "Calgary",
+   "province": "AB",
+   "postalCode": "T2P 1B5",
+   "lat": 51.0461,
+   "lng": -114.0661
+  },
+  {
+   "id": "-yeg-downtown",
+   "number": "10205",
+   "route": "101 St NW",
+   "neighbourhood": "Downtown",
+   "city": "Edmonton",
+   "province": "AB",
+   "postalCode": "T5J 4H5",
+   "lat": 53.5436,
+   "lng": -113.493
+  },
+  {
+   "id": "-airdrie",
+   "number": "1204",
+   "route": "Main St S",
+   "neighbourhood": "Old Town",
+   "city": "Airdrie",
+   "province": "AB",
+   "postalCode": "T4B 3G5",
+   "lat": 51.2881,
+   "lng": -114.014
+  },
+  {
+   "id": "-red-deer",
+   "number": "4914",
+   "route": "48 Ave",
+   "neighbourhood": "Downtown",
+   "city": "Red Deer",
+   "province": "AB",
+   "postalCode": "T4N 3T3",
+   "lat": 52.2681,
+   "lng": -113.8112
+  },
+  {
+   "id": "-lethbridge",
+   "number": "910",
+   "route": "4 Ave S",
+   "neighbourhood": "Downtown",
+   "city": "Lethbridge",
+   "province": "AB",
+   "postalCode": "T1J 0P6",
+   "lat": 49.6936,
+   "lng": -112.8401
+  },
+  {
+   "id": "-toronto",
+   "number": "1204",
+   "route": "Queen St W",
+   "neighbourhood": "Parkdale",
+   "city": "Toronto",
+   "province": "ON",
+   "postalCode": "M6J 1J6",
+   "lat": 43.6426,
+   "lng": -79.4295
+  },
+  {
+   "id": "-montreal",
+   "number": "1204",
+   "route": "Rue Sainte-Catherine O",
+   "neighbourhood": "Ville-Marie",
+   "city": "Montréal",
+   "province": "QC",
+   "postalCode": "H3B 1K1",
+   "lat": 45.4987,
+   "lng": -73.571
+  },
+  {
+   "id": "-vancouver",
+   "number": "1204",
+   "route": "Granville St",
+   "neighbourhood": "Downtown",
+   "city": "Vancouver",
+   "province": "BC",
+   "postalCode": "V6Z 1M1",
+   "lat": 49.2769,
+   "lng": -123.127
+  }
+ ]
+}

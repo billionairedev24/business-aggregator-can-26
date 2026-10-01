@@ -20,7 +20,8 @@ class MarketQueries implements MarketStore {
 
     private static final String REGION = """
             select id, kind, parent_id, province, city, name_i18n ->> 'en' as name_en, name_i18n ->> 'fr' as name_fr,
-                   coalesce(stage, 'off') as stage
+                   coalesce(stage, 'off') as stage,
+                   ST_Y(center::geometry) as lat, ST_X(center::geometry) as lng
               from region.regions
             """;
     private static final String POINT = "ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography";
@@ -122,6 +123,8 @@ class MarketQueries implements MarketStore {
                 rs.getString("city"),
                 rs.getString("name_en"),
                 rs.getString("name_fr"),
-                CodedEnum.fromCode(Stage.class, rs.getString("stage")));
+                CodedEnum.fromCode(Stage.class, rs.getString("stage")),
+                rs.getObject("lat", Double.class),
+                rs.getObject("lng", Double.class));
     }
 }

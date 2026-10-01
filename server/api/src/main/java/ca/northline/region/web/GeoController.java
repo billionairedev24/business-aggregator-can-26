@@ -7,11 +7,10 @@ import ca.northline.region.application.GeoUseCases.NamePlace;
 import ca.northline.region.application.GeoUseCases.SuggestAddresses;
 import ca.northline.region.application.GeoViews.Address;
 import ca.northline.region.application.GeoViews.Place;
-import ca.northline.region.application.GeoViews.Province;
+import ca.northline.region.application.GeoViews;
 import ca.northline.region.application.GeoViews.Resolution;
 import ca.northline.region.application.GeoViews.Suggestions;
 import ca.northline.region.domain.GeoPoint;
-import ca.northline.shared.ListResponse;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.WebhookRateLimiter;
 import ca.northline.shared.security.MerchantAccess;
@@ -42,7 +41,7 @@ import org.springframework.web.bind.annotation.RestController;
  * {@code rate_limited}.
  *
  * <pre>
- * GET  /api/v1/geo/markets                         provinces with their markets and stages
+ * GET  /api/v1/geo/markets                         provinces with their markets and stages, the fallback market
  * GET  /api/v1/geo/autocomplete?q=&session=&near=  {items:[{placeId, main, secondary}], attribution}
  * GET  /api/v1/geo/places/{placeId}?session=       the address, its market, zone and waitlist
  * GET  /api/v1/geo/reverse?lat=&lng=               {label, city, province, market, zone} — 404 when nothing is there
@@ -81,10 +80,10 @@ class GeoController {
     }
 
     @GetMapping("/markets")
-    ResponseEntity<ListResponse<Province>> markets(Locale locale) {
+    ResponseEntity<GeoViews.Markets> markets(Locale locale) {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.maxAge(Duration.ofMinutes(5)).cachePublic())
-                .body(new ListResponse<>(markets.provinces(locale)));
+                .body(markets.provinces(locale));
     }
 
     @GetMapping("/autocomplete")

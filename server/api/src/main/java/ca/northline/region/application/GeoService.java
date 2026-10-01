@@ -1,5 +1,7 @@
 package ca.northline.region.application;
 
+import ca.northline.region.api.Markets;
+import ca.northline.region.api.TaxRates;
 import ca.northline.region.application.GeoUseCases.BrowseMarkets;
 import ca.northline.region.application.GeoUseCases.ChooseAddress;
 import ca.northline.region.application.GeoUseCases.JoinWaitlist;
@@ -41,6 +43,8 @@ class GeoService implements SuggestAddresses, ChooseAddress, NamePlace, BrowseMa
 
     private final PlacesAutocomplete places;
     private final MarketStore markets;
+    private final Markets served;
+    private final TaxRates taxes;
 
     @Override
     public Suggestions suggest(String input, @Nullable String sessionToken, Locale locale, @Nullable GeoPoint near) {
@@ -124,7 +128,7 @@ class GeoService implements SuggestAddresses, ChooseAddress, NamePlace, BrowseMa
         if (market.isEmpty() || !market.get().stage().live()) {
             waitlist = market.or(() -> province == null ? Optional.empty() : markets.nearestMarket(province, point))
                     .or(() -> province == null ? Optional.empty() : markets.province(province))
-                    .map(r -> new Waitlist(r.id(), r.market() ? cityOf(r) : r.nameEn(), r.stage()))
+                    .map(r -> new Waitlist(r.id(), r.market() ? cityOf(r) : r.nameEn(), stage(r)))
                     .orElse(null);
         }
         return new Resolution(market.map(GeoService::market).orElse(null), zone, waitlist);
@@ -132,20 +136,43 @@ class GeoService implements SuggestAddresses, ChooseAddress, NamePlace, BrowseMa
 
     @Override
     @Transactional(readOnly = true)
-    public List<Province> provinces(Locale locale) {
+    public GeoViews.Markets provinces(Locale locale) {
         var all = markets.regions();
         var fr = locale.getLanguage().equals("fr");
-        return all.stream()
+        var order = List.copyOf(served.served());
+        var provinces = all.stream()
                 .filter(r -> !r.market())
+                .filter(p -> served.serves(p.province())
+                        || p.stage() != Stage.OFF
+                        || all.stream().anyMatch(m -> m.market() && p.id().equals(m.parentId())))
+                // served provinces first, in configuration order, then the others by sort
+                .sorted(java.util.Comparator.comparingInt((RegionRow p) -> {
+                    var i = order.indexOf(p.province());
+                    return i < 0 ? Integer.MAX_VALUE : i;
+                }))
                 .map(p -> new Province(
                         p.province(),
                         fr && p.nameFr() != null ? p.nameFr() : p.nameEn(),
-                        p.stage(),
+                        stage(p),
+                        taxes.bpsFor(p.province()),
                         all.stream()
                                 .filter(m -> m.market() && p.id().equals(m.parentId()))
                                 .map(GeoService::market)
                                 .toList()))
                 .toList();
+        var firstLive = provinces.stream()
+                .filter(p -> p.stage().live())
+                .sorted(java.util.Comparator.comparing(
+                        (Province p) -> !p.code().equals(served.defaultProvince())))
+                .flatMap(p -> p.markets().stream().filter(m -> m.stage().live()))
+                .findFirst()
+                .orElse(null);
+        return new GeoViews.Markets(provinces, firstLive);
+    }
+
+    /** A province listed in SEARCH_MARKETS is live whatever its row says (one list of served markets). */
+    private Stage stage(RegionRow r) {
+        return !r.market() && served.serves(r.province()) ? Stage.LIVE : r.stage();
     }
 
     @Override
@@ -163,7 +190,8 @@ class GeoService implements SuggestAddresses, ChooseAddress, NamePlace, BrowseMa
                 && (email.length() > 254 || !GeoMessages.EMAIL.matcher(email).matches())) {
             throw RuleViolation.of("email", "format", GeoMessages.EMAIL_FORMAT);
         }
-        if (region.stage().live()) {
+        // a served province still has addresses outside its markets: only a live market refuses
+        if (region.market() && region.stage().live()) {
             throw new Conflict("region_live", "Northline is already live here.");
         }
         return markets.joinWaitlist(
@@ -175,7 +203,7 @@ class GeoService implements SuggestAddresses, ChooseAddress, NamePlace, BrowseMa
     }
 
     private static Market market(RegionRow r) {
-        return new Market(r.id(), cityOf(r), r.province(), r.stage());
+        return new Market(r.id(), cityOf(r), r.province(), r.stage(), r.lat(), r.lng());
     }
 
     private static String cityOf(RegionRow r) {

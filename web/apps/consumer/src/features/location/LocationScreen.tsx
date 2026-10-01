@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { ApiError, ValidationError } from '@northline/client';
-import { Alert, Button, ErrorState, Field, Skeleton, Tag, TextInput } from '@northline/ui';
+import { Alert, Button, ErrorState, Field, Skeleton, Tag, TextInput, useLocale } from '@northline/ui';
 import { useViewer } from '../session/api';
 import { newSessionToken, useAddress, useJoinWaitlist, useMarkets, useSuggestions, type Address, type Province, type Stage } from './api';
 import { useLocationT } from './messages';
@@ -9,8 +9,6 @@ import { useDeliveryLocation, type DeliveryLocation } from './useDeliveryLocatio
 
 type T = ReturnType<typeof useLocationT>;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-/** The design's four province buttons, in its order. */
-const PROVINCE_ORDER = ['AB', 'BC', 'ON', 'QC'] as const;
 
 /** Waits `ms` after the last change (typeahead: one request per pause, not per keystroke). */
 function useDebounced<V>(value: V, ms: number): V {
@@ -50,7 +48,8 @@ export function LocationScreen({ next }: { next?: string }) {
 
   const address = useAddress(placeId, session);
   const picked = address.data ?? null;
-  const shownProvince = picked?.province ?? province ?? saved?.province ?? location.province ?? 'AB';
+  const shownProvince = picked?.province ?? province ?? saved?.province ?? location.province ?? markets.data?.items[0]?.code ?? '';
+  const provinceOf = (code: string) => markets.data?.items.find(p => p.code === code);
 
   const onQuery = (value: string) => {
     setQuery(value);
@@ -98,10 +97,10 @@ export function LocationScreen({ next }: { next?: string }) {
         <TextInput value={unit} onChange={e => setUnit(e.target.value)} placeholder={t('unitPlaceholder')} maxLength={120} autoComplete="address-line2" />
       </Field>
 
-      {picked ? <Tags t={t} market={picked.resolution.market ?? null} zone={picked.resolution.zone ?? null} province={picked.province ?? shownProvince} />
-        : saved ? <Tags t={t} market={saved.marketId ? { city: saved.city!, stage: 'live' } : null} zone={saved.zone ? { name: saved.zone } : null} province={saved.province ?? shownProvince} />
+      {picked ? <Tags t={t} market={picked.resolution.market ?? null} zone={picked.resolution.zone ?? null} province={provinceOf(picked.province ?? shownProvince)} />
+        : saved ? <Tags t={t} market={saved.marketId ? { city: saved.city!, stage: 'live' } : null} zone={saved.zone ? { name: saved.zone } : null} province={provinceOf(saved.province ?? shownProvince)} />
         : null}
-      <p className="nl-location-info">{t('info')}</p>
+      <p className="nl-location-info">{info(t, provinceOf(shownProvince))}</p>
 
       {picked && !live ? (
         <Waitlist t={t} a={picked} />
@@ -113,10 +112,9 @@ export function LocationScreen({ next }: { next?: string }) {
 }
 
 function ProvincePicker({ t, markets, value, onChange }: { t: T; markets: ReturnType<typeof useMarkets>; value: string; onChange: (p: string) => void }) {
-  if (markets.isPending) return <div className="nl-location-provinces" aria-busy="true">{PROVINCE_ORDER.map(p => <Skeleton key={p} height={60} radius={12} />)}</div>;
+  if (markets.isPending) return <div className="nl-location-provinces" aria-busy="true">{[0, 1, 2, 3].map(p => <Skeleton key={p} height={60} radius={12} />)}</div>;
   if (markets.isError) return <ErrorState message={t('marketsError')} onRetry={() => void markets.refetch()} />;
-  const byCode = new Map(markets.data.map(p => [p.code, p]));
-  const list = PROVINCE_ORDER.map(code => byCode.get(code)).filter((p): p is Province => !!p);
+  const list = markets.data.items;
   return (
     <div className="nl-location-provinces" role="group" aria-label={t('provinces')}>
       {list.map(p => {
@@ -125,7 +123,7 @@ function ProvincePicker({ t, markets, value, onChange }: { t: T; markets: Return
         return (
           <button key={p.code} type="button" className="nl-location-province" aria-pressed={value === p.code} disabled={!open} onClick={() => onChange(p.code)}>
             {p.name}
-            <span className="nl-location-province-note" lang={p.code === 'QC' && !open ? 'fr' : undefined}>{note}</span>
+            <span className="nl-location-province-note">{note}</span>
           </button>
         );
       })}
@@ -133,12 +131,15 @@ function ProvincePicker({ t, markets, value, onChange }: { t: T; markets: Return
   );
 }
 
-/** "Live · Calgary, Edmonton" (the first two live markets, as the design), "Pilot · invite only", "Waitlist". */
+/** "Live · {first two live markets}" (as the design), "Pilot · invite only", "Waitlist". */
 function stageNote(t: T, p: Province): string {
   switch (p.stage) {
-    case 'live': return t('stageLive', { cities: p.markets.filter(m => m.stage === 'live').slice(0, 2).map(m => m.city).join(', ') });
+    case 'live': {
+      const cities = p.markets.filter(m => m.stage === 'live').slice(0, 2).map(m => m.city).join(', ');
+      return cities ? t('stageLive', { cities }) : t('stageLiveOnly');
+    }
     case 'pilot': return t('stagePilot');
-    case 'waitlist': return p.code === 'QC' ? 'Liste d’attente' : t('stageWaitlist');
+    case 'waitlist': return t('stageWaitlist');
     default: return t('stageOff');
   }
 }
@@ -236,14 +237,26 @@ function SavedParts({ t, l }: { t: T; l: DeliveryLocation }) {
   );
 }
 
-function Tags({ t, market, zone, province }: { t: T; market: { city: string; stage: Stage } | null; zone: { name: string; runsPerDay?: number | null } | null; province: string }) {
-  const tax = (['AB', 'BC', 'ON', 'QC'] as const).includes(province as 'AB') ? t(`tax_${province as 'AB'}`) : t('tax_other');
+/** "Northline opens city by city. Live in {province}: … Pilot: … Waitlist: … An address outside …" from the api's markets. */
+function info(t: T, p: Province | undefined): string {
+  const cities = (stage: Stage) => (p?.markets ?? []).filter(m => m.stage === stage).map(m => m.city).join(', ');
+  const parts = [t('infoIntro')];
+  if (p && cities('live')) parts.push(t('infoLive', { province: p.name, cities: cities('live') }));
+  if (cities('pilot')) parts.push(t('infoPilot', { cities: cities('pilot') }));
+  if (cities('waitlist')) parts.push(t('infoWaitlist', { cities: cities('waitlist') }));
+  parts.push(t('infoTail'));
+  return parts.join(' ');
+}
+
+function Tags({ t, market, zone, province }: { t: T; market: { city: string; stage: Stage } | null; zone: { name: string; runsPerDay?: number | null } | null; province: Province | undefined }) {
+  const { locale } = useLocale();
+  const tax = province ? t('tax', { rate: (province.taxBps / 100).toLocaleString(locale === 'fr' ? 'fr-CA' : 'en-CA', { maximumFractionDigits: 3 }) }) : null;
   return (
     <div className="nl-location-tags">
       {market && <Tag tone={market.stage === 'live' ? 'accent' : 'neutral'}>{t('tagMarket', { city: market.city, stage: t(market.stage) })}</Tag>}
       {zone && <Tag tone="accent">{t('tagZone', { zone: zone.name })}</Tag>}
       {zone?.runsPerDay ? <Tag tone="neutral">{t('tagRuns', { count: zone.runsPerDay })}</Tag> : null}
-      <Tag tone="neutral">{tax}</Tag>
+      {tax && <Tag tone="neutral">{tax}</Tag>}
     </div>
   );
 }

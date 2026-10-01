@@ -33,7 +33,7 @@ public final class GeoUseCases {
     }
 
     public interface BrowseMarkets {
-        List<Province> provinces(Locale locale);
+        GeoViews.Markets provinces(Locale locale);
     }
 
     public interface JoinWaitlist {

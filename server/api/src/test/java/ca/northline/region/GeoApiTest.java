@@ -1,5 +1,15 @@
 package ca.northline.region;
 
+import static org.hamcrest.Matchers.not;
+
+import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
+
+import org.springframework.core.io.ClassPathResource;
+
+import org.junit.jupiter.api.BeforeEach;
+
+import javax.sql.DataSource;
+
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
@@ -26,6 +36,18 @@ class GeoApiTest extends IntegrationTest {
     @Autowired
     JdbcClient jdbc;
 
+    @Autowired
+    DataSource dataSource;
+
+    /**
+     * Markets and zones are region data, not migrations: the tests load the local dev seed's (V119, idempotent). The
+     * provinces served come from the test profile's SEARCH_MARKETS default (AB, BC, ON, QC).
+     */
+    @BeforeEach
+    void markets() {
+        new ResourceDatabasePopulator(new ClassPathResource("db/seed-dev/V119__dev_markets.sql")).execute(dataSource);
+    }
+
     /** A fresh browsing session per test, so the per-session lookup limit never spills over. */
     static String guest() {
         return "g_" + Ids.next();
@@ -34,22 +56,42 @@ class GeoApiTest extends IntegrationTest {
     @Nested
     class Markets {
         @Test
-        void listsProvincesWithTheirMarketsAndStages() throws Exception {
+        void listsTheServedProvincesFirstWithTheirMarketsTaxAndTheFallbackMarket() throws Exception {
             mvc.perform(get("/api/v1/geo/markets"))
                     .andExpect(status().isOk())
                     .andExpect(header().string("Cache-Control", "max-age=300, public"))
                     .andExpect(jsonPath("$.items[0].code").value("AB"))
                     .andExpect(jsonPath("$.items[0].name").value("Alberta"))
                     .andExpect(jsonPath("$.items[0].stage").value("live"))
+                    .andExpect(jsonPath("$.items[0].taxBps").value(500))
                     .andExpect(jsonPath("$.items[0].markets[0].city").value("Calgary"))
+                    .andExpect(jsonPath("$.items[0].markets[0].lat").value(51.0447))
                     .andExpect(jsonPath("$.items[0].markets[1].city").value("Edmonton"))
                     .andExpect(jsonPath("$.items[0].markets[2].city").value("Airdrie"))
                     .andExpect(jsonPath("$.items[0].markets[3].stage").value("pilot"))
+                    // served by configuration (SEARCH_MARKETS), whatever the row says; its markets keep their stage
                     .andExpect(jsonPath("$.items[1].code").value("BC"))
-                    .andExpect(jsonPath("$.items[1].stage").value("pilot"))
-                    .andExpect(jsonPath("$.items[2].stage").value("waitlist"));
+                    .andExpect(jsonPath("$.items[1].stage").value("live"))
+                    .andExpect(jsonPath("$.items[1].markets[0].stage").value("pilot"))
+                    .andExpect(jsonPath("$.items[2].code").value("ON"))
+                    .andExpect(jsonPath("$.items[3].code").value("QC"))
+                    .andExpect(jsonPath("$.fallback.city").value("Calgary"))
+                    .andExpect(jsonPath("$.items[*].code", not(hasItem("YT"))));
             mvc.perform(get("/api/v1/geo/markets").header("Accept-Language", "fr-CA"))
                     .andExpect(jsonPath("$.items[1].name").value("Colombie-Britannique"));
+        }
+
+        @Test
+        void aProvinceNotServedShowsItsOwnStageAfterTheServedOnes() throws Exception {
+            jdbc.sql("update region.regions set stage = 'waitlist' where id = 'prov-mb'").update();
+            try {
+                mvc.perform(get("/api/v1/geo/markets"))
+                        .andExpect(jsonPath("$.items[4].code").value("MB"))
+                        .andExpect(jsonPath("$.items[4].stage").value("waitlist"))
+                        .andExpect(jsonPath("$.items[4].markets", hasSize(0)));
+            } finally {
+                jdbc.sql("update region.regions set stage = 'off' where id = 'prov-mb'").update();
+            }
         }
     }
 

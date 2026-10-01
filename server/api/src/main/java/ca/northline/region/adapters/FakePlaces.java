@@ -5,15 +5,17 @@ import ca.northline.region.domain.GeoPoint;
 import ca.northline.region.domain.PlaceParts;
 import java.text.Normalizer;
 import java.util.Comparator;
+import org.springframework.core.io.ClassPathResource;
+import tools.jackson.databind.json.JsonMapper;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
 /**
- * {@code PLACES_PROVIDER=local}: a fixed list of Canadian addresses — design 06's four "1204 17 …" suggestions in
- * Calgary, plus one per other market and a few outside them (Red Deer pilot, Lethbridge waitlist, Toronto, Montréal,
- * Vancouver) so every branch of the Location screen can be tried without a Google key. Matching: every word typed
+ * {@code PLACES_PROVIDER=local}: a fixed list of Canadian addresses read from {@code places-fixtures/addresses.json}
+ * (design 06's "1204 17 …" suggestions, one per dev-seed market and a few outside them) so every branch of the Location
+ * screen can be tried without a Google key. Matching: every word typed
  * must start a word of the address. Reverse: the nearest fixture within 3 km.
  */
 class FakePlaces implements PlacesAutocomplete {
@@ -44,56 +46,29 @@ class FakePlaces implements PlacesAutocomplete {
                 new GeoPoint(lat, lng));
     }
 
-    static final List<PlaceParts> FIXTURES = List.of(
-            place("-yyc-beltline", "1204", "17 Ave SW", "Beltline", "Calgary", "AB", "T2T 0B7", 51.0379, -114.0898),
-            place(
-                    "-yyc-capitol-hill",
-                    "1204",
-                    "17 Ave NW",
-                    "Capitol Hill",
-                    "Calgary",
-                    "AB",
-                    "T2M 0P8",
-                    51.0712,
-                    -114.0921),
-            place("-yyc-sunalta", "1204", "17 St SW", "Sunalta", "Calgary", "AB", "T3C 1A1", 51.0417, -114.1043),
-            place("-yyc-inglewood", "1204", "17 Ave SE", "Inglewood", "Calgary", "AB", "T2G 1J6", 51.0376, -114.0290),
-            place(
-                    "-yyc-forest-lawn",
-                    "3715",
-                    "17 Ave SE",
-                    "Forest Lawn",
-                    "Calgary",
-                    "AB",
-                    "T2A 0S1",
-                    51.0381,
-                    -113.9858),
-            place(
-                    "-yyc-downtown",
-                    "220",
-                    "8 Ave SW",
-                    "Downtown Commercial Core",
-                    "Calgary",
-                    "AB",
-                    "T2P 1B5",
-                    51.0461,
-                    -114.0661),
-            place("-yeg-downtown", "10205", "101 St NW", "Downtown", "Edmonton", "AB", "T5J 4H5", 53.5436, -113.4930),
-            place("-airdrie", "1204", "Main St S", "Old Town", "Airdrie", "AB", "T4B 3G5", 51.2881, -114.0140),
-            place("-red-deer", "4914", "48 Ave", "Downtown", "Red Deer", "AB", "T4N 3T3", 52.2681, -113.8112),
-            place("-lethbridge", "910", "4 Ave S", "Downtown", "Lethbridge", "AB", "T1J 0P6", 49.6936, -112.8401),
-            place("-toronto", "1204", "Queen St W", "Parkdale", "Toronto", "ON", "M6J 1J6", 43.6426, -79.4295),
-            place(
-                    "-montreal",
-                    "1204",
-                    "Rue Sainte-Catherine O",
-                    "Ville-Marie",
-                    "Montréal",
-                    "QC",
-                    "H3B 1K1",
-                    45.4987,
-                    -73.5710),
-            place("-vancouver", "1204", "Granville St", "Downtown", "Vancouver", "BC", "V6Z 1M1", 49.2769, -123.1270));
+    /** The fixture addresses ({@code places-fixtures/addresses.json}): local runs and tests only. */
+    static final List<PlaceParts> FIXTURES = load();
+
+    private static List<PlaceParts> load() {
+        try (var in = new ClassPathResource("places-fixtures/addresses.json").getInputStream()) {
+            var out = new java.util.ArrayList<PlaceParts>();
+            for (var a : JsonMapper.builder().build().readTree(in).path("addresses")) {
+                out.add(place(
+                        a.path("id").asString(),
+                        a.path("number").asString(),
+                        a.path("route").asString(),
+                        a.path("neighbourhood").asString(),
+                        a.path("city").asString(),
+                        a.path("province").asString(),
+                        a.path("postalCode").asString(),
+                        a.path("lat").asDouble(),
+                        a.path("lng").asDouble()));
+            }
+            return List.copyOf(out);
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException("places-fixtures/addresses.json is missing", e);
+        }
+    }
 
     @Override
     public String attribution() {
