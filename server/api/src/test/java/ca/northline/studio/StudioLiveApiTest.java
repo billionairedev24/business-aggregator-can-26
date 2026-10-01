@@ -144,4 +144,25 @@ class StudioLiveApiTest extends IntegrationTest {
                         """).params(id, merchantId, Ids.next(), Ids.next()).update();
         return id;
     }
+
+    /** S-88: a courier assigned to a kitchen's run and arriving at its counter reach the kitchen display at once. */
+    @Test
+    void couriersAssignedAndArrivingSignalTheKitchen() throws Exception {
+        var biz = data.business(MerchantRole.OWNER);
+        var stream = open(biz.merchantId(), biz.userId());
+        var order = Ids.next();
+        var run = Ids.next();
+        var now = Instant.now();
+        tx.executeWithoutResult(_ -> {
+            events.publishEvent(new ca.northline.fulfilment.api.DeliveryAssigned(
+                    Ids.next(), now, run, Ids.next(), List.of(order), List.of(biz.merchantId()), "food"));
+            events.publishEvent(new ca.northline.fulfilment.api.CourierArrived(
+                    Ids.next(), now, order, biz.merchantId(), "food", run));
+        });
+        Awaitility.await().atMost(Duration.ofSeconds(20)).untilAsserted(() -> {
+            var body = stream.getContentAsString();
+            assertThat(body.split("event:kitchen").length - 1).isEqualTo(2);
+            assertThat(body).contains("event:kitchen\ndata:{\"ref\":\"" + order + "\"}");
+        });
+    }
 }

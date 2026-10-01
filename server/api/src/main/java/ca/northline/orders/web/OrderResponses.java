@@ -24,7 +24,15 @@ final class OrderResponses {
             @Nullable Instant placedAt,
             @Nullable Instant deliveredAt,
             SellerStatus status,
-            @Nullable String issueNote) {}
+            @Nullable String issueNote,
+            @Nullable CourierPickupResponse courierPickup) {}
+
+    record CourierPickupResponse(
+            boolean courierAssigned,
+            @Nullable String runLabel,
+            @Nullable Instant eta,
+            @Nullable Instant arrivedAt,
+            @Nullable Instant pickedUpAt) {}
 
     record CountsResponse(
             int toPack,

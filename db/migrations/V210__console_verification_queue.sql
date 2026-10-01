@@ -1,4 +1,4 @@
--- S-79 platform console verification queue (range V190–V199, docs/CONSOLE_PLAN.md). Additive only.
+-- S-79 platform console verification queue (range V210–V219 console queues, docs/IMPLEMENTATION_PLAN.md). Additive only.
 
 -- Every decision an agent takes on a submitted application: approve (pending → active) or request information
 -- (pending → applicant, the listed checks reopened). Kept for the queue's "Decision" column, the median time to a

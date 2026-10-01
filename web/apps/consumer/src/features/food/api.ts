@@ -1,6 +1,7 @@
 import { queryOptions, useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 import { ApiError, http } from '@northline/client';
+import { CourierProgress } from '../tracking/courier';
 
 /**
  * Food (S-57). Public reads: `GET /api/v1/public/kitchens?city=&lat=&lng=` (landing, loaded in the browser once the
@@ -91,6 +92,8 @@ export const Tracking = z.object({
   placedAt: z.string(), scheduledFor: z.string().nullish(), acceptedAt: z.string().nullish(), prepMin: z.number().int().nullish(),
   readyBy: z.string().nullish(), readyAt: z.string().nullish(), handedOffAt: z.string().nullish(), deliveredAt: z.string().nullish(),
   eta: z.string().nullish(), totalCents: z.number().int(), lines: z.array(Line),
+  // S-88: the courier bringing it, live (delivery only)
+  courier: CourierProgress.nullish(),
 });
 export type Tracking = z.infer<typeof Tracking>;
 
@@ -116,8 +119,12 @@ export const confirmFood = (orderId: string, key: string) =>
 export const trackingQuery = (orderId: string) => queryOptions({
   queryKey: ['me', 'food-orders', orderId],
   queryFn: () => http(`/api/v1/me/food-orders/${encodeURIComponent(orderId)}`, {}, Tracking),
+  // the stream (S-88) keeps it fresh; if it can't open, poll
   refetchInterval: 15_000,
 });
+
+/** S-88: the tracking stream, event `food` (kitchen steps and courier moves). */
+export const trackingStreamUrl = (orderId: string) => `/api/v1/me/food-orders/${encodeURIComponent(orderId)}/events`;
 
 /** The ProblemDetail `code` of a failed call (409/403), if any. */
 export const problemCode = (e: unknown) =>

@@ -77,6 +77,7 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
     private final PaymentStepUp stepUp;
     private final PaymentSettings settings;
     private final Markets markets;
+    private final CourierProgressReader couriers;
     private final JsonMapper json = JsonMapper.builder().build();
 
     FoodCheckoutService(
@@ -94,7 +95,8 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
             SecondFactors secondFactors,
             PaymentStepUp stepUp,
             PaymentSettings settings,
-            Markets markets) {
+            Markets markets,
+            CourierProgressReader couriers) {
         this.pricing = pricing;
         this.kitchens = kitchens;
         this.progress = progress;
@@ -110,6 +112,7 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
         this.stepUp = stepUp;
         this.settings = settings;
         this.markets = markets;
+        this.couriers = couriers;
     }
 
     /** Everything decided before any money moves: the kitchen, the priced lines, fees, tip, place of supply. */
@@ -300,7 +303,8 @@ class FoodCheckoutService implements QuoteFoodOrder, StartFoodOrder, PlaceFoodOr
                 state.deliveredAt(),
                 eta(row, ticket),
                 row.totalCents(),
-                json.readValue(row.lines(), LINES));
+                json.readValue(row.lines(), LINES),
+                row.fulfilmentMode().equals("delivery") ? couriers.of(row.id()) : null);
     }
 
     // ── pricing ────────────────────────────────────────────────────────────────────────────────────────────

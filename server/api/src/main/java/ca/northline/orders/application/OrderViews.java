@@ -30,7 +30,21 @@ public final class OrderViews {
             @Nullable Instant placedAt,
             @Nullable Instant deliveredAt,
             SellerStatus status,
-            @Nullable String issueNote) {}
+            @Nullable String issueNote,
+            @Nullable CourierPickup courierPickup) {}
+
+    /**
+     * The courier's pickup at this shop (S-86), once the order is on a run.
+     *
+     * @param eta when the courier is due at the shop
+     * @param pickedUpAt when the courier collected this shop's bag
+     */
+    public record CourierPickup(
+            boolean courierAssigned,
+            @Nullable String runLabel,
+            @Nullable Instant eta,
+            @Nullable Instant arrivedAt,
+            @Nullable Instant pickedUpAt) {}
 
     /** The chips above the table and the headline's cut-off. */
     public record Counts(

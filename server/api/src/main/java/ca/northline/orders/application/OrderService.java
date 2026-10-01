@@ -1,5 +1,6 @@
 package ca.northline.orders.application;
 
+import ca.northline.fulfilment.api.CourierPickups;
 import ca.northline.identity.api.PersonDirectory;
 import ca.northline.identity.api.PersonDirectory.Person;
 import ca.northline.orders.application.OrderQueries.OrderRow;
@@ -7,6 +8,7 @@ import ca.northline.orders.application.OrderUseCases.ListOrders;
 import ca.northline.orders.application.OrderUseCases.PackOrder;
 import ca.northline.orders.application.OrderUseCases.ViewOrder;
 import ca.northline.orders.application.OrderViews.Counts;
+import ca.northline.orders.application.OrderViews.CourierPickup;
 import ca.northline.orders.application.OrderViews.OrderBoard;
 import ca.northline.orders.application.OrderViews.OrderSummary;
 import ca.northline.orders.domain.MerchantOrder;
@@ -21,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +38,7 @@ class OrderService implements ListOrders, ViewOrder, PackOrder {
     private final ApplicationEventPublisher events;
     private final Clock clock;
     private final MerchantPlaces places;
+    private final CourierPickups pickups;
 
     @Override
     public OrderBoard board(String merchantId) {
@@ -45,7 +49,10 @@ class OrderService implements ListOrders, ViewOrder, PackOrder {
         var rows = orders.board(merchantId, startOfToday);
         var names = people.people(
                 rows.stream().map(OrderRow::customerId).filter(Objects::nonNull).toList());
-        var all = rows.stream().map(r -> summary(r, names)).toList();
+        var couriers =
+                pickups.atMerchant(merchantId, rows.stream().map(OrderRow::id).toList());
+        var all =
+                rows.stream().map(r -> summary(r, names, couriers.get(r.id()))).toList();
         var toPack =
                 all.stream().filter(o -> o.status() == SellerStatus.TO_PACK).toList();
         var next = toPack.stream()
@@ -75,7 +82,8 @@ class OrderService implements ListOrders, ViewOrder, PackOrder {
     public OrderSummary view(String merchantId, String orderId) {
         var row = orders.row(merchantId, orderId).orElseThrow(() -> new NotFound("order", orderId));
         var names = row.customerId() == null ? Map.<String, Person>of() : people.people(List.of(row.customerId()));
-        return summary(row, names);
+        return summary(
+                row, names, pickups.atMerchant(merchantId, List.of(orderId)).get(orderId));
     }
 
     @Override
@@ -104,7 +112,7 @@ class OrderService implements ListOrders, ViewOrder, PackOrder {
         };
     }
 
-    private static OrderSummary summary(OrderRow r, Map<String, Person> names) {
+    private static OrderSummary summary(OrderRow r, Map<String, Person> names, CourierPickups.@Nullable Pickup pickup) {
         var person = r.customerId() == null ? null : names.get(r.customerId());
         var lines = r.lines();
         var status = MerchantOrder.builder()
@@ -134,6 +142,14 @@ class OrderService implements ListOrders, ViewOrder, PackOrder {
                 r.placedAt(),
                 r.deliveredAt(),
                 status,
-                r.issueNote());
+                r.issueNote(),
+                pickup == null
+                        ? null
+                        : new CourierPickup(
+                                pickup.courierAssigned(),
+                                pickup.runLabel(),
+                                pickup.eta(),
+                                pickup.arrivedAt(),
+                                pickup.pickedUpAt()));
     }
 }

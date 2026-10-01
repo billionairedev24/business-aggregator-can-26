@@ -62,6 +62,8 @@ topics:
     owner: orders
   - name: fulfilment.delivery
     owner: fulfilment
+  - name: fulfilment.run
+    owner: fulfilment
   - name: payments.payment
     owner: payments
   - name: payments.escrow

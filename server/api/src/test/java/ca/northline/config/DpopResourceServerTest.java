@@ -3,6 +3,7 @@ package ca.northline.config;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ca.northline.shared.security.MerchantRole;
@@ -184,6 +185,29 @@ class DpopResourceServerTest extends IntegrationTest {
         var token = accessToken(biz.userId(), "openid profile orders bookings offline_access", thumbprint(app));
         var url = "http://localhost/api/v1/merchants/" + biz.merchantId();
         mvc.perform(get(url).header("Authorization", "DPoP " + token).header("DPoP", proof(app, "GET", url, token)))
+                .andExpect(status().isForbidden());
+    }
+
+    /** S-86: the courier app's API takes a DPoP-bound token with scope courier, never a bearer token. */
+    @Test
+    void theCourierApi_takesOnlyAKeyBoundCourierToken() throws Exception {
+        var app = key();
+        var user = data.user("Kai Courier");
+        var url = "http://localhost/api/v1/courier/me";
+        var token = accessToken(user, "openid courier deliveries", thumbprint(app));
+        // the proof is checked and the handler reached: this person isn't a courier yet
+        mvc.perform(get(url).header("Authorization", "DPoP " + token).header("DPoP", proof(app, "GET", url, token)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("not_a_courier"));
+        // the same scope on a bearer token stops at the filter
+        var bearer = accessToken(user, "openid courier deliveries", null);
+        mvc.perform(get(url).header("Authorization", "Bearer " + bearer))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("forbidden"));
+        // a consumer app's key-bound token without the courier scope too
+        var consumer = accessToken(user, "openid orders", thumbprint(app));
+        mvc.perform(get(url).header("Authorization", "DPoP " + consumer)
+                        .header("DPoP", proof(app, "GET", url, consumer)))
                 .andExpect(status().isForbidden());
     }
 }

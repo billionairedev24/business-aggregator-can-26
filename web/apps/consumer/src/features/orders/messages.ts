@@ -26,6 +26,10 @@ export const useOrderT = defineMessages({
     signIn: 'Sign in to see your order.', signInAction: 'Sign in',
     notFound: 'We couldn’t find this order.',
     loading: 'Loading your order…', loadError: 'We couldn’t load your order.',
+    confirm: 'Got everything', confirming: 'Confirming…', confirmError: 'We couldn’t confirm your order. Try again.',
+    paysShops: 'Shops are paid {date} unless you confirm sooner or report a problem.',
+    confirmed: 'You confirmed it. The shops are paid.',
+    proof_photo: 'Delivered with photo proof.', proof_signature: 'Delivered with your signature.', proof_pin: 'Delivered with your PIN.',
   },
   fr: {
     placed: 'Commande passée. Arrivée {when}.',
@@ -51,5 +55,9 @@ export const useOrderT = defineMessages({
     signIn: 'Connectez-vous pour voir votre commande.', signInAction: 'Se connecter',
     notFound: 'Commande introuvable.',
     loading: 'Chargement de votre commande…', loadError: 'Impossible de charger votre commande.',
+    confirm: 'J’ai tout reçu', confirming: 'Confirmation…', confirmError: 'Impossible de confirmer votre commande. Réessayez.',
+    paysShops: 'Les commerces sont payés le {date}, à moins que vous ne confirmiez avant ou signaliez un problème.',
+    confirmed: 'Vous avez confirmé. Les commerces sont payés.',
+    proof_photo: 'Livrée avec photo à l’appui.', proof_signature: 'Livrée avec votre signature.', proof_pin: 'Livrée avec votre NIP.',
   },
 });

@@ -20,6 +20,8 @@ public record LedgerEntry(
     public static final String STRIPE_BALANCE = "stripe_balance";
     /** S-57: food tips owed to couriers ("100% goes to them") until courier payouts exist. */
     public static final String COURIER_TIPS = "courier_tips";
+    /** S-78: the reference type of a delivery fee's postings (the order id), as on its PaymentIntent. */
+    public static final String DELIVERY_FEE = "order_delivery";
 
     public static String merchant(String merchantId) {
         return "merchant:" + merchantId;
@@ -47,6 +49,17 @@ public record LedgerEntry(
                 credit(TAX_PAYABLE, e.getTaxCents() + e.getPlatformTaxCents(), "escrow", e.getId(), at),
                 credit(REVENUE, e.getPlatformFeeCents(), "escrow", e.getId(), at),
                 credit(COURIER_TIPS, e.getTipCents(), "escrow", e.getId(), at));
+    }
+
+    /**
+     * S-78: an order's delivery fee is captured (no escrow: it is Northline's from the start) — the fee is revenue, its
+     * GST/HST is owed to the CRA.
+     */
+    public static List<LedgerEntry> deliveryFeeCaptured(String orderId, long totalCents, long taxCents, Instant at) {
+        return nonZero(
+                debit(STRIPE_BALANCE, totalCents, DELIVERY_FEE, orderId, at),
+                credit(TAX_PAYABLE, taxCents, DELIVERY_FEE, orderId, at),
+                credit(REVENUE, totalCents - taxCents, DELIVERY_FEE, orderId, at));
     }
 
     /** Escrow → merchant balance (net) + Northline's fee. */

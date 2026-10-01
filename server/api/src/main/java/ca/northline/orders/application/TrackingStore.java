@@ -26,7 +26,9 @@ public interface TrackingStore {
             @Nullable String fulfilmentMode,
             @Nullable String windowId,
             @Nullable Instant scheduledFor,
-            @Nullable Instant deliveredAt) {}
+            @Nullable Instant deliveredAt,
+            @Nullable String deliveryProof,
+            @Nullable Instant confirmedAt) {}
 
     /** @param state {@code pending} | {@code packed} | {@code short} | {@code refunded} */
     record LineState(String merchantId, int qty, String state) {}

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { mockFetch, renderApp, type Call } from '../../test/render';
 import { SAVED_KEY } from '../location/useDeliveryLocation';
@@ -325,6 +325,26 @@ describe('Food tracking (design 06 foodTrack)', () => {
     expect(screen.getByText('Kitchen confirmed')).toBeInTheDocument();
     expect(screen.getByText(/^NL-F10001 · Pho Lucky · \$50\.08 · arriving/)).toBeInTheDocument();
     expect(screen.getByText('Cooking · 15 min').closest('li')).toHaveAttribute('aria-current', 'step');
+  });
+
+  it('shows the courier on the way, live from the order’s stream, with the drop-off PIN (S-88)', async () => {
+    const listeners: Record<string, ((e: MessageEvent<string>) => void)[]> = {};
+    let url = '';
+    vi.stubGlobal('EventSource', class {
+      constructor(u: string) { url = u; }
+      addEventListener(name: string, fn: (e: MessageEvent<string>) => void) { (listeners[name] ??= []).push(fn); }
+      close() {}
+    });
+    const courier = { state: 'planned', runLabel: null, courierName: 'Kai', eta: '2026-09-30T23:35:00Z', stopsBefore: 0, lat: null, lng: null, positionAt: null, pin: '4821' };
+    routes['GET /api/v1/me/food-orders/F1'] = () => ({ body: tracking({ courier }) });
+    open('/food/orders/F1');
+    expect(await screen.findByText(/^Kai will bring your order\. At your door about /)).toBeInTheDocument();
+    expect(screen.getByText('Drop-off PIN 4821')).toBeInTheDocument();
+    await waitFor(() => expect(url).toBe('/api/v1/me/food-orders/F1/events'));
+    act(() => listeners.food?.forEach(fn => fn({ data: JSON.stringify(tracking({ stage: 'on_the_way', courier: { ...courier, state: 'picked_up', lat: 50.01, lng: -100, positionAt: '2026-09-30T23:30:00Z' } })) } as MessageEvent<string>)));
+    expect(await screen.findByText(/^Kai is on the way\. You’re next\. At your door about /)).toBeInTheDocument();
+    expect(screen.getByText(/^Live · updated /)).toBeInTheDocument();
+    vi.unstubAllGlobals();
   });
 
   it('shows pickup orders ready at the counter', async () => {
