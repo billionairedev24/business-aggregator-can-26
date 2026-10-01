@@ -5454,3 +5454,35 @@ server environment variable. Runbook: [runbooks/courier-app.md](runbooks/courier
   the model), sellers per market, and the re-matching of addresses when a zone is removed (addresses are matched when
   saved; nothing stores a zone on an address). The lede and footer were reworded where the design promised these
   ("Flags propagate in 30 s" → "within a minute", the region cache period).
+
+## 2026-10-01 — S-85 Finance and reconciliation (Stripe vs ledger)
+
+- **What is reconciled.** The ledger already models cash at Stripe (`stripe_balance`, debited on capture, credited on
+  refunds, chargebacks and payouts), so a day's **ledger Δ** = Σ debits − credits on it and the **Stripe balance Δ** =
+  the platform's balance transactions that move it (charges +, refunds and dispute withdrawals −) plus the payouts
+  Stripe accepted (from `payments.payouts`, which the S-12 webhooks keep). Transfers to connected accounts (separate
+  charges and transfers: still at Stripe) and Stripe's fees (not posted in the ledger) are left out; fees are reported
+  apart. Payouts are created on connected accounts, so they are compared from our webhook-fed table rather than the
+  platform's balance transactions.
+- **Object by object:** Stripe ids join the two sides (an escrow's PaymentIntent `stripe_charge`, a delivery fee's,
+  `refunds.stripe_refund`, `disputes.stripe_dispute`, `payouts.stripe_payout`); one charge may hold several escrows.
+  Differences: `missing_in_ledger`, `missing_at_stripe` (also a posting whose Stripe id is unknown), `amount_differs`.
+  A day is `matched`, `mismatch`, or `resolved` (finance's note, kept while re-runs still differ).
+- **New:** port `payments.application.StripeBalance` (stripe-java `GET /v1/balance_transactions`, every page; fake
+  mirroring the ledger without a key, with a hook for tests), `ReconcileStripe` (nightly job for the two previous days,
+  run / resolve / export from the console), tables **V231** `payments.reconciliation_days` / `reconciliation_items`,
+  `payments.api.FinanceFigures` and the console's `GET /api/v1/console/finance`.
+- **Roles:** the finance screen (admin, finance) reads; running a day, resolving it and S-21's Stripe Tax reconciliation
+  need `payouts`. Runs from the console, resolutions and both exports are audited (`payments.reconciliation_run |
+  reconciliation_resolved | reconciliation_exported`, `payments.ledger_exported`; ids and codes only — the note stays
+  in the reconciliation table).
+- **Screen figures:** escrow held (+ items); "Friday payout batch" became **payouts in flight** (pending / in transit,
+  businesses) — payouts follow each business's own schedule, there is no single batch; net revenue of the last 7 days
+  and its mix from the ledger's `revenue` account by reference (escrow fees = take rate, delivery fees, give-backs);
+  take rate by tier = the tiers' default rates (`payments.domain.Tier`), approved businesses per tier, and each tier's
+  share of the week's money held; tax of the current quarter (platform-zone) from S-21's read model — GST/HST on
+  Northline's fees and what Northline remits as marketplace facilitator — with the GST/HST return due the last day of
+  the month after the quarter.
+- **Not done / never run:** Plus subscriptions and provider-funded rewards are not recorded anywhere (shown "—").
+  The real balance-transaction call has never run against Stripe (stripe-mock only). Exports are CSV only (the Data
+  Table still offers its own CSV/XLSX/PDF of what is on screen).

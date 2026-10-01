@@ -82,6 +82,9 @@ public interface SellerDirectory {
         }
     }
 
+    /** S-85: the tier of every approved business ({@code registered | trusted | master}), by id. */
+    Map<String, String> tiers();
+
     /** The oversight action an event names ({@code actionId}), for the business's notification email. */
     Optional<Oversight> action(String actionId);
 }

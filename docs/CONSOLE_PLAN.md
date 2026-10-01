@@ -116,7 +116,7 @@ member.
 | `/catalogue` | `taxonomy` | `taxonomy` | admin | S-94 | stand-in |
 | `/support` | `support` | `support` | admin, trust_safety, dispatch, support | S-83 | stand-in |
 | `/provinces?province=` | `regions` | `regions` | admin | S-84 | built |
-| `/finance` | `finance` | `finance` | admin, finance | S-85 | stand-in |
+| `/finance` | `finance` | `finance` | admin, finance | S-85 | built |
 | `/reports` | `reports` | `reports` | admin, finance, analyst | S-95 | stand-in |
 | `/integrations` | `api` | `api` | admin | S-96 | stand-in |
 | `/team` | `team` | `team` | admin, trust_safety, finance | S-96 | stand-in |
@@ -267,6 +267,24 @@ DELETE /api/v1/console/regions/zones/{zoneId}                                   
 
 Every change is audited (`region.*`) and re-reads the region model after commit (DECISIONS "S-84").
 
+### Finance and reconciliation (S-85)
+
+```
+GET  /api/v1/console/finance                                         (screen finance)
+→ { asOf, timeZone, escrowHeldCents, escrowItems, payoutsInFlightCents, payoutsInFlightSellers, nextPayoutArrival,
+    revenueWeekCents, mix: {takeCents, deliveryCents, adjustmentsCents, plusCents: null, rewardsCents: null},
+    tiers: [{tier, sellers, rateBps, gmvShare}], tax: {period, platformFeeCents, facilitatorCents, nextFiling} }
+GET  /api/v1/console/payments/reconciliation?from=&to=               → {items: [Day]} (default: 14 days)
+GET  /api/v1/console/payments/reconciliation/{day}                   → {day: Day, items: [Item]}
+GET  /api/v1/console/payments/reconciliation/export?from=&to=        text/csv (audited)
+GET  /api/v1/console/payments/reconciliation/ledger-export?from=&to= text/csv (audited)
+POST /api/v1/console/payments/reconciliation/run {day}               (finance · payouts) Day
+POST /api/v1/console/payments/reconciliation/{day}/resolve {note}    (finance · payouts) Day   409 not_mismatched
+Day: {day, stripeCents, ledgerCents, varianceCents, feeCents, items, mismatches, status: matched|mismatch|resolved, …}
+```
+
+Rules: DECISIONS "S-85"; operations: runbooks/stripe.md § 10.
+
 ## API: what exists, what's missing
 
 | screen | exists | missing (the screen's story adds it) |
@@ -282,7 +300,7 @@ Every change is audited (`region.*`) and re-reads the region model after commit 
 | taxonomy | `db/seed/categories.json` (seed only) | categories CRUD with regulators, limits, per-province rules (S-94) |
 | support | customer cases (`account`, `messaging.api`) for their owners | tickets queue, macros en/fr, case actions (S-83) |
 | regions | S-84: stages with a confirmation and the go-live checklist, markets, zones (GeoJSON), courier model | the co-sign of a second admin, dry-run as customer, categories per province, drawing zones on a map |
-| finance | `POST /api/v1/console/payments/tax-reconciliations` (S-21) | escrow / payouts / reconciliation / take rate by tier / revenue mix (S-85) |
+| finance | S-21 tax reconciliation; S-85: escrow, payouts in flight, revenue mix, take by tier, Stripe ↔ ledger reconciliation and exports | Plus subscriptions and rewards (not recorded) |
 | reports | — | funnels, cohorts, top categories, supply gaps (S-95) |
 | api | `developer` module (merchants' keys and webhooks) | platform-wide API clients and rate limits (S-96) |
 | team, profile | `developer.api.AuditTrail` (write); auth `GET /api/auth/security` (sessions, passkeys) | roles and people, audit log views ("My audit trail"), sessions (S-96) |

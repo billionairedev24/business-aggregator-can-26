@@ -62,6 +62,19 @@ class PaymentsGatewayConfig {
         return new FakeBankLinking();
     }
 
+    /** S-85: the platform account's balance transactions for the daily reconciliation. */
+    @Bean
+    @ConditionalOnExpression(HAS_KEY)
+    StripeBalanceTransactions stripeBalanceTransactions(PaymentsProperties props) {
+        return new StripeBalanceTransactions(client(props));
+    }
+
+    @Bean
+    @ConditionalOnExpression(NO_KEY)
+    FakeStripeBalance fakeStripeBalance(org.springframework.jdbc.core.simple.JdbcClient jdbc) {
+        return new FakeStripeBalance(jdbc);
+    }
+
     private static com.stripe.StripeClient client(PaymentsProperties props) {
         var base = props.stripeApiBase();
         if (base != null && !base.isBlank()) {
