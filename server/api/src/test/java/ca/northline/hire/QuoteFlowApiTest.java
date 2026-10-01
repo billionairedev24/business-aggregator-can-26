@@ -71,7 +71,11 @@ class QuoteFlowApiTest extends IntegrationTest {
     }
 
     static Instant tomorrowAt(int hour) {
-        return LocalDate.now(CALGARY).plusDays(1).atTime(hour, 0).atZone(CALGARY).toInstant();
+        return LocalDate.now(CALGARY)
+                .plusDays(1)
+                .atTime(hour, 0)
+                .atZone(CALGARY)
+                .toInstant();
     }
 
     Map<String, Object> ask(List<String> providers) {
@@ -157,11 +161,11 @@ class QuoteFlowApiTest extends IntegrationTest {
             mvc.perform(get("/api/v1/merchants/{m}/quote-requests", wrench.merchantId())
                             .with(TestJwt.member(wrench.owner())))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$[0].title").value("Mobile mechanic · 2018 Honda Civic"))
-                    .andExpect(jsonPath("$[0].area").value("Beltline"));
+                    .andExpect(jsonPath("$.items[0].title").value("Mobile mechanic · 2018 Honda Civic"))
+                    .andExpect(jsonPath("$.items[0].area").value("Beltline"));
             mvc.perform(get("/api/v1/merchants/{m}/quote-requests", torque.merchantId())
                             .with(TestJwt.member(torque.owner())))
-                    .andExpect(jsonPath("$.length()").value(0));
+                    .andExpect(jsonPath("$.items.length()").value(0));
             var details = jdbc.sql("select details::text from booking.quote_requests where customer_id = ?")
                     .params(customer)
                     .query(String.class)
@@ -190,7 +194,13 @@ class QuoteFlowApiTest extends IntegrationTest {
         @Test
         void onlyProvidersOfferingTheService_andOnlyQuoteableServices() throws Exception {
             var cleaner = fx.provider("Only Cleans", "master", List.of("Beltline"));
-            fx.service(cleaner.merchantId(), "service.cleaning-and-property.house-cleaning", "Clean", "hourly", 4500L, 120);
+            fx.service(
+                    cleaner.merchantId(),
+                    "service.cleaning-and-property.house-cleaning",
+                    "Clean",
+                    "hourly",
+                    4500L,
+                    120);
             mvc.perform(post("/api/v1/me/quote-requests")
                             .with(TestJwt.customer(customer))
                             .contentType(MediaType.APPLICATION_JSON)
@@ -265,7 +275,8 @@ class QuoteFlowApiTest extends IntegrationTest {
                     .andExpect(jsonPath("$.quote.totalCents").value(45675))
                     .andExpect(jsonPath("$.quote.depositCents").value(11419))
                     .andExpect(jsonPath("$.quote.depositBps").value(2500))
-                    .andExpect(jsonPath("$.quote.scope").value("Confirm the charging fault and replace the alternator."))
+                    .andExpect(
+                            jsonPath("$.quote.scope").value("Confirm the charging fault and replace the alternator."))
                     .andExpect(jsonPath("$.quote.exclusions").value("Serpentine belt extra if worn."))
                     .andExpect(jsonPath("$.quote.warranty").value("parts_labour_12m"))
                     .andExpect(jsonPath("$.quote.validUntil").exists())
@@ -343,7 +354,9 @@ class QuoteFlowApiTest extends IntegrationTest {
                             .content(visit()))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.code").value("second_factor_required"));
-            jdbc.sql("update identity.users set mfa_primary = 'totp' where id = ?").params(customer).update();
+            jdbc.sql("update identity.users set mfa_primary = 'totp' where id = ?")
+                    .params(customer)
+                    .update();
             mvc.perform(post("/api/v1/me/quotes/{id}/accept", quoteId)
                             .with(TestJwt.customer(customer))
                             .header("Idempotency-Key", "a2-" + quoteId)
@@ -434,10 +447,12 @@ class QuoteFlowApiTest extends IntegrationTest {
                             .query(Long.class)
                             .single())
                     .isEqualTo(1L);
-            assertThat(events.stream(QuoteAccepted.class).filter(e -> e.aggregateId().equals(quoteId)))
+            assertThat(events.stream(QuoteAccepted.class)
+                            .filter(e -> e.aggregateId().equals(quoteId)))
                     .singleElement()
                     .satisfies(e -> assertThat(e.depositCents()).isEqualTo(11419));
-            assertThat(events.stream(BookingConfirmed.class).filter(e -> e.aggregateId().equals(bookingId)))
+            assertThat(events.stream(BookingConfirmed.class)
+                            .filter(e -> e.aggregateId().equals(bookingId)))
                     .singleElement()
                     .satisfies(e -> assertThat(e.quoteId()).isEqualTo(quoteId));
 

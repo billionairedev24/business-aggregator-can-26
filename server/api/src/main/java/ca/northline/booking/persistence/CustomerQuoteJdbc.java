@@ -74,10 +74,14 @@ class CustomerQuoteJdbc implements CustomerQuoteStore {
 
     @Override
     public List<String> declinedBy(String requestId) {
-        return jdbc.sql("select merchant_id from booking.quote_request_declines where request_id = :id")
+        return jdbc
+                .sql("select merchant_id from booking.quote_request_declines where request_id = :id")
                 .param("id", requestId)
-                .query(String.class)
-                .list();
+                .query((rs, _) -> rs.getString(1))
+                .list()
+                .stream()
+                .filter(java.util.Objects::nonNull)
+                .toList();
     }
 
     @Override

@@ -70,7 +70,7 @@ class CustomerQuoteService implements CustomerQuotes {
             var byMerchant = byMerchant(quotes.sentOf(r.id()));
             var latest = byMerchant.values().stream()
                     .map(versions -> view(versions.getFirst(), versions))
-                    .sorted(Comparator.comparing(CustomerQuote::totalCents))
+                    .sorted(Comparator.comparingLong(CustomerQuote::totalCents))
                     .toList();
             return new CustomerRequest(
                     r.id(),
@@ -177,7 +177,9 @@ class CustomerQuoteService implements CustomerQuotes {
                 q.getMerchantId(),
                 q.getVersion(),
                 q.getState().code(),
-                validUntil != null && !clock.instant().isBefore(validUntil) && q.getState().isOpen(),
+                validUntil != null
+                        && !clock.instant().isBefore(validUntil)
+                        && q.getState().isOpen(),
                 c.scope(),
                 c.exclusions(),
                 c.proposedAt(),
@@ -204,7 +206,11 @@ class CustomerQuoteService implements CustomerQuotes {
                 validUntil,
                 versions.stream()
                         .map(v -> new Version(
-                                v.getId(), v.getVersion(), v.getState().code(), v.getTotals().totalCents(), v.getSentAt()))
+                                v.getId(),
+                                v.getVersion(),
+                                v.getState().code(),
+                                v.getTotals().totalCents(),
+                                v.getSentAt()))
                         .toList(),
                 versions.isEmpty() ? q.getId() : versions.getFirst().getId());
     }

@@ -52,7 +52,12 @@ public interface CustomerQuotes {
             boolean taxable) {}
 
     /** Every version the customer received from that provider for the request, newest first. */
-    record Version(String quoteId, int version, String state, long totalCents, @Nullable Instant sentAt) {}
+    record Version(
+            String quoteId,
+            int version,
+            String state,
+            long totalCents,
+            @Nullable Instant sentAt) {}
 
     /**
      * One version of one provider's quote.

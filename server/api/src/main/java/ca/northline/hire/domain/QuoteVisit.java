@@ -30,7 +30,8 @@ public record QuoteVisit(
         if (nz(accessNote).length() > 500) {
             errors.add(new Violation("accessNote", "length", BookingRequest.TOO_LONG_500));
         }
-        if (!blank(contactPhone) && !BookingRequest.PHONE_FORMAT.matcher(nz(contactPhone)).matches()) {
+        if (!blank(contactPhone)
+                && !BookingRequest.PHONE_FORMAT.matcher(nz(contactPhone)).matches()) {
             errors.add(new Violation("contactPhone", "format", BookingRequest.PHONE));
         }
         if (!errors.isEmpty()) {

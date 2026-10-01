@@ -99,7 +99,8 @@ class QuoteFlowService
         ask.validate(category.kind(), category.vehicle(), today);
         var chosen = new ArrayList<String>();
         for (var slug : ask.providers()) {
-            var provider = providers.bySlug(slug, "en")
+            var provider = providers
+                    .bySlug(slug, "en")
                     .orElseThrow(() -> RuleViolation.of("providers", "not_offered", NOT_OFFERED));
             boolean offered = offers.ofMerchant(provider.merchantId(), "en").stream()
                     .anyMatch(o -> category.id().equals(o.categoryId()));
@@ -116,7 +117,9 @@ class QuoteFlowService
                 ask.title(Objects.requireNonNullElse(category.names().get("en"), category.slug())),
                 ask.text(),
                 blankToNull(ask.area()),
-                day == null ? null : day.atTime(PREFERRED_TIME).atZone(region.timeZone()).toInstant(),
+                day == null
+                        ? null
+                        : day.atTime(PREFERRED_TIME).atZone(region.timeZone()).toInstant(),
                 ask.details()));
         return new Requested(ref.id(), ref.ref(), ref.respondBy(), ref.expiresAt(), chosen.size());
     }
@@ -127,11 +130,14 @@ class QuoteFlowService
         var summaries = summaries(r.merchantIds(), lang);
         var quoted = r.quotes().stream().collect(Collectors.toMap(CustomerQuote::merchantId, Function.identity()));
         var rows = r.merchantIds().stream()
-                .filter(summaries::containsKey)
-                .map(id -> {
+                .<Offer>mapMulti((id, out) -> {
+                    var provider = summaries.get(id);
+                    if (provider == null) {
+                        return;
+                    }
                     var q = quoted.get(id);
                     var status = q != null ? "quoted" : r.declinedBy().contains(id) ? "declined" : "waiting";
-                    return new Offer(summaries.get(id), status, q);
+                    out.accept(new Offer(provider, status, q));
                 })
                 .sorted((a, b) -> {
                     var qa = a.quote();
@@ -168,8 +174,13 @@ class QuoteFlowService
             throw new NotFound("quote", quoteId);
         }
         var others = r.quotes().stream()
-                .filter(o -> !o.merchantId().equals(q.merchantId()) && summaries.containsKey(o.merchantId()))
-                .map(o -> new Other(o.id(), summaries.get(o.merchantId()).name(), o.totalCents(), o.state()))
+                .filter(o -> !o.merchantId().equals(q.merchantId()))
+                .<Other>mapMulti((o, out) -> {
+                    var other = summaries.get(o.merchantId());
+                    if (other != null) {
+                        out.accept(new Other(o.id(), other.name(), o.totalCents(), o.state()));
+                    }
+                })
                 .toList();
         var acceptance = quotes.acceptance(customerId, quoteId)
                 .filter(a -> a.acceptedAt() != null)
@@ -303,7 +314,8 @@ class QuoteFlowService
 
     private static void requireOpen(CustomerQuote q) {
         if ("superseded".equals(q.state())) {
-            throw new Conflict("quote_revised", "The provider revised this quote. Review the new version before accepting.");
+            throw new Conflict(
+                    "quote_revised", "The provider revised this quote. Review the new version before accepting.");
         }
         if (q.expired()) {
             throw new Conflict("quote_expired", EXPIRED);

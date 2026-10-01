@@ -37,7 +37,10 @@ public record QuoteAsk(
     public static final String GUESTS = BookingRequest.GUESTS;
     public static final String NOT_QUOTEABLE = "This service is booked directly — pick a time on a provider's page.";
 
-    public record Vehicle(@Nullable String year, @Nullable String make, @Nullable String model) {}
+    public record Vehicle(
+            @Nullable String year,
+            @Nullable String make,
+            @Nullable String model) {}
 
     public QuoteAsk {
         providers = providers == null ? List.of() : List.copyOf(providers);
@@ -68,7 +71,9 @@ public record QuoteAsk(
             var v = vehicle;
             if (v == null || blank(v.year()) || blank(v.make()) || blank(v.model())) {
                 errors.add(new Violation("vehicle", "required", VEHICLE));
-            } else if (nz(v.year()).length() > 10 || nz(v.make()).length() > 40 || nz(v.model()).length() > 80) {
+            } else if (nz(v.year()).length() > 10
+                    || nz(v.make()).length() > 40
+                    || nz(v.model()).length() > 80) {
                 errors.add(new Violation("vehicle", "length", TOO_LONG_80));
             }
         }
@@ -106,7 +111,9 @@ public record QuoteAsk(
             return categoryName + " · " + guests + " guests";
         }
         if (v != null && !blank(v.make())) {
-            return categoryName + " · " + String.join(" ", nz(v.year()), nz(v.make()), nz(v.model())).strip();
+            return categoryName + " · "
+                    + String.join(" ", nz(v.year()), nz(v.make()), nz(v.model()))
+                            .strip();
         }
         return categoryName;
     }
@@ -116,7 +123,9 @@ public record QuoteAsk(
         var d = new LinkedHashMap<String, Object>();
         var v = vehicle;
         if (v != null && !blank(v.make())) {
-            d.put("vehicle", String.join(" ", nz(v.year()), nz(v.make()), nz(v.model())).strip());
+            d.put(
+                    "vehicle",
+                    String.join(" ", nz(v.year()), nz(v.make()), nz(v.model())).strip());
         }
         if (eventDate != null) {
             d.put("eventDate", eventDate.toString());

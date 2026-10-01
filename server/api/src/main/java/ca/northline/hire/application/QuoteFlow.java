@@ -73,9 +73,12 @@ public final class QuoteFlow {
      * One row of the compare table.
      *
      * @param status {@code quoted | waiting | declined}
-     * @param quote the provider's latest version, when {@code quoted}
+     * @param quote the provider's latest version, when the status says it has quoted
      */
-    public record Offer(ProviderSummary provider, String status, @Nullable CustomerQuote quote) {}
+    public record Offer(
+            ProviderSummary provider,
+            String status,
+            @Nullable CustomerQuote quote) {}
 
     public record Comparison(
             String requestId,

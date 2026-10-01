@@ -86,11 +86,7 @@ class QuotePersistenceAdapter implements QuoteRepository {
         return jdbc.sql("select " + COLUMNS + """
                           from booking.quotes where request_id = :id and state <> 'draft'
                          order by merchant_id, version desc
-                        """)
-                .param("id", requestId)
-                .query((rs, _) -> header(rs))
-                .list()
-                .stream()
+                        """).param("id", requestId).query((rs, _) -> header(rs)).list().stream()
                 .map(this::withLines)
                 .toList();
     }
