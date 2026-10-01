@@ -8,7 +8,8 @@ import { addDays, hhmmLabel, isoWeekday, today } from '../../lib/time';
 import { DAYS, hoursQuery, previewQuery, rulesQuery, servicesQuery, useSaveHours, type Day, type Days, type Range } from './api';
 import type { SaveState } from './AvailabilityScreen';
 import { useAvailabilityT } from './messages';
-import { TIME_OPTIONS, slotCount, validateDays } from './rules';
+import { AVAILABILITY_MESSAGES_FR, TIME_OPTIONS, slotCount, validateDays } from './rules';
+import { useLocalizeMessage } from '../../lib/validation';
 
 type Apply = 'today' | 'monday' | 'date';
 
@@ -51,7 +52,8 @@ export function HoursTab({ onState }: { onState: (s: SaveState) => void }) {
   const errorsFor = (id: string) => validateDays(drafts[id] ?? saved[id] ?? emptyDays());
   const clientErrors = current && days ? errorsFor(current) : {};
   const allErrorCount = dirtyIds.reduce((n, id) => n + Object.keys(errorsFor(id)).length, 0);
-  const shownError = (k: string) => (tried ? clientErrors[k] ?? serverErrors[`${current}:${k}`] : undefined);
+  const lm = useLocalizeMessage(AVAILABILITY_MESSAGES_FR);
+  const shownError = (k: string) => lm(tried ? clientErrors[k] ?? serverErrors[`${current}:${k}`] : undefined);
 
   const setDays = (next: Days) => { if (current) { setDrafts(d => ({ ...d, [current]: next })); setServerErrors({}); } };
   const setRange = (day: Day, i: number, which: 0 | 1, v: string) => days && setDays({ ...days, [day]: days[day].map((r, j) => (j === i ? (which === 0 ? [v, r[1]] : [r[0], v]) as Range : r)) });

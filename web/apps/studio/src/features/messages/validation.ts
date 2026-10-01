@@ -26,14 +26,14 @@ export const LIMITS = { message: 2000, files: 5, fileBytes: 10 * 1024 * 1024, ca
 const FILE_TYPES = ['image/jpeg', 'image/png', 'image/heic', 'image/heif', 'application/pdf'];
 export const FILE_ACCEPT = '.jpg,.jpeg,.png,.heic,.heif,.pdf,image/jpeg,image/png,image/heic,image/heif,application/pdf';
 
-const FR: Record<string, string> = {
+export const FR: Record<string, string> = {
   [MSG.MESSAGE_REQUIRED]: 'Écrivez un message ou joignez un fichier.',
   [MSG.MESSAGE_TOO_LONG]: 'Les messages doivent faire moins de 2 000 caractères.',
   [MSG.TOO_MANY_FILES]: "Joignez jusqu'à 5 fichiers.",
   [MSG.FILE_GONE]: "Ce fichier n'est plus disponible. Joignez-le de nouveau.",
   [MSG.FILE_REQUIRED]: 'Choisissez un fichier à joindre.',
   [MSG.FILE_TYPE]: 'Joignez des fichiers JPG, PNG, HEIC ou PDF.',
-  [MSG.FILE_TOO_LARGE]: "Les fichiers peuvent faire jusqu'à 10 Mo.",
+  [MSG.FILE_TOO_LARGE]: 'Les fichiers peuvent faire jusqu’à 10 Mo.',
   [MSG.TOPIC_REQUIRED]: 'Choisissez un sujet.',
   [MSG.CASE_BODY_REQUIRED]: 'Dites-nous ce qui se passe.',
   [MSG.CASE_BODY_TOO_LONG]: 'Moins de 4 000 caractères, svp.',

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { mockFetch, renderWithProviders } from '../../test/ops';
+import { QuoteComposer } from './QuoteComposer';
 import { QuoteRequests } from './QuoteRequests';
 
 vi.mock('../shell/api', () => ({ useMerchantId: () => 'm1', useRole: () => 'owner' }));
@@ -62,6 +63,18 @@ describe('Quote requests + composer', () => {
     expect(await screen.findByText(/Quote sent · \$165\.38 · 2 lines · valid 7 days/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'View as customer' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Revise' })).toBeTruthy();
+  });
+
+  it('shows the client checks in French in the French Studio (S-40)', async () => {
+    const user = userEvent.setup({ delay: null });
+    renderWithProviders(<QuoteComposer request={request(draftQuote) as never} onDone={() => {}} onCancel={() => {}} />, 'fr');
+    await user.click(screen.getByRole('button', { name: '+ Ajouter une ligne' }));
+    await user.clear(screen.getByLabelText(/Portée des travaux/));
+    await user.click(screen.getByRole('button', { name: /^Envoyer le devis/ }));
+    const alerts = screen.getAllByRole('alert').map(a => a.textContent);
+    expect(alerts).toContain('Décrivez cette ligne — les clients doivent voir ce qu’ils paient.');
+    expect(alerts).toContain('Décrivez la portée des travaux.');
+    expect(calls.filter(c => c.method === 'POST')).toHaveLength(0);
   });
 
   it('maps server 422s onto the lines', async () => {

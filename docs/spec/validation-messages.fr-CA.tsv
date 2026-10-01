@@ -66,10 +66,10 @@ At most 12 photos.	Au plus 12 photos.	new
 At most 120 characters.	Au plus 120 caractères.	shipped
 At most 160 characters.	Au plus 160 caractères.	new
 At most 200 characters.	Au plus 200 caractères.	shipped
-At most 2000 characters.	2000 caractères au maximum.	shipped
-At most 250 characters.	250 caractères au maximum.	shipped
+At most 2000 characters.	Au plus 2000 caractères.	shipped
+At most 250 characters.	Au plus 250 caractères.	shipped
 At most 40 characters.	Au plus 40 caractères.	shipped
-At most 4000 characters.	4000 caractères au maximum.	shipped
+At most 4000 characters.	Au plus 4000 caractères.	shipped
 At most 50 lines.	Au plus 50 lignes.	new
 At most 500 characters.	Au plus 500 caractères.	shipped
 At most 500 items per file.	Au plus 500 articles par fichier.	new
@@ -241,7 +241,7 @@ Enter your Shopify store address (your-store.myshopify.com).	Entrez l’adresse 
 Enter your Toast restaurant GUID (Toast Web › Integrations).	Entrez le GUID de votre restaurant Toast (Toast Web › Intégrations).	shipped
 File uploads are not available yet.	Le téléversement de fichiers n’est pas encore offert.	new
 Files can be at most 10 MB.	Les fichiers peuvent faire au plus 10 Mo.	new
-Files can be up to 10 MB.	Les fichiers peuvent atteindre 10 Mo.	shipped
+Files can be up to 10 MB.	Les fichiers peuvent faire jusqu’à 10 Mo.	shipped
 Final sale is allowed only for perishables.	La vente finale est permise seulement pour les périssables.	shipped
 Finish Stripe onboarding first.	Terminez d’abord l’inscription Stripe.	new
 First name is required.	Le prénom est obligatoire.	shipped

@@ -149,6 +149,9 @@ class QuoteController {
   the most basic failing rule first. Rule ids come from the constraint: `NotNull/NotBlank/NotEmpty/AssertTrue` → `required`,
   `Pattern/Email` → `format`, `Size/Length` → `length`, `Min/Max/Positive…` → `range`. A custom constraint `@GstNumber`
   gets the snake_cased name `gst_number`.
+- **French (S-40):** messages stay English in the code. Add every new message (and every 409 detail the Studio shows)
+  with its fr-CA wording to `docs/spec/validation-messages.fr-CA.tsv`; `ValidationMessageCatalogueTests` fails on a
+  message without one. A message built at run time is a template there (`Only %d left.`, `{name} is sold out.`).
 - The DB triggers in V016 stay as the last line of defence. Validate before writing so users see 422 messages, not a 409.
 - **Nullness of request records.** A component that Bean Validation requires (`@NotNull`) is declared **non-null**
   for NullAway: no `@Nullable` next to it, because the two contradict each other (Error Prone
