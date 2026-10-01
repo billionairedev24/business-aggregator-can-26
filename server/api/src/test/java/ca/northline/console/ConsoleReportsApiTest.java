@@ -24,13 +24,13 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
  * S-95: reports from aggregates — weekly active customers, the shop funnel, signup-month cohorts, top categories and
- * waitlist demand for a province (Yukon: no other test sells there), with small counts withheld and no personal data in
+ * waitlist demand for a province (New Brunswick: no other test sells there), with small counts withheld and no personal data in
  * the answer; admin, finance and analysts only.
  */
 class ConsoleReportsApiTest extends IntegrationTest {
 
     static final String URL = "/api/v1/console/reports";
-    static final ZoneId YUKON = ZoneId.of("America/Whitehorse");
+    static final ZoneId NEW_BRUNSWICK = ZoneId.of("America/Moncton");
 
     @Autowired
     JdbcClient jdbc;
@@ -45,12 +45,12 @@ class ConsoleReportsApiTest extends IntegrationTest {
         if (!shop.isEmpty()) {
             return;
         }
-        // earlier runs' Yukon test businesses leave the province, so the counts below are this run's
-        jdbc.sql("update merchants.merchants set province = null where province = 'YT' and display_name like 'S95 %'")
+        // earlier runs' New Brunswick test businesses leave the province, so the counts below are this run's
+        jdbc.sql("update merchants.merchants set province = null where province = 'NB' and display_name like 'S95 %'")
                 .update();
         staff = data.user("Ana Analyst");
-        shop = data.merchant("both", "S95 Whitehorse Garage " + Ids.next().substring(20));
-        jdbc.sql("update merchants.merchants set province = 'YT' where id = ?")
+        shop = data.merchant("both", "S95 Moncton Garage " + Ids.next().substring(20));
+        jdbc.sql("update merchants.merchants set province = 'NB' where id = ?")
                 .params(shop)
                 .update();
         category = "service.s95-" + Ids.next().substring(16).toLowerCase(java.util.Locale.ROOT);
@@ -64,8 +64,8 @@ class ConsoleReportsApiTest extends IntegrationTest {
                 .params(service, shop, category)
                 .update();
 
-        var lastMonth = YearMonth.now(YUKON).minusMonths(1);
-        var signup = lastMonth.atDay(2).atTime(12, 0).atZone(YUKON).toInstant();
+        var lastMonth = YearMonth.now(NEW_BRUNSWICK).minusMonths(1);
+        var signup = lastMonth.atDay(2).atTime(12, 0).atZone(NEW_BRUNSWICK).toInstant();
         var now = Instant.now();
         var people = new ArrayList<String>();
         for (var i = 0; i < 6; i++) {
@@ -81,7 +81,7 @@ class ConsoleReportsApiTest extends IntegrationTest {
         booking(customers.getFirst(), service, now.minus(Duration.ofMinutes(3)));
         jdbc.sql("""
                         insert into merchants.storefront_visits (merchant_id, day, visits) values (?, ?, 120)
-                        on conflict (merchant_id, day) do update set visits = 120""").params(shop, LocalDate.now(YUKON)).update();
+                        on conflict (merchant_id, day) do update set visits = 120""").params(shop, LocalDate.now(NEW_BRUNSWICK)).update();
     }
 
     void order(String customer, Instant at) {
@@ -118,10 +118,10 @@ class ConsoleReportsApiTest extends IntegrationTest {
 
     @Test
     void aProvincesHealth_fromCountsOnly() throws Exception {
-        var lastMonth = YearMonth.now(YUKON).minusMonths(1).toString();
-        mvc.perform(get(URL).param("province", "YT").with(TestJwt.staff(staff, StaffRole.ANALYST)))
+        var lastMonth = YearMonth.now(NEW_BRUNSWICK).minusMonths(1).toString();
+        mvc.perform(get(URL).param("province", "NB").with(TestJwt.staff(staff, StaffRole.ANALYST)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.province").value("YT"))
+                .andExpect(jsonPath("$.province").value("NB"))
                 .andExpect(jsonPath("$.weeks.length()").value(13))
                 .andExpect(jsonPath("$.weeks[12].customers").value(6))
                 .andExpect(jsonPath("$.funnel[0].step").value("app_opens"))
@@ -148,7 +148,7 @@ class ConsoleReportsApiTest extends IntegrationTest {
         var weekAgo = Instant.now().minus(Duration.ofDays(7));
         order(customers.get(0), weekAgo);
         order(customers.get(1), weekAgo);
-        mvc.perform(get(URL).param("province", "YT").with(TestJwt.staff(staff, StaffRole.FINANCE)))
+        mvc.perform(get(URL).param("province", "NB").with(TestJwt.staff(staff, StaffRole.FINANCE)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.weeks[11].customers").value(Matchers.nullValue()))
                 .andExpect(jsonPath("$.weeks[12].customers").value(6));
