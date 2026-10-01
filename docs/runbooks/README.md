@@ -162,6 +162,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `REGISTRY_CORPORATIONS_CANADA_URL`/`_KEY`/`_KEY_HEADER`, `REGISTRY_ALBERTA_URL`/`_KEY`, `REGISTRY_CALGARY_URL`/`_DATASET`/`_APP_TOKEN`, `REGISTRY_RECHECK_AFTER`, `REGISTRY_RECHECK_CRON` | ✓ | | | | per provider ([registries.md](registries.md#set-up-per-environment)) |
 | `WEBHOOK_SECRET_KEY` | ✓ | | | ✓ | yes (the same value in both: the api encrypts partner webhook secrets, the worker decrypts them to sign — S-33) |
 | `WEBHOOKS_ALLOW_LOCAL` | | | | ✓ | no (`false`; `true` only locally — http://localhost endpoints; refused in the cloud) |
+| `IMPORT_IMAGES_ALLOW_LOCAL` | ✓ | | | | no (`false`; `true` only locally — bulk-import image URLs on http:// or loopback, never private or metadata addresses; refused in the cloud — S-72, [webhooks.md § SSRF rules](webhooks.md#ssrf-rules-platform-egresspolicy)) |
 | `SEARCH_PROVIDER` | ✓ | | | | no (`elasticsearch`; `local` = no index, the `local` profile's default, refused in staging/prod — [search.md § 7](search.md#7-the-search-api-s-44)) |
 | `SEARCH_CACHE_TTL`, `SEARCH_RATE_LIMIT` | ✓ | | | | no (`30s`, `120`/min per address) |
 | `REGION_PROVINCES`, `REGION_DEFAULT_PROVINCE`, `REGION_CACHE_TTL` | ✓ | | | ✓ (`REGION_DEFAULT_PROVINCE`) | no (none extra — the live region rows are served, V131: Alberta; `AB`; `60s`) — S-134, [regions.md](regions.md); S-44's `SEARCH_MARKETS` / `SEARCH_DEFAULT_MARKET` are still read as their fallbacks |
