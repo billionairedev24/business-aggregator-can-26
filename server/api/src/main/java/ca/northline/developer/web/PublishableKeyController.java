@@ -52,7 +52,8 @@ class PublishableKeyController {
 
     record RollRequest(@Nullable List<String> allowedOrigins) {}
 
-    record OriginsRequest(@NotNull(message = DeveloperRules.ORIGIN_FORMAT) List<String> allowedOrigins) {}
+    record OriginsRequest(
+            @NotNull(message = DeveloperRules.ORIGIN_FORMAT) List<String> allowedOrigins) {}
 
     @GetMapping
     @RequiresMerchant(VIEW)
@@ -65,7 +66,8 @@ class PublishableKeyController {
     @PostMapping
     @RequiresMerchant(MANAGE)
     PublishableKeyResponse roll(
-            @PathVariable String merchantId, @RequestBody(required = false) @Nullable RollRequest body,
+            @PathVariable String merchantId,
+            @RequestBody(required = false) @Nullable RollRequest body,
             CurrentMember member) {
         return response(keys.roll(actor(member), body == null ? null : body.allowedOrigins()));
     }

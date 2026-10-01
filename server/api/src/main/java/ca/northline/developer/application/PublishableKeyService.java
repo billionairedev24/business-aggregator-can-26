@@ -57,8 +57,8 @@ class PublishableKeyService implements PublishableKeys, EmbedKeys {
     @Override
     @Transactional
     public PublishableKey allowOrigins(Actor actor, List<String> allowedOrigins) {
-        var current = store.active(actor.merchantId())
-                .orElseThrow(() -> new NotFound("publishable key", actor.merchantId()));
+        var current =
+                store.active(actor.merchantId()).orElseThrow(() -> new NotFound("publishable key", actor.merchantId()));
         var origins = DeveloperRules.origins(allowedOrigins);
         store.origins(current.id(), origins);
         audit.record(AuditTrail.Entry.of(
@@ -68,8 +68,7 @@ class PublishableKeyService implements PublishableKeys, EmbedKeys {
                         "publishable_key.origins_changed",
                         "publishable_key",
                         current.id())
-                .withChange(
-                        Map.of("allowedOrigins", current.allowedOrigins()), Map.of("allowedOrigins", origins)));
+                .withChange(Map.of("allowedOrigins", current.allowedOrigins()), Map.of("allowedOrigins", origins)));
         return new PublishableKey(current.id(), current.merchantId(), current.key(), origins, current.createdAt());
     }
 

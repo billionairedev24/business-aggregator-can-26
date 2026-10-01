@@ -73,7 +73,9 @@ class EmbedKeyApiTest extends IntegrationTest {
     }
 
     void publish(String id, String user) throws Exception {
-        jdbc.sql("update merchants.merchants set status = 'active' where id = ?").param(id).update();
+        jdbc.sql("update merchants.merchants set status = 'active' where id = ?")
+                .param(id)
+                .update();
         mvc.perform(post("/api/v1/merchants/{id}/storefront/publish", id).with(TestJwt.member(user)))
                 .andExpect(status().isOk());
     }
@@ -123,7 +125,8 @@ class EmbedKeyApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.brandColor").value("#2f5d3a"))
                 .andExpect(jsonPath("$.path").value("/providers/" + slug));
 
-        var actions = jdbc.sql("select action from developer.audit_log where merchant_id = ? and action like 'publishable_key.%'")
+        var actions = jdbc.sql(
+                        "select action from developer.audit_log where merchant_id = ? and action like 'publishable_key.%'")
                 .param(merchantId)
                 .query(String.class)
                 .list();
@@ -157,7 +160,8 @@ class EmbedKeyApiTest extends IntegrationTest {
     void aKeyLimitedToSomeWebsitesAnswersOnlyThem() throws Exception {
         publish(merchantId, owner);
         var key = issue(merchantId, owner);
-        sites("{\"allowedOrigins\":[\"www.aspenwrench.example\",\" https://Book.AspenWrench.example:443/ \",\"https://www.aspenwrench.example\"]}")
+        sites(
+                        "{\"allowedOrigins\":[\"www.aspenwrench.example\",\" https://Book.AspenWrench.example:443/ \",\"https://www.aspenwrench.example\"]}")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.allowedOrigins.length()").value(2))
                 .andExpect(jsonPath("$.allowedOrigins[0]").value("https://www.aspenwrench.example"))
@@ -179,16 +183,21 @@ class EmbedKeyApiTest extends IntegrationTest {
 
     @Test
     void websitesAreValidated() throws Exception {
-        sites("{\"allowedOrigins\":[\"https://www.aspenwrench.example\"]}").andExpect(status().isNotFound()); // no key yet
+        sites("{\"allowedOrigins\":[\"https://www.aspenwrench.example\"]}")
+                .andExpect(status().isNotFound()); // no key yet
         issue(merchantId, owner);
         for (var bad : new String[] {
-            "http://www.aspenwrench.example", "https://www.aspenwrench.example/book", "https://user@host.example",
-            "ftp://host.example", "https://"
+            "http://www.aspenwrench.example",
+            "https://www.aspenwrench.example/book",
+            "https://user@host.example",
+            "ftp://host.example",
+            "https://"
         }) {
             sites("{\"allowedOrigins\":[\"%s\"]}".formatted(bad))
                     .andExpect(status().isUnprocessableContent())
                     .andExpect(jsonPath("$.errors[0].field").value("allowedOrigins"))
-                    .andExpect(jsonPath("$.errors[0].message").value("Enter a site address like https://www.example.com."));
+                    .andExpect(jsonPath("$.errors[0].message")
+                            .value("Enter a site address like https://www.example.com."));
         }
         var many = new StringBuilder("{\"allowedOrigins\":[");
         for (int i = 0; i < 11; i++) {

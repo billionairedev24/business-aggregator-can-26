@@ -84,7 +84,9 @@ class PublishableKeyJdbc implements PublishableKeyStore {
     private static List<String> strings(@Nullable Array array) throws SQLException {
         return array == null
                 ? List.of()
-                : Arrays.stream((Object[]) array.getArray()).map(String::valueOf).toList();
+                : Arrays.stream((Object[]) array.getArray())
+                        .map(String::valueOf)
+                        .toList();
     }
 
     private static String pgArray(List<String> values) {

@@ -68,7 +68,9 @@ class PublicEmbedController {
             case STORE -> "/";
         };
         return ResponseEntity.ok()
-                .header(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, embedKey.allowedOrigins().isEmpty() || origin == null ? "*" : origin)
+                .header(
+                        HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN,
+                        embedKey.allowedOrigins().isEmpty() || origin == null ? "*" : origin)
                 .header(HttpHeaders.VARY, HttpHeaders.ORIGIN)
                 .cacheControl(CacheControl.maxAge(Duration.ofMinutes(1)).cachePublic())
                 .body(new EmbedResponse(
