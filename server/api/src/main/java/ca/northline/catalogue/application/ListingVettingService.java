@@ -6,6 +6,7 @@ import ca.northline.catalogue.domain.Listing;
 import ca.northline.catalogue.domain.MaterialField;
 import ca.northline.catalogue.domain.ProductListing;
 import ca.northline.catalogue.domain.ServiceListing;
+import ca.northline.catalogue.domain.Vetting;
 import ca.northline.catalogue.domain.VettingFlag;
 import ca.northline.developer.api.AuditTrail;
 import ca.northline.messaging.api.ListingRejectedNotice;
@@ -107,14 +108,14 @@ class ListingVettingService implements ListingVetting {
             return;
         }
         var listing = found.get();
-        switch (listing.getState().getVetting()) {
-            case PENDING, APPROVED ->
-                apply(listing, false, List.of(TRUST_FLAG_REASON), event.note(), event.actorId(), event.role());
-            case DRAFT, REJECTED ->
-                log.debug(
-                        "Listing {} isn't live or in review; flag {} changes nothing",
-                        event.targetId(),
-                        event.aggregateId());
+        var vetting = listing.getState().getVetting();
+        if (vetting == Vetting.PENDING || vetting == Vetting.APPROVED) {
+            apply(listing, false, List.of(TRUST_FLAG_REASON), event.note(), event.actorId(), event.role());
+        } else {
+            log.debug(
+                    "Listing {} isn't live or in review; flag {} changes nothing",
+                    event.targetId(),
+                    event.aggregateId());
         }
     }
 
