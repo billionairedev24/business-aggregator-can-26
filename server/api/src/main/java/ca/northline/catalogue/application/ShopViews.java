@@ -170,7 +170,12 @@ public final class ShopViews {
         }
     }
 
-    public record Variant(String variantId, String value, long priceCents, int stock) {}
+    /** @param images S-65: the variant's own approved images (URLs; empty = show the offer's) */
+    public record Variant(String variantId, String value, long priceCents, int stock, List<String> images) {
+        public Variant {
+            images = List.copyOf(images);
+        }
+    }
 
     public record MoreItem(String productId, String name, long priceCents) {}
 

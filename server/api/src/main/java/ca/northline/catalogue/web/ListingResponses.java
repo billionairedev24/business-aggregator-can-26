@@ -8,6 +8,7 @@ import ca.northline.catalogue.domain.ItemCondition;
 import ca.northline.catalogue.domain.ListingKind;
 import ca.northline.catalogue.domain.ListingStatus;
 import ca.northline.catalogue.domain.MaterialField;
+import ca.northline.catalogue.domain.OfferType;
 import ca.northline.catalogue.domain.PricingMode;
 import ca.northline.catalogue.domain.ReturnsPolicy;
 import ca.northline.catalogue.domain.VariantTheme;
@@ -42,7 +43,8 @@ final class ListingResponses {
             @Nullable Instant submittedAt,
             @Nullable String categoryId,
             @Nullable PricingMode pricingMode,
-            Instant updatedAt) {}
+            Instant updatedAt,
+            boolean bundle) {}
 
     /** The editor's view of one listing — {@link ProductResponse} or {@link ServiceResponse}, told apart by kind. */
     sealed interface ListingDetail permits ProductResponse, ServiceResponse {}
@@ -55,6 +57,17 @@ final class ListingResponses {
             String sku,
             @Nullable String gtin,
             long priceCents,
+            int stock,
+            List<MediaResponse> images) {}
+
+    /** S-65: one item of a bundle, with the product's name, variant, own price and stock. */
+    record BundleItemResponse(
+            String offerId,
+            @Nullable String variantId,
+            int qty,
+            String name,
+            @Nullable String option,
+            long unitPriceCents,
             int stock) {}
 
     record MissingField(String field, String message) {}
@@ -112,7 +125,10 @@ final class ListingResponses {
             boolean bilingualOk,
             boolean warranty,
             @Nullable String searchKeywords,
-            CompletenessResponse completeness)
+            CompletenessResponse completeness,
+            // bundle (S-65): stock above is what the items allow
+            OfferType type,
+            List<BundleItemResponse> bundleItems)
             implements ListingDetail {}
 
     record ServiceResponse(

@@ -172,6 +172,7 @@ class ShopBrowsingService implements BrowseShop {
                                     .collect(Collectors.groupingBy(MoreRow::merchantId));
                     var candidates = new HashSet<>(record.imageIds());
                     rows.forEach(r -> candidates.addAll(r.imageIds()));
+                    variants.values().forEach(vs -> vs.forEach(v -> candidates.addAll(v.imageIds())));
                     var approved = candidates.isEmpty() ? Set.<String>of() : media.approved(candidates);
                     var offers = rows.stream()
                             .<ShopViews.Offer>mapMulti((row, sink) -> {
@@ -222,7 +223,15 @@ class ShopBrowsingService implements BrowseShop {
             ShopCatalogue.ProductRecord record,
             Set<String> approved) {
         var own = variants.getOrDefault(row.offerId(), List.of()).stream()
-                .map(v -> new ShopViews.Variant(v.variantId(), v.value(), v.priceCents(), v.stock()))
+                .map(v -> new ShopViews.Variant(
+                        v.variantId(),
+                        v.value(),
+                        v.priceCents(),
+                        v.stock(),
+                        v.imageIds().stream()
+                                .filter(approved::contains)
+                                .map(id -> MEDIA_URL + id)
+                                .toList()))
                 .toList();
         var price = own.stream()
                 .filter(v -> v.stock() > 0)

@@ -1,14 +1,20 @@
 package ca.northline.catalogue.application;
 
+import ca.northline.catalogue.application.ListingRepository.BundleComponent;
 import ca.northline.catalogue.domain.AutomatedVetting;
 import ca.northline.catalogue.domain.CategoryProfile;
 import ca.northline.catalogue.domain.ImageSource;
 import ca.northline.catalogue.domain.Listing;
+import ca.northline.catalogue.domain.ListingMessages;
+import ca.northline.catalogue.domain.ProductDetails.BundleItem;
 import ca.northline.catalogue.domain.ProductListing;
 import ca.northline.catalogue.domain.ServiceListing;
 import ca.northline.catalogue.domain.Vetting;
+import ca.northline.shared.Conflict;
 import ca.northline.shared.NotFound;
+import ca.northline.shared.RuleViolation;
 import java.time.Clock;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -45,10 +51,28 @@ class ListingLifecycleService implements ManageListing, VetListing {
             case ProductListing p -> p.completeness(category);
             case ServiceListing s -> s.completeness(category);
         };
+        if (listing instanceof ProductListing p && p.getDetails().isBundle() && unapprovedItems(p)) {
+            throw RuleViolation.of("bundleItems", "approved", ListingMessages.BUNDLE_ITEMS_APPROVED);
+        }
         var submitted = listing.submit(completeness, actorId, clock.instant());
         save(listing);
         events.publishEvent(submitted);
         return viewListing.view(merchantId, listingId);
+    }
+
+    /** S-65: is any item of the bundle missing or not an approved listing? */
+    private boolean unapprovedItems(ProductListing p) {
+        var items = p.getDetails().bundleItems();
+        var found =
+                listings
+                        .bundleComponents(
+                                p.getMerchantId(),
+                                items.stream().map(BundleItem::offerId).toList())
+                        .stream()
+                        .filter(c -> c.vetting() == Vetting.APPROVED)
+                        .map(BundleComponent::offerId)
+                        .collect(Collectors.toSet());
+        return items.stream().anyMatch(i -> !found.contains(i.offerId()));
     }
 
     @Override
@@ -70,6 +94,9 @@ class ListingLifecycleService implements ManageListing, VetListing {
     @Override
     public void delete(String merchantId, String listingId, String actorId) {
         var listing = load(merchantId, listingId);
+        if (listings.inBundle(listingId)) {
+            throw new Conflict("listing_in_bundle", ListingMessages.LISTING_IN_BUNDLE);
+        }
         listings.delete(listing);
         events.publishEvent(listing.deleted(actorId, clock.instant()));
     }
@@ -86,16 +113,27 @@ class ListingLifecycleService implements ManageListing, VetListing {
         var licenceOk = registry == null || licences.hasVerifiedLicence(listing.getMerchantId(), registry);
         var duplicate = false;
         var mainOnWhite = true;
-        if (listing instanceof ProductListing p && p.getDetails().imageSource() == ImageSource.OWN) {
-            var own = media.findAll(p.getDetails().ownImageIds());
-            for (var image : own) {
+        if (listing instanceof ProductListing p) {
+            var d = p.getDetails();
+            var shared = d.imageSource() == ImageSource.SHARED;
+            // the seller's own uploads: the listing's (unless it shows the shared record's) and each variant's (S-65)
+            var uploads = media.findAll(
+                    shared
+                            ? d.allOwnImageIds().stream()
+                                    .filter(id -> !d.ownImageIds().contains(id))
+                                    .toList()
+                            : d.allOwnImageIds());
+            for (var image : uploads) {
                 var hash = image.phash();
                 if (hash != null && media.hasNearDuplicate(hash, listing.getMerchantId(), DUPLICATE_DISTANCE)) {
                     duplicate = true;
                     break;
                 }
             }
-            mainOnWhite = own.isEmpty() || own.getFirst().onWhite();
+            if (!shared) {
+                var own = media.findAll(d.ownImageIds());
+                mainOnWhite = own.isEmpty() || own.getFirst().onWhite();
+            }
         }
         var flags = AutomatedVetting.check(new AutomatedVetting.Subject(
                 listing.kind(), category, listing.priceCents(), licenceOk, duplicate, mainOnWhite));

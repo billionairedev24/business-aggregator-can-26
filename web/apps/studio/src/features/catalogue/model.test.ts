@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Category } from './api';
-import { emptyProduct, fees, permissions, portalOf, productCompleteness, validateProductDraft, vetState, variantSku, validateServiceDraft, emptyService, type ProductForm } from './model';
+import { bundleFacts, emptyProduct, fees, productPayload, permissions, portalOf, productCompleteness, validateProductDraft, vetState, variantSku, validateServiceDraft, emptyService, type ProductForm } from './model';
 import { MSG, gtinProblem, parseMoney } from './validation';
 
 const autoParts: Category = {
@@ -35,7 +35,7 @@ describe('product draft validation (same messages as the server)', () => {
     expect(e).toMatchObject({ title: MSG.TITLE_PROMO, gtin: MSG.GTIN_CHECK_DIGIT, compareAtCents: MSG.COMPARE_AT_HIGHER, returnsPolicy: MSG.FINAL_SALE_PERISHABLE });
   });
   it('checks variant rows by server field path', () => {
-    const row = { key: 'a', value: '20 in', sku: 'WB-20', gtin: '', price: '17', stock: '1' };
+    const row = { key: 'a', value: '20 in', sku: 'WB-20', gtin: '', price: '17', stock: '1', images: [] };
     const e = validateProductDraft(filled({ variantTheme: 'length', variants: [row, { ...row, key: 'b', sku: '' }, { ...row, key: 'c' }] }), autoParts);
     expect(e['variants[1].sku']).toBe(MSG.SKU_REQUIRED);
     expect(e['variants[2].value']).toBe(MSG.VARIANT_DUPLICATE);
@@ -69,5 +69,32 @@ describe('side panels and table helpers', () => {
     expect(permissions('technician')).toMatchObject({ update: true, delete: false });
     expect(permissions('bookkeeper')).toMatchObject({ create: false, update: false });
     expect(variantSku('WB-22', '26 in')).toBe('WB-26');
+  });
+});
+
+describe('bundles and variant images (S-65)', () => {
+  const item = (offerId: string, qty: string, stock: number, unitPriceCents: number) => ({ key: offerId, offerId, variantId: null, qty, name: offerId, option: null, unitPriceCents, stock });
+  it('counts whole bundles the items allow and the price bought separately', () => {
+    expect(bundleFacts({ bundle: [item('a', '2', 9, 500), item('b', '1', 3, 1200)] })).toEqual({ available: 3, separateCents: 2200 });
+    expect(bundleFacts({ bundle: [] })).toEqual({ available: 0, separateCents: 0 });
+  });
+  it('needs two units for the contents section and sends items, no stock, no variants', () => {
+    const one = filled({ ...emptyProduct('bundle'), title: 'Wiper pair', categoryId: autoParts.id, attributes: { partType: 'Wiper blades' }, price: '30', bundle: [item('a', '1', 5, 1900)] });
+    expect(productCompleteness(one, autoParts, null).done.variants).toBe(false);
+    const two = { ...one, bundle: [item('a', '2', 5, 1900)] };
+    expect(productCompleteness(two, autoParts, null).done.variants).toBe(true);
+    const p = productPayload(two);
+    expect(p).toMatchObject({ type: 'bundle', identifierType: 'none', stock: 0, lowStockAt: null, variants: [], bundleItems: [{ offerId: 'a', variantId: null, qty: 2 }] });
+  });
+  it('flags the same item twice and a quantity out of range', () => {
+    const f = filled({ ...emptyProduct('bundle'), title: 'Pair', categoryId: autoParts.id, price: '30', bundle: [item('a', '1', 5, 1), item('a', '100', 5, 1)] });
+    const e = validateProductDraft(f, autoParts);
+    expect(e['bundleItems[1].offerId']).toBe(MSG.BUNDLE_ITEM_DUPLICATE);
+    expect(e['bundleItems[1].qty']).toBe(MSG.BUNDLE_QTY_RANGE);
+  });
+  it("sends each variant's own images", () => {
+    const image = { id: 'M1', url: '/m/M1', width: 1200, height: 1200, onWhite: true };
+    const row = { key: 'a', value: '20 in', sku: 'WB-20', gtin: '', price: '17', stock: '1', images: [image] };
+    expect(productPayload(filled({ variantTheme: 'length', variants: [row] })).variants[0]!.imageIds).toEqual(['M1']);
   });
 });

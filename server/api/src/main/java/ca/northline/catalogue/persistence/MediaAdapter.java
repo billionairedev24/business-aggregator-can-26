@@ -79,7 +79,7 @@ class MediaAdapter implements MediaRepository {
             return Set.of();
         }
         // The uploader's own approved offer, not any offer: approving another seller's listing that inherits a shared
-        // record must not make the record creator's unvetted images public.
+        // record must not make the record creator's unvetted images public. A variant's own images (S-65) count too.
         return Set.copyOf(
                 jdbc.sql("""
                         select m.id from catalogue.media m
@@ -87,6 +87,10 @@ class MediaAdapter implements MediaRepository {
                            and (exists (select 1 from catalogue.offers o
                                          where o.merchant_id = m.merchant_id and o.vetting = 'approved'
                                            and o.own_images @> array[m.id])
+                                or exists (select 1 from catalogue.variants v
+                                             join catalogue.offers o on o.id = v.offer_id
+                                            where o.merchant_id = m.merchant_id and o.vetting = 'approved'
+                                              and v.image_set @> array[m.id])
                                 or exists (select 1 from catalogue.catalog_products p
                                             where p.locked and p.image_set @> array[m.id]))
                         """).param("ids", array(ids)).query(String.class).list());

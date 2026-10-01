@@ -33,15 +33,18 @@ class ListingQueriesAdapter implements ListingQueries {
                           select s.id, 'service' as kind, s.name as name, s.sku, s.price_cents, null::integer as stock,
                                  s.sales_30d, s.vetting, s.status, s.vetting_flags, s.revet_reasons, s.submitted_at, s.category_id,
                                  coalesce(c.name_i18n ->> :lang, c.name_i18n ->> 'en') as category_name, s.pricing_mode,
-                                 s.duration_min, coalesce(s.instant_book, false) as instant_book, s.created_at, s.updated_at
+                                 s.duration_min, coalesce(s.instant_book, false) as instant_book, s.created_at, s.updated_at,
+                                 false as bundle
                             from catalogue.services s
                             left join catalogue.categories c on c.id = s.category_id
                            where s.merchant_id = :m
                           union all
-                          select o.id, 'product', o.title, o.sku, o.price_cents, o.stock, o.sales_30d, o.vetting, o.status,
+                          select o.id, 'product', o.title, o.sku, o.price_cents,
+                                 case when o.listing_type = 'bundle' then catalogue.bundle_stock(o.id) else o.stock end,
+                                 o.sales_30d, o.vetting, o.status,
                                  o.vetting_flags, o.revet_reasons, o.submitted_at, cp.category_id,
                                  coalesce(c.name_i18n ->> :lang, c.name_i18n ->> 'en'), null, null, false, o.created_at,
-                                 o.updated_at
+                                 o.updated_at, o.listing_type = 'bundle'
                             from catalogue.offers o
                             join catalogue.catalog_products cp on cp.id = o.product_id
                             left join catalogue.categories c on c.id = cp.category_id
@@ -73,7 +76,8 @@ class ListingQueriesAdapter implements ListingQueries {
                         enumOrNull(rs, "pricing_mode", PricingMode.class),
                         intOrNull(rs, "duration_min"),
                         rs.getBoolean("instant_book"),
-                        requiredInstant(rs, "updated_at")))
+                        requiredInstant(rs, "updated_at"),
+                        rs.getBoolean("bundle")))
                 .list();
     }
 
