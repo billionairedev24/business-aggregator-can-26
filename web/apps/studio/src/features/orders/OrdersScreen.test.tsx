@@ -2,7 +2,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { mockFetch, renderWithProviders } from '../../test/ops';
-import { OrdersScreen } from './OrdersScreen';
+import { OrdersScreen, courierText } from './OrdersScreen';
+import { useOrdersT } from './messages';
+import { renderHook } from '@testing-library/react';
 
 let role = 'owner';
 vi.mock('../shell/api', () => ({ useMerchantId: () => 'm1', useRole: () => role }));
@@ -50,5 +52,24 @@ describe('Orders · products', () => {
     renderWithProviders(<OrdersScreen />);
     expect(await screen.findByText("We couldn't load your orders.")).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy();
+  });
+
+  it('the order shows its pack-by time and the courier’s pickup at the shop (S-86)', async () => {
+    const pickup = { courierAssigned: true, runLabel: 'R-611', eta: inHours(3), arrivedAt: null, pickedUpAt: null };
+    mockFetch({ 'GET /api/v1/merchants/m1/orders': () => ({ ...board(), items: [order('o1', 'NL-48213', 'awaiting_pickup', { courierPickup: pickup })] }) });
+    const user = userEvent.setup({ delay: null });
+    renderWithProviders(<OrdersScreen />);
+    await user.click(await screen.findByText('NL-48213'));
+    expect(await screen.findByText('Pack by')).toBeTruthy();
+    expect(screen.getByText('Courier pickup')).toBeTruthy();
+    expect(screen.getByText(/^R-611 · Courier due /)).toBeTruthy();
+  });
+
+  it('words the courier’s pickup in en and fr', () => {
+    const p = { courierAssigned: false, runLabel: null, eta: '2026-10-01T23:50:00Z', arrivedAt: null, pickedUpAt: null };
+    const en = renderHook(() => useOrdersT(), { wrapper: ({ children }) => <>{children}</> }).result.current;
+    expect(courierText(p, en, 'en')).toMatch(/^Finding a courier · pickup about /);
+    expect(courierText({ ...p, courierAssigned: true, arrivedAt: '2026-10-01T23:49:00Z' }, en, 'en')).toBe('Courier is here');
+    expect(courierText({ ...p, pickedUpAt: '2026-10-01T23:55:00Z' }, en, 'en')).toMatch(/^Picked up /);
   });
 });

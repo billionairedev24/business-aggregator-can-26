@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:fulfilment.delivery_assigned:1",
+  "description": "delivery.assigned — topic fulfilment.run, key = run id. A courier on shift was given the run.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "courierId",
+    "orderIds"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "fulfilment.runs.id"
+    },
+    "courierId": {
+      "type": "string",
+      "description": "fulfilment.couriers.id"
+    },
+    "orderIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

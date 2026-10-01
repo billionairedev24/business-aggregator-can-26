@@ -1,0 +1,301 @@
+package ca.northline.fulfilment.application;
+
+import ca.northline.fulfilment.api.DeliveryCompleted;
+import ca.northline.fulfilment.api.DeliveryPickedUp;
+import ca.northline.fulfilment.application.CourierStore.Courier;
+import ca.northline.fulfilment.application.CourierStore.Shift;
+import ca.northline.fulfilment.application.DeliveryStore.Delivery;
+import ca.northline.fulfilment.application.DispatchUseCases.CourierApp;
+import ca.northline.fulfilment.application.DispatchUseCases.CourierView;
+import ca.northline.fulfilment.application.DispatchUseCases.RunView;
+import ca.northline.fulfilment.application.DispatchUseCases.ShiftView;
+import ca.northline.fulfilment.application.RunStore.Run;
+import ca.northline.fulfilment.application.RunStore.Stop;
+import ca.northline.fulfilment.domain.DeliveryRules;
+import ca.northline.shared.Bytes;
+import ca.northline.shared.Conflict;
+import ca.northline.shared.Ids;
+import ca.northline.shared.NotFound;
+import ca.northline.shared.RuleViolation;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.Nullable;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * The courier app's use cases (S-86 for S-87). A courier sees and moves only their own run; the run row is locked on
+ * every action, so two taps (or two phones) can't complete one stop twice.
+ *
+ * <ul>
+ *   <li>Shifts: ops schedules them; the courier starts one from 15 minutes before its start (status
+ *       {@code available}) and ends it when no run is open ({@code offline}).
+ *   <li>Stops: arrive → pickup (the shop must have packed; the sealed-bag scan is recorded) → drop-off with proof: a
+ *       photo or signature uploaded first, or the customer's 4-digit PIN. The last pickup of an order publishes
+ *       {@code delivery.picked_up}; a drop-off {@code delivery.completed} (S-78: the goods escrow window starts).
+ *   <li>The run is {@code loading} from the first stop, {@code en_route} once every pickup is done and {@code done}
+ *       after the last drop-off; the courier is then {@code available} again (or {@code offline} off shift).
+ * </ul>
+ */
+@Service
+@RequiredArgsConstructor
+@Transactional
+class CourierAppService implements CourierApp {
+
+    static final Duration EARLY_START = Duration.ofMinutes(15);
+
+    private final CourierStore couriers;
+    private final RunStore runs;
+    private final DeliveryStore deliveries;
+    private final ProofStorage proofs;
+    private final RunViews views;
+    private final ApplicationEventPublisher events;
+    private final Clock clock;
+
+    @Override
+    @Transactional(readOnly = true)
+    public CourierView me(String userId) {
+        var c = courier(userId);
+        return new CourierView(
+                c.id(),
+                c.market(),
+                c.vehicle(),
+                c.status(),
+                couriers.onShift(c.id()).map(CourierAppService::view).orElse(null));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ShiftView> shifts(String userId) {
+        var c = courier(userId);
+        return couriers.shifts(c.id(), clock.instant()).stream()
+                .map(CourierAppService::view)
+                .toList();
+    }
+
+    @Override
+    public ShiftView startShift(String userId, String shiftId) {
+        var c = courier(userId);
+        var shift = ownShift(c, shiftId);
+        var now = clock.instant();
+        if (shift.state().equals("on")) {
+            return view(shift);
+        }
+        if (!shift.state().equals("scheduled")
+                || now.isBefore(shift.startsAt().minus(EARLY_START))
+                || !now.isBefore(shift.endsAt())
+                || couriers.onShift(c.id()).isPresent()) {
+            throw new Conflict("shift_not_startable", DeliveryRules.SHIFT_NOT_STARTABLE);
+        }
+        couriers.startShift(shiftId, now);
+        if (runs.openRunOf(c.id()).isEmpty()) {
+            couriers.status(c.id(), "available");
+        }
+        return view(couriers.shift(shiftId).orElseThrow());
+    }
+
+    @Override
+    public ShiftView endShift(String userId, String shiftId) {
+        var c = courier(userId);
+        var shift = ownShift(c, shiftId);
+        if (!shift.state().equals("on")) {
+            return view(shift);
+        }
+        if (runs.openRunOf(c.id()).isPresent()) {
+            throw new Conflict("run_open", DeliveryRules.RUN_OPEN);
+        }
+        couriers.endShift(shiftId, clock.instant());
+        couriers.status(c.id(), "offline");
+        return view(couriers.shift(shiftId).orElseThrow());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<RunView> myRun(String userId) {
+        var c = courier(userId);
+        return runs.openRunOf(c.id()).map(r -> views.courierView(r, runs.stops(r.id())));
+    }
+
+    @Override
+    public RunView arrive(String userId, String stopId) {
+        var at = clock.instant();
+        var mine = ownStop(userId, stopId);
+        if (!mine.stop().state().equals("done")) {
+            runs.arrived(stopId, at);
+            start(mine.run(), at);
+        }
+        return reload(mine.run());
+    }
+
+    @Override
+    public RunView pickUp(String userId, String stopId, boolean scanOk) {
+        var at = clock.instant();
+        var mine = ownStop(userId, stopId);
+        var stop = mine.stop();
+        if (!stop.kind().equals("pickup")) {
+            throw new Conflict("not_a_pickup", DeliveryRules.NOT_YOUR_RUN);
+        }
+        if (stop.state().equals("done")) {
+            return reload(mine.run());
+        }
+        var delivery = delivery(stop.orderId());
+        var packed = delivery.pickups().stream()
+                .anyMatch(p -> p.merchantId().equals(stop.merchantId()) && p.packedAt() != null);
+        if (!packed) {
+            throw new Conflict("not_packed", DeliveryRules.NOT_PACKED);
+        }
+        runs.pickedUp(stopId, scanOk, at);
+        start(mine.run(), at);
+        var stops = runs.stops(mine.run().id());
+        var orderPickups = stops.stream()
+                .filter(s -> s.orderId().equals(stop.orderId()) && s.kind().equals("pickup"))
+                .toList();
+        if (orderPickups.stream().allMatch(s -> s.state().equals("done"))) {
+            deliveries.moveState(stop.orderId(), "picked_up", at);
+            events.publishEvent(new DeliveryPickedUp(
+                    Ids.next(),
+                    at,
+                    stop.orderId(),
+                    mine.run().id(),
+                    mine.courier().id()));
+        }
+        if (stops.stream()
+                .filter(s -> s.kind().equals("pickup"))
+                .allMatch(s -> s.state().equals("done"))) {
+            runs.moveState(mine.run().id(), "en_route", at);
+        }
+        return reload(mine.run());
+    }
+
+    @Override
+    public RunView proof(String userId, String stopId, String kind, Bytes file) {
+        var mine = ownStop(userId, stopId);
+        var stop = mine.stop();
+        if (!stop.kind().equals("dropoff")) {
+            throw new Conflict("not_a_dropoff", DeliveryRules.NOT_YOUR_RUN);
+        }
+        if (stop.state().equals("done")) {
+            throw new Conflict("stop_done", DeliveryRules.STOP_DONE);
+        }
+        if (!kind.equals("photo") && !kind.equals("signature")) {
+            throw RuleViolation.of("kind", "required", DeliveryRules.PROOF_REQUIRED);
+        }
+        var bytes = file.toArray();
+        var type = DeliveryRules.imageType(bytes);
+        if (type == null || bytes.length > DeliveryRules.MAX_PROOF_BYTES) {
+            throw RuleViolation.of("file", "format", DeliveryRules.PROOF_FILE);
+        }
+        var key = mine.run().id() + "/" + stopId + "-" + kind;
+        proofs.put(key, bytes, type);
+        runs.proofStored(stopId, kind, key);
+        return reload(mine.run());
+    }
+
+    @Override
+    public RunView dropOff(String userId, String stopId, String proof, @Nullable String pin) {
+        var at = clock.instant();
+        var mine = ownStop(userId, stopId);
+        var stop = mine.stop();
+        if (!stop.kind().equals("dropoff")) {
+            throw new Conflict("not_a_dropoff", DeliveryRules.NOT_YOUR_RUN);
+        }
+        if (stop.state().equals("done")) {
+            return reload(mine.run());
+        }
+        if (!DeliveryRules.PROOFS.contains(proof)) {
+            throw RuleViolation.of("proof", "required", DeliveryRules.PROOF_REQUIRED);
+        }
+        var delivery = delivery(stop.orderId());
+        var stops = runs.stops(mine.run().id());
+        var pickedUp = stops.stream()
+                .filter(s -> s.orderId().equals(stop.orderId()) && s.kind().equals("pickup"))
+                .allMatch(s -> s.state().equals("done"));
+        if (!pickedUp) {
+            throw new Conflict("not_picked_up", DeliveryRules.NOT_PICKED_UP);
+        }
+        switch (proof) {
+            case "pin" -> {
+                if (pin == null || pin.isBlank()) {
+                    throw RuleViolation.of("pin", "required", DeliveryRules.PIN_REQUIRED);
+                }
+                if (!java.security.MessageDigest.isEqual(
+                        pin.strip().getBytes(java.nio.charset.StandardCharsets.US_ASCII),
+                        delivery.pin().getBytes(java.nio.charset.StandardCharsets.US_ASCII))) {
+                    throw RuleViolation.of("pin", "match", DeliveryRules.PIN_WRONG);
+                }
+            }
+            default -> {
+                if (!proof.equals(stop.proofKind()) || stop.proofKey() == null) {
+                    throw new Conflict("proof_missing", DeliveryRules.PROOF_MISSING);
+                }
+            }
+        }
+        runs.droppedOff(stopId, proof, at);
+        start(mine.run(), at);
+        deliveries.moveState(stop.orderId(), "delivered", at);
+        events.publishEvent(new DeliveryCompleted(
+                Ids.next(),
+                at,
+                stop.orderId(),
+                mine.run().id(),
+                stopId,
+                mine.courier().id(),
+                proof));
+        var all = runs.stops(mine.run().id());
+        if (all.stream().allMatch(s -> s.state().equals("done") || s.id().equals(stopId))) {
+            runs.moveState(mine.run().id(), "done", at);
+            var onShift = couriers.onShift(mine.courier().id()).isPresent();
+            couriers.status(mine.courier().id(), onShift ? "available" : "offline");
+        }
+        return reload(mine.run());
+    }
+
+    // ── helpers ─────────────────────────────────────────────────────────────────────────────────────────────
+
+    private record Mine(Courier courier, Run run, Stop stop) {}
+
+    private Courier courier(String userId) {
+        return couriers.byUser(userId).filter(Courier::active).orElseThrow(NotACourier::new);
+    }
+
+    private Shift ownShift(Courier c, String shiftId) {
+        return couriers.shift(shiftId)
+                .filter(s -> s.courierId().equals(c.id()))
+                .orElseThrow(() -> new NotFound("shift", shiftId));
+    }
+
+    /** The stop, on the caller's own open run, with the run locked. Others' stops are 404 (ids can't be probed). */
+    private Mine ownStop(String userId, String stopId) {
+        var c = courier(userId);
+        var stop = runs.stop(stopId).orElseThrow(() -> new NotFound("stop", stopId));
+        var run = runs.lock(stop.runId())
+                .filter(r -> c.id().equals(r.courierId()) && !r.state().equals("done"))
+                .orElseThrow(() -> new NotFound("stop", stopId));
+        // re-read under the lock: a concurrent action may have moved it
+        return new Mine(c, run, runs.stop(stopId).orElseThrow());
+    }
+
+    private Delivery delivery(String orderId) {
+        return deliveries.find(orderId).orElseThrow(() -> new NotFound("delivery", orderId));
+    }
+
+    private void start(Run run, Instant at) {
+        if (run.state().equals("planned")) {
+            runs.moveState(run.id(), "loading", at);
+        }
+    }
+
+    private RunView reload(Run run) {
+        var fresh = runs.find(run.id()).orElseThrow();
+        return views.courierView(fresh, runs.stops(fresh.id()));
+    }
+
+    static ShiftView view(Shift s) {
+        return new ShiftView(s.id(), s.startsAt(), s.endsAt(), s.state(), s.startedAt(), s.endedAt());
+    }
+}

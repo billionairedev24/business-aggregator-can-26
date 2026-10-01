@@ -6,7 +6,8 @@ info:
   description: "What the consumer web and the mobile apps call. Public reads (storefronts,\
     \ catalogue, search) need no sign-in; the customer's own endpoints go through\
     \ the consumer-bff (session cookie + CSRF header) or, from the mobile apps, with\
-    \ a DPoP-bound token."
+    \ a DPoP-bound token. The courier app's `/api/v1/courier/**` takes only a DPoP-bound\
+    \ token with scope `courier`."
   license:
     identifier: LicenseRef-Northline
     name: Proprietary
@@ -304,6 +305,552 @@ paths:
           description: "Validation failed: one error per field with the exact message."
       tags:
       - cart-controller
+  /api/v1/courier/me:
+    get:
+      operationId: courierMe
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CourierView"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - courier-controller
+  /api/v1/courier/run:
+    get:
+      operationId: courierRun
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RunView"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - courier-controller
+  /api/v1/courier/shifts:
+    get:
+      operationId: courierShifts
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ListResponseShiftView"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - courier-controller
+  /api/v1/courier/shifts/{shiftId}/end:
+    post:
+      operationId: courierEnd
+      parameters:
+      - in: path
+        name: shiftId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ShiftView"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - courier-controller
+  /api/v1/courier/shifts/{shiftId}/start:
+    post:
+      operationId: courierStart
+      parameters:
+      - in: path
+        name: shiftId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ShiftView"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - courier-controller
+  /api/v1/courier/stops/{stopId}/arrive:
+    post:
+      operationId: courierArrive
+      parameters:
+      - in: path
+        name: stopId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RunView"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - courier-controller
+  /api/v1/courier/stops/{stopId}/dropoff:
+    post:
+      operationId: courierDropoff
+      parameters:
+      - in: path
+        name: stopId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DropoffRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RunView"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - courier-controller
+  /api/v1/courier/stops/{stopId}/pickup:
+    post:
+      operationId: courierPickup
+      parameters:
+      - in: path
+        name: stopId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PickupRequest"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RunView"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - courier-controller
+  /api/v1/courier/stops/{stopId}/proof:
+    post:
+      operationId: courierProof
+      parameters:
+      - in: path
+        name: stopId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: kind
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+              required:
+              - file
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RunView"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - courier-controller
   /api/v1/geo/autocomplete:
     get:
       operationId: geoAutocomplete
@@ -5854,6 +6401,19 @@ components:
           type: string
         title:
           type: string
+    CourierView:
+      type: object
+      properties:
+        courierId:
+          type: string
+        market:
+          type: string
+        shift:
+          $ref: "#/components/schemas/ShiftView"
+        status:
+          type: string
+        vehicle:
+          type: string
     CustomerQuote:
       type: object
       properties:
@@ -6060,6 +6620,37 @@ components:
           description: Cents of Canadian dollars (CAD).
         soldOut:
           type: boolean
+    Dropoff:
+      type: object
+      properties:
+        city:
+          type: string
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        note:
+          type: string
+        postal:
+          type: string
+        street:
+          type: string
+        unit:
+          type: string
+    DropoffRequest:
+      type: object
+      properties:
+        pin:
+          type: string
+          pattern: "\\s*\\d{4}\\s*"
+        proof:
+          type: string
+          minLength: 1
+          pattern: photo|signature|pin
+      required:
+      - proof
     Event:
       type: object
       properties:
@@ -6538,6 +7129,13 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Row"
+    ListResponseShiftView:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShiftView"
     ListResponseUpcoming:
       type: object
       properties:
@@ -6868,19 +7466,26 @@ components:
           type: string
         publishableKey:
           type: string
+    PickupRequest:
+      type: object
+      properties:
+        scanOk:
+          type: boolean
     Place:
       type: object
       properties:
-        city:
+        address:
           type: string
-        label:
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        merchantId:
           type: string
-        market:
-          $ref: "#/components/schemas/Market"
-        province:
+        name:
           type: string
-        zone:
-          $ref: "#/components/schemas/Zone"
     Plus:
       type: object
       properties:
@@ -7838,6 +8443,32 @@ components:
           format: date-time
         windowId:
           type: string
+    RunView:
+      type: object
+      properties:
+        endsAt:
+          type: string
+          format: date-time
+        id:
+          type: string
+        kind:
+          type: string
+        label:
+          type: string
+        market:
+          type: string
+        part:
+          type: integer
+          format: int32
+        startsAt:
+          type: string
+          format: date-time
+        state:
+          type: string
+        stops:
+          type: array
+          items:
+            $ref: "#/components/schemas/StopView"
     SavedCard:
       type: object
       properties:
@@ -7928,6 +8559,25 @@ components:
         publishableKey:
           type: string
         setupIntentId:
+          type: string
+    ShiftView:
+      type: object
+      properties:
+        endedAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+        id:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+        startsAt:
+          type: string
+          format: date-time
+        state:
           type: string
     ShopCard:
       type: object
@@ -8027,6 +8677,39 @@ components:
       properties:
         key:
           type: string
+        state:
+          type: string
+    StopView:
+      type: object
+      properties:
+        arrivedAt:
+          type: string
+          format: date-time
+        doneAt:
+          type: string
+          format: date-time
+        dropoff:
+          $ref: "#/components/schemas/Dropoff"
+        eta:
+          type: string
+          format: date-time
+        id:
+          type: string
+        kind:
+          type: string
+        orderId:
+          type: string
+        orderRef:
+          type: string
+        packed:
+          type: boolean
+        place:
+          $ref: "#/components/schemas/Place"
+        proofKind:
+          type: string
+        seq:
+          type: integer
+          format: int32
         state:
           type: string
     SuggestResponse:

@@ -41,6 +41,12 @@ public final class ShopOrderFlow {
 
     /** @param kind {@code pooled} (the market's first open run) | {@code direct} */
     public Placed place(String market, String kind, String customer, Listing... listings) throws Exception {
+        return place(market, kind, customer, "T2T 0B8", listings);
+    }
+
+    /** @param postal the delivery address's postal code (drop-offs without coordinates are ordered by it) */
+    public Placed place(String market, String kind, String customer, String postal, Listing... listings)
+            throws Exception {
         var auth = TestJwt.customerWithMfa(customer);
         for (var l : listings) {
             mvc.perform(post("/api/v1/cart/items")
@@ -65,7 +71,7 @@ public final class ShopOrderFlow {
             }
         }
         var address = """
-                {"street":"1204 17 Ave SW","unit":"Apt 804","city":"%s","province":"AB","postal":"t2t0b8","note":"Buzz 0804"}""".formatted(market);
+                {"street":"1204 17 Ave SW","unit":"Apt 804","city":"%s","province":"AB","postal":"%s","note":"Buzz 0804"}""".formatted(market, postal);
         var body = kind.equals("pooled") ? """
                         {"kind":"pooled","windowId":"%s","address":%s,"substitution":"similar"}""".formatted(windowId, address) : """
                         {"kind":"direct","address":%s,"substitution":"similar"}""".formatted(address);

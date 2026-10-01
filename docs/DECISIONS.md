@@ -4957,3 +4957,105 @@ merge in order.
   409; a refund case opened on day 2 keeps that line held past day 8 while the other line releases, and the denied
   case releases it; a replayed drop-off keeps the first time; a food order is delivered from `picked_up`.
   vitest: the consumer's confirmation (proof note, pay date, error then success, French).
+
+## 2026-10-01 — S-86 Pooled run planning and dispatch service
+
+Branch `fulfil/s-86-dispatch`, **stacked on S-78** (#116, itself on S-89 #115): it publishes S-78's
+`delivery.completed`, and V202 must follow V201. Contract for the courier app (S-87) and the console (S-81):
+`docs/runbooks/fulfilment.md`. `docs/CONSOLE_PLAN.md` didn't exist on main when this was written.
+
+- **Module direction:**
+  - orders hands deliveries over through the new inbound port `fulfilment.api.DeliveryRequests`, called from
+    orders' listener `DispatchHandover` on `order.placed` (once per shop, so pickups accumulate), `order.packed`, and
+    the kitchen's `order.accepted` (ready-by) and `order.ready` (food packed).
+  - orders follows fulfilment's events back.
+  - fulfilment reads no orders table and depends on no module that depends on it. food reads `CourierPickups`, and
+    orders depends on food, so fulfilment → orders would be a cycle. fulfilment depends only on identity (courier
+    names), merchants (shop places) and shared.
+  - The drop-off address is copied into `fulfilment.deliveries.dropoff`. Shop orders get it from
+    `identity.api.DeliveryAddresses`, food orders from the checkout snapshot. It is cleared 30 days after the
+    delivery ends.
+- **Planning** (`DispatchService`; every minute in `DispatchJobs`, or `POST /console/fulfilment/plan`):
+  - Pooled windows are planned once the customers' cut-off (`orderBy`) has passed: "Tonight's run created from
+    orders".
+  - Orders whose shops haven't packed still join, because shops pack by `packBy` (the Studio's "Pack by", already
+    shown since S-49/operations) and the courier's pickup refuses an unpacked shop (409 `not_packed`).
+  - A window holds at most `max-drops-per-run` (12, ours) drop-offs per run, then is split into parts.
+  - Direct goods orders get their own run once every shop has packed. Food deliveries get one once accepted, with
+    the pickup due at ready-by.
+  - The planner holds a transaction-level advisory lock, so replicas never plan one window twice.
+- **Stop order, recorded as `nearest-neighbour-v1`:**
+  - pickups first, then drop-offs (a pooled run collects every sealed bag before delivering);
+  - shops by nearest neighbour from the westernmost located shop; drop-offs by nearest neighbour from the last shop;
+  - unlocated places after the located ones: shops by id, addresses by postal code, street, order id;
+  - ETAs: 3 min/km straight line, at least 4 min, 8 min when unlocated; 5 min per shop, 3 min per door.
+  - Deterministic; numbers are ours. Customer addresses aren't geocoded (S-49/S-51), so pooled drop-offs are in
+    postal order today; food addresses carry coordinates.
+- **Couriers:**
+  - `fulfilment.couriers` gains `market`, `active` and `last_assigned_at`. Ops onboards a courier (an existing
+    identity user) and schedules shifts (at most 12 h).
+  - The courier starts a shift from 15 minutes before it (status `available`) and ends it when no run is open.
+  - Assignment goes to the market's courier who is on a shift (ending after the run starts), available and longest
+    without a run. It happens 60 min before a pooled run starts, at once for a direct run.
+  - The run is locked `for update skip locked` and the courier claimed with `update … where status = 'available'`.
+    A partial unique index allows one open run per courier. Ops can reassign a run that hasn't started.
+- **Courier app API** (`/api/v1/courier/**`): scope `courier` **and** a DPoP-bound token (`cnf.jkt`, so Spring's
+  DPoP filter verified the proof — S-29). It is checked at the filter (`SecurityConfig.dpopBound`); a bearer token
+  with the scope is refused. The courier sees only their own run (others' stops 404). Stops:
+  - **arrive;**
+  - **pickup** (the sealed-bag scan is recorded as `scan_ok`);
+  - **proof upload:** photo or signature, JPG/PNG/WebP by magic bytes, ≤ 5 MB, through the new `ProofStorage`
+    port. The adapters are object storage, local disk under local/test, and a fail-loudly placeholder.
+  - **drop-off** with `photo` | `signature` (uploaded first) | `pin` (the delivery's 4-digit PIN, compared in
+    constant time).
+  - The last pickup of an order publishes **`delivery.picked_up`** (orders → `picked_up`). A drop-off publishes
+    S-78's **`delivery.completed`** (orders → `delivered`, escrow window, delivery fee).
+  - Run states: `planned → loading → en_route → done`.
+- **Dispatch events:** `run.planned` and `delivery.assigned` go on the new topic **`fulfilment.run`** (key = run
+  id); `delivery.picked_up` goes on `fulfilment.delivery`. Ids only.
+- **Ops view** (`/api/v1/console/fulfilment/**`, staff + second factor):
+  - runs by market and time, with courier, progress, next ETA and `late` (a pending stop 15 min past its ETA);
+  - a run's stops, an order's delivery, couriers with shift and run;
+  - onboard a courier, schedule a shift, plan now, reassign.
+  - Contract in the runbook for S-81.
+  - **Not audit-logged:** no staff audit trail exists (`developer.api.AuditTrail` is merchant-scoped). S-81's "actions
+    audit-logged" needs one.
+- **Studio:** a seller's order (Orders screen detail) now shows the courier's pickup at that shop: "R-701 · Courier
+  due 6:10 pm", "Courier is here", "Picked up 6:12 pm" and "Finding a courier · pickup about …" (en + fr-CA).
+  `CourierPickups` gains `atMerchant(merchantId, orderIds)` plus `pickedUpAt` and `runLabel`.
+- **OpenAPI:** the courier paths are in the `public` document (the mobile apps' audience), not a new group.
+- **Schema (V202):**
+  - new `fulfilment.deliveries`, `delivery_pickups` and `shifts`;
+  - `couriers` + `market, active, last_assigned_at, created_at`, with unique `user_id`;
+  - `runs` + `market, label, part, starts_at, ends_at, pack_by, heuristic, planned_at, assigned_at, started_at,
+    done_at`, plus a unique `(window_id, part)` and one open run per courier;
+  - `stops` + `merchant_id, state, done_at, proof_kind`, plus a check that a done drop-off has proof.
+  - V010's columns are reused: `route` (ordered stops and ETAs), `proof_media_id` (the object key) and `scan_ok`.
+- **Not done:**
+  - failed deliveries (customer absent) and returns;
+  - PIN attempt limits (the courier is authenticated and at the door);
+  - courier earnings and tips payout;
+  - geocoding shop and customer addresses;
+  - cancelling a delivery when an order is cancelled (no cancel flow exists);
+  - a dev-seed courier persona;
+  - the courier app itself (S-87).
+- **Never run against a real service:** object storage for proofs ran only on the local disk adapter. No real app
+  has called the courier API; DPoP is exercised with generated keys (`DpopResourceServerTest`).
+- **Tests:**
+  - `DispatchApiTest` (market "Dispatchville", movable clock; orders through the real checkout):
+    - tonight's run from 3 orders after the cut-off, not before and not twice;
+    - stop order (pickups grouped, drop-offs by postal code, ETAs non-decreasing), `run.planned`, the console's
+      run/order views, the Studio's pack-by and courier pickup;
+    - the courier's full run: unpacked 409, drop-off before pickup 409, packing in the Studio, arrive/pickup,
+      `delivery.picked_up` → order `picked_up`;
+    - PIN missing, wrong and right; photo missing, not an image and accepted; `delivery.completed` → order
+      `delivered`, escrow window started; courier available, shift ended;
+    - token rules (none 401, customer 403, bearer 403, not a courier 403 `not_a_courier`, another courier's stop 404,
+      shift end with open run 409, proof message 422);
+    - console rules (customer/courier 403, no MFA `mfa_required`, vehicle 422, duplicate 409, 13-h shift 422);
+    - reassignment until the run starts (then 409 `run_started`); a direct order planned once packed.
+  - `CourierAssignmentConcurrencyTest`: 4 racing assigners over 6 runs and 3 couriers → exactly 3 assignments, no
+    courier twice; two staff giving one courier two runs at once → 200 + 409.
+  - `RoutePlannerTest` (heuristic, ETAs, determinism).
+  - `DpopResourceServerTest.theCourierApi_takesOnlyAKeyBoundCourierToken` (real proof).
+  - vitest: the Studio order's courier pickup (en, wording).

@@ -45,6 +45,9 @@ class OpenApiConfig {
         "/api/v1/public/**", "/api/v1/storefronts/**", "/api/v1/search/**", "/api/v1/geo/**"
     };
     static final String[] CUSTOMER = {"/api/v1/me", "/api/v1/me/**", "/api/v1/cart", "/api/v1/cart/**"};
+    /** S-86: the courier app's API (a mobile app with DPoP-bound tokens, like the consumer app). */
+    static final String[] COURIER = {"/api/v1/courier/**"};
+
     static final String[] STUDIO = {
         "/api/v1/merchants/**",
         "/api/v1/me",
@@ -68,14 +71,15 @@ class OpenApiConfig {
                 .group("public")
                 .displayName("Public & consumer")
                 .addOpenApiCustomizer(ApiDocs.base(props))
-                .pathsToMatch(concat(PUBLIC_READS, CUSTOMER))
+                .pathsToMatch(concat(concat(PUBLIC_READS, CUSTOMER), COURIER))
                 .pathsToExclude("/api/v1/me/businesses")
                 .addOpenApiCustomizer(schemes(props))
                 .addOpenApiCustomizer(api -> {
                     ApiDocs.describeGroup(api, "Public & consumer", """
                             What the consumer web and the mobile apps call. Public reads (storefronts, catalogue, \
                             search) need no sign-in; the customer's own endpoints go through the consumer-bff \
-                            (session cookie + CSRF header) or, from the mobile apps, with a DPoP-bound token.""");
+                            (session cookie + CSRF header) or, from the mobile apps, with a DPoP-bound token. The \
+                            courier app's `/api/v1/courier/**` takes only a DPoP-bound token with scope `courier`.""");
                     api.setSecurity(customer());
                     publicReads(api);
                 })

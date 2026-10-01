@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:fulfilment.run_planned:1",
+  "description": "run.planned — topic fulfilment.run, key = run id. A courier run was planned with its stops ordered.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "market",
+    "kind",
+    "orderIds",
+    "stops",
+    "heuristic"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "fulfilment.runs.id"
+    },
+    "market": {
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "pooled",
+        "direct"
+      ]
+    },
+    "windowId": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "orders.delivery_windows.id"
+    },
+    "orderIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "stops": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "heuristic": {
+      "type": "string"
+    }
+  }
+}
