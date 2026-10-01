@@ -8,6 +8,7 @@ import { nextAvailable, percent, price, rating } from '../services/format';
 import { useServicesT } from '../services/messages';
 import { categoryName, copyKeys, familyOf } from '../services/taxonomy';
 import { dyn } from '../services/text';
+import { FavouriteButton } from '../account/FavouriteButton';
 import { moreReviewsQuery, providerQuery, storefrontQuery, type ProviderFacts, type PublicReview, type Storefront } from './api';
 import { useProviderT } from './messages';
 
@@ -58,7 +59,10 @@ function Hero({ page, facts, locale }: { page: Storefront; facts: ProviderFacts;
           <div className="nl-prov-tagline">{tagline}</div>
         </div>
       </div>
-      <span className="tag nl-prov-tier">{t('tierVerified', { tier })}</span>
+      <span className="nl-prov-tierbox">
+        <span className="tag nl-prov-tier">{t('tierVerified', { tier })}</span>
+        <FavouriteButton merchantId={facts.merchantId} className="btn btn-ghost nl-prov-fav" />
+      </span>
     </header>
   );
 }

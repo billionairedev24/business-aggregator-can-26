@@ -31,6 +31,14 @@ public final class ObjectKeys {
     }
 
     /**
+     * {@code customers/<userId>/<objectId>[.<ext>]} — a customer's own upload (S-60 photos), one prefix per person so
+     * erasure can remove it.
+     */
+    public static String customerObject(String userId, String objectId, String contentType) {
+        return merchantObject("customers/" + userId, objectId, contentType);
+    }
+
+    /**
      * @return the key, when it is a relative path of {@code [A-Za-z0-9._-]} segments that neither start with a dot nor
      *     climb out ({@code ..}); otherwise {@link IllegalArgumentException}
      */

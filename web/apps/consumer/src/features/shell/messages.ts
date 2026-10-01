@@ -58,14 +58,14 @@ export const SCREEN_NAMES: { en: Record<ScreenKey, string>; fr: Record<ScreenKey
     product: 'Product', cart: 'Cart', confirmed: 'Order confirmed', food: 'Food', restaurant: 'Restaurant',
     foodCheckout: 'Checkout', foodTrack: 'Track order', services: 'Services', svcCategory: 'Service category',
     providers: 'Providers', provider: 'Provider', book: 'Book a service', quote: 'Quote', quoteRequest: 'Request quotes', quoteCompare: 'Compare quotes', orders: 'Orders & bookings',
-    account: 'Account', signIn: 'Sign in', register: 'Create account', sell: 'Sell or offer a service',
+    account: 'Account', problem: 'Report a problem', signIn: 'Sign in', register: 'Create account', sell: 'Sell or offer a service',
   },
   fr: {
     home: 'Accueil', location: 'Où devons-nous livrer ?', search: 'Rechercher', shop: 'Boutique', category: 'Rayon',
     product: 'Produit', cart: 'Panier', confirmed: 'Commande confirmée', food: 'Restaurants', restaurant: 'Restaurant',
     foodCheckout: 'Paiement', foodTrack: 'Suivre la commande', services: 'Services', svcCategory: 'Catégorie de service',
     providers: 'Prestataires', provider: 'Prestataire', book: 'Réserver un service', quote: 'Devis', quoteRequest: 'Demander des devis', quoteCompare: 'Comparer les devis', orders: 'Commandes et réservations',
-    account: 'Compte', signIn: 'Se connecter', register: 'Créer un compte', sell: 'Vendre ou offrir un service',
+    account: 'Compte', problem: 'Signaler un problème', signIn: 'Se connecter', register: 'Créer un compte', sell: 'Vendre ou offrir un service',
   },
 };
 export const useScreenT = defineMessages(SCREEN_NAMES);

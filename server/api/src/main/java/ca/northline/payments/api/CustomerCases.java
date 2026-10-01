@@ -11,6 +11,13 @@ public interface CustomerCases {
     /** Opens refund case {@code RF-…} on an escrow; returns the refund id. */
     String requestRefund(String escrowId, String customerId, long amountCents, String what);
 
+    /**
+     * Opens refund case {@code RF-…} for review only (S-60 "Something's wrong"): never approved automatically — the
+     * merchant accepts, or a Northline agent decides once the merchant contests or the 24 h review window passes. The
+     * escrow goes on hold when it is still held. Returns the refund id.
+     */
+    String requestReview(String escrowId, String customerId, long amountCents, String what);
+
     /** Opens dispute {@code DS-…} on an escrow (escrow goes on hold); returns the dispute id. */
     String openDispute(String escrowId, String customerId, String subject, String statement);
 }

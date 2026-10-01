@@ -329,3 +329,19 @@ sessions are ignored.
   approves in the console (S-console).
 - *Redaction* — a person's request to delete their verification data is done in the Stripe dashboard (Identity →
   session → Redact); Northline holds no copy.
+
+## 9. Saved cards — SetupIntents (S-59)
+
+Customers save cards from **Account › Payment methods** without paying: the api creates a card-only,
+`usage=off_session` SetupIntent on the person's Stripe Customer (`POST /api/v1/me/payment-methods/setup-intents`, the
+same Customer checkout uses), Stripe.js confirms it in the Payment Element (`confirmSetup`), and the api reads the
+PaymentMethod back (`POST /api/v1/me/payment-methods`). The default card is the Customer's
+`invoice_settings.default_payment_method`; Remove detaches the PaymentMethod.
+
+- **Nothing new to configure:** it uses `STRIPE_SECRET_KEY` and `STRIPE_PUBLISHABLE_KEY` like checkout. Without a key
+  (local, test) the fake adapter saves a test Visa ending 4242 in memory (a restart forgets it).
+- **What Northline keeps:** `payments.customer_cards` — brand, last four, expiry, default flag — refreshed from Stripe
+  on every list; it feeds the account menu ("Visa ··4471") and the billing history. Never a card number.
+- **Never run against the real Stripe API** in this repository: the adapter (`StripeSavedCards`) is tested against
+  stripe-mock only. Before launch, run the flow once in test mode (3-D Secure test card `4000 0025 0000 3155` asks for
+  authentication during `confirmSetup`).

@@ -43,6 +43,19 @@ class PaymentsGatewayConfig {
         return new FakeStripeGateway(clock, time);
     }
 
+    /** S-59: saved cards through SetupIntents. */
+    @Bean
+    @ConditionalOnExpression(HAS_KEY)
+    StripeSavedCards stripeSavedCards(PaymentsProperties props) {
+        return new StripeSavedCards(client(props));
+    }
+
+    @Bean
+    @ConditionalOnExpression(NO_KEY)
+    FakeSavedCards fakeSavedCards(Clock clock) {
+        return new FakeSavedCards(clock);
+    }
+
     @Bean
     @ConditionalOnExpression(NO_KEY)
     FakeBankLinking fakeBankLinking() {

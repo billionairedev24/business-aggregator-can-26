@@ -55,7 +55,12 @@ function Track({ t, o }: { t: T; o: Tracking }) {
           {steps.map((s, i) => <li key={i} data-done={done(i) || undefined} aria-current={done(i) && !done(i + 1) ? 'step' : undefined}><span aria-hidden className="nl-track-dot" />{s}</li>)}
         </ol>
         <p className="nl-fco-muted">{t('liveNote')}</p>
-        <div className="nl-track-actions"><Link to="/account/orders" className="btn btn-ghost">{t('orders')}</Link></div>
+        <div className="nl-track-actions">
+          {o.stage === 'delivered' || o.stage === 'on_the_way'
+            ? <Link to="/account/problem/$kind/$id" params={{ kind: 'food', id: o.orderId }} className="btn btn-secondary">{t('somethingWrong')}</Link>
+            : null}
+          <Link to="/account/orders" className="btn btn-ghost">{t('orders')}</Link>
+        </div>
       </div>
       <div className="nl-track-map halftone" aria-hidden>
         <svg viewBox="0 0 400 300">

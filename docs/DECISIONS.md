@@ -3996,3 +3996,214 @@ Stacked on S-132 (#87) → S-131 (#85) → S-130 (#83) → S-129 (#82).
 - **Not done / never exercised:** no live model run (precision and recall are measured only against the simulated
   model); no console UI; the scheduler's cron and interval were not run in a deployed environment (tests call the use
   cases directly).
+
+## 2026-09-30 — S-58 Account area: orders & bookings, quotes, favourites, wallet & points
+
+Branch `web/s-58-account-activity` (not stacked).
+
+- **New module `account`** (`ca.northline.account`, schema `account`): the consumer's own area under `/api/v1/me`,
+  single-factor sessions allowed. It owns only favourites and composes everything else from the other modules' `api`
+  packages, which gained small read interfaces (each implemented by that module's own JDBC, so `SchemaOwnershipTests`
+  holds — `account` was added to its schema list):
+  `orders.api.CustomerOrders` (shop and food orders with lines, shops, window/ETA), `booking.api.CustomerHistory`
+  (bookings with the `completed` event time; quote requests without an accepted quote, with each provider's latest open
+  version), `payments.api.CustomerCaseQuery` (refund cases through `escrows.customer_id`, disputes through
+  `opened_by`), `trust.api.LoyaltyPoints`, `identity.api.PlusMemberships`.
+- **Endpoints:** `GET /me/activity` (Orders & bookings), `GET /me/upcoming` (the S-46 "Your week" contract, texts in
+  the caller's language), `GET /me/wallet`, `GET /me/account-summary` (the S-45 menu contract — S-58 fills
+  `reliability`, `points`, `plus`, `activeOrders`, `favourites`, `openCases`), `GET /me/favourites`,
+  `PUT|DELETE /me/favourites/{businessId}` (idempotent; 404 when the business isn't active). All `no-store`.
+- **One list, three filters:** design 06's "Active · 3 / Past / Refunds & cases · 1" tags filter one Data Table
+  (`?view=active|past|cases`). Active = orders not yet delivered (placed → picked up), bookings not yet completed
+  (requested → on site), quote requests waiting for or holding open quotes; active rows sort soonest first, past rows
+  newest first, at most 100. A request with an accepted quote is not listed — its booking is (status "Deposit held"
+  when only the quote's deposit was held). "Refunds & cases" = rows with a refund case or dispute on any of their escrow
+  references (an order's lines, a food order, a booking); an open one turns the row's status into "Case RF-…" and its
+  action into "View case" (`/account?tab=help&case=<id>`, S-60's tab).
+- **Statuses** are codes the web words (en/fr): orders packing / ready / on the way / delivered / done; food paid /
+  cooking / ready / on the way / done; bookings booked (nothing paid), escrow, deposit held, on the way, on site,
+  completed, done; requests waiting / quote ready / declined / expired. Row titles follow the design: "Grocery run ·
+  N shops" for pooled runs (also for non-grocery shops — the design's wording), "Delivery · N shops" for direct
+  couriers, the kitchen's name for food, the job or request title otherwise. Actions: Track (orders under way), Details
+  (a booking's confirmation `/providers/<slug>/book?step=done&booking=`, a past order), View quote (`/quotes/<id>` when
+  one quote is open, else the comparison), Re-book (`/providers/<slug>`), View case.
+- **"Done ★5"** isn't shown: there is no consumer review flow writing `trust.reviews` for these jobs yet.
+- **Your week** (server-written, en/fr): active rows within seven days, plus requests with a quote ready; times in
+  the default market's zone (`region.api.Markets.zone(null)` — no zone in code), money with the locale's CAD format.
+- **Wallet & points — minimal read model (stubbed earning):** no loyalty backend existed. `trust.points_ledger` (V012)
+  got `created_at` and `note` (V160); `LoyaltyPoints` reads the balance (not-yet-expired credits minus debits) and the
+  points earned in each of the last eight weeks. **Nothing writes the ledger** (no earning, redemption or expiry
+  rules; checkout's points line stays hidden, S-51) — the dev seed (V161) stands in. 100 points = $1 (design 06:
+  1,240 pts = $12.40). Plus reads `identity.households.plus_plan` through `household_members`; V160 adds
+  `plus_since` ("Active since …"). Nothing bills Plus (no subscription backend).
+- **Wallet's "Payment methods" section** links to the Payment methods tab until S-59 lists the cards there.
+- **Favourites:** `account.favourites (user_id, merchant_id, created_at)`. A card shows the business's tier, its
+  main category (the leaf of the category id; French from the services taxonomy's `FR_NAMES`), how many of the
+  person's own bookings/orders were with it and the last one, and one button: View quote (an open quote from it), Book
+  (provider page), Order (kitchen page), Shop (a Shop-scope search by its name — shops have no pages yet, S-48's rule).
+  The design's brand colour per card and "3× points this week" (merchant rewards) are not shown: no rewards data.
+  "Offered first when you book" and "notified when they fund rewards or open new slots" are **not implemented** (no
+  booking-order or notification hook reads favourites yet). ♡ was added to the provider page's header (signed-in
+  only; it renders nothing until the browser knows who is signed in, so the SSR HTML is unchanged).
+- **Other tabs** of `/account` (payments, profile, addresses, security, notifications, language, dietary, plus, help)
+  show "This part of your account is on its way (S-59/S-60)." until those stories land. The tab list wraps into pills
+  under 720 px (no horizontal scroll); `Sell or offer a service` links to S-61's `/sell`.
+- **UI kit:** `@northline/ui` exports `./DataTable.css` so a server-rendered route can link the table's stylesheet
+  (the consumer app's first Data Table).
+- **Schema (V160, consumer-account range V160–V169 — renumbered from V140 by the ordering rule):** schema `account` +
+  `account.favourites`; `trust.points_ledger.created_at`, `.note` + index `(user_id, created_at)`;
+  `identity.households.plus_since`; indexes `identity.household_members(user_id)`, `booking.bookings(customer_id,
+  starts_at desc)`, `payments.escrows(customer_id)`, `payments.disputes(opened_by)`. Dev seed V161: Amara's three
+  favourites and 1,240 points.
+- **Tests:** `AccountActivityApiTest` (orders, bookings and quotes with statuses, actions and hrefs, active first,
+  someone else's rows hidden; a refund case on an order line; Your week in en and fr; wallet points/weeks/Plus and an
+  empty wallet; favourites add/list/remove, idempotent, 404 for an inactive business; 401 signed out). vitest
+  `features/account/account.test.tsx` (design copy and columns, actions navigate, Past / Refunds & cases filters,
+  empty, error + Retry, guest sign-in, skeleton, French; wallet balance/value/chart/Plus, error, no points; favourites
+  meta, buttons, Remove, empty, guest, French).
+
+## 2026-10-01 — S-59 Account area: profile, addresses, payment methods (SetupIntent), security, notifications, language, dietary & accessibility, Plus
+
+Branch `web/s-59-account-settings`, **stacked on S-58** (`web/s-58-account-activity`, #90).
+
+- **Tabs built:** Payment methods, Profile, Addresses & household, Security & sign-in, Notifications, Language & region,
+  Dietary & accessibility, Northline Plus (design 06 `at.*`); the wallet's "Payment methods" section now lists the
+  cards. Help & cases is S-60. Every tab has a skeleton, an empty line where a list can be empty, a rosehip error with
+  Retry, en + fr-CA copy, 44 px targets and no horizontal scroll (the notification table scrolls inside its own box
+  below ~360 px rather than the page).
+- **Endpoints** (all `/api/v1/me`, single-factor sessions accepted):
+  - identity — `GET|PATCH /profile`, `POST /erasure-request`, `GET|POST /addresses`, `PATCH|DELETE /addresses/{id}`,
+    `POST /addresses/{id}/default`, `GET /household`, `POST|DELETE /plus`;
+  - payments — `GET /payment-methods`, `POST /payment-methods/setup-intents`, `POST /payment-methods {setupIntentId}`,
+    `POST /payment-methods/{id}/default`, `DELETE /payment-methods/{id}`, `GET /billing-history`;
+  - messaging — `GET|PUT /notifications`;
+  - account — `GET|PATCH /preferences`, `GET /export`; `GET /account-summary` now also fills `paymentMethod`,
+    `addresses {count, members}`, `signIn`, `quietHours` ("10 pm" / "22 h"), `dietary` (words in the caller's
+    language) and `province` (the S-45 menu contract is complete).
+- **Saved cards = Stripe SetupIntents** (new port `payments.application.SavedCardGateway`; `StripeSavedCards` with
+  stripe-java, `FakeSavedCards` without a key — a test Visa ending 4242, in memory). Stripe is the source of truth;
+  every list refreshes `payments.customer_cards` (brand, last four, expiry, default — never the number), which feeds
+  the menu and the billing history's card column. The first saved card becomes the default; removing the default
+  promotes the newest remaining card. A SetupIntent or card that isn't the caller's is 404. The card form is the
+  Payment Element (`confirmSetup`, `redirect: if_required`) when the api says Stripe, else the read-only test-card
+  stand-in (S-51's pattern). Apple Pay / Google Pay rows of the design are not offered (cards only, S-51).
+  **Never run against real Stripe** — `StripeSavedCardsStripeMockTest` checks the requests against stripe-mock.
+- **Billing history** = the caller's escrows (label, order number, amount + tax + Northline's own charges, state) and
+  S-51's delivery-fee PaymentIntents, newest first, 50 at most; "Northline Plus · monthly" rows of the design don't
+  exist (Plus isn't billed).
+- **Profile:** first/last name and the receipts email (registration's messages; another account's email → 422 "That
+  email is already used by another account."), pronouns (she / he / they / prefer not to say), birthday as month-day
+  ("Enter a birthday like 03/14 (month / day)."). The verified mobile is read-only (changing it needs a code at
+  northline-auth — not in this story). **Not built:** profile photo upload / remove (no avatar storage; initials are
+  shown) and the reliability breakdown ("0 no-shows · 0 disputes lost · 14 jobs rated 5★") — only the score and its
+  explanation. **"Delete account…"** records `identity.users.erasure_requested_at` after a confirmation; staff erase
+  the account (no automated erasure job yet).
+- **Addresses:** checkout's validation messages; a name ("Mum") is new (`label`); a saved address can be renamed and
+  its unit/note changed — moving it means a new address; removal keeps the row (`deleted_at`, orders may point at it)
+  and the next address becomes the default. S-51's `DeliveryAddresses` now ignores removed addresses. Household
+  members are listed (names, "own login", "shares Plus"); **invitations are not built** ("Manage" shows the members).
+- **Plus — free trial only, no billing:** "Start 30-day free trial" creates the person's household when needed and
+  sets `plus_plan`, `plus_since` and `renews_at` = now + 30 days; a plan past `renews_at` is no longer active
+  (`PlusMemberships`, wallet, menu). Cancel sets `none`. No Stripe Billing subscription, no charge after the trial, no
+  Plus pricing at checkout yet.
+- **Security tab = northline-auth's S-19 API through `@northline/auth-kit`:** the schemas, query and changes
+  (`securityQuery`, add/remove passkey, revoke session, revoke others, `securityChangeError`) moved from the Studio's
+  settings API into `packages/auth-kit/src/security.ts`; the Studio re-exports them unchanged. A phone-code session has
+  no second-factor auth session, so the tab first asks to confirm with the passkey / authenticator (S-51's step-up
+  endpoints renew the session's factor) — or, for an account without one, to add a passkey on this device (S-51's
+  enrolment, only within 15 minutes of signing in; otherwise "sign in again"). A change answered `step_up_required`
+  opens the same confirmation and is retried. "Security key (FIDO2) · Add" registers a WebAuthn credential labelled
+  "Security key". **Deviations:** the design's "Require Face ID / passkey for payments over $100" would misstate S-51's
+  rule (every payment from a phone-code session steps up), so the row reads "Require Face ID / passkey for payments ·
+  Always"; "login alerts on" is not claimed (no sign-in alerts are sent); setting up an authenticator app after
+  registration isn't offered (no such auth endpoint — the row shows Enabled / Not set up). "Sign out everywhere" signs
+  every other session out (step-up as needed) and then this browser.
+- **Download my data** (`GET /me/export`, `Content-Disposition: attachment`): profile, addresses, preferences,
+  favourites, orders & bookings, wallet, refund cases. Not included: notification settings, saved-card summaries,
+  messages, and northline-auth's data (passkeys, sessions — shown on the tab).
+- **Notifications:** the design's seven rows × push/SMS/email with its defaults; security alerts are on everywhere and
+  can't be turned off (422 "Security alerts always go to every channel."). Quiet hours share the person's
+  `quiet_from` / `quiet_to` with their Studio matrix (one person, one night); `quiet_on`, the notification language
+  (same as app / English / Français) and marketing email (weekly / rewards only / none — CASL) are customer-only
+  columns. Changes are kept on the page until "Save preferences". **Stored only — no customer notification is sent
+  yet** (the S-27 worker has no customer events); the SMS number and email shown are the profile's (read-only here).
+- **Language & region:** English / Français switch the app in place on Save and set `identity.users.locale`
+  (receipts, notifications). The design's "ਪੰਜਾਬੀ · Punjabi (beta)" is not offered: the app has no Punjabi copy.
+  Province choices are the region model's live and pilot provinces (S-134; pilots marked "(pilot)"), plus "Follow my
+  location"; the api accepts any province of the region model (no province list in code — S-134's lint). The French
+  option's design wording "requis au Québec" is allowed in the web region lint with that reason; units and time format are stored (nothing formats with them yet); currency is CAD only.
+- **Dietary & accessibility:** codes stored in `account.preferences`; the menu shows the dietary words. **Not yet
+  used:** shop filtering by diet, flagging products, sharing notes with visiting providers, and applying the display
+  choices (larger text, high contrast, reduce motion) to the page.
+- **Schema (V162):** `identity.users.pronouns`, `birthday_month`, `birthday_day`, `erasure_requested_at`;
+  `identity.addresses.label`, `created_at`, `deleted_at`; `account.preferences`; `payments.customer_cards`; index
+  `payments.payment_intents(customer_id)`; `messaging.notification_prefs.customer_matrix`, `quiet_on`, `notify_lang`,
+  `marketing`. Dev seed V163: Amara's two addresses (design copy), Kofi in her household, her dietary/accessibility
+  choices.
+- **Tests:** `AccountSettingsApiTest` (profile read/update and messages, email taken, erasure idempotent; addresses
+  add/rename/default/remove, someone else's 404, messages; Plus trial start/conflict/cancel and the wallet; saved
+  cards through the fake SetupIntents, default, remove, someone else's 404; billing history; notifications defaults,
+  changes, security locked, quiet hours validation and the menu value; preferences incl. locale and menu values;
+  export; 401s), `StripeSavedCardsStripeMockTest`; vitest `features/account/settings.test.tsx` (every tab's main path,
+  validation messages, step-up prompt, French).
+
+## 2026-10-01 — S-60 Refund / "something's wrong" flow into the case queue
+
+Branch `web/s-60-something-wrong`, **stacked on S-59** (#93, itself on S-58 #90).
+
+- **Design source:** design 06 has the cases table (Help & cases) and "View case" from Orders & bookings; the report
+  screen itself is the consumer app's `refund` screen (`design/Consumer Screen.dc.html`, "Something's wrong" on
+  `delivered`). Its copy is used as written ("Pick what went wrong. Your request opens a case…", "Request $X refund",
+  "Case RF-2201 · in review", the four steps, "We'll notify you at each step…").
+- **Never an instant refund.** A report opens, per escrow, a payments refund case through the new
+  `CustomerCases.requestReview` (S-11's case queue: the escrow goes on hold, the business is emailed via
+  `refund.case_updated`, the business accepts or contests within 24 h). Unlike `requestRefund` — whose "under $25 is
+  approved unless contested within 48 h" rule the Studio describes — **review cases are never approved by the clock**:
+  `Refund.requested(…, autoApprove = false)` makes the lapse job send them to a Northline agent. Payment happens only
+  through the existing refund queue after an approval. A refund case on an already refunded escrow is now refused
+  (409 `escrow_refunded`) for both paths.
+- **Escrow windows respected** (`account.domain.ProblemRules`, `payments.api.CustomerEscrows`): an item can be reported
+  while its escrow is held and fulfilled and before it releases — goods until 7 days after delivery, services until
+  48 h after completion (a customer's sign-off / "All good" releases at once and closes the window). Food is released
+  at handoff, so food problems can be reported for **24 h after handoff** (our number; the refund then comes back
+  through S-11's transfer reversal). Statuses per item: open, reported (a case is open), closed (released / refunded
+  / past the window), not_yet (not delivered / done), not_paid (no escrow). 409 codes: `already_reported`,
+  `window_closed`, `not_fulfilled`, `not_paid`.
+- **One case per escrow:** goods orders hold escrow per line, so each chosen line gets its own `RF-…` (the design's
+  cases table lists them per item: "kale spoiled · $4.46"); a food order (one escrow) and a booking get one, whatever
+  lines are picked (food: the picked lines' amount, capped at the escrow). The amount asked is the item's price plus
+  its share of the tax, as the refund queue pays it.
+- **Northline's case queue:** each report also opens one **customer case** in `messaging.tickets`
+  (`requester_type = customer`, no business — so it never shows in a Studio's Help — topic `refund`, `HD-…`, the
+  support SLA: urgent 15 min, else 4 h of support hours) with a `case` thread holding the report and photos, and in
+  `context` the refund case ids and the triage. No console queue screen exists yet; staff work from the table (no
+  `ticket.opened` event: its schema requires a business — follow-up).
+- **S-132 triage is optional:** the web asks `POST /api/v1/me/help/triage` when the person writes a note (≥ 10
+  characters, on blur) and shows "Sounds like: Damaged" with a button to use it; only when the person's chosen reason
+  matches the suggestion are `triageCategory` / `triageSummary` sent. Any failure (AI off, budget, older api) shows
+  nothing. Without triage the server maps the reason to S-132's categories (`damaged`, `missing_item`,
+  `service_quality` …); `safety` makes the case urgent. The flow works the same without the AI module.
+- **Reasons:** goods and food — Missing, Damaged, Wrong item, Poor quality, Late (design); services — Not done, Poor
+  quality, Late, No-show, Charged wrongly (ours; the design shows only goods).
+- **Photos:** `POST /me/case-uploads` (the help form's rules: JPG/PNG/HEIC/PDF, signature checked, ≤ 10 MB, ≤ 5 per
+  report or note) into the messaging `AttachmentStorage` under `customers/<user>/…` (new `ObjectKeys.customerObject`)
+  and `messaging.customer_uploads`; only the uploader can attach or read them.
+- **Help & cases** (`/account?tab=help`, design 06 `at.help`): the person's refund cases and disputes with the design's
+  statuses ("Seller reviewing · 14 h left", "Closed · $15 credit", …) and what they are about (the Orders & bookings
+  row); `?case=` opens one with its timeline (Submitted → Seller reviews → Northline decides → Refund issued; steps
+  marked done / now / next / not needed / not refunded) and the case's messages, where the person can add a message
+  ("You can add photos or messages to the case any time"). **Not built:** "Chat with Northline" (no live support chat
+  for customers); adding photos to an existing case from the web (the api accepts `attachmentIds` on notes).
+- **Entry points:** Orders & bookings rows of delivered orders (goods: 7 days, food: 24 h) and completed paid jobs get
+  "Something's wrong" (`report` action → `/account/problem/<order|food|booking>/<id>`); the order tracking page (S-52)
+  when delivered and the food tracking page (S-57) after handoff link to it. The page itself checks the escrow.
+- **Points adjusted** in the last step is the design's copy; no ledger writer exists yet (S-58).
+- **Schema (V164):** `messaging.customer_uploads`; index `messaging.tickets (requester_type, requester_id,
+  created_at)`. No new configuration.
+- **Tests:** `SomethingWrongApiTest` (report → refund case in seller review with `auto = false`, escrow on hold,
+  customer ticket with the refund and triage category, already reported 409, lapse goes to an agent not an approval;
+  closed / not yet / not paid; a job as one case and safety urgent; food released at handoff still reportable, one
+  case for two lines; validation messages and others' 404/401; photos, Help & cases list, detail steps, a note,
+  others' 404; the `report` action in Orders & bookings). vitest `features/account/problem.test.tsx` (report with a
+  photo and the four steps, required item and reason, triage suggestion used and sent, no suggestion when triage is
+  off, closed window, error + Retry, French; Help & cases statuses, a case's timeline and a message).

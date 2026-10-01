@@ -10,6 +10,8 @@
 .nl-prov-name { font-size: clamp(30px, 5vw, 40px); margin: 0; letter-spacing: -0.02em; color: var(--color-on-accent); overflow-wrap: anywhere; }
 .nl-prov-tagline { font-size: 15px; opacity: .88; }
 .nl-prov-tier { background: var(--color-surface); color: var(--color-text); }
+.nl-prov-tierbox { display: inline-flex; align-items: center; gap: 6px; }
+.nl-prov-fav { min-width: 44px; min-height: 44px; background: var(--color-surface); color: var(--color-accent-2-700); border-radius: var(--radius-pill); }
 .nl-prov-split { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(min(100%, 320px), 1fr); gap: 28px 64px; margin-top: 28px; align-items: start; }
 @media (max-width: 859px) { .nl-prov-split { grid-template-columns: minmax(0, 1fr); } }
 .nl-prov-main { min-width: 0; }

@@ -1,0 +1,130 @@
+/* Account area (S-58 … S-60, design 06 `orders` and `account`). Tokens only. */
+.nl-acct-grid { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 28px 48px; padding-top: 32px; }
+.nl-acct-tabs { display: flex; flex-direction: column; gap: 2px; font-size: 15px; }
+.nl-acct-tab { display: flex; align-items: center; min-height: 44px; padding: 10px 12px; border-radius: var(--radius-md); color: var(--color-text); text-decoration: none; }
+.nl-acct-tab:hover { background: var(--color-accent-100); }
+.nl-acct-tab.is-current { background: var(--color-accent-100); color: var(--color-accent-800); font-weight: 600; }
+.nl-acct-tab:focus-visible, .nl-orders-view:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.nl-acct-body { min-width: 0; }
+.nl-acct-h1 { font-size: 36px; margin: 0; letter-spacing: -0.02em; }
+.nl-acct-h2 { font-size: 22px; margin: 28px 0 8px; }
+.nl-acct-lede { font-size: 14px; color: var(--color-neutral-700); margin: 6px 0 18px; max-width: 60ch; }
+.nl-acct-strong { font-weight: 600; }
+.nl-acct-panel { margin-top: 22px; padding: 16px; border-radius: var(--radius-md); background: var(--color-surface); display: flex; justify-content: space-between; align-items: center; gap: 12px; max-width: 640px; flex-wrap: wrap; }
+.nl-acct-rows { display: flex; flex-direction: column; max-width: 640px; font-size: 15px; margin: 0; padding: 0; list-style: none; }
+.nl-acct-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 48px; flex-wrap: wrap; }
+.nl-acct-actions { display: flex; gap: 10px; margin-top: 22px; flex-wrap: wrap; align-items: center; }
+@media (max-width: 720px) {
+  .nl-acct-grid { grid-template-columns: minmax(0, 1fr); gap: 18px; padding-top: 20px; }
+  .nl-acct-tabs { flex-direction: row; flex-wrap: wrap; gap: 6px; }
+  .nl-acct-tab { min-height: 44px; padding: 8px 12px; border: 1px solid var(--color-divider); border-radius: var(--radius-pill); font-size: 14px; }
+  .nl-acct-h1 { font-size: 30px; }
+}
+
+/* Wallet & points */
+.nl-wallet-balance { display: flex; align-items: baseline; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+.nl-wallet-points { font-size: 52px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; }
+.nl-wallet-chart { margin: 14px 0 0; max-width: 520px; }
+.nl-wallet-bars { display: flex; gap: 4px; height: 60px; }
+.nl-wallet-bar { flex: 1; background: var(--color-neutral-200); display: flex; align-items: flex-end; }
+.nl-wallet-bar > span { display: block; width: 100%; background: var(--color-accent); }
+.nl-wallet-chart figcaption { margin-top: 4px; font-size: 12px; }
+
+/* Favourites */
+.nl-fav-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; max-width: 760px; }
+.nl-fav { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 12px 0; }
+.nl-fav-mark { width: 52px; height: 52px; border-radius: var(--radius-md); background: var(--color-accent-700); color: var(--color-on-accent); display: grid; place-items: center; font-weight: 600; font-size: 20px; }
+.nl-fav-name { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.nl-fav-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+@media (max-width: 520px) {
+  .nl-fav { grid-template-columns: 52px minmax(0, 1fr); }
+  .nl-fav-actions { grid-column: 1 / -1; justify-content: flex-start; }
+}
+
+/* Orders & bookings */
+.nl-orders { padding-top: 32px; }
+.nl-orders-views { display: flex; gap: 6px; margin: 14px 0 6px; flex-wrap: wrap; }
+.nl-orders-view { font: inherit; font-size: 13px; font-weight: 600; min-height: 44px; padding: 6px 14px; border-radius: var(--radius-pill); border: 0; cursor: pointer; background: var(--color-neutral-200); color: var(--color-neutral-900); }
+.nl-orders-view.is-current { background: var(--color-accent-100); color: var(--color-accent-800); }
+.nl-orders-table { max-width: 960px; width: 100%; min-width: 0; }
+
+/* Settings tabs (S-59) */
+.nl-block { display: block; }
+.nl-center { text-align: center; }
+.nl-measure { max-width: 60ch; margin-top: 8px; }
+.nl-first { margin-top: 0; }
+.nl-acct-form { max-width: 640px; margin-top: 22px; }
+.nl-acct-wide { max-width: 640px; margin-top: 12px; }
+.nl-acct-note { font-size: 14px; color: var(--color-neutral-700); margin-top: 16px; }
+.nl-acct-table { max-width: 720px; width: 100%; min-width: 0; overflow-x: auto; }
+.nl-acct-fieldset { border: 0; padding: 0; margin: 18px 0 0; max-width: 520px; }
+.nl-danger { color: var(--color-accent-2-700); }
+.nl-danger-btn { background: var(--color-accent-2); color: var(--color-on-accent); }
+.nl-profile-head { display: flex; gap: 18px; align-items: center; margin-top: 18px; }
+.nl-profile-avatar { width: 80px; height: 80px; border-radius: 50%; background: var(--color-accent-700); color: var(--color-on-accent); display: grid; place-items: center; font-weight: 600; font-size: 28px; }
+
+.nl-pm-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-width: 640px; }
+.nl-pm { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--color-divider); border-radius: var(--radius-md); flex-wrap: wrap; }
+.nl-pm-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.nl-pm-add { margin-top: 12px; }
+.nl-card-form { margin-top: 10px; max-width: 520px; padding: 14px; border: 1px solid var(--color-divider); border-radius: var(--radius-md); }
+.nl-card-kicker { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-neutral-700); margin-bottom: 10px; }
+.nl-card-element { min-height: 120px; }
+.nl-card-fake { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.nl-card-fake dt { font-size: 13px; font-weight: 600; }
+.nl-card-fake dd { margin: 4px 0 0; border: 1px solid var(--color-divider); border-radius: var(--radius-md); padding: 0 10px; min-height: 42px; display: flex; align-items: center; font-size: 14px; color: var(--color-neutral-500); background: var(--color-bg); }
+.nl-card-fake-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.nl-card-save { margin-top: 12px; }
+
+.nl-sec-banner { margin-top: 14px; padding: 14px 16px; background: var(--color-accent-100); border-radius: var(--radius-md); color: var(--color-accent-900); max-width: 640px; }
+.nl-sec-banner.is-weak { background: var(--color-highlight-100); color: var(--color-on-highlight); }
+.nl-sec-confirm { flex-direction: column; align-items: stretch; }
+
+.nl-notif-table { width: 100%; }
+.nl-notif-table th[scope="row"] { font-weight: 400; text-align: left; }
+.nl-toggle { width: 44px; height: 26px; border-radius: 13px; border: 0; cursor: pointer; background: var(--color-neutral-300); position: relative; }
+.nl-toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--color-bg); transition: transform .15s; }
+.nl-toggle[aria-checked="true"] { background: var(--color-accent); }
+.nl-toggle[aria-checked="true"]::after { transform: translateX(18px); }
+.nl-toggle:disabled { cursor: not-allowed; opacity: .6; }
+.nl-toggle:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .nl-toggle::after { transition: none; } }
+.nl-quiet { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; max-width: 720px; }
+.nl-quiet select { max-width: 130px; }
+
+.nl-lang-options { display: flex; flex-direction: column; gap: 8px; }
+.nl-plus-plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 10px; max-width: 720px; }
+.nl-plus-perks { font-size: 15px; display: flex; flex-direction: column; gap: 6px; color: var(--color-neutral-800); padding-left: 18px; margin: 0; }
+
+/* Something's wrong & Help & cases (S-60) */
+.nl-problem { padding-top: 32px; max-width: 640px; }
+.nl-problem-kicker { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-neutral-700); padding: 0; }
+.nl-problem-set { border: 0; padding: 0; margin: 18px 0 0; }
+.nl-problem-items { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.nl-problem-item { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 8px 12px; border: 1px solid var(--color-divider); border-radius: var(--radius-md); cursor: pointer; }
+.nl-problem-item.is-on { border-color: var(--color-accent); background: var(--color-accent-100); }
+.nl-problem-item[aria-disabled="true"] { cursor: not-allowed; opacity: .7; }
+.nl-problem-item input { width: 18px; height: 18px; accent-color: var(--color-accent); }
+.nl-problem-item:focus-within { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.nl-problem-item-name { flex: 1; min-width: 0; }
+.nl-problem-set .nl-chips { margin-top: 8px; }
+.nl-problem-suggest { margin-top: 8px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.nl-problem-photo { margin-top: 14px; min-height: 46px; }
+.nl-problem-photos { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.nl-problem-submit { margin-top: 16px; min-height: 50px; font-size: 16px; }
+.nl-problem-done { margin-top: 14px; }
+.nl-problem-card { margin-top: 0; }
+.nl-problem-received { font-size: 18px; font-weight: 600; margin-top: 4px; }
+.nl-problem-steps { list-style: none; padding: 0; margin: 18px 0; display: flex; flex-direction: column; gap: 12px; font-size: 14px; }
+.nl-problem-steps li { display: flex; gap: 12px; color: var(--color-neutral-700); }
+.nl-problem-steps li.is-done, .nl-problem-steps li.is-current { color: var(--color-text); }
+.nl-problem-dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--color-neutral-300); flex: none; }
+.nl-problem-steps li.is-done .nl-problem-dot { background: var(--color-accent); border-color: var(--color-accent); }
+.nl-problem-steps li.is-current .nl-problem-dot { border-color: var(--color-accent); }
+.nl-problem-steps li.is-denied .nl-problem-dot { border-color: var(--color-accent-2); }
+.nl-problem-steps li.is-skipped { text-decoration: line-through; }
+.nl-help-table { max-width: 760px; margin-top: 14px; }
+.nl-case-notes { list-style: none; padding: 0; margin: 0 0 14px; display: flex; flex-direction: column; gap: 10px; max-width: 640px; }
+.nl-case-note { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: var(--radius-md); background: var(--color-surface); }
+.nl-case-note.is-you { background: var(--color-accent-100); }
+.nl-case-note-body { white-space: pre-wrap; overflow-wrap: anywhere; }

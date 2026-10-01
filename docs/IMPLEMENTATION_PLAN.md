@@ -49,8 +49,8 @@ See `docs/BACKEND_CONVENTIONS.md` (written by the backend foundation) — layeri
 | V110–V119 | consumer web (CONSUMER_WEB_PLAN.md) |
 | V120–V129 | search |
 | V130–V139 | region platform (S-134: region profiles, launch markets) |
-| V140–V149 | consumer account (S-58–S-60) |
 | V150–V159 | AI (S-129–S-133) |
+| V160–V169 | consumer account (S-58–S-60: `account` schema, favourites, points read model, preferences, customer cases; dev seed V161…) — moved from V140–V149 by the ordering rule below |
 
 **Ordering rule (2026-10-01):** Flyway applies versions in order and, outside the `local` profile, refuses a version lower than one already applied. A new migration must therefore be numbered **above the highest version on main** when it merges, not just inside its workstream's range. If a range is behind, take the next free range above the maximum and record it here (S-129/S-133's V125/V126 became V150/V151 for this reason).
 

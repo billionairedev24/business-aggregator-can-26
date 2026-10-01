@@ -53,7 +53,7 @@ export const useFoodT = defineMessages({
     err_generic: 'Something went wrong on our side. Your card wasn’t charged. Try again.', err_card: 'Your card was declined: {message}',
     err_closed: 'This kitchen stopped taking orders. Schedule for later, or pick another kitchen.',
     // tracking
-    orders: 'Orders', trackTitle: 'Track order', signIn: 'Sign in',
+    orders: 'Orders', trackTitle: 'Track order', signIn: 'Sign in', somethingWrong: 'Something’s wrong',
     st_paid: 'Paid', st_paidTitle: 'Waiting for {kitchen} to start',
     st_cooking: 'Kitchen confirmed', st_cookingTitle: '{kitchen} is cooking',
     st_ready: 'Ready', st_readyTitle: 'Ready — the courier is on the way to the kitchen', st_readyPickupTitle: 'Ready for pickup at {kitchen}',
@@ -113,7 +113,7 @@ export const useFoodT = defineMessages({
     quoting: 'Mise à jour du total…', estimate: 'Les taxes sont estimées jusqu’au paiement.',
     err_generic: 'Un problème est survenu de notre côté. Votre carte n’a pas été débitée. Réessayez.', err_card: 'Votre carte a été refusée : {message}',
     err_closed: 'Cette cuisine ne prend plus de commandes. Planifiez pour plus tard ou choisissez une autre cuisine.',
-    orders: 'Commandes', trackTitle: 'Suivre la commande', signIn: 'Se connecter',
+    orders: 'Commandes', trackTitle: 'Suivre la commande', signIn: 'Se connecter', somethingWrong: 'Un problème',
     st_paid: 'Payée', st_paidTitle: 'En attente de {kitchen}',
     st_cooking: 'Cuisine confirmée', st_cookingTitle: '{kitchen} cuisine votre commande',
     st_ready: 'Prête', st_readyTitle: 'Prête — le livreur se rend à la cuisine', st_readyPickupTitle: 'Prête à récupérer chez {kitchen}',

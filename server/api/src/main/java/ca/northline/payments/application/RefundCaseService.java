@@ -159,8 +159,21 @@ class RefundCaseService implements RespondToCases, CustomerCases, DisputeDecisio
 
     @Override
     public String requestRefund(String escrowId, String customerId, long amountCents, String what) {
+        return request(escrowId, customerId, amountCents, what, true);
+    }
+
+    @Override
+    public String requestReview(String escrowId, String customerId, long amountCents, String what) {
+        return request(escrowId, customerId, amountCents, what, false);
+    }
+
+    private String request(String escrowId, String customerId, long amountCents, String what, boolean autoApprove) {
         var escrow = customerEscrow(escrowId, customerId);
-        var refund = Refund.requested(cases.nextCaseNumber("RF"), escrow, amountCents, what, clock.instant());
+        if (escrow.getState() == EscrowState.REFUNDED) {
+            throw new Conflict("escrow_refunded", "This payment was already refunded.");
+        }
+        var refund =
+                Refund.requested(cases.nextCaseNumber("RF"), escrow, amountCents, what, clock.instant(), autoApprove);
         cases.insert(refund);
         escrow.putOnHold();
         escrows.update(escrow);

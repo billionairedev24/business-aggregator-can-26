@@ -82,6 +82,9 @@ function OrderView({ order }: { order: OrderTracking }) {
           ) : null}
           <div className="order-actions">
             <SiteLink href="/account/orders" className="btn btn-primary">{t('viewOrders')}</SiteLink>
+            {order.state === 'delivered'
+              ? <SiteLink href={`/account/problem/order/${encodeURIComponent(order.orderId)}`} className="btn btn-secondary">{t('somethingWrong')}</SiteLink>
+              : null}
             <SiteLink href="/" className="btn btn-ghost">{t('backHome')}</SiteLink>
           </div>
         </div>

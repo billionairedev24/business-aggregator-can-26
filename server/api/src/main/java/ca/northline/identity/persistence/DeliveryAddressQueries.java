@@ -30,8 +30,9 @@ class DeliveryAddressQueries implements DeliveryAddresses, SecondFactors {
 
     @Override
     public List<Address> of(String userId) {
-        return jdbc.sql(COLUMNS
-                        + " where user_id = :u and street is not null order by is_default desc nulls last, id desc")
+        return jdbc.sql(
+                        COLUMNS
+                                + " where user_id = :u and street is not null and deleted_at is null order by is_default desc nulls last, id desc")
                 .param("u", userId)
                 .query((rs, _) -> address(rs))
                 .list();
@@ -39,7 +40,7 @@ class DeliveryAddressQueries implements DeliveryAddresses, SecondFactors {
 
     @Override
     public Optional<Address> find(String userId, String addressId) {
-        return jdbc.sql(COLUMNS + " where user_id = :u and id = :id and street is not null")
+        return jdbc.sql(COLUMNS + " where user_id = :u and id = :id and street is not null and deleted_at is null")
                 .param("u", userId)
                 .param("id", addressId)
                 .query((rs, _) -> address(rs))
@@ -50,7 +51,7 @@ class DeliveryAddressQueries implements DeliveryAddresses, SecondFactors {
     @Transactional
     public Address save(String userId, NewAddress a) {
         var existing = jdbc.sql(COLUMNS + """
-                         where user_id = :u and lower(street) = lower(:street)
+                         where user_id = :u and deleted_at is null and lower(street) = lower(:street)
                            and coalesce(lower(unit), '') = coalesce(lower(:unit), '')
                            and replace(upper(postal), ' ', '') = replace(upper(:postal), ' ', '')
                         """)
