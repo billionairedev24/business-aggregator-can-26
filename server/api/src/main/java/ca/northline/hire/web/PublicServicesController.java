@@ -7,7 +7,7 @@ import ca.northline.hire.application.BrowseServices.ListCategories;
 import ca.northline.hire.application.BrowseServices.ListProviders;
 import ca.northline.hire.application.BrowseServices.Providers;
 import ca.northline.hire.application.BrowseServices.ViewCategory;
-import ca.northline.hire.application.HireProperties;
+import ca.northline.hire.application.RegionDefaults;
 import ca.northline.shared.RuleViolation;
 import java.time.Duration;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +36,7 @@ class PublicServicesController {
     private final ListCategories landing;
     private final ViewCategory categories;
     private final ListProviders providers;
-    private final HireProperties region;
+    private final RegionDefaults region;
 
     @GetMapping("/api/v1/public/services")
     ResponseEntity<Landing> landing(@RequestParam(defaultValue = "en") String lang) {
@@ -57,12 +57,13 @@ class PublicServicesController {
             @RequestParam(required = false) @Nullable String city,
             @RequestParam(defaultValue = "en") String lang) {
         return cached(
-                providers.providers(slug, place(lat, lng, city, region.defaultCity()), Languages.of(lang)),
+                providers.providers(slug, place(lat, lng, city, region.fallbackCity()), Languages.of(lang)),
                 Duration.ofSeconds(30));
     }
 
-    /** @param defaultCity the configured market when the customer has no city */
-    static Place place(@Nullable Double lat, @Nullable Double lng, @Nullable String city, String defaultCity) {
+    /** @param fallbackCity the region\'s fallback market when the customer has no city (null when none is configured) */
+    static Place place(
+            @Nullable Double lat, @Nullable Double lng, @Nullable String city, @Nullable String fallbackCity) {
         if ((lat == null) != (lng == null)) {
             throw RuleViolation.of(lat == null ? "lat" : "lng", "required", POINT_INCOMPLETE);
         }
@@ -75,7 +76,7 @@ class PublicServicesController {
         if (city != null && city.length() > 60) {
             throw RuleViolation.of("city", "length", CITY_TOO_LONG);
         }
-        return new Place(lat, lng, city == null || city.isBlank() ? defaultCity : city.strip());
+        return new Place(lat, lng, city == null || city.isBlank() ? fallbackCity : city.strip());
     }
 
     private static <T> ResponseEntity<T> cached(T body, Duration maxAge) {

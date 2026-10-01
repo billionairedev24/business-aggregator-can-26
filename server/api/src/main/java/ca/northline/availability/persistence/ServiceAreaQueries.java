@@ -42,7 +42,8 @@ class ServiceAreaQueries implements ServiceAreas {
 
     @Override
     public Set<String> covering(Collection<String> merchantIds, Place place) {
-        if (merchantIds.isEmpty()) {
+        var city = place.city();
+        if (merchantIds.isEmpty() || (!place.hasPoint() && city == null)) {
             return Set.of();
         }
         var query = place.hasPoint()
@@ -55,7 +56,7 @@ class ServiceAreaQueries implements ServiceAreas {
                                 select distinct a.merchant_id from availability.service_areas a
                                   join availability.service_zones z on z.name = a.zone
                                  where a.merchant_id in (:ids) and lower(z.city) = lower(:city)
-                                """).param("city", place.city());
+                                """).param("city", city);
         return new HashSet<>(query.param("ids", List.copyOf(merchantIds))
                 .query((rs, _) -> rs.getString(1))
                 .list());

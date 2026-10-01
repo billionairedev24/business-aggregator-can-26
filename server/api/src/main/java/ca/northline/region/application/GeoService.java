@@ -1,5 +1,6 @@
 package ca.northline.region.application;
 
+import ca.northline.region.api.FallbackMarket;
 import ca.northline.region.api.Markets;
 import ca.northline.region.api.TaxRates;
 import ca.northline.region.application.GeoUseCases.BrowseMarkets;
@@ -39,7 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 @RequiredArgsConstructor
-class GeoService implements SuggestAddresses, ChooseAddress, NamePlace, BrowseMarkets, JoinWaitlist {
+class GeoService implements SuggestAddresses, ChooseAddress, NamePlace, BrowseMarkets, JoinWaitlist, FallbackMarket {
 
     private final PlacesAutocomplete places;
     private final MarketStore markets;
@@ -167,6 +168,14 @@ class GeoService implements SuggestAddresses, ChooseAddress, NamePlace, BrowseMa
                 .findFirst()
                 .orElse(null);
         return new GeoViews.Markets(provinces, firstLive);
+    }
+
+    @Override
+    public java.util.Optional<FallbackMarket.City> fallback() {
+        var m = provinces(Locale.ENGLISH).fallback();
+        return m == null
+                ? java.util.Optional.empty()
+                : java.util.Optional.of(new FallbackMarket.City(m.city(), m.province()));
     }
 
     /** A province listed in SEARCH_MARKETS is live whatever its row says (one list of served markets). */

@@ -74,7 +74,11 @@ public final class BrowseServices {
      * @param city the city the list is for
      */
     public record Providers(
-            String categorySlug, ServiceKind kind, @Nullable String area, String city, List<ProviderCard> items) {}
+            String categorySlug,
+            ServiceKind kind,
+            @Nullable String area,
+            @Nullable String city,
+            List<ProviderCard> items) {}
 
     /**
      * @param onTimePct on-time arrival (percent), null before the first nightly score

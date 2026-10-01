@@ -15,10 +15,13 @@ import org.jspecify.annotations.Nullable;
 public interface ServiceAreas {
 
     /**
-     * A customer's location: coordinates when the device gave them, and the city of the location pill (the caller's
-     * default market when the customer has none — never a city chosen here).
+     * A customer's location: coordinates when the device gave them, else the city of the location pill (the region's
+     * fallback market when the customer has none — never a city chosen here); neither = nobody is covered.
      */
-    record Place(@Nullable Double lat, @Nullable Double lng, String city) {
+    record Place(
+            @Nullable Double lat,
+            @Nullable Double lng,
+            @Nullable String city) {
 
         public boolean hasPoint() {
             return lat != null && lng != null;

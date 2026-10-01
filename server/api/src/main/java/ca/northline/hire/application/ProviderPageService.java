@@ -47,7 +47,7 @@ class ProviderPageService implements ViewProvider, ListProviderReviews {
     private final QualityQuery quality;
     private final PublicReviews reviews;
     private final TaxRates taxRates;
-    private final HireProperties region;
+    private final RegionDefaults region;
 
     @Override
     public ProviderPage provider(String slug, String lang) {
@@ -95,7 +95,7 @@ class ProviderPageService implements ViewProvider, ListProviderReviews {
                 offered.stream().map(ProviderPageService::service).toList(),
                 areas.zones(List.of(p.merchantId())).getOrDefault(p.merchantId(), List.of()),
                 offered.isEmpty() ? null : slots.next(p.merchantId(), shortest).orElse(null),
-                taxRates.bpsFor(Objects.requireNonNullElse(p.province(), region.defaultProvince())),
+                taxRates.bpsFor(region.province(p.province())),
                 reviews.newest(p.merchantId(), FIRST_REVIEWS, 0));
     }
 

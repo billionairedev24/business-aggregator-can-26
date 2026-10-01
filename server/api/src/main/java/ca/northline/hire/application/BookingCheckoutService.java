@@ -77,7 +77,7 @@ class BookingCheckoutService
     private final PersonDirectory people;
     private final TaxRates taxRates;
     private final SecretSealer sealer;
-    private final HireProperties region;
+    private final RegionDefaults region;
     private final Clock clock;
 
     /** What travels with the hold between "Hold $…" and the card confirmation (sealed: it has the access note). */
@@ -92,7 +92,7 @@ class BookingCheckoutService
             String slug, String serviceId, @Nullable LocalDate from, int days, @Nullable String customerId) {
         var provider = provider(slug);
         var offer = offer(provider, serviceId);
-        var today = LocalDate.now(clock.withZone(region.timeZone()));
+        var today = LocalDate.now(clock.withZone(region.zone(provider.province())));
         var start = from == null || from.isBefore(today) ? today : from;
         var duration = offer.durationMin();
         return new Calendar(
@@ -314,7 +314,7 @@ class BookingCheckoutService
                 .map(PublicProviders.Provider::province)
                 .filter(Objects::nonNull)
                 .findFirst()
-                .orElse(region.defaultProvince());
+                .orElse(region.province(null));
     }
 
     private PublicProviders.Provider provider(String slug) {

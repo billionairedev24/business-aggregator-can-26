@@ -2811,7 +2811,7 @@ Branch `web/s-53-services-landing` (from main). Contracts: [CONSUMER_WEB_PLAN.md
   (Beltline 1.2 km … SE Calgary 10 km, Airdrie/Cochrane/Okotoks the towns) — reference data, the same everywhere, until
   `region.zones` has Calgary polygons. A business covers the customer when one of its zones contains the device's
   point, or, with only a city (the IP guess, the Calgary fallback, a saved address without coordinates), when one of
-  its zones is in that city; no location at all = the configured default market (`northline.hire.default-city`). Appointments and consultations (the customer goes to them)
+  its zones is in that city; no location at all = the region's fallback market (S-47's `GET /api/v1/geo/markets` → `fallback`, through the new `region.api.FallbackMarket`; nobody is covered when none is configured). The web sends the fallback market's city itself (S-47's `useDeliveryLocation`). Appointments and consultations (the customer goes to them)
   also match the business's own city. The heading's area is the zone the point is in (nearest centre when two
   overlap), else the city. `availability.api.ServiceAreas`.
 - **Trust order** (design: "Sorted by trust · tier, on-time rate, dispute rate and re-book rate"): tier, then on-time
@@ -2852,20 +2852,15 @@ Branch `web/s-53-services-landing` (from main). Contracts: [CONSUMER_WEB_PLAN.md
   ServiceOffers`, `merchants.api.PublicProviders`.
 - **Not done:** search-backed ranking and `next_slot` (E-6); distance; per-category French taxonomy in the database;
   structured data (S-63).
-- **Region-neutral** (the decision above): no province, city or time zone in this story's code or copy. The default
-  market, the fallback province and the time zone are configuration (`northline.hire`: `default-city`,
-  `default-province`, `time-zone`; HireProperties) until S-134's region configuration; the landing and a category
-  return `provinces` (their live providers' `merchants.province`) and the copy names them as a parameter ("4 categories
-  live in {region}"); registry names in the copy come from the category (`regulatedRegistry`). Existing literals still
-  relied on (S-134): the web's shared `TIME_ZONE` (`@northline/ui`), `DEFAULT_MARKET` (`features/location/markets.ts`),
-  `AlbertaHolidays` and `Team.ZONE` in the availability planner (moved into `DaySchedule`, unchanged), and the zone rows
-  of V114 (reference data).
-
-## 2026-09-30 — S-54 Public provider page from the storefront API (sections, reviews, service area)
-
-Branch `web/s-54-provider-page`, **stacked on `web/s-53-services-landing`** (uses its `hire` module, service kinds and
-copy).
-
+- **Region-neutral** (the decision above): no province, city or time zone in this story's code or copy. The province
+  (tax) is the business's own, else the default market's, and the time zone the province's market's — both from S-47's
+  `region.api.Markets` (SEARCH_MARKETS / SEARCH_DEFAULT_MARKET); the city for a visitor without a location is the api's
+  fallback market (new, additive `region.api.FallbackMarket`, implemented by `GeoService` — the same answer as `GET
+  /api/v1/geo/markets`); `hire.application.RegionDefaults` reads them. The landing and a category return `provinces`
+  (their live providers' `merchants.province`) and the copy names them as a parameter ("4 categories live in
+  {region}"); registry names in the copy come from the category (`regulatedRegistry`). Existing literals still relied on
+  (S-134): the web's shared `TIME_ZONE` (`@northline/ui`), `AlbertaHolidays` and `Team.ZONE` in the availability
+  planner (moved into `DaySchedule`, unchanged), and the zone rows of V114 (reference data).
 - **Two public reads, one page.** The page itself is the storefront API as it was (`GET /api/v1/storefronts/{slug}`:
   enabled sections in the owner's order, brand colour, logo, tagline, announcement, CTA label, verified facts); new
   `GET /api/v1/public/providers/{slug}` (module `hire`) adds what Northline holds: rating and review count, the latest
@@ -2950,7 +2945,7 @@ Branch `web/s-55-booking-wizard`, stacked on `web/s-54-provider-page` (itself on
   cleaning estimates them from bedrooms + add-ons, design 06); consultations free; quote-only services and services
   without instant book answer 422 ("…ask for a quote instead", S-56). Sales tax from `region.api.TaxRates` for the provider's province. The whole
   price + tax is held in escrow ("Hold $93.45 in escrow"). The rate is the provider's province's
-  (`merchants.province`, else `northline.hire.default-province`); the provider page returns it (`taxBps`) so the
+  (`merchants.province`, else the default market's, `region.api.Markets`); the provider page returns it (`taxBps`) so the
   wizard's summary shows the same tax, labelled "Tax 5%" (the tax's name differs by province). Free cancellation until 12 h before is recorded on the
   booking (`free_cancel_until`) and shown; charging late cancellations is not part of this story.
 - **Validation messages** (422, per field; en in both locales like the other server rules): "Describe the problem in
@@ -2964,7 +2959,7 @@ Branch `web/s-55-booking-wizard`, stacked on `web/s-54-provider-page` (itself on
   customer id) for S-33, and `CalendarSyncListener` writes it back to the member's connected calendar (S-32).
 - **Schema (V115, additive):** `booking.access_notes`; `bookings.source` (`studio`|`customer`), `tax_cents`,
   `free_cancel_until`; index `ix_bookings_member_starts`.
-- **Region-neutral:** "today" and calendar days use `northline.hire.time-zone` (config) on the server and the shared
+- **Region-neutral:** "today" and calendar days use the provider's province's time zone (`region.api.Markets.zone`, S-47) on the server and the shared
   `TIME_ZONE` of `@northline/ui` in the browser (an existing literal, S-134); the planner underneath still uses
   availability's `Team.ZONE` and `AlbertaHolidays` (existing, S-134).
 - **Not done:** cancelling the PaymentIntent when a hold expires after the card was confirmed but before `confirm`
@@ -3001,7 +2996,7 @@ Branch `web/s-56-quotes`, stacked on `web/s-55-booking-wizard` (and so on S-54, 
   quote's deposit, or **the whole quote when it asks for none** (as instant bookings hold the whole price). The tax in
   the held amount is the deposit's share of the quote's GST. `POST …/accept/confirm` (Idempotency-Key) then checks
   the authorization (`EscrowLifecycle.hold`), accepts the quote (`quote.accepted`, existing v2 schema), and books the
-  proposed time — the quote's `proposedAt`, else the request's preferred date at 9 am in the market's time zone (`northline.hire.time-zone`) — with a free member
+  proposed time — the quote's `proposedAt`, else the request's preferred date at 9 am in the default market's time zone (`region.api.Markets`) — with a free member
   (`ProviderSlots.freeMember`; 409 `slot_taken` "The provider is no longer free at the proposed time…"), publishing
   `booking.confirmed` with the `quoteId` (S-55). **V116** `booking.quote_acceptances` keeps the booking id, the
   PaymentIntent and the amounts between the two calls (one row per quote version; replaced while not accepted).

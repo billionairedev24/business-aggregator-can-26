@@ -89,13 +89,13 @@ class QuoteFlowService
     private final ViewBooking bookingViews;
     private final ProviderSlots slots;
     private final PersonDirectory people;
-    private final HireProperties region;
+    private final RegionDefaults region;
     private final Clock clock;
 
     @Override
     public Requested request(String customerId, QuoteAsk ask) {
         var category = categories.category(ask.category(), "en");
-        var today = LocalDate.now(clock.withZone(region.timeZone()));
+        var today = LocalDate.now(clock.withZone(region.zone(null)));
         ask.validate(category.kind(), category.vehicle(), today);
         var chosen = new ArrayList<String>();
         for (var slug : ask.providers()) {
@@ -119,7 +119,7 @@ class QuoteFlowService
                 blankToNull(ask.area()),
                 day == null
                         ? null
-                        : day.atTime(PREFERRED_TIME).atZone(region.timeZone()).toInstant(),
+                        : day.atTime(PREFERRED_TIME).atZone(region.zone(null)).toInstant(),
                 ask.details()));
         return new Requested(ref.id(), ref.ref(), ref.respondBy(), ref.expiresAt(), chosen.size());
     }

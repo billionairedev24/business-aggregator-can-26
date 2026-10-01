@@ -1,5 +1,6 @@
 package ca.northline.hire;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsInRelativeOrder;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasItem;
@@ -108,7 +109,6 @@ class ServicesBrowsingApiTest extends IntegrationTest {
                             .param("lng", BELTLINE_LNG))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.area").value("Beltline"))
-                    .andExpect(jsonPath("$.city").value("Calgary"))
                     .andExpect(jsonPath("$.kind").value("visit"))
                     .andExpect(jsonPath("$.items[*].merchantId", hasItem(beltline.merchantId())))
                     .andExpect(jsonPath("$.items[*].merchantId", not(hasItem(okotoks.merchantId()))));
@@ -119,14 +119,20 @@ class ServicesBrowsingApiTest extends IntegrationTest {
                     .andExpect(jsonPath("$.area").value("Okotoks"))
                     .andExpect(jsonPath("$.items[*].merchantId", hasItem(okotoks.merchantId())))
                     .andExpect(jsonPath("$.items[*].merchantId", not(hasItem(beltline.merchantId()))));
-            // city only (no device location): zones in that city; nothing at all = Calgary
+            // city only (no device location): zones in that city
             mvc.perform(get("/api/v1/public/services/mobile-mechanic/providers").param("city", "Okotoks"))
                     .andExpect(jsonPath("$.items[*].merchantId", hasItem(okotoks.merchantId())))
                     .andExpect(jsonPath("$.items[*].merchantId", not(hasItem(beltline.merchantId()))));
+            // nothing at all = the region's fallback market (S-47); none configured here (no market rows) = nobody
+            String markets = mvc.perform(get("/api/v1/geo/markets"))
+                    .andReturn()
+                    .getResponse()
+                    .getContentAsString();
+            Object fallback = com.jayway.jsonpath.JsonPath.read(markets, "$.fallback");
+            assertThat(fallback).isNull();
             mvc.perform(get("/api/v1/public/services/mobile-mechanic/providers"))
-                    .andExpect(jsonPath("$.city").value("Calgary"))
                     .andExpect(jsonPath("$.area").doesNotExist())
-                    .andExpect(jsonPath("$.items[*].merchantId", hasItem(beltline.merchantId())));
+                    .andExpect(jsonPath("$.items").isEmpty());
         }
 
         @Test
