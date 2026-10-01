@@ -124,7 +124,7 @@ A feature folder per story area, named after the design: `home`, `location`, `se
 | `/account/orders` | orders | S-58 | Orders & bookings — from the account menu only |
 | `/account?tab=` | account | S-58, S-59 | tabs: wallet, payments, profile, addresses, favourites, security, notifications, language, dietary, plus, help |
 | `/sign-in?next=`, `/register?next=` | auth | S-62 (**built**) | no account buttons in the header there; `features/auth` |
-| `/sell?type=seller\|provider\|kitchen` | (account › Sell) | S-61 | entry into Studio onboarding |
+| `/sell?type=seller\|provider\|kitchen` | (account › Sell) | S-61 (**built**) | entry into Studio onboarding (07a–07d) at `NL_STUDIO_ORIGIN`: signed in → the studio-bff's `/bff/login?next=/onboarding?type=…` hand-off; guest → `/onboarding?type=…` (the Studio signs them in); "Start fresh" → Studio `/register?next=/onboarding?…&new=1` (07d); `type` marks a card |
 | `/legal/terms.html`, `/legal/privacy.html` | — | S-63 | static, verbatim (design 09/10) until S-63's pages |
 
 Storefront pages on `pages.<zone>` and merchants' own domains (by `Host`) share the app (S-54): `server/page-hosts.mjs` decides per request (`NL_PAGES_HOST`, the S-31 by-host lookup), the router maps the host's path onto `/providers/<slug>` (`src/lib/pages.ts`), and links from there go to `NL_SITE_ORIGIN` (`siteHref`, `useSiteConfig()`). Business pages only; store and menu pages go to the site's home until S-49/S-57 take them.

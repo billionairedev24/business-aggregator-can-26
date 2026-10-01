@@ -168,6 +168,8 @@ their own variables. (dict "root" $ "name" "<app>" "app" $appValues)
 {{- /* S-54: business pages on pages.<zone> and merchants' own domains link back to the site (server/page-hosts.mjs). */ -}}
 {{- $_ := set $env "NL_SITE_ORIGIN" $v.urls.consumer -}}
 {{- with $v.urls.pages }}{{- $_ := set $env "NL_PAGES_HOST" (urlParse .).host -}}{{- end -}}
+{{- /* S-61: "Sell or offer a service" enters the Studio's onboarding. */ -}}
+{{- $_ := set $env "NL_STUDIO_ORIGIN" $v.urls.studio -}}
 {{- end -}}
 {{- $env = merge (deepCopy (default (dict) .app.env)) $env -}}
 {{- end -}}

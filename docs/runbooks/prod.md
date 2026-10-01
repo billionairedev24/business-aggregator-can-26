@@ -142,6 +142,7 @@ Every app reads its configuration from environment variables; nothing environmen
 | `APPLICATIONINSIGHTS_CONNECTION_STRING` | otel-collector (S-111) | Azure only | `InstrumentationKey=…;IngestionEndpoint=https://canadacentral-…` | Key Vault `applicationinsights-connection-string` ([observability.md § Azure](observability.md#azure)) |
 | `VITE_NL_AUTH_ORIGIN` (Studio build) | web/apps/studio | no since S-14: the Studio image reads `NL_AUTH_ORIGIN` at start (chart: `urls.auth`); the build-time value is only a fallback | `https://auth.northline.ca` | CI build argument; one Studio build per environment |
 | `NL_SITE_ORIGIN`, `NL_PAGES_HOST` | web/apps/consumer (S-54) | no — the chart sets them from `urls.consumer` / `urls.pages` | `https://northline.ca` / `pages.northline.ca` | business pages on `pages.` and merchants' own domains (README § Consumer web) |
+| `NL_STUDIO_ORIGIN` | web/apps/consumer (S-61) | no — the chart sets it from `urls.studio` | `https://studio.northline.ca` | where "Sell or offer a service" enters Studio onboarding (README § Consumer web) |
 | `NL_LEGAL_ENTITY` | web/apps/consumer (S-134) | no (`Northline Marketplace Inc.`) | `Northline Marketplace Inc. · Calgary` | the footer's company line — legal entity data, configuration rather than copy |
 | `VITE_NL_PLATFORM_TIME_ZONE` (Studio build) | web/apps/studio (S-134) | no (UTC until the region model answers) | `America/Edmonton` | the platform zone before `GET /api/v1/geo/regions` answers; business dates use the merchant's market zone |
 

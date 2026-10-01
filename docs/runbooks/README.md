@@ -222,7 +222,9 @@ browser signs out of northline-auth there), `TRUST_PROXY` (`true` behind the Gat
 S-54: `NL_SITE_ORIGIN` (= `urls.consumer`, the site's own origin; business pages served elsewhere link back to it) and
 `NL_PAGES_HOST` (= the host of `urls.pages`): with it set, `pages.<zone>/<slug>` and merchants' own domains (looked up
 with `GET /api/v1/public/storefronts/by-host`, S-31) serve the business's public page; without it (local) every host is
-the site. Both optional, set by the chart.
+the site. Both optional, set by the chart. S-61: `NL_STUDIO_ORIGIN` (= `urls.studio`, set by the chart; default
+`http://localhost:3100`) — `/sell` links into the Studio's onboarding there (signed in: the Studio BFF's
+`/bff/login?next=/onboarding?type=…` hand-off; a guest: `/onboarding?type=…`, which signs in on the Studio).
 
 ## Consumer BFF (S-45)
 
