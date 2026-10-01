@@ -1,5 +1,6 @@
 package ca.northline.config;
 
+import ca.northline.mcp.DevDocsProperties;
 import ca.northline.mcp.McpProperties;
 import ca.northline.mcp.McpSecurityConfiguration;
 import ca.northline.shared.security.Authorities;
@@ -54,9 +55,10 @@ class SecurityConfig {
             NorthlineJwtConverter converter,
             ObjectProvider<DevAuthFilter> devAuth,
             McpProperties mcp,
+            DevDocsProperties docs,
             JsonMapper json) {
         devAuth.ifAvailable(filter -> http.addFilterBefore(filter, BearerTokenAuthenticationFilter.class));
-        var entryPoint = McpSecurityConfiguration.entryPoint(mcp);
+        var entryPoint = McpSecurityConfiguration.entryPoint(mcp, docs);
         return http.securityMatcher(
                         "/mcp",
                         "/mcp/**",
@@ -64,14 +66,20 @@ class SecurityConfig {
                         McpSecurityConfiguration.METADATA_PATH + "/**")
                 // first in the chain: Spring Security's own resource metadata would answer without the authorization
                 // server
-                .addFilterBefore(McpSecurityConfiguration.metadataEndpoint(mcp, json), DisableEncodeUrlFilter.class)
-                .authorizeHttpRequests(a -> a.dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR)
-                        .permitAll()
-                        .requestMatchers(
-                                McpSecurityConfiguration.METADATA_PATH, McpSecurityConfiguration.METADATA_PATH + "/**")
-                        .permitAll()
-                        .anyRequest()
-                        .authenticated())
+                .addFilterBefore(McpSecurityConfiguration.metadataEndpoint(mcp, docs, json), DisableEncodeUrlFilter.class)
+                .authorizeHttpRequests(a -> {
+                    a.dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR)
+                            .permitAll()
+                            .requestMatchers(
+                                    McpSecurityConfiguration.METADATA_PATH,
+                                    McpSecurityConfiguration.METADATA_PATH + "/**")
+                            .permitAll();
+                    // S-128: the developer docs server — open locally; in the cloud a staff token (DevDocsAccessFilter)
+                    if (docs.access() == DevDocsProperties.Access.OPEN) {
+                        a.requestMatchers("/mcp/docs").permitAll();
+                    }
+                    a.anyRequest().authenticated();
+                })
                 .oauth2ResourceServer(
                         o -> o.jwt(j -> j.jwtAuthenticationConverter(converter)).authenticationEntryPoint(entryPoint))
                 .exceptionHandling(e -> e.authenticationEntryPoint(entryPoint))

@@ -22,7 +22,7 @@ import tools.jackson.databind.json.JsonMapper;
 /** S-127 wiring: which operations become tools, the filters around {@code /mcp}, the call store. */
 @Slf4j
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties(McpProperties.class)
+@EnableConfigurationProperties({McpProperties.class, DevDocsProperties.class})
 class McpConfiguration {
 
     static {
@@ -100,8 +100,8 @@ class McpConfiguration {
 
     @Bean
     FilterRegistrationBean<McpTokenConfinement> mcpTokenConfinement(
-            McpProperties props, McpAgentHeaderFilter agentHeader) {
-        var registration = new FilterRegistrationBean<>(new McpTokenConfinement(props, agentHeader));
+            McpProperties props, DevDocsProperties docs, McpAgentHeaderFilter agentHeader) {
+        var registration = new FilterRegistrationBean<>(new McpTokenConfinement(props, docs, agentHeader));
         registration.addUrlPatterns("/api/*");
         registration.setOrder(AFTER_SECURITY);
         return registration;

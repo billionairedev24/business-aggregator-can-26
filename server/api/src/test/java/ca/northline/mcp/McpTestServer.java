@@ -58,6 +58,7 @@ abstract class McpTestServer {
     static final int PORT = freePort();
     static final String BASE = "http://localhost:" + PORT;
     static final String RESOURCE = BASE + "/mcp";
+    static final String DOCS_RESOURCE = BASE + "/mcp/docs";
     static final ECKey KEY = newKey();
 
     @ServiceConnection
@@ -72,6 +73,7 @@ abstract class McpTestServer {
         registry.add("northline.mcp.resource", () -> RESOURCE);
         registry.add("northline.mcp.authorization-server", () -> ISSUER);
         registry.add("northline.docs.enabled", () -> "false"); // as in prod: the model exists, nothing publishes it
+        registry.add("northline.devdocs.resource", () -> DOCS_RESOURCE); // S-128, open (the local default)
     }
 
     @Autowired
@@ -156,9 +158,17 @@ abstract class McpTestServer {
 
     /** The MCP Java SDK's client over Streamable HTTP, sending {@code token} on every request. */
     static McpSyncClient client(String token) {
-        var request = HttpRequest.newBuilder().header("Authorization", "Bearer " + token);
+        return client(token, "/mcp");
+    }
+
+    /** The same against another endpoint (S-128: {@code /mcp/docs}); no token = no Authorization header. */
+    static McpSyncClient client(String token, String endpoint) {
+        var request = HttpRequest.newBuilder();
+        if (token != null) {
+            request.header("Authorization", "Bearer " + token);
+        }
         var transport = HttpClientStreamableHttpTransport.builder(BASE)
-                .endpoint("/mcp")
+                .endpoint(endpoint)
                 .requestBuilder(request)
                 .build();
         return McpClient.sync(transport).requestTimeout(Duration.ofSeconds(30)).build();
