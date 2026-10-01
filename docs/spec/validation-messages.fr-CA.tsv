@@ -680,3 +680,18 @@ This refund request was already decided.	Cette demande de remboursement a déjà
 This case is already with trust & safety.	Ce dossier est déjà confié à l’équipe Confiance et sécurité.	new
 This case is resolved.	Ce dossier est résolu.	new
 Pick a filter from the list.	Choisissez un filtre dans la liste.	new
+Enter the English name, 1 to 80 characters.	Entrez le nom anglais, de 1 à 80 caractères.	new
+Enter the French name, 1 to 80 characters.	Entrez le nom français, de 1 à 80 caractères.	new
+Choose services, shop or food.	Choisissez services, boutique ou restauration.	new
+Choose a group of the same root.	Choisissez un groupe de la même racine.	new
+Choose visit, home, event, appointment or consult.	Choisissez visite, domicile, événement, rendez-vous ou consultation.	new
+The licence registry is at most 80 characters.	Le registre de permis compte au plus 80 caractères.	new
+Use 2 to 40 lowercase letters, digits, - or _.	Utilisez de 2 à 40 lettres minuscules, chiffres, - ou _.	new
+Enter the regulator's name, 1 to 80 characters.	Entrez le nom de l’organisme de réglementation, de 1 à 80 caractères.	new
+The website starts with https:// and is at most 200 characters.	Le site Web commence par https:// et compte au plus 200 caractères.	new
+Choose a regulator from the list.	Choisissez un organisme de réglementation dans la liste.	new
+That regulator is in another province.	Cet organisme de réglementation est dans une autre province.	new
+That group already has a category with this name.	Ce groupe a déjà une catégorie de ce nom.	new
+A regulator with this code already exists.	Un organisme de réglementation avec ce code existe déjà.	new
+Enter a limit from 1 to 50.	Entrez une limite de 1 à 50.	new
+Choose provider, seller, both or kitchen.	Choisissez fournisseur, vendeur, les deux ou cuisine.	new

@@ -11,9 +11,10 @@ import org.springframework.transaction.annotation.Transactional;
 class OnboardingTaxonomyService implements BrowseTaxonomy {
 
     private final Taxonomy taxonomy;
+    private final CategoryLimitLookup categoryLimits;
 
     @Override
     public TaxonomyView forType(MerchantType type) {
-        return new TaxonomyView(type, type.categoryLimit(), taxonomy.groups(type.roots()));
+        return new TaxonomyView(type, categoryLimits.limit(type), taxonomy.groups(type.roots()));
     }
 }
