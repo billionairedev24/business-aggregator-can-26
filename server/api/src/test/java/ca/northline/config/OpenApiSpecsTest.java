@@ -167,6 +167,24 @@ class OpenApiSpecsTest extends IntegrationTest {
         assertThat(scalar).doesNotContain("cdn.jsdelivr.net");
     }
 
+    /**
+     * S-139: "Authorize" in Swagger UI and Scalar signs in at northline-auth with the public client {@code docs}
+     * (authorization code + PKCE), coming back to the viewer's own page on the api host.
+     */
+    @Test
+    void viewersSignInWithTheDocsClient() throws Exception {
+        var config = body("/v3/api-docs/swagger-config");
+        assertThat(JsonPath.<String>read(config, "$.oauth2RedirectUrl"))
+                .isEqualTo("http://localhost:8080/swagger-ui/oauth2-redirect.html");
+        assertThat(body("/swagger-ui/swagger-initializer.js")).contains("initOAuth");
+        assertThat(body("/swagger-ui/oauth2-redirect.html")).contains("oauth2");
+        var scalar = body("/docs/scalar");
+        assertThat(scalar)
+                .contains("\"x-scalar-client-id\":\"docs\"")
+                .contains("\"x-usePkce\":\"SHA-256\"")
+                .contains("\"x-scalar-redirect-uri\":\"http://localhost:8080/docs/scalar\"");
+    }
+
     @Test
     void productionPublishesNoSpecAndNoViewer() throws Exception {
         var prod = new YamlPropertySourceLoader()

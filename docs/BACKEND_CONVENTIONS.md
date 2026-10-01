@@ -240,9 +240,17 @@ public record QuoteSent(String eventId, Instant occurredAt, String aggregateId, 
 - Records for DTOs, commands, events and value objects. Put invariants in compact constructors (`DisplayName`).
 - MapStruct for every mapping. Mappers are Spring beans with constructor injection, and an unmapped target is a
   compile error.
-- Error Prone plus NullAway run on every compile (NullAway errors fail the build; other Error Prone findings are warnings).
-  Keep the warning count at **0**: fix the code; suppress only a real false positive, with a narrow
-  `@SuppressWarnings("<Check>") // reason`.
+- Error Prone plus NullAway run on every compile, and **every warning is an error** (`-Werror`, S-138). That covers
+  Error Prone's findings, NullAway and javac's own warnings in main, test and test-fixture code. A new warning fails
+  `compileJava` and so `./gradlew build`, with `error: warnings found and -Werror specified` after the warning.
+  - Fix the code. Suppress only a real false positive, with a narrow `@SuppressWarnings("<Check>") // reason` on the
+    smallest element.
+  - Generated sources (`build/generated/**`, MapStruct and Lombok output) are outside Error Prone
+    (`disableWarningsInGeneratedCode`, `excludedPaths`).
+  - Disabled checks (`StringSplitter`, `MissingSummary`, `JavaTimeDefaultTimeZone`) are listed in
+    `server/build.gradle.kts`. Disabling another one is a decision for DECISIONS.md, not a local workaround.
+  - To see every warning at once instead of stopping at the first failing module, run
+    `./gradlew compileJava compileTestJava compileTestFixturesJava --rerun-tasks --continue`.
 - File content in a record (an upload, a stored object) is `ca.northline.shared.Bytes`, never `byte[]`: a record
   compares and prints an array by reference, `Bytes` compares by content and prints only the size.
 - Nested types that share a name across use cases (`SendQuote.Command`, `ReviseQuote.Command`) are written qualified

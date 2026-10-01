@@ -285,27 +285,58 @@ class SearchIndexerTest extends WorkerIntegrationTest {
         await().atMost(INDEXED)
                 .until(() -> doc("listings_en", dish).map(ListingDocument::pausedUntil), Optional.of(until)::equals);
 
-        // a row deleted from Postgres: found in the index by a whole-merchant refresh. That refresh finds the dish with
-        // a
-        // search (not a get), which only sees what Elasticsearch has refreshed (1 s), and on a loaded full build the
-        // deletion was seen to never arrive for one publish (not reproduced alone). The event is therefore published
-        // again every few seconds (a new event id, as the outbox does on the next menu change) until the deletion
-        // shows; each publish is handled the same way and the projection is idempotent, so this still fails if the
-        // event-driven deletion doesn't work at all.
+        // a row deleted from Postgres: found in the index by a whole-merchant refresh, on the first event (S-137)
         jdbc.sql("delete from food.menu_items where id = :id").param("id", dish).update();
-        var published = new java.util.concurrent.atomic.AtomicLong(
-                System.nanoTime() - Duration.ofSeconds(10).toNanos());
-        await().atMost(INDEXED).pollInterval(Duration.ofMillis(250)).until(() -> {
-            if (System.nanoTime() - published.get() > Duration.ofSeconds(3).toNanos()) {
-                published.set(System.nanoTime());
-                send("food.menu", "food.menu_published", """
-                        {"eventId":"%s","occurredAt":"2026-09-30T18:00:00Z","aggregateId":"%s","merchantId":"%s",\
-                        "actorId":"%s"}""".formatted(
-                                Events.id(), menu.menuId(), k.id(), Events.id()));
-            }
-            return doc("listings_en", dish).isEmpty()
-                    && doc("listings_fr", dish).isEmpty();
-        });
+        send("food.menu", "food.menu_published", menuPublished(menu.menuId(), k.id()));
+        await().atMost(INDEXED)
+                .until(() -> doc("listings_en", dish).isEmpty()
+                        && doc("listings_fr", dish).isEmpty());
+    }
+
+    /**
+     * S-137: a dish indexed a moment ago is not searchable until Elasticsearch refreshes; the whole-merchant refresh
+     * that looks up stale documents must still find it. With refresh off on the live indices, only the projection's own
+     * refresh can make it searchable, so this fails deterministically if that refresh is missing. One event, no retry.
+     */
+    @Test
+    void aJustIndexedDish_deletedFromPostgres_isRemovedOnTheFirstMenuPublished() throws Exception {
+        var fx = fx();
+        var k = fx.merchant("kitchen", "trusted", "Banh Mi Test Kitchen");
+        fx.kitchen(k);
+        var menu = fx.menu(k, "live");
+        var keep = fx.dish(k, menu, "Banh mi thit", "Banh mi au porc", 1200, "published", "approved");
+        send("food.menu", "food.item_availability", availability(keep, k.id(), menu.menuId(), true, null));
+        await().atMost(INDEXED).until(() -> doc("listings_en", keep), Optional::isPresent);
+        es.indices().refresh(r -> r.index("listings_en", "listings_fr"));
+        refreshInterval("-1");
+        try {
+            var dish = fx.dish(k, menu, "Banh mi chay", "Banh mi vegetarien", 1100, "published", "approved");
+            send("food.menu", "food.item_availability", availability(dish, k.id(), menu.menuId(), true, null));
+            await().atMost(INDEXED).until(() -> doc("listings_en", dish), Optional::isPresent); // a get is realtime
+
+            jdbc.sql("delete from food.menu_items where id = :id")
+                    .param("id", dish)
+                    .update();
+            send("food.menu", "food.menu_published", menuPublished(menu.menuId(), k.id()));
+            await().atMost(INDEXED)
+                    .until(() -> doc("listings_en", dish).isEmpty()
+                            && doc("listings_fr", dish).isEmpty());
+            assertThat(doc("listings_en", keep)).isPresent();
+        } finally {
+            refreshInterval("1s"); // the layout's (deploy/search/listings.json)
+        }
+    }
+
+    private void refreshInterval(String interval) throws IOException {
+        es.indices()
+                .putSettings(p -> p.index("listings_en", "listings_fr")
+                        .settings(st -> st.refreshInterval(t -> t.time(interval))));
+    }
+
+    private static String menuPublished(String menuId, String merchantId) {
+        return """
+                {"eventId":"%s","occurredAt":"2026-09-30T18:00:00Z","aggregateId":"%s","merchantId":"%s",\
+                "actorId":"%s"}""".formatted(Events.id(), menuId, merchantId, Events.id());
     }
 
     @Test

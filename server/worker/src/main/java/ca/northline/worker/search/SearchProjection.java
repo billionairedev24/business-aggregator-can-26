@@ -29,6 +29,10 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * overwrite a newer one (a 409 on an item = someone already wrote something newer; that's fine). Deletes carry the
  * version too, so a stale write can't resurrect a deleted document within {@code index.gc_deletes}.
  *
+ * <p><b>Rows deleted from Postgres</b> are found in the index: a whole-merchant refresh searches for the merchant's
+ * ids. A search only sees what Elasticsearch has refreshed (every second), so the index is refreshed first (S-137):
+ * a dish indexed a moment before its deletion is removed on the first event, not at the next reconcile sweep.
+ *
  * <p>Must run inside a transaction (the lock is held until it ends): the indexer's comes from {@code EventProcessing},
  * the reconciler and the reindex open their own.
  */
@@ -65,6 +69,19 @@ public class SearchProjection {
 
     /** Re-reads {@code scope} and writes it to {@code targets}. */
     public Outcome refresh(Scope scope, Targets targets) {
+        return refresh(scope, targets, true);
+    }
+
+    /**
+     * The reindex backfill's first write of a merchant to indices created by that run (S-71): they hold nothing of the
+     * merchant yet, so there is nothing stale to look up, and no refresh per merchant on indices that load with
+     * refresh off.
+     */
+    public Outcome backfill(String merchantId, Targets targets) {
+        return refresh(new Scope.Merchant(merchantId), targets, false);
+    }
+
+    private Outcome refresh(Scope scope, Targets targets, boolean findStale) {
         if (!TransactionSynchronizationManager.isActualTransactionActive()) {
             throw new IllegalStateException("SearchProjection.refresh needs a transaction (the merchant lock)");
         }
@@ -92,7 +109,9 @@ public class SearchProjection {
             // documents of rows deleted from Postgres are found in the index itself
             case Scope.Merchant merchant -> {
                 deletes.add(merchant.merchantId());
-                deletes.addAll(indexedIds(targets.of(SearchLanguage.EN), merchant.merchantId()));
+                if (findStale) {
+                    deletes.addAll(indexedIds(targets.of(SearchLanguage.EN), merchant.merchantId()));
+                }
                 built.visibleIds().forEach(deletes::remove);
             }
             default -> {}
@@ -148,9 +167,14 @@ public class SearchProjection {
         }
     }
 
-    /** Ids the index holds for a merchant (its own document included). */
+    /**
+     * Ids the index holds for a merchant (its own document included). Both languages are written in one bulk request
+     * with the same ids, so one index answers for both. The refresh makes documents written in the last second
+     * searchable; it costs a new segment only when something was written since the last one.
+     */
     private List<String> indexedIds(String index, String merchantId) {
         try {
+            es.indices().refresh(r -> r.index(index));
             return es
                     .search(
                             s -> s.index(index)

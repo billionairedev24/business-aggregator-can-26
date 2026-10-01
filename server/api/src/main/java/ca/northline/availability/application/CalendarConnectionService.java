@@ -177,9 +177,16 @@ class CalendarConnectionService implements CompleteCalendarConnection, ListCalen
      * Stops notifications, deletes the upcoming events Northline wrote, revokes the grant (Google; Microsoft has no
      * per-app revocation endpoint — the token is destroyed and the member can remove the app in their account) and
      * deletes the link with its sources, busy blocks and mirrors.
+     *
+     * <p>S-136: the link is locked first ({@code FOR UPDATE}), so a read or write-back in flight finishes before this
+     * sees the channels and mirrors, and none starts until the link is gone.
      */
     @Transactional
-    void disconnect(Link link) {
+    void disconnect(Link stale) {
+        var link = links.lockForDelete(stale.id()).orElse(null);
+        if (link == null) {
+            return; // disconnected meanwhile
+        }
         var gateway = gateways.get(link.provider());
         var now = clock.instant();
         access.with(link, token -> {
@@ -243,7 +250,9 @@ class CalendarConnectionService implements CompleteCalendarConnection, ListCalen
         if (calendarIds.isEmpty()) {
             throw RuleViolation.of("calendarIds", "required", NONE);
         }
-        var link = twoWayLink(merchantId, userId, provider);
+        // S-136: the link before its sources (the token refresh below may update it)
+        var link = links.lockWaiting(twoWayLink(merchantId, userId, provider).id())
+                .orElseThrow(() -> new NotFound("calendar", provider.code()));
         var gateway = gateways.get(provider);
         var remote = access.with(link, gateway::calendars).orElse(null);
         if (remote == null) {

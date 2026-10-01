@@ -29,6 +29,9 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param consumerClients S-62: OAuth clients whose people sign in on the consumer site ({@code consumer-bff})
  * @param mfaRequiredClients S-62: OAuth clients that get a code only for a sign-in with a second factor (the Studio's and
  *     the console's BFFs) — a consumer's phone-code sign-in is sent to their sign-in page instead
+ * @param tokenEndpointOrigins S-139: browser origins whose public clients call {@code /oauth2/token} and
+ *     {@code /oauth2/revoke} themselves (CORS): the api's Swagger UI and Scalar ({@code docs} client) outside prod.
+ *     Empty = no CORS there (the BFFs and the apps call it server-side or natively).
  */
 // platformZone: the zone account dates ("member since") are shown in — an account belongs to no market
 // (REGION_PLATFORM_ZONE, region configuration; S-134)
@@ -51,7 +54,8 @@ public record AuthProperties(
         @Nullable String consumerLoginPage,
         @DefaultValue("consumer-bff") List<String> consumerClients,
         @DefaultValue({"studio-bff", "console-bff"}) List<String> mfaRequiredClients,
-        ZoneId platformZone) {
+        ZoneId platformZone,
+        @DefaultValue List<String> tokenEndpointOrigins) {
 
     /** WebAuthn relying party: id (registrable domain) and the origins allowed in client data. */
     public record WebAuthn(
