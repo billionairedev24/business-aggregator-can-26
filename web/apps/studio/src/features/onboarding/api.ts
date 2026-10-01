@@ -29,7 +29,7 @@ export const Onboarding = z.object({
   type: MerchantType,
   status: MerchantStatus,
   step: z.enum(['account', 'business', 'verification', 'review', 'page', 'listings', 'done']),
-  province: z.enum(['AB', 'BC', 'ON', 'QC']).nullish(),
+  province: z.string().nullish(),
   workEmail: z.string().nullish(),
   businessTermsAccepted: z.boolean(),
   displayName: z.string(),
@@ -70,7 +70,7 @@ export const taxonomyQuery = (type: MerchantType, lang: string) => queryOptions(
   staleTime: 10 * 60_000,
 });
 
-export interface AccountInput { type: MerchantType; province: 'AB' | 'BC' | 'ON' | 'QC'; workEmail?: string; businessTermsAccepted?: boolean }
+export interface AccountInput { type: MerchantType; province: string; workEmail?: string; businessTermsAccepted?: boolean }
 export interface PrincipalInput { legalName: string; role: PrincipalRole; ownershipPct?: number | null }
 export interface BusinessInput {
   displayName: string; legalName: string; structure: Structure; gstNumber?: string;

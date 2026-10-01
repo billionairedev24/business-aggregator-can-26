@@ -1,7 +1,7 @@
 import { createFileRoute, notFound } from '@tanstack/react-router';
 import { isNotFound as isApiNotFound } from '@northline/client';
 import shopCss from '../../features/shop/shop.css?url';
-import { DEFAULT_MARKET, departmentQuery, MarketSearch } from '../../features/shop/api';
+import { departmentQuery, MarketSearch } from '../../features/shop/api';
 import { DepartmentPage } from '../../features/shop/DepartmentPage';
 import { shopText } from '../../features/shop/messages';
 import { ShopSkeleton } from '../../features/shop/parts';
@@ -13,7 +13,7 @@ export const Route = createFileRoute('/shop/$department')({
   loaderDeps: ({ search }) => ({ market: search.market }),
   loader: async ({ context, deps, params }) => {
     try {
-      return await context.queryClient.ensureQueryData(departmentQuery(params.department, deps.market ?? DEFAULT_MARKET, context.locale));
+      return await context.queryClient.ensureQueryData(departmentQuery(params.department, deps.market, context.locale));
     } catch (e) {
       if (isApiNotFound(e)) throw notFound();
       throw e;

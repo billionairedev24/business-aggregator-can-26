@@ -129,7 +129,7 @@ class DefaultAiCompletionsTest {
                 .containsExactlyInAnyOrder("list_orders", "earnings_summary", "mark_packed");
         var toolMessage = STUB.lastRequest().path("messages").path(3);
         assertThat(toolMessage.path("role").asString()).isEqualTo("tool");
-        assertThat(toolMessage.path("content").asString()).contains("NL-48213").contains("[phone]");
+        assertThat(toolMessage.path("content").asString()).contains("NL-48213").contains("[PHONE]");
         assertThat(toolMessage.path("content").asString()).doesNotContain("403-555-0199");
 
         assertThat(kit.usage).singleElement().satisfies(u -> {
@@ -261,7 +261,7 @@ class DefaultAiCompletionsTest {
         var sent = STUB.lastRequest();
         assertThat(sent.path("response_format").path("type").asString()).isEqualTo("json_object");
         assertThat(sent.path("model").asString()).isEqualTo("google/gemini-3.5-flash-lite");
-        assertThat(sent.path("messages").path(1).path("content").asString()).endsWith("email me at [email]");
+        assertThat(sent.path("messages").path(1).path("content").asString()).endsWith("email me at [EMAIL]");
     }
 
     @Test

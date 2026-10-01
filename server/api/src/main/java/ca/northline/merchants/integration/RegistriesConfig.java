@@ -1,8 +1,14 @@
 package ca.northline.merchants.integration;
 
 import ca.northline.merchants.application.BusinessRegistry;
+import ca.northline.merchants.domain.RegistryCheck.Answer;
+import ca.northline.merchants.domain.RegistryQuery;
 import ca.northline.merchants.domain.RegistrySource;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -34,14 +40,16 @@ class RegistriesConfig {
 
     /**
      * @param keyHeader the API Store's key header (Corporations Canada), default {@code user-key}
-     * @param dataset the Socrata dataset id (Calgary), default {@code vdjc-pybd}
+     * @param dataset the Socrata dataset id (municipal licences), default {@code vdjc-pybd}
+     * @param licences licence names the source answers besides business records (a municipal dataset)
      */
     record Source(
             @Nullable String provider,
             @Nullable String url,
             @Nullable String key,
             @Nullable String keyHeader,
-            @Nullable String dataset) {
+            @Nullable String dataset,
+            @Nullable List<String> licences) {
 
         String effective() {
             return provider == null || provider.isBlank()
@@ -56,7 +64,25 @@ class RegistriesConfig {
             @Nullable Source alberta,
             @Nullable Source calgary) {}
 
-    private static final Source NONE = new Source(null, null, null, null, null);
+    private static final Source NONE = new Source(null, null, null, null, null, null);
+
+    /** A source with the licence names configuration gives it (whatever its provider). */
+    record Licensed(BusinessRegistry delegate, Set<String> licences) implements BusinessRegistry {
+
+        Licensed {
+            licences = Set.copyOf(licences);
+        }
+
+        @Override
+        public RegistrySource source() {
+            return delegate.source();
+        }
+
+        @Override
+        public Answer lookup(RegistryQuery query) {
+            return delegate.lookup(query);
+        }
+    }
 
     @Bean
     BusinessRegistry corporationsCanadaRegistry(RegistriesProperties p, Environment env) {
@@ -95,6 +121,11 @@ class RegistriesConfig {
     @Bean
     BusinessRegistry calgaryRegistry(RegistriesProperties p, Environment env) {
         var s = p.calgary() == null ? NONE : p.calgary();
+        var licences = new HashSet<>(Objects.requireNonNullElse(s.licences(), List.<String>of()));
+        return new Licensed(calgary(s, env), licences);
+    }
+
+    private static BusinessRegistry calgary(Source s, Environment env) {
         return switch (choose("calgary", s, env)) {
             case "socrata" -> {
                 var url = s.url() == null || s.url().isBlank()

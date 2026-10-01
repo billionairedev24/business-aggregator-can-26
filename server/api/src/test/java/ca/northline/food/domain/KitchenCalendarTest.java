@@ -12,7 +12,10 @@ import org.junit.jupiter.api.Test;
 
 class KitchenCalendarTest {
 
-    // Wednesday 30 Sep 2026, Edmonton
+    /** Test data: a kitchen in a Mountain-time market. */
+    private static final java.time.ZoneId ZONE = java.time.ZoneId.of("America/Edmonton");
+
+    // Wednesday 30 Sep 2026, in the kitchen's zone
     private static final LocalDate WED = LocalDate.of(2026, 9, 30);
 
     private static OpeningRanges ranges(String from, String to) {
@@ -20,9 +23,7 @@ class KitchenCalendarTest {
     }
 
     private static java.time.Instant at(LocalDate day, String time) {
-        return LocalDateTime.of(day, LocalTime.parse(time))
-                .atZone(KitchenTime.ZONE)
-                .toInstant();
+        return LocalDateTime.of(day, LocalTime.parse(time)).atZone(ZONE).toInstant();
     }
 
     private static KitchenCalendar calendar(
@@ -32,7 +33,7 @@ class KitchenCalendarTest {
             int late,
             boolean menuLive) {
         var week = Map.of(1, ranges("11:00", "21:00"), 3, ranges("11:00", "21:00"), 4, ranges("11:00", "21:00"));
-        return new KitchenCalendar(KitchenTime.ZONE, week, holidays, pausedUntil, autoPause, late, menuLive);
+        return new KitchenCalendar(ZONE, week, holidays, pausedUntil, autoPause, late, menuLive);
     }
 
     private static KitchenCalendar open() {

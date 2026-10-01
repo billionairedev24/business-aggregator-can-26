@@ -1,4 +1,4 @@
-import { formatMoney, TIME_ZONE, type Locale } from '@northline/ui';
+import { formatMoney, type Locale, timeZone } from '@northline/ui';
 import { clock, clockWithPeriod, hhmmLabel, toMinutes } from '../../lib/time';
 import type { MenuSchedule, ModifierGroup, Ticket } from './api';
 import type { KitchenT } from './messages';
@@ -11,9 +11,9 @@ export function parseDollars(text: string): number | undefined {
 }
 export const dollars = (cents: number) => (cents / 100).toFixed(2);
 
-const hourIn = (d: Date) => Number(new Intl.DateTimeFormat('en-US', { timeZone: TIME_ZONE, hour: 'numeric', hourCycle: 'h23' }).format(d));
-/** ISO weekday (1 = Mon) in Edmonton. */
-export const weekdayIn = (d: Date) => { const w = new Intl.DateTimeFormat('en-US', { timeZone: TIME_ZONE, weekday: 'short' }).format(d); return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].indexOf(w) + 1; };
+const hourIn = (d: Date) => Number(new Intl.DateTimeFormat('en-US', { timeZone: timeZone(), hour: 'numeric', hourCycle: 'h23' }).format(d));
+/** ISO weekday (1 = Mon) in the merchant's time zone. */
+export const weekdayIn = (d: Date) => { const w = new Intl.DateTimeFormat('en-US', { timeZone: timeZone(), weekday: 'short' }).format(d); return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].indexOf(w) + 1; };
 /** The service the kitchen is in ("Tuesday dinner"): before 11 → morning, 11–16 → lunch, then dinner. */
 export const mealOf = (d: Date): 'morning' | 'lunch' | 'dinner' => { const h = hourIn(d); return h < 11 ? 'morning' : h < 16 ? 'lunch' : 'dinner'; };
 

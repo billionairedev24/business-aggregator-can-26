@@ -14,12 +14,13 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * One member's Settings › Notifications: the channel matrix over the design's defaults
  * ({@code docs/spec/notification-matrix-defaults.json}, the same file the api's {@code NotificationMatrix} is checked
- * against) and the quiet hours, in {@code America/Edmonton}.
+ * against) and the quiet hours, in {@code zone}: the time zone of the business the notification is about (its
+ * market's, else its province's; region model, S-134).
  */
-public record Preferences(Map<String, Map<String, Boolean>> matrix, LocalTime quietFrom, LocalTime quietTo) {
+public record Preferences(
+        Map<String, Map<String, Boolean>> matrix, LocalTime quietFrom, LocalTime quietTo, ZoneId zone) {
 
     public static final String DEFAULTS = "spec/notification-matrix-defaults.json";
-    public static final ZoneId ZONE = ZoneId.of("America/Edmonton");
 
     public Preferences {
         matrix = Map.copyOf(matrix);
@@ -30,12 +31,12 @@ public record Preferences(Map<String, Map<String, Boolean>> matrix, LocalTime qu
         return matrix.getOrDefault(row, Map.of()).getOrDefault(channel.code(), false);
     }
 
-    /** Inside the quiet hours at {@code now} (Edmonton time; an interval may wrap midnight, 21:00–07:00). */
+    /** Inside the quiet hours at {@code now} (local time in {@code zone}; an interval may wrap midnight, 21:00–07:00). */
     public boolean quietAt(Instant now) {
         if (quietFrom.equals(quietTo)) {
             return false;
         }
-        var time = now.atZone(ZONE).toLocalTime();
+        var time = now.atZone(zone).toLocalTime();
         return quietFrom.isBefore(quietTo)
                 ? !time.isBefore(quietFrom) && time.isBefore(quietTo)
                 : !time.isBefore(quietFrom) || time.isBefore(quietTo);
@@ -43,7 +44,7 @@ public record Preferences(Map<String, Map<String, Boolean>> matrix, LocalTime qu
 
     /** The first moment after {@code now} when the quiet hours end. */
     public Instant quietEndsAfter(Instant now) {
-        var local = now.atZone(ZONE);
+        var local = now.atZone(zone);
         ZonedDateTime end = local.with(quietTo);
         if (!end.isAfter(local)) {
             end = end.plusDays(1);
@@ -72,18 +73,19 @@ public record Preferences(Map<String, Map<String, Boolean>> matrix, LocalTime qu
         }
 
         /** Stored cells over the defaults (a member who never saved has no row; new rows get their defaults). */
-        public Preferences with(Map<String, Map<String, Boolean>> stored, LocalTime storedFrom, LocalTime storedTo) {
+        public Preferences with(
+                Map<String, Map<String, Boolean>> stored, LocalTime storedFrom, LocalTime storedTo, ZoneId zone) {
             var merged = new LinkedHashMap<String, Map<String, Boolean>>();
             matrix.forEach((row, flags) -> {
                 var cells = new LinkedHashMap<>(flags);
                 cells.putAll(stored.getOrDefault(row, Map.of()));
                 merged.put(row, cells);
             });
-            return new Preferences(merged, storedFrom, storedTo);
+            return new Preferences(merged, storedFrom, storedTo, zone);
         }
 
-        public Preferences only() {
-            return new Preferences(matrix, quietFrom, quietTo);
+        public Preferences only(ZoneId zone) {
+            return new Preferences(matrix, quietFrom, quietTo, zone);
         }
 
         private static Map<String, Boolean> flags(JsonNode row) {

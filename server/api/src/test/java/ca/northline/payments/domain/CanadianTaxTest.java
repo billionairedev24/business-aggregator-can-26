@@ -11,6 +11,9 @@ import org.junit.jupiter.api.Test;
 /** S-21: the fake's fixed rates, the Edmonton quarter, the refund's share of the tax and the balanced postings. */
 class CanadianTaxTest {
 
+    /** Test data: a business in a Mountain-time market. */
+    static final java.time.ZoneId ZONE = java.time.ZoneId.of("America/Edmonton");
+
     @Test
     void ratesAndJurisdictions() {
         assertThat(CanadianTax.total(Province.AB.lines(24_700))).isEqualTo(1_235);
@@ -34,9 +37,12 @@ class CanadianTaxTest {
     @Test
     void periodIsTheEdmontonQuarter() {
         // 2026-10-01T05:59Z is still Sep 30 in Edmonton (MDT, UTC−6)
-        assertThat(CanadianTax.period(Instant.parse("2026-10-01T05:59:00Z"))).isEqualTo("2026-Q3");
-        assertThat(CanadianTax.period(Instant.parse("2026-10-01T06:00:00Z"))).isEqualTo("2026-Q4");
-        assertThat(CanadianTax.period(Instant.parse("2027-01-01T07:00:00Z"))).isEqualTo("2027-Q1");
+        assertThat(CanadianTax.period(Instant.parse("2026-10-01T05:59:00Z"), ZONE))
+                .isEqualTo("2026-Q3");
+        assertThat(CanadianTax.period(Instant.parse("2026-10-01T06:00:00Z"), ZONE))
+                .isEqualTo("2026-Q4");
+        assertThat(CanadianTax.period(Instant.parse("2027-01-01T07:00:00Z"), ZONE))
+                .isEqualTo("2027-Q1");
     }
 
     @Test

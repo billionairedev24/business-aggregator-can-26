@@ -78,9 +78,10 @@ export const Placed = z.object({ orderId: z.string(), ref: z.string() });
 export interface AddressInput { addressId?: string; street?: string; unit?: string; city?: string; province?: string; postal?: string; note?: string }
 export interface CheckoutBody { kind: 'pooled' | 'direct' | ''; windowId?: string | null; address: AddressInput; substitution: 'similar' | 'refund' | 'ask' }
 
-export const setupQuery = (market: string, locale: Locale, enabled: boolean) => queryOptions({
-  queryKey: ['checkout', 'setup', market.toLowerCase(), locale],
-  queryFn: () => http(`/api/v1/me/checkout?market=${encodeURIComponent(market)}&lang=${locale}`, {}, Setup),
+/** @param market the visitor's city; undefined = the api's fallback market (region configuration) */
+export const setupQuery = (market: string | undefined, locale: Locale, enabled: boolean) => queryOptions({
+  queryKey: ['checkout', 'setup', market?.toLowerCase() ?? '', locale],
+  queryFn: () => http(`/api/v1/me/checkout?${market ? `market=${encodeURIComponent(market)}&` : ''}lang=${locale}`, {}, Setup),
   enabled,
   staleTime: 15_000,
 });

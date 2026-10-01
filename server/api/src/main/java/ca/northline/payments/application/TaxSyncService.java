@@ -44,12 +44,18 @@ class TaxSyncService implements ReconcileTax {
     private final TaxGateway gateway;
     private final TransactionTemplate transactions;
     private final Clock clock;
+    private final BusinessTime time;
 
     TaxSyncService(
-            TaxRepository taxes, TaxGateway gateway, PlatformTransactionManager transactionManager, Clock clock) {
+            TaxRepository taxes,
+            TaxGateway gateway,
+            PlatformTransactionManager transactionManager,
+            Clock clock,
+            BusinessTime time) {
         this.taxes = taxes;
         this.gateway = gateway;
         this.clock = clock;
+        this.time = time;
         // each transaction in its own database transaction, also when called from the listener's
         this.transactions = new TransactionTemplate(transactionManager);
         this.transactions.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
@@ -84,8 +90,8 @@ class TaxSyncService implements ReconcileTax {
     /** Nightly: the current quarter, and the previous one while its late refunds and retries can still land. */
     int reconcileRecent() {
         var now = clock.instant();
-        var current = CanadianTax.period(now);
-        var previous = CanadianTax.period(now.minus(Duration.ofDays(92)));
+        var current = CanadianTax.period(now, time.platform());
+        var previous = CanadianTax.period(now.minus(Duration.ofDays(92)), time.platform());
         var a = reconcile(current);
         var b = previous.equals(current) ? null : reconcile(previous);
         return a.reported() + a.rows() + (b == null ? 0 : b.reported() + b.rows());
@@ -94,7 +100,7 @@ class TaxSyncService implements ReconcileTax {
     @Override
     public Report reconcile(@Nullable String period) {
         var now = clock.instant();
-        var quarter = period == null ? CanadianTax.period(now) : period.strip();
+        var quarter = period == null ? CanadianTax.period(now, time.platform()) : period.strip();
         if (!PERIOD.matcher(quarter).matches()) {
             throw RuleViolation.of("period", "format", "Use a quarter like 2026-Q3.");
         }

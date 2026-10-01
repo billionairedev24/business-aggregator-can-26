@@ -16,7 +16,7 @@ import lombok.ToString;
 import org.jspecify.annotations.Nullable;
 
 /**
- * A merchant's itemized reply to a quote request (aggregate root). Honoured as written (Alberta CPA ±10 %), so it is
+ * A merchant's itemized reply to a quote request (aggregate root). Honoured as written (provincial consumer-protection rules, ±10 %), so it is
  * <b>immutable once sent</b>: a change is a {@link #revise revision} — a new row with version + 1 — and the prior
  * version becomes {@code superseded}. Totals are always derived from the content ({@link QuoteTotals}); the V016 trigger
  * re-checks subtotal = Σ lines at commit.

@@ -22,8 +22,9 @@ feature follows:
 
 - **Minimum data.** Tools and prompts carry ids, names of listings/services, dates, amounts and states. Never contact
   details, never another business's data (tools are scoped to the authorized `merchantId`).
-- **Redaction on the port.** `PrivacyRedactor` masks card numbers and SINs (Luhn-checked), bank account numbers
-  (cheque format, "account 1234567", IBAN), emails, phone numbers and API keys in every message before it leaves.
+- **Redaction on the port.** `PrivacyRedactor` runs on every message before it leaves. It reuses the logging
+  `Redactor` (S-112) for secrets, emails, card numbers (last 4 kept), phone numbers, one-time codes and postal codes
+  (area only), and adds SINs (Luhn-checked) and bank account numbers (cheque format, "account 1234567", IBAN).
 - **No training, no retention.** Every request carries `provider: {data_collection: "deny", zdr: true}`: OpenRouter
   only routes to endpoints that neither store nor train on prompts and have a Zero Data Retention policy. Keep
   `OPENROUTER_DATA_COLLECTION=deny` and `OPENROUTER_ZDR=true`. Also leave OpenRouter's account-level *Input & Output

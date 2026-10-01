@@ -1,5 +1,6 @@
 import { SiteLink, useLocale } from '@northline/ui';
 import { useShellT } from './messages';
+import { useSiteConfig } from '../../lib/config';
 
 /**
  * Design 06's footer, as a placeholder: S-63 owns the legal pages and the real footer. Privacy and Terms open the
@@ -8,9 +9,10 @@ import { useShellT } from './messages';
 export function Footer() {
   const t = useShellT();
   const { locale, setLocale } = useLocale();
+  const { legalEntity } = useSiteConfig();
   return (
     <footer className="nl-footer">
-      <span>{t('footerCompany')}</span>
+      <span>{legalEntity}</span>
       <SiteLink href="/legal/privacy.html">{t('privacy')}</SiteLink>
       <SiteLink href="/legal/terms.html">{t('terms')}</SiteLink>
       <button type="button" className="nl-footer-lang" lang={locale === 'fr' ? 'en-CA' : 'fr-CA'}

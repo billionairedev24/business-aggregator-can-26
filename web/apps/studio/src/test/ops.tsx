@@ -1,3 +1,4 @@
+import { isRegions, regionsBody } from './regions';
 import type { ReactNode } from 'react';
 import { render } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -21,6 +22,8 @@ export function mockFetch(routes: Record<string, Handler>) {
     const body = typeof init.body === 'string' ? JSON.parse(init.body) : init.body;
     calls.push({ method, url, body });
     const key = Object.keys(routes).find(k => { const [m, p] = k.split(' '); return m === method && url.startsWith(p!); });
+    // the region model (S-134) answers like the launch configuration unless the test mocks it
+    if (!key && isRegions(url)) return new Response(JSON.stringify(regionsBody(url)), { status: 200, headers: { 'content-type': 'application/json' } });
     if (!key) return new Response(JSON.stringify({ detail: 'not mocked' }), { status: 404 });
     try {
       const data = routes[key]!(url, init);

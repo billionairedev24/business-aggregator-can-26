@@ -17,7 +17,7 @@ public interface CustomerQuotes {
     /**
      * @param merchantIds the providers asked (1–3, already checked by the caller)
      * @param title what the job is ("Alternator replacement", "Mocktail bar · 40 guests")
-     * @param area the zone or city the work is in ("Beltline"): never a street address
+     * @param area the zone or city the work is in (a neighbourhood): never a street address
      * @param details the answers the providers need (vehicle, event date, guests…): no access codes or phone numbers
      */
     record NewRequest(

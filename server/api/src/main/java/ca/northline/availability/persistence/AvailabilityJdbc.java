@@ -123,14 +123,15 @@ class AvailabilityJdbc implements HoursRepository, TimeOffRepository, CalendarLi
 
     @Override
     public Optional<Instant> lastSaved(String merchantId) {
-        return Optional.ofNullable(jdbc.sql("""
+        // nothing saved yet = one row whose value is null (a null single() result is an error in JdbcClient)
+        return jdbc.sql("""
                         select greatest((select max(updated_at) from availability.availability_rules where merchant_id = :m),
                                         (select max(updated_at) from availability.booking_rules where merchant_id = :m))
                                as saved
                         """)
                 .param("m", merchantId)
-                .query((rs, _) -> JdbcTimes.instant(rs, "saved"))
-                .single());
+                .query((rs, _) -> Optional.ofNullable(JdbcTimes.instant(rs, "saved")))
+                .single();
     }
 
     // ── rules ───────────────────────────────────────────────────────────────────

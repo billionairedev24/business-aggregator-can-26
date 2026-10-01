@@ -1,7 +1,6 @@
 package ca.northline.auth.application;
 
 import ca.northline.auth.domain.Factor;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -24,9 +23,9 @@ import org.springframework.stereotype.Service;
 public class UserClaimsService {
 
     public static final String MFA = "mfa";
-    private static final ZoneId EDMONTON = ZoneId.of("America/Edmonton");
 
     private final UserAccounts accounts;
+    private final AuthProperties props;
 
     /** The factors recorded on a session authentication ({@code FACTOR_*} authorities). */
     public static EnumSet<Factor> factorsOf(Authentication authentication) {
@@ -61,7 +60,8 @@ public class UserClaimsService {
             }
             claims.put("locale", Objects.requireNonNullElse(u.locale(), "en-CA"));
             claims.put(
-                    "member_since", u.createdAt().atZone(EDMONTON).toLocalDate().toString());
+                    "member_since",
+                    u.createdAt().atZone(props.platformZone()).toLocalDate().toString());
         });
         putAuthenticationContext(claims, factors);
         return claims;

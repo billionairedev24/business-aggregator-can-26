@@ -5,6 +5,7 @@ import ca.northline.email.EmailFormat;
 import java.net.URI;
 import java.text.MessageFormat;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.EnumSet;
 import java.util.Locale;
 import java.util.Map;
@@ -26,7 +27,7 @@ import tools.jackson.databind.JsonNode;
  * </table>
  *
  * Texts are one short line in the member's language (French for {@code fr}), amounts and dates formatted like the
- * emails ({@link EmailFormat}: CAD, America/Edmonton).
+ * emails ({@link EmailFormat}: CAD, the email time zone).
  */
 public final class Notices {
 
@@ -100,13 +101,13 @@ public final class Notices {
                 "payout." + outcome, "payout.failed.title", (f, business) -> new Object[] {f.money(amount), business});
         return new Notice.Texts() {
             @Override
-            public String text(String business, Locale locale) {
-                return words.text(business, locale);
+            public String text(String business, Locale locale, ZoneId zone) {
+                return words.text(business, locale, zone);
             }
 
             @Override
-            public String title(String business, Locale locale) {
-                return words.title(business, locale);
+            public String title(String business, Locale locale, ZoneId zone) {
+                return words.title(business, locale, zone);
             }
 
             @Override
@@ -145,13 +146,13 @@ public final class Notices {
     private static Notice.Texts texts(String key, String titleKey, Arguments arguments) {
         return new Notice.Texts() {
             @Override
-            public String text(String business, Locale locale) {
-                return format(key, locale, arguments.of(EmailFormat.of(locale), business));
+            public String text(String business, Locale locale, ZoneId zone) {
+                return format(key, locale, arguments.of(EmailFormat.of(locale, zone), business));
             }
 
             @Override
-            public String title(String business, Locale locale) {
-                return format(titleKey, locale, arguments.of(EmailFormat.of(locale), business));
+            public String title(String business, Locale locale, ZoneId zone) {
+                return format(titleKey, locale, arguments.of(EmailFormat.of(locale, zone), business));
             }
         };
     }

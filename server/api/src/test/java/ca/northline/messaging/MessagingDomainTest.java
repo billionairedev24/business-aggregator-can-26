@@ -19,6 +19,9 @@ import org.junit.jupiter.params.provider.CsvSource;
 /** Plain domain rules: masking and off-platform detection, the support SLA in support hours, case replies. */
 class MessagingDomainTest {
 
+    /** Test data: support hours kept in a Mountain-time platform zone. */
+    static final java.time.ZoneId ZONE = java.time.ZoneId.of("America/Edmonton");
+
     @Nested
     class Text {
 
@@ -46,20 +49,20 @@ class MessagingDomainTest {
     class Sla {
 
         static Instant mt(String local) {
-            return LocalDateTime.parse(local).atZone(SupportSla.ZONE).toInstant();
+            return LocalDateTime.parse(local).atZone(ZONE).toInstant();
         }
 
         @Test
         void countsOnlySupportHours() {
-            assertThat(SupportSla.dueAt(mt("2026-09-29T10:00"), TicketPriority.NORMAL))
+            assertThat(SupportSla.dueAt(mt("2026-09-29T10:00"), TicketPriority.NORMAL, ZONE))
                     .isEqualTo(mt("2026-09-29T14:00"));
-            assertThat(SupportSla.dueAt(mt("2026-09-29T21:30"), TicketPriority.NORMAL))
+            assertThat(SupportSla.dueAt(mt("2026-09-29T21:30"), TicketPriority.NORMAL, ZONE))
                     .isEqualTo(mt("2026-09-30T09:30"));
-            assertThat(SupportSla.dueAt(mt("2026-09-29T02:00"), TicketPriority.PRIORITY))
+            assertThat(SupportSla.dueAt(mt("2026-09-29T02:00"), TicketPriority.PRIORITY, ZONE))
                     .isEqualTo(mt("2026-09-29T08:00"));
-            assertThat(SupportSla.dueAt(mt("2026-09-29T22:55"), TicketPriority.URGENT))
+            assertThat(SupportSla.dueAt(mt("2026-09-29T22:55"), TicketPriority.URGENT, ZONE))
                     .isEqualTo(mt("2026-09-30T07:10"));
-            assertThat(SupportSla.dueAt(mt("2026-09-29T23:30"), TicketPriority.URGENT))
+            assertThat(SupportSla.dueAt(mt("2026-09-29T23:30"), TicketPriority.URGENT, ZONE))
                     .isEqualTo(mt("2026-09-30T07:15"));
         }
 
@@ -79,15 +82,15 @@ class MessagingDomainTest {
         @Test
         void replyToWaitingCaseReturnsItToNorthline() {
             var waiting = new SupportCase("c", 4471, TicketState.WAITING, TicketPriority.NORMAL, null);
-            var replied = waiting.replied(now);
+            var replied = waiting.replied(now, ZONE);
             assertThat(replied.state()).isEqualTo(TicketState.IN_PROGRESS);
-            assertThat(replied.slaDueAt()).isEqualTo(SupportSla.dueAt(now, TicketPriority.NORMAL));
+            assertThat(replied.slaDueAt()).isEqualTo(SupportSla.dueAt(now, TicketPriority.NORMAL, ZONE));
         }
 
         @Test
         void resolvedCaseStaysClosed() {
             var resolved = new SupportCase("c", 4402, TicketState.RESOLVED, TicketPriority.NORMAL, null);
-            assertThatThrownBy(() -> resolved.replied(now))
+            assertThatThrownBy(() -> resolved.replied(now, ZONE))
                     .isInstanceOf(Conflict.class)
                     .hasMessage("This case is resolved. Open a new case.");
         }

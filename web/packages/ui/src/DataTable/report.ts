@@ -2,7 +2,7 @@
  * Report builders — pure functions from rows + columns to file contents. No DOM; see `download.ts`.
  * CSV (UTF-8 with BOM), Excel (.xlsx, Office Open XML in a stored ZIP — no dependency), print HTML.
  */
-import { TIME_ZONE, type Locale } from '../i18n';
+import { platformTimeZone, type Locale } from '../i18n';
 import { cellText, isBlank, subText, valueOf, type NormalizedColumn } from './model';
 
 export interface ReportCell {
@@ -288,8 +288,8 @@ thead{display:table-header-group}tr{break-inside:avoid}
 }
 
 // ── file naming ──────────────────────────────────────────────────────────────
-/** YYYY-MM-DD in America/Edmonton. */
-export const reportDate = (d = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+/** YYYY-MM-DD in the platform zone (a file name belongs to no market). */
+export const reportDate = (d = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: platformTimeZone(), year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
 
 export function reportFileName(stem: string, ext: string, d = new Date()): string {
   const slug =

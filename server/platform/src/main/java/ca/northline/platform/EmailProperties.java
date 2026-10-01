@@ -1,6 +1,7 @@
 package ca.northline.platform;
 
 import java.time.Duration;
+import java.time.ZoneId;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
@@ -14,7 +15,10 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  *     {@code azure} (Azure Communication Services Email) ({@code EMAIL_PROVIDER})
  * @param from sender, {@code Name <address>}; its domain must be verified at the provider ({@code EMAIL_FROM})
  * @param replyTo where replies go; empty = no Reply-To header ({@code EMAIL_REPLY_TO})
- * @param mailingAddress CASL sender identification printed in every footer ({@code EMAIL_MAILING_ADDRESS})
+ * @param mailingAddress CASL sender identification printed in every footer: the legal entity's address, configuration
+ *     only — no default in code ({@code EMAIL_MAILING_ADDRESS}, required)
+ * @param timeZone the zone dates and times in emails are written in ({@code EMAIL_TIME_ZONE}, else the platform zone
+ *     {@code REGION_PLATFORM_ZONE}; required)
  * @param contact CASL contact line printed in every footer (an email address or web page) ({@code EMAIL_CONTACT})
  * @param region AWS region for {@code ses}, e.g. {@code ca-central-1}; empty = the SDK default chain ({@code
  *     EMAIL_REGION})
@@ -34,10 +38,10 @@ public record EmailProperties(
         @DefaultValue("Northline <no-reply@northline.ca>") String from,
         @Nullable String replyTo,
 
-        @DefaultValue("Northline Marketplace Inc. · 1200 – 8th Avenue SW, Calgary, Alberta T2P 1B5, Canada")
-        String mailingAddress,
+        @Nullable String mailingAddress,
 
         @DefaultValue("support@northline.ca") String contact,
+        @Nullable ZoneId timeZone,
         @Nullable String region,
         @Nullable String endpoint,
         @Nullable String apiKey,

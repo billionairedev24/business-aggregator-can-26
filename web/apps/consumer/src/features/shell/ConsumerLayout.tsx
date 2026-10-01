@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useRouterState } from '@tanstack/react-router';
 import { DeliveryLocationProvider } from '../location/useDeliveryLocation';
+import { VisitorPlace } from '../location/regions';
 import { useViewer } from '../session/api';
 import { Footer } from './Footer';
 import { GuestBanner } from './GuestBanner';
@@ -17,13 +18,15 @@ export function ConsumerLayout({ children, geolocation }: { children: ReactNode;
   const banner = !loading && !user && screen && SCREENS[screen].guestBanner;
   return (
     <DeliveryLocationProvider ipCity={session?.location?.city} geolocation={geolocation}>
-      <div className="nl-app">
-        <a href="#main" className="nl-skip">{t('skip')}</a>
-        <Header />
-        {banner && <GuestBanner />}
-        <main id="main" tabIndex={-1} className="nl-main">{children}</main>
-        <Footer />
-      </div>
+      <VisitorPlace>
+        <div className="nl-app">
+          <a href="#main" className="nl-skip">{t('skip')}</a>
+          <Header />
+          {banner && <GuestBanner />}
+          <main id="main" tabIndex={-1} className="nl-main">{children}</main>
+          <Footer />
+        </div>
+      </VisitorPlace>
     </DeliveryLocationProvider>
   );
 }

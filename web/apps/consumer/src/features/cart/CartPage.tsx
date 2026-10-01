@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { MarketZone, useZone } from '../location/regions';
+import { useRegions } from '../location/regions';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { Minus, Plus, Trash } from '@phosphor-icons/react';
@@ -15,7 +17,6 @@ import { SERVER_FR, useCartT } from './messages';
 import { FakePayment, StripePayment } from './Payment';
 import { StepUpDialog } from './StepUpDialog';
 
-const PROVINCES = ['AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'NT', 'NU', 'ON', 'PE', 'QC', 'SK', 'YT'] as const;
 type Substitution = CheckoutBody['substitution'];
 
 /** Server 422 messages in the page's language (orders.domain.CheckoutMessages are English). */
@@ -32,13 +33,14 @@ export function localizeServer(message: string, locale: Locale): string {
 }
 
 /** Client checks with the server's messages (orders.domain.CheckoutMessages). */
-export function addressErrors(a: AddressInput): Record<string, string> {
+/** @param provinces the region model's province codes (any two-letter code until it has loaded; the server checks too) */
+export function addressErrors(a: AddressInput, provinces: readonly string[] = []): Record<string, string> {
   const e: Record<string, string> = {};
   if (a.addressId) return e;
   if (!a.street?.trim() || a.street.trim().length > 120) e['address.street'] = 'Enter the street address.';
   if (a.unit && a.unit.trim().length > 20) e['address.unit'] = 'Keep the unit under 20 characters.';
   if (!a.city?.trim() || a.city.trim().length > 60) e['address.city'] = 'Enter the city.';
-  if (!a.province || !(PROVINCES as readonly string[]).includes(a.province)) e['address.province'] = "Choose a Canadian province or territory.";
+  if (!a.province || !/^[A-Z]{2}$/.test(a.province) || (provinces.length > 0 && !provinces.includes(a.province))) e['address.province'] = "Choose a Canadian province or territory.";
   if (!/^[A-Z]\d[A-Z] ?\d[A-Z]\d$/.test((a.postal ?? '').trim().toUpperCase().replace('-', ' '))) e['address.postal'] = 'Enter a Canadian postal code, like T2P 1B5.';
   if (a.note && a.note.trim().length > 200) e['address.note'] = 'Keep delivery notes under 200 characters.';
   return e;
@@ -53,6 +55,8 @@ export function CartPage() {
   const t = useCartT();
   const { user, loading: sessionLoading } = useViewer();
   const cart = useQuery(cartQuery);
+  const { location } = useDeliveryLocation();
+  const city = location.status === 'locating' ? undefined : location.city;
   if (cart.isPending || sessionLoading) return <CartSkeleton />;
   if (cart.isError) return <div className="nl-page"><ErrorState message={t('loadError')} onRetry={() => void cart.refetch()} /></div>;
   if (cart.data.itemCount === 0) {
@@ -63,7 +67,8 @@ export function CartPage() {
       </div>
     );
   }
-  return user ? <Checkout cart={cart.data} /> : <GuestCart cart={cart.data} />;
+  // times on this page read in the visitor's market's zone (region model), else the platform zone
+  return <MarketZone city={city}>{user ? <Checkout cart={cart.data} /> : <GuestCart cart={cart.data} />}</MarketZone>;
 }
 
 function GuestCart({ cart }: { cart: Cart }) {
@@ -99,13 +104,14 @@ function CartHead({ cart }: { cart: Cart }) {
 function CartGroups({ cart, packBy }: { cart: Cart; packBy: string | null }) {
   const t = useCartT();
   const { locale } = useLocale();
+  const zone = useZone();
   return (
     <>
       {cart.groups.map(g => (
         <section key={g.merchantId || 'gone'} className="cart-group" aria-label={g.shopName || t('unavailableGroup')}>
           <div className="cart-group-head">
             <h2 className="cart-shop">{g.shopName || t('unavailableGroup')}</h2>
-            {packBy && g.shopName ? <span className="cart-group-note">{t('closesToRun', { time: clock(packBy, locale) })}</span> : null}
+            {packBy && g.shopName ? <span className="cart-group-note">{t('closesToRun', { time: clock(packBy, locale, zone) })}</span> : null}
           </div>
           <ul className="cart-lines">{g.items.map(item => <CartItem key={item.itemId} item={item} />)}</ul>
         </section>
@@ -148,18 +154,24 @@ type Phase = { step: 'form' } | { step: 'stepUp'; mode: 'required' | 'enrol' } |
 function Checkout({ cart }: { cart: Cart }) {
   const t = useCartT();
   const { locale } = useLocale();
+  const zone = useZone();
   const { money } = useFormatters();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { location } = useDeliveryLocation();
-  const market = location.status === 'locating' ? 'Calgary' : location.city ?? 'Calgary';
+  // the visitor's market; none known = the api's fallback market (region configuration)
+  const market = location.status === 'locating' ? undefined : location.city ?? undefined;
+  const regions = useRegions();
+  const provinceCodes = regions?.provinces.map(p => p.code) ?? [];
   const setup = useQuery(setupQuery(market, locale, true));
 
   const [optionId, setOptionId] = useState<string>();
   const [substitution, setSubstitution] = useState<Substitution>('similar');
   const [addressId, setAddressId] = useState<string>();
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState<AddressInput>({ province: 'AB' });
+  const [draft, setDraft] = useState<AddressInput>({ province: location.status !== 'locating' ? location.province : undefined });
+  // no province known yet: the configured default province once the region model answers
+  useEffect(() => { if (!draft.province && regions?.defaultProvince) setDraft(d => ({ ...d, province: d.province ?? regions.defaultProvince ?? undefined })); }, [draft.province, regions?.defaultProvince]);
   const [touched, setTouched] = useState(false);
   const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string>();
@@ -179,7 +191,7 @@ function Checkout({ cart }: { cart: Cart }) {
 
   const option = data?.options.find(o => o.id === optionId);
   const address: AddressInput = !editing && addressId ? { addressId } : trimAddress(draft);
-  const clientErrors = addressErrors(address);
+  const clientErrors = addressErrors(address, provinceCodes);
   const body: CheckoutBody = { kind: option?.kind ?? '', windowId: option?.windowId ?? null, address, substitution };
   const complete = !!option && Object.keys(clientErrors).length === 0;
   const quote = useQuery(quoteQuery(body, locale, complete));
@@ -259,7 +271,7 @@ function Checkout({ cart }: { cart: Cart }) {
             {!editing && addressId ? (
               <SavedAddress setup={data} addressId={addressId} onPick={setAddressId} onChange={() => setEditing(true)} disabled={!!started} />
             ) : (
-              <AddressForm value={draft} onChange={v => { setDraft(v); setServerErrors({}); }} errors={shownErrors} locale={locale}
+              <AddressForm value={draft} provinces={provinceCodes} onChange={v => { setDraft(v); setServerErrors({}); }} errors={shownErrors} locale={locale}
                 onCancel={data.addresses.length > 0 ? () => setEditing(false) : undefined} disabled={!!started} />
             )}
             {serverErrors['address.city'] && !editing ? <p className="cart-field-error" role="alert">{serverErrors['address.city']}</p> : null}
@@ -327,11 +339,12 @@ function taxLabel(t: ReturnType<typeof useCartT>, type: string, percent: number,
 function WindowOption({ option, selected, onPick, disabled }: { option: DeliveryOption; selected: boolean; onPick: () => void; disabled: boolean }) {
   const t = useCartT();
   const { locale } = useLocale();
+  const zone = useZone();
   const { money } = useFormatters();
   const name = option.kind === 'direct'
     ? t('now', { eta: option.etaMinutes ?? 45 })
-    : t(`win_${runWhen({ day: option.day ?? 'later', startsAt: option.startsAt! })}`, { range: windowRange(option.startsAt!, option.endsAt!, locale), weekday: weekday(option.startsAt!, locale) });
-  const desc = option.kind === 'direct' ? t('direct') : option.households > 0 ? t('pooledWith', { count: option.households }) : t('pooled', { time: clock(option.orderBy!, locale) });
+    : t(`win_${runWhen({ day: option.day ?? 'later', startsAt: option.startsAt! }, zone)}`, { range: windowRange(option.startsAt!, option.endsAt!, locale, zone), weekday: weekday(option.startsAt!, locale, zone) });
+  const desc = option.kind === 'direct' ? t('direct') : option.households > 0 ? t('pooledWith', { count: option.households }) : t('pooled', { time: clock(option.orderBy!, locale, zone) });
   return (
     <button type="button" role="radio" aria-checked={selected} className="nl-option cart-option" onClick={onPick} disabled={disabled}>
       <span className="cart-option-text"><span className="cart-option-name">{name}</span><span className="cart-option-desc">{desc}</span></span>
@@ -359,7 +372,8 @@ function SavedAddress({ setup, addressId, onPick, onChange, disabled }: { setup:
   );
 }
 
-function AddressForm({ value, onChange, errors, locale, onCancel, disabled }: {
+function AddressForm({ value, provinces, onChange, errors, locale, onCancel, disabled }: {
+  provinces: readonly string[];
   value: AddressInput; onChange: (v: AddressInput) => void; errors: Record<string, string>; locale: Locale; onCancel?: () => void; disabled: boolean;
 }) {
   const t = useCartT();
@@ -371,7 +385,7 @@ function AddressForm({ value, onChange, errors, locale, onCancel, disabled }: {
         <Field label={t('street')} error={err('street')} className="cart-span-2"><TextInput value={value.street ?? ''} onChange={set('street')} autoComplete="address-line1" disabled={disabled} aria-invalid={!!err('street')} /></Field>
         <Field label={t('unit')} error={err('unit')}><TextInput value={value.unit ?? ''} onChange={set('unit')} autoComplete="address-line2" disabled={disabled} aria-invalid={!!err('unit')} /></Field>
         <Field label={t('city')} error={err('city')}><TextInput value={value.city ?? ''} onChange={set('city')} autoComplete="address-level2" disabled={disabled} aria-invalid={!!err('city')} /></Field>
-        <Field label={t('province')} error={err('province')}><Select value={value.province ?? ''} onChange={set('province')} options={[...PROVINCES]} disabled={disabled} /></Field>
+        <Field label={t('province')} error={err('province')}><Select value={value.province ?? ''} onChange={set('province')} options={[...provinces]} disabled={disabled} /></Field>
         <Field label={t('postal')} error={err('postal')}><TextInput value={value.postal ?? ''} onChange={set('postal')} autoComplete="postal-code" disabled={disabled} aria-invalid={!!err('postal')} /></Field>
         <Field label={t('note')} error={err('note')} className="cart-span-2"><TextInput value={value.note ?? ''} onChange={set('note')} placeholder={t('notePlaceholder')} disabled={disabled} aria-invalid={!!err('note')} /></Field>
       </div>

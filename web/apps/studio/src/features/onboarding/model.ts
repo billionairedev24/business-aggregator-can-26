@@ -27,7 +27,7 @@ export function validateOnboardingSearch(search: Record<string, unknown>): Onboa
 /** Studio home after "Go live" (kitchens land on Live orders). */
 export const studioHome = (merchantId: string, type: MerchantType) => (type === 'kitchen' ? `/b/${merchantId}/kitchen/live` : `/b/${merchantId}`);
 
-/** Next business days at 10:00 and 14:00 in Calgary, starting tomorrow, for the kitchen-visit booking. */
+/** Next business days at 10:00 and 14:00 in the business's time zone, starting tomorrow, for the kitchen-visit booking. */
 export function visitSlots(now: Date, count = 6): Date[] {
   const out: Date[] = [];
   const day = new Date(now);

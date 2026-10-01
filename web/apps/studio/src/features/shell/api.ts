@@ -15,8 +15,20 @@ export type Business = z.infer<typeof Business>;
 const Businesses = z.union([z.array(Business), z.object({ items: z.array(Business) }).transform(r => r.items)]);
 export const businessesQuery = queryOptions({ queryKey: ['me', 'businesses'], queryFn: () => http('/api/v1/me/businesses', {}, Businesses) });
 
+/**
+ * Where the business is in the region model (S-134): its province (else the configured default), the province's name,
+ * the market's time zone the Studio shows its dates in, and the privacy law to cite.
+ */
+export const MerchantRegion = z.object({
+  province: z.string().nullish(), provinceName: z.object({ en: z.string(), fr: z.string() }),
+  provinceIn: z.object({ en: z.string(), fr: z.string() }).nullish(), provinceOf: z.object({ en: z.string(), fr: z.string() }).nullish(),
+  timeZone: z.string(),
+  privacyLaw: z.string().nullish(),
+});
+export type MerchantRegion = z.infer<typeof MerchantRegion>;
+
 /** GET /api/v1/merchants/{id} — Studio header summary. */
-export const MerchantSummary = z.object({ id: z.string(), displayName: z.string(), type: MerchantType, tier: MerchantTier.nullish(), city: z.string().nullish(), status: MerchantStatus.nullish(), role: z.string().nullish(), teamCount: z.number().nullish() });
+export const MerchantSummary = z.object({ id: z.string(), displayName: z.string(), type: MerchantType, tier: MerchantTier.nullish(), city: z.string().nullish(), status: MerchantStatus.nullish(), role: z.string().nullish(), teamCount: z.number().nullish(), region: MerchantRegion.nullish() });
 export type MerchantSummary = z.infer<typeof MerchantSummary>;
 export const merchantQuery = (merchantId: string) => queryOptions({ queryKey: ['merchant', merchantId], queryFn: () => http(`/api/v1/merchants/${merchantId}`, {}, MerchantSummary) });
 

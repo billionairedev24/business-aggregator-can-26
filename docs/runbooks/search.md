@@ -205,7 +205,7 @@ indices (the worker with `--profile events`, or the reindex), and run the api wi
   1 km, half at 6 km, when `lat`/`lng` are sent). Ties: tier, then id.
 - **Only what customers may see:** the market's documents with `vetting=approved`, `status=live`,
   `merchantStatus=active` (the indexer indexes nothing else; the filters are there too).
-- **Markets are configuration** (`SEARCH_MARKETS`, `CODE=Zone/Id,…`; region config until S-134): a province opens
+- **Markets are configuration** (the region model since S-134, [regions.md](regions.md); `SEARCH_MARKETS` is now a fallback of `REGION_PROVINCES`): a province opens
   to search by adding it there. Its time zone is the "now" for open-now, the same-day cut-off and "sold out today"
   (the index keeps local times). A code that isn't configured gets 422 `unsupported`; `SEARCH_DEFAULT_MARKET` must be
   one of them (blank = `market` required). The api refuses to start on a malformed entry.

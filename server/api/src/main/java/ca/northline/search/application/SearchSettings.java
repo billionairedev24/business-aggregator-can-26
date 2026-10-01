@@ -1,37 +1,28 @@
 package ca.northline.search.application;
 
+import ca.northline.region.api.Markets;
 import java.time.Duration;
 import java.time.ZoneId;
-import java.util.Map;
-import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Settings the application layer needs (bound from {@code northline.search.*} in the integration package).
- *
- * @param defaultMarket the market searched when a request names none; {@code null} = requests must name one
- * @param markets the markets search serves (province/territory code) → the time zone their listings' hours, cut-offs
- *     and "sold out today" dates are kept in. Region configuration, not code: S-134 moves it into the region config.
+ * Settings the application layer needs (bound from {@code northline.search.*} in the integration package). The markets
+ * search serves, their time zones and the default market are the region model's ({@link Markets}, S-134): a province
+ * opens for search the moment the region configuration serves it.
  */
-public record SearchSettings(
-        Duration cacheTtl, @Nullable String defaultMarket, int rateLimitPerMinute, Map<String, ZoneId> markets) {
+public record SearchSettings(Duration cacheTtl, int rateLimitPerMinute, Markets markets) {
 
-    public SearchSettings {
-        markets = Map.copyOf(markets);
-        if (markets.isEmpty()) {
-            throw new IllegalStateException("northline.search.markets (SEARCH_MARKETS) names no market");
-        }
-        if (defaultMarket != null && !markets.containsKey(defaultMarket)) {
-            throw new IllegalStateException(
-                    "SEARCH_DEFAULT_MARKET " + defaultMarket + " is not one of SEARCH_MARKETS " + markets.keySet());
-        }
+    /** The market searched when a request names none; {@code null} = requests must name one. */
+    public @Nullable String defaultMarket() {
+        return markets.defaultProvince();
     }
 
     public boolean serves(String market) {
-        return markets.containsKey(market);
+        return markets.serves(market);
     }
 
+    /** The time zone the market's listings keep their hours, cut-offs and "sold out today" dates in. */
     public ZoneId zone(String market) {
-        return Objects.requireNonNull(markets.get(market), () -> "not a served market: " + market);
+        return markets.zone(market);
     }
 }

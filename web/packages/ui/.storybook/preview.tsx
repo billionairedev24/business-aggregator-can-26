@@ -1,6 +1,10 @@
 import type { Preview } from '@storybook/react-vite';
 import '@northline/tokens/tokens.css';
 import '../src/styles/index.css';
+import { configurePlatformTimeZone } from '../src/i18n';
+
+// Story data is a Mountain-time launch market (S-134: the apps take the zone from the region model).
+configurePlatformTimeZone('America/Edmonton');
 
 // Theme switcher: overrides the five base tokens only — proves one-change theming.
 const themes: Record<string, Record<string, string>> = {

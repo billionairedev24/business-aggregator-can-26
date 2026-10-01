@@ -1,10 +1,10 @@
 package ca.northline.payments.infra;
 
+import ca.northline.payments.application.BusinessTime;
 import ca.northline.payments.application.PaymentGateway;
 import ca.northline.payments.application.PayoutGateway;
 import ca.northline.payments.domain.AuthorizationWindow;
 import ca.northline.payments.domain.Payout;
-import ca.northline.payments.domain.Zones;
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.DayOfWeek;
@@ -29,6 +29,7 @@ class FakeStripeGateway implements PaymentGateway, PayoutGateway {
     private static final String ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
     private final SecureRandom random = new SecureRandom();
     private final Clock clock;
+    private final BusinessTime time;
     private final Map<String, Authorization> intents = new ConcurrentHashMap<>();
     private final Map<String, Instant> payouts = new ConcurrentHashMap<>();
 
@@ -120,11 +121,12 @@ class FakeStripeGateway implements PaymentGateway, PayoutGateway {
         if (instant) {
             arrives = now.plus(Duration.ofMinutes(30));
         } else {
-            var day = LocalDate.ofInstant(now, Zones.EDMONTON).plusDays(1);
+            var zone = time.platform();
+            var day = LocalDate.ofInstant(now, zone).plusDays(1);
             while (day.getDayOfWeek() == DayOfWeek.SATURDAY || day.getDayOfWeek() == DayOfWeek.SUNDAY) {
                 day = day.plusDays(1);
             }
-            arrives = day.atTime(9, 0).atZone(Zones.EDMONTON).toInstant();
+            arrives = day.atTime(9, 0).atZone(zone).toInstant();
         }
         var id = id("po_", 4);
         payouts.put(id, arrives);

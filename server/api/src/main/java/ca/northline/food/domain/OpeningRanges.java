@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * A day's opening ranges ("11:00"–"21:00", 24 h clock, Edmonton local time). A range ends after it starts (no ranges
+ * A day's opening ranges ("11:00"–"21:00", 24 h clock, the kitchen's local time). A range ends after it starts (no ranges
  * over midnight) and ranges of one day don't overlap. An empty list = closed.
  */
 public record OpeningRanges(List<Range> ranges) {

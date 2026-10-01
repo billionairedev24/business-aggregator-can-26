@@ -21,6 +21,7 @@ import ca.northline.availability.application.AvailabilityUseCases.ViewSync;
 import ca.northline.availability.application.AvailabilityUseCases.ViewTimeOff;
 import ca.northline.availability.application.CalendarUseCases.ChooseCalendarSources;
 import ca.northline.availability.application.CalendarUseCases.ListCalendarSources;
+import ca.northline.availability.domain.BookingRules;
 import ca.northline.availability.domain.CalendarProvider;
 import ca.northline.availability.web.AvailabilityDtos.BookableBody;
 import ca.northline.availability.web.AvailabilityDtos.CalendarResponse;
@@ -48,7 +49,10 @@ import ca.northline.shared.security.CurrentMember;
 import ca.northline.shared.security.RequiresMerchant;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
@@ -141,7 +145,10 @@ class AvailabilityController {
     @PutMapping("/rules")
     @RequiresMerchant(EDIT)
     RulesResponse saveRules(@PathVariable String merchantId, @Valid @RequestBody RulesBody body, CurrentMember member) {
-        return mapper.toResponse(saveRules.saveRules(merchantId, member.userId(), mapper.toRules(body)));
+        var offered = viewRules.rules(merchantId).zones();
+        var areas = new HashSet<>(Objects.requireNonNullElse(body.serviceAreas(), List.<String>of()));
+        var rules = BookingRules.offeredIn(offered, () -> mapper.toRules(body), areas);
+        return mapper.toResponse(saveRules.saveRules(merchantId, member.userId(), rules));
     }
 
     @GetMapping("/time-off")

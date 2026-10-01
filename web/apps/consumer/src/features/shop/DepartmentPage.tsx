@@ -1,4 +1,5 @@
 import { useSuspenseQuery } from '@tanstack/react-query';
+import { useZone } from '../location/regions';
 import { EmptyState, SiteLink, TileGrid, useLocale } from '@northline/ui';
 import { departmentQuery } from './api';
 import { runWhen, weekday } from './format';
@@ -13,14 +14,14 @@ import { ProductCardTile, ShopCardTile } from './parts';
 export function DepartmentPage({ slug, market: explicit }: { slug: string; market?: string }) {
   const { locale } = useLocale();
   const t = useShopT();
-  const market = explicit ?? 'Calgary';
-  useMarketFollowsLocation(explicit);
-  const { data } = useSuspenseQuery(departmentQuery(slug, market, locale));
+  const { data } = useSuspenseQuery(departmentQuery(slug, explicit, locale));
+  const zone = useZone(data.market);
+  useMarketFollowsLocation(explicit, data.market);
   const link = (path: string) => withMarket(path, explicit);
   const run = data.run;
-  const when = run ? runWhen(run) : null;
+  const when = run ? runWhen(run, zone) : null;
   const counts = { shops: data.shopCount, city: data.market, onRun: data.onRunCount, items: data.productCount };
-  const sub = run && when ? t(`deptSub_${when}`, { ...counts, weekday: weekday(run.startsAt, locale) }) : t('deptSubNoRun', counts);
+  const sub = run && when ? t(`deptSub_${when}`, { ...counts, weekday: weekday(run.startsAt, locale, zone) }) : t('deptSubNoRun', counts);
 
   return (
     <div className="nl-page shop-page">

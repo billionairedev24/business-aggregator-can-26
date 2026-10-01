@@ -7,6 +7,7 @@ import ca.northline.worker.notifications.Notifier;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.ZoneId;
 import java.util.EnumSet;
 import java.util.Locale;
 import java.util.Set;
@@ -67,7 +68,7 @@ public final class WebhookDisabledNotices {
                 payload,
                 new Notice.Texts() {
                     @Override
-                    public String text(String business, Locale locale) {
+                    public String text(String business, Locale locale, ZoneId zone) {
                         return french(locale)
                                 ? "Northline : webhook désactivé pour " + business + " après 3 jours d’échecs."
                                 : "Northline: a webhook endpoint for " + business
@@ -75,7 +76,7 @@ public final class WebhookDisabledNotices {
                     }
 
                     @Override
-                    public String title(String business, Locale locale) {
+                    public String title(String business, Locale locale, ZoneId zone) {
                         return french(locale) ? "Webhook désactivé" : "Webhook turned off";
                     }
 

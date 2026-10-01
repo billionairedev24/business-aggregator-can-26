@@ -91,7 +91,7 @@ public final class ShopViews {
     /**
      * A pooled run as the Shop shows it.
      *
-     * @param day {@code today} | {@code tomorrow} | {@code later}, in America/Edmonton
+     * @param day {@code today} | {@code tomorrow} | {@code later}, in the market's time zone
      * @param orderBy the customer's cut-off
      * @param packBy when the shops have it packed for the courier (S-50: "Glenmore packs at 5:45")
      */

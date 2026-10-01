@@ -7,6 +7,8 @@ import ca.northline.sms.SmsTransportConfiguration;
 import ca.northline.worker.events.ProcessedEvents;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
+import java.time.ZoneId;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -43,8 +45,14 @@ public class NotificationsConfiguration {
     }
 
     @Bean
-    Recipients recipients(JdbcClient jdbc, JsonMapper json, Preferences.Defaults defaults) {
-        return new JdbcRecipients(jdbc, json, defaults);
+    Recipients recipients(
+            JdbcClient jdbc,
+            JsonMapper json,
+            Preferences.Defaults defaults,
+            @Value("${northline.region.default-province:}") String defaultProvince,
+            @Value("${northline.region.platform-zone}") ZoneId platformZone) {
+        return new JdbcRecipients(
+                jdbc, json, defaults, new JdbcRecipients.RegionSettings(defaultProvince.strip(), platformZone));
     }
 
     @Bean

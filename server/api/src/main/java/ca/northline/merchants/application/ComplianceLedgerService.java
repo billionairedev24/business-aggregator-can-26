@@ -20,12 +20,12 @@ import ca.northline.merchants.domain.VerificationStatus;
 import ca.northline.payments.api.ConnectedAccounts;
 import ca.northline.payments.api.PayoutPlan;
 import ca.northline.payments.api.TaxSummary;
+import ca.northline.region.api.MerchantPlaces;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.Ids;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
 import java.time.Clock;
-import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -51,8 +51,6 @@ import org.springframework.transaction.annotation.Transactional;
 class ComplianceLedgerService
         implements ViewCompliance, RenewVerification, AcceptObligations, OpenStripeLink, ComplianceStatus {
 
-    static final ZoneId ZONE = ZoneId.of("America/Edmonton");
-
     private final ComplianceLedgerStore ledger;
     private final ConnectAccountGateway stripe;
     private final TaxSummary tax;
@@ -63,13 +61,14 @@ class ComplianceLedgerService
     private final ApplicationEventPublisher events;
     private final StudioLinks links;
     private final Clock clock;
+    private final MerchantPlaces places;
 
     @Override
     public ComplianceView view(String merchantId) {
         var facts = facts(merchantId);
         var now = clock.instant();
         var items = ledger.items(merchantId, now);
-        var period = quarter();
+        var period = quarter(merchantId);
         return new ComplianceView(
                 new Business(
                         facts.type().code(),
@@ -239,8 +238,9 @@ class ComplianceLedgerService
         return ledger.facts(merchantId).orElseThrow(() -> new NotFound("merchant", merchantId));
     }
 
-    private String quarter() {
-        var today = clock.instant().atZone(ZONE).toLocalDate();
+    /** The current quarter in the business's zone (region model). */
+    private String quarter(String merchantId) {
+        var today = clock.instant().atZone(places.of(merchantId).zone()).toLocalDate();
         return today.getYear() + "-Q" + ((today.getMonthValue() - 1) / 3 + 1);
     }
 

@@ -1,6 +1,9 @@
 import '@testing-library/jest-dom/vitest';
 import { afterEach } from 'vitest';
 import { cleanup, configure } from '@testing-library/react';
+import { configurePlatformTimeZone } from '@northline/ui';
+// Test data: a Mountain-time platform zone, as the launch configuration has (the apps get it from the region model).
+configurePlatformTimeZone('America/Edmonton');
 afterEach(() => cleanup());
 // findBy* / waitFor give up after 1 s by default — too short for a fetch → re-render on a loaded machine. They still
 // resolve as soon as the element appears, so this only changes how long a genuinely missing element takes to fail

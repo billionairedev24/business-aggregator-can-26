@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useRegions } from '../shell/place';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { Alert, Button, DataTable, ErrorState, FileButton, PageHeader, PageSkeleton, Tag, useFormatters, useLocale, type DataTableColumn } from '@northline/ui';
@@ -134,13 +135,15 @@ const TAX_JURISDICTIONS = new Set(['ab_gst', 'bc_gst_pst', 'mb_gst_pst', 'nb_hst
 
 function TaxTable({ rows, period, takeRateBps }: { rows: TaxRow[]; period: string; takeRateBps: number | null }) {
   const t = useComplianceT();
+  const regions = useRegions();
+  const provinceName = (code: string) => regions?.provinces.find(p => p.code === code)?.name ?? code;
   const role = useRole();
   const quarter = period.split('-')[1] ?? period;
   const lines: TaxLine[] = rows.map(r => ({
     id: r.jurisdiction,
     name: r.jurisdiction === 'platform_fee_gst'
       ? (takeRateBps ? t('tax_platform_fee_gst', { pct: takeRateBps / 100 }) : t('tax_platform_fee_gst_plain'))
-      : TAX_JURISDICTIONS.has(r.jurisdiction) ? t(`tax_${r.jurisdiction}` as Parameters<ComplianceT>[0]) : r.jurisdiction,
+      : TAX_JURISDICTIONS.has(r.jurisdiction) ? t(`tax_${r.jurisdiction}` as Parameters<ComplianceT>[0], { name: provinceName(r.jurisdiction.slice(0, 2).toUpperCase()) }) : r.jurisdiction,
     amt: r.collectedCents,
     note: r.handling === 'not_selling' && r.jurisdiction.startsWith('bc_') ? t('handling_not_selling_bc') : t(`handling_${r.handling}`),
   }));
@@ -157,6 +160,8 @@ function TaxTable({ rows, period, takeRateBps }: { rows: TaxRow[]; period: strin
 
 function Documents({ data, owner }: { data: Compliance; owner: boolean }) {
   const t = useComplianceT();
+  const regions = useRegions();
+  const provinceName = (code: string) => regions?.provinces.find(p => p.code === code)?.name ?? code;
   const { locale } = useLocale();
   const f = useFormatters();
   const merchantId = useMerchantId();
@@ -164,7 +169,7 @@ function Documents({ data, owner }: { data: Compliance; owner: boolean }) {
   const [uploading, setUploading] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const b = data.business;
-  const what = [b.requiredFor, b.province ? t(`province_${b.province}` as Parameters<ComplianceT>[0]) : null].filter(Boolean).join(' · ');
+  const what = [b.requiredFor, b.province ? provinceName(b.province) : null].filter(Boolean).join(' · ');
   const upload = (d: ComplianceDoc, file: File) => {
     setUploading(d.id);
     setErrors(e => ({ ...e, [d.id]: '' }));

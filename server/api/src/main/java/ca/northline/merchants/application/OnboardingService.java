@@ -16,8 +16,13 @@ import ca.northline.merchants.domain.MerchantType;
 import ca.northline.merchants.domain.OnboardingStep;
 import ca.northline.merchants.domain.Principal;
 import ca.northline.merchants.domain.PrincipalRole;
+import ca.northline.merchants.domain.Province;
 import ca.northline.merchants.domain.SelectedCategory;
 import ca.northline.merchants.domain.Verification;
+import ca.northline.region.api.LaunchStatus;
+import ca.northline.region.api.MarketProfile;
+import ca.northline.region.api.MerchantPlaces;
+import ca.northline.region.api.Regions;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
 import ca.northline.shared.RuleViolation.Violation;
@@ -72,10 +77,28 @@ class OnboardingService
     private final OwnerIdentityService ownerIdentity;
     private final ApplicationEventPublisher events;
     private final Clock clock;
+    private final MerchantPlaces places;
+    private final Regions regions;
+
+    /** {@code {province}} = the province's name (region model). */
+    static final String PROVINCE_CLOSED = "Northline isn't open in {province} yet.";
+
+    /** The province must be open in the region model: live, pilot or waitlist (S-134). */
+    private void requireOpen(Province province) {
+        var profile = regions.province(province.code());
+        if (profile.isEmpty() || profile.get().status() == LaunchStatus.OFF) {
+            throw RuleViolation.of(
+                    "province",
+                    "option",
+                    PROVINCE_CLOSED.replace(
+                            "{province}", profile.map(p -> p.nameEn()).orElse(province.code())));
+        }
+    }
 
     @Override
     @Transactional
     public OnboardingView start(StartOnboarding.Command command) {
+        requireOpen(command.province());
         var application = MerchantApplication.start(
                 command.type(),
                 command.province(),
@@ -104,12 +127,14 @@ class OnboardingService
         });
         var docs = documents.findAll(merchantId, docIds).stream()
                 .collect(Collectors.toMap(Document::id, Function.identity()));
-        return new OnboardingView(application, checks, docs);
+        return new OnboardingView(
+                application, checks, docs, places.of(merchantId).zone());
     }
 
     @Override
     @Transactional
     public OnboardingView update(UpdateAccount.Command command) {
+        requireOpen(command.province());
         var application = load(command.merchantId());
         var typeChanged = application.changeAccount(
                 command.type(),
@@ -171,7 +196,8 @@ class OnboardingService
                         principals,
                         categories,
                         command.profile()),
-                clock.instant());
+                clock.instant(),
+                regions.markets().stream().map(MarketProfile::city).toList());
         applications.save(application);
         syncChecklist(application);
         storefronts.ensure(application.getId(), application.getType(), application.getDisplayName());

@@ -72,6 +72,7 @@ class CalendarSyncService implements CalendarJobs {
     private final Clock clock;
     private final TransactionTemplate tx;
     private final TransactionTemplate own;
+    private final Team team;
 
     CalendarSyncService(
             CalendarLinkRepository links,
@@ -83,7 +84,8 @@ class CalendarSyncService implements CalendarJobs {
             PersonDirectory people,
             ApplicationEventPublisher events,
             Clock clock,
-            PlatformTransactionManager transactions) {
+            PlatformTransactionManager transactions,
+            Team team) {
         this.links = links;
         this.sync = sync;
         this.gateways = gateways;
@@ -93,6 +95,7 @@ class CalendarSyncService implements CalendarJobs {
         this.people = people;
         this.events = events;
         this.clock = clock;
+        this.team = team;
         this.tx = new TransactionTemplate(transactions);
         this.own = new TransactionTemplate(transactions);
         this.own.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
@@ -148,11 +151,12 @@ class CalendarSyncService implements CalendarJobs {
                     ? null
                     : source.cursor();
             var gateway = gateways.get(link.provider());
+            var zone = team.zone(link.merchantId());
             var changes = access.with(link, token -> {
                 try {
-                    return gateway.changes(token, calendarId, cursor, from, to);
+                    return gateway.changes(token, calendarId, cursor, from, to, zone);
                 } catch (CursorExpired _) {
-                    return gateway.changes(token, calendarId, null, from, to);
+                    return gateway.changes(token, calendarId, null, from, to, zone);
                 }
             });
             if (changes.isEmpty()) {

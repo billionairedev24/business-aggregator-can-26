@@ -1,3 +1,4 @@
+import { ProvincePlace } from '../shell/place';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -37,9 +38,10 @@ describe('VerificationStep', () => {
   it('asks for the licence number in a dialog and shows the server message', async () => {
     const o = onboarding();
     mockFetch(c => (c.url.endsWith('/V3/complete') ? { status: 422, body: { errors: [{ field: 'reference', rule: 'required', message: 'Enter the licence number.' }] } } : undefined));
-    renderWithProviders(<VerificationStep onboarding={o} onBack={() => {}} onSubmitted={() => {}} />);
+    // the onboarding screen fills the place from the application's province (region model; test data: Alberta)
+    renderWithProviders(<ProvincePlace code="AB"><VerificationStep onboarding={o} onBack={() => {}} onSubmitted={() => {}} /></ProvincePlace>);
     expect(screen.getByText('AMVIC licence')).toBeTruthy();
-    expect(screen.getByText('Required for automotive services in Alberta.')).toBeTruthy();
+    expect(await screen.findByText('Required for automotive services in Alberta.')).toBeTruthy();
     await user().click(screen.getByRole('button', { name: 'Enter licence #' }));
     const dialog = screen.getByRole('dialog', { name: 'AMVIC licence' });
     await user().click(within(dialog).getByRole('button', { name: 'Verify' }));

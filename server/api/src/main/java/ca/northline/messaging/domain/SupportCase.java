@@ -2,6 +2,7 @@ package ca.northline.messaging.domain;
 
 import ca.northline.shared.Conflict;
 import java.time.Instant;
+import java.time.ZoneId;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -20,19 +21,21 @@ public record SupportCase(
         return "HD-" + number;
     }
 
-    public static SupportCase open(String id, int number, TicketPriority priority, Instant now) {
-        return new SupportCase(id, number, TicketState.NEW, priority, SupportSla.dueAt(now, priority));
+    /** @param supportZone the zone support hours are kept in (the platform zone) */
+    public static SupportCase open(String id, int number, TicketPriority priority, Instant now, ZoneId supportZone) {
+        return new SupportCase(id, number, TicketState.NEW, priority, SupportSla.dueAt(now, priority, supportZone));
     }
 
     /**
      * The business wrote in the case. A resolved case stays closed (open a new one); a case waiting on the business
      * goes back to Northline with a fresh reply target.
      */
-    public SupportCase replied(Instant now) {
+    public SupportCase replied(Instant now, ZoneId supportZone) {
         return switch (state) {
             case RESOLVED -> throw new Conflict("case_resolved", "This case is resolved. Open a new case.");
             case WAITING ->
-                new SupportCase(id, number, TicketState.IN_PROGRESS, priority, SupportSla.dueAt(now, priority));
+                new SupportCase(
+                        id, number, TicketState.IN_PROGRESS, priority, SupportSla.dueAt(now, priority, supportZone));
             case NEW, IN_PROGRESS -> this;
         };
     }

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRootRoute, createRoute, createRouter, Outlet, RouterProvider } from '@tanstack/react-router';
 import { I18nProvider, SiteLinkProvider, type Locale } from '@northline/ui';
 import { vi } from 'vitest';
+import { isRegions, regionsBody } from './regions';
 import { ConsumerLayout } from '../features/shell/ConsumerLayout';
 import { NotFound } from '../features/shell/NotFound';
 import { RouteError } from '../features/shell/RouteError';
@@ -24,7 +25,8 @@ export function mockFetch(handler: Handler) {
     const raw = init?.body;
     const call = { method: init?.method ?? 'GET', url, body: typeof raw === 'string' ? JSON.parse(raw) : raw, headers: (init?.headers ?? {}) as Record<string, string> };
     calls.push(call);
-    const res = handler(call) ?? { status: 404, body: { detail: 'not found' } };
+    // the region model (S-134) answers like the launch configuration unless the test handles it
+    const res = handler(call) ?? (isRegions(url) ? { body: regionsBody(url) } : { status: 404, body: { detail: 'not found' } });
     return new Response(res.body === undefined ? '' : JSON.stringify(res.body), { status: res.status ?? 200, headers: { 'content-type': 'application/json' } });
   }));
   return calls;

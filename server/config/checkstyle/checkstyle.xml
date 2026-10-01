@@ -35,6 +35,18 @@
     <module name="SimplifyBooleanReturn"/>
     <module name="StringLiteralEquality"/>
     <module name="ModifiedControlVariable"/>
+    <!--
+      S-134 region-neutral (DECISIONS "Region-neutral by design"): no province, city or time zone in code. Places, zones,
+      holidays, registries and legal copy come from the region model (region.regions, northline.region.*); messages take
+      {province}/{city} parameters. Tests, the region model's own data (HolidayRule) and province-specific adapters are
+      allowed in suppressions.xml, each with its reason. Identifiers (OpenCorporatesAlbertaRegistry) aren't literals.
+    -->
+    <module name="IllegalTokenText">
+      <property name="id" value="RegionLiteral"/>
+      <property name="tokens" value="STRING_LITERAL, TEXT_BLOCK_CONTENT"/>
+      <property name="format" value="Alberta|Calgary|Edmonton|Airdrie|Beltline|British Columbia|Ontario|Qu[eé]bec|Manitoba|Saskatchewan|Nova Scotia|New Brunswick|Newfoundland|Prince Edward Island|Yukon|Nunavut|Northwest Territories|America/(Edmonton|Vancouver|Toronto|Winnipeg|Regina|Halifax|St_Johns|Moncton|Whitehorse|Iqaluit|Yellowknife)|^&quot;(AB|BC|MB|NB|NS|NT|NU|ON|PE|QC|SK|YT)&quot;$"/>
+      <property name="message" value="Region literal in code (S-134, DECISIONS &quot;Region-neutral by design&quot;): take the province, city or time zone from the region model (region.api.Regions / MerchantPlaces) or configuration, and pass place names to messages as parameters."/>
+    </module>
     <module name="Regexp">
       <property name="format" value="System\.(out|err)\.print"/>
       <property name="illegalPattern" value="true"/>

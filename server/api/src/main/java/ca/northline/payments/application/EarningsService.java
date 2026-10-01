@@ -3,10 +3,10 @@ package ca.northline.payments.application;
 import ca.northline.payments.api.EarningsQuery;
 import ca.northline.payments.api.EscrowKind;
 import ca.northline.payments.domain.PayoutSchedule;
-import ca.northline.payments.domain.Zones;
 import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -27,6 +27,7 @@ class EarningsService implements ViewEarnings, EarningsQuery {
     private final MerchantBalances balances;
     private final MerchantTiers tiers;
     private final Clock clock;
+    private final BusinessTime time;
 
     @Override
     public Overview overview(String merchantId) {
@@ -34,7 +35,7 @@ class EarningsService implements ViewEarnings, EarningsQuery {
         var schedule = payouts.schedule(merchantId).orElse(PayoutSchedule.DEFAULT);
         var pausedUntil =
                 payouts.pendingAccount(merchantId).map(a -> a.getEffectiveAt()).orElse(null);
-        var next = schedule.nextAfter(now, pausedUntil).orElse(null);
+        var next = schedule.nextAfter(now, pausedUntil, time.of(merchantId)).orElse(null);
         var totals = earnings.escrowTotals(merchantId, next);
         var available = balances.of(merchantId);
         var rate = tiers.rateOf(merchantId);
@@ -65,17 +66,18 @@ class EarningsService implements ViewEarnings, EarningsQuery {
 
     @Override
     public List<WeekNet> weeklyNet(String merchantId, int weeks) {
-        var today = LocalDate.ofInstant(clock.instant(), Zones.EDMONTON);
+        var zone = time.of(merchantId);
+        var today = LocalDate.ofInstant(clock.instant(), zone);
         var firstMonday =
                 today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).minusWeeks(weeks - 1L);
         var buckets = new LinkedHashMap<LocalDate, EnumMap<EscrowKind, Long>>();
         for (int i = 0; i < weeks; i++) {
             buckets.put(firstMonday.plusWeeks(i), new EnumMap<>(EscrowKind.class));
         }
-        var from = firstMonday.atStartOfDay(Zones.EDMONTON).toInstant();
+        var from = firstMonday.atStartOfDay(zone).toInstant();
         for (var r : earnings.released(merchantId, from, clock.instant())) {
-            var monday = LocalDate.ofInstant(r.releasedAt(), Zones.EDMONTON)
-                    .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+            var monday =
+                    LocalDate.ofInstant(r.releasedAt(), zone).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
             var bucket = buckets.get(monday);
             if (bucket != null) {
                 bucket.merge(r.kind(), r.netCents(), Long::sum);
@@ -93,22 +95,23 @@ class EarningsService implements ViewEarnings, EarningsQuery {
     @Override
     public MonthNet monthNet(String merchantId) {
         var now = clock.instant();
-        var today = LocalDate.ofInstant(now, Zones.EDMONTON);
+        var zone = time.of(merchantId);
+        var today = LocalDate.ofInstant(now, zone);
         var monthStart = today.withDayOfMonth(1);
         var previousStart = monthStart.minusMonths(1);
         var previousEnd = previousStart.plusDays(Math.min(today.getDayOfMonth(), previousStart.lengthOfMonth()));
-        var current = sum(merchantId, monthStart, today.plusDays(1));
-        var previous = sum(merchantId, previousStart, previousEnd);
+        var current = sum(merchantId, monthStart, today.plusDays(1), zone);
+        var previous = sum(merchantId, previousStart, previousEnd, zone);
         Integer change = previous == 0 ? null : (int) Math.round((current - previous) * 100.0 / previous);
         return new MonthNet(current, previous, change);
     }
 
-    private long sum(String merchantId, LocalDate from, LocalDate toExclusive) {
+    private long sum(String merchantId, LocalDate from, LocalDate toExclusive, ZoneId zone) {
         return earnings
                 .released(
                         merchantId,
-                        from.atStartOfDay(Zones.EDMONTON).toInstant(),
-                        toExclusive.atStartOfDay(Zones.EDMONTON).toInstant())
+                        from.atStartOfDay(zone).toInstant(),
+                        toExclusive.atStartOfDay(zone).toInstant())
                 .stream()
                 .mapToLong(EarningsReadModel.Released::netCents)
                 .sum();

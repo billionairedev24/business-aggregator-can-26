@@ -20,6 +20,7 @@ import ca.northline.food.domain.KitchenMessages;
 import ca.northline.food.domain.KitchenPause;
 import ca.northline.food.domain.KitchenTime;
 import ca.northline.food.domain.OpeningRanges;
+import ca.northline.region.api.MerchantPlaces;
 import ca.northline.shared.Ids;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
@@ -51,6 +52,7 @@ class KitchenSettingsService implements ViewKitchenSetup, EditKitchenSetup {
     private final MenuStore menus;
     private final KitchenMerchantFacts merchant;
     private final Clock clock;
+    private final MerchantPlaces places;
 
     /** A kitchen that never saved its settings: the defaults the design shows for a new kitchen. */
     static SettingsRow defaults(String merchantId) {
@@ -113,7 +115,11 @@ class KitchenSettingsService implements ViewKitchenSetup, EditKitchenSetup {
                                     : new DayView(d, day.ranges(), day.note());
                         })
                         .toList(),
-                store.holidays(merchantId, KitchenTime.today(clock)).stream()
+                store
+                        .holidays(
+                                merchantId,
+                                KitchenTime.today(clock, places.of(merchantId).zone()))
+                        .stream()
                         .map(h -> new HolidayView(h.id(), h.day(), h.ranges(), h.note()))
                         .toList(),
                 menus.menus(merchantId).stream()
@@ -221,7 +227,7 @@ class KitchenSettingsService implements ViewKitchenSetup, EditKitchenSetup {
     @Transactional
     public SetupView addHoliday(String merchantId, HolidayCommand h, String actorId) {
         var errors = new ArrayList<Violation>();
-        if (h.day().isBefore(KitchenTime.today(clock))) {
+        if (h.day().isBefore(KitchenTime.today(clock, places.of(merchantId).zone()))) {
             errors.add(new Violation("day", "future", KitchenMessages.FUTURE_DATE));
         }
         var ranges = OpeningRanges.check("ranges", h.ranges(), errors);

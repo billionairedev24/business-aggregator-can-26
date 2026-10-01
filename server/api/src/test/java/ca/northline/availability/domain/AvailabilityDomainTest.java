@@ -2,26 +2,11 @@ package ca.northline.availability.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class AvailabilityDomainTest {
-
-    @Test
-    void albertaHolidays2026() {
-        assertThat(AlbertaHolidays.of(2026))
-                .extracting(AlbertaHolidays.Holiday::key, AlbertaHolidays.Holiday::date)
-                .contains(
-                        org.assertj.core.groups.Tuple.tuple("family_day", LocalDate.of(2026, 2, 16)),
-                        org.assertj.core.groups.Tuple.tuple("good_friday", LocalDate.of(2026, 4, 3)),
-                        org.assertj.core.groups.Tuple.tuple("victoria_day", LocalDate.of(2026, 5, 18)),
-                        org.assertj.core.groups.Tuple.tuple("thanksgiving", LocalDate.of(2026, 10, 12)));
-        assertThat(AlbertaHolidays.upcoming(LocalDate.of(2026, 9, 8), 5))
-                .extracting(AlbertaHolidays.Holiday::key)
-                .containsExactly("thanksgiving", "remembrance_day", "christmas", "boxing_day", "new_year");
-    }
 
     @Test
     void slotPreviewMatchesTheDesign() {

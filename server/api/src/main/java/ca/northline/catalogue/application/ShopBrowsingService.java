@@ -45,7 +45,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 class ShopBrowsingService implements BrowseShop {
 
-    static final ZoneId ZONE = ZoneId.of("America/Edmonton");
     static final int LANDING_SHOPS = 12;
     static final int LANDING_PRODUCTS = 8;
     static final int DEPARTMENT_PRODUCTS = 48;
@@ -324,7 +323,16 @@ class ShopBrowsingService implements BrowseShop {
         var runs = served.map(m -> deliveryRuns.upcoming(m, now)).orElse(List.of());
         var cats = catalogue.categories(lang).stream()
                 .collect(Collectors.toMap(Category::id, Function.identity(), (a, _) -> a));
-        return new Context(name, served.isPresent(), lang, shops, cats, new HashSet<>(categories.banned()), runs, now);
+        return new Context(
+                name,
+                served.isPresent(),
+                lang,
+                shops,
+                cats,
+                new HashSet<>(categories.banned()),
+                runs,
+                now,
+                deliveryRuns.zone(name));
     }
 
     /** One request's market, sellers, taxonomy and runs. */
@@ -336,7 +344,8 @@ class ShopBrowsingService implements BrowseShop {
             Map<String, Category> categories,
             Collection<String> excluded,
             List<DeliveryRuns.Run> runs,
-            Instant now) {
+            Instant now,
+            ZoneId zone) {
 
         Collection<String> merchantIds() {
             return shops.keySet();
@@ -358,17 +367,17 @@ class ShopBrowsingService implements BrowseShop {
             if (handlingDays == null) {
                 return List.of();
             }
-            var today = LocalDate.ofInstant(now, ZONE);
+            var today = LocalDate.ofInstant(now, zone);
             return runs.stream()
                     .filter(r ->
-                            ChronoUnit.DAYS.between(today, LocalDate.ofInstant(r.startsAt(), ZONE)) >= handlingDays)
+                            ChronoUnit.DAYS.between(today, LocalDate.ofInstant(r.startsAt(), zone)) >= handlingDays)
                     .limit(limit)
                     .map(this::view)
                     .toList();
         }
 
         private Run view(DeliveryRuns.Run r) {
-            var days = ChronoUnit.DAYS.between(LocalDate.ofInstant(now, ZONE), LocalDate.ofInstant(r.startsAt(), ZONE));
+            var days = ChronoUnit.DAYS.between(LocalDate.ofInstant(now, zone), LocalDate.ofInstant(r.startsAt(), zone));
             var day = days <= 0 ? "today" : days == 1 ? "tomorrow" : "later";
             return new Run(
                     r.windowId(),

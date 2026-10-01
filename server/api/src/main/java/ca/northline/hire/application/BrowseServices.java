@@ -70,7 +70,7 @@ public final class BrowseServices {
             int durationMin) {}
 
     /**
-     * @param area the zone the customer is in ("Beltline"), null when unknown
+     * @param area the zone the customer is in (a neighbourhood), null when unknown
      * @param city the city the list is for
      */
     public record Providers(

@@ -1,8 +1,8 @@
-import { TIME_ZONE, type Locale } from '@northline/ui';
+import { type Locale, timeZone } from '@northline/ui';
 import { ApiError } from '../../lib/http';
 
 const INTL: Record<Locale, string> = { en: 'en-CA', fr: 'fr-CA' };
-const fmt = (locale: Locale, o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(INTL[locale], { timeZone: TIME_ZONE, ...o });
+const fmt = (locale: Locale, o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(INTL[locale], { timeZone: timeZone(), ...o });
 
 /** "Friday" / "vendredi". */
 export const weekdayLong = (iso: string, locale: Locale) => fmt(locale, { weekday: 'long' }).format(new Date(iso));
