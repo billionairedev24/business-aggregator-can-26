@@ -55,7 +55,7 @@ export const ActivityItem = z.object({
   tone: z.enum(['accent', 'neutral', 'accent-2']).catch('neutral'),
   active: z.boolean(),
   caseRef: z.object({ id: z.string(), number: z.string(), kind: z.string(), open: z.boolean() }).nullish(),
-  action: z.enum(['track', 'details', 'view_quote', 'rebook', 'view_case']).catch('details'),
+  action: z.enum(['track', 'details', 'view_quote', 'rebook', 'view_case', 'report']).catch('details'),
   href: z.string().nullish(),
 });
 export type ActivityItem = z.infer<typeof ActivityItem>;

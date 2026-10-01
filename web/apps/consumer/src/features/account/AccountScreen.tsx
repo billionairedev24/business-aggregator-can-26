@@ -8,6 +8,7 @@ import { ACCOUNT_TABS, isAccountTab, tabHref, type AccountTab } from './tabs';
 import { AddressesTab } from './AddressesTab';
 import { DietaryTab } from './DietaryTab';
 import { FavouritesTab } from './FavouritesTab';
+import { HelpTab } from './HelpTab';
 import { LanguageTab } from './LanguageTab';
 import { NotificationsTab } from './NotificationsTab';
 import { CardList, PaymentsTab } from './PaymentsTab';
@@ -17,7 +18,7 @@ import { SecurityTab } from './SecurityTab';
 import { WalletTab } from './WalletTab';
 
 /** Which story builds a tab that isn't here yet. */
-const PENDING: Partial<Record<AccountTab, string>> = { help: 'S-60' };
+const PENDING: Partial<Record<AccountTab, string>> = {};
 
 const TABS: Partial<Record<AccountTab, () => ReactNode>> = {
   wallet: () => <WalletTab cards={<CardList />} />,
@@ -30,6 +31,7 @@ const TABS: Partial<Record<AccountTab, () => ReactNode>> = {
   language: () => <LanguageTab />,
   dietary: () => <DietaryTab />,
   plus: () => <PlusTab />,
+  help: () => <HelpTab />,
 };
 
 /**

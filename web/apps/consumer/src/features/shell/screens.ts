@@ -9,7 +9,7 @@ export type ScreenKey =
   | 'shop' | 'category' | 'product' | 'cart' | 'confirmed'
   | 'food' | 'restaurant' | 'foodCheckout' | 'foodTrack'
   | 'services' | 'svcCategory' | 'providers' | 'provider' | 'book' | 'quote' | 'quoteRequest' | 'quoteCompare'
-  | 'orders' | 'account' | 'signIn' | 'register' | 'sell';
+  | 'orders' | 'account' | 'problem' | 'signIn' | 'register' | 'sell';
 
 export interface Screen {
   /** Route path (TanStack Router syntax). */
@@ -49,6 +49,8 @@ export const SCREENS: Record<ScreenKey, Screen> = {
   quoteCompare: { path: '/quotes/requests/$requestId', story: 'S-56', section: 'services', guestBanner: true },
   orders: { path: '/account/orders', story: 'S-58', guestBanner: true },
   account: { path: '/account', story: 'S-58 · S-59', guestBanner: true },
+  /** "Something's wrong" (consumer app `refund`, design 06's case flow): report a problem with an order or a job. */
+  problem: { path: '/account/problem/$kind/$id', story: 'S-60', guestBanner: true },
   signIn: { path: '/sign-in', story: 'S-62', auth: true },
   register: { path: '/register', story: 'S-62', auth: true },
   sell: { path: '/sell', story: 'S-61' },

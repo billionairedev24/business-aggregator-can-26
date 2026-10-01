@@ -95,3 +95,36 @@
 .nl-lang-options { display: flex; flex-direction: column; gap: 8px; }
 .nl-plus-plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 10px; max-width: 720px; }
 .nl-plus-perks { font-size: 15px; display: flex; flex-direction: column; gap: 6px; color: var(--color-neutral-800); padding-left: 18px; margin: 0; }
+
+/* Something's wrong & Help & cases (S-60) */
+.nl-problem { padding-top: 32px; max-width: 640px; }
+.nl-problem-kicker { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-neutral-700); padding: 0; }
+.nl-problem-set { border: 0; padding: 0; margin: 18px 0 0; }
+.nl-problem-items { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.nl-problem-item { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 8px 12px; border: 1px solid var(--color-divider); border-radius: var(--radius-md); cursor: pointer; }
+.nl-problem-item.is-on { border-color: var(--color-accent); background: var(--color-accent-100); }
+.nl-problem-item[aria-disabled="true"] { cursor: not-allowed; opacity: .7; }
+.nl-problem-item input { width: 18px; height: 18px; accent-color: var(--color-accent); }
+.nl-problem-item:focus-within { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.nl-problem-item-name { flex: 1; min-width: 0; }
+.nl-problem-set .nl-chips { margin-top: 8px; }
+.nl-problem-suggest { margin-top: 8px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.nl-problem-photo { margin-top: 14px; min-height: 46px; }
+.nl-problem-photos { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.nl-problem-submit { margin-top: 16px; min-height: 50px; font-size: 16px; }
+.nl-problem-done { margin-top: 14px; }
+.nl-problem-card { margin-top: 0; }
+.nl-problem-received { font-size: 18px; font-weight: 600; margin-top: 4px; }
+.nl-problem-steps { list-style: none; padding: 0; margin: 18px 0; display: flex; flex-direction: column; gap: 12px; font-size: 14px; }
+.nl-problem-steps li { display: flex; gap: 12px; color: var(--color-neutral-700); }
+.nl-problem-steps li.is-done, .nl-problem-steps li.is-current { color: var(--color-text); }
+.nl-problem-dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--color-neutral-300); flex: none; }
+.nl-problem-steps li.is-done .nl-problem-dot { background: var(--color-accent); border-color: var(--color-accent); }
+.nl-problem-steps li.is-current .nl-problem-dot { border-color: var(--color-accent); }
+.nl-problem-steps li.is-denied .nl-problem-dot { border-color: var(--color-accent-2); }
+.nl-problem-steps li.is-skipped { text-decoration: line-through; }
+.nl-help-table { max-width: 760px; margin-top: 14px; }
+.nl-case-notes { list-style: none; padding: 0; margin: 0 0 14px; display: flex; flex-direction: column; gap: 10px; max-width: 640px; }
+.nl-case-note { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: var(--radius-md); background: var(--color-surface); }
+.nl-case-note.is-you { background: var(--color-accent-100); }
+.nl-case-note-body { white-space: pre-wrap; overflow-wrap: anywhere; }

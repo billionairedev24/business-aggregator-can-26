@@ -8,5 +8,7 @@ public enum ActivityAction implements CodedEnum {
     DETAILS,
     VIEW_QUOTE,
     REBOOK,
-    VIEW_CASE
+    VIEW_CASE,
+    /** "Something's wrong" (S-60): delivered or done, still inside its escrow window as far as the list knows. */
+    REPORT
 }

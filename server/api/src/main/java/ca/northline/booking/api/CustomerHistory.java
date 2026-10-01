@@ -2,6 +2,7 @@ package ca.northline.booking.api;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -75,6 +76,9 @@ public interface CustomerHistory {
 
     /** The customer's bookings, latest start first (at most {@code limit}). */
     List<BookingSummary> bookings(String customerId, int limit);
+
+    /** The customer's own booking; empty for anyone else's. */
+    Optional<BookingSummary> booking(String customerId, String bookingId);
 
     /** The customer's quote requests without an accepted quote, newest first (at most {@code limit}). */
     List<RequestSummary> openRequests(String customerId, int limit);

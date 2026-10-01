@@ -2,6 +2,7 @@ package ca.northline.payments.api;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -21,6 +22,8 @@ public interface CustomerCaseQuery {
      * @param outcome what came of it: {@code refund | credit} (paid or approved), {@code denied}, a dispute's decision
      *     ({@code full_refund | partial | release | goodwill}), or null while open
      * @param settledCents the money given back (paid or approved refund, a dispute's refund), else null
+     * @param agentDecided a Northline agent decided it (the business contested, or let its review window pass)
+     * @param reviewBy the end of the business's review window (refunds), whatever the state
      */
     record CaseSummary(
             String id,
@@ -38,7 +41,9 @@ public interface CustomerCaseQuery {
             @Nullable Instant decidedAt,
             @Nullable Instant paidAt,
             @Nullable String outcome,
-            @Nullable Long settledCents) {
+            @Nullable Long settledCents,
+            boolean agentDecided,
+            @Nullable Instant reviewBy) {
 
         /** Still being looked at (nothing decided yet). */
         public boolean open() {
@@ -52,4 +57,7 @@ public interface CustomerCaseQuery {
 
     /** The customer's cases, newest first (at most {@code limit}). */
     List<CaseSummary> cases(String customerId, int limit);
+
+    /** One of the customer's cases; empty for anyone else's. */
+    Optional<CaseSummary> find(String customerId, String caseId);
 }

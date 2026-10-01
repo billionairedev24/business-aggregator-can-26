@@ -9,6 +9,7 @@ import java.time.Clock;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
@@ -25,6 +26,15 @@ class CustomerHistoryJdbc implements CustomerHistory {
 
     @Override
     public List<BookingSummary> bookings(String customerId, int limit) {
+        return bookings(customerId, null, limit);
+    }
+
+    @Override
+    public Optional<BookingSummary> booking(String customerId, String bookingId) {
+        return bookings(customerId, bookingId, 1).stream().findFirst();
+    }
+
+    private List<BookingSummary> bookings(String customerId, @Nullable String bookingId, int limit) {
         return jdbc.sql("""
                         select b.id, b.ref, b.merchant_id, b.member_user_id, coalesce(b.title, 'Job') as title,
                                coalesce(b.state, 'confirmed') as state, b.starts_at,
@@ -36,10 +46,12 @@ class CustomerHistoryJdbc implements CustomerHistory {
                                  where e.booking_id = b.id and e.type = 'completed') as completed_at
                           from booking.bookings b
                          where b.customer_id = :c and b.starts_at is not null
+                           and (cast(:b as text) is null or b.id = :b)
                          order by b.starts_at desc, b.id desc
                          limit :limit
                         """)
                 .param("c", customerId)
+                .param("b", bookingId)
                 .param("limit", limit)
                 .query((rs, _) -> new BookingSummary(
                         rs.getString("id"),

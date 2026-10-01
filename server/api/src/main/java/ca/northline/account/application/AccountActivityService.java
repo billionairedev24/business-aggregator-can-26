@@ -8,6 +8,7 @@ import ca.northline.account.domain.ActivityAction;
 import ca.northline.account.domain.ActivityKind;
 import ca.northline.account.domain.ActivityStatus;
 import ca.northline.account.domain.PreferenceRules;
+import ca.northline.account.domain.ProblemRules;
 import ca.northline.booking.api.CustomerHistory;
 import ca.northline.booking.api.CustomerHistory.BookingSummary;
 import ca.northline.booking.api.CustomerHistory.RequestSummary;
@@ -126,7 +127,12 @@ class AccountActivityService implements ViewActivity, ViewUpcoming, ViewWallet, 
                 ? firstNonNull(o.windowStart(), o.etaAt(), o.placedAt())
                 : firstNonNull(o.deliveredAt(), o.placedAt());
         var href = (food ? "/food/orders/" : "/orders/") + o.id();
-        var action = open ? ActivityAction.VIEW_CASE : active ? ActivityAction.TRACK : ActivityAction.DETAILS;
+        var reportable = caseRef == null && reportable(o);
+        var action = open ? ActivityAction.VIEW_CASE
+                : active ? ActivityAction.TRACK : reportable ? ActivityAction.REPORT : ActivityAction.DETAILS;
+        if (action == ActivityAction.REPORT) {
+            href = "/account/problem/" + (food ? "food/" : "order/") + o.id();
+        }
         return new Item(
                 o.id(),
                 food ? ActivityKind.FOOD : ActivityKind.ORDER,
@@ -168,6 +174,9 @@ class AccountActivityService implements ViewActivity, ViewUpcoming, ViewWallet, 
         if (open) {
             action = ActivityAction.VIEW_CASE;
             href = caseHref(caseRef);
+        } else if (caseRef == null && "completed".equals(b.state()) && b.paid()) {
+            action = ActivityAction.REPORT;
+            href = "/account/problem/booking/" + b.id();
         } else if (active || slug == null) {
             action = ActivityAction.DETAILS;
             href = slug == null ? null : "/providers/" + slug + "/book?step=done&booking=" + b.id();
@@ -229,6 +238,19 @@ class AccountActivityService implements ViewActivity, ViewUpcoming, ViewWallet, 
                 ActivityAction.VIEW_QUOTE,
                 href,
                 when);
+    }
+
+    /**
+     * A delivered order still inside the window "Something's wrong" accepts as far as the list can tell (goods: 7 days
+     * after delivery and not confirmed; food: 24 h after it). The problem page checks the escrow itself.
+     */
+    private boolean reportable(OrderSummary o) {
+        var at = o.deliveredAt();
+        if (at == null || !"delivered".equals(o.state())) {
+            return false;
+        }
+        var window = "food".equals(o.type()) ? ProblemRules.FOOD_WINDOW : java.time.Duration.ofDays(7);
+        return at.plus(window).isAfter(clock.instant());
     }
 
     private static List<String> nameList(Collection<String> merchantIds, Map<String, Business> names) {

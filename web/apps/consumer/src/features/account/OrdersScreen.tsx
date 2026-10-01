@@ -26,7 +26,7 @@ interface Row {
 }
 
 const TONES: Record<ActivityItem['tone'], DataTableTone> = { accent: 'tag-accent', neutral: 'tag-neutral', 'accent-2': 'tag-accent-2' };
-const ACTIONS = ['track', 'details', 'view_quote', 'rebook', 'view_case'] as const;
+const ACTIONS = ['track', 'details', 'view_quote', 'rebook', 'view_case', 'report'] as const;
 
 export const inView = (item: ActivityItem, view: OrderView) =>
   view === 'cases' ? !!item.caseRef : view === 'active' ? item.active : !item.active;

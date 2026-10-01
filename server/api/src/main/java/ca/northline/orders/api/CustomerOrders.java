@@ -2,6 +2,7 @@ package ca.northline.orders.api;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -52,4 +53,20 @@ public interface CustomerOrders {
 
     /** The customer's orders, newest first (at most {@code limit}). */
     List<OrderSummary> recent(String customerId, int limit);
+
+    /** One line of an order as it was bought ({@code unitCents} × {@code qty}, before tax). */
+    record Line(String id, String merchantId, String title, int qty, long unitCents) {
+        public long amountCents() {
+            return unitCents * qty;
+        }
+    }
+
+    record OrderDetail(OrderSummary order, List<Line> lines) {
+        public OrderDetail {
+            lines = List.copyOf(lines);
+        }
+    }
+
+    /** The customer's own order with its lines; empty for anyone else's (S-60 "Something's wrong"). */
+    Optional<OrderDetail> detail(String customerId, String orderId);
 }

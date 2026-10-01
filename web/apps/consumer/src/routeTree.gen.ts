@@ -34,6 +34,7 @@ import { Route as QuotesRequestsRequestIdRouteImport } from './routes/quotes/req
 import { Route as ServicesCategoryIndexRouteImport } from './routes/services/$category/index'
 import { Route as ServicesCategoryProvidersRouteImport } from './routes/services/$category/providers'
 import { Route as ServicesCategoryQuoteRouteImport } from './routes/services/$category/quote'
+import { Route as AccountProblemKindIdRouteImport } from './routes/account/problem.$kind.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -161,6 +162,11 @@ const ServicesCategoryQuoteRoute = ServicesCategoryQuoteRouteImport.update({
   path: '/services/$category/quote',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountProblemKindIdRoute = AccountProblemKindIdRouteImport.update({
+  id: '/account/problem/$kind/$id',
+  path: '/account/problem/$kind/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -188,6 +194,7 @@ export interface FileRoutesByFullPath {
   '/services/$category/quote': typeof ServicesCategoryQuoteRoute
   '/providers/$slug/': typeof ProvidersSlugIndexRoute
   '/services/$category/': typeof ServicesCategoryIndexRoute
+  '/account/problem/$kind/$id': typeof AccountProblemKindIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -215,6 +222,7 @@ export interface FileRoutesByTo {
   '/services/$category/quote': typeof ServicesCategoryQuoteRoute
   '/providers/$slug': typeof ProvidersSlugIndexRoute
   '/services/$category': typeof ServicesCategoryIndexRoute
+  '/account/problem/$kind/$id': typeof AccountProblemKindIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -243,6 +251,7 @@ export interface FileRoutesById {
   '/services/$category/quote': typeof ServicesCategoryQuoteRoute
   '/providers/$slug/': typeof ProvidersSlugIndexRoute
   '/services/$category/': typeof ServicesCategoryIndexRoute
+  '/account/problem/$kind/$id': typeof AccountProblemKindIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -272,6 +281,7 @@ export interface FileRouteTypes {
     | '/services/$category/quote'
     | '/providers/$slug/'
     | '/services/$category/'
+    | '/account/problem/$kind/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -299,6 +309,7 @@ export interface FileRouteTypes {
     | '/services/$category/quote'
     | '/providers/$slug'
     | '/services/$category'
+    | '/account/problem/$kind/$id'
   id:
     | '__root__'
     | '/'
@@ -326,6 +337,7 @@ export interface FileRouteTypes {
     | '/services/$category/quote'
     | '/providers/$slug/'
     | '/services/$category/'
+    | '/account/problem/$kind/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -354,6 +366,7 @@ export interface RootRouteChildren {
   ServicesCategoryQuoteRoute: typeof ServicesCategoryQuoteRoute
   ProvidersSlugIndexRoute: typeof ProvidersSlugIndexRoute
   ServicesCategoryIndexRoute: typeof ServicesCategoryIndexRoute
+  AccountProblemKindIdRoute: typeof AccountProblemKindIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -533,6 +546,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ServicesCategoryQuoteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/account/problem/$kind/$id': {
+      id: '/account/problem/$kind/$id'
+      path: '/account/problem/$kind/$id'
+      fullPath: '/account/problem/$kind/$id'
+      preLoaderRoute: typeof AccountProblemKindIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -562,6 +582,7 @@ const rootRouteChildren: RootRouteChildren = {
   ServicesCategoryQuoteRoute: ServicesCategoryQuoteRoute,
   ProvidersSlugIndexRoute: ProvidersSlugIndexRoute,
   ServicesCategoryIndexRoute: ServicesCategoryIndexRoute,
+  AccountProblemKindIdRoute: AccountProblemKindIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

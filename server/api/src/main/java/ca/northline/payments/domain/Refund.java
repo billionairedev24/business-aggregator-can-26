@@ -87,10 +87,20 @@ public class Refund {
 
     /** A customer asked for money back on {@code escrow}. */
     public static Refund requested(String caseNumber, Escrow escrow, long amountCents, String what, Instant now) {
+        return requested(caseNumber, escrow, amountCents, what, now, amountCents < AUTO_APPROVE_BELOW_CENTS);
+    }
+
+    /**
+     * A customer asked for money back on {@code escrow}. With {@code autoApprove} false (S-60's "Something's wrong")
+     * nothing is approved by the clock: the seller accepts, or a Northline agent decides once the seller contests or
+     * lets the 24 h pass.
+     */
+    public static Refund requested(
+            String caseNumber, Escrow escrow, long amountCents, String what, Instant now, boolean autoApprove) {
         if (amountCents <= 0 || amountCents > escrow.getAmountCents()) {
             throw RuleViolation.of("amountCents", "range", "Refund between $0.01 and the amount paid.");
         }
-        var auto = amountCents < AUTO_APPROVE_BELOW_CENTS;
+        var auto = autoApprove && amountCents < AUTO_APPROVE_BELOW_CENTS;
         return Refund.builder()
                 .id(Ids.next())
                 .paymentIntentId(escrow.getPaymentIntentId())
