@@ -5500,6 +5500,7 @@ Stacked on S-93 → S-80 → S-92 → S-79.
   survey; the design's per-case "one-click" suggestions (re-verify WCB, restore
   instant book, force-dispatch…) belong to the screens that own those actions — the desk offers assign / refund request
   / escalate; the finance screen's list of refund requests (S-85).
+
 ## 2026-10-01 — S-87 Courier app (MVP): shifts, stops, pickup/drop-off, proof of delivery
 
 Branch `courier/s-87-courier-app`. **No migration** (the V220–V229 range offered for this story is unused) and no new
