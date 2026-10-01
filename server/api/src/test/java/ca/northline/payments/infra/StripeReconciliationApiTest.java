@@ -58,7 +58,9 @@ class StripeReconciliationApiTest extends IntegrationTest {
         // a unique past day per test run
         day = LocalDate.of(2001, 1, 1).plusDays(Math.floorMod(Ids.next().hashCode(), 7000));
         suffix = Ids.next().substring(16).toLowerCase(Locale.ROOT);
-        jdbc.sql("delete from payments.reconciliation_days where day = ?").params(day).update();
+        jdbc.sql("delete from payments.reconciliation_days where day = ?")
+                .params(day)
+                .update();
     }
 
     Instant at(int hour) {
@@ -71,19 +73,15 @@ class StripeReconciliationApiTest extends IntegrationTest {
         var escrow = Ids.next();
         jdbc.sql("""
                         insert into payments.payment_intents (id, stripe_pi, amount_cents, currency, capture_method, state, stripe_charge)
-                        values (?, ?, ?, 'CAD', 'manual', 'captured', ?)""")
-                .params(pi, "pi_" + pi, cents, stripeCharge)
-                .update();
+                        values (?, ?, ?, 'CAD', 'manual', 'captured', ?)""").params(pi, "pi_" + pi, cents, stripeCharge).update();
         jdbc.sql("""
                         insert into payments.escrows (id, payment_intent_id, ref_type, ref_id, merchant_id, amount_cents, state)
-                        values (?, ?, 'booking', ?, ?, ?, 'held')""")
-                .params(escrow, pi, Ids.next(), Ids.next(), cents)
-                .update();
-        post("stripe_balance", cents, 0, "escrow", escrow, 10);
-        post("escrow", 0, cents, "escrow", escrow, 10);
+                        values (?, ?, 'booking', ?, ?, ?, 'held')""").params(escrow, pi, Ids.next(), Ids.next(), cents).update();
+        posting("stripe_balance", cents, 0, "escrow", escrow, 10);
+        posting("escrow", 0, cents, "escrow", escrow, 10);
     }
 
-    void post(String account, long debit, long credit, String refType, String refId, int hour) {
+    void posting(String account, long debit, long credit, String refType, String refId, int hour) {
         jdbc.sql("""
                         insert into payments.ledger_entries (id, account, debit_cents, credit_cents, ref_type, ref_id, at)
                         values (?, ?, ?, ?, ?, ?, ?)""")
@@ -96,8 +94,8 @@ class StripeReconciliationApiTest extends IntegrationTest {
         jdbc.sql("insert into payments.refunds (id, amount_cents, state, stripe_refund) values (?, ?, 'paid', ?)")
                 .params(id, cents, stripeRefund)
                 .update();
-        post("stripe_balance", 0, cents, "refund", id, 12);
-        post("escrow", cents, 0, "refund", id, 12);
+        posting("stripe_balance", 0, cents, "refund", id, 12);
+        posting("escrow", cents, 0, "refund", id, 12);
     }
 
     void payout(String stripePayout, long cents) {
@@ -107,7 +105,7 @@ class StripeReconciliationApiTest extends IntegrationTest {
                         values (?, ?, ?, ?, 'scheduled', 0, 'paid', ?)""")
                 .params(id, Ids.next(), stripePayout, cents, JdbcTimes.ts(at(15)))
                 .update();
-        post("stripe_balance", 0, cents, "payout", id, 15);
+        posting("stripe_balance", 0, cents, "payout", id, 15);
     }
 
     @Test
@@ -136,17 +134,22 @@ class StripeReconciliationApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.varianceCents").value(550))
                 .andExpect(jsonPath("$.feeCents").value(66))
                 .andExpect(jsonPath("$.mismatches").value(2));
-        mvc.perform(get("/api/v1/console/payments/reconciliation/{day}", day).with(TestJwt.staff(staff, StaffRole.FINANCE)))
+        mvc.perform(get("/api/v1/console/payments/reconciliation/{day}", day)
+                        .with(TestJwt.staff(staff, StaffRole.FINANCE)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items", hasSize(5)))
-                .andExpect(jsonPath("$.items[?(@.stripeId == 'ch_late_%s')].status".formatted(suffix)).value("missing_in_ledger"))
+                .andExpect(jsonPath("$.items[?(@.stripeId == 'ch_late_%s')].status".formatted(suffix))
+                        .value("missing_in_ledger"))
                 .andExpect(jsonPath("$.items[?(@.ledgerCents == 700)].status").value("missing_at_stripe"))
-                .andExpect(jsonPath("$.items[?(@.stripeId == 'po_ok_%s')].status".formatted(suffix)).value("matched"))
+                .andExpect(jsonPath("$.items[?(@.stripeId == 'po_ok_%s')].status".formatted(suffix))
+                        .value("matched"))
                 .andExpect(jsonPath("$.items[0].status").value(org.hamcrest.Matchers.not("matched")));
         assertThat(audited("payments.reconciliation_run")).isEqualTo(2);
 
         // finance resolves the day with a note, then exports it
-        mvc.perform(json(post("/api/v1/console/payments/reconciliation/{day}/resolve", day), "{\"note\":\"Late refund, booked the next day\"}")
+        mvc.perform(json(
+                                post("/api/v1/console/payments/reconciliation/{day}/resolve", day),
+                                "{\"note\":\"Late refund, booked the next day\"}")
                         .with(TestJwt.staff(staff, StaffRole.FINANCE)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("resolved"))
@@ -157,25 +160,38 @@ class StripeReconciliationApiTest extends IntegrationTest {
         mvc.perform(json(post("/api/v1/console/payments/reconciliation/run"), "{\"day\":\"%s\"}".formatted(day))
                         .with(TestJwt.staff(staff, StaffRole.FINANCE)))
                 .andExpect(jsonPath("$.status").value("resolved"));
-        mvc.perform(get("/api/v1/console/payments/reconciliation").param("from", day.minusDays(1).toString()).param("to", day.toString())
+        mvc.perform(get("/api/v1/console/payments/reconciliation")
+                        .param("from", day.minusDays(1).toString())
+                        .param("to", day.toString())
                         .with(TestJwt.staff(staff, StaffRole.FINANCE)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items", hasSize(1)))
                 .andExpect(jsonPath("$.items[0].day").value(day.toString()));
-        var csv = mvc.perform(get("/api/v1/console/payments/reconciliation/export").param("from", day.toString()).param("to", day.toString())
+        var csv = mvc.perform(get("/api/v1/console/payments/reconciliation/export")
+                        .param("from", day.toString())
+                        .param("to", day.toString())
                         .with(TestJwt.staff(staff, StaffRole.FINANCE)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith("text/csv"))
-                .andReturn().getResponse().getContentAsString();
-        assertThat(csv).startsWith("day,status,stripe_cents,ledger_cents,variance_cents")
-                .contains(day + ",resolved,4250,3700,550,66,charge,ch_late_" + suffix + ",1250,,,,missing_in_ledger,\"Late refund, booked the next day\"");
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(csv)
+                .startsWith("day,status,stripe_cents,ledger_cents,variance_cents")
+                .contains(day + ",resolved,4250,3700,550,66,charge,ch_late_" + suffix
+                        + ",1250,,,,missing_in_ledger,\"Late refund, booked the next day\"");
         assertThat(audited("payments.reconciliation_exported")).isEqualTo(1);
-        var ledger = mvc.perform(get("/api/v1/console/payments/reconciliation/ledger-export").param("from", day.toString()).param("to", day.toString())
+        var ledger = mvc.perform(get("/api/v1/console/payments/reconciliation/ledger-export")
+                        .param("from", day.toString())
+                        .param("to", day.toString())
                         .with(TestJwt.staff(staff, StaffRole.ADMIN)))
                 .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
         assertThat(ledger.lines()).first().isEqualTo("at,account,debit_cents,credit_cents,ref_type,ref_id");
-        assertThat(ledger.lines().filter(l -> l.contains(",stripe_balance,"))).hasSize(5);
+        // the two captures, the refund and the payout
+        assertThat(ledger.lines().filter(l -> l.contains(",stripe_balance,"))).hasSize(4);
     }
 
     @Test
@@ -192,7 +208,9 @@ class StripeReconciliationApiTest extends IntegrationTest {
                         .with(TestJwt.staff(staff, StaffRole.FINANCE)))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.errors[0].message").value("Say how the difference was resolved."));
-        mvc.perform(json(post("/api/v1/console/payments/reconciliation/run"), "{\"day\":\"%s\"}".formatted(LocalDate.now().plusDays(2)))
+        mvc.perform(json(
+                                post("/api/v1/console/payments/reconciliation/run"),
+                                "{\"day\":\"%s\"}".formatted(LocalDate.now().plusDays(2)))
                         .with(TestJwt.staff(staff, StaffRole.FINANCE)))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.errors[0].message").value("Choose a day that has ended."));
@@ -200,17 +218,21 @@ class StripeReconciliationApiTest extends IntegrationTest {
                         .with(TestJwt.staff(staff, StaffRole.FINANCE)))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.errors[0].message").value("Choose a day (YYYY-MM-DD)."));
-        mvc.perform(get("/api/v1/console/payments/reconciliation").param("from", "2026-01-01").param("to", "2026-09-01")
+        mvc.perform(get("/api/v1/console/payments/reconciliation")
+                        .param("from", "2026-01-01")
+                        .param("to", "2026-09-01")
                         .with(TestJwt.staff(staff, StaffRole.FINANCE)))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.errors[0].message").value("Choose at most 92 days, the first before the last."));
-        mvc.perform(get("/api/v1/console/payments/reconciliation/{day}", day.minusDays(1)).with(TestJwt.staff(staff, StaffRole.FINANCE)))
+        mvc.perform(get("/api/v1/console/payments/reconciliation/{day}", day.minusDays(1))
+                        .with(TestJwt.staff(staff, StaffRole.FINANCE)))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void onlyAdminAndFinanceOpenItAndOnlyPayoutsChangeIt() throws Exception {
-        for (var role : new StaffRole[] {StaffRole.TRUST_SAFETY, StaffRole.DISPATCH, StaffRole.SUPPORT, StaffRole.ANALYST}) {
+        for (var role :
+                new StaffRole[] {StaffRole.TRUST_SAFETY, StaffRole.DISPATCH, StaffRole.SUPPORT, StaffRole.ANALYST}) {
             mvc.perform(get("/api/v1/console/payments/reconciliation").with(TestJwt.staff(staff, role)))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.code").value("insufficient_role"));
@@ -220,6 +242,15 @@ class StripeReconciliationApiTest extends IntegrationTest {
                             .with(TestJwt.staff(staff, role)))
                     .andExpect(status().isForbidden());
             mvc.perform(get("/api/v1/console/finance").with(TestJwt.staff(staff, role)))
+                    .andExpect(status().isForbidden());
+            mvc.perform(get("/api/v1/console/payments/reconciliation/{day}", day)
+                            .with(TestJwt.staff(staff, role)))
+                    .andExpect(status().isForbidden());
+            mvc.perform(get("/api/v1/console/payments/reconciliation/ledger-export")
+                            .with(TestJwt.staff(staff, role)))
+                    .andExpect(status().isForbidden());
+            mvc.perform(json(post("/api/v1/console/payments/reconciliation/{day}/resolve", day), "{\"note\":\"x\"}")
+                            .with(TestJwt.staff(staff, role)))
                     .andExpect(status().isForbidden());
         }
         mvc.perform(json(post("/api/v1/console/payments/reconciliation/run"), "{\"day\":\"%s\"}".formatted(day))
@@ -245,7 +276,8 @@ class StripeReconciliationApiTest extends IntegrationTest {
     }
 
     long audited(String action) {
-        return jdbc.sql("select count(*) from developer.audit_log where action = ? and actor_id = ? and merchant_id is null")
+        return jdbc.sql(
+                        "select count(*) from developer.audit_log where action = ? and actor_id = ? and merchant_id is null")
                 .params(action, staff)
                 .query(Long.class)
                 .single();

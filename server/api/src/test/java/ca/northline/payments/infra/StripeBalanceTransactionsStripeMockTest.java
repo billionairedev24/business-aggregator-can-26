@@ -21,7 +21,8 @@ class StripeBalanceTransactionsStripeMockTest {
         var txns = balance.between(Instant.parse("2026-09-08T06:00:00Z"), Instant.parse("2026-09-09T06:00:00Z"));
         assertThat(recorder.sent()).isNotEmpty();
         assertThat(recorder.sent().getFirst().path()).isEqualTo("/v1/balance_transactions");
-        assertThat(recorder.sent()).allSatisfy(s -> assertThat(s.version()).isEqualTo(StripeClients.PINNED_API_VERSION));
+        assertThat(recorder.sent())
+                .allSatisfy(s -> assertThat(s.version()).isEqualTo(StripeClients.PINNED_API_VERSION));
         assertThat(txns).allSatisfy(t -> {
             assertThat(t.id()).startsWith("txn_");
             assertThat(t.type()).isNotBlank();

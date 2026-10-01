@@ -18,10 +18,19 @@ public interface ViewFinance {
      * @param plusCents Plus subscriptions: not recorded anywhere yet, always null
      * @param rewardsCents provider-funded rewards (pass-through): not recorded yet, always null
      */
-    record Mix(long takeCents, long deliveryCents, long adjustmentsCents, @Nullable Long plusCents, @Nullable Long rewardsCents) {}
+    record Mix(
+            long takeCents,
+            long deliveryCents,
+            long adjustmentsCents,
+            @Nullable Long plusCents,
+            @Nullable Long rewardsCents) {}
 
     /** @param gmvShare this tier's share of the week's money held, 0–1; null without any */
-    record TierRow(String tier, long sellers, int rateBps, @Nullable Double gmvShare) {}
+    record TierRow(
+            String tier,
+            long sellers,
+            int rateBps,
+            @Nullable Double gmvShare) {}
 
     /** @param nextFiling the GST/HST return of the quarter is due the last day of the month after it */
     record Tax(String period, long platformFeeCents, long facilitatorCents, LocalDate nextFiling) {}

@@ -20,11 +20,5 @@ public interface StripeBalance {
      * @param amountCents gross, signed (refunds and dispute withdrawals are negative)
      * @param feeCents Stripe's fee on it
      */
-    record Txn(
-            String id,
-            String type,
-            @Nullable String sourceId,
-            long amountCents,
-            long feeCents,
-            Instant createdAt) {}
+    record Txn(String id, String type, @Nullable String sourceId, long amountCents, long feeCents, Instant createdAt) {}
 }

@@ -43,7 +43,7 @@ public interface ReconcileStripe {
     /**
      * @param stripeCents Σ Stripe amounts that day (charges +, refunds, disputes and payouts −)
      * @param ledgerCents Σ {@code stripe_balance} debits − credits that day
-     * @param status {@code matched} | {@code mismatch} | {@code resolved}
+     * @param status matched, mismatch (a difference) or resolved (finance noted why)
      */
     record Day(
             LocalDate day,
@@ -58,6 +58,8 @@ public interface ReconcileStripe {
             @Nullable String resolvedBy,
             @Nullable Instant resolvedAt) {
 
+        /** Stripe − ledger (sent to the console as {@code varianceCents}). */
+        @com.fasterxml.jackson.annotation.JsonProperty("varianceCents")
         public long varianceCents() {
             return stripeCents - ledgerCents;
         }

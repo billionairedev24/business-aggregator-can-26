@@ -22,7 +22,8 @@ class FinanceFiguresJdbc implements FinanceFigures {
 
     @Override
     public Held escrowHeld() {
-        return jdbc.sql("select coalesce(sum(amount_cents), 0) as c, count(*) as n from payments.escrows where state = 'held'")
+        return jdbc.sql(
+                        "select coalesce(sum(amount_cents), 0) as c, count(*) as n from payments.escrows where state = 'held'")
                 .query((rs, _) -> new Held(rs.getLong("c"), rs.getLong("n")))
                 .single();
     }

@@ -419,6 +419,46 @@ paths:
           description: "Validation failed: one error per field with the exact message."
       tags:
       - disputes-controller
+  /api/v1/console/finance:
+    get:
+      operationId: financeFinance
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Finance"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - finance-controller
   /api/v1/console/fulfilment/couriers:
     get:
       operationId: dispatchConsoleCouriers
@@ -1732,6 +1772,378 @@ paths:
           description: Your sign-in doesn't allow this.
       tags:
       - overview-controller
+  /api/v1/console/payments/reconciliation:
+    get:
+      operationId: reconciliationDays
+      parameters:
+      - in: query
+        name: from
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: to
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Days"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - reconciliation-controller
+  /api/v1/console/payments/reconciliation/export:
+    get:
+      operationId: reconciliationExport
+      parameters:
+      - in: query
+        name: from
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: to
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      responses:
+        "200":
+          content:
+            text/csv:
+              schema:
+                type: string
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - reconciliation-controller
+  /api/v1/console/payments/reconciliation/ledger-export:
+    get:
+      operationId: reconciliationLedger
+      parameters:
+      - in: query
+        name: from
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: to
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      responses:
+        "200":
+          content:
+            text/csv:
+              schema:
+                type: string
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - reconciliation-controller
+  /api/v1/console/payments/reconciliation/run:
+    post:
+      operationId: reconciliationRun
+      parameters:
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RunRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Day"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - reconciliation-controller
+  /api/v1/console/payments/reconciliation/{day}:
+    get:
+      operationId: reconciliationDay
+      parameters:
+      - in: path
+        name: day
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DayDetail"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - reconciliation-controller
+  /api/v1/console/payments/reconciliation/{day}/resolve:
+    post:
+      operationId: reconciliationResolve
+      parameters:
+      - in: path
+        name: day
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Day"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - reconciliation-controller
   /api/v1/console/payments/tax-reconciliations:
     post:
       operationId: taxReconciliationRun
@@ -4667,6 +5079,62 @@ components:
           uniqueItems: true
         userId:
           type: string
+    Day:
+      type: object
+      properties:
+        computedAt:
+          type: string
+          format: date-time
+        day:
+          type: string
+          format: date
+        feeCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        items:
+          type: integer
+          format: int32
+        ledgerCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        mismatches:
+          type: integer
+          format: int32
+        resolvedAt:
+          type: string
+          format: date-time
+        resolvedBy:
+          type: string
+        resolvedNote:
+          type: string
+        status:
+          type: string
+        stripeCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        varianceCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+    DayDetail:
+      type: object
+      properties:
+        day:
+          $ref: "#/components/schemas/Day"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Item"
+    Days:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Day"
     DecisionRequest:
       type: object
       properties:
@@ -4844,6 +5312,43 @@ components:
           type: number
           format: double
         name:
+          type: string
+    Finance:
+      type: object
+      properties:
+        asOf:
+          type: string
+          format: date-time
+        escrowHeldCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        escrowItems:
+          type: integer
+          format: int64
+        mix:
+          $ref: "#/components/schemas/Mix"
+        nextPayoutArrival:
+          type: string
+          format: date-time
+        payoutsInFlightCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        payoutsInFlightSellers:
+          type: integer
+          format: int64
+        revenueWeekCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        tax:
+          $ref: "#/components/schemas/Tax"
+        tiers:
+          type: array
+          items:
+            $ref: "#/components/schemas/TierRow"
+        timeZone:
           type: string
     Flag:
       type: object
@@ -5228,6 +5733,29 @@ components:
         value:
           type: number
           format: double
+    Mix:
+      type: object
+      properties:
+        adjustmentsCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        deliveryCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        plusCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        rewardsCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        takeCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
     Monitor:
       type: object
       properties:
@@ -5623,6 +6151,15 @@ components:
         stillPending:
           type: integer
           format: int32
+    ResolveRequest:
+      type: object
+      properties:
+        note:
+          type: string
+          maxLength: 500
+          minLength: 0
+      required:
+      - note
     ReverificationRequest:
       type: object
       properties:
@@ -5825,6 +6362,14 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/StopView"
+    RunRequest:
+      type: object
+      properties:
+        day:
+          type: string
+          minLength: 1
+      required:
+      - day
     RunSummary:
       type: object
       properties:
@@ -5990,6 +6535,22 @@ components:
         oldestOverdue:
           type: string
           format: date-time
+    Tax:
+      type: object
+      properties:
+        facilitatorCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        nextFiling:
+          type: string
+          format: date
+        period:
+          type: string
+        platformFeeCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
     Ticket:
       type: object
       properties:
@@ -6054,6 +6615,20 @@ components:
       required:
       - reason
       - tier
+    TierRow:
+      type: object
+      properties:
+        gmvShare:
+          type: number
+          format: double
+        rateBps:
+          type: integer
+          format: int32
+        sellers:
+          type: integer
+          format: int64
+        tier:
+          type: string
     TrailEntry:
       type: object
       properties:

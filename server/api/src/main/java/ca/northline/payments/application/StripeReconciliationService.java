@@ -5,7 +5,6 @@ import ca.northline.payments.application.ReconciliationStore.Posting;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.RuleViolation;
 import java.time.Clock;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -77,7 +76,8 @@ class StripeReconciliationService implements ReconcileStripe {
         for (var p : store.postings(from, to)) {
             ledgerCents += p.cents();
             if (p.stripeId() == null) {
-                items.add(new Item(kind(p.refType()), null, null, p.refType(), p.refId(), p.cents(), "missing_at_stripe"));
+                items.add(new Item(
+                        kind(p.refType()), null, null, p.refType(), p.refId(), p.cents(), "missing_at_stripe"));
             } else {
                 ledgerById.computeIfAbsent(p.stripeId(), _ -> new ArrayList<>()).add(p);
             }
@@ -108,7 +108,8 @@ class StripeReconciliationService implements ReconcileStripe {
                 postings.getFirst().refId(),
                 postings.stream().mapToLong(Posting::cents).sum(),
                 "missing_at_stripe")));
-        var mismatches = (int) items.stream().filter(i -> !i.status().equals("matched")).count();
+        var mismatches =
+                (int) items.stream().filter(i -> !i.status().equals("matched")).count();
         var previous = store.day(day);
         var matched = mismatches == 0 && stripeCents == ledgerCents;
         var resolved = previous.filter(d -> d.status().equals("resolved")).filter(_ -> !matched);
@@ -134,12 +135,19 @@ class StripeReconciliationService implements ReconcileStripe {
                     "reconciliation_day",
                     day.toString(),
                     null,
-                    Map.of("status", result.status(), "varianceCents", result.varianceCents(), "mismatches", mismatches)));
+                    Map.of(
+                            "status",
+                            result.status(),
+                            "varianceCents",
+                            result.varianceCents(),
+                            "mismatches",
+                            mismatches)));
         }
         return result;
     }
 
-    private static final Comparator<Item> ORDER = Comparator.comparing((Item i) -> i.status().equals("matched"))
+    private static final Comparator<Item> ORDER = Comparator.comparing(
+                    (Item i) -> i.status().equals("matched"))
             .thenComparing(Item::kind)
             .thenComparing(i -> Objects.requireNonNullElse(i.stripeId(), ""));
 
@@ -176,7 +184,8 @@ class StripeReconciliationService implements ReconcileStripe {
     @Override
     @Transactional(readOnly = true)
     public DayDetail day(LocalDate day) {
-        var d = store.day(day).orElseThrow(() -> new ca.northline.shared.NotFound("reconciliation_day", day.toString()));
+        var d = store.day(day)
+                .orElseThrow(() -> new ca.northline.shared.NotFound("reconciliation_day", day.toString()));
         return new DayDetail(d, store.items(day));
     }
 
@@ -190,7 +199,8 @@ class StripeReconciliationService implements ReconcileStripe {
         if (text.length() > NOTE_MAX) {
             throw RuleViolation.of("note", "length", NOTE_LENGTH);
         }
-        var d = store.day(day).orElseThrow(() -> new ca.northline.shared.NotFound("reconciliation_day", day.toString()));
+        var d = store.day(day)
+                .orElseThrow(() -> new ca.northline.shared.NotFound("reconciliation_day", day.toString()));
         if (!d.status().equals("mismatch")) {
             throw new Conflict("not_mismatched", NOT_MISMATCHED);
         }
@@ -240,11 +250,24 @@ class StripeReconciliationService implements ReconcileStripe {
     public String exportLedger(LocalDate from, LocalDate to, Actor actor) {
         var zone = time.platform();
         var out = new StringBuilder("at,account,debit_cents,credit_cents,ref_type,ref_id\n");
-        store.ledger(from.atStartOfDay(zone).toInstant(), to.plusDays(1).atStartOfDay(zone).toInstant())
-                .forEach(row -> out.append(String.join(",", row.stream().map(StripeReconciliationService::csv).toList()))
+        store.ledger(
+                        from.atStartOfDay(zone).toInstant(),
+                        to.plusDays(1).atStartOfDay(zone).toInstant())
+                .forEach(row -> out.append(String.join(
+                                ",",
+                                row.stream()
+                                        .map(StripeReconciliationService::csv)
+                                        .toList()))
                         .append('\n'));
         audit.record(new AuditTrail.Entry(
-                null, actor.userId(), actor.role(), "payments.ledger_exported", "ledger", from + ".." + to, null, null));
+                null,
+                actor.userId(),
+                actor.role(),
+                "payments.ledger_exported",
+                "ledger",
+                from + ".." + to,
+                null,
+                null));
         return out.toString();
     }
 
@@ -264,12 +287,15 @@ class StripeReconciliationService implements ReconcileStripe {
         cells.add(i == null || i.ledgerCents() == null ? "" : Long.toString(i.ledgerCents()));
         cells.add(i == null ? "" : i.status());
         cells.add(Objects.requireNonNullElse(d.resolvedNote(), ""));
-        return String.join(",", cells.stream().map(StripeReconciliationService::csv).toList()) + "\n";
+        return String.join(
+                        ",",
+                        cells.stream().map(StripeReconciliationService::csv).toList()) + "\n";
     }
 
     /** RFC 4180 quoting, and a leading quote mark for cells a spreadsheet would read as a formula. */
     static String csv(String cell) {
-        var value = !cell.isEmpty() && "=+-@".indexOf(cell.charAt(0)) >= 0 && !cell.matches("-?\\d+") ? "'" + cell : cell;
+        var value =
+                !cell.isEmpty() && "=+-@".indexOf(cell.charAt(0)) >= 0 && !cell.matches("-?\\d+") ? "'" + cell : cell;
         return value.contains(",") || value.contains("\"") || value.contains("\n")
                 ? "\"" + value.replace("\"", "\"\"") + "\""
                 : value;

@@ -35,7 +35,8 @@ class StripeBalanceTransactions implements StripeBalance {
                 .build();
         try {
             var out = new ArrayList<Txn>();
-            for (BalanceTransaction t : stripe.v1().balanceTransactions().list(params).autoPagingIterable()) {
+            for (BalanceTransaction t :
+                    stripe.v1().balanceTransactions().list(params).autoPagingIterable()) {
                 if (t.getCurrency() != null && !"cad".equals(t.getCurrency().toLowerCase(Locale.ROOT))) {
                     continue;
                 }

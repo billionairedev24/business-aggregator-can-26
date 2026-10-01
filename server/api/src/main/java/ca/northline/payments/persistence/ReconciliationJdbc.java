@@ -44,7 +44,10 @@ class ReconciliationJdbc implements ReconciliationStore {
                 .param("from", JdbcTimes.ts(from))
                 .param("to", JdbcTimes.ts(to))
                 .query((rs, _) -> new Posting(
-                        rs.getString("ref_type"), rs.getString("ref_id"), rs.getString("stripe_id"), rs.getLong("cents")))
+                        rs.getString("ref_type"),
+                        rs.getString("ref_id"),
+                        rs.getString("stripe_id"),
+                        rs.getLong("cents")))
                 .list();
     }
 
@@ -58,7 +61,8 @@ class ReconciliationJdbc implements ReconciliationStore {
                          order by created_at, id""")
                 .param("from", JdbcTimes.ts(from))
                 .param("to", JdbcTimes.ts(to))
-                .query((rs, _) -> new StripePayout(rs.getString("id"), rs.getString("stripe_payout"), rs.getLong("net")))
+                .query((rs, _) ->
+                        new StripePayout(rs.getString("id"), rs.getString("stripe_payout"), rs.getLong("net")))
                 .list();
     }
 
@@ -123,7 +127,9 @@ class ReconciliationJdbc implements ReconciliationStore {
                 .param("by", day.resolvedBy(), java.sql.Types.VARCHAR)
                 .param("resolvedAt", JdbcTimes.ts(day.resolvedAt()), java.sql.Types.TIMESTAMP_WITH_TIMEZONE)
                 .update();
-        jdbc.sql("delete from payments.reconciliation_items where day = :d").param("d", day.day()).update();
+        jdbc.sql("delete from payments.reconciliation_items where day = :d")
+                .param("d", day.day())
+                .update();
         for (var i : items) {
             jdbc.sql("""
                             insert into payments.reconciliation_items (id, day, kind, stripe_id, stripe_cents, ledger_ref_type,

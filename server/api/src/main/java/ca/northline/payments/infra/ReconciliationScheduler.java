@@ -33,8 +33,12 @@ class ReconciliationScheduler {
             try {
                 var result = reconcile.run(day, null);
                 if (!result.status().equals("matched")) {
-                    log.warn("Stripe reconciliation {}: {} ({} difference(s), variance {} cents)",
-                            day, result.status(), result.mismatches(), result.varianceCents());
+                    log.warn(
+                            "Stripe reconciliation {}: {} ({} difference(s), variance {} cents)",
+                            day,
+                            result.status(),
+                            result.mismatches(),
+                            result.varianceCents());
                 }
             } catch (RuntimeException e) {
                 log.error("Stripe reconciliation of {} failed; retried tomorrow or run it from the console", day, e);

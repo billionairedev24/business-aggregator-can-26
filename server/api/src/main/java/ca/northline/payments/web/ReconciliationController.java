@@ -55,21 +55,22 @@ class ReconciliationController {
     record RunRequest(@NotBlank(message = DAY) String day) {}
 
     record ResolveRequest(
-            @NotBlank(message = ReconcileStripe.NOTE_REQUIRED)
-            @Size(max = 500, message = ReconcileStripe.NOTE_LENGTH)
+            @NotBlank(message = ReconcileStripe.NOTE_REQUIRED) @Size(max = 500, message = ReconcileStripe.NOTE_LENGTH)
             String note) {}
 
     record Days(List<ReconcileStripe.Day> items) {}
 
     @GetMapping
-    ResponseEntity<Days> days(@RequestParam(required = false) @Nullable String from, @RequestParam(required = false) @Nullable String to) {
+    ResponseEntity<Days> days(
+            @RequestParam(required = false) @Nullable String from,
+            @RequestParam(required = false) @Nullable String to) {
         var range = range(from, to);
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
                 .body(new Days(reconcile.days(range[0], range[1])));
     }
 
-    @GetMapping("/{day:\\d{4}-\\d{2}-\\d{2}}")
+    @GetMapping("/{day}")
     ReconcileStripe.DayDetail day(@PathVariable String day) {
         return reconcile.day(parse(day, "day"));
     }
@@ -82,7 +83,8 @@ class ReconciliationController {
         var range = range(from, to);
         return ResponseEntity.ok()
                 .contentType(new MediaType("text", "csv", java.nio.charset.StandardCharsets.UTF_8))
-                .header(HttpHeaders.CONTENT_DISPOSITION,
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"reconciliation-%s-%s.csv\"".formatted(range[0], range[1]))
                 .cacheControl(CacheControl.noStore())
                 .body(reconcile.export(range[0], range[1], actor(staff)));
@@ -97,7 +99,8 @@ class ReconciliationController {
         var range = range(from, to);
         return ResponseEntity.ok()
                 .contentType(new MediaType("text", "csv", java.nio.charset.StandardCharsets.UTF_8))
-                .header(HttpHeaders.CONTENT_DISPOSITION,
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"ledger-%s-%s.csv\"".formatted(range[0], range[1]))
                 .cacheControl(CacheControl.noStore())
                 .body(reconcile.exportLedger(range[0], range[1], actor(staff)));
@@ -109,7 +112,7 @@ class ReconciliationController {
         return reconcile.run(parse(body.day(), "day"), actor(staff));
     }
 
-    @PostMapping("/{day:\\d{4}-\\d{2}-\\d{2}}/resolve")
+    @PostMapping("/{day}/resolve")
     @RequiresConsole(value = ConsoleScreen.FINANCE, actions = ConsoleAction.PAYOUTS)
     ReconcileStripe.Day resolve(@PathVariable String day, @Valid @RequestBody ResolveRequest body, CurrentStaff staff) {
         return reconcile.resolve(parse(day, "day"), body.note(), actor(staff));
