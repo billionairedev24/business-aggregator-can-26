@@ -327,11 +327,4 @@ class ConsumerBffTest {
                 .andExpect(cookie().maxAge("__Host-NL_CONSUMER", 0));
         assertThat(session.isInvalid()).isTrue();
     }
-
-    /** S-125: the consumer-bff's session API (same document shape, its own cookie and guest sessions). */
-    @Test
-    void openApi_committedSpecMatchesTheCode() throws Exception {
-        ca.northline.openapi.OpenApiSnapshot.verify(
-                mvc, "/bff/v3/api-docs", "bff-consumer", java.util.List.of("internal"));
-    }
 }

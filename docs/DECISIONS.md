@@ -2874,6 +2874,15 @@ Runbook: [docs/runbooks/api-docs.md](runbooks/api-docs.md). Stacked on S-124 (Ma
   - Scalar's and Swagger UI's "Authorize" against a real northline-auth: no docs OAuth client is registered, so
     "Try it" uses pasted tokens. A public `docs` client with the viewers' redirect URIs is follow-up work.
   - the viewers were checked by status and content in MockMvc, not clicked through in a browser;
-  - `ConsumerBffTest`'s relay tests failed intermittently with a JDK HttpClient NPE when run together with
-    `BffSessionTest` under heavy machine load, and passed when run alone. The failing test changed from run to run,
-    and the failure is in the WireMock relay, not in the documentation.
+- **Found, not fixed: a JDK HttpClient race in the gateway relay (bff).**
+  - **Symptom:** `ConsumerBffTest`'s relay tests fail intermittently with an NPE in `Http1Exchange.requestMoreBody`
+    (the body subscriber is not set yet when Spring's empty `OutputStreamPublisher` completes).
+  - **When:** whenever an OpenAPI document had been generated in the same Spring context first, and more often when
+    Swagger UI's webjar files had been served in the JVM. Main is stable: 4 of 4 runs passed. This branch failed 4 of
+    6 runs before the change below.
+  - **Mitigation:** the consumer-bff spec is checked in its own context (`ConsumerBffOpenApiTest`), and the BFF test
+    checks Swagger UI through its redirect and `swagger-config` instead of the webjar files. Since then the suite
+    passes (3 of 3).
+  - **Production:** never affected, because springdoc is off in prod.
+  - **Follow-up for the lead:** dev/staging could hit the race after someone opens `/bff/docs`. Candidate fixes are a
+    gateway MVC `ClientHttpRequestFactory` without a body for GET, or the JDK fix.
