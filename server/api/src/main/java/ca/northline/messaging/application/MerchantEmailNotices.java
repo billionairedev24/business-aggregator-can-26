@@ -2,6 +2,7 @@ package ca.northline.messaging.application;
 
 import ca.northline.email.EmailAddress;
 import ca.northline.email.EmailContent;
+import ca.northline.email.EmailContent.ApplicationDecision;
 import ca.northline.email.EmailContent.BankAccountChange;
 import ca.northline.email.EmailContent.CustomDomainNotice;
 import ca.northline.email.EmailContent.DisputeUpdate;
@@ -10,6 +11,7 @@ import ca.northline.email.EmailContent.RefundCaseUpdate;
 import ca.northline.email.EmailDeliveryFailed;
 import ca.northline.email.Mailer;
 import ca.northline.identity.api.NotificationContacts;
+import ca.northline.merchants.api.ApplicationDecided;
 import ca.northline.merchants.api.BusinessNames;
 import ca.northline.merchants.api.CustomDomainChanged;
 import ca.northline.merchants.api.TeamRoster;
@@ -165,6 +167,22 @@ class MerchantEmailNotices {
                 OWNERS,
                 null,
                 business -> new CustomDomainNotice(business, event.domain(), change, event.graceEndsAt(), page));
+    }
+
+    /**
+     * S-79: the console's verification queue approved the application or sent it back with checks to redo. The
+     * answer to the owners' own submission: always sent, to every owner.
+     */
+    @ApplicationModuleListener
+    void on(ApplicationDecided event) {
+        var approved = "approved".equals(event.decision());
+        var link = approved ? links.studioHome(event.aggregateId()) : links.onboardingVerification(event.aggregateId());
+        notify(
+                event.eventId(),
+                event.aggregateId(),
+                OWNERS,
+                null,
+                business -> new ApplicationDecision(business, event.decision(), event.checkKeys(), event.note(), link));
     }
 
     /**

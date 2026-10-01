@@ -7,8 +7,7 @@ import ca.northline.merchants.application.RegistryReviews.ReviewView;
 import ca.northline.shared.ListResponse;
 import ca.northline.shared.security.ConsoleAction;
 import ca.northline.shared.security.ConsoleScreen;
-import ca.northline.shared.security.CurrentUser;
-import ca.northline.shared.security.MerchantAccessDenied;
+import ca.northline.shared.security.CurrentStaff;
 import ca.northline.shared.security.RequiresConsole;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -28,7 +27,9 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Platform console — registry verification queue (S-23): lookups that didn't match, with their evidence, and the
  * agent's decision. {@code /api/v1/console/**} needs role {@code STAFF}; a second factor is required too.
- * S-90: the verification queue (admin, trust &amp; safety); deciding needs {@code verify}.
+ * S-90: the verification queue (admin, trust &amp; safety); deciding needs {@code verify}. S-79: decisions are
+ * audit-logged; the application detail ({@code /api/v1/console/verification/applications/{id}}) lists a business's
+ * reviews.
  *
  * <pre>
  * GET  /api/v1/console/registry-reviews[?limit=50]                                      {items: [ReviewView]}
@@ -58,23 +59,20 @@ class RegistryReviewController {
 
     @GetMapping
     @RequiresConsole(ConsoleScreen.VERIFY)
-    ListResponse<ReviewView> open(@RequestParam(defaultValue = "50") int limit, CurrentUser user) {
-        requireMfa(user);
+    ListResponse<ReviewView> open(@RequestParam(defaultValue = "50") int limit) {
         return new ListResponse<>(reviews.open(Math.clamp(limit, 1, 200)));
     }
 
     @PostMapping("/{id}/decision")
     @RequiresConsole(value = ConsoleScreen.VERIFY, actions = ConsoleAction.VERIFY)
-    ReviewView decide(@PathVariable String id, @Valid @RequestBody DecisionRequest body, CurrentUser user) {
-        requireMfa(user);
+    ReviewView decide(@PathVariable String id, @Valid @RequestBody DecisionRequest body, CurrentStaff staff) {
         return decide.decide(new DecideReview.Command(
-                id, "approve".equals(body.decision()), user.userId(), body.note(), body.reference(), body.expiresOn()));
-    }
-
-    private static void requireMfa(CurrentUser user) {
-        if (!user.mfa()) {
-            throw new MerchantAccessDenied(
-                    MerchantAccessDenied.Reason.MFA_REQUIRED, "Sign in with your second factor to do this.");
-        }
+                id,
+                "approve".equals(body.decision()),
+                staff.userId(),
+                staff.roleCodes(),
+                body.note(),
+                body.reference(),
+                body.expiresOn()));
     }
 }

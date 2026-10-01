@@ -29,6 +29,17 @@ public record NotificationLinks(
         return URI.create(base(studioUrl, "http://localhost:3100") + "/b/" + encode(merchantId) + "/" + page);
     }
 
+    /** {@code <studio>/b/<merchantId>}: the business's Studio home. */
+    public URI studioHome(String merchantId) {
+        return URI.create(base(studioUrl, "http://localhost:3100") + "/b/" + encode(merchantId));
+    }
+
+    /** {@code <studio>/onboarding/verification?m=<merchantId>}: the onboarding wizard's Verification step. */
+    public URI onboardingVerification(String merchantId) {
+        return URI.create(
+                base(studioUrl, "http://localhost:3100") + "/onboarding/verification?m=" + encode(merchantId));
+    }
+
     public URI unsubscribe(String token) {
         return URI.create(base(apiUrl, "http://localhost:8080") + UNSUBSCRIBE_PATH + "?t=" + encode(token));
     }

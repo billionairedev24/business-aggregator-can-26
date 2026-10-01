@@ -28,7 +28,7 @@ class OwnerIdentityQueries implements OwnerIdentityStore {
     private static final String CHECK_COLUMNS = """
             c.id as c_id, c.merchant_id as c_merchant, c.principal_id as c_principal, c.stripe_session, c.status,
             c.last_error, c.name_match, c.dob_match, c.delivery, c.email, c.attempts, c.requested_by,
-            c.stripe_updated_at, c.verified_at, c.updated_at
+            c.stripe_updated_at, c.verified_at, c.updated_at, c.reviewed_by, c.reviewed_at, c.review_note
             """;
 
     private final JdbcClient jdbc;
@@ -77,15 +77,17 @@ class OwnerIdentityQueries implements OwnerIdentityStore {
         jdbc.sql("""
                         insert into merchants.owner_identity_checks (id, merchant_id, principal_id, stripe_session,
                                status, last_error, name_match, dob_match, delivery, email, attempts, requested_by,
-                               stripe_updated_at, verified_at, updated_at)
+                               stripe_updated_at, verified_at, updated_at, reviewed_by, reviewed_at, review_note)
                         values (:id, :m, :p, :session, :status, :error, :name, :dob, :delivery, :email, :attempts, :by,
-                                :stripeAt, :verifiedAt, :at)
+                                :stripeAt, :verifiedAt, :at, :reviewedBy, :reviewedAt, :reviewNote)
                         on conflict (id) do update set stripe_session = excluded.stripe_session,
                                status = excluded.status, last_error = excluded.last_error,
                                name_match = excluded.name_match, dob_match = excluded.dob_match,
                                delivery = excluded.delivery, email = excluded.email, attempts = excluded.attempts,
                                requested_by = excluded.requested_by, stripe_updated_at = excluded.stripe_updated_at,
-                               verified_at = excluded.verified_at, updated_at = excluded.updated_at
+                               verified_at = excluded.verified_at, updated_at = excluded.updated_at,
+                               reviewed_by = excluded.reviewed_by, reviewed_at = excluded.reviewed_at,
+                               review_note = excluded.review_note
                         """)
                 .param("id", c.getId())
                 .param("m", c.getMerchantId())
@@ -102,6 +104,9 @@ class OwnerIdentityQueries implements OwnerIdentityStore {
                 .param("stripeAt", ts(c.getStripeUpdatedAt()))
                 .param("verifiedAt", ts(c.getVerifiedAt()))
                 .param("at", ts(c.getUpdatedAt()))
+                .param("reviewedBy", c.getReviewedBy())
+                .param("reviewedAt", ts(c.getReviewedAt()))
+                .param("reviewNote", c.getReviewNote())
                 .update();
     }
 
@@ -140,6 +145,9 @@ class OwnerIdentityQueries implements OwnerIdentityStore {
                 .stripeUpdatedAt(instant(rs, "stripe_updated_at"))
                 .verifiedAt(instant(rs, "verified_at"))
                 .updatedAt(requiredInstant(rs, "updated_at"))
+                .reviewedBy(rs.getString("reviewed_by"))
+                .reviewedAt(instant(rs, "reviewed_at"))
+                .reviewNote(rs.getString("review_note"))
                 .build();
     }
 

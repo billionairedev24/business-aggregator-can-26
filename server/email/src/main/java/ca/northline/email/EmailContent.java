@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -501,6 +502,80 @@ public sealed interface EmailContent {
         }
     }
 
+    // ── Verification (S-79) ──────────────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * The console's verification queue decided the application: approved (the business starts at Registered), or sent
+     * back with the checks to redo and the agent's note. Transactional: the answer to the owners' own submission.
+     *
+     * @param decision {@code approved | info_requested}
+     * @param checkKeys checklist keys to redo ({@code insurance}, {@code licence:AMVIC}); empty when approved
+     * @param note the agent's words to the business, or null
+     * @param link the Studio (approved) or the onboarding Verification step (info requested)
+     */
+    record ApplicationDecision(
+            String businessName,
+            String decision,
+            List<String> checkKeys,
+            @Nullable String note,
+            URI link) implements EmailContent {
+
+        /** Checklist keys the template names; anything else is shown as its key. */
+        private static final Set<String> KNOWN_CHECKS = Set.of(
+                "kyc",
+                "registry",
+                "gst",
+                "ahs_permit",
+                "food_cert",
+                "inspection",
+                "insurance",
+                "category_permits",
+                "product_safety",
+                "returns_policy",
+                "allergen_attestation",
+                "aglc",
+                "bank",
+                "mfa",
+                "site_visit");
+
+        public ApplicationDecision {
+            checkKeys = List.copyOf(checkKeys);
+        }
+
+        @Override
+        public String template() {
+            return "application-decision";
+        }
+
+        @Override
+        public String variant() {
+            return decision;
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.TRANSACTIONAL;
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            var checks = checkKeys.stream()
+                    .map(key -> key.startsWith("licence:")
+                            ? Map.of("code", "licence", "arg", key.substring("licence:".length()))
+                            : KNOWN_CHECKS.contains(key)
+                                    ? Map.of("code", key, "arg", "")
+                                    : Map.of("code", "other", "arg", key))
+                    .toList();
+            var v = new LinkedHashMap<String, Object>();
+            v.put("businessName", businessName);
+            v.put("decision", decision);
+            v.put("checks", checks);
+            v.put("note", note == null ? "" : note);
+            v.put("link", link.toString());
+            return v;
+        }
+    }
+
     // ── Samples (preview endpoint, rendering tests) ──────────────────────────────────────────────────────────────
 
     /**
@@ -597,6 +672,17 @@ public sealed interface EmailContent {
                             change == CustomDomainNotice.Change.DNS_LOST ? at.plus(Duration.ofDays(3)) : null,
                             URI.create(studio + "/page")));
         }
+        all.put(
+                "application-decision.approved",
+                new ApplicationDecision(business, "approved", List.of(), null, URI.create(studio)));
+        all.put(
+                "application-decision.info_requested",
+                new ApplicationDecision(
+                        business,
+                        "info_requested",
+                        List.of("insurance", "licence:AMVIC"),
+                        "Your insurance certificate is cut off at the bottom; please upload all pages.",
+                        URI.create("http://localhost:3100/onboarding/verification?m=01J9ZD3V00000000000000PWM1")));
         return java.util.Collections.unmodifiableMap(all);
     }
 
