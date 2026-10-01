@@ -62,6 +62,19 @@ class OAuthClientCatalogTest {
     }
 
     @Test
+    void strict_allowsLoopbackIpRedirects_forPublicClientsOnly() {
+        // S-127: desktop MCP clients (Claude Code, the MCP Inspector) receive the code on 127.0.0.1:<any port>.
+        new OAuthClientCatalog(props("agent", mobile("http://127.0.0.1/callback")), ClientPolicy.STRICT);
+
+        assertThatThrownBy(() -> new OAuthClientCatalog(
+                        props("agent", mobile("http://localhost/callback")), ClientPolicy.STRICT))
+                .hasMessageContaining("must use https outside local");
+        assertThatThrownBy(() -> new OAuthClientCatalog(
+                        props("a", bff(BCRYPT, "http://127.0.0.1/callback")), ClientPolicy.STRICT))
+                .hasMessageContaining("must use https outside local");
+    }
+
+    @Test
     void local_allowsHttpAnywhere() {
         new OAuthClientCatalog(props("a", bff("{noop}a", "http://192.168.1.20:3100/cb")), ClientPolicy.LOCAL);
     }

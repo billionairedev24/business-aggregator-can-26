@@ -232,6 +232,8 @@ class AuthorizationServerConfig {
                 resources.addAudience(ctx, audience); // S-127: + the MCP server when the client asked for it
                 // RFC 9068: space-delimited string (the api's NorthlineJwtConverter reads it that way).
                 ctx.getClaims().claim("scope", String.join(" ", ctx.getAuthorizedScopes()));
+                // RFC 9068 § 2.2: which client the token was issued to (the MCP server audits it per tool call, S-127).
+                ctx.getClaims().claim("client_id", ctx.getRegisteredClient().getClientId());
                 ctx.getClaims().claims(c -> c.putAll(claims.accessTokenClaims(user.getName(), factors)));
             } else if (OidcParameterNames.ID_TOKEN.equals(ctx.getTokenType().getValue())) {
                 ctx.getClaims().claims(c -> c.putAll(claims.idTokenClaims(user.getName(), factors)));
