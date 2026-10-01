@@ -262,6 +262,9 @@ Notes:
   link-local and metadata addresses stay refused) and add an endpoint such as `http://localhost:4000/hooks` — any
   local HTTP listener works; "Send test event" in the endpoint's Deliveries drawer sends one at once.
   `WEBHOOK_SECRET_KEY` empty = the fixed development key, the same one the api uses ([webhooks.md](webhooks.md)).
+- **Bulk-import image URLs (S-72):** the `image_urls` column is fetched under the webhook SSRF rules (public https
+  only). To test with images served from your machine, set `IMPORT_IMAGES_ALLOW_LOCAL=true` in `server/.env`
+  (http:// and loopback allowed; private, link-local and metadata addresses stay refused).
 - Stop: `make down` stops the apps make started and every stand-in (`VOLUMES=1` also deletes the data volumes; =
   `docker compose --profile all down [-v]`).
 

@@ -4704,3 +4704,57 @@ The baseline files keep their comments, because applied migrations are never edi
 
 **Tests.** `SchemaTodosTest` checks the V181 indexes on the migrated test database, the group-order link uniqueness,
 and the audit log rules: no update, no delete, and a retention delete only past seven years with the setting.
+
+## 2026-09-30 — S-72 Bulk import: validate image URLs and support full updates on re-import
+
+- **One set of SSRF rules.** The S-33 `EgressPolicy` and `HostResolver` moved from the worker to the shared `platform`
+  library (`ca.northline.platform`). They are joined by `EgressDnsResolver`, the HttpClient 5 resolver that
+  checks every resolved address and pins the connection to them, and `EgressPolicy.refuseLiteral` for IP-literal
+  hosts. The worker's webhook transport uses the same classes, so its behaviour is unchanged. The api's new
+  `SafeRemoteImages` (port `RemoteImages`) fetches import images with them.
+- **Fetch rules:**
+  - https only, no credentials in the URL, public addresses only;
+  - no redirects: a redirect could point anywhere, so the merchant gives the final URL;
+  - no cookies, no retries;
+  - timeouts of 5 s to connect, 10 s per read and 20 s in all;
+  - at most 15 MB, the upload limit.
+  - `IMPORT_IMAGES_ALLOW_LOCAL=true` allows http:// and loopback, for local development and the tests. The cloud
+    profiles refuse to start with it, the same rule as `WEBHOOKS_ALLOW_LOCAL`.
+- **The `image_urls` column.** The three product templates gain it: up to 9 links, main first, separated by spaces,
+  new lines or `|` (commas would split a CSV cell). Validation fetches every distinct URL once, 8 at a time on virtual
+  threads, at most 500 per file ("Up to 500 image URLs per file."). It runs outside a database transaction, so no
+  connection is held while fetching. A row whose image fails becomes an error row, with the first failing image's
+  message:
+  - "Image URL unreachable" — the design's text: an HTTP error, a timeout, a redirect, or an image too large;
+  - "Image URL must be a public https:// link" — refused by the SSRF rules;
+  - "Image URL is not a JPG or PNG image";
+  - "Image URL is under 1000 px on the longest side";
+  - "Image URL is not a valid link";
+  - "Up to 9 image URLs per row".
+
+  The report is kept in row order.
+- **Importing images.** On import the URLs are fetched again and stored through the normal media upload, as the
+  business's own images in order, and the listing's image source becomes `own`. An image that no longer loads at that
+  moment is left out instead of failing the whole import; the completeness meter then shows it missing. Variant
+  rows' images go to the listing: the first row of a parent supplies them. Per-variant images arrive with S-65.
+- **Full updates on re-import.**
+  - **Category templates:** a row for an existing SKU now updates every column it fills in: title, GTIN, brand, MPN,
+    category, attributes, price, stock and images. An empty cell keeps the current value, so a sheet exported with
+    blanks never wipes data.
+  - **Validation for updates:** an update row checks the attributes it names against the listing's category, or the
+    new category when the row changes it. Price and stock may be empty.
+  - **Services template:** updates name, category, pricing mode, price, duration, buffer, what's included and
+    instant book in the same way.
+  - **Price & stock template:** still changes price and stock only.
+  - **How it is saved:** updates go through the editor's use cases (`EditProduct`/`EditService.update`), so the
+    editor's validation, S-39 re-vetting and events apply as in the Studio.
+- **Variants on re-import.** Rows whose `parent_sku` is an existing product listing no longer fail ("Parent SKU
+  already exists …").
+  - Each row updates the variant with its SKU (price, stock, GTIN, and the name when size or colour is filled) or
+    adds a new variant. A new variant needs a price and stock.
+  - The first row's listing-level columns apply to the listing.
+  - The offer shows the lowest variant price and the total stock, as the S-35 sync does.
+  - Variants missing from the file are kept, not removed.
+- **Not done:** the row errors stay English, like the existing import messages, which the design shows verbatim.
+  Nothing has fetched a real third-party image host: the tests use WireMock on loopback, and the SSRF refusals are
+  unit-tested with made-up addresses.

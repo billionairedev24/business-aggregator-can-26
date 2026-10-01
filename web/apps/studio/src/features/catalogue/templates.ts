@@ -4,20 +4,21 @@ import type { Portal } from './model';
 
 /**
  * Bulk-upload templates — the header row matches the server's ImportTemplate columns (attribute columns are the
- * category's attribute keys in snake_case). One example row each. Generated in the browser as .xlsx.
+ * category's attribute keys in snake_case). One example row each. Generated in the browser as .xlsx. `image_urls`
+ * (S-72): up to 9 public https links, main first, separated by spaces.
  */
 export const TEMPLATES: Record<ImportTemplate, { columns: string[]; example: (string | number)[] }> = {
   auto_parts: {
-    columns: ['sku', 'title', 'gtin', 'brand', 'mpn', 'category_id', 'price', 'stock', 'part_type', 'length', 'position'],
-    example: ['WB-22', 'Bosch Icon 22" Beam Wiper Blade · all-season', '028851200226', 'Bosch', '22A', 'shop.hardware-and-auto.auto-parts', 19, 22, 'Wiper blades', '22 in', 'Front'],
+    columns: ['sku', 'title', 'gtin', 'brand', 'mpn', 'category_id', 'price', 'stock', 'part_type', 'length', 'position', 'image_urls'],
+    example: ['WB-22', 'Bosch Icon 22" Beam Wiper Blade · all-season', '028851200226', 'Bosch', '22A', 'shop.hardware-and-auto.auto-parts', 19, 22, 'Wiper blades', '22 in', 'Front', 'https://example.com/wb-22-main.jpg https://example.com/wb-22-side.jpg'],
   },
   groceries: {
-    columns: ['sku', 'title', 'gtin', 'brand', 'category_id', 'price', 'stock', 'volume', 'storage'],
-    example: ['OAT-1L', 'Oat milk · barista · 1 L', '', 'Prairie Oat Co.', 'shop.food-and-grocery.groceries', 4.49, 30, '1 L', 'Refrigerated'],
+    columns: ['sku', 'title', 'gtin', 'brand', 'category_id', 'price', 'stock', 'volume', 'storage', 'image_urls'],
+    example: ['OAT-1L', 'Oat milk · barista · 1 L', '', 'Prairie Oat Co.', 'shop.food-and-grocery.groceries', 4.49, 30, '1 L', 'Refrigerated', 'https://example.com/oat-1l.jpg'],
   },
   clothing: {
-    columns: ['parent_sku', 'sku', 'title', 'gtin', 'brand', 'category_id', 'price', 'stock', 'department', 'material', 'size', 'colour'],
-    example: ['PARKA-01', 'PARKA-01-M-BLK', 'Down parka · winter', '', 'North Pass', 'shop.apparel.clothing', 289, 4, 'Unisex', 'Blend', 'M', 'Black'],
+    columns: ['parent_sku', 'sku', 'title', 'gtin', 'brand', 'category_id', 'price', 'stock', 'department', 'material', 'size', 'colour', 'image_urls'],
+    example: ['PARKA-01', 'PARKA-01-M-BLK', 'Down parka · winter', '', 'North Pass', 'shop.apparel.clothing', 289, 4, 'Unisex', 'Blend', 'M', 'Black', 'https://example.com/parka-black.jpg'],
   },
   services: {
     columns: ['sku', 'name', 'category_id', 'pricing_mode', 'price', 'duration_min', 'buffer_min', 'included', 'instant_book'],

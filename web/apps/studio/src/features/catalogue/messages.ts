@@ -142,7 +142,7 @@ export const useCatalogueT = defineMessages({
 
     // bulk upload
     bulkKicker: '{section} · bulk upload', bulkTitle: 'Add or update hundreds of products at once',
-    bulkLede: 'Download the template for your category, fill it in, upload. Rows are validated before anything changes; errors come back as a report with row numbers. Existing SKUs are updated, new ones are created as drafts.',
+    bulkLede: 'Download the template for your category, fill it in, upload. Rows are validated before anything changes; errors come back as a report with row numbers. Existing SKUs are updated with every column you fill in (empty cells keep the current value), new ones are created as drafts. Image URLs must be public https links to JPG or PNG images; we check each one.',
     step1: '1 · Template', step2: '2 · Upload', orConnect: 'Or connect', downloadXlsx: 'Download .xlsx',
     tpl_auto_parts: 'Auto › Parts & accessories', tpl_groceries: 'Groceries', tpl_clothing: 'Clothing (with size/colour variants)', tpl_services: 'Services', tpl_price_stock: 'Price & stock only (quick update)',
     dropHere: 'Drop .xlsx / .csv here · up to 10,000 rows', chooseFile: 'Choose file', validating: 'Validating…',
@@ -297,7 +297,7 @@ export const useCatalogueT = defineMessages({
     secDetails: 'Nom et catégorie', secPricing: 'Tarification', secSchedule: 'Durée et battement', secIncluded: 'Ce qui est inclus',
 
     bulkKicker: '{section} · import en masse', bulkTitle: 'Ajoutez ou modifiez des centaines de produits à la fois',
-    bulkLede: 'Téléchargez le modèle de votre catégorie, remplissez-le, téléversez-le. Les lignes sont validées avant tout changement; les erreurs reviennent dans un rapport avec les numéros de ligne. Les UGS existantes sont mises à jour, les nouvelles sont créées en brouillon.',
+    bulkLede: 'Téléchargez le modèle de votre catégorie, remplissez-le, téléversez-le. Les lignes sont validées avant tout changement; les erreurs reviennent dans un rapport avec les numéros de ligne. Les UGS existantes sont mises à jour avec chaque colonne remplie (une cellule vide garde la valeur actuelle), les nouvelles sont créées en brouillon. Les URL d’images doivent être des liens https publics vers des images JPG ou PNG; nous les vérifions une à une.',
     step1: '1 · Modèle', step2: '2 · Téléversement', orConnect: 'Ou connectez', downloadXlsx: 'Télécharger le .xlsx',
     tpl_auto_parts: 'Auto › Pièces et accessoires', tpl_groceries: 'Épicerie', tpl_clothing: 'Vêtements (variantes taille/couleur)', tpl_services: 'Services', tpl_price_stock: 'Prix et stock seulement (mise à jour rapide)',
     dropHere: "Déposez un .xlsx / .csv ici · jusqu'à 10 000 lignes", chooseFile: 'Choisir un fichier', validating: 'Validation…',
