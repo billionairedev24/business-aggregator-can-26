@@ -17,6 +17,7 @@ A business needs at least one owner.	Une entreprise doit avoir au moins un propr
 A distance filter needs your location (lat and lng).	Un filtre de distance exige votre position (lat et lng).	review
 A document for this check is already waiting for review.	Un document pour cette vérification attend déjà d’être examiné.	new
 A Northline agent is reviewing this owner.	Un agent de Northline examine ce propriétaire.	new
+A summary needs at least 3 reviews.	Un résumé exige au moins 3 avis.	new
 Accept the cancellation policy to continue.	Acceptez la politique d’annulation pour continuer.	new
 Account numbers are 7 to 12 digits.	Les numéros de compte comptent de 7 à 12 chiffres.	shipped
 Add $%d.%02d to reach the $15 minimum.	Ajoutez %d,%02d $ pour atteindre le minimum de 15 $.	new
@@ -365,6 +366,7 @@ Role is user or assistant.	Le rôle est user ou assistant.	review
 Scan the QR code first.	Balayez d’abord le code QR.	new
 Search for 100 characters or fewer.	Recherchez 100 caractères ou moins.	new
 Search isn't available in {market} yet.	La recherche n’est pas encore offerte à {market}.	new
+Secrets can't be stored here yet (no encryption key).	Les secrets ne peuvent pas encore être stockés ici (aucune clé de chiffrement).	new
 Security alerts always go to every channel.	Les alertes de sécurité sont toujours envoyées sur tous les canaux.	new
 Send a code first.	Envoyez d’abord un code.	new
 Send both lat and lng, or neither.	Envoyez lat et lng, ou aucun des deux.	review
@@ -446,6 +448,7 @@ The tax doesn't match its calculation. Calculate it again.	La taxe ne correspond
 The time to report a problem with this has passed. Contact Northline from Help & cases.	Le délai pour signaler un problème est passé. Contactez Northline depuis Aide et dossiers.	shipped
 There aren't enough options to pick that many.	Il n’y a pas assez d’options pour en choisir autant.	shipped
 There is no open offer on this dispute.	Il n’y a aucune offre ouverte sur ce litige.	new
+There's no customer message to reply to.	Il n’y a aucun message de client auquel répondre.	new
 These hours overlap another range on the same day.	Ces heures chevauchent une autre plage le même jour.	shipped
 This application was already submitted.	Cette demande a déjà été soumise.	new
 This bank account change was already confirmed or cancelled.	Ce changement de compte bancaire a déjà été confirmé ou annulé.	new

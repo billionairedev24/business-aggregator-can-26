@@ -1,7 +1,9 @@
 package ca.northline.shared.web;
 
+import ca.northline.platform.i18n.MessageCatalogue;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.NotFound;
+import ca.northline.shared.PlaceNames;
 import ca.northline.shared.RuleViolation;
 import ca.northline.shared.RuleViolation.Violation;
 import ca.northline.shared.security.MerchantAccessDenied;
@@ -12,8 +14,11 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DuplicateKeyException;
@@ -40,13 +45,21 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
  *   <li>422 {@code {"errors":[{field, rule, message}]}} — Bean Validation failures and {@link RuleViolation}s.
  *   <li>404 / 403 / 409 (and Spring MVC's own 4xx) — RFC 9457 {@link ProblemDetail}; 403 and 409 carry a {@code code}.
  * </ul>
+ *
+ * <p>S-40: messages are English in the code (validation-rules.md's exact text). When the request's
+ * {@code Accept-Language} prefers French, the 422 messages and the 403/409 details go out in the fr-CA wording of
+ * {@code docs/spec/validation-messages.fr-CA.tsv}; place names in them come from the region module ({@link PlaceNames}).
  */
 @Slf4j
 @RestControllerAdvice
+@RequiredArgsConstructor
 class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final HttpStatus UNPROCESSABLE = HttpStatus.UNPROCESSABLE_CONTENT;
     private static final String PROBLEM_BASE = "https://northline.ca/problems/";
+    private static final MessageCatalogue FRENCH = MessageCatalogue.frenchCanadian();
+
+    private final ObjectProvider<PlaceNames> placeNames;
 
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(
@@ -56,7 +69,7 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         ex.getBindingResult()
                 .getGlobalErrors()
                 .forEach(ge -> violations.add(violation(ge.getObjectName(), ge.getCode(), ge.getDefaultMessage())));
-        return unprocessable(violations);
+        return unprocessable(violations, request);
     }
 
     @Override
@@ -73,19 +86,21 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
                 violations.add(violation(param, lastCode(error.getCodes()), error.getDefaultMessage()));
             }
         }
-        return unprocessable(violations);
+        return unprocessable(violations, request);
     }
 
     @ExceptionHandler
-    ResponseEntity<Object> ruleViolation(RuleViolation ex) {
-        return unprocessable(ex.getViolations());
+    ResponseEntity<Object> ruleViolation(RuleViolation ex, WebRequest request) {
+        return unprocessable(ex.getViolations(), request);
     }
 
     @ExceptionHandler
-    ResponseEntity<Object> constraintViolation(ConstraintViolationException ex) {
-        return unprocessable(ex.getConstraintViolations().stream()
-                .map(ApiExceptionHandler::fromConstraintViolation)
-                .toList());
+    ResponseEntity<Object> constraintViolation(ConstraintViolationException ex, WebRequest request) {
+        return unprocessable(
+                ex.getConstraintViolations().stream()
+                        .map(ApiExceptionHandler::fromConstraintViolation)
+                        .toList(),
+                request);
     }
 
     @ExceptionHandler
@@ -94,33 +109,41 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler
-    ProblemDetail conflict(Conflict ex) {
-        return problem(HttpStatus.CONFLICT, ex.getCode(), ex.getMessage());
+    ProblemDetail conflict(Conflict ex, WebRequest request) {
+        return problem(
+                HttpStatus.CONFLICT,
+                ex.getCode(),
+                localize(Objects.requireNonNullElse(ex.getMessage(), HttpStatus.CONFLICT.getReasonPhrase()), request));
     }
 
     @ExceptionHandler
-    ProblemDetail staleWrite(OptimisticLockingFailureException ex) {
-        return problem(HttpStatus.CONFLICT, "stale", "Someone else changed this. Reload and try again.");
+    ProblemDetail staleWrite(OptimisticLockingFailureException ex, WebRequest request) {
+        return problem(
+                HttpStatus.CONFLICT, "stale", localize("Someone else changed this. Reload and try again.", request));
     }
 
     @ExceptionHandler
-    ProblemDetail duplicate(DuplicateKeyException ex) {
-        return problem(HttpStatus.CONFLICT, "duplicate", "That already exists.");
+    ProblemDetail duplicate(DuplicateKeyException ex, WebRequest request) {
+        return problem(HttpStatus.CONFLICT, "duplicate", localize("That already exists.", request));
     }
 
     @ExceptionHandler
-    ProblemDetail integrity(DataIntegrityViolationException ex) {
+    ProblemDetail integrity(DataIntegrityViolationException ex, WebRequest request) {
         // DB CHECK/trigger (V016) caught something Bean Validation/domain rules should have: log loudly, answer 409.
         log.warn(
                 "Database constraint rejected a write: {}",
                 ex.getMostSpecificCause().getMessage());
-        return problem(HttpStatus.CONFLICT, "constraint_violation", "This change breaks a business rule.");
+        return problem(
+                HttpStatus.CONFLICT, "constraint_violation", localize("This change breaks a business rule.", request));
     }
 
     @ExceptionHandler
-    ProblemDetail forbidden(AccessDeniedException ex) {
+    ProblemDetail forbidden(AccessDeniedException ex, WebRequest request) {
         var code = ex instanceof MerchantAccessDenied denied ? denied.reason().code() : "forbidden";
-        return problem(HttpStatus.FORBIDDEN, code, Objects.requireNonNullElse(ex.getMessage(), "Forbidden"));
+        return problem(
+                HttpStatus.FORBIDDEN,
+                code,
+                localize(Objects.requireNonNullElse(ex.getMessage(), "Forbidden"), request));
     }
 
     static ProblemDetail problem(HttpStatus status, String code, @Nullable String detail) {
@@ -131,8 +154,24 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return problem;
     }
 
-    private static ResponseEntity<Object> unprocessable(List<Violation> violations) {
-        return ResponseEntity.status(UNPROCESSABLE).body(ValidationErrors.of(violations));
+    private ResponseEntity<Object> unprocessable(List<Violation> violations, WebRequest request) {
+        var localized = violations.stream()
+                .map(v -> new Violation(v.field(), v.rule(), localize(v.message(), request)))
+                .toList();
+        return ResponseEntity.status(UNPROCESSABLE).body(ValidationErrors.of(localized));
+    }
+
+    /** The message in the caller's language (S-40): English unless {@code Accept-Language} prefers French. */
+    private String localize(String english, WebRequest request) {
+        return FRENCH.localize(english, request.getHeader(HttpHeaders.ACCEPT_LANGUAGE), this::frenchArgument);
+    }
+
+    /** A place captured from an English message, in French ("in": with its preposition); other parts as they are. */
+    private String frenchArgument(String value, @Nullable String form) {
+        var in = "in".equals(form);
+        var names = placeNames.getIfAvailable();
+        var french = names == null ? Optional.<String>empty() : names.french(value, in);
+        return french.orElse(in ? "à " + value : value);
     }
 
     private static Violation fromFieldError(FieldError fe) {

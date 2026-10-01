@@ -3,6 +3,7 @@ package ca.northline.auth.web;
 import ca.northline.auth.application.FlowRejected;
 import ca.northline.auth.application.InvalidInput;
 import ca.northline.auth.application.InvalidInput.Violation;
+import ca.northline.platform.i18n.MessageCatalogue;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -24,7 +25,8 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 /**
  * Same error format as the api: 422 {@code {"errors":[{field, rule, message}]}} (one per field, most basic rule
- * first) and RFC 9457 ProblemDetail with a {@code code} for everything else.
+ * first) and RFC 9457 ProblemDetail with a {@code code} for everything else. Messages go out in French when
+ * {@code Accept-Language} prefers it (S-40, {@code docs/spec/validation-messages.fr-CA.tsv}).
  */
 @RestControllerAdvice(basePackages = "ca.northline.auth.web")
 class AuthExceptionHandler extends ResponseEntityExceptionHandler {
@@ -41,6 +43,7 @@ class AuthExceptionHandler extends ResponseEntityExceptionHandler {
             "Size",
             "length");
     private static final List<String> PRIORITY = List.of("required", "format");
+    private static final MessageCatalogue FRENCH = MessageCatalogue.frenchCanadian();
 
     /** The 422 body. */
     record Errors(List<Violation> errors) {}
@@ -55,16 +58,16 @@ class AuthExceptionHandler extends ResponseEntityExceptionHandler {
                         fe.getField(),
                         RULES.getOrDefault(Objects.requireNonNullElse(fe.getCode(), ""), "invalid"),
                         Objects.requireNonNullElse(fe.getDefaultMessage(), "Check this field."))));
-        return unprocessable(violations);
+        return unprocessable(violations, request);
     }
 
     @ExceptionHandler
-    ResponseEntity<Object> invalid(InvalidInput ex) {
-        return unprocessable(ex.getViolations());
+    ResponseEntity<Object> invalid(InvalidInput ex, WebRequest request) {
+        return unprocessable(ex.getViolations(), request);
     }
 
     @ExceptionHandler
-    ResponseEntity<ProblemDetail> rejected(FlowRejected ex) {
+    ResponseEntity<ProblemDetail> rejected(FlowRejected ex, WebRequest request) {
         var status = switch (ex.getReason()) {
             case NOT_STARTED -> HttpStatus.CONFLICT;
             case THROTTLED, LOCKED, RATE_LIMITED -> HttpStatus.TOO_MANY_REQUESTS;
@@ -74,7 +77,8 @@ class AuthExceptionHandler extends ResponseEntityExceptionHandler {
             case GONE -> HttpStatus.NOT_FOUND;
             case CODE_NOT_SENT, UNAVAILABLE -> HttpStatus.SERVICE_UNAVAILABLE;
         };
-        var problem = problem(status, ex.getReason().code(), ex.getMessage());
+        var message = ex.getMessage();
+        var problem = problem(status, ex.getReason().code(), message == null ? null : localize(message, request));
         var response = ResponseEntity.status(status);
         var retry = ex.getRetryAfterSeconds();
         if (retry != null) {
@@ -92,13 +96,19 @@ class AuthExceptionHandler extends ResponseEntityExceptionHandler {
         return problem;
     }
 
-    private static ResponseEntity<Object> unprocessable(List<Violation> violations) {
+    private static String localize(String english, WebRequest request) {
+        return FRENCH.localize(
+                english, request.getHeader(HttpHeaders.ACCEPT_LANGUAGE), MessageCatalogue.Arguments.AS_IS);
+    }
+
+    private static ResponseEntity<Object> unprocessable(List<Violation> violations, WebRequest request) {
         var byField = new LinkedHashMap<String, Violation>();
         violations.stream()
                 .sorted(Comparator.comparingInt(AuthExceptionHandler::rank))
                 .forEach(v -> byField.putIfAbsent(v.field(), v));
         var errors = byField.values().stream()
                 .sorted(Comparator.comparing(Violation::field))
+                .map(v -> new Violation(v.field(), v.rule(), localize(v.message(), request)))
                 .toList();
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT).body(new Errors(errors));
     }
