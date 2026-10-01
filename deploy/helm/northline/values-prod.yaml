@@ -56,6 +56,8 @@ apps:
       COMMERCE_PROVIDER: oauth
       # S-36 POS menu import: Square (the S-35 app), Clover (CLOVER_CLIENT_ID) and Toast (TOAST_CLIENT_ID, partner)
       POS_PROVIDER: oauth
+      # S-47 addresses: Google Places API (New) + Geocoding API; the key is the secret google-maps-api-key
+      PLACES_PROVIDER: google
       EMAIL_FROM: "Northline <no-reply@northline.ca>"
     autoscaling: { enabled: true, minReplicas: 3, maxReplicas: 10 }
     resources:
@@ -67,6 +69,7 @@ apps:
       STRIPE_WEBHOOK_SECRET: true   # S-12
       STRIPE_CONNECT_WEBHOOK_SECRET: true
       EMAIL_UNSUBSCRIBE_KEY: true   # S-13: required under staging/prod
+      GOOGLE_MAPS_API_KEY: true     # S-47: PLACES_PROVIDER=google
   auth:
     secretEnv:
       GOOGLE_CLIENT_SECRET: true    # S-18: Google and Apple sign-in are required here (GOOGLE_CLIENT_ID, APPLE_CLIENT_ID,

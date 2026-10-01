@@ -38,7 +38,7 @@ class CommerceController {
     record SyncErrorResponse(String externalId, String title, String error) {}
 
     /**
-     * @param state {@code connected}, {@code reconnect} (grant revoked) or, when not connected, {@code disconnected}
+     * @param state {@code "connected"}, {@code "reconnect"} (grant revoked) or, when not connected, {@code "disconnected"}
      * @param syncStatus {@code importing} | {@code ok} | {@code failed}
      * @param updates {@code webhooks} (changes arrive as they happen, plus a daily full read) | {@code hourly}
      * @param lastSyncCount listings whose price or stock the last full sync changed

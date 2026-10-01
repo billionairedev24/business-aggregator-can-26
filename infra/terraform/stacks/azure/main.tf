@@ -71,6 +71,8 @@ locals {
     # S-36 POS menu import: the Clover app secret and Toast partner credentials (Square reuses S-35's app).
     CLOVER_CLIENT_SECRET = "clover-client-secret"
     TOAST_CLIENT_SECRET  = "toast-client-secret"
+    # S-47 addresses: the server-side Google Maps Platform key (Places API (New) + Geocoding API).
+    GOOGLE_MAPS_API_KEY = "google-maps-api-key"
     # S-111: an OTLP backend's credentials (e.g. Grafana Cloud "Basic <base64 instance:token>"); empty = the cloud's own.
     OTEL_BACKEND_AUTH = "otel-backend-auth"
     # S-111: Azure Monitor (Application Insights) connection string for the Collector's azuremonitor exporter.

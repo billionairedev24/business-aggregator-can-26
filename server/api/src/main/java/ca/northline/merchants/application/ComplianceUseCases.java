@@ -2,6 +2,7 @@ package ca.northline.merchants.application;
 
 import ca.northline.merchants.application.ConnectAccountGateway.Requirement;
 import ca.northline.merchants.domain.ComplianceItem;
+import ca.northline.shared.Bytes;
 import java.time.Instant;
 import java.util.List;
 import org.jspecify.annotations.Nullable;
@@ -15,7 +16,7 @@ public final class ComplianceUseCases {
     }
 
     public interface RenewVerification {
-        record Command(SettingsActor actor, String verificationId, String fileName, String contentType, byte[] bytes) {}
+        record Command(SettingsActor actor, String verificationId, String fileName, String contentType, Bytes bytes) {}
 
         ComplianceItem renew(Command command);
     }

@@ -58,7 +58,7 @@ abstract class ObjectStoreContract {
 
         assertThat(stored).isEqualTo(new ObjectStore.ObjectInfo(key, "image/png", 300_000));
         var content = store.get(key).orElseThrow();
-        assertThat(content.bytes()).isEqualTo(bytes);
+        assertThat(content.bytes().toArray()).isEqualTo(bytes);
         assertThat(content.info()).isEqualTo(stored);
         assertThat(store.info(key)).contains(stored);
         assertThat(store.exists(key)).isTrue();
@@ -80,7 +80,8 @@ abstract class ObjectStoreContract {
         store.put(key, "second version".getBytes(StandardCharsets.UTF_8), "image/jpeg");
 
         var content = store.get(key).orElseThrow();
-        assertThat(new String(content.bytes(), StandardCharsets.UTF_8)).isEqualTo("second version");
+        assertThat(new String(content.bytes().toArray(), StandardCharsets.UTF_8))
+                .isEqualTo("second version");
         assertThat(content.info().contentType()).isEqualTo("image/jpeg");
         assertThat(content.info().size()).isEqualTo(14);
     }
@@ -101,7 +102,7 @@ abstract class ObjectStoreContract {
     void emptyObject() {
         var key = key(PDF);
         store.put(key, new byte[0], PDF);
-        assertThat(store.get(key).orElseThrow().bytes()).isEmpty();
+        assertThat(store.get(key).orElseThrow().bytes().isEmpty()).isTrue();
         assertThat(store.info(key).orElseThrow().size()).isZero();
     }
 

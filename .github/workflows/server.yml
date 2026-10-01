@@ -71,15 +71,12 @@ jobs:
           echo "args=$args" >> "$GITHUB_OUTPUT"
 
       # build = Spotless check, Checkstyle, Error Prone + NullAway, tests (Testcontainers, ModularityTests, ArchUnit).
-      # Testcontainers uses the runner's Docker daemon.
-      - name: ./gradlew build
+      # Testcontainers uses the runner's Docker daemon. `make server-build` = the same ./gradlew call as on a laptop
+      # (S-124; it adds ci/gradle/maven-mirror.init.gradle.kts).
+      - name: make server-build
         env:
           TASK_ARGS: ${{ steps.tasks.outputs.args }}
-        run: |
-          # shellcheck disable=SC2086 # TASK_ARGS holds several arguments
-          ./gradlew $TASK_ARGS \
-            --init-script ../ci/gradle/maven-mirror.init.gradle.kts \
-            --max-workers=2 --continue --console=plain
+        run: make -C .. server-build TASKS="$TASK_ARGS" GRADLE_FLAGS="--max-workers=2 --continue --console=plain"
 
       - name: Publish test results
         if: ${{ !cancelled() && !inputs.skip-tests }}

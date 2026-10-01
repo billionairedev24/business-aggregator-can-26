@@ -155,5 +155,20 @@ if helm template northline "$CHART" -f "$CHART/values-local-kind.yaml" --show-on
   echo "FAIL local-kind renders the search-indices Job without Elasticsearch"; failed=1
 else echo "ok   local-kind: no search-indices Job"; fi
 
+# S-71: the reindex Job exists only while a run id is set, and refuses a run id that isn't a DNS label.
+if [[ -n "$(helm template northline "$CHART" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml \
+    --show-only templates/search-reindex-job.yaml 2>/dev/null)" ]]; then
+  echo "FAIL the search reindex Job renders without a run id"; failed=1
+else echo "ok   no search reindex Job without a run id"; fi
+job=$(helm template northline "$CHART" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml \
+    --set searchReindex.runId=2026-10-01 --show-only templates/search-reindex-job.yaml)
+if grep -q 'name: northline-search-reindex-2026-10-01' <<<"$job" && grep -q '"ca.northline.worker.search.SearchReindexCommand"' <<<"$job"; then
+  echo "ok   searchReindex.runId renders the reindex Job"
+else echo "FAIL searchReindex.runId does not render the reindex Job"; failed=1; fi
+if helm template northline "$CHART" -f "$CHART/values-prod.yaml" --set searchReindex.runId=Not_A_Label >/dev/null 2>&1; then
+  echo "FAIL a run id that isn't a DNS label accepted"; failed=1
+else echo "ok   search reindex run id must be a DNS label"; fi
+check "prod × aws + search reindex Job (S-71)" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml --set searchReindex.runId=2026-10-01 --set searchReindex.keepOld=true
+
 rm -f /tmp/helm-lint.$$ /tmp/kubeconform.$$
 exit $failed

@@ -93,7 +93,7 @@ class MenuItemController {
                 .map(p -> ResponseEntity.ok()
                         .contentType(MediaType.parseMediaType(p.contentType()))
                         .cacheControl(CacheControl.noCache().cachePrivate())
-                        .body(p.bytes()))
+                        .body(p.bytes().toArray()))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 }

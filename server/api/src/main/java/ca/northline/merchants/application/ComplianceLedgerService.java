@@ -100,7 +100,7 @@ class ComplianceLedgerService
         if (!item.renewable()) {
             throw new Conflict("renewal_pending", "A document for this check is already waiting for review.");
         }
-        if (command.bytes().length == 0) {
+        if (command.bytes().isEmpty()) {
             throw RuleViolation.of(Documents.FIELD, "required", ComplianceRules.DOCUMENT_REQUIRED);
         }
         var document = uploads.upload(new UploadDocument.Command(

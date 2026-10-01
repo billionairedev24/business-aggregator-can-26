@@ -1,7 +1,6 @@
 package ca.northline.availability.web;
 
 import ca.northline.availability.application.CalendarUseCases.CompleteCalendarConnection;
-import ca.northline.availability.application.CalendarUseCases.CompleteCalendarConnection.Callback;
 import ca.northline.availability.domain.CalendarProvider;
 import ca.northline.shared.CodedEnum;
 import ca.northline.shared.NotFound;
@@ -37,7 +36,7 @@ class CalendarOAuthController {
             @RequestParam(required = false) @Nullable String error,
             CurrentUser user) {
         var p = provider(provider);
-        var done = complete.complete(new Callback(user.userId(), p, code, state, error));
+        var done = complete.complete(new CompleteCalendarConnection.Callback(user.userId(), p, code, state, error));
         var target = UriComponentsBuilder.fromPath(
                         done.merchantId() == null ? "/" : "/b/" + done.merchantId() + "/availability")
                 .queryParam("calendar", p.code())

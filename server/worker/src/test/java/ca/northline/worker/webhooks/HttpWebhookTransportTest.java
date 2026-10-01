@@ -37,7 +37,7 @@ class HttpWebhookTransportTest {
 
     /** Made-up names → chosen addresses (the system resolver is never asked). */
     static final HostResolver FAKE_DNS = host -> switch (host) {
-        case "partner.example.test" -> List.of(InetAddress.getByName("127.0.0.1"));
+        case "partner.example.test" -> List.of(InetAddress.ofLiteral("127.0.0.1"));
         case "internal.example.test" -> List.of(InetAddress.getByName("10.0.0.7"));
         case "rebind.example.test" ->
             List.of(InetAddress.getByName("93.184.216.34"), InetAddress.getByName("169.254.169.254"));

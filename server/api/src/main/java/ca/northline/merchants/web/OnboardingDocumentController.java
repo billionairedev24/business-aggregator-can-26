@@ -8,6 +8,7 @@ import ca.northline.merchants.application.Documents.ReadDocument;
 import ca.northline.merchants.application.Documents.UploadDocument;
 import ca.northline.merchants.domain.Document;
 import ca.northline.merchants.web.OnboardingResponses.DocumentResponse;
+import ca.northline.shared.Bytes;
 import ca.northline.shared.CodedEnum;
 import ca.northline.shared.RuleViolation;
 import ca.northline.shared.security.CurrentMember;
@@ -68,7 +69,7 @@ class OnboardingDocumentController {
                     kind,
                     Objects.requireNonNullElse(file.getOriginalFilename(), "document"),
                     Objects.requireNonNullElse(file.getContentType(), "application/octet-stream"),
-                    file.getBytes())));
+                    Bytes.of(file.getBytes()))));
         } catch (IOException ex) {
             throw new UncheckedIOException(ex);
         }
@@ -93,6 +94,6 @@ class OnboardingDocumentController {
                                 .toString())
                 .header("X-Content-Type-Options", "nosniff")
                 .header("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox")
-                .body(content.bytes());
+                .body(content.bytes().toArray());
     }
 }

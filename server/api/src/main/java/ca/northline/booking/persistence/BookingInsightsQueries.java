@@ -170,7 +170,6 @@ class BookingInsightsQueries implements BookingCalendar, BookingInsights, Servic
     @Override
     public Map<String, String> badges(NavBadgeContributor.Context context) {
         var merchantId = context.merchantId();
-        var locale = context.locale();
         var today = LocalDate.now(clock.withZone(ZONE));
         long count = jobCount(
                 merchantId,

@@ -213,7 +213,7 @@ class StripeConnectAccountGateway implements ConnectAccountGateway {
     }
 
     static boolean business(String field) {
-        return field.startsWith("company.") && !owners(field)
+        return (field.startsWith("company.") && !owners(field))
                 || field.startsWith("business_profile.")
                 || field.startsWith("tos_acceptance.");
     }

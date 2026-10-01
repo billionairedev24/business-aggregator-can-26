@@ -27,14 +27,14 @@ class CheckoutPaymentService implements PaymentAuthorizations {
 
     @Override
     public Started start(Request request) {
-        if (request.amountCents() <= 0 || request.taxCents() < 0) {
+        if (request.amountCents() <= 0 || request.taxCents() < 0 || request.platformCents() < 0) {
             throw RuleViolation.of("amountCents", "range", "Enter an amount.");
         }
         var calculationId = request.taxCalculationId();
         if (calculationId != null) {
             taxCalculations.use(calculationId, request);
         }
-        var total = request.amountCents() + request.taxCents();
+        var total = request.amountCents() + request.taxCents() + request.platformCents();
         var customer = escrows.stripeCustomer(request.customerId()).orElseGet(() -> {
             var created =
                     gateway.customer(request.customerId(), StripeIdempotencyKeys.of("customer", request.customerId()));
@@ -74,5 +74,22 @@ class CheckoutPaymentService implements PaymentAuthorizations {
                 authorization.paymentIntent(),
                 authorization.clientSecret(),
                 authorization.status().code());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean authorized(String paymentIntent, long amountCents) {
+        var authorization = gateway.authorization(paymentIntent);
+        return authorization.status() == IntentStatus.AUTHORIZED
+                && (authorization.amountCapturableCents() == 0 || authorization.amountCapturableCents() >= amountCents);
+    }
+
+    @Override
+    public void cancel(String paymentIntent) {
+        var authorization = gateway.authorization(paymentIntent);
+        if (authorization.status() == IntentStatus.AUTHORIZED
+                || authorization.status() == IntentStatus.REQUIRES_ACTION) {
+            gateway.cancel(paymentIntent, StripeIdempotencyKeys.of("cancel-checkout", paymentIntent));
+        }
     }
 }

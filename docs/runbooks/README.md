@@ -18,12 +18,13 @@ say where a step is still manual or missing.
 | [calendar-sync.md](calendar-sync.md) | Google and Microsoft calendar two-way sync: Google Cloud and Microsoft Entra app registrations, redirect and notification URIs per environment, secrets, KMS envelope key, operations (S-32) |
 | [commerce-sync.md](commerce-sync.md) | Shopify, Square and Lightspeed catalogue sync: app registration per platform, redirect and webhook URLs on the api host, secrets, local fakes, operations (S-35) |
 | [pos-menu-import.md](pos-menu-import.md) | kitchens' POS menu import: Square (shared with S-35), Clover and Toast (partner-gated) set-up, the shared OAuth callback, preview and re-import diff, allergens, local fake (S-36) |
+| [google-maps.md](google-maps.md) | addresses on the consumer site: Google Maps Platform project, Places API (New) and Geocoding API, the server key and its restrictions, billing and quotas, local fixtures, operations (S-47) |
 | [registries.md](registries.md) | business registry lookups: Corporations Canada API, Alberta Corporate Registry (search service or registry-agent searches), City of Calgary licences (Socrata), manual review queue, re-checks (S-23) |
 | [stripe.md](stripe.md) | Stripe Connect Express: platform account setup (test/live), money flow, idempotency, local stripe-mock, operations (S-11), webhooks (S-12), Stripe Tax (S-21) |
 | [email.md](email.md) | transactional email: Mailpit locally, SES / SendGrid / Azure Communication Services / SMTP set-up, SPF/DKIM/DMARC, CASL (S-13) |
 | [notifications.md](notifications.md) | team notifications: who sends which email / SMS / push (api vs worker), matrix and quiet hours, failures, push stub (S-13/S-27) |
 | [webhooks.md](webhooks.md) | partner webhooks: payloads and signature for integrators, delivery design (per-endpoint scheduling, retries, auto-disable), SSRF rules, operations (S-33) |
-| [search.md](search.md) | the Elasticsearch read model: index layout and naming, analyzers per language, synonyms, the search-indices Job, least-privilege access (S-42); the indexer, visibility rules, versions, the reconcile sweep, merchant locations (S-43) |
+| [search.md](search.md) | the Elasticsearch read model: index layout and naming, analyzers per language, synonyms, the search-indices Job, least-privilege access (S-42); the indexer, visibility rules, versions, the reconcile sweep, merchant locations (S-43); the search API and its contract for the consumer web (S-44); the full reindex with an alias swap (S-71) |
 | [events.md](events.md) | domain events: wire format, the worker's consumer framework (dedupe, retries, DLQ), alerts and metrics, DLQ replay (S-25/S-26) |
 | [ci.md](ci.md) | CI pipelines on GitHub Actions and GitLab CI, manual trigger only (S-4/S-5, infra checks S-2/S-3) |
 | [mobile-auth.md](mobile-auth.md) | the consumer and courier apps: sign-in with PKCE, DPoP-bound tokens, nonces, rotating refresh tokens and reuse detection, calling the api, sign-out, sessions (S-29) |
@@ -54,6 +55,7 @@ say where a step is still manual or missing.
 | Custom domains (`DOMAINS_DNS_PROVIDER`, `DOMAINS_EDGE_PROVIDER`) | `local`: in-memory DNS zone ("Simulate DNS records →") and edge | `doh` + `kubernetes` (chart), Let's Encrypt **staging** | **`doh`/`jndi` + `kubernetes`** (`local` refused), Let's Encrypt staging | same, Let's Encrypt production |
 | Catalogue sync (`COMMERCE_PROVIDER`) | `local`: fake Shopify / Square / Lightspeed with fixture catalogues | `local`, or `oauth` with the dev apps (Square sandbox) | **`oauth`** (`local` refused) | same |
 | POS menu import (`POS_PROVIDER`) | `local`: fake Square / Clover / Toast with a fixture menu | `local`, or `oauth` with the dev apps (sandboxes) | **`oauth`** (`local` refused) | same |
+| Addresses (`PLACES_PROVIDER`) | `local`: fixture Canadian addresses | `local`, or `google` with the dev key | **`google`** (`local` refused) | same |
 | Identity verification (`IDENTITY_PROVIDER`) | `local`: pick the outcome on a page | `local` (owners can't finish) or `stripe` with test keys | **`stripe`**, test mode | **`stripe`**, live mode |
 | SMS / email | logged | *no provider yet (S-8, S-13)* | same | same |
 | Required variables checked at start-up | none | yes | yes (+ Stripe, storage) | yes (+ Stripe, storage) |
@@ -99,6 +101,7 @@ say where a step is still manual or missing.
   | `northline.domains.edge.provider` | `DOMAINS_EDGE_PROVIDER` | `local` (in memory) · `kubernetes` (shard Gateways, cert-manager Certificates, HTTPRoutes in the app's namespace) | **done** (S-31 — [custom-domains.md](custom-domains.md)) |
   | `northline.commerce.provider` | `COMMERCE_PROVIDER` | `local` (fake Shopify, Square and Lightspeed) · `oauth` (Shopify Admin GraphQL, Square Catalog + Inventory, Lightspeed X-Series; each once its app is set) | **done** (S-35, catalogue sync — [commerce-sync.md](commerce-sync.md)) |
   | `northline.pos.provider` | `POS_PROVIDER` | `local` (fake Square, Clover and Toast) · `oauth` (Square Catalog, Clover REST v3, Toast menus v2; each once its credentials are set) | **done** (S-36, kitchens' POS menu import — [pos-menu-import.md](pos-menu-import.md)) |
+  | `northline.places.provider` | `PLACES_PROVIDER` | `local` (fixture addresses) · `google` (Places API (New) + Geocoding API with `GOOGLE_MAPS_API_KEY`) | **done** (S-47, consumer Location screen and pill — [google-maps.md](google-maps.md)) |
   | `northline.email.provider` | `EMAIL_PROVIDER` | `local` (SMTP to Mailpit) · `smtp` · `ses` · `sendgrid` · `azure` | **done** (S-13, api invitations and money notices — [email.md](email.md); S-27 worker: `payout.failed`) |
   | `northline.tax.provider` | `TAX_PROVIDER` | `local` (fixed Canadian rates) · `stripe` (Stripe Tax) | **done** (S-21, api sales tax — [stripe.md § 6](stripe.md#6-stripe-tax-s-21)) |
   | `northline.identity.provider` | `IDENTITY_PROVIDER` | `local` (fake with an outcome page) · `stripe` (Stripe Identity) | **done** (S-22, owners' identity verification — [stripe.md § Identity](stripe.md#8-identity-s-22)) |
@@ -152,6 +155,8 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `REGISTRY_CORPORATIONS_CANADA_URL`/`_KEY`/`_KEY_HEADER`, `REGISTRY_ALBERTA_URL`/`_KEY`, `REGISTRY_CALGARY_URL`/`_DATASET`/`_APP_TOKEN`, `REGISTRY_RECHECK_AFTER`, `REGISTRY_RECHECK_CRON` | ✓ | | | | per provider ([registries.md](registries.md#set-up-per-environment)) |
 | `WEBHOOK_SECRET_KEY` | ✓ | | | ✓ | yes (the same value in both: the api encrypts partner webhook secrets, the worker decrypts them to sign — S-33) |
 | `WEBHOOKS_ALLOW_LOCAL` | | | | ✓ | no (`false`; `true` only locally — http://localhost endpoints; refused in the cloud) |
+| `SEARCH_PROVIDER` | ✓ | | | | no (`elasticsearch`; `local` = no index, the `local` profile's default, refused in staging/prod — [search.md § 7](search.md#7-the-search-api-s-44)) |
+| `SEARCH_MARKETS`, `SEARCH_DEFAULT_MARKET`, `SEARCH_CACHE_TTL`, `SEARCH_RATE_LIMIT` | ✓ | | | | no (`AB=America/Edmonton,BC=…,ON=…,QC=…` markets and their time zones, `AB`, `30s`, `120`/min per address) |
 | `SEARCH_RECONCILE_ENABLED`, `SEARCH_RECONCILE_EVERY` | | | | ✓ | no (`true`, `1m` — [search.md § 6](search.md#6-the-indexer-s-43)) |
 | `WEBHOOKS_MAX_IN_FLIGHT`, `WEBHOOKS_CONNECT_TIMEOUT`, `WEBHOOKS_RESPONSE_TIMEOUT`, `WEBHOOKS_TOTAL_TIMEOUT`, `WEBHOOKS_DISABLE_AFTER`, `WEBHOOKS_LOG_RETENTION` | | | | ✓ | no (64, 5s, 10s, 15s, 3d, 30d — [webhooks.md](webhooks.md)) |
 | `STORAGE_PROVIDER`, `STORAGE_BUCKET` | ✓ | | | | staging and prod (`local` refused there — S-10, [object-storage.md](object-storage.md)) |
@@ -171,6 +176,8 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `COMMERCE_POLL_INTERVAL`, `COMMERCE_RECONCILE_INTERVAL`, `COMMERCE_WEBHOOK_RATE_LIMIT` | ✓ | | | | no (`PT1H`, `P1D`, 600/min) |
 | `POS_PROVIDER` | ✓ | | | | staging and prod: `oauth` (`local` refused there — S-36, [pos-menu-import.md](pos-menu-import.md)) |
 | `CLOVER_CLIENT_ID`/`_SECRET`, `CLOVER_AUTH_URL`, `CLOVER_API_URL`, `TOAST_CLIENT_ID`/`_SECRET`, `TOAST_API_URL` | ✓ | | | | no — empty = that POS shows "Not available yet" ([pos-menu-import.md](pos-menu-import.md#variables-api)) |
+| `PLACES_PROVIDER`, `GOOGLE_MAPS_API_KEY` | ✓ | | | | staging and prod: `google` + the key (`local` refused there — S-47, [google-maps.md](google-maps.md)) |
+| `PLACES_RATE_LIMIT` | ✓ | | | | no (60 address lookups per browsing session and minute) |
 | `EMAIL_PROVIDER`, `EMAIL_FROM` | ✓ | | | ✓ | staging and prod (`local` refused there — S-13, [email.md](email.md)) |
 | `EMAIL_UNSUBSCRIBE_KEY`, `API_PUBLIC_URL` | ✓ | | | ✓ | staging and prod (unsubscribe links; the worker signs them for `payout.failed`, S-27 — [email.md](email.md#variables); S-32 calendar notification URLs) |
 | `EMAIL_REPLY_TO`, `EMAIL_MAILING_ADDRESS`, `EMAIL_CONTACT`, `EMAIL_REGION`, `EMAIL_ENDPOINT`, `EMAIL_API_KEY`, `EMAIL_CONFIGURATION_SET`, `EMAIL_RETRY_*`, `SMTP_*` | ✓ | | | ✓ | per provider: `EMAIL_API_KEY` with `sendgrid`, `EMAIL_ENDPOINT` with `azure`, `SMTP_HOST` with `smtp` ([email.md](email.md#variables)) |

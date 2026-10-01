@@ -24,6 +24,8 @@ public class StepUpService {
     private final SecondFactors factors;
     private final FlowStore flow;
     private final StepUpProofs proofs;
+    private final UserAccounts accounts;
+    private final AccountSecurity security;
     private final AttemptLimits limits;
     private final Clock clock;
 
@@ -63,6 +65,41 @@ public class StepUpService {
             throw failed(userId, InvalidInput.of("code", "mismatch", AuthMessages.SIGN_IN_CODE_WRONG));
         }
         return succeed(userId, Factor.TOTP);
+    }
+
+    /**
+     * S-51 (consumer checkout): an account without a second factor adds a passkey right after its phone-code sign-in
+     * — the same assurance as registering with one — and gets the step-up proof with it. Accounts that have one step
+     * up with it instead.
+     */
+    public String enrolOptions(String userId) {
+        guard(userId);
+        var account = accounts.findById(userId)
+                .orElseThrow(() -> new FlowRejected(Reason.UNAUTHENTICATED, "Sign in again to add a passkey."));
+        if ("passkey".equals(account.mfaPrimary()) || "totp".equals(account.mfaPrimary())) {
+            throw new FlowRejected(Reason.STEP_UP_REQUIRED, "Use your passkey or authenticator app instead.");
+        }
+        var name = account.email() != null
+                ? account.email()
+                : java.util.Objects.requireNonNullElse(account.phone(), userId);
+        var options = passkeys.creationOptions(userId, name, account.givenName());
+        flow.put(FlowStore.PASSKEY_CREATION, options);
+        return passkeys.toJson(options);
+    }
+
+    @Transactional
+    public StepUpProofs.Proof enrolPasskey(String userId, String credentialJson, String label) {
+        guard(userId);
+        var options = flow.get(FlowStore.PASSKEY_CREATION)
+                .orElseThrow(() -> new FlowRejected(Reason.NOT_STARTED, "Start adding the passkey again."));
+        flow.remove(FlowStore.PASSKEY_CREATION);
+        try {
+            passkeys.register(options, credentialJson, label);
+        } catch (InvalidInput e) {
+            throw failed(userId, e);
+        }
+        security.setMfaPrimary(userId, Factor.PASSKEY.code());
+        return succeed(userId, Factor.PASSKEY);
     }
 
     private StepUpProofs.Proof succeed(String userId, Factor factor) {

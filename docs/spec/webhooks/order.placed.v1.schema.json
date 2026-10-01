@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:webhook.order.placed:1",
+  "title": "Northline webhook order.placed v1",
+  "description": "A customer paid (card authorized, held in escrow) for an order with lines from your business. Only your lines; no customer details.",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "version",
+    "createdAt",
+    "merchantId",
+    "data"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "Event id (ULID). The same event keeps its id on every retry and resend: deduplicate on it."
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "order.placed"
+      ]
+    },
+    "version": {
+      "type": "integer",
+      "enum": [
+        1
+      ],
+      "description": "Payload version; a breaking change ships as a new version."
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When it happened (UTC)."
+    },
+    "merchantId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "Your business (Studio URL /b/<merchantId>)."
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "orderId",
+        "orderRef",
+        "orderType",
+        "delivery",
+        "lines",
+        "subtotalCents",
+        "taxCents",
+        "currency"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "orderId": {
+          "type": "string"
+        },
+        "orderRef": {
+          "type": "string",
+          "description": "The reference the customer and your Studio show (NL-50000)."
+        },
+        "orderType": {
+          "type": "string",
+          "enum": [
+            "goods",
+            "food"
+          ]
+        },
+        "delivery": {
+          "type": "string",
+          "enum": [
+            "pooled",
+            "direct",
+            "pickup"
+          ]
+        },
+        "windowId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The pooled run's delivery window, when pooled."
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "lineId",
+              "offerId",
+              "qty",
+              "amountCents"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "lineId": {
+                "type": "string"
+              },
+              "offerId": {
+                "type": "string",
+                "description": "Your listing."
+              },
+              "variantId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "qty": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "amountCents": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        "subtotalCents": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "taxCents": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "currency": {
+          "type": "string",
+          "enum": [
+            "CAD"
+          ]
+        }
+      }
+    }
+  }
+}

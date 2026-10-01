@@ -64,7 +64,7 @@ class OrderService implements ListOrders, ViewOrder, PackOrder {
                 next.map(OrderSummary::runLabel).orElse(null));
         var list = all.stream()
                 .filter(o -> o.status() != SellerStatus.DELIVERED && o.status() != SellerStatus.CANCELLED)
-                .sorted(Comparator.comparing((OrderSummary o) -> rank(o.status()))
+                .sorted(Comparator.comparingInt((OrderSummary o) -> rank(o.status()))
                         .thenComparing(o -> o.windowStartsAt() == null ? Instant.MAX : o.windowStartsAt())
                         .thenComparing(OrderSummary::id))
                 .toList();
@@ -112,8 +112,10 @@ class OrderService implements ListOrders, ViewOrder, PackOrder {
                 .merchantId("")
                 .orderState(r.state())
                 .lines(lines.stream()
-                        .map(l ->
-                                new MerchantOrder.Line(l.id(), l.state(), l == lines.getFirst() ? r.issueNote() : null))
+                        .map(l -> new MerchantOrder.Line(
+                                l.id(),
+                                l.state(),
+                                l.id().equals(lines.getFirst().id()) ? r.issueNote() : null))
                         .toList())
                 .othersPending(false)
                 .build()
