@@ -44,6 +44,7 @@ locals {
     STUDIO_BFF_SECRET_HASH   = "studio-bff-secret-hash"
     CONSUMER_BFF_SECRET      = "consumer-bff-secret"
     CONSUMER_BFF_SECRET_HASH = "consumer-bff-secret-hash"
+    CONSOLE_BFF_SECRET       = "console-bff-secret"
     CONSOLE_BFF_SECRET_HASH  = "console-bff-secret-hash"
     STRIPE_SECRET_KEY        = "stripe-secret-key"
     STRIPE_PUBLISHABLE_KEY   = "stripe-publishable-key"

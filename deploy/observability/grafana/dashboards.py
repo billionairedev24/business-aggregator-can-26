@@ -4,7 +4,7 @@
     python3 deploy/observability/grafana/dashboards.py          # (re)write dashboards/*.json
     python3 deploy/observability/grafana/dashboards.py --check  # fail when the committed JSON differs (CI, make)
 
-One JSON file per service (api, auth, bff, consumer-bff, worker) and per key flow (sign-in, checkout and payouts,
+One JSON file per service (api, auth, bff, consumer-bff, console-bff, worker) and per key flow (sign-in, checkout and payouts,
 kitchens, events), plus an overview. Every query is PromQL against a Prometheus-compatible data source picked by the
 `datasource` variable: the local otel-lgtm stack, Grafana Cloud, Amazon Managed Prometheus, Google Managed Prometheus
 or Azure Monitor managed Prometheus. Metric names are the Prometheus spelling of what the apps export over OTLP
@@ -22,6 +22,7 @@ SERVICES = {
     "auth": "northline-auth",
     "bff": "northline-studio-bff",
     "consumer-bff": "northline-consumer-bff",
+    "console-bff": "northline-console-bff",  # S-90
     "worker": "northline-worker",
 }
 

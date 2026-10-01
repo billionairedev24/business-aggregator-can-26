@@ -79,6 +79,8 @@ apps:
     autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 4 }
   consumer-bff:
     autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 4 }
+  console-bff:                      # S-90
+    autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 3 }
   worker:
     env:
       EMAIL_FROM: "Northline <no-reply@staging.northline.ca>"   # S-27 notifications (payout.failed email)
@@ -89,6 +91,8 @@ apps:
     autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 3 }
   consumer:
     autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 4 }
+  console:
+    autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 3 }
 
 # S-111 (docs/runbooks/observability.md): half the traces; exporters from the cloud overlay.
 observability:
