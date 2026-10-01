@@ -1,0 +1,20 @@
+{
+  "about": "S-131 quote lines eval: a job request → suggested lines (QuoteLinesEval). Passes when the suggestion has 1–6 lines, includes every kind in `kinds`, the descriptions satisfy `mustInclude`, and nothing in `mustNotInclude` appears (prices, contact, off-platform). `input` is the title the simulated model matches on.",
+  "cases": [
+    {"id": "brakes", "input": "Grinding brakes", "job": {"title": "Grinding brakes", "description": "Grinding noise from the front when I brake, 2016 Civic", "area": "the north side"},
+     "kinds": ["labour"], "mustInclude": [["brake", "pad"]], "mustNotInclude": ["$", "e-transfer", "cash"],
+     "mock": {"json": {"lines": [{"kind": "labour", "description": "Brake inspection and road test", "qty": 1}, {"kind": "part", "description": "Front brake pads (set)", "qty": 1}, {"kind": "labour", "description": "Replace front pads", "qty": 1.5}], "questions": ["Do you also feel vibration in the steering wheel?"]}}},
+    {"id": "alternator", "input": "Battery light on", "job": {"title": "Battery light on", "description": "Battery light came on and the car died twice"},
+     "kinds": ["labour"], "mustInclude": [["diagnos", "test", "alternator", "battery"]], "mustNotInclude": ["$"],
+     "mock": {"json": {"lines": [{"kind": "labour", "description": "Charging system diagnostic", "qty": 1}, {"kind": "part", "description": "Alternator (if the test confirms)", "qty": 1}], "questions": []}}},
+    {"id": "vague", "input": "Car makes a noise", "job": {"title": "Car makes a noise"},
+     "kinds": ["labour"], "mustInclude": [["diagnos", "inspect", "inspection"]], "mustNotInclude": ["$"],
+     "mock": {"json": {"lines": [{"kind": "labour", "description": "Inspection to find the noise", "qty": 1}], "questions": ["When do you hear the noise: braking, turning or over bumps?"]}}},
+    {"id": "travel", "input": "Mobile tire swap", "job": {"title": "Mobile tire swap", "description": "Swap to winter tires at my place, tires on rims already"},
+     "kinds": ["labour"], "mustInclude": [["tire", "swap"]], "mustNotInclude": ["$"],
+     "mock": {"json": {"lines": [{"kind": "labour", "description": "Swap four tires on rims", "qty": 1}, {"kind": "travel", "description": "Mobile service call", "qty": 1}], "questions": []}}},
+    {"id": "fr", "locale": "fr", "input": "Changement d'huile", "job": {"title": "Changement d'huile", "description": "Vidange et filtre, huile synthétique"},
+     "kinds": ["labour"], "mustInclude": [["huile", "vidange"]], "mustNotInclude": ["$"],
+     "mock": {"json": {"lines": [{"kind": "labour", "description": "Vidange d'huile", "qty": 1}, {"kind": "part", "description": "Filtre à huile", "qty": 1}, {"kind": "part", "description": "Huile synthétique (L)", "qty": 5}], "questions": []}}}
+  ]
+}

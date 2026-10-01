@@ -7,6 +7,12 @@ public final class EvalSuites {
     private EvalSuites() {}
 
     public static List<EvalSuite> all() {
-        return List.of(new PlatformEval(), new ca.northline.studio.application.AssistantEval());
+        return List.of(
+                new PlatformEval(),
+                new ca.northline.studio.application.AssistantEval(),
+                new ca.northline.catalogue.application.ListingCopyEval(),
+                new ca.northline.booking.application.QuoteLinesEval(),
+                new ca.northline.messaging.application.ReplyEval(),
+                new ca.northline.trust.application.ReviewSummaryEval());
     }
 }

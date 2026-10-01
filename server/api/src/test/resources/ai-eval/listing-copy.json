@@ -1,0 +1,24 @@
+{
+  "about": "S-131 listing copy eval: listing facts → English and French drafts (ListingCopyEval). A case passes when both languages have a title and a description, the French reads as French (one of `frWords`), every `mustInclude` group appears in the English or French text, and nothing in `mustNotInclude` does (invented prices, guarantees, licences, contact or off-platform payment). `input` is the name the simulated model matches on; `mock.json` is its reply.",
+  "cases": [
+    {"id": "brake-inspection", "input": "Brake inspection", "facts": {"kind": "service", "name": "Brake inspection", "included": "Pads, rotors, calipers, brake fluid test, written report", "durationMin": 45},
+     "mustInclude": [["brake", "frein"], ["report", "rapport"]], "mustNotInclude": ["$", "guarantee", "garanti", "certified", "certifié", "call us", "e-transfer"],
+     "mock": {"json": {"en": {"title": "Brake inspection", "description": "A 45-minute check of pads, rotors, calipers and brake fluid, with a written report of what we found.", "bullets": ["Pads, rotors and calipers checked", "Brake fluid tested", "Written report"]}, "fr": {"title": "Inspection des freins", "description": "Une vérification de 45 minutes des plaquettes, disques, étriers et du liquide de frein, avec un rapport écrit.", "bullets": ["Plaquettes, disques et étriers vérifiés", "Liquide de frein testé", "Rapport écrit"]}}}},
+    {"id": "wiper-blades", "input": "Wiper blades 22 in", "facts": {"kind": "product", "name": "Wiper blades 22 in", "brand": "Bosch", "attributes": {"length": "22 in", "fit": "hook arm"}},
+     "mustInclude": [["wiper", "essuie-glace"], ["22"]], "mustNotInclude": ["$", "free shipping", "livraison gratuite", "in stock", "en stock"],
+     "mock": {"json": {"en": {"title": "Bosch wiper blades, 22 in", "description": "A 22-inch Bosch wiper blade for hook-arm wipers.", "bullets": ["22 in", "Fits hook arms"]}, "fr": {"title": "Balais d'essuie-glace Bosch, 22 po", "description": "Un balai d'essuie-glace Bosch de 22 pouces pour bras à crochet.", "bullets": ["22 po", "Pour bras à crochet"]}}}},
+    {"id": "oil-change", "input": "Oil & filter change", "facts": {"kind": "service", "name": "Oil & filter change", "included": "Up to 5 L synthetic oil, new filter, top-up of fluids", "durationMin": 30},
+     "mustInclude": [["oil", "huile"], ["filter", "filtre"]], "mustNotInclude": ["$", "warranty", "garantie", "licensed"],
+     "mock": {"json": {"en": {"title": "Oil & filter change", "description": "Up to 5 L of synthetic oil, a new filter and a top-up of fluids, in about 30 minutes.", "bullets": ["Synthetic oil, up to 5 L", "New filter"]}, "fr": {"title": "Vidange d'huile et filtre", "description": "Jusqu'à 5 L d'huile synthétique, un filtre neuf et l'appoint des liquides, en 30 minutes environ.", "bullets": ["Huile synthétique, jusqu'à 5 L", "Filtre neuf"]}}}},
+    {"id": "notes-no-claims", "input": "Ceramic coating", "facts": {"kind": "service", "name": "Ceramic coating", "notes": "Best in town, call 403-555-0199 to book, cash discount"},
+     "mustInclude": [["ceramic", "céramique"]], "mustNotInclude": ["403", "[PHONE]", "cash", "comptant", "best in town", "$"],
+     "mock": {"json": {"en": {"title": "Ceramic coating", "description": "A ceramic coating applied to your vehicle's paint.", "bullets": []}, "fr": {"title": "Revêtement céramique", "description": "Un revêtement céramique appliqué sur la peinture de votre véhicule.", "bullets": []}}}},
+    {"id": "pho", "input": "Pho tai", "facts": {"kind": "product", "name": "Pho tai", "attributes": {"size": "large", "broth": "beef"}},
+     "mustInclude": [["pho", "phở"], ["beef", "bœuf", "boeuf"]], "mustNotInclude": ["$", "healthy", "santé", "gluten-free", "sans gluten"],
+     "mock": {"json": {"en": {"title": "Pho tai (large)", "description": "A large bowl of pho with beef broth.", "bullets": ["Large", "Beef broth"]}, "fr": {"title": "Phở tái (grand)", "description": "Un grand bol de phở au bouillon de bœuf.", "bullets": ["Grand format", "Bouillon de bœuf"]}}}},
+    {"id": "category-only", "input": "Snow tire swap", "facts": {"kind": "service", "name": "Snow tire swap", "durationMin": 60},
+     "mustInclude": [["tire", "pneu"]], "mustNotInclude": ["$", "free", "gratuit"],
+     "mock": {"json": {"en": {"title": "Snow tire swap", "description": "We swap your tires for winter ones, in about an hour.", "bullets": []}, "fr": {"title": "Pose de pneus d'hiver", "description": "Nous installons vos pneus d'hiver, en une heure environ.", "bullets": []}}}}
+  ],
+  "frWords": [" de ", " des ", " le ", " la ", " les ", " du ", " un ", " une ", " et ", " pour ", " au "]
+}
