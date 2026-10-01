@@ -62,9 +62,7 @@ class LiveController {
 
     @GetMapping(path = "/api/v1/merchants/{merchantId}/live", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @RequiresMerchant(VIEW)
-    @Operation(
-            summary = "The Studio's live stream (server-sent events)",
-            description = """
+    @Operation(summary = "The Studio's live stream (server-sent events)", description = """
                     Events: `ready` once on open; `message` (data `{"ref": threadId}`) when a message is added to one \
                     of the business's threads; `kitchen` (`{"ref": orderId|null}`) when a food order arrives or moves \
                     or the kitchen pauses/resumes; `orders` (`{"ref": orderId}`) when a goods order arrives or is \
