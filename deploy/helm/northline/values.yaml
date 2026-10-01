@@ -391,6 +391,9 @@ apps:
     # S-29: route all of /api/v1 on the api host, for clients that hold their own tokens (the mobile apps, with DPoP;
     # partners). false = webhooks and unsubscribe only, as before. Every other endpoint still needs a token.
     tokenClients: true
+    # S-127: route /mcp (the MCP server for AI agents: Claude, IDEs; OAuth 2.1 tokens from auth with the mcp scope and
+    # acr=mfa) and /.well-known/oauth-protected-resource on the api host. false = agents can't reach it (docs/runbooks/mcp.md).
+    mcp: true
     allowFrom: [bff, consumer-bff]
     extraVolumes: []
     extraVolumeMounts: []

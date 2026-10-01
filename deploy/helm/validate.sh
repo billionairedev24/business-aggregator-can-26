@@ -63,6 +63,13 @@ for cloud in aws gcp azure; do
   else echo "ok   prod × $cloud renders no Secret (External Secrets only)"; fi
 done
 
+# S-127: the api host routes the MCP server and its protected resource metadata; apps.api.mcp=false removes both.
+mcp_out=$(helm template northline "$CHART" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml)
+no_mcp=$(helm template northline "$CHART" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml --set apps.api.mcp=false)
+if grep -q 'value: /mcp }' <<<"$mcp_out" && grep -q 'value: /.well-known/oauth-protected-resource }' <<<"$mcp_out" \
+    && ! grep -q 'value: /mcp }' <<<"$no_mcp"; then echo "ok   api host routes /mcp and its metadata (apps.api.mcp)"
+else echo "FAIL MCP routes on the api host"; failed=1; fi
+
 # S-17: every deployed environment serves every host over TLS with HSTS, plain HTTP only redirects, and the refusals.
 for env in dev staging prod; do
   for cloud in aws gcp azure; do
