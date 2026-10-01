@@ -299,12 +299,12 @@ sign-out revoking the refresh token, `next` limited to local paths, no framing. 
 **Staff roles** live in `identity.platform_roles` (`staff` opens the console; `admin`, `trust_safety`, `dispatch`,
 `finance`, `support`, `support_lead` (S-83, V214: support plus editing the desk's macros), `analyst` decide the screens
 and actions — V190) and reach the api in the access token's `roles`
-claim (10 min). Grant or take one away with SQL until the Team screen (S-96) does it; it applies at the person's next
-token refresh:
+claim (10 min). Admins grant and remove them on the console's Team screen (S-96: audited `console.role_granted |
+role_revoked`; no one can remove their own admin role or the last admin); a change applies at the person's next token
+refresh. SQL is only for the very first admin of an environment (nobody can use the Team screen yet):
 
 ```sql
-INSERT INTO identity.platform_roles (user_id, role, granted_by) VALUES ('<user id>', 'staff', '<admin id>'), ('<user id>', 'finance', '<admin id>');
-DELETE FROM identity.platform_roles WHERE user_id = '<user id>' AND role = 'finance';
+INSERT INTO identity.platform_roles (user_id, role) VALUES ('<user id>', 'staff'), ('<user id>', 'admin');
 ```
 
 - **Secrets:** `console-bff-secret` (plain, the console-bff) and `console-bff-secret-hash` (`{bcrypt}` of the same

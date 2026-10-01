@@ -5846,3 +5846,46 @@ server environment variable. Runbook: [runbooks/courier-app.md](runbooks/courier
 - **Charts:** the design system's `LineChart` (solid accent this period, dotted neutral previous, legend), meter bars
   for the funnel and `BarList` for categories; the weekly figures also open as a table ("Show as table"); cohort cells
   are tinted by rate with the number always printed.
+
+## 2026-10-01 — S-96 Platform console: team and roles, audit log viewer, API keys, on-call rota, staff profile
+
+- **Team replaces the SQL procedure.** `/team` (screen `team`: admin, trust & safety, finance) lists the console roles
+  (design "Roles": Role · People · Can · Needs, from `StaffRole`) and the people holding them. Admins (`province`, the
+  design's perm for the roles table) add and remove roles and "Invite" an existing account by email
+  (`POST /api/v1/console/team/invite`; 422 when no account uses the email — creating accounts stays northline-auth's).
+  Granting a role also grants `staff` (it opens the console); removing the last console role removes `staff`. 409
+  `own_admin` (nobody removes their own admin role) and `last_admin`. Audit `console.role_granted | role_revoked` (the
+  role code). Writes go through the new `identity.api.StaffDirectory`; the console module checks and audits. A change
+  reaches the person's token at its next refresh (≤ 10 min). The runbook keeps SQL only to bootstrap the first admin.
+  "Needs" shows "Second factor at sign-in" for every role: the design's per-role factor (Passkey / App 2FA / SSO) is not
+  modelled — every role needs `acr=mfa` today.
+- **Audit log viewer** over `developer.audit_log` (new `developer.api.AuditLogQuery`): filters by action area (a prefix
+  such as `payments.`), person, business id, target and dates; newest first, 50 a page with an opaque cursor (422 for a
+  token the api didn't make). Actor and business names are filled in for display; entries stay codes and ids as stored.
+  "My audit trail" on the profile is the same list for the signed-in person (`GET /api/v1/console/me/audit`). The
+  design's footer ("Immutable · exported nightly to cold storage · retained 7 years") is left out: no export job or
+  retention policy exists yet.
+- **Staff API keys** (`/integrations`, screen `api`: admin; issue and revoke need `keys`): every business's keys
+  ("Partner keys": owner, scopes, last used, status). Staff issue a key for a business — the Studio's rules and scopes,
+  secret shown once — and revoke one, through the developer module's own use cases (new `developer.api.PartnerKeys`), so
+  the business's audit log gets `api_key.issued | api_key.revoked` with the staff member as actor and `ApiKeyRevoked`
+  is published as before. Not built: the design's request metrics (no metrics source for them), the webhook event list
+  and example (documentation, not data), GraphQL (doesn't exist; the lede says what exists).
+- **On-call rota** (`/on-call`, every staff member; **V234** `identity.oncall_shifts`): shifts from 12 h ago to a week
+  ahead, who is on call now. Admins add and remove shifts (`province`); the person on a shift — or an admin — hands it to
+  a colleague ("Swap a shift"; 409 `not_your_shift`). Audit `console.oncall_shift_added | oncall_shift_swapped |
+  oncall_shift_removed`. The escalation paths and targets are the design's copy (without its tool column: PagerDuty,
+  Slack channels and an Unleash kill-switch aren't set up). Not built: incidents ("Declare incident", "Open incidents")
+  and paging ("Page current on-call") — no incident store or paging integration exists.
+- **Staff profile** (`/profile`, every staff member): name, email, roles and role view; **Security** (passkeys with
+  add / remove, the authenticator, backup codes left, "Sign out everywhere") and **Devices & sessions** (sign one out)
+  come from northline-auth's `/api/auth/security` through `@northline/auth-kit` (S-19, as the Studio and the consumer
+  site); changes that need a recent second factor answer `step_up_required` and the screen says how to confirm. With no
+  recent second factor the page asks the person to sign in again first. **Preferences**: the console's language. Not
+  built: Company SSO (no SSO), regenerating backup codes from the console.
+- **Messages (fr in the catalogue):** "Choose a role from the list.", "Enter the person's email.", "No Northline account
+  uses that email. They sign up first, then you add the role.", "You can't remove your own admin role.", "Northline
+  needs at least one admin.", "Say what the shift covers, 1 to 120 characters.", "A shift ends after it starts and lasts
+  at most 7 days.", "Choose a staff member.", "Only the person on the shift or an admin can hand it over.", "Use a date
+  and time like 2026-09-08T18:00:00Z.", "That page link is no longer valid. Start from the first page.", "Choose a
+  business.".

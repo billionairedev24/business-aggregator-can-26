@@ -30,7 +30,7 @@ import tools.jackson.databind.json.JsonMapper;
 /** {@link DeveloperStore} and the {@link AuditTrail} over schema {@code developer}. */
 @Repository
 @RequiredArgsConstructor
-class DeveloperJdbc implements DeveloperStore, AuditTrail {
+class DeveloperJdbc implements DeveloperStore, AuditTrail, ca.northline.developer.application.PlatformDeveloperStore {
 
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
@@ -270,6 +270,23 @@ class DeveloperJdbc implements DeveloperStore, AuditTrail {
               left join lateral (select status_code, at from developer.webhook_deliveries
                                   where endpoint_id = e.id order by at desc nulls last limit 1) d on true
             """;
+
+    @Override
+    public List<ApiKey> allKeys(int limit) {
+        return jdbc.sql(
+                        "select * from developer.api_keys order by revoked_at is not null, created_at desc, id limit :limit")
+                .param("limit", limit)
+                .query((rs, _) -> key(rs))
+                .list();
+    }
+
+    @Override
+    public Optional<ApiKey> keyById(String keyId) {
+        return jdbc.sql("select * from developer.api_keys where id = :id")
+                .param("id", keyId)
+                .query((rs, _) -> key(rs))
+                .optional();
+    }
 
     private static ApiKey key(ResultSet rs) throws SQLException {
         return new ApiKey(

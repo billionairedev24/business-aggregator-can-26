@@ -730,3 +730,15 @@ That group already has a category with this name.	Ce groupe a déjà une catégo
 A regulator with this code already exists.	Un organisme de réglementation avec ce code existe déjà.	new
 Enter a limit from 1 to 50.	Entrez une limite de 1 à 50.	new
 Choose provider, seller, both or kitchen.	Choisissez fournisseur, vendeur, les deux ou cuisine.	new
+Choose a role from the list.	Choisissez un rôle dans la liste.	new
+Enter the person's email.	Entrez le courriel de la personne.	new
+No Northline account uses that email. They sign up first, then you add the role.	Aucun compte Northline n’utilise ce courriel. La personne s’inscrit d’abord, puis vous ajoutez le rôle.	new
+You can't remove your own admin role.	Vous ne pouvez pas retirer votre propre rôle d’administrateur.	new
+Northline needs at least one admin.	Northline doit garder au moins un administrateur.	new
+Say what the shift covers, 1 to 120 characters.	Indiquez ce que couvre le quart, de 1 à 120 caractères.	new
+A shift ends after it starts and lasts at most 7 days.	Un quart se termine après son début et dure au plus 7 jours.	new
+Choose a staff member.	Choisissez un membre du personnel.	new
+Only the person on the shift or an admin can hand it over.	Seule la personne de garde ou un administrateur peut céder ce quart.	new
+Use a date and time like 2026-09-08T18:00:00Z.	Utilisez une date et une heure comme 2026-09-08T18:00:00Z.	new
+That page link is no longer valid. Start from the first page.	Ce lien de page n’est plus valide. Recommencez à la première page.	new
+Choose a business.	Choisissez une entreprise.	new

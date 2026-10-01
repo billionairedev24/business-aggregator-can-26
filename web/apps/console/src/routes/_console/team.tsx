@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { ScreenPending } from '../../features/shell/ScreenPending';
+import { TeamScreen } from '../../features/team/TeamScreen';
 
-export const Route = createFileRoute('/_console/team')({ component: () => <ScreenPending screen="team" /> });
+/** Team, roles & audit (S-96). */
+export const Route = createFileRoute('/_console/team')({ component: TeamScreen });
