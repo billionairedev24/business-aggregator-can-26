@@ -57,7 +57,7 @@ jobs:
       - run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
       # terraform fmt -check, scripts/check-contract.sh, init -backend=false + validate everywhere, terraform test.
       - name: Validate
-        run: scripts/validate.sh "${{ inputs.cloud }}"
+        run: make -C ../.. tf-validate CLOUD="${{ inputs.cloud }}"
 
   tflint:
     name: tflint
@@ -69,9 +69,7 @@ jobs:
       - uses: terraform-linters/setup-tflint@v4
         with:
           tflint_version: ${{ env.TFLINT_VERSION }}
-      - name: Install rulesets
-        run: tflint --init --config "$PWD/.tflint.hcl"
+      - name: tflint (make tf-lint)
+        run: make -C ../.. tf-lint
         env:
           GITHUB_TOKEN: ${{ github.token }} # avoids GitHub API rate limits when downloading plugins
-      - name: tflint
-        run: tflint --recursive --config "$PWD/.tflint.hcl" --format compact
