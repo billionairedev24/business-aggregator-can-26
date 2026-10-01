@@ -47,17 +47,18 @@ describe('console shell (S-90, design 03)', () => {
   });
 
   it('opens profile and on-call for every staff member, even without a console role', async () => {
-    staffApi([]);
+    staffApi([], c => (c.url.includes('/api/v1/console/oncall') ? { body: { asOf: '2026-09-08T18:00:00Z', shifts: [], now: [], staff: [] } } : undefined));
     renderConsole('/on-call');
-    expect(await screen.findByRole('heading', { level: 1, name: 'On-call & escalations' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Who’s on, how to reach them, and what’s burning'.replace(/’/g, "'") })).toBeTruthy();
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('switches the role view among held roles: logged through the api, the sidebar narrows, later calls carry the role', async () => {
-    const calls = staffApi(['trust_safety', 'finance']);
+    const calls = staffApi(['trust_safety', 'finance'], c => (c.url.endsWith('/api/v1/console/team') ? { body: { roles: [], members: [] } }
+      : c.url.includes('/api/v1/console/audit') ? { body: { items: [] } } : undefined));
     const user = userEvent.setup({ delay: null });
     const { router } = renderConsole('/team');
-    await screen.findByRole('heading', { level: 1, name: 'Team & audit' });
+    await screen.findByRole('heading', { level: 1, name: 'Who can do what, and who did what' });
     // the accordion opens the current screen's group (Platform): trust & safety sees Team, not Finance
     expect(navLabels()).toContain('Team & audit');
     expect(navLabels()).not.toContain('Finance');

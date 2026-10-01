@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { ScreenPending } from '../../features/shell/ScreenPending';
+import { IntegrationsScreen } from '../../features/integrations/IntegrationsScreen';
 
-export const Route = createFileRoute('/_console/integrations')({ component: () => <ScreenPending screen="api" /> });
+/** API & webhooks (S-96): every business's API keys. */
+export const Route = createFileRoute('/_console/integrations')({ component: IntegrationsScreen });

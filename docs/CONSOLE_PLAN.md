@@ -118,10 +118,10 @@ member.
 | `/provinces?province=` | `regions` | `regions` | admin | S-84 | built |
 | `/finance` | `finance` | `finance` | admin, finance | S-85 | stand-in |
 | `/reports` | `reports` | `reports` | admin, finance, analyst | S-95 | stand-in |
-| `/integrations` | `api` | `api` | admin | S-96 | stand-in |
-| `/team` | `team` | `team` | admin, trust_safety, finance | S-96 | stand-in |
-| `/profile?tab=security\|sessions\|audit\|prefs` | `profile` | `profile` | every staff member | S-96 | stand-in |
-| `/on-call` | `oncall` | `oncall` | every staff member | S-96 | stand-in |
+| `/integrations` | `api` | `api` | admin | S-96 | built |
+| `/team` | `team` | `team` | admin, trust_safety, finance | S-96 | built |
+| `/profile?tab=security\|sessions\|audit\|prefs` | `profile` | `profile` | every staff member | S-96 | built |
+| `/on-call` | `oncall` | `oncall` | every staff member | S-96 | built |
 | any of the above, role can't open it | `denied` | — | — | S-90 | built (banner + overview) |
 
 ## Roles
@@ -138,7 +138,7 @@ member.
 
 Not modelled yet (later stories): the design's co-signatures ("province Off↔Live needs 2 admins", "Suspend requires a
 T&S lead co-sign"; "refunds > $500 need a 2nd approver" is built for disputes by S-80), the per-role second factor ("Passkey" / "App 2FA" / "SSO" —
-today every role needs `acr=mfa`), and granting roles from the Team screen (SQL until S-96 —
+today every role needs `acr=mfa`). Granting roles is the Team screen's since S-96 (the runbook's SQL only bootstraps the first admin —
 `docs/runbooks/README.md` § Console BFF).
 
 ## Contracts
@@ -336,6 +336,27 @@ DELETE /api/v1/console/regions/zones/{zoneId}                                   
 
 Every change is audited (`region.*`) and re-reads the region model after commit (DECISIONS "S-84").
 
+### Team, audit, API keys, on-call (S-96)
+
+```
+GET    /api/v1/console/team                                      (team) {roles: [{role, people, screens, actions}], members: [Member]}
+POST   /api/v1/console/team/invite {email, role}                 (team · province = admin) Member
+POST   /api/v1/console/team/{userId}/roles {role}                (team · province) Member
+DELETE /api/v1/console/team/{userId}/roles/{role}                (team · province) Member · 409 own_admin | last_admin
+GET    /api/v1/console/audit?actor=&action=&business=&target=&from=&to=&before=   (team) {items: [AuditRow], next}
+GET    /api/v1/console/me/audit?before=                          (profile) my own entries
+GET    /api/v1/console/api-keys                                  (api) {items: [KeyRow]}
+POST   /api/v1/console/api-keys {merchantId, name, scopes}       (api · keys) 201 {key, secret}
+POST   /api/v1/console/api-keys/{keyId}/revoke                   (api · keys) KeyRow
+GET    /api/v1/console/oncall?from=&to=                          (oncall) {asOf, shifts, now, staff}
+POST   /api/v1/console/oncall/shifts {userId, startsAt, endsAt, duty}   (oncall · province) 201
+POST   /api/v1/console/oncall/shifts/{id}/hand-over {userId}     (oncall; the person on it, or an admin) · 409 not_your_shift
+DELETE /api/v1/console/oncall/shifts/{id}                        (oncall · province) 204
+```
+
+Profile security and sessions call northline-auth's `/api/auth/security` (S-19) through `@northline/auth-kit`.
+DECISIONS "S-96".
+
 ## API: what exists, what's missing
 
 | screen | exists | missing (the screen's story adds it) |
@@ -353,9 +374,9 @@ Every change is audited (`region.*`) and re-reads the region model after commit 
 | regions | S-84: stages with a confirmation and the go-live checklist, markets, zones (GeoJSON), courier model | the co-sign of a second admin, dry-run as customer, categories per province, drawing zones on a map |
 | finance | `POST /api/v1/console/payments/tax-reconciliations` (S-21) | escrow / payouts / reconciliation / take rate by tier / revenue mix (S-85) |
 | reports | — | funnels, cohorts, top categories, supply gaps (S-95) |
-| api | `developer` module (merchants' keys and webhooks) | platform-wide API clients and rate limits (S-96) |
-| team, profile | `developer.api.AuditTrail` (write); auth `GET /api/auth/security` (sessions, passkeys) | roles and people, audit log views ("My audit trail"), sessions (S-96) |
-| oncall | — | rota, incidents, escalation paths (S-96) |
+| api | S-96: every business's API keys, issue (secret shown once) and revoke | request metrics (4.1M · p95 · 5xx · webhook success: no metrics source), per-key rate-limit edits, webhook catalogue page |
+| team, profile | S-96: roles and people (grant / revoke / invite, admin only), audit log with filters and pages, my audit trail; profile security and sessions through `@northline/auth-kit` | Company SSO, backup-code regeneration from the console |
+| oncall | S-96: rota (add / hand over / remove shifts), escalation paths | incidents ("Declare incident"), paging ("Page current on-call") |
 
 ## Migration and seed ranges
 
