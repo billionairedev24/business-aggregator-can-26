@@ -9,6 +9,7 @@ import ca.northline.merchants.api.SellerDirectory.Seller;
 import ca.northline.orders.api.OrderMonitor;
 import ca.northline.payments.api.DisputeCounts;
 import ca.northline.shared.NotFound;
+import ca.northline.shared.PlaceFilter;
 import ca.northline.trust.api.QualityQuery;
 import ca.northline.trust.api.RatingQuery;
 import ca.northline.trust.api.SellerStanding;
@@ -50,7 +51,7 @@ class SellersService implements ViewSellers {
     private static final Set<String> PENDING_TYPES = Set.of("licence", "registry", "ahs_permit", "food_cert");
 
     private final Clock clock;
-    private final PlaceScope places;
+    private final PlaceFilter places;
     private final SellerDirectory directory;
     private final CategorySource categories;
     private final SellerStanding standing;
@@ -166,7 +167,8 @@ class SellersService implements ViewSellers {
                             st.quality(),
                             gmv,
                             rate,
-                            flags(s, st, rate, now));
+                            flags(s, st, rate, now),
+                            s.searchHidden());
                 })
                 .toList();
     }

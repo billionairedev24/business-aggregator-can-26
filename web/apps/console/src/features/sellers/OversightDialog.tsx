@@ -5,7 +5,11 @@ import { useOversight, type Check, type OversightAction, type Seller } from './a
 import { checkName } from './format';
 import { useSellersT, type SellersKey } from './messages';
 
-const TITLE: Record<OversightAction, SellersKey> = { suspend: 'o_suspend', reinstate: 'o_reinstate', reverification: 'o_reverify', tier: 'o_tier' };
+const TITLE: Record<Exclude<OversightAction, 'search'>, SellersKey> = { suspend: 'o_suspend', reinstate: 'o_reinstate', reverification: 'o_reverify', tier: 'o_tier' };
+
+/** The dialog's name for an action: "search" hides a shown business and shows a hidden one. */
+const actionName = (action: OversightAction, seller: Seller): SellersKey =>
+  action === 'search' ? (seller.searchHidden ? 'o_show' : 'o_hide') : TITLE[action];
 
 /**
  * The confirmation step of an oversight action (S-82): the reason the business will see, and the new tier or the check
@@ -22,9 +26,9 @@ export function OversightDialog({ seller, action, checks, onClose, onDone }: { s
   const errors = run.error instanceof ValidationError ? run.error.byField() : {};
   const conflict = run.error && !(run.error instanceof ValidationError) ? (run.error instanceof ApiError ? run.error.message : String(run.error)) : undefined;
   const blocked = action === 'reverification' && !verifiable.length;
-  const submit = () => run.mutate({ sellerId: seller.id, action, reason, tier, verificationId }, { onSuccess: () => { onDone?.(); onClose(); } });
+  const submit = () => run.mutate({ sellerId: seller.id, action, reason, tier, verificationId, hidden: !seller.searchHidden }, { onSuccess: () => { onDone?.(); onClose(); } });
   return (
-    <Dialog open onClose={onClose} title={t('dialogTitle', { action: t(TITLE[action]), name: seller.name })}
+    <Dialog open onClose={onClose} title={t('dialogTitle', { action: t(actionName(action, seller)), name: seller.name })}
       actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button><Button disabled={run.isPending || blocked} onClick={submit}>{t('confirm')}</Button></>}>
       {action === 'tier' ? (
         <Field label={t('dialogTier')} error={errors.tier}>

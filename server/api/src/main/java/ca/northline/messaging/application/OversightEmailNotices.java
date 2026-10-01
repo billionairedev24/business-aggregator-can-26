@@ -8,6 +8,7 @@ import ca.northline.email.Mailer;
 import ca.northline.identity.api.NotificationContacts;
 import ca.northline.merchants.api.BusinessNames;
 import ca.northline.merchants.api.MerchantReinstated;
+import ca.northline.merchants.api.MerchantSearchVisibilityChanged;
 import ca.northline.merchants.api.MerchantSuspended;
 import ca.northline.merchants.api.MerchantTierChanged;
 import ca.northline.merchants.api.ReverificationRequired;
@@ -52,6 +53,19 @@ class OversightEmailNotices {
     @ApplicationModuleListener
     void on(MerchantTierChanged e) {
         send(e.eventId(), e.aggregateId(), e.actionId(), Action.TIER_CHANGED, e.fromTier(), e.toTier(), null, "help");
+    }
+
+    @ApplicationModuleListener
+    void on(MerchantSearchVisibilityChanged e) {
+        send(
+                e.eventId(),
+                e.aggregateId(),
+                e.actionId(),
+                e.hidden() ? Action.SEARCH_HIDDEN : Action.SEARCH_RESTORED,
+                null,
+                null,
+                null,
+                e.hidden() ? "reviews" : "");
     }
 
     @ApplicationModuleListener

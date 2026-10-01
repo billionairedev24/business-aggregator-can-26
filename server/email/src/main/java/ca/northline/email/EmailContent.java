@@ -680,7 +680,9 @@ public sealed interface EmailContent {
             SUSPENDED,
             REINSTATED,
             REVERIFICATION_REQUIRED,
-            TIER_CHANGED
+            TIER_CHANGED,
+            SEARCH_HIDDEN,
+            SEARCH_RESTORED
         }
 
         @Override

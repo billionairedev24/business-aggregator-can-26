@@ -137,6 +137,41 @@ describe('sellers & providers (S-82, design 03)', () => {
     await waitFor(() => expect(calls.find(c => c.url.endsWith('/merchants/m2/reverification'))?.body).toEqual({ verificationId: 'v3', reason: 'Certificate looks altered' }));
   });
 
+  it('hides from search, and shows a business the rating floor hid again', async () => {
+    const calls = api(['admin']);
+    const user = userEvent.setup({ delay: null });
+    renderConsole('/sellers/m2');
+    await screen.findByRole('heading', { level: 1 });
+    await user.click(screen.getByRole('radio', { name: /Hide from search/ }));
+    expect(screen.getByText('Existing customers can still book')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Apply: Hide from search' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Hide from search · Bow River Mechanics' });
+    await user.type(within(dialog).getByRole('textbox', { name: /Reason/ }), 'Repeated late arrivals');
+    await user.click(within(dialog).getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(calls.find(c => c.url.endsWith('/merchants/m2/search'))?.body).toEqual({ hidden: true, reason: 'Repeated late arrivals' }));
+  });
+
+  it('marks a hidden business in the list and the detail, and names the trust rules in the timeline', async () => {
+    const hidden = { ...SELLERS[1]!, searchHidden: 'rating_floor' as const };
+    const calls = api(['admin'], c => {
+      if (c.method === 'GET' && c.url.includes('/api/v1/console/sellers/m2')) return { body: { ...DETAIL, seller: hidden,
+        trail: [{ id: 't2', action: 'search_hidden', reason: 'Average rating 3.90 over 90 days is below the floor of 4.2', detail: {}, actorRole: 'system', at: '2026-09-01T05:23:00Z' }] } };
+      if (c.method === 'GET' && c.url.includes('/api/v1/console/sellers')) return { body: { ...DIRECTORY, items: [hidden] } };
+      return undefined;
+    });
+    const user = userEvent.setup({ delay: null });
+    renderConsole('/sellers');
+    expect(await screen.findByText('Hidden from search · rating floor · Quality < floor · Insurance 21 d')).toBeTruthy();
+    renderConsole('/sellers/m2');
+    expect(await screen.findByText('Hidden from search by the trust rules · “Average rating 3.90 over 90 days is below the floor of 4.2”')).toBeTruthy();
+    await user.click(screen.getByRole('radio', { name: /Show in search/ }));
+    await user.click(screen.getByRole('button', { name: 'Apply: Show in search' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Show in search · Bow River Mechanics' });
+    await user.type(within(dialog).getByRole('textbox', { name: /Reason/ }), 'Reviews checked by hand');
+    await user.click(within(dialog).getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(calls.find(c => c.url.endsWith('/merchants/m2/search'))?.body).toEqual({ hidden: false, reason: 'Reviews checked by hand' }));
+  });
+
   it('shows the api’s validation and conflict messages in the dialog', async () => {
     api(['admin'], c => (c.method === 'POST' ? { status: 422, body: { errors: [{ field: 'reason', rule: 'required', message: 'Give the reason the business will see.' }] } } : undefined));
     const user = userEvent.setup({ delay: null });

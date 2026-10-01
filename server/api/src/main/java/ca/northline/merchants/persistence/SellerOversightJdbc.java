@@ -34,7 +34,7 @@ class SellerOversightJdbc implements SellerDirectory, OversightStore {
 
     private static final String SELLER = """
             select m.id, m.display_name, m.type, m.tier, m.status, m.province, m.city, m.created_at, m.approved_at,
-                   m.stripe_account_id,
+                   m.stripe_account_id, case when m.search_hidden_at is not null then m.search_hidden_cause end as search_hidden,
                    (select array_agg(c.category_id order by c.category_id) from merchants.merchant_categories c
                      where c.merchant_id = m.id and c.status is distinct from 'rejected' and c.category_id is not null)
                      as categories
@@ -161,6 +161,38 @@ class SellerOversightJdbc implements SellerDirectory, OversightStore {
     }
 
     @Override
+    public Optional<String> searchHidden(String merchantId) {
+        return jdbc.sql(
+                        "select search_hidden_cause from merchants.merchants where id = :id and search_hidden_at is not null")
+                .param("id", merchantId)
+                .query(String.class)
+                .optional();
+    }
+
+    @Override
+    public void searchHidden(String merchantId, @Nullable String cause, Instant at) {
+        jdbc.sql("""
+                        update merchants.merchants
+                           set search_hidden_at = case when cast(:cause as text) is null then null else cast(:at as timestamptz) end,
+                               search_hidden_cause = :cause, updated_at = :at
+                         where id = :id""")
+                .param("cause", cause, java.sql.Types.VARCHAR)
+                .param("at", JdbcTimes.ts(at))
+                .param("id", merchantId)
+                .update();
+    }
+
+    @Override
+    public List<String> hiddenFromSearch(String cause) {
+        return jdbc.sql("""
+                        select id from merchants.merchants
+                         where search_hidden_at is not null and search_hidden_cause = :cause order by id""")
+                .param("cause", cause)
+                .query((rs, _) -> java.util.Objects.requireNonNull(rs.getString(1)))
+                .list();
+    }
+
+    @Override
     public void insert(Oversight action, String merchantId) {
         jdbc.sql("""
                         insert into merchants.oversight_actions (id, merchant_id, action, reason, detail, actor_id,
@@ -192,7 +224,8 @@ class SellerOversightJdbc implements SellerDirectory, OversightStore {
                 categories == null ? List.of() : Arrays.asList((String[]) categories.getArray()),
                 JdbcTimes.requiredInstant(rs, "created_at"),
                 JdbcTimes.instant(rs, "approved_at"),
-                attention);
+                attention,
+                rs.getString("search_hidden"));
     }
 
     private static Seller withAttention(Seller s, List<Check> attention) {
@@ -207,7 +240,8 @@ class SellerOversightJdbc implements SellerDirectory, OversightStore {
                 s.categoryIds(),
                 s.createdAt(),
                 s.approvedAt(),
-                attention);
+                attention,
+                s.searchHidden());
     }
 
     private static Check check(ResultSet rs) throws SQLException {

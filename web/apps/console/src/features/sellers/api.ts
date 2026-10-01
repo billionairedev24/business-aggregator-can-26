@@ -15,6 +15,7 @@ export const Seller = z.object({
   type: z.enum(['provider', 'seller', 'kitchen', 'both']), province: z.string().nullish(), city: z.string().nullish(),
   tier: z.enum(['registered', 'trusted', 'master']).nullish(), status: z.enum(['applicant', 'pending', 'active', 'paused', 'suspended']).nullish(),
   quality: z.number().nullish(), gmv90Cents: z.number(), disputeRate: z.number().nullish(), flags: z.array(Flag),
+  searchHidden: z.enum(['staff', 'rating_floor']).nullish(),
 });
 export type Seller = z.infer<typeof Seller>;
 
@@ -24,7 +25,7 @@ export type Directory = z.infer<typeof Directory>;
 const Measure = z.object({ value: z.number().nullish(), floor: z.number().nullish() });
 export const Check = z.object({ id: z.string(), checkType: z.string(), registry: z.string().nullish(), reference: z.string().nullish(), status: z.string(), expiresAt: z.string().nullish() });
 export type Check = z.infer<typeof Check>;
-const Trail = z.object({ id: z.string(), action: z.enum(['suspended', 'reinstated', 'reverification_required', 'tier_changed']), reason: z.string(),
+const Trail = z.object({ id: z.string(), action: z.enum(['suspended', 'reinstated', 'reverification_required', 'tier_changed', 'search_hidden', 'search_restored']), reason: z.string(),
   detail: z.record(z.string(), z.string()), actorName: z.string().nullish(), actorRole: z.string(), at: z.string() });
 export type Trail = z.infer<typeof Trail>;
 
@@ -54,16 +55,16 @@ export const sellerQuery = (id: string) => queryOptions({
   queryFn: () => http(`/api/v1/console/sellers/${encodeURIComponent(id)}`, {}, Detail),
 });
 
-export type OversightAction = 'suspend' | 'reinstate' | 'reverification' | 'tier';
-export interface OversightInput { sellerId: string; action: OversightAction; reason: string; tier?: string; verificationId?: string }
+export type OversightAction = 'suspend' | 'reinstate' | 'reverification' | 'tier' | 'search';
+export interface OversightInput { sellerId: string; action: OversightAction; reason: string; tier?: string; verificationId?: string; hidden?: boolean }
 
-/** `POST /api/v1/console/merchants/{businessId}/{suspend|reinstate|reverification|tier}` (audited, the owners are emailed). */
+/** `POST /api/v1/console/merchants/{businessId}/{suspend|reinstate|reverification|tier|search}` (audited, the owners are emailed). */
 export function useOversight() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ sellerId, action, reason, tier, verificationId }: OversightInput) => http(
+    mutationFn: ({ sellerId, action, reason, tier, verificationId, hidden }: OversightInput) => http(
       `/api/v1/console/merchants/${encodeURIComponent(sellerId)}/${action}`,
-      { method: 'POST', body: action === 'tier' ? { tier, reason } : action === 'reverification' ? { verificationId, reason } : { reason } },
+      { method: 'POST', body: action === 'tier' ? { tier, reason } : action === 'reverification' ? { verificationId, reason } : action === 'search' ? { hidden, reason } : { reason } },
     ),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['console', 'sellers'] }),
   });

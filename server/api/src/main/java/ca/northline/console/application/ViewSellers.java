@@ -56,6 +56,7 @@ public interface ViewSellers {
     /**
      * @param disputeRate disputes opened ÷ orders and bookings in the last 90 days, null without any sale
      * @param quality the latest nightly quality score, null before the first
+     * @param searchHidden why it is hidden from search ({@code staff} or {@code rating_floor}), null when it is shown
      */
     record Row(
             String id,
@@ -69,7 +70,8 @@ public interface ViewSellers {
             @Nullable Integer quality,
             long gmv90Cents,
             @Nullable Double disputeRate,
-            List<Flag> flags) {
+            List<Flag> flags,
+            @Nullable String searchHidden) {
 
         public Row {
             flags = List.copyOf(flags);

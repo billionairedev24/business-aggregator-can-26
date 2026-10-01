@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
  * POST /api/v1/console/merchants/{businessId}/reinstate      {reason}                  409 not_suspended
  * POST /api/v1/console/merchants/{businessId}/reverification {verificationId, reason}  409 not_verifiable
  * POST /api/v1/console/merchants/{businessId}/tier           {tier, reason}            409 same_tier · not_approved
+ * POST /api/v1/console/merchants/{businessId}/search         {hidden, reason}          409 already_hidden · not_hidden
  * → Oversight {id, action, reason, detail, actorId, actorRole, at}
  * </pre>
  */
@@ -55,6 +56,21 @@ class SellerOversightController {
             @NotBlank(message = SellerOversight.REASON_REQUIRED)
             @Size(max = 500, message = SellerOversight.REASON_LENGTH)
             String reason) {}
+
+    record SearchRequest(
+            @jakarta.validation.constraints.NotNull(message = SellerOversight.HIDDEN_REQUIRED)
+            Boolean hidden,
+
+            @NotBlank(message = SellerOversight.REASON_REQUIRED)
+            @Size(max = 500, message = SellerOversight.REASON_LENGTH)
+            String reason) {}
+
+    /** Hide from search / show again (design 03 oversight "Hide from search": existing customers can still book). */
+    @PostMapping("/search")
+    @RequiresConsole(value = ConsoleScreen.SELLERS, actions = ConsoleAction.SUSPEND)
+    Oversight search(@PathVariable String businessId, @Valid @RequestBody SearchRequest body, CurrentStaff staff) {
+        return oversight.searchVisibility(businessId, body.hidden(), body.reason(), actor(staff));
+    }
 
     @PostMapping("/suspend")
     @RequiresConsole(value = ConsoleScreen.SELLERS, actions = ConsoleAction.SUSPEND)
