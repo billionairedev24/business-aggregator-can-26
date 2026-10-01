@@ -18,6 +18,52 @@ security:
 - oauth2:
   - openid
 paths:
+  /api/v1/console/delivery/map:
+    get:
+      operationId: deliveryMapMap
+      parameters:
+      - in: query
+        name: market
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DeliveryMap"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - delivery-map-controller
   /api/v1/console/disputes:
     get:
       operationId: disputesQueue
@@ -3360,6 +3406,13 @@ components:
         oldest:
           type: string
           format: date-time
+    Basemap:
+      type: object
+      properties:
+        attribution:
+          type: string
+        tiles:
+          type: string
     CaseDetail:
       type: object
       properties:
@@ -3453,6 +3506,24 @@ components:
           minLength: 0
       required:
       - decision
+    Counts:
+      type: object
+      properties:
+        all:
+          type: integer
+          format: int64
+        attention:
+          type: integer
+          format: int64
+        escrow:
+          type: integer
+          format: int64
+        late:
+          type: integer
+          format: int64
+        live:
+          type: integer
+          format: int64
     CourierRef:
       type: object
       properties:
@@ -3571,6 +3642,17 @@ components:
           type: string
         note:
           type: string
+    DeliveryMap:
+      type: object
+      properties:
+        basemap:
+          $ref: "#/components/schemas/Basemap"
+        market:
+          $ref: "#/components/schemas/Market"
+        zones:
+          type: array
+          items:
+            $ref: "#/components/schemas/Zone"
     DeliveryView:
       type: object
       properties:
@@ -3951,6 +4033,21 @@ components:
             type: string
       required:
       - key
+    Market:
+      type: object
+      properties:
+        city:
+          type: string
+        id:
+          type: string
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        province:
+          type: string
     MeResponse:
       type: object
       properties:
@@ -3960,6 +4057,23 @@ components:
             $ref: "#/components/schemas/RoleGrant"
         userId:
           type: string
+    Monitor:
+      type: object
+      properties:
+        asOf:
+          type: string
+          format: date-time
+        counts:
+          $ref: "#/components/schemas/Counts"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Row"
+        truncated:
+          type: boolean
+        week:
+          type: integer
+          format: int64
     Note:
       type: object
       properties:
@@ -4035,6 +4149,15 @@ components:
           type: string
         status:
           type: string
+    PauseRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 500
+          minLength: 0
+      required:
+      - reason
     PendingRefund:
       type: object
       properties:
@@ -4368,6 +4491,50 @@ components:
           minLength: 1
       required:
       - role
+    Row:
+      type: object
+      properties:
+        amountCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        at:
+          type: string
+          format: date-time
+        attention:
+          type: boolean
+        customer:
+          type: string
+        id:
+          type: string
+        kind:
+          type: string
+        ref:
+          type: string
+        sellers:
+          type: array
+          items:
+            type: string
+        since:
+          type: string
+          format: date-time
+        state:
+          type: string
+        status:
+          type: string
+          enum:
+          - new
+          - live
+          - escrow
+          - escrow_48h
+          - late
+          - stuck
+          - issue
+          - delivered
+          - done
+          - cancelled
+        type:
+          type: string
     RuleRequest:
       type: object
       properties:
