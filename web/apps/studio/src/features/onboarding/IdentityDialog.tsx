@@ -13,7 +13,7 @@ export interface IdentityDialogProps {
   navigate?: (url: string) => void;
 }
 
-const REASONS = ['document_expired', 'document_unverified_other', 'document_type_not_supported', 'selfie_face_mismatch', 'selfie_unverified_other', 'consent_declined', 'under_supported_age'] as const;
+const REASONS = ['document_expired', 'document_unverified_other', 'document_type_not_supported', 'selfie_face_mismatch', 'selfie_unverified_other', 'consent_declined', 'under_supported_age', 'agent_rejected'] as const;
 
 /** "Identity (Stripe KYC)" (design 02 checkDefs: "Government ID + selfie for every owner ≥ 25%"): one row per owner. */
 export function IdentityDialog({ merchantId, title, onClose, navigate = url => window.location.assign(url) }: IdentityDialogProps) {

@@ -1,16 +1,17 @@
-package ca.northline.region.application;
+package ca.northline.console.application;
 
 import ca.northline.developer.api.AuditTrail;
+import ca.northline.region.api.LaunchStatus;
+import ca.northline.region.api.RegionEditor;
+import ca.northline.region.api.RegionEditor.ProvinceRow;
+import ca.northline.region.api.RegionEditor.RegionRef;
+import ca.northline.region.api.RegionEditor.ZoneInput;
 import ca.northline.region.api.Regions;
-import ca.northline.region.application.SwitchboardStore.ProvinceRow;
-import ca.northline.region.application.SwitchboardStore.RegionRef;
-import ca.northline.region.domain.Stage;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -22,7 +23,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
- * {@link Switchboard} over {@link SwitchboardStore}: stage rules (a market is never more open than its province; going
+ * {@link Switchboard} over the region module's {@link RegionEditor}: stage rules (a market is never more open than its province; going
  * live needs the checklist), the platform audit log in the same transaction, and {@link Regions#refresh()} once it
  * committed so this instance serves the change at once (others within {@code REGION_CACHE_TTL}).
  */
@@ -33,7 +34,7 @@ class SwitchboardService implements Switchboard {
 
     private static final Set<String> COURIER_MODELS = Set.of("own", "contracted", "hybrid");
 
-    private final SwitchboardStore store;
+    private final RegionEditor store;
     private final AuditTrail audit;
     private final Regions regions;
 
@@ -44,14 +45,15 @@ class SwitchboardService implements Switchboard {
     }
 
     @Override
-    public Province provinceStage(String code, Stage stage, String confirm, Actor actor) {
-        var row = store.province(code.strip().toUpperCase(Locale.ROOT)).orElseThrow(() -> new NotFound("province", code));
+    public Province provinceStage(String code, LaunchStatus stage, String confirm, Actor actor) {
+        var row =
+                store.province(code.strip().toUpperCase(Locale.ROOT)).orElseThrow(() -> new NotFound("province", code));
         if (!confirm.strip().equalsIgnoreCase(row.code())) {
             throw RuleViolation.of("confirm", "match", CONFIRM_PROVINCE);
         }
         var ref = store.lock(row.id()).orElseThrow();
         var view = view(row);
-        if (stage == Stage.LIVE && ref.stage() != Stage.LIVE && !view.ready()) {
+        if (stage == LaunchStatus.LIVE && ref.stage() != LaunchStatus.LIVE && !view.ready()) {
             throw new Conflict("not_ready", NOT_READY);
         }
         if (stage == ref.stage()) {
@@ -61,7 +63,7 @@ class SwitchboardService implements Switchboard {
         // a province's stage is the ceiling: markets above it come down with it
         var lowered = new LinkedHashMap<String, String>();
         for (var m : store.markets(row.id())) {
-            if (m.stage().ordinal() > stage.ordinal()) {
+            if (m.stage().above(stage)) {
                 store.stage(m.id(), stage);
                 lowered.put(m.id(), m.stage().code());
             }
@@ -70,13 +72,20 @@ class SwitchboardService implements Switchboard {
         if (!lowered.isEmpty()) {
             after.put("marketsLowered", lowered);
         }
-        record(actor, "region.stage_changed", "province", row.id(), Map.of("stage", ref.stage().code()), after);
+        record(
+                actor,
+                "region.stage_changed",
+                "province",
+                row.id(),
+                Map.of("stage", ref.stage().code()),
+                after);
         return reload(row.code());
     }
 
     @Override
     public Province courierModel(String code, String model, Actor actor) {
-        var row = store.province(code.strip().toUpperCase(Locale.ROOT)).orElseThrow(() -> new NotFound("province", code));
+        var row =
+                store.province(code.strip().toUpperCase(Locale.ROOT)).orElseThrow(() -> new NotFound("province", code));
         if (!COURIER_MODELS.contains(model)) {
             throw RuleViolation.of("courierModel", "format", COURIER_MODEL);
         }
@@ -93,19 +102,20 @@ class SwitchboardService implements Switchboard {
     }
 
     @Override
-    public Province marketStage(String marketId, Stage stage, String confirm, Actor actor) {
+    public Province marketStage(String marketId, LaunchStatus stage, String confirm, Actor actor) {
         var ref = market(marketId);
         if (ref.city() == null || !confirm.strip().equalsIgnoreCase(ref.city().strip())) {
             throw RuleViolation.of("confirm", "match", CONFIRM_MARKET);
         }
-        var province = store.lock(java.util.Objects.requireNonNull(ref.parentId())).orElseThrow();
-        if (stage.ordinal() > province.stage().ordinal()) {
+        var province =
+                store.lock(java.util.Objects.requireNonNull(ref.parentId())).orElseThrow();
+        if (stage.above(province.stage())) {
             throw RuleViolation.of("stage", "province", ABOVE_PROVINCE);
         }
         if (stage == ref.stage()) {
             return reload(ref.province());
         }
-        if (stage == Stage.LIVE) {
+        if (stage == LaunchStatus.LIVE) {
             var zones = store.zones(province.id()).stream()
                     .filter(z -> z.marketId().equals(ref.id()) && z.areaKm2() != null)
                     .count();
@@ -114,7 +124,13 @@ class SwitchboardService implements Switchboard {
             }
         }
         store.stage(ref.id(), stage);
-        record(actor, "region.stage_changed", "market", ref.id(), Map.of("stage", ref.stage().code()), Map.of("stage", stage.code()));
+        record(
+                actor,
+                "region.stage_changed",
+                "market",
+                ref.id(),
+                Map.of("stage", ref.stage().code()),
+                Map.of("stage", stage.code()));
         return reload(ref.province());
     }
 
@@ -151,14 +167,9 @@ class SwitchboardService implements Switchboard {
         if (zone.runsPerDay() != null && (zone.runsPerDay() < 0 || zone.runsPerDay() > 24)) {
             throw RuleViolation.of("runsPerDay", "range", RUNS);
         }
-        for (var money : List.of(
-                Map.entry("feeStdCents", zone.feeStdCents()),
-                Map.entry("feePlusCents", zone.feePlusCents()),
-                Map.entry("minBasketCents", zone.minBasketCents()))) {
-            if (money.getValue() != null && money.getValue() < 0) {
-                throw RuleViolation.of(money.getKey(), "range", MONEY);
-            }
-        }
+        money("feeStdCents", zone.feeStdCents());
+        money("feePlusCents", zone.feePlusCents());
+        money("minBasketCents", zone.minBasketCents());
         var market = market(zone.marketId());
         if (zoneId != null) {
             var existing = store.zone(zoneId).orElseThrow(() -> new NotFound("zone", zoneId));
@@ -169,8 +180,16 @@ class SwitchboardService implements Switchboard {
         store.lock(java.util.Objects.requireNonNull(market.parentId()));
         String id;
         try {
-            id = store.saveZone(zoneId, new ZoneInput(market.id(), name, zone.runsPerDay(), zone.feeStdCents(),
-                    zone.feePlusCents(), zone.minBasketCents(), zone.boundary()));
+            id = store.saveZone(
+                    zoneId,
+                    new ZoneInput(
+                            market.id(),
+                            name,
+                            zone.runsPerDay(),
+                            zone.feeStdCents(),
+                            zone.feePlusCents(),
+                            zone.minBasketCents(),
+                            zone.boundary()));
         } catch (IllegalArgumentException e) {
             throw RuleViolation.of("boundary", "format", BOUNDARY);
         }
@@ -190,12 +209,18 @@ class SwitchboardService implements Switchboard {
         var left = store.zones(province.id()).stream()
                 .filter(z -> z.marketId().equals(market.id()) && !z.id().equals(zoneId) && z.areaKm2() != null)
                 .count();
-        if (market.stage() == Stage.LIVE && left == 0) {
+        if (market.stage() == LaunchStatus.LIVE && left == 0) {
             throw new Conflict("last_zone", LAST_ZONE);
         }
         store.deleteZone(zoneId);
         record(actor, "region.zone_removed", "zone", zoneId, Map.of("marketId", zone.marketId()), null);
         return reload(province.province());
+    }
+
+    private static void money(String field, @Nullable Long cents) {
+        if (cents != null && cents < 0) {
+            throw RuleViolation.of(field, "range", MONEY);
+        }
     }
 
     private RegionRef market(String marketId) {
@@ -218,7 +243,9 @@ class SwitchboardService implements Switchboard {
         checklist.put("registries", !row.registries().isEmpty());
         checklist.put(
                 "marketWithZones",
-                markets.stream().anyMatch(m -> zones.stream().anyMatch(z -> z.marketId().equals(m.id()) && z.areaKm2() != null)));
+                markets.stream()
+                        .anyMatch(m ->
+                                zones.stream().anyMatch(z -> z.marketId().equals(m.id()) && z.areaKm2() != null)));
         return new Province(
                 row.id(),
                 row.code(),
@@ -244,7 +271,8 @@ class SwitchboardService implements Switchboard {
             String targetId,
             @Nullable Map<String, ?> before,
             @Nullable Map<String, ?> after) {
-        audit.record(new AuditTrail.Entry(null, actor.userId(), actor.role(), action, targetType, targetId, before, after));
+        audit.record(
+                new AuditTrail.Entry(null, actor.userId(), actor.role(), action, targetType, targetId, before, after));
     }
 
     /** Re-reads the region model once the change committed (or now, outside a transaction). */

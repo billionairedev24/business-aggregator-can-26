@@ -1,6 +1,7 @@
 package ca.northline.trust.persistence;
 
 import ca.northline.shared.JdbcTimes;
+import ca.northline.shared.MerchantScope;
 import ca.northline.trust.application.TrustFlagStore;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -25,7 +26,7 @@ class TrustFlagAdapter implements TrustFlagStore {
 
     private static final String COLUMNS = """
             id, target_type, target_id, rule, merchant_id, coalesce(state, 'open') as state, evidence, created_at,
-            decided_by, decided_at, decision_note""";
+            decided_by, decided_at, decision_note, action""";
 
     private final JdbcClient jdbc;
 
@@ -107,14 +108,48 @@ class TrustFlagAdapter implements TrustFlagStore {
     }
 
     @Override
-    public boolean decide(String id, String state, String staffId, @Nullable String note, Instant at) {
+    public List<StoredFlag> queue(MerchantScope scope, Instant since, int limit) {
+        return jdbc.sql("select " + COLUMNS + """
+                         from trust.flags
+                         where (:everyone or merchant_id = any(:merchants))
+                           and (coalesce(state, 'open') = 'open' or decided_at >= :since)
+                         order by coalesce(state, 'open') = 'open' desc, created_at, decided_at desc, id
+                         limit :limit
+                        """)
+                .param("everyone", scope.everyone())
+                .param("merchants", scope.ids())
+                .param("since", since.atOffset(ZoneOffset.UTC))
+                .param("limit", limit)
+                .query((rs, n) -> flag(rs))
+                .list();
+    }
+
+    @Override
+    public List<StoredFlag> openOn(String targetType, @Nullable String targetId, int limit) {
+        return jdbc.sql("select " + COLUMNS + """
+                         from trust.flags
+                         where coalesce(state, 'open') = 'open' and target_type = :type
+                           and (cast(:target as text) is null or target_id = cast(:target as text))
+                         order by created_at, id
+                         limit :limit
+                        """)
+                .param("type", targetType)
+                .param("target", targetId)
+                .param("limit", limit)
+                .query((rs, n) -> flag(rs))
+                .list();
+    }
+
+    @Override
+    public boolean decide(String id, String state, String action, String staffId, @Nullable String note, Instant at) {
         return jdbc.sql("""
                         update trust.flags
-                           set state = :state, action = :state, decided_by = :staff, decided_at = :at,
+                           set state = :state, action = :action, decided_by = :staff, decided_at = :at,
                                decision_note = :note
                          where id = :id and coalesce(state, 'open') = 'open'
                         """)
                         .param("state", state)
+                        .param("action", action)
                         .param("staff", staffId)
                         .param("at", at.atOffset(ZoneOffset.UTC))
                         .param("note", note)
@@ -144,6 +179,7 @@ class TrustFlagAdapter implements TrustFlagStore {
                 JdbcTimes.requiredInstant(rs, "created_at"),
                 rs.getString("decided_by"),
                 JdbcTimes.instant(rs, "decided_at"),
-                rs.getString("decision_note"));
+                rs.getString("decision_note"),
+                rs.getString("action"));
     }
 }

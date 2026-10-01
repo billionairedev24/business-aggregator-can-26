@@ -29,7 +29,7 @@ function checkTag(c: Check, now: string, t: SellersT): { text: string; tone: Tag
 }
 
 function trailText(e: Trail, t: SellersT): string {
-  const who = e.actorName ?? t('staff');
+  const who = e.actorRole === 'system' ? t('trustRules') : e.actorName ?? t('staff');
   switch (e.action) {
     case 'tier_changed': return t('t_tier_changed', { from: t(`tier_${e.detail.from}` as SellersKey), to: t(`tier_${e.detail.to}` as SellersKey), who, reason: e.reason });
     case 'reverification_required': return t('t_reverification_required', { check: checkName(e.detail.checkType ?? '', t), who, reason: e.reason });
@@ -65,6 +65,8 @@ function DetailView({ data }: { data: Detail }) {
     suspended ? { id: 'reinstate', name: 'o_reinstate', desc: 'o_reinstateDesc', allowed: can('suspend') } : { id: 'suspend', name: 'o_suspend', desc: 'o_suspendDesc', allowed: can('suspend') },
     { id: 'reverification', name: 'o_reverify', desc: 'o_reverifyDesc', allowed: can('verify') },
     { id: 'tier', name: 'o_tier', desc: 'o_tierDesc', allowed: can('suspend') && !!s.tier },
+    s.searchHidden ? { id: 'search', name: 'o_show', desc: s.searchHidden === 'rating_floor' ? 'o_showFloorDesc' : 'o_showDesc', allowed: can('suspend') }
+      : { id: 'search', name: 'o_hide', desc: 'o_hideDesc', allowed: can('suspend') },
   ];
   const [pick, setPick] = useState<OversightAction>(actions[0]!.id);
   const [dialog, setDialog] = useState<OversightAction | null>(null);
@@ -86,6 +88,7 @@ function DetailView({ data }: { data: Detail }) {
         <div>
           <h1 className="nl-sl-title nl-sl-name">{s.name}</h1>
           <div className="nl-sl-meta">{meta}</div>
+          {s.searchHidden ? <Tag tone="accent-2">{t(s.searchHidden === 'rating_floor' ? 'hiddenFloor' : 'hidden')}</Tag> : null}
         </div>
         <div className="nl-sl-actions">
           <Button variant="secondary" className={suspended ? 'nl-sl-unsuspend' : undefined} disabled={!can('suspend')}

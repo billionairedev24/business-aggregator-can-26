@@ -640,6 +640,46 @@ Your role can't do this.	Votre rôle ne permet pas de faire ceci.	new
 That market isn't in the chosen province.	Ce marché n’est pas dans la province choisie.	new
 Choose a province from the list.	Choisissez une province dans la liste.	new
 Choose a market from the list.	Choisissez un marché dans la liste.	new
+Choose approve or request info.	Choisissez Approuver ou Demander des renseignements.	new
+Choose what the business needs to fix.	Choisissez ce que l’entreprise doit corriger.	new
+Pick checks from this application.	Choisissez des vérifications de cette demande.	new
+Tell the business what to fix.	Dites à l’entreprise quoi corriger.	new
+This application isn't waiting for a decision.	Cette demande n’attend pas de décision.	new
+Decide the open registry and identity reviews first.	Tranchez d’abord les examens de registre et d’identité en cours.	new
+Only a submitted application can be sent back.	Seule une demande soumise peut être renvoyée.	new
+Choose why the listing is rejected.	Choisissez pourquoi l’annonce est refusée.	new
+Pick reasons from the list.	Choisissez des raisons dans la liste.	new
+This listing isn't waiting for a decision.	Cette annonce n’attend pas de décision.	new
+This dish isn't waiting for a price decision.	Ce plat n’attend pas de décision sur son prix.	new
+Choose an outcome.	Choisissez une issue.	new
+A partial refund is more than $0 and less than the amount in escrow.	Un remboursement partiel est de plus de 0 $ et de moins que le montant en fiducie.	new
+A refund case is refunded in full or released to the seller.	Un dossier de remboursement est remboursé en entier ou libéré au vendeur.	new
+Another person must co-sign this decision.	Une autre personne doit cosigner cette décision.	new
+This case isn't waiting for an agent.	Ce dossier n’attend pas d’agent.	new
+This case already has a decision waiting for a finance co-sign.	Ce dossier a déjà une décision qui attend la cosignature des finances.	new
+This decision was already co-signed or declined.	Cette décision a déjà été cosignée ou refusée.	new
+Choose approve or decline.	Choisissez Approuver ou Refuser.	new
+Enter a number in the allowed range.	Entrez un nombre dans la plage permise.	new
+Enter a whole number in the allowed range.	Entrez un nombre entier dans la plage permise.	new
+Add at least one word or phrase.	Ajoutez au moins un mot ou une expression.	new
+Each word or phrase is at most 60 characters.	Chaque mot ou expression compte au plus 60 caractères.	new
+At most 200 words or phrases.	Au plus 200 mots ou expressions.	new
+Pick a rule from the list.	Choisissez une règle dans la liste.	new
+Send the rule's value.	Envoyez la valeur de la règle.	new
+Enter a rating from 1 to 5.	Entrez une note de 1 à 5.	new
+Only a business can be warned.	Seule une entreprise peut recevoir un avertissement.	new
+Write a reply.	Rédigez une réponse.	new
+Keep your reply under 5,000 characters.	Votre réponse doit compter moins de 5 000 caractères.	new
+Enter an amount more than $0.	Entrez un montant supérieur à 0 $.	new
+Use lower-case letters, digits, dots and dashes for the key.	Utilisez des lettres minuscules, des chiffres, des points et des tirets pour la clé.	new
+Give the macro a title in English and French.	Donnez un titre à la macro en anglais et en français.	new
+Write the macro in English and French.	Rédigez la macro en anglais et en français.	new
+That key is already used.	Cette clé est déjà utilisée.	new
+Another person must decide this refund request.	Une autre personne doit trancher cette demande de remboursement.	new
+This refund request was already decided.	Cette demande de remboursement a déjà été tranchée.	new
+This case is already with trust & safety.	Ce dossier est déjà confié à l’équipe Confiance et sécurité.	new
+This case is resolved.	Ce dossier est résolu.	new
+Pick a filter from the list.	Choisissez un filtre dans la liste.	new
 Say why the courier is paused.	Indiquez pourquoi le livreur est mis en pause.	new
 Keep the reason under 500 characters.	Limitez la raison à 500 caractères.	new
 Choose needs attention, live, escrow, late or all.	Choisissez à traiter, en cours, séquestre, en retard ou tout.	new
@@ -665,12 +705,5 @@ The radius is 1 to 200 km.	Le rayon est de 1 à 200 km.	new
 Enter the zone's name, 1 to 60 characters.	Entrez le nom de la zone, de 1 à 60 caractères.	new
 Choose one of the province's markets.	Choisissez un des marchés de la province.	new
 Pooled runs a day are 0 to 24.	Les tournées groupées par jour vont de 0 à 24.	new
-Enter an amount of $0 or more.	Entrez un montant de 0 $ ou plus.	new
 Paste a GeoJSON polygon (lng, lat) for the boundary.	Collez un polygone GeoJSON (lng, lat) pour la limite.	new
 A live market keeps at least one zone. Lower its stage first.	Un marché en service garde au moins une zone. Abaissez d’abord son étape.	new
-Say how the difference was resolved.	Indiquez comment l’écart a été résolu.	new
-Keep the note under 500 characters.	Limitez la note à 500 caractères.	new
-Only a day that doesn't match can be resolved.	Seul un jour qui ne concorde pas peut être résolu.	new
-Choose a day that has ended.	Choisissez un jour terminé.	new
-Choose a day (YYYY-MM-DD).	Choisissez un jour (AAAA-MM-JJ).	new
-Choose at most 92 days, the first before the last.	Choisissez au plus 92 jours, le premier avant le dernier.	new

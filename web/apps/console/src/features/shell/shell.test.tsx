@@ -56,8 +56,8 @@ describe('console shell (S-90, design 03)', () => {
   it('switches the role view among held roles: logged through the api, the sidebar narrows, later calls carry the role', async () => {
     const calls = staffApi(['trust_safety', 'finance']);
     const user = userEvent.setup({ delay: null });
-    const { router } = renderConsole('/trust');
-    await screen.findByRole('heading', { level: 1, name: 'Trust & safety' });
+    const { router } = renderConsole('/sellers');
+    await screen.findByRole('heading', { level: 1, name: 'Sellers & providers' });
     expect(navLabels()).toContain('Verification queue');
     expect(groupHeads()).toEqual(['Operations', 'Marketplace', 'Platform']);
 

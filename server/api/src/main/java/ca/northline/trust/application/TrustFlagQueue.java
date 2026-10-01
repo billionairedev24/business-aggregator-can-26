@@ -14,10 +14,18 @@ public interface TrustFlagQueue {
 
     String NOT_OPEN = "This flag was already decided.";
     String DECISION_REQUIRED = "Choose dismissed or actioned.";
+    String NO_BUSINESS = "Only a business can be warned.";
 
     List<FlagView> list(@Nullable String state, @Nullable String source, int limit);
 
-    FlagView decide(String flagId, String decision, String staffId, @Nullable String note);
+    /** S-93: open flags of the businesses in scope (oldest first) and those decided in the last 7 days, with names. */
+    List<FlagView> queue(ca.northline.shared.MerchantScope scope, int limit);
+
+    /** S-93: a staff action on an open flag (actions it); {@code warn} emails the business's owners. */
+    FlagView act(String flagId, TrustRules.FlagAction action, String staffId, String role, @Nullable String note);
+
+    /** @param role the console role(s) the staff member acts with (audit log) */
+    FlagView decide(String flagId, String decision, String staffId, String role, @Nullable String note);
 
     /**
      * @param source "ai" when the model's screening or scan raised it, else "rules"
@@ -39,5 +47,8 @@ public interface TrustFlagQueue {
             Instant createdAt,
             @Nullable String decidedBy,
             @Nullable Instant decidedAt,
-            @Nullable String decisionNote) {}
+            @Nullable String decisionNote,
+            @Nullable String action,
+            @Nullable String businessName,
+            @Nullable String province) {}
 }

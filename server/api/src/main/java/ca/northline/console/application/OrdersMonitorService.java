@@ -9,6 +9,7 @@ import ca.northline.merchants.api.BusinessNames;
 import ca.northline.orders.api.MarketplaceOrders;
 import ca.northline.orders.api.OrderMonitor;
 import ca.northline.orders.api.OrderMonitor.MonitoredOrder;
+import ca.northline.shared.PlaceFilter;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -48,7 +49,7 @@ class OrdersMonitorService implements MonitorOrders {
     private static final Set<Status> LATE = EnumSet.of(Status.LATE, Status.STUCK);
 
     private final Clock clock;
-    private final PlaceScope places;
+    private final PlaceFilter places;
     private final OrderMonitor orders;
     private final BookingMonitor bookings;
     private final MarketplaceOrders orderFigures;

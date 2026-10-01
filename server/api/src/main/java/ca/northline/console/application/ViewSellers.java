@@ -18,7 +18,10 @@ public interface ViewSellers {
     Detail detail(String sellerId);
 
     /** @param q a business's display or legal name, or part of it */
-    record Query(@Nullable String q, @Nullable String province, @Nullable String market) {}
+    record Query(
+            @Nullable String q,
+            @Nullable String province,
+            @Nullable String market) {}
 
     /**
      * What puts a business at risk (design: "Quality &lt; floor · insurance 21 d", "Off-platform payment mention",
@@ -53,6 +56,7 @@ public interface ViewSellers {
     /**
      * @param disputeRate disputes opened ÷ orders and bookings in the last 90 days, null without any sale
      * @param quality the latest nightly quality score, null before the first
+     * @param searchHidden why it is hidden from search ({@code staff} or {@code rating_floor}), null when it is shown
      */
     record Row(
             String id,
@@ -66,7 +70,8 @@ public interface ViewSellers {
             @Nullable Integer quality,
             long gmv90Cents,
             @Nullable Double disputeRate,
-            List<Flag> flags) {
+            List<Flag> flags,
+            @Nullable String searchHidden) {
 
         public Row {
             flags = List.copyOf(flags);
@@ -110,7 +115,7 @@ public interface ViewSellers {
 
     /**
      * @param stripeAccount the Connect account id shortened ({@code acct_1Kx…}), null without one
-     * @param rating the review average and count
+     * @param ratingAverage the review average ({@code ratingCount} reviews)
      */
     record Detail(
             Instant asOf,

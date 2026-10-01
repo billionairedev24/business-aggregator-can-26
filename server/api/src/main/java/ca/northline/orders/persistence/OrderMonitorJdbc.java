@@ -65,7 +65,8 @@ class OrderMonitorJdbc implements OrderMonitor {
     }
 
     @Override
-    public java.util.Map<String, Sales> salesByMerchant(java.util.Collection<String> merchantIds, Instant from, Instant to) {
+    public java.util.Map<String, Sales> salesByMerchant(
+            java.util.Collection<String> merchantIds, Instant from, Instant to) {
         if (merchantIds.isEmpty()) {
             return java.util.Map.of();
         }
@@ -81,7 +82,8 @@ class OrderMonitorJdbc implements OrderMonitor {
                 .param("ids", merchantIds.toArray(String[]::new))
                 .param("from", JdbcTimes.ts(from))
                 .param("to", JdbcTimes.ts(to))
-                .query((rs, _) -> out.put(rs.getString("merchant_id"), new Sales(rs.getLong("gmv"), rs.getLong("orders"))))
+                .query((rs, _) ->
+                        out.put(rs.getString("merchant_id"), new Sales(rs.getLong("gmv"), rs.getLong("orders"))))
                 .list();
         return java.util.Map.copyOf(out);
     }

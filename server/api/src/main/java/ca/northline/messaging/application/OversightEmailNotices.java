@@ -8,6 +8,7 @@ import ca.northline.email.Mailer;
 import ca.northline.identity.api.NotificationContacts;
 import ca.northline.merchants.api.BusinessNames;
 import ca.northline.merchants.api.MerchantReinstated;
+import ca.northline.merchants.api.MerchantSearchVisibilityChanged;
 import ca.northline.merchants.api.MerchantSuspended;
 import ca.northline.merchants.api.MerchantTierChanged;
 import ca.northline.merchants.api.ReverificationRequired;
@@ -55,6 +56,19 @@ class OversightEmailNotices {
     }
 
     @ApplicationModuleListener
+    void on(MerchantSearchVisibilityChanged e) {
+        send(
+                e.eventId(),
+                e.aggregateId(),
+                e.actionId(),
+                e.hidden() ? Action.SEARCH_HIDDEN : Action.SEARCH_RESTORED,
+                null,
+                null,
+                null,
+                e.hidden() ? "reviews" : "");
+    }
+
+    @ApplicationModuleListener
     void on(ReverificationRequired e) {
         send(
                 e.eventId(),
@@ -76,7 +90,10 @@ class OversightEmailNotices {
             @Nullable String toTier,
             @Nullable String checkType,
             String page) {
-        var reason = directory.action(actionId).map(SellerDirectory.Oversight::reason).orElse("");
+        var reason = directory
+                .action(actionId)
+                .map(SellerDirectory.Oversight::reason)
+                .orElse("");
         var business = businesses.displayName(merchantId).orElse("Northline");
         var link = links.studio(merchantId, page);
         var owners = roster.members(merchantId).stream()

@@ -8,6 +8,8 @@
 [(#{dispute-update.amount})]: [(${amount})]
 [# th:if="${change == 'decided'}"][(#{dispute-update.refund})]: [(${refund})]
 [/]
+[# th:if="${note != ''}"][(#{dispute-update.note(${note})})]
+[/]
 [(#{dispute-update.cta})]: [(${link})]
 [/]
 [# th:insert="~{footer.txt}" /]

@@ -1,0 +1,11 @@
+[(#{__${'application-decision.heading.' + decision}__})]
+
+[(#{__${'application-decision.body.' + decision}__(${businessName})})]
+[# th:each="c : ${checks}"]
+- [(#{__${'application-decision.check.' + c.code}__(${c.arg})})][/]
+[# th:if="${note != ''}"]
+[(#{application-decision.note(${note})})]
+[/]
+[(#{__${'application-decision.cta.' + decision}__})]: [(${link})]
+
+[# th:insert="~{footer.txt}" /]

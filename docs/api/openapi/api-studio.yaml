@@ -18066,6 +18066,7 @@ components:
             - missing_licence
             - duplicate_image
             - main_not_on_white
+            - restricted_keyword
     ListingTotal:
       type: object
       properties:
@@ -19526,6 +19527,7 @@ components:
               - missing_licence
               - duplicate_image
               - main_not_on_white
+              - restricted_keyword
           warranty:
             type: boolean
     ProfileRequest:
@@ -20600,6 +20602,7 @@ components:
               - missing_licence
               - duplicate_image
               - main_not_on_white
+              - restricted_keyword
     SetupView:
       type: object
       properties:

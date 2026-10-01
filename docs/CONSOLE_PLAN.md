@@ -105,16 +105,16 @@ member.
 |---|---|---|---|---|---|
 | `/sign-in` | signed out | — | anyone | S-90 | built (`?next=`, `?error=staff_only\|mfa_required\|signin`) |
 | `/?province=&market=` | `overview` | `overview` | all six | S-91 | built |
-| `/orders?view=&q=&province=&market=` | `orders` | `orders` | admin, dispatch, support | S-81 | built |
-| `/disputes` | `disputes` | `disputes` | admin, trust_safety, finance, support | S-80 | stand-in |
+| `/orders?view=&q=&province=&market=` | `orders` | `orders` | admin, dispatch, support, support_lead | S-81 | built |
+| `/disputes?province=&market=&case=kind:id` | `disputes` | `disputes` | admin, trust_safety, finance, support, support_lead | S-80 | built |
 | `/delivery?market=` | `delivery` | `delivery` | admin, dispatch | S-81 | built |
-| `/sellers?q=&province=&market=&risk=` | `sellers` | `sellers` | admin, trust_safety, support | S-82 | built |
-| `/sellers/$sellerId` | `seller_detail` | `sellers` | admin, trust_safety, support | S-82 | built |
-| `/verification` | `verify` | `verify` | admin, trust_safety | S-79 | stand-in |
-| `/vetting` | `vetting` | `vetting` | admin, trust_safety | S-92 | stand-in |
-| `/trust` | `trust` | `trust` | admin, trust_safety | S-93 | stand-in |
+| `/sellers?q=&province=&market=&risk=` | `sellers` | `sellers` | admin, trust_safety, support, support_lead | S-82 | built |
+| `/sellers/$sellerId` | `seller_detail` | `sellers` | admin, trust_safety, support, support_lead | S-82 | built |
+| `/verification?province=&market=&application=` | `verify` | `verify` | admin, trust_safety | S-79 | built |
+| `/vetting?province=&market=` | `vetting` | `vetting` | admin, trust_safety | S-92 | built |
+| `/trust?province=&market=` | `trust` | `trust` | admin, trust_safety | S-93 | built |
 | `/catalogue` | `taxonomy` | `taxonomy` | admin | S-94 | stand-in |
-| `/support` | `support` | `support` | admin, trust_safety, dispatch, support | S-83 | stand-in |
+| `/support?province=&market=&filter=&ticket=` | `support` | `support` | admin, trust_safety, dispatch, support, support_lead | S-83 | built |
 | `/provinces?province=` | `regions` | `regions` | admin | S-84 | built |
 | `/finance` | `finance` | `finance` | admin, finance | S-85 | built |
 | `/reports` | `reports` | `reports` | admin, finance, analyst | S-95 | stand-in |
@@ -128,15 +128,16 @@ member.
 
 | role (`StaffRole`, token code) | design name | screens | actions |
 |---|---|---|---|
-| `admin` | Admin | all | all (`suspend`, `decide`, `refund`, `province`, `payouts`, `keys`, `verify`, `vet`, `dispatch`, `support`) |
+| `admin` | Admin | all | all (`suspend`, `decide`, `refund`, `province`, `payouts`, `keys`, `verify`, `vet`, `dispatch`, `support`, `macros`) |
 | `trust_safety` | Trust & safety | overview, disputes, sellers, verify, vetting, trust, support, team | suspend, decide, verify, vet, support |
 | `dispatch` | Ops dispatcher | overview, orders, delivery, support | dispatch |
 | `finance` | Finance | overview, disputes, finance, reports, team | refund, payouts |
 | `support` | Support | overview, orders, disputes, sellers, support | support |
+| `support_lead` | Support lead (S-83; design: "macros … editable by support leads") | as support | support, macros |
 | `analyst` | Read-only analyst | overview, reports | — |
 
 Not modelled yet (later stories): the design's co-signatures ("province Off↔Live needs 2 admins", "Suspend requires a
-T&S lead co-sign", "refunds > $500 need a 2nd approver"), the per-role second factor ("Passkey" / "App 2FA" / "SSO" —
+T&S lead co-sign"; "refunds > $500 need a 2nd approver" is built for disputes by S-80), the per-role second factor ("Passkey" / "App 2FA" / "SSO" —
 today every role needs `acr=mfa`), and granting roles from the Team screen (SQL until S-96 —
 `docs/runbooks/README.md` § Console BFF).
 
@@ -157,6 +158,69 @@ POST /api/v1/console/me/role-view {role}   → { role, screens, actions }   403 
 ```
 
 `GET /api/v1/console/me` is sent without `X-Console-Role` (the stored view may name a role taken away since).
+
+### Verification queue (S-79)
+
+```
+GET  /api/v1/console/verification/applications[?province=&market=]      → { items: [Application], pending, medianDecisionHours? }
+GET  /api/v1/console/verification/applications/{businessId}             → { application, owners, registryReviews, decisions }
+POST /api/v1/console/verification/applications/{businessId}/decision    {decision: approve|request_info, checkKeys?, note?}  (verify)
+POST /api/v1/console/verification/applications/{businessId}/identity-reviews/{checkId}/decision {decision: approve|reject, note?}
+409 not_pending · reviews_open · review_closed
+```
+
+Every console screen that filters by place resolves `?province=&market=` through `shared.PlaceFilter` (same rules and
+422s as the overview) and shows the shell's `PlaceFilters`.
+
+### Listing vetting (S-92)
+
+```
+GET  /api/v1/console/vetting[?province=&market=]          → { autoApproved, flagged, items: [Item] }   (screen vetting)
+POST /api/v1/console/vetting/listings/{id}/decision        {decision: approve|reject, reasons?, note?}  (vet)
+POST /api/v1/console/vetting/dishes/{id}/decision          {decision: approve|reject, reasons?, note?}  (vet)
+Item: { id, kind: product|service|dish, merchantId, businessName, province?, name, priceCents?, category?, medianCents?,
+        deviationPct?, regulator?, flags[], revetReasons[], trustFlags[{flagId, rule, source, explanation, categories}],
+        state: pending|approved|rejected, submittedAt?, decidedAt?, reasons[], note? }
+409 not_in_review
+```
+
+### Disputes & refunds (S-80)
+
+```
+GET  /api/v1/console/disputes[?province=&market=]          → { summary: {forAgent, inSellerWindow, closedThisWeek}, items: [{row, businessName, province}] }
+GET  /api/v1/console/disputes/{dispute|refund}/{id}        → { item, detail: {evidence, customerPriorDisputes, sellerPriorDisputes, sellerPriorWon}, sellerQuality? }
+GET  /api/v1/console/disputes/dispute/{id}/evidence/{evidenceId}   the stored file
+POST /api/v1/console/disputes/{dispute|refund}/{id}/decision {outcome: full_refund|partial|release|goodwill_credit, refundCents?, note?}  (decide)
+POST /api/v1/console/disputes/decisions/{decisionId}/cosign  {decision: approve|decline, note?}   (refund; not the decider)
+409 not_with_agent · awaiting_cosign · cosign_self · cosign_closed
+```
+
+### Trust & safety (S-93)
+
+```
+GET /api/v1/console/trust/rules                                  → {items: [{key, value, defaults, fields, updatedBy?, edited?}]}
+PUT /api/v1/console/trust/rules/{key} {value}                    (decide) 422 value.<field>
+GET /api/v1/console/trust/rules/rating_floor/impact?rating=4.4[&province=&market=]  → {rating, days, affected, total}
+GET /api/v1/console/trust/flags/queue[?province=&market=]        → {items: [FlagView + businessName, province, action]}
+POST /api/v1/console/trust/flags/{id}/action {action: warn|coach|confirm|suspend_listings|escalate, note?}  (decide; suspend)
+```
+
+### Support desk (S-83)
+
+```
+GET    /api/v1/console/support/tickets[?filter=all|urgent|unassigned|mine|sla_risk|providers|sellers|kitchens|customers][&province=&market=]
+       → {kpis: {open, urgent, medianFirstReplyMinutes?, slaAtRisk, resolvedWithoutEscalation?, csat?, frenchShare?}, counts: {<filter>: n}, items: [Ticket]}
+GET    /api/v1/console/support/tickets/{id}                → {ticket, context, refLabel?, notes: [{by, name?, body, at}], refundRequests}
+POST   /api/v1/console/support/tickets/{id}/reply {body, resolve?, macroKey?}   (support) → waiting | resolved
+POST   /api/v1/console/support/tickets/{id}/take                                (support)
+POST   /api/v1/console/support/tickets/{id}/escalate {note?}                     (support) 409 already_escalated
+POST   /api/v1/console/support/tickets/{id}/refund-requests {amountCents, note?} (support)
+GET    /api/v1/console/support/refund-requests[?province=&market=]   (screen finance) → {items: [{request, ticket}]}
+POST   /api/v1/console/support/refund-requests/{id}/decision {decision: approve|decline, note?}  (screen finance, refund) 409 request_self · request_closed
+GET    /api/v1/console/support/macros                                    → {items: [{id, key, title: {en, fr}, body: {en, fr}}]}
+POST   /api/v1/console/support/macros {key, title, body}  · PUT …/macros/{id} · DELETE …/macros/{id}   (macros)
+409 case_resolved on any action on a resolved case
+```
 
 ### Overview (S-91)
 
@@ -242,7 +306,12 @@ POST /api/v1/console/merchants/{businessId}/suspend {reason}                    
 POST /api/v1/console/merchants/{businessId}/reinstate {reason}                    (sellers · suspend) 409 not_suspended
 POST /api/v1/console/merchants/{businessId}/reverification {verificationId, reason} (sellers · verify) 409 not_verifiable
 POST /api/v1/console/merchants/{businessId}/tier {tier, reason}                   (sellers · suspend) 409 same_tier · not_approved
+POST /api/v1/console/merchants/{businessId}/search {hidden, reason}               (sellers · suspend) 409 already_hidden · not_hidden
 ```
+
+Row also carries `searchHidden` (`staff` | `rating_floor` | null). A nightly job enforces the trust rules'
+consequences: below the rating floor → hidden from search until it recovers; off-platform payment again after a
+warning → suspended (actor `system`).
 
 Audit `merchant.<action>`; events `merchant.suspended|reinstated|tier_changed|reverification_required`; the owners are
 emailed with the reason (DECISIONS "S-82").
@@ -292,13 +361,13 @@ Rules: DECISIONS "S-85"; operations: runbooks/stripe.md § 10.
 | shell | `GET /api/v1/console/me`, `POST …/me/role-view` (S-90); `GET /api/v1/geo/regions` (S-134) | nav badge counts (`GET /api/v1/console/nav-badges`, design: "14", "1 stuck", "23 open"…); global search (`GET /api/v1/console/search?q=` across merchants, orders, cases — the design shows the pill only, no results; no story owns it yet) |
 | overview | `GET /api/v1/console/overview` (S-91, below) | — |
 | orders, delivery | `/api/v1/console/fulfilment/**` (S-86, § Delivery below): runs by market/time with `late`, run detail with stops, an order's delivery, couriers with shift and run, onboard a courier, schedule a shift, plan now, reassign a run; S-81: the orders monitor, the map's geometry, pause / resume a courier | zone economics' cost per stop (no courier cost model), paging a courier, bulk customer notices |
-| disputes | `payments.api.DisputeDecisions` (decide, decideRefund) | the agents' queue and evidence endpoints (S-80) |
-| sellers | S-82: directory, detail, suspend / reinstate, re-verification, tier | coaching, instant book off, hide from search, bulk message, impersonation |
-| verify | `GET/POST /api/v1/console/registry-reviews` (S-23) | the application queue with KYC / licence / insurance checks, approve / request info (S-79; replaces the local "Simulate approval") |
-| vetting | — | flagged listings queue, approve / reject (S-92) |
-| trust | `GET /api/v1/console/trust/flags`, `POST …/{id}/decision` (S-133) | tier rules, automatic consequences, rating floor tuning (S-93) |
+| disputes | `GET /api/v1/console/disputes`, `GET …/{kind}/{id}`, evidence download, `POST …/{kind}/{id}/decision`, `POST …/decisions/{id}/cosign` (S-80) | — |
+| sellers | S-82: directory, detail, suspend / reinstate, re-verification, tier, hide from search | coaching, instant book off, bulk message, impersonation |
+| verify | `GET/POST /api/v1/console/registry-reviews` (S-23); `GET /api/v1/console/verification/applications[/{id}]`, `POST …/{id}/decision`, `POST …/{id}/identity-reviews/{checkId}/decision` (S-79) | — |
+| vetting | `GET /api/v1/console/vetting`, `POST …/listings/{id}/decision`, `POST …/dishes/{id}/decision` (S-92) | — |
+| trust | `GET /api/v1/console/trust/flags`, `POST …/{id}/decision` (S-133); `GET …/flags/queue`, `POST …/flags/{id}/action`, `GET/PUT …/trust/rules[/{key}]`, `GET …/rules/rating_floor/impact` (S-93) | S-82 enforces the rating floor (hide from search) and warning-then-suspension; instant book off after no-shows and the photo delay have no state to act on |
 | taxonomy | `db/seed/categories.json` (seed only) | categories CRUD with regulators, limits, per-province rules (S-94) |
-| support | customer cases (`account`, `messaging.api`) for their owners | tickets queue, macros en/fr, case actions (S-83) |
+| support | `GET /api/v1/console/support/tickets[/{id}]`, `POST …/tickets/{id}/reply\|take\|escalate\|refund-requests`, `GET …/refund-requests`, `POST …/refund-requests/{id}/decision`, `GET/POST/PUT/DELETE …/macros` (S-83) | the finance screen's list of refund requests (S-85 reads `GET …/support/refund-requests`); CSAT collection (no survey sends it yet) |
 | regions | S-84: stages with a confirmation and the go-live checklist, markets, zones (GeoJSON), courier model | the co-sign of a second admin, dry-run as customer, categories per province, drawing zones on a map |
 | finance | S-21 tax reconciliation; S-85: escrow, payouts in flight, revenue mix, take by tier, Stripe ↔ ledger reconciliation and exports | Plus subscriptions and rewards (not recorded) |
 | reports | — | funnels, cohorts, top categories, supply gaps (S-95) |
@@ -310,7 +379,8 @@ Rules: DECISIONS "S-85"; operations: runbooks/stripe.md § 10.
 
 **V190–V199** (IMPLEMENTATION_PLAN.md, the next free range above V183); the console queues (S-79, S-80, S-83, S-92, S-93) **V210–V219**; the second batch (S-81, S-82, S-84, S-85, S-94–S-96) **V230–V239**. S-90: V190 (`identity.platform_roles` console
 roles, `granted_by`; `ix_audit_log_platform`), dev seed V191 (Priya Natarajan, staff with every role). Later console
-stories take the next numbers in the range; a seed stays in `db/seed-dev/`.
+stories take the next numbers in the range; a seed stays in `db/seed-dev/`. The review queues (S-79, S-92, S-80, S-93,
+S-83) use **V210–V219** (fulfilment took V200–V209 first; ordering rule).
 
 ## Deploy
 

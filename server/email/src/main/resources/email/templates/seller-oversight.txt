@@ -3,7 +3,7 @@
 
 [(#{__${'seller-oversight.body.' + action}__(${businessName}, ${fromName}, ${toName}, ${checkName})})]
 
-[(#{seller-oversight.reason-given(${reason})})]
+[(#{seller-oversight.reason-given(${staffReason})})]
 
 [(#{__${'seller-oversight.action.' + action}__})]
 

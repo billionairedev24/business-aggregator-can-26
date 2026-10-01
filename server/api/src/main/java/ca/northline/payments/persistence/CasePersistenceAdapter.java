@@ -34,7 +34,7 @@ class CasePersistenceAdapter implements CaseRepository {
             id, ref_id, merchant_id, case_number, subject, amount_cents, customer_name, customer_statement, opened_by,
             evidence, response, response_updated_at, offer_cents, offer_state, offer_expires_at, state, decision,
             decided_by, refund_cents, respond_by, opened_at, decided_at, stripe_dispute, stripe_status, stripe_reason,
-            stripe_updated_at, version""";
+            stripe_updated_at, decision_note, version""";
 
     private final RefundRowRepository refunds;
     private final PaymentsRowMapper mapper;
@@ -114,6 +114,7 @@ class CasePersistenceAdapter implements CaseRepository {
                 .param("stripeStatus", d.getStripeStatus())
                 .param("stripeReason", d.getStripeReason())
                 .param("stripeUpdatedAt", ts(d.getStripeUpdatedAt()))
+                .param("decisionNote", d.getDecisionNote())
                 .param("id", d.getId())
                 .param("escrow", d.getEscrowId())
                 .param("merchant", d.getMerchantId())
@@ -141,7 +142,7 @@ class CasePersistenceAdapter implements CaseRepository {
                                decided_by = :decidedBy, refund_cents = :refund, decided_at = :decidedAt,
                                respond_by = :respondBy, stripe_dispute = :stripeDispute, stripe_status = :stripeStatus,
                                stripe_reason = :stripeReason, stripe_updated_at = :stripeUpdatedAt,
-                               version = version + 1
+                               decision_note = :decisionNote, version = version + 1
                          where id = :id and version = :version""")
                 .param("evidence", JSON.writeValueAsString(d.getEvidence()))
                 .param("response", d.getResponse())
@@ -159,6 +160,7 @@ class CasePersistenceAdapter implements CaseRepository {
                 .param("stripeStatus", d.getStripeStatus())
                 .param("stripeReason", d.getStripeReason())
                 .param("stripeUpdatedAt", ts(d.getStripeUpdatedAt()))
+                .param("decisionNote", d.getDecisionNote())
                 .param("id", d.getId())
                 .param("version", version)
                 .update();
@@ -254,6 +256,7 @@ class CasePersistenceAdapter implements CaseRepository {
                 .stripeStatus(rs.getString("stripe_status"))
                 .stripeReason(rs.getString("stripe_reason"))
                 .stripeUpdatedAt(instant(rs, "stripe_updated_at"))
+                .decisionNote(rs.getString("decision_note"))
                 .version(rs.getInt("version"))
                 .build();
     }

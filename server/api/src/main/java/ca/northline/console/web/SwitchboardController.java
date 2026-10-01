@@ -1,7 +1,8 @@
-package ca.northline.region.web;
+package ca.northline.console.web;
 
-import ca.northline.region.application.Switchboard;
-import ca.northline.region.domain.Stage;
+import ca.northline.console.application.Switchboard;
+import ca.northline.region.api.LaunchStatus;
+import ca.northline.region.api.RegionEditor;
 import ca.northline.shared.RuleViolation;
 import ca.northline.shared.security.ConsoleAction;
 import ca.northline.shared.security.ConsoleScreen;
@@ -50,16 +51,21 @@ class SwitchboardController {
 
     record StageRequest(
             @NotBlank(message = Switchboard.STAGE) String stage,
-            @NotBlank(message = Switchboard.CONFIRM_PROVINCE) String confirm) {}
+
+            @NotBlank(message = Switchboard.CONFIRM_PROVINCE)
+            String confirm) {}
 
     record MarketStageRequest(
             @NotBlank(message = Switchboard.STAGE) String stage,
             @NotBlank(message = Switchboard.CONFIRM_MARKET) String confirm) {}
 
-    record CourierModelRequest(@NotBlank(message = Switchboard.COURIER_MODEL) String courierModel) {}
+    record CourierModelRequest(
+            @NotBlank(message = Switchboard.COURIER_MODEL) String courierModel) {}
 
     record MarketRequest(
-            @NotBlank(message = "Choose a province from the list.") String province,
+            @NotBlank(message = "Choose a province from the list.")
+            String province,
+
             @NotBlank(message = Switchboard.CITY) String city,
             @NotNull(message = Switchboard.CENTRE) Double lat,
             @NotNull(message = Switchboard.CENTRE) Double lng,
@@ -74,8 +80,8 @@ class SwitchboardController {
             @Nullable Long minBasketCents,
             @Nullable String boundary) {
 
-        Switchboard.ZoneInput input() {
-            return new Switchboard.ZoneInput(
+        RegionEditor.ZoneInput input() {
+            return new RegionEditor.ZoneInput(
                     marketId,
                     name,
                     runsPerDay,
@@ -133,8 +139,8 @@ class SwitchboardController {
         return switchboard.removeZone(zoneId, actor(staff));
     }
 
-    private static Stage stage(String code) {
-        return Arrays.stream(Stage.values())
+    private static LaunchStatus stage(String code) {
+        return Arrays.stream(LaunchStatus.values())
                 .filter(s -> s.code().equals(code))
                 .findFirst()
                 .orElseThrow(() -> RuleViolation.of("stage", "format", Switchboard.STAGE));

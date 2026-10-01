@@ -1,10 +1,7 @@
 package ca.northline.region.persistence;
 
-import ca.northline.region.application.Switchboard.Market;
-import ca.northline.region.application.Switchboard.Zone;
-import ca.northline.region.application.Switchboard.ZoneInput;
-import ca.northline.region.application.SwitchboardStore;
-import ca.northline.region.domain.Stage;
+import ca.northline.region.api.LaunchStatus;
+import ca.northline.region.api.RegionEditor;
 import ca.northline.shared.CodedEnum;
 import ca.northline.shared.Ids;
 import java.math.BigDecimal;
@@ -22,10 +19,10 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
-/** {@link SwitchboardStore} over {@code region.regions}, {@code tax_profiles}, {@code zones} and {@code waitlist} (S-84). */
+/** {@link RegionEditor} over {@code region.regions}, {@code tax_profiles}, {@code zones} and {@code waitlist} (S-84). */
 @Repository
 @RequiredArgsConstructor
-class SwitchboardJdbc implements SwitchboardStore {
+class RegionEditorJdbc implements RegionEditor {
 
     private static final String PROVINCE = """
             select r.id, r.province, r.name_i18n ->> 'en' as name_en, r.name_i18n ->> 'fr' as name_fr,
@@ -41,7 +38,9 @@ class SwitchboardJdbc implements SwitchboardStore {
 
     @Override
     public List<ProvinceRow> provinces() {
-        return jdbc.sql(PROVINCE + " order by r.sort, r.id").query((rs, _) -> province(rs)).list();
+        return jdbc.sql(PROVINCE + " order by r.sort, r.id")
+                .query((rs, _) -> province(rs))
+                .list();
     }
 
     @Override
@@ -64,7 +63,7 @@ class SwitchboardJdbc implements SwitchboardStore {
                         rs.getString("parent_id"),
                         rs.getString("province"),
                         rs.getString("city"),
-                        CodedEnum.fromCode(Stage.class, rs.getString("stage"))))
+                        CodedEnum.fromCode(LaunchStatus.class, rs.getString("stage"))))
                 .optional();
     }
 
@@ -82,7 +81,7 @@ class SwitchboardJdbc implements SwitchboardStore {
                 .query((rs, _) -> new Market(
                         rs.getString("id"),
                         rs.getString("city"),
-                        CodedEnum.fromCode(Stage.class, rs.getString("stage")),
+                        CodedEnum.fromCode(LaunchStatus.class, rs.getString("stage")),
                         rs.getObject("lat", Double.class),
                         rs.getObject("lng", Double.class),
                         decimal(rs.getBigDecimal("radius_km")),
@@ -123,7 +122,7 @@ class SwitchboardJdbc implements SwitchboardStore {
     }
 
     @Override
-    public void stage(String regionId, Stage stage) {
+    public void stage(String regionId, LaunchStatus stage) {
         jdbc.sql("update region.regions set stage = :s where id = :id")
                 .param("s", stage.code())
                 .param("id", regionId)
@@ -149,7 +148,8 @@ class SwitchboardJdbc implements SwitchboardStore {
     }
 
     @Override
-    public String insertMarket(String provinceId, String province, String city, double lat, double lng, double radiusKm) {
+    public String insertMarket(
+            String provinceId, String province, String city, double lat, double lng, double radiusKm) {
         var id = marketId(city);
         jdbc.sql("""
                         insert into region.regions (id, kind, parent_id, province, city, name_i18n, stage, center, radius_km,
@@ -178,7 +178,11 @@ class SwitchboardJdbc implements SwitchboardStore {
                 .replaceAll("[^a-z0-9]+", "-")
                 .replaceAll("(^-|-$)", "");
         var id = "mkt-" + (slug.isEmpty() ? Ids.next().toLowerCase(Locale.ROOT) : slug);
-        var taken = jdbc.sql("select count(*) from region.regions where id = :id").param("id", id).query(Long.class).single() > 0;
+        var taken = jdbc.sql("select count(*) from region.regions where id = :id")
+                        .param("id", id)
+                        .query(Long.class)
+                        .single()
+                > 0;
         return taken ? id + "-" + Ids.next().substring(20).toLowerCase(Locale.ROOT) : id;
     }
 
@@ -198,8 +202,7 @@ class SwitchboardJdbc implements SwitchboardStore {
                                 insert into region.zones (id, region_id, name, polygon, runs_per_day, fee_std_cents,
                                                           fee_plus_cents, min_basket_cents, sort)
                                 values (:id, :m, :name, %s, :runs, :fee, :plus, :min,
-                                        coalesce((select max(sort) from region.zones where region_id = :m), 0) + 1)"""
-                                .formatted(geography == null ? "null" : geography))
+                                        coalesce((select max(sort) from region.zones where region_id = :m), 0) + 1)""".formatted(geography == null ? "null" : geography))
                         .param("id", id)
                         .param("m", zone.marketId())
                         .param("name", zone.name())
@@ -213,8 +216,7 @@ class SwitchboardJdbc implements SwitchboardStore {
                 jdbc.sql("""
                                 update region.zones set region_id = :m, name = :name, runs_per_day = :runs,
                                        fee_std_cents = :fee, fee_plus_cents = :plus, min_basket_cents = :min%s
-                                 where id = :id"""
-                                .formatted(geography == null ? "" : ", polygon = " + geography))
+                                 where id = :id""".formatted(geography == null ? "" : ", polygon = " + geography))
                         .param("id", id)
                         .param("m", zone.marketId())
                         .param("name", zone.name())
@@ -259,7 +261,7 @@ class SwitchboardJdbc implements SwitchboardStore {
                 rs.getString("id"),
                 rs.getString("province"),
                 Map.copyOf(names),
-                CodedEnum.fromCode(Stage.class, rs.getString("stage")),
+                CodedEnum.fromCode(LaunchStatus.class, rs.getString("stage")),
                 texts(rs, "languages"),
                 rs.getString("courier_model"),
                 Map.copyOf(tax),

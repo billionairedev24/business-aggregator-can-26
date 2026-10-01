@@ -9,6 +9,7 @@ import ca.northline.merchants.api.SellerDirectory.Seller;
 import ca.northline.orders.api.OrderMonitor;
 import ca.northline.payments.api.DisputeCounts;
 import ca.northline.shared.NotFound;
+import ca.northline.shared.PlaceFilter;
 import ca.northline.trust.api.QualityQuery;
 import ca.northline.trust.api.RatingQuery;
 import ca.northline.trust.api.SellerStanding;
@@ -50,7 +51,7 @@ class SellersService implements ViewSellers {
     private static final Set<String> PENDING_TYPES = Set.of("licence", "registry", "ahs_permit", "food_cert");
 
     private final Clock clock;
-    private final PlaceScope places;
+    private final PlaceFilter places;
     private final SellerDirectory directory;
     private final CategorySource categories;
     private final SellerStanding standing;
@@ -83,10 +84,8 @@ class SellersService implements ViewSellers {
         var score = quality.latest(sellerId);
         var floors = FLOORS.get(row.tier());
         var components = score.map(QualityQuery.QualityScore::components).orElse(List.of());
-        Function<String, QualityQuery.@Nullable Component> component = key -> components.stream()
-                .filter(c -> c.key().equals(key))
-                .findFirst()
-                .orElse(null);
+        Function<String, QualityQuery.@Nullable Component> component = key ->
+                components.stream().filter(c -> c.key().equals(key)).findFirst().orElse(null);
         var onTime = component.apply("on_time");
         var disputeComponent = component.apply("disputes");
         var rating = ratings.summary(sellerId);
@@ -153,7 +152,9 @@ class SellersService implements ViewSellers {
                     long sales = (g == null ? 0 : g.orders()) + (b == null ? 0 : b.bookings());
                     var rate = sales == 0 ? null : opened.getOrDefault(s.id(), 0L) / (double) sales;
                     var st = standings.getOrDefault(s.id(), new Standing(null, List.of()));
-                    var category = s.categoryIds().isEmpty() ? null : names.get(s.categoryIds().getFirst());
+                    var category = s.categoryIds().isEmpty()
+                            ? null
+                            : names.get(s.categoryIds().getFirst());
                     return new Row(
                             s.id(),
                             s.name(),
@@ -166,7 +167,8 @@ class SellersService implements ViewSellers {
                             st.quality(),
                             gmv,
                             rate,
-                            flags(s, st, rate, now));
+                            flags(s, st, rate, now),
+                            s.searchHidden());
                 })
                 .toList();
     }
@@ -181,7 +183,8 @@ class SellersService implements ViewSellers {
             return Map.of();
         }
         return categories.byIds(ids).stream()
-                .collect(Collectors.toMap(CategorySource.Category::id, c -> new Category(c.id(), c.names()), (a, _) -> a));
+                .collect(Collectors.toMap(
+                        CategorySource.Category::id, c -> new Category(c.id(), c.names()), (a, _) -> a));
     }
 
     static List<Flag> flags(Seller s, Standing st, @Nullable Double disputeRate, Instant now) {
@@ -199,8 +202,7 @@ class SellersService implements ViewSellers {
                     null));
         }
         if (floors != null && disputeRate != null && disputeRate * 100 > floors.disputePct()) {
-            out.add(new Flag(
-                    "disputes_above", null, null, null, null, disputeRate * 100, floors.disputePct(), null));
+            out.add(new Flag("disputes_above", null, null, null, null, disputeRate * 100, floors.disputePct(), null));
         }
         st.openFlags().forEach(rule -> out.add(new Flag("trust_flag", rule, null, null, null, null, null, null)));
         for (Check c : s.attention()) {

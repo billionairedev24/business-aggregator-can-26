@@ -37,4 +37,7 @@ export function flagText(f: Flag, t: SellersT): string {
   }
 }
 
-export const flagsText = (s: Seller, t: SellersT) => (s.flags.length ? s.flags.map(f => flagText(f, t)).join(' · ') : t('none'));
+export const flagsText = (s: Seller, t: SellersT) => {
+  const all = [...(s.searchHidden ? [t(s.searchHidden === 'rating_floor' ? 'hiddenFloor' : 'hidden')] : []), ...s.flags.map(f => flagText(f, t))];
+  return all.length ? all.join(' · ') : t('none');
+};

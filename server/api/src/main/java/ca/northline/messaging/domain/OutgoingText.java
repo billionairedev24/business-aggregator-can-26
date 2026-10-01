@@ -24,6 +24,14 @@ public record OutgoingText(String text, boolean offPlatform) {
                     + "|virement|en argent comptant|payer directement|hors de l'appli)\\b");
 
     public static OutgoingText of(String raw) {
+        return of(raw, java.util.List.of());
+    }
+
+    /**
+     * S-93: with the phrases trust &amp; safety configured on top of the built-in patterns (lower-case, matched
+     * case-insensitively anywhere in the text).
+     */
+    public static OutgoingText of(String raw, java.util.List<String> phrases) {
         var text = raw.strip();
         var phone = PHONE.matcher(text);
         boolean masked = phone.find();
@@ -31,7 +39,11 @@ public record OutgoingText(String text, boolean offPlatform) {
         var email = EMAIL.matcher(text);
         masked |= email.find();
         text = email.replaceAll(MASKED_EMAIL);
+        var lower = text.toLowerCase(java.util.Locale.ROOT);
         return new OutgoingText(
-                text, masked || OFF_PLATFORM_PAYMENT.matcher(text).find());
+                text,
+                masked
+                        || OFF_PLATFORM_PAYMENT.matcher(text).find()
+                        || phrases.stream().anyMatch(lower::contains));
     }
 }

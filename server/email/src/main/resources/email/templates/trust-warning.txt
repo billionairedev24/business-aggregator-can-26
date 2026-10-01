@@ -1,0 +1,11 @@
+[(#{trust-warning.heading})]
+
+[(#{__${'trust-warning.body.' + rule}__(${businessName})})]
+[# th:if="${note != ''}"]
+[(#{trust-warning.note(${note})})]
+[/]
+[(#{trust-warning.next})]
+
+[(#{trust-warning.cta})]: [(${link})]
+
+[# th:insert="~{footer.txt}" /]

@@ -10,7 +10,7 @@ import ca.northline.payments.api.MarketplaceMoney;
 import ca.northline.region.api.MarketProfile;
 import ca.northline.region.api.Regions;
 import ca.northline.shared.MerchantScope;
-import ca.northline.shared.RuleViolation;
+import ca.northline.shared.PlaceFilter;
 import ca.northline.trust.api.TrustQueues;
 import java.time.Clock;
 import java.time.Duration;
@@ -18,7 +18,6 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
@@ -27,10 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 class OverviewService implements ViewOverview {
-
-    static final String UNKNOWN_PROVINCE = "Choose a province from the list.";
-    static final String UNKNOWN_MARKET = "Choose a market from the list.";
-    static final String MARKET_OUTSIDE_PROVINCE = "That market isn't in the chosen province.";
 
     static final Duration WEEK = Duration.ofDays(7);
     static final int WEEKS = 12;
@@ -41,6 +36,7 @@ class OverviewService implements ViewOverview {
 
     private final Clock clock;
     private final Regions regions;
+    private final PlaceFilter places;
     private final MarketplaceMerchants merchants;
     private final MarketplaceOrders orders;
     private final MarketplaceBookings bookings;
@@ -55,14 +51,13 @@ class OverviewService implements ViewOverview {
     @Transactional(readOnly = true)
     public Overview view(Query query) {
         var now = clock.instant();
-        var market = market(query.market());
-        var province = province(query.province(), market);
-        var scope = province == null && market == null
-                ? MerchantScope.everyBusiness()
-                : MerchantScope.only(merchants.idsIn(province, market == null ? null : market.city()));
-        ZoneId zone = market != null
-                ? market.zone()
-                : province != null ? regions.zone(province, null) : regions.platformZone();
+        var place = places.resolve(query.province(), query.market());
+        var market = place.marketId() == null
+                ? null
+                : regions.marketById(place.marketId()).orElse(null);
+        var province = place.province();
+        var scope = place.scope();
+        ZoneId zone = place.zone();
         var from = now.minus(WEEK);
 
         var goods = orders.gmvCents(scope, now.minus(WEEK.multipliedBy(WEEKS)), WEEK, WEEKS);
@@ -127,25 +122,6 @@ class OverviewService implements ViewOverview {
                 tiles,
                 queue,
                 live);
-    }
-
-    private @Nullable MarketProfile market(@Nullable String id) {
-        if (id == null || id.isBlank()) {
-            return null;
-        }
-        return regions.marketById(id.strip()).orElseThrow(() -> RuleViolation.of("market", "exists", UNKNOWN_MARKET));
-    }
-
-    private @Nullable String province(@Nullable String code, @Nullable MarketProfile market) {
-        if (code == null || code.isBlank()) {
-            return market == null ? null : market.province();
-        }
-        var province = regions.province(code.strip().toUpperCase(Locale.ROOT))
-                .orElseThrow(() -> RuleViolation.of("province", "exists", UNKNOWN_PROVINCE));
-        if (market != null && !market.province().equals(province.code())) {
-            throw RuleViolation.of("market", "province", MARKET_OUTSIDE_PROVINCE);
-        }
-        return province.code();
     }
 
     /** The next open pooled run of each live market in scope (the filtered market, else the province's or all). */
