@@ -306,7 +306,12 @@ POST /api/v1/console/merchants/{businessId}/suspend {reason}                    
 POST /api/v1/console/merchants/{businessId}/reinstate {reason}                    (sellers · suspend) 409 not_suspended
 POST /api/v1/console/merchants/{businessId}/reverification {verificationId, reason} (sellers · verify) 409 not_verifiable
 POST /api/v1/console/merchants/{businessId}/tier {tier, reason}                   (sellers · suspend) 409 same_tier · not_approved
+POST /api/v1/console/merchants/{businessId}/search {hidden, reason}               (sellers · suspend) 409 already_hidden · not_hidden
 ```
+
+Row also carries `searchHidden` (`staff` | `rating_floor` | null). A nightly job enforces the trust rules'
+consequences: below the rating floor → hidden from search until it recovers; off-platform payment again after a
+warning → suspended (actor `system`).
 
 Audit `merchant.<action>`; events `merchant.suspended|reinstated|tier_changed|reverification_required`; the owners are
 emailed with the reason (DECISIONS "S-82").
@@ -319,10 +324,10 @@ emailed with the reason (DECISIONS "S-82").
 | overview | `GET /api/v1/console/overview` (S-91, below) | — |
 | orders, delivery | `/api/v1/console/fulfilment/**` (S-86, § Delivery below): runs by market/time with `late`, run detail with stops, an order's delivery, couriers with shift and run, onboard a courier, schedule a shift, plan now, reassign a run; S-81: the orders monitor, the map's geometry, pause / resume a courier | zone economics' cost per stop (no courier cost model), paging a courier, bulk customer notices |
 | disputes | `GET /api/v1/console/disputes`, `GET …/{kind}/{id}`, evidence download, `POST …/{kind}/{id}/decision`, `POST …/decisions/{id}/cosign` (S-80) | — |
-| sellers | S-82: directory, detail, suspend / reinstate, re-verification, tier | coaching, instant book off, hide from search, bulk message, impersonation |
+| sellers | S-82: directory, detail, suspend / reinstate, re-verification, tier, hide from search | coaching, instant book off, bulk message, impersonation |
 | verify | `GET/POST /api/v1/console/registry-reviews` (S-23); `GET /api/v1/console/verification/applications[/{id}]`, `POST …/{id}/decision`, `POST …/{id}/identity-reviews/{checkId}/decision` (S-79) | — |
 | vetting | `GET /api/v1/console/vetting`, `POST …/listings/{id}/decision`, `POST …/dishes/{id}/decision` (S-92) | — |
-| trust | `GET /api/v1/console/trust/flags`, `POST …/{id}/decision` (S-133); `GET …/flags/queue`, `POST …/flags/{id}/action`, `GET/PUT …/trust/rules[/{key}]`, `GET …/rules/rating_floor/impact` (S-93) | the consequences' jobs (S-82) |
+| trust | `GET /api/v1/console/trust/flags`, `POST …/{id}/decision` (S-133); `GET …/flags/queue`, `POST …/flags/{id}/action`, `GET/PUT …/trust/rules[/{key}]`, `GET …/rules/rating_floor/impact` (S-93) | S-82 enforces the rating floor (hide from search) and warning-then-suspension; instant book off after no-shows and the photo delay have no state to act on |
 | taxonomy | `db/seed/categories.json` (seed only) | categories CRUD with regulators, limits, per-province rules (S-94) |
 | support | `GET /api/v1/console/support/tickets[/{id}]`, `POST …/tickets/{id}/reply\|take\|escalate\|refund-requests`, `GET …/refund-requests`, `POST …/refund-requests/{id}/decision`, `GET/POST/PUT/DELETE …/macros` (S-83) | the finance screen's list of refund requests (S-85 reads `GET …/support/refund-requests`); CSAT collection (no survey sends it yet) |
 | regions | `region.api.Regions` reads; `GET /api/v1/geo/regions` | province / market / zone stage changes with co-sign (S-84) |

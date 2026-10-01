@@ -5658,7 +5658,31 @@ server environment variable. Runbook: [runbooks/courier-app.md](runbooks/courier
   lands), an open trust flag, or a check that is due (to do, expired, rejected), under review (licences, registries,
   permits) or expiring within 30 days. Dispute rate = disputes opened ÷ orders + bookings, 90 days. The headline counts
   active businesses and the active ones at risk.
-- **Not done (design 03 shows them):** Coaching plan, Instant book off, Hide from search (no such states exist yet),
-  "Bulk message", "Message" and "Impersonate (read-only)" (no staff-to-business messaging or impersonation exists).
+- **Hide from search (design 03 "Existing customers can still book").** V230 adds `merchants.search_hidden_at` and
+  `search_hidden_cause` (`staff` | `rating_floor`). `POST …/{businessId}/search {hidden, reason}` (sellers ·
+  `suspend`) hides or shows a business; 409 `already_hidden` / `not_hidden`. The search worker indexes a hidden active
+  business as `hidden`, so its documents leave search exactly as a paused one's do (tested in `SearchIndexerTest`);
+  its page, listings and checkout stay open, so existing customers can still book. Event
+  `merchant.search_visibility_changed` (`actionId`, `hidden`, `cause`), trail `search_hidden` / `search_restored`,
+  audit `merchant.search_hidden` / `merchant.search_restored`, owners emailed. The directory's Flags column and the
+  detail header say "Hidden from search" (with "· rating floor" when the rules hid it).
+- **The trust rules' consequences are enforced here (coordinator: S-93 left them as configuration).** A nightly job
+  (`TrustEnforcementScheduler`, `northline.console.trust-enforcement-cron`, default `0 23 5 * * *`, off under the
+  `test` profile) runs `console.application.TrustEnforcementService`: trust decides who
+  (`trust.api.TrustConsequences`), merchants applies (`merchants.api.SellerSanctions`), so neither module depends on
+  the other.
+  - **Rating floor** (`trust.rules` `rating_floor`, default 4.2 over 90 days): a business with at least 5 reviews in
+    the window whose average is below the floor is hidden from search (cause `rating_floor`); once its average is
+    back at the floor, or it no longer has 5 reviews in the window, it is shown again automatically. A business staff
+    hid is never shown again by the job, and the job never hides one twice.
+  - **Off-platform payment, warning then suspension:** an open `off_platform_payment` flag raised after another of
+    the business's off-platform flags was actioned "warn" within 180 days suspends it (`active|paused → suspended`).
+  - Each one is an oversight action by actor `system` (role `system`), audited, emailed to the owners with the
+    reason; the timeline reads "… by the trust rules".
+  - The reasons the job writes are English only (they are stored once, like a staff member's reason).
+- **Not done (design 03 shows them):** Coaching plan, Instant book off (no instant-book state exists to switch, so
+  "instant book off after no-shows" is not enforced either), the completion-photo delay and customer no-show
+  consequences (no such states), "Bulk message", "Message" and "Impersonate (read-only)" (no staff-to-business
+  messaging or impersonation exists).
   The design's "Coaching" status has no equivalent. The directory returns at most 2,000 businesses (`truncated`;
   search by name finds the others).
