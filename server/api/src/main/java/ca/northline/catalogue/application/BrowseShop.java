@@ -18,7 +18,8 @@ public interface BrowseShop {
 
     /**
      * A catalogue product with the market's offers (S-50). Empty when the product isn't a shop product or no shop
-     * anywhere sells it (an unvetted record is never public); a product sold only elsewhere has no offers.
+     * anywhere sells it (an unvetted record is never public); a product sold only elsewhere has no offers. An offer id
+     * (a search result, S-48) names its product; the page carries the product's own id.
      */
     Optional<ShopViews.ProductPage> product(String productId, String market, Locale locale);
 }

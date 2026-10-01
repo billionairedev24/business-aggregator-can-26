@@ -1,4 +1,4 @@
-import { createFileRoute, notFound } from '@tanstack/react-router';
+import { createFileRoute, notFound, redirect } from '@tanstack/react-router';
 import { isNotFound as isApiNotFound } from '@northline/client';
 import shopCss from '../../features/shop/shop.css?url';
 import productCss from '../../features/product/product.css?url';
@@ -9,14 +9,20 @@ import { ProductDetail, ProductSkeleton } from '../../features/product/ProductDe
 /** Product detail (S-50): offers, variants, stock, delivery cut-off. Server-rendered for SEO; 404 when unpublished. */
 export const Route = createFileRoute('/products/$productId')({
   validateSearch: ProductSearch,
-  loaderDeps: ({ search }) => ({ market: search.market }),
+  loaderDeps: ({ search }) => ({ market: search.market, offer: search.offer }),
   loader: async ({ context, deps, params }) => {
+    let page;
     try {
-      return await context.queryClient.ensureQueryData(productQuery(params.productId, deps.market, context.locale));
+      page = await context.queryClient.ensureQueryData(productQuery(params.productId, deps.market, context.locale));
     } catch (e) {
       if (isApiNotFound(e)) throw notFound();
       throw e;
     }
+    // S-48: a search result is an offer; the api names its product, and the page lives at the product's own URL.
+    if (page.productId !== params.productId) {
+      throw redirect({ to: '/products/$productId', params: { productId: page.productId }, search: { market: deps.market, offer: deps.offer ?? params.productId }, statusCode: 301 });
+    }
+    return page;
   },
   head: ({ match, loaderData }) => {
     const t = productText(match.context.locale);

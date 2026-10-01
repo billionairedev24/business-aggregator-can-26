@@ -103,7 +103,7 @@ A feature folder per story area, named after the design: `home`, `location`, `se
 |---|---|---|---|
 | `/` | home | S-46 (**built**) | no search in the header on this page; its tiles link to `/shop/<department>` (the leaf slug of the category id, e.g. `bakery`), `/services/<category>` (e.g. `mobile-mechanic`) and `/food?cuisine=<code>` — S-49 / S-53 / S-57 take those parameters |
 | `/location?next=` | location | S-47 (**built**) | saves with `useDeliveryLocation().save()`, then goes to `next` (local path) or home |
-| `/search?q=&scope=` | search | S-48 | header / hero search lands here; `scope` all \| services \| shop \| food |
+| `/search?q=&scope=` | search | S-48 (**built**) | header / hero search lands here; `scope` all \| services \| shop \| food; filters and sort are URL parameters with the API's names (`category`, `sort`, `tier`, `maxPrice`, `delivery`, `openNow`, `instantBook`, `dietary`, `allergenFree`, `radiusKm`); first page SSR without a place, then the browser adds province + coordinates; predictions as you type in the header and hero (`features/search/SiteSearch`) |
 | `/shop` | shop | S-49 | landing page, not results |
 | `/shop/$department` | category | S-49 | SSR + SEO |
 | `/products/$productId` | product | S-50 | SSR + SEO |
@@ -295,6 +295,15 @@ Both endpoints are `GET`, public, JSON, camelCase; money in cents; errors as eve
   `text` to set in bold (empty when the match came from another word form).
 - The design's "Your recent" searches are the client's (not stored by the api); "fr → sourdough" synonym rows are not
   returned (synonyms apply to `/search`).
+
+#### Consumer side (S-48)
+
+- Results link: product → `/products/<offer id>?offer=<offer id>` (the product endpoint accepts an offer id and the
+  route redirects to the product's own URL), service → `/providers/<slug>`, dish → `/food/<slug>`, business → its
+  provider / kitchen page (a shop: a Shop-scope search by its name until shops have pages).
+- Recent searches: `localStorage['nl.recentSearches']` (`features/search/recent.ts`), this browser only.
+- The SSR server sends the visitor's address chain as `X-Forwarded-For` (`x-nl-forwarded-for` from
+  `server/node-server.mjs`; `forwardedFor()` in `lib/request.ts`).
 
 ## Public API: what exists, what's missing
 

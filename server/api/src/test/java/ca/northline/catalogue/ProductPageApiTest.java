@@ -138,6 +138,20 @@ class ProductPageApiTest extends IntegrationTest {
     }
 
     @Test
+    void anOfferIdFromSearchNamesItsProduct() throws Exception {
+        var tag = Ids.next().substring(18);
+        var shop = shopFixtures.shop(MARKET, "Offers " + tag, "master");
+        var loaf = shopFixtures.listing(shop, BAKERY, "Search loaf " + tag, 650, 5);
+        mvc.perform(get("/api/v1/public/shop/products/{id}", loaf.offerId()).param("market", MARKET))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.productId").value(loaf.productId()))
+                .andExpect(jsonPath("$.name").value("Search loaf " + tag))
+                .andExpect(jsonPath("$.offers[0].offerId").value(loaf.offerId()));
+        var draft = shopFixtures.listing(shop, BAKERY, "Draft loaf " + tag, 500, 5, "draft", "hidden", "same_day", 0);
+        mvc.perform(get("/api/v1/public/shop/products/{id}", draft.offerId())).andExpect(status().isNotFound());
+    }
+
+    @Test
     void unpublishedAndUnknownProductsAre404() throws Exception {
         var tag = Ids.next().substring(18);
         var shop = shopFixtures.shop(MARKET, "Drafts " + tag, "master");

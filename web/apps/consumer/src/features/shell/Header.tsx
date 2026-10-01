@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { useNavigate, useRouterState } from '@tanstack/react-router';
-import { LocationPill, SearchBar, SiteHeader, SiteLink, Skeleton, useLocale } from '@northline/ui';
+import { useRouterState } from '@tanstack/react-router';
+import { LocationPill, SiteHeader, SiteLink, Skeleton, useLocale } from '@northline/ui';
 import { useCartCount } from '../cart/api';
 import { useDeliveryLocation } from '../location/useDeliveryLocation';
+import { SiteSearch } from '../search/SiteSearch';
 import { signInHref, useSignOut, useViewer } from '../session/api';
 import { AccountArea } from './AccountArea';
 import { useShellT } from './messages';
@@ -15,7 +15,6 @@ import { SCREENS, screenFor } from './screens';
 export function Header() {
   const t = useShellT();
   const { locale, setLocale } = useLocale();
-  const navigate = useNavigate();
   const pathname = useRouterState({ select: s => s.location.pathname });
   const href = useRouterState({ select: s => s.location.href });
   const screen = screenFor(pathname);
@@ -23,7 +22,8 @@ export function Header() {
   const cartCount = useCartCount(!loading);
   const { location } = useDeliveryLocation();
   const signOut = useSignOut();
-  const [query, setQuery] = useState('');
+  // on the results page the field shows what was searched
+  const searched = useRouterState({ select: st => (st.location.pathname === '/search' ? (st.location.search as { q?: unknown }).q : undefined) });
   const section = screen ? SCREENS[screen].section : undefined;
   const links = (['services', 'shop', 'food'] as const).map(key => ({ key, label: t(key), href: `/${key}`, current: section === key }));
 
@@ -41,8 +41,7 @@ export function Header() {
     <SiteHeader
       location={<LocationPill status={location.status} label={location.label} href="/location" />}
       search={screen === 'home' ? undefined : (
-        <SearchBar variant="header" value={query} onChange={setQuery} placeholder={t('search')}
-          onSubmit={q => { if (q) void navigate({ to: '/search', search: { q } }); }} />
+        <SiteSearch variant="header" placeholder={t('search')} initial={typeof searched === 'string' ? searched : ''} />
       )}
       links={links}
       locale={locale}
