@@ -14,13 +14,18 @@ import org.springframework.stereotype.Component;
 
 /**
  * Local fake of the media store: files under {@code northline.media.local-dir} (default: a {@code northline-media}
- * folder in the temp directory). Profiles {@code local} and {@code test} only.
+ * folder in the temp directory). Profiles {@code local} and {@code test} only. Dev-seed listings (V104, V113, V184)
+ * reference {@code seed/<name>.jpg}; until something is uploaded under that key, the bundled sample picture from
+ * {@code seed-media/catalogue} is served (S-77, as {@code LocalKitchenPhotoStore} does for menu items).
  */
 @Slf4j
 @Component
 @Profile({"local", "test"})
 @UsesLocalStorage
 class LocalMediaStorage implements MediaStorage {
+
+    private static final String SEED_PREFIX = "seed/";
+    private static final String SEED_MEDIA = "/seed-media/catalogue/";
 
     private final Path root;
 
@@ -44,9 +49,19 @@ class LocalMediaStorage implements MediaStorage {
     public Optional<byte[]> get(String key) {
         var file = resolve(key);
         try {
-            return Files.isRegularFile(file) ? Optional.of(Files.readAllBytes(file)) : Optional.empty();
+            return Files.isRegularFile(file) ? Optional.of(Files.readAllBytes(file)) : seedSample(key);
         } catch (IOException ex) {
             throw new UncheckedIOException(ex);
+        }
+    }
+
+    private static Optional<byte[]> seedSample(String key) throws IOException {
+        var name = key.startsWith(SEED_PREFIX) ? key.substring(SEED_PREFIX.length()) : "";
+        if (!name.matches("[a-z0-9-]+\\.jpg")) {
+            return Optional.empty();
+        }
+        try (var in = LocalMediaStorage.class.getResourceAsStream(SEED_MEDIA + name)) {
+            return in == null ? Optional.empty() : Optional.of(in.readAllBytes());
         }
     }
 
