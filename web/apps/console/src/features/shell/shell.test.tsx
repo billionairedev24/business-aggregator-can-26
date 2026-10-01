@@ -1,6 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
+import { overview } from '../../test/fixtures';
 import { renderConsole, staffApi } from '../../test/render';
 
 const sidebar = (name = 'Main navigation') => screen.getByRole('navigation', { name });
@@ -37,11 +38,11 @@ describe('console shell (S-90, design 03)', () => {
   });
 
   it('shows the denied banner (and the overview) for a screen the role can’t open', async () => {
-    staffApi(['support']);
+    staffApi(['support'], c => (c.url.includes('/api/v1/console/overview') ? { body: overview() } : undefined));
     renderConsole('/finance');
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toBe("Not available in this role. Your role (Support) can't open that screen. Ask an admin for access or switch role view if you hold more than one.");
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Overview');
+    expect((await screen.findByRole('heading', { level: 1 })).textContent).toBe('$212k GMV this week, 1,204 sellers, 7 verifications and 3 disputes waiting.');
     expect(screen.queryByRole('heading', { name: 'Finance' })).toBeNull();
   });
 
