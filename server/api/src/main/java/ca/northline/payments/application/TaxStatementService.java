@@ -57,9 +57,7 @@ class TaxStatementService implements TaxStatements {
         var province = place.province();
         if (province != null) {
             var profile = place.profile();
-            var in = profile != null
-                    ? profile.nameIn(l.locale)
-                    : (l.fr ? "en " : "in ") + place.provinceName(l.locale);
+            var in = profile != null ? profile.nameIn(l.locale) : (l.fr ? "en " : "in ") + place.provinceName(l.locale);
             party.add((l.fr ? "Taux de taxe de vente " : "Sales-tax rate ")
                     + in
                     + (l.fr ? " : " : ": ")
@@ -70,18 +68,24 @@ class TaxStatementService implements TaxStatements {
                 l.fr ? "Sommaire de la TPS/TVH perçue " + year : year + " GST/HST collected summary",
                 party,
                 l.fr
-                        ? List.of("Mois", "Ventes taxables", "TPS/TVH perçue", "TPS/TVH remboursée", "Remise par Northline")
-                        : List.of("Month", "Taxable sales", "GST/HST collected", "GST/HST refunded", "Remitted by Northline"),
+                        ? List.of(
+                                "Mois",
+                                "Ventes taxables",
+                                "TPS/TVH perçue",
+                                "TPS/TVH remboursée",
+                                "Remise par Northline")
+                        : List.of(
+                                "Month",
+                                "Taxable sales",
+                                "GST/HST collected",
+                                "GST/HST refunded",
+                                "Remitted by Northline"),
                 rows,
+                List.of("Total " + year, l.money(sold), l.money(tax), l.money(refunded), l.money(tax - refunded)),
                 List.of(
-                        "Total " + year,
-                        l.money(sold),
-                        l.money(tax),
-                        l.money(refunded),
-                        l.money(tax - refunded)),
-                List.of(l.fr
-                        ? "Northline perçoit et remet la TPS/TVH sur vos ventes à titre de facilitateur de marché; conservez ce sommaire avec vos dossiers."
-                        : "Northline collects and remits GST/HST on your sales as the marketplace facilitator; keep this summary with your records."),
+                        l.fr
+                                ? "Northline perçoit et remet la TPS/TVH sur vos ventes à titre de facilitateur de marché; conservez ce sommaire avec vos dossiers."
+                                : "Northline collects and remits GST/HST on your sales as the marketplace facilitator; keep this summary with your records."),
                 footer(merchantId, l)));
     }
 
@@ -112,9 +116,10 @@ class TaxStatementService implements TaxStatements {
                         : List.of("Month", "Gross sales", "Northline fees", "Net earnings", "Refunds", "Paid out"),
                 rows,
                 List.of("Total " + year, l.money(g), l.money(f), l.money(g - f), l.money(r), l.money(p)),
-                List.of(l.fr
-                        ? "Montants en dollars canadiens, par mois de la vente, dans le fuseau horaire de votre entreprise."
-                        : "Amounts in Canadian dollars, by month of sale, in your business's time zone."),
+                List.of(
+                        l.fr
+                                ? "Montants en dollars canadiens, par mois de la vente, dans le fuseau horaire de votre entreprise."
+                                : "Amounts in Canadian dollars, by month of sale, in your business's time zone."),
                 footer(merchantId, l)));
     }
 
@@ -143,7 +148,9 @@ class TaxStatementService implements TaxStatements {
 
     private String footer(String merchantId, Labels l) {
         var today = LocalDate.ofInstant(clock.instant(), time.of(merchantId));
-        var date = DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG).withLocale(l.locale).format(today);
+        var date = DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)
+                .withLocale(l.locale)
+                .format(today);
         return (l.fr ? "Produit le " : "Generated ") + date + " · Northline";
     }
 

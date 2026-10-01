@@ -33,7 +33,8 @@ class PdfBoxStatementRenderer implements StatementRenderer {
 
     @Override
     public Bytes pdf(StatementDocument d) {
-        try (var doc = new PDDocument(); var out = new ByteArrayOutputStream()) {
+        try (var doc = new PDDocument();
+                var out = new ByteArrayOutputStream()) {
             var regular = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
             var bold = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD);
             var info = new PDDocumentInformation();
@@ -75,7 +76,8 @@ class PdfBoxStatementRenderer implements StatementRenderer {
             cs.close();
 
             for (int i = 0; i < pages.size(); i++) {
-                try (var footer = new PDPageContentStream(doc, pages.get(i), PDPageContentStream.AppendMode.APPEND, true)) {
+                try (var footer =
+                        new PDPageContentStream(doc, pages.get(i), PDPageContentStream.AppendMode.APPEND, true)) {
                     var label = d.footer() + "  ·  " + (i + 1) + " / " + pages.size();
                     text(footer, regular, 8, MARGIN, MARGIN - 24, label);
                 }

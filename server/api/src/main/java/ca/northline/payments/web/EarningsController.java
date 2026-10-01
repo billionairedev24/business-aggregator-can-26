@@ -4,9 +4,9 @@ import static ca.northline.shared.security.MerchantPermission.FINANCE_READ;
 
 import ca.northline.payments.application.BusinessTime;
 import ca.northline.payments.application.TaxStatements;
-import ca.northline.shared.Bytes;
 import ca.northline.payments.application.ViewEarnings;
 import ca.northline.payments.application.ViewSalesReport;
+import ca.northline.shared.Bytes;
 import ca.northline.shared.ListResponse;
 import ca.northline.shared.security.RequiresMerchant;
 import java.nio.charset.StandardCharsets;
@@ -105,9 +105,7 @@ class EarningsController {
             Locale requestLocale) {
         var y = year == null ? today(merchantId).getYear() : year;
         var locale = locale(lang, requestLocale);
-        return pdf(
-                fileName("gst-summary", y, locale),
-                statements.gstSummaryPdf(merchantId, y, locale));
+        return pdf(fileName("gst-summary", y, locale), statements.gstSummaryPdf(merchantId, y, locale));
     }
 
     @GetMapping("/reports/annual-statement.pdf")
@@ -119,14 +117,13 @@ class EarningsController {
             Locale requestLocale) {
         var y = year == null ? today(merchantId).getYear() - 1 : year;
         var locale = locale(lang, requestLocale);
-        return pdf(
-                fileName("annual-statement", y, locale),
-                statements.annualStatementPdf(merchantId, y, locale));
+        return pdf(fileName("annual-statement", y, locale), statements.annualStatementPdf(merchantId, y, locale));
     }
 
     /** {@code lang=fr|en} wins; otherwise the request's language; French only when asked for. */
     private static Locale locale(@Nullable String lang, Locale requestLocale) {
-        var language = lang != null && !lang.isBlank() ? lang.strip().toLowerCase(Locale.ROOT) : requestLocale.getLanguage();
+        var language =
+                lang != null && !lang.isBlank() ? lang.strip().toLowerCase(Locale.ROOT) : requestLocale.getLanguage();
         return language.startsWith("fr") ? Locale.CANADA_FRENCH : Locale.CANADA;
     }
 

@@ -2,6 +2,7 @@ package ca.northline.payments;
 
 import static ca.northline.payments.PaymentsFixture.hoursAgo;
 import static ca.northline.payments.PaymentsFixture.inHours;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.startsWith;
@@ -10,8 +11,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 import ca.northline.shared.security.MerchantRole;
 import ca.northline.support.IntegrationTest;
@@ -179,7 +178,8 @@ class EarningsApiTest extends IntegrationTest {
                 .andReturn()
                 .getResponse()
                 .getContentAsByteArray();
-        assertThat(new String(en, 0, 5, java.nio.charset.StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
+        assertThat(new String(en, 0, 5, java.nio.charset.StandardCharsets.US_ASCII))
+                .isEqualTo("%PDF-");
         assertThat(pdfText(en))
                 .contains("2025 GST/HST collected summary")
                 .contains("Prairie Wrench Mobile Mechanics Ltd.")
@@ -196,7 +196,8 @@ class EarningsApiTest extends IntegrationTest {
                         .header("Accept-Language", "fr-CA")
                         .with(TestJwt.member(shop.ownerId())))
                 .andExpect(status().isOk())
-                .andExpect(header().string("Content-Disposition", containsString("northline-annual-statement-2025-fr.pdf")))
+                .andExpect(header().string(
+                                "Content-Disposition", containsString("northline-annual-statement-2025-fr.pdf")))
                 .andReturn()
                 .getResponse()
                 .getContentAsByteArray();
@@ -214,7 +215,9 @@ class EarningsApiTest extends IntegrationTest {
                 .andReturn()
                 .getResponse()
                 .getContentAsByteArray();
-        assertThat(pdfText(gstFr)).contains("Taux de taxe de vente en Nouvelle-Écosse").contains("No de TPS/TVH");
+        assertThat(pdfText(gstFr))
+                .contains("Taux de taxe de vente en Nouvelle-Écosse")
+                .contains("No de TPS/TVH");
 
         // finance only: a technician can't download it
         mvc.perform(get("/api/v1/merchants/{id}/reports/gst-summary.pdf", shop.merchantId())
