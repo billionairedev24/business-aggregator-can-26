@@ -3996,3 +3996,52 @@ Stacked on S-132 (#87) → S-131 (#85) → S-130 (#83) → S-129 (#82).
 - **Not done / never exercised:** no live model run (precision and recall are measured only against the simulated
   model); no console UI; the scheduler's cron and interval were not run in a deployed environment (tests call the use
   cases directly).
+
+## 2026-10-01 — S-139 Public 'docs' OAuth client so Swagger UI / Scalar 'Try it' can sign in
+
+Runbook: [api-docs.md § Try it with your own sign-in](runbooks/api-docs.md). It follows the S-122 catalogue rules
+(a public client, PKCE, no secret, https outside local/dev loopback) and S-29's rule that a public client refreshes
+only with DPoP.
+
+- **Client `docs`** ("Northline API docs (Swagger UI, Scalar)"):
+  - public, authorization code + PKCE S256, no consent screen;
+  - scopes `openid profile merchant` (the scopes the `oauth2` scheme of the specs lists);
+  - grant type `authorization_code` only, with 10-minute access tokens and no refresh token, since the viewers
+    don't do DPoP;
+  - redirect URIs `${API_PUBLIC_URL}/swagger-ui/oauth2-redirect.html` and `${API_PUBLIC_URL}/docs/scalar`.
+
+  The token is the person's own: the api applies their memberships, roles and `acr`, as for any client, so Studio
+  calls still need a second factor. The client is not in `mfa-required-clients`, because consumer endpoints are
+  documented too. People sign in on the Studio's sign-in page (`LoginPages` default), or not at all with an existing
+  session.
+- **Never in prod:** the client lives in a document of auth's `application.yml` activated on
+  `local | test | dev | staging`. Profile documents, rather than a new `ClientSpec` key, keep the catalogue unchanged.
+  `DocsClientTest` resolves the configuration per profile and asserts that dev and staging have the client and its
+  CORS origin and that prod has neither. Prod also has no viewer (S-125).
+- **CORS on `/oauth2/token` and `/oauth2/revoke`** (new `northline.auth.token-endpoint-origins`, empty by default,
+  `${API_PUBLIC_URL}` in the same profile document):
+  - Swagger UI and Scalar exchange the code with `fetch` from the api host, and Swagger UI's `X-Requested-With`
+    header needs a preflight.
+  - The CORS is POST only, without credentials, for that origin only. The viewer pages' CSP already allowed
+    `connect-src <issuer>` (S-125).
+  - The authorization-server filter chain matches only `POST /oauth2/token`, so the preflight `OPTIONS` lands in the
+    web chain. Both chains therefore register the same token-endpoint CORS (`registerTokenEndpointCors`).
+  - The authorization endpoint needs no CORS, because it is a top-level navigation in a popup.
+- **Viewers** (the api's `application.yml`): Swagger UI has `oauth.client-id: docs`, its scopes and a fixed
+  `oauth2-redirect-url` from `API_PUBLIC_URL` (never the request's host behind the ingress). Scalar has
+  `scalar.authentication` with the preferred scheme `oauth2`, `clientId: docs`, PKCE SHA-256 and the redirect to its
+  own page. springdoc copies these into Scalar's configuration. The auth and BFF viewers are unchanged: their
+  endpoints use cookies, not bearer tokens.
+- **No new variable:** auth now also reads `API_PUBLIC_URL` (already derived by the chart for every app and already
+  used by S-127). The README and the dev/staging tables say so.
+- **Tests:**
+  - `DocsClientTest` (auth):
+    - with a signed-in session, the authorization request for `docs` redirects straight to Swagger UI's
+      `oauth2-redirect.html` with a code;
+    - the preflight and the token exchange from `http://localhost:8080` get `Access-Control-Allow-Origin` without
+      credentials, and the token is addressed to `northline-api`, for `client_id=docs`, with no refresh token;
+    - another origin gets no CORS, and another redirect URI is refused;
+    - the client is configured per profile as described above.
+  - The api's `OpenApiSpecsTest` checks Swagger UI's `oauth2RedirectUrl` and Scalar's client id, redirect and PKCE.
+- **Not exercised:** a click-through in a real browser against a deployed dev environment (popups, the Studio
+  sign-in hand-off back to `/oauth2/authorize`). The flow was checked with MockMvc only.

@@ -87,6 +87,30 @@ documented somewhere.
   Swagger UI's and Scalar's own initialisers need `'unsafe-inline'`. `connect-src` lets their "Authorize" / "Try it"
   exchange a code at northline-auth. Every other path keeps `default-src 'none'`; the auth and BFF tests check both.
 
+**Try it with your own sign-in (S-139, local, dev and staging).** "Authorize" in the api's Swagger UI and Scalar
+signs in at northline-auth with the public client **`docs`** (authorization code + PKCE S256, no secret). You sign in
+on the Studio's sign-in page, or not at all if you are already signed in there. The token is yours: the api applies
+your memberships, roles and `acr` as for any other client (Studio calls need a second factor). Then "Try it" sends
+`Authorization: Bearer …` to the api.
+
+- **Client:** `docs` in `server/auth/src/main/resources/application.yml`, in a document for the profiles
+  `local | test | dev | staging`.
+  - Scopes: `openid profile merchant`.
+  - Grant types: `authorization_code` only. Access tokens last 10 minutes; there is no refresh token, because a
+    public client refreshes only with DPoP (S-29). When the token expires, authorize again.
+  - Redirect URIs: `${API_PUBLIC_URL}/swagger-ui/oauth2-redirect.html` and `${API_PUBLIC_URL}/docs/scalar`.
+- **CORS:** the viewers exchange the code from their page, so northline-auth answers CORS on `/oauth2/token` and
+  `/oauth2/revoke`, without credentials, for `northline.auth.token-endpoint-origins` only. That is
+  `${API_PUBLIC_URL}` in the same profile document; the list is empty in prod.
+- **Viewers:** `springdoc.swagger-ui.oauth.client-id` and `oauth2-redirect-url`, and
+  `scalar.authentication.oauth2.oauth2.flows.authorization-code` in the api's `application.yml`.
+- **Never in prod:** prod has neither the client nor the CORS origin (`DocsClientTest`), and it has no viewer anyway.
+  A prod database keeps no `docs` row, because nothing ever registered one there.
+- **The auth and BFF viewers** don't use it: their endpoints authenticate with cookies (`authSession`, `bffSession`),
+  not bearer tokens.
+- **Nothing to set:** `API_PUBLIC_URL` is already derived by the chart for every app. With the local defaults, it is
+  `http://localhost:8080`.
+
 **Production:** every `application-prod.yml` sets `springdoc.api-docs.enabled=false`,
 `springdoc.swagger-ui.enabled=false`, `scalar.enabled=false` and `northline.docs.enabled=false`, so the documents,
 viewers, pages and their filter chain don't exist. Each app's test asserts it.
