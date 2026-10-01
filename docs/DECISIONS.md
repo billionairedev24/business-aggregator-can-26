@@ -5667,7 +5667,7 @@ server environment variable. Runbook: [runbooks/courier-app.md](runbooks/courier
   audit `merchant.search_hidden` / `merchant.search_restored`, owners emailed. The directory's Flags column and the
   detail header say "Hidden from search" (with "· rating floor" when the rules hid it).
 - **The trust rules' consequences are enforced here (coordinator: S-93 left them as configuration).** A nightly job
-  (`TrustEnforcementScheduler`, `northline.console.trust-enforcement-cron`, default `0 23 5 * * *`, off under the
+  (`TrustEnforcementScheduler`, `CONSOLE_TRUST_ENFORCEMENT_CRON`, default `0 23 5 * * *` platform zone, off under the
   `test` profile) runs `console.application.TrustEnforcementService`: trust decides who
   (`trust.api.TrustConsequences`), merchants applies (`merchants.api.SellerSanctions`), so neither module depends on
   the other.
