@@ -79,6 +79,7 @@ class OnboardingService
     private final Clock clock;
     private final MerchantPlaces places;
     private final Regions regions;
+    private final CategoryLimitLookup categoryLimits;
 
     /** {@code {province}} = the province's name (region model). */
     static final String PROVINCE_CLOSED = "Northline isn't open in {province} yet.";
@@ -337,8 +338,8 @@ class OnboardingService
         } else if (out.isEmpty()) {
             problems.add(new Violation(
                     CATEGORIES, "required", type == MerchantType.SELLER ? PICK_DEPARTMENT : PICK_SERVICE));
-        } else if (out.size() > type.categoryLimit()) {
-            problems.add(new Violation(CATEGORIES, "range", MAXIMUM.formatted(type.categoryLimit())));
+        } else if (out.size() > categoryLimits.limit(type)) {
+            problems.add(new Violation(CATEGORIES, "range", MAXIMUM.formatted(categoryLimits.limit(type))));
         }
         return out;
     }

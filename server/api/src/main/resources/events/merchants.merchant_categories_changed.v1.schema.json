@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:merchants.merchant_categories_changed:1",
+  "type": "object",
+  "required": ["eventId", "occurredAt", "aggregateId", "actorId", "categoryId"],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": { "type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$" },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "aggregateId": { "type": "string", "description": "merchants.merchants.id" },
+    "actorId": { "type": "string", "description": "identity.users.id of the staff member" },
+    "categoryId": { "type": "string", "description": "catalogue.categories.id the business now holds" }
+  }
+}

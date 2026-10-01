@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { ScreenPending } from '../../features/shell/ScreenPending';
+import { TaxonomyScreen } from '../../features/taxonomy/TaxonomyScreen';
 
-export const Route = createFileRoute('/_console/catalogue')({ component: () => <ScreenPending screen="taxonomy" /> });
+/** Catalogue taxonomy (S-94): categories, regulators by province, category limits, businesses' suggestions. */
+export const Route = createFileRoute('/_console/catalogue')({ component: TaxonomyScreen });

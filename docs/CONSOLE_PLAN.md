@@ -113,7 +113,7 @@ member.
 | `/verification?province=&market=&application=` | `verify` | `verify` | admin, trust_safety | S-79 | built |
 | `/vetting?province=&market=` | `vetting` | `vetting` | admin, trust_safety | S-92 | built |
 | `/trust?province=&market=` | `trust` | `trust` | admin, trust_safety | S-93 | built |
-| `/catalogue` | `taxonomy` | `taxonomy` | admin | S-94 | stand-in |
+| `/catalogue` | `taxonomy` | `taxonomy` | admin | S-94 | built |
 | `/support?province=&market=&filter=&ticket=` | `support` | `support` | admin, trust_safety, dispatch, support, support_lead | S-83 | built |
 | `/provinces?province=` | `regions` | `regions` | admin | S-84 | built |
 | `/finance` | `finance` | `finance` | admin, finance | S-85 | built |
@@ -358,6 +358,29 @@ The screen lists support's pending refund requests under "Refund requests from s
 
 Rules: DECISIONS "S-85"; operations: runbooks/stripe.md § 10.
 
+### Catalogue taxonomy (S-94)
+
+```
+GET  /api/v1/console/taxonomy                                          (screen taxonomy)
+→ { asOf, serviceCategories, shopDepartments, categories: [Row], regulators: [{code, name, province, website, categories}],
+    limits: [{merchantType, max, businessesAbove, updatedAt, updatedBy}], suggestions: [{id, name, businesses: [{id, name, type, province, status}]}] }
+Row: { id, parentId, root, group, nameEn, nameFr, bookingType, regulatedRegistry, requiresVsCheck,
+       regulators: [{province, regulator|null}], sellers, liveIn: [province], liveListings, medianPriceCents, priceMode: fixed|hourly|quote }
+POST /api/v1/console/taxonomy/categories {root?, parentId?, nameEn, nameFr?, bookingType?, regulatedRegistry?, requiresVsCheck}
+                                                                       (taxonomy · vet) 201 Row · 409 category_exists
+PUT  /api/v1/console/taxonomy/categories/{id} {nameEn, nameFr?, bookingType?, regulatedRegistry?, requiresVsCheck}   Row
+PUT  /api/v1/console/taxonomy/categories/{id}/regulators/{province} {regulator: code|none|null}                      Row
+POST /api/v1/console/taxonomy/regulators {code, name, province, website?}            201 · 409 regulator_exists
+PUT  /api/v1/console/taxonomy/regulators/{code} {name, province, website?}           409 regulator_in_use
+PUT  /api/v1/console/taxonomy/limits/{provider|seller|both|kitchen} {max}            Limit
+POST /api/v1/console/taxonomy/suggestions/{suggestionId}/approve {CategoryInput}     {category: Row, moved, alreadyHeld}
+POST /api/v1/console/taxonomy/suggestions/{suggestionId}/merge {categoryId}          {category: Row, moved, alreadyHeld}
+```
+
+Audit `catalogue.category_created | category_updated | category_regulated | regulator_created | regulator_updated |
+suggestion_approved | suggestion_merged`, `merchants.category_limit_changed`, and per moved business
+`merchant.category_assigned`; event `merchant.categories_changed` (search re-reads the business). DECISIONS "S-94".
+
 ## API: what exists, what's missing
 
 | screen | exists | missing (the screen's story adds it) |
@@ -374,6 +397,12 @@ Rules: DECISIONS "S-85"; operations: runbooks/stripe.md § 10.
 | support | `GET /api/v1/console/support/tickets[/{id}]`, `POST …/tickets/{id}/reply\|take\|escalate\|refund-requests`, `GET …/refund-requests`, `POST …/refund-requests/{id}/decision`, `GET/POST/PUT/DELETE …/macros` (S-83) | CSAT collection (no survey sends it yet); the finance screen lists and decides refund requests (S-85) |
 | regions | S-84: stages with a confirmation and the go-live checklist, markets, zones (GeoJSON), courier model | the co-sign of a second admin, dry-run as customer, categories per province, drawing zones on a map |
 | finance | S-21 tax reconciliation; S-85: escrow, payouts in flight, revenue mix, take by tier, Stripe ↔ ledger reconciliation and exports, support's refund requests | Plus subscriptions and rewards (not recorded) |
+
+| trust | `GET /api/v1/console/trust/flags`, `POST …/{id}/decision` (S-133); `GET …/flags/queue`, `POST …/flags/{id}/action`, `GET/PUT …/trust/rules[/{key}]`, `GET …/rules/rating_floor/impact` (S-93) | the consequences' jobs (S-82) |
+| taxonomy | S-94: categories (add, edit), regulators by province, category limits, businesses' suggestions (approve / merge) | synonyms (fr/en) and search boosting rules (search reads neither yet); retiring a category |
+| support | `GET /api/v1/console/support/tickets[/{id}]`, `POST …/tickets/{id}/reply\|take\|escalate\|refund-requests`, `GET …/refund-requests`, `POST …/refund-requests/{id}/decision`, `GET/POST/PUT/DELETE …/macros` (S-83) | the finance screen's list of refund requests (S-85 reads `GET …/support/refund-requests`); CSAT collection (no survey sends it yet) |
+| regions | `region.api.Regions` reads; `GET /api/v1/geo/regions` | province / market / zone stage changes with co-sign (S-84) |
+| finance | `POST /api/v1/console/payments/tax-reconciliations` (S-21) | escrow / payouts / reconciliation / take rate by tier / revenue mix (S-85) |
 | reports | — | funnels, cohorts, top categories, supply gaps (S-95) |
 | api | `developer` module (merchants' keys and webhooks) | platform-wide API clients and rate limits (S-96) |
 | team, profile | `developer.api.AuditTrail` (write); auth `GET /api/auth/security` (sessions, passkeys) | roles and people, audit log views ("My audit trail"), sessions (S-96) |
@@ -384,7 +413,9 @@ Rules: DECISIONS "S-85"; operations: runbooks/stripe.md § 10.
 **V190–V199** (IMPLEMENTATION_PLAN.md, the next free range above V183); the console queues (S-79, S-80, S-83, S-92, S-93) **V210–V219**; the second batch (S-81, S-82, S-84, S-85, S-94–S-96) **V230–V239**. S-90: V190 (`identity.platform_roles` console
 roles, `granted_by`; `ix_audit_log_platform`), dev seed V191 (Priya Natarajan, staff with every role). Later console
 stories take the next numbers in the range; a seed stays in `db/seed-dev/`. The review queues (S-79, S-92, S-80, S-93,
-S-83) use **V210–V219** (fulfilment took V200–V209 first; ordering rule).
+S-83) use **V210–V219** (fulfilment took V200–V209 first; ordering rule). The second batch (S-81, S-82, S-84, S-85,
+S-94–S-96) uses **V230–V239**: S-94 V232 (catalogue regulators, category rules, `edited_at`) and V233
+(`merchants.category_limits`, the limit trigger's function reads it).
 
 ## Deploy
 

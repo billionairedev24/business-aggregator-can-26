@@ -5759,3 +5759,61 @@ server environment variable. Runbook: [runbooks/courier-app.md](runbooks/courier
 - **Not done / never run:** Plus subscriptions and provider-funded rewards are not recorded anywhere (shown "—").
   The real balance-transaction call has never run against Stripe (stripe-mock only). Exports are CSV only (the Data
   Table still offers its own CSV/XLSX/PDF of what is on screen).
+
+## 2026-10-01 — S-94 Catalogue taxonomy: categories, regulators by province, category limits, suggested categories
+
+- **Where things live.** Catalogue owns the taxonomy: new port `catalogue.api.TaxonomyAdmin` (validation, ids, the
+  province rules) over `catalogue.categories`, the new `catalogue.regulators` and `catalogue.category_regulators`
+  (**V232**). Merchants owns businesses' categories: `merchants.api.MerchantCategories` (limits, who holds what, the
+  suggestions and moving businesses to a category) over `merchants.merchant_categories` and the new
+  `merchants.category_limits` (**V233**). The console module orchestrates and audits (`ManageTaxonomy`,
+  `/api/v1/console/taxonomy/**`), since catalogue already depends on merchants (no cycle). Screen `taxonomy`, admin
+  only; every change needs `vet` (design 03: the taxonomy table's perm).
+- **Categories.** Add a group (no parent, under a root) or a leaf (under a group of the same root); the id is the
+  parent's id plus a slug of the English name, as the seeder makes them, so ids stay stable and readable; 409
+  `category_exists`. Edit names (en, fr), booking type (services only), the default licence registry and the
+  vulnerable-sector check; id, root and parent never change (listings and businesses point at the id). French goes to
+  `name_i18n.fr` and to `catalogue.category_labels` (the shop reads the label, V111). **The dev seeder now leaves a
+  console-edited row alone** (`catalogue.categories.edited_at`, `seedCategories` upserts only rows without it), so a
+  re-seed never undoes an edit. Retiring or deleting a category is not built (listings, services and businesses
+  reference it).
+- **Regulators by province (design "Yes · AMVIC (AB), BC: none").** Regulators are a list staff keep: code, name,
+  province, website. None are seeded: which body licenses what is per province, and code may not assume it. A
+  category answers to one regulator per province (`category_regulators`), or staff say "not regulated here"; a
+  province without a rule falls back to the category's default licence registry (`regulated_registry`, the column
+  onboarding and vetting already read). A regulator's province can't change while categories point at it (409
+  `regulator_in_use`). **Known gap:** onboarding's licence check and listing vetting still read the default registry
+  only, not the per-province rule; switching them over is a follow-up.
+- **Category limits — V016's trigger still applies.** The limit per business type (provider 10, seller 5, both 10,
+  kitchen 3 to start) is in `merchants.category_limits`; V233 replaces only the function `trg_category_limit` calls, so
+  the constraint trigger on `merchant_categories` keeps enforcing it on every insert and update (tested: with the
+  kitchen limit at 4, a fifth category fails in the database). Onboarding's Business step validates and shows the
+  same number (`CategoryLimitLookup`). Lowering a limit doesn't remove anyone's categories; the screen says how many
+  businesses hold more, and they keep them until they change their categories.
+- **Suggested categories (approve or merge).** Onboarding stores a free-text category as `suggested:<slug>` with the
+  business's wording (S-37). The screen groups pending suggestions by id with the businesses that typed them.
+  *Approve* creates the category (the suggestion's wording unless staff change it) and *merge* picks an existing one;
+  either way every business holding the suggestion moves to the category — `approved`, or `requested` when the
+  category is regulated (a default registry or a regulator in some province), as onboarding does for regulated
+  picks. A business that already holds the category just loses the suggestion. Each moved business gets
+  `merchant.category_assigned` in its audit log and a `merchant.categories_changed` event (schema v1; search re-reads
+  the business).
+- **Screen figures:** "service categories" = service leaves, "shop departments" = shop groups (the design's headline);
+  sellers and "Live in" = active businesses holding the category and their provinces; median price = the live
+  listings' median in the pricing mode most of them use (`/h` for hourly, "quote" when all are quoted; shop goods by
+  their catalogue product's category).
+- **Audit (codes only):** `catalogue.category_created | category_updated` (the names of the fields that changed, not
+  the names themselves) `| category_regulated | regulator_created | regulator_updated | suggestion_approved |
+  suggestion_merged`, `merchants.category_limit_changed` (before/after max), `merchant.category_assigned`.
+- **Not done (design 03 shows them):** "Synonyms (fr/en)" and "Search boosting rules" — the search index reads
+  neither (`search_terms` is unused today), so the buttons would do nothing; they need a search mapping change.
+  Category name edits reach search documents when a business is next re-indexed (the worker's category cache is
+  five minutes; there is no event per category).
+- **Messages (fr in the catalogue):** "Enter the English name, 1 to 80 characters.", "Enter the French name, 1 to 80
+  characters.", "Choose services, shop or food.", "Choose a group of the same root.", "Choose visit, home, event,
+  appointment or consult.", "The licence registry is at most 80 characters.", "Use 2 to 40 lowercase letters, digits,
+  - or _.", "Enter the regulator's name, 1 to 80 characters.", "The website starts with https:// and is at most 200
+  characters.", "Choose a regulator from the list.", "That regulator is in another province.", "That group already
+  has a category with this name.", "A regulator with this code already exists.", "Enter a limit from 1 to 50.",
+  "Choose provider, seller, both or kitchen.". The dialogs and the sections below the table are ours (design 03 shows
+  the table and its buttons only).
