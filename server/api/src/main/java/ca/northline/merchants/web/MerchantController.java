@@ -1,6 +1,5 @@
 package ca.northline.merchants.web;
 
-import java.util.Locale;
 import static ca.northline.shared.security.MerchantPermission.MANAGE;
 import static ca.northline.shared.security.MerchantPermission.VIEW;
 
@@ -12,6 +11,7 @@ import ca.northline.region.api.Regions;
 import ca.northline.shared.security.CurrentMember;
 import ca.northline.shared.security.RequiresMerchant;
 import jakarta.validation.Valid;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;

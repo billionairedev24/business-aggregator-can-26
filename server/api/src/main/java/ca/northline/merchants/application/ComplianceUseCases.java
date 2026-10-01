@@ -41,7 +41,7 @@ public final class ComplianceUseCases {
             int dueCount) {}
 
     /**
-     * @param requiredFor first approved category ("Mobile mechanic") — "Required for Mobile mechanic · Alberta"
+     * @param requiredFor first approved category ("Mobile mechanic") — "Required for Mobile mechanic · {province}"
      */
     public record Business(
             String type,

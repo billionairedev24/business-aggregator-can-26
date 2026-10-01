@@ -74,18 +74,20 @@ nearest fixture within 3 km, else 404 (the pill then falls back to the api's fal
 
 ## Markets and zones
 
-Region-neutral: no market is in code or in a migration.
+Region-neutral: no market is in code. Since S-134 the provinces and markets are the region model
+([regions.md](regions.md)): V131 makes Alberta and its Calgary, Edmonton and Airdrie markets the first configured live
+region (data, not code).
 
-- **Provinces served** = `SEARCH_MARKETS` (`CODE=Zone/Id,…`, shared with search; `SEARCH_DEFAULT_MARKET` picks the
-  pill's fallback market's province). A province listed there shows as live; the others keep the stage of their row
-  (`V117__geo_markets_zones.sql` lists Canada's 13 provinces and territories, all `off`).
+- **Provinces served** = the live province rows plus `REGION_PROVINCES` (`CODE[=Zone/Id],…`; S-44's `SEARCH_MARKETS`
+  as its fallback); `REGION_DEFAULT_PROVINCE` picks the pill's fallback market's province. A province listed there
+  shows as live; the others keep the stage of their row.
 - **Markets and zones** are rows of `region.regions` (`kind = 'market'`, `parent_id` = the province row, `city`,
   `center`, `radius_km`, `stage`, `sort`) and `region.zones` (polygons inside a market, pooled-run pricing). A market
   covers addresses within `radius_km` of its centre (the nearest covering centre wins). Until the console's Regions
   screen exists (S-134), add or change them with SQL; `db/seed-dev/V119__dev_markets.sql` (local only) is a complete
   example, e.g. `update region.regions set stage = 'live' where id = '<market id>';`.
-- Opening a province: add it to `SEARCH_MARKETS` (all api instances), add its markets and zones, then set the markets'
-  stage.
+- Opening a province: [regions.md § 3](regions.md#3-opening-a-province-example-saskatchewan-saskatoon) — its row's
+  stage, its markets and zones; no code and no restart.
 
 ## Operations
 

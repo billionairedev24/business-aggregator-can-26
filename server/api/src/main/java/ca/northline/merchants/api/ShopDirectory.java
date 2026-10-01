@@ -5,8 +5,8 @@ import java.util.List;
 
 /**
  * The businesses a customer can buy goods from (S-49, consumer Shop): active sellers (type {@code seller} or
- * {@code both}) of a market, with what the Shop pages show about them. A market is a city (Calgary, Edmonton, Airdrie —
- * design 06 Location screen); it matches {@code merchants.merchants.city} ignoring case.
+ * {@code both}) of a market, with what the Shop pages show about them. A market is a city (a live market of the region
+ * model — design 06 Location screen); it matches {@code merchants.merchants.city} ignoring case.
  */
 public interface ShopDirectory {
 
@@ -18,7 +18,7 @@ public interface ShopDirectory {
 
     /**
      * @param tier {@code registered} | {@code trusted} | {@code master}
-     * @param city the market the business trades in (display form, e.g. "Calgary")
+     * @param city the market the business trades in (display form)
      */
     record Shop(String merchantId, String displayName, String tier, String city) {}
 }

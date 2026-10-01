@@ -18,6 +18,6 @@ public interface ReconcileTax {
      */
     record Report(String period, int reported, int checked, int mismatched, int rows, int stillPending) {}
 
-    /** @param period {@code 2026-Q3}; null = the current quarter (Edmonton) */
+    /** @param period {@code 2026-Q3}; null = the current quarter (platform zone) */
     Report reconcile(@Nullable String period);
 }
