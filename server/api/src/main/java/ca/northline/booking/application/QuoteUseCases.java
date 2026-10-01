@@ -19,14 +19,14 @@ public final class QuoteUseCases {
     public interface SendQuote {
         record Command(String merchantId, String requestId, String actorId, QuoteContent content) {}
 
-        QuoteView send(Command command);
+        QuoteView send(SendQuote.Command command);
     }
 
     /** "Revise": a new version with the new content; the prior one becomes {@code superseded}. */
     public interface ReviseQuote {
         record Command(String merchantId, String quoteId, String actorId, QuoteContent content) {}
 
-        QuoteView revise(Command command);
+        QuoteView revise(ReviseQuote.Command command);
     }
 
     /** "Decline" a request: it disappears from this merchant's list. */

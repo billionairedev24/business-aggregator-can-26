@@ -1,6 +1,7 @@
 package ca.northline.shared.storage;
 
 import ca.northline.platform.StorageProperties;
+import ca.northline.shared.Bytes;
 import com.azure.core.http.jdk.httpclient.JdkHttpClientBuilder;
 import com.azure.core.util.BinaryData;
 import com.azure.core.util.Context;
@@ -89,7 +90,7 @@ final class AzureBlobObjectStore implements ObjectStore {
             var response = container.getBlobClient(key).downloadContentWithResponse(null, null, null, Context.NONE);
             var bytes = response.getValue().toBytes();
             var type = response.getDeserializedHeaders().getContentType();
-            return Optional.of(new ObjectContent(new ObjectInfo(key, type, bytes.length), bytes));
+            return Optional.of(new ObjectContent(new ObjectInfo(key, type, bytes.length), Bytes.of(bytes)));
         } catch (BlobStorageException ex) {
             return notFound(ex);
         }

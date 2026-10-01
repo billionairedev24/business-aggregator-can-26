@@ -9,7 +9,7 @@ import java.time.Instant;
  * completion, goods 7 days after delivery, food on handoff. A customer sign-off / delivery confirmation releases at once.
  */
 public enum EscrowKind implements CodedEnum {
-    SERVICE(Duration.ofHours(48)),
+    SERVICE(Duration.ofDays(2)),
     GOODS(Duration.ofDays(7)),
     FOOD(Duration.ZERO);
 

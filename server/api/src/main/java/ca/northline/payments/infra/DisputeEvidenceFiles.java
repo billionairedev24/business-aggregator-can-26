@@ -1,6 +1,7 @@
 package ca.northline.payments.infra;
 
 import ca.northline.payments.application.DisputeEvidenceStorage;
+import ca.northline.shared.Bytes;
 import ca.northline.shared.storage.UsesLocalStorage;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -60,7 +61,7 @@ class DisputeEvidenceFiles implements DisputeEvidenceStorage {
         try {
             var typeFile = path.resolveSibling(path.getFileName() + ".type");
             var type = Files.exists(typeFile) ? Files.readString(typeFile) : "application/octet-stream";
-            return Optional.of(new StoredFile(Files.readAllBytes(path), type));
+            return Optional.of(new StoredFile(Bytes.of(Files.readAllBytes(path)), type));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

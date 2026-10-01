@@ -32,7 +32,7 @@ public class Refund {
     /** Design 02: "Small refunds (under $25) are auto-approved … unless you contest within 48 h". */
     public static final long AUTO_APPROVE_BELOW_CENTS = 2500;
 
-    public static final Duration SMALL_CONTEST_WINDOW = Duration.ofHours(48);
+    public static final Duration SMALL_CONTEST_WINDOW = Duration.ofDays(2);
     /** Chat 1: "submitted → seller has 24 h → agent decides in 2 business days → refund lands". */
     public static final Duration SELLER_REVIEW_WINDOW = Duration.ofHours(24);
 
@@ -64,7 +64,7 @@ public class Refund {
     private final String what;
     private final @Nullable String customerName;
     private final long amountCents;
-    /** GST/HST given back on top of {@code amountCents}: the refunded share of the tax the sale collected (S-21). */
+    /** GST/HST given back on top of the refunded amount: the refunded share of the tax the sale collected (S-21). */
     private final long taxCents;
 
     private final String reason;

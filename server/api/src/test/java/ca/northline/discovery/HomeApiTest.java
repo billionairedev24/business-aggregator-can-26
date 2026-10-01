@@ -19,6 +19,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.Locale;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -129,7 +130,7 @@ class HomeApiTest extends IntegrationTest {
         kitchen("Lina's", "[\"italian\"]", "{courier,meal_kits}", true);
         kitchen("Drafty", "[\"vietnamese\"]", "{courier}", false);
 
-        mvc.perform(get("/api/v1/public/home").param("city", city.toLowerCase()))
+        mvc.perform(get("/api/v1/public/home").param("city", city.toLowerCase(Locale.ROOT)))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Cache-Control", "max-age=60, public"))
                 .andExpect(jsonPath("$.providers").value(3))
@@ -175,7 +176,7 @@ class HomeApiTest extends IntegrationTest {
         var b = business("provider", "Bravo Mechanics", "master", "service.automotive.mobile-mechanic");
         var c = business("both", "Charlie Movers", "trusted", "service.cleaning-and-property.movers");
         var d = business("provider", "Delta Unrated", "master");
-        storefront(b, "bravo-" + b.toLowerCase());
+        storefront(b, "bravo-" + b.toLowerCase(Locale.ROOT));
         review(a, 4);
         review(b, 5);
         review(b, 5);
@@ -184,7 +185,7 @@ class HomeApiTest extends IntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.trusted", hasSize(3)))
                 .andExpect(jsonPath("$.trusted[0].merchantId").value(b))
-                .andExpect(jsonPath("$.trusted[0].slug").value("bravo-" + b.toLowerCase()))
+                .andExpect(jsonPath("$.trusted[0].slug").value("bravo-" + b.toLowerCase(Locale.ROOT)))
                 .andExpect(jsonPath("$.trusted[0].rating").value(5.0))
                 .andExpect(jsonPath("$.trusted[0].reviews").value(2))
                 .andExpect(jsonPath("$.trusted[0].tier").value("master"))

@@ -11,7 +11,6 @@ import org.jspecify.annotations.Nullable;
 /** Outbound port: payouts, payout settings, bank accounts and the Stripe connected account. */
 public interface PayoutRepository {
 
-    /** The merchant's Stripe Connect Express account. */
     /**
      * The merchant's Stripe Connect Express account.
      *

@@ -83,8 +83,8 @@ class EgressPolicyTest {
     @Test
     void localDevelopmentAllowsHttpAndLoopbackOnly() throws Exception {
         assertThat(local.refuseUrl(URI.create("http://localhost:8080/hooks"))).isEmpty();
-        assertThat(local.refuse(InetAddress.getByName("127.0.0.1"))).isEmpty();
-        assertThat(local.refuse(InetAddress.getByName("::1"))).isEmpty();
+        assertThat(local.refuse(InetAddress.ofLiteral("127.0.0.1"))).isEmpty();
+        assertThat(local.refuse(InetAddress.ofLiteral("::1"))).isEmpty();
         assertThat(local.refuse(InetAddress.getByName("10.0.0.1"))).contains("private network");
         assertThat(local.refuse(InetAddress.getByName("169.254.169.254"))).contains("link-local / cloud metadata");
     }

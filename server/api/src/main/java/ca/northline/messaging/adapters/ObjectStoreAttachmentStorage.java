@@ -24,6 +24,6 @@ class ObjectStoreAttachmentStorage implements AttachmentStorage {
 
     @Override
     public Optional<byte[]> get(String key) {
-        return objects.get(key).map(ObjectStore.ObjectContent::bytes);
+        return objects.get(key).map(c -> c.bytes().toArray());
     }
 }

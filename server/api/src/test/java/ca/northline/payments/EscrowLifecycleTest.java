@@ -115,7 +115,7 @@ class EscrowLifecycleTest extends IntegrationTest {
         var completed = Instant.now().minus(Duration.ofHours(1)).truncatedTo(java.time.temporal.ChronoUnit.MICROS);
         escrows.fulfilled("booking", service.refId(), completed);
         escrows.fulfilled("order_line", goods.refId(), completed);
-        assertThat(Duration.between(completed, row(serviceId).releaseAt())).isEqualTo(Duration.ofHours(48));
+        assertThat(Duration.between(completed, row(serviceId).releaseAt())).isEqualTo(Duration.ofDays(2));
         assertThat(Duration.between(completed, row(goodsId).releaseAt())).isEqualTo(Duration.ofDays(7));
         assertThat(row(serviceId).state()).isEqualTo("held");
 

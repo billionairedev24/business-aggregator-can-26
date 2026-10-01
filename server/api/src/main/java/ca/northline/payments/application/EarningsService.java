@@ -1,6 +1,7 @@
 package ca.northline.payments.application;
 
 import ca.northline.payments.api.EarningsQuery;
+import ca.northline.payments.api.EscrowKind;
 import ca.northline.payments.domain.PayoutSchedule;
 import ca.northline.payments.domain.Zones;
 import java.time.Clock;
@@ -8,6 +9,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -66,9 +68,9 @@ class EarningsService implements ViewEarnings, EarningsQuery {
         var today = LocalDate.ofInstant(clock.instant(), Zones.EDMONTON);
         var firstMonday =
                 today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).minusWeeks(weeks - 1L);
-        var buckets = new LinkedHashMap<LocalDate, long[]>();
+        var buckets = new LinkedHashMap<LocalDate, EnumMap<EscrowKind, Long>>();
         for (int i = 0; i < weeks; i++) {
-            buckets.put(firstMonday.plusWeeks(i), new long[3]);
+            buckets.put(firstMonday.plusWeeks(i), new EnumMap<>(EscrowKind.class));
         }
         var from = firstMonday.atStartOfDay(Zones.EDMONTON).toInstant();
         for (var r : earnings.released(merchantId, from, clock.instant())) {
@@ -76,11 +78,15 @@ class EarningsService implements ViewEarnings, EarningsQuery {
                     .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
             var bucket = buckets.get(monday);
             if (bucket != null) {
-                bucket[r.kind().ordinal()] += r.netCents();
+                bucket.merge(r.kind(), r.netCents(), Long::sum);
             }
         }
         var out = new ArrayList<WeekNet>(weeks);
-        buckets.forEach((monday, b) -> out.add(new WeekNet(monday, b[0], b[1], b[2])));
+        buckets.forEach((monday, b) -> out.add(new WeekNet(
+                monday,
+                b.getOrDefault(EscrowKind.SERVICE, 0L),
+                b.getOrDefault(EscrowKind.GOODS, 0L),
+                b.getOrDefault(EscrowKind.FOOD, 0L))));
         return out;
     }
 

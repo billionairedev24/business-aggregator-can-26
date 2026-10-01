@@ -21,6 +21,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import org.jspecify.annotations.Nullable;
@@ -73,7 +74,7 @@ class CartCheckoutApiTest extends IntegrationTest {
     }
 
     static String guest() {
-        return "g_" + Ids.next().toLowerCase();
+        return "g_" + Ids.next().toLowerCase(Locale.ROOT);
     }
 
     static JsonNode json(ResultActions result) throws Exception {

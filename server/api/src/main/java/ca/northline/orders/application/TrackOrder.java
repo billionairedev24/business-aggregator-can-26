@@ -14,8 +14,8 @@ public interface TrackOrder {
     OrderTracking view(String customerId, String orderId);
 
     /**
-     * @param state {@code placed} | {@code accepted} | {@code packing} | {@code ready} | {@code picked_up} |
-     *     {@code delivered} | {@code confirmed} | {@code refunded} | {@code cancelled}
+     * @param state {@code "placed"} | {@code "accepted"} | {@code "packing"} | {@code "ready"} | {@code "picked_up"} |
+     *     {@code "delivered"} | {@code "confirmed"} | {@code "refunded"} | {@code "cancelled"}
      * @param steps paid → packing → pickup → delivered, each {@code done} | {@code current} | {@code todo}
      */
     record OrderTracking(

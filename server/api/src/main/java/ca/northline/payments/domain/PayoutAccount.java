@@ -54,7 +54,7 @@ public class PayoutAccount {
     private final String last4;
     private final String holderName;
     private final String externalRef;
-    /** Financial Connections account ({@code fca_…}) an instant link came from; null for typed details. */
+    /** Financial Connections account id (fca_…) an instant link came from; null for typed details. */
     private final @Nullable String financialConnectionsAccount;
 
     @ToString.Include

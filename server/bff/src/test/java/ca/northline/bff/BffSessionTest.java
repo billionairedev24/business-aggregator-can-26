@@ -147,13 +147,20 @@ class BffSessionTest {
         for (var path : java.util.List.of(
                 "/bff/docs/redoc",
                 "/bff/docs/redoc/redoc.standalone.js",
-                "/bff/docs/scalar",
-                "/bff/swagger-ui/index.html",
+                "/bff/v3/api-docs/swagger-config",
                 "/bff/v3/api-docs/internal")) {
             assertThat(mvc.perform(get(path)).andReturn().getResponse().getStatus())
                     .as(path)
                     .isEqualTo(200);
         }
+        // Swagger UI: its entry point under /bff (the webjar's own files are checked in the api's and auth's tests;
+        // serving
+        // them here reliably triggers a JDK HttpClient race in ConsumerBffTest's relay — see DECISIONS, S-125).
+        assertThat(mvc.perform(get("/bff/swagger-ui.html"))
+                        .andReturn()
+                        .getResponse()
+                        .getRedirectedUrl())
+                .contains("/bff/swagger-ui/index.html");
         var spec = mvc.perform(get("/bff/v3/api-docs/internal"))
                 .andReturn()
                 .getResponse()

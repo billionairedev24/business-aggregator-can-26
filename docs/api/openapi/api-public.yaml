@@ -304,6 +304,195 @@ paths:
           description: "Validation failed: one error per field with the exact message."
       tags:
       - cart-controller
+  /api/v1/geo/autocomplete:
+    get:
+      operationId: geoAutocomplete
+      parameters:
+      - in: query
+        name: q
+        required: false
+        schema:
+          type: string
+          default: ""
+      - in: query
+        name: session
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: lat
+        required: false
+        schema:
+          type: number
+          format: double
+      - in: query
+        name: lng
+        required: false
+        schema:
+          type: number
+          format: double
+      - in: header
+        name: X-Northline-Guest
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Suggestions"
+          description: OK
+      security: []
+      tags:
+      - geo-controller
+  /api/v1/geo/markets:
+    get:
+      operationId: geoMarkets
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Markets"
+          description: OK
+      security: []
+      tags:
+      - geo-controller
+  /api/v1/geo/places/{placeId}:
+    get:
+      operationId: geoPlace
+      parameters:
+      - in: path
+        name: placeId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: session
+        required: false
+        schema:
+          type: string
+      - in: header
+        name: X-Northline-Guest
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Address"
+          description: OK
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      security: []
+      tags:
+      - geo-controller
+  /api/v1/geo/resolve:
+    get:
+      operationId: geoResolve
+      parameters:
+      - in: query
+        name: lat
+        required: true
+        schema:
+          type: number
+          format: double
+      - in: query
+        name: lng
+        required: true
+        schema:
+          type: number
+          format: double
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Resolution"
+          description: OK
+      security: []
+      tags:
+      - geo-controller
+  /api/v1/geo/reverse:
+    get:
+      operationId: geoReverse
+      parameters:
+      - in: query
+        name: lat
+        required: true
+        schema:
+          type: number
+          format: double
+      - in: query
+        name: lng
+        required: true
+        schema:
+          type: number
+          format: double
+      - in: header
+        name: X-Northline-Guest
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Place"
+          description: OK
+      security: []
+      tags:
+      - geo-controller
+  /api/v1/geo/waitlist:
+    post:
+      operationId: geoJoin
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WaitlistRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: boolean
+          description: OK
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      security: []
+      tags:
+      - geo-controller
   /api/v1/me:
     get:
       operationId: meMe
@@ -627,6 +816,281 @@ paths:
           description: Not found.
       tags:
       - checkout-controller
+  /api/v1/me/food-orders:
+    post:
+      operationId: foodOrderStart
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        required: false
+        schema:
+          type: string
+      - in: header
+        name: X-Step-Up
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: user
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentUser"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - food-order-controller
+  /api/v1/me/food-orders/quote:
+    post:
+      operationId: foodOrderQuote
+      parameters:
+      - in: query
+        name: user
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentUser"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Totals"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - food-order-controller
+  /api/v1/me/food-orders/{orderId}:
+    get:
+      operationId: foodOrderTrack
+      parameters:
+      - in: path
+        name: orderId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: user
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentUser"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Tracking"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - food-order-controller
+  /api/v1/me/food-orders/{orderId}/confirm:
+    post:
+      operationId: foodOrderConfirm
+      parameters:
+      - in: path
+        name: orderId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: header
+        name: Idempotency-Key
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: user
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentUser"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - food-order-controller
   /api/v1/me/orders/{orderId}:
     get:
       operationId: consumerOrderOrder
@@ -791,6 +1255,101 @@ paths:
       security: []
       tags:
       - public-media-controller
+  /api/v1/public/home:
+    get:
+      operationId: homeHome
+      parameters:
+      - in: query
+        name: city
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/HomeSummary"
+          description: OK
+      security: []
+      tags:
+      - home-controller
+  /api/v1/public/kitchens:
+    get:
+      operationId: publicKitchenKitchens
+      parameters:
+      - in: query
+        name: city
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: lat
+        required: false
+        schema:
+          type: number
+          format: double
+      - in: query
+        name: lng
+        required: false
+        schema:
+          type: number
+          format: double
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Kitchens"
+          description: OK
+      security: []
+      tags:
+      - public-kitchen-controller
+  /api/v1/public/kitchens/{slug}:
+    get:
+      operationId: publicKitchenRestaurant
+      parameters:
+      - in: path
+        name: slug
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: lat
+        required: false
+        schema:
+          type: number
+          format: double
+      - in: query
+        name: lng
+        required: false
+        schema:
+          type: number
+          format: double
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Restaurant"
+          description: OK
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      security: []
+      tags:
+      - public-kitchen-controller
   /api/v1/public/shop:
     get:
       operationId: publicShopLanding
@@ -1470,6 +2029,31 @@ components:
       required:
       - offerId
       - qty
+    Address:
+      type: object
+      properties:
+        city:
+          type: string
+        label:
+          type: string
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        neighbourhood:
+          type: string
+        placeId:
+          type: string
+        postalCode:
+          type: string
+        province:
+          type: string
+        resolution:
+          $ref: "#/components/schemas/Resolution"
+        street:
+          type: string
     AddressInput:
       type: object
       properties:
@@ -1562,6 +2146,71 @@ components:
           type: array
           items:
             type: string
+    Card:
+      type: object
+      properties:
+        brandColor:
+          type: string
+        closesAt:
+          type: string
+          format: date-time
+        cuisines:
+          type: array
+          items:
+            type: string
+        delivers:
+          type: boolean
+        deliveryFeeCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        dietary:
+          type: array
+          items:
+            type: string
+        distanceKm:
+          type: number
+          format: double
+        etaFromMin:
+          type: integer
+          format: int32
+        etaToMin:
+          type: integer
+          format: int32
+        fulfilment:
+          type: array
+          items:
+            type: string
+        merchantId:
+          type: string
+        name:
+          type: string
+        open:
+          type: boolean
+        opensAt:
+          type: string
+          format: date-time
+        paused:
+          type: boolean
+        pickupFromMin:
+          type: integer
+          format: int32
+        pickupToMin:
+          type: integer
+          format: int32
+        prepMin:
+          type: integer
+          format: int32
+        priceLevel:
+          type: string
+        rating:
+          type: number
+          format: double
+        reviews:
+          type: integer
+          format: int32
+        slug:
+          type: string
     CartLine:
       type: object
       properties:
@@ -1619,6 +2268,13 @@ components:
           type: integer
           format: int64
           description: Cents of Canadian dollars (CAD).
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
     CategoryRef:
       type: object
       properties:
@@ -1647,6 +2303,48 @@ components:
           type: string
         windowId:
           type: string
+    Combo:
+      type: object
+      properties:
+        availableNow:
+          type: boolean
+        discountBps:
+          type: integer
+          format: int32
+        fromCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        id:
+          type: string
+        name:
+          type: string
+        priceCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        pricing:
+          type: string
+        saveCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        slots:
+          type: array
+          items:
+            $ref: "#/components/schemas/Slot"
+    ComboLine:
+      type: object
+      properties:
+        comboId:
+          type: string
+        itemIds:
+          type: array
+          items:
+            type: string
+        qty:
+          type: integer
+          format: int32
     CurrentUser:
       type: object
       properties:
@@ -1667,24 +2365,34 @@ components:
     Delivery:
       type: object
       properties:
-        day:
+        city:
           type: string
-        endsAt:
+        dropoff:
           type: string
-          format: date-time
-        etaAt:
+        extras:
+          type: array
+          items:
+            type: string
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        note:
           type: string
-          format: date-time
-        households:
-          type: integer
-          format: int32
-        kind:
+        postalCode:
           type: string
-        runLabel:
+        province:
           type: string
-        startsAt:
+        street:
           type: string
-          format: date-time
+        unit:
+          type: string
+        zone:
+          type: string
+        zoneId:
+          type: string
     Department:
       type: object
       properties:
@@ -1741,6 +2449,37 @@ components:
           type: integer
           format: int64
           description: Cents of Canadian dollars (CAD).
+    Dish:
+      type: object
+      properties:
+        allergens:
+          type: array
+          items:
+            type: string
+        availability:
+          type: string
+        availableNow:
+          type: boolean
+        description:
+          type: string
+        dietary:
+          type: array
+          items:
+            type: string
+        groups:
+          type: array
+          items:
+            $ref: "#/components/schemas/Group"
+        id:
+          type: string
+        name:
+          type: string
+        priceCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        soldOut:
+          type: boolean
     FacetsResponse:
       type: object
       properties:
@@ -1769,6 +2508,28 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/BucketResponse"
+    Group:
+      type: object
+      properties:
+        count:
+          type: integer
+          format: int32
+        id:
+          type: string
+        name:
+          type: string
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/Option"
+        required:
+          type: boolean
+        rule:
+          type: string
+        showForOptionIds:
+          type: array
+          items:
+            type: string
     HighlightResponse:
       type: object
       properties:
@@ -1778,6 +2539,57 @@ components:
         start:
           type: integer
           format: int32
+    HomeSummary:
+      type: object
+      properties:
+        categories:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int32
+        city:
+          type: string
+        cuisines:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int32
+        kitchensOpen:
+          type: integer
+          format: int32
+        providers:
+          type: integer
+          format: int32
+        shops:
+          type: integer
+          format: int32
+        trusted:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrustedProvider"
+    ItemLine:
+      type: object
+      properties:
+        itemId:
+          type: string
+        note:
+          type: string
+        optionIds:
+          type: array
+          items:
+            type: string
+        qty:
+          type: integer
+          format: int32
+    Kitchens:
+      type: object
+      properties:
+        city:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Card"
     Landing:
       type: object
       properties:
@@ -1802,6 +2614,63 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ShopCard"
+    Line:
+      type: object
+      properties:
+        choices:
+          type: array
+          items:
+            type: string
+        comboId:
+          type: string
+        itemId:
+          type: string
+        note:
+          type: string
+        qty:
+          type: integer
+          format: int32
+        title:
+          type: string
+        totalCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        unitCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+    Market:
+      type: object
+      properties:
+        city:
+          type: string
+        id:
+          type: string
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        province:
+          type: string
+        stage:
+          type: string
+          enum:
+          - "off"
+          - waitlist
+          - pilot
+          - live
+    Markets:
+      type: object
+      properties:
+        fallback:
+          $ref: "#/components/schemas/Market"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Province"
     MeResponse:
       type: object
       properties:
@@ -1904,36 +2773,40 @@ components:
     Option:
       type: object
       properties:
-        day:
-          type: string
-        endsAt:
-          type: string
-          format: date-time
-        etaMinutes:
-          type: integer
-          format: int32
-        feeCents:
+        deltaCents:
           type: integer
           format: int64
           description: Cents of Canadian dollars (CAD).
-        households:
-          type: integer
-          format: int32
         id:
           type: string
-        kind:
+        isDefault:
+          type: boolean
+        name:
           type: string
-        orderBy:
+        soldOut:
+          type: boolean
+    OrderRequest:
+      type: object
+      properties:
+        combos:
+          type: array
+          items:
+            $ref: "#/components/schemas/ComboLine"
+        delivery:
+          $ref: "#/components/schemas/Delivery"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ItemLine"
+        merchantId:
+          type: string
+        mode:
+          type: string
+        scheduledFor:
           type: string
           format: date-time
-        packBy:
-          type: string
-          format: date-time
-        startsAt:
-          type: string
-          format: date-time
-        windowId:
-          type: string
+        tip:
+          $ref: "#/components/schemas/Tip"
     OrderTracking:
       type: object
       properties:
@@ -1984,6 +2857,19 @@ components:
           type: string
         publishableKey:
           type: string
+    Place:
+      type: object
+      properties:
+        city:
+          type: string
+        label:
+          type: string
+        market:
+          $ref: "#/components/schemas/Market"
+        province:
+          type: string
+        zone:
+          $ref: "#/components/schemas/Zone"
     Problem:
       type: object
       description: RFC 9457 problem details. 403 and 409 carry a machine-readable
@@ -2072,6 +2958,27 @@ components:
           type: boolean
         unit:
           type: string
+    Province:
+      type: object
+      properties:
+        code:
+          type: string
+        markets:
+          type: array
+          items:
+            $ref: "#/components/schemas/Market"
+        name:
+          type: string
+        stage:
+          type: string
+          enum:
+          - "off"
+          - waitlist
+          - pilot
+          - live
+        taxBps:
+          type: integer
+          format: int32
     PublicSection:
       type: object
       properties:
@@ -2161,6 +3068,49 @@ components:
           type: integer
           format: int64
           description: Cents of Canadian dollars (CAD).
+    Resolution:
+      type: object
+      properties:
+        market:
+          $ref: "#/components/schemas/Market"
+        waitlist:
+          $ref: "#/components/schemas/Waitlist"
+        zone:
+          $ref: "#/components/schemas/Zone"
+    Restaurant:
+      type: object
+      properties:
+        address:
+          type: string
+        ahsVerified:
+          type: boolean
+        combos:
+          type: array
+          items:
+            $ref: "#/components/schemas/Combo"
+        kitchen:
+          $ref: "#/components/schemas/Card"
+        minOrderCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        province:
+          type: string
+        sections:
+          type: array
+          items:
+            $ref: "#/components/schemas/Section"
+        serviceFeeBps:
+          type: integer
+          format: int32
+        slots:
+          type: array
+          items:
+            type: string
+            format: date-time
+        taxBps:
+          type: integer
+          format: int32
     ResultItem:
       type: object
       properties:
@@ -2279,6 +3229,19 @@ components:
           type: integer
           format: int64
           description: "Matching results, exact up to 10 000"
+    Section:
+      type: object
+      properties:
+        id:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Dish"
+        menu:
+          type: string
+        name:
+          type: string
     Setup:
       type: object
       properties:
@@ -2341,6 +3304,18 @@ components:
           type: string
         packed:
           type: boolean
+    Slot:
+      type: object
+      properties:
+        itemIds:
+          type: array
+          items:
+            type: string
+        label:
+          type: string
+        qty:
+          type: integer
+          format: int32
     SseEmitter:
       type: object
       properties:
@@ -2361,6 +3336,15 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SuggestionResponse"
+    Suggestion:
+      type: object
+      properties:
+        main:
+          type: string
+        placeId:
+          type: string
+        secondary:
+          type: string
     SuggestionResponse:
       type: object
       properties:
@@ -2398,6 +3382,15 @@ components:
           - food
           - merchant
           - category
+    Suggestions:
+      type: object
+      properties:
+        attribution:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Suggestion"
     TaxLine:
       type: object
       properties:
@@ -2407,6 +3400,137 @@ components:
         percent:
           type: number
         type:
+          type: string
+    Tip:
+      type: object
+      properties:
+        kind:
+          type: string
+        value:
+          type: integer
+          format: int64
+    Totals:
+      type: object
+      properties:
+        deliveryFeeCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        estimate:
+          type: boolean
+        etaFromMin:
+          type: integer
+          format: int32
+        etaToMin:
+          type: integer
+          format: int32
+        feeTaxCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        kitchen:
+          type: string
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/Line"
+        mode:
+          type: string
+        scheduledFor:
+          type: string
+          format: date-time
+        serviceFeeCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        subtotalCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        taxCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        tipCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        totalCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+    Tracking:
+      type: object
+      properties:
+        acceptedAt:
+          type: string
+          format: date-time
+        deliveredAt:
+          type: string
+          format: date-time
+        eta:
+          type: string
+          format: date-time
+        handedOffAt:
+          type: string
+          format: date-time
+        kitchen:
+          type: string
+        kitchenSlug:
+          type: string
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/Line"
+        mode:
+          type: string
+        orderId:
+          type: string
+        placedAt:
+          type: string
+          format: date-time
+        prepMin:
+          type: integer
+          format: int32
+        readyAt:
+          type: string
+          format: date-time
+        readyBy:
+          type: string
+          format: date-time
+        ref:
+          type: string
+        scheduledFor:
+          type: string
+          format: date-time
+        stage:
+          type: string
+        state:
+          type: string
+        totalCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+    TrustedProvider:
+      type: object
+      properties:
+        brandColor:
+          type: string
+        category:
+          $ref: "#/components/schemas/Category"
+        merchantId:
+          type: string
+        name:
+          type: string
+        rating:
+          type: number
+          format: double
+        reviews:
+          type: integer
+          format: int32
+        slug:
+          type: string
+        tier:
           type: string
     Ulid:
       type: string
@@ -2459,6 +3583,49 @@ components:
           type: string
         variantId:
           type: string
+    Waitlist:
+      type: object
+      properties:
+        name:
+          type: string
+        regionId:
+          type: string
+        stage:
+          type: string
+          enum:
+          - "off"
+          - waitlist
+          - pilot
+          - live
+    WaitlistRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        regionId:
+          type: string
+    Zone:
+      type: object
+      properties:
+        feePlusCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        feeStdCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        id:
+          type: string
+        minBasketCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        name:
+          type: string
+        runsPerDay:
+          type: integer
+          format: int32
   securitySchemes:
     bffSession:
       description: "Browsers only (the Studio, the consumer web): the BFF's HttpOnly\
