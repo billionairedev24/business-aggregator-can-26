@@ -53,6 +53,18 @@ export const MSG = {
   BUFFER_RANGE: 'Buffer must be between 0 and 120 minutes.',
   INCLUDED_REQUIRED: "Describe what's included.",
   INCLUDED_TOO_LONG: 'At most 2000 characters.',
+  BUNDLE_ITEMS_REQUIRED: 'Add at least two items to the bundle.',
+  BUNDLE_ITEMS_TOO_MANY: 'A bundle holds up to 10 items.',
+  BUNDLE_ITEM_UNKNOWN: 'Choose one of your own products.',
+  BUNDLE_ITEM_BUNDLE: "A bundle can't contain another bundle.",
+  BUNDLE_ITEM_DUPLICATE: 'This item is already in the bundle — change its quantity.',
+  BUNDLE_VARIANT_REQUIRED: 'Choose a variant.',
+  BUNDLE_QTY_RANGE: 'Quantity must be between 1 and 99.',
+  BUNDLE_ITEMS_APPROVED: 'Every item in a bundle must be an approved listing.',
+  LISTING_IN_BUNDLE: 'This product is part of a bundle. Remove it from the bundle first.',
+  DOCUMENT_REQUIRED: 'Choose a file to upload.',
+  DOCUMENT_TYPE: 'Upload a PDF, PNG or JPEG under 10 MB.',
+  DOCUMENTS_TOO_MANY: 'Up to 10 documents per listing.',
 } as const;
 
 const FR: Record<string, string> = {
@@ -100,6 +112,19 @@ const FR: Record<string, string> = {
   [MSG.BUFFER_RANGE]: 'Le battement doit être entre 0 et 120 minutes.',
   [MSG.INCLUDED_REQUIRED]: 'Décrivez ce qui est inclus.',
   [MSG.INCLUDED_TOO_LONG]: '2000 caractères au maximum.',
+  [MSG.BUNDLE_ITEMS_REQUIRED]: "Ajoutez au moins deux articles à l'ensemble.",
+  [MSG.BUNDLE_ITEMS_TOO_MANY]: "Un ensemble contient jusqu'à 10 articles.",
+  [MSG.BUNDLE_ITEM_UNKNOWN]: 'Choisissez un de vos propres produits.',
+  [MSG.BUNDLE_ITEM_BUNDLE]: 'Un ensemble ne peut pas contenir un autre ensemble.',
+  [MSG.BUNDLE_ITEM_DUPLICATE]: "Cet article est déjà dans l'ensemble — modifiez sa quantité.",
+  [MSG.BUNDLE_VARIANT_REQUIRED]: 'Choisissez une variante.',
+  [MSG.BUNDLE_QTY_RANGE]: 'La quantité doit être entre 1 et 99.',
+  [MSG.BUNDLE_ITEMS_APPROVED]: "Chaque article d'un ensemble doit être une annonce approuvée.",
+  [MSG.LISTING_IN_BUNDLE]: "Ce produit fait partie d'un ensemble. Retirez-le de l'ensemble d'abord.",
+  [MSG.DOCUMENT_REQUIRED]: 'Choisissez un fichier à téléverser.',
+  [MSG.DOCUMENT_TYPE]: 'Téléversez un PDF, PNG ou JPEG de moins de 10 Mo.',
+  [MSG.DOCUMENTS_TOO_MANY]: "Jusqu'à 10 documents par annonce.",
+  "A bundle's stock follows its items.": "Le stock d'un ensemble suit ses articles.",
   'That image is no longer available — upload it again.': "Cette image n'est plus disponible — téléversez-la de nouveau.",
 };
 
@@ -160,6 +185,7 @@ export const productDraftSchema = z.object({
   bullets: z.array(z.string().max(250, MSG.BULLET_TOO_LONG)).max(5, MSG.BULLETS_TOO_MANY),
   searchKeywords: z.string().max(250, MSG.KEYWORDS_TOO_LONG).nullable(),
   imageIds: z.array(z.string()).max(9, MSG.IMAGES_TOO_MANY),
+  bundleItems: z.array(z.object({ qty: z.number({ error: MSG.BUNDLE_QTY_RANGE }).int(MSG.BUNDLE_QTY_RANGE).min(1, MSG.BUNDLE_QTY_RANGE).max(99, MSG.BUNDLE_QTY_RANGE) })).max(10, MSG.BUNDLE_ITEMS_TOO_MANY),
   variants: z.array(z.object({
     value: z.string().trim().min(1, MSG.VARIANT_VALUE_REQUIRED),
     sku: z.string().trim().min(1, MSG.SKU_REQUIRED).max(40, MSG.SKU_TOO_LONG),
