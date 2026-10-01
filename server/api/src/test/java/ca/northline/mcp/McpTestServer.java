@@ -74,6 +74,7 @@ abstract class McpTestServer {
         registry.add("northline.mcp.authorization-server", () -> ISSUER);
         registry.add("northline.docs.enabled", () -> "false"); // as in prod: the model exists, nothing publishes it
         registry.add("northline.devdocs.resource", () -> DOCS_RESOURCE); // S-128, open (the local default)
+        registry.add("northline.devdocs.enabled", () -> "true");
     }
 
     @Autowired
