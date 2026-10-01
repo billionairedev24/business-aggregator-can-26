@@ -117,7 +117,8 @@ class SseRelayTest {
 
     @Test
     void theOrderTrackingStreamIsRelayedAsItIsWritten() throws Exception {
-        var client = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
+        var client =
+                HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
         var started = System.nanoTime();
         var res = client.send(
                 HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api/v1/me/orders/o1/events"))
