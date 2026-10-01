@@ -5,6 +5,8 @@ import ca.northline.mcp.McpProperties;
 import ca.northline.mcp.McpSecurityConfiguration;
 import ca.northline.shared.security.Authorities;
 import jakarta.servlet.DispatcherType;
+import java.util.Map;
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -15,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.authorization.AuthenticatedAuthorizationManager;
 import org.springframework.security.authorization.AuthorityAuthorizationManager;
+import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.authorization.AuthorizationManagers;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.ObjectPostProcessor;
@@ -22,11 +25,13 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.DPoPProofContext;
 import org.springframework.security.oauth2.jwt.JwtDecoderFactory;
 import org.springframework.security.oauth2.server.resource.authentication.DPoPAuthenticationProvider;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -138,6 +143,12 @@ class SecurityConfig {
                         .access(AuthorizationManagers.allOf(
                                 AuthorityAuthorizationManager.hasRole("STAFF"),
                                 AuthorityAuthorizationManager.hasAuthority(Authorities.MFA)))
+                        // S-86: the courier app — scope courier on a DPoP-bound token (S-29: cnf.jkt, so the proof was
+                        // checked; a bearer token never reaches the courier's run, stops or proof uploads)
+                        .requestMatchers("/api/v1/courier/**")
+                        .access(AuthorizationManagers.allOf(
+                                AuthorityAuthorizationManager.hasAuthority("SCOPE_courier"),
+                                (auth, _) -> new AuthorizationDecision(dpopBound(auth.get()))))
                         // Studio tokens (scope merchant) and partner clients (S-30: role partner — each handler
                         // must also be marked @PartnerAccess, and only the partner's businesses are open)
                         .requestMatchers("/api/v1/merchants/**")
@@ -201,6 +212,14 @@ class SecurityConfig {
                     {"type":"https://northline.ca/problems/forbidden","title":"Forbidden","status":403,\
                     "detail":"Your sign-in doesn't allow this.","code":"forbidden"}""");
         };
+    }
+
+    /** A token bound to the app's key ({@code cnf.jkt}); Spring's DPoP filter has verified the proof for it. */
+    static boolean dpopBound(@Nullable Authentication auth) {
+        return auth instanceof JwtAuthenticationToken jwt
+                && jwt.getToken().getClaims().get("cnf") instanceof Map<?, ?> cnf
+                && cnf.get("jkt") instanceof String jkt
+                && !jkt.isBlank();
     }
 
     private static boolean staffWithoutMfa() {

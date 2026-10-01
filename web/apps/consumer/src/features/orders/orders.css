@@ -21,3 +21,6 @@
 .order-home { fill: var(--color-bg); stroke: var(--color-text); stroke-width: 3; }
 .order-map-note { position: absolute; left: 16px; bottom: 16px; right: 16px; width: fit-content; max-width: calc(100% - 32px); background: var(--color-bg); padding: 8px 12px; border-radius: var(--radius-md); box-shadow: var(--shadow-md); font-size: 13px; }
 .order-map-note:empty { display: none; }
+.order-note { margin: 16px 0 0; color: var(--color-neutral-700); font-size: 14px; }
+.order-error { margin: 12px 0 0; color: var(--color-accent-2-700); font-size: 14px; }
+.order-courier { fill: var(--color-accent-2); }

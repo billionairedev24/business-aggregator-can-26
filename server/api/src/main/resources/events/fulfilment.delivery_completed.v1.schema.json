@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:fulfilment.delivery_completed:1",
+  "description": "delivery.completed — topic fulfilment.delivery, key = order id. The courier dropped the order off with proof.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "proof"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "aggregateId": {
+      "type": "string",
+      "description": "orders.orders.id"
+    },
+    "runId": {
+      "type": ["string", "null"],
+      "description": "fulfilment.runs.id"
+    },
+    "stopId": {
+      "type": ["string", "null"],
+      "description": "fulfilment.stops.id (the drop-off)"
+    },
+    "courierId": {
+      "type": ["string", "null"],
+      "description": "fulfilment.couriers.id"
+    },
+    "proof": {
+      "enum": [
+        "photo",
+        "signature",
+        "pin"
+      ]
+    }
+  }
+}

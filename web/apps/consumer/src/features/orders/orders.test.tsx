@@ -32,7 +32,10 @@ class FakeEventSource {
 type Reply = { status?: number; body?: unknown } | undefined;
 let user: typeof AMARA | null;
 let order: (c: Call) => Reply;
-const server = (c: Call): Reply => (c.url === '/bff/session' ? { body: { user, guestId: 'g' } } : c.url === '/api/v1/me/orders/ORD1' ? order(c) : undefined);
+let confirm: (c: Call) => Reply = () => undefined;
+const server = (c: Call): Reply => (c.url === '/bff/session' ? { body: { user, guestId: 'g' } }
+  : c.url === '/api/v1/me/orders/ORD1' ? order(c)
+    : c.url === '/api/v1/me/orders/ORD1/confirm' ? confirm(c) : undefined);
 function Page() {
   const { orderId } = useParams({ strict: false }) as { orderId: string };
   return <OrderStatus orderId={orderId} />;
@@ -114,5 +117,49 @@ describe('Order confirmed and tracking (design 06 confirmed)', () => {
     fail = false;
     await userEvent.setup({ delay: null }).click(within(screen.getByRole('alert')).getByRole('button', { name: 'Retry' }));
     expect(await screen.findByRole('heading', { level: 1, name: /^Order placed\. Arriving tonight 6.9.p\.m\.$/ })).toBeInTheDocument();
+  });
+
+  it('lets the customer confirm a delivered order, which pays the shops (S-78)', async () => {
+    const DELIVERED = { ...ORDER, state: 'delivered', steps: steps(4), deliveredAt: '2026-10-01T01:10:00Z', deliveryProof: 'photo', canConfirm: true, paysShopsAt: '2026-10-08T01:10:00Z', confirmedAt: null };
+    order = () => ({ body: DELIVERED });
+    let calls = 0;
+    confirm = c => { calls += 1; expect(c.method).toBe('POST'); return calls === 1 ? { status: 500, body: { detail: 'x' } } : { body: { ...DELIVERED, state: 'confirmed', canConfirm: false, paysShopsAt: null, confirmedAt: '2026-10-01T02:00:00Z' } }; };
+    open();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Delivered.' })).toBeInTheDocument();
+    expect(screen.getByText('Delivered with photo proof.')).toBeInTheDocument();
+    expect(screen.getByText(/^Shops are paid \w+day, October [78] unless you confirm sooner or report a problem\.$/)).toBeInTheDocument();
+    const user = userEvent.setup({ delay: null });
+    await user.click(screen.getByRole('button', { name: 'Got everything' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('We couldn’t confirm your order. Try again.');
+    await user.click(screen.getByRole('button', { name: 'Got everything' }));
+    expect(await screen.findByText('You confirmed it. The shops are paid.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Got everything' })).not.toBeInTheDocument();
+  });
+
+  it('offers the confirmation in French', async () => {
+    order = () => ({ body: { ...ORDER, state: 'picked_up', steps: steps(3), canConfirm: true, paysShopsAt: null } });
+    open('fr');
+    expect(await screen.findByRole('button', { name: 'J’ai tout reçu' })).toBeInTheDocument();
+  });
+
+  it('shows the courier coming, then live on the way, with the drop-off PIN (S-88)', async () => {
+    const courier = { state: 'planned', runLabel: 'R-611', courierName: 'Kai', eta: '2026-10-01T01:10:00Z', stopsBefore: 3, lat: null, lng: null, positionAt: null, pin: '4821' };
+    order = () => ({ body: { ...ORDER, courier } });
+    open();
+    expect(await screen.findByText(/^Kai will bring your order\. At your door about /)).toBeInTheDocument();
+    expect(screen.getByText('Drop-off PIN 4821')).toBeInTheDocument();
+    act(() => FakeEventSource.last!.emit('order', { ...ORDER, state: 'picked_up', steps: steps(3), courier: { ...courier, state: 'picked_up', stopsBefore: 2, lat: 50.01, lng: -100, positionAt: '2026-10-01T00:55:00Z' } }));
+    expect(await screen.findByText(/^Kai is on the way\. 2 stops before yours\. At your door about /)).toBeInTheDocument();
+    expect(screen.getByText(/^Live · updated /)).toBeInTheDocument();
+    act(() => FakeEventSource.last!.emit('order', { ...ORDER, state: 'delivered', steps: steps(4), courier: { ...courier, state: 'delivered', pin: null } }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Delivered.' })).toBeInTheDocument();
+    expect(screen.queryByText(/Drop-off PIN/)).not.toBeInTheDocument();
+  });
+
+  it('words the courier in French', async () => {
+    order = () => ({ body: { ...ORDER, state: 'picked_up', steps: steps(3), courier: { state: 'picked_up', runLabel: null, courierName: 'Kai', eta: null, stopsBefore: 1, lat: null, lng: null, positionAt: null, pin: '0042' } } });
+    open('fr');
+    expect(await screen.findByText('Kai est en route. 1 arrêt avant le vôtre.')).toBeInTheDocument();
+    expect(screen.getByText('NIP de livraison 0042')).toBeInTheDocument();
   });
 });

@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
  * The signed-in customer's food orders (S-57). Any signed-in token is enough to read and quote; paying needs an
@@ -37,6 +38,7 @@ import org.springframework.web.bind.annotation.RestController;
  * POST /api/v1/me/food-orders                 201: the checkout + its card payment (Stripe client secret)
  * POST /api/v1/me/food-orders/{id}/confirm    the card is authorized → escrow held, order placed (order.placed)
  * GET  /api/v1/me/food-orders/{id}            tracking
+ * GET  /api/v1/me/food-orders/{id}/events     tracking as text/event-stream (S-88: kitchen steps and courier moves)
  * </pre>
  */
 @RestController
@@ -49,6 +51,7 @@ class FoodOrderController {
     private final PlaceFoodOrder place;
     private final TrackFoodOrder track;
     private final IdempotentRequests idempotent;
+    private final OrderStreams streams;
 
     static final String IDEMPOTENCY_KEY = "Idempotency-Key";
     static final String STEP_UP = "X-Step-Up";
@@ -132,6 +135,12 @@ class FoodOrderController {
     @GetMapping("/{orderId}")
     Tracking track(@PathVariable String orderId, CurrentUser user) {
         return track.track(user.userId(), orderId);
+    }
+
+    /** S-88: the tracking as a stream (event {@code food}), pushed on every kitchen step and courier move. */
+    @GetMapping(path = "/{orderId}/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    SseEmitter events(@PathVariable String orderId, CurrentUser user) {
+        return streams.open(orderId, "food", () -> track.track(user.userId(), orderId));
     }
 
     /** Maps the request onto the use case's command (missing lists = empty). */

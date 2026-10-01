@@ -107,4 +107,15 @@ public interface EscrowLifecycle {
 
     /** The customer signed off / confirmed delivery: releases now. */
     void confirmed(String refType, String refId, Instant at);
+
+    /** Like {@link #confirmed} but a no-op when nothing is held for the reference. */
+    boolean confirmedIfHeld(String refType, String refId, Instant at);
+
+    /**
+     * S-78: the order was delivered (or the customer confirmed it), so its delivery fee — the manual-capture
+     * PaymentIntent checkout opened for Northline ({@code order_delivery}, S-51) — is captured: Northline's revenue and
+     * the fee's GST/HST. No escrow and no release: the fee is never transferred to a merchant. Idempotent; false when
+     * the order has no authorized delivery-fee hold (free delivery, already captured or canceled).
+     */
+    boolean captureDeliveryFee(String orderId, Instant at);
 }

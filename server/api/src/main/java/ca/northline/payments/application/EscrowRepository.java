@@ -77,6 +77,9 @@ public interface EscrowRepository {
 
     Optional<Intent> intentByStripeId(String stripePaymentIntent);
 
+    /** The current (not replaced) PaymentIntent of a reference, locked for the rest of the transaction. */
+    Optional<Intent> currentIntentForUpdate(String refType, String refId);
+
     /** The old hold was canceled and replaced by {@code newPaymentIntentId}. */
     void replacePaymentIntent(String oldPaymentIntentId, String newPaymentIntentId);
 

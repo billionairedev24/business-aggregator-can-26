@@ -55,6 +55,19 @@ class SseRelayTest {
                 Thread.currentThread().interrupt();
             }
         });
+        // S-88: the customer's live order tracking (event "order" on every courier move) takes the same relay
+        API.createContext("/api/v1/me/orders/o1/events", ex -> {
+            ex.getResponseHeaders().add("Content-Type", "text/event-stream");
+            ex.sendResponseHeaders(200, 0);
+            try (var out = ex.getResponseBody()) {
+                out.write("event: order\ndata: {\"state\":\"picked_up\"}\n\n".getBytes(StandardCharsets.UTF_8));
+                out.flush();
+                Thread.sleep(PAUSE_MS);
+                out.write("event: order\ndata: {\"state\":\"delivered\"}\n\n".getBytes(StandardCharsets.UTF_8));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
         API.start();
     }
 
@@ -100,5 +113,31 @@ class SseRelayTest {
         assertThat(lines).containsExactly("data: {\"text\":\"first\"}", "data: {\"content\":\"first second\"}");
         assertThat(arrivals.get(0)).as("first frame before the api finished").isLessThan(PAUSE_MS - 300);
         assertThat(arrivals.get(1)).isGreaterThanOrEqualTo(PAUSE_MS - 100);
+    }
+
+    @Test
+    void theOrderTrackingStreamIsRelayedAsItIsWritten() throws Exception {
+        var client =
+                HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
+        var started = System.nanoTime();
+        var res = client.send(
+                HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/api/v1/me/orders/o1/events"))
+                        .header("Accept", "text/event-stream")
+                        .build(),
+                HttpResponse.BodyHandlers.ofInputStream());
+        assertThat(res.statusCode()).isEqualTo(200);
+        var arrivals = new ArrayList<Long>();
+        var lines = new ArrayList<String>();
+        try (var in = new BufferedReader(new InputStreamReader(res.body(), StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = in.readLine()) != null) {
+                if (line.startsWith("data:")) {
+                    lines.add(line);
+                    arrivals.add((System.nanoTime() - started) / 1_000_000);
+                }
+            }
+        }
+        assertThat(lines).containsExactly("data: {\"state\":\"picked_up\"}", "data: {\"state\":\"delivered\"}");
+        assertThat(arrivals.get(0)).as("first position before the api finished").isLessThan(PAUSE_MS - 300);
     }
 }
