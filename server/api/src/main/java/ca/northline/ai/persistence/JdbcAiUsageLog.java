@@ -8,7 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
-/** {@code ai.usage} (V125): one row per AI request, no content. */
+/** {@code ai.usage} (V150): one row per AI request, no content. */
 @Component
 @RequiredArgsConstructor
 class JdbcAiUsageLog implements AiUsageLog {

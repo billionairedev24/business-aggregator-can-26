@@ -1,4 +1,4 @@
--- 2026-09-30 (S-129 AI platform, range V125–V129): one row per AI request (a draft, a classification, one assistant
+-- 2026-09-30 (S-129 AI platform, range V150–V159; renumbered from V125 at merge so it sorts after V130+): one row per AI request (a draft, a classification, one assistant
 -- question with all its model calls). Cost accounting per business and feature, and the trace from an answer to the
 -- prompt version and model that produced it. Never any content: no prompt, answer or tool result is stored.
 -- See docs/DECISIONS.md (S-129) and docs/runbooks/ai.md.

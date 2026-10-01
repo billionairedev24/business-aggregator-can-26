@@ -1,4 +1,4 @@
--- S-133 (AI workstream, V125–V129): AI trust & safety assist. Additive only. See docs/DECISIONS.md "S-133".
+-- S-133 (AI workstream, V150–V159; renumbered from V126 at merge): AI trust & safety assist. Additive only. See docs/DECISIONS.md "S-133".
 -- The model only suggests: screenings and anomaly scans raise open trust.flags for the console queue, staff decide.
 -- Nothing here changes a listing, review, message or business automatically.
 

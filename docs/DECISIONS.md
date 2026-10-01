@@ -3400,7 +3400,7 @@ conventions, under the conditions of "AI provider and data residency" above.
   to roles that hold the tool's permission and `MerchantAccess.require` runs again before every run (fresh membership,
   `acr=mfa`). Domain errors and refusals go back to the model as `{error, detail}`. A `write()` tool is never run by
   the loop: it returns a `PendingAction` for the UI to confirm (S-130). Tool results are cut at 12k characters.
-- **Schema (V125):** schema `ai`, table `ai.usage` — one row per request (feature, person, business, provider, model,
+- **Schema (V150, first numbered V125):** schema `ai`, table `ai.usage` — one row per request (feature, person, business, provider, model,
   prompt version, calls, tokens, cost in micro-USD, latency, tool runs, outcome). No content. `ai` added to
   `SchemaOwnershipTests`.
 - **Prompts** are versioned files `ai/prompts/<name>.v<N>.md`; the highest version is served and `name@vN` is recorded.
@@ -3952,7 +3952,7 @@ Stacked on S-132 (#87) → S-131 (#85) → S-130 (#83) → S-129 (#82).
   queue. It never changes vetting, hides a listing or review, blocks a message or penalizes a business.
   - The automated vetting still decides by its own rules. AI screening of a submitted listing runs
     alongside it and does not hold the listing.
-  - Deciding a flag (`dismissed` | `actioned`) records who, when and why (V126 `decided_by`, `decided_at`,
+  - Deciding a flag (`dismissed` | `actioned`) records who, when and why (V151 `decided_by`, `decided_at`,
     `decision_note`; audit `trust.flag_decided`, platform-level, so it isn't listed in the business's own audit log).
     What "actioned" means is a separate staff action.
 - **Screening by polling, not by events.** One job (`TrustScreeningService`, every 15 min) reads each source after its
@@ -3983,7 +3983,7 @@ Stacked on S-132 (#87) → S-131 (#85) → S-130 (#83) → S-129 (#82).
   - Each market and week is claimed once (`trust.anomaly_scans` unique).
 - **Dedup:** a screening flag is raised unless an *open* one exists for the same target and rule. A listing that is
   resubmitted after a dismissal can be flagged again. Detector flags keep their stricter "once ever" rule.
-- **Schema (V126):** `trust.ai_screenings`, `trust.ai_screening_marks`, `trust.anomaly_scans`, and the decision
+- **Schema (V151, first numbered V126):** `trust.ai_screenings`, `trust.ai_screening_marks`, `trust.anomaly_scans`, and the decision
   columns plus an index on `trust.flags`.
 - **Console API** (`/api/v1/console/trust/flags`, staff with MFA by the path rule). Every flag gets an `explanation`:
   the model's, or one derived from its rule (off-platform detector, business report). **No console web app exists
