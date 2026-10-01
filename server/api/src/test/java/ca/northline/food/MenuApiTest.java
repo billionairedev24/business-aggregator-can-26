@@ -429,6 +429,109 @@ class MenuApiTest extends IntegrationTest {
                         .isEqualTo("approved"));
     }
 
+    // ── S-67: ±40 % price vetting ─────────────────────────────────────────────
+
+    /** Kitchens of one fresh cuisine (no other test's dishes compare). */
+    private KitchenFixtures.Kitchen kitchenOf(KitchenFixtures fx, String cuisine) {
+        var k = fx.kitchen();
+        jdbc.sql("update merchants.merchants set profile = jsonb_build_object('cuisines', jsonb_build_array(?::text)) where id = ?")
+                .params(cuisine, k.merchantId())
+                .update();
+        return k;
+    }
+
+    @Test
+    void outlierPriceWaitsForTheOwnersConfirmation() throws Exception {
+        var fx = fx();
+        var cuisine = "s67-" + Ids.next().toLowerCase(Locale.ROOT);
+        for (var n = 0; n < 2; n++) { // 6 comparable live dishes, median $15
+            var peer = kitchenOf(fx, cuisine);
+            var peerMenu = fx.menu(peer, "live");
+            for (var price : List.of(1400L, 1500L, 1600L)) {
+                fx.item(peer, peerMenu.mainsId(), "Bun", price, 0);
+            }
+        }
+        var k = kitchenOf(fx, cuisine);
+        var menu = fx.menu(k, "live");
+        var owner = TestJwt.member(k.ownerId());
+        var created = mvc.perform(post(k.base() + "/menu-items")
+                        .with(owner)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(item(menu.menuId(), menu.mainsId(), "[]").replace("1700", "2300")))
+                .andExpect(status().isCreated())
+                .andReturn();
+        var itemId = com.jayway.jsonpath.JsonPath.read(created.getResponse().getContentAsString(), "$.id").toString();
+        mvc.perform(multipart(k.base() + "/menu-items/{id}/photo", itemId)
+                        .file(new MockMultipartFile("file", "pho.png", "image/png", png(1000)))
+                        .with(owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.visibility").value("price_check"))
+                .andExpect(jsonPath("$.priceCheck.medianCents").value(1500))
+                .andExpect(jsonPath("$.priceCheck.deviationPct").value(53))
+                .andExpect(jsonPath("$.priceCheck.confirmed").value(false));
+        assertThat(vetting(itemId)).isEqualTo("pending");
+
+        // within ±40 %: live, no flag
+        mvc.perform(put(k.base() + "/menu-items/{id}", itemId)
+                        .with(owner)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(item(menu.menuId(), menu.mainsId(), "[]").replace("1700", "2000")))
+                .andExpect(jsonPath("$.visibility").value("live"))
+                .andExpect(jsonPath("$.priceCheck").doesNotExist());
+
+        // far below, then confirmed by the owner: live, and the flag says so
+        mvc.perform(put(k.base() + "/menu-items/{id}", itemId)
+                        .with(owner)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(item(menu.menuId(), menu.mainsId(), "[]").replace("1700", "500")))
+                .andExpect(jsonPath("$.visibility").value("price_check"))
+                .andExpect(jsonPath("$.priceCheck.deviationPct").value(-67));
+        mvc.perform(post(k.base() + "/menu-items/{id}/confirm-price", itemId).with(owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.visibility").value("live"))
+                .andExpect(jsonPath("$.priceCheck.confirmed").value(true));
+        assertThat(vetting(itemId)).isEqualTo("approved");
+
+        // a new price is checked again
+        mvc.perform(put(k.base() + "/menu-items/{id}", itemId)
+                        .with(owner)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(item(menu.menuId(), menu.mainsId(), "[]").replace("1700", "450")))
+                .andExpect(jsonPath("$.visibility").value("price_check"));
+        // cooks may confirm too (EDIT); a bookkeeper may not
+        mvc.perform(post(k.base() + "/menu-items/{id}/confirm-price", itemId)
+                        .with(TestJwt.member(fx.member(k, MerchantRole.BOOKKEEPER))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void noPriceCheckWithoutEnoughComparableDishes() throws Exception {
+        var fx = fx();
+        var cuisine = "s67-" + Ids.next().toLowerCase(Locale.ROOT);
+        var peer = kitchenOf(fx, cuisine);
+        fx.item(peer, fx.menu(peer, "live").mainsId(), "Bun", 1500, 0); // one dish: too few to compare
+        var k = kitchenOf(fx, cuisine);
+        var menu = fx.menu(k, "live");
+        var owner = TestJwt.member(k.ownerId());
+        var created = mvc.perform(post(k.base() + "/menu-items")
+                        .with(owner)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(item(menu.menuId(), menu.mainsId(), "[]").replace("1700", "9900")))
+                .andReturn();
+        var itemId = com.jayway.jsonpath.JsonPath.read(created.getResponse().getContentAsString(), "$.id").toString();
+        mvc.perform(multipart(k.base() + "/menu-items/{id}/photo", itemId)
+                        .file(new MockMultipartFile("file", "pho.png", "image/png", png(1000)))
+                        .with(owner))
+                .andExpect(jsonPath("$.visibility").value("live"));
+    }
+
+    private String vetting(String itemId) {
+        return jdbc.sql("select vetting from food.menu_items where id = ?")
+                .param(itemId)
+                .query(String.class)
+                .single();
+    }
+
     @Test
     void databaseRejectsAPublishedItemWithoutAllergens() {
         var fx = fx();

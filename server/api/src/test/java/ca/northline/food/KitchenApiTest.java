@@ -11,6 +11,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ca.northline.food.api.FoodOrderHandedOff;
+import ca.northline.food.api.KitchenAutoPaused;
+import ca.northline.food.api.KitchenAutoResumed;
 import ca.northline.food.api.KitchenOrderAccepted;
 import ca.northline.food.api.KitchenOrderReady;
 import ca.northline.food.api.KitchenPaused;
@@ -172,6 +174,86 @@ class KitchenApiTest extends IntegrationTest {
                 .andExpect(status().isForbidden());
         mvc.perform(get(k.base() + "/kitchen/live").with(TestJwt.memberWithoutMfa(k.ownerId())))
                 .andExpect(status().isForbidden());
+    }
+
+    // ── S-67: auto-pause on late orders ─────────────────────────────────────────
+
+    @Autowired
+    ca.northline.food.application.KitchenUseCases.KitchenAutoPause autoPause;
+
+    @Test
+    void lateOrdersAutoPauseTheKitchen_andCatchingUpResumesIt() throws Exception {
+        var fx = fx();
+        var k = fx.kitchen();
+        var owner = TestJwt.member(k.ownerId());
+        mvc.perform(put(k.base() + "/kitchen/prep")
+                        .with(owner)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"defaultPrepMin\":25,\"maxOrdersPer15\":8,\"largeOrderCents\":20000,\"autoPauseLate\":3}"))
+                .andExpect(status().isOk());
+        var menu = fx.menu(k, "live");
+        var dish = fx.item(k, menu.mainsId(), "Pho", 1700, 0);
+        var orders = new java.util.ArrayList<String>();
+        for (int i = 0; i < 3; i++) {
+            var order = fx.foodOrder(k, data.user("C" + i), "pickup", dish, 1700, 1);
+            orders.add(order);
+            jdbc.sql("""
+                            insert into food.kitchen_tickets (order_id, merchant_id, stage, accepted_at, ready_by)
+                            values (?, ?, 'cooking', now() - interval '40 minutes', now() - interval '10 minutes')
+                            """).params(order, k.merchantId()).update();
+        }
+
+        autoPause.check(k.merchantId());
+        assertThat(events.stream(KitchenAutoPaused.class))
+                .singleElement()
+                .satisfies(e -> {
+                    assertThat(e.aggregateId()).isEqualTo(k.merchantId());
+                    assertThat(e.lateOrders()).isEqualTo(3);
+                    assertThat(e.threshold()).isEqualTo(3);
+                });
+        autoPause.check(k.merchantId()); // no change, no second event
+        assertThat(events.stream(KitchenAutoPaused.class)).hasSize(1);
+        mvc.perform(get(k.base() + "/kitchen/live").with(owner))
+                .andExpect(jsonPath("$.autoPause.lateOrders").value(3))
+                .andExpect(jsonPath("$.autoPause.threshold").value(3))
+                .andExpect(jsonPath("$.autoPause.active").value(true));
+        assertThat(jdbc.sql("select auto_paused_at is not null from food.kitchen_settings where merchant_id = ?")
+                        .param(k.merchantId())
+                        .query(Boolean.class)
+                        .single())
+                .isTrue();
+
+        // one order ready: 2 late < 3 → resumed at once
+        mvc.perform(post(k.base() + "/kitchen/live/{id}/ready", orders.getFirst()).with(owner))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.autoPause.active").value(false));
+        assertThat(events.stream(KitchenAutoResumed.class)).singleElement()
+                .satisfies(e -> assertThat(e.aggregateId()).isEqualTo(k.merchantId()));
+    }
+
+    @Test
+    void autoPauseOffNeverPauses() throws Exception {
+        var fx = fx();
+        var k = fx.kitchen();
+        mvc.perform(put(k.base() + "/kitchen/prep")
+                        .with(TestJwt.member(k.ownerId()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"defaultPrepMin\":25,\"maxOrdersPer15\":8,\"largeOrderCents\":20000,\"autoPauseLate\":null}"))
+                .andExpect(status().isOk());
+        var menu = fx.menu(k, "live");
+        var dish = fx.item(k, menu.mainsId(), "Pho", 1700, 0);
+        for (int i = 0; i < 6; i++) {
+            var order = fx.foodOrder(k, data.user("C" + i), "pickup", dish, 1700, 1);
+            jdbc.sql("""
+                            insert into food.kitchen_tickets (order_id, merchant_id, stage, ready_by)
+                            values (?, ?, 'cooking', now() - interval '10 minutes')
+                            """).params(order, k.merchantId()).update();
+        }
+        autoPause.check(k.merchantId());
+        assertThat(events.stream(KitchenAutoPaused.class)).isEmpty();
+        mvc.perform(get(k.base() + "/kitchen/live").with(TestJwt.member(k.ownerId())))
+                .andExpect(jsonPath("$.autoPause.lateOrders").value(6))
+                .andExpect(jsonPath("$.autoPause.active").value(false));
     }
 
     // ── Hours, prep & capacity ──────────────────────────────────────────────────

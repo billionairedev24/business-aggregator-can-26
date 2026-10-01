@@ -58,6 +58,9 @@ public final class MenuUseCases {
         ItemView soldOut(String merchantId, String itemId, boolean soldOut);
 
         void delete(String merchantId, String itemId);
+
+        /** S-67: "Keep this price" — the owner confirms a price the ±40 % check flagged; the dish can go live. */
+        ItemView confirmPrice(String merchantId, String itemId);
     }
 
     /** "Photo · required to go live". */
