@@ -3,7 +3,7 @@ package ca.northline.auth.web;
 import ca.northline.auth.application.FlowRejected;
 import ca.northline.auth.application.InvalidInput;
 import ca.northline.auth.application.InvalidInput.Violation;
-import ca.northline.platform.i18n.MessageCatalogue;
+import ca.northline.platform.MessageCatalogue;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Comparator;

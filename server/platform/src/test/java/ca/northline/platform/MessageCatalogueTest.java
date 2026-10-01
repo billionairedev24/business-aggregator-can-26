@@ -1,4 +1,4 @@
-package ca.northline.platform.i18n;
+package ca.northline.platform;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

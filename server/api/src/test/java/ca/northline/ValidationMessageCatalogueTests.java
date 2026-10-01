@@ -2,7 +2,7 @@ package ca.northline;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import ca.northline.platform.i18n.MessageCatalogue;
+import ca.northline.platform.MessageCatalogue;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;

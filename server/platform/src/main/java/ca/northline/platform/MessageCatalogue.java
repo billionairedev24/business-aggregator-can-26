@@ -1,4 +1,4 @@
-package ca.northline.platform.i18n;
+package ca.northline.platform;
 
 import java.io.IOException;
 import java.io.InputStream;

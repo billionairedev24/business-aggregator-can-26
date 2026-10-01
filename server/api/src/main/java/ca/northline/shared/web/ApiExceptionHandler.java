@@ -1,6 +1,6 @@
 package ca.northline.shared.web;
 
-import ca.northline.platform.i18n.MessageCatalogue;
+import ca.northline.platform.MessageCatalogue;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.PlaceNames;
