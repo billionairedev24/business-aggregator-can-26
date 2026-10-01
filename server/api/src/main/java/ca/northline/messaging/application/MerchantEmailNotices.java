@@ -9,6 +9,7 @@ import ca.northline.email.EmailContent.DisputeUpdate;
 import ca.northline.email.EmailContent.ListingRejected;
 import ca.northline.email.EmailContent.PayoutSent;
 import ca.northline.email.EmailContent.RefundCaseUpdate;
+import ca.northline.email.EmailContent.TrustWarning;
 import ca.northline.email.EmailDeliveryFailed;
 import ca.northline.email.Mailer;
 import ca.northline.identity.api.NotificationContacts;
@@ -17,6 +18,7 @@ import ca.northline.merchants.api.BusinessNames;
 import ca.northline.merchants.api.CustomDomainChanged;
 import ca.northline.merchants.api.TeamRoster;
 import ca.northline.messaging.api.ListingRejectedNotice;
+import ca.northline.messaging.api.TrustWarningNotice;
 import ca.northline.messaging.application.NotificationPreferences.NotificationPrefsStore;
 import ca.northline.messaging.domain.NotificationMatrix;
 import ca.northline.payments.api.DisputeDecided;
@@ -210,6 +212,18 @@ class MerchantEmailNotices {
                 null,
                 business -> new ListingRejected(
                         business, event.kind(), event.listingName(), event.reasons(), event.note(), link));
+    }
+
+    /** S-93: trust &amp; safety warned the business from a flag; always sent, to the owners. */
+    @ApplicationModuleListener
+    void on(TrustWarningNotice event) {
+        var link = links.studioHome(event.merchantId());
+        notify(
+                event.eventId(),
+                event.merchantId(),
+                OWNERS,
+                null,
+                business -> new TrustWarning(business, event.rule(), event.note(), link));
     }
 
     /**

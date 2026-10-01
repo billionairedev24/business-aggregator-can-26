@@ -625,6 +625,36 @@ public sealed interface EmailContent {
         }
     }
 
+    /**
+     * S-93: trust &amp; safety warned the business from a flag (off-platform payment attempt, a floor breach …).
+     * Transactional: an account notice, always sent to the owners.
+     *
+     * @param rule the flag's rule ({@code off_platform_payment}, …); unknown rules use the generic wording
+     */
+    record TrustWarning(
+            String businessName, String rule, @Nullable String note, URI link) implements EmailContent {
+
+        @Override
+        public String template() {
+            return "trust-warning";
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.TRANSACTIONAL;
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            var v = new LinkedHashMap<String, Object>();
+            v.put("businessName", businessName);
+            v.put("rule", "off_platform_payment".equals(rule) ? rule : "other");
+            v.put("note", note == null ? "" : note);
+            v.put("link", link.toString());
+            return v;
+        }
+    }
+
     // ── Samples (preview endpoint, rendering tests) ──────────────────────────────────────────────────────────────
 
     /**
@@ -743,6 +773,13 @@ public sealed interface EmailContent {
                         List.of("pricing", "misleading"),
                         "The price is far below what the job costs; customers would be charged more on site.",
                         URI.create(studio + "/listings")));
+        all.put(
+                "trust-warning",
+                new TrustWarning(
+                        business,
+                        "off_platform_payment",
+                        "A message asked a customer to e-transfer you directly.",
+                        URI.create(studio + "/messages")));
         return java.util.Collections.unmodifiableMap(all);
     }
 

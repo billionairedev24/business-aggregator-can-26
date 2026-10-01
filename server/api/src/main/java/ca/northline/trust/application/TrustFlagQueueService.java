@@ -1,17 +1,25 @@
 package ca.northline.trust.application;
 
 import ca.northline.developer.api.AuditTrail;
+import ca.northline.merchants.api.BusinessNames;
+import ca.northline.messaging.api.TrustWarningNotice;
+import ca.northline.region.api.MerchantPlaces;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.Ids;
+import ca.northline.shared.MerchantScope;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
 import ca.northline.trust.api.FlagDecided;
 import ca.northline.trust.api.ListingFlags;
 import ca.northline.trust.application.TrustFlagStore.StoredFlag;
+import ca.northline.trust.application.TrustRules.FlagAction;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.context.ApplicationEventPublisher;
@@ -29,6 +37,8 @@ class TrustFlagQueueService implements TrustFlagQueue, ListingFlags {
     private final AuditTrail audit;
     private final ApplicationEventPublisher events;
     private final Clock clock;
+    private final BusinessNames names;
+    private final MerchantPlaces places;
 
     @Override
     @Transactional(readOnly = true)
@@ -45,8 +55,52 @@ class TrustFlagQueueService implements TrustFlagQueue, ListingFlags {
             throw RuleViolation.of("decision", "invalid", DECISION_REQUIRED);
         }
         var flag = flags.find(flagId).orElseThrow(() -> new NotFound("flag", flagId));
-        if (!record(flag, decision, staffId, role, note)) {
+        if (!record(flag, decision, decision, staffId, role, note)) {
             throw new Conflict("flag_decided", NOT_OPEN);
+        }
+        return view(flags.find(flagId).orElseThrow(() -> new NotFound("flag", flagId)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<FlagView> queue(MerchantScope scope, int limit) {
+        var nameById = new HashMap<String, String>();
+        var provinceById = new HashMap<String, Optional<String>>();
+        return flags.queue(scope, clock.instant().minus(Duration.ofDays(7)), Math.clamp(limit, 1, 500)).stream()
+                .map(f -> {
+                    var m = f.merchantId();
+                    if (m == null) {
+                        return view(f, null, null);
+                    }
+                    var name = nameById.computeIfAbsent(
+                            m, id -> names.displayName(id).orElse(id));
+                    var province = provinceById.computeIfAbsent(m, id -> {
+                        var place = places.of(id);
+                        return place.ownProvince() ? Optional.ofNullable(place.province()) : Optional.empty();
+                    });
+                    return view(f, name, province.orElse(null));
+                })
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public FlagView act(String flagId, FlagAction action, String staffId, String role, @Nullable String note) {
+        var flag = flags.find(flagId).orElseThrow(() -> new NotFound("flag", flagId));
+        if (action == FlagAction.WARN && flag.merchantId() == null) {
+            throw RuleViolation.of("action", "option", NO_BUSINESS);
+        }
+        if (!record(flag, "actioned", action.code(), staffId, role, note)) {
+            throw new Conflict("flag_decided", NOT_OPEN);
+        }
+        if (action == FlagAction.WARN) {
+            events.publishEvent(new TrustWarningNotice(
+                    Ids.next(),
+                    clock.instant(),
+                    flagId,
+                    java.util.Objects.requireNonNull(flag.merchantId()),
+                    flag.rule(),
+                    note == null || note.isBlank() ? null : note.strip()));
         }
         return view(flags.find(flagId).orElseThrow(() -> new NotFound("flag", flagId)));
     }
@@ -75,7 +129,8 @@ class TrustFlagQueueService implements TrustFlagQueue, ListingFlags {
     public int resolve(String listingId, boolean actioned, String staffId, String role, @Nullable String note) {
         var decided = 0;
         for (var flag : flags.openOn(LISTING, listingId, 100)) {
-            if (record(flag, actioned ? "actioned" : "dismissed", staffId, role, note)) {
+            var decision = actioned ? "actioned" : "dismissed";
+            if (record(flag, decision, decision, staffId, role, note)) {
                 decided++;
             }
         }
@@ -83,11 +138,12 @@ class TrustFlagQueueService implements TrustFlagQueue, ListingFlags {
     }
 
     /** Decides one open flag: the row, the audit entry and {@link FlagDecided}. False when it was no longer open. */
-    private boolean record(StoredFlag flag, String decision, String staffId, String role, @Nullable String note) {
+    private boolean record(
+            StoredFlag flag, String decision, String action, String staffId, String role, @Nullable String note) {
         var flagId = flag.id();
         var cleanNote = note == null || note.isBlank() ? null : note.strip();
         var now = clock.instant();
-        if (!flags.decide(flagId, decision, staffId, cleanNote, now)) {
+        if (!flags.decide(flagId, decision, action, staffId, cleanNote, now)) {
             return false;
         }
         // Platform-level entry (no merchant_id): staff moderation isn't listed in the business's own audit log.
@@ -107,7 +163,9 @@ class TrustFlagQueueService implements TrustFlagQueue, ListingFlags {
                         "source",
                         source(flag),
                         "merchantId",
-                        String.valueOf(flag.merchantId()))));
+                        String.valueOf(flag.merchantId()),
+                        "action",
+                        action)));
         events.publishEvent(new FlagDecided(
                 Ids.next(),
                 now,
@@ -119,11 +177,16 @@ class TrustFlagQueueService implements TrustFlagQueue, ListingFlags {
                 decision,
                 staffId,
                 role,
-                cleanNote));
+                cleanNote,
+                action));
         return true;
     }
 
     static FlagView view(StoredFlag f) {
+        return view(f, null, null);
+    }
+
+    static FlagView view(StoredFlag f, @Nullable String businessName, @Nullable String province) {
         var e = f.evidence();
         var categories = e.getOrDefault("categories", e.getOrDefault("signals", ""));
         return new FlagView(
@@ -144,7 +207,10 @@ class TrustFlagQueueService implements TrustFlagQueue, ListingFlags {
                 f.createdAt(),
                 f.decidedBy(),
                 f.decidedAt(),
-                f.decisionNote());
+                f.decisionNote(),
+                f.action(),
+                businessName,
+                province);
     }
 
     private static String source(StoredFlag f) {

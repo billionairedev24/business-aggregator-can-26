@@ -5406,3 +5406,43 @@ Stacked on S-92 (#122), itself on S-79 (#121).
 - **Not done:** seller appeals ("seller may appeal once" is the design's copy; the `appealed` state exists but no
   appeal flow); "quality scores update tonight" relies on the existing nightly quality job; Stripe card disputes
   (chargebacks) stay with the issuer and don't appear in the queue.
+
+## 2026-10-01 — S-93 Trust & safety rules, flags (incl. off-platform payment flags from messaging)
+
+Stacked on S-80 (#123) → S-92 (#122) → S-79 (#121).
+
+- **Rules as configuration** (`trust.domain.TrustRule`, `trust.rules`): tier thresholds and take rates (Registered /
+  Trusted / Master, design 03 tier rules), the rating floor (4.2 over 90 days, 30 days to recover), provider no-shows (3
+  in 30 days), customer no-shows (×2), the missing-photo escrow delay (48 h), the **off-platform payment phrases** and
+  the **restricted keywords** for listings. Each rule is a typed JSON value with the design's numbers as defaults; a rule
+  without a row uses its default (no seed data). `GET /api/v1/console/trust/rules`, `PUT …/rules/{key} {value}`
+  (action `decide`) validates every field (422 per `value.<field>`), stores it and writes `trust.rule_changed`
+  (platform-level, before/after).
+- **What the rules drive today:** the phrases add to the message detector's built-in patterns (`messaging.api.
+  OffPlatformPhrases`, implemented by trust — messaging can't call trust, trust → messaging); the restricted keywords
+  are a new automated vetting check (`restricted_keyword` flag → the S-92 queue; `trust.api.ListingKeywordRules`); the
+  rating floor drives "Simulate impact" (`GET …/rules/rating_floor/impact?rating=&province=&market=`: businesses with at
+  least 5 reviews in the window, and how many average below it). **Display only for now:** tier thresholds and take
+  rates (tiers aren't recomputed by a job yet; payments still reads the tier stored on the business), the no-show limits
+  and the photo delay — the consequences list reads them, so the copy follows the configuration.
+- **Flags:** `GET /api/v1/console/trust/flags/queue?province=&market=` lists open flags of the businesses in scope
+  (with name and province) and those decided in the last 7 days. **Actions** `POST …/flags/{id}/action {warn | coach
+  | confirm | suspend_listings | escalate, note?}` (action `decide`; `suspend_listings` also needs `suspend`) action
+  the flag and record what was done in `trust.flags.action` (column of V012, first use). **Warn** emails the owners
+  (`trust-warning`, en/fr, transactional; `messaging.api.TrustWarningNotice`) — the design's "warning, then
+  suspension". The others are recorded (and audit-logged) only: coaching, instant-book-off and suspensions belong to the
+  sellers oversight screen (S-82). A listing's flag keeps S-92's meaning ("actioned" rejects the listing; the console
+  shows it as "Reject listing"). Dismiss uses the S-133 decision endpoint. `FlagDecided` now carries the action.
+- **Which action a flag offers** (console): off-platform payment → Warn; quality below floor → Start coaching; a
+  customer no-show → Confirm; regulated work without permit → Suspend listing rights; listing flags → Reject listing;
+  anything else → Escalate to ops.
+- **Copy:** the design's tier rules and consequences are built from the rule values ("20+ jobs · quality ≥ 80 · …",
+  "Instant book, 12% take, badge"); the lede mentions ClickHouse as written in the design (scores are computed by the
+  existing nightly job). Keyword lists, the rule dialog and flag wording for the api's codes are ours.
+- **Schema V213:** `trust.rules`; index `trust.flags(merchant_id, state)`.
+- **Messages (fr in the catalogue):** "Enter a number in the allowed range.", "Enter a whole number in the allowed
+  range.", "Add at least one word or phrase.", "Each word or phrase is at most 60 characters.", "At most 200 words or
+  phrases.", "Pick a rule from the list.", "Send the rule's value.", "Enter a rating from 1 to 5.", "Only a business
+  can be warned.".
+- **Not done:** the automatic consequences themselves (removing a business from search below the floor, instant book
+  off after no-shows, the photo delay) — the rules are their configuration, the jobs are S-82's; appeals.

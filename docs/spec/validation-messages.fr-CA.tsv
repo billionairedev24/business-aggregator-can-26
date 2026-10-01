@@ -659,3 +659,12 @@ This case isn't waiting for an agent.	Ce dossier n’attend pas d’agent.	new
 This case already has a decision waiting for a finance co-sign.	Ce dossier a déjà une décision qui attend la cosignature des finances.	new
 This decision was already co-signed or declined.	Cette décision a déjà été cosignée ou refusée.	new
 Choose approve or decline.	Choisissez Approuver ou Refuser.	new
+Enter a number in the allowed range.	Entrez un nombre dans la plage permise.	new
+Enter a whole number in the allowed range.	Entrez un nombre entier dans la plage permise.	new
+Add at least one word or phrase.	Ajoutez au moins un mot ou une expression.	new
+Each word or phrase is at most 60 characters.	Chaque mot ou expression compte au plus 60 caractères.	new
+At most 200 words or phrases.	Au plus 200 mots ou expressions.	new
+Pick a rule from the list.	Choisissez une règle dans la liste.	new
+Send the rule's value.	Envoyez la valeur de la règle.	new
+Enter a rating from 1 to 5.	Entrez une note de 1 à 5.	new
+Only a business can be warned.	Seule une entreprise peut recevoir un avertissement.	new

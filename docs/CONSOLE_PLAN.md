@@ -112,7 +112,7 @@ member.
 | `/sellers/$sellerId` | `seller_detail` | `sellers` | admin, trust_safety, support | S-82 | stand-in |
 | `/verification?province=&market=&application=` | `verify` | `verify` | admin, trust_safety | S-79 | built |
 | `/vetting?province=&market=` | `vetting` | `vetting` | admin, trust_safety | S-92 | built |
-| `/trust` | `trust` | `trust` | admin, trust_safety | S-93 | stand-in |
+| `/trust?province=&market=` | `trust` | `trust` | admin, trust_safety | S-93 | built |
 | `/catalogue` | `taxonomy` | `taxonomy` | admin | S-94 | stand-in |
 | `/support` | `support` | `support` | admin, trust_safety, dispatch, support | S-83 | stand-in |
 | `/provinces` | `regions` | `regions` | admin | S-84 | stand-in |
@@ -194,6 +194,16 @@ POST /api/v1/console/disputes/decisions/{decisionId}/cosign  {decision: approve|
 409 not_with_agent · awaiting_cosign · cosign_self · cosign_closed
 ```
 
+### Trust & safety (S-93)
+
+```
+GET /api/v1/console/trust/rules                                  → {items: [{key, value, defaults, fields, updatedBy?, edited?}]}
+PUT /api/v1/console/trust/rules/{key} {value}                    (decide) 422 value.<field>
+GET /api/v1/console/trust/rules/rating_floor/impact?rating=4.4[&province=&market=]  → {rating, days, affected, total}
+GET /api/v1/console/trust/flags/queue[?province=&market=]        → {items: [FlagView + businessName, province, action]}
+POST /api/v1/console/trust/flags/{id}/action {action: warn|coach|confirm|suspend_listings|escalate, note?}  (decide; suspend)
+```
+
 ### Overview (S-91)
 
 ```
@@ -256,7 +266,7 @@ stopsDone, stopsTotal, nextEta, late, heuristic}` (`late`: a pending stop more t
 | sellers | `merchants.api.MerchantDirectory`, `trust.api.QualityQuery` | directory with filters, seller detail, oversight actions (coach, instant book off, hide, demote, suspend) (S-82) |
 | verify | `GET/POST /api/v1/console/registry-reviews` (S-23); `GET /api/v1/console/verification/applications[/{id}]`, `POST …/{id}/decision`, `POST …/{id}/identity-reviews/{checkId}/decision` (S-79) | — |
 | vetting | `GET /api/v1/console/vetting`, `POST …/listings/{id}/decision`, `POST …/dishes/{id}/decision` (S-92) | — |
-| trust | `GET /api/v1/console/trust/flags`, `POST …/{id}/decision` (S-133) | tier rules, automatic consequences, rating floor tuning (S-93) |
+| trust | `GET /api/v1/console/trust/flags`, `POST …/{id}/decision` (S-133); `GET …/flags/queue`, `POST …/flags/{id}/action`, `GET/PUT …/trust/rules[/{key}]`, `GET …/rules/rating_floor/impact` (S-93) | the consequences' jobs (S-82) |
 | taxonomy | `db/seed/categories.json` (seed only) | categories CRUD with regulators, limits, per-province rules (S-94) |
 | support | customer cases (`account`, `messaging.api`) for their owners | tickets queue, macros en/fr, case actions (S-83) |
 | regions | `region.api.Regions` reads; `GET /api/v1/geo/regions` | province / market / zone stage changes with co-sign (S-84) |

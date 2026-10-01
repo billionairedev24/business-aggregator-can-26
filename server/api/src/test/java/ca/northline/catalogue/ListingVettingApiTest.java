@@ -189,7 +189,7 @@ class ListingVettingApiTest extends CatalogueApiTest {
         var biz = provider(MerchantRole.OWNER);
         verifiedLicence(biz.merchantId(), "AMVIC");
         var id = json(mvc.perform(postJson("/api/v1/merchants/{m}/services", """
-                                        {"name":"Guaranteed to pass inspection","categoryId":"%s","pricingMode":"fixed",
+                                        {"name":"Pass inspection, promised","categoryId":"%s","pricingMode":"fixed",
                                          "priceCents":18000,"durationMin":60,"bufferMin":15,"included":"Inspection",
                                          "instantBook":true}
                                         """.formatted(MECHANIC), biz.merchantId())
