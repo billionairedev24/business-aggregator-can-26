@@ -11,7 +11,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Weekly hours as {@code integer_range}s of minutes in the week (Monday 00:00 America/Edmonton = 0, 10 080 minutes),
+ * Weekly hours as {@code integer_range}s of minutes in the week (Monday 00:00 local time = 0, 10 080 minutes),
  * the shape "open now" is queried against: {@code food.opening_hours} and {@code availability.availability_rules} both
  * store per ISO weekday (Mon = 1) {@code [["11:00","21:00"], …]}. A range past midnight ({@code ["18:00","02:00"]})
  * continues into the next day (Sunday into Monday). Overlapping ranges (two technicians) are merged.

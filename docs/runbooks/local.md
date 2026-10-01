@@ -14,7 +14,7 @@ Gradle/pnpm/compose commands still work and are shown next to each target.
 | what | version | notes |
 |---|---|---|
 | git | any | |
-| JDK | **25** | `export JAVA_HOME=/path/to/jdk-25`. Gradle 9.8 comes with the wrapper (`server/gradlew`). |
+| JDK | **25** | `export JAVA_HOME=/path/to/jdk-25`. Gradle 9.8 comes with the wrapper (`server/gradlew`). The Gradle daemon itself must run on JDK 25 too (`server/gradle/gradle-daemon-jvm.properties` picks an installed one): in IntelliJ set *Settings › Build Tools › Gradle › Gradle JVM* to JDK 25, otherwise Spotless fails on `_` (unnamed variables). |
 | Node.js + pnpm | Node 22+, pnpm 10.17 | `corepack enable` picks the pnpm version from `web/package.json`. |
 | PostgreSQL | **17** with **PostGIS 3.5** | yours, or Docker (`--profile db`). Extensions used: `postgis`, `citext`, `pgcrypto`. |
 | Valkey or Redis | Valkey 8 / Redis 7+ | optional: only for `local,valkey` (sessions in Valkey) and the worker. Yours, or Docker (`--profile cache`). |
@@ -174,7 +174,7 @@ everything except `tools` (`make kafka-ui`, `make kibana`).
 | `db` | Postgres 17 + PostGIS | `DB_URL=jdbc:postgresql://localhost:5432/northline` | everything |
 | `cache` | Valkey 8 | `REDIS_HOST=localhost`, `REDIS_PORT=6379` | `local,valkey`, worker, non-`local` runs |
 | `events` | Kafka 4 (KRaft) + one-shot topic creation (`scripts/topics.sh` from `deploy/kafka/topics.yaml`, ~1 min the first time, seconds after) | `KAFKA_BOOTSTRAP=localhost:9092` | worker; api without `local` |
-| `search` | Elasticsearch 9 (security off) | `ES_URIS=http://localhost:9200` | worker; api without `local` |
+| `search` | Elasticsearch 9 (security off) | `ES_URIS=http://localhost:9200` (+ `SEARCH_PROVIDER=elasticsearch` for the api under `local`) | worker; the api's search |
 | `mail` | Mailpit — inbox at http://localhost:8025 | `SMTP_HOST=localhost`, `SMTP_PORT=1025` (the defaults) | api email (`EMAIL_PROVIDER=local`, S-13) |
 | `storage` | S3-compatible storage (RustFS) + bucket `northline-local`; console http://localhost:9101 | `STORAGE_ENDPOINT=http://localhost:9100`, `STORAGE_ACCESS_KEY=northline`, `STORAGE_SECRET_KEY=northline-dev-secret`, `STORAGE_PATH_STYLE=true` | api with `STORAGE_PROVIDER=s3` (S-10) |
 | `payments` | stripe-mock | `STRIPE_SECRET_KEY=sk_test_123`, `STRIPE_API_BASE=http://localhost:12111` (+ `TAX_PROVIDER=stripe` for Stripe Tax, S-21) | api payments + Stripe Connect (+ Stripe Tax) instead of the fakes |

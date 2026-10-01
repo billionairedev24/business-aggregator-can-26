@@ -11,6 +11,7 @@ dependencies {
     implementation(project(":platform"))
     implementation(project(":email")) // transactional email (S-13)
     implementation(project(":sms")) // SMS team invitations (S-27)
+    implementation(project(":search-index")) // S-44: the listings index contract (ListingDocument, languages)
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
@@ -60,6 +61,7 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-junit-jupiter")
     testImplementation("org.testcontainers:testcontainers-postgresql")
     testImplementation("org.testcontainers:testcontainers-kafka") // S-26: the real wire format of externalized events
+    testImplementation("org.testcontainers:testcontainers-elasticsearch") // S-44: the search API on Elasticsearch 9
     testImplementation(libs.archunit)
     testImplementation(libs.wiremock) // S-23: registry adapters against recorded HTTP stand-ins
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -154,3 +156,7 @@ extensions.configure<com.google.cloud.tools.jib.gradle.JibExtension> {
     }
 }
 tasks.matching { it.name.startsWith("jib") && it.name != "jibTools" }.configureEach { dependsOn(jibTools) }
+
+// S-44: the search module pulls the Elasticsearch client's (large) type model into ArchUnit's / Modulith's class
+// import, on top of every cached test context; 768m (the root default) ran out of heap at the end of the suite.
+tasks.named<Test>("test") { maxHeapSize = "1g" }
