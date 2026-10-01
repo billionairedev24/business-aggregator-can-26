@@ -1,5 +1,6 @@
 package ca.northline.auth.config;
 
+import ca.northline.auth.application.AuthProperties;
 import ca.northline.auth.application.LoginPages;
 import ca.northline.auth.application.PartnerTokens;
 import ca.northline.auth.application.RefreshTokenReuse;
@@ -60,6 +61,9 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.preauth.AbstractPreAuthenticatedProcessingFilter;
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -88,7 +92,8 @@ class AuthorizationServerConfig {
             RegisteredClientRepository clients,
             PartnerAssertions partnerAssertions,
             PartnerTokens partnerTokens,
-            ResourceIndicators resources) {
+            ResourceIndicators resources,
+            AuthProperties props) {
         var authorizationServer = new OAuth2AuthorizationServerConfigurer();
         return http.securityMatcher(authorizationServer.getEndpointsMatcher())
                 .with(
@@ -127,6 +132,8 @@ class AuthorizationServerConfig {
                                                         : p))
                                         .errorResponseHandler(new PartnerTokenErrors())))
                 .authorizeHttpRequests(a -> a.anyRequest().authenticated())
+                // S-139: the API viewers (public client `docs`) exchange their code from the browser
+                .cors(c -> c.configurationSource(tokenEndpointCors(props.tokenEndpointOrigins())))
                 .headers(WebSecurityConfig::lockedDown)
                 // S-62: each client's people sign in on their own site (the Studio's, the consumer's).
                 .exceptionHandling(e -> e.defaultAuthenticationEntryPointFor(
@@ -138,6 +145,32 @@ class AuthorizationServerConfig {
                 .addFilterBefore(new MfaRequiredClients(pages), AbstractPreAuthenticatedProcessingFilter.class)
                 .oauth2ResourceServer(rs -> rs.jwt(Customizer.withDefaults()))
                 .build();
+    }
+
+    /**
+     * S-139: CORS for the token and revocation endpoints, for the browser origins of public clients that call them
+     * from a page ({@code northline.auth.token-endpoint-origins}: the api's Swagger UI and Scalar outside prod). No
+     * credentials: PKCE public clients send no cookie and no secret. Nothing is registered when the list is empty. Used
+     * by this chain (the POST) and by the web chain, which receives the preflight: this chain only matches
+     * {@code POST /oauth2/token}.
+     */
+    static CorsConfigurationSource tokenEndpointCors(List<String> origins) {
+        var source = new UrlBasedCorsConfigurationSource();
+        registerTokenEndpointCors(source, origins);
+        return source;
+    }
+
+    static void registerTokenEndpointCors(UrlBasedCorsConfigurationSource source, List<String> origins) {
+        if (!origins.isEmpty()) {
+            var config = new CorsConfiguration();
+            config.setAllowedOrigins(origins);
+            config.setAllowedMethods(List.of("POST"));
+            config.setAllowedHeaders(List.of("Content-Type", "Accept", "X-Requested-With"));
+            config.setAllowCredentials(false);
+            config.setMaxAge(3600L);
+            source.registerCorsConfiguration("/oauth2/token", config);
+            source.registerCorsConfiguration("/oauth2/revoke", config);
+        }
     }
 
     /**

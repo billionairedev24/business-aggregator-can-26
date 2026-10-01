@@ -101,7 +101,10 @@ class RedisSlotHoldStore implements SlotHoldStore {
     @Override
     public List<Hold> ofMember(String merchantId, String memberUserId, Instant from, Instant to, Instant now) {
         var ids = redis.opsForZSet()
-                .rangeByScore(memberKey(merchantId, memberUserId), now.toEpochMilli() + 1, Double.MAX_VALUE);
+                .rangeByScore(
+                        memberKey(merchantId, memberUserId),
+                        (double) (now.toEpochMilli() + 1), // epoch millis are exact as a double (< 2^53)
+                        Double.MAX_VALUE);
         if (ids == null) {
             return List.of();
         }

@@ -4207,3 +4207,198 @@ Branch `web/s-60-something-wrong`, **stacked on S-59** (#93, itself on S-58 #90)
   others' 404; the `report` action in Orders & bookings). vitest `features/account/problem.test.tsx` (report with a
   photo and the four steps, required item and reason, triage suggestion used and sent, no suggestion when triage is
   off, closed window, error + Retry, French; Help & cases statuses, a case's timeline and a message).
+
+## 2026-10-01 — S-135 BFF relay race: JDK HttpClient request factory in the api relay
+
+- **Root cause: an empty request body streamed into a JDK HttpClient race.** It is not the docs viewers.
+  - Gateway MVC (`RestClientProxyExchange`) streams a body whenever `getInputStream().isFinished()` is false. MockMvc
+    reports that for every request, GETs included, until the stream is read. Tomcat reports it for a chunked request
+    whose body is empty. Real GETs on Tomcat are already "finished" and go out without a body.
+  - Spring's `JdkClientHttpRequest` then publishes the body through `OutputStreamPublisher`, which runs the writer on
+    its own (virtual) thread. For an empty body the writer signals `onComplete` at once, without waiting for demand,
+    which Reactive Streams allows.
+  - In the JDK 25 client, `Http1Exchange.sendBodyAsync` subscribes first and stores `bodySubscriber` afterwards. A
+    completion that arrives in between runs the write path, and the write path calls `requestMoreBody()` on the null
+    field. The result is `NullPointerException: … "this.bodySubscriber" is null`, the S-125 symptom with the same stack.
+  - The window opens when the exchange runs on a **pooled keep-alive connection that the server has already closed**.
+    A stand-alone reproduction (`JdkClientHttpRequestFactory`, a server that drops each connection after answering)
+    failed 12 of 200 requests with an empty streamed body and 0 of 200 with no body. Healthy connections failed 0 of
+    2,000.
+  - S-125's correlation with "a spec had been generated in the same process" was timing: generating the spec and
+    serving the webjars left the WireMock api's kept-alive connections idle long enough to be closed. The guess that
+    dev/staging would hit the race after someone opens `/bff/docs` does not hold. What matters is an empty chunked body
+    on a stale connection, and it can happen with or without the docs.
+- **Suspects ruled out:**
+  - *A shared HttpClient:* the gateway's `RestClient` has its own request factory, and the failing state is one
+    exchange's field.
+  - *The HTTP/2 upgrade:* the stack is `Http1Exchange`, and the reproduction fails with an HTTP/1.1-only client.
+  - *Connection reuse on its own:* with no body it never failed. Reuse widens the window but does not cause the race.
+  - *Virtual threads:* they make the writer thread start immediately, so they make the race more likely but don't
+    cause it.
+- **Fix in the relay, not a global setting:** `bff.config.RelayBody` is the first `before` filter of the `/api/**`
+  route. It wraps the servlet request so that `isFinished()` reads one byte ahead.
+  - With no byte, the gateway sends no body (a GET is a plain GET, and an empty POST gets `Content-Length: 0`).
+  - With at least one byte, the publisher's first write waits for the client's demand, which comes only after
+    `bodySubscriber` is stored.
+  - The look-ahead blocks, which is fine because the relay is blocking (virtual threads) and reads the body straight
+    after.
+  - Rejected alternatives:
+    - `BufferingClientHttpRequestFactory` also buffers responses, which would break the S-130 assistant's SSE stream.
+    - A custom `ProxyExchange` would copy the gateway's response handling.
+    - `jdk.httpclient.*` system properties are JVM-wide.
+  - SSE streaming is unchanged: `SseRelayTest` still passes, because response handling is untouched.
+- **Tests:**
+  - `RelayRaceTest` (bff) runs in a context that has generated its OpenAPI document and served Swagger UI's webjar,
+    the Scalar page and `swagger-config`. Four workers send 400 requests each way:
+    - GETs through MockMvc, plain GETs and GETs with an empty chunked body over a real connection, all against an api
+      stand-in that closes every connection after answering, without saying so.
+    - DELETE, empty and JSON POSTs, and chunked (empty, 2-chunk, 5 kB) and `Content-Length` bodies against a
+      keep-alive stand-in, checking that the api receives exactly the bytes sent.
+  - Without the fix both tests failed with the NPE, 2 of 2 runs. With it, `RelayRaceTest`, `ConsumerBffTest`,
+    `SseRelayTest` and `BffSessionTest` passed **20 of 20 runs** in a row (`:bff:test --rerun`).
+  - S-125's workaround is undone: `BffSessionTest` checks Swagger UI's `index.html` and the Scalar page again.
+    `ConsumerBffOpenApiTest` keeps its own context, because the committed document shows the local cookie names.
+- **Not fixed (HTTP itself, recorded for the lead):** a relayed POST, PUT, PATCH or DELETE that lands on a pooled
+  connection the api has just closed fails with an `IOException` ("header parser received no bytes"). The browser sees
+  a 500. The JDK client retries only GET and HEAD on a connection that turned out to be closed
+  (`jdk.httpclient.enableAllMethodRetry` would retry everything, JVM-wide, which is unsafe for payments). Against the
+  api's Tomcat this needs Tomcat to close an idle connection at the moment the relay reuses it. The JDK client drops
+  idle connections after 30 s (`jdk.httpclient.keepalive.timeout`), so keeping the api's keep-alive timeout above
+  that makes it rarer still. Money-moving POSTs carry an `Idempotency-Key` anyway, so the browser can retry them.
+
+## 2026-10-01 — S-136 Calendar link disconnect deadlock
+
+- **The competing transactions** are a calendar read and the member's disconnect, with locks taken in opposite orders.
+  A read comes from the sync job, a notification or the read right after connecting or choosing calendars.
+  - **The read** locked the calendar's `calendar_sources` row (`FOR NO KEY UPDATE SKIP LOCKED`), called the provider,
+    rewrote the busy blocks and only then updated the parent `calendar_links` row: `last_sync_at`, plus a rotated
+    Microsoft refresh token or the `reconnect` state on the way.
+  - **The disconnect** deleted the `calendar_links` row first (`FOR UPDATE`), then, by `ON DELETE CASCADE`, the sources
+    and everything under them.
+  - The two locks were taken in opposite orders: source → link versus link → source. Postgres aborted one of the two
+    transactions. `CalendarSyncApiTest`'s "choose calendars, then disconnect" hit it when the read queued by the choice
+    was still running.
+  - The write-back already locked the link first, and the channel transactions touch only channel rows, so neither
+    took part.
+- **Fix: one lock order, the link first, in the strongest mode the transaction will need, so it never upgrades
+  later.**
+  - `CalendarLinkRepository.lockWaiting` (`FOR NO KEY UPDATE`, waiting) replaces the unlocked `byId` at the start of
+    a read and of "choose calendars".
+  - `lockForDelete` (`FOR UPDATE`) starts a disconnect, before it reads the channels and mirrors. A read or write-back
+    in flight therefore finishes first, and its mirrors are seen and deleted at the provider. None starts until the
+    link is gone: a read waits and then finds no link, and the job's write-back skips it.
+  - Rejected alternatives:
+    - A retry on deadlock would also have to retry the member's DELETE request, and it hides the cause.
+    - `FOR KEY SHARE` first and the update later deadlocks with any other transaction that updates the link and
+      then touches a source, such as "choose calendars" after a token refresh.
+- **Write-back now waits instead of skipping when it is asked for at once.** Reads hold the link for the length of
+  the provider call, so the S-55 write-back of a newly confirmed booking (`writeBackMember`) and the one after
+  connecting wait for a read in progress (`writeBack(link, wait = true)`) instead of skipping until the next 5-minute
+  run. The job's write-back keeps `SKIP LOCKED`, so replicas still share the work. Reads of one member's calendars now
+  run one after another; they already queued on the link update at the end.
+- **Tests:** `CalendarLockOrderTest`:
+  - **Forced interleaving:** a third transaction holds a busy block, so the read waits while holding the source. The
+    disconnect starts, and the test waits until Postgres shows it blocked. Then the busy block is released.
+  - **Unforced:** five rounds of four reads and a disconnect started together.
+  - Without the fix both tests failed with `deadlock detected`. With it, they and `CalendarSyncApiTest` passed 5 of 5
+    runs in a row, and `CalendarProvidersWireMockTest` passes.
+
+## 2026-10-01 — S-137 Indexer refreshes before finding stale documents
+
+- **Cause:** a whole-merchant refresh finds the documents of rows deleted from Postgres by *searching* the index for
+  the merchant's ids. A search sees only refreshed segments, so a dish indexed less than a second before its deletion
+  was invisible to it and survived until a later refresh of the same merchant. The reconcile sweep did not help,
+  because a deleted row changes no `updated_at`.
+- **Fix: `_refresh` the index before the id lookup** (`SearchProjection.indexedIds`, the language whose ids the lookup
+  reads). A refresh of an index with nothing new is a no-op, and otherwise it writes one small segment, as the
+  1-second refresh interval does anyway. Whole-merchant refreshes come from merchant-wide events and the reconcile
+  sweep, at a rate in the order of the refresh interval.
+- **The reindex backfill skips the lookup** (`SearchProjection.backfill`): it writes a merchant's first documents to
+  indices created by that run, which hold nothing of the merchant yet, and those indices load with refresh off, so a
+  refresh per merchant would only make thousands of tiny segments. The catch-up and the post-swap sweep of a reindex
+  use the normal path and do get the refresh, which also fixes a deletion during a reindex being missed on the
+  still-unrefreshed new index.
+- **Rejected alternatives:**
+  - `refresh=wait_for` on every write would hold every indexer event up to a second, which throttles consumption.
+  - A Postgres table of indexed ids per merchant would give a deterministic lookup, at the cost of a migration and a
+    write per document. It is the follow-up if refresh load ever shows up in the cluster's metrics.
+- **Tests:**
+  - `SearchIndexerTest.kitchenDishes_…` no longer republishes `menu_published` every 3 seconds: one event, then the
+    deletion.
+  - The new `aJustIndexedDish_deletedFromPostgres_isRemovedOnTheFirstMenuPublished` turns refresh off on the live
+    indices, so only the projection's own refresh can make the new dish searchable. It indexes a dish, deletes the
+    row and publishes one event; the dish is gone and its neighbour is kept. It failed without the fix (1 of 1 run); with it, `SearchIndexerTest` and `SearchReindexTest` passed 5 of 5 consecutive runs.
+- **No schema, configuration or API change.**
+
+## 2026-10-01 — S-139 Public 'docs' OAuth client so Swagger UI / Scalar 'Try it' can sign in
+
+Runbook: [api-docs.md § Try it with your own sign-in](runbooks/api-docs.md). It follows the S-122 catalogue rules
+(a public client, PKCE, no secret, https outside local/dev loopback) and S-29's rule that a public client refreshes
+only with DPoP.
+
+- **Client `docs`** ("Northline API docs (Swagger UI, Scalar)"):
+  - public, authorization code + PKCE S256, no consent screen;
+  - scopes `openid profile merchant` (the scopes the `oauth2` scheme of the specs lists);
+  - grant type `authorization_code` only, with 10-minute access tokens and no refresh token, since the viewers
+    don't do DPoP;
+  - redirect URIs `${API_PUBLIC_URL}/swagger-ui/oauth2-redirect.html` and `${API_PUBLIC_URL}/docs/scalar`.
+
+  The token is the person's own: the api applies their memberships, roles and `acr`, as for any client, so Studio
+  calls still need a second factor. The client is not in `mfa-required-clients`, because consumer endpoints are
+  documented too. People sign in on the Studio's sign-in page (`LoginPages` default), or not at all with an existing
+  session.
+- **Never in prod:** the client lives in a document of auth's `application.yml` activated on
+  `local | test | dev | staging`. Profile documents, rather than a new `ClientSpec` key, keep the catalogue unchanged.
+  `DocsClientTest` resolves the configuration per profile and asserts that dev and staging have the client and its
+  CORS origin and that prod has neither. Prod also has no viewer (S-125).
+- **CORS on `/oauth2/token` and `/oauth2/revoke`** (new `northline.auth.token-endpoint-origins`, empty by default,
+  `${API_PUBLIC_URL}` in the same profile document):
+  - Swagger UI and Scalar exchange the code with `fetch` from the api host, and Swagger UI's `X-Requested-With`
+    header needs a preflight.
+  - The CORS is POST only, without credentials, for that origin only. The viewer pages' CSP already allowed
+    `connect-src <issuer>` (S-125).
+  - The authorization-server filter chain matches only `POST /oauth2/token`, so the preflight `OPTIONS` lands in the
+    web chain. Both chains therefore register the same token-endpoint CORS (`registerTokenEndpointCors`).
+  - The authorization endpoint needs no CORS, because it is a top-level navigation in a popup.
+- **Viewers** (the api's `application.yml`): Swagger UI has `oauth.client-id: docs`, its scopes and a fixed
+  `oauth2-redirect-url` from `API_PUBLIC_URL` (never the request's host behind the ingress). Scalar has
+  `scalar.authentication` with the preferred scheme `oauth2`, `clientId: docs`, PKCE SHA-256 and the redirect to its
+  own page. springdoc copies these into Scalar's configuration. The auth and BFF viewers are unchanged: their
+  endpoints use cookies, not bearer tokens.
+- **No new variable:** auth now also reads `API_PUBLIC_URL` (already derived by the chart for every app and already
+  used by S-127). The README and the dev/staging tables say so.
+- **Tests:**
+  - `DocsClientTest` (auth):
+    - with a signed-in session, the authorization request for `docs` redirects straight to Swagger UI's
+      `oauth2-redirect.html` with a code;
+    - the preflight and the token exchange from `http://localhost:8080` get `Access-Control-Allow-Origin` without
+      credentials, and the token is addressed to `northline-api`, for `client_id=docs`, with no refresh token;
+    - another origin gets no CORS, and another redirect URI is refused;
+    - the client is configured per profile as described above.
+  - The api's `OpenApiSpecsTest` checks Swagger UI's `oauth2RedirectUrl` and Scalar's client id, redirect and PKCE.
+- **Not exercised:** a click-through in a real browser against a deployed dev environment (popups, the Studio
+  sign-in hand-off back to `/oauth2/authorize`). The flow was checked with MockMvc only.
+
+## 2026-10-01 — S-138 Make Error Prone warnings errors (-Werror)
+
+- **Remaining warnings on main, fixed in the code:** a clean `compileJava compileTestJava compileTestFixturesJava
+  --rerun-tasks --continue` of every module found three, all in `:api`. Since #72, merged work had added them.
+  - `RedisSlotHoldStore` (`LongDoubleConversion`): an explicit `(double)` cast on the ZSET score's lower bound.
+    Epoch milliseconds are below 2^53, so they are exact as a double.
+  - `CustomerBookings` (`InvalidParam`): the javadoc names `booking.bookingId()`, not a parameter `bookingId`.
+  - `PublicKitchenService` (`BoxingComparator`): `thenComparingDouble` for the distance sort.
+
+  No suppression was added.
+- **`-Werror`** is added to every `JavaCompile` in `server/build.gradle.kts`, as the 2026-10-01 "warnings to zero"
+  section proposed. javac fails on any warning, Error Prone's and NullAway's included, in main, test and test-fixture
+  code. `disableWarningsInGeneratedCode` and the excluded `build/generated` paths stay, so MapStruct and Lombok output
+  can't fail the build.
+  - Proof: reintroducing the `LongDoubleConversion` warning makes `:api:compileJava` fail with
+    `error: warnings found and -Werror specified`.
+  - It is documented in BACKEND_CONVENTIONS § 10, with the command that lists every warning at once.
+- **Open branches checked before switching it on:** S-58, S-59 and S-60 (the account area; PRs #90, #93, #95) and
+  this run's S-135, S-136, S-137 and S-139 (#91, #92, #94, #96). Each branch tip was merged with this change, with no
+  conflict, and compiled cleanly with `--rerun-tasks`: 0 warnings, and all seven compile. A later commit on one of
+  them that adds a warning will fail its build after this merges. The fix is in the code, as above.
+- **Not changed:** the disabled checks (`StringSplitter`, `MissingSummary`, `JavaTimeDefaultTimeZone`) and NullAway
+  being off in tests.

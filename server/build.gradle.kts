@@ -46,7 +46,9 @@ subprojects {
 
     tasks.withType<JavaCompile>().configureEach {
         options.encoding = "UTF-8"
-        options.compilerArgs.addAll(listOf("-parameters", "-Xlint:-processing"))
+        // S-138: every warning is an error, Error Prone's included (BACKEND_CONVENTIONS § 10). Generated code stays
+        // out of Error Prone (below), so MapStruct/Lombok output can't fail the build.
+        options.compilerArgs.addAll(listOf("-parameters", "-Xlint:-processing", "-Werror"))
         options.errorprone {
             disableWarningsInGeneratedCode.set(true)
             excludedPaths.set(".*/build/generated/.*")

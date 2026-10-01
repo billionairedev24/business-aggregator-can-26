@@ -270,6 +270,23 @@ northline:
     region: ${SMS_REGION:}             # aws: ca-central-1 (empty = SDK default chain)
     endpoint: ${SMS_ENDPOINT:}         # API base override (tests, LocalStack, VPC endpoint)
 ---
+# S-139 (docs/runbooks/api-docs.md § Try it): the api's Swagger UI and Scalar sign in through this server with the
+# public client `docs` (authorization code + PKCE from the browser, with the person's own session; no secret, no refresh
+# token, because a public client refreshes only with DPoP). The token request comes from the viewers' origin, hence
+# CORS on /oauth2/token for it. local, test, dev and staging only: production publishes no viewer (S-125) and has
+# no such client (DocsClientTest).
+spring.config.activate.on-profile: "local | test | dev | staging"
+northline:
+  auth.token-endpoint-origins: [ "${API_PUBLIC_URL:http://localhost:8080}" ]
+  oauth.clients.docs:
+    type: public
+    name: Northline API docs (Swagger UI, Scalar)
+    redirect-uris:
+      - ${API_PUBLIC_URL:http://localhost:8080}/swagger-ui/oauth2-redirect.html
+      - ${API_PUBLIC_URL:http://localhost:8080}/docs/scalar
+    scopes: [ openid, profile, merchant ]
+    grant-types: [ authorization_code ]
+---
 # Local runs read server/.env (or .env next to the jar) — KEY=value lines, see server/.env.example. Never under `test`.
 spring.config.activate.on-profile: "!test"
 spring.config.import: optional:file:${NORTHLINE_DOTENV_DIR:.}/.env[.properties],optional:file:${NORTHLINE_DOTENV_DIR:..}/.env[.properties]

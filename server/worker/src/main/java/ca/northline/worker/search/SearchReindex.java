@@ -246,7 +246,7 @@ public final class SearchReindex {
         while (true) {
             var page = source.merchantIds(after, batch);
             for (var merchantId : page) {
-                transactions.executeWithoutResult(_ -> projection.refresh(new Scope.Merchant(merchantId), targets));
+                transactions.executeWithoutResult(_ -> projection.backfill(merchantId, targets));
                 count++;
             }
             if (page.size() < batch) {
