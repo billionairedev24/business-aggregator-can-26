@@ -390,6 +390,26 @@ class DispatchApiTest extends IntegrationTest {
                         == 2);
         // the run is done: the courier is free, then off shift
         mvc.perform(get("/api/v1/courier/run").with(me)).andExpect(status().isNoContent());
+        // S-87: the app replays actions whose answers it lost; on the done run they are no-ops
+        mvc.perform(json(post("/api/v1/courier/stops/{id}/dropoff", dropA), "{\"proof\":\"photo\"}")
+                        .with(me))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("done"));
+        mvc.perform(post("/api/v1/courier/stops/{id}/arrive", dropB).with(me))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("done"));
+        mvc.perform(json(post("/api/v1/courier/stops/{id}/pickup", bakeryA), "{\"scanOk\":true}")
+                        .with(me))
+                .andExpect(status().isOk());
+        mvc.perform(multipart("/api/v1/courier/stops/{id}/proof", dropA)
+                        .file(new MockMultipartFile("file", "door.jpg", "image/jpeg", JPEG))
+                        .param("kind", "photo")
+                        .with(me))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("stop_done"));
+        assertThat(events.stream(DeliveryCompleted.class)
+                        .filter(e -> e.aggregateId().equals(a.orderId())))
+                .hasSize(1);
         mvc.perform(get("/api/v1/courier/me").with(me))
                 .andExpect(jsonPath("$.status").value("available"));
         var shiftId =

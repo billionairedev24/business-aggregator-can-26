@@ -26,7 +26,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  *     proxies, shown in Settings › Security's session list (S-19). Empty = no city.
  * @param consumerLoginPage S-62: the consumer web app's sign-in page — where an unauthenticated authorization request of
  *     a {@code consumerClients} client, and a Google / Apple sign-in started there, land (empty = {@code loginPage})
- * @param consumerClients S-62: OAuth clients whose people sign in on the consumer site ({@code consumer-bff})
+ * @param consumerClients S-62: OAuth clients whose people sign in on the consumer site ({@code consumer-bff}; S-87: the
+ *     courier app, {@code courier-app})
  * @param consoleLoginPage S-90: the platform console's sign-in page — where an unauthenticated (or single-factor)
  *     authorization request of a {@code consoleClients} client lands (empty = {@code loginPage})
  * @param consoleClients S-90: OAuth clients whose people (Northline staff) sign in on the console ({@code console-bff})
@@ -55,7 +56,7 @@ public record AuthProperties(
 
         @Nullable String clientCityHeader,
         @Nullable String consumerLoginPage,
-        @DefaultValue("consumer-bff") List<String> consumerClients,
+        @DefaultValue({"consumer-bff", "courier-app"}) List<String> consumerClients,
         @Nullable String consoleLoginPage,
         @DefaultValue("console-bff") List<String> consoleClients,
         @DefaultValue({"studio-bff", "console-bff"}) List<String> mfaRequiredClients,

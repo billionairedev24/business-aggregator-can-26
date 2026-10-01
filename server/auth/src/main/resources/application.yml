@@ -84,7 +84,9 @@ northline:
     # S-62: the consumer web app's sign-in page (consumer-bff's unauthenticated authorization requests, Google / Apple
     # started there), and which clients only get a code after a second factor.
     consumer-login-page: ${CONSUMER_ORIGIN:http://localhost:3000}/sign-in
-    consumer-clients: [ consumer-bff ]
+    # S-87: couriers sign in on the consumer site's page too (a courier is a person, not a business): the courier app's
+    # authorization request lands there and its continueTo goes back to the app — never the Studio's sign-in.
+    consumer-clients: [ consumer-bff, courier-app ]
     # S-90: Northline staff sign in on the platform console (console-bff's authorization requests).
     console-login-page: ${CONSOLE_ORIGIN:http://localhost:3200}/sign-in
     console-clients: [ console-bff ]

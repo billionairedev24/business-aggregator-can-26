@@ -1,0 +1,16 @@
+node_modules/
+.expo/
+dist/
+dist-*/
+web-build/
+ios/
+android/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.keystore
+!debug.keystore
+coverage/
+smoke-out/
