@@ -14,7 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ca.northline.merchants.api.CustomDomainChanged;
-import ca.northline.merchants.application.DnsResolver.Type;
+import ca.northline.merchants.application.DnsResolver;
 import ca.northline.merchants.application.StorefrontUseCases.CustomDomainJobs;
 import ca.northline.merchants.integration.FakeDnsResolver;
 import ca.northline.shared.security.MerchantRole;
@@ -119,8 +119,8 @@ class CustomDomainApiTest extends IntegrationTest {
 
     /** What the merchant adds at their DNS host. */
     void addRecords(Shop s, String domain) {
-        dns.publish(domain, Type.CNAME, List.of(TARGET));
-        dns.publish("_northline-verify." + domain, Type.TXT, List.of(token(s)));
+        dns.publish(domain, DnsResolver.Type.CNAME, List.of(TARGET));
+        dns.publish("_northline-verify." + domain, DnsResolver.Type.TXT, List.of(token(s)));
     }
 
     void approveAndPublish(Shop s) throws Exception {
@@ -191,8 +191,8 @@ class CustomDomainApiTest extends IntegrationTest {
                     .andExpect(jsonPath("$.customDomainSetup.records[0].value").value(TARGET));
 
             // flattened at the DNS host: A records with the edge's address
-            dns.publish(apex, Type.A, List.of(FakeDnsResolver.EDGE_ADDRESS));
-            dns.publish("_northline-verify." + apex, Type.TXT, List.of(token(shop)));
+            dns.publish(apex, DnsResolver.Type.A, List.of(FakeDnsResolver.EDGE_ADDRESS));
+            dns.publish("_northline-verify." + apex, DnsResolver.Type.TXT, List.of(token(shop)));
             checkNow(shop).andExpect(jsonPath("$.customDomainStatus").value("verified"));
         }
 
@@ -237,13 +237,13 @@ class CustomDomainApiTest extends IntegrationTest {
                     .andExpect(jsonPath("$.customDomainSetup.checkedAt").exists())
                     .andExpect(jsonPath("$.customDomainSetup.nextCheckAt").exists());
 
-            dns.publish("_northline-verify." + shop.domain(), Type.TXT, List.of(token(shop)));
+            dns.publish("_northline-verify." + shop.domain(), DnsResolver.Type.TXT, List.of(token(shop)));
             checkNow(shop).andExpect(jsonPath("$.customDomainSetup.problem").value("no_record"));
 
-            dns.publish(shop.domain(), Type.CNAME, List.of("somewhere-else.example.net"));
+            dns.publish(shop.domain(), DnsResolver.Type.CNAME, List.of("somewhere-else.example.net"));
             checkNow(shop).andExpect(jsonPath("$.customDomainSetup.problem").value("not_pointing"));
 
-            dns.publish(shop.domain(), Type.CNAME, List.of(TARGET));
+            dns.publish(shop.domain(), DnsResolver.Type.CNAME, List.of(TARGET));
             checkNow(shop)
                     .andExpect(jsonPath("$.customDomainStatus").value("verified"))
                     .andExpect(jsonPath("$.customDomainSetup.problem").doesNotExist())
@@ -372,7 +372,7 @@ class CustomDomainApiTest extends IntegrationTest {
         void unprovenHolder_whoseTxtIsThere_keepsIt() throws Exception {
             var first = shop("First Co");
             connect(first, shop.domain());
-            dns.publish("_northline-verify." + shop.domain(), Type.TXT, List.of(token(first)));
+            dns.publish("_northline-verify." + shop.domain(), DnsResolver.Type.TXT, List.of(token(first)));
 
             connect(shop, shop.domain())
                     .andExpect(status().isUnprocessableContent())

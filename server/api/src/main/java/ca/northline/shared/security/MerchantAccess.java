@@ -67,7 +67,7 @@ public class MerchantAccess {
 
     /**
      * S-30: authorizes a partner for {@code merchantId} on an endpoint marked {@link PartnerAccess}: the business must be
-     * in the token's {@code merchants} claim (the partner's binding) and the token must carry the scope. Partners have
+     * in the token's {@code "merchants"} claim (the partner's binding) and the token must carry the scope. Partners have
      * no membership and never get a {@link CurrentMember}.
      */
     public void requirePartner(String merchantId, PartnerAccess access) {

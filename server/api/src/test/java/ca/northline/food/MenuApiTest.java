@@ -332,13 +332,18 @@ class MenuApiTest extends IntegrationTest {
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.errors[0].field").value("rows[3].allergens"));
         mvc.perform(multipart(k.base() + "/menus/{m}/import", menu.menuId())
-                        .file(new MockMultipartFile("file", "menu.csv", "text/csv", "name,price\nx,1\n".getBytes()))
+                        .file(new MockMultipartFile(
+                                "file", "menu.csv", "text/csv", "name,price\nx,1\n".getBytes(StandardCharsets.UTF_8)))
                         .with(owner))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.errors[0].message")
                         .value("The first row must name the columns: section, name, price, allergens."));
-        var good = "Section,Name,Price,Allergens,Description\nMains,Com tam,$16.50,Fish,Broken rice\n"
-                + "Dessert,\"Che, three colour\",6.5,Milk; Soy,\nDessert,Mango sticky rice,7,none,\n";
+        var good = """
+                Section,Name,Price,Allergens,Description
+                Mains,Com tam,$16.50,Fish,Broken rice
+                Dessert,"Che, three colour",6.5,Milk; Soy,
+                Dessert,Mango sticky rice,7,none,
+                """;
         mvc.perform(multipart(k.base() + "/menus/{m}/import", menu.menuId())
                         .file(new MockMultipartFile(
                                 "file", "menu.csv", "text/csv", good.getBytes(StandardCharsets.UTF_8)))

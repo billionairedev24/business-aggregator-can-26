@@ -7,6 +7,7 @@ import static ca.northline.shared.security.MerchantPermission.VIEW;
 import ca.northline.payments.application.RespondToCases;
 import ca.northline.payments.domain.CaseMessages;
 import ca.northline.payments.domain.Evidence;
+import ca.northline.shared.Bytes;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
 import ca.northline.shared.security.CurrentMember;
@@ -121,7 +122,8 @@ class RefundCaseController {
         var contentType = Objects.requireNonNullElse(request.getContentType(), "application/octet-stream")
                 .split(";")[0]
                 .strip();
-        var dispute = cases.addEvidence(merchantId, disputeId, new RespondToCases.Upload(name, contentType, bytes));
+        var dispute =
+                cases.addEvidence(merchantId, disputeId, new RespondToCases.Upload(name, contentType, Bytes.of(bytes)));
         return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toDetail(dispute));
     }
 
@@ -136,7 +138,7 @@ class RefundCaseController {
                 .header(
                         HttpHeaders.CONTENT_DISPOSITION,
                         ContentDisposition.inline().filename(evidenceId).build().toString())
-                .body(file.bytes());
+                .body(file.bytes().toArray());
     }
 
     @PostMapping("/disputes/{disputeId}/goodwill-offer")
@@ -152,8 +154,7 @@ class RefundCaseController {
                 key,
                 body,
                 HttpStatus.OK,
-                () -> mapper.toDetail(
-                        cases.offerGoodwill(merchantId, disputeId, Objects.requireNonNull(body.amountCents()))));
+                () -> mapper.toDetail(cases.offerGoodwill(merchantId, disputeId, body.amountCents())));
     }
 
     @PostMapping("/disputes/{disputeId}/full-refund")

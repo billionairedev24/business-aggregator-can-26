@@ -77,7 +77,7 @@ class DpopResourceServerTest extends IntegrationTest {
                 .issuer("http://auth.invalid")
                 .subject(userId)
                 .audience(List.of("mobile-consumer", "northline-api"))
-                .issueTime(new Date())
+                .issueTime(Date.from(Instant.now()))
                 .expirationTime(Date.from(Instant.now().plusSeconds(600)))
                 .claim("scope", scope)
                 .claim("acr", "mfa");
@@ -94,7 +94,7 @@ class DpopResourceServerTest extends IntegrationTest {
                 .jwtID(UUID.randomUUID().toString())
                 .claim("htm", method)
                 .claim("htu", uri)
-                .issueTime(new Date());
+                .issueTime(Date.from(Instant.now()));
         if (accessToken != null) {
             claims.claim(
                     "ath",

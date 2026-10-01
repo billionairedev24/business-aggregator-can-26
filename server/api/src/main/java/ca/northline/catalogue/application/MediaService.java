@@ -7,6 +7,7 @@ import static ca.northline.catalogue.domain.ListingMessages.IMAGE_TYPE;
 
 import ca.northline.catalogue.domain.ListingMessages;
 import ca.northline.catalogue.domain.MediaAsset;
+import ca.northline.shared.Bytes;
 import ca.northline.shared.Ids;
 import ca.northline.shared.RuleViolation;
 import ca.northline.shared.storage.ObjectKeys;
@@ -74,6 +75,6 @@ class MediaService implements ManageMedia {
     }
 
     private Optional<Content> bytes(MediaAsset m) {
-        return storage.get(m.storageKey()).map(bytes -> new Content(bytes, m.contentType()));
+        return storage.get(m.storageKey()).map(bytes -> new Content(Bytes.of(bytes), m.contentType()));
     }
 }

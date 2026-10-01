@@ -16,6 +16,7 @@ import ca.northline.shared.security.MerchantRole;
 import ca.northline.support.IntegrationTest;
 import ca.northline.support.SettingsFixtures;
 import ca.northline.support.TestJwt;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
@@ -137,7 +138,8 @@ class ComplianceApiTest extends IntegrationTest {
     void ownerUploadsARenewal_itWaitsForReview_andIsNoLongerDue() throws Exception {
         var l = ledger();
         mvc.perform(multipart("/api/v1/merchants/{id}/compliance/verifications/{v}/renewal", l.merchantId(), l.wcb())
-                        .file(new MockMultipartFile("file", "wcb-2026.pdf", "application/pdf", "%PDF-1.7".getBytes()))
+                        .file(new MockMultipartFile(
+                                "file", "wcb-2026.pdf", "application/pdf", "%PDF-1.7".getBytes(StandardCharsets.UTF_8)))
                         .with(TestJwt.member(l.owner())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("submitted"))
@@ -154,7 +156,8 @@ class ComplianceApiTest extends IntegrationTest {
                                 """).params(l.wcb()).query(String.class).single()).isEqualTo("verification");
 
         mvc.perform(multipart("/api/v1/merchants/{id}/compliance/verifications/{v}/renewal", l.merchantId(), l.wcb())
-                        .file(new MockMultipartFile("file", "again.pdf", "application/pdf", "%PDF-1.7".getBytes()))
+                        .file(new MockMultipartFile(
+                                "file", "again.pdf", "application/pdf", "%PDF-1.7".getBytes(StandardCharsets.UTF_8)))
                         .with(TestJwt.member(l.owner())))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("renewal_pending"));
@@ -184,7 +187,8 @@ class ComplianceApiTest extends IntegrationTest {
         mvc.perform(get("/api/v1/merchants/{id}/compliance", l.merchantId()).with(TestJwt.member(bookkeeper)))
                 .andExpect(status().isOk());
         mvc.perform(multipart("/api/v1/merchants/{id}/compliance/verifications/{v}/renewal", l.merchantId(), l.wcb())
-                        .file(new MockMultipartFile("file", "wcb.pdf", "application/pdf", "%PDF".getBytes()))
+                        .file(new MockMultipartFile(
+                                "file", "wcb.pdf", "application/pdf", "%PDF".getBytes(StandardCharsets.UTF_8)))
                         .with(TestJwt.member(bookkeeper)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("insufficient_role"));

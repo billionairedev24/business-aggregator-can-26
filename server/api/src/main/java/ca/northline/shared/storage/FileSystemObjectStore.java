@@ -1,5 +1,6 @@
 package ca.northline.shared.storage;
 
+import ca.northline.shared.Bytes;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
@@ -47,7 +48,8 @@ final class FileSystemObjectStore implements ObjectStore {
         var file = resolve(key);
         try {
             var bytes = Files.readAllBytes(file);
-            return Optional.of(new ObjectContent(new ObjectInfo(key, contentType(file), bytes.length), bytes));
+            return Optional.of(
+                    new ObjectContent(new ObjectInfo(key, contentType(file), bytes.length), Bytes.of(bytes)));
         } catch (NoSuchFileException _) {
             return Optional.empty();
         } catch (IOException ex) {

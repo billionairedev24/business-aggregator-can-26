@@ -173,9 +173,9 @@ class TopicCatalogueTest {
     private static List<Integer> delaysSeconds(RetryableTopic retry) {
         var backOff = retry.backOff();
         var delays = new ArrayList<Integer>();
-        var delay = value(backOff.delayString(), backOff.delay());
+        var delay = value(backOff.delayString(), (double) backOff.delay());
         var multiplier = value(backOff.multiplierString(), backOff.multiplier());
-        var max = value(backOff.maxDelayString(), backOff.maxDelay());
+        var max = value(backOff.maxDelayString(), (double) backOff.maxDelay());
         for (var i = 0; i < Integer.parseInt(retry.attempts()) - 1; i++) {
             var capped = max > 0 ? Math.min(delay, max) : delay;
             delays.add((int) (capped / 1000));

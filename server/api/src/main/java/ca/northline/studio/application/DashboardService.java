@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
@@ -188,7 +189,7 @@ class DashboardService implements ViewDashboard {
         return day.atStartOfDay(ZONE).toInstant();
     }
 
-    private static void add(HashSet<String> ids, @Nullable String id) {
+    private static void add(Set<String> ids, @Nullable String id) {
         if (id != null) {
             ids.add(id);
         }

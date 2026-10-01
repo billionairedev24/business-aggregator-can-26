@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import org.junit.jupiter.api.Test;
@@ -73,7 +74,7 @@ public class ExternalizedTopicsCatalogueTest {
     }
 
     @SuppressWarnings("unchecked")
-    static TreeSet<String> catalogueTopics() throws IOException {
+    static Set<String> catalogueTopics() throws IOException {
         try (var in = Files.newInputStream(CATALOGUE)) {
             Map<String, Object> root = new Yaml(new SafeConstructor(new LoaderOptions())).load(in);
             var names = new TreeSet<String>();

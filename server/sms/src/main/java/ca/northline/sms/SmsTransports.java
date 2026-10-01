@@ -38,7 +38,7 @@ public final class SmsTransports {
             case LOCAL -> local(environment);
             case TWILIO -> twilio(sms);
             case AWS -> aws(awsClient(sms), sms);
-            case AZURE -> azure();
+            case AZURE -> throw azureNotImplemented();
         };
     }
 
@@ -109,8 +109,8 @@ public final class SmsTransports {
         return new AwsSmsTransport(client, from, voiceFrom);
     }
 
-    public static SmsTransport azure() {
-        throw new IllegalStateException("SMS_PROVIDER=azure (Azure Communication Services) is not implemented yet: use"
+    private static IllegalStateException azureNotImplemented() {
+        return new IllegalStateException("SMS_PROVIDER=azure (Azure Communication Services) is not implemented yet: use"
                 + " twilio or aws (docs/runbooks/README.md § SMS and voice codes)");
     }
 
