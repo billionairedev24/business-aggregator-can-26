@@ -5686,3 +5686,35 @@ server environment variable. Runbook: [runbooks/courier-app.md](runbooks/courier
   messaging or impersonation exists).
   The design's "Coaching" status has no equivalent. The directory returns at most 2,000 businesses (`truncated`;
   search by name finds the others).
+
+## 2026-10-01 — S-84 Provinces, markets and zones switchboard (Off/Waitlist/Pilot/Live)
+
+- **A UI over the S-134 region model, no new table.** `console.application.Switchboard` edits `region.regions` (stage,
+  courier model, new markets) and `region.zones` (delivery zones, GeoJSON boundaries) through the new write port
+  `region.api.RegionEditor` — it lives in the console module because region writing the audit log itself would make a
+  module cycle (region → developer → identity → region) — writes the platform audit log in
+  the same transaction (`region.stage_changed` — with the markets brought down —, `region.courier_model_changed`,
+  `region.market_added`, `region.zone_created | zone_updated | zone_removed`; `merchant_id` null, codes only) and calls
+  `Regions.refresh()` after commit, so the instance serves the change at once and the others within
+  `REGION_CACHE_TTL`. Endpoints `/api/v1/console/regions/**` (CONSOLE_PLAN § Province switchboard).
+- **Admin only:** screen `regions` + action `province` on every change (the role table already gives both to admin
+  only). **Confirmation step:** every stage change carries `confirm` — the province's code, or the market's name — that
+  the server checks (422), and the screen asks for it in a dialog. The design's "two co-signers for Off ↔ Live" is not
+  modelled (no co-sign workflow; CONSOLE_PLAN "Not modelled yet"), nor the "waitlist emailed automatically on Live".
+- **Going live needs the checklist** (409 `not_ready`): a tax profile, a holiday calendar, at least one business
+  registry adapter key on the province (the story's list; a province whose records are checked by hand sets the
+  `manual` key), and a market with a delivery zone that has a boundary. A market goes live only with such a zone
+  (409), and **never above its province** (422 "A market can't be more open than its province."); lowering a province
+  lowers its markets above the new stage (one audit entry lists them). A live market keeps at least one zone (409
+  `last_zone`). Pilot and waitlist need no checklist.
+- **New markets** need a centre in Canada's bounding box and a radius of 1–200 km; their id is `mkt-<city slug>` (a
+  suffix when taken), stage off, the province's languages; the time zone stays the province's (set `time_zones` by
+  SQL for a market in another zone).
+- **Zone boundaries:** "Import GeoJSON" (a Polygon, MultiPolygon or a Feature holding one, lng/lat) → PostGIS
+  `ST_MakeValid`, the largest polygon kept (`region.zones.polygon` is a single `geography(Polygon)`); 422 on anything
+  unreadable. "Draw on map" and "From postal codes (FSA)" are not built. Fees and the minimum basket are typed in
+  dollars ("Free" = 0).
+- **Not done (design 03 shows them):** "Dry-run as customer", "Categories live" (no per-province category flags exist in
+  the model), sellers per market, and the re-matching of addresses when a zone is removed (addresses are matched when
+  saved; nothing stores a zone on an address). The lede and footer were reworded where the design promised these
+  ("Flags propagate in 30 s" → "within a minute", the region cache period).

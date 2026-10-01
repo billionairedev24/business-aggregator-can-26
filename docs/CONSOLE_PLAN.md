@@ -115,7 +115,7 @@ member.
 | `/trust?province=&market=` | `trust` | `trust` | admin, trust_safety | S-93 | built |
 | `/catalogue` | `taxonomy` | `taxonomy` | admin | S-94 | stand-in |
 | `/support?province=&market=&filter=&ticket=` | `support` | `support` | admin, trust_safety, dispatch, support, support_lead | S-83 | built |
-| `/provinces` | `regions` | `regions` | admin | S-84 | stand-in |
+| `/provinces?province=` | `regions` | `regions` | admin | S-84 | built |
 | `/finance` | `finance` | `finance` | admin, finance | S-85 | stand-in |
 | `/reports` | `reports` | `reports` | admin, finance, analyst | S-95 | stand-in |
 | `/integrations` | `api` | `api` | admin | S-96 | stand-in |
@@ -316,6 +316,26 @@ warning → suspended (actor `system`).
 Audit `merchant.<action>`; events `merchant.suspended|reinstated|tier_changed|reverification_required`; the owners are
 emailed with the reason (DECISIONS "S-82").
 
+### Province switchboard (S-84)
+
+```
+GET    /api/v1/console/regions                                   (screen regions) → { provinces: [Province] }
+Province: { id, code, names, stage, languages, courierModel, tax: {gst|pst|hst|qst: bps}, timeZones, holidays, privacyLaw,
+            registries, waitlist, markets: [{id, city, stage, lat, lng, radiusKm, zones, waitlist}],
+            zones: [{id, marketId, name, runsPerDay, feeStdCents, feePlusCents, minBasketCents, areaKm2}],
+            checklist: {taxProfile, holidays, registries, marketWithZones} }
+POST   /api/v1/console/regions/provinces/{code}/stage {stage, confirm: <code>}       (province) 409 not_ready
+PUT    /api/v1/console/regions/provinces/{code}/courier-model {courierModel: own|contracted|hybrid}
+POST   /api/v1/console/regions/markets {province, city, lat, lng, radiusKm}           409 market_exists
+POST   /api/v1/console/regions/markets/{marketId}/stage {stage, confirm: <city>}      422 stage (above the province) · 409 not_ready
+POST   /api/v1/console/regions/zones {marketId, name, runsPerDay?, feeStdCents?, feePlusCents?, minBasketCents?, boundary?: GeoJSON}
+PUT    /api/v1/console/regions/zones/{zoneId}   (same body; boundary omitted = kept)
+DELETE /api/v1/console/regions/zones/{zoneId}                                         409 last_zone
+→ each change answers the province (Province)
+```
+
+Every change is audited (`region.*`) and re-reads the region model after commit (DECISIONS "S-84").
+
 ## API: what exists, what's missing
 
 | screen | exists | missing (the screen's story adds it) |
@@ -330,7 +350,7 @@ emailed with the reason (DECISIONS "S-82").
 | trust | `GET /api/v1/console/trust/flags`, `POST …/{id}/decision` (S-133); `GET …/flags/queue`, `POST …/flags/{id}/action`, `GET/PUT …/trust/rules[/{key}]`, `GET …/rules/rating_floor/impact` (S-93) | S-82 enforces the rating floor (hide from search) and warning-then-suspension; instant book off after no-shows and the photo delay have no state to act on |
 | taxonomy | `db/seed/categories.json` (seed only) | categories CRUD with regulators, limits, per-province rules (S-94) |
 | support | `GET /api/v1/console/support/tickets[/{id}]`, `POST …/tickets/{id}/reply\|take\|escalate\|refund-requests`, `GET …/refund-requests`, `POST …/refund-requests/{id}/decision`, `GET/POST/PUT/DELETE …/macros` (S-83) | the finance screen's list of refund requests (S-85 reads `GET …/support/refund-requests`); CSAT collection (no survey sends it yet) |
-| regions | `region.api.Regions` reads; `GET /api/v1/geo/regions` | province / market / zone stage changes with co-sign (S-84) |
+| regions | S-84: stages with a confirmation and the go-live checklist, markets, zones (GeoJSON), courier model | the co-sign of a second admin, dry-run as customer, categories per province, drawing zones on a map |
 | finance | `POST /api/v1/console/payments/tax-reconciliations` (S-21) | escrow / payouts / reconciliation / take rate by tier / revenue mix (S-85) |
 | reports | — | funnels, cohorts, top categories, supply gaps (S-95) |
 | api | `developer` module (merchants' keys and webhooks) | platform-wide API clients and rate limits (S-96) |
