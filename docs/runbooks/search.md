@@ -263,6 +263,7 @@ Exit codes: 0 done, 1 failed (see the log; before the swap nothing changed), 2 a
 **By hand** (a machine that reaches the database, Kafka and Elasticsearch; the worker's `DB_*`, `KAFKA_*`, `ES_*`):
 
 ```sh
+make search-reindex                                               # KEEP_OLD=1 keeps the old indices (S-124)
 cd server && ./gradlew :worker:searchReindex                     # or --args='--keep-old' / --args='--batch=500'
 java -cp @/app/jib-classpath-file ca.northline.worker.search.SearchReindexCommand   # inside the worker image
 ```
