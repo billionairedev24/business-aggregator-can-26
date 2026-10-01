@@ -2869,6 +2869,12 @@ Branch `web/s-53-services-landing` (from main). Contracts: [CONSUMER_WEB_PLAN.md
   {region}"); registry names in the copy come from the category (`regulatedRegistry`). Existing literals still relied on
   (S-134): the web's shared `TIME_ZONE` (`@northline/ui`), `AlbertaHolidays` and `Team.ZONE` in the availability
   planner (moved into `DaySchedule`, unchanged), and the zone rows of V114 (reference data).
+
+## 2026-09-30 — S-54 Public provider page from the storefront API (sections, reviews, service area)
+
+Branch `web/s-54-provider-page`, **stacked on `web/s-53-services-landing`** (uses its `hire` module, service kinds and
+copy).
+
 - **Two public reads, one page.** The page itself is the storefront API as it was (`GET /api/v1/storefronts/{slug}`:
   enabled sections in the owner's order, brand colour, logo, tagline, announcement, CTA label, verified facts); new
   `GET /api/v1/public/providers/{slug}` (module `hire`) adds what Northline holds: rating and review count, the latest
