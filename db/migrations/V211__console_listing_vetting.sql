@@ -1,4 +1,4 @@
--- S-92 platform console listing vetting queue (range V190–V199, docs/CONSOLE_PLAN.md). Additive only.
+-- S-92 platform console listing vetting queue (console queues range V210–V219, docs/IMPLEMENTATION_PLAN.md). Additive only.
 
 -- Every reviewer decision on a listing (offer or service) in the console's vetting queue: approved (as if the
 -- automated checks had passed) or rejected with reasons (emailed to the owners). The audit log has the same facts.

@@ -5354,7 +5354,7 @@ Stacked on S-79 (it uses S-79's `shared.PlaceFilter`, the console's `PlaceFilter
 - **Audit:** `vetting.listing_approved|listing_rejected` (target `product|service`), `vetting.dish_approved|dish_rejected`
   (target `menu_item`), with the business's id and the console role; trust flags resolved alongside write
   `trust.flag_decided` as before.
-- **Schema V193:** `catalogue.vetting_decisions` (decision, reasons, the flags seen, note ≤ 500, reviewer, role, time);
+- **Schema V211:** `catalogue.vetting_decisions` (decision, reasons, the flags seen, note ≤ 500, reviewer, role, time);
   partial indexes on pending offers and services. No food or trust schema change.
 - **Messages (fr in the catalogue):** "Choose why the listing is rejected.", "Pick reasons from the list.", 409 "This
   listing isn't waiting for a decision." / "This dish isn't waiting for a price decision."
