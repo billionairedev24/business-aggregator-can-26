@@ -3,13 +3,16 @@ package ca.northline.payments.web;
 import static ca.northline.shared.security.MerchantPermission.FINANCE_READ;
 
 import ca.northline.payments.application.BusinessTime;
+import ca.northline.payments.application.TaxStatements;
 import ca.northline.payments.application.ViewEarnings;
 import ca.northline.payments.application.ViewSalesReport;
+import ca.northline.shared.Bytes;
 import ca.northline.shared.ListResponse;
 import ca.northline.shared.security.RequiresMerchant;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.ContentDisposition;
@@ -32,7 +35,11 @@ import org.springframework.web.bind.annotation.RestController;
  * GET /api/v1/merchants/{merchantId}/reports/export.csv?period=        Export CSV
  * GET /api/v1/merchants/{merchantId}/reports/gst-summary.csv?year=     Tax summary (GST)
  * GET /api/v1/merchants/{merchantId}/reports/annual-statement.csv?year=
+ * GET /api/v1/merchants/{merchantId}/reports/gst-summary.pdf?year=&amp;lang=en|fr      S-41: the same as PDF statements
+ * GET /api/v1/merchants/{merchantId}/reports/annual-statement.pdf?year=&amp;lang=en|fr
  * </pre>
+ *
+ * <p>The PDFs' language is {@code lang} (a download link can't set headers), else {@code Accept-Language}.
  */
 @RestController
 @RequestMapping("/api/v1/merchants/{merchantId}")
@@ -46,6 +53,7 @@ class EarningsController {
     private final PaymentsWebMapper mapper;
     private final Clock clock;
     private final BusinessTime time;
+    private final TaxStatements statements;
 
     @GetMapping("/earnings")
     @RequiresMerchant(FINANCE_READ)
@@ -86,6 +94,53 @@ class EarningsController {
     ResponseEntity<String> annual(@PathVariable String merchantId, @RequestParam @Nullable Integer year) {
         var y = year == null ? today(merchantId).getYear() - 1 : year;
         return csv("northline-annual-statement-" + y + ".csv", reports.annualStatementCsv(merchantId, y));
+    }
+
+    @GetMapping("/reports/gst-summary.pdf")
+    @RequiresMerchant(FINANCE_READ)
+    ResponseEntity<byte[]> gstPdf(
+            @PathVariable String merchantId,
+            @RequestParam @Nullable Integer year,
+            @RequestParam @Nullable String lang,
+            Locale requestLocale) {
+        var y = year == null ? today(merchantId).getYear() : year;
+        var locale = locale(lang, requestLocale);
+        return pdf(fileName("gst-summary", y, locale), statements.gstSummaryPdf(merchantId, y, locale));
+    }
+
+    @GetMapping("/reports/annual-statement.pdf")
+    @RequiresMerchant(FINANCE_READ)
+    ResponseEntity<byte[]> annualPdf(
+            @PathVariable String merchantId,
+            @RequestParam @Nullable Integer year,
+            @RequestParam @Nullable String lang,
+            Locale requestLocale) {
+        var y = year == null ? today(merchantId).getYear() - 1 : year;
+        var locale = locale(lang, requestLocale);
+        return pdf(fileName("annual-statement", y, locale), statements.annualStatementPdf(merchantId, y, locale));
+    }
+
+    /** {@code lang=fr|en} wins; otherwise the request's language; French only when asked for. */
+    private static Locale locale(@Nullable String lang, Locale requestLocale) {
+        var language =
+                lang != null && !lang.isBlank() ? lang.strip().toLowerCase(Locale.ROOT) : requestLocale.getLanguage();
+        return language.startsWith("fr") ? Locale.CANADA_FRENCH : Locale.CANADA;
+    }
+
+    private static String fileName(String kind, int year, Locale locale) {
+        return "northline-" + kind + "-" + year + ("fr".equals(locale.getLanguage()) ? "-fr" : "") + ".pdf";
+    }
+
+    private static ResponseEntity<byte[]> pdf(String filename, Bytes body) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment()
+                                .filename(filename)
+                                .build()
+                                .toString())
+                .body(body.toArray());
     }
 
     private LocalDate today(String merchantId) {

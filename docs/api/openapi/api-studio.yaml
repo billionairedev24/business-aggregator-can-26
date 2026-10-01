@@ -11486,6 +11486,78 @@ paths:
           description: Not found.
       tags:
       - earnings-controller
+  /api/v1/merchants/{merchantId}/reports/annual-statement.pdf:
+    get:
+      operationId: earningsAnnualPdf
+      parameters:
+      - in: path
+        name: merchantId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: year
+        required: false
+        schema:
+          type: integer
+          format: int32
+      - in: query
+        name: lang
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: byte
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - earnings-controller
   /api/v1/merchants/{merchantId}/reports/export.csv:
     get:
       operationId: earningsExport
@@ -11573,6 +11645,78 @@ paths:
             '*/*':
               schema:
                 type: string
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - earnings-controller
+  /api/v1/merchants/{merchantId}/reports/gst-summary.pdf:
+    get:
+      operationId: earningsGstPdf
+      parameters:
+      - in: path
+        name: merchantId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: year
+        required: false
+        schema:
+          type: integer
+          format: int32
+      - in: query
+        name: lang
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: byte
           description: OK
         "401":
           content:
