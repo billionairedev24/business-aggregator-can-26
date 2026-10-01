@@ -1,4 +1,4 @@
-package ca.northline.worker.webhooks;
+package ca.northline.platform;
 
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -10,14 +10,16 @@ import java.util.Locale;
 import java.util.Optional;
 
 /**
- * Where webhook deliveries may go (S-33, SSRF): https only, to public unicast addresses. Refused — whatever DNS says —
+ * Where Northline's servers may send a request to a URL someone else chose (S-33, SSRF) — partner webhooks (worker) and
+ * bulk-import image URLs (api, S-72): https only, to public unicast addresses. Refused — whatever DNS says —
  * loopback, "this network", private (RFC 1918, IPv6 ULA), carrier-grade NAT, link-local (which holds the cloud
  * metadata services 169.254.169.254 / 169.254.170.2 / fd00:ec2::254), multicast, broadcast, documentation and
  * benchmarking ranges, and IPv4 embedded in IPv6 (mapped, NAT64, 6to4) when the embedded address is refused. With
  * {@code allowLocal} (local development and tests only) loopback and {@code http} are allowed, nothing else.
  *
- * <p>The check runs on the resolved addresses, and {@link HttpWebhookTransport} connects only to the addresses it
- * checked (no second lookup), so a DNS answer that changes between check and connect (rebinding) can't slip through.
+ * <p>The check runs on the resolved addresses, and the HTTP clients connect only to the addresses it checked
+ * ({@link EgressDnsResolver}: no second lookup), so a DNS answer that changes between check and connect (rebinding)
+ * can't slip through.
  */
 public final class EgressPolicy {
 
@@ -45,6 +47,21 @@ public final class EgressPolicy {
             return Optional.of("only https:// URLs are allowed");
         }
         return Optional.empty();
+    }
+
+    /**
+     * An IP-literal host ({@code https://10.0.0.1/}, {@code https://[::1]/}) is checked before the request as well: a
+     * client may connect to a literal without asking the resolver. Empty for a host name (the resolver checks those).
+     */
+    public Optional<String> refuseLiteral(String host) {
+        var bare = host.startsWith("[") && host.endsWith("]") ? host.substring(1, host.length() - 1) : host;
+        InetAddress literal;
+        try {
+            literal = InetAddress.ofLiteral(bare);
+        } catch (IllegalArgumentException notALiteral) {
+            return Optional.empty();
+        }
+        return refuseAddresses(bare, List.of(literal));
     }
 
     /** Why the resolved addresses may not be called (the first refused one decides), or empty. */

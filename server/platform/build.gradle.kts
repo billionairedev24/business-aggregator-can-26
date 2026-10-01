@@ -13,8 +13,11 @@ dependencies {
     compileOnly("org.springframework.boot:spring-boot-starter-opentelemetry")
     compileOnly("org.springframework:spring-web")
     compileOnly("jakarta.servlet:jakarta.servlet-api")
+    // S-33/S-72: EgressDnsResolver is an HttpClient 5 resolver; the apps that make outbound calls bring the client.
+    compileOnly("org.apache.httpcomponents.client5:httpclient5")
     testImplementation("org.springframework.modulith:spring-modulith-events-api")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.apache.httpcomponents.client5:httpclient5")
     testImplementation("org.springframework.boot:spring-boot-starter-opentelemetry")
     testImplementation("org.springframework:spring-web")
     testImplementation("jakarta.servlet:jakarta.servlet-api")
