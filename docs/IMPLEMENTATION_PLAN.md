@@ -17,6 +17,8 @@ db/migrations     Flyway. V001–V017 are the design baseline. New migrations us
 web/packages/tokens   the only place colours/fonts/radii live
 web/packages/ui       reusable components + Storybook stories (+ i18n runtime)
 web/apps/studio       TanStack Router SPA for the Studio
+mobile/packages/mobile-kit  native apps' shared plumbing: DPoP OAuth (PKCE), api client, secure storage, theme from web/packages/tokens, i18n (S-87)
+mobile/apps/courier   the courier app, Expo + React Native + expo-router (S-87; docs/runbooks/courier-app.md). The consumer app joins mobile/apps in phase 4
 ```
 
 ## Frontend conventions (web/)

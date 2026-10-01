@@ -32,6 +32,7 @@ say where a step is still manual or missing.
 | [api-docs.md](api-docs.md) | OpenAPI 3.1 documents per audience (api, auth, BFFs), Swagger UI / Scalar / Redoc in local, dev and staging, the committed specs and their drift check, Redocly lint, none in prod (S-125) |
 | [ci.md](ci.md) | CI pipelines on GitHub Actions and GitLab CI, manual trigger only (S-4/S-5, infra checks S-2/S-3) |
 | [fulfilment.md](fulfilment.md) | deliveries, pooled run planning and its stop-order heuristic, courier shifts and assignment, proof of delivery, events, the courier app API (S-87) and the console's dispatch API (S-81), privacy (S-86) |
+| [courier-app.md](courier-app.md) | the courier app (S-87, `mobile/`, Expo): run it locally, the fixture backend, checks, EAS builds, store accounts, signing, permission texts, what has never run on a device |
 | [mobile-auth.md](mobile-auth.md) | the consumer and courier apps: sign-in with PKCE, DPoP-bound tokens, nonces, rotating refresh tokens and reuse detection, calling the api, sign-out, sessions (S-29) |
 | [mcp.md](mcp.md) | the built-in MCP server for AI agents (Claude, IDEs, the MCP Inspector): connecting, OAuth 2.1 sign-in and consent, scopes, tools and confirmations, limits, audit, operations (S-127); the developer docs MCP server over docs/ and the OpenAPI documents (S-128) |
 | [partners.md](partners.md) | partner API clients: `client_credentials` with `private_key_jwt`, keys (JWK Set URL or registered), scopes, business binding, rotation, revocation, rate limits, audit (S-30) |
@@ -342,7 +343,7 @@ the database but not in configuration is logged as `stored but not in configurat
 | `partner:<name>` (S-30) | client credentials, `private_key_jwt` (no secret) | when declared under `northline.oauth.partners` (chart value `partners`) | — | `api.read` / `api.write`, bound to named businesses; 15 min tokens — [partners.md](partners.md) |
 | `northline-mcp` ("Northline MCP (AI agents)", S-127) | public (PKCE S256), **consent screen**, needs `acr=mfa` | always | `http://127.0.0.1/callback`, `http://127.0.0.1/oauth/callback` (any port), `https://claude.ai/api/mcp/auth_callback`, `https://claude.com/api/mcp/auth_callback` | openid profile merchant mcp mcp.write mcp.ops; 1 h access tokens, no refresh token — [mcp.md](mcp.md) |
 | `https://…` (any HTTPS URL, S-127) | public (PKCE S256), consent screen, needs `acr=mfa` | registered on first use from the agent's [Client ID Metadata Document](mcp.md#client-registration) | from the document | at most openid profile merchant mcp mcp.write |
-| `courier-app` ("Northline Courier") | public (PKCE S256, no secret), **DPoP required** (S-29) | always | `${CONSUMER_ORIGIN}/courier/oauth2redirect`, `ca.northline.courier:/oauth2redirect` | openid courier deliveries; refresh 12 h |
+| `courier-app` ("Northline Courier") | public (PKCE S256, no secret), **DPoP required** (S-29) | always | `${CONSUMER_ORIGIN}/courier/oauth2redirect`, `ca.northline.courier:/oauth2redirect` | openid courier deliveries; refresh 12 h; signs in on the consumer site's page (S-87) — [courier-app.md](courier-app.md) |
 | `docs` ("Northline API docs (Swagger UI, Scalar)", S-139) | public (PKCE S256), no consent | **local, test, dev, staging only** (never prod) | `${API_PUBLIC_URL}/swagger-ui/oauth2-redirect.html`, `${API_PUBLIC_URL}/docs/scalar` | openid profile merchant; 10 min access tokens, no refresh token; CORS on `/oauth2/token` for `${API_PUBLIC_URL}` — [api-docs.md](api-docs.md) |
 
 Defaults for anything not set: grant types `authorization_code` + `refresh_token`, PKCE required, no consent screen,
@@ -516,7 +517,7 @@ Limits: the registration's `otp-send` / `otp-verify` (above), 5 tries per code, 
 `northline.auth.mfa-required-clients` (default `studio-bff`, `console-bff`): the browser is sent to that app's
 sign-in page, where signing in with a passkey / authenticator / backup code replaces the session. The api refuses
 merchant and staff endpoints without `acr=mfa` anyway. Unauthenticated authorization requests of the clients in
-`northline.auth.consumer-clients` (default `consumer-bff`) go to `northline.auth.consumer-login-page`
+`northline.auth.consumer-clients` (default `consumer-bff`, `courier-app` — S-87: couriers are people, not businesses) go to `northline.auth.consumer-login-page`
 (`${CONSUMER_ORIGIN}/sign-in`); every other client to `login-page` (the Studio's). No new variables: both pages come
 from `STUDIO_ORIGIN` / `CONSUMER_ORIGIN`.
 

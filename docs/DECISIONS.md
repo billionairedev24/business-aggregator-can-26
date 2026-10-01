@@ -5262,3 +5262,83 @@ Branch `fulfil/s-88-live-tracking`, **stacked on S-86**. No migration.
   - A multi-replica deployment hasn't been exercised (two adapter instances against one Valkey stand in for it).
   - No map tiles or geocoding on the web.
   - The courier app's background-location permission flow is S-87's.
+
+## 2026-10-01 — S-87 Courier app (MVP): shifts, stops, pickup/drop-off, proof of delivery
+
+Branch `courier/s-87-courier-app`. **No migration** (the V220–V229 range offered for this story is unused) and no new
+server environment variable. Runbook: [runbooks/courier-app.md](runbooks/courier-app.md).
+
+- **Where the app lives:** a top-level `mobile/` pnpm workspace (`mobile/apps/courier`, `mobile/packages/mobile-kit`),
+  not `web/apps`. Expo SDK 57 pins its own React (19.2.3), React Native 0.86.3, Metro and Jest; inside `web/` every web
+  developer and the web CI would install them, and `web/pnpm-lock.yaml` (which parallel stories edit) would carry
+  them. The consumer app (phase 4) goes to `mobile/apps/consumer`. Versions follow samop-inv-ship-26's `apps/mobile`.
+- **S-97's branch** `mobile/s-97-setup` holds no commit beyond main (it was created and stopped), so nothing was reused
+  from it; samop's app was the reference instead.
+- **Shared plumbing** in `@northline/mobile-kit`, for the consumer app to reuse: the DPoP session (PKCE S256, the
+  `use_dpop_nonce` retry, single-flight rotating refresh that stores the new refresh token before using the answer,
+  `invalid_grant` ends the session, revoke at sign-out), the api client (proof with `ath` per request, one refresh on
+  401, problem-details errors, `Retry-After`), secure storage, i18n (en, fr-CA, plurals, times in a given zone) and the
+  theme. The theme reads `web/packages/tokens/tokens.json` through a `link:` dependency (the package now exports
+  `./tokens.json`) and derives the ramps in OKLCH as `derived.css` does — React Native has no `color-mix`. Colour
+  literals are refused by ESLint and a test.
+- **Design:** `design/*.dc.html` and SCREENS.md have no courier screen (only console/consumer mentions of couriers), so
+  the screens are **ours, an addition with no design in the spec**: minimal, Northline tokens and fonts, 48 dp targets,
+  a stack without tabs. Listed in SCREENS.md § Courier app. Copy en + fr-CA ours. The icon is a placeholder drawn from
+  the base tokens (`scripts/gen-icons.mjs`) until design supplies one.
+- **Sign-in page:** the `courier-app` client's unauthenticated authorization request went to the **Studio's** sign-in
+  page (every client not in `consumer-clients`/`console-clients` does). Couriers are people, not businesses: the
+  client is now in `northline.auth.consumer-clients` (yml and the property default), so they land on the consumer
+  site's page and its `continueTo` returns to the app (`MobileDpopApiTest.Courier`). `mobile-consumer` still lands on
+  the Studio's page; the consumer app (phase 4) should move it the same way.
+- **The DPoP key is a software key** (P-256 via @noble/curves) kept in expo-secure-store (Keychain / Keystore-
+  encrypted, `AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY`: readable by the background task with the phone locked, never
+  backed up or migrated), not the non-exportable Secure Enclave / StrongBox key mobile-auth.md § 1 asks for: Expo has no
+  module for it and a native module could not be built or tried here. `DeviceKey` is the seam for a native
+  implementation. **Follow-up.**
+- **A refresh that got no answer** keeps its refresh token and is presented again later (mobile-auth.md § 4 allows
+  this trade-off): couriers lose signal often, and forcing a sign-in on every lost answer is worse than the rare reuse
+  detection that ends the sign-in.
+- **Offline (the outbox):** arrive, pickup, proof upload and drop-off are queued on the phone and sent in order, one at
+  a time, each with an `Idempotency-Key` repeated on every retry; no answer / 408 / 429 / 5xx retry with back-off or
+  `Retry-After`; a refusal drops the action and the later ones for the same stop and shows the api's message; a proof
+  upload refused with `stop_done` counts as sent; a sign-in that ended pauses the queue until the next sign-in.
+  Starting or ending a shift is **not** queued (it has a time window and needs the server's answer). The queue holds
+  stop ids, the proof kind, the PIN until sent and the proof file's path — no address; the run itself is kept in memory
+  only, so drop-off addresses are not stored on the phone across restarts.
+- **Server change for replays:** the api's stop actions were already idempotent by state, except that a stop of a run
+  that is done answered 404. `CourierAppService.ownStop` now lets a done stop of the courier's own done run through, so
+  a replayed action answers the run instead (no event, tested in `DispatchApiTest`). The api does not store
+  `Idempotency-Key`s for these calls (payments' store belongs to payments); the header is sent for when it does.
+- **Location:** only while a run is open, after the app's own explanation card (what customers see, latest position
+  only, sharing ends with the run). "Always" → OS updates to a background task (Android foreground-service
+  notification, iOS blue indicator); "while using" → updates while the app is open. A ping at most every 4 s, later on
+  `nextAfterMs` / 429 `Retry-After`; only the newest fix, never buffered or retried (no position is stored on the
+  phone, in line with S-88's latest-position-only decision); the pinger re-reads the run every 60 s from the
+  background and stops on 204 or 409 `not_on_shift`.
+- **Proof:** photo through expo-camera, scaled to 1600 px JPEG (the api takes ≤ 5 MB); signature strokes rasterised to a
+  600 × 240 grey PNG in JS (no screenshot module); the PIN checked for four digits on the phone, its value by the api.
+- **Stop detail:** the api gives a pickup no item list (fulfilment never reads orders' lines), so a pickup shows the
+  shop, the order reference, whether it is packed and the sealed-bag confirmation (`scanOk`). There is **no call or
+  message via Northline** for couriers (no masked-number or courier messaging API exists): no contact button, and the
+  stop says customers' numbers aren't shared and to contact the dispatcher. **Follow-ups.**
+- **Times** show in the run's market zone from the region model (`GET /api/v1/geo/regions`, market matched by id or
+  city, else the platform zone); nothing names a province, city or zone (a test scans the app).
+- **Variants:** development / preview / production with their own bundle ids; all use the one registered redirect
+  `ca.northline.courier:/oauth2redirect` (the server matches exactly). App Links / Universal Links wait for the
+  association files (mobile-auth.md).
+- **Fixture backend** (`EXPO_PUBLIC_FIXTURES=1`): an in-memory northline-auth + courier API inside the app for the web
+  smoke test, the screen tests and demos; `app.config.ts` refuses it for a production build.
+- **CI:** `.github/workflows/courier.yml` (workflow_dispatch only) and `ci/gitlab/courier.yml` (`PIPELINE_PART=courier`,
+  never part of `all`; the EAS build a further manual job). `make courier-*` targets (make/courier.mk).
+- **Tests:** kit 29 (PKCE RFC 7636 vector, proofs verified with the public key, server-clock `iat`, nonce retry,
+  single-flight refresh, reuse → signed out, offline refresh keeps the token, api 401 refresh, 204/409/422/429, theme
+  contrast, i18n); app 43 (outbox order/back-off/Retry-After/refusals/replays/restart, pinger throttle/429/stale/stop,
+  signature PNG, every screen on the fixture backend incl. offline drop-off, French, config against the auth server's
+  client registration, en/fr parity, region and colour rules); `expo export` iOS + Android; headless-Chromium smoke of
+  the web build. Server: `MobileDpopApiTest` (courier sign-in page), `DispatchApiTest` (replays on a done run).
+- **Not done / never run:** no device, simulator, emulator or native build (no macOS or Android SDK here); never
+  exercised: camera, background location and the foreground service, Keychain/Keystore, the system-browser sign-in
+  against a real northline-auth, multipart upload from a phone, EAS Build/Submit, the stores and their background-
+  location reviews. The acceptance criterion (a run end to end in staging) is not met yet: it needs an EAS project, a
+  build and a test phone (runbook § Staging acceptance). Hardware-backed key, courier contact, pickup item lists, App
+  Links: follow-ups above.

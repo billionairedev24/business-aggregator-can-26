@@ -308,8 +308,11 @@ class CourierAppService implements CourierApp {
     private Mine ownStop(String userId, String stopId) {
         var c = courier(userId);
         var stop = runs.stop(stopId).orElseThrow(() -> new NotFound("stop", stopId));
+        // S-87: the app replays an action whose answer it lost (offline queue). A done stop of the courier's own run
+        // stays reachable after the run is done, so the replay is a no-op that answers the run instead of a 404.
         var run = runs.lock(stop.runId())
-                .filter(r -> c.id().equals(r.courierId()) && !r.state().equals("done"))
+                .filter(r -> c.id().equals(r.courierId())
+                        && (!r.state().equals("done") || stop.state().equals("done")))
                 .orElseThrow(() -> new NotFound("stop", stopId));
         // re-read under the lock: a concurrent action may have moved it
         return new Mine(c, run, runs.stop(stopId).orElseThrow());

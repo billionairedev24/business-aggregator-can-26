@@ -4,10 +4,13 @@ How the Northline consumer app and the courier app sign people in and call the a
 PKCE in the phone's browser, tokens bound to a key the app holds (DPoP, RFC 9449), refresh tokens that rotate on every
 use and end the sign-in when an old one comes back. For mobile developers first, operators second.
 
-> **Status (2026-09-30):** northline-auth and the api implement everything below and it is tested end to end with
-> generated P-256 keys (`MobileDpopApiTest`, `DpopResourceServerTest`, `ReplayStoreTest`). No app exists yet (S-28 for
-> the consumer app's events, S-87 for the courier MVP): nothing has run on a real iPhone or Android device, and the
-> App Link / Universal Link association files are not served anywhere yet (see [Redirects](#redirects)).
+> **Status (2026-10-01):** northline-auth and the api implement everything below and it is tested end to end with
+> generated P-256 keys (`MobileDpopApiTest`, `DpopResourceServerTest`, `ReplayStoreTest`). The courier app (S-87,
+> [courier-app.md](courier-app.md)) implements the app side in `@northline/mobile-kit` (`mobile/packages/mobile-kit`),
+> tested in Jest and in a headless-browser build against an in-app stand-in of the servers; it has **not run on a real
+> iPhone or Android device**, and its key is a software key in the Keychain / Keystore-encrypted storage, not yet a
+> Secure Enclave / StrongBox key (§ 1). The consumer app comes in phase 4. The App Link / Universal Link association
+> files are not served anywhere yet (see [Redirects](#redirects)).
 
 Other runbooks: [README § OAuth clients](README.md#oauth-clients-s-122) · [README § Sessions](README.md#sessions-s-19)
 · [edge](edge.md) · [local](local.md)
@@ -68,8 +71,9 @@ https://auth.<zone>/oauth2/authorize?response_type=code
 
 - `code_verifier`: 43–128 characters of `[A-Za-z0-9-._~]`, random per request. `plain` is refused; a request without
   a challenge gets no code.
-- Not signed in yet: the browser goes to the sign-in page (today the Studio's, `STUDIO_ORIGIN/sign-in`; the consumer
-  web's once E-7 builds it). After the sign-in or "Create account" succeeds, the page **goes back to your
+- Not signed in yet: the browser goes to the client's sign-in page — for `courier-app` the consumer site's
+  (`CONSUMER_ORIGIN/sign-in`, S-87: it is in `northline.auth.consumer-clients`); for `mobile-consumer` still the
+  Studio's (`STUDIO_ORIGIN/sign-in`) until the consumer app (phase 4) moves it too. After the sign-in or "Create account" succeeds, the page **goes back to your
   authorization request** (northline-auth answers the sign-in with `continueTo`), and northline-auth redirects to your
   redirect URI with `code` and `state`. Already signed in on this phone's browser: the code comes back at once.
 - Every sign-in today uses a second factor (passkey, authenticator app or backup code), so the tokens carry
