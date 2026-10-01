@@ -71,6 +71,7 @@ abstract class McpTestServer {
         registry.add("springdoc.ai.mcp.base-url", () -> BASE);
         registry.add("northline.mcp.resource", () -> RESOURCE);
         registry.add("northline.mcp.authorization-server", () -> ISSUER);
+        registry.add("northline.docs.enabled", () -> "false"); // as in prod: the model exists, nothing publishes it
     }
 
     @Autowired

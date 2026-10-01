@@ -10,6 +10,8 @@ urls:
   consumer: https://staging.northline.ca
   console: https://console.staging.northline.ca
   pages: https://pages.staging.northline.ca
+  docs: https://docs.staging.northline.ca                   # S-126: the public documentation site
+  docsInternal: https://internal-docs.staging.northline.ca   # S-126: with apps.docs-internal + edge.docsInternal.allowedCIDRs
   webauthnRpId: staging.northline.ca
 
 # S-17: Gateway API with the chart's Gateway (Envoy Gateway), Let's Encrypt certificates per host over HTTP-01,
@@ -35,6 +37,7 @@ networkPolicy:
 
 apps:
   api:
+    docsRoutes: true            # S-125: Swagger UI, Scalar, Redoc and the specs on the api host
     env:
       # S-13: EMAIL_PROVIDER comes from the cloud overlay (ses / sendgrid / azure); the sender is per environment.
       TAX_PROVIDER: stripe          # S-21: Stripe Tax (with STRIPE_SECRET_KEY); `local` is refused here

@@ -47,6 +47,17 @@ web:storybook:
     expire_in: 7 days
     paths: [web/packages/ui/storybook-static/]
 
+# S-126: the documentation site, both variants, and the page check (scripts/check-build.mjs).
+web:docs:
+  extends: .web
+  stage: build
+  image: node:22-bookworm
+  needs: []
+  timeout: 20m
+  script:
+    - make -C .. docs DOCS_VARIANT=public
+    - make -C .. docs DOCS_VARIANT=internal
+
 # Optional: Run pipeline with RUN_STUDIO_SMOKE=true. Migrates + seeds an empty PostGIS, starts api + auth (local
 # profile) and the studio dev server, then sweeps every Studio screen (scripts/studio-smoke.mjs).
 web:studio-smoke:

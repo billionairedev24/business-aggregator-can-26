@@ -1,6 +1,7 @@
 dependencies {
     implementation(project(":platform"))
     implementation(project(":sms")) // SMS / voice adapters shared with the api and the worker (S-27)
+    implementation(project(":openapi")) // S-125: the JSON API and the OAuth endpoints as OpenAPI 3.1
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
@@ -30,6 +31,7 @@ dependencies {
     runtimeOnly("org.postgresql:postgresql")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation(testFixtures(project(":openapi"))) // S-125: OpenApiSnapshot (spec drift check)
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testImplementation("org.springframework.boot:spring-boot-starter-security-test")
     testImplementation("org.springframework.boot:spring-boot-testcontainers")

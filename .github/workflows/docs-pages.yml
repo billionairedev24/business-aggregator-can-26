@@ -1,0 +1,57 @@
+# S-126 — the PUBLIC documentation site as a static export on GitHub Pages (docs/runbooks/docs-site.md).
+#
+# MANUAL ONLY: Actions › docs-pages › Run workflow (or `gh workflow run docs-pages.yml`). Needs Settings › Pages ›
+# Source = GitHub Actions. Only the public variant is ever published here: the internal one (runbooks, decisions,
+# internal specs) runs only behind the edge's IP allowlist (apps.docs-internal).
+name: docs-pages
+
+on:
+  workflow_dispatch:
+    inputs:
+      base-url:
+        description: Base path of the site (a project site lives under /<repository>/)
+        type: string
+        default: /business-aggregator-can-26/
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: docs-pages
+  cancel-in-progress: false
+
+env:
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/pnpm-setup
+      - uses: actions/configure-pages@v5
+        id: pages
+      - name: make docs-pages (public variant)
+        env:
+          DOCS_URL: ${{ steps.pages.outputs.origin }}
+          DOCS_BASE_URL: ${{ inputs.base-url }}
+        run: make -C .. docs-pages
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: web/apps/docs/build
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

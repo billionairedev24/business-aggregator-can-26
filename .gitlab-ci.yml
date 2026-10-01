@@ -17,8 +17,8 @@ workflow:
 variables:
   PIPELINE_PART:
     value: all
-    options: [all, server, web, infra, chart, images, gitops, promote, events]
-    description: "Which part to build and test. `events` = the event schema contract check (S-34, also in `all`). `images` builds and pushes the container images (S-14, never part of `all`); `chart` = Helm checks, `gitops` = Argo CD checks (S-15; both also in `all`); `promote` opens a promotion merge request (S-15, never part of `all`)."
+    options: [all, server, web, infra, chart, images, gitops, promote, events, openapi, pages]
+    description: "Which part to build and test. `events` = the event schema contract check (S-34, also in `all`). `openapi` = Redocly lint of the committed specs (S-125, also in `all`; the code-vs-spec check runs in `server`). `images` builds and pushes the container images (S-14, never part of `all`); `chart` = Helm checks, `gitops` = Argo CD checks (S-15; both also in `all`); `promote` opens a promotion merge request (S-15, never part of `all`). `pages` publishes the public documentation site on GitLab Pages (S-126, never part of `all`)."
   EVENT_SCHEMAS_BASE:
     value: main
     description: "events: the branch the event schemas are compared with (breaking changes need a version bump)."

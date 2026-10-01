@@ -15,7 +15,7 @@
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
-ALL_APPS="api auth bff worker studio consumer"
+ALL_APPS="api auth bff worker studio consumer docs docs-internal"   # docs, docs-internal: S-126
 usage() { sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
 
 [[ $# -ge 1 ]] || usage

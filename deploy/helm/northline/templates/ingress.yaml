@@ -25,6 +25,11 @@ S-17 adds TLS (cert-manager), DNS (external-dns reads these hostnames) and the e
 {{- $apiPaths := list -}}
 {{- if $v.apps.api.tokenClients -}}
 {{- $apiPaths = list (dict "path" "/api/v1" "app" "api") -}}
+{{- if $v.apps.api.docsRoutes -}}
+{{- /* S-125: the API documentation (dev, staging; refused in prod by validate.yaml). */ -}}
+{{- $apiPaths = concat $apiPaths (list (dict "path" "/docs" "app" "api") (dict "path" "/swagger-ui" "app" "api")
+      (dict "path" "/swagger-ui.html" "app" "api") (dict "path" "/v3/api-docs" "app" "api")) -}}
+{{- end -}}
 {{- else -}}
 {{- $apiPaths = list
       (dict "path" "/api/v1/webhooks/stripe" "app" "api") (dict "path" "/api/v1/webhooks/calendar" "app" "api")
@@ -63,6 +68,14 @@ S-17 adds TLS (cert-manager), DNS (external-dns reads these hostnames) and the e
 {{- range $v.edge.customDomains -}}
 {{- $routes = append $routes (dict "host" .host "paths" (list (dict "path" "/" "app" "consumer")) "custom" true) -}}
 {{- end -}}
+{{- end -}}
+{{- /* S-126: the documentation site; docs-internal behind edge.docsInternal (templates/edge.yaml SecurityPolicy). */ -}}
+{{- if and $v.apps.docs.enabled $v.urls.docs -}}
+{{- $routes = append $routes (dict "host" (include "northline.host" $v.urls.docs) "paths" (list (dict "path" "/" "app" "docs"))) -}}
+{{- end -}}
+{{- $dint := get $v.apps "docs-internal" -}}
+{{- if and $dint $dint.enabled $v.urls.docsInternal -}}
+{{- $routes = append $routes (dict "host" (include "northline.host" $v.urls.docsInternal) "paths" (list (dict "path" "/" "app" "docs-internal")) "internal" true) -}}
 {{- end -}}
 {{- if $v.apps.console.enabled -}}
 {{- $routes = append $routes (dict "host" (include "northline.host" $v.urls.console) "paths" (list (dict "path" "/" "app" "console"))) -}}

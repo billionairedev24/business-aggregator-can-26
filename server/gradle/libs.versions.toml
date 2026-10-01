@@ -34,6 +34,8 @@ greenmail = "2.1.14"
 springdoc-webmvc-mcp = { module = "org.springdoc:springdoc-openapi-starter-webmvc-mcp", version.ref = "springdoc" }
 spring-ai-mcp-server-webmvc = { module = "org.springframework.ai:spring-ai-starter-mcp-server-webmvc", version.ref = "spring-ai" }
 springdoc-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
+# S-125: Scalar through springdoc's own starter (scalar-webmvc, version managed by springdoc)
+springdoc-webmvc-scalar = { module = "org.springdoc:springdoc-openapi-starter-webmvc-scalar", version.ref = "springdoc" }
 stripe = { module = "com.stripe:stripe-java", version.ref = "stripe" }
 ulid = { module = "com.github.f4b6a3:ulid-creator", version.ref = "ulid" }
 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }

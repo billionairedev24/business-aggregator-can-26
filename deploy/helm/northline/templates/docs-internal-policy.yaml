@@ -1,0 +1,34 @@
+{{- /*
+S-126: the internal documentation site (apps.docs-internal: runbooks, decisions, security review, every OpenAPI document)
+is reachable only from edge.docsInternal.allowedCIDRs — an Envoy Gateway SecurityPolicy on its HTTPRoute; any other
+client gets 403 from the edge before the request reaches the pod. validate.yaml refuses docs-internal outside local
+without CIDRs or without the Envoy edge. (A sign-in through northline-auth with SecurityPolicy `oidc` is the planned
+upgrade: docs/runbooks/docs-site.md.)
+*/ -}}
+{{- $dint := get .Values.apps "docs-internal" }}
+{{- $cidrs := .Values.edge.docsInternal.allowedCIDRs }}
+{{- if and $dint $dint.enabled .Values.urls.docsInternal $cidrs .Values.edge.enabled .Values.gateway.enabled (eq .Values.edge.gateway.className "envoy") }}
+{{- $host := include "northline.host" .Values.urls.docsInternal }}
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: northline-docs-internal-allowlist
+  labels:
+    {{- include "northline.labels" (dict "root" . "app" "docs-internal") | nindent 4 }}
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: {{ printf "northline-%s" ($host | replace "." "-") | trunc 63 | trimSuffix "-" }}
+  authorization:
+    defaultAction: Deny
+    rules:
+      - name: docs-internal-allowlist
+        action: Allow
+        principal:
+          clientCIDRs:
+            {{- range $cidrs }}
+            - {{ . | quote }}
+            {{- end }}
+{{- end }}

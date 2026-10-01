@@ -176,7 +176,7 @@ Helm: `apps.api.mcp: true` (default) routes `/mcp` and `/.well-known/oauth-prote
 The agent header secret is generated per process. Argo CD needs no change.
 
 Under prod, the OpenAPI document is still generated (the tools come from it), but `/v3/api-docs` and Swagger UI are
-closed (`northline.docs.public: false`).
+closed (S-125's `northline.docs.enabled: false`).
 
 ## Operations
 

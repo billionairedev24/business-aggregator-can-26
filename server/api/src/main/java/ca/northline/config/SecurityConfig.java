@@ -156,10 +156,10 @@ class SecurityConfig {
     /** Actuator health/info and the OpenAPI docs are public; anything else outside /api is closed. */
     @Bean
     @Order(2)
-    SecurityFilterChain infrastructure(HttpSecurity http, @Value("${northline.docs.public:true}") boolean docsPublic) {
+    SecurityFilterChain infrastructure(HttpSecurity http, @Value("${northline.docs.enabled:true}") boolean docsPublic) {
         return http.authorizeHttpRequests(a -> {
                     a.requestMatchers("/actuator/health/**", "/actuator/info").permitAll();
-                    // S-127: prod keeps springdoc's model for the MCP tools but doesn't publish it
+                    // S-125/S-127: prod keeps springdoc's model for the MCP tools but doesn't publish it
                     if (docsPublic) {
                         a.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                                 .permitAll();

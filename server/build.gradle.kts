@@ -160,3 +160,16 @@ configure(subprojects.filter { it.name in appImages }) {
         }
     }
 }
+
+// ---- OpenAPI specs (S-125, docs/runbooks/api-docs.md) ---------------------------------------------------------------
+// Each app's OpenApiSpecsTest compares the specs it serves with the committed docs/api/openapi/*.yaml (part of
+// `./gradlew build`); -Popenapi.write=true (make openapi) writes them instead.
+configure(subprojects.filter { it.name in setOf("api", "auth", "bff") }) {
+    tasks.withType<Test>().configureEach {
+        systemProperty("northline.repo", rootProject.file("..").absolutePath)
+        val write = providers.gradleProperty("openapi.write").getOrElse("false")
+        systemProperty("openapi.write", write)
+        inputs.property("openapi.write", write)
+        inputs.dir(rootProject.file("../docs/api/openapi")).withPropertyName("committedSpecs").optional()
+    }
+}

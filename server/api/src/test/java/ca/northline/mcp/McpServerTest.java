@@ -105,6 +105,9 @@ class McpServerTest extends McpTestServer {
                 .startsWith("Bearer")
                 .contains("resource_metadata=\"" + BASE + "/.well-known/oauth-protected-resource/mcp\"")
                 .contains("scope=\"openid merchant mcp\"");
+        // The OpenAPI model behind the tools is not published when the docs are off (prod).
+        assertThat(http("GET", "/v3/api-docs", null, null, Map.of()).statusCode())
+                .isIn(401, 403, 404);
     }
 
     @Test

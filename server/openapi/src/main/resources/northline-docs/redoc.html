@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{title}} · Redoc</title>
+  <link rel="stylesheet" href="{{base}}/docs/assets/docs.css">
+</head>
+<body>
+  <header class="masthead">
+    <div class="brand">{{title}} <small>Reference</small></div>
+    <label>Audience <select id="group">{{options}}</select></label>
+    <a href="{{base}}/docs">All viewers</a>
+  </header>
+  <div id="redoc"></div>
+  <div id="redoc-error" role="alert"><strong>The reference could not load.</strong> <span></span></div>
+  <!-- Redoc's standalone bundle, served by this app (npm registry at build time, integrity-checked). -->
+  <script src="{{base}}/docs/redoc/redoc.standalone.js"></script>
+  <script src="{{base}}/docs/assets/redoc-init.js"></script>
+</body>
+</html>

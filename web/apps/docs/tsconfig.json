@@ -1,0 +1,12 @@
+{
+  "extends": "@docusaurus/tsconfig",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "noEmit": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "types": ["node", "vitest/globals", "@docusaurus/module-type-aliases"]
+  },
+  "include": ["src", "docusaurus.config.ts", "sidebars.ts", "sidebars-guides.ts", "scripts"]
+}

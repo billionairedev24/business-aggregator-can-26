@@ -1,0 +1,8 @@
+{
+  "version.label": { "message": "Actuelle", "description": "The label for version current" },
+  "sidebar.repo.category.Overview": { "message": "Vue d’ensemble", "description": "The label for category Overview in sidebar repo" },
+  "sidebar.repo.category.Plans and conventions": { "message": "Plans et conventions", "description": "The label for category Plans and conventions in sidebar repo" },
+  "sidebar.repo.category.Runbooks": { "message": "Procédures", "description": "The label for category Runbooks in sidebar repo" },
+  "sidebar.repo.category.Security": { "message": "Sécurité", "description": "The label for category Security in sidebar repo" },
+  "sidebar.repo.category.AI": { "message": "IA", "description": "The label for category AI in sidebar repo" }
+}
