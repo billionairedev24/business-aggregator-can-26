@@ -90,7 +90,7 @@ export type LiveBoard = z.infer<typeof LiveBoard>;
 // ── queries ─────────────────────────────────────────────────────────────────
 
 export const kitchenKey = (merchantId: string, ...rest: string[]): QueryKey => ['merchant', merchantId, 'kitchen', ...rest];
-/** Live orders refresh every 15 s (the kitchen display polls; tickets also print). */
+/** New and moved orders arrive over the live stream (S-68); while it is down the kitchen display polls every 15 s. */
 export const LIVE_POLL_MS = 15_000;
 
 export const liveQuery = (merchantId: string) => queryOptions({ queryKey: kitchenKey(merchantId, 'live'), queryFn: () => http(`${m(merchantId)}/kitchen/live`, {}, LiveBoard), refetchInterval: LIVE_POLL_MS });
