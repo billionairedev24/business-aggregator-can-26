@@ -24,6 +24,18 @@ function pageFromHeaders(): PageHost | null {
   }
 }
 
+/**
+ * The visitor's address chain for the api's per-client search limit (S-44: "the SSR server should add the browser's
+ * address to X-Forwarded-For", otherwise every server-rendered search counts against the SSR pod). Set by
+ * server/node-server.mjs only (`x-nl-forwarded-for`; a browser's own is dropped); the browser sends nothing — the
+ * consumer-bff sees it directly.
+ */
+export const forwardedFor = createIsomorphicFn()
+  .server((): string | undefined => {
+    try { return getRequestHeader('x-nl-forwarded-for') || undefined; } catch { return undefined; }
+  })
+  .client((): string | undefined => undefined);
+
 export const publicConfig = createIsomorphicFn()
   .server((): PublicConfig => ({
     authOrigin: process.env.NL_AUTH_ORIGIN ?? FALLBACK_CONFIG.authOrigin,

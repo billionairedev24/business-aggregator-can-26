@@ -1,10 +1,11 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Link, useNavigate, useRouterState } from '@tanstack/react-router';
+import { Link, useRouterState } from '@tanstack/react-router';
 import { ForkKnife, Storefront, Wrench } from '@phosphor-icons/react';
-import { EmptyState, ErrorState, SearchBar, SiteLink, Skeleton, Tag, useFormatters, useLocale, type TagTone } from '@northline/ui';
+import { EmptyState, ErrorState, SiteLink, Skeleton, Tag, useFormatters, useLocale, type TagTone } from '@northline/ui';
 import { useAccountSummary } from '../account/api';
 import { useDeliveryLocation } from '../location/useDeliveryLocation';
 import { signInHref, useViewer } from '../session/api';
+import { SiteSearch } from '../search/SiteSearch';
 import { useShellT } from '../shell/messages';
 import { useHomeSummary, useUpcoming, type HomeSummary, type TrustedProvider } from './api';
 import { countOf, CUISINES, DEPARTMENTS, SERVICE_CATEGORIES, type ServiceTile, type Tile } from './catalog';
@@ -31,11 +32,9 @@ const partOfDay = (hour: number) => (hour >= 5 && hour < 12 ? 'morning' : hour >
 export function HomeScreen() {
   const t = useHomeT();
   const shell = useShellT();
-  const navigate = useNavigate();
   const { user, loading: sessionLoading } = useViewer();
   const { location } = useDeliveryLocation();
   const hour = useLocalHour();
-  const [query, setQuery] = useState('');
   const summary = useHomeSummary(location.city);
   const place = location.label?.split(',')[0]?.trim();
   const data = summary.data;
@@ -51,8 +50,7 @@ export function HomeScreen() {
         <p className="nl-home-greeting">{greeting ?? <Skeleton width={240} height={14} radius={4} style={{ opacity: 0.4 }} />}</p>
         <h1 id="home-hero-title" className="nl-home-title">{place ? t('heroQ', { place }) : t('heroQAnywhere')}</h1>
         <div className="nl-home-search">
-          <SearchBar variant="hero" value={query} onChange={setQuery} placeholder={shell('search')}
-            onSubmit={q => { if (q) void navigate({ to: '/search', search: { q } }); }} />
+          <SiteSearch variant="hero" placeholder={shell('search')} />
         </div>
         <nav className="nl-home-scopes" aria-label={t('scopes')}>
           <Scope to="/services" icon={<Wrench weight="duotone" size={18} aria-hidden />} label={t('scopeServices')} meta={data && t('pros', { count: data.providers })} loading={summary.isPending && !!location.city} />

@@ -3532,3 +3532,71 @@ from one region model; Alberta and Calgary are its first *configured* live regio
 - **Not done:** log retention and deletion are the backend's (documented per backend, not automated); no log-based
   alerts (the metrics alerts of S-111 cover the same failures). **Never run against a real backend** (CloudWatch Logs,
   Cloud Logging, Azure Monitor, Loki/Grafana Cloud).
+
+## 2026-10-01 — S-48 Search results with predictions and filters
+
+Built on the S-44 contract (docs/CONSUMER_WEB_PLAN.md § Search) and S-47's location.
+
+- **`/search` is server-rendered, the same HTML for everyone.** The URL carries the text, scope, sort and filters
+  (`q`, `scope`, `category`, `sort`, `tier`, `maxPrice`, `delivery`, `openNow`, `instantBook`, `dietary`,
+  `allergenFree`, `radiusKm` — the API's own names, so a shared link reproduces the search; anything malformed is
+  dropped). The loader fetches the first page with no place (the API's default province); once the browser knows the
+  location it asks again with `market` = the location's province and `lat`/`lng` (results stay on screen, dimmed,
+  while it does). A failing first page doesn't fail the route: the page shows its own error state with Retry.
+- **The design's filter list** ("On tonight's run", "Under $10", "Master sellers", "Halal", "Gluten-free") is what the
+  header search lands on (`scope` all) and the Shop scope. **"Organic" is not offered**: the index has no organic data
+  (S-44). The services scope shows the providers screen's chips (Master tier, Instant book, Available today = open now,
+  Under $80), the food scope the food screen's (Open now, Halal, Vegan, Nut-free = peanuts + tree nuts). Additions
+  where the design is silent (recorded): a "Show" group (Everything / Services / Shop / Food, with counts from the
+  kinds facet when searching everything; changing scope drops the other scope's filters), a "Categories" group from
+  the categories facet (toggles `category`), a "Distance" group (Any / under 3, 10, 25 km) only when the browser has
+  coordinates, and "Clear all". The design's static "Shops" list is the merchants facet (top five, text as designed;
+  labelled Providers / Kitchens / Businesses by scope — the API has no merchant filter, so they don't filter).
+- **Sort** is the design's "Sorted by relevance ▾" as a native select (relevance, distance, price both ways, rating);
+  distance appears only with coordinates. A URL asking for distance (sort or radius) without a location leaves it out
+  of the API call (the API would 422) and says "Set your location to sort and filter by distance." with a link.
+- **Cards** as designed (picture, name and price, "business · detail", one tag): detail = category, rating with count,
+  distance; tag by priority sold out → on tonight's run → open now (food) → instant book (services) → Master/Trusted
+  tier. "Quote" for quote-priced or unpriced listings, "from $" for businesses, "$/h" for hourly. Pictures: a catalogue
+  image (`media:`) through the public media endpoint; dish photos (`object:`) have no public URL yet → the design's
+  halftone placeholder in the merchant's swatch colour.
+- **Where a result goes:** product → `/products/<offer id>?offer=<offer id>` (see the api change below), service →
+  the provider page, dish → the kitchen page, business → provider or kitchen page; a shop has no page of its own yet
+  (S-49), so it searches the Shop scope by its name. Categories from suggestions go to the services category or shop
+  department page (leaf slug); others search within the category.
+- **Paging:** "Show more results" with the API's `next` token (TanStack infinite query); "Showing N of M" (M shown as
+  "10000+" past the API's exact count). A dead `after` (422 on `after`) shows the API's sentence; 429 → "Too many
+  searches at once — try again in a minute."
+- **Empty state:** "Nothing matches “{q}” here yet." with one action — "Clear filters" when filters are on, else
+  "Browse services".
+- **Predictions as you type** (header and home hero, design 06 `suggestions`): the UI kit's `SearchBar` gained an
+  optional ARIA combobox (`suggestions` groups + `onPick`, ↑/↓/Enter/Esc, mousedown picks, highlighted ranges via
+  `Highlighted`; stories `HeaderPredictions` / `HeroPredictions`). `features/search/SiteSearch` feeds it from
+  `/search/suggest` (150 ms debounce, the visitor's province, the page language, previous list kept while typing) and
+  "Your recent" from `localStorage['nl.recentSearches']` (last five, read after hydration; written when a search runs
+  or a suggestion is opened; nothing is sent). Item meta: listings "{business} · {price}", businesses "{type} ·
+  {tier} · ★ {rating}", categories their side ("Service", "Shop"…), recent "searched today/yesterday/N days ago". The
+  prototype's footnote ("Elasticsearch completion suggester · fr/en synonyms…") is technical and not shown; the
+  "fr → sourdough" synonym rows aren't returned by the API (S-44). On the results page the header field shows the
+  searched text.
+- **`robots: noindex, follow`** on `/search`: result pages are endless and query-specific; the listings themselves are
+  indexed (S-63).
+- **SSR and the per-client rate limit (S-44):** `server/node-server.mjs` now passes the visitor's address chain to the
+  app as `x-nl-forwarded-for` (the ingress's `X-Forwarded-For` when `TRUST_PROXY=true`, then the peer; a browser's own
+  header is dropped) and the server-side search sends it as `X-Forwarded-For` through the consumer-bff, so the api's
+  limit counts the visitor rather than the SSR pod. The consumer-bff relays the header as is.
+- **api change (catalogue, S-50's endpoint):** search results are offers, the product page takes a product. `GET
+  /api/v1/public/shop/products/{id}` now also accepts one of the product's offer ids and answers the product (its own
+  `productId` in the body); the consumer's product route redirects (301) such a URL to `/products/<productId>`, keeping
+  the offer preselected (`?offer=`). No schema change. Test: `ProductPageApiTest.anOfferIdFromSearchNamesItsProduct`.
+- **No migration, no new configuration.**
+- **Tests:** `features/search/search.test.tsx` — the design's heading, filters, facets and cards in English and
+  French; filters/sort/category/clear through the URL and onto the API query; scopes with their own chips; the
+  location's province and coordinates, the distance group and sort; distance left out without a location; paging;
+  empty, error + Retry and rate-limit states; recent searches; suggestions (listings, businesses, categories, recent
+  in both languages, highlighting, keyboard pick, Escape, Enter); links per kind; malformed URL parameters. Shell and
+  home tests now find the field as a combobox.
+- **Not done:** Storybook interaction/a11y runs of the new stories (no browser in the sandbox; `pnpm test-storybook` in
+  CI); multi-select facets (S-44 counts the whole filtered result); filtering by a merchant from the "Shops" list;
+  "Organic", "Free delivery (Plus)" and "EV certified" (no data); the redirect of offer URLs is exercised by the api
+  test only (no router-level test).
