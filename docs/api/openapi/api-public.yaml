@@ -515,12 +515,6 @@ paths:
   /api/v1/me:
     get:
       operationId: meMe
-      parameters:
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       responses:
         "200":
           content:
@@ -572,11 +566,6 @@ paths:
         required: false
         schema:
           type: string
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       requestBody:
         content:
           application/json:
@@ -636,12 +625,6 @@ paths:
   /api/v1/me/bookings/holds:
     post:
       operationId: myBookingsHold
-      parameters:
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       requestBody:
         content:
           application/json:
@@ -707,11 +690,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       responses:
         "200":
           description: OK
@@ -773,11 +751,6 @@ paths:
         required: false
         schema:
           type: string
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       responses:
         "200":
           content:
@@ -838,11 +811,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       responses:
         "200":
           content:
@@ -899,11 +867,6 @@ paths:
       operationId: checkoutSetup
       parameters:
       - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
-      - in: query
         name: market
         required: false
         schema:
@@ -954,11 +917,6 @@ paths:
     post:
       operationId: checkoutQuote
       parameters:
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       - in: query
         name: lang
         required: false
@@ -1024,11 +982,6 @@ paths:
     post:
       operationId: checkoutStart
       parameters:
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       - in: header
         name: Idempotency-Key
         required: false
@@ -1104,11 +1057,6 @@ paths:
     post:
       operationId: checkoutPlace
       parameters:
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       - in: path
         name: checkoutId
         required: true
@@ -1184,11 +1132,6 @@ paths:
         required: false
         schema:
           type: string
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       requestBody:
         content:
           application/json:
@@ -1248,12 +1191,6 @@ paths:
   /api/v1/me/food-orders/quote:
     post:
       operationId: foodOrderQuote
-      parameters:
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       requestBody:
         content:
           application/json:
@@ -1319,11 +1256,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       responses:
         "200":
           content:
@@ -1389,11 +1321,6 @@ paths:
         required: false
         schema:
           type: string
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       responses:
         "200":
           content:
@@ -1449,11 +1376,6 @@ paths:
     get:
       operationId: consumerOrderOrder
       parameters:
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       - in: path
         name: orderId
         required: true
@@ -1514,11 +1436,6 @@ paths:
     get:
       operationId: consumerOrderEvents
       parameters:
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       - in: path
         name: orderId
         required: true
@@ -1578,12 +1495,6 @@ paths:
   /api/v1/me/quote-requests:
     post:
       operationId: myQuotesRequest
-      parameters:
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       requestBody:
         content:
           application/json:
@@ -1655,11 +1566,6 @@ paths:
         schema:
           type: string
           default: en
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       responses:
         "200":
           content:
@@ -1726,11 +1632,6 @@ paths:
         schema:
           type: string
           default: en
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       responses:
         "200":
           content:
@@ -1801,11 +1702,6 @@ paths:
         required: false
         schema:
           type: string
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       requestBody:
         content:
           application/json:
@@ -1889,11 +1785,6 @@ paths:
         required: false
         schema:
           type: string
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       requestBody:
         content:
           application/json:
@@ -1972,11 +1863,6 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
-      - in: query
-        name: user
-        required: true
-        schema:
-          $ref: "#/components/schemas/CurrentUser"
       responses:
         "200":
           description: OK
@@ -3570,23 +3456,6 @@ components:
         priceRange:
           type: string
         timeline:
-          type: string
-    CurrentUser:
-      type: object
-      properties:
-        mfa:
-          type: boolean
-        roles:
-          type: array
-          items:
-            type: string
-          uniqueItems: true
-        scopes:
-          type: array
-          items:
-            type: string
-          uniqueItems: true
-        userId:
           type: string
     CustomerQuote:
       type: object

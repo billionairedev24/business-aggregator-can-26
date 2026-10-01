@@ -34,6 +34,12 @@ northline:                               # a STRIPE_SECRET_KEY exported in the s
     check-cooldown: PT0S
     target-host: pages.test.northline.ca
     blocked-suffixes: northline.ca, northline-cdn.net
+# S-127: springdoc builds the MCP tools from the OpenAPI model at start-up; only the MCP tests need them (they turn
+# it on), so the other contexts start without generating the document.
+springdoc.ai.mcp.enabled: false
+springdoc.pre-loading-enabled: false
+# S-128: the developer docs server holds the docs and OpenAPI trees in memory; only the MCP tests (one context) turn it on.
+northline.devdocs.enabled: false
 # S-125: fixed so the committed docs/api/openapi specs never depend on the machine's AUTH_ISSUER / API_PUBLIC_URL.
 northline.docs:
   issuer: http://localhost:9000

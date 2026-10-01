@@ -3349,3 +3349,186 @@ from one region model; Alberta and Calgary are its first *configured* live regio
   provider's; service-zone names unique across markets; email dates use the configured email zone rather than each
   recipient business's; the registry adapter configuration keys keep their province/city names (`northline.registries
   .alberta`, `.calgary`) — they configure those adapters.
+
+## 2026-10-01 — S-127 Built-in MCP server (OAuth 2.1) for merchants, partners and ops
+
+- **Inside the api, not a separate app.** The MCP server is module `ca.northline.mcp` in `server/api`. springdoc
+  3.1.1's MCP support (`springdoc-openapi-starter-webmvc-mcp`) turns selected operations into tools, and Spring AI
+  2.0.0's `spring-ai-starter-mcp-server-webmvc` serves them over Streamable HTTP on `/mcp` (SYNC, protocol
+  2025-11-25). This is the pattern used in the samop reference. A tool call is an HTTP request back to the same api
+  with the caller's own token and a per-process agent header. Tools are therefore exactly the Studio operations,
+  with their merchant binding (S-30), roles, validation, idempotency and audit, and no business logic is duplicated.
+  A separate app would need its own deploy, token exchange and network path for no gain at this size.
+- **The tool list is an allowlist** (`AgentTools.ALL`, 33 tools: listings, orders and fulfilment, kitchen board,
+  appointments, availability, messages, earnings/payouts read-only, reviews, two staff tools). Every other api
+  operation is excluded from the MCP model by the `McpToolCustomizer`. **Refunds, payouts, checkout/payments, team,
+  security and deletes are not tools.** `kitchen_hand_off` stays in: it is a fulfilment step that releases that order's
+  escrow as it does in the Studio.
+- **Scopes:** `mcp` (reads + resources), `mcp.write` (writes), `mcp.ops` (staff tools, also needs the `staff` role and
+  `acr=mfa`), each next to `merchant`. Partners (S-30) map `api.read`/`api.write` onto the same split. springdoc's
+  built-in guardrails (`require-approval`) are off; `McpGatewayFilter` enforces the policy in one place, before the
+  MCP server: audience, second factor, scopes, rate limits, confirmations and audit.
+- **Confirmation is two calls with identical arguments.** The first answers `confirmation_required` and changes
+  nothing; the second, within 5 min, runs. The same change within 10 min after that is `already_done`. The change is
+  marked done when it is confirmed, not when it succeeds: a confirmed call that fails is retried by changing an
+  argument or after the window. That is the safer side for a client that retries blindly. MCP elicitation would be
+  nicer, but clients support it unevenly; the two-step also works in clients without it. State is in Valkey
+  (`nl:mcp:*`, `MCP_STORE=redis`; memory is refused under staging/prod).
+- **Authorization per MCP 2025-11-25.** Protected resource metadata (RFC 9728) is served at the path form
+  `/.well-known/oauth-protected-resource/mcp` and the root form. A `401` carries `resource_metadata` and `scope`. A
+  missing scope is `403 insufficient_scope`, and a missing second factor is `403 insufficient_user_authentication`
+  with `acr_values="mfa"` (RFC 9470). auth accepts `resource` (RFC 8707) in the authorization and token requests,
+  only for the configured MCP resources (`invalid_target` otherwise; a token request may narrow but not widen). The
+  resource goes into the access token's `aud`, and the api's MCP endpoint accepts only tokens addressed to it. Access
+  tokens now also carry `client_id` (RFC 9068 § 2.2), for the audit trail.
+- **No token passthrough the other way:** an MCP-audience token on `/api/**` without the MCP server's internal header
+  is `403 mcp_token`. An agent can't use its token for operations outside the tool list.
+- **Client registration: Client ID Metadata Documents, not Dynamic Client Registration.** DCR would let anyone write
+  client rows. With CIMD the client is identified by an HTTPS URL that auth fetches under SSRF rules (public addresses
+  only, no redirects, 5 s, 5 KB, optional host allowlist) and registers as a public PKCE client with consent, capped
+  at `mcp`/`mcp.write` (never `mcp.ops`). `auth.oauth2_registered_client.client_id` is widened to `varchar(2048)`
+  (**V025**, additive). A registered client `northline-mcp` covers clients that let you type a client id. Public
+  clients may now use `http` loopback-IP redirects (RFC 8252) in every environment.
+- **No refresh tokens for MCP clients.** Public clients refresh only with DPoP (S-29), and MCP clients don't do DPoP.
+  Access tokens live 1 h, and the auth session makes the next sign-in silent. Consent uses Spring Authorization
+  Server's default page for now; a branded consent screen in the Studio's design is a follow-up.
+- **acr=mfa** is required for people: `northline-mcp` and URL clients are in `mfa-required-clients`, and the gateway
+  checks it again.
+- **Audit:** `mcp.tool_call` / `mcp.tool_confirmation` / `mcp.tool_refused` rows in `developer.audit_log`, with the
+  client id. `AuditTrail.Entry.merchantId` became `@Nullable` for staff calls that have no business.
+- **New operation** `PATCH /api/v1/merchants/{id}/listings/{listingId}/price-stock` (`QuickUpdateListing`), so the
+  agent can't overwrite a whole listing to change a price. Products with variants and stock on services are refused
+  with clear messages (`ListingMessages.QUICK_UPDATE_*`).
+- **OpenAPI model:** `springdoc.pre-loading-enabled: true` (the MCP tools register only once the OpenAPI document is
+  built), and `CurrentUser`/`CurrentMember` are ignored as request parameters in the document (they are resolved
+  from the token; before, they showed up as a bogus `user` query parameter). Under prod the document is still
+  generated (`springdoc.api-docs.enabled: true`, S-125 had it off) but not published: S-125's
+  `northline.docs.enabled: false` removes the docs chain, and the api's own chains deny `/v3/api-docs`.
+- **Edge:** `apps.api.mcp: true` routes `/mcp` and `/.well-known/oauth-protected-resource` on the api host. No new
+  secret: the agent header is random per process.
+- **Never run against real clients:** the OAuth + MCP session is tested with the MCP Java SDK client and tokens minted
+  in the test, and auth's flow in MockMvc (WireMock for metadata documents). It has not been tried with Claude or the
+  MCP Inspector against a deployed environment.
+
+## 2026-10-01 — S-128 Developer docs MCP server
+
+- **A second MCP server in the same app, at `/mcp/docs`**, not more tools on S-127's `/mcp`. It has its own resource
+  URI (`MCP_DOCS_RESOURCE`, already accepted by auth since S-127), metadata (`/.well-known/oauth-protected-resource/mcp/docs`)
+  and access rule. A merchant's agent shouldn't see internal runbooks, and a coding agent shouldn't need a business
+  sign-in. It is built directly with the MCP Java SDK (stateless Streamable HTTP servlet,
+  `HttpServletStatelessServerTransport`). Spring AI's auto-configuration serves one server, and a read-only docs
+  server needs no session.
+- **Content is packaged at build time.** `processResources` copies `docs/**/*.md` (not the backlog) and
+  `docs/api/openapi/*.yaml` into `northline-devdocs/` on the api's classpath (about 2 MB). The image therefore serves
+  the docs of the code it runs, with no repository checkout or network at runtime. S-125's committed OpenAPI
+  documents are the source; the springdoc runtime model is not used (it isn't published in prod, and the committed
+  specs are what the docs site shows). The YAML is parsed with SnakeYAML (Boot's) into Jackson 3 trees.
+- **Tools:** `search_docs` (every word must match; ranked by occurrences, with headings ×3 and titles ×2 — plain and
+  predictable, no index or embeddings), `list_documents`, `get_document` (by section, or in 24 000-character pages),
+  `list_operations`, `get_operation` (schemas with `$ref`s inlined to depth 6; recursive ones keep their `$ref`). All
+  are annotated read-only. Each document and spec is also an MCP resource.
+- **Access:** `open` locally (no auth, as the story asks); `staff` in the cloud. Internal-only in prod means
+  Northline staff with a second factor and a token for the docs resource, refused for anyone else with RFC 9728/9470
+  challenges. `MCP_DOCS_ACCESS=open` is refused under staging/prod. Docs tokens are confined: `/api/**` answers
+  `403 mcp_token`, and `/mcp` rejects them by audience.
+- **Never run against real clients:** tested with the MCP Java SDK client in the api's tests; not tried with Claude
+  Code or an IDE against a deployed environment.
+
+## 2026-10-01 — S-111 OpenTelemetry tracing and metrics across api, auth, bff, worker
+
+- **One stack, every app.** `spring-boot-starter-opentelemetry` (Micrometer Observation → OpenTelemetry SDK, OTLP/HTTP)
+  in api, auth, bff (both BFFs) and worker; the worker keeps its Prometheus endpoint (S-26), the api its own. Shared
+  wiring lives in `server/platform` (`ca.northline.platform.observability`): an `EnvironmentPostProcessor` adds
+  `classpath:northline/observability-defaults.yml` with the **lowest** precedence (export behind
+  `OTEL_EXPORT_ENABLED`, W3C only, Kafka template + listener observations, histograms, `service.namespace=northline`,
+  `base-time-unit: seconds`, Spring Security's filter-chain spans off, JDBC settings), a `Sampler`, a
+  `ContextPropagatingTaskDecorator` and an `ObservationPredicate` that skips `/actuator/**`. Defaults in a library
+  instead of four `application.yml` edits keep the apps uniform and the change additive; any app file or variable
+  still wins. The api's `application-cloud.yml` export switches moved there.
+- **Vendor-neutral by construction:** the apps speak only OTLP to `OTEL_EXPORTER_OTLP_ENDPOINT` (Spring Boot 4.1 maps
+  the standard `OTEL_*` variables). An **OpenTelemetry Collector in the Helm chart** (`templates/otel-collector.yaml`,
+  contrib image pinned by digest) is the only component that knows the backend; exporters and pipelines are values
+  (`observability.collector.exporters/pipelines`), set per cloud overlay: AWS X-Ray + CloudWatch EMF + CloudWatch Logs,
+  Google Cloud Trace + Managed Prometheus + Cloud Logging, Azure Monitor; any OTLP backend via
+  `test-values/observability-otlp.yaml` (Grafana Cloud shown). In the chart rather than an Argo CD add-on: it belongs
+  to the environment's release (its ServiceAccount, NetworkPolicy, ExternalSecret), it is namespaced, and the
+  AppProject already allows every kind it needs. The ADOT image works as a drop-in (`observability.collector.image`).
+- **Sampling = `ConsistentSampling`:** trace-id ratio for spans with a remote parent too (parent-based only for local
+  parents), so a browser's `-01` can't force sampling at the public edge, and BFF/api/worker reach the same decision
+  for the same trace. One ratio for all apps (`observability.tracesSampleRatio` → `OTEL_TRACES_SAMPLER_ARG`): dev 1.0,
+  staging 0.5, prod 0.1. Ratio 1.0 maps to always-on (OpenTelemetry's ratio sampler drops ids at exactly
+  `Long.MAX_VALUE`). No tail sampling by default; documented as an extra processor.
+- **Browser → BFF:** `@northline/client`'s `http()` sends a fresh `traceparent` on same-origin calls only (another
+  origin's CORS may refuse the header). The browser exports **no** spans: that would need a public OTLP ingestion
+  endpoint (abuse, cost) and the OpenTelemetry web SDK in both apps; the BFF's server span is the first stored one.
+  Envoy Gateway tracing (an EnvoyProxy `telemetry.tracing` to the Collector) can add the edge hop later.
+- **DB spans:** `net.ttddyy.observation:datasource-micrometer-spring-boot` 2.3.0 (built for Boot 4.1.1) in api, auth,
+  worker; `jdbc.includes: [query]` (no connection/fetch spans), parameter values never recorded; the Collector deletes
+  `jdbc.params*` anyway. **Kafka:** template and listener observations carry `traceparent` next to S-26's `nl-event-*`
+  headers (auth's `user.registered` now gets one too).
+- **Business metrics** (no ids in labels; counted after commit): `northline.auth.sign_ins{method,mfa,outcome}` and
+  `northline.auth.lockouts{action}` in `JdbcSignInLog`; `northline.checkouts{ref_type,status}` when a checkout opens its
+  escrow PaymentIntent (`CheckoutPaymentService` — the one call every checkout makes); `northline.payouts{outcome,kind}`
+  and `northline.payouts.amount` (CAD dollars) from `PayoutSent`/`PayoutFailed` via a plain `@EventListener` (no
+  outbox row per event); KDS latency from the ticket's own timestamps (`KitchenMetrics`, called by
+  `KitchenLiveService`): promised minutes, accepted → ready (`late`), ready → handed off (`mode`). Consumer lag and DLQ
+  counts were already there (Kafka client metrics, S-26's counters). Not measured: order placed → accepted (the
+  ticket has no placed time; the live board's row does).
+- **Dashboards as code:** a Python generator (`deploy/observability/grafana/dashboards.py`, `--check` for drift) writes
+  10 Grafana JSON dashboards (overview, one per service incl. consumer-bff, sign-in, checkout and payouts, kitchens,
+  events), PromQL on a `datasource` variable, viewer's time zone. **Alerts:** Prometheus rules with `promtool` unit
+  tests (`deploy/observability/prometheus`), run through Docker by `scripts/observability.sh check`.
+- **Local:** compose profile `observability` = the same Collector processors (`collector-local.yaml`) in front of
+  `grafana/otel-lgtm:0.34.0`, Grafana on **3300** (3000 is the consumer app). `make up OBS=1` starts it and exports the
+  `OTEL_*` variables to every app; `make obs-*` targets wrap `scripts/observability.sh` (callable without make).
+- **Terraform:** workload identity `otel-collector` in the three stacks; AWS role gets `AWSXrayWriteOnlyAccess` +
+  `CloudWatchAgentServerPolicy`; GCP gets `cloudtrace.agent`, `monitoring.metricWriter`, `logging.logWriter` and the
+  three APIs; secrets `otel-backend-auth` (all clouds) and `applicationinsights-connection-string` (Azure) created empty.
+- **Tests:** `OtlpReceiver` (platform test fixture, `java-test-fixtures`) decodes OTLP/protobuf
+  (`io.opentelemetry.proto:opentelemetry-proto` 1.10.0-alpha, tests only). api `TracingTest` (caller's trace → SQL
+  spans without values → Kafka `traceparent` + PRODUCER span; metrics exported; probes untraced), bff `BffTracingTest`
+  (browser → SERVER → CLIENT → the api receives the same trace), worker `WorkerTracingTest` (the Kafka hop: CONSUMER
+  span continues the producer's), auth `AuthTelemetryTest`, unit tests for sampling, defaults, payment and kitchen
+  metrics, client `traceparent`.
+- **Never run against the real services:** no backend account exists. The exporters' configurations pass
+  `otelcol-contrib validate` (0.161.0) for AWS, Google Cloud and Azure, but no span has reached X-Ray, Cloud Trace,
+  Application Insights or Grafana Cloud. The Terraform additions are `fmt`-checked, not applied.
+
+## 2026-10-01 — S-112 Centralised logging with PII redaction
+
+- **One redaction layer for every app:** `ca.northline.platform.logging.Redactor` (platform library, so api, auth,
+  both BFFs and the worker share it). Two layers, as in the user's other services: a field with a sensitive *name*
+  is masked whole; every other string is scanned for secrets (PEM keys, Authorization/Cookie echoes, bearer/basic/DPoP,
+  JWTs, `sk_`/`rk_`/`whsec_`/`sk-…`/AWS/GitHub keys, `key=value` pairs), then emails, Luhn-valid card-like numbers
+  (last four kept), North American and E.164 phone numbers, one-time codes after "verification / sign-in / security /
+  backup / OTP code" (en/fr), Canadian postal codes (forward sortation area kept). Numbers glued to letters or `_`
+  (ULIDs, Stripe ids, trace ids) are never touched; dates, amounts and the SMS adapters' masked numbers stay.
+- **Format:** Spring Boot's structured logging, **ECS** by default under dev/staging/prod (`LOG_FORMAT` = `ecs` |
+  `logstash` | `gelf` | `text`; anything else stops start-up), plain text under local/test where people read the
+  console. The redaction is a `StructuredLoggingJsonMembersCustomizer` value processor over every string member
+  (message, MDC, key-values, `error.message`, `error.stack_trace`). `traceId`/`spanId` are renamed `trace.id`/`span.id`
+  (ECS names; top-level dotted keys — Boot's rename keeps them flat). Set by `LoggingDefaults` (an
+  `EnvironmentPostProcessor`, lowest precedence) — no app yml changed.
+- **Shipping through the Collector = OTLP, from the app:** `OtlpLogAppender` (Northline's own Logback appender over the
+  OpenTelemetry logs bridge) is attached to the root logger when `management.logging.export.enabled` (i.e.
+  `OTEL_EXPORT_ENABLED=true`); records carry the current trace context, logger, thread, MDC and exception, all
+  redacted. Not the OpenTelemetry Logback instrumentation (it sends the raw message) and not a node-level
+  `filelog` DaemonSet (cluster-wide hostPath access, a second add-on, and logs that bypass the in-app redaction's
+  trace linkage). The console keeps the same redacted JSON for `kubectl logs` and cloud node agents.
+- **Collector, second line:** `transform/redact` (OTTL `replace_pattern` / `replace_all_patterns`) on log bodies and
+  log and span attributes, chart and local config generated from one list (`northline.redactPatterns`); RE2 has no
+  look-behind or Luhn, so it is coarser. Run against a sample record with otelcol-contrib 0.161.0.
+- **The S-20 local SMS case:** `LoggingSmsSender` (auth) and `LoggingSmsTransport` (shared library: api invitations,
+  worker notifications) write the code / text **only under the `local` and `test` profiles**; elsewhere they log that it
+  was withheld, and start-up warns. Consequence: a `dev` environment that keeps `SMS_PROVIDER=local` can no longer
+  complete phone verification — dev needs Twilio or AWS for sign-ups (documented in README § SMS, logging.md). No
+  escape hatch on purpose (the story: "make sure it can't happen outside local").
+- **Tests:** `RedactorTest` (28 cases incl. the S-20 log line, the SMS text in English and French, and what must stay),
+  `StructuredLogsTest` (a `dev` start logs redacted ECS JSON incl. MDC and exception; `local` stays text; `LOG_FORMAT`
+  overrides), `OtlpLogAppenderTest`; `RedactionCheck` (platform test fixture) on **every app** — api `TracingTest`,
+  auth `AuthTelemetryTest`, consumer-bff `BffTracingTest`, worker `WorkerTracingTest`: a PII-laden line logged in a
+  span comes out redacted on the console (ECS) and over OTLP, the OTLP record linked to the span's trace;
+  `SmsConfigTest` / `SmsTransportsTest` prove the stand-ins withhold under `dev`.
+- **Not done:** log retention and deletion are the backend's (documented per backend, not automated); no log-based
+  alerts (the metrics alerts of S-111 cover the same failures). **Never run against a real backend** (CloudWatch Logs,
+  Cloud Logging, Azure Monitor, Loki/Grafana Cloud).

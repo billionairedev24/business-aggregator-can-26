@@ -5,6 +5,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("org.springframework.boot:spring-boot-starter-opentelemetry") // S-111: traces, metrics, logs over OTLP
+    implementation(libs.datasource.micrometer) // S-111: a span per SQL statement (no parameter values)
     implementation("org.springframework.boot:spring-boot-starter-security-oauth2-authorization-server")
     implementation("org.springframework.boot:spring-boot-starter-security-oauth2-client") // Google / Apple federation
     implementation("org.springframework.boot:spring-boot-starter-jdbc")
@@ -39,6 +41,7 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-postgresql")
     testImplementation("org.testcontainers:testcontainers-kafka")
     testImplementation(libs.wiremock)
+    testImplementation(testFixtures(project(":platform"))) // S-111: OtlpReceiver
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

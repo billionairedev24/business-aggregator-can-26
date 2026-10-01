@@ -6,6 +6,7 @@ spring-boot = "4.1.1"
 spring-modulith = "2.1.1"
 spring-cloud = "2025.1.3"
 springdoc = "3.1.1"
+spring-ai = "2.0.0"
 stripe = "33.4.2"
 ulid = "5.2.4"
 lombok = "1.18.48"
@@ -27,8 +28,13 @@ gcp-storage = "2.74.0"
 azure-storage-blob = "12.35.1"
 wiremock = "3.13.2"
 greenmail = "2.1.14"
+otel-proto = "1.10.0-alpha"
+datasource-micrometer = "2.3.0"
 
 [libraries]
+# S-127 MCP server: springdoc builds MCP tools from the OpenAPI model, Spring AI serves them (Streamable HTTP /mcp).
+springdoc-webmvc-mcp = { module = "org.springdoc:springdoc-openapi-starter-webmvc-mcp", version.ref = "springdoc" }
+spring-ai-mcp-server-webmvc = { module = "org.springframework.ai:spring-ai-starter-mcp-server-webmvc", version.ref = "spring-ai" }
 springdoc-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
 # S-125: Scalar through springdoc's own starter (scalar-webmvc, version managed by springdoc)
 springdoc-webmvc-scalar = { module = "org.springdoc:springdoc-openapi-starter-webmvc-scalar", version.ref = "springdoc" }
@@ -50,6 +56,8 @@ azure-storage-blob = { module = "com.azure:azure-storage-blob", version.ref = "a
 aws-sesv2 = { module = "software.amazon.awssdk:sesv2", version.ref = "aws-sdk" }
 aws-sms-voice = { module = "software.amazon.awssdk:pinpointsmsvoicev2", version.ref = "aws-sdk" }
 greenmail-junit5 = { module = "com.icegreen:greenmail-junit5", version.ref = "greenmail" }
+datasource-micrometer = { module = "net.ttddyy.observation:datasource-micrometer-spring-boot", version.ref = "datasource-micrometer" } # S-111: JDBC spans
+otel-proto = { module = "io.opentelemetry.proto:opentelemetry-proto", version.ref = "otel-proto" } # S-111 tests: decode OTLP exports
 wiremock = { module = "org.wiremock:wiremock-standalone", version.ref = "wiremock" }
 gcp-kms = { module = "com.google.cloud:google-cloud-kms", version.ref = "gcp-kms" }
 azure-keyvault-keys = { module = "com.azure:azure-security-keyvault-keys", version.ref = "azure-keyvault-keys" }

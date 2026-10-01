@@ -19,7 +19,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
  * LOCAL PROFILE ONLY. Authenticates {@code X-Dev-User: <identity.users id>} without the auth server by minting an
- * in-memory JWT with the same claims northline-auth would issue ({@code scope=openid profile merchant},
+ * in-memory JWT with the same claims northline-auth would issue ({@code scope=openid profile merchant} plus the MCP
+ * agent scopes {@code mcp mcp.write} for the local MCP server,
  * {@code merchants} from {@code merchants.merchant_members}, {@code acr=mfa} unless {@code X-Dev-Acr: none}).
  * A real {@code Authorization: Bearer} header always wins. Wired by {@link DevAuthConfig}.
  */
@@ -57,7 +58,7 @@ class DevAuthFilter extends OncePerRequestFilter {
                 .header("alg", "none")
                 .issuer("urn:northline:dev-auth")
                 .subject(userId)
-                .claim("scope", "openid profile merchant")
+                .claim("scope", "openid profile merchant mcp mcp.write") // S-127: the local MCP server too
                 .claim(
                         "merchants",
                         memberships.membershipsOf(userId).stream()

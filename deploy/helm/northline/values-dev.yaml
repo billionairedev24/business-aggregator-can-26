@@ -33,3 +33,9 @@ apps:
     env:
       # One replica may keep the signing keys in a file (KMS_PROVIDER=local) — set KMS_PROVIDER from Terraform instead.
       OAUTH_CLIENTS_SYNC_ON_STARTUP: "true"
+
+# S-111 (docs/runbooks/observability.md): every trace kept; the Collector's exporters come from the cloud overlay.
+observability:
+  tracesSampleRatio: "1.0"
+  collector:
+    enabled: true

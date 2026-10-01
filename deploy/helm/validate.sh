@@ -46,6 +46,11 @@ for cloud in aws gcp azure; do
 done
 check "staging × aws, Ingress + cert-manager" -f "$CHART/values-staging.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml -f test-values/edge-ingress.yaml --set edge.domainReconciler.enabled=false
 check "defaults" 
+# S-111: the Collector with any OTLP backend (Grafana Cloud) instead of the cloud's own exporters.
+check "prod × aws, Collector → OTLP backend" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml -f test-values/observability-otlp.yaml
+if helm template northline "$CHART" -f "$CHART/values-dev.yaml" --set observability.collector.enabled=true --set 'observability.collector.pipelines.traces={nowhere}' >/dev/null 2>&1; then
+  echo "FAIL Collector pipeline with an undefined exporter accepted"; failed=1
+else echo "ok   Collector pipelines only use defined exporters"; fi
 
 # Refusals the chart must keep: secrets from values outside local, http URLs in prod.
 if helm template northline "$CHART" -f "$CHART/values-prod.yaml" --set secrets.create=true >/dev/null 2>&1; then
@@ -63,6 +68,13 @@ for cloud in aws gcp azure; do
       | grep -qE '^kind: Secret$'; then echo "FAIL prod × $cloud renders a Secret"; failed=1
   else echo "ok   prod × $cloud renders no Secret (External Secrets only)"; fi
 done
+
+# S-127: the api host routes the MCP server and its protected resource metadata; apps.api.mcp=false removes both.
+mcp_out=$(helm template northline "$CHART" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml)
+no_mcp=$(helm template northline "$CHART" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml --set apps.api.mcp=false)
+if grep -q 'value: /mcp }' <<<"$mcp_out" && grep -q 'value: /.well-known/oauth-protected-resource }' <<<"$mcp_out" \
+    && ! grep -q 'value: /mcp }' <<<"$no_mcp"; then echo "ok   api host routes /mcp and its metadata (apps.api.mcp)"
+else echo "FAIL MCP routes on the api host"; failed=1; fi
 
 # S-17: every deployed environment serves every host over TLS with HSTS, plain HTTP only redirects, and the refusals.
 for env in dev staging prod; do

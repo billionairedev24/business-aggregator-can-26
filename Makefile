@@ -34,6 +34,14 @@ CONSUMER_DEV_USER ?= 01J9ZD3V0000000000000C0001
 # MAVEN_MIRROR_URL is empty). CI adds its own, e.g. GRADLE_FLAGS='--max-workers=2 --continue --console=plain'.
 GRADLE_FLAGS ?= --max-workers=2
 export SPRING_PROFILE DEV_USER CONSUMER_DEV_USER GRADLE_FLAGS DEV_AUTH
+# S-111: OBS=1 also starts the OpenTelemetry Collector + Grafana LGTM (compose profile observability) and makes every app
+# export traces, metrics and logs to it (docs/runbooks/observability.md). Grafana: http://localhost:3300.
+OBS ?=
+ifeq ($(OBS),1)
+export OTEL_EXPORT_ENABLED := true
+export OTEL_EXPORTER_OTLP_ENDPOINT := http://localhost:4318
+export OTEL_RESOURCE_ATTRIBUTES := deployment.environment.name=local
+endif
 
 # JDK 25 for the Gradle wrapper: JAVA_HOME when it is one, else macOS's java_home, Homebrew, SDKMAN or /usr/lib/jvm.
 JDK25 := $(firstword $(shell [ -n "$$JAVA_HOME" ] && "$$JAVA_HOME/bin/java" -version 2>&1 | grep -q 'version "25' && echo "$$JAVA_HOME") $(shell [ -x /usr/libexec/java_home ] && /usr/libexec/java_home -v 25 2>/dev/null) $(wildcard /opt/homebrew/opt/openjdk@25/libexec/openjdk.jdk/Contents/Home /usr/local/opt/openjdk@25/libexec/openjdk.jdk/Contents/Home /Library/Java/JavaVirtualMachines/*25*/Contents/Home $(HOME)/.sdkman/candidates/java/25* /usr/lib/jvm/java-25-openjdk-amd64 /usr/lib/jvm/java-25-openjdk-arm64 /usr/lib/jvm/java-25-openjdk /usr/lib/jvm/temurin-25-jdk-amd64 /usr/lib/jvm/temurin-25-jdk-arm64))
@@ -72,10 +80,12 @@ env: ## Create .env, server/.env and the web apps' .env from their .env.example 
 .PHONY: up
 up: standins-up ## Stand-ins (PROFILES) + migrate + seed, then SERVICES in the background, waiting until each answers
 	@if [ -z "$(SKIP_DB)" ]; then $(MAKE) db-migrate db-seed; fi
+	@if [ "$(OBS)" = 1 ]; then $(ROOT)/scripts/observability.sh up; fi
 	@$(STACK) up $(SERVICES)
 
 .PHONY: run
 run: ## SERVICES in the foreground with merged logs (stand-ins as make up leaves them); Ctrl-C stops what it started
+	@if [ "$(OBS)" = 1 ]; then $(ROOT)/scripts/observability.sh up; fi
 	@$(STACK) dev $(SERVICES)
 
 .PHONY: dev
@@ -93,7 +103,7 @@ restart: ## Restart SERVICES
 .PHONY: status
 status: ## What runs, on which port, whether it answers, the useful URLs; then the stand-ins
 	@$(STACK) status
-	@$(COMPOSE) --profile all --profile tools ps 2>/dev/null || true
+	@$(COMPOSE) --profile all --profile tools --profile observability ps 2>/dev/null || true
 
 .PHONY: logs
 logs: ## Follow the app logs (.run/logs; SERVICES=api for one); make standins-logs for the containers
@@ -106,11 +116,11 @@ standins-up: ## Only the compose stand-ins (PROFILES=db,cache,events,search,mail
 
 .PHONY: standins-down
 standins-down: ## Stop the compose stand-ins, every profile (VOLUMES=1 also deletes their data)
-	$(COMPOSE) --profile all --profile tools down $(if $(VOLUMES),-v)
+	$(COMPOSE) --profile all --profile tools --profile observability down $(if $(VOLUMES),-v)
 
 .PHONY: standins-logs
 standins-logs: ## Follow the stand-ins' logs (SERVICE=postgres|kafka|… for one)
-	$(COMPOSE) --profile all --profile tools logs -f --tail=100 $(SERVICE)
+	$(COMPOSE) --profile all --profile tools --profile observability logs -f --tail=100 $(SERVICE)
 
 .PHONY: smoke
 smoke: ## Health of every app port, whoever started it (api, auth, bffs, worker, studio, consumer)
@@ -168,6 +178,7 @@ help: ## This list, and the common variables
 ##> DEV_AUTH  studio/consumer: auto (dev auth unless their BFF runs), 1 or 0
 ##> SPRING_PROFILE  Spring profile(s) of the apps (default local)
 ##> SKIP_DB  1 = make up doesn't migrate or seed
+##> OBS  1 = make up/run also start the observability stack and the apps export to it (S-111)
 ##> PROJECT TESTS  server-build/server-test: one Gradle project (api, auth, bff, worker), a test filter
 ##> DB_URL DB_USER DB_PASSWORD  database for db-* and the apps (default: server/.env, then localhost:5432/northline)
 ##> GRADLE_FLAGS  Gradle flags (default --max-workers=2)
@@ -182,3 +193,4 @@ include $(ROOT)/make/search.mk
 include $(ROOT)/make/docs.mk
 include $(ROOT)/make/deploy.mk
 include $(ROOT)/make/infra.mk
+include $(ROOT)/make/observability.mk

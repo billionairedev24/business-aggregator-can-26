@@ -8,6 +8,7 @@ import ca.northline.catalogue.application.BrowseListings;
 import ca.northline.catalogue.application.EditProduct;
 import ca.northline.catalogue.application.EditService;
 import ca.northline.catalogue.application.ManageListing;
+import ca.northline.catalogue.application.QuickUpdateListing;
 import ca.northline.catalogue.application.ViewListing;
 import ca.northline.catalogue.domain.ListingKind;
 import ca.northline.catalogue.web.ListingResponses.ListingDetail;
@@ -18,6 +19,7 @@ import ca.northline.shared.CodedEnum;
 import ca.northline.shared.ListResponse;
 import ca.northline.shared.RuleViolation;
 import ca.northline.shared.security.CurrentMember;
+import ca.northline.shared.security.CurrentUser;
 import ca.northline.shared.security.PartnerAccess;
 import ca.northline.shared.security.RequiresMerchant;
 import jakarta.validation.Valid;
@@ -27,6 +29,7 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -50,6 +53,7 @@ class ListingController {
     private final EditProduct editProduct;
     private final EditService editService;
     private final ManageListing manageListing;
+    private final QuickUpdateListing quickUpdate;
     private final ListingWebMapper mapper;
 
     @GetMapping("/listings")
@@ -117,6 +121,24 @@ class ListingController {
             CurrentMember member) {
         var command = new EditService.Command(merchantId, listingId, body.toDetails(), member.userId());
         return mapper.toResponse(editService.update(command));
+    }
+
+    /**
+     * S-127: price and stock only (a product without variants; a service's price). Partners with {@code api.write}
+     * may call it for their businesses (inventory sync).
+     */
+    @PatchMapping("/listings/{listingId}/price-stock")
+    @RequiresMerchant(EDIT)
+    @PartnerAccess(PartnerAccess.WRITE)
+    ListingDetail updatePriceAndStock(
+            @PathVariable String merchantId,
+            @PathVariable String listingId,
+            @Valid @RequestBody PriceStockRequest body,
+            CurrentUser user) {
+        return mapper.toDetail(
+                quickUpdate.update(new QuickUpdateListing.Command(
+                        merchantId, listingId, body.priceCents(), body.stock(), user.userId())),
+                merchantId);
     }
 
     @PostMapping("/listings/{listingId}/submit")
