@@ -11,11 +11,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ca.northline.shared.security.MerchantRole;
+import ca.northline.shared.security.StaffRole;
 import ca.northline.support.IntegrationTest;
 import ca.northline.support.MovableClock;
 import ca.northline.support.ShopFixtures.Listing;
 import ca.northline.support.ShopOrderFlow;
-import ca.northline.shared.security.StaffRole;
 import ca.northline.support.TestJwt;
 import com.jayway.jsonpath.JsonPath;
 import java.time.Duration;

@@ -1081,6 +1081,8 @@ components:
           type: string
         name:
           type: string
+        position:
+          $ref: "#/components/schemas/Position"
         runId:
           type: string
         shift:
@@ -1438,6 +1440,21 @@ components:
         startsAt:
           type: string
           format: date-time
+    Position:
+      type: object
+      properties:
+        at:
+          type: string
+          format: date-time
+        heading:
+          type: number
+          format: double
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
     Problem:
       type: object
       description: RFC 9457 problem details. 403 and 409 carry a machine-readable
