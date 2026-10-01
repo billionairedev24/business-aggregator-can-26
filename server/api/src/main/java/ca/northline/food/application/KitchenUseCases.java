@@ -14,6 +14,16 @@ import org.jspecify.annotations.Nullable;
 public final class KitchenUseCases {
     private KitchenUseCases() {}
 
+    // ── Kitchen businesses only ─────────────────────────────────────────────────
+
+    /**
+     * S-73: the kitchen screens' endpoints exist only for a kitchen business. Any other type (provider, seller, both)
+     * gets 404 {@code not_found} — there is no kitchen to show — after the usual membership checks (403 first).
+     */
+    public interface RequireKitchen {
+        void require(String merchantId);
+    }
+
     // ── Live orders ───────────────────────────────────────────────────────────
 
     /** The kitchen display: open orders, Accept → Cooking → Ready → handed off, busy bump, pause. */
