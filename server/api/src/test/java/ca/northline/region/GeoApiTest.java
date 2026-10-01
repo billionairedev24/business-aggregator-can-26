@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import ca.northline.shared.Ids;
 import ca.northline.support.IntegrationTest;
 import ca.northline.support.TestJwt;
+import java.util.Locale;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -247,7 +248,7 @@ class GeoApiTest extends IntegrationTest {
 
         @Test
         void aGuestJoinsWithTheirEmailOnce() throws Exception {
-            var email = "dana." + Ids.next().toLowerCase() + "@example.ca";
+            var email = "dana." + Ids.next().toLowerCase(Locale.ROOT) + "@example.ca";
             mvc.perform(post("/api/v1/geo/waitlist")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"regionId\":\"mkt-lethbridge\",\"email\":\"" + email + "\"}"))
@@ -255,7 +256,8 @@ class GeoApiTest extends IntegrationTest {
                     .andExpect(jsonPath("$.joined").value(true));
             mvc.perform(post("/api/v1/geo/waitlist")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"regionId\":\"mkt-lethbridge\",\"email\":\"" + email.toUpperCase() + "\"}"))
+                            .content("{\"regionId\":\"mkt-lethbridge\",\"email\":\"" + email.toUpperCase(Locale.ROOT)
+                                    + "\"}"))
                     .andExpect(status().isOk());
             org.assertj.core.api.Assertions.assertThat(rows("mkt-lethbridge", email))
                     .isEqualTo(1);
