@@ -182,6 +182,7 @@ externalSecrets:
     GOOGLE_MAPS_API_KEY: google-maps-api-key                          # S-47 address autocomplete / reverse geocoding (api)
     OTEL_BACKEND_AUTH: otel-backend-auth                              # S-111: the OTLP backend's credentials (Collector)
     APPLICATIONINSIGHTS_CONNECTION_STRING: applicationinsights-connection-string  # S-111: Azure Monitor (Collector)
+    OPENROUTER_API_KEY: openrouter-api-key                            # S-129 AI platform (api)
   # Optional variables (secretEnv: false) to map as well. List only those that hold a value in the secrets manager:
   # one empty or missing remote secret fails the app's whole ExternalSecret. Required variables are always mapped.
   optionalKeys: [REDIS_PASSWORD, KAFKA_SASL_JAAS_CONFIG, ES_PASSWORD]
@@ -438,6 +439,7 @@ apps:
       CLOVER_CLIENT_SECRET: false              # S-36: with CLOVER_CLIENT_ID (configEnv); empty = Clover not offered
       TOAST_CLIENT_SECRET: false               # S-36: with TOAST_CLIENT_ID (configEnv), once Toast admits Northline as a partner
       GOOGLE_MAPS_API_KEY: false               # S-47: with PLACES_PROVIDER=google (required in staging/prod)
+      OPENROUTER_API_KEY: false                # S-129: empty = every AI feature answers 503; add to optionalKeys once the key exists
     runAsUser: 65532
     probes:
       startup: { path: /actuator/health/liveness, periodSeconds: 5, failureThreshold: 60 }

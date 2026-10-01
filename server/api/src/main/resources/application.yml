@@ -336,6 +336,51 @@ northline:
     auth-token: ${SMS_AUTH_TOKEN:}
     region: ${SMS_REGION:}
     endpoint: ${SMS_ENDPOINT:}
+  # AI (S-129, ca.northline.ai; docs/runbooks/ai.md): the LlmClient port. fake (deterministic, no network or key;
+  # refused under staging/prod) | openrouter (OpenRouter's OpenAI-compatible API; blank key = every AI feature 503).
+  ai:
+    provider: ${AI_PROVIDER:fake}
+    max-tool-rounds: ${AI_MAX_TOOL_ROUNDS:4}                       # assistant tool rounds per question
+    budget:                                                        # 429 ai_rate_limited above these (Valkey)
+      person-tokens-per-day: ${AI_BUDGET_PERSON_TOKENS_PER_DAY:200000}
+      merchant-tokens-per-day: ${AI_BUDGET_MERCHANT_TOKENS_PER_DAY:1000000}
+      person-requests-per-minute: ${AI_REQUESTS_PER_MINUTE:20}
+      system-tokens-per-day: ${AI_BUDGET_SYSTEM_TOKENS_PER_DAY:2000000}   # S-133 trust & safety jobs
+    fake:                                                          # local dashboards: "300-1800" ms and a cost
+      latency-ms: ${AI_FAKE_LATENCY_MS:0}
+      usd-per-million-tokens: ${AI_FAKE_USD_PER_MTOK:0}
+    openrouter:
+      base-url: ${OPENROUTER_BASE_URL:https://openrouter.ai/api/v1}
+      api-key: ${OPENROUTER_API_KEY:}                              # secret
+      model: ${OPENROUTER_MODEL:google/gemini-3.7-flash}           # standard tier: assistant, listing copy, quote lines
+      light-model: ${OPENROUTER_LIGHT_MODEL:google/gemini-3.5-flash-lite}   # light tier: classification, short drafts
+      referer: ${OPENROUTER_REFERER:${STUDIO_ORIGIN:http://localhost:3100}} # attribution (HTTP-Referer)
+      title: ${OPENROUTER_TITLE:Northline}                         # attribution (X-Title)
+      data-collection: ${OPENROUTER_DATA_COLLECTION:deny}          # only providers that neither store nor train on prompts
+      zdr: ${OPENROUTER_ZDR:true}                                  # only Zero Data Retention endpoints
+      connect-timeout: ${OPENROUTER_CONNECT_TIMEOUT:5s}
+      read-timeout: ${OPENROUTER_READ_TIMEOUT:60s}
+    models:                                                        # per-feature overrides; blank = the tier's model
+      assistant: ${OPENROUTER_MODEL_ASSISTANT:}
+      insight: ${OPENROUTER_MODEL_INSIGHT:}
+      listing-copy: ${OPENROUTER_MODEL_LISTING_COPY:}
+      quote-lines: ${OPENROUTER_MODEL_QUOTE_LINES:}
+      message-reply: ${OPENROUTER_MODEL_MESSAGE_REPLY:}
+      review-summary: ${OPENROUTER_MODEL_REVIEW_SUMMARY:}
+      search-filters: ${OPENROUTER_MODEL_SEARCH_FILTERS:}
+      help-triage: ${OPENROUTER_MODEL_HELP_TRIAGE:}
+      trust-screen: ${OPENROUTER_MODEL_TRUST_SCREEN:}
+      anomaly-scan: ${OPENROUTER_MODEL_ANOMALY_SCAN:}
+  # AI trust & safety assist (S-133, docs/ai/trust-safety.md): suggestions go to the console queue, staff decide.
+  trust:
+    ai:
+      screening: ${TRUST_AI_SCREENING_ENABLED:true}                 # listings, reviews, messages since the last run
+      screen-messages: ${TRUST_AI_SCREEN_MESSAGES:true}
+      interval: ${TRUST_AI_SCREENING_INTERVAL:PT15M}
+      batch: ${TRUST_AI_SCREENING_BATCH:25}                         # per source per run
+      initial-lookback: P1D
+      anomaly-scan: ${TRUST_AI_ANOMALY_SCAN_ENABLED:true}
+      anomaly-cron: ${TRUST_AI_ANOMALY_CRON:0 10 12 * * MON}        # UTC; scans the week that ended
 ---
 # Local runs read server/.env (or .env next to the jar) — KEY=value lines, see server/.env.example. Never under `test`.
 spring.config.activate.on-profile: "!test"

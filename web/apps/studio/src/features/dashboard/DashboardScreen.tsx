@@ -5,6 +5,7 @@ import { useMerchant, useMerchantId, type MerchantType } from '../shell/api';
 import { screenHref, type ScreenKey } from '../shell/nav';
 import { clock, clockWithPeriod } from '../../lib/time';
 import { dashboardQuery, type Dashboard } from './api';
+import { InsightCard } from '../assistant/InsightCard';
 import { numberWord, useDashboardT } from './messages';
 import './Dashboard.css';
 
@@ -21,7 +22,10 @@ export function DashboardScreen() {
   const t = useDashboardT();
   if (q.isPending) return <PageSkeleton kpis={4} rows={6} />;
   if (q.isError) return <ErrorState message={t('loadError')} onRetry={() => void q.refetch()} />;
-  return <DashboardView data={q.data} kind={variant(merchant.type)} city={merchant.city ?? ''} merchantId={merchantId} />;
+  return <>
+    <DashboardView data={q.data} kind={variant(merchant.type)} city={merchant.city ?? ''} merchantId={merchantId} />
+    <InsightCard merchantId={merchantId} screen="dashboard" />
+  </>;
 }
 
 export function DashboardView({ data, kind, city, merchantId }: { data: Dashboard; kind: 'provider' | 'seller' | 'both'; city: string; merchantId: string }) {

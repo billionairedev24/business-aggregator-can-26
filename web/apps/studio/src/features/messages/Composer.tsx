@@ -5,6 +5,7 @@ import { ValidationError } from '../../lib/http';
 import { uploadAttachment, type Attachment, type QuickReply } from './api';
 import { useMessagesT } from './messages';
 import { draftProblem, FILE_ACCEPT, fileProblem, LIMITS, MSG, useMessageT } from './validation';
+import { ReplySuggestions } from '../writing/WritingHelp';
 
 export interface ComposerSend { body: string; attachments: Attachment[]; templateKey: string | null }
 
@@ -18,6 +19,8 @@ export interface ComposerProps {
   attachText?: string;
   sendVariant?: 'primary' | 'secondary';
   maxLength?: number;
+  /** S-131: the thread to draft AI reply suggestions for (Messages only); a pick only fills the box. */
+  replySuggestionsFor?: string;
   onSend: (draft: ComposerSend) => Promise<unknown>;
 }
 
@@ -26,7 +29,7 @@ export interface ComposerProps {
  * they're picked (JPG, PNG, HEIC, PDF ≤ 10 MB, up to 5), validation shows after a send attempt, the draft survives a
  * failed send.
  */
-export function Composer({ merchantId, label, quickReplies = [], attach = 'icon', attachText, sendVariant = 'primary', maxLength = LIMITS.message, onSend }: ComposerProps) {
+export function Composer({ merchantId, label, quickReplies = [], attach = 'icon', attachText, sendVariant = 'primary', maxLength = LIMITS.message, replySuggestionsFor, onSend }: ComposerProps) {
   const t = useMessagesT();
   const mt = useMessageT();
   const errId = useId();
@@ -84,6 +87,7 @@ export function Composer({ merchantId, label, quickReplies = [], attach = 'icon'
 
   return (
     <form className="nl-msg-composer" onSubmit={e => void submit(e)} noValidate>
+      {replySuggestionsFor ? <ReplySuggestions key={replySuggestionsFor} merchantId={merchantId} threadId={replySuggestionsFor} onPick={text => { setBody(text); setTemplate(null); setServerError(undefined); }} /> : null}
       {quickReplies.length > 0 && (
         <div className="nl-msg-quick" role="group" aria-label={t('quickReplies')}>
           {quickReplies.map(q => (

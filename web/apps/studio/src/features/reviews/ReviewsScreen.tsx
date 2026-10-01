@@ -9,6 +9,7 @@ import { ReportReason, reviewSummaryQuery, reviewsQuery, useReplyToReview, useRe
 import { useReviewsT } from './messages';
 import { firstErrors, ReplyForm, ReportForm, useMessageT } from './validation';
 import './reviews.css';
+import { ReviewSummaryDraftPanel } from '../writing/WritingHelp';
 
 const CAN_RESPOND = new Set(['owner', 'technician', 'cook', 'manager', 'staff']);
 
@@ -44,6 +45,7 @@ export function ReviewsScreen() {
             <Distribution summary={s} />
             <p className="nl-rev-note">{t('twoWay')}</p>
             {!canRespond ? <p className="nl-rev-note">{t('viewOnly', { role: shellT(`role_${role}` as 'role_owner') })}</p> : null}
+            {canRespond && s.count >= 3 ? <ReviewSummaryDraftPanel merchantId={merchantId} /> : null}
           </div>
           <div>
             <ul className="nl-rev-list">

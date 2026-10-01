@@ -77,6 +77,8 @@ locals {
     OTEL_BACKEND_AUTH = "otel-backend-auth"
     # S-111: Azure Monitor (Application Insights) connection string for the Collector's azuremonitor exporter.
     APPLICATIONINSIGHTS_CONNECTION_STRING = "applicationinsights-connection-string"
+    # S-129 AI platform: the OpenRouter API key (empty until created; AI features answer 503 without it).
+    OPENROUTER_API_KEY = "openrouter-api-key"
   }
 }
 

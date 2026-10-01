@@ -46,6 +46,7 @@ class SchemaOwnershipTests {
             "trust",
             "messaging",
             "developer",
+            "ai",
             "account");
 
     /**

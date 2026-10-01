@@ -6,6 +6,7 @@ import { AppShell, Avatar, Menu, useLocale, type MenuEntry } from '@northline/ui
 import { useSession, useSignOut } from '../../lib/session';
 import { businessesQuery, navBadgesQuery, type MerchantSummary } from './api';
 import { useShellT } from './messages';
+import { AssistantButton } from '../assistant/AssistantDrawer';
 import { buildNav, homeScreen, screenFromPath, screenHref } from './nav';
 
 const RAIL_KEY = 'nl.studio.rail';
@@ -36,7 +37,7 @@ export function StudioLayout({ merchant, children }: { merchant: MerchantSummary
         <span style={{ fontSize: 14, color: 'var(--color-neutral-700)' }}>{merchant.displayName}{merchant.city ? ` · ${merchant.city}` : ''}</span>
         <span className={`tag ${tier.cls}`}>{t(tier.key)}</span>
       </>}
-      headerEnd={<AccountMenu merchant={merchant} badges={badges} />}
+      headerEnd={<><AssistantButton merchantId={merchant.id} /><AccountMenu merchant={merchant} badges={badges} /></>}
       pinned={pinned} groups={groups} currentKey={screenFromPath(pathname)}
       onNavigate={i => nav({ to: i.href })}
       rail={rail} onRailChange={r => { setRail(r); try { localStorage.setItem(RAIL_KEY, r ? '1' : '0'); } catch { /* private mode */ } }}
