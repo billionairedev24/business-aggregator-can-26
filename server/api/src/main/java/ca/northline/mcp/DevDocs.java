@@ -69,7 +69,8 @@ public final class DevDocs {
         var docs = new TreeMap<String, Doc>();
         var specs = new TreeMap<String, Spec>();
         try {
-            for (var resource : new PathMatchingResourcePatternResolver().getResources("classpath*:" + ROOT + "/**/*")) {
+            for (var resource :
+                    new PathMatchingResourcePatternResolver().getResources("classpath*:" + ROOT + "/**/*")) {
                 var path = relativePath(resource);
                 if (path == null || !resource.isReadable()) {
                     continue;
@@ -221,10 +222,8 @@ public final class DevDocs {
             if (spec == null) {
                 continue;
             }
-            var op = spec.root()
-                    .path("paths")
-                    .path(ref.path())
-                    .path(ref.method().toLowerCase(Locale.ROOT));
+            var op =
+                    spec.root().path("paths").path(ref.path()).path(ref.method().toLowerCase(Locale.ROOT));
             var shared = spec.root().path("paths").path(ref.path()).path("parameters");
             var result = new LinkedHashMap<String, Object>();
             result.put("spec", ref.spec());
@@ -298,7 +297,8 @@ public final class DevDocs {
             var m = fenced ? null : HEADING.matcher(line);
             if (m != null && m.matches()) {
                 if (!body.isEmpty() || level > 0) {
-                    sections.add(new Section(heading, anchor(heading), level, body.toString().strip()));
+                    sections.add(new Section(
+                            heading, anchor(heading), level, body.toString().strip()));
                 }
                 heading = m.group(2);
                 level = m.group(1).length();
@@ -310,7 +310,8 @@ public final class DevDocs {
                 body.append(line).append('\n');
             }
         }
-        sections.add(new Section(heading, anchor(heading), level, body.toString().strip()));
+        sections.add(
+                new Section(heading, anchor(heading), level, body.toString().strip()));
         return new Doc(path, title == null ? path : title, text, List.copyOf(sections));
     }
 

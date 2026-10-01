@@ -46,10 +46,11 @@ class DevDocsMcpTest extends McpTestServer {
                     .extracting(Tool::name)
                     .containsExactlyInAnyOrder(
                             "search_docs", "list_documents", "get_document", "list_operations", "get_operation");
-            assertThat(tools).allSatisfy(t -> assertThat(t.annotations().readOnlyHint())
-                    .isTrue());
+            assertThat(tools)
+                    .allSatisfy(t -> assertThat(t.annotations().readOnlyHint()).isTrue());
 
-            var hits = json(docs.callTool(new CallToolRequest("search_docs", Map.of("query", "confirmation_required"))));
+            var hits =
+                    json(docs.callTool(new CallToolRequest("search_docs", Map.of("query", "confirmation_required"))));
             assertThat(hits.get("hits").findValuesAsString("path")).contains("runbooks/mcp.md");
 
             var section = json(docs.callTool(new CallToolRequest(
@@ -59,8 +60,8 @@ class DevDocsMcpTest extends McpTestServer {
             var page = json(docs.callTool(new CallToolRequest("get_document", Map.of("path", "DECISIONS.md"))));
             assertThat(page.get("nextOffset").asInt()).isPositive();
 
-            var operations = json(docs.callTool(new CallToolRequest(
-                    "list_operations", Map.of("spec", "api-studio", "query", "price-stock"))));
+            var operations = json(docs.callTool(
+                    new CallToolRequest("list_operations", Map.of("spec", "api-studio", "query", "price-stock"))));
             assertThat(operations.get("operations").findValuesAsString("operationId"))
                     .containsExactly("listingUpdatePriceAndStock");
 
@@ -80,7 +81,8 @@ class DevDocsMcpTest extends McpTestServer {
         try (var docs = client(null, "/mcp/docs")) {
             docs.initialize();
 
-            var uris = docs.listResources().resources().stream().map(Resource::uri).toList();
+            var uris =
+                    docs.listResources().resources().stream().map(Resource::uri).toList();
             assertThat(uris)
                     .contains(
                             "northline-docs://docs/runbooks/mcp.md",
@@ -88,7 +90,8 @@ class DevDocsMcpTest extends McpTestServer {
                             "northline-docs://openapi/api-studio.yaml");
 
             var spec = docs.readResource(new ReadResourceRequest("northline-docs://openapi/api-public.yaml"));
-            assertThat(((TextResourceContents) spec.contents().getFirst()).text()).startsWith("openapi:");
+            assertThat(((TextResourceContents) spec.contents().getFirst()).text())
+                    .startsWith("openapi:");
         }
     }
 
@@ -119,14 +122,9 @@ class DevDocsMcpTest extends McpTestServer {
         assertThat(api.statusCode()).isEqualTo(403);
         assertThat(api.body()).contains("mcp_token");
 
-        var business = http(
-                "POST",
-                "/mcp",
-                docsToken,
-                """
+        var business = http("POST", "/mcp", docsToken, """
                 {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25",\
-                "capabilities":{},"clientInfo":{"name":"t","version":"1"}}}""",
-                Map.of("Accept", "application/json, text/event-stream"));
+                "capabilities":{},"clientInfo":{"name":"t","version":"1"}}}""", Map.of("Accept", "application/json, text/event-stream"));
         assertThat(business.statusCode()).isEqualTo(401);
     }
 

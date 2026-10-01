@@ -93,17 +93,15 @@ class DevDocsTest {
 
     @Test
     void operations_areListedAndResolved_recursiveSchemasKeepTheirRef() {
-        assertThat(docs.operations(null, "thing"))
-                .singleElement()
-                .satisfies(op -> {
-                    assertThat(op.method()).isEqualTo("PATCH");
-                    assertThat(op.spec()).isEqualTo("api-test");
-                    assertThat(op.tags()).containsExactly("things");
-                });
+        assertThat(docs.operations(null, "thing")).singleElement().satisfies(op -> {
+            assertThat(op.method()).isEqualTo("PATCH");
+            assertThat(op.spec()).isEqualTo("api-test");
+            assertThat(op.tags()).containsExactly("things");
+        });
 
         var byId = docs.operation(null, "thingUpdate", null, null).orElseThrow();
-        var byPath = docs.operation("api-test", null, "patch", "/api/v1/things/{id}")
-                .orElseThrow();
+        var byPath =
+                docs.operation("api-test", null, "patch", "/api/v1/things/{id}").orElseThrow();
         assertThat(byPath).isEqualTo(byId);
 
         var parameters = (JsonNode) byId.get("parameters");

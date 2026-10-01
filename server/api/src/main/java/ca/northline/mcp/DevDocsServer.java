@@ -140,7 +140,9 @@ class DevDocsServer {
                                             .map(d -> Map.of("path", d.path(), "title", d.title()))
                                             .toList(),
                                     "openapi",
-                                    docs.specs().stream().map(DevDocs.Spec::name).toList())),
+                                    docs.specs().stream()
+                                            .map(DevDocs.Spec::name)
+                                            .toList())),
                     tool(
                             "get_document",
                             "A document's Markdown, by path (e.g. 'runbooks/mcp.md'). With 'section' (a heading or"
@@ -148,7 +150,9 @@ class DevDocsServer {
                                     + " returned nextOffset as 'offset'.",
                             schema(
                                     Map.of(
-                                            "path", stringProp("Path relative to docs/, from search_docs or list_documents"),
+                                            "path",
+                                                    stringProp(
+                                                            "Path relative to docs/, from search_docs or list_documents"),
                                             "section", stringProp("Optional heading or anchor"),
                                             "offset", intProp("Optional character offset for the next page")),
                                     List.of("path")),
@@ -164,8 +168,7 @@ class DevDocsServer {
                                             "query", stringProp("Optional filter, e.g. 'listings'")),
                                     List.of()),
                             args -> {
-                                var operations = docs.operations(
-                                        nullableArg(args, "spec"), nullableArg(args, "query"));
+                                var operations = docs.operations(nullableArg(args, "spec"), nullableArg(args, "query"));
                                 return Map.of(
                                         "count",
                                         operations.size(),
@@ -246,7 +249,8 @@ class DevDocsServer {
                                         .map(DevDocs.Section::heading)
                                         .toList()));
             }
-            var offset = Math.max(0, Math.min(intArg(args, "offset", 0), doc.text().length()));
+            var offset =
+                    Math.max(0, Math.min(intArg(args, "offset", 0), doc.text().length()));
             var end = Math.min(doc.text().length(), offset + props.pageChars());
             var page = new LinkedHashMap<String, Object>();
             page.put("path", doc.path());
@@ -261,7 +265,10 @@ class DevDocsServer {
         }
 
         private SyncToolSpecification tool(
-                String name, String description, Map<String, Object> inputSchema, Function<Map<String, Object>, Object> body) {
+                String name,
+                String description,
+                Map<String, Object> inputSchema,
+                Function<Map<String, Object>, Object> body) {
             return new SyncToolSpecification(
                     McpSchema.Tool.builder()
                             .name(name)
@@ -314,7 +321,9 @@ class DevDocsServer {
                 return n.intValue();
             }
             try {
-                return value == null ? fallback : Integer.parseInt(String.valueOf(value).strip());
+                return value == null
+                        ? fallback
+                        : Integer.parseInt(String.valueOf(value).strip());
             } catch (NumberFormatException e) {
                 throw new IllegalArgumentException(name + " must be a whole number", e);
             }

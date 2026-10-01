@@ -66,7 +66,8 @@ class SecurityConfig {
                         McpSecurityConfiguration.METADATA_PATH + "/**")
                 // first in the chain: Spring Security's own resource metadata would answer without the authorization
                 // server
-                .addFilterBefore(McpSecurityConfiguration.metadataEndpoint(mcp, docs, json), DisableEncodeUrlFilter.class)
+                .addFilterBefore(
+                        McpSecurityConfiguration.metadataEndpoint(mcp, docs, json), DisableEncodeUrlFilter.class)
                 .authorizeHttpRequests(a -> {
                     a.dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR)
                             .permitAll()

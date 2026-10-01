@@ -21,8 +21,8 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 class DevDocsAccessFilterTest {
 
     private static final String DOCS = "https://api.example.test/mcp/docs";
-    private static final DevDocsAccessFilter STAFF_ONLY = new DevDocsAccessFilter(
-            new DevDocsProperties(true, DevDocsProperties.Access.STAFF, DOCS, 8, 24000));
+    private static final DevDocsAccessFilter STAFF_ONLY =
+            new DevDocsAccessFilter(new DevDocsProperties(true, DevDocsProperties.Access.STAFF, DOCS, 8, 24000));
 
     @AfterEach
     void clear() {
@@ -64,7 +64,8 @@ class DevDocsAccessFilterTest {
         assertThat(response.getStatus()).isEqualTo(status);
         assertThat(response.getHeader("WWW-Authenticate"))
                 .contains("error=\"" + error + "\"")
-                .contains("resource_metadata=\"https://api.example.test/.well-known/oauth-protected-resource/mcp/docs\"");
+                .contains(
+                        "resource_metadata=\"https://api.example.test/.well-known/oauth-protected-resource/mcp/docs\"");
     }
 
     private static MockFilterChain call(DevDocsAccessFilter filter, JwtAuthenticationToken token) throws Exception {
