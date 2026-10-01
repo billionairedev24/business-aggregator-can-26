@@ -67,7 +67,8 @@ ca.northline.<module>
   `ca.northline.merchants`). Read other modules through their `api` package. For merchants that means `MerchantDirectory`,
   `MerchantVerifications` and `TeamRoster`. When the module you need already depends on yours, declare the query in your
   `api` package and let that module implement it (`payments.api.MerchantBillingFacts`, `merchants.api.CategorySource`).
-  Allowed exceptions are listed in the test, each with its reason.
+  No exceptions remain since S-64 (`food.api.KitchenOrderFeed`, implemented by orders); a new one needs its reason in
+  the test's `ALLOWED` map and a DECISIONS line.
 - Every package has a `package-info.java` with `@NullMarked`. NullAway treats `ca.northline` as non-null by default —
   mark nullable things `@org.jspecify.annotations.Nullable`.
 - Shared kernel `ca.northline.shared`: `Ids` (ULID), `Money`, `CodedEnum`/`CodedEnums`, `DomainEvent`, `ListResponse`,
