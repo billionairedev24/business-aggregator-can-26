@@ -6,12 +6,14 @@
 //
 // GET /healthz answers "ok" for Kubernetes probes. Static files come from dist/client (hashed /assets/* are cached for
 // a year, everything else revalidates); every other request is rendered by the app. SIGTERM drains open connections.
+// Business pages on pages.<zone> and on merchants' own domains: page-hosts.mjs (S-54; NL_SITE_ORIGIN, NL_PAGES_HOST).
 import { createServer } from 'node:http';
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
 import { Readable } from 'node:stream';
 import { fileURLToPath } from 'node:url';
+import { createPageRouter, PAGE_HEADERS } from './page-hosts.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const clientDir = join(root, 'dist', 'client');
@@ -21,6 +23,7 @@ const port = Number(process.env.PORT ?? 3000);
 const host = process.env.HOST ?? '0.0.0.0';
 // Behind the ingress the public scheme/host arrive as X-Forwarded-*; believe them only when told to.
 const trustProxy = process.env.TRUST_PROXY === 'true';
+const pageRoute = createPageRouter({ siteOrigin: process.env.NL_SITE_ORIGIN, pagesHost: process.env.NL_PAGES_HOST, bffUrl: process.env.NL_BFF_URL });
 
 const types = {
   '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -51,11 +54,15 @@ async function staticFile(pathname) {
   }
 }
 
-function toRequest(req) {
+const publicHost = req => (trustProxy && req.headers['x-forwarded-host']?.split(',')[0].trim()) || req.headers.host || 'localhost';
+
+function toRequest(req, page) {
   const proto = (trustProxy && req.headers['x-forwarded-proto']?.split(',')[0].trim()) || 'http';
-  const authority = (trustProxy && req.headers['x-forwarded-host']?.split(',')[0].trim()) || req.headers.host || 'localhost';
+  const authority = publicHost(req);
   const headers = new Headers();
   for (let i = 0; i < req.rawHeaders.length; i += 2) headers.append(req.rawHeaders[i], req.rawHeaders[i + 1]);
+  for (const name of PAGE_HEADERS) headers.delete(name); // only this server says which page a host serves
+  if (page) { headers.set('x-nl-page-mode', page.mode); headers.set('x-nl-page-host', page.host); headers.set('x-nl-page-slug', page.slug); }
   const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
   const controller = new AbortController();
   req.on('close', () => { if (!req.complete) controller.abort(); });
@@ -100,7 +107,19 @@ const server = createServer(async (req, res) => {
         return;
       }
     }
-    await send(res, await app.fetch(toRequest(req)), req.method === 'HEAD');
+    const url = new URL(req.url ?? '/', 'http://x');
+    const route = await pageRoute(publicHost(req), pathname, url.search);
+    if (route.type === 'redirect') {
+      res.writeHead(302, { ...securityHeaders, location: route.location, 'cache-control': 'public, max-age=60' });
+      res.end();
+      return;
+    }
+    if (route.type === 'notFound' || route.type === 'unavailable') {
+      res.writeHead(route.type === 'notFound' ? 404 : 503, { ...securityHeaders, 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
+      res.end(route.type === 'notFound' ? 'No Northline page is connected to this domain.' : 'Try again in a moment.');
+      return;
+    }
+    await send(res, await app.fetch(toRequest(req, route.page)), req.method === 'HEAD');
   } catch (error) {
     console.error(`${req.method} ${req.url} failed`, error);
     if (!res.headersSent) res.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' });

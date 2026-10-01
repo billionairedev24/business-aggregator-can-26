@@ -113,19 +113,21 @@ A feature folder per story area, named after the design: `home`, `location`, `se
 | `/food/$kitchen` | restaurant | S-57 (**built**) | SSR + SEO; the food order lives in the browser (`nl.foodCart`, one kitchen) |
 | `/food/checkout` | foodCheckout | S-57 (**built**) | guest banner; signed in to pay; S-51's step-up |
 | `/food/orders/$orderId` | foodTrack | S-57 (**built**) | polls every 15 s |
-| `/services` | services | S-53 | landing page |
-| `/services/$category` | svcCategory | S-53 | SSR + SEO |
-| `/services/$category/providers` | providers | S-53 | |
-| `/providers/$slug` | provider | S-54 | public provider page (storefront API); SSR + SEO + JSON-LD (S-63) |
-| `/providers/$slug/book` | book | S-55 | guest banner |
-| `/quotes/$quoteId` | quote | S-56 | guest banner |
+| `/services` | services | S-53 (**built**) | landing page; SSR |
+| `/services/$category` | svcCategory | S-53 (**built**) | SSR + SEO; `$category` = the leaf slug (`mobile-mechanic`) |
+| `/services/$category/providers` | providers | S-53 (**built**) | category SSR, providers by location in the browser |
+| `/services/$category/quote` | book (quote mode, from a category) | S-56 (**built**) | `?step=job\|where\|who&provider=`; "Describe the job, get 3 quotes"; guest banner |
+| `/providers/$slug` | provider | S-54 (**built**) | public provider page (storefront API + `/api/v1/public/providers/{slug}`); SSR + SEO; JSON-LD is S-63; also served as `pages.<zone>/<slug>` and on merchants' own domains |
+| `/providers/$slug/book` | book | S-55 (**built**) | `?step=details\|location\|schedule\|pay\|done&service=&booking=`; provider SSR, calendar/hold/payment client-side; sign-in from the hold on; guest banner |
+| `/quotes/requests/$requestId` | book (quote mode, "N quotes received") | S-56 (**built**) | compare the request's quotes; guest banner |
+| `/quotes/$quoteId` | quote | S-56 (**built**) | every line, versions, accept with the escrow deposit; guest banner |
 | `/account/orders` | orders | S-58 | Orders & bookings — from the account menu only |
 | `/account?tab=` | account | S-58, S-59 | tabs: wallet, payments, profile, addresses, favourites, security, notifications, language, dietary, plus, help |
 | `/sign-in?next=`, `/register?next=` | auth | S-62 (**built**) | no account buttons in the header there; `features/auth` |
 | `/sell?type=seller\|provider\|kitchen` | (account › Sell) | S-61 | entry into Studio onboarding |
 | `/legal/terms.html`, `/legal/privacy.html` | — | S-63 | static, verbatim (design 09/10) until S-63's pages |
 
-Storefront pages on `pages.<zone>` and merchants' own domains (by `Host`) are S-54/S-63 work; they share the app.
+Storefront pages on `pages.<zone>` and merchants' own domains (by `Host`) share the app (S-54): `server/page-hosts.mjs` decides per request (`NL_PAGES_HOST`, the S-31 by-host lookup), the router maps the host's path onto `/providers/<slug>` (`src/lib/pages.ts`), and links from there go to `NL_SITE_ORIGIN` (`siteHref`, `useSiteConfig()`). Business pages only; store and menu pages go to the site's home until S-49/S-57 take them.
 
 ## Contracts
 
@@ -301,18 +303,20 @@ Both endpoints are `GET`, public, JSON, camelCase; money in cents; errors as eve
 | `GET /bff/session`, `GET /bff/login`, `POST /bff/logout` | **exists** (S-45) | shell, S-62 |
 | `GET /api/v1/me` | exists (any signed-in token) | S-59 |
 | `GET /api/v1/storefronts/{slug}`, `/logo`, `GET /api/v1/public/storefronts/by-host?host=` | exists, public | S-54, S-63 |
+| `GET /api/v1/public/providers/{slug}`, `/providers/{slug}/reviews?offset&limit` | **exists** (S-54, module `hire`) | S-54 |
 | `GET /api/v1/onboarding/taxonomy` | exists (signed in) | S-61 |
 | northline-auth JSON API (`/api/auth/register…`, `/api/auth/sign-in…`, `/api/auth/sign-out`) + S-62's `/api/auth/sign-in/code[/verify]`, `/api/auth/register/complete` | exists | S-62 (built) |
 | `GET /api/v1/geo/reverse`, `/markets`, `/autocomplete`, `/places/{id}`, `/resolve`, `POST /waitlist` | **exists** (S-47) | pill, Location screen, checkout |
 | `GET /api/v1/public/home?city=` → section counts, businesses per category id, open kitchens per cuisine, trusted providers | **exists** (S-46, module `discovery`) | home |
 | `GET /api/v1/search`, `GET /api/v1/search/suggest` | **exists** (S-44; contract above, § Search) | S-48, home |
 | Shop landing + departments: `GET /api/v1/public/shop?market=&lang=`, `GET /api/v1/public/shop/departments/{slug}?market=&lang=` | **exists** (S-49) | S-49 (S-46 may reuse the landing's departments) |
-| service categories landing content (public catalogue reads) | missing | S-53 |
 | product detail + offers: `GET /api/v1/public/shop/products/{id}?market=&lang=` | **exists** (S-50) | S-50 |
 | cart: `GET /api/v1/cart`, `POST /api/v1/cart/items`, `PATCH`/`DELETE /api/v1/cart/items/{id}` (guest-keyed by `X-Northline-Guest`); checkout: `GET /api/v1/me/checkout?market=`, `POST /api/v1/me/checkout/quote`, `POST /api/v1/me/checkouts` (Idempotency-Key, X-Step-Up), `POST /api/v1/me/checkouts/{id}/place` (Idempotency-Key) | **exists** (S-51) | S-51 (S-57 food checkout may reuse the step-up and payment parts) |
 | consumer order + tracking: `GET /api/v1/me/orders/{id}`, `GET /api/v1/me/orders/{id}/events` (SSE, event `order`) | **exists** (S-52); the orders list is missing | S-52, S-58 (list), S-57 (food tracking may reuse the stream) |
 | food: `GET /api/v1/public/kitchens?city=&lat=&lng=`, `GET /api/v1/public/kitchens/{slug}`; `POST /api/v1/me/food-orders/quote`, `POST /api/v1/me/food-orders` (Idempotency-Key, X-Step-Up), `POST /api/v1/me/food-orders/{id}/confirm` (Idempotency-Key), `GET /api/v1/me/food-orders/{id}` | **exists** (S-57) | food landing, restaurant, food checkout, tracking |
-| providers by category, availability slots, booking create, quote request / accept (consumer side) | missing (merchant side exists) | S-53, S-55, S-56 |
+| `GET /api/v1/public/services`, `/services/{slug}`, `/services/{slug}/providers?lat&lng&city` | **exists** (S-53, module `hire`) | S-53 |
+| `GET /api/v1/public/providers/{slug}/slots`, `POST/DELETE /api/v1/me/bookings/holds`, `POST /api/v1/me/bookings/checkout` (Idempotency-Key, X-Step-Up), `POST /api/v1/me/bookings/holds/{id}/confirm`, `GET /api/v1/me/bookings/{id}` | **exists** (S-55, module `hire`) | S-55 |
+| `POST /api/v1/me/quote-requests`, `GET /api/v1/me/quote-requests/{id}`, `GET /api/v1/me/quotes/{id}`, `POST /api/v1/me/quotes/{id}/decline`, `POST /api/v1/me/quotes/{id}/accept` (Idempotency-Key, X-Step-Up), `POST /api/v1/me/quotes/{id}/accept/confirm` | **exists** (S-56, module `hire`) | S-56 |
 | `GET /api/v1/me/account-summary`, wallet, addresses, payment methods, notifications, favourites | missing | S-45 menu values, S-58, S-59 |
 | refunds / "something's wrong" (consumer side) | missing (merchant side exists) | S-60 |
 
@@ -332,7 +336,7 @@ Additive only; record each addition in `docs/DECISIONS.md` under the story's hea
 
 ## Deploy
 
-- Consumer app: `apps.consumer` (type node, port 3000, `/healthz`), env `NL_BFF_URL`, `NL_AUTH_ORIGIN`, `TRUST_PROXY`.
+- Consumer app: `apps.consumer` (type node, port 3000, `/healthz`), env `NL_BFF_URL`, `NL_AUTH_ORIGIN`, `TRUST_PROXY`, `NL_SITE_ORIGIN` and `NL_PAGES_HOST` (S-54, from `urls.consumer` / `urls.pages`).
 - consumer-bff: `apps.consumer-bff` (the bff image, `profiles: [consumer]`, port 8081, `CONSUMER_BFF_SECRET`);
   routes `/api`, `/bff`, `/oauth2`, `/login` on the consumer host, `/api`, `/bff` on `pages.`; reachable from the
   consumer app for SSR. auth needs `CONSUMER_BFF_SECRET_HASH`. `promote.sh` pins it to the bff digest.

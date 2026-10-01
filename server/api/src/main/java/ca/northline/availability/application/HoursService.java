@@ -12,12 +12,9 @@ import ca.northline.availability.application.AvailabilityUseCases.SaveHours;
 import ca.northline.availability.application.AvailabilityUseCases.SaveRules;
 import ca.northline.availability.application.AvailabilityUseCases.ViewHours;
 import ca.northline.availability.application.AvailabilityUseCases.ViewRules;
-import ca.northline.availability.domain.AlbertaHolidays;
 import ca.northline.availability.domain.BookingRules;
 import ca.northline.availability.domain.SlotPlanner;
-import ca.northline.availability.domain.TimeOff;
 import ca.northline.availability.domain.WeeklyHours;
-import ca.northline.booking.api.BookingCalendar;
 import ca.northline.catalogue.api.CatalogueFacts;
 import ca.northline.catalogue.api.CatalogueFacts.ServiceDuration;
 import ca.northline.shared.Ids;
@@ -47,10 +44,8 @@ class HoursService implements ViewHours, SaveHours, PreviewSlots, ListPreviewSer
     static final List<Integer> FALLBACK_DURATIONS = List.of(30, 45, 60, 90);
 
     private final HoursRepository hours;
-    private final TimeOffRepository timeOff;
     private final Team team;
-    private final BookingCalendar calendar;
-    private final CalendarSyncRepository calendarSync;
+    private final DaySchedule schedule;
     private final CatalogueFacts catalogue;
     private final ApplicationEventPublisher events;
     private final Clock clock;
@@ -99,48 +94,9 @@ class HoursService implements ViewHours, SaveHours, PreviewSlots, ListPreviewSer
         var rules = hours.rules(query.merchantId()).orElseGet(BookingRules::defaults);
         int interval = Objects.requireNonNullElse(query.intervalMin(), rules.intervalMin());
         int buffer = Objects.requireNonNullElse(query.bufferMin(), rules.bufferMin());
-        var day = query.date();
-        var closedBy = timeOff.from(query.merchantId(), day).stream()
-                .filter(t -> t.covers(day, query.memberUserId()))
-                .findFirst();
-        var ranges = query.ranges() != null
-                ? query.ranges()
-                : hours.effectiveOn(query.merchantId(), query.memberUserId(), day)
-                        .map(h -> h.on(day.getDayOfWeek()))
-                        .orElse(List.of());
-        String closed = null;
-        if (closedBy.isPresent()) {
-            if (closedBy.get().kind() == TimeOff.Kind.CLOSED) {
-                closed = "time_off";
-                ranges = List.of();
-            } else {
-                ranges = closedBy.get().specialRanges();
-            }
-        } else if (AlbertaHolidays.isHoliday(day)
-                && !hours.openHolidays(query.merchantId()).contains(day)) {
-            closed = "holiday";
-            ranges = List.of();
-        }
-        var from = day.atStartOfDay(ZONE).toInstant();
-        var jobs = calendar.busy(
-                query.merchantId(),
-                query.memberUserId(),
-                from,
-                day.plusDays(1).atStartOfDay(ZONE).toInstant());
-        // S-32: busy times from the member's connected Google / Outlook calendars block slots like jobs do
-        var calendarBusy = calendarSync.busy(
-                query.merchantId(),
-                query.memberUserId(),
-                from,
-                day.plusDays(1).atStartOfDay(ZONE).toInstant());
-        var busy = java.util.stream.Stream.concat(
-                        jobs.stream()
-                                .map(b -> new SlotPlanner.Busy(minutes(b.startsAt(), day), minutes(b.endsAt(), day))),
-                        calendarBusy.stream()
-                                .map(b -> new SlotPlanner.Busy(minutes(b.startsAt(), day), minutes(b.endsAt(), day))))
-                .toList();
-        var slots = SlotPlanner.preview(ranges, busy, query.durationMin(), interval, buffer);
-        return new Preview(slots, jobs.size(), calendarBusy.size(), interval, buffer, closed);
+        var day = schedule.of(query.merchantId(), query.memberUserId(), query.date(), query.ranges());
+        var slots = SlotPlanner.preview(day.ranges(), day.busy(), query.durationMin(), interval, buffer);
+        return new Preview(slots, day.jobs(), day.busyBlocks(), interval, buffer, day.closed());
     }
 
     @Override
@@ -169,17 +125,5 @@ class HoursService implements ViewHours, SaveHours, PreviewSlots, ListPreviewSer
         hours.saveRules(merchantId, rules, at);
         events.publishEvent(new AvailabilityChanged(Ids.next(), at, merchantId, actorId, "rules"));
         return rules(merchantId);
-    }
-
-    /** Minutes since local midnight of {@code day}, clamped to the day. */
-    private static int minutes(java.time.Instant instant, LocalDate day) {
-        var local = instant.atZone(ZONE);
-        if (local.toLocalDate().isBefore(day)) {
-            return 0;
-        }
-        if (local.toLocalDate().isAfter(day)) {
-            return 24 * 60;
-        }
-        return local.getHour() * 60 + local.getMinute();
     }
 }

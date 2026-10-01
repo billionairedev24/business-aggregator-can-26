@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:booking.booking_confirmed:1",
+  "description": "booking.confirmed — a customer booked and paid (escrow held) or accepted a quote with its deposit (S-55). Topic booking.booking, key = booking id. Ids and amounts only.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "occurredAt",
+    "aggregateId",
+    "merchantId",
+    "customerId",
+    "bookingType",
+    "startsAt",
+    "endsAt",
+    "priceCents",
+    "depositCents"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": { "type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$" },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "aggregateId": { "type": "string", "description": "booking.bookings.id" },
+    "merchantId": { "type": "string", "description": "merchants.merchants.id" },
+    "customerId": { "type": "string", "description": "identity.users.id of the customer" },
+    "memberUserId": { "type": ["string", "null"], "description": "identity.users.id of the team member doing the job" },
+    "serviceId": { "type": ["string", "null"], "description": "catalogue.services.id" },
+    "quoteId": { "type": ["string", "null"], "description": "booking.quotes.id when the booking came from an accepted quote" },
+    "bookingType": { "type": "string", "enum": ["visit", "home", "event", "appointment", "consult"] },
+    "startsAt": { "type": "string", "format": "date-time" },
+    "endsAt": { "type": "string", "format": "date-time" },
+    "priceCents": { "type": "integer", "minimum": 0 },
+    "depositCents": { "type": "integer", "minimum": 0 }
+  }
+}

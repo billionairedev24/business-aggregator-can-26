@@ -2973,3 +2973,247 @@ Runbook: [docs/runbooks/docs-site.md](runbooks/docs-site.md). Stacked on S-125 (
   - the IP allowlist was rendered and schema-validated, not enforced by a live Envoy Gateway;
   - French translations of the repository docs;
   - SSO for the internal site.
+
+## 2026-09-30 — S-53 Services landing, service category, provider list
+
+Branch `web/s-53-services-landing` (from main). Contracts: [CONSUMER_WEB_PLAN.md](CONSUMER_WEB_PLAN.md).
+
+- **New api module `hire`** (consumer side of the Services journey, S-53 … S-56): a composition module like `studio`
+  — no tables, only other modules' `api` packages (availability, catalogue, merchants, trust; booking and payments
+  from S-55), nothing depends on it. Chosen over putting the reads in `booking` (it can't depend on availability or
+  payments without a cycle: availability → booking, payments → booking) or `search` (projection only). Its read models
+  are serialized as they are (as the Studio dashboard does): they exist only for these screens.
+- **Public endpoints** (`GET /api/v1/public/**`, open since S-31; `?lang=en|fr`, default en):
+  `GET /api/v1/public/services` → `{liveCategories, providers, groups: [{id, key, names, note, items: [{slug, names,
+  kind, providers}]}]}` · `GET /api/v1/public/services/{slug}` → `{id, slug, names, group, kind, vehicle,
+  regulatedRegistry, providers, quoteable, jobs: [{name, included, pricingMode, priceCents, durationMin}]}` (404 for an
+  unknown slug) · `GET /api/v1/public/services/{slug}/providers?lat&lng&city` → `{categorySlug, kind, area, city,
+  items: [{merchantId, slug, name, tier, brandColor, blurb, rating, reviewCount, onTimePct, disputePct, rebookPct,
+  fromCents, pricingMode, instantBook, nextAvailable, zones}]}`. Landing and category: `Cache-Control: max-age=60,
+  public`; providers 30 s. The category `slug` is the leaf part of the CategorySeeder id (`mobile-mechanic`; unique
+  across the service root, checked). Validation (messages not in validation-rules.md, English in both locales like the
+  other server rules): one of `lat`/`lng` alone → 422 "Send both lat and lng, or neither."; out of range → "That
+  location is outside the map."; `city` over 60 → "At most 60 characters.".
+- **A category's providers** = active `provider`/`both` businesses with a published business page and at least one
+  live, approved service (`catalogue.services`) in that leaf. Counts on the landing and the category page are these,
+  not filtered by location (server-rendered pages are the same for everyone); "live categories" = leaves with at least
+  one. The design's "62 categories · 1,204 providers" are sample numbers.
+- **Booking type per category** (`hire.domain.ServiceKind`): `catalogue.categories.booking_type` wins when set, but
+  the seed sets none (and `seedCategories` owns the rows), so it comes from the group — automotive, home trades,
+  tech: visit · cleaning & property, pets, education, childcare: home · events: event · personal care: appointment ·
+  professional: consult — with leaf exceptions (movers → event as in the design; property management, career/life
+  coach, web design, photo editing → consult; mobile hair & makeup, home care aide → home; dog grooming →
+  appointment). `vehicle` (the wizard's vehicle questions) = the automotive group. Quotes for visits and events only
+  (the design's `quoteable`), events are quote-only.
+- **Service area = zones** (`availability.service_areas`, V041, names from Booking rules). **V114** adds
+  `availability.service_zones`: each of the nine names with its city, a centre and an approximate circular area
+  (Beltline 1.2 km … SE Calgary 10 km, Airdrie/Cochrane/Okotoks the towns) — reference data, the same everywhere, until
+  `region.zones` has Calgary polygons. A business covers the customer when one of its zones contains the device's
+  point, or, with only a city (the IP guess, the Calgary fallback, a saved address without coordinates), when one of
+  its zones is in that city; no location at all = the region's fallback market (S-47's `GET /api/v1/geo/markets` → `fallback`, through the new `region.api.FallbackMarket`; nobody is covered when none is configured). The web sends the fallback market's city itself (S-47's `useDeliveryLocation`). Appointments and consultations (the customer goes to them)
+  also match the business's own city. The heading's area is the zone the point is in (nearest centre when two
+  overlap), else the city. `availability.api.ServiceAreas`.
+- **Trust order** (design: "Sorted by trust · tier, on-time rate, dispute rate and re-book rate"): tier, then on-time
+  (higher), disputes (lower), re-book (higher), rating, name; a business without a nightly quality score yet sorts after
+  scored ones of its tier (`hire.domain.TrustRank`). The consult variant's "Sorted by recent sales…" isn't used: there
+  is no sales ranking, and the note must say what the list does.
+- **Next available** is computed live: `availability.api.ProviderSlots` (new, used again by S-55's calendar) = the
+  Studio preview's `SlotPlanner` over every bookable member (hours, time off, closed holidays, confirmed jobs, S-32
+  calendar busy blocks, travel buffer), merged, then minimum notice, "same day by 9 am", horizon and jobs per day. The
+  per-day part of `HoursService.preview` moved into `DaySchedule` so both use it (Studio behaviour unchanged). "Next
+  available" looks at most 14 days ahead. Cost: a few queries per member-day per provider — fine for a city's providers
+  in one category; the search projection's `next_slot` (E-6) should replace it on the list later.
+- **Not shown / not built from the design's list:** the distance ("1.2 km") — businesses have no base location, only
+  zones, so the filter "Under 3 km" isn't offered; "EV certified" (no such attribute). Filters kept: Master tier,
+  Instant book, Available today, Under $80 — applied in the browser to the covering providers (none on by default;
+  the prototype's pre-ticked "Master tier" is demo state). Rows show "★ rating (reviews) · on-time" or "New on
+  Northline", "from $79" / "from $45/h" / "Quote", and "Today 3 pm" / "Tomorrow 9 am" / "Thu 9 am" / "No openings in
+  the next 2 weeks".
+- **Copy:** the design details one category per booking type (mobile mechanic, cleaning, bar, barber, real estate).
+  Its text is used for that family (automotive; the cleaning leaves; cocktail bar and bartender; barber & hair;
+  real-estate agent) exactly; the other categories of a type get generic wording in the same shape (ours: blurb, "where",
+  CTA hint, first two steps of visits) — e.g. a plumber isn't "Licensed technicians who bring the shop to you". The
+  CTA noun ("See 14 mechanics") and the list heading noun ("Mobile mechanics · 14 come to Beltline") come from the
+  design's `nounBy` for those families, "providers" / the category name otherwise. Group lines: the design's for its
+  five groups, ours for pets, education, tech, childcare.
+- **French category names** live in the consumer app (`features/services/taxonomy.ts`, all 10 groups and 108 leaves):
+  `catalogue.categories.name_i18n` is English-only and `seedCategories` rewrites it, so a migration couldn't keep them.
+  The API still returns `names` so a translated table takes over by itself; names without French are marked
+  `lang="en"`.
+- **Pages:** landing and category render on the server (loader → `ensureQueryData`, the screen `useSuspenseQuery`,
+  title + description meta, 404 → the not-found screen); the provider list renders the category on the server and
+  loads the covering providers in the browser once the location is known (device/saved coordinates are sent; the
+  Calgary fallback and the IP city only as a city). Loading skeletons, empty ("No verified providers cover Beltline for
+  this service yet." + See all services; "No providers match these filters." + Clear filters) and error (Retry) states.
+- **Shared-contract changes (additive):** new route `/services/$category/quote` (screen key `quoteRequest`, S-56 —
+  the category's "Describe the job, get 3 quotes"; `ScreenPending` until then); UI kit `BrandMark` (a business's
+  initial on its brand colour, with a story); `availability.api.ServiceAreas`/`ProviderSlots`, `catalogue.api.
+  ServiceOffers`, `merchants.api.PublicProviders`.
+- **Not done:** search-backed ranking and `next_slot` (E-6); distance; per-category French taxonomy in the database;
+  structured data (S-63).
+- **Region-neutral** (the decision above): no province, city or time zone in this story's code or copy. The province
+  (tax) is the business's own, else the default market's, and the time zone the province's market's — both from S-47's
+  `region.api.Markets` (SEARCH_MARKETS / SEARCH_DEFAULT_MARKET); the city for a visitor without a location is the api's
+  fallback market (new, additive `region.api.FallbackMarket`, implemented by `GeoService` — the same answer as `GET
+  /api/v1/geo/markets`); `hire.application.RegionDefaults` reads them. The landing and a category return `provinces`
+  (their live providers' `merchants.province`) and the copy names them as a parameter ("4 categories live in
+  {region}"); registry names in the copy come from the category (`regulatedRegistry`). Existing literals still relied on
+  (S-134): the web's shared `TIME_ZONE` (`@northline/ui`), `AlbertaHolidays` and `Team.ZONE` in the availability
+  planner (moved into `DaySchedule`, unchanged), and the zone rows of V114 (reference data).
+
+## 2026-09-30 — S-54 Public provider page from the storefront API (sections, reviews, service area)
+
+Branch `web/s-54-provider-page`, **stacked on `web/s-53-services-landing`** (uses its `hire` module, service kinds and
+copy).
+
+- **Two public reads, one page.** The page itself is the storefront API as it was (`GET /api/v1/storefronts/{slug}`:
+  enabled sections in the owner's order, brand colour, logo, tagline, announcement, CTA label, verified facts); new
+  `GET /api/v1/public/providers/{slug}` (module `hire`) adds what Northline holds: rating and review count, the latest
+  quality score's on-time / dispute / re-book figures, the live approved services (with each one's category and
+  booking type), the service-area zones, the next free slot (S-53's `ProviderSlots`) and the three newest reviews;
+  `GET /api/v1/public/providers/{slug}/reviews?offset&limit` pages the rest (10 by default, at most 20). Both
+  `max-age=60, public`. 404 unless the business is an active `provider`/`both` with a published page. The loader
+  fetches both in parallel on the server.
+- **The business's kind** (visit, home, event, appointment, consult — the CTA title, the mode tag and the copy family)
+  comes from the category most of its services are in; a business without services is a visit.
+- **Sections in order** (storefront-sections.json): the hero (design `pv` hero: brand-colour band, logo or initial,
+  name, tagline + "since <year of approval>", "<tier> tier · verified") and the trust figures and credential tags
+  always open the page; then the enabled `about` (the Business-step description), `reviews` (three newest, "Show
+  more reviews", the business's public reply under a review, "New on Northline — verified" before the first), `area`
+  (the zones — "Comes to you in Beltline · Downtown."; appointments and consultations: "You go to them in <city>."),
+  `faq` (the builder's pairs as disclosure widgets) and `policies` in the owner's order. `services` + `cta` are the
+  aside (design): the service menu (name, duration, price or "Quote") only when `services` is enabled, as the spec says
+  ("Only the Book button remains"), the button labelled with the page's CTA label (Book a visit / Request a quote /
+  Order now / Reserve — the owner's choice wins over the design's per-type wording), "Not sure? Request a quote" for
+  quoteable kinds, "Next available: … · <note>". The announcement is a strip above the hero.
+- **Not rendered:** `gallery` (the builder can't add photos yet, S-53 preview shows the same), the map of the area
+  (no map provider; the zones are listed), and `featured`/`catalogue`/`delivery`/`menu`/`hours`/`fulfil`/`permit`
+  (store and menu sections; a `both` page's products belong to the shop pages, S-49/S-50). Credential tags from verified
+  checks: licence → "AMVIC licensed", insurance → "$2M insured" (the insurance check requires ≥ $2M, onboarding
+  decision), ID → "ID verified", site visit → "Site visited"; the design's "Red Seal journeyman" etc. are sample text
+  with no data behind them. The consult variant's "sales · 12 mo" figure has no source; re-book is shown for everyone.
+- **SEO-ready, structured data left to S-63:** server-rendered title ("Prairie Wrench · Mobile mechanic · Calgary ·
+  Northline"), description (the business's description, else its tagline), canonical (the live custom domain when there
+  is one — the owner's own address is the page's home — else `NL_SITE_ORIGIN/providers/<slug>`) and Open Graph tags.
+  No `hreflang`: the language is a cookie, not a URL (S-63 decides).
+- **Other hosts** (plan: "storefront pages on `pages.<zone>` and merchants' own domains are S-54/S-63 work"): the node
+  server (`server/page-hosts.mjs`) classifies the `Host`: the site; `pages.<zone>` (`NL_PAGES_HOST`) where `/<slug>` is
+  that page; any other host = a merchant's domain, resolved with S-31's `GET /api/v1/public/storefronts/by-host`
+  through the consumer-bff (cached 60 s like the endpoint's `Cache-Control`, a failed lookup isn't cached → 503 "Try
+  again in a moment."; unknown host → 404 "No Northline page is connected to this domain."). Only business pages are
+  served; other page kinds and every other path redirect (302) to `NL_SITE_ORIGIN`. The server passes the page as
+  `x-nl-page-mode/host/slug` headers (the browser's are dropped); the router's `rewrite` maps the host's `/` or
+  `/<slug>` onto `/providers/<slug>` and back, so SSR and hydration agree while the address bar keeps the merchant's
+  URL. Sign-in, booking and the cart live on the site (the consumer-bff client has one redirect URI; merchants' domains
+  get no `/api` route), so on those hosts the page's links are absolute to `NL_SITE_ORIGIN` (`siteHref`) and "Show
+  more reviews" becomes "See all reviews" on the site. Local development: the Vite dev server doesn't do host routing;
+  the built server does with `NL_PAGES_HOST` (runbooks/local.md). New variables `NL_SITE_ORIGIN`, `NL_PAGES_HOST`
+  (consumer app, optional, the chart sets them from `urls.consumer` / `urls.pages`); `publicConfig` carries `siteOrigin`
+  and `page`, `useSiteConfig()` reads them.
+- **New public API:** `trust.api.PublicReviews` (newest first; author display name, job label, reply — nothing else
+  about the author).
+- **Not done:** JSON-LD, sitemap, `hreflang` (S-63); the shell on a merchant's own domain still shows the site header,
+  whose links and session/cart calls go to the site or fail quietly (no BFF route there) — a slimmer page chrome for
+  other hosts is left to S-63; the CDN in front of these pages (edge caching) isn't configured.
+
+## 2026-09-30 — S-55 Booking wizard (job details → location & access → schedule → payment → confirmed)
+
+Branch `web/s-55-booking-wizard`, stacked on `web/s-54-provider-page` (itself on S-53) and on S-51
+(`web/s-51-cart-checkout`, #56) for the payment step-up, `IdempotentRequests` and `PaymentSettings`.
+
+- **Flow** (module `hire`, `BookingCheckoutService`): `GET /api/v1/public/providers/{slug}/slots?serviceId&from&days`
+  (public, ≤ 14 days) → `POST /api/v1/me/bookings/holds {slug, serviceId, startsAt, hours?}` (201; the slot and a
+  booking id chosen up front) → `POST /api/v1/me/bookings/checkout` (Idempotency-Key, `X-Step-Up`; validates every
+  answer, prices it, opens the manual-capture PaymentIntent for `booking:<id>`) → the Payment Element confirms the card
+  when the provider is Stripe (the fake gateway authorizes at once) → `POST /api/v1/me/bookings/holds/{holdId}/confirm`
+  (201; `EscrowLifecycle.hold` checks the authorization and writes the escrow row, S-11; the booking is written, the hold
+  freed) → `GET /api/v1/me/bookings/{id}`. Sign-in is required from the hold on (the calendar is public); the wizard
+  keeps the answers in `sessionStorage` across the trip to the sign-in page and clears them once booked.
+- **Real availability** = S-53's `ProviderSlots` (hours, time off, holidays, confirmed jobs, S-32 calendar busy blocks,
+  travel buffer, notice, same-day cutoff, horizon) **plus other customers' live holds**. A slot shows free when at least
+  one bookable member is free; the hold picks the first free member.
+- **Slot holds in Valkey** (`availability.api.SlotHolds`, 10 min): a Lua script checks overlap (with the travel buffer)
+  against the member's holds and places the hold atomically; keys share a `{m:<merchant>}` hash tag so the script is
+  cluster-safe. A customer has at most one hold per business (a new one replaces it). Profiles `local`/`test` use an
+  in-memory store with the same rules. At confirm, an advisory lock per member plus an overlap lookup on
+  `booking.bookings` is the last guard (409 `slot_taken`). 409 `hold_expired` ("Your 10-minute hold ended. Pick the
+  time again.") sends the wizard back to the calendar.
+- **Access notes are private**: V115 `booking.access_notes` holds the access instructions and the day's phone number
+  sealed with `SecretSealer` (context `booking.access_notes:<booking id>`); they never enter `bookings.details`, events
+  or webhooks. The provider's Studio job card shows them only from 1 h before to 1 h after the start (design:
+  "shared with the provider only for the two hours around the visit"). Between hold and confirm the answers ride with
+  the hold, sealed too.
+- **Payment step-up = S-51's rule** (`PaymentGate`): an `acr=mfa` sign-in pays directly; a phone-code sign-in sends an
+  `X-Step-Up` proof from `/auth/step-up/*`; an account with neither gets 403 `second_factor_required` and enrols a
+  passkey (the S-51 `StepUpDialog`). A free consultation holds no money and skips it.
+- **Pricing** (`hire.domain.Pricing`): fixed = the service price; hourly = rate × hours (home services ask the hours;
+  cleaning estimates them from bedrooms + add-ons, design 06); consultations free; quote-only services and services
+  without instant book answer 422 ("…ask for a quote instead", S-56). Sales tax from `region.api.TaxRates` for the provider's province. The whole
+  price + tax is held in escrow ("Hold $93.45 in escrow"). The rate is the provider's province's
+  (`merchants.province`, else the default market's, `region.api.Markets`); the provider page returns it (`taxBps`) so the
+  wizard's summary shows the same tax, labelled "Tax 5%" (the tax's name differs by province). Free cancellation until 12 h before is recorded on the
+  booking (`free_cancel_until`) and shown; charging late cancellations is not part of this story.
+- **Validation messages** (422, per field; en in both locales like the other server rules): "Describe the problem in
+  at least 10 characters.", "Tell us the vehicle year, make and model.", "Pick or enter the address.", "Add access
+  instructions (3+ characters).", "Enter a phone number like +1 403 555 0123.", "Accept the cancellation policy to
+  continue.", "Agree to the Northline terms to continue.", "Choose one of the options.", and for the hold "Pick a
+  time.".
+- **`booking.confirmed`** (`booking.api.BookingConfirmed`, schema `booking.booking_confirmed.v1`, topic
+  `booking.booking`): ids, type, times, price, deposit — no names, addresses, notes or phone numbers. The worker maps it
+  to the public webhook `booking.confirmed` (`docs/spec/webhooks/booking.confirmed.v1.schema.json`, without the
+  customer id) for S-33, and `CalendarSyncListener` writes it back to the member's connected calendar (S-32).
+- **Schema (V115, additive):** `booking.access_notes`; `bookings.source` (`studio`|`customer`), `tax_cents`,
+  `free_cancel_until`; index `ix_bookings_member_starts`.
+- **Region-neutral:** "today" and calendar days use the provider's province's time zone (`region.api.Markets.zone`, S-47) on the server and the shared
+  `TIME_ZONE` of `@northline/ui` in the browser (an existing literal, S-134); the planner underneath still uses
+  availability's `Team.ZONE` and `AlbertaHolidays` (existing, S-134).
+- **Not done:** cancelling the PaymentIntent when a hold expires after the card was confirmed but before `confirm`
+  (the authorization lapses at Stripe on its own; a sweeper is follow-up work); saved cards, points and promo codes on
+  bookings; photo upload in job details; late-cancellation fees; the customer's bookings list (`/account/orders`
+  shows orders only).
+
+## 2026-09-30 — S-56 Quotes: request from several providers, compare, accept with an escrow deposit
+
+Branch `web/s-56-quotes`, stacked on `web/s-55-booking-wizard` (and so on S-54, S-53 and S-51).
+
+- **Request** (`POST /api/v1/me/quote-requests`, module `hire` → `booking.api.CustomerQuotes`): the category, 1–3
+  providers (their page slugs), the description (10–1,000 characters), the vehicle for automotive categories, the
+  event date and guests for events, an optional budget, note, area and preferred date. Each provider must be published
+  and offer a live service in that category; only quoteable categories (visits and events, S-53's `quoteable`) take
+  requests. It is one `booking.quote_requests` row with `merchant_ids` — exactly what the Studio "Quote requests"
+  column (Operations) already lists — `respond_by` = now + 2 h (design: "Master-tier providers answer within 2
+  hours"), `expires_at` = now + 7 days. **Providers see the area only**: the street address, access instructions and
+  the day's phone number are given to the one provider whose quote is accepted, at acceptance (sealed with the booking,
+  S-55's `booking.access_notes`). Validation messages: "Choose 1 to 3 providers.", "Describe the job in at least 10
+  characters.", "Tell us the vehicle year, make and model.", "Pick a date from tomorrow on.", "Enter the number of
+  guests (1 to 2,000).", "One of these providers doesn't offer this service any more. Choose again.", "This service is
+  booked directly — pick a time on a provider's page.".
+- **Compare** (`GET /api/v1/me/quote-requests/{id}`): every provider asked, with its latest sent version (never a
+  draft), cheapest first, then "waiting" / "declined". **Read** (`GET /api/v1/me/quotes/{id}`): every line (kind,
+  description, note, qty, unit, amount), subtotal/GST/total, scope, exclusions, warranty, deposit (kind, rate, amount),
+  proposed time and duration, validity, and every version from that provider; opening it moves `sent` → `viewed` (the
+  provider sees it was read). Someone else's request or quote is 404.
+- **Versioning** is the merchant side's (V040: immutable once sent; a revision is a new row, version + 1, and the prior
+  one becomes `superseded`). A customer on an old version sees "revised — version N replaces it" with a link, and
+  accepting it answers 409 `quote_revised`; an expired quote 409 `quote_expired`.
+- **Accept = pay the escrow deposit** (S-11): `POST /api/v1/me/quotes/{id}/accept` (Idempotency-Key, `X-Step-Up`,
+  the S-51 rule via S-55's `PaymentGate`) opens a manual-capture PaymentIntent for the booking chosen up front — the
+  quote's deposit, or **the whole quote when it asks for none** (as instant bookings hold the whole price). The tax in
+  the held amount is the deposit's share of the quote's GST. `POST …/accept/confirm` (Idempotency-Key) then checks
+  the authorization (`EscrowLifecycle.hold`), accepts the quote (`quote.accepted`, existing v2 schema), and books the
+  proposed time — the quote's `proposedAt`, else the request's preferred date at 9 am in the default market's time zone (`region.api.Markets`) — with a free member
+  (`ProviderSlots.freeMember`; 409 `slot_taken` "The provider is no longer free at the proposed time…"), publishing
+  `booking.confirmed` with the `quoteId` (S-55). **V116** `booking.quote_acceptances` keeps the booking id, the
+  PaymentIntent and the amounts between the two calls (one row per quote version; replaced while not accepted).
+- **Decline** (`POST /api/v1/me/quotes/{id}/decline`): the quote becomes `declined`; the request's other quotes stay
+  open.
+- **Screens:** `/services/$category/quote` (the job → where & when → who should quote; `?provider=` pre-ticks the
+  business the customer came from — the provider page's "Not sure?" button, and the main button of event businesses,
+  which are quote-only), `/quotes/requests/$requestId` (new, screen key `quoteCompare`: "N quotes received") and
+  `/quotes/$quoteId` (design 06 `quote`). The request survives the trip to the sign-in page in `sessionStorage`.
+- **Region-neutral:** no place in the code or copy; tax labels read "Tax 5%" (the rate from the quote). Existing
+  literal relied on: `QuoteService.PROVINCE` ("AB", Operations) sets the tax of the quotes providers send (S-134).
+- **Not done:** the balance of a deposit quote ("balance held 48 h before the event") — only the deposit is held at
+  acceptance; messages on a quote ("Ask a question first", the design's thread) — no customer↔provider messaging API
+  yet; notifying providers of a new request (the Studio column polls; push/e-mail are the notifications stories); a
+  `quote.requested` event; photos on a request; the customer's list of requests (`/account/orders` is S-58).
