@@ -2,11 +2,9 @@ package ca.northline.region.application;
 
 import ca.northline.region.application.GeoViews.Address;
 import ca.northline.region.application.GeoViews.Place;
-import ca.northline.region.application.GeoViews.Province;
 import ca.northline.region.application.GeoViews.Resolution;
 import ca.northline.region.application.GeoViews.Suggestions;
 import ca.northline.region.domain.GeoPoint;
-import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
@@ -33,7 +31,7 @@ public final class GeoUseCases {
     }
 
     public interface BrowseMarkets {
-        List<Province> provinces(Locale locale);
+        GeoViews.Markets provinces(Locale locale);
     }
 
     public interface JoinWaitlist {

@@ -10,7 +10,7 @@ import { http } from '@northline/client';
 export const Stage = z.enum(['off', 'waitlist', 'pilot', 'live']);
 export type Stage = z.infer<typeof Stage>;
 
-export const Market = z.object({ id: z.string(), city: z.string(), province: z.string(), stage: Stage });
+export const Market = z.object({ id: z.string(), city: z.string(), province: z.string(), stage: Stage, lat: z.number().nullish(), lng: z.number().nullish() });
 export type Market = z.infer<typeof Market>;
 
 export const Zone = z.object({
@@ -26,7 +26,8 @@ export const Resolution = z.object({
 });
 export type Resolution = z.infer<typeof Resolution>;
 
-export const Province = z.object({ code: z.string(), name: z.string(), stage: Stage, markets: z.array(Market) });
+/** `stage` is `live` for a province the api serves (its SEARCH_MARKETS); `taxBps` = sales tax on goods. */
+export const Province = z.object({ code: z.string(), name: z.string(), stage: Stage, taxBps: z.number().int(), markets: z.array(Market) });
 export type Province = z.infer<typeof Province>;
 
 export const Suggestions = z.object({
@@ -43,9 +44,13 @@ export const Address = z.object({
 });
 export type Address = z.infer<typeof Address>;
 
+/** Provinces (served first) and the market the pill names when nothing is known about the visitor. */
+export const Markets = z.object({ items: z.array(Province), fallback: Market.nullish() });
+export type Markets = z.infer<typeof Markets>;
+
 export const marketsQuery = queryOptions({
   queryKey: ['public', 'geo', 'markets'],
-  queryFn: () => http('/api/v1/geo/markets', {}, z.object({ items: z.array(Province) })).then(r => r.items),
+  queryFn: () => http('/api/v1/geo/markets', {}, Markets),
   staleTime: 5 * 60_000,
 });
 

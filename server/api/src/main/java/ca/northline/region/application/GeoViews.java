@@ -8,7 +8,14 @@ import org.jspecify.annotations.Nullable;
 public final class GeoViews {
     private GeoViews() {}
 
-    public record Market(String id, String city, String province, Stage stage) {}
+    /** A market; {@code lat}/{@code lng} = its centre. */
+    public record Market(
+            String id,
+            String city,
+            String province,
+            Stage stage,
+            @Nullable Double lat,
+            @Nullable Double lng) {}
 
     /**
      * A delivery zone and its pooled-run pricing ("3 pooled runs / day").
@@ -44,6 +51,16 @@ public final class GeoViews {
         }
     }
 
+    /**
+     * The Location screen's provinces, and the market the pill names when nothing is known about the visitor: the
+     * first live market of the default market's province (SEARCH_DEFAULT_MARKET), else of any served province.
+     */
+    public record Markets(List<Province> items, @Nullable Market fallback) {
+        public Markets {
+            items = List.copyOf(items);
+        }
+    }
+
     public record Suggestions(List<Suggestion> items, String attribution) {
         public Suggestions {
             items = List.copyOf(items);
@@ -53,7 +70,7 @@ public final class GeoViews {
     public record Suggestion(String placeId, String main, String secondary) {}
 
     /**
-     * A chosen address: {@code label} is what the pill shows ("1204 17 Ave SW, Calgary").
+     * A chosen address: {@code label} is what the pill shows ("{street}, {city}").
      */
     public record Address(
             String placeId,
@@ -68,7 +85,7 @@ public final class GeoViews {
             Resolution resolution) {}
 
     /**
-     * The device's position named for the pill: {@code label} = "Beltline, Calgary" (neighbourhood or zone, city);
+     * The device's position named for the pill: {@code label} = "{neighbourhood or zone}, {city}";
      * {@code city} = the market's city inside a market, else the locality.
      */
     public record Place(
@@ -78,8 +95,11 @@ public final class GeoViews {
             @Nullable Market market,
             @Nullable Zone zone) {}
 
-    /** A province button of the Location screen with its markets (by sort). */
-    public record Province(String code, String name, Stage stage, List<Market> markets) {
+    /**
+     * A province button of the Location screen with its markets (by sort). {@code stage} is {@code live} for a
+     * province listed in SEARCH_MARKETS; {@code taxBps} = its sales tax on goods (GST/HST + PST/QST).
+     */
+    public record Province(String code, String name, Stage stage, int taxBps, List<Market> markets) {
         public Province {
             markets = List.copyOf(markets);
         }

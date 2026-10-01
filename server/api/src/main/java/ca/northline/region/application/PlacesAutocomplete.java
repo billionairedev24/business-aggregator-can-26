@@ -27,7 +27,7 @@ public interface PlacesAutocomplete {
     /** The street address (or, failing that, the neighbourhood / city) at a point; empty when nothing is there. */
     Optional<PlaceParts> reverse(GeoPoint point, Locale locale);
 
-    /** One suggestion: {@code main} = "1204 17 Ave SW", {@code secondary} = "Calgary, AB T2T 0B7, Canada". */
+    /** One suggestion: {@code main} = the street address, {@code secondary} = "{city}, {province} {postal code}, Canada". */
     record Prediction(String placeId, String main, String secondary) {}
 
     /** The provider can't answer now (network, quota, key refused). The screen asks to try again. */

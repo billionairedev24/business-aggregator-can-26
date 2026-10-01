@@ -2215,70 +2215,6 @@ Built on S-45 (branch `web/s-62-consumer-auth` from `web/s-45-consumer-shell`).
   mock the auth API; server tests use the recording SMS sender, WireMock providers); step-up for payments on
   single-factor consumer sessions is S-51's; the security addendum is in docs/security/s-20-auth-review.md.
 
-## 2026-09-30 — S-47 Location screen with Google Places autocomplete (Canada) and market/zone resolution
-
-Built on S-45's shell and location pill (docs/CONSUMER_WEB_PLAN.md § Location).
-
-- **Port `region.application.PlacesAutocomplete`** (autocomplete, place details, reverse geocoding), chosen by
-  `northline.places.provider` (`PLACES_PROVIDER`): `local` (default; `FakePlaces`, fixture addresses — design 06's four
-  "1204 17 …" Calgary suggestions, one per market, Toronto / Montréal / Vancouver for the waitlist; refused under
-  staging/prod) or `google` (`GooglePlaces`: **Places API (New)** autocomplete + details and the **Geocoding API** for
-  reverse, key `GOOGLE_MAPS_API_KEY`, required with `google`). The browser never sees the key: it calls
-  `/api/v1/geo/*` through the consumer-bff. **Never run against Google** (no account) — WireMock tests only.
-- **Google usage:** Canada only (`includedRegionCodes: ["ca"]`), address types only (`street_address`, `premise`,
-  `subpremise`, `route`), 50 km location bias around the visitor when known, the browser's **session token** on every
-  suggestion and on the details call (one billed session per search), nothing below 3 characters, a 250 ms debounce,
-  3 s time-outs and no retries (a late suggestion is useless) → 503 `places_unavailable`. The Geocoding API takes the
-  key only as a query parameter, so its errors are rethrown without the request (the URI would put the key in logs).
-  Nothing Google returns is stored.
-- **Abuse limit:** address lookups cost money, so each browsing session (the consumer-bff's `X-Northline-Guest`), else
-  the caller's address, gets `PLACES_RATE_LIMIT` (60) lookups a minute per api instance → 429 `rate_limited`
-  (the shared `WebhookRateLimiter`, in memory). Markets and resolve aren't limited (no Google call).
-- **Markets and zones (V117, reference data in a migration):** `region.regions` holds provinces **and** their city
-  markets (`kind`, `parent_id`, `city`, `center geography(Point)`, `radius_km`, `sort`; unique province rows), seeded
-  from design 06's Location copy: Alberta live (Calgary, Edmonton, Airdrie live; Red Deer pilot; Lethbridge, Medicine
-  Hat waitlist), British Columbia pilot (Vancouver pilot), Ontario and Québec waitlist. A market covers addresses within
-  `radius_km` of its centre; the nearest covering centre wins (Airdrie is 27 km from central Calgary, so Calgary's
-  radius is 25 km). `region.zones` got `sort`, a name CHECK and a GiST index; approximate neighbourhood boxes for
-  Calgary (Downtown, Beltline, Sunalta, Mission, Inglewood, Kensington, Capitol Hill, Forest Lawn), Edmonton (Downtown,
-  Old Strathcona) and Airdrie, priced as the design ("3 pooled runs / day", $4.99, free with Plus, $35 minimum) — to be
-  redrawn by Operations; the console's Regions screen doesn't exist yet (SQL until then). New `region.waitlist`
-  (region, user id or a guest's own email, language; one entry per person and region). Reference data belongs to every
-  environment, so it's a migration, not a dev seed.
-- **Resolution** (`resolution: {market, zone, waitlist}`): the covering market (any stage); its zone when the market is
-  live or pilot; the waitlist ("An address outside a live market joins the waitlist for its nearest one") = the
-  covering market when it isn't live, else the province's nearest market, else the province (Toronto → Ontario). Pilot
-  = invite only, so a pilot address also gets the waitlist (with the pilot wording) and can't be saved.
-- **Endpoints** (`/api/v1/geo/**`, already public; guests allowed): `GET /markets` (cached 5 min), `GET /autocomplete`,
-  `GET /places/{placeId}`, `GET /reverse` (S-45's missing endpoint), `GET /resolve`, `POST /waitlist` (201 joined, 200
-  already listed; signed in → user id, guest → email required; a live region → 409 `region_live`).
-- **Pill contract (additive):** `/reverse` answers `{label, city, province?, market?, zone?}`; the pill treats a `market`
-  that is null or not live/pilot as "outside every market" (the S-45 fallback to Calgary) and remembers province,
-  market and zone with the detected place. `SavedLocation` gained `street`, `unit`, `province`, `postalCode`,
-  `marketId`, `zoneId`, `zone` (all optional; older saved values still parse). Label: "Beltline, Calgary" = the
-  provider's neighbourhood, else the zone, then the market's city; a saved address shows "1204 17 Ave SW, Calgary".
-- **Screen details the design leaves open:** the province buttons come from `/markets` — "Live · {first two live
-  markets}" reproduces the design's "Live · Calgary, Edmonton"; Québec's "Liste d'attente" stays French in English
-  (the design's; marked `lang="fr"`). Choosing a province only sets what's highlighted; the picked address's province
-  wins. The address field is an ARIA combobox (↑/↓/Enter/Esc). The prototype's technical footer ("Google Places
-  Autocomplete · restricted to CA · session token") isn't shown; "powered by Google" is (Google's terms). The parts
-  row (Street, City, Province, Postal, Place ID) and the tags (Market · city · stage, Zone, pooled runs, tax) appear once
-  an address is chosen; tax labels per province are the S-21 codes (AB "GST 5%", BC "GST 5% + PST 7%", ON "HST 13%",
-  QC "GST 5% + QST 9.975%"). "Save and continue" without a chosen address → "Choose your address from the list."
-  (ours). `?next=` returns there after saving (checkout's "Change"). The address stays in this browser only
-  (`localStorage`); account addresses are S-59's.
-- **Messages** (server `region.domain.GeoMessages`, English; web en + fr-CA): "At most 200 characters.", "Start the
-  address search again." (bad session token), "Choose an address in Canada.", "Choose where you'd like Northline.",
-  and validation-rules.md's "Email is required." / "That doesn't look like an email address.".
-- **Configuration:** `PLACES_PROVIDER`, `GOOGLE_MAPS_API_KEY` (secret `google-maps-api-key`: Terraform `secret_env` on
-  AWS, Google Cloud and Azure; chart `secretNames`, `apps.api.secretEnv`, required in values-staging/prod with
-  `PLACES_PROVIDER: google`), `PLACES_RATE_LIMIT`; required-env lists of staging/prod; runbooks README, local, dev,
-  staging, prod, secrets, infrastructure; new runbook `docs/runbooks/google-maps.md`; `server/.env.example`.
-- **Not done / never exercised:** no call to Google has ever been made (the adapter follows Google's documentation;
-  field names of Places API (New) — `placePrediction.structuredFormat`, `addressComponents[].longText/shortText` — are
-  unverified live); the zones are approximate boxes; no console screen for markets/zones/waitlist; waitlist emails
-  aren't sent when a market opens (no job yet); the rate limit is per api instance.
-
 ## 2026-09-30 — S-49 Shop landing, department/category pages
 
 - **Public browse endpoints** (catalogue, open under `/api/v1/public/**`, guests allowed):
@@ -2695,3 +2631,78 @@ Built on S-45's shell (docs/CONSUMER_WEB_PLAN.md). No migration.
 - **No migration.**
 - **Tests:** `SearchReindexTest` on Kafka 4 + PostGIS + Elasticsearch 9 with the whole worker running: a listing indexed live, a ghost document Postgres doesn't have, a live listing whose event was lost; during the backfill a new listing is published (the live indexer writes the old index) — after the run the alias points at a new versioned index with the layout's `_meta`, the old index is gone, the ghost is gone, the lost and the late listings are there, searches answered the kept listing at every phase, and the live indexer keeps writing through the alias. A second concurrent run is refused; a failure after the backfill deletes the half-built indices and leaves the live alias as it was; `--keep-old` keeps the previous indices.
 - **Not done / never run for real:** nothing has run against Elastic Cloud; no throttling of the backfill (Elasticsearch bulk per merchant; add one if a large catalogue loads a small cluster); a scheduled periodic rebuild (on demand only).
+
+## 2026-09-30 — S-47 Location screen with Google Places autocomplete (Canada) and market/zone resolution
+
+Built on S-45's shell and location pill (docs/CONSUMER_WEB_PLAN.md § Location).
+
+- **Port `region.application.PlacesAutocomplete`** (autocomplete, place details, reverse geocoding), chosen by
+  `northline.places.provider` (`PLACES_PROVIDER`): `local` (default; `FakePlaces`, fixture addresses read from
+  `places-fixtures/addresses.json` — design 06's "1204 17 …" suggestions, one per dev-seed market and a few outside them;
+  refused under staging/prod) or `google` (`GooglePlaces`: **Places API (New)** autocomplete + details and the **Geocoding API** for
+  reverse, key `GOOGLE_MAPS_API_KEY`, required with `google`). The browser never sees the key: it calls
+  `/api/v1/geo/*` through the consumer-bff. **Never run against Google** (no account) — WireMock tests only.
+- **Google usage:** Canada only (`includedRegionCodes: ["ca"]`), address types only (`street_address`, `premise`,
+  `subpremise`, `route`), 50 km location bias around the visitor when known, the browser's **session token** on every
+  suggestion and on the details call (one billed session per search), nothing below 3 characters, a 250 ms debounce,
+  3 s time-outs and no retries (a late suggestion is useless) → 503 `places_unavailable`. The Geocoding API takes the
+  key only as a query parameter, so its errors are rethrown without the request (the URI would put the key in logs).
+  Nothing Google returns is stored.
+- **Abuse limit:** address lookups cost money, so each browsing session (the consumer-bff's `X-Northline-Guest`), else
+  the caller's address, gets `PLACES_RATE_LIMIT` (60) lookups a minute per api instance → 429 `rate_limited`
+  (the shared `WebhookRateLimiter`, in memory). Markets and resolve aren't limited (no Google call).
+- **Region-neutral markets (DECISIONS "Region-neutral by design"; no city, province or zone in code).** Which
+  provinces are served is **configuration we already have**: `SEARCH_MARKETS` / `SEARCH_DEFAULT_MARKET` (S-44), read
+  through a new shared `region.api.Markets` (`region.config.MarketSettings`; the same parsing and start-up checks as
+  search; S-46 uses it for kitchen hours). A province listed there is `live` whatever its row says; the others keep
+  their row's stage (`off`, `waitlist`, `pilot`). City markets and their delivery zones are **region data**, not code
+  or migrations: operations add them (SQL until the console's Regions screen; S-134 brings the region configuration).
+- **Schema (V117, additive):** `region.regions` holds provinces **and** their city markets (`kind`, `parent_id`,
+  `city`, `center geography(Point)`, `radius_km`, `sort`; unique province rows); a market covers addresses within
+  `radius_km` of its centre and the nearest covering centre wins (a satellite town next to a large city). The migration
+  only lists Canada's 13 provinces and territories (names en/fr, all `off`). `region.zones` got `sort`, a name CHECK and
+  a GiST index. New `region.waitlist` (region, user id or a guest's own email, language; one entry per person and
+  region).
+- **Local dev seed `db/seed-dev/V119__dev_markets.sql`** (profile `local` only, like the personas): design 06's
+  Location examples — markets live / pilot / waitlist with approximate neighbourhood zones priced as the design ("3
+  pooled runs / day", $4.99, free with Plus, $35 minimum), one pilot and two waitlist provinces. `GeoApiTest` loads the
+  same file.
+- **`GET /markets`** answers `{items, fallback}`: provinces shown = served ones first (configuration order), then any
+  other with a stage or a market; each with `taxBps` (sales tax on goods from `region.api.TaxRates`, shown as "Sales
+  tax {rate}%") and its markets (with centre `lat`/`lng`). `fallback` = the first live market of the default market's
+  province (else of any served province) — the pill's "nowhere known" place, replacing S-45's hardcoded list
+  (`features/location/markets.ts` is deleted). With none configured the pill says "Set location".
+- **Resolution** (`resolution: {market, zone, waitlist}`): the covering market (any stage); its zone when the market is
+  live or pilot; the waitlist ("An address outside a live market joins the waitlist for its nearest one") = the
+  covering market when it isn't live, else the province's nearest market, else the province (Toronto → Ontario). Pilot
+  = invite only, so a pilot address also gets the waitlist (with the pilot wording) and can't be saved.
+- **Endpoints** (`/api/v1/geo/**`, already public; guests allowed): `GET /markets` (cached 5 min), `GET /autocomplete`,
+  `GET /places/{placeId}`, `GET /reverse` (S-45's missing endpoint), `GET /resolve`, `POST /waitlist` (201 joined, 200
+  already listed; signed in → user id, guest → email required; a live market → 409 `region_live`; a served province can still be joined for an address outside its markets).
+- **Pill contract (additive):** `/reverse` answers `{label, city, province?, market?, zone?}`; the pill treats a `market`
+  that is null or not live/pilot as "outside every market" (the api's fallback market), and an unreachable `/reverse`
+  the same (S-45's client-side nearest-market guess is gone with its hardcoded list), and remembers province,
+  market and zone with the detected place. `SavedLocation` gained `street`, `unit`, `province`, `postalCode`,
+  `marketId`, `zoneId`, `zone` (all optional; older saved values still parse). Label: "{neighbourhood}, {city}" = the
+  provider's neighbourhood, else the zone, then the market's city; a saved address shows "{street}, {city}".
+- **Screen details the design leaves open:** the province buttons come from `/markets`, in its order — "Live · {first two
+  live markets}" reproduces the design's note. The design's hardcoded paragraph ("In Alberta: … are live; … pilot; …
+  waitlist") is built from the chosen province's markets ("Live in {province}: {cities}. Pilot: … Waitlist: …"). Choosing a province only sets what's highlighted; the picked address's province
+  wins. The address field is an ARIA combobox (↑/↓/Enter/Esc). The prototype's technical footer ("Google Places
+  Autocomplete · restricted to CA · session token") isn't shown; "powered by Google" is (Google's terms). The parts
+  row (Street, City, Province, Postal, Place ID) and the tags (Market · city · stage, Zone, pooled runs, tax) appear once
+  an address is chosen; the tax tag is the province's total rate ("Sales tax 5%"; the design's per-tax names like "GST 5% + PST 7%"
+  would need tax components per province, which `TaxRates` doesn't expose). "Save and continue" without a chosen address → "Choose your address from the list."
+  (ours). `?next=` returns there after saving (checkout's "Change"). The address stays in this browser only
+  (`localStorage`); account addresses are S-59's.
+- **Messages** (server `region.domain.GeoMessages`, English; web en + fr-CA): "At most 200 characters.", "Start the
+  address search again." (bad session token), "Choose an address in Canada.", "Choose where you'd like Northline.",
+  and validation-rules.md's "Email is required." / "That doesn't look like an email address.".
+- **Configuration:** `PLACES_PROVIDER`, `GOOGLE_MAPS_API_KEY` (secret `google-maps-api-key`: Terraform `secret_env` on
+  AWS, Google Cloud and Azure; chart `secretNames`, `apps.api.secretEnv`, required in values-staging/prod with
+  `PLACES_PROVIDER: google`), `PLACES_RATE_LIMIT`; required-env lists of staging/prod; runbooks README, local, dev,
+  staging, prod, secrets, infrastructure; new runbook `docs/runbooks/google-maps.md`; `server/.env.example`.
+- **Not done / never exercised:** no call to Google has ever been made (the adapter follows Google's documentation;
+  field names of Places API (New) — `placePrediction.structuredFormat`, `addressComponents[].longText/shortText` — are
+  unverified live); the zones are approximate boxes; no console screen for markets/zones/waitlist; waitlist emails
+  aren't sent when a market opens (no job yet); the rate limit is per api instance.

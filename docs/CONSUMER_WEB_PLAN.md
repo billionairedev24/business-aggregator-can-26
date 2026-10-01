@@ -163,15 +163,16 @@ Order: saved (`localStorage['nl.location']`, written by `save({ label, city, lat
 province?, postalCode?, marketId?, zoneId?, zone? })` on the Location screen — S-47 added everything after `placeId`,
 all optional) → the device's geolocation, named by `GET /api/v1/geo/reverse?lat&lng → { label, city, province?,
 market?: {id, city, province, stage}, zone?: {id, name, …} }` (S-47; 404 when nothing is known there; a `market` that is
-null or not live/pilot counts as outside every market), else the nearest live market (Calgary, Edmonton, Airdrie within
-40 km) → the IP city → Calgary. Statuses map to the pill's copy: `locating`, `detected` ("Detected · deliver to"),
+null or not live/pilot counts as outside every market, as does no answer) → the IP city → the api's fallback market
+(`GET /api/v1/geo/markets` → `fallback`, from region configuration; none → "Set location"). Statuses map to the pill's copy: `locating`, `detected` ("Detected · deliver to"),
 `fallback` / `saved` ("Deliver to"). Screens filter by `location.city` (and `lat/lng` when present); checkout reads the
 saved address parts (`street`, `unit`, `postalCode`, `province` — the province is the place of supply for tax, S-21).
 Server-side the location is unknown: render location-independent content or a skeleton. `/location?next=/path` comes
 back to `next` after Save (checkout's "Change").
 
-**Geo api (S-47, public under `/api/v1/geo`, the Google key on the server):** `GET /markets` (provinces → markets with
-stages), `GET /autocomplete?q=&session=&lat=&lng=` (Canada only; ≥ 3 characters; one `session` token per address
+**Geo api (S-47, public under `/api/v1/geo`, the Google key on the server):** `GET /markets` → `{items, fallback}` (provinces,
+served ones first, with stage, `taxBps` and markets with stage and centre; `fallback` = the pill's market when nothing
+is known), `GET /autocomplete?q=&session=&lat=&lng=` (Canada only; ≥ 3 characters; one `session` token per address
 search), `GET /places/{placeId}?session=` (the address + `resolution: { market, zone, waitlist }`), `GET /reverse`,
 `GET /resolve?lat=&lng=`, `POST /waitlist { regionId, email? }` (guests give an email; 201, or 200 when already on it).
 Lookups are limited per browsing session (429 `rate_limited`); Google failures are 503 `places_unavailable`.

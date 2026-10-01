@@ -40,7 +40,9 @@ public interface MarketStore {
             @Nullable String city,
             String nameEn,
             @Nullable String nameFr,
-            Stage stage) {
+            Stage stage,
+            @Nullable Double lat,
+            @Nullable Double lng) {
 
         public boolean market() {
             return kind.equals("market");

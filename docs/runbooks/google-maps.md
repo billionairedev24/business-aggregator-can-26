@@ -66,25 +66,32 @@ against WireMock only. **It has never run against Google** — no Google Cloud p
 
 ## Local and tests
 
-`PLACES_PROVIDER=local` (the default) uses `FakePlaces`: design 06's four "1204 17 …" Calgary addresses, one address
-per market (Edmonton, Airdrie, Red Deer pilot, Lethbridge waitlist), and Toronto / Montréal / Vancouver for the
-waitlist. Every typed word must start a word of the address ("1204 17", "queen st"). Reverse geocoding answers the
-nearest fixture within 3 km, else 404 (the pill then falls back to the nearest market). Tests: `GooglePlacesWireMockTest`
+`PLACES_PROVIDER=local` (the default) uses `FakePlaces`, whose addresses are in
+`server/api/src/main/resources/places-fixtures/addresses.json`: design 06's "1204 17 …" suggestions, one address per
+market of the local dev seed and a few outside every market (for the waitlist). Every typed word must start a word of the address ("1204 17", "queen st"). Reverse geocoding answers the
+nearest fixture within 3 km, else 404 (the pill then falls back to the api's fallback market). Tests: `GooglePlacesWireMockTest`
 (request shape, parsing, errors), `GeoApiTest` (the endpoints with the fake, markets, zones, waitlist, rate limit).
 
 ## Markets and zones
 
-`V117__geo_markets_zones.sql` seeds Alberta (live: Calgary, Edmonton, Airdrie; pilot: Red Deer; waitlist: Lethbridge,
-Medicine Hat), British Columbia (pilot: Vancouver), Ontario and Québec (waitlist), and approximate delivery zones in
-Calgary, Edmonton and Airdrie. A market covers addresses within `radius_km` of its centre (the nearest covering centre
-wins); zones are polygons inside it. Until the console's Regions screen exists, change them with SQL, e.g.
-`update region.regions set stage = 'live' where id = 'mkt-red-deer';`.
+Region-neutral: no market is in code or in a migration.
+
+- **Provinces served** = `SEARCH_MARKETS` (`CODE=Zone/Id,…`, shared with search; `SEARCH_DEFAULT_MARKET` picks the
+  pill's fallback market's province). A province listed there shows as live; the others keep the stage of their row
+  (`V117__geo_markets_zones.sql` lists Canada's 13 provinces and territories, all `off`).
+- **Markets and zones** are rows of `region.regions` (`kind = 'market'`, `parent_id` = the province row, `city`,
+  `center`, `radius_km`, `stage`, `sort`) and `region.zones` (polygons inside a market, pooled-run pricing). A market
+  covers addresses within `radius_km` of its centre (the nearest covering centre wins). Until the console's Regions
+  screen exists (S-134), add or change them with SQL; `db/seed-dev/V119__dev_markets.sql` (local only) is a complete
+  example, e.g. `update region.regions set stage = 'live' where id = '<market id>';`.
+- Opening a province: add it to `SEARCH_MARKETS` (all api instances), add its markets and zones, then set the markets'
+  stage.
 
 ## Operations
 
 - **Key leaked:** create a new key with the same restrictions, put it in `google-maps-api-key`, restart the api
   (External Secrets refreshes the Secret within its interval), then delete the old key.
-- **429 / quota:** raise the daily quota or wait for midnight Pacific; the pill falls back to the nearest market and
+- **429 / quota:** raise the daily quota or wait for midnight Pacific; the pill falls back to the fallback market and
   people can still type an address later.
 - **"REQUEST_DENIED" in the api log:** the key isn't allowed for that API (restrictions) or billing is off.
 
