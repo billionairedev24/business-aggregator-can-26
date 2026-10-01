@@ -207,6 +207,15 @@ class CalendarSyncService implements CalendarJobs {
                 .sum();
     }
 
+    /** S-55: a booking was confirmed — write the member's calendars now instead of at the next 5-minute run. */
+    public int writeBackMember(String merchantId, String memberUserId) {
+        return links.connected().stream()
+                .filter(l ->
+                        l.merchantId().equals(merchantId) && l.memberUserId().equals(memberUserId))
+                .mapToInt(l -> writeBack(l.id()))
+                .sum();
+    }
+
     /** Writes, rewrites and deletes the member's booking events; returns the number of provider writes. */
     int writeBack(String linkId) {
         return Objects.requireNonNullElse(

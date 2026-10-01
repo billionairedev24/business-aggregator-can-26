@@ -5,6 +5,8 @@ import { isNotFound, isUnauthorized, setHttpBase } from '@northline/client';
 import { routeTree } from './routeTree.gen';
 import { RouteError } from './features/shell/RouteError';
 import { NotFound } from './features/shell/NotFound';
+import { pageRewrite } from './lib/pages';
+import { publicConfig } from './lib/request';
 
 export interface RouterContext { queryClient: QueryClient }
 
@@ -23,6 +25,8 @@ export function getRouter() {
   });
   const router = createRouter({
     routeTree,
+    // S-54: a business page on pages.<zone>/<slug> or the business's own domain is /providers/<slug> inside the app.
+    rewrite: pageRewrite(publicConfig().page),
     context: { queryClient },
     defaultPreload: 'intent',
     defaultPreloadStaleTime: 0,

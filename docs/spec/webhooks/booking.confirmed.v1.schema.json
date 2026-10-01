@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:webhook.booking.confirmed:1",
+  "title": "Northline webhook booking.confirmed v1",
+  "description": "A customer booked and paid (the money is held in escrow), or accepted a quote with its deposit. The time is booked for the team member.",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "version",
+    "createdAt",
+    "merchantId",
+    "data"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "Event id (ULID). The same event keeps its id on every retry and resend: deduplicate on it."
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "booking.confirmed"
+      ]
+    },
+    "version": {
+      "type": "integer",
+      "enum": [
+        1
+      ],
+      "description": "Payload version; a breaking change ships as a new version."
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When it happened (UTC)."
+    },
+    "merchantId": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "Your business (Studio URL /b/<merchantId>)."
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "bookingId",
+        "bookingType",
+        "startsAt",
+        "endsAt",
+        "priceCents",
+        "depositCents",
+        "currency"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "bookingId": {
+          "type": "string",
+          "description": "The booking (Studio › Appointments)."
+        },
+        "memberUserId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "User id of the team member doing the job."
+        },
+        "serviceId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The service booked (Listings)."
+        },
+        "quoteId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The accepted quote, when the booking came from one."
+        },
+        "bookingType": {
+          "type": "string",
+          "enum": [
+            "visit",
+            "home",
+            "event",
+            "appointment",
+            "consult"
+          ]
+        },
+        "startsAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "endsAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "priceCents": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The job's price before tax."
+        },
+        "depositCents": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "What is held now (the whole price unless a quote asked for a deposit)."
+        },
+        "currency": {
+          "type": "string",
+          "enum": [
+            "CAD"
+          ]
+        }
+      }
+    }
+  }
+}

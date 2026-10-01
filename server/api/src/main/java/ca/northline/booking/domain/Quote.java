@@ -143,6 +143,21 @@ public class Quote {
                 Ids.next(), at, id, merchantId, customerId, totals.totalCents(), totals.depositCents());
     }
 
+    /**
+     * The customer declines (consumer app): the provider is told; the request's other quotes stay open.
+     *
+     * @param requestCustomerId the customer who asked for the quote
+     */
+    public void decline(String customerId, String requestCustomerId) {
+        if (!customerId.equals(requestCustomerId)) {
+            throw new Conflict("not_customer", "Only the customer can decline this quote.");
+        }
+        if (!state.isOpen()) {
+            throw new Conflict("quote_state", "This quote can no longer be declined.");
+        }
+        state = QuoteState.DECLINED;
+    }
+
     private void requireState(QuoteState expected, String action) {
         if (state != expected) {
             throw new Conflict("quote_state", "This quote is %s and can't be %s.".formatted(state.code(), action));

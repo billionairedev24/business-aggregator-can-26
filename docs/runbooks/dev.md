@@ -135,6 +135,7 @@ Every app reads its configuration from environment variables; nothing environmen
 | `OTEL_BACKEND_AUTH` | otel-collector (S-111) | with an OTLP backend that needs credentials (Grafana Cloud…) | `Basic <base64 instance:token>` | secrets manager `otel-backend-auth` → External Secrets ([observability.md § Any OTLP backend](observability.md#any-otlp-backend)) |
 | `APPLICATIONINSIGHTS_CONNECTION_STRING` | otel-collector (S-111) | Azure only | `InstrumentationKey=…;IngestionEndpoint=https://canadacentral-…` | Key Vault `applicationinsights-connection-string` ([observability.md § Azure](observability.md#azure)) |
 | `VITE_NL_AUTH_ORIGIN` (Studio build) | web/apps/studio | no since S-14: the Studio image reads `NL_AUTH_ORIGIN` at start (chart: `urls.auth`); the build-time value is only a fallback | `https://auth.dev.northline.ca` | CI build argument; one Studio build per environment |
+| `NL_SITE_ORIGIN`, `NL_PAGES_HOST` | web/apps/consumer (S-54) | no — the chart sets them from `urls.consumer` / `urls.pages` | `https://dev.northline.ca` / `pages.dev.northline.ca` | business pages on `pages.` and merchants' own domains (README § Consumer web) |
 
 Generating the secrets:
 
