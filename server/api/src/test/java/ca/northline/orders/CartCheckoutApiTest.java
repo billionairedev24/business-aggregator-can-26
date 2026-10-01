@@ -399,16 +399,18 @@ class CartCheckoutApiTest extends IntegrationTest {
             var orderId = placed.path("orderId").asString();
             assertThat(orderId).isEqualTo(started.path("orderId").asString());
 
-            var order = jdbc.sql(
-                            "select state, type, window_id, delivery_kind, customer_id, tax_cents from orders.orders where id = ?")
-                    .params(orderId)
-                    .query()
-                    .singleRow();
+            var order = jdbc.sql("""
+                                    select state, type, window_id, delivery_kind, customer_id, tax_cents, fulfilment_mode,
+                                           customer_eta is null as no_customer_eta
+                                      from orders.orders where id = ?""").params(orderId).query().singleRow();
             assertThat(order)
                     .containsEntry("state", "placed")
                     .containsEntry("type", "goods")
                     .containsEntry("window_id", window)
                     .containsEntry("delivery_kind", "pooled")
+                    // S-89: a shop order is delivered; customer_eta is a pickup customer's arrival, so none
+                    .containsEntry("fulfilment_mode", "delivery")
+                    .containsEntry("no_customer_eta", true)
                     .containsEntry("customer_id", amara);
             assertThat(jdbc.sql("select count(*) from orders.order_lines where order_id = ?")
                             .params(orderId)

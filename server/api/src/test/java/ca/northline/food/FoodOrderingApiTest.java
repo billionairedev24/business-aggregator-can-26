@@ -1,6 +1,7 @@
 package ca.northline.food;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -27,6 +28,7 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.event.ApplicationEvents;
@@ -442,5 +444,77 @@ class FoodOrderingApiTest extends IntegrationTest {
                                 .query(Boolean.class)
                                 .single())
                         .isTrue());
+    }
+
+    /** S-89: pickup checkout writes the mode and the customer's arrival time; the kitchen hands it to the customer. */
+    @Test
+    void pickupSetsTheModeAndTheCustomersArrivalAndTheKitchenHandsItToTheCustomer() throws Exception {
+        var body = start(TestJwt.customerWithMfa(customer), null, order("pickup", twoLargePho(), null, ""), Ids.next())
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String orderId = JsonPath.read(body, "$.orderId");
+        confirm(orderId, TestJwt.customerWithMfa(customer)).andExpect(status().isOk());
+
+        var order = jdbc.sql("""
+                        select fulfilment_mode, delivery_fee_cents,
+                               customer_eta > placed_at and customer_eta < placed_at + interval '2 hours' as eta_ahead
+                          from orders.orders where id = ?
+                        """).params(orderId).query().singleRow();
+        assertThat(order)
+                .containsEntry("fulfilment_mode", "pickup")
+                .containsEntry("delivery_fee_cents", 0L)
+                .containsEntry("eta_ahead", true);
+
+        // the kitchen display: a pickup, the customer arriving at that time, "Handed to customer" from ready
+        var cook = TestJwt.member(fx.member(k, MerchantRole.COOK));
+        mvc.perform(get(k.base() + "/kitchen/live").with(cook))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].orderId").value(orderId))
+                .andExpect(jsonPath("$.items[0].fulfilmentMode").value("pickup"))
+                .andExpect(jsonPath("$.items[0].handoff.party").value("customer"))
+                .andExpect(jsonPath("$.items[0].handoff.state").value("arriving"))
+                .andExpect(jsonPath("$.items[0].handoff.eta").isNotEmpty());
+        mvc.perform(post(k.base() + "/kitchen/live/{o}/accept", orderId).with(cook))
+                .andExpect(status().isOk());
+        mvc.perform(post(k.base() + "/kitchen/live/{o}/ready", orderId).with(cook))
+                .andExpect(status().isOk());
+        mvc.perform(post(k.base() + "/kitchen/live/{o}/handoff", orderId).with(cook))
+                .andExpect(status().isOk());
+        var me = TestJwt.customer(customer);
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(10))
+                .untilAsserted(() -> mvc.perform(
+                                get("/api/v1/me/food-orders/{id}", orderId).with(me))
+                        .andExpect(jsonPath("$.mode").value("pickup"))
+                        .andExpect(jsonPath("$.stage").value("delivered")));
+        assertThat(jdbc.sql("select state from orders.orders where id = ?")
+                        .params(orderId)
+                        .query(String.class)
+                        .single())
+                .isEqualTo("delivered");
+    }
+
+    /** S-89: the mode is never empty (V200 default) and only a pickup carries a customer arrival time. */
+    @Test
+    void everyOrderHasAModeAndOnlyPickupsACustomerArrival() {
+        var id = Ids.next();
+        jdbc.sql("insert into orders.orders (id, type, state) values (?, 'goods', 'placed')")
+                .params(id)
+                .update();
+        assertThat(jdbc.sql("select fulfilment_mode from orders.orders where id = ?")
+                        .params(id)
+                        .query(String.class)
+                        .single())
+                .isEqualTo("delivery");
+        assertThatThrownBy(() -> jdbc.sql("update orders.orders set customer_eta = now() where id = ?")
+                        .params(id)
+                        .update())
+                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> jdbc.sql("update orders.orders set fulfilment_mode = null where id = ?")
+                        .params(id)
+                        .update())
+                .isInstanceOf(DataIntegrityViolationException.class);
     }
 }

@@ -4877,3 +4877,26 @@ and the audit log rules: no update, no delete, and a retention delete only past 
 - **Tests:** `LocalMediaStorageTest` (fallback, an upload wins, unknown or unsafe keys) and `SeedPhotosTest`
   (`local` profile: every seeded menu item and listing image key has bytes, every live seeded listing has an image,
   the public media endpoint serves one as image/jpeg).
+
+## 2026-10-01 — S-89 Checkout sets orders.fulfilment_mode and customer_eta
+
+- **Already done by S-51 / S-57; verified, with the gaps closed.** The shop checkout (`CheckoutJdbc.createOrder`)
+  writes `fulfilment_mode = 'delivery'` (pooled run or direct courier; the shop has no pickup) and no `customer_eta`.
+  The food checkout (`FoodCheckoutJdbc`) writes `delivery` | `pickup` from the customer's choice and, for pickup,
+  `customer_eta` = the scheduled window's start, else placed + the kitchen's pickup-ready minutes. The kitchen display
+  (S-38/S-64) shows a pickup as "Pickup · customer N min away" and its ready card as **Handed to customer**; hand-off
+  moves a pickup order to `delivered` (S-57's `FoodOrderProgress`), a courier one to `picked_up`.
+- **`customer_eta` means the pickup customer's arrival** (V091's comment and the IMPLEMENTATION_PLAN contract), not a
+  delivery ETA. Delivery ETAs belong to the courier's run (S-86/S-88), so a delivery order never has one.
+- **Gap closed — "kitchen treats empty as delivery":** rows written before checkout existed (older dev seed, fixtures)
+  had no mode. **V200** fills them with `delivery`, makes the column `NOT NULL DEFAULT 'delivery'` and adds
+  `chk_orders_customer_eta_pickup` (`customer_eta` only on pickup orders). The kitchen feed's `coalesce(…, 'delivery')`
+  is gone.
+- **Not done:** pickup for shop orders (pickup-only offers can't join a run and the shop checkout offers no pickup;
+  that is a product decision, not this story's).
+- **Migration range:** the fulfilment workstream takes **V200–V209** (main was at V183, the console holds V190–V199);
+  IMPLEMENTATION_PLAN updated.
+- **Tests:** `FoodOrderingApiTest.pickupSetsTheModeAndTheCustomersArrivalAndTheKitchenHandsItToTheCustomer` (pickup
+  checkout → mode + arrival time → kitchen display "customer arriving" → accept, ready, hand-off → order and tracking
+  `delivered`), `…everyOrderHasAModeAndOnlyPickupsACustomerArrival` (V200 default and checks);
+  `CartCheckoutApiTest` placing asserts a shop order's `delivery` mode and empty `customer_eta`.
