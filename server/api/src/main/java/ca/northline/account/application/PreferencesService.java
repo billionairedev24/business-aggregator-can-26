@@ -11,7 +11,10 @@ import ca.northline.account.application.Preferences.Prefs;
 import ca.northline.account.application.Preferences.Stored;
 import ca.northline.account.domain.PreferenceRules;
 import ca.northline.identity.api.AccountFacts;
+import ca.northline.region.api.ProvinceProfile;
+import ca.northline.region.api.Regions;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
@@ -28,6 +31,7 @@ class PreferencesService implements ManagePreferences {
 
     private final PreferencesStore store;
     private final AccountFacts identity;
+    private final Regions regions;
 
     @Override
     @Transactional(readOnly = true)
@@ -49,7 +53,9 @@ class PreferencesService implements ManagePreferences {
     @Override
     public Prefs update(String userId, Change c) {
         var language = PreferenceRules.code(c.language(), PreferenceRules.LANGUAGES, "language");
-        var province = PreferenceRules.province(c.province());
+        var province = PreferenceRules.province(
+                c.province(),
+                regions.provinces().stream().map(ProvinceProfile::code).collect(Collectors.toSet()));
         var units = PreferenceRules.code(c.units(), PreferenceRules.UNITS, "units");
         var time = PreferenceRules.code(c.timeFormat(), PreferenceRules.TIME_FORMATS, "timeFormat");
         var dietary = PreferenceRules.codes(c.dietary(), DIETARY, "dietary");

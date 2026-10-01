@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import { Button, ErrorState, Field, FormGrid, OptionCard, Select, useLocale } from '@northline/ui';
 import { useRegions } from '../location/regions';
 import { FormSkeleton } from './ProfileTab';
-import { PROVINCES } from './AddressesTab';
 import { prefsQuery, useSavePrefs, type Prefs } from './settingsApi';
 import { useSettingsT } from './settingsMessages';
 
@@ -35,9 +34,7 @@ function LanguageForm({ initial }: { initial: Prefs }) {
   useEffect(() => setP(initial), [initial]);
   const update = (next: Partial<Prefs>) => { setP(x => ({ ...x, ...next })); setSaved(false); };
   const served = (regions?.provinces ?? []).filter(r => r.status === 'live' || r.status === 'pilot');
-  const provinces = served.length
-    ? served.map(r => ({ value: r.code, label: r.status === 'pilot' ? t('pilot', { name: r.name }) : r.name }))
-    : PROVINCES.map(p => ({ value: p, label: p }));
+  const provinces = served.map(r => ({ value: r.code, label: r.status === 'pilot' ? t('pilot', { name: r.name }) : r.name }));
   if (p.province && !provinces.some(o => o.value === p.province)) provinces.push({ value: p.province, label: p.province });
   const submit = () => save.mutate({ language: p.language, province: p.province ?? undefined, units: p.units, timeFormat: p.timeFormat }, {
     onSuccess: next => { setSaved(true); if (next.language !== locale) setLocale(next.language); },

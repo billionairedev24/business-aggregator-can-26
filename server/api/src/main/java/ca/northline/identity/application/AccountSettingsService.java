@@ -11,6 +11,8 @@ import ca.northline.identity.application.AccountSettings.NewAddress;
 import ca.northline.identity.application.AccountSettings.Profile;
 import ca.northline.identity.application.AccountSettings.ProfileChange;
 import ca.northline.identity.domain.AccountRules;
+import ca.northline.region.api.ProvinceProfile;
+import ca.northline.region.api.Regions;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
@@ -18,6 +20,8 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
@@ -33,6 +37,7 @@ class AccountSettingsService implements ManageProfile, ManageAddresses, ManageHo
     static final Duration TRIAL = Duration.ofDays(30);
 
     private final AccountSettingsStore store;
+    private final Regions regions;
     private final Clock clock;
 
     // ── Profile ───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -90,7 +95,7 @@ class AccountSettingsService implements ManageProfile, ManageAddresses, ManageHo
                 a.street().strip(),
                 blankToNull(a.unit()),
                 a.city().strip(),
-                AccountRules.province(a.province()),
+                AccountRules.province(a.province(), provinceCodes()),
                 AccountRules.postal(a.postal()),
                 blankToNull(a.note()));
         return store.insertAddress(userId, clean, store.addresses(userId).isEmpty());
@@ -123,6 +128,10 @@ class AccountSettingsService implements ManageProfile, ManageAddresses, ManageHo
             return store.addresses(userId);
         }
         return rest;
+    }
+
+    private Set<String> provinceCodes() {
+        return regions.provinces().stream().map(ProvinceProfile::code).collect(Collectors.toSet());
     }
 
     private Address requireAddress(String userId, String addressId) {
