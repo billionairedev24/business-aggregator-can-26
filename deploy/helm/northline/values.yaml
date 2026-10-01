@@ -302,6 +302,18 @@ searchIndices:
     requests: { cpu: 100m, memory: 256Mi }
     limits: { memory: 384Mi }
 
+# S-71 (docs/runbooks/search.md § 9): the full search reindex as a one-off Job with the worker's environment — new
+# indices from Postgres, Kafka catch-up, atomic alias swap, old indices deleted. Rendered only while runId is set; a new
+# runId (a DNS label, e.g. the date) runs it again. Safe while everything runs.
+searchReindex:
+  runId: ""
+  keepOld: false                  # keep the previous indices (to swap back by hand)
+  activeDeadlineSeconds: 7200
+  ttlSecondsAfterFinished: 604800
+  resources:
+    requests: { cpu: 250m, memory: 512Mi }
+    limits: { memory: 768Mi }
+
 # Registers the OAuth clients (S-122) after every install/upgrade: the auth image running OAuthClientsCommand sync
 # with the auth Deployment's environment. Idempotent; northline-auth also syncs at start unless
 # apps.auth.env.OAUTH_CLIENTS_SYNC_ON_STARTUP is "false".

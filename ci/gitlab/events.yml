@@ -25,9 +25,8 @@ events:schemas:
       - .gradle-home/caches/modules-2/
     policy: pull
   before_script:
-    - apt-get update -qq && apt-get install -y -qq --no-install-recommends git > /dev/null
+    - apt-get update -qq && apt-get install -y -qq --no-install-recommends git make > /dev/null
     - git config --global --add safe.directory "$CI_PROJECT_DIR"
     - git fetch --no-tags origin "$EVENT_SCHEMAS_BASE"
   script:
-    - cd server
-    - ./gradlew :event-contracts:eventSchemas -PeventSchemas.base="origin/$EVENT_SCHEMAS_BASE" -PeventSchemas.requireBase=true --init-script ../ci/gradle/maven-mirror.init.gradle.kts --max-workers=2 --console=plain
+    - make server-events BASE="origin/$EVENT_SCHEMAS_BASE" REQUIRE_BASE=1 GRADLE_FLAGS="--max-workers=2 --console=plain"

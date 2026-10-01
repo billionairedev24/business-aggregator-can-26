@@ -50,12 +50,9 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v5
 
-      - name: ./gradlew :event-contracts:eventSchemas
+      - name: make server-events
         env:
           BASE: ${{ inputs.base }}
         run: |
           git fetch --no-tags origin "$BASE"
-          ./gradlew :event-contracts:eventSchemas \
-            -PeventSchemas.base="origin/$BASE" -PeventSchemas.requireBase=true \
-            --init-script ../ci/gradle/maven-mirror.init.gradle.kts \
-            --max-workers=2 --console=plain
+          make -C .. server-events BASE="origin/$BASE" REQUIRE_BASE=1 GRADLE_FLAGS="--max-workers=2 --console=plain"
