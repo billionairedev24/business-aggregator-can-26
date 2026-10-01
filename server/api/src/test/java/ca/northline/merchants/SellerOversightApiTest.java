@@ -294,6 +294,11 @@ class SellerOversightApiTest extends IntegrationTest {
                                     "{\"verificationId\":\"%s\",\"reason\":\"x\"}".formatted(insurance))
                             .with(TestJwt.staff(staff, role)))
                     .andExpect(status().isForbidden());
+            mvc.perform(json(
+                                    post("/api/v1/console/merchants/{id}/search", business),
+                                    "{\"hidden\":true,\"reason\":\"x\"}")
+                            .with(TestJwt.staff(staff, role)))
+                    .andExpect(status().isForbidden());
         }
         mvc.perform(json(post("/api/v1/console/merchants/{id}/suspend", business), "{\"reason\":\"x\"}")
                         .with(TestJwt.staffWithoutMfa(staff, StaffRole.ADMIN)))
