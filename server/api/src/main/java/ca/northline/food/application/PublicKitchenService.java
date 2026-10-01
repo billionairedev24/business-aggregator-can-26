@@ -78,7 +78,10 @@ class PublicKitchenService implements PublicKitchenUseCases, FoodCheckoutFacts {
                         .map(row -> card(k, status.getOrDefault(k.merchantId(), KitchenStatus.CLOSED), row, lat, lng))
                         .stream())
                 .sorted(Comparator.comparingInt((Card c) -> c.open() ? 0 : 1)
-                        .thenComparing(c -> c.distanceKm() == null ? Double.MAX_VALUE : c.distanceKm())
+                        .thenComparingDouble(c -> {
+                            var km = c.distanceKm();
+                            return km == null ? Double.MAX_VALUE : km;
+                        })
                         .thenComparing(Card::name))
                 .toList();
         return new Kitchens(city, cards);

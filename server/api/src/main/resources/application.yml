@@ -71,7 +71,12 @@ springdoc:
     urls-primary-name: public
     display-request-duration: true
     persist-authorization: false
+    # S-139: "Authorize" signs in at northline-auth with the public client `docs` (registered under local, dev and
+    # staging only), authorization code + PKCE; the token stays in the page (not persisted).
+    oauth2-redirect-url: ${API_PUBLIC_URL:http://localhost:8080}/swagger-ui/oauth2-redirect.html
     oauth:
+      client-id: docs
+      scopes: [ openid, profile, merchant ]
       use-pkce-with-authorization-code-grant: true
   # S-127: build the OpenAPI model at start-up (in the background); the MCP tools are registered from it.
   pre-loading-enabled: true
@@ -91,6 +96,16 @@ scalar:                                    # springdoc's Scalar starter (bundled
   page-title: Northline api · Scalar
   show-sidebar: true
   hide-client-button: false
+  # S-139: the same `docs` client for Scalar's "Authorize" (the redirect comes back to this page)
+  authentication:
+    preferred-security-scheme: oauth2
+    oauth2:
+      oauth2:
+        flows.authorization-code:
+          client-id: docs
+          pkce: SHA_256
+          redirect-uri: ${API_PUBLIC_URL:http://localhost:8080}/docs/scalar
+          selected-scopes: [ openid, profile, merchant ]
 northline.docs:
   title: Northline api
   issuer: ${AUTH_ISSUER:http://localhost:9000}

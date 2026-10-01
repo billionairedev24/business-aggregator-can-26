@@ -11,8 +11,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 /**
  * S-125: the consumer-bff's session API (the {@code consumer} profile) equals docs/api/openapi/bff-consumer-internal.yaml.
- * Its own context on purpose: generating the document inside {@link ConsumerBffTest}'s context made that context's
- * relay calls hit a JDK HttpClient race (NPE in {@code Http1Exchange.requestMoreBody}) — see DECISIONS, S-125.
+ * Its own context, with the local cookie names the committed document shows ({@link ConsumerBffTest} uses the cloud
+ * ones). It was split out in S-125 because of a relay race that S-135 fixed ({@link RelayRaceTest}).
  */
 @SpringBootTest
 @AutoConfigureMockMvc

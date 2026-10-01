@@ -67,7 +67,7 @@ public interface CustomerBookings {
 
     /**
      * Writes the booking unless the member already has a job then (409 {@code slot_taken}); idempotent on
-     * {@code bookingId} (a retry returns the booking already written).
+     * {@code booking.bookingId()} (a retry returns the booking already written).
      */
     CustomerBooking book(NewBooking booking);
 

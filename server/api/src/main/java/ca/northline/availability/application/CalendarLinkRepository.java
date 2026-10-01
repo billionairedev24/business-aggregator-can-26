@@ -22,6 +22,16 @@ public interface CalendarLinkRepository {
     /** Locks the link for a write-back ({@code FOR NO KEY UPDATE SKIP LOCKED}); empty when another replica holds it. */
     Optional<Link> lock(String linkId);
 
+    /**
+     * S-136: locks the link ({@code FOR NO KEY UPDATE}), waiting for a transaction that holds it; empty when it is gone.
+     * Lock order: a transaction that locks or changes a link and the rows under it (sources, busy blocks, channels,
+     * mirrors) locks the link first, in the strongest mode it will need, so it never upgrades later.
+     */
+    Optional<Link> lockWaiting(String linkId);
+
+    /** S-136: {@code FOR UPDATE} (disconnect deletes the link and, by cascade, everything under it); waits. */
+    Optional<Link> lockForDelete(String linkId);
+
     /** Google and Outlook links that still work (the jobs' work list). */
     List<Link> connected();
 
