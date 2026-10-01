@@ -69,6 +69,9 @@ importers:
         specifier: ^4.0.0
         version: 4.6.5
     devDependencies:
+      '@northline/legal':
+        specifier: workspace:*
+        version: link:../../packages/legal
       '@tanstack/react-query-devtools':
         specifier: ^5.85.0
         version: 5.104.0(@tanstack/react-query@5.104.0(react@19.3.0))(@types/react@19.3.0)(csstype@3.2.3)(react@19.3.0)
@@ -212,6 +215,9 @@ importers:
         specifier: ^4.0.0
         version: 4.6.5
     devDependencies:
+      '@northline/legal':
+        specifier: workspace:*
+        version: link:../../packages/legal
       '@tanstack/react-query-devtools':
         specifier: ^5.85.0
         version: 5.104.0(@tanstack/react-query@5.104.0(react@19.3.0))(@types/react@19.3.0)(csstype@3.2.3)(react@19.3.0)
@@ -289,6 +295,8 @@ importers:
       vitest:
         specifier: ^3.2.0
         version: 3.2.7(@types/debug@4.1.13)(@types/node@24.19.0)(@vitest/browser@3.2.7)(jiti@2.7.0)(jsdom@26.1.0)(lightningcss@1.33.0)(terser@5.51.2)(yaml@2.9.1)
+
+  packages/legal: {}
 
   packages/tokens: {}
 
