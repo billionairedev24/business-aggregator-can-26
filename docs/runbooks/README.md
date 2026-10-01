@@ -31,6 +31,7 @@ say where a step is still manual or missing.
 | [docs-site.md](docs-site.md) | the Docusaurus documentation site: public variant on docs.<zone>, internal variant behind an IP allowlist, build, images, Pages export (S-126) |
 | [api-docs.md](api-docs.md) | OpenAPI 3.1 documents per audience (api, auth, BFFs), Swagger UI / Scalar / Redoc in local, dev and staging, the committed specs and their drift check, Redocly lint, none in prod (S-125) |
 | [ci.md](ci.md) | CI pipelines on GitHub Actions and GitLab CI, manual trigger only (S-4/S-5, infra checks S-2/S-3) |
+| [fulfilment.md](fulfilment.md) | deliveries, pooled run planning and its stop-order heuristic, courier shifts and assignment, proof of delivery, events, the courier app API (S-87) and the console's dispatch API (S-81), privacy (S-86) |
 | [mobile-auth.md](mobile-auth.md) | the consumer and courier apps: sign-in with PKCE, DPoP-bound tokens, nonces, rotating refresh tokens and reuse detection, calling the api, sign-out, sessions (S-29) |
 | [mcp.md](mcp.md) | the built-in MCP server for AI agents (Claude, IDEs, the MCP Inspector): connecting, OAuth 2.1 sign-in and consent, scopes, tools and confirmations, limits, audit, operations (S-127); the developer docs MCP server over docs/ and the OpenAPI documents (S-128) |
 | [partners.md](partners.md) | partner API clients: `client_credentials` with `private_key_jwt`, keys (JWK Set URL or registered), scopes, business binding, rotation, revocation, rate limits, audit (S-30) |
@@ -216,7 +217,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `MCP_DOCS_RESOURCE` | ✓ | ✓ | | | no (`${API_PUBLIC_URL}/mcp/docs`, the developer docs MCP server — S-128; same value in both) |
 | `MCP_DOCS_ACCESS` | ✓ | | | | no (`staff` in the cloud — `open` refused under staging/prod; `open` locally — [mcp.md § Developer docs](mcp.md#developer-docs-s-128)) |
 | `MCP_STORE`, `MCP_CALLS_PER_MINUTE`, `MCP_WRITES_PER_MINUTE` | ✓ | | | | no (`redis` in the cloud, `memory` locally — refused in staging/prod; 60 tool calls and 10 changes per person per minute — [mcp.md](mcp.md#limits)) |
-| `LIVE_BUS`, `LIVE_STREAM` | ✓ | | | | no (`redis` in the cloud — Valkey pub/sub so the Studio's live stream works on every api replica; `memory` locally — refused in staging/prod; `10m` per stream before the browser reconnects — S-68) |
+| `LIVE_BUS`, `LIVE_STREAM` | ✓ | | | | no (`redis` in the cloud — Valkey pub/sub so the Studio's live stream works on every api replica; `memory` locally — refused in staging/prod; `10m` per stream before the browser reconnects — S-68); S-88: couriers' latest positions (`nl:courier-pos:*`, TTL, no history) and their moves to the customers' tracking streams use the same switch |
 | `MCP_CLIENT_METADATA_DOCUMENTS`, `MCP_CLIENT_METADATA_HOSTS` | | ✓ | | | no (`true`: agents may identify with a Client ID Metadata Document; empty = from any public HTTPS host — [mcp.md](mcp.md#client-registration)) |
 | `LOG_FORMAT` | ✓ | ✓ | ✓ | ✓ | no — `ecs` JSON under dev/staging/prod, plain `text` under local/test (S-112, [logging.md](logging.md)) |
 | `OTEL_EXPORT_ENABLED`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_TRACES_SAMPLER_ARG`, `OTEL_RESOURCE_ATTRIBUTES` | ✓ | ✓ | ✓ | ✓ | no — the chart sets them when its Collector is on (S-111, [observability.md](observability.md)); locally `make up OBS=1` |

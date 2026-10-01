@@ -3,6 +3,8 @@ package ca.northline.orders.application;
 import ca.northline.food.api.FoodOrderHandedOff;
 import ca.northline.food.api.KitchenOrderAccepted;
 import ca.northline.food.api.KitchenOrderReady;
+import ca.northline.orders.api.OrderConfirmed;
+import ca.northline.orders.api.OrderDelivered;
 import ca.northline.orders.api.OrderPacked;
 import ca.northline.orders.api.OrderPlaced;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +40,16 @@ class OrderTrackingEvents {
 
     @ApplicationModuleListener
     void on(FoodOrderHandedOff e) {
+        bus.changed(e.aggregateId());
+    }
+
+    @ApplicationModuleListener
+    void on(OrderDelivered e) {
+        bus.changed(e.aggregateId());
+    }
+
+    @ApplicationModuleListener
+    void on(OrderConfirmed e) {
         bus.changed(e.aggregateId());
     }
 }

@@ -25,6 +25,15 @@ export function runText(o: Order, t: T, locale: Locale, now = new Date()): strin
   return t('runOn', { date: formatDate(o.windowStartsAt, locale), time });
 }
 
+/** The courier's pickup at this shop (S-86): picked up, waiting, due, or still finding a courier. */
+export function courierText(p: NonNullable<Order['courierPickup']>, t: T, locale: Locale): string {
+  if (p.pickedUpAt) return t('courierPickedUp', { time: clockWithPeriod(p.pickedUpAt, locale) });
+  if (p.arrivedAt) return t('courierWaiting');
+  const time = p.eta ? clockWithPeriod(p.eta, locale) : '—';
+  const text = p.courierAssigned ? t('courierDue', { time }) : t('courierFinding', { time });
+  return p.runLabel ? `${p.runLabel} · ${text}` : text;
+}
+
 export const statusText = (o: Pick<Order, 'status' | 'issueNote'>, t: T) => (o.status === 'issue' && o.issueNote ? t('s_issue_note', { note: o.issueNote }) : t(`s_${o.status}`));
 
 export function headline(b: OrderBoard, t: T, locale: Locale, now = new Date()): string {
@@ -98,6 +107,7 @@ export function OrdersScreen() {
             <dt>{t('detailArea')}</dt><dd>{detail.area ?? '—'}</dd>
             <dt>{t('detailRun')}</dt><dd>{[detail.runLabel, runText(detail, t, locale)].filter(Boolean).join(' · ')}</dd>
             {detail.cutoffAt ? <><dt>{t('detailCutoff')}</dt><dd>{f.date(detail.cutoffAt, 'dateTime')}</dd></> : null}
+            {detail.courierPickup ? <><dt>{t('detailCourier')}</dt><dd>{courierText(detail.courierPickup, t, locale)}</dd></> : null}
             {detail.placedAt ? <><dt>{t('detailPlaced')}</dt><dd>{f.date(detail.placedAt, 'dateTime')}</dd></> : null}
             <dt>{t('detailLines')}</dt>
             <dd><ul className="nl-orders-lines">{detail.lines.map(l => <li key={l.id}><span>{l.qty} × {l.title}</span><span>{f.money(l.qty * l.unitCents)} · {t(`lineState_${l.state}` as Parameters<T>[0])}</span></li>)}</ul></dd>

@@ -10,6 +10,10 @@ export const Order = z.object({
   lines: z.array(z.object({ id: z.string(), title: z.string(), qty: z.number(), unitCents: z.number(), state: z.string() })),
   totalCents: z.number(), windowStartsAt: z.string().nullish(), cutoffAt: z.string().nullish(), runLabel: z.string().nullish(),
   placedAt: z.string().nullish(), deliveredAt: z.string().nullish(), status: SellerStatus, issueNote: z.string().nullish(),
+  // S-86: the courier's pickup at this shop once the order is on a run
+  courierPickup: z.object({
+    courierAssigned: z.boolean(), runLabel: z.string().nullish(), eta: z.string().nullish(), arrivedAt: z.string().nullish(), pickedUpAt: z.string().nullish(),
+  }).nullish(),
 });
 export type Order = z.infer<typeof Order>;
 

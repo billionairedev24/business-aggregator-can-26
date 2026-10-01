@@ -1,0 +1,6 @@
+/* Courier progress on the tracking pages (S-88). Tokens only. */
+.nl-courier { margin-top: 16px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.nl-courier p { margin: 0; }
+.nl-courier-live { color: var(--color-neutral-700); display: flex; align-items: center; gap: 8px; }
+.nl-courier-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-accent); flex: none; }
+.nl-courier-pin { padding: 8px 12px; border-radius: var(--radius-md); border: 1px solid var(--color-divider); width: fit-content; max-width: 100%; }

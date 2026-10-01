@@ -137,6 +137,21 @@ class EscrowPersistenceAdapter implements EscrowRepository {
                 .optional();
     }
 
+    @Override
+    public Optional<Intent> currentIntentForUpdate(String refType, String refId) {
+        return jdbc.sql("select " + INTENT_COLUMNS + """
+                         from payments.payment_intents
+                        where ref_type = :type and ref_id = :id and replaced_by is null
+                        order by created_at desc, id desc
+                        limit 1
+                        for update
+                        """)
+                .param("type", refType)
+                .param("id", refId)
+                .query(EscrowPersistenceAdapter::intent)
+                .optional();
+    }
+
     private static Intent intent(ResultSet rs, int rowNum) throws SQLException {
         return new Intent(
                 rs.getString("id"),

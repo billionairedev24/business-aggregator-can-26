@@ -5002,6 +5002,267 @@ and the audit log rules: no update, no delete, and a retention delete only past 
   - Console vitest `overview.test.tsx`: design copy and formats, links by role, filters writing the query with the
     role header, empty figures, error and retry, French money.
 
+## 2026-10-01 — S-89 Checkout sets orders.fulfilment_mode and customer_eta
+
+- **Already done by S-51 / S-57; verified, with the gaps closed.** The shop checkout (`CheckoutJdbc.createOrder`)
+  writes `fulfilment_mode = 'delivery'` (pooled run or direct courier; the shop has no pickup) and no `customer_eta`.
+  The food checkout (`FoodCheckoutJdbc`) writes `delivery` | `pickup` from the customer's choice and, for pickup,
+  `customer_eta` = the scheduled window's start, else placed + the kitchen's pickup-ready minutes. The kitchen display
+  (S-38/S-64) shows a pickup as "Pickup · customer N min away" and its ready card as **Handed to customer**; hand-off
+  moves a pickup order to `delivered` (S-57's `FoodOrderProgress`), a courier one to `picked_up`.
+- **`customer_eta` means the pickup customer's arrival** (V091's comment and the IMPLEMENTATION_PLAN contract), not a
+  delivery ETA. Delivery ETAs belong to the courier's run (S-86/S-88), so a delivery order never has one.
+- **Gap closed — "kitchen treats empty as delivery":** rows written before checkout existed (older dev seed, fixtures)
+  had no mode. **V200** fills them with `delivery`, makes the column `NOT NULL DEFAULT 'delivery'` and adds
+  `chk_orders_customer_eta_pickup` (`customer_eta` only on pickup orders). The kitchen feed's `coalesce(…, 'delivery')`
+  is gone.
+- **Not done:** pickup for shop orders (pickup-only offers can't join a run and the shop checkout offers no pickup;
+  that is a product decision, not this story's).
+- **Migration range:** the fulfilment workstream takes **V200–V209** (main was at V183, the console holds V190–V199);
+  IMPLEMENTATION_PLAN updated.
+- **Tests:** `FoodOrderingApiTest.pickupSetsTheModeAndTheCustomersArrivalAndTheKitchenHandsItToTheCustomer` (pickup
+  checkout → mode + arrival time → kitchen display "customer arriving" → accept, ready, hand-off → order and tracking
+  `delivered`), `…everyOrderHasAModeAndOnlyPickupsACustomerArrival` (V200 default and checks);
+  `CartCheckoutApiTest` placing asserts a shop order's `delivery` mode and empty `customer_eta`.
+
+## 2026-10-01 — S-78 Goods delivered/confirmed drive escrow release
+
+Branch `fulfil/s-78-delivery-escrow`, **stacked on S-89** (`fulfil/s-89-fulfilment-mode`, V200) so the migrations
+merge in order.
+
+- **Events, in order:** fulfilment's **`delivery.completed`** (`fulfilment.api.DeliveryCompleted`, topic
+  `fulfilment.delivery`, key = order id; the courier's drop-off with `proof` = `photo` | `signature` | `pin`) →
+  orders moves the order to `delivered` (`delivered_at`, new `delivery_proof`) and publishes **`order.delivered`**
+  (`orders.api.OrderDelivered`, topic `orders.order`). The customer's confirmation moves it to `confirmed` (new
+  `confirmed_at`) and publishes **`order.confirmed`**. Both are ids only (schemas `fulfilment.delivery_completed.v1`,
+  `orders.order_delivered.v1`, `orders.order_confirmed.v1`). S-78 defines `delivery.completed`; the courier's
+  proof-of-delivery that publishes it is S-86's.
+- **Escrow follows the order events** (`orders.application.GoodsEscrowRelease`, an `@ApplicationModuleListener`):
+  `order.delivered` → `EscrowLifecycle.fulfilledIfHeld("order_line", line, deliveredAt)` for each line that isn't
+  refunded — capture, and the **7-day window starts at the drop-off** (`EscrowKind.GOODS`, unchanged);
+  `order.confirmed` → new `confirmedIfHeld` per line — **released at once**. Wired from orders, not payments, because
+  orders already depends on payments (payments → orders would be a cycle), as food's `KitchenEscrowRelease` does
+  for hand-off. The order row is locked (`select … for update`) by the delivery, the confirmation and both escrow
+  handlers, so a drop-off and a confirmation of the same order never interleave.
+- **Module direction:** orders now depends on `fulfilment.api` (the event). fulfilment depends on nothing; it must
+  not depend on orders, which depends on food, which reads `fulfilment.api.CourierPickups` (S-64) — the cycle
+  Modulith would reject. S-86 keeps that direction.
+- **Delivery fee (the S-51 gap):** the fee's manual-capture PaymentIntent (`order_delivery`) is now **captured on
+  delivery or confirmation**: new `EscrowLifecycle.captureDeliveryFee(orderId, at)` locks the reference's current
+  PaymentIntent, captures it at Stripe (key `nl1:capture-delivery:<order>:<intent>`) and posts
+  `stripe_balance` ↔ `revenue` + `tax_payable` (the checkout's tax calculation, `ref_type = order_delivery`) under
+  `ref_type = order_delivery`. No escrow row: the fee is Northline's from the start and never transferred.
+  Idempotent (state `captured` is skipped).
+- **Customer confirmation:** `POST /api/v1/me/orders/{orderId}/confirm` (single-factor sessions, like tracking). Only
+  the order's customer (404 otherwise); allowed from `picked_up` or `delivered` — confirming an order the courier
+  has picked up but not yet marked counts as its delivery (`delivered_at` = now); before pickup 409 `not_delivered`
+  "Your order hasn't been delivered yet."; cancelled/refunded 409 `order_closed`. Repeating it answers the order
+  unchanged. **No Idempotency-Key:** the request carries no amount and is idempotent by the order's state, so a
+  retried tap can't release twice.
+- **Disputes pause the release** (S-60/S-80, unchanged rules, now tested on the goods window): a refund case or
+  dispute on a line's escrow puts it `disputed`; the release job skips it past the 7 days; a denied refund or a
+  merchant win resumes it, and the next release job pays it.
+- **Tracking (S-52):** the order view adds `deliveryProof`, `confirmedAt`, `canConfirm` and `paysShopsAt` (delivery
+  + 7 days while unconfirmed); `order.delivered` / `order.confirmed` push the SSE stream. Consumer page: "Delivered
+  with photo proof.", "Shops are paid {date} unless you confirm sooner or report a problem.", **Got everything**
+  (our copy, en + fr-CA; the design's step "you confirm, shops paid" has no button text).
+- **Schema (V201):** `orders.orders.delivery_proof`, `confirmed_at` (+ check: only on confirmed/refunded orders).
+- **Not done:** partner webhook `order.delivered` stays in `NOT_YET_PUBLISHED` (the event is per order, the
+  webhook is per business — needs per-shop payloads); the delivery-fee sale isn't reported to Stripe Tax (the
+  `tax_transactions` row needs an escrow; the ledger has the tax payable); a delivery-fee authorization isn't renewed
+  before it lapses (runs are at most 2 days out; S-11's renewal covers escrows only); cancelling an order doesn't
+  cancel its delivery-fee hold (no cancel flow exists).
+- **Never run against real Stripe:** the delivery-fee capture ran against the fake gateway only.
+- **Tests:** `DeliveryEscrowTest` (movable application clock, `support.MovableClock`; market "Deliveryville"; orders
+  placed through the real cart → checkout → place, `support.ShopOrderFlow`): the drop-off starts each line's 7-day
+  window and captures the fee (revenue + GST in the ledger), nothing releases a minute before the window ends and
+  everything one minute after; confirmation releases at once, repeats and a late drop-off change nothing;
+  confirming on the way counts as delivery, not before pickup (409 + message), others 404, guests 401, cancelled
+  409; a refund case opened on day 2 keeps that line held past day 8 while the other line releases, and the denied
+  case releases it; a replayed drop-off keeps the first time; a food order is delivered from `picked_up`.
+  vitest: the consumer's confirmation (proof note, pay date, error then success, French).
+
+## 2026-10-01 — S-86 Pooled run planning and dispatch service
+
+Branch `fulfil/s-86-dispatch`, **stacked on S-78** (#116, itself on S-89 #115): it publishes S-78's
+`delivery.completed`, and V202 must follow V201. Contract for the courier app (S-87) and the console (S-81):
+`docs/runbooks/fulfilment.md`, summarised in `docs/CONSOLE_PLAN.md` § Delivery and dispatch (the console's plan arrived on
+main with S-90 while this was in review).
+
+- **Module direction:**
+  - orders hands deliveries over through the new inbound port `fulfilment.api.DeliveryRequests`, called from
+    orders' listener `DispatchHandover` on `order.placed` (once per shop, so pickups accumulate), `order.packed`, and
+    the kitchen's `order.accepted` (ready-by) and `order.ready` (food packed).
+  - orders follows fulfilment's events back.
+  - fulfilment reads no orders table and depends on no module that depends on it. food reads `CourierPickups`, and
+    orders depends on food, so fulfilment → orders would be a cycle. fulfilment depends only on identity (courier
+    names), merchants (shop places) and shared.
+  - The drop-off address is copied into `fulfilment.deliveries.dropoff`. Shop orders get it from
+    `identity.api.DeliveryAddresses`, food orders from the checkout snapshot. It is cleared 30 days after the
+    delivery ends.
+- **Planning** (`DispatchService`; every minute in `DispatchJobs`, or `POST /console/fulfilment/plan`):
+  - Pooled windows are planned once the customers' cut-off (`orderBy`) has passed: "Tonight's run created from
+    orders".
+  - Orders whose shops haven't packed still join, because shops pack by `packBy` (the Studio's "Pack by", already
+    shown since S-49/operations) and the courier's pickup refuses an unpacked shop (409 `not_packed`).
+  - A window holds at most `max-drops-per-run` (12, ours) drop-offs per run, then is split into parts.
+  - Direct goods orders get their own run once every shop has packed. Food deliveries get one once accepted, with
+    the pickup due at ready-by.
+  - The planner holds a transaction-level advisory lock, so replicas never plan one window twice.
+- **Stop order, recorded as `nearest-neighbour-v1`:**
+  - pickups first, then drop-offs (a pooled run collects every sealed bag before delivering);
+  - shops by nearest neighbour from the westernmost located shop; drop-offs by nearest neighbour from the last shop;
+  - unlocated places after the located ones: shops by id, addresses by postal code, street, order id;
+  - ETAs: 3 min/km straight line, at least 4 min, 8 min when unlocated; 5 min per shop, 3 min per door.
+  - Deterministic; numbers are ours. Customer addresses aren't geocoded (S-49/S-51), so pooled drop-offs are in
+    postal order today; food addresses carry coordinates.
+- **Couriers:**
+  - `fulfilment.couriers` gains `market`, `active` and `last_assigned_at`. Ops onboards a courier (an existing
+    identity user) and schedules shifts (at most 12 h).
+  - The courier starts a shift from 15 minutes before it (status `available`) and ends it when no run is open.
+  - Assignment goes to the market's courier who is on a shift (ending after the run starts), available and longest
+    without a run. It happens 60 min before a pooled run starts, at once for a direct run.
+  - The run is locked `for update skip locked` and the courier claimed with `update … where status = 'available'`.
+    A partial unique index allows one open run per courier. Ops can reassign a run that hasn't started.
+- **Courier app API** (`/api/v1/courier/**`): scope `courier` **and** a DPoP-bound token (`cnf.jkt`, so Spring's
+  DPoP filter verified the proof — S-29). It is checked at the filter (`SecurityConfig.dpopBound`); a bearer token
+  with the scope is refused. The courier sees only their own run (others' stops 404). Stops:
+  - **arrive;**
+  - **pickup** (the sealed-bag scan is recorded as `scan_ok`);
+  - **proof upload:** photo or signature, JPG/PNG/WebP by magic bytes, ≤ 5 MB, through the new `ProofStorage`
+    port. The adapters are object storage, local disk under local/test, and a fail-loudly placeholder.
+  - **drop-off** with `photo` | `signature` (uploaded first) | `pin` (the delivery's 4-digit PIN, compared in
+    constant time).
+  - The last pickup of an order publishes **`delivery.picked_up`** (orders → `picked_up`). A drop-off publishes
+    S-78's **`delivery.completed`** (orders → `delivered`, escrow window, delivery fee).
+  - Run states: `planned → loading → en_route → done`.
+- **Dispatch events:** `run.planned` and `delivery.assigned` go on the new topic **`fulfilment.run`** (key = run
+  id); `delivery.picked_up` goes on `fulfilment.delivery`. Ids only.
+- **Ops view** (`/api/v1/console/fulfilment/**`, staff + second factor):
+  - runs by market and time, with courier, progress, next ETA and `late` (a pending stop 15 min past its ETA);
+  - a run's stops, an order's delivery, couriers with shift and run;
+  - onboard a courier, schedule a shift, plan now, reassign.
+  - Contract in the runbook for S-81.
+  - **Console roles and audit (S-90, merged meanwhile):** every handler carries `@RequiresConsole`:
+    - runs and couriers need the `delivery` screen (dispatch, admin);
+    - changes also need its `dispatch` action;
+    - an order's delivery needs the `orders` screen (dispatch, support, admin).
+
+    Changes are written to the platform audit log (`developer.audit_log`, `merchant_id` null, the active console
+    roles): `fulfilment.courier_added`, `fulfilment.shift_scheduled`, `fulfilment.run_assigned`,
+    `fulfilment.runs_planned`. This meets S-81's "actions audit-logged" for these.
+- **Studio:** a seller's order (Orders screen detail) now shows the courier's pickup at that shop: "R-701 · Courier
+  due 6:10 pm", "Courier is here", "Picked up 6:12 pm" and "Finding a courier · pickup about …" (en + fr-CA).
+  `CourierPickups` gains `atMerchant(merchantId, orderIds)` plus `pickedUpAt` and `runLabel`.
+- **OpenAPI:** the courier paths are in the `public` document (the mobile apps' audience), not a new group.
+- **Dev seed compatibility:** the V108 dev seed has two courier rows for one person and no market, and seed files
+  aren't edited. The one-courier-per-person index therefore covers only couriers ops onboards (`market` set). A
+  window without a market (the seed's R-611/R-612 serve every market) takes the order's delivery city as its market.
+- **Schema (V202):**
+  - new `fulfilment.deliveries`, `delivery_pickups` and `shifts`;
+  - `couriers` + `market, active, last_assigned_at, created_at`, with unique `user_id`;
+  - `runs` + `market, label, part, starts_at, ends_at, pack_by, heuristic, planned_at, assigned_at, started_at,
+    done_at`, plus a unique `(window_id, part)` and one open run per courier;
+  - `stops` + `merchant_id, state, done_at, proof_kind`, plus a check that a done drop-off has proof.
+  - V010's columns are reused: `route` (ordered stops and ETAs), `proof_media_id` (the object key) and `scan_ok`.
+- **Not done:**
+  - failed deliveries (customer absent) and returns;
+  - PIN attempt limits (the courier is authenticated and at the door);
+  - courier earnings and tips payout;
+  - geocoding shop and customer addresses;
+  - cancelling a delivery when an order is cancelled (no cancel flow exists);
+  - a dev-seed courier persona;
+  - the courier app itself (S-87).
+- **Never run against a real service:** object storage for proofs ran only on the local disk adapter. No real app
+  has called the courier API; DPoP is exercised with generated keys (`DpopResourceServerTest`).
+- **Tests:**
+  - `DispatchApiTest` (market "Dispatchville", movable clock; orders through the real checkout):
+    - tonight's run from 3 orders after the cut-off, not before and not twice;
+    - stop order (pickups grouped, drop-offs by postal code, ETAs non-decreasing), `run.planned`, the console's
+      run/order views, the Studio's pack-by and courier pickup;
+    - the courier's full run: unpacked 409, drop-off before pickup 409, packing in the Studio, arrive/pickup,
+      `delivery.picked_up` → order `picked_up`;
+    - PIN missing, wrong and right; photo missing, not an image and accepted; `delivery.completed` → order
+      `delivered`, escrow window started; courier available, shift ended;
+    - token rules (none 401, customer 403, bearer 403, not a courier 403 `not_a_courier`, another courier's stop 404,
+      shift end with open run 409, proof message 422);
+    - console rules (customer/courier 403, no MFA `mfa_required`, vehicle 422, duplicate 409, 13-h shift 422);
+    - reassignment until the run starts (then 409 `run_started`); a direct order planned once packed.
+  - `CourierAssignmentConcurrencyTest`: 4 racing assigners over 6 runs and 3 couriers → exactly 3 assignments, no
+    courier twice; two staff giving one courier two runs at once → 200 + 409.
+  - `RoutePlannerTest` (heuristic, ETAs, determinism).
+  - `DpopResourceServerTest.theCourierApi_takesOnlyAKeyBoundCourierToken` (real proof).
+  - vitest: the Studio order's courier pickup (en, wording).
+
+## 2026-10-01 — S-88 Live tracking via SSE and Redis pub/sub
+
+Branch `fulfil/s-88-live-tracking`, **stacked on S-86**. No migration.
+
+- **Privacy decision (recorded per the story):** courier positions are kept **only as the latest one per courier**, in
+  Valkey (`nl:courier-pos:<courierId>`, TTL 5 min, replaced on every ping). They are **never written to Postgres**:
+  - no table or column holds them (test: no coordinate column in the `fulfilment` schema);
+  - no position history or trail exists anywhere;
+  - events carry no position.
+
+  This deliberately departs from V010's comment ("Redis Streams · TTL 24 h"): a 24-hour trail isn't needed for
+  tracking, and proof of delivery is the stop's photo/signature/PIN and time (S-86), not a GPS trail.
+
+  The customer sees the position only while their order is on its way (picked up, not delivered). Before pickup they
+  see the courier's first name, the planned ETA and their drop-off PIN; after delivery, neither the position nor the
+  PIN. Ops sees the latest position per courier (console couriers list) for S-81's ops map.
+- **Pings:** `POST /api/v1/courier/location` (DPoP courier token):
+  - only while on shift (409 `not_on_shift`);
+  - rate-limited to one per `ping-interval` (2 s) per courier across replicas (`SET NX PX` in Valkey); a faster ping
+    gets 429 `too_many_pings` with `Retry-After`.
+  - The app is expected to send every 4 s, so customers' updates are ≤ 5 s apart (the acceptance criterion).
+  - lat/lng are range-checked (422 "Send a latitude and longitude on the map.").
+- **Fan-out:** a ping publishes "moved" on channel `nl:courier:<orderId>` for each on-its-way order on the courier's
+  run. The same Valkey pub/sub pattern as S-52's `nl:order:*` and S-68's `nl:studio:*`. It is selected by the same
+  `LIVE_BUS` switch (`redis` | `memory`; memory refused under staging/prod), so there is no new variable.
+- **Module direction kept:** `fulfilment.api.CourierLocations` (`forOrder`, `subscribe`) is read by orders. orders'
+  new `OrderStreams` (web; extracted from S-52's controller, counting streams for S-91's `TrackingStreams` gauge) subscribes each stream to both the order's tracking bus
+  and the courier's moves.
+- **Live ETA:** from the position, the run's own leg rules (S-86 `RoutePlanner.leg`) through the drop-offs still
+  before this one, plus their dwell. Without a recent position the planned stop ETA stands.
+- **Customer screens:**
+  - **Goods tracking (S-52)** and **food tracking (S-57)** both carry `courier` (state, run, first name, ETA, stops
+    before, position, time, PIN).
+  - Food tracking gets its own stream, `GET /api/v1/me/food-orders/{id}/events` (event `food`, also pushed by the
+    kitchen steps). The page now listens and keeps its 15 s polling as the fallback.
+  - The consumer pages show "Kai is on the way. 2 stops before yours. At your door about 7:10 pm.", "Live · updated
+    7:02 pm" and "Drop-off PIN 4821 · Give it to the courier if they ask." (ours, en + fr-CA), plus a courier marker on
+    the route illustration. There are still no map tiles: no map provider is set up for the web.
+- **Consumer BFF:** the streams take the consumer-bff's existing streaming relay. `SseRelayTest` now also proves an
+  order tracking stream's first event arrives before the api finishes.
+- **Kitchen courier status:**
+  - `delivery.assigned` gains `merchantIds` and `orderType`.
+  - New `delivery.courier_arrived` (pickup arrival; topic `fulfilment.delivery`).
+  - The Studio's live stream (S-68) turns both into `kitchen` / `orders` signals, so the kitchen display's "courier
+    arriving / waiting" and Orders' courier pickup update at once, instead of after the 60 s safety refresh.
+- **Tests:**
+  - `LiveTrackingApiTest` (market "Pingville", movable clock):
+    - off-shift ping 409;
+    - before pickup: name, PIN, no position;
+    - after pickup: a ping is pushed on the customer's open stream; a second ping within 2 s gets 429 with
+      `Retry-After: 2`, and 2 s later it is accepted and pushed again;
+    - position, ETA and stops on the order; others' 404;
+    - after delivery: no position, no PIN;
+    - 422 messages; the ops courier list's position; no coordinate column or position table in Postgres; a
+      non-courier 403.
+  - `LivePositionsTest`: a real Valkey 8 with two adapter instances — the rate limit holds across replicas, only one
+    key per courier, TTL, expiry, a move crosses replicas to that order only; the memory adapter on the app clock.
+  - `FoodOrderingApiTest.aFoodDeliveryIsDispatchedAndItsTrackingStreams`: the food delivery reaches fulfilment with
+    its coordinates, the stream pushes the kitchen's accept, the planned run shows "finding a courier" on the kitchen
+    display, and the food tracking carries the courier part.
+  - `SseRelayTest.theOrderTrackingStreamIsRelayedAsItIsWritten`.
+  - `StudioLiveApiTest.couriersAssignedAndArrivingSignalTheKitchen`.
+  - vitest: goods and food courier progress, live from the stream, PIN gone after delivery, French.
+- **Not done / never run:**
+  - No real phone has sent positions.
+  - A multi-replica deployment hasn't been exercised (two adapter instances against one Valkey stand in for it).
+  - No map tiles or geocoding on the web.
+  - The courier app's background-location permission flow is S-87's.
+
 
 ## 2026-10-01 — S-79 Verification queue: review merchant checks, approve/reject with reasons
 
@@ -5040,7 +5301,7 @@ and the audit log rules: no update, no delete, and a retention delete only past 
 - **Region filter:** `?province=&market=` (S-134). The overview's resolution moved to a shared kernel port
   `shared.PlaceFilter` (implemented by merchants, which knows where each business operates) so every queue resolves
   places and answers the same 422s. The console's `PlaceFilters` component (shell) is shared too.
-- **Schema V192:** `merchants.application_decisions` (decision, check keys, note ≤ 500, agent, role, submitted/decided
+- **Schema V210** (console queues range V210–V219: V19x would sort below fulfilment's V200–V202): `merchants.application_decisions` (decision, check keys, note ≤ 500, agent, role, submitted/decided
   times); `owner_identity_checks.reviewed_by|reviewed_at|review_note`; partial indexes for pending businesses and open
   identity reviews.
 - **"Simulate approval" (local only) is kept** for Studio development: design 02 draws the button, and it exists only

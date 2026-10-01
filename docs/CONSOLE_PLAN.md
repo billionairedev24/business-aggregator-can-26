@@ -214,13 +214,33 @@ GET /api/v1/console/overview[?province=AB][&market=<region market id>]   (screen
   `HealthSignals` port (`none` | `prometheus`, docs/runbooks/observability.md § Console health).
 - The console refreshes it every minute while open.
 
+### Delivery and dispatch (S-86; S-81 builds the screens)
+
+Full contract, payloads and the planning rules: [runbooks/fulfilment.md](runbooks/fulfilment.md). Every handler carries
+`@RequiresConsole`; changes go to the platform audit log (`developer.audit_log`, `merchant_id` null, actions
+`fulfilment.courier_added` · `fulfilment.shift_scheduled` · `fulfilment.run_assigned` · `fulfilment.runs_planned`).
+
+| call | screen · action | answer |
+|---|---|---|
+| `GET /api/v1/console/fulfilment/runs?market=&from=&to=` | delivery | `{items: [RunSummary]}` (default: yesterday → 2 days ahead) |
+| `GET /api/v1/console/fulfilment/runs/{runId}` | delivery | `{run: RunSummary, stops: [Stop]}` |
+| `POST /api/v1/console/fulfilment/runs/{runId}/assign` `{courierId}` | delivery · dispatch | RunSummary; 409 `courier_busy` / `run_started` |
+| `GET /api/v1/console/fulfilment/couriers?market=` | delivery | `{items: [{id, userId, name, market, vehicle, status, active, shift, runId, position}]}` (`position` from S-88: the latest only) |
+| `POST /api/v1/console/fulfilment/couriers` `{userId, market, vehicle}` | delivery · dispatch | 201 CourierSummary; 409 `already_a_courier` |
+| `POST /api/v1/console/fulfilment/couriers/{courierId}/shifts` `{startsAt, endsAt}` | delivery · dispatch | 201 shift; ≤ 12 h |
+| `POST /api/v1/console/fulfilment/plan` `{market?}` | delivery · dispatch | `{runs, assigned}` |
+| `GET /api/v1/console/fulfilment/orders/{orderId}` | orders | `{orderId, orderRef, orderType, kind, market, state, orderBy, packBy, run, pickups: [{merchantId, name, packedAt, pickedUpAt}], dropoffEta, deliveredAt, proofKind}` |
+
+`RunSummary` = `{id, label, part, market, kind, state, startsAt, endsAt, packBy, courier: {id, userId, name}, orders,
+stopsDone, stopsTotal, nextEta, late, heuristic}` (`late`: a pending stop more than 15 min past its ETA).
+
 ## API: what exists, what's missing
 
 | screen | exists | missing (the screen's story adds it) |
 |---|---|---|
 | shell | `GET /api/v1/console/me`, `POST …/me/role-view` (S-90); `GET /api/v1/geo/regions` (S-134) | nav badge counts (`GET /api/v1/console/nav-badges`, design: "14", "1 stuck", "23 open"…); global search (`GET /api/v1/console/search?q=` across merchants, orders, cases — the design shows the pill only, no results; no story owns it yet) |
 | overview | `GET /api/v1/console/overview` (S-91, below) | — |
-| orders, delivery | — (`orders.api`, `fulfilment` read models for merchants only) | console orders monitor, runs, couriers, zone economics (S-81) |
+| orders, delivery | `/api/v1/console/fulfilment/**` (S-86, § Delivery below): runs by market/time with `late`, run detail with stops, an order's delivery, couriers with shift and run, onboard a courier, schedule a shift, plan now, reassign a run | the orders list itself (search, filters by state/market), the ops map's geometry, zone economics (S-81) |
 | disputes | `payments.api.DisputeDecisions` (decide, decideRefund) | the agents' queue and evidence endpoints (S-80) |
 | sellers | `merchants.api.MerchantDirectory`, `trust.api.QualityQuery` | directory with filters, seller detail, oversight actions (coach, instant book off, hide, demote, suspend) (S-82) |
 | verify | `GET/POST /api/v1/console/registry-reviews` (S-23); `GET /api/v1/console/verification/applications[/{id}]`, `POST …/{id}/decision`, `POST …/{id}/identity-reviews/{checkId}/decision` (S-79) | — |
@@ -239,7 +259,8 @@ GET /api/v1/console/overview[?province=AB][&market=<region market id>]   (screen
 
 **V190–V199** (IMPLEMENTATION_PLAN.md, the next free range above V183). S-90: V190 (`identity.platform_roles` console
 roles, `granted_by`; `ix_audit_log_platform`), dev seed V191 (Priya Natarajan, staff with every role). Later console
-stories take the next numbers in the range; a seed stays in `db/seed-dev/`.
+stories take the next numbers in the range; a seed stays in `db/seed-dev/`. The review queues (S-79, S-92, S-80, S-93,
+S-83) use **V210–V219** (fulfilment took V200–V209 first; ordering rule).
 
 ## Deploy
 

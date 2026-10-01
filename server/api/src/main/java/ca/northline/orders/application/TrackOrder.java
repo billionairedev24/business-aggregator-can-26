@@ -17,6 +17,10 @@ public interface TrackOrder {
      * @param state {@code "placed"} | {@code "accepted"} | {@code "packing"} | {@code "ready"} | {@code "picked_up"} |
      *     {@code "delivered"} | {@code "confirmed"} | {@code "refunded"} | {@code "cancelled"}
      * @param steps paid → packing → pickup → delivered, each {@code done} | {@code current} | {@code todo}
+     * @param deliveryProof the courier's proof at drop-off: {@code photo} | {@code signature} | {@code pin} (S-78)
+     * @param canConfirm the customer can confirm receipt now ({@link ConfirmDelivery}; S-78)
+     * @param paysShopsAt when the shops are paid without a confirmation: 7 days after delivery (goods, S-78)
+     * @param courier the courier bringing it, live (S-88); null before fulfilment has the order
      */
     record OrderTracking(
             String orderId,
@@ -31,7 +35,12 @@ public interface TrackOrder {
             Delivery delivery,
             List<ShopProgress> shops,
             List<Step> steps,
-            @Nullable Instant deliveredAt) {
+            @Nullable Instant deliveredAt,
+            @Nullable String deliveryProof,
+            @Nullable Instant confirmedAt,
+            boolean canConfirm,
+            @Nullable Instant paysShopsAt,
+            @Nullable CourierProgress courier) {
 
         public OrderTracking {
             shops = List.copyOf(shops);
