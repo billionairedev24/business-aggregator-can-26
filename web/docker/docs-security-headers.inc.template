@@ -1,0 +1,9 @@
+# Included by every location of docs.conf. The site loads nothing from another origin: Redoc and Scalar are bundled
+# (Scalar's standalone bundle is served from /scalar/). 'unsafe-inline' scripts: Docusaurus' colour-mode and Scalar's
+# init snippets are inline; 'unsafe-eval': Scalar's bundled Vue runtime. NL_DOCS_CONNECT: origins "Try it" may call.
+add_header X-Content-Type-Options "nosniff" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+add_header X-Frame-Options "DENY" always;
+add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()" always;
+add_header Cross-Origin-Opener-Policy "same-origin" always;
+add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' ${NL_DOCS_CONNECT}; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'" always;

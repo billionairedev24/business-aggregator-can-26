@@ -15,7 +15,8 @@ import { REPO_DOCS_EXCLUDE, REPO_DOCS_INCLUDE, redocRoute, scalarRoute, specsFor
 const variant = variantFrom(process.env.NORTHLINE_DOCS_VARIANT);
 const internal = variant === 'internal';
 // Docusaurus loads this file as CommonJS (jiti): __dirname, not import.meta.
-const repoDocs = resolve(__dirname, '../../../docs');
+// NORTHLINE_DOCS_DIR: the repository's docs/ elsewhere (the image build gets it as the named context repo-docs).
+const repoDocs = resolve(process.env.NORTHLINE_DOCS_DIR ?? resolve(__dirname, '../../../docs'));
 const specDir = resolve(repoDocs, 'api/openapi');
 const baseUrl = process.env.DOCS_BASE_URL ?? '/';
 const specs = specsFor(variant);
@@ -95,6 +96,8 @@ const config: Config = {
           url: `${baseUrl}openapi/${spec.id}.yaml`,
           withDefaultFonts: false, // no fonts.scalar.com
           telemetry: false,
+          agent: { disabled: true }, // no "Ask AI" (Scalar's hosted agent would receive the spec)
+          showDeveloperTools: 'never', // no "Generate SDKs" (Scalar's hosted service)
           hideClientButton: false,
         },
       },
@@ -120,7 +123,7 @@ const config: Config = {
   themeConfig: {
     colorMode: { respectPrefersColorScheme: true },
     navbar: {
-      title: internal ? 'Northline · Engineering' : 'Northline · Developers',
+      title: 'Northline',
       logo: { alt: 'Northline', src: 'img/favicon.svg' },
       items: [
         { to: '/guides/', label: 'Guides', position: 'left' },
@@ -139,7 +142,7 @@ const config: Config = {
       style: 'light',
       copyright: `© ${new Date().getFullYear()} Northline · ${internal ? 'internal — do not share' : 'northline.ca'}`,
     },
-    prism: { theme: prismThemes.github, darkTheme: prismThemes.dracula, additionalLanguages: ['bash', 'java', 'yaml', 'json'] },
+    prism: { theme: prismThemes.github, darkTheme: prismThemes.dracula },
   } satisfies Preset.ThemeConfig,
 };
 
