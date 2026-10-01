@@ -65,6 +65,10 @@ without one answers 404 "no endpoints", which the app shows as 503), then run th
 | `AI_BUDGET_PERSON_TOKENS_PER_DAY` | `200000` | per person per day (UTC days: a cost window, no market time zone) |
 | `AI_BUDGET_MERCHANT_TOKENS_PER_DAY` | `1000000` | per business (its whole team) per day |
 | `AI_REQUESTS_PER_MINUTE` | `20` | AI requests (questions, drafts) one person may start per minute |
+| `AI_BUDGET_SYSTEM_TOKENS_PER_DAY` | `2000000` | per background job (S-133 `trust-screening`, `anomaly-scan`) per day; jobs have no per-minute rate |
+| `TRUST_AI_SCREENING_ENABLED`, `TRUST_AI_SCREEN_MESSAGES` | `true`, `true` | S-133 screening of new listings, reviews (and messages) |
+| `TRUST_AI_SCREENING_INTERVAL`, `TRUST_AI_SCREENING_BATCH` | `PT15M`, `25` | how often, and items per source per run |
+| `TRUST_AI_ANOMALY_SCAN_ENABLED`, `TRUST_AI_ANOMALY_CRON` | `true`, `0 10 12 * * MON` | S-133 weekly scan (cron in UTC) |
 | `AI_FAKE_LATENCY_MS`, `AI_FAKE_USD_PER_MTOK` | `0` | fake only: make local dashboards look like a real model |
 
 Over a budget: **429 `ai_rate_limited`** with `Retry-After` and `limit` = `person_rate` | `person_tokens` |
@@ -118,6 +122,29 @@ Rotation: create a new key, update the secret, restart the api, delete the old k
   `AI_REQUESTS_PER_MINUTE` or turn AI off; plain search keeps working.
 - `POST /api/v1/me/help/triage` needs a signed-in customer. It opens nothing.
 - Details: [docs/ai/consumer.md](../ai/consumer.md).
+
+## Trust & safety assist (S-133)
+
+- **What runs:** every 15 min the screening job reads listings submitted for vetting, reviews and customer-thread
+  messages written since its marks (`trust.ai_screening_marks`), asks the light model about each one and records the
+  verdict in `trust.ai_screenings`. Every Monday 12:10 UTC the anomaly scan compares each business's week with its
+  previous eight and asks the standard model to explain the ones that stand out, one call per market.
+- **What it does with the answer:** only opens `trust.flags` (`ai_screen`, `anomaly_<week>`) with an explanation, for
+  the console queue `GET /api/v1/console/trust/flags` (staff with a second factor), where staff dismiss or action
+  each (`POST …/{id}/decision`, audited `trust.flag_decided`). No listing, review, message or business changes.
+- **When AI is off or over budget:** the screening pauses where it is (the mark doesn't move) and continues next run;
+  the anomaly scan still raises its flags with the rules' own explanation (`source: rules`). The deterministic
+  detectors (off-platform words, review reports, automated vetting) keep working regardless.
+- **Cost:** about one light-model call per listing, review and message; at the defaults (25 per source per 15 min)
+  at most ~7,200 calls a day. `AI_BUDGET_SYSTEM_TOKENS_PER_DAY` caps each job (the job logs "paused" and continues
+  the next UTC day). To save cost, set `TRUST_AI_SCREEN_MESSAGES=false` first: messages are the busiest source and already
+  have the deterministic detector.
+- **Backlog:** if `trust.ai_screening_marks.after_at` lags far behind now, raise `TRUST_AI_SCREENING_BATCH` or the
+  system budget. To skip a backlog deliberately, move the mark (`update trust.ai_screening_marks set after_at = now()
+  where source = 'message'`).
+- **Replicas:** safe to run on all; each source is locked per run (Postgres advisory lock) and each market's scan is
+  claimed once per week (`trust.anomaly_scans`). Re-run a week: delete its rows in `trust.anomaly_scans`.
+- Details: [docs/ai/trust-safety.md](../ai/trust-safety.md).
 
 ## Dashboards and alerts
 

@@ -1,7 +1,9 @@
 /**
  * Trust: verified two-way reviews (generated from completed bookings and delivered orders — the business may reply
  * once and report, never edit), the nightly quality score, and trust &amp; safety flags (review reports, off-platform
- * payment attempts detected in messages). Layout as in {@code merchants} (docs/BACKEND_CONVENTIONS.md).
+ * payment attempts detected in messages), and the S-133 AI assist: screening of listings, reviews and messages and a
+ * weekly anomaly scan, which only raise flags for the console queue where staff decide. Layout as in {@code merchants}
+ * (docs/BACKEND_CONVENTIONS.md).
  */
 @ApplicationModule(displayName = "trust")
 @NullMarked

@@ -3785,3 +3785,56 @@ Stacked on S-131 (#85) → S-130 (#83) → S-129 (#82).
 - `SimulatedModel` now matches a case on its **redacted** input, which is what the model receives.
 - **No schema change.** Usage is recorded as `search_filters` and `help_triage`.
 - **Not done:** no consumer UI (S-48 / S-60); no live model run.
+
+## 2026-10-01 — S-133 AI trust & safety assist: screening, weekly anomaly scan, staff queue
+
+Stacked on S-132 (#87) → S-131 (#85) → S-130 (#83) → S-129 (#82).
+
+- **Suggestions only, staff decide.** The model can only open `trust.flags` with an explanation, for the console
+  queue. It never changes vetting, hides a listing or review, blocks a message or penalizes a business.
+  - The automated vetting still decides by its own rules. AI screening of a submitted listing runs
+    alongside it and does not hold the listing.
+  - Deciding a flag (`dismissed` | `actioned`) records who, when and why (V126 `decided_by`, `decided_at`,
+    `decision_note`; audit `trust.flag_decided`, platform-level, so it isn't listed in the business's own audit log).
+    What "actioned" means is a separate staff action.
+- **Screening by polling, not by events.** One job (`TrustScreeningService`, every 15 min) reads each source after its
+  mark (`trust.ai_screening_marks`: time + id). Two reasons:
+  - Reviews have no creation event; they are generated from completed jobs by imports and seeds.
+  - When the AI is down or over budget, the mark doesn't move and nothing is skipped. An event listener would have
+    needed its own retry store.
+  - Each source runs under a Postgres advisory lock (one replica at a time). The AI calls for a batch (default 25)
+    run inside that transaction; this is acceptable at this batch size.
+- **Module boundaries:** trust needs listing texts, but catalogue already depends on `trust.api` (ratings). So the
+  reader is declared in `trust.api.ListingTexts` and implemented by catalogue (`ListingTextService`). The reverse
+  would be a module cycle. Messages come from the new `messaging.api.MessageTexts`, since trust already depends on
+  messaging. Reviews are trust's own.
+- **Minimum data** (DECISIONS "AI provider and data residency"): only the item's own words plus one context line
+  (kind, stars, who wrote to whom, category, price, vetting codes). No names, ids, thread subject or other items; see
+  docs/ai/trust-safety.md for the table. The anomaly scan sends letters and counts only, never names, places or text.
+  `trust.ai_screenings` stores no item text, only the verdict, categories and (for flags) the explanation.
+- **System caller budget:** jobs call as `Caller.system(job)` (`system:trust-screening`, `system:anomaly-scan`). They
+  have no per-minute rate and their own daily tokens, `AI_BUDGET_SYSTEM_TOKENS_PER_DAY` (2M). They are not throttled
+  like a person, and a runaway job cannot spend a person's or business's budget.
+- **Anomaly scan:**
+  - The signals are deterministic (`AnomalyRules`: review burst, rating drop, ≥ 3 off-platform flags, ≥ 3 screening
+    flags in the week, against the previous 8 weeks). The model only explains them.
+  - Without the model, flags still go out with the rules' own explanation. "Every flag explains itself" holds either
+    way.
+  - Weeks are Monday–Sunday **UTC** (a cost and reporting window, region-neutral).
+  - Markets: the region market id, else the business's own province, else `unplaced` (from `MerchantPlaces`).
+  - Each market and week is claimed once (`trust.anomaly_scans` unique).
+- **Dedup:** a screening flag is raised unless an *open* one exists for the same target and rule. A listing that is
+  resubmitted after a dismissal can be flagged again. Detector flags keep their stricter "once ever" rule.
+- **Schema (V126):** `trust.ai_screenings`, `trust.ai_screening_marks`, `trust.anomaly_scans`, and the decision
+  columns plus an index on `trust.flags`.
+- **Console API** (`/api/v1/console/trust/flags`, staff with MFA by the path rule). Every flag gets an `explanation`:
+  the model's, or one derived from its rule (off-platform detector, business report). **No console web app exists
+  yet**, so this is API only.
+- **Evals:**
+  - `trust-screen.json`: 18 cases (11 flag, 7 tempting-but-fine), precision and recall of "flag", the expected
+    category, and the explanation not repeating an address.
+  - `anomaly-scan.json`: 6 market weeks, 8 businesses; the rules must pick the labelled ones with the right signals,
+    and explanations must cite the numbers. Both are in `EvalSuites` for the live eval.
+- **Not done / never exercised:** no live model run (precision and recall are measured only against the simulated
+  model); no console UI; the scheduler's cron and interval were not run in a deployed environment (tests call the use
+  cases directly).
