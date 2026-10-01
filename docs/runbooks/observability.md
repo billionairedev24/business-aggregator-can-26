@@ -36,6 +36,7 @@ browser ──traceparent──▶ BFF ──traceparent──▶ api ──▶ 
 | `northline_kds_promised_minutes_*` | api | — | minutes promised at "Accept" |
 | `northline_events_consumed_total` | worker | `consumer`, `type`, `outcome` (processed, duplicate, failed, poison) | S-26 |
 | `northline_events_dead_lettered_total` | worker | `consumer`, `topic` | S-26 DLQ — the page |
+| `northline_tracking_streams` | api | — | open order-tracking streams (SSE) on the replica (S-91: the console's "Tracking" tile) |
 
 Counted after the transaction commits (a rolled-back checkout never happened). Every series also carries
 `application` (= `spring.application.name`: `northline-api`, `northline-auth`, `northline-studio-bff`,
@@ -174,6 +175,32 @@ Alertmanager), unit-tested with `promtool test rules` (`make obs-check`; tests i
 
 Routing (pager / ticket) belongs to the backend's alerting (Alertmanager, Grafana alerting, CloudWatch alarms via
 EMF, Cloud Monitoring, Azure Monitor action groups).
+
+## Console health (S-91)
+
+The platform console's overview shows six "System health" tiles (design 03). Five come from these metrics through the
+api's `HealthSignals` port, chosen by `CONSOLE_HEALTH_PROVIDER`:
+
+| `CONSOLE_HEALTH_PROVIDER` | what the tiles show |
+|---|---|
+| `none` (default; local, test, or before a metrics store exists) | "—" with a grey dot: not measured |
+| `prometheus` | one instant query per tile (`GET <CONSOLE_HEALTH_PROMETHEUS_URL>/api/v1/query`) against any Prometheus-compatible store — Grafana Cloud / Mimir, Amazon Managed Prometheus (through a SigV4 proxy sidecar, the token empty), Google Managed Prometheus (its frontend), Azure Monitor managed Prometheus, or your own Prometheus. `CONSOLE_HEALTH_PROMETHEUS_TOKEN` is sent as a bearer token when set |
+
+| tile | query (`northline.console.health.prometheus.queries.*`, application.yml) | rosehip dot above (`degraded-above`) |
+|---|---|---|
+| API p95 | p95 of `http_server_requests_seconds` of the api, ms | 500 ms |
+| Search | the same for `/api/v1/search…`, ms | 300 ms |
+| Kafka lag | `max(kafka_consumer_fetch_manager_records_lag_max)` of the worker, records (the design's seconds aren't measured) | 1,000 (the `NorthlineConsumerLag` alert) |
+| Stripe | share of failed calls to `api.stripe.com` over 5 min | 5 % |
+| Tracking WS | `sum(northline_tracking_streams)` — open order-tracking streams (a gauge the api adds in S-91) | — |
+| Courier app | not a metric: couriers whose app went offline during a run (`fulfilment`, from the database) | any |
+
+A query that fails, times out (`CONSOLE_HEALTH_PROMETHEUS_TIMEOUT`, 3 s) or returns no sample shows that tile as not
+measured; the overview itself never fails for it (a WARN line `Console health: <tile> unreadable` is logged). The label
+names follow the OTLP → Prometheus conversion of S-111 (`application`, `uri`, `client_name`, `outcome`); a backend
+that names them differently needs its own queries, set as `NORTHLINE_CONSOLE_HEALTH_PROMETHEUS_QUERIES_API_P95=…` and
+so on. **Never run against a real store yet**: the adapter is tested against a WireMock stand-in answering as the
+Prometheus HTTP API documents.
 
 ## Local
 

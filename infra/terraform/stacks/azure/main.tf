@@ -80,6 +80,8 @@ locals {
     APPLICATIONINSIGHTS_CONNECTION_STRING = "applicationinsights-connection-string"
     # S-129 AI platform: the OpenRouter API key (empty until created; AI features answer 503 without it).
     OPENROUTER_API_KEY = "openrouter-api-key"
+    # S-91 console overview health: a metrics store's read token (empty unless the store needs one).
+    CONSOLE_HEALTH_PROMETHEUS_TOKEN = "console-health-prometheus-token"
   }
 }
 

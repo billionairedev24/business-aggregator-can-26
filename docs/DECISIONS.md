@@ -4947,3 +4947,58 @@ and the audit log rules: no update, no delete, and a retention delete only past 
   absent), `ConsoleBffOpenApiTest`, `SessionCookieSettingsTest`; console vitest (shell, role filter, denied, role switch,
   language, sign-in hand-off, `next` safety, route list).
 
+## 2026-09-30 — S-91 Overview: GMV and health dashboard
+
+- **One endpoint, composed in the console module:** `GET /api/v1/console/overview?province=&market=` (screen
+  `overview`, every role). It reads each figure through a new query API on the module that owns the data:
+  `orders.api.MarketplaceOrders`, `booking.api.MarketplaceBookings`, `payments.api.MarketplaceMoney`,
+  `merchants.api.MarketplaceMerchants`, `catalogue.api.VettingQueue`, `trust.api.TrustQueues` and
+  `fulfilment.api.FleetStatus`. There is no cross-module SQL (S-37). Two shared kernel types were added:
+  `MerchantScope` (every business, or a set) and `Backlog` (count + oldest).
+- **Region-aware:** a province (two-letter code) and/or a market id from the region model resolve to that place's
+  businesses (`MarketplaceMerchants.idsIn`, by `merchants.province` and the market's city), and every module filters
+  by those ids. Unknown places are a 422, with French in the catalogue. The design has no filter. Two selects ("All
+  provinces", "All markets", from `GET /api/v1/geo/regions`) sit next to the kicker and write `?province=&market=`.
+  The fleet stays platform-wide: couriers and runs have no market until zones carry one (S-81/S-84). Pools are listed
+  per live market in scope, so with no filter the design's single "tonight's {city} pool" line becomes one line per
+  live market.
+- **Definitions** (CONSOLE_PLAN § Overview):
+  - The periods are rolling 7 days, not calendar weeks, so "+9% w/w" compares like with like. The chart's W1…W12
+    are 7-day periods ending now.
+  - GMV is goods plus services. Goods are order lines (shop and food) by placed time. Services are booking prices
+    by booking time.
+  - Net revenue is the ledger's `revenue` account. On time means pooled orders delivered before their window ends.
+  - The dispute rate is disputes opened ÷ orders plus bookings. The "goods" share is orders ÷ orders plus bookings.
+  - Food counts as goods: the chart has two colours, goods and services.
+- **Shown differently from the design:**
+  - "avg delivery fee paid · cost $4.10" drops the cost: Northline has no delivery cost model yet (zone economics:
+    S-81/S-84).
+  - "Kafka lag" shows records (`kafka_consumer_fetch_manager_records_lag_max`), not seconds: lag in time isn't
+    measured.
+  - The work queue lists all six items for every role. Items for screens the active role doesn't open have no link.
+  - SLA texts ("SLA 2 d", "SLA 4 h") are the design's copy, not computed policy.
+  - "1 stuck delivery run · R-608 · 12 min" shows the minutes only: runs have no label in `fulfilment`.
+  - Missing figures show "—", never zero (a province without deliveries has no on-time rate).
+- **System health is behind a port** (`console.application.HealthSignals`, `northline.console.health.provider`):
+  - `none` (the default everywhere) shows every tile as not measured.
+  - `prometheus` runs one PromQL instant query per tile against any Prometheus-compatible query API (Grafana Cloud /
+    Mimir, Amazon / Google / Azure managed Prometheus, self-hosted), with an optional bearer token. The queries and
+    thresholds are configuration.
+  - A failed query makes that tile unknown and never fails the overview.
+  - **Never run against a real store:** it is tested only against a WireMock stand-in of the Prometheus HTTP API.
+  - New variables: `CONSOLE_HEALTH_PROVIDER`, `CONSOLE_HEALTH_PROMETHEUS_URL`, `CONSOLE_HEALTH_PROMETHEUS_TIMEOUT`,
+    and the optional secret `CONSOLE_HEALTH_PROMETHEUS_TOKEN` (runbooks, `.env.example`, Helm secret map, Terraform).
+  - The courier app tile comes from the database (couriers offline during a run).
+  - The "Tracking WS" tile reads a new gauge, `northline.tracking.streams` (open order-tracking SSE streams per
+    replica, from `orders.application.TrackingStreams`).
+- **Stuck runs:** a run is stuck when a stop is 10 minutes past its ETA and not reached. **Below a floor** means the
+  latest quality score is under 80 (the Trusted floor in design 03's tier rules).
+- **No schema change.** The overview refreshes every minute and keeps the previous figures while a filter loads.
+- **Tests:**
+  - `ConsoleOverviewApiTest`: every figure for one province no other test uses (Yukon) — GMV per period with
+    refunded lines and cancelled orders left out, revenue net of a dispute, on time, dispute rate, delivery fee,
+    work queue, live — plus the whole-platform shape, 422s, and 403s for no role / no MFA / not staff.
+  - `PrometheusHealthSignalsTest` (WireMock: vector and scalar results, thresholds, bearer token, failures, no URL).
+  - Console vitest `overview.test.tsx`: design copy and formats, links by role, filters writing the query with the
+    role header, empty figures, error and retry, French money.
+

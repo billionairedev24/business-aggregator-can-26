@@ -104,7 +104,7 @@ member.
 | path | design `view` | screen key | roles | story | status |
 |---|---|---|---|---|---|
 | `/sign-in` | signed out | — | anyone | S-90 | built (`?next=`, `?error=staff_only\|mfa_required\|signin`) |
-| `/` | `overview` | `overview` | all six | S-91 | stand-in |
+| `/?province=&market=` | `overview` | `overview` | all six | S-91 | built |
 | `/orders` | `orders` | `orders` | admin, dispatch, support | S-81 | stand-in |
 | `/disputes` | `disputes` | `disputes` | admin, trust_safety, finance, support | S-80 | stand-in |
 | `/delivery` | `delivery` | `delivery` | admin, dispatch | S-81 | stand-in |
@@ -158,12 +158,43 @@ POST /api/v1/console/me/role-view {role}   → { role, screens, actions }   403 
 
 `GET /api/v1/console/me` is sent without `X-Console-Role` (the stored view may name a role taken away since).
 
+### Overview (S-91)
+
+```
+GET /api/v1/console/overview[?province=AB][&market=<region market id>]   (screen overview: every role)
+→ { asOf, timeZone, scope: { province, market, city }, from,
+    headline: { gmvCents, sellers, verifications, disputes },
+    kpis: { gmvCents, previousGmvCents, revenueCents, orders, bookings, onTimeRatio?, disputeRate?, averageDeliveryFeeCents? },
+    weeks: [12 × { start, goodsCents, servicesCents }],                       oldest first
+    health: [{ key: api_p95|search_p95|kafka_lag|stripe|tracking_streams|courier_app, value?, status: ok|degraded|unknown }],
+    workQueue: { verifications, flaggedListings, disputes: {count, oldest?}, stuckRuns: {count, oldestOverdue?},
+                 trustFlags: {count, oldest?, offPlatformPayment}, sellersBelowFloor },
+    live: { couriersOnRuns, couriersActive, providersOnJobs, pools: [{ market, city, label?, orders, closesAt, startsAt }], escrowHeldCents } }
+422 province | market: not in the region model, or the market outside the province
+```
+
+- **Periods:** rolling — the KPIs cover the last 7 days (`from` … `asOf`) against the 7 days before; the chart is 12
+  consecutive 7-day periods ending now. **GMV** = goods (order lines, quantity × unit price; shop and food orders by
+  placed time; cancelled orders and refunded lines out) + services (booking price by booking time; cancelled out).
+  **Net revenue** = the ledger's `revenue` account (fees credited at escrow release, minus dispute give-backs).
+  **On time** = pooled-run orders delivered before their window's end. **Dispute rate** = disputes opened ÷ orders +
+  bookings. **Goods share** = orders ÷ orders + bookings.
+- **Scope:** a province and/or market (region model) resolves to the businesses there (`merchants.api.MarketplaceMerchants`);
+  every module filters its own rows by those ids (`shared.MerchantScope`). The fleet (couriers, stuck runs) is
+  platform-wide until zones carry their market. Dates show in the market's, else the province's, else the platform
+  zone (`timeZone`).
+- **Sources (no cross-module SQL, S-37):** `orders.api.MarketplaceOrders`, `booking.api.MarketplaceBookings`,
+  `payments.api.MarketplaceMoney`, `merchants.api.MarketplaceMerchants`, `catalogue.api.VettingQueue`,
+  `trust.api.TrustQueues`, `fulfilment.api.FleetStatus`, `orders.api.DeliveryRuns` (pools), and the console's
+  `HealthSignals` port (`none` | `prometheus`, docs/runbooks/observability.md § Console health).
+- The console refreshes it every minute while open.
+
 ## API: what exists, what's missing
 
 | screen | exists | missing (the screen's story adds it) |
 |---|---|---|
 | shell | `GET /api/v1/console/me`, `POST …/me/role-view` (S-90); `GET /api/v1/geo/regions` (S-134) | nav badge counts (`GET /api/v1/console/nav-badges`, design: "14", "1 stuck", "23 open"…); global search (`GET /api/v1/console/search?q=` across merchants, orders, cases — the design shows the pill only, no results; no story owns it yet) |
-| overview | — | S-91 |
+| overview | `GET /api/v1/console/overview` (S-91, below) | — |
 | orders, delivery | — (`orders.api`, `fulfilment` read models for merchants only) | console orders monitor, runs, couriers, zone economics (S-81) |
 | disputes | `payments.api.DisputeDecisions` (decide, decideRefund) | the agents' queue and evidence endpoints (S-80) |
 | sellers | `merchants.api.MerchantDirectory`, `trust.api.QualityQuery` | directory with filters, seller detail, oversight actions (coach, instant book off, hide, demote, suspend) (S-82) |
