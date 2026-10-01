@@ -46,6 +46,8 @@ secrets:
     STUDIO_BFF_SECRET_HASH: "{noop}dev-studio-bff"
     CONSUMER_BFF_SECRET: dev-consumer-bff
     CONSUMER_BFF_SECRET_HASH: "{noop}dev-consumer-bff"
+    CONSOLE_BFF_SECRET: dev-console-bff
+    CONSOLE_BFF_SECRET_HASH: "{noop}dev-console-bff"
 
 apps:
   docs: { enabled: false }       # S-126: build web/Dockerfile --target docs and add it to deploy/kind/up.sh APPS to rehearse it
@@ -71,6 +73,10 @@ apps:
       requests: { cpu: 50m, memory: 384Mi }
       limits: { memory: 384Mi }
   consumer-bff:
+    resources:
+      requests: { cpu: 50m, memory: 384Mi }
+      limits: { memory: 384Mi }
+  console-bff:
     resources:
       requests: { cpu: 50m, memory: 384Mi }
       limits: { memory: 384Mi }

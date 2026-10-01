@@ -27,11 +27,12 @@ northline:
     totp-key: bm9ydGhsaW5lLWxvY2FsLWRldi10b3RwLWtleS0zMmI=
     login-page: http://localhost:3100/sign-in
     consumer-login-page: http://localhost:3000/sign-in
+    console-login-page: http://localhost:3200/sign-in    # S-90
     # S-45: the consumer app's dev server (:3000) calls the JSON API too (sign-out; S-62's sign-in pages).
-    allowed-origins: [ "http://localhost:3100", "http://127.0.0.1:3100", "http://localhost:8082", "http://localhost:3000", "http://127.0.0.1:3000" ]
+    allowed-origins: [ "http://localhost:3100", "http://127.0.0.1:3100", "http://localhost:8082", "http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3200", "http://127.0.0.1:3200" ]
     webauthn:
       rp-id: localhost
-      origins: [ "http://localhost:3100", "http://localhost:8082", "http://localhost:3000" ]
+      origins: [ "http://localhost:3100", "http://localhost:8082", "http://localhost:3000", "http://localhost:3200" ]
   oauth:
     clients:
       studio-bff:
@@ -50,5 +51,9 @@ northline:
         post-logout-redirect-uris: [ "http://localhost:3000/" ]
       console-bff:
         secret-hash: ${CONSOLE_BFF_SECRET_HASH:{noop}dev-console-bff}
-        redirect-uris: [ "http://localhost:8083/login/oauth2/code/console" ]
-        post-logout-redirect-uris: [ "http://localhost:8083/" ]
+        # S-90: the console's dev server (:3200) proxies /login and /oauth2 to the console-bff (:8083).
+        redirect-uris:
+          - http://localhost:3200/login/oauth2/code/console
+          - http://127.0.0.1:3200/login/oauth2/code/console
+          - http://localhost:8083/login/oauth2/code/console
+        post-logout-redirect-uris: [ "http://localhost:3200/sign-in" ]

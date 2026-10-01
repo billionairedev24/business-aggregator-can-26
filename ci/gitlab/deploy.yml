@@ -61,7 +61,7 @@ images:web:
     - if: $PIPELINE_PART == "images" && ($IMAGE_APPS == "all" || $IMAGE_APPS == "web")
   parallel:
     matrix:
-      - APP: [studio, consumer, docs, docs-internal]
+      - APP: [studio, consumer, console, docs, docs-internal]
   script:
     - echo "$REGISTRY_PASSWORD" | docker login "$REGISTRY_HOST" -u "$REGISTRY_USER" --password-stdin
     - docker buildx create --use --driver docker-container

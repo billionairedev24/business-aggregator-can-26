@@ -49,6 +49,8 @@ it under the `local` profile only.
 | `make up SERVICES="auth api bff studio"` | real sign-in: northline-auth :9000 → studio-bff :8082 → Studio (`ravi.sandhu@example.com`, TOTP key `NORTHLINERAVIDEVTOTPSECRET234567`; README § Local sign-in) |
 | `make up SERVICES="auth api bff-consumer consumer"` | the consumer web :3000 through the consumer-bff :8081 |
 | `make up SERVICES="api consumer"` | the consumer web with dev auth as Amara Osei (no BFF, no auth server) |
+| `make up SERVICES="auth api bff-console console"` | the platform console :3200 through the console-bff :8083 (S-90; staff sign-in, README § Local sign-in) |
+| `make up SERVICES="api console"` | the console with dev auth as Priya Natarajan, staff with every console role |
 | `make up SERVICES=all PROFILES=all` | every app (incl. the worker and Storybook) and every stand-in |
 | `make up PROFILES=none` | no containers: your own Postgres from `server/.env` ([runbooks/local.md § 3](runbooks/local.md#3-postgres)) |
 | `make run SERVICES=api` | only the api, in the foreground (also `make dev`) |
@@ -108,7 +110,8 @@ The profiles are docker-compose.yml's: `db`, `cache`, `events` (Kafka + topic cr
 | http://localhost:8080/api/v1/… | api (`curl -H 'X-Dev-User: 01J9ZD3V00000000000000RAV1' localhost:8080/api/v1/me/businesses`) |
 | http://localhost:8080/docs | the api's API documentation: every audience in Swagger UI (`/swagger-ui.html`), Scalar (`/docs/scalar`) and Redoc (`/docs/redoc`); auth's on :9000/docs, the BFFs' on :8082/bff/docs and :8081/bff/docs ([runbooks/api-docs.md](runbooks/api-docs.md)) |
 | http://localhost:9000/.well-known/openid-configuration | northline-auth |
-| http://localhost:8082, :8081 | studio-bff, consumer-bff (reached through the web dev servers) |
+| http://localhost:3200 | platform console (S-90; dev server, proxies `/api` to the api or the console-bff) |
+| http://localhost:8082, :8081, :8083 | studio-bff, consumer-bff, console-bff (reached through the web dev servers) |
 | http://localhost:8084/actuator/health | worker health |
 | http://localhost:6006 | Storybook |
 | http://localhost:3300 | documentation site (`make up SERVICES=docs`, or `make docs docs-serve` for the full build with search and French; [runbooks/docs-site.md](runbooks/docs-site.md)) |

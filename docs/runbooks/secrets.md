@@ -59,7 +59,8 @@ Terraform (AWS, Google Cloud) or not at all (Azure: Key Vault has no empty secre
 | `STUDIO_BFF_SECRET_HASH` | `studio-bff-secret-hash` | auth | yes | operator: `{bcrypt}` of `STUDIO_BFF_SECRET` ([dev.md](dev.md#environment-variables)) |
 | `CONSUMER_BFF_SECRET` | `consumer-bff-secret` | consumer-bff (S-45) | yes | operator: `openssl rand -base64 32` |
 | `CONSUMER_BFF_SECRET_HASH` | `consumer-bff-secret-hash` | auth | yes (S-45) | operator: `{bcrypt}` of `CONSUMER_BFF_SECRET` |
-| `CONSOLE_BFF_SECRET_HASH` | `console-bff-secret-hash` | auth | no — add to `optionalKeys` once set | operator, when the console BFF exists |
+| `CONSOLE_BFF_SECRET` | `console-bff-secret` | console-bff (S-90) | yes | operator: `openssl rand -base64 32` |
+| `CONSOLE_BFF_SECRET_HASH` | `console-bff-secret-hash` | auth | yes (S-90) | operator: `{bcrypt}` of `CONSOLE_BFF_SECRET` |
 | `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY` | `stripe-secret-key`, `stripe-publishable-key` | api | staging, prod | Stripe dashboard ([stripe.md](stripe.md)) |
 | `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET` | `stripe-webhook-secret`, `stripe-connect-webhook-secret` | api | staging, prod | the two webhook endpoints' signing secrets ([stripe.md](stripe.md)) |
 | `EMAIL_UNSUBSCRIBE_KEY` | `email-unsubscribe-key` | api | staging, prod | operator: `openssl rand -base64 32` ([email.md](email.md)) |
@@ -73,6 +74,7 @@ Terraform (AWS, Google Cloud) or not at all (Azure: Key Vault has no empty secre
 | `SHOPIFY_CLIENT_SECRET`, `SQUARE_CLIENT_SECRET`, `SQUARE_WEBHOOK_SIGNATURE_KEY`, `LIGHTSPEED_CLIENT_SECRET` | `shopify-client-secret`, `square-client-secret`, `square-webhook-signature-key`, `lightspeed-client-secret` | api | once that platform is offered (S-35; add to `optionalKeys` when set) | Shopify Partner Dashboard app / Square Developer Console (application secret, webhook subscription signature key) / Lightspeed X-Series developer portal ([commerce-sync.md](commerce-sync.md)) |
 | `CLOVER_CLIENT_SECRET`, `TOAST_CLIENT_SECRET` | `clover-client-secret`, `toast-client-secret` | api | once that POS is offered (S-36; add to `optionalKeys` when set) | Clover developer dashboard app / Toast partner credentials ([pos-menu-import.md](pos-menu-import.md)) |
 | `GOOGLE_MAPS_API_KEY` | `google-maps-api-key` | api | staging, prod (S-47; dev only with `PLACES_PROVIDER=google` — then add to `optionalKeys`) | Google Cloud console › APIs & Services › Credentials, restricted to Places API (New) + Geocoding API ([google-maps.md](google-maps.md)) |
+| `CONSOLE_HEALTH_PROMETHEUS_TOKEN` | `console-health-prometheus-token` | api | no — only for a metrics store that needs a bearer token (S-91; add to `optionalKeys` once set) | the store's read-only token (Grafana Cloud access policy with `metrics:read`, …) |
 | `OPENROUTER_API_KEY` | `openrouter-api-key` | api | no — until it exists AI features answer 503 (S-129; add to `optionalKeys` once set) | openrouter.ai › Settings › Keys, one key per environment with a credit limit ([ai.md](ai.md#set-up-per-environment)) |
 | `SMS_AUTH_TOKEN` | `sms-auth-token` | auth | with `SMS_PROVIDER=twilio` | Twilio console ([README § SMS](README.md#sms-and-voice-codes-s-8)) |
 

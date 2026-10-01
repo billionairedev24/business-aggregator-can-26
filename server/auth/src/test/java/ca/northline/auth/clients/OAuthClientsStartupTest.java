@@ -10,8 +10,7 @@ import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 
 /**
- * Under prod the studio-bff and consumer-bff (S-45) secret hashes are required before start-up; the not-yet-built
- * console's is not.
+ * Under prod the studio-bff, consumer-bff (S-45) and console-bff (S-90) secret hashes are required before start-up.
  */
 class OAuthClientsStartupTest {
 
@@ -26,7 +25,6 @@ class OAuthClientsStartupTest {
                 .isInstanceOf(MissingEnvironmentException.class)
                 .satisfies(e -> assertThat(
                                 ((MissingEnvironmentException) e).missing().get("secrets"))
-                        .contains("STUDIO_BFF_SECRET_HASH", "CONSUMER_BFF_SECRET_HASH")
-                        .doesNotContain("CONSOLE_BFF_SECRET_HASH"));
+                        .contains("STUDIO_BFF_SECRET_HASH", "CONSUMER_BFF_SECRET_HASH", "CONSOLE_BFF_SECRET_HASH"));
     }
 }
