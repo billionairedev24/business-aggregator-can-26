@@ -16,6 +16,10 @@ public interface Markets {
 
     boolean serves(@Nullable String province);
 
+    /** The market searched and shown when nothing else is known ({@code SEARCH_DEFAULT_MARKET}); null = none set. */
+    @Nullable
+    String defaultProvince();
+
     /**
      * The time zone of the province's market; for a province that isn't served (or unknown, {@code null}) the default
      * market's, else the first configured market's.

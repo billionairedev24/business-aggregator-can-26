@@ -60,10 +60,7 @@ public record KitchenCalendar(
             return new State(
                     true,
                     null,
-                    local.toLocalDate()
-                            .atTime(current.get().to())
-                            .atZone(zone)
-                            .toInstant(),
+                    local.toLocalDate().atTime(current.get().to()).atZone(zone).toInstant(),
                     false);
         }
         var resume = paused && !autoPaused() && pausedUntil != null ? pausedUntil : now;

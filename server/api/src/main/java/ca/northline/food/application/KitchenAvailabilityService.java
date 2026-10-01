@@ -44,7 +44,8 @@ class KitchenAvailabilityService implements KitchenAvailability {
         // holidays from yesterday (UTC) cover "today" in every Canadian zone
         var from = LocalDate.ofInstant(now, ZoneOffset.UTC).minusDays(1);
         for (var row : store.calendars(zones.keySet(), from, now)) {
-            var state = calendar(row, zones.getOrDefault(row.merchantId(), markets.zone(null))).at(now);
+            var state = calendar(row, zones.getOrDefault(row.merchantId(), markets.zone(null)))
+                    .at(now);
             out.put(
                     row.merchantId(),
                     new KitchenStatus(

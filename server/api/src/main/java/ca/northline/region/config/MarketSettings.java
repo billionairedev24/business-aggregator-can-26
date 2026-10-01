@@ -24,16 +24,21 @@ class MarketSettings implements Markets {
 
     private final Map<String, ZoneId> zones;
     private final ZoneId fallback;
+    private final @Nullable String defaultProvince;
 
     MarketSettings(
             @Value("${northline.search.markets}") String spec,
             @Value("${northline.search.default-market:}") String defaultMarket) {
-        this.zones = parse(spec);
-        if (zones.isEmpty()) {
+        var parsed = parse(spec);
+        if (parsed.isEmpty()) {
             throw new IllegalStateException("northline.search.markets (SEARCH_MARKETS) names no market");
         }
-        var preferred = zones.get(defaultMarket.strip().toUpperCase(Locale.ROOT));
-        this.fallback = preferred != null ? preferred : zones.values().iterator().next();
+        var code = defaultMarket.strip().toUpperCase(Locale.ROOT);
+        var preferred = parsed.get(code);
+        this.zones = parsed;
+        this.defaultProvince = preferred == null ? null : code;
+        this.fallback =
+                preferred != null ? preferred : parsed.values().iterator().next();
     }
 
     static Map<String, ZoneId> parse(String spec) {
@@ -66,6 +71,11 @@ class MarketSettings implements Markets {
     @Override
     public boolean serves(@Nullable String province) {
         return province != null && zones.containsKey(province.strip().toUpperCase(Locale.ROOT));
+    }
+
+    @Override
+    public @Nullable String defaultProvince() {
+        return defaultProvince;
     }
 
     @Override
