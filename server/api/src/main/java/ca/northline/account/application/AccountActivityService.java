@@ -7,15 +7,19 @@ import ca.northline.account.application.Favourites.FavouriteStore;
 import ca.northline.account.domain.ActivityAction;
 import ca.northline.account.domain.ActivityKind;
 import ca.northline.account.domain.ActivityStatus;
+import ca.northline.account.domain.PreferenceRules;
 import ca.northline.booking.api.CustomerHistory;
 import ca.northline.booking.api.CustomerHistory.BookingSummary;
 import ca.northline.booking.api.CustomerHistory.RequestSummary;
+import ca.northline.identity.api.AccountFacts;
 import ca.northline.identity.api.PersonDirectory;
 import ca.northline.identity.api.PlusMemberships;
+import ca.northline.messaging.api.QuietHours;
 import ca.northline.orders.api.CustomerOrders;
 import ca.northline.orders.api.CustomerOrders.OrderSummary;
 import ca.northline.payments.api.CustomerCaseQuery;
 import ca.northline.payments.api.CustomerCaseQuery.CaseSummary;
+import ca.northline.payments.api.SavedCards;
 import ca.northline.region.api.Markets;
 import ca.northline.trust.api.LoyaltyPoints;
 import java.time.Clock;
@@ -56,6 +60,10 @@ class AccountActivityService implements ViewActivity, ViewUpcoming, ViewWallet, 
     private final FavouriteStore favourites;
     private final Businesses businesses;
     private final Markets markets;
+    private final AccountFacts identity;
+    private final Preferences.PreferencesStore preferences;
+    private final SavedCards cards;
+    private final QuietHours quietHours;
     private final Clock clock;
 
     // ── Orders & bookings ─────────────────────────────────────────────────────────────────────────────────────────
@@ -282,16 +290,52 @@ class AccountActivityService implements ViewActivity, ViewUpcoming, ViewWallet, 
     }
 
     @Override
-    public Summary summary(String userId) {
+    public Summary summary(String userId, Locale locale) {
         var activity = activity(userId);
         var p = points.of(userId);
         var person = people.people(List.of(userId)).get(userId);
+        var facts = identity.of(userId);
+        var prefs = preferences.find(userId).orElse(Preferences.Stored.DEFAULTS);
+        var card = cards.defaultCard(userId).map(c -> new ViewAccountSummary.Card(brand(c.brand()), c.last4()));
+        var quiet = quietHours
+                .of(userId)
+                .map(w -> new ViewAccountSummary.Quiet(hour(w.from(), locale), hour(w.to(), locale)));
         return new Summary(
                 person == null ? null : person.reliabilityScore(),
                 new ViewAccountSummary.Points(p.balance(), p.valueCents()),
                 plus.of(userId).isPresent(),
                 (int) activity.items().stream().filter(Item::active).count(),
                 favourites.count(userId),
-                (int) activity.cases().stream().filter(CaseSummary::open).count());
+                (int) activity.cases().stream().filter(CaseSummary::open).count(),
+                card.orElse(null),
+                new ViewAccountSummary.Addresses(facts.addresses(), facts.householdMembers()),
+                facts.mfaPrimary(),
+                quiet.orElse(null),
+                prefs.dietary().stream()
+                        .map(d -> PreferenceRules.dietaryWord(d, locale))
+                        .toList(),
+                prefs.province() != null ? prefs.province() : facts.defaultProvince());
+    }
+
+    /** Stripe's brand code as the menu writes it: "visa" → "Visa", "amex" → "Amex". */
+    static String brand(String code) {
+        return switch (code) {
+            case "mastercard" -> "Mastercard";
+            case "amex" -> "Amex";
+            case "diners" -> "Diners";
+            case "jcb" -> "JCB";
+            case "unionpay" -> "UnionPay";
+            default -> code.isEmpty() ? code : Character.toUpperCase(code.charAt(0)) + code.substring(1);
+        };
+    }
+
+    /** "10 pm" / "22 h", "7 am" / "7 h". */
+    static String hour(java.time.LocalTime t, Locale locale) {
+        if ("fr".equals(locale.getLanguage())) {
+            return t.getMinute() == 0 ? t.getHour() + " h" : "%d h %02d".formatted(t.getHour(), t.getMinute());
+        }
+        var h = t.getHour() % 12 == 0 ? 12 : t.getHour() % 12;
+        var suffix = t.getHour() < 12 ? "am" : "pm";
+        return t.getMinute() == 0 ? h + " " + suffix : "%d:%02d %s".formatted(h, t.getMinute(), suffix);
     }
 }

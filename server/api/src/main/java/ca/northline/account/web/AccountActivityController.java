@@ -14,7 +14,6 @@ import ca.northline.account.domain.ActivityStatus;
 import ca.northline.shared.ListResponse;
 import ca.northline.shared.security.CurrentUser;
 import io.swagger.v3.oas.annotations.Operation;
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
@@ -91,15 +90,6 @@ class AccountActivityController {
         }
     }
 
-    /** Every field may be absent for the web; S-59 adds the settings ones. */
-    record SummaryResponse(
-            @Nullable BigDecimal reliability,
-            ViewAccountSummary.Points points,
-            boolean plus,
-            int activeOrders,
-            int favourites,
-            int openCases) {}
-
     @Operation(summary = "Orders & bookings: the caller's orders, bookings and open quote requests")
     @GetMapping("/activity")
     ResponseEntity<ListResponse<ActivityResponse>> activity(CurrentUser user) {
@@ -124,11 +114,7 @@ class AccountActivityController {
 
     @Operation(summary = "The account menu's values")
     @GetMapping("/account-summary")
-    ResponseEntity<SummaryResponse> summary(CurrentUser user) {
-        var s = summary.summary(user.userId());
-        return ResponseEntity.ok()
-                .cacheControl(CacheControl.noStore())
-                .body(new SummaryResponse(
-                        s.reliability(), s.points(), s.plus(), s.activeOrders(), s.favourites(), s.openCases()));
+    ResponseEntity<ViewAccountSummary.Summary> summary(CurrentUser user, Locale locale) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(summary.summary(user.userId(), locale));
     }
 }
