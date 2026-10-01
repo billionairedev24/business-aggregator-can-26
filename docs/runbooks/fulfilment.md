@@ -75,6 +75,11 @@ All payloads are ids only. They never carry an address, a name or a photo.
   A bearer token, or a token without the scope, gets 403 at the filter.
 - **Who:** the person must be an active courier (403 `not_a_courier`).
 - **Whose stops:** a courier sees and moves only their own run. Another courier's stop is 404.
+- **Replays (S-87):** every stop action is idempotent by the stop's state, so the app's offline outbox can send an
+  action again when it lost the answer: a done stop answers the run unchanged (no second event), also after the run
+  is done; a proof upload for a done stop answers 409 `stop_done`, which the app counts as sent. The app sends an
+  `Idempotency-Key` per action (the same on every retry); the api does not need it today.
+- **The app:** [courier-app.md](courier-app.md) (`mobile/apps/courier`).
 
 | call | answer |
 |---|---|
