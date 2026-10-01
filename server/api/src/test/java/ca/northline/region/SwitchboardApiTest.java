@@ -292,6 +292,19 @@ class SwitchboardApiTest extends IntegrationTest {
                     .andExpect(status().isForbidden());
             mvc.perform(delete("/api/v1/console/regions/zones/{id}", "z").with(TestJwt.staff(admin, role)))
                     .andExpect(status().isForbidden());
+            mvc.perform(json(put("/api/v1/console/regions/provinces/PE/courier-model"), "{\"courierModel\":\"own\"}")
+                            .with(TestJwt.staff(admin, role)))
+                    .andExpect(status().isForbidden());
+            mvc.perform(json(
+                                    post("/api/v1/console/regions/markets/{id}/stage", "m"),
+                                    "{\"stage\":\"pilot\",\"confirm\":\"x\"}")
+                            .with(TestJwt.staff(admin, role)))
+                    .andExpect(status().isForbidden());
+            mvc.perform(json(post("/api/v1/console/regions/zones"), "{}").with(TestJwt.staff(admin, role)))
+                    .andExpect(status().isForbidden());
+            mvc.perform(json(put("/api/v1/console/regions/zones/{id}", "z"), "{}")
+                            .with(TestJwt.staff(admin, role)))
+                    .andExpect(status().isForbidden());
         }
         mvc.perform(json(post("/api/v1/console/regions/provinces/PE/stage"), "{\"stage\":\"pilot\",\"confirm\":\"PE\"}")
                         .with(TestJwt.staffWithoutMfa(admin, StaffRole.ADMIN)))
