@@ -269,7 +269,9 @@ class AuthorizationServerConfig {
                 ctx.getClaims().claim("client_id", ctx.getRegisteredClient().getClientId());
                 ctx.getClaims().claims(c -> c.putAll(claims.accessTokenClaims(user.getName(), factors)));
             } else if (OidcParameterNames.ID_TOKEN.equals(ctx.getTokenType().getValue())) {
-                ctx.getClaims().claims(c -> c.putAll(claims.idTokenClaims(user.getName(), factors)));
+                ctx.getClaims()
+                        .claims(c ->
+                                c.putAll(claims.idTokenClaims(user.getName(), factors, ctx.getAuthorizedScopes())));
                 // OIDC `sid`: the session (sign-in) the tokens belong to — the BFF shows it as the current session.
                 SessionAuthentication.sessionIdOf(user)
                         .ifPresent(sid -> ctx.getClaims().claim("sid", sid));

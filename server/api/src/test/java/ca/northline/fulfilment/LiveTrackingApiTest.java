@@ -15,6 +15,7 @@ import ca.northline.support.IntegrationTest;
 import ca.northline.support.MovableClock;
 import ca.northline.support.ShopFixtures.Listing;
 import ca.northline.support.ShopOrderFlow;
+import ca.northline.shared.security.StaffRole;
 import ca.northline.support.TestJwt;
 import com.jayway.jsonpath.JsonPath;
 import java.time.Duration;
@@ -111,13 +112,13 @@ class LiveTrackingApiTest extends IntegrationTest {
         var created = body(mvc.perform(json(
                         post("/api/v1/console/fulfilment/couriers"),
                         "{\"userId\":\"%s\",\"market\":\"%s\",\"vehicle\":\"bike\"}".formatted(courier, MARKET))
-                .with(TestJwt.staff(staff))));
+                .with(TestJwt.staff(staff, StaffRole.DISPATCH))));
         var now = clock.instant();
         var shift = body(mvc.perform(json(
                         post("/api/v1/console/fulfilment/couriers/{id}/shifts", JsonPath.<String>read(created, "$.id")),
                         "{\"startsAt\":\"%s\",\"endsAt\":\"%s\"}"
                                 .formatted(now.minus(Duration.ofMinutes(5)), now.plus(Duration.ofHours(4))))
-                .with(TestJwt.staff(staff))));
+                .with(TestJwt.staff(staff, StaffRole.DISPATCH))));
         // off shift, the app's position isn't taken
         ping(courier, 50.0, -100.0)
                 .andExpect(status().isConflict())
@@ -126,7 +127,7 @@ class LiveTrackingApiTest extends IntegrationTest {
                         .with(TestJwt.courier(courier)))
                 .andExpect(status().isOk());
         mvc.perform(json(post("/api/v1/console/fulfilment/plan"), "{\"market\":\"%s\"}".formatted(MARKET))
-                        .with(TestJwt.staff(staff)))
+                        .with(TestJwt.staff(staff, StaffRole.DISPATCH)))
                 .andExpect(jsonPath("$.assigned").value(1));
 
         // planned, not picked up: the customer sees the courier coming and the PIN, not where the courier is
@@ -238,7 +239,7 @@ class LiveTrackingApiTest extends IntegrationTest {
         // the ops map sees the courier's latest position
         mvc.perform(get("/api/v1/console/fulfilment/couriers")
                         .param("market", MARKET)
-                        .with(TestJwt.staff(staff)))
+                        .with(TestJwt.staff(staff, StaffRole.DISPATCH)))
                 .andExpect(jsonPath("$.items[?(@.userId == '%s')].position.lat".formatted(it.get(2)))
                         .value(50.0447));
         // no table or column of the fulfilment schema holds coordinates of couriers

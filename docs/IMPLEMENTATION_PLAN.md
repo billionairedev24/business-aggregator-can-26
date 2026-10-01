@@ -1,6 +1,7 @@
 # Implementation plan — Studio (provider · seller · kitchen · both)
 
-> The consumer web app (design 06) has its own plan: [CONSUMER_WEB_PLAN.md](CONSUMER_WEB_PLAN.md) (S-45).
+> The consumer web app (design 06) has its own plan: [CONSUMER_WEB_PLAN.md](CONSUMER_WEB_PLAN.md) (S-45); the platform
+> console (design 03) too: [CONSOLE_PLAN.md](CONSOLE_PLAN.md) (S-90).
 
 Scope: everything in `design/02 Provider Studio.dc.html` (signed-out auth, onboarding, every Studio screen for all four portals), full stack. Source of truth order is in `CLAUDE.md`. This file fixes the conventions every workstream follows so the pieces fit.
 
@@ -54,6 +55,7 @@ See `docs/BACKEND_CONVENTIONS.md` (written by the backend foundation) — layeri
 | V170–V179 | Studio follow-ups (S-40, S-41, S-64, S-66, S-67, S-73) — the next free range above V164 (ordering rule below) |
 | V160–V169 | consumer account (S-58–S-60: `account` schema, favourites, points read model, preferences, customer cases; dev seed V161…) — moved from V140–V149 by the ordering rule below |
 | V180–V189 | Studio follow-ups, batch B (S-65, S-70, S-72, S-75, S-76, S-77) — above batch A's V170–V179 by the ordering rule below |
+| V190–V199 | platform console (E-8: S-90 foundation, S-91 overview, then S-79–S-85, S-92–S-96; [CONSOLE_PLAN.md](CONSOLE_PLAN.md)) — the next free range above V183 |
 | V200–V209 | fulfilment (E-9: S-89, S-78, S-86, S-88) — above the console's V190–V199 by the ordering rule below |
 
 **Ordering rule (2026-10-01):** Flyway applies versions in order and, outside the `local` profile, refuses a version lower than one already applied. A new migration must therefore be numbered **above the highest version on main** when it merges, not just inside its workstream's range. If a range is behind, take the next free range above the maximum and record it here (S-129/S-133's V125/V126 became V150/V151 for this reason).

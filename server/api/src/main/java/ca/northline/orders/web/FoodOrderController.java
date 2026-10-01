@@ -51,7 +51,7 @@ class FoodOrderController {
     private final PlaceFoodOrder place;
     private final TrackFoodOrder track;
     private final IdempotentRequests idempotent;
-    private final TrackingStreams streams;
+    private final OrderStreams streams;
 
     static final String IDEMPOTENCY_KEY = "Idempotency-Key";
     static final String STEP_UP = "X-Step-Up";

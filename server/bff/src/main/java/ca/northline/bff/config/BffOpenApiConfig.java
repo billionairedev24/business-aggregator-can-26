@@ -22,8 +22,9 @@ import org.springframework.core.env.Profiles;
 import org.springframework.web.servlet.view.RedirectView;
 
 /**
- * S-125: the BFF's session endpoints as OpenAPI 3.1 — one {@code internal} document, for the Studio (studio-bff) or,
- * under the {@code consumer} profile, for the consumer web (consumer-bff). Everything lives under {@code /bff}
+ * S-125: the BFF's session endpoints as OpenAPI 3.1 — one {@code internal} document, for the Studio (studio-bff),
+ * under the {@code consumer} profile for the consumer web (consumer-bff), under {@code console} for the platform console
+ * (console-bff, S-90). Everything lives under {@code /bff}
  * ({@code /bff/v3/api-docs}, {@code /bff/swagger-ui.html}, {@code /bff/docs/scalar}, {@code /bff/docs/redoc}),
  * because the edge already routes {@code /bff} of the Studio and consumer hosts to the BFF (S-17), and the hosts' other
  * paths belong to the web apps. The relayed {@code /api/**} is the api's documents (studio, public).
@@ -40,11 +41,13 @@ class BffOpenApiConfig {
     @Bean
     GroupedOpenApi bffSessionApi(DocsProperties props, Environment environment) {
         var consumer = environment.acceptsProfiles(Profiles.of("consumer"));
-        var audience = consumer ? "consumer-bff session" : "studio-bff session";
-        var cookie = consumer ? "NL_CONSUMER" : "NL_STUDIO";
+        var console = environment.acceptsProfiles(Profiles.of("console")); // S-90
+        var name = consumer ? "consumer-bff" : console ? "console-bff" : "studio-bff";
+        var audience = name + " session";
+        var cookie = consumer ? "NL_CONSUMER" : console ? "NL_CONSOLE" : "NL_STUDIO";
         return GroupedOpenApi.builder()
                 .group("internal")
-                .displayName(consumer ? "consumer-bff session API" : "studio-bff session API")
+                .displayName(name + " session API")
                 .addOpenApiCustomizer(ApiDocs.base(props))
                 .pathsToMatch("/bff/**")
                 .addOpenApiCustomizer(api -> {
@@ -54,7 +57,10 @@ class BffOpenApiConfig {
                             (consumer
                                             ? "The consumer web's backend-for-frontend (S-45). Guests get a session too "
                                                     + "(`guestId`) and browse the api without a token. "
-                                            : "The Studio's backend-for-frontend. ")
+                                            : console
+                                                    ? "The platform console's backend-for-frontend (S-90). Only Northline "
+                                                            + "staff who signed in with a second factor keep a session. "
+                                                    : "The Studio's backend-for-frontend. ")
                                     + "The browser holds only the HttpOnly session cookie; tokens stay in the server-side "
                                     + "session. `/api/**` on the same origin is relayed to the api with the user's access token "
                                     + "(see the api's documents); POST, PUT, PATCH and DELETE need the `X-XSRF-TOKEN` header. "

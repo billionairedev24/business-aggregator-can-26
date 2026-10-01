@@ -6,6 +6,7 @@ import ca.northline.fulfilment.api.DeliveryRequests;
 import ca.northline.fulfilment.application.DispatchUseCases.AssignCouriers;
 import ca.northline.fulfilment.application.DispatchUseCases.PlanRuns;
 import ca.northline.shared.Ids;
+import ca.northline.shared.security.StaffRole;
 import ca.northline.support.IntegrationTest;
 import ca.northline.support.MovableClock;
 import ca.northline.support.TestJwt;
@@ -147,7 +148,7 @@ class CourierAssignmentConcurrencyTest extends IntegrationTest {
                     return mvc.perform(MockMvcRequestBuilders.post("/api/v1/console/fulfilment/runs/{id}/assign", run)
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content("{\"courierId\":\"%s\"}".formatted(courier))
-                                    .with(TestJwt.staff(staff)))
+                                    .with(TestJwt.staff(staff, StaffRole.DISPATCH)))
                             .andReturn()
                             .getResponse()
                             .getStatus();

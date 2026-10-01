@@ -36,6 +36,7 @@ northline:
     totp-key: bm9ydGhsaW5lLWxvY2FsLWRldi10b3RwLWtleS0zMmI=
     login-page: http://localhost:3100/sign-in
     consumer-login-page: http://localhost:3000/sign-in
+    console-login-page: http://localhost:3200/sign-in
     allowed-origins: [ "http://localhost:3100" ]
     webauthn:
       rp-id: localhost

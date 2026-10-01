@@ -66,6 +66,12 @@ paths:
       - dispatch-console-controller
     post:
       operationId: dispatchConsoleAddCourier
+      parameters:
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
       requestBody:
         content:
           application/json:
@@ -131,6 +137,11 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
       requestBody:
         content:
           application/json:
@@ -264,6 +275,12 @@ paths:
   /api/v1/console/fulfilment/plan:
     post:
       operationId: dispatchConsolePlan
+      parameters:
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
       requestBody:
         content:
           application/json:
@@ -446,6 +463,11 @@ paths:
         required: true
         schema:
           $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
       requestBody:
         content:
           application/json:
@@ -516,6 +538,168 @@ paths:
           description: "Validation failed: one error per field with the exact message."
       tags:
       - dispatch-console-controller
+  /api/v1/console/me:
+    get:
+      operationId: staffProfileMe
+      parameters:
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MeResponse"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - staff-profile-controller
+  /api/v1/console/me/role-view:
+    post:
+      operationId: staffProfileSwitchView
+      parameters:
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleViewRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RoleGrant"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - staff-profile-controller
+  /api/v1/console/overview:
+    get:
+      operationId: overviewView
+      parameters:
+      - in: query
+        name: province
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: market
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Overview"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - overview-controller
   /api/v1/console/payments/tax-reconciliations:
     post:
       operationId: taxReconciliationRun
@@ -851,6 +1035,15 @@ components:
           minLength: 1
       required:
       - courierId
+    Backlog:
+      type: object
+      properties:
+        count:
+          type: integer
+          format: int64
+        oldest:
+          type: string
+          format: date-time
     CourierRef:
       type: object
       properties:
@@ -888,8 +1081,6 @@ components:
           type: string
         name:
           type: string
-        position:
-          $ref: "#/components/schemas/Position"
         runId:
           type: string
         shift:
@@ -899,6 +1090,35 @@ components:
         userId:
           type: string
         vehicle:
+          type: string
+    CurrentStaff:
+      type: object
+      properties:
+        active:
+          type: array
+          items:
+            type: string
+            enum:
+            - admin
+            - trust_safety
+            - dispatch
+            - finance
+            - support
+            - analyst
+          uniqueItems: true
+        held:
+          type: array
+          items:
+            type: string
+            enum:
+            - admin
+            - trust_safety
+            - dispatch
+            - finance
+            - support
+            - analyst
+          uniqueItems: true
+        userId:
           type: string
     DecisionRequest:
       type: object
@@ -1004,6 +1224,74 @@ components:
           type: string
         targetType:
           type: string
+    Flags:
+      type: object
+      properties:
+        count:
+          type: integer
+          format: int64
+        offPlatformPayment:
+          type: boolean
+        oldest:
+          type: string
+          format: date-time
+    Headline:
+      type: object
+      properties:
+        disputes:
+          type: integer
+          format: int64
+        gmvCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        sellers:
+          type: integer
+          format: int64
+        verifications:
+          type: integer
+          format: int64
+    Health:
+      type: object
+      properties:
+        key:
+          type: string
+        status:
+          type: string
+        value:
+          type: number
+          format: double
+    Kpis:
+      type: object
+      properties:
+        averageDeliveryFeeCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        bookings:
+          type: integer
+          format: int64
+        disputeRate:
+          type: number
+          format: double
+        gmvCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        onTimeRatio:
+          type: number
+          format: double
+        orders:
+          type: integer
+          format: int64
+        previousGmvCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        revenueCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
     ListResponseCourierSummary:
       type: object
       properties:
@@ -1032,6 +1320,64 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/RunSummary"
+    Live:
+      type: object
+      properties:
+        couriersActive:
+          type: integer
+          format: int64
+        couriersOnRuns:
+          type: integer
+          format: int64
+        escrowHeldCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        pools:
+          type: array
+          items:
+            $ref: "#/components/schemas/Pool"
+        providersOnJobs:
+          type: integer
+          format: int64
+    MeResponse:
+      type: object
+      properties:
+        roles:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoleGrant"
+        userId:
+          type: string
+    Overview:
+      type: object
+      properties:
+        asOf:
+          type: string
+          format: date-time
+        from:
+          type: string
+          format: date-time
+        headline:
+          $ref: "#/components/schemas/Headline"
+        health:
+          type: array
+          items:
+            $ref: "#/components/schemas/Health"
+        kpis:
+          $ref: "#/components/schemas/Kpis"
+        live:
+          $ref: "#/components/schemas/Live"
+        scope:
+          $ref: "#/components/schemas/Scope"
+        timeZone:
+          type: string
+        weeks:
+          type: array
+          items:
+            $ref: "#/components/schemas/Week"
+        workQueue:
+          $ref: "#/components/schemas/WorkQueue"
     PickupView:
       type: object
       properties:
@@ -1074,21 +1420,24 @@ components:
         runs:
           type: integer
           format: int32
-    Position:
+    Pool:
       type: object
       properties:
-        at:
+        city:
+          type: string
+        closesAt:
           type: string
           format: date-time
-        heading:
-          type: number
-          format: double
-        lat:
-          type: number
-          format: double
-        lng:
-          type: number
-          format: double
+        label:
+          type: string
+        market:
+          type: string
+        orders:
+          type: integer
+          format: int64
+        startsAt:
+          type: string
+          format: date-time
     Problem:
       type: object
       description: RFC 9457 problem details. 403 and 409 carry a machine-readable
@@ -1190,6 +1539,63 @@ components:
           type: string
         subject:
           type: string
+    RoleGrant:
+      type: object
+      properties:
+        actions:
+          type: array
+          items:
+            type: string
+            enum:
+            - suspend
+            - decide
+            - refund
+            - province
+            - payouts
+            - keys
+            - verify
+            - vet
+            - dispatch
+            - support
+        role:
+          type: string
+          enum:
+          - admin
+          - trust_safety
+          - dispatch
+          - finance
+          - support
+          - analyst
+        screens:
+          type: array
+          items:
+            type: string
+            enum:
+            - overview
+            - orders
+            - disputes
+            - delivery
+            - sellers
+            - verify
+            - vetting
+            - trust
+            - taxonomy
+            - support
+            - regions
+            - finance
+            - reports
+            - api
+            - team
+            - profile
+            - oncall
+    RoleViewRequest:
+      type: object
+      properties:
+        role:
+          type: string
+          minLength: 1
+      required:
+      - role
     RunDetail:
       type: object
       properties:
@@ -1242,6 +1648,15 @@ components:
         stopsTotal:
           type: integer
           format: int32
+    Scope:
+      type: object
+      properties:
+        city:
+          type: string
+        market:
+          type: string
+        province:
+          type: string
     ShiftRequest:
       type: object
       properties:
@@ -1306,6 +1721,15 @@ components:
           format: int32
         state:
           type: string
+    Stuck:
+      type: object
+      properties:
+        count:
+          type: integer
+          format: int64
+        oldestOverdue:
+          type: string
+          format: date-time
     Ulid:
       type: string
       description: "A ULID: 26 characters, Crockford base 32, sortable by creation\
@@ -1343,6 +1767,36 @@ components:
             $ref: "#/components/schemas/ValidationError"
       required:
       - errors
+    Week:
+      type: object
+      properties:
+        goodsCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        servicesCents:
+          type: integer
+          format: int64
+          description: Cents of Canadian dollars (CAD).
+        start:
+          type: string
+          format: date-time
+    WorkQueue:
+      type: object
+      properties:
+        disputes:
+          $ref: "#/components/schemas/Backlog"
+        flaggedListings:
+          $ref: "#/components/schemas/Backlog"
+        sellersBelowFloor:
+          type: integer
+          format: int64
+        stuckRuns:
+          $ref: "#/components/schemas/Stuck"
+        trustFlags:
+          $ref: "#/components/schemas/Flags"
+        verifications:
+          $ref: "#/components/schemas/Backlog"
   securitySchemes:
     bffSession:
       description: "Browsers only (the Studio, the consumer web): the BFF's HttpOnly\

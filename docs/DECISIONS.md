@@ -4878,6 +4878,130 @@ and the audit log rules: no update, no delete, and a retention delete only past 
   (`local` profile: every seeded menu item and listing image key has bytes, every live seeded listing has an image,
   the public media endpoint serves one as image/jpeg).
 
+## 2026-09-30 — S-90 Console shell with role switch, role-filtered nav and denied screen
+
+- **App:** `web/apps/console`, a TanStack Router SPA like the Studio (static nginx image, port 8080; dev server :3200).
+  Nothing in the console is public or indexed, so the consumer site's SSR buys nothing here. Plan and conventions for
+  the later stories: `docs/CONSOLE_PLAN.md`.
+- **console-bff** is the bff jar under a `console` profile (port 8083, cookie `__Host-NL_CONSOLE`, client `console-bff`,
+  scopes `openid profile console`), like the consumer-bff. **Staff only, with a second factor:** northline-auth puts the
+  platform `roles` in the ID token for the `console` scope (not for other clients). The BFF ends any sign-in whose ID
+  token lacks `staff` or `acr=mfa`: it revokes the refresh token, drops the session and redirects to
+  `/sign-in?error=staff_only|mfa_required`. Every later request re-checks, and a session that fails gets a 401. The api
+  enforces the same anyway; the gate keeps non-staff out of the console entirely.
+- **northline-auth:** `console-bff` is now always registered; `CONSOLE_BFF_SECRET_HASH` is required in the cloud (was
+  optional until E-8). Its unauthenticated or single-factor authorization requests go to the console's own sign-in page
+  (`northline.auth.console-login-page`, `console-clients`). `CONSOLE_ORIGIN` joins the JSON API's allowed origins and the
+  WebAuthn origins.
+- **Staff role model (schema V190).** `identity.platform_roles` accepts `trust_safety`, `dispatch`, `finance`, `support`
+  and `analyst` next to `staff` and `admin` (CHECK widened only). It also gets `granted_by` and an index for platform
+  audit rows (`merchant_id IS NULL`). `staff` stays the on/off switch for the console: every console user holds it plus
+  one or more console roles. `StaffRole` (shared.security) maps roles to `ConsoleScreen`s and `ConsoleAction`s. The
+  screens are design 03 `ROLES.views`. The actions are `ROLES.can` plus the Data Table's `CAN`, which adds `dispatch`
+  for dispatchers and `support` for support and T&S. Admin has every action. Profile and on-call are open to any staff
+  member, even with no console role.
+- **Enforcement:** `@RequiresConsole(screen, actions)` on every `/api/v1/console/**` handler. `StaffAccessInterceptor`
+  enforces it, and a handler without it is denied (`ConsoleEndpointsTest`). The path-level rule (role `STAFF` + `acr=mfa`)
+  stays. 403 codes: `mfa_required`, `not_staff`, `role_not_held`, `insufficient_role`, `unguarded_endpoint`. The three
+  existing console endpoints now carry their screen: trust flags → `trust` (+ `decide`), registry reviews → `verify`
+  (+ `verify`), tax reconciliation → `finance` + `payouts`. Their tests now use role-bearing staff tokens
+  (`TestJwt.staff(id, StaffRole...)`).
+- **Role view:** the console acts with **one** held role at a time. It sends it as `X-Console-Role` and the api
+  authorizes with that role alone. The default is the remembered view (localStorage) if still held, else the first
+  held role in design order. The design shows one role name in the top bar, so a union view was not added. Switching
+  records `console.role_view_switched` in `developer.audit_log` (`merchant_id` null, `role` = the active roles), as the
+  design says "Logged". After a switch the console stays on the screen when the new role opens it, else goes to the
+  overview (design).
+- **Denied screen:** design `v.denied` renders the overview with the banner. The console shows the banner, then the
+  overview, at the requested URL, so switching role lets the person in without navigating. The sidebar highlights
+  nothing then.
+- **Top bar:** "Ops · Alberta + BC pilot" is built from `GET /api/v1/geo/regions`: live provinces by name, pilot
+  provinces by code + "pilot". The design's "Admin · Ops" (role · team) shows the role only: teams aren't modelled.
+  "← Direction" (the design file's own navigation) is left out. The global search pill is there as designed. The design
+  shows no results, so no search endpoint was added; CONSOLE_PLAN lists it as missing, with no owning story.
+- **Sign-in page:** design 03's copy and steps (email or mobile → passkey / authenticator / backup code → "Signed in."),
+  using northline-auth's JSON API through `@northline/auth-kit`, then the console-bff hand-off. **Staff SSO (Okta /
+  Google Workspace) is not built.** The design's two SSO buttons are left out, and the copy that mentions SSO is kept
+  verbatim (it is the target). "Welcome back, Priya. 7 verifications and 3 disputes are waiting." shows only the
+  greeting: the counts need the S-91 / nav-badge data.
+- **Account menu:** design items in order. "My audit trail" has no "today · 6" count yet (S-96). The role list shows
+  held roles only, with "N views · actions" from the api's grant; admin shows "all views".
+- **Not modelled yet:** co-signatures (two admins for a province, T&S lead for suspensions, a second approver for
+  refunds > $500), per-role factor rules (passkey / app 2FA / SSO), nav badge counts, granting roles in the UI (SQL in
+  the runbook until S-96).
+- **Paths:** API & webhooks is `/integrations`, because `/api` belongs to the console-bff on the console host. The dev
+  server proxies `^/api/` (not the `/api` prefix) for the same reason.
+- **Panels:** the console uses the Studio's `--color-surface: var(--color-bg)` (decision of 2026-09-29), so its sidebar
+  and panels match the Studio's.
+- **Dev:** seed V191 adds Priya Natarajan (staff, every console role, backup codes `priya-n-00001…10`). Dev auth (api,
+  `local`) now mints the `roles` claim from `identity.platform_roles` through a new `shared.security.PlatformRoles` port
+  (identity implements it). `make up SERVICES="api console"`, `run-console[-dev]`, `run-bff-console`.
+- **Deploy:** chart apps `console` (static, enabled) and `console-bff` (bff image + `console` profile, port 8083); the
+  console host routes `/api`, `/bff`, `/oauth2`, `/login` to the console-bff; `CONSOLE_BFF_SECRET` in the secret maps,
+  Terraform (created empty), the kind ESO store; Argo CD images and `promote.sh` (console-bff = the bff's digest); CI
+  image matrices (GitHub, GitLab) and the web check build the console; Grafana dashboard `northline-console-bff`.
+- **Tests:** api `ConsoleRolesApiTest` (me, role view + audit row, role not held, 422, screen/action refusals, role view
+  narrowing, admin), `ConsoleEndpointsTest`, `StaffRoleTest`; auth `TokenClaimsTest` (console ID token roles, console
+  sign-in page for no / single-factor sessions), `OAuthClientsStartupTest`; bff `ConsoleBffTest` (client, staff-only
+  gate with revocation, relay with role header and stripped credentials, CSRF header-only, sign-out, other clients
+  absent), `ConsoleBffOpenApiTest`, `SessionCookieSettingsTest`; console vitest (shell, role filter, denied, role switch,
+  language, sign-in hand-off, `next` safety, route list).
+
+## 2026-09-30 — S-91 Overview: GMV and health dashboard
+
+- **One endpoint, composed in the console module:** `GET /api/v1/console/overview?province=&market=` (screen
+  `overview`, every role). It reads each figure through a new query API on the module that owns the data:
+  `orders.api.MarketplaceOrders`, `booking.api.MarketplaceBookings`, `payments.api.MarketplaceMoney`,
+  `merchants.api.MarketplaceMerchants`, `catalogue.api.VettingQueue`, `trust.api.TrustQueues` and
+  `fulfilment.api.FleetStatus`. There is no cross-module SQL (S-37). Two shared kernel types were added:
+  `MerchantScope` (every business, or a set) and `Backlog` (count + oldest).
+- **Region-aware:** a province (two-letter code) and/or a market id from the region model resolve to that place's
+  businesses (`MarketplaceMerchants.idsIn`, by `merchants.province` and the market's city), and every module filters
+  by those ids. Unknown places are a 422, with French in the catalogue. The design has no filter. Two selects ("All
+  provinces", "All markets", from `GET /api/v1/geo/regions`) sit next to the kicker and write `?province=&market=`.
+  The fleet stays platform-wide: couriers and runs have no market until zones carry one (S-81/S-84). Pools are listed
+  per live market in scope, so with no filter the design's single "tonight's {city} pool" line becomes one line per
+  live market.
+- **Definitions** (CONSOLE_PLAN § Overview):
+  - The periods are rolling 7 days, not calendar weeks, so "+9% w/w" compares like with like. The chart's W1…W12
+    are 7-day periods ending now.
+  - GMV is goods plus services. Goods are order lines (shop and food) by placed time. Services are booking prices
+    by booking time.
+  - Net revenue is the ledger's `revenue` account. On time means pooled orders delivered before their window ends.
+  - The dispute rate is disputes opened ÷ orders plus bookings. The "goods" share is orders ÷ orders plus bookings.
+  - Food counts as goods: the chart has two colours, goods and services.
+- **Shown differently from the design:**
+  - "avg delivery fee paid · cost $4.10" drops the cost: Northline has no delivery cost model yet (zone economics:
+    S-81/S-84).
+  - "Kafka lag" shows records (`kafka_consumer_fetch_manager_records_lag_max`), not seconds: lag in time isn't
+    measured.
+  - The work queue lists all six items for every role. Items for screens the active role doesn't open have no link.
+  - SLA texts ("SLA 2 d", "SLA 4 h") are the design's copy, not computed policy.
+  - "1 stuck delivery run · R-608 · 12 min" shows the minutes only: runs have no label in `fulfilment`.
+  - Missing figures show "—", never zero (a province without deliveries has no on-time rate).
+- **System health is behind a port** (`console.application.HealthSignals`, `northline.console.health.provider`):
+  - `none` (the default everywhere) shows every tile as not measured.
+  - `prometheus` runs one PromQL instant query per tile against any Prometheus-compatible query API (Grafana Cloud /
+    Mimir, Amazon / Google / Azure managed Prometheus, self-hosted), with an optional bearer token. The queries and
+    thresholds are configuration.
+  - A failed query makes that tile unknown and never fails the overview.
+  - **Never run against a real store:** it is tested only against a WireMock stand-in of the Prometheus HTTP API.
+  - New variables: `CONSOLE_HEALTH_PROVIDER`, `CONSOLE_HEALTH_PROMETHEUS_URL`, `CONSOLE_HEALTH_PROMETHEUS_TIMEOUT`,
+    and the optional secret `CONSOLE_HEALTH_PROMETHEUS_TOKEN` (runbooks, `.env.example`, Helm secret map, Terraform).
+  - The courier app tile comes from the database (couriers offline during a run).
+  - The "Tracking WS" tile reads a new gauge, `northline.tracking.streams` (open order-tracking SSE streams per
+    replica, from `orders.application.TrackingStreams`).
+- **Stuck runs:** a run is stuck when a stop is 10 minutes past its ETA and not reached. **Below a floor** means the
+  latest quality score is under 80 (the Trusted floor in design 03's tier rules).
+- **No schema change.** The overview refreshes every minute and keeps the previous figures while a filter loads.
+- **Tests:**
+  - `ConsoleOverviewApiTest`: every figure for one province no other test uses (Yukon) — GMV per period with
+    refunded lines and cancelled orders left out, revenue net of a dispute, on time, dispute rate, delivery fee,
+    work queue, live — plus the whole-platform shape, 422s, and 403s for no role / no MFA / not staff.
+  - `PrometheusHealthSignalsTest` (WireMock: vector and scalar results, thresholds, bearer token, failures, no URL).
+  - Console vitest `overview.test.tsx`: design copy and formats, links by role, filters writing the query with the
+    role header, empty figures, error and retry, French money.
+
 ## 2026-10-01 — S-89 Checkout sets orders.fulfilment_mode and customer_eta
 
 - **Already done by S-51 / S-57; verified, with the gaps closed.** The shop checkout (`CheckoutJdbc.createOrder`)
@@ -4962,7 +5086,8 @@ merge in order.
 
 Branch `fulfil/s-86-dispatch`, **stacked on S-78** (#116, itself on S-89 #115): it publishes S-78's
 `delivery.completed`, and V202 must follow V201. Contract for the courier app (S-87) and the console (S-81):
-`docs/runbooks/fulfilment.md`. `docs/CONSOLE_PLAN.md` didn't exist on main when this was written.
+`docs/runbooks/fulfilment.md`, summarised in `docs/CONSOLE_PLAN.md` § Delivery and dispatch (the console's plan arrived on
+main with S-90 while this was in review).
 
 - **Module direction:**
   - orders hands deliveries over through the new inbound port `fulfilment.api.DeliveryRequests`, called from
@@ -5018,8 +5143,14 @@ Branch `fulfil/s-86-dispatch`, **stacked on S-78** (#116, itself on S-89 #115): 
   - a run's stops, an order's delivery, couriers with shift and run;
   - onboard a courier, schedule a shift, plan now, reassign.
   - Contract in the runbook for S-81.
-  - **Not audit-logged:** no staff audit trail exists (`developer.api.AuditTrail` is merchant-scoped). S-81's "actions
-    audit-logged" needs one.
+  - **Console roles and audit (S-90, merged meanwhile):** every handler carries `@RequiresConsole`:
+    - runs and couriers need the `delivery` screen (dispatch, admin);
+    - changes also need its `dispatch` action;
+    - an order's delivery needs the `orders` screen (dispatch, support, admin).
+
+    Changes are written to the platform audit log (`developer.audit_log`, `merchant_id` null, the active console
+    roles): `fulfilment.courier_added`, `fulfilment.shift_scheduled`, `fulfilment.run_assigned`,
+    `fulfilment.runs_planned`. This meets S-81's "actions audit-logged" for these.
 - **Studio:** a seller's order (Orders screen detail) now shows the courier's pickup at that shop: "R-701 · Courier
   due 6:10 pm", "Courier is here", "Picked up 6:12 pm" and "Finding a courier · pickup about …" (en + fr-CA).
   `CourierPickups` gains `atMerchant(merchantId, orderIds)` plus `pickedUpAt` and `runLabel`.
@@ -5089,7 +5220,7 @@ Branch `fulfil/s-88-live-tracking`, **stacked on S-86**. No migration.
   run. The same Valkey pub/sub pattern as S-52's `nl:order:*` and S-68's `nl:studio:*`. It is selected by the same
   `LIVE_BUS` switch (`redis` | `memory`; memory refused under staging/prod), so there is no new variable.
 - **Module direction kept:** `fulfilment.api.CourierLocations` (`forOrder`, `subscribe`) is read by orders. orders'
-  new `TrackingStreams` (extracted from S-52's controller) subscribes each stream to both the order's tracking bus
+  new `OrderStreams` (web; extracted from S-52's controller, counting streams for S-91's `TrackingStreams` gauge) subscribes each stream to both the order's tracking bus
   and the courier's moves.
 - **Live ETA:** from the position, the run's own leg rules (S-86 `RoutePlanner.leg`) through the drop-offs still
   before this one, plus their dwell. Without a recent position the planned stop ETA stands.

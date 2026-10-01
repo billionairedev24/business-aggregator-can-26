@@ -23,7 +23,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
  * GET /api/v1/me/orders/{orderId}/events   text/event-stream: event "order" with the same JSON now and on every change;
  *                                          a comment every 25 s keeps proxies from closing it; ends after 30 minutes
  *                                          (EventSource reconnects); S-88: also on every move of the courier
- *                                          carrying it (TrackingStreams)
+ *                                          carrying it (OrderStreams)
  * POST /api/v1/me/orders/{orderId}/confirm  the customer received it (S-78): goods escrow releases at once; 409
  *                                          not_delivered before the courier's pickup; repeating it changes nothing
  * </pre>
@@ -35,7 +35,7 @@ class ConsumerOrderController {
 
     private final TrackOrder track;
     private final ConfirmDelivery confirmDelivery;
-    private final TrackingStreams streams;
+    private final OrderStreams streams;
 
     @GetMapping("/{orderId}")
     ResponseEntity<OrderTracking> order(CurrentUser user, @PathVariable String orderId) {

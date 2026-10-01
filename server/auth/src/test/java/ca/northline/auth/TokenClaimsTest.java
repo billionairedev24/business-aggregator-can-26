@@ -44,6 +44,13 @@ class TokenClaimsTest extends AuthIntegrationTest {
             "http://localhost:8081/login/oauth2/code/northline",
             "openid profile orders");
 
+    /** S-90: the platform console's BFF — staff only, with a second factor. */
+    private static final Client CONSOLE = new Client(
+            "console-bff",
+            "dev-console-bff",
+            "http://localhost:8083/login/oauth2/code/console",
+            "openid profile console");
+
     private record Client(String id, String secret, String redirect, String scope) {}
 
     private static final String VERIFIER = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk-northline-test";
@@ -114,6 +121,49 @@ class TokenClaimsTest extends AuthIntegrationTest {
         mvc.perform(authorize(STUDIO).session(new MockHttpSession()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("http://localhost:3100/sign-in"));
+    }
+
+    @Test
+    void consoleTokens_carryTheStaffRoles_inTheIdTokenToo() throws Exception {
+        var user = register(newPerson());
+        jdbc.sql("""
+                        INSERT INTO identity.platform_roles (user_id, role)
+                        VALUES (:u, 'staff'), (:u, 'trust_safety'), (:u, 'finance')""").param("u", user.userId()).update();
+
+        var tokens = tokens(CONSOLE, authorize(CONSOLE).session(user.session()));
+
+        assertThat(JsonPath.<List<String>>read(payload(tokens.get("access_token")), "$.roles"))
+                .containsExactly("finance", "staff", "trust_safety");
+        var id = payload(tokens.get("id_token"));
+        assertThat(JsonPath.<List<String>>read(id, "$.roles")).containsExactly("finance", "staff", "trust_safety");
+        assertThat(JsonPath.<String>read(id, "$.acr")).isEqualTo("mfa");
+        // other clients' ID tokens don't list platform roles
+        var studio = tokens(STUDIO, authorize(STUDIO).session(user.session()));
+        assertThat(JsonPath.<Map<String, Object>>read(payload(studio.get("id_token")), "$"))
+                .doesNotContainKey("roles");
+    }
+
+    @Test
+    void noSession_consoleAuthorizeRedirectsToTheConsoleSignInPage() throws Exception {
+        mvc.perform(authorize(CONSOLE).session(new MockHttpSession()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("http://localhost:3200/sign-in"));
+    }
+
+    @Test
+    void aSingleFactorSession_getsNoConsoleCode_andIsSentToTheConsoleSignInPage() throws Exception {
+        var user = register(newPerson());
+        var singleFactor = UsernamePasswordAuthenticationToken.authenticated(
+                user.userId(),
+                null,
+                List.of(
+                        new SimpleGrantedAuthority("ROLE_USER"),
+                        FactorGrantedAuthority.withAuthority(Factor.PHONE_OTP.authority())
+                                .issuedAt(clock.instant())
+                                .build()));
+        mvc.perform(authorize(CONSOLE).session(new MockHttpSession()).with(authentication(singleFactor)))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("http://localhost:3200/sign-in"));
     }
 
     private MockHttpServletRequestBuilder authorize(Client client) throws Exception {

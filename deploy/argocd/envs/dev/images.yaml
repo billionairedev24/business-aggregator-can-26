@@ -17,4 +17,6 @@ apps:
   consumer: { image: { digest: "" } }
   docs: { image: { digest: "" } }
   docs-internal: { image: { digest: "" } }
+  console: { image: { digest: "" } }
   consumer-bff: { image: { digest: "" } }
+  console-bff: { image: { digest: "" } }

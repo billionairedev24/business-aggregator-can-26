@@ -1,8 +1,11 @@
 package ca.northline.trust.web;
 
 import ca.northline.shared.ListResponse;
+import ca.northline.shared.security.ConsoleAction;
+import ca.northline.shared.security.ConsoleScreen;
 import ca.northline.shared.security.CurrentUser;
 import ca.northline.shared.security.MerchantAccessDenied;
+import ca.northline.shared.security.RequiresConsole;
 import ca.northline.trust.application.TrustFlagQueue;
 import ca.northline.trust.application.TrustFlagQueue.FlagView;
 import jakarta.validation.Valid;
@@ -21,7 +24,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Platform console — trust &amp; safety queue (S-133): every flag with its explanation (AI-suggested ones marked
- * {@code source: ai}), and the staff decision. {@code /api/v1/console/**} needs role {@code STAFF} and a second factor.
+ * {@code source: ai}), and the staff decision. {@code /api/v1/console/**} needs role {@code STAFF} and a second factor;
+ * S-90: the trust screen (admin, trust &amp; safety), deciding needs {@code decide}.
  *
  * <pre>
  * GET  /api/v1/console/trust/flags[?state=open|dismissed|actioned][&amp;source=ai|rules][&amp;limit=50]   {items: [FlagView]}
@@ -44,6 +48,7 @@ class TrustFlagQueueController {
             String note) {}
 
     @GetMapping
+    @RequiresConsole(ConsoleScreen.TRUST)
     ListResponse<FlagView> list(
             @RequestParam(defaultValue = "open") @Pattern(regexp = "open|dismissed|actioned|all") String state,
             @RequestParam(required = false) @Nullable @Pattern(regexp = "ai|rules") String source,
@@ -54,6 +59,7 @@ class TrustFlagQueueController {
     }
 
     @PostMapping("/{id}/decision")
+    @RequiresConsole(value = ConsoleScreen.TRUST, actions = ConsoleAction.DECIDE)
     FlagView decide(@PathVariable String id, @Valid @RequestBody DecisionRequest body, CurrentUser user) {
         requireMfa(user);
         return queue.decide(id, body.decision(), user.userId(), body.note());

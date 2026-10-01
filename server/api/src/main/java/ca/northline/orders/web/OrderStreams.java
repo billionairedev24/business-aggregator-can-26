@@ -2,6 +2,7 @@ package ca.northline.orders.web;
 
 import ca.northline.fulfilment.api.CourierLocations;
 import ca.northline.orders.application.TrackingBus;
+import ca.northline.orders.application.TrackingStreams;
 import jakarta.annotation.PreDestroy;
 import java.io.IOException;
 import java.time.Duration;
@@ -18,23 +19,26 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
  * event ({@code order} / {@code food}) carries the same JSON as the GET, sent at once and again whenever the order
  * changes (the tracking bus, Valkey pub/sub between replicas) or the courier carrying it moves (fulfilment's courier
  * positions). A comment every 25 s keeps proxies from closing it; it ends after 30 minutes (EventSource reconnects).
- * Each push re-reads the order with the caller's own rights, so a message carries no data.
+ * Each push re-reads the order with the caller's own rights, so a message carries no data. Open streams are counted
+ * for the console's health tile ({@link TrackingStreams}, S-91).
  */
 @Slf4j
 @Component
-class TrackingStreams {
+class OrderStreams {
 
     static final Duration STREAM = Duration.ofMinutes(30);
     static final Duration HEARTBEAT = Duration.ofSeconds(25);
 
     private final TrackingBus bus;
     private final CourierLocations couriers;
+    private final TrackingStreams gauge;
     /** Spring's scheduler on virtual threads: one timer, each keep-alive on its own virtual thread. */
     private final SimpleAsyncTaskScheduler heartbeats = new SimpleAsyncTaskScheduler();
 
-    TrackingStreams(TrackingBus bus, CourierLocations couriers) {
+    OrderStreams(TrackingBus bus, CourierLocations couriers, TrackingStreams gauge) {
         this.bus = bus;
         this.couriers = couriers;
+        this.gauge = gauge;
         heartbeats.setVirtualThreads(true);
         heartbeats.setThreadNamePrefix("order-stream-");
     }
@@ -51,6 +55,7 @@ class TrackingStreams {
         Runnable push = () -> send(emitter, event, orderId, view);
         var changes = bus.subscribe(orderId, push);
         var moves = couriers.subscribe(orderId, push);
+        var counted = gauge.opened(); // S-91: the console's "Tracking" health tile
         var beat = heartbeats.scheduleAtFixedRate(
                 () -> {
                     try {
@@ -64,6 +69,7 @@ class TrackingStreams {
         Runnable close = () -> {
             changes.close();
             moves.close();
+            counted.run();
             beat.cancel(false);
         };
         emitter.onCompletion(close);

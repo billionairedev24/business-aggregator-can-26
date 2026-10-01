@@ -16,6 +16,7 @@ import ca.northline.fulfilment.api.DeliveryPickedUp;
 import ca.northline.fulfilment.api.RunPlanned;
 import ca.northline.shared.Ids;
 import ca.northline.shared.security.MerchantRole;
+import ca.northline.shared.security.StaffRole;
 import ca.northline.support.IntegrationTest;
 import ca.northline.support.MovableClock;
 import ca.northline.support.ShopFixtures.Listing;
@@ -119,7 +120,7 @@ class DispatchApiTest extends IntegrationTest {
         var courier = body(mvc.perform(json(
                                 post("/api/v1/console/fulfilment/couriers"),
                                 "{\"userId\":\"%s\",\"market\":\"%s\",\"vehicle\":\"ebike\"}".formatted(user, MARKET))
-                        .with(TestJwt.staff(staff)))
+                        .with(TestJwt.staff(staff, StaffRole.DISPATCH)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("offline")));
         String courierId = JsonPath.read(courier, "$.id");
@@ -128,7 +129,7 @@ class DispatchApiTest extends IntegrationTest {
                                 post("/api/v1/console/fulfilment/couriers/{id}/shifts", courierId),
                                 "{\"startsAt\":\"%s\",\"endsAt\":\"%s\"}"
                                         .formatted(now.minus(Duration.ofMinutes(5)), now.plus(Duration.ofHours(6))))
-                        .with(TestJwt.staff(staff)))
+                        .with(TestJwt.staff(staff, StaffRole.DISPATCH)))
                 .andExpect(status().isCreated()));
         mvc.perform(post("/api/v1/courier/shifts/{id}/start", JsonPath.<String>read(shift, "$.id"))
                         .with(TestJwt.courier(user)))
@@ -170,7 +171,7 @@ class DispatchApiTest extends IntegrationTest {
 
     ResultActions plan() throws Exception {
         return mvc.perform(json(post("/api/v1/console/fulfilment/plan"), "{\"market\":\"%s\"}".formatted(MARKET))
-                .with(TestJwt.staff(staff)));
+                .with(TestJwt.staff(staff, StaffRole.DISPATCH)));
     }
 
     String pin(String orderId) {
@@ -204,7 +205,7 @@ class DispatchApiTest extends IntegrationTest {
 
         var runs = body(mvc.perform(get("/api/v1/console/fulfilment/runs")
                         .param("market", MARKET)
-                        .with(TestJwt.staff(staff)))
+                        .with(TestJwt.staff(staff, StaffRole.DISPATCH)))
                 .andExpect(status().isOk()));
         List<Map<String, Object>> mine = JsonPath.read(runs, "$.items[?(@.orders == 3)]");
         assertThat(mine).hasSize(1);
@@ -216,9 +217,9 @@ class DispatchApiTest extends IntegrationTest {
                 .containsEntry("heuristic", "nearest-neighbour-v1");
         assertThat(mine.getFirst().get("label")).isNotNull();
 
-        var detail = body(
-                mvc.perform(get("/api/v1/console/fulfilment/runs/{id}", runId).with(TestJwt.staff(staff)))
-                        .andExpect(status().isOk()));
+        var detail = body(mvc.perform(get("/api/v1/console/fulfilment/runs/{id}", runId)
+                        .with(TestJwt.staff(staff, StaffRole.DISPATCH)))
+                .andExpect(status().isOk()));
         List<String> kinds = JsonPath.read(detail, "$.stops[*].kind");
         assertThat(kinds).containsExactly("pickup", "pickup", "pickup", "pickup", "dropoff", "dropoff", "dropoff");
         // drop-offs without coordinates by postal code: T2A, T2T, T3K
@@ -233,7 +234,8 @@ class DispatchApiTest extends IntegrationTest {
                         e -> assertThat(e.orderIds()).containsExactlyInAnyOrder(a.orderId(), b.orderId(), c.orderId()));
 
         // the order's delivery in the console; the shops' pack-by time in the Studio
-        mvc.perform(get("/api/v1/console/fulfilment/orders/{id}", a.orderId()).with(TestJwt.staff(staff)))
+        mvc.perform(get("/api/v1/console/fulfilment/orders/{id}", a.orderId())
+                        .with(TestJwt.staff(staff, StaffRole.DISPATCH)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("planned"))
                 .andExpect(jsonPath("$.run.id").value(runId))
@@ -440,7 +442,19 @@ class DispatchApiTest extends IntegrationTest {
     void theConsoleIsForStaffWithASecondFactor_andChecksItsInput() throws Exception {
         mvc.perform(get("/api/v1/console/fulfilment/runs").with(TestJwt.customer(data.user("C"))))
                 .andExpect(status().isForbidden());
-        mvc.perform(get("/api/v1/console/fulfilment/runs").with(TestJwt.staffWithoutMfa(staff)))
+        // S-90 console roles: runs and couriers are the delivery screen (dispatch); support sees an order's delivery
+        // on the orders screen but can't dispatch; analysts see neither
+        mvc.perform(get("/api/v1/console/fulfilment/runs").with(TestJwt.staff(staff, StaffRole.SUPPORT)))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/console/fulfilment/orders/{id}", Ids.next())
+                        .with(TestJwt.staff(staff, StaffRole.SUPPORT)))
+                .andExpect(status().isNotFound());
+        mvc.perform(get("/api/v1/console/fulfilment/orders/{id}", Ids.next())
+                        .with(TestJwt.staff(staff, StaffRole.ANALYST)))
+                .andExpect(status().isForbidden());
+        mvc.perform(json(post("/api/v1/console/fulfilment/plan"), "{}").with(TestJwt.staff(staff, StaffRole.SUPPORT)))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/console/fulfilment/runs").with(TestJwt.staffWithoutMfa(staff, StaffRole.DISPATCH)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("mfa_required"));
         mvc.perform(get("/api/v1/console/fulfilment/runs").with(TestJwt.courier(data.user("K"))))
@@ -449,18 +463,18 @@ class DispatchApiTest extends IntegrationTest {
         mvc.perform(json(
                                 post("/api/v1/console/fulfilment/couriers"),
                                 "{\"userId\":\"%s\",\"market\":\"%s\",\"vehicle\":\"rocket\"}".formatted(user, MARKET))
-                        .with(TestJwt.staff(staff)))
+                        .with(TestJwt.staff(staff, StaffRole.DISPATCH)))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.errors[0].message").value("Choose bike, ebike, car or van."));
         var courier = body(mvc.perform(json(
                                 post("/api/v1/console/fulfilment/couriers"),
                                 "{\"userId\":\"%s\",\"market\":\"%s\",\"vehicle\":\"car\"}".formatted(user, MARKET))
-                        .with(TestJwt.staff(staff)))
+                        .with(TestJwt.staff(staff, StaffRole.DISPATCH)))
                 .andExpect(status().isCreated()));
         mvc.perform(json(
                                 post("/api/v1/console/fulfilment/couriers"),
                                 "{\"userId\":\"%s\",\"market\":\"%s\",\"vehicle\":\"car\"}".formatted(user, MARKET))
-                        .with(TestJwt.staff(staff)))
+                        .with(TestJwt.staff(staff, StaffRole.DISPATCH)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("already_a_courier"));
         var now = clock.instant();
@@ -470,17 +484,18 @@ class DispatchApiTest extends IntegrationTest {
                                         JsonPath.<String>read(courier, "$.id")),
                                 "{\"startsAt\":\"%s\",\"endsAt\":\"%s\"}"
                                         .formatted(now, now.plus(Duration.ofHours(13))))
-                        .with(TestJwt.staff(staff)))
+                        .with(TestJwt.staff(staff, StaffRole.DISPATCH)))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.errors[0].message")
                         .value("A shift ends after it starts and lasts at most 12 hours."));
         mvc.perform(get("/api/v1/console/fulfilment/couriers")
                         .param("market", MARKET)
-                        .with(TestJwt.staff(staff)))
+                        .with(TestJwt.staff(staff, StaffRole.DISPATCH)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[?(@.userId == '%s')].name".formatted(user))
                         .value("Vic Vehicle"));
-        mvc.perform(get("/api/v1/console/fulfilment/orders/{id}", Ids.next()).with(TestJwt.staff(staff)))
+        mvc.perform(get("/api/v1/console/fulfilment/orders/{id}", Ids.next())
+                        .with(TestJwt.staff(staff, StaffRole.DISPATCH)))
                 .andExpect(status().isNotFound());
     }
 
@@ -503,10 +518,16 @@ class DispatchApiTest extends IntegrationTest {
         mvc.perform(json(
                                 post("/api/v1/console/fulfilment/runs/{id}/assign", runId),
                                 "{\"courierId\":\"%s\"}".formatted(leeId))
-                        .with(TestJwt.staff(staff)))
+                        .with(TestJwt.staff(staff, StaffRole.DISPATCH)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.courier.userId").value(lee))
                 .andExpect(jsonPath("$.courier.name").value("Lee Courier"));
+        // the reassignment is in the platform audit log (no business), with the dispatcher's role
+        assertThat(jdbc.sql("""
+                                select action, role, merchant_id is null as platform from developer.audit_log
+                                 where target_id = ? and action = 'fulfilment.run_assigned'""").params(runId).query().singleRow())
+                .containsEntry("role", "dispatch")
+                .containsEntry("platform", true);
         mvc.perform(get("/api/v1/courier/me").with(TestJwt.courier(kai)))
                 .andExpect(jsonPath("$.status").value("available"));
         mvc.perform(get("/api/v1/courier/run").with(TestJwt.courier(kai))).andExpect(status().isNoContent());
@@ -522,7 +543,7 @@ class DispatchApiTest extends IntegrationTest {
         mvc.perform(json(
                                 post("/api/v1/console/fulfilment/runs/{id}/assign", runId),
                                 "{\"courierId\":\"%s\"}".formatted(kaiId))
-                        .with(TestJwt.staff(staff)))
+                        .with(TestJwt.staff(staff, StaffRole.DISPATCH)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("run_started"));
     }
@@ -544,7 +565,7 @@ class DispatchApiTest extends IntegrationTest {
         awaitPacked(direct.orderId(), 1);
         plan().andExpect(jsonPath("$.runs").value(1));
         mvc.perform(get("/api/v1/console/fulfilment/orders/{id}", direct.orderId())
-                        .with(TestJwt.staff(staff)))
+                        .with(TestJwt.staff(staff, StaffRole.DISPATCH)))
                 .andExpect(jsonPath("$.run.kind").value("direct"))
                 .andExpect(jsonPath("$.run.stopsTotal").value(2));
     }

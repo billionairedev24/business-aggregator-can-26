@@ -2,7 +2,7 @@
 # docs/runbooks/deploy.md, gitops.md. The checks need helm 3.14+ and kubeconform (argocd-validate also kubectl).
 
 IMAGE_TAG ?= dev
-WEB_IMAGES ?= studio consumer docs docs-internal
+WEB_IMAGES ?= studio consumer console docs docs-internal
 # jibDockerBuild (local Docker, default) | jib (PUSH=1: push to REGISTRY, every IMAGE_PLATFORMS) | jibBuildTar (CI build-only)
 JIB_TASK ?= $(if $(filter 1 true yes,$(PUSH)),jib,jibDockerBuild)
 image_props = $(if $(REGISTRY),-Pimage.registry=$(REGISTRY)) -Pimage.tag=$(IMAGE_TAG) $(if $(IMAGE_PLATFORMS),-Pimage.platforms=$(IMAGE_PLATFORMS))
@@ -28,7 +28,7 @@ images-java: ## api, auth, bff, worker with Jib (JIB_TASK=jibBuildTar for a buil
 	$(GRADLE) $(JIB_TASK) -x test $(image_props)
 
 .PHONY: images-web
-images-web: ## studio, consumer, docs, docs-internal from web/Dockerfile (PUSH=1 uses buildx for IMAGE_PLATFORMS and pushes)
+images-web: ## studio, consumer, console, docs, docs-internal from web/Dockerfile (PUSH=1 uses buildx for IMAGE_PLATFORMS and pushes)
 	@for app in $(WEB_IMAGES); do \
 		ref="$(or $(REGISTRY),northline)/$$app:$(IMAGE_TAG)"; echo "--- $$ref"; \
 		if [ -n "$(filter 1 true yes,$(PUSH))" ]; then \

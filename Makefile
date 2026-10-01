@@ -27,13 +27,15 @@ SERVICES ?= api studio
 PROFILES ?=
 # Spring profile the apps run with (`local` = Postgres only, dev auth, dev seed).
 SPRING_PROFILE ?= local
-# Seeded personas (db/seed-dev): Ravi Sandhu (owner of the three businesses) and Amara Osei (consumer).
+# Seeded personas (db/seed-dev): Ravi Sandhu (owner of the three businesses), Amara Osei (consumer) and Priya Natarajan
+# (Northline staff with every console role, S-90).
 DEV_USER ?= 01J9ZD3V00000000000000RAV1
 CONSUMER_DEV_USER ?= 01J9ZD3V0000000000000C0001
+CONSOLE_DEV_USER ?= 01J9ZD3V00000000000000PNA1
 # Gradle: at most two workers (the tests start Testcontainers), plus CI's optional Maven mirror (a no-op when
 # MAVEN_MIRROR_URL is empty). CI adds its own, e.g. GRADLE_FLAGS='--max-workers=2 --continue --console=plain'.
 GRADLE_FLAGS ?= --max-workers=2
-export SPRING_PROFILE DEV_USER CONSUMER_DEV_USER GRADLE_FLAGS DEV_AUTH
+export SPRING_PROFILE DEV_USER CONSUMER_DEV_USER CONSOLE_DEV_USER GRADLE_FLAGS DEV_AUTH
 # S-111: OBS=1 also starts the OpenTelemetry Collector + Grafana LGTM (compose profile observability) and makes every app
 # export traces, metrics and logs to it (docs/runbooks/observability.md). Grafana: http://localhost:3300.
 OBS ?=

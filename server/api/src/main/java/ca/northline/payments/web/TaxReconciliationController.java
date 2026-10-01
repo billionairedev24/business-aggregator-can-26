@@ -1,8 +1,11 @@
 package ca.northline.payments.web;
 
 import ca.northline.payments.application.ReconcileTax;
+import ca.northline.shared.security.ConsoleAction;
+import ca.northline.shared.security.ConsoleScreen;
 import ca.northline.shared.security.CurrentUser;
 import ca.northline.shared.security.MerchantAccessDenied;
+import ca.northline.shared.security.RequiresConsole;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -13,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Platform finance (staff, {@code /api/v1/console/**} needs role {@code STAFF}; a second factor too): runs the Stripe
  * Tax reconciliation of a quarter now — the same as the nightly job (docs/runbooks/stripe.md § 6).
+ * S-90: the finance screen (admin, finance) with {@code payouts}.
  *
  * <pre>
  * POST /api/v1/console/payments/tax-reconciliations   { "period": "2026-Q3" }   (period optional: this quarter)
@@ -28,6 +32,7 @@ class TaxReconciliationController {
     record ReconcileRequest(@Nullable String period) {}
 
     @PostMapping
+    @RequiresConsole(value = ConsoleScreen.FINANCE, actions = ConsoleAction.PAYOUTS)
     ReconcileTax.Report run(@RequestBody(required = false) @Nullable ReconcileRequest body, CurrentUser user) {
         if (!user.mfa()) {
             throw new MerchantAccessDenied(

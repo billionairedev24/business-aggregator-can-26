@@ -17,7 +17,7 @@ browser ──▶ [optional WAF/CDN: Cloudflare · CloudFront+AWS WAF · Cloud A
         ──▶ cloud layer-4 load balancer (NLB · GCP passthrough NLB · Azure LB), created for the Envoy Service
         ──▶ Envoy proxies (Envoy Gateway, namespace envoy-gateway-system)      TLS ends here: cert-manager Secrets
         ──▶ Gateway northline (namespace northline-<env>): :80 → 301 https, :443 one listener per host
-        ──▶ HTTPRoutes (+ HSTS and other response headers) ──▶ Services studio, bff, auth, api, consumer, consumer-bff
+        ──▶ HTTPRoutes (+ HSTS and other response headers) ──▶ Services studio, bff, auth, api, consumer, consumer-bff, console, console-bff
 DNS: external-dns writes A/ALIAS records for every HTTPRoute hostname into the environment's zone
 Certificates: cert-manager, Let's Encrypt (HTTP-01 through the Gateway; DNS-01 through the cloud's DNS as an option)
 Merchants' domains (S-31): shard Gateways northline-custom-N + Certificates + HTTPRoutes written by the api (custom-domains.md)
@@ -69,7 +69,8 @@ Merchants' domains (S-31): shard Gateways northline-custom-N + Certificates + HT
 - **docs / internal-docs (S-126):** the documentation site; `internal-docs.` exists only with `apps.docs-internal`, and an
   Envoy Gateway `SecurityPolicy` admits only `edge.docsInternal.allowedCIDRs` ([docs-site.md](docs-site.md)). S-125 also
   routes `/docs`, `/swagger-ui(.html)` and `/v3/api-docs` on `api.` in dev and staging (`apps.api.docsRoutes`).
-- **console:** placeholder. No route, certificate or record exists until `apps.console.enabled` (E-8).
+- **console (S-90):** the console app on `/`; `/api`, `/bff`, `/oauth2` and `/login` go to the console-bff (the Studio host's
+  shape). Only staff with a second factor keep a session there ([README § Console BFF](README.md#console-bff-s-90)).
 - **consumer (the apex, S-45):** the consumer app on `/`; `/api`, `/bff`, `/oauth2` and `/login` go to the consumer-bff
   (the same shape as the Studio host), so the browser only ever talks to its own origin and holds `__Host-` cookies.
 - **pages:** `/api` and `/bff` → the consumer-bff (guest sessions, the api relay; signing in happens on the apex —

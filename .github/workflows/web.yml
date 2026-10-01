@@ -1,4 +1,4 @@
-# S-5 — CI for web/ (pnpm monorepo: tokens, ui + Storybook, studio, consumer).
+# S-5 — CI for web/ (pnpm monorepo: tokens, ui + Storybook, studio, consumer, console).
 #
 # MANUAL ONLY: CI credits are depleted, so this workflow runs only when started from
 # Actions › web › Run workflow (or `gh workflow run web.yml -f studio-smoke=true`). To run it automatically later,
@@ -37,7 +37,7 @@ defaults:
 
 jobs:
   checks:
-    name: colours, typecheck, unit tests, studio build
+    name: colours, typecheck, unit tests, studio + console builds
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -51,6 +51,8 @@ jobs:
         run: make -C .. web-test
       - name: Studio build
         run: make -C .. web-build-studio
+      - name: Console build (S-90)
+        run: make -C .. web-build-console
 
       - name: Upload studio build
         uses: actions/upload-artifact@v4

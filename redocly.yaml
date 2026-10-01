@@ -22,6 +22,8 @@ apis:
     root: docs/api/openapi/auth-public.yaml
   bff-consumer-internal:
     root: docs/api/openapi/bff-consumer-internal.yaml
+  bff-console-internal:
+    root: docs/api/openapi/bff-console-internal.yaml
   bff-internal:
     root: docs/api/openapi/bff-internal.yaml
 rules:

@@ -3,7 +3,9 @@
 # Profiles: `local` (application-local.yml: in-memory session, no Redis), `test`, and `dev` | `staging` | `prod`,
 # which also activate `cloud` (application-cloud.yml: required variables checked at start-up).
 # S-45: the same jar is the consumer-bff with the `consumer` profile added (application-consumer.yml: client
-# consumer-bff, cookie NL_CONSUMER, port 8081, anonymous browsing). The studio client below is registered only without it.
+# consumer-bff, cookie NL_CONSUMER, port 8081, anonymous browsing). S-90: with the `console` profile it is the console-bff
+# (application-console.yml: client console-bff, cookie NL_CONSOLE, port 8083, staff with a second factor only). The studio
+# client below is registered only without either.
 spring:
   application.name: northline-studio-bff
   threads.virtual.enabled: true
@@ -63,8 +65,8 @@ northline.bff:
   session-check-interval: ${SESSION_CHECK_INTERVAL:60s}
   sign-in-page: /sign-in
 ---
-# The Studio's OAuth client — not registered under the `consumer` profile (application-consumer.yml has its own).
-spring.config.activate.on-profile: "!consumer"
+# The Studio's OAuth client — not registered under the `consumer` or `console` profile (each has its own).
+spring.config.activate.on-profile: "!consumer & !console"
 spring.security.oauth2.client.registration:
   studio:
     provider: northline

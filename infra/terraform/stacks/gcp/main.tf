@@ -44,6 +44,7 @@ locals {
     STUDIO_BFF_SECRET_HASH   = "studio-bff-secret-hash"
     CONSUMER_BFF_SECRET      = "consumer-bff-secret"
     CONSUMER_BFF_SECRET_HASH = "consumer-bff-secret-hash"
+    CONSOLE_BFF_SECRET       = "console-bff-secret"
     CONSOLE_BFF_SECRET_HASH  = "console-bff-secret-hash"
     STRIPE_SECRET_KEY        = "stripe-secret-key"
     STRIPE_PUBLISHABLE_KEY   = "stripe-publishable-key"
@@ -77,6 +78,8 @@ locals {
     OTEL_BACKEND_AUTH = "otel-backend-auth"
     # S-129 AI platform: the OpenRouter API key (empty until created; AI features answer 503 without it).
     OPENROUTER_API_KEY = "openrouter-api-key"
+    # S-91 console overview health: a metrics store's read token (empty unless the store needs one).
+    CONSOLE_HEALTH_PROMETHEUS_TOKEN = "console-health-prometheus-token"
   }
 
 

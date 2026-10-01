@@ -18,6 +18,7 @@ import ca.northline.payments.domain.CanadianTax;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.Ids;
 import ca.northline.shared.RuleViolation;
+import ca.northline.shared.security.StaffRole;
 import ca.northline.support.IntegrationTest;
 import ca.northline.support.TestJwt;
 import java.time.Duration;
@@ -436,7 +437,7 @@ class StripeTaxSyncTest extends IntegrationTest {
             mvc.perform(post("/api/v1/console/payments/tax-reconciliations")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"period\":\"" + QUARTER + "\"}")
-                            .with(TestJwt.staff(Ids.next())))
+                            .with(TestJwt.staff(Ids.next(), StaffRole.FINANCE)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.period").value(QUARTER))
                     .andExpect(jsonPath("$.mismatched").isNumber())
@@ -451,7 +452,8 @@ class StripeTaxSyncTest extends IntegrationTest {
 
         @Test
         void currentQuarter_whenNoneGiven() throws Exception {
-            mvc.perform(post("/api/v1/console/payments/tax-reconciliations").with(TestJwt.staff(Ids.next())))
+            mvc.perform(post("/api/v1/console/payments/tax-reconciliations")
+                            .with(TestJwt.staff(Ids.next(), StaffRole.FINANCE)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.period").value(QUARTER));
         }
@@ -461,7 +463,7 @@ class StripeTaxSyncTest extends IntegrationTest {
             mvc.perform(post("/api/v1/console/payments/tax-reconciliations")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"period\":\"Q3 2026\"}")
-                            .with(TestJwt.staff(Ids.next())))
+                            .with(TestJwt.staff(Ids.next(), StaffRole.FINANCE)))
                     .andExpect(status().isUnprocessableContent())
                     .andExpect(jsonPath("$.errors[0].field").value("period"))
                     .andExpect(jsonPath("$.errors[0].message").value("Use a quarter like 2026-Q3."));
