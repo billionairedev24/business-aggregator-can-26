@@ -15,6 +15,7 @@ import ca.northline.merchants.domain.ComplianceRules;
 import ca.northline.merchants.web.SettingsDtos.AcceptObligationsRequest;
 import ca.northline.merchants.web.SettingsDtos.LinkResponse;
 import ca.northline.merchants.web.SettingsDtos.StripeLinkRequest;
+import ca.northline.shared.Bytes;
 import ca.northline.shared.RuleViolation;
 import ca.northline.shared.security.CurrentMember;
 import ca.northline.shared.security.RequiresMerchant;
@@ -76,7 +77,7 @@ class ComplianceController {
                     verificationId,
                     Objects.requireNonNullElse(file.getOriginalFilename(), "document"),
                     Objects.requireNonNullElse(file.getContentType(), "application/octet-stream"),
-                    file.getBytes()));
+                    Bytes.of(file.getBytes())));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

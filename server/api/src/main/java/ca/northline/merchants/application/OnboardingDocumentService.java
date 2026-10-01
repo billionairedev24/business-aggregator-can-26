@@ -3,6 +3,7 @@ package ca.northline.merchants.application;
 import ca.northline.merchants.application.Documents.ReadDocument;
 import ca.northline.merchants.application.Documents.UploadDocument;
 import ca.northline.merchants.domain.Document;
+import ca.northline.shared.Bytes;
 import ca.northline.shared.Ids;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
@@ -28,16 +29,16 @@ class OnboardingDocumentService implements UploadDocument, ReadDocument {
 
     @Override
     public Document upload(UploadDocument.Command command) {
-        if (command.bytes().length == 0) {
+        if (command.bytes().isEmpty()) {
             throw RuleViolation.of(Documents.FIELD, "required", Documents.EMPTY);
         }
         var logo = command.purpose() == Document.Purpose.LOGO;
         var type = command.contentType().toLowerCase(Locale.ROOT).split(";")[0].strip();
-        if (command.bytes().length > Documents.MAX_BYTES || !(logo ? LOGO_TYPES : EVIDENCE_TYPES).contains(type)) {
+        if (command.bytes().size() > Documents.MAX_BYTES || !(logo ? LOGO_TYPES : EVIDENCE_TYPES).contains(type)) {
             throw RuleViolation.of(Documents.FIELD, "type", logo ? Documents.LOGO_TYPE : Documents.TYPE_OR_SIZE);
         }
         var id = Ids.next();
-        var key = storage.put(command.merchantId(), id, type, command.bytes());
+        var key = storage.put(command.merchantId(), id, type, command.bytes().toArray());
         var name =
                 command.fileName().isBlank() ? "document" : command.fileName().strip();
         var document = new Document(
@@ -46,7 +47,7 @@ class OnboardingDocumentService implements UploadDocument, ReadDocument {
                 command.purpose(),
                 name.length() > 200 ? name.substring(name.length() - 200) : name,
                 type,
-                command.bytes().length,
+                command.bytes().size(),
                 key,
                 command.actorId(),
                 clock.instant());
@@ -58,6 +59,6 @@ class OnboardingDocumentService implements UploadDocument, ReadDocument {
     @Transactional(readOnly = true)
     public Content read(String merchantId, String documentId) {
         var document = documents.find(merchantId, documentId).orElseThrow(() -> new NotFound("document", documentId));
-        return new Content(document, storage.get(document.storageKey()));
+        return new Content(document, Bytes.of(storage.get(document.storageKey())));
     }
 }

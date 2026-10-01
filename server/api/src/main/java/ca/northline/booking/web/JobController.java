@@ -17,6 +17,7 @@ import ca.northline.booking.web.JobResponses.ApprovalResponse;
 import ca.northline.booking.web.JobResponses.JobDetailResponse;
 import ca.northline.booking.web.JobResponses.JobResponse;
 import ca.northline.booking.web.JobResponses.MediaResponse;
+import ca.northline.shared.Bytes;
 import ca.northline.shared.ListResponse;
 import ca.northline.shared.RuleViolation;
 import ca.northline.shared.security.CurrentMember;
@@ -143,7 +144,7 @@ class JobController {
                 member.userId(),
                 Objects.requireNonNullElse(file.getOriginalFilename(), "attachment"),
                 Objects.requireNonNullElse(file.getContentType(), "application/octet-stream"),
-                file.getBytes())));
+                Bytes.of(file.getBytes()))));
     }
 
     private JobDetailResponse advance(

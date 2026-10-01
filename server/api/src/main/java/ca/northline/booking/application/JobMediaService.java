@@ -28,14 +28,14 @@ class JobMediaService implements UploadMedia {
         if (!ALLOWED.contains(type)) {
             throw RuleViolation.of("file", "content_type", TYPE_NOT_ALLOWED);
         }
-        if (command.bytes().length == 0) {
+        if (command.bytes().isEmpty()) {
             throw RuleViolation.of("file", "required", EMPTY);
         }
-        if (command.bytes().length > MAX_BYTES) {
+        if (command.bytes().size() > MAX_BYTES) {
             throw RuleViolation.of("file", "length", TOO_LARGE);
         }
         var id = Ids.next();
-        var key = store.put(command.merchantId(), id, type, command.bytes());
+        var key = store.put(command.merchantId(), id, type, command.bytes().toArray());
         var name =
                 command.fileName().isBlank() ? "attachment" : command.fileName().strip();
         var media = new MediaInfo(
@@ -43,7 +43,7 @@ class JobMediaService implements UploadMedia {
                 command.merchantId(),
                 name.length() > 200 ? name.substring(0, 200) : name,
                 type,
-                command.bytes().length,
+                command.bytes().size(),
                 key,
                 command.actorId(),
                 clock.instant());
