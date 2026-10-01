@@ -212,6 +212,12 @@ northline:
       client-id: ${TOAST_CLIENT_ID:}
       client-secret: ${TOAST_CLIENT_SECRET:}
       api-url: ${TOAST_API_URL:https://ws-api.toasttab.com}    # sandbox: https://ws-sandbox-api.eng.toasttab.com
+  # Addresses (S-47, docs/runbooks/google-maps.md): local = fixture addresses (refused under staging/prod) | google =
+  # Places API (New) autocomplete + details and the Geocoding API (reverse), key server-side only.
+  places:
+    provider: ${PLACES_PROVIDER:local}
+    api-key: ${GOOGLE_MAPS_API_KEY:}
+    per-minute: ${PLACES_RATE_LIMIT:60}                   # address lookups per browsing session and minute, per instance
   # Provider switches (ca.northline.platform) — see docs/runbooks/README.md.
   # Object storage (S-10, ca.northline.shared.storage): local (modules' disk fakes; placeholders under dev; refused
   # under staging/prod) | s3 (AWS S3 or RustFS/MinIO: endpoint + path-style) | gcs | azure (endpoint = account URL).
@@ -266,4 +272,4 @@ northline:
 ---
 # Local runs read server/.env (or .env next to the jar) — KEY=value lines, see server/.env.example. Never under `test`.
 spring.config.activate.on-profile: "!test"
-spring.config.import: optional:file:.env[.properties],optional:file:../.env[.properties]
+spring.config.import: optional:file:${NORTHLINE_DOTENV_DIR:.}/.env[.properties],optional:file:${NORTHLINE_DOTENV_DIR:..}/.env[.properties]

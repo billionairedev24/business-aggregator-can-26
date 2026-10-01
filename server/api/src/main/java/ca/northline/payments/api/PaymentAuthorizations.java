@@ -21,6 +21,9 @@ public interface PaymentAuthorizations {
      * @param taxCalculationId the {@link TaxCalculations} quote the tax comes from ({@code amountCents} and
      *     {@code taxCents} must match it); null = the caller computed the tax, and the sale is reported to Stripe Tax
      *     with a calculation made at capture for the merchant's province
+     * @param platformCents Northline's own charges authorized on the same card payment and captured with the escrow
+     *     (S-57 food: courier fee, service fee, their tax, the courier's tip) — never transferred to the merchant; 0 for
+     *     none. The matching {@link EscrowLifecycle.PlatformCharges} go with the hold.
      */
     record Request(
             String merchantId,
@@ -31,7 +34,32 @@ public interface PaymentAuthorizations {
             long taxCents,
             String transferGroup,
             @Nullable String clientKey,
-            @Nullable String taxCalculationId) {
+            @Nullable String taxCalculationId,
+            long platformCents) {
+
+        /** Without platform charges (S-21 shape). */
+        public Request(
+                String merchantId,
+                String refType,
+                String refId,
+                String customerId,
+                long amountCents,
+                long taxCents,
+                String transferGroup,
+                @Nullable String clientKey,
+                @Nullable String taxCalculationId) {
+            this(
+                    merchantId,
+                    refType,
+                    refId,
+                    customerId,
+                    amountCents,
+                    taxCents,
+                    transferGroup,
+                    clientKey,
+                    taxCalculationId,
+                    0);
+        }
 
         /** Without a tax calculation (the tax was worked out by the caller). */
         public Request(
@@ -43,7 +71,7 @@ public interface PaymentAuthorizations {
                 long taxCents,
                 String transferGroup,
                 @Nullable String clientKey) {
-            this(merchantId, refType, refId, customerId, amountCents, taxCents, transferGroup, clientKey, null);
+            this(merchantId, refType, refId, customerId, amountCents, taxCents, transferGroup, clientKey, null, 0);
         }
     }
 

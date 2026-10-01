@@ -18,6 +18,8 @@ public record LedgerEntry(
     public static final String STRIPE_FEES = "stripe_fees";
     public static final String TAX_PAYABLE = "tax_payable";
     public static final String STRIPE_BALANCE = "stripe_balance";
+    /** S-57: food tips owed to couriers ("100% goes to them") until courier payouts exist. */
+    public static final String COURIER_TIPS = "courier_tips";
 
     public static String merchant(String merchantId) {
         return "merchant:" + merchantId;
@@ -40,9 +42,11 @@ public record LedgerEntry(
     /** The customer's payment is captured into escrow (tax is owed to the CRA). */
     public static List<LedgerEntry> captured(Escrow e, Instant at) {
         return nonZero(
-                debit(STRIPE_BALANCE, e.getAmountCents() + e.getTaxCents(), "escrow", e.getId(), at),
+                debit(STRIPE_BALANCE, e.capturedCents(), "escrow", e.getId(), at),
                 credit(ESCROW, e.getAmountCents(), "escrow", e.getId(), at),
-                credit(TAX_PAYABLE, e.getTaxCents(), "escrow", e.getId(), at));
+                credit(TAX_PAYABLE, e.getTaxCents() + e.getPlatformTaxCents(), "escrow", e.getId(), at),
+                credit(REVENUE, e.getPlatformFeeCents(), "escrow", e.getId(), at),
+                credit(COURIER_TIPS, e.getTipCents(), "escrow", e.getId(), at));
     }
 
     /** Escrow → merchant balance (net) + Northline's fee. */

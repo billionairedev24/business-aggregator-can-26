@@ -51,7 +51,7 @@ class EscrowService implements EscrowLifecycle {
                 .map(Escrow::getId)
                 .orElseGet(() -> {
                     var now = clock.instant();
-                    var total = hold.amountCents() + hold.taxCents();
+                    var total = hold.amountCents() + hold.taxCents() + hold.platformTotal();
                     var authorization = requireAuthorized(gateway.authorization(hold.stripePaymentIntent()), total);
                     var known = escrows.intentByStripeId(hold.stripePaymentIntent());
                     var intent = escrows.recordPaymentIntent(new EscrowRepository.IntentRecord(
@@ -277,7 +277,7 @@ class EscrowService implements EscrowLifecycle {
                 }
                 var charge = gateway.capture(
                         intent.stripePaymentIntent(),
-                        escrow.getAmountCents() + escrow.getTaxCents(),
+                        escrow.capturedCents(),
                         StripeIdempotencyKeys.of("capture", escrow.getId(), intent.id()));
                 escrows.recordCapture(intent.id(), charge);
             });
