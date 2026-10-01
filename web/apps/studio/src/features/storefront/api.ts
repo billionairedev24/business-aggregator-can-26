@@ -123,6 +123,35 @@ export const useSimulateDns = (merchantId: string) =>
 export const usePublishStorefront = (merchantId: string) =>
   useStorefrontMutation<void>(merchantId, () => http(`/api/v1/merchants/${merchantId}/storefront/publish`, { method: 'POST' }, Storefront));
 
+/** S-75: GET …/storefront-stats — visits to the public page and the booked rate, last 30 days. */
+export const StorefrontStats = z.object({
+  visits: z.number(), booked: z.number(), bookedRateBps: z.number().nullish(),
+  daily: z.array(z.object({ date: z.string(), visits: z.number() })),
+});
+export type StorefrontStats = z.infer<typeof StorefrontStats>;
+export const storefrontStatsQuery = (merchantId: string) => queryOptions({
+  queryKey: ['merchant', merchantId, 'storefront-stats'],
+  queryFn: () => http(`/api/v1/merchants/${merchantId}/storefront-stats`, {}, StorefrontStats),
+  staleTime: 5 * 60_000,
+});
+
+/** S-75: the provider-funded reward (`GET`, 204 = never set; `PUT` switches it on with its terms, or off). */
+export const Reward = z.object({ active: z.boolean(), multiplier: z.number(), label: z.string().nullish(), endsOn: z.string(), running: z.boolean() });
+export type Reward = z.infer<typeof Reward>;
+export interface RewardInput { active: boolean; multiplier: 2 | 3; label: string | null; endsOn: string | null }
+const rewardKey = (merchantId: string) => ['merchant', merchantId, 'reward'] as const;
+export const rewardQuery = (merchantId: string) => queryOptions({
+  queryKey: rewardKey(merchantId),
+  queryFn: async () => (await http(`/api/v1/merchants/${merchantId}/reward`, {}, Reward.nullish())) ?? null,
+});
+export function useSaveReward(merchantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: RewardInput) => http(`/api/v1/merchants/${merchantId}/reward`, { method: 'PUT', body }, Reward),
+    onSuccess: r => qc.setQueryData(rewardKey(merchantId), r),
+  });
+}
+
 export const UploadedDocument = z.object({ id: z.string(), fileName: z.string(), contentType: z.string(), sizeBytes: z.number() });
 export type UploadedDocument = z.infer<typeof UploadedDocument>;
 

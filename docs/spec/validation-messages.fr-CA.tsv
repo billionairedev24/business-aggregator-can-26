@@ -86,6 +86,7 @@ Category not allowed in Shop	Catégorie non permise dans la Boutique	shipped
 Check this field.	Vérifiez ce champ.	new
 Choose %s.	Choisissez : %s.	review
 Choose 1 to 3 providers.	Choisissez de 1 à 3 prestataires.	new
+Choose 2× or 3× points.	Choisissez des points ×2 ou ×3.	new
 Choose 30 d, 90 d or 12 mo.	Choisissez 30 j, 90 j ou 12 mois.	new
 Choose a Canadian province or territory.	Choisissez une province ou un territoire du Canada.	shipped
 Choose a category down to the last level.	Choisissez une catégorie jusqu'au dernier niveau.	shipped
@@ -151,6 +152,7 @@ Choose the country of origin.	Choisissez le pays d'origine.	shipped
 Choose the number of bedrooms.	Choisissez le nombre de chambres.	new
 Choose the type of home.	Choisissez le type de logement.	new
 Choose what we do if something's out of stock.	Choisissez ce que nous faisons si un article est en rupture de stock.	new
+Choose when the reward ends.	Choisissez quand la récompense se termine.	new
 Choose where you’d like Northline.	Choisissez où vous aimeriez avoir Northline.	new
 Choose your POS.	Choisissez votre PDV.	new
 Compare-at must be higher than your price.	Le prix de comparaison doit dépasser votre prix.	shipped
@@ -317,6 +319,7 @@ Pick a service.	Choisissez un service.	new
 Pick a step.	Choisissez une étape.	new
 Pick a time.	Choisissez une heure.	new
 Pick allergens from the Health Canada list.	Choisissez les allergènes dans la liste de Santé Canada.	new
+Pick an end date within the next 90 days.	Choisissez une date de fin dans les 90 prochains jours.	new
 Pick at least one day.	Choisissez au moins un jour.	shipped
 Pick at least one department.	Choisissez au moins un rayon.	shipped
 Pick at least one event.	Choisissez au moins un événement.	shipped
@@ -364,6 +367,7 @@ Refund between $0.01 and the amount paid.	Remboursez entre 0,01 $ et le montant 
 Reload the page to read the current version first.	Rechargez d’abord la page pour lire la version actuelle.	new
 Required for corporations, co-ops and non-profits.	Obligatoire pour les sociétés, coopératives et organismes sans but lucratif.	shipped
 Role is user or assistant.	Le rôle est user ou assistant.	review
+Say whether the reward is on.	Indiquez si la récompense est active.	new
 Scan the QR code first.	Balayez d’abord le code QR.	new
 Search for 100 characters or fewer.	Recherchez 100 caractères ou moins.	new
 Search isn't available in {market} yet.	La recherche n’est pas encore offerte à {market}.	new

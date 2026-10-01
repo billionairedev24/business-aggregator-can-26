@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useInfiniteQuery, useSuspenseQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { Alert, ErrorState, Skeleton, Tag, useLocale, type Locale } from '@northline/ui';
 import { siteHref, type PageHost } from '../../lib/pages';
@@ -9,7 +9,8 @@ import { useServicesT } from '../services/messages';
 import { categoryName, copyKeys, familyOf } from '../services/taxonomy';
 import { dyn } from '../services/text';
 import { FavouriteButton } from '../account/FavouriteButton';
-import { moreReviewsQuery, providerQuery, storefrontQuery, type ProviderFacts, type PublicReview, type Storefront } from './api';
+import { useStorefrontVisit } from '../../lib/visits';
+import { moreReviewsQuery, providerQuery, rewardQuery, storefrontQuery, type ProviderFacts, type PublicReview, type Storefront } from './api';
 import { useProviderT } from './messages';
 
 /** Sections the provider page renders in the page's order (hero first, the CTA card beside them). */
@@ -25,6 +26,7 @@ export function ProviderPage({ slug }: { slug: string }) {
   const { data: page } = useSuspenseQuery(storefrontQuery(slug));
   const { data: facts } = useSuspenseQuery(providerQuery(slug, locale));
   const config = useSiteConfig();
+  useStorefrontVisit(slug);
   const enabled = new Set(page.sections.map(s => s.kind));
   const main = page.sections.filter(s => MAIN.includes(s.kind));
   return (
@@ -83,6 +85,8 @@ function Figures({ facts, locale }: { facts: ProviderFacts; locale: Locale }) {
 /** Verified facts as the design's credential tags, plus how the business is booked. */
 function Credentials({ facts }: { facts: ProviderFacts }) {
   const t = useProviderT();
+  const { locale } = useLocale();
+  const reward = useQuery(rewardQuery(facts.merchantId)).data;
   const tags = facts.verifiedFacts.map(f => f.startsWith('licence:')
     ? t('fact_licence', { registry: f.slice('licence:'.length) })
     : dyn(t, `fact_${f}`, ''))
@@ -91,6 +95,7 @@ function Credentials({ facts }: { facts: ProviderFacts }) {
     <div className="nl-prov-creds">
       {tags.map(tag => <Tag key={tag} tone="accent">{tag}</Tag>)}
       <Tag tone="neutral">{t(`mode_${facts.kind}`)}</Tag>
+      {reward ? <Tag tone="highlight">{t(reward.label ? 'rewardOn' : 'reward', { multiplier: reward.multiplier, label: reward.label ?? '', until: new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(`${reward.endsOn}T12:00:00Z`)) })}</Tag> : null}
     </div>
   );
 }

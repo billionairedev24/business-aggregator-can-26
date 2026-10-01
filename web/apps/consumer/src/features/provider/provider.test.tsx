@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useParams } from '@tanstack/react-router';
@@ -118,5 +118,40 @@ describe('provider page (design 06 provider)', () => {
     expect(ago('2026-09-29T12:00:00Z', 'en', now)).toBe('yesterday');
     expect(ago('2026-09-16T12:00:00Z', 'en', now)).toBe('2 weeks ago');
     expect(ago('2026-08-01T12:00:00Z', 'en', now)).toBe('2 months ago');
+  });
+});
+
+describe('storefront visits and the provider-funded reward (S-75)', () => {
+  const withReward = (reward: unknown) => (c: Call) => (c.url === '/api/v1/public/merchants/m1/reward' ? { body: reward } : api()(c));
+  beforeEach(() => sessionStorage.clear());
+
+  it('counts the visit once per tab session, with no cookie or identity in the beacon', async () => {
+    const calls = mockFetch(api());
+    const first = renderApp('/providers/prairie-wrench', { routes });
+    await screen.findByRole('heading', { level: 1, name: 'Prairie Wrench' });
+    first.unmount();
+    renderApp('/providers/prairie-wrench', { routes });
+    await screen.findByRole('heading', { level: 1, name: 'Prairie Wrench' });
+    const beacons = calls.filter(c => c.url === '/api/v1/public/storefronts/prairie-wrench/visits');
+    expect(beacons).toHaveLength(1);
+    expect(beacons[0]!.method).toBe('POST');
+    expect(beacons[0]!.body).toBeUndefined();
+  });
+
+  it('shows the running reward among the credentials', async () => {
+    mockFetch(withReward({ multiplier: 2, label: 'brake jobs', endsOn: '2026-10-31' }));
+    renderApp('/providers/prairie-wrench', { routes });
+    expect(await screen.findByText('2× points on brake jobs until Oct 31')).toBeInTheDocument();
+  });
+
+  it('shows nothing when no reward runs, and words it in French', async () => {
+    mockFetch(withReward(null));
+    const r = renderApp('/providers/prairie-wrench', { routes });
+    await screen.findByRole('heading', { level: 1, name: 'Prairie Wrench' });
+    expect(screen.queryByText(/points/)).not.toBeInTheDocument();
+    r.unmount();
+    mockFetch(withReward({ multiplier: 3, label: null, endsOn: '2026-10-31' }));
+    renderApp('/providers/prairie-wrench', { routes, locale: 'fr' });
+    expect(await screen.findByText('Points ×3 jusqu’au 31 oct.')).toBeInTheDocument();
   });
 });

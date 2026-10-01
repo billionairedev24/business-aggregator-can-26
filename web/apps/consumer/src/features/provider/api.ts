@@ -60,6 +60,15 @@ export const providerQuery = (slug: string, locale: Locale) => queryOptions({
   staleTime: 60_000,
 });
 
+/** S-75: the reward the business funds today ("2× points on brake jobs until Oct 1"); null when none (204). */
+export const Reward = z.object({ multiplier: z.number().int(), label: z.string().nullish(), endsOn: z.string() });
+export type Reward = z.infer<typeof Reward>;
+export const rewardQuery = (merchantId: string) => queryOptions({
+  queryKey: ['reward', merchantId],
+  queryFn: async () => (await http(`/api/v1/public/merchants/${encodeURIComponent(merchantId)}/reward`, {}, Reward.nullish())) ?? null,
+  staleTime: 5 * 60_000,
+});
+
 export const PAGE_SIZE = 10;
 
 /** Reviews after the first three the page shows. */
