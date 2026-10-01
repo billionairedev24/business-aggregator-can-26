@@ -3886,6 +3886,35 @@ paths:
       security: []
       tags:
       - public-media-controller
+  /api/v1/public/embed:
+    get:
+      operationId: publicEmbedEmbed
+      parameters:
+      - in: query
+        name: key
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: store
+        required: true
+        schema:
+          type: string
+      - in: header
+        name: Origin
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: object
+          description: OK
+      security: []
+      tags:
+      - public-embed-controller
   /api/v1/public/home:
     get:
       operationId: homeHome

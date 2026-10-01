@@ -8,6 +8,7 @@ import { integrationsQuery } from '../catalogue/api';
 import { useMerchant, useMerchantId, useRole } from '../shell/api';
 import { screenHref } from '../shell/nav';
 import { apiKeysQuery, businessQuery, deliveriesQuery, developerOptionsQuery, useAddWebhook, useEnableWebhook, useIssueKey, useQueueDelivery, useRemoveWebhook, useRevokeKey, useRotateWebhook, webhooksQuery, type ApiKey, type Webhook, type WebhookDelivery } from './api';
+import { EmbedSnippet } from './EmbedSnippet';
 import { useSettingsT, type SettingsT } from './messages';
 import { keySchema, localizeServerErrors, webhookErrors } from './validation';
 
@@ -198,11 +199,12 @@ function Embed() {
   const t = useSettingsT();
   const merchantId = useMerchantId();
   const business = useQuery(businessQuery(merchantId));
-  const slug = business.data?.storeSlug ?? 'your-store';
+  const slug = business.data?.storeSlug;
   return (
     <section aria-labelledby="set-embed">
       <h3 id="set-embed" className="nl-set-h3">{t('embedTitle')}</h3>
-      <pre className="nl-set-code">{`<script src="https://cdn.northline.ca/embed.js"\n  data-store="${slug}"\n  data-key="pk_live_…"></script>`}</pre>
+      {/* S-76: the real publishable key; without a page yet there is nothing to embed */}
+      {slug ? <EmbedSnippet slug={slug} manageSites /> : business.isPending ? null : <p className="nl-muted">{t('embedNoPage')}</p>}
     </section>
   );
 }

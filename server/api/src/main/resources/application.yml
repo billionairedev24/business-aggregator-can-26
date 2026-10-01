@@ -143,6 +143,8 @@ northline:
     bus: ${LIVE_BUS:memory}
     stream: ${LIVE_STREAM:10m}
   studio.base-url: ${STUDIO_ORIGIN:http://localhost:3100}      # invitation links, Stripe return URLs
+  # S-76: the consumer site that serves the website embed script (<site>/embed.js) shown in the Studio's snippet
+  developer.embed.site-origin: ${CONSUMER_ORIGIN:http://localhost:3000}
   # The region model (S-134, docs/runbooks/regions.md): provinces and markets are rows in region.regions (V130/V131,
   # edited by the console later); this is the configuration on top. Code never names a province, city or zone.
   region:

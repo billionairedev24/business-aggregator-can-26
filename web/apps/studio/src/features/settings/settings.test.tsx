@@ -165,6 +165,7 @@ describe('Settings › API & integrations', () => {
       [`GET ${S}/webhooks`]: () => ({ items: [{ id: 'w1', url: 'https://prairiewrench.ca/hooks/northline', events: ['booking.confirmed'], active: true, signature: 'HMAC-SHA256', createdAt: '2026-02-02T17:00:00Z', lastStatus: 200, lastDeliveryAt: new Date().toISOString() }] }),
       [`GET ${S}/developer-options`]: () => ({ scopes: ['orders:read', 'payouts:read'], events: ['booking.confirmed'] }),
       [`GET ${S}/business`]: () => business,
+      [`GET ${S}/publishable-key`]: () => ({ key: 'pk_live_Q2hlY2tZb3VyU2NyaXB0', allowedOrigins: [], createdAt: '2026-02-02T17:00:00Z', scriptUrl: 'https://northline.ca/embed.js' }),
       [`POST ${S}/api-keys`]: () => ({ key: { id: 'k2', name: 'Zap', scopes: ['orders:read'], prefix: 'nl_live_Zzzz', rateLimit: 600, createdAt: new Date().toISOString(), lastUsedAt: null }, secret: 'nl_live_Zzzzsecret' }),
       'GET /api/v1/merchants/m1/availability/sync': () => ({ calendars: [{ provider: 'google', connected: true }], team: [] }),
       'GET /api/v1/merchants/m1/listings/integrations': () => ({ items: [] }),
@@ -173,7 +174,7 @@ describe('Settings › API & integrations', () => {
     renderWithProviders(<ApiTab />);
     expect((await screen.findAllByText('Website embed')).length).toBeGreaterThan(0);
     expect(screen.getByText(/booking.confirmed · HMAC-SHA256 · last delivery 200 OK/)).toBeTruthy();
-    expect(screen.getByText(/data-store="prairie-wrench"/)).toBeTruthy();
+    expect((await screen.findByText(/data-store="prairie-wrench"/)).textContent).toContain('data-key="pk_live_Q2hlY2tZb3VyU2NyaXB0"'); // S-76
     await user.click(screen.getAllByRole('button', { name: 'Issue key' })[0]!);
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Issue key' }));

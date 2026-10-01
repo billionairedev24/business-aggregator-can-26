@@ -4816,3 +4816,38 @@ and the audit log rules: no update, no delete, and a retention delete only past 
   window and cancelled bookings, 403s, the reward's on/off, public view, audit and every validation message);
   `StorefrontStats.test.tsx` (lede, reward switch, 422 next to the field, read-only technician, French);
   `provider.test.tsx` (one beacon per tab session with no body, the reward tag in en and fr).
+
+## 2026-09-30 — S-76 Publishable keys for the website embed snippet
+
+- **Key.** One publishable key per business, `pk_live_` + 32 url-safe characters (`developer.publishable_keys`, V183).
+  It is public by design: it sits in the business's page source and only names the business. So it is stored as is
+  (the secret `nl_live_` API keys stay hashed) and gives no access to anything beyond the published page. The
+  `pk_test_` prefix isn't modelled: every environment issues `pk_live_` keys, the same rule as the secret keys.
+- **Studio.** `GET/POST /api/v1/merchants/{merchantId}/settings/publishable-key` (VIEW / MANAGE): POST issues the
+  first key or replaces it. Replacing stops the old key at once, after a confirm dialog that says so. `PUT …/origins`
+  sets the websites the embed answers on. Settings › API "Embed your store" and the Business page's "Embed code"
+  dialog show the real snippet (`<script src="<site>/embed.js" data-store="<slug>" data-key="pk_live_…" async>`) and
+  replace the design's `pk_live_…` placeholder; the allowed websites are edited in Settings › API. Issuing, replacing
+  and changing websites are audit-logged. The script URL is `CONSUMER_ORIGIN` + `/embed.js`
+  (`northline.developer.embed.site-origin`; the api already received `CONSUMER_ORIGIN` from the chart).
+- **Allowed websites.** Each entry is a browser origin: https only (http only for localhost), no path, query or
+  credentials, at most 10. A bare host gets `https://`, and a default port is dropped. An empty list means any website.
+  The check uses the browser's `Origin` header. That stops copying the snippet to another site in a browser; it is
+  not a secret (a script outside a browser can send any Origin, and the answer is public page data anyway).
+- **Embed.** `web/apps/consumer/public/embed.js` (served by the consumer site, no build step, no dependencies):
+  - It finds its `<script data-key>` tags and calls `GET <site>/api/v1/public/embed?key=&store=` without cookies,
+    then inserts the page's Book / Order button (its CTA label, in the page's language, en or fr) in the brand colour,
+    with readable text. The button opens the business's Northline page.
+  - The endpoint (merchants module, through `developer.api.EmbedKeys`) answers only for an active key of that page's
+    business, on a published page, from an allowed website. Otherwise it returns 404, or 403 for a website that isn't
+    allowed. Answers carry `Access-Control-Allow-Origin` (`*`, or the allowed origin with `Vary: Origin`) and
+    are cached a minute.
+  - Store pages have no consumer page yet (S-49), so their button opens the site's home.
+- **Not done / never exercised.** The script has run only under jsdom in vitest and the endpoint only under MockMvc.
+  It has not been tested on a real third-party site, through the consumer-bff relay (CORS headers are expected to pass
+  through the gateway unchanged) or across browsers. There is no inline iframe mode (the consumer site sends
+  `X-Frame-Options: DENY`). Embed bookings are not attributed to the sales report's `embed` source yet.
+- **Tests:** `EmbedKeyApiTest` (issue, roll, old key 404, other business's key 404, unpublished 404, website limits with
+  CORS headers, every validation message, 403s, audit), `embed.test.ts` (consumer: request, button, language, colour
+  contrast, inactive key, single mount), `embed.test.tsx` (studio: snippet, create, confirm replace, websites with
+  the 422 message, read-only role, French).

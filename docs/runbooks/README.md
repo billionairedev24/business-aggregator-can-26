@@ -143,7 +143,8 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `AUTH_INTERNAL_URL` | | | ✓ | | no (= `AUTH_ISSUER`) |
 | `API_URL` | | | ✓ | | yes |
 | `STUDIO_ORIGIN` | ✓ | ✓ | | | yes |
-| `CONSUMER_ORIGIN`, `CONSOLE_ORIGIN`, `WEBAUTHN_RP_ID` | | ✓ | | | yes |
+| `CONSUMER_ORIGIN` | ✓ (S-76: the embed script's site) | ✓ | | | yes |
+| `CONSOLE_ORIGIN`, `WEBAUTHN_RP_ID` | | ✓ | | | yes |
 | `TOTP_KEY` | | ✓ | | | yes |
 | `STUDIO_BFF_SECRET` | | | ✓ | | yes |
 | `STUDIO_BFF_SECRET_HASH` | | ✓ | | | yes |

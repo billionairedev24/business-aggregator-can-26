@@ -15,6 +15,8 @@ public final class Secrets {
 
     public static final String API_KEY_PREFIX = "nl_live_";
     public static final String WEBHOOK_PREFIX = "whsec_";
+    /** S-76: publishable (public) keys for the website embed. */
+    public static final String PUBLISHABLE_PREFIX = "pk_live_";
     /** Characters of the key kept for display ("nl_live_Ab3x…"). */
     public static final int SHOWN = 12;
 
@@ -22,6 +24,10 @@ public final class Secrets {
 
     public static String apiKey() {
         return API_KEY_PREFIX + random(24);
+    }
+
+    public static String publishableKey() {
+        return PUBLISHABLE_PREFIX + random(24);
     }
 
     public static String webhookSecret() {

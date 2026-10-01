@@ -71,6 +71,7 @@ export function localizeServerErrors(errors: FieldError[], t: SettingsT): Record
     'email:required': 'err_contact', 'email:format': 'err_email', 'phone:format': 'err_phone', 'role:required': 'err_role', 'role:allowed': 'err_roleOffer',
     'name:required': 'err_keyName', 'name:length': 'err_keyNameLong', 'scopes:required': 'err_scopes',
     'url:required': 'err_url', 'url:format': 'err_https', 'events:required': 'err_events',
+    'allowedOrigins:format': 'err_origin', 'allowedOrigins:size': 'err_origins',
   };
   const out: Record<string, string> = {};
   for (const e of errors) {

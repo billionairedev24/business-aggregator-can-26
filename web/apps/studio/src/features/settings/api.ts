@@ -161,6 +161,32 @@ export const deliveriesQuery = (m: string, endpointId: string) => queryOptions({
 export const developerOptionsQuery = (m: string) => queryOptions({ queryKey: settingsKey(m, 'developer-options'), queryFn: () => http(`${base(m)}/developer-options`, {}, DeveloperOptions), staleTime: Infinity });
 export const auditLogQuery = (m: string) => queryOptions({ queryKey: settingsKey(m, 'audit-log'), queryFn: () => http(`${base(m)}/audit-log`, {}, items(AuditEntry)) });
 
+// ── S-76: publishable key for the website embed ──────────────────────────────────────────────────────────────────────
+export const PublishableKey = z.object({ key: z.string(), allowedOrigins: z.array(z.string()), createdAt: z.string(), scriptUrl: z.string() });
+export type PublishableKey = z.infer<typeof PublishableKey>;
+/** 204 (no key yet) reads as null. */
+export const publishableKeyQuery = (m: string) => queryOptions({
+  queryKey: settingsKey(m, 'publishable-key'),
+  queryFn: async () => (await http(`${base(m)}/publishable-key`, {}, PublishableKey.nullish())) ?? null,
+});
+/** Issues the first key or rolls it (the old one stops working at once). */
+export function useRollPublishableKey(m: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => http(`${base(m)}/publishable-key`, { method: 'POST' }, PublishableKey),
+    onSuccess: k => qc.setQueryData(settingsKey(m, 'publishable-key'), k),
+  });
+}
+export function useEmbedOrigins(m: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (allowedOrigins: string[]) => http(`${base(m)}/publishable-key/origins`, { method: 'PUT', body: { allowedOrigins } }, PublishableKey),
+    onSuccess: k => qc.setQueryData(settingsKey(m, 'publishable-key'), k),
+  });
+}
+/** The snippet a business pastes on its own website. */
+export const embedSnippet = (k: PublishableKey, slug: string) => `<script src="${k.scriptUrl}"\n  data-store="${slug}"\n  data-key="${k.key}" async></script>`;
+
 export function useIssueKey(m: string) {
   const qc = useQueryClient();
   return useMutation({
