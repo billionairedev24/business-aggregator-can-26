@@ -144,6 +144,8 @@ class SecondProvinceTest extends IntegrationTest {
                 .andExpect(jsonPath("$.region.province").value("SK"))
                 .andExpect(jsonPath("$.region.provinceName.en").value("Saskatchewan"))
                 .andExpect(jsonPath("$.region.provinceName.fr").value("Saskatchewan"))
+                .andExpect(jsonPath("$.region.provinceIn.fr").value("en Saskatchewan"))
+                .andExpect(jsonPath("$.region.provinceOf.fr").value("de la Saskatchewan"))
                 .andExpect(jsonPath("$.region.timeZone").value("America/Regina"))
                 .andExpect(jsonPath("$.region.privacyLaw").value("pipeda"));
     }
@@ -223,11 +225,14 @@ class SecondProvinceTest extends IntegrationTest {
     void pooledRunsAreAtSaskatoonsLocalTimes() {
         assertThat(runs.market("saskatoon")).hasValue("Saskatoon");
         assertThat(runs.zone("Saskatoon")).isEqualTo(REGINA);
-        var upcoming = runs.upcoming("Saskatoon", Instant.now());
-        assertThat(upcoming).isNotEmpty();
-        assertThat(upcoming)
+        // the configured runs (evening 18:00, morning 08:00) at Saskatoon's local times
+        var scheduled = runs.upcoming("Saskatoon", Instant.now()).stream()
+                .filter(r -> !r.slot().equals("other"))
+                .toList();
+        assertThat(scheduled).isNotEmpty();
+        assertThat(scheduled)
                 .allSatisfy(r -> assertThat(r.startsAt().atZone(REGINA).toLocalTime())
-                        .isIn(LocalTime.of(18, 0), LocalTime.of(8, 0)));
+                        .isEqualTo(r.slot().equals("evening") ? LocalTime.of(18, 0) : LocalTime.of(8, 0)));
     }
 
     @Test

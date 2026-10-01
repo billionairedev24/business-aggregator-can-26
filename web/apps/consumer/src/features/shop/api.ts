@@ -48,19 +48,23 @@ export const Department = z.object({
 });
 export type Department = z.infer<typeof Department>;
 
-/** Where nobody chose a market: Calgary, the fallback market (docs/CONSUMER_WEB_PLAN.md § Location). */
-export const DEFAULT_MARKET = 'Calgary';
+/**
+ * `market` = a city; undefined = nobody chose one, and the api renders its fallback market (the default province's
+ * first live market — region configuration, never a city in this app; the response names it in `market`).
+ */
+export const marketParams = (market: string | undefined, locale: Locale) =>
+  `${market ? `market=${encodeURIComponent(market)}&` : ''}lang=${locale}`;
+const q = marketParams;
+const key = (market: string | undefined) => market?.toLowerCase() ?? '';
 
-const q = (market: string, locale: Locale) => `market=${encodeURIComponent(market)}&lang=${locale}`;
-
-export const landingQuery = (market: string, locale: Locale) => queryOptions({
-  queryKey: ['shop', 'landing', market.toLowerCase(), locale],
+export const landingQuery = (market: string | undefined, locale: Locale) => queryOptions({
+  queryKey: ['shop', 'landing', key(market), locale],
   queryFn: () => http(`/api/v1/public/shop?${q(market, locale)}`, {}, Landing),
   staleTime: 60_000,
 });
 
-export const departmentQuery = (slug: string, market: string, locale: Locale) => queryOptions({
-  queryKey: ['shop', 'department', slug, market.toLowerCase(), locale],
+export const departmentQuery = (slug: string, market: string | undefined, locale: Locale) => queryOptions({
+  queryKey: ['shop', 'department', slug, key(market), locale],
   queryFn: () => http(`/api/v1/public/shop/departments/${encodeURIComponent(slug)}?${q(market, locale)}`, {}, Department),
   staleTime: 60_000,
 });

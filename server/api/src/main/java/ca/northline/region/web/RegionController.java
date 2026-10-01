@@ -34,9 +34,12 @@ class RegionController {
     private final Regions regions;
     private final Markets markets;
 
+    /** {@code nameIn} "in Alberta" / "au Québec", {@code nameOf} "Alberta" / "du Québec": for copy in the language. */
     record ProvinceResponse(
             String code,
             String name,
+            String nameIn,
+            String nameOf,
             LaunchStatus status,
             String timeZone,
             List<String> timeZones,
@@ -65,6 +68,8 @@ class RegionController {
                 .map(p -> new ProvinceResponse(
                         p.code(),
                         p.name(language),
+                        p.nameIn(language),
+                        p.nameOf(language),
                         p.status(),
                         p.zone().getId(),
                         p.timeZones().stream().map(ZoneId::getId).toList(),

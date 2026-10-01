@@ -273,7 +273,9 @@ class RegionCatalogue implements Regions, Markets {
                 row.privacyLaw() == null ? PrivacyLaw.PIPEDA : CodedEnum.fromCode(PrivacyLaw.class, row.privacyLaw()),
                 row.registries(),
                 row.holidays(),
-                row.taxBps() == null ? 0 : row.taxBps());
+                row.taxBps() == null ? 0 : row.taxBps(),
+                row.frIn() == null ? "(" + r.nameEn() + ")" : row.frIn(),
+                row.frOf() == null ? "(" + r.nameEn() + ")" : row.frOf());
     }
 
     private MarketProfile market(ProfileRow row, Map<String, ProvinceProfile> provinces) {

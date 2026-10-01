@@ -341,6 +341,7 @@ describe('Food tracking (design 06 foodTrack)', () => {
     first.unmount();
     user = null;
     open('/food/orders/F1', 'fr');
-    expect(await screen.findByRole('link', { name: 'Se connecter' })).toBeInTheDocument();
+    // the page's own sign-in link (the header has one too for guests)
+    expect(await within(await screen.findByRole('main')).findByRole('link', { name: 'Se connecter' })).toBeInTheDocument();
   });
 });

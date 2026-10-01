@@ -28,7 +28,8 @@ public interface MerchantPlaces {
             @Nullable String marketId,
             ZoneId zone,
             String provinceNameEn,
-            String provinceNameFr) {
+            String provinceNameFr,
+            @Nullable ProvinceProfile profile) {
 
         /** The province's name in the locale ({@code ""} when no province is known). */
         public String provinceName(Locale locale) {

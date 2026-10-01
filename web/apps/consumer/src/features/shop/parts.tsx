@@ -1,4 +1,5 @@
 import { ProductTile, ShopTile, Skeleton, useFormatters, useLocale, type TagTone } from '@northline/ui';
+import { useZone } from '../location/regions';
 import type { ProductCard, Run, ShopCard } from './api';
 import { clock, runWhen, weekday } from './format';
 import { useShopT } from './messages';
@@ -15,10 +16,11 @@ export function useTierLabel() {
 export function useRunTag() {
   const t = useShopT();
   const { locale } = useLocale();
+  const zone = useZone();
   return (run: Run | null | undefined, next: Run | null | undefined): { label: string; tone: TagTone } => {
     if (!run) return { label: t('notOnRun'), tone: 'neutral' };
-    const when = runWhen(run);
-    const label = t(`run_${when}`, { weekday: weekday(run.startsAt, locale) });
+    const when = runWhen(run, zone);
+    const label = t(`run_${when}`, { weekday: weekday(run.startsAt, locale, zone) });
     return { label, tone: next && run.windowId === next.windowId ? 'accent' : 'neutral' };
   };
 }
@@ -27,10 +29,11 @@ export function useRunTag() {
 export function useOrderByTag() {
   const t = useShopT();
   const { locale } = useLocale();
+  const zone = useZone();
   return (run: Run | null | undefined, next: Run | null | undefined): { label: string; tone: TagTone } => {
     if (!run) return { label: t('notOnRun'), tone: 'neutral' };
-    if (next && run.windowId === next.windowId) return { label: t('orderBy', { time: clock(run.orderBy, locale) }), tone: 'accent' };
-    return { label: runWhen(run) === 'tomorrow' ? t('tomorrow') : t('laterDay', { weekday: weekday(run.startsAt, locale) }), tone: 'neutral' };
+    if (next && run.windowId === next.windowId) return { label: t('orderBy', { time: clock(run.orderBy, locale, zone) }), tone: 'accent' };
+    return { label: runWhen(run, zone) === 'tomorrow' ? t('tomorrow') : t('laterDay', { weekday: weekday(run.startsAt, locale, zone) }), tone: 'neutral' };
   };
 }
 

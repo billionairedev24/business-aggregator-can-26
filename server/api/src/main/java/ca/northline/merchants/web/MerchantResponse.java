@@ -24,12 +24,16 @@ record MerchantResponse(
 
     /**
      * @param province the business's province (else the configured default province), null when neither is known
+     * @param provinceIn "in Alberta" / "en Alberta", {@code provinceOf} "Alberta" / "de l'Alberta": the name as copy
+     *     needs it in each language
      * @param privacyLaw the province's privacy law code ({@code pipeda}, {@code ab_pipa}, {@code bc_pipa},
      *     {@code qc_law25})
      */
     record Region(
             @Nullable String province,
             Names provinceName,
+            Names provinceIn,
+            Names provinceOf,
             String timeZone,
             @Nullable String privacyLaw) {}
 

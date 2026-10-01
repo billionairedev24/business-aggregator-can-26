@@ -1,5 +1,6 @@
 package ca.northline.merchants.web;
 
+import java.util.Locale;
 import static ca.northline.shared.security.MerchantPermission.MANAGE;
 import static ca.northline.shared.security.MerchantPermission.VIEW;
 
@@ -50,9 +51,18 @@ class MerchantController {
 
     private MerchantResponse.Region region(String merchantId) {
         var place = places.of(merchantId);
+        var profile = place.profile();
         return new MerchantResponse.Region(
                 place.province(),
                 new MerchantResponse.Names(place.provinceNameEn(), place.provinceNameFr()),
+                profile == null
+                        ? new MerchantResponse.Names("", "")
+                        : new MerchantResponse.Names(
+                                profile.nameIn(Locale.ENGLISH), profile.nameIn(Locale.CANADA_FRENCH)),
+                profile == null
+                        ? new MerchantResponse.Names("", "")
+                        : new MerchantResponse.Names(
+                                profile.nameOf(Locale.ENGLISH), profile.nameOf(Locale.CANADA_FRENCH)),
                 place.zone().getId(),
                 regions.province(place.province())
                         .map(p -> p.privacyLaw().code())

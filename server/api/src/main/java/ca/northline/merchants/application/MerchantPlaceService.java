@@ -41,6 +41,7 @@ class MerchantPlaceService implements MerchantPlaces {
                 market.map(MarketProfile::id).orElse(null),
                 zone,
                 name.map(p -> p.name(Locale.ENGLISH)).orElse(""),
-                name.map(p -> p.name(Locale.CANADA_FRENCH)).orElse(""));
+                name.map(p -> p.name(Locale.CANADA_FRENCH)).orElse(""),
+                name.orElse(null));
     }
 }

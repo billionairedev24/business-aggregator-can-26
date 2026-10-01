@@ -1,5 +1,5 @@
 import type { Locale, Translate } from '@northline/ui';
-import { formatMoney, TIME_ZONE } from '@northline/ui';
+import { formatMoney, timeZone } from '@northline/ui';
 import type { PricingMode } from './api';
 
 type PriceKeys = 'priceQuote' | 'priceFrom' | 'perHour' | 'priceFree';
@@ -14,11 +14,11 @@ export function price(t: Translate<PriceKeys>, locale: Locale, mode: PricingMode
 }
 
 const INTL: Record<Locale, string> = { en: 'en-CA', fr: 'fr-CA' };
-const dayKey = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+const dayKey = (d: Date, zone: string) => new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
 
 /** A short time as the design writes it: "3 pm", "9:30 am" (en) · "15 h", "9 h 30" (fr). */
-export function shortTime(at: Date, locale: Locale): string {
-  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE, hour: 'numeric', minute: '2-digit', hourCycle: 'h23' }).formatToParts(at);
+export function shortTime(at: Date, locale: Locale, zone: string = timeZone()): string {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: zone, hour: 'numeric', minute: '2-digit', hourCycle: 'h23' }).formatToParts(at);
   const h = Number(parts.find(p => p.type === 'hour')?.value ?? 0);
   const m = parts.find(p => p.type === 'minute')?.value ?? '00';
   if (locale === 'fr') return m === '00' ? `${h} h` : `${h} h ${m}`;
@@ -29,15 +29,16 @@ export function shortTime(at: Date, locale: Locale): string {
 type AvailKeys = 'availToday' | 'availTomorrow' | 'availDay' | 'noOpenings';
 
 /** "Today 3 pm" · "Tomorrow 9 am" · "Thu 9 am" (in the market's time zone), relative to `now`. */
-export function nextAvailable(t: Translate<AvailKeys>, locale: Locale, iso: string | null | undefined, now = new Date()): string {
+/** @param zone the zone the business keeps its hours in (its market's); the platform zone when unknown */
+export function nextAvailable(t: Translate<AvailKeys>, locale: Locale, iso: string | null | undefined, now = new Date(), zone: string = timeZone()): string {
   if (!iso) return t('noOpenings');
   const at = new Date(iso);
-  const time = shortTime(at, locale);
-  const today = dayKey(now);
-  const tomorrow = dayKey(new Date(now.getTime() + 86_400_000));
-  if (dayKey(at) === today) return t('availToday', { time });
-  if (dayKey(at) === tomorrow) return t('availTomorrow', { time });
-  const day = new Intl.DateTimeFormat(INTL[locale], { timeZone: TIME_ZONE, weekday: 'short' }).format(at);
+  const time = shortTime(at, locale, zone);
+  const today = dayKey(now, zone);
+  const tomorrow = dayKey(new Date(now.getTime() + 86_400_000), zone);
+  if (dayKey(at, zone) === today) return t('availToday', { time });
+  if (dayKey(at, zone) === tomorrow) return t('availTomorrow', { time });
+  const day = new Intl.DateTimeFormat(INTL[locale], { timeZone: zone, weekday: 'short' }).format(at);
   return t('availDay', { day, time });
 }
 

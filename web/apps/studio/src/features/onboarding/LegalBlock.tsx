@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useRegions } from '../shell/place';
 import { Field, FileButton, Select, TextInput } from '@northline/ui';
 import { uploadDocument } from '../storefront/api';
 import { ValidationError } from '../../lib/http';
@@ -23,6 +24,8 @@ export interface LegalBlockProps {
 /** "Legal details · <structure>" with the per-structure fields and the owners / principals table (design 02 `bsDefs`). */
 export function LegalBlock({ merchantId, structure, values, onChange, documents, onDocument, owners, onOwners, errors, onTouch }: LegalBlockProps) {
   const t = useOnboardingT();
+  const regions = useRegions();
+  const provinceName = (code: string) => regions?.provinces.find(p => p.code === code)?.name ?? code;
   const [uploading, setUploading] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<Record<string, string>>({});
   const spec = OWNERS[structure];
@@ -82,7 +85,7 @@ export function LegalBlock({ merchantId, structure, values, onChange, documents,
             const value = typeof v === 'boolean' ? String(v) : typeof v === 'string' ? v : f.options![0]!.value;
             return (
               <Field key={f.key} label={t(f.label)} note={note} error={err(f.key)}>
-                <Select value={value} onChange={e => set(f.key, e.target.value)} options={f.options!.map(o => ({ value: o.value, label: t(o.label) }))} />
+                <Select value={value} onChange={e => set(f.key, e.target.value)} options={f.options!.map(o => ({ value: o.value, label: o.province ? t(o.label, { name: provinceName(o.value) }) : t(o.label) }))} />
               </Field>
             );
           }

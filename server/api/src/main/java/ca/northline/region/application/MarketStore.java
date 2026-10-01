@@ -57,6 +57,7 @@ public interface MarketStore {
      *
      * @param timeZones IANA zone ids as stored (a market's may be empty: it keeps its province's)
      * @param taxBps the province's current combined tax rate, null without a tax profile
+     * @param frIn / {@code frOf}: the French name with its preposition / article ("en Alberta", "de l'Alberta")
      */
     record ProfileRow(
             RegionRow region,
@@ -64,7 +65,9 @@ public interface MarketStore {
             List<String> holidays,
             @Nullable String privacyLaw,
             List<String> registries,
-            @Nullable Integer taxBps) {}
+            @Nullable Integer taxBps,
+            @Nullable String frIn,
+            @Nullable String frOf) {}
 
     record ZoneRow(
             String id,

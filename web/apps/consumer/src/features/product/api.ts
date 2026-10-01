@@ -1,4 +1,5 @@
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
+import { marketParams } from '../shop/api';
 import { z } from 'zod';
 import { http } from '@northline/client';
 import type { Locale } from '@northline/ui';
@@ -8,7 +9,7 @@ import { cartQuery } from '../cart/api';
 /**
  * The product page (S-50): `GET /api/v1/public/shop/products/{id}?market=&lang=` — the catalogue record and the
  * market's offers, best first, each with variants, stock and the pooled runs it can make (cut-off computed by the api
- * in America/Edmonton). Public and server-rendered like the other Shop pages.
+ * in the market's time zone). Public and server-rendered like the other Shop pages.
  */
 export const Variant = z.object({ variantId: z.string(), value: z.string(), priceCents: z.number().int(), stock: z.number().int() });
 export type Variant = z.infer<typeof Variant>;
@@ -29,9 +30,9 @@ export const ProductPage = z.object({
 });
 export type ProductPage = z.infer<typeof ProductPage>;
 
-export const productQuery = (productId: string, market: string, locale: Locale) => queryOptions({
-  queryKey: ['shop', 'product', productId, market.toLowerCase(), locale],
-  queryFn: () => http(`/api/v1/public/shop/products/${encodeURIComponent(productId)}?market=${encodeURIComponent(market)}&lang=${locale}`, {}, ProductPage),
+export const productQuery = (productId: string, market: string | undefined, locale: Locale) => queryOptions({
+  queryKey: ['shop', 'product', productId, market?.toLowerCase() ?? '', locale],
+  queryFn: () => http(`/api/v1/public/shop/products/${encodeURIComponent(productId)}?${marketParams(market, locale)}`, {}, ProductPage),
   staleTime: 30_000,
 });
 

@@ -62,6 +62,26 @@ UPDATE region.regions r
   ) AS v(province, zones, holidays, law, registries)
  WHERE r.kind = 'province' AND r.province = v.province;
 
+-- French needs the preposition and article with a province's name ("en Alberta", "au Québec", "de l'Ontario"):
+-- name_i18n.fr_in / fr_of, so copy can say "exerçant {provinceIn}" for any province without a list in code.
+UPDATE region.regions r SET name_i18n = r.name_i18n || jsonb_build_object('fr_in', v.fr_in, 'fr_of', v.fr_of)
+  FROM (VALUES
+    ('AB', 'en Alberta', 'de l''Alberta'),
+    ('BC', 'en Colombie-Britannique', 'de la Colombie-Britannique'),
+    ('MB', 'au Manitoba', 'du Manitoba'),
+    ('NB', 'au Nouveau-Brunswick', 'du Nouveau-Brunswick'),
+    ('NL', 'à Terre-Neuve-et-Labrador', 'de Terre-Neuve-et-Labrador'),
+    ('NS', 'en Nouvelle-Écosse', 'de la Nouvelle-Écosse'),
+    ('NT', 'dans les Territoires du Nord-Ouest', 'des Territoires du Nord-Ouest'),
+    ('NU', 'au Nunavut', 'du Nunavut'),
+    ('ON', 'en Ontario', 'de l''Ontario'),
+    ('PE', 'à l''Île-du-Prince-Édouard', 'de l''Île-du-Prince-Édouard'),
+    ('QC', 'au Québec', 'du Québec'),
+    ('SK', 'en Saskatchewan', 'de la Saskatchewan'),
+    ('YT', 'au Yukon', 'du Yukon')
+  ) AS v(province, fr_in, fr_of)
+ WHERE r.kind = 'province' AND r.province = v.province;
+
 -- Sales tax (fractions). MB's RST and SK/BC's PST are provincial sales taxes, stored as pst.
 INSERT INTO region.tax_profiles (id, gst, pst, hst, qst, effective_from) VALUES
   ('tax-ab-2025', 0.05, NULL,  NULL, NULL,    DATE '2025-04-01'),

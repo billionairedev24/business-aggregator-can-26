@@ -1,19 +1,18 @@
 import { useId, useState } from 'react';
-import { Alert, Avatar, Checkbox, Field, FormGrid, OptionCard, Select, TextInput, useLocale } from '@northline/ui';
+import { Alert, Avatar, Checkbox, Field, FormGrid, OptionCard, Select, TextInput, useLocale, platformTimeZone } from '@northline/ui';
 import { useSession, useSignOut } from '../../lib/session';
 import { serverFieldErrors } from '../../lib/forms';
 import type { MerchantType } from '../shell/api';
 import { useStartOnboarding, useUpdateAccount, type Onboarding } from './api';
 import { useOnboardingT } from './messages';
+import { useRegions } from '../shell/place';
 import { PICKER_TYPES } from './model';
 import { accountErrors } from './validation';
-
-type Province = 'AB' | 'BC' | 'ON' | 'QC';
 
 export interface AccountStepProps {
   type: MerchantType | undefined;
   onboarding: Onboarding | undefined;
-  /** Brand-new account (07d): Business Terms checkbox, all provinces. */
+  /** Brand-new account (07d): Business Terms checkbox, every open province (waitlisted ones too). */
   isNew: boolean;
   onTypeChange: (type: MerchantType) => void;
   onDone: (merchantId: string, type: MerchantType) => void;
@@ -28,7 +27,8 @@ export function AccountStep({ type, onboarding, isNew, onTypeChange, onDone }: A
   const start = useStartOnboarding();
   const update = useUpdateAccount(onboarding?.merchantId ?? '');
   const [picking, setPicking] = useState(!type);
-  const [province, setProvince] = useState<Province>(onboarding?.province ?? 'AB');
+  const regions = useRegions();
+  const [chosen, setProvince] = useState<string | undefined>(onboarding?.province ?? undefined);
   const [workEmail, setWorkEmail] = useState(onboarding?.workEmail ?? '');
   const [terms, setTerms] = useState(onboarding?.businessTermsAccepted ?? false);
   const [tried, setTried] = useState(false);
@@ -43,15 +43,17 @@ export function AccountStep({ type, onboarding, isNew, onTypeChange, onDone }: A
 
   const submit = () => {
     setTried(true);
-    if (Object.keys(errors).length || !type) return;
+    if (Object.keys(errors).length || !type || !province) return;
     const body = { type, province, workEmail: workEmail.trim() || undefined, businessTermsAccepted: terms || undefined };
     const opts = { onSuccess: (o: Onboarding) => onDone(o.merchantId, o.type) };
     if (onboarding) update.mutate(body, opts); else start.mutate(body, opts);
   };
 
-  const since = user?.memberSince ? new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { month: 'long', year: 'numeric', timeZone: 'America/Edmonton' }).format(new Date(user.memberSince)) : undefined;
+  const since = user?.memberSince ? new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { month: 'long', year: 'numeric', timeZone: platformTimeZone() }).format(new Date(user.memberSince)) : undefined;
   const contact = [user?.email, user?.phone].filter(Boolean).join(' · ');
-  const provinces: Province[] = isNew ? ['AB', 'BC', 'ON', 'QC'] : ['AB', 'BC'];
+  // the provinces Northline is open in (region model, S-134): live and pilot; a brand-new account also sees waitlists
+  const provinces = (regions?.provinces ?? []).filter(p => p.status === 'live' || p.status === 'pilot' || (isNew && p.status === 'waitlist'));
+  const province = chosen ?? regions?.defaultProvince ?? provinces[0]?.code ?? '';
 
   return (
     <>
@@ -92,7 +94,7 @@ export function AccountStep({ type, onboarding, isNew, onTypeChange, onDone }: A
           </Field>
         )}
         <Field label={t('province')} error={server.province}>
-          <Select id={ids.province} value={province} onChange={e => setProvince(e.target.value as Province)} options={provinces.map(p => ({ value: p, label: t(`prov_${p}`) }))} />
+          <Select id={ids.province} value={province} onChange={e => setProvince(e.target.value)} options={provinces.map(p => ({ value: p.code, label: t(p.status === 'live' ? 'prov_live' : p.status === 'pilot' ? 'prov_pilot' : 'prov_waitlist', { name: p.name }) }))} />
         </Field>
       </FormGrid>
 

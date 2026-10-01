@@ -73,7 +73,7 @@ class PublicShopController {
 
     /** The URL's market, else the region's fallback market (S-47: the default province's first live market). */
     String market(@Nullable String market) {
-        var value = market == null || market.isBlank()
+        var value = market == null
                 ? fallback.fallback().map(FallbackMarket.City::city).orElse("")
                 : market.strip();
         if (value.isEmpty() || value.length() > MAX_MARKET) {

@@ -48,7 +48,9 @@ class RegionCatalogueTest {
                     List.of(holidays),
                     "pipeda",
                     List.of("registry_" + code.toLowerCase(java.util.Locale.ROOT)),
-                    500));
+                    500,
+                    "en " + code,
+                    "de " + code));
         }
 
         void market(String id, String province, String city, Stage stage, @Nullable String zone) {
@@ -58,6 +60,8 @@ class RegionCatalogueTest {
                     List.of(),
                     null,
                     List.of("licences_" + city.toLowerCase(java.util.Locale.ROOT)),
+                    null,
+                    null,
                     null));
         }
 
