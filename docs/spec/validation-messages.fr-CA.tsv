@@ -707,3 +707,11 @@ Choose one of the province's markets.	Choisissez un des marchés de la province.
 Pooled runs a day are 0 to 24.	Les tournées groupées par jour vont de 0 à 24.	new
 Paste a GeoJSON polygon (lng, lat) for the boundary.	Collez un polygone GeoJSON (lng, lat) pour la limite.	new
 A live market keeps at least one zone. Lower its stage first.	Un marché en service garde au moins une zone. Abaissez d’abord son étape.	new
+Say how the difference was resolved.	Indiquez comment l’écart a été résolu.	new
+Only a day that doesn't match can be resolved.	Seul un jour qui ne concorde pas peut être résolu.	new
+Choose a day that has ended.	Choisissez un jour terminé.	new
+Choose a day (YYYY-MM-DD).	Choisissez un jour (AAAA-MM-JJ).	new
+Choose at most 92 days, the first before the last.	Choisissez au plus 92 jours, le premier avant le dernier.	new
+This business is already hidden from search.	Cette entreprise est déjà masquée dans la recherche.	new
+This business isn't hidden from search.	Cette entreprise n’est pas masquée dans la recherche.	new
+Choose hide or show.	Choisissez Masquer ou Afficher.	new
