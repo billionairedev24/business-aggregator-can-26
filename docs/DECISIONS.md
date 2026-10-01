@@ -5124,6 +5124,7 @@ Branch `fulfil/s-88-live-tracking`, **stacked on S-86**. No migration.
     its coordinates, the stream pushes the kitchen's accept, the planned run shows "finding a courier" on the kitchen
     display, and the food tracking carries the courier part.
   - `SseRelayTest.theOrderTrackingStreamIsRelayedAsItIsWritten`.
+  - `StudioLiveApiTest.couriersAssignedAndArrivingSignalTheKitchen`.
   - vitest: goods and food courier progress, live from the stream, PIN gone after delivery, French.
 - **Not done / never run:**
   - No real phone has sent positions.
