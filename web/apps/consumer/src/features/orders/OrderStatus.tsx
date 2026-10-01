@@ -3,7 +3,7 @@ import { useZone } from '../location/regions';
 import { isNotFound } from '@northline/client';
 import { signInHref, useViewer } from '../session/api';
 import { clock, runWhen, weekday, windowRange } from '../shop/format';
-import { useOrder, useOrderStream, type OrderTracking } from './api';
+import { useConfirmDelivery, useOrder, useOrderStream, type OrderTracking } from './api';
 import { useOrderT } from './messages';
 
 /**
@@ -59,6 +59,8 @@ function OrderView({ order }: { order: OrderTracking }) {
     ? (packed === 0 ? t('sub', { ref, total, shops }) : t('subPacked', { ref, total, packed, shops }))
     : t('subDone', { ref, total });
   const done = order.state === 'cancelled' || order.state === 'refunded';
+  const confirm = useConfirmDelivery(order.orderId);
+  const paysOn = order.paysShopsAt ? new Intl.DateTimeFormat(locale, { weekday: 'long', month: 'long', day: 'numeric', timeZone: zone }).format(new Date(order.paysShopsAt)) : null;
 
   return (
     <div className="nl-page order-page">
@@ -80,8 +82,14 @@ function OrderView({ order }: { order: OrderTracking }) {
               ))}
             </ol>
           ) : null}
+          {order.deliveryProof ? <p className="order-note">{t(`proof_${order.deliveryProof}`)}</p> : null}
+          {order.confirmedAt ? <p className="order-note">{t('confirmed')}</p> : paysOn ? <p className="order-note">{t('paysShops', { date: paysOn })}</p> : null}
+          {confirm.isError ? <p className="order-error" role="alert">{t('confirmError')}</p> : null}
           <div className="order-actions">
-            <SiteLink href="/account/orders" className="btn btn-primary">{t('viewOrders')}</SiteLink>
+            {order.canConfirm
+              ? <button type="button" className="btn btn-primary" disabled={confirm.isPending} onClick={() => confirm.mutate()}>{confirm.isPending ? t('confirming') : t('confirm')}</button>
+              : null}
+            <SiteLink href="/account/orders" className={order.canConfirm ? 'btn btn-secondary' : 'btn btn-primary'}>{t('viewOrders')}</SiteLink>
             {order.state === 'delivered'
               ? <SiteLink href={`/account/problem/order/${encodeURIComponent(order.orderId)}`} className="btn btn-secondary">{t('somethingWrong')}</SiteLink>
               : null}

@@ -498,6 +498,7 @@ This job is %s and can't move to %s.	Ce travail est à l’état %s et ne peut p
 This job is %s; extra approvals are only possible before it is completed.	Ce travail est à l’état %s; les approbations supplémentaires ne sont possibles qu’avant qu’il soit terminé.	review
 This modifier group has no options in your POS.	Ce groupe d’options n’a aucune option dans votre PDV.	new
 This order has nothing left to pack.	Cette commande n’a plus rien à emballer.	new
+This order was cancelled or refunded.	Cette commande a été annulée ou remboursée.	new
 This order was cancelled.	Cette commande a été annulée.	shipped
 This owner is already verified.	Ce propriétaire est déjà vérifié.	new
 This page link no longer works. Start the search again.	Ce lien de page ne fonctionne plus. Recommencez la recherche.	shipped
@@ -591,6 +592,7 @@ Your 10-minute hold ended. Pick the time again.	Votre réservation de 10 minutes
 Your browsing session expired. Reload the page.	Votre session de navigation a expiré. Rechargez la page.	new
 Your cart is empty.	Votre panier est vide.	shipped
 Your menu goes live once Northline approves your kitchen.	Votre menu sera en ligne dès que Northline aura approuvé votre cuisine.	new
+Your order hasn't been delivered yet.	Votre commande n’a pas encore été livrée.	new
 Your page goes live once Northline approves your business.	Votre page sera en ligne dès que Northline aura approuvé votre entreprise.	shipped
 Your role (%s) can't do this.	Votre rôle (%s) ne permet pas de faire ceci.	review
 Your role (%s) can't see this screen's data.	Votre rôle (%s) ne permet pas de voir les données de cet écran.	review

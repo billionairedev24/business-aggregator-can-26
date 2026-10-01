@@ -4900,3 +4900,60 @@ and the audit log rules: no update, no delete, and a retention delete only past 
   checkout → mode + arrival time → kitchen display "customer arriving" → accept, ready, hand-off → order and tracking
   `delivered`), `…everyOrderHasAModeAndOnlyPickupsACustomerArrival` (V200 default and checks);
   `CartCheckoutApiTest` placing asserts a shop order's `delivery` mode and empty `customer_eta`.
+
+## 2026-10-01 — S-78 Goods delivered/confirmed drive escrow release
+
+Branch `fulfil/s-78-delivery-escrow`, **stacked on S-89** (`fulfil/s-89-fulfilment-mode`, V200) so the migrations
+merge in order.
+
+- **Events, in order:** fulfilment's **`delivery.completed`** (`fulfilment.api.DeliveryCompleted`, topic
+  `fulfilment.delivery`, key = order id; the courier's drop-off with `proof` = `photo` | `signature` | `pin`) →
+  orders moves the order to `delivered` (`delivered_at`, new `delivery_proof`) and publishes **`order.delivered`**
+  (`orders.api.OrderDelivered`, topic `orders.order`). The customer's confirmation moves it to `confirmed` (new
+  `confirmed_at`) and publishes **`order.confirmed`**. Both are ids only (schemas `fulfilment.delivery_completed.v1`,
+  `orders.order_delivered.v1`, `orders.order_confirmed.v1`). S-78 defines `delivery.completed`; the courier's
+  proof-of-delivery that publishes it is S-86's.
+- **Escrow follows the order events** (`orders.application.GoodsEscrowRelease`, an `@ApplicationModuleListener`):
+  `order.delivered` → `EscrowLifecycle.fulfilledIfHeld("order_line", line, deliveredAt)` for each line that isn't
+  refunded — capture, and the **7-day window starts at the drop-off** (`EscrowKind.GOODS`, unchanged);
+  `order.confirmed` → new `confirmedIfHeld` per line — **released at once**. Wired from orders, not payments, because
+  orders already depends on payments (payments → orders would be a cycle), as food's `KitchenEscrowRelease` does
+  for hand-off. The order row is locked (`select … for update`) by the delivery, the confirmation and both escrow
+  handlers, so a drop-off and a confirmation of the same order never interleave.
+- **Module direction:** orders now depends on `fulfilment.api` (the event). fulfilment depends on nothing; it must
+  not depend on orders, which depends on food, which reads `fulfilment.api.CourierPickups` (S-64) — the cycle
+  Modulith would reject. S-86 keeps that direction.
+- **Delivery fee (the S-51 gap):** the fee's manual-capture PaymentIntent (`order_delivery`) is now **captured on
+  delivery or confirmation**: new `EscrowLifecycle.captureDeliveryFee(orderId, at)` locks the reference's current
+  PaymentIntent, captures it at Stripe (key `nl1:capture-delivery:<order>:<intent>`) and posts
+  `stripe_balance` ↔ `revenue` + `tax_payable` (the checkout's tax calculation, `ref_type = order_delivery`) under
+  `ref_type = order_delivery`. No escrow row: the fee is Northline's from the start and never transferred.
+  Idempotent (state `captured` is skipped).
+- **Customer confirmation:** `POST /api/v1/me/orders/{orderId}/confirm` (single-factor sessions, like tracking). Only
+  the order's customer (404 otherwise); allowed from `picked_up` or `delivered` — confirming an order the courier
+  has picked up but not yet marked counts as its delivery (`delivered_at` = now); before pickup 409 `not_delivered`
+  "Your order hasn't been delivered yet."; cancelled/refunded 409 `order_closed`. Repeating it answers the order
+  unchanged. **No Idempotency-Key:** the request carries no amount and is idempotent by the order's state, so a
+  retried tap can't release twice.
+- **Disputes pause the release** (S-60/S-80, unchanged rules, now tested on the goods window): a refund case or
+  dispute on a line's escrow puts it `disputed`; the release job skips it past the 7 days; a denied refund or a
+  merchant win resumes it, and the next release job pays it.
+- **Tracking (S-52):** the order view adds `deliveryProof`, `confirmedAt`, `canConfirm` and `paysShopsAt` (delivery
+  + 7 days while unconfirmed); `order.delivered` / `order.confirmed` push the SSE stream. Consumer page: "Delivered
+  with photo proof.", "Shops are paid {date} unless you confirm sooner or report a problem.", **Got everything**
+  (our copy, en + fr-CA; the design's step "you confirm, shops paid" has no button text).
+- **Schema (V201):** `orders.orders.delivery_proof`, `confirmed_at` (+ check: only on confirmed/refunded orders).
+- **Not done:** partner webhook `order.delivered` stays in `NOT_YET_PUBLISHED` (the event is per order, the
+  webhook is per business — needs per-shop payloads); the delivery-fee sale isn't reported to Stripe Tax (the
+  `tax_transactions` row needs an escrow; the ledger has the tax payable); a delivery-fee authorization isn't renewed
+  before it lapses (runs are at most 2 days out; S-11's renewal covers escrows only); cancelling an order doesn't
+  cancel its delivery-fee hold (no cancel flow exists).
+- **Never run against real Stripe:** the delivery-fee capture ran against the fake gateway only.
+- **Tests:** `DeliveryEscrowTest` (movable application clock, `support.MovableClock`; market "Deliveryville"; orders
+  placed through the real cart → checkout → place, `support.ShopOrderFlow`): the drop-off starts each line's 7-day
+  window and captures the fee (revenue + GST in the ledger), nothing releases a minute before the window ends and
+  everything one minute after; confirmation releases at once, repeats and a late drop-off change nothing;
+  confirming on the way counts as delivery, not before pickup (409 + message), others 404, guests 401, cancelled
+  409; a refund case opened on day 2 keeps that line held past day 8 while the other line releases, and the denied
+  case releases it; a replayed drop-off keeps the first time; a food order is delivered from `picked_up`.
+  vitest: the consumer's confirmation (proof note, pay date, error then success, French).

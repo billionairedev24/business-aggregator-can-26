@@ -1,4 +1,4 @@
-/** Public API of the fulfilment module: courier pickups (S-64). */
+/** Public API of the fulfilment module: courier pickups (S-64) and delivery events (S-78). */
 @NamedInterface("api")
 @NullMarked
 package ca.northline.fulfilment.api;

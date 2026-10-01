@@ -2,6 +2,8 @@ package ca.northline.orders.application;
 
 import ca.northline.merchants.api.BusinessNames;
 import ca.northline.orders.api.DeliveryRuns;
+import ca.northline.orders.domain.OrderDelivery;
+import ca.northline.payments.api.EscrowKind;
 import ca.northline.shared.NotFound;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -16,8 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * {@link TrackOrder}. The timeline follows the order's state (the shops' "Mark packed" moves it to packing / ready;
- * the courier and the customer move it on) — fulfilment has no courier events yet, so pickup and delivery advance
- * when the order's state does.
+ * the courier's pickup and drop-off and the customer's confirmation move it on: S-78).
  */
 @Service
 @RequiredArgsConstructor
@@ -62,7 +63,13 @@ class OrderTrackingService implements TrackOrder {
                 delivery(o),
                 shops,
                 steps(o.state()),
-                o.deliveredAt());
+                o.deliveredAt(),
+                o.deliveryProof(),
+                o.confirmedAt(),
+                "goods".equals(o.type()) && OrderDelivery.confirmable(o.state()),
+                "goods".equals(o.type()) && o.deliveredAt() != null && o.confirmedAt() == null
+                        ? EscrowKind.GOODS.releaseAt(o.deliveredAt())
+                        : null);
     }
 
     private Delivery delivery(TrackingStore.Header o) {

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { http } from '@northline/client';
 
@@ -18,6 +18,11 @@ export const OrderTracking = z.object({
   shops: z.array(z.object({ merchantId: z.string(), name: z.string(), items: z.number().int(), packed: z.boolean() })),
   steps: z.array(Step),
   deliveredAt: z.string().nullish(),
+  // S-78: the courier's proof, the customer's confirmation and when the shops are paid without it
+  deliveryProof: z.enum(['photo', 'signature', 'pin']).nullish(),
+  confirmedAt: z.string().nullish(),
+  canConfirm: z.boolean().optional(),
+  paysShopsAt: z.string().nullish(),
 });
 export type OrderTracking = z.infer<typeof OrderTracking>;
 
@@ -46,3 +51,12 @@ export function useOrderStream(orderId: string, enabled: boolean) {
 }
 
 export const useOrder = (orderId: string, enabled: boolean) => useQuery({ ...orderQuery(orderId), enabled });
+
+/** "Got everything" (S-78): `POST …/confirm` releases the shops' escrow at once; the answer is the updated order. */
+export function useConfirmDelivery(orderId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => http(`/api/v1/me/orders/${encodeURIComponent(orderId)}/confirm`, { method: 'POST' }, OrderTracking),
+    onSuccess: data => qc.setQueryData(orderQuery(orderId).queryKey, data),
+  });
+}

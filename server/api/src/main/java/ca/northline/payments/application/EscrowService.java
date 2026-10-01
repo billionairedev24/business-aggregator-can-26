@@ -42,6 +42,7 @@ class EscrowService implements EscrowLifecycle {
     private final MerchantTiers tiers;
     private final PaymentGateway gateway;
     private final TaxTransactions taxes;
+    private final TaxRepository deliveryTax;
     private final ApplicationEventPublisher events;
     private final Clock clock;
 
@@ -122,6 +123,38 @@ class EscrowService implements EscrowLifecycle {
         }
         releaseIfDue(escrow);
         escrows.update(escrow);
+    }
+
+    @Override
+    public boolean confirmedIfHeld(String refType, String refId, Instant at) {
+        if (escrows.findByRef(refType, refId).isEmpty()) {
+            return false;
+        }
+        confirmed(refType, refId, at);
+        return true;
+    }
+
+    @Override
+    public boolean captureDeliveryFee(String orderId, Instant at) {
+        var intent = escrows.currentIntentForUpdate(LedgerEntry.DELIVERY_FEE, orderId)
+                .filter(i -> i.state() == IntentStatus.AUTHORIZED)
+                .orElse(null);
+        if (intent == null) {
+            return false;
+        }
+        var charge = gateway.capture(
+                intent.stripePaymentIntent(),
+                intent.amountCents(),
+                StripeIdempotencyKeys.of("capture-delivery", orderId, intent.id()));
+        escrows.recordCapture(intent.id(), charge);
+        var tax = Math.min(
+                intent.amountCents(),
+                deliveryTax.calculationFor(LedgerEntry.DELIVERY_FEE, orderId)
+                        .map(TaxRepository.Calculation::taxCents)
+                        .orElse(0L));
+        ledger.post(LedgerEntry.deliveryFeeCaptured(orderId, intent.amountCents(), tax, at));
+        log.info("Order {}: delivery fee captured ({} cents)", orderId, intent.amountCents());
+        return true;
     }
 
     /** Releases every due escrow (the release job). */
