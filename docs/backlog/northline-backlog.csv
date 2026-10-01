@@ -22,13 +22,13 @@ E-7,,Epic,Consumer web (06 Consumer Web),Consumer web (06 Consumer Web),"Build w
 Phase 2. 19 stories, 134 points.",High,,phase-2,web,,consumer-web,,2027-01-25,2027-03-19
 E-8,,Epic,Platform console (03 Platform Console),Platform console (03 Platform Console),"web/apps/console from design/03 Platform Console.dc.html: role-gated ops, trust & safety, finance and rollout tools.
 
-Phase 3. 14 stories, 91 points.",High,,phase-3,console,,console,,2027-04-19,2027-06-25
+Phase 3. 14 stories, 91 points.",High,,phase-3,console,,console,,2027-04-19,2027-07-09
 E-9,,Epic,"Fulfilment, dispatch and courier","Fulfilment, dispatch and courier","Pooled runs, dispatch, courier app, live tracking (SSE + Redis pub/sub), proof of delivery; goods delivery drives escrow release.
 
 Phase 3. 5 stories, 39 points.",High,,phase-3,fulfil,,fulfilment,,2027-04-19,2027-06-11
 E-10,,Epic,Consumer mobile app (01 Consumer App),Consumer mobile app (01 Consumer App),"iOS/Android consumer app from design/01 Consumer App.dc.html and Consumer Screen.dc.html, journeys A–D.
 
-Phase 4. 7 stories, 57 points.",High,,phase-4,app,,mobile,,2027-06-14,2027-07-09
+Phase 3. 7 stories, 57 points.",High,,phase-3,app,,mobile,,2027-05-31,2027-07-09
 E-11,,Epic,"Security, privacy and legal compliance","Security, privacy and legal compliance","Pen test, PIPEDA/Law 25 rights, retention, CASL, Loi 96, accessibility, legal review.
 
 Phase 5. 8 stories, 39 points.",High,,phase-5,sec,,compliance,,2027-06-28,2027-08-06
@@ -831,59 +831,13 @@ Acceptance criteria:
 - Pickup orders show 'Handed to customer' flow.
 
 Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,2,phase-3,orders,,fulfilment,Sprint 18,2027-05-31,2027-06-11
-S-90,E-8,Story,"Console shell with role switch, role-filtered nav and denied screen",,"Roles: admin, trust & safety, ops dispatcher, finance, support, read-only analyst.
-
-Acceptance criteria:
-- Matches design 03
-- actions audit-logged
-- role gates enforced server-side.
-
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,console,,console,Sprint 18,2027-05-31,2027-06-11
-S-91,E-8,Story,Overview: GMV and health dashboard,,"Acceptance criteria:
-- Matches design 03
-- actions audit-logged
-- role gates enforced server-side.
-
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,console,,console,Sprint 18,2027-05-31,2027-06-11
-S-92,E-8,Story,Listing vetting queue: flagged listings approve/reject,,"Owns rejecting flagged listings.
-
-Acceptance criteria:
-- Matches design 03
-- actions audit-logged
-- role gates enforced server-side.
-
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,console,,console,Sprint 18,2027-05-31,2027-06-11
-S-93,E-8,Story,"Trust & safety rules, flags (incl. off-platform payment flags from messaging)",,"Acceptance criteria:
-- Matches design 03
-- actions audit-logged
-- role gates enforced server-side.
-
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,console,,console,Sprint 18,2027-05-31,2027-06-11
-S-94,E-8,Story,"Taxonomy management (categories, regulators, limits, suggested categories)",,"Acceptance criteria:
-- Matches design 03
-- actions audit-logged
-- role gates enforced server-side.
-
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,console,,console,Sprint 18,2027-05-31,2027-06-11
-S-95,E-8,Story,Analytics: funnels and cohorts,,"Acceptance criteria:
-- Matches design 03
-- actions audit-logged
-- role gates enforced server-side.
-
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,console,,console,Sprint 18,2027-05-31,2027-06-11
-S-96,E-8,Story,"API keys, team, audit log, on-call and profile screens",,"Acceptance criteria:
-- Matches design 03
-- actions audit-logged
-- role gates enforced server-side.
-
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,console,,console,Sprint 19,2027-06-14,2027-06-25
-S-97,E-10,Story,Mobile tech decision and project setup (React Native/Expo recommended; shared tokens and API client),,"Record the decision in DECISIONS.md.
+S-97,E-10,Story,Mobile tech decision and project setup (React Native/Expo recommended; shared tokens and API client),,"Expo + React Native + expo-router, following billionairedev24/samop-inv-ship-26 (apps/mobile, docs/MOBILE_RELEASE.md). Record the decision in DECISIONS.md.
 
 Acceptance criteria:
 - App builds for iOS and Android in CI
 - tokens shared with web.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-4,mobile,,mobile,Sprint 19,2027-06-14,2027-06-25
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,5,phase-3,mobile,,mobile,Sprint 18,2027-05-31,2027-06-11
 S-98,E-10,Story,"Journey A: welcome, sign up, OTP, MFA, location",,"Per design 01 Consumer App.
 
 Acceptance criteria:
@@ -891,7 +845,7 @@ Acceptance criteria:
 - accessible
 - works offline-tolerant on flaky networks.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-4,mobile,,mobile,Sprint 19,2027-06-14,2027-06-25
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-3,mobile,,mobile,Sprint 18,2027-05-31,2027-06-11
 S-99,E-10,Story,"Journey B: shop — home, search, product, cart, checkout (Stripe), confirmed, tracking, delivered, refund",,"Per design 01 Consumer App.
 
 Acceptance criteria:
@@ -899,7 +853,7 @@ Acceptance criteria:
 - accessible
 - works offline-tolerant on flaky networks.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,13,phase-4,mobile,,mobile,Sprint 19,2027-06-14,2027-06-25
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,13,phase-3,mobile,,mobile,Sprint 18,2027-05-31,2027-06-11
 S-100,E-10,Story,"Journey C: services — providers, profile, booking, notifications, ETA, sign-off, review",,"Per design 01 Consumer App.
 
 Acceptance criteria:
@@ -907,7 +861,7 @@ Acceptance criteria:
 - accessible
 - works offline-tolerant on flaky networks.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,13,phase-4,mobile,,mobile,Sprint 20,2027-06-28,2027-07-09
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,13,phase-3,mobile,,mobile,Sprint 19,2027-06-14,2027-06-25
 S-101,E-10,Story,"Journey D: account — orders, quote received, account, security, wallet",,"Per design 01 Consumer App.
 
 Acceptance criteria:
@@ -915,7 +869,53 @@ Acceptance criteria:
 - accessible
 - works offline-tolerant on flaky networks.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-4,mobile,,mobile,Sprint 20,2027-06-28,2027-07-09
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",High,8,phase-3,mobile,,mobile,Sprint 19,2027-06-14,2027-06-25
+S-90,E-8,Story,"Console shell with role switch, role-filtered nav and denied screen",,"Roles: admin, trust & safety, ops dispatcher, finance, support, read-only analyst.
+
+Acceptance criteria:
+- Matches design 03
+- actions audit-logged
+- role gates enforced server-side.
+
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,console,,console,Sprint 19,2027-06-14,2027-06-25
+S-91,E-8,Story,Overview: GMV and health dashboard,,"Acceptance criteria:
+- Matches design 03
+- actions audit-logged
+- role gates enforced server-side.
+
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,console,,console,Sprint 19,2027-06-14,2027-06-25
+S-92,E-8,Story,Listing vetting queue: flagged listings approve/reject,,"Owns rejecting flagged listings.
+
+Acceptance criteria:
+- Matches design 03
+- actions audit-logged
+- role gates enforced server-side.
+
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,console,,console,Sprint 19,2027-06-14,2027-06-25
+S-93,E-8,Story,"Trust & safety rules, flags (incl. off-platform payment flags from messaging)",,"Acceptance criteria:
+- Matches design 03
+- actions audit-logged
+- role gates enforced server-side.
+
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,console,,console,Sprint 20,2027-06-28,2027-07-09
+S-94,E-8,Story,"Taxonomy management (categories, regulators, limits, suggested categories)",,"Acceptance criteria:
+- Matches design 03
+- actions audit-logged
+- role gates enforced server-side.
+
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,console,,console,Sprint 20,2027-06-28,2027-07-09
+S-95,E-8,Story,Analytics: funnels and cohorts,,"Acceptance criteria:
+- Matches design 03
+- actions audit-logged
+- role gates enforced server-side.
+
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,console,,console,Sprint 20,2027-06-28,2027-07-09
+S-96,E-8,Story,"API keys, team, audit log, on-call and profile screens",,"Acceptance criteria:
+- Matches design 03
+- actions audit-logged
+- role gates enforced server-side.
+
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,console,,console,Sprint 20,2027-06-28,2027-07-09
 S-102,E-10,Story,Push notifications (APNs/FCM) and deep links,,"Per design 01 Consumer App.
 
 Acceptance criteria:
@@ -923,7 +923,7 @@ Acceptance criteria:
 - accessible
 - works offline-tolerant on flaky networks.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-4,mobile,,mobile,Sprint 20,2027-06-28,2027-07-09
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,mobile,,mobile,Sprint 20,2027-06-28,2027-07-09
 S-103,E-10,Story,App Store / Play Store release pipeline and store listings (en/fr),,"Per design 01 Consumer App.
 
 Acceptance criteria:
@@ -931,7 +931,7 @@ Acceptance criteria:
 - accessible
 - works offline-tolerant on flaky networks.
 
-Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-4,mobile,,mobile,Sprint 20,2027-06-28,2027-07-09
+Refs: docs/DECISIONS.md, docs/SCREENS.md, docs/IMPLEMENTATION_PLAN.md",Medium,5,phase-3,mobile,,mobile,Sprint 20,2027-06-28,2027-07-09
 S-104,E-11,Story,External penetration test and remediation,,"Scope: auth, BFF, api, studio, console, payments flows.
 
 Acceptance criteria:
