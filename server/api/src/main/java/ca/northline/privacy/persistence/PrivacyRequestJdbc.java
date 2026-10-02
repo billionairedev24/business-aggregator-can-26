@@ -13,10 +13,12 @@ import ca.northline.privacy.domain.SubjectKind;
 import ca.northline.privacy.domain.Verification;
 import ca.northline.region.api.PrivacyLaw;
 import ca.northline.shared.CodedEnum;
+import ca.northline.shared.Ids;
 import ca.northline.shared.crypto.SecretSealer.Sealed;
 import java.sql.Array;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
@@ -141,6 +143,31 @@ class PrivacyRequestJdbc implements PrivacyRequestStore {
                                        version = version + 1
                                  where id = :id and version = :version
                                 """).params(p).update() == 1;
+    }
+
+    @Override
+    public int textsSince(String subjectId, Instant since) {
+        return jdbc.sql("select count(*) from privacy.verification_texts where subject_id = :s and sent_at >= :since")
+                .param("s", subjectId)
+                .param("since", ts(since))
+                .query(Integer.class)
+                .single();
+    }
+
+    @Override
+    public void textSent(String subjectId, String requestId, Instant at) {
+        jdbc.sql("delete from privacy.verification_texts where sent_at < :old")
+                .param("old", ts(at.minus(Duration.ofDays(2))))
+                .update();
+        jdbc.sql("""
+                        insert into privacy.verification_texts (id, subject_id, request_id, sent_at)
+                        values (:id, :s, :r, :at)
+                        """)
+                .param("id", Ids.next())
+                .param("s", subjectId)
+                .param("r", requestId)
+                .param("at", ts(at))
+                .update();
     }
 
     @Override

@@ -109,10 +109,13 @@ public class AttemptLimits {
         return decision.allowed() ? error : rejection(action, who, decision);
     }
 
-    /** A success resets the account and session counters (never the IP's: one good account must not unlock an IP). */
+    /**
+     * A success resets the account and session counters (never the IP's: one good account must not unlock an IP; nor
+     * the platform's).
+     */
     public void succeeded(LimitedAction action, Subject who) {
         var limits = limits(action, who).stream()
-                .filter(l -> l.scope() != LimitScope.IP)
+                .filter(l -> l.scope() != LimitScope.IP && l.scope() != LimitScope.PLATFORM)
                 .toList();
         if (!limits.isEmpty()) {
             limiter.reset(limits);
@@ -146,7 +149,14 @@ public class AttemptLimits {
                     .map(LimitScope::code)
                     .sorted()
                     .toList();
-            log.warn("Rate limit: {} locked for {} s ({})", action.code(), seconds, scopes);
+            if (decision.newlyLocked().contains(LimitScope.PLATFORM)) {
+                log.error(
+                        "Rate limit: {} locked for everyone for {} s — platform budget reached",
+                        action.code(),
+                        seconds);
+            } else {
+                log.warn("Rate limit: {} locked for {} s ({})", action.code(), seconds, scopes);
+            }
             audit.lockedOut(who.userId(), action.code(), scopes, seconds, new SignInLog.Client(origin.ip(), null));
         }
         return new FlowRejected(Reason.RATE_LIMITED, AuthMessages.RATE_LIMITED, seconds);
@@ -154,7 +164,7 @@ public class AttemptLimits {
 
     private List<Limit> limits(LimitedAction action, Subject who) {
         var rules = props.limits().getOrDefault(action, Map.of());
-        var limits = new ArrayList<Limit>(3);
+        var limits = new ArrayList<Limit>(4);
         for (var scope : LimitScope.values()) {
             var rule = rules.get(scope);
             var value = rule == null ? null : valueOf(scope, who);
@@ -171,6 +181,7 @@ public class AttemptLimits {
             case ACCOUNT -> who.account();
             case IP -> origin.ip();
             case SESSION -> origin.sessionId();
+            case PLATFORM -> "all";
         };
     }
 

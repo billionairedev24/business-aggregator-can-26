@@ -25,6 +25,8 @@ public final class PrivacyRules {
     public static final String NOT_AWAITING = "This request is already verified or closed.";
     public static final String CODE_LOCKED = "Too many wrong codes. Ask for a new code.";
     public static final String CODE_NOT_SENT = "We couldn't text the code. Try again in a minute.";
+    public static final String TOO_MANY_CODES = "We've texted you several codes already. Try again later, or confirm"
+            + " it's you with your passkey or authenticator app.";
     public static final String CODE_TOO_SOON = "We just sent a code. Wait a minute before asking for another.";
     public static final String NO_MOBILE =
             "Your account has no verified mobile number. Confirm it's you with your passkey"

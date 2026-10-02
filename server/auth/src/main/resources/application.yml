@@ -122,6 +122,9 @@ northline:
           account: { max: 5, window: 1h, lockout: 1h }
           ip: { max: 20, window: 1h, lockout: 1h }
           session: { max: 5, window: 1h, lockout: 1h }
+          # S-104: every text on the platform together (SMS pumping across many numbers and addresses); reaching it
+          # pauses sending codes for everyone for the lockout and logs an error — size it well above real traffic
+          platform: { max: "${OTP_SEND_PLATFORM_PER_HOUR:1000}", window: 1h, lockout: 15m, max-lockout: 1h }
         otp-verify:
           account: { max: 10, window: 1h, lockout: 15m }
           ip: { max: 50, window: 1h, lockout: 15m }

@@ -18,6 +18,7 @@ import { deepLinkAnswer, isDeepLinkPath } from './deep-links.mjs'; // S-102: the
 import { createPageRouter, PAGE_HEADERS } from './page-hosts.mjs';
 import { createSeo, isSeoPath } from './seo.mjs';
 import { appLinkAnswer, appLinksConfig, isAppLinkPath } from './app-links.mjs';
+import { securityHeaders as createSecurityHeaders } from './security-headers.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const clientDir = join(root, 'dist', 'client');
@@ -42,12 +43,8 @@ const types = {
   '.webmanifest': 'application/manifest+json',
 };
 
-const securityHeaders = {
-  'x-content-type-options': 'nosniff',
-  'referrer-policy': 'strict-origin-when-cross-origin',
-  'x-frame-options': 'DENY',
-  'permissions-policy': 'camera=(), microphone=(), payment=(self), geolocation=(self)',
-};
+// S-104: nosniff, framing, referrer, permissions and a Content-Security-Policy (security-headers.mjs)
+const securityHeaders = createSecurityHeaders(process.env);
 
 async function staticFile(pathname) {
   if (pathname === '/' || pathname.endsWith('/')) return null;

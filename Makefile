@@ -201,3 +201,4 @@ include $(ROOT)/make/deploy.mk
 include $(ROOT)/make/infra.mk
 include $(ROOT)/make/dr.mk
 include $(ROOT)/make/observability.mk
+include $(ROOT)/make/security.mk
