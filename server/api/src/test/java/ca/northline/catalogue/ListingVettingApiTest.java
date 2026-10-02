@@ -338,6 +338,29 @@ class ListingVettingApiTest extends CatalogueApiTest {
                         assertThat(m.text()).contains("price of “Wagyu pho”").contains("/kitchen/menu")));
     }
 
+    /**
+     * S-104: a dish's rejection reasons reach the business's email as message keys, like a listing's — so only the
+     * listed reasons are accepted (free text there would have been evaluated by the template engine).
+     */
+    @Test
+    void aDishRejectedWithAReasonNotOnTheList_isRefused() throws Exception {
+        var kitchen = business("kitchen", MerchantRole.OWNER);
+        var dish = heldDish(kitchen.merchantId());
+
+        decide(
+                        QUEUE + "/dishes/" + dish + "/decision",
+                        "{\"decision\":\"reject\",\"reasons\":[\"other}+${7*7}+#{x\"]}",
+                        StaffRole.TRUST_SAFETY)
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.errors[0].field").value("reasons"))
+                .andExpect(jsonPath("$.errors[0].message").value("Pick reasons from the list."));
+        assertThat(jdbc.sql("select status from food.menu_items where id = ?")
+                        .param(dish)
+                        .query(String.class)
+                        .single())
+                .isEqualTo("published");
+    }
+
     @Test
     void rolesAreEnforcedByTheApi() throws Exception {
         var biz = provider(MerchantRole.OWNER);
