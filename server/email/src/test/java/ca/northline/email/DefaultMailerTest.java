@@ -105,6 +105,53 @@ class DefaultMailerTest {
     }
 
     @Test
+    void commercialEmails_goOnlyWithConsent_askedAtSendTime() {
+        var consented = new java.util.HashSet<String>();
+        var mailer = new DefaultMailer(
+                sent::add,
+                EmailTemplatesTest.TEMPLATES,
+                memory,
+                (user, category) ->
+                        category == MessageClasses.ConsentCategory.MARKETING_EMAIL && consented.contains(user));
+        var offer = EmailContent.samples().get("marketing-offer");
+        var delivery = new Mailer.Delivery(
+                "offer-1:user-9", EmailAddress.of("amara@example.com"), offer, Locale.CANADA, unsubscribe, "user-9");
+
+        assertThat(mailer.send(delivery)).isEqualTo(Mailer.Outcome.NO_CONSENT);
+        assertThat(sent).isEmpty();
+        assertThat(keys).isEmpty(); // not claimed: sent once consent exists
+
+        consented.add("user-9");
+        assertThat(mailer.send(delivery)).isEqualTo(Mailer.Outcome.SENT);
+        assertThat(sent.getFirst().headers())
+                .containsEntry(EmailMessage.LIST_UNSUBSCRIBE, "<" + unsubscribe + ">")
+                .containsEntry(EmailMessage.LIST_UNSUBSCRIBE_POST, "List-Unsubscribe=One-Click");
+        assertThat(sent.getFirst().text()).contains("Northline Marketplace Inc.", "1200 – 8th Avenue SW");
+    }
+
+    @Test
+    void commercialEmails_needTheRecipientsId_andNothingIsSentWithoutAConsentSource() {
+        var offer = EmailContent.samples().get("marketing-offer");
+        var anonymous = new Mailer.Delivery(
+                "offer-2:user-9", EmailAddress.of("amara@example.com"), offer, Locale.CANADA, unsubscribe);
+
+        assertThatThrownBy(() -> mailer(sent::add).send(anonymous))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("recipient's id");
+        // the library's default (no CommercialConsent bean): nothing commercial goes
+        assertThat(mailer(sent::add)
+                        .send(new Mailer.Delivery(
+                                "offer-3:user-9",
+                                EmailAddress.of("amara@example.com"),
+                                offer,
+                                Locale.CANADA,
+                                unsubscribe,
+                                "user-9")))
+                .isEqualTo(Mailer.Outcome.NO_CONSENT);
+        assertThat(sent).isEmpty();
+    }
+
+    @Test
     void logsMaskAddresses() {
         assertThat(DefaultMailer.masked(EmailAddress.of("ravi@prairiewrench.ca")))
                 .isEqualTo("r***@prairiewrench.ca");

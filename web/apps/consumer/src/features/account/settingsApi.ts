@@ -59,10 +59,31 @@ export const NOTIFY_CHANNELS = ['push', 'sms', 'email'] as const;
 export const NotificationPrefs = z.object({
   matrix: z.record(z.string(), z.record(z.string(), z.boolean())),
   quietOn: z.boolean(), quietFrom: z.string(), quietTo: z.string(),
-  language: z.enum(['app', 'en', 'fr']).catch('app'), marketing: z.enum(['weekly', 'rewards', 'none']).catch('weekly'),
+  language: z.enum(['app', 'en', 'fr']).catch('app'), marketing: z.enum(['weekly', 'rewards', 'none']).catch('none'),
 });
 export type NotificationPrefs = z.infer<typeof NotificationPrefs>;
 export const notificationsQuery = queryOptions({ queryKey: ['me', 'notifications'], queryFn: () => http('/api/v1/me/notifications', {}, NotificationPrefs) });
+
+/**
+ * CASL consent to Northline's marketing (S-108, `GET /api/v1/me/consents`): per channel whether it is given, the wording
+ * to read before saying yes (in the UI's language, the legal sender filled in), who asks, and every grant and withdrawal.
+ * The `offers` row and "Marketing emails" above are these consents; a save sends the wording versions shown.
+ */
+export const ConsentHistoryItem = z.object({
+  id: z.string(), category: z.string(), action: z.enum(['granted', 'withdrawn']), at: z.string(), source: z.string(),
+  wordingVersion: z.string().nullish(), language: z.string().nullish(),
+});
+export type ConsentHistoryItem = z.infer<typeof ConsentHistoryItem>;
+export const Consents = z.object({
+  categories: z.array(z.object({
+    category: z.string(), channel: z.enum(NOTIFY_CHANNELS), granted: z.boolean(), since: z.string().nullish(), source: z.string().nullish(),
+    wordingVersion: z.string(), wording: z.string(),
+  })),
+  history: z.array(ConsentHistoryItem),
+  requester: z.string(),
+});
+export type Consents = z.infer<typeof Consents>;
+export const consentsQuery = (locale: string) => queryOptions({ queryKey: ['me', 'consents', locale], queryFn: () => http('/api/v1/me/consents', {}, Consents) });
 
 // ── Preferences (language & region, dietary & accessibility) ────────────────────────────────────────────────────────
 export const DIETARY = ['halal', 'kosher', 'vegetarian', 'vegan', 'gluten_free', 'dairy_free', 'nut_free', 'low_sodium'] as const;
@@ -110,8 +131,13 @@ export const useConfirmCard = () => useAccountMutation((setupIntentId: string) =
 export const useDefaultCard = () => useAccountMutation((id: string) => http(`/api/v1/me/payment-methods/${encodeURIComponent(id)}/default`, { method: 'POST' }, Cards), { set: cardsQuery.queryKey });
 export const useRemoveCard = () => useAccountMutation((id: string) => http(`/api/v1/me/payment-methods/${encodeURIComponent(id)}`, { method: 'DELETE' }, Cards), { set: cardsQuery.queryKey });
 
-export type NotificationChange = Partial<Omit<NotificationPrefs, 'matrix'>> & { matrix?: Record<string, Record<string, boolean>> };
-export const useSaveNotifications = () => useAccountMutation((c: NotificationChange) => http('/api/v1/me/notifications', { method: 'PUT', body: c }, NotificationPrefs), { set: notificationsQuery.queryKey });
+export type NotificationChange = Partial<Omit<NotificationPrefs, 'matrix'>> & {
+  matrix?: Record<string, Record<string, boolean>>;
+  /** S-108: where consent changes happen and the wording versions shown, by channel. */
+  consentSource?: 'web_settings'; consentWordings?: Record<string, string>;
+};
+export const useSaveNotifications = () => useAccountMutation((c: NotificationChange) => http('/api/v1/me/notifications', { method: 'PUT', body: c }, NotificationPrefs),
+  { set: notificationsQuery.queryKey, refresh: [['me', 'consents']] });
 
 export type PrefsChange = Partial<Prefs>;
 export const useSavePrefs = () => useAccountMutation((c: PrefsChange) => http('/api/v1/me/preferences', { method: 'PATCH', body: c }, Prefs),

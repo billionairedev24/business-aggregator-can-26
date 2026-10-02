@@ -781,4 +781,6 @@ Confirm it's you with your passkey or authenticator app, then try again.	Confirm
 That mobile number is already used by another account.	Ce numéro de mobile est déjà utilisé par un autre compte.	new
 Enter the name as it should appear, up to 80 characters.	Entrez le nom tel qu’il doit paraître, 80 caractères au plus.	new
 We couldn't text the code. Try again in a minute.	Nous n’avons pas pu texter le code. Réessayez dans une minute.	new
+Enter an account id, an email address or a phone number.	Entrez un identifiant de compte, une adresse courriel ou un numéro de téléphone.	new
+The consent wording has changed. Read it again before you agree.	Le texte du consentement a changé. Relisez-le avant d’accepter.	new
 We've texted you several codes already. Try again later, or confirm it's you with your passkey or authenticator app.	Nous vous avons déjà texté plusieurs codes. Réessayez plus tard ou confirmez que c’est vous avec votre clé d’accès ou votre application d’authentification.	new

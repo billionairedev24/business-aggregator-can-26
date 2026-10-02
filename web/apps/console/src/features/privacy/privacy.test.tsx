@@ -83,4 +83,41 @@ describe('privacy requests (S-105)', () => {
     expect(await screen.findByRole('heading', { level: 1, name: '2 demandes ouvertes · 1 en retard' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Consigner une demande' })).toBeTruthy();
   });
+
+  it('S-108: finds the proof of consent by contact and withdraws for the person', async () => {
+    const records = [
+      { id: 'C2', userId: '01J9ZD3V00000000000000AMR1', category: 'marketing_email', action: 'granted', at: '2026-09-20T15:00:00Z', source: 'checkout',
+        wordingVersion: 'account.email.2026-10', language: 'fr', ipPrefix: '203.0.113.0/24', addressKnown: true, actorId: null },
+      { id: 'C1', userId: '01J9ZD3V00000000000000AMR1', category: 'marketing_sms', action: 'withdrawn', at: '2026-09-01T15:00:00Z', source: 'list_unsubscribe',
+        wordingVersion: null, language: null, ipPrefix: null, addressKnown: true, actorId: null },
+    ];
+    const calls = api(['privacy'], c => {
+      if (c.method === 'GET' && c.url.includes('/api/v1/console/consents?contact=amara%40example.ca')) return { body: { items: records } };
+      if (c.method === 'POST' && c.url.endsWith('/api/v1/console/consents/withdrawals')) return { status: 200 }; // the api's 204 (a test Response can't carry one)
+      return undefined;
+    });
+    renderConsole('/privacy');
+    expect(await screen.findByRole('heading', { name: 'Consent to marketing (CASL)' })).toBeTruthy();
+    await user().type(screen.getByLabelText('Account id, email or phone'), 'amara@example.ca');
+    await user().click(screen.getByRole('button', { name: 'Search' }));
+    expect(await screen.findByText('Checkout')).toBeTruthy();
+    expect(screen.getByText('account.email.2026-10 · fr')).toBeTruthy();
+    expect(screen.getByText('Mailbox one-click')).toBeTruthy();
+    expect(screen.getByText('203.0.113.0/24')).toBeTruthy();
+    // only what is granted now can be withdrawn
+    expect(screen.queryByRole('button', { name: /Withdraw Marketing texts/ })).toBeNull();
+    await user().click(screen.getByRole('button', { name: 'Withdraw Marketing email for 01J9ZD3V00000000000000AMR1' }));
+    await waitFor(() => expect(calls.find(c => c.method === 'POST' && c.url.endsWith('/withdrawals'))?.body)
+      .toEqual({ userId: '01J9ZD3V00000000000000AMR1', category: 'marketing_email' }));
+    expect(await screen.findByText('Withdrawn. The person won’t get it any more.')).toBeTruthy();
+  });
+
+  it('S-108: an account id is looked up as an id; French; no withdrawal without the privacy action', async () => {
+    const calls = api(['admin'], c => c.method === 'GET' && c.url.includes('/api/v1/console/consents?userId=') ? { body: { items: [] } } : undefined);
+    renderConsole('/privacy', { locale: 'fr' });
+    await user().type(await screen.findByLabelText('Identifiant de compte, courriel ou téléphone'), '01J9ZD3V00000000000000AMR1');
+    await user().click(screen.getByRole('button', { name: 'Chercher' }));
+    expect(await screen.findByText('Aucun registre de consentement pour cette personne.')).toBeTruthy();
+    expect(calls.some(c => c.url.endsWith('/api/v1/console/consents?userId=01J9ZD3V00000000000000AMR1'))).toBe(true);
+  });
 });

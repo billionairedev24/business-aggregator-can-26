@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Button, ErrorState, Field, FormGrid, Select, Switch, TextInput, useLocale } from '@northline/ui';
 import { useSession } from '../session/api';
 import { FormSkeleton } from './ProfileTab';
-import { NOTIFY_CHANNELS, NOTIFY_EVENTS, notificationsQuery, useSaveNotifications, type NotificationPrefs } from './settingsApi';
+import { NOTIFY_CHANNELS, NOTIFY_EVENTS, consentsQuery, notificationsQuery, useSaveNotifications, type Consents, type NotificationPrefs } from './settingsApi';
 import { useSettingsT } from './settingsMessages';
 
 const FROM = ['21:00', '22:00', '23:00'] as const;
@@ -18,22 +18,31 @@ const hourLabel = (v: string, locale: 'en' | 'fr') => {
  * Notifications (design 06 `at.notifications`): the event × channel matrix (security alerts locked on), quiet hours,
  * the notification language, the contact the messages go to (edited under Profile) and marketing email (CASL). Changes
  * are kept on the page until "Save preferences".
+ *
+ * S-108: the "Offers & rewards" row and "Marketing emails" are the person's CASL consents — never on by default; the
+ * wording each one means and the consent history are shown under "Marketing messages", and a save sends the wording
+ * versions shown. The offers row's email cell and "Marketing emails" are the same consent and move together.
  */
 export function NotificationsTab() {
   const t = useSettingsT();
   const prefs = useQuery(notificationsQuery);
+  const { locale } = useLocale();
+  const consents = useQuery(consentsQuery(locale));
   return (
     <>
       <h1 id="acct-title" className="nl-acct-h1">{t('notifTitle')}</h1>
       <p className="nl-acct-lede">{t('notifLede')}</p>
       {prefs.isPending ? <FormSkeleton label={t('loading')} rows={7} />
         : prefs.isError ? <ErrorState message={t('loadError')} onRetry={() => void prefs.refetch()} />
-          : <NotificationsForm initial={prefs.data} />}
+          : <NotificationsForm initial={prefs.data} consents={consents.data} />}
+      {consents.isError ? <ErrorState message={t('loadError')} onRetry={() => void consents.refetch()} /> : null}
     </>
   );
 }
 
-function NotificationsForm({ initial }: { initial: NotificationPrefs }) {
+const CONSENT_CELL = (e: string) => e === 'offers';
+
+function NotificationsForm({ initial, consents }: { initial: NotificationPrefs; consents?: Consents }) {
   const t = useSettingsT();
   const { locale } = useLocale();
   const session = useSession();
@@ -42,8 +51,15 @@ function NotificationsForm({ initial }: { initial: NotificationPrefs }) {
   const [saved, setSaved] = useState(false);
   useEffect(() => setP(initial), [initial]);
   const update = (next: Partial<NotificationPrefs>) => { setP(x => ({ ...x, ...next })); setSaved(false); };
-  const toggle = (event: string, channel: string) =>
-    update({ matrix: { ...p.matrix, [event]: { ...p.matrix[event], [channel]: !p.matrix[event]?.[channel] } } });
+  const toggle = (event: string, channel: string) => {
+    const on = !p.matrix[event]?.[channel];
+    const matrix = { ...p.matrix, [event]: { ...p.matrix[event], [channel]: on } };
+    // the offers row's email cell is the marketing-email consent: the choice below follows it
+    const marketing = CONSENT_CELL(event) && channel === 'email' ? (on ? (p.marketing === 'none' ? 'weekly' : p.marketing) : 'none') : p.marketing;
+    update({ matrix, marketing });
+  };
+  const chooseMarketing = (marketing: NotificationPrefs['marketing']) =>
+    update({ marketing, matrix: { ...p.matrix, offers: { ...p.matrix.offers, email: marketing !== 'none' } } });
   const changedCells = () => {
     const out: Record<string, Record<string, boolean>> = {};
     for (const e of NOTIFY_EVENTS) for (const c of NOTIFY_CHANNELS) {
@@ -51,9 +67,19 @@ function NotificationsForm({ initial }: { initial: NotificationPrefs }) {
     }
     return out;
   };
-  const submit = () => save.mutate({
-    matrix: changedCells(), quietOn: p.quietOn, quietFrom: hhmm(p.quietFrom), quietTo: hhmm(p.quietTo), language: p.language, marketing: p.marketing,
-  }, { onSuccess: () => setSaved(true) });
+  const submit = () => {
+    const matrix = changedCells();
+    const marketingChanged = p.marketing !== initial.marketing;
+    const consentChanged = marketingChanged || Object.keys(matrix).some(CONSENT_CELL);
+    save.mutate({
+      matrix, quietOn: p.quietOn, quietFrom: hhmm(p.quietFrom), quietTo: hhmm(p.quietTo), language: p.language,
+      ...(marketingChanged ? { marketing: p.marketing } : {}),
+      ...(consentChanged ? {
+        consentSource: 'web_settings' as const,
+        consentWordings: Object.fromEntries((consents?.categories ?? []).map(c => [c.channel, c.wordingVersion])),
+      } : {}),
+    }, { onSuccess: () => setSaved(true) });
+  };
   const user = session.data?.user;
   return (
     <>
@@ -101,15 +127,57 @@ function NotificationsForm({ initial }: { initial: NotificationPrefs }) {
         <Field label={t('smsNumber')} hint={t('contactHint')}><TextInput value={user?.phone ?? ''} readOnly /></Field>
         <Field label={t('emailAddr')}><TextInput value={user?.email ?? ''} readOnly /></Field>
         <Field label={t('marketing')}>
-          <Select value={p.marketing} onChange={e => update({ marketing: e.target.value as NotificationPrefs['marketing'] })}
+          <Select value={p.marketing} onChange={e => chooseMarketing(e.target.value as NotificationPrefs['marketing'])}
             options={(['weekly', 'rewards', 'none'] as const).map(m => ({ value: m, label: t(`mk_${m}`) }))} />
         </Field>
       </FormGrid>
+      {consents ? <MarketingConsents consents={consents} /> : null}
       {save.isError ? <p className="nl-error" role="alert">{t('saveError')}</p> : null}
       <div className="nl-acct-actions">
         <Button type="button" onClick={submit} disabled={save.isPending} aria-busy={save.isPending}>{t('savePrefs')}</Button>
         <span className="nl-small nl-muted" role="status">{saved ? t('notifSaved') : ''}</span>
       </div>
     </>
+  );
+}
+
+/** S-108: what each marketing consent means (the wording the person agrees to), who asks, and its history. */
+function MarketingConsents({ consents }: { consents: Consents }) {
+  const t = useSettingsT();
+  const { locale } = useLocale();
+  const date = (iso: string) => new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
+  return (
+    <section aria-labelledby="nl-consents" className="nl-measure">
+      <h2 id="nl-consents" className="nl-acct-h2">{t('consentTitle')}</h2>
+      <p className="nl-small nl-muted">{t('consentLede')}</p>
+      <ul className="nl-consents">
+        {consents.categories.map(c => (
+          <li key={c.category}>
+            <strong>{t(`cat_${c.category}` as 'cat_marketing_email')}</strong>{' · '}
+            <span>{c.granted && c.since ? t('consentGivenOn', { date: date(c.since) }) : t('consentNotGiven')}</span>
+            <span className="nl-block nl-small">{c.wording}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="nl-small nl-muted">{t('consentRequester', { requester: consents.requester })}</p>
+      <h3 className="nl-acct-h3">{t('consentHistory')}</h3>
+      {consents.history.length === 0 ? <p className="nl-small nl-muted">{t('consentHistoryEmpty')}</p> : (
+        <div className="nl-acct-table">
+          <table className="table">
+            <thead><tr><th scope="col">{t('colDate')}</th><th scope="col">{t('consentWhat')}</th><th scope="col">{t('consentAction')}</th><th scope="col">{t('consentWhere')}</th></tr></thead>
+            <tbody>
+              {consents.history.map(h => (
+                <tr key={h.id}>
+                  <td>{date(h.at)}</td>
+                  <td>{t(`cat_${h.category}` as 'cat_marketing_email')}</td>
+                  <td>{t(h.action === 'granted' ? 'act_granted' : 'act_withdrawn')}</td>
+                  <td>{t(`src_${h.source}` as 'src_web_settings')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }

@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<!--/* S-108: Northline's own offer to a customer — a commercial electronic message. The layout adds the legal sender,
+       the consent line and the one-click unsubscribe link; EmailTemplates refuses it without them. */-->
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout.html :: email(#{marketing-offer.preheader}, ~{::content})}">
+<body>
+<div th:fragment="content">
+  <h1 th:style="${s.h1}" th:text="${heading}">Heading</h1>
+  <p th:style="${s.p}" th:text="${body}">Body</p>
+  <th:block th:replace="~{button.html :: button(#{marketing-offer.cta}, ${link})}"/>
+</div>
+</body>
+</html>

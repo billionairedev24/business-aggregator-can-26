@@ -42,6 +42,8 @@ export interface AccountFixtureState {
   plus: { plan: 'monthly' | 'annual'; since: string } | null;
   /** The matrix, language and marketing; the quiet hours are `services.quiet`. */
   notifications: { matrix: Matrix; language: string; marketing: string };
+  /** S-108: grants and withdrawals of the marketing consents, newest first (the offers row and marketing are them). */
+  consentHistory: { id: string; category: string; action: 'granted' | 'withdrawn'; at: string; source: string; wordingVersion?: string | null }[];
   prefs: { language: string; province: string | null; units: string; timeFormat: string; dietary: string[]; allergies: string | null; accessibility: string[]; accessNotes: string | null; display: string[] };
   /** S-105 privacy requests, newest first (the api's RequestView shape). */
   privacy: Array<Record<string, unknown> & { id: string; type: string; state: string }>;
@@ -93,8 +95,11 @@ export function newAccountState(o: {
         security: { push: true, sms: true, email: true },
       },
       language: 'app',
-      marketing: 'weekly',
+      marketing: 'none', // S-108: no email consent
     },
+    consentHistory: [
+      { id: 'consent-1', category: 'marketing_push', action: 'granted', at: '2026-09-20T15:00:00Z', source: 'app_settings', wordingVersion: 'account.push.2026-10' },
+    ],
     prefs: { language: 'en', province: null, units: 'metric', timeFormat: '12h', dietary: [], allergies: null, accessibility: [], accessNotes: null, display: [] },
     privacy: [],
     cases: [],
@@ -233,6 +238,26 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
     };
   };
   const notifications = () => ({ events: Object.keys(state.notifications.matrix), channels: ['push', 'sms', 'email'], ...state.notifications, ...state.services.quiet });
+  // S-108: the consents behind the offers row, as /me/consents answers them (wording in English only here)
+  const CONSENT_CATEGORY: Record<string, string> = { email: 'marketing_email', sms: 'marketing_sms', push: 'marketing_push' };
+  const consents = () => ({
+    categories: (['email', 'sms', 'push'] as const).map((channel) => {
+      const category = CONSENT_CATEGORY[channel]!;
+      const last = state.consentHistory.find((h) => h.category === category);
+      return {
+        category, channel, granted: last?.action === 'granted', since: last?.at ?? null, source: last?.source ?? null,
+        wordingVersion: `account.${channel}.2026-10`, wording: `Yes, Northline Marketplace Inc. may send me Northline’s offers by ${channel}.`,
+      };
+    }),
+    history: state.consentHistory,
+    requester: 'Northline Marketplace Inc. · 1 Test Street, Testville · support@northline.ca',
+  });
+  const consentChange = (channel: string, on: boolean, source: string) => {
+    const category = CONSENT_CATEGORY[channel];
+    const last = state.consentHistory.find((h) => h.category === category);
+    if (!category || (last?.action === 'granted') === on) return;
+    state.consentHistory.unshift({ id: `consent-${state.consentHistory.length + 1}`, category, action: on ? 'granted' : 'withdrawn', at: new Date().toISOString(), source, wordingVersion: on ? `account.${channel}.2026-10` : null });
+  };
 
   return (req) => {
     const { method, path } = req;
@@ -270,7 +295,7 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
 
     // ── the api: personal ─────────────────────────────────────────────────────────────────────────────────────────
     const mine =
-      ['/me/account-summary', '/me/activity', '/me/profile', '/me/addresses', '/me/household', '/me/plus', '/me/wallet', '/me/notifications', '/me/preferences', '/me/privacy-requests', '/me/cases'].includes(path) ||
+      ['/me/account-summary', '/me/activity', '/me/profile', '/me/addresses', '/me/household', '/me/plus', '/me/wallet', '/me/notifications', '/me/consents', '/me/preferences', '/me/privacy-requests', '/me/cases'].includes(path) ||
       /^\/me\/(quotes|addresses|cases|privacy-requests)\//.test(path) ||
       (path.startsWith('/me/payment-methods') && !(method === 'GET' && path === '/me/payment-methods'));
     if (!mine) return undefined;
@@ -444,8 +469,12 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
       if (b.quietTo) state.services.quiet.quietTo = String(b.quietTo).slice(0, 5);
       if (b.language !== undefined) state.notifications.language = b.language;
       if (b.marketing !== undefined) state.notifications.marketing = b.marketing;
+      const source = (req.body as { consentSource?: string }).consentSource ?? 'web_settings';
+      for (const [channel, on] of Object.entries(b.matrix?.offers ?? {})) consentChange(channel, on, source);
+      if (b.marketing !== undefined) consentChange('email', b.marketing !== 'none', source);
       return ctx.answer(200, notifications());
     }
+    if (path === '/me/consents' && method === 'GET') return ctx.answer(200, consents());
     if (path === '/me/preferences') {
       if (method === 'GET') return ctx.answer(200, state.prefs);
       const b = req.body as Partial<AccountFixtureState['prefs']>;
