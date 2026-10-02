@@ -18,6 +18,11 @@ locals {
   cors_origins        = distinct(flatten([for b in var.buckets : b.cors_allowed_origins]))
   # S-114: known at plan time even while the key id is not (try() would make it unknown).
   replica_kms_key = var.replica == null ? null : var.replica.kms_key
+  # S-107: one management policy rule per container and expiring prefix (names: letters, digits, '-').
+  expiring = merge([for c, b in var.buckets : {
+    for prefix, days in b.expire_prefixes :
+    "expire-${c}-${trimsuffix(replace(prefix, "/", "-"), "-")}" => { prefix = "${c}/${prefix}", days = days }
+  }]...)
 }
 
 resource "azurerm_storage_account" "this" {
@@ -88,6 +93,23 @@ resource "azurerm_storage_management_policy" "this" {
       actions {
         version {
           delete_after_days_since_creation = rule.value.noncurrent_days
+        }
+      }
+    }
+  }
+
+  dynamic "rule" {
+    for_each = local.expiring
+    content {
+      name    = rule.key
+      enabled = true
+      filters {
+        blob_types   = ["blockBlob"]
+        prefix_match = [rule.value.prefix]
+      }
+      actions {
+        base_blob {
+          delete_after_days_since_creation_greater_than = rule.value.days
         }
       }
     }
@@ -184,6 +206,23 @@ resource "azurerm_storage_management_policy" "replica" {
       }
       version {
         delete_after_days_since_creation = var.replica.noncurrent_days
+      }
+    }
+  }
+
+  dynamic "rule" {
+    for_each = local.expiring
+    content {
+      name    = rule.key
+      enabled = true
+      filters {
+        blob_types   = ["blockBlob"]
+        prefix_match = [rule.value.prefix]
+      }
+      actions {
+        base_blob {
+          delete_after_days_since_creation_greater_than = rule.value.days
+        }
       }
     }
   }

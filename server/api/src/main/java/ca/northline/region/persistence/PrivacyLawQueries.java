@@ -20,7 +20,7 @@ class PrivacyLawQueries implements PrivacyLawStore {
                         select name_i18n->>'en' as name_en, name_i18n->>'fr' as name_fr,
                                short_i18n->>'en' as short_en, short_i18n->>'fr' as short_fr,
                                authority_i18n->>'en' as authority_en, authority_i18n->>'fr' as authority_fr,
-                               authority_url, response_days, business_days, extension_days
+                               authority_url, response_days, business_days, extension_days, decision_retention_days
                           from region.privacy_laws where code = :code
                         """)
                 .param("code", law.code())
@@ -34,7 +34,8 @@ class PrivacyLawQueries implements PrivacyLawStore {
                         rs.getString("authority_url"),
                         rs.getInt("response_days"),
                         rs.getBoolean("business_days"),
-                        rs.getInt("extension_days")))
+                        rs.getInt("extension_days"),
+                        rs.getInt("decision_retention_days")))
                 .optional();
     }
 }

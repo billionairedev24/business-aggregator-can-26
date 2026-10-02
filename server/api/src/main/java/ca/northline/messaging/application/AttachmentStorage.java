@@ -11,4 +11,7 @@ public interface AttachmentStorage {
 
     /** Removes everything under {@code <prefix>/} (a customer's uploads on erasure, S-105); returns how many. */
     int deleteAll(String prefix);
+
+    /** Removes one object; nothing happens when it is already gone (S-107 retention). */
+    void delete(String key);
 }

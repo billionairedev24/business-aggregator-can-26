@@ -26,6 +26,9 @@ variable "buckets" {
     versioning           = optional(bool, true)
     noncurrent_days      = optional(number, 30)
     cors_allowed_origins = optional(list(string), [])
+    # S-107: current objects under a key prefix deleted this many days after they were written (bucket lifecycle,
+    # replicas too) — data whose retention is a fixed age with no legal hold, e.g. { "privacy/exports/" = 8 }.
+    expire_prefixes = optional(map(number), {})
   }))
 }
 
@@ -56,14 +59,15 @@ variable "force_destroy" {
 }
 
 variable "replica" {
-  description = "S-114: replicate every bucket to the other Canadian region of the cloud (new and changed objects, deletes as delete markers / versions), versioned, with lifecycle rules: current objects move to a cooler class after cool_after_days, older versions expire after noncurrent_days. null = no replica. AWS: S3 replication to a bucket <name>-replica; Google Cloud: an event-driven Storage Transfer Service replication job to a bucket <name>-replica; Azure: object replication to a second storage account. kms_key = a key in that region on AWS and Google Cloud (kms module instantiated there); on Azure the primary key vault's key (Key Vault keeps a read-only copy in the paired region)."
+  description = "S-114: replicate every bucket to the other Canadian region of the cloud (new and changed objects, deletes as delete markers / versions), versioned, with lifecycle rules: current objects move to a cooler class after cool_after_days, older versions expire after noncurrent_days (30: within the Privacy Policy's 35 days), the buckets' expire_prefixes apply too. null = no replica. AWS: S3 replication to a bucket <name>-replica; Google Cloud: an event-driven Storage Transfer Service replication job to a bucket <name>-replica; Azure: object replication to a second storage account. kms_key = a key in that region on AWS and Google Cloud (kms module instantiated there); on Azure the primary key vault's key (Key Vault keeps a read-only copy in the paired region)."
   type = object({
     region = string
     kms_key = optional(object({
       id = string
     }))
     cool_after_days = optional(number, 30)
-    noncurrent_days = optional(number, 90)
+    # S-107: 30 (was 90) — the Privacy Policy says backups roll off within 35 days of deletion.
+    noncurrent_days = optional(number, 30)
   })
   default = null
 

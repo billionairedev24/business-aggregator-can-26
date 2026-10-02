@@ -6932,6 +6932,116 @@ Branch `security/s-108-casl`. Runbook: [runbooks/casl.md](runbooks/casl.md). Mig
 - **Not done:** inbound SMS STOP/ARRET; sign-up and checkout checkboxes; any commercial producer (campaigns, offers);
   counsel review of the wordings; a separate console screen (the privacy screen hosts the lookup).
 
+## 2026-09-30 — S-107 Data retention jobs per the Privacy Policy retention schedule
+
+Branch `security/s-107-retention`. Runbook: [runbooks/retention.md](runbooks/retention.md) (the full table, a run, the
+console, metrics, mismatches); privacy-requests.md § 9 links it.
+
+- **The schedule is a YAML catalogue, not code and not environment variables.** `privacy/retention-schedule.yml` (api
+  resources), loaded by `RetentionCatalogue` with Spring's `Binder`: per category the policy clause and its words
+  verbatim, the period (ISO-8601) and what starts it, `afterDisputeClosed`, `lawMinimum`, the legal basis and name
+  (en/fr), the action (`delete` | `pseudonymise` | `aggregate`), the owning module, the hold codes and the enforcement
+  (`job` | `pipeline` | `infrastructure` | `none` | `blocked`). Periods are the policy's: a variable would let an
+  environment silently contradict the published policy. `RetentionScheduleTest` reads `web/packages/legal/pages/
+  privacy.html` § 6 and fails on a clause without a category, a misquote, or a period the clause doesn't state.
+- **Categories:** the policy's eight clauses map to 13 categories (a clause owned by several modules is one category per
+  module); plus two the policy's section 6 doesn't name, kept and flagged: `developer.audit_log` (7 years) and S-108's `messaging.consent_records` (CASL proof, 3 years after withdrawal, through `messaging.api.ConsentRetention`). Fifteen in all; the
+  table is in the runbook. Short-lived technical data other jobs already delete (exports, drop-off addresses, Stripe
+  events, push devices, S-115's dead deferred notifications, dedupe claims, webhook log, idempotency keys, live
+  positions, erased accounts' credentials) is listed as `operational` in the same file and shown in the report; those
+  jobs were not moved.
+- **One SPI, like S-105:** `shared.privacy.RetentionContributor` (`holds`, `relate`, `expired`, `purge`), implemented
+  per module as a package-private `<Module>Retention` in `persistence` over its own schema (identity, orders, booking,
+  payments, messaging, fulfilment, developer, privacy). It sits in `shared` for S-105's reason (privacy depends on
+  those modules). `PrivacyContributorsTests` checks they are package-private persistence adapters;
+  `RetentionScheduleTest` that every module with a job has one; the service refuses to start if a runnable category
+  has no contributor or a contributor runs an unknown category.
+- **Holds are S-105's (`PersonalDataContributor.Hold`), collected across modules.** Each module reports the holds it
+  knows as references (`booking:<id>`, `order:<id>`, `order_line:<id>`, `food_order:<id>`, `dispute:<id>`), a decided
+  dispute with its decision date and customer; `relate` translates names (orders: order line / food order → order).
+  The privacy module keeps those in force for a category (its hold codes; a decided dispute for
+  `afterDisputeClosed`, plus the law's minimum when `lawMinimum`) and passes the keys to the job as a SQL array. People
+  with an open privacy request are held in every category (PIPEDA s. 8(8)). No cross-schema SQL anywhere.
+- **CASL proof (S-108):** `messaging.consent_records` runs `ConsentRetention.purgeExpiredProofs` (idempotent) from the
+  messaging job; dry runs count the same rows. S-108's own daily `@Scheduled` purge and `CASL_PURGE_CRON` are
+  **retired**: one scheduler, one report, one audit trail and the not-run alert cover it. `RetentionScheduleTest`
+  checks the schedule's P3Y equals `ConsentRetention.PROOF_PERIOD`; casl.md and the env runbooks updated.
+- **Province-dependent periods come from the region model.** New `region.privacy_laws.decision_retention_days` (V301,
+  exposed as `PrivacyRegime.decisionRetentionDays`): what a law keeps after a decision about a person. BC PIPA 365
+  (s. 35(1)); PIPEDA, Alberta PIPA, Québec 0 (no number) — drafted for legal review. Applied to dispute evidence,
+  delivery proofs and check-in locations by the customer's province (default address, else the default province, as
+  S-105). The policy's periods themselves are national; Québec's 3-year prescription is flagged, not applied.
+- **Account profile (30 days) reuses the erasure pipeline:** closing an account *is* an S-105 erasure, which blanks the
+  profile within minutes. The `account.closed_profile` job finds erasures whose account closed more than 30 days ago
+  with a step still pending or failed, makes those steps due and runs them through `PrivacyWork.run`; held steps are
+  its "held". No second anonymiser.
+- **Actions chosen where the policy is silent:** 7-year transaction records are *pseudonymised* (customer ids set to
+  null, names, addresses and customer words cleared; amounts, tax, dates and the business stay; the ledger and payouts
+  hold no customer data) rather than deleted — deleting would break merchants' balances and reports; checkout and
+  accepted-quote snapshots (whose customer id is NOT NULL) are deleted, the order / booking row keeps the sale.
+  Conversations, help-case conversations, uploads and delivery proofs are *deleted* (rows and files); dispute evidence
+  is *pseudonymised* (statements and files go, the decision and amounts stay); check-in locations: the point is
+  cleared, the transition stays; sign-ins deleted (northline-auth treats a missing sign-in as ended; refresh tokens
+  live ≤ 30 days); the audit log deleted after 7 years through V181's trigger switch (`northline.audit_retention`),
+  bounded by the trigger's own `now() - 7 years`.
+- **Clocks chosen where the policy is silent:** "after the transaction" = a conversation's last message, a help case's
+  resolution, a dispute's escrow `occurred_at`, a drop-off's `done_at`; 7 years from the order placed / the booking's
+  end / the escrow created; sign-ins from their last activity (ended, else last seen, else started).
+- **Runs:** nightly at `RETENTION_CRON` (02:47, platform zone), every replica; a category with a successful scheduled run
+  in the last 20 h is skipped; batches of `RETENTION_BATCH` (500) in their own transaction under
+  `pg_try_advisory_xact_lock('privacy.retention:<category>')`, at most `RETENTION_MAX_BATCHES` (40) a night; a dry run
+  counts only. The existing scheduling pattern (Spring `@Scheduled` + Postgres advisory locks) instead of ShedLock — no
+  module uses ShedLock. `RETENTION_DRY_RUN` makes nightly runs count only (recommended for a new environment's first
+  week, documented in prod.md).
+- **Objects through the storage ports:** `delete(key)` added to `AttachmentStorage`, `DisputeEvidenceStorage` and
+  `ProofStorage` (object store, local folder and unconfigured adapters). Deleted in the batch's transaction after the
+  rows are chosen; a failed delete fails the batch (retried next night); deleting a missing object is fine.
+- **Bucket lifecycle where it suffices:** only access exports have a fixed age with no hold — Terraform's new
+  `buckets.<name>.expire_prefixes` deletes `privacy/exports/` after 8 days on the buckets and their replicas (AWS
+  lifecycle rule, GCS lifecycle rule, Azure management policy), a backstop behind the hourly sweep. Everything else
+  depends on holds and is deleted by the jobs.
+- **Search index:** holds no personal data (S-105) — nothing to purge.
+- **Report:** console Privacy › Retention tab (screen `privacy`; runs need the `privacy` action — S-105's privacy
+  officer, support lead and admin; no new role). `GET /api/v1/console/retention`, `/export` (CSV, RFC 4180, every
+  field quoted, headers in the caller's language), `POST /runs {dryRun, category?}` (422 `category` for a code without
+  a job). Every run, dry or not, scheduled or staff, is a `privacy.retention_runs` row and an audit entry
+  `privacy.retention_run` (target `retention_category`). en + fr-CA.
+- **Metrics and alerts:** `northline.retention.rows{category, action}`, `northline.retention.runs{category, mode,
+  outcome}`, `northline.retention.last_success{category}` (read from the runs table, cached 60 s; before a first
+  success, the first run of any category, so a category that never succeeds alerts). `NorthlineRetentionNotRun`
+  (ticket, 2 days, for 1 h) and `NorthlineRetentionMissing` (ticket, 6 h), promtool tests, runbook page.
+- **Fixed mismatches (the policy was clearly right):** prod bucket replicas kept older versions (deleted objects) 90 days
+  — now 30 on all three clouds ("Backups roll off within 35 days of deletion"); nothing deleted sign-ins, messages,
+  dispute evidence, delivery proofs, check-in locations or old transaction records, and the audit log's 7-year purge had
+  no job — all have jobs now.
+- **Flagged, not changed** (runbook § 7): the audit log is not in the policy (and part of it may be "security logs: 12
+  months"); Québec's 3-year prescription vs "2 years"; KYC's "5 years after the relationship ends" can't trigger (no
+  business closure or refusal exists — category `blocked`); Google Cloud and Azure replicas don't receive deletions
+  (S-114), so files the jobs delete survive there; an erasure step held by an open order keeps that module's data past
+  30 days; personal data the policy doesn't schedule is kept with no end (notification inbox, abandoned carts,
+  addresses of open accounts, trust flags, AI usage, storefront visits, merchants' job photos); northline-auth's own
+  token / authorization tables have no 12-month purge; payment intents without an escrow have no date to age by.
+- **Schema (V301):** `privacy.retention_runs`; `region.privacy_laws.decision_retention_days` (+ BC 365); indexes for the
+  scans (`identity.sessions` last activity, `messaging.threads` last message, resolved tickets, customer uploads,
+  located booking events, decided disputes, escrows' `created_at`, proof stops, `orders.placed_at`,
+  `developer.audit_log.at`). Range V301–V304 recorded in IMPLEMENTATION_PLAN.md (above S-108's V300).
+- **Variables (all optional, no secret):** `RETENTION_ENABLED`, `RETENTION_CRON`, `RETENTION_BATCH`,
+  `RETENTION_MAX_BATCHES`, `RETENTION_DRY_RUN` (runbooks dev/staging/prod/local, `.env.example`). No Helm change: the
+  api reads them from `configEnv` like the other optional settings.
+- **Tests:** `RetentionJobsTest` (every job's dry run and run against its own rows: sign-ins and an open request,
+  conversations with files and order / dispute holds and the year after a decision, help cases and uploads, check-in
+  locations with an upcoming booking, an open dispute and BC vs Alberta after a decision, dispute evidence files,
+  delivery proofs, seven-year records with an open order, the audit log, the overdue erasure through the pipeline, the
+  nightly run once per night with audit and gauges; the API's roles, MFA, French, CSV, 422 and audit roles);
+  `RetentionScheduleTest` (the policy word for word); `PrivacyContributorsTests` (+ retention adapters); promtool
+  cases; console `retention.test.tsx` (report, drawer, dry run with the role header, confirm before running, tabs,
+  French). Terraform validated offline with the env roots' mocked plans (`scripts/validate.sh all`).
+- **Not done / never run:** no bucket, lifecycle rule, replica or alert has run in a real cloud (the Terraform is
+  validated offline only); the legal values (BC 365, the others 0, the clocks above) need counsel's review; a
+  litigation hold (keep everything about a case past the policy) is not modelled — stopping the jobs is the only lever;
+  northline-auth's tables and the worker's operational purges are not in the report's run history (they keep their own
+  jobs and metrics).
+
 ## 2026-09-30 — S-104 External penetration test and remediation (internal review, fixes, testers' packet)
 
 The third-party test itself can't happen in this repository. This story is the internal review that comes first, the
@@ -6964,7 +7074,7 @@ engagement, contacts, retest, STRIDE), [docs/security/README.md](security/README
   a request over the budget still opens it (it waits for a step-up proof, or a code once the budget allows);
   "send a new code" answers `409 too_many_codes` (fr-CA in the catalogue). **Schema: V305**
   `privacy.verification_texts` (id, subject, request with `ON DELETE CASCADE`, sent_at; rows older than two days are
-  deleted on insert) — V305–V309 is S-104's range, above main's V290.
+  deleted on insert) — V305–V309 is S-104's range, above main's V301 (S-107).
 - **SMS pumping:** new rate-limit scope `PLATFORM` (key `all`) beside account/IP/session; only `otp-send` uses it:
   `OTP_SEND_PLATFORM_PER_HOUR` (default 1000/h, lockout 15 min, max 1 h), logged at ERROR when reached; never reset by a
   success. New optional variable in runbooks README/dev/staging/prod and `.env.example`; no secret. Restricting

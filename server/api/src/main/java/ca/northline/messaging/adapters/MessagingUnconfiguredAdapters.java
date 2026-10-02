@@ -31,6 +31,11 @@ class MessagingUnconfiguredAdapters {
             }
 
             @Override
+            public void delete(String key) {
+                // nothing was ever stored
+            }
+
+            @Override
             public int deleteAll(String prefix) {
                 return 0; // nothing was ever stored
             }
