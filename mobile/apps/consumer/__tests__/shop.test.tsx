@@ -407,6 +407,20 @@ describe('B6 Payment', () => {
     expect(stepUps).toEqual(['', FIXTURE_PROOF]);
   });
 
+  it('words a wrong or locked authenticator code (not the raw key)', async () => {
+    let answer: [number, unknown] = [422, { code: 'invalid_code', detail: 'mismatch' }];
+    const { server } = await signedInWithCart({ url: PAY, wrap: intercept((u) => u.endsWith('/api/auth/step-up/totp'), () => answer) });
+    server.shop.stepUp = 'required';
+    fireEvent.press(await screen.findByRole('button', { name: 'Pay $23.35' }));
+    fireEvent.changeText(await screen.findByTestId('step-up-code'), '000000');
+    fireEvent.press(screen.getByTestId('step-up-confirm'));
+    expect(await screen.findByText('That code didn’t work. Check it and try again.')).toBeTruthy();
+    expect(screen.queryByText(/shop\.stepUp\./)).toBeNull();
+    answer = [429, { code: 'rate_limited' }];
+    fireEvent.press(screen.getByTestId('step-up-confirm'));
+    expect(await screen.findByText('Too many tries. Wait a few minutes, then try again.')).toBeTruthy();
+  });
+
   it('a phone that can’t step up is told so; an account without a second factor is sent to add one', async () => {
     const { server } = await signedInWithCart({ url: PAY, wrap: intercept((u) => u.endsWith('/api/auth/step-up/totp'), () => [401, { code: 'unauthenticated' }]) });
     server.shop.stepUp = 'required';
