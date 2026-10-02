@@ -1,0 +1,118 @@
+{
+  "$comment": "S-106: the legal document registry. Every legal text Northline shows, with its versions (newest last), effective dates and counsel's sign-off. kind 'page' and 'file' are hashed (registry.mjs: SHA-256 of the visible text / canonical JSON) and legal.test.mjs fails when the text changes without a new version here. kind 'code' is versioned where it lives and pinned by its own test (pinnedBy). A sign-off is {counsel, firm, date, sha256 (= the version's sha256, the exact text reviewed), reference}. Process: docs/compliance/legal/review-packet.md.",
+  "documents": [
+    {
+      "id": "terms",
+      "title": "Terms of Service (Part A customers, Part B Business Terms at #business)",
+      "kind": "page",
+      "source": "web/packages/legal/pages/terms.html",
+      "languages": ["en"],
+      "appearsIn": [
+        "consumer web /legal/terms.html (footer, registration and sign-in terms checkbox)",
+        "Studio /legal/terms.html (registration; onboarding 07d Business Terms checkbox → #business; Compliance › Platform obligations 'read')",
+        "consumer app welcome / sign-up / account (opens the consumer site's page)",
+        "App Store and Play listings (terms URL)"
+      ],
+      "acceptanceRecord": "identity.users.terms_version (northline-auth TERMS_VERSION, default 3.0) + terms_accepted_at; merchants.merchants.business_terms_accepted_at (no version stored)",
+      "versions": [
+        {
+          "version": "3.0",
+          "effective": "2026-10-01",
+          "sha256": "017164c815e7025258d7523a2b76b3aea2b39381c4d134d220d870a672bf22ff",
+          "note": "Design 09 draft, verbatim (CLAUDE.md). 'Strong draft, not legal advice' — not reviewed by counsel.",
+          "signOff": null
+        }
+      ]
+    },
+    {
+      "id": "privacy",
+      "title": "Privacy Policy",
+      "kind": "page",
+      "source": "web/packages/legal/pages/privacy.html",
+      "languages": ["en"],
+      "appearsIn": [
+        "consumer web /legal/privacy.html (footer, registration)",
+        "Studio /legal/privacy.html (registration)",
+        "consumer app (opens the consumer site's page)",
+        "App Store and Play listings (privacy policy URL, en-CA and fr-CA listings alike)"
+      ],
+      "acceptanceRecord": "identity.users.terms_version covers both documents (AuthProperties.termsVersion)",
+      "versions": [
+        {
+          "version": "3.0",
+          "effective": "2026-10-01",
+          "sha256": "ef4aa0c070192f6d44923339458e97d1653d4da0027ca1b08bb36ac4b634f4ca",
+          "note": "Design 10 draft, verbatim. Not reviewed by counsel; S-107 quotes § 6 word for word.",
+          "signOff": null
+        }
+      ]
+    },
+    {
+      "id": "merchant-obligations",
+      "title": "Platform obligations (the merchant's versioned summary of the Business Terms)",
+      "kind": "code",
+      "source": "server/api/src/main/java/ca/northline/merchants/domain/ComplianceRules.java",
+      "text": "web/apps/studio/src/features/compliance/messages.ts (ob1–ob5, ob5Kitchen; en and fr)",
+      "pinnedBy": "legal.test.mjs (OBLIGATIONS_VERSION equals this registry's current version)",
+      "languages": ["en", "fr"],
+      "appearsIn": ["Studio › Compliance › 'Platform obligations you’ve accepted' (accept button for the owner)"],
+      "acceptanceRecord": "merchants.obligation_acceptances",
+      "versions": [
+        { "version": "2.3", "effective": "2026-09-29", "note": "Design 02 copy. Not reviewed by counsel.", "signOff": null }
+      ]
+    },
+    {
+      "id": "casl-consent-wordings",
+      "title": "CASL express-consent wordings (S-108)",
+      "kind": "code",
+      "source": "server/api/src/main/java/ca/northline/messaging/domain/ConsentWordings.java",
+      "pinnedBy": "ConsentWordingsTest (hash of every published wording); legal.test.mjs (the registry lists every version id)",
+      "languages": ["en", "fr"],
+      "appearsIn": [
+        "consumer web and app Account › Notifications › Marketing messages (account.*)",
+        "Studio Settings › Notifications › Marketing from Northline (studio.email)"
+      ],
+      "acceptanceRecord": "messaging.consent_records.wording_version + language",
+      "versions": [
+        { "version": "account.email.2026-10", "effective": "2026-10-02", "signOff": null },
+        { "version": "account.sms.2026-10", "effective": "2026-10-02", "signOff": null },
+        { "version": "account.push.2026-10", "effective": "2026-10-02", "signOff": null },
+        { "version": "studio.email.2026-10", "effective": "2026-10-02", "signOff": null }
+      ]
+    },
+    {
+      "id": "store-privacy-consumer",
+      "title": "App Store App Privacy / Play Data safety answers — consumer app (S-103)",
+      "kind": "file",
+      "source": "mobile/apps/consumer/store/privacy.json",
+      "languages": ["en"],
+      "appearsIn": ["App Store Connect › App Privacy and Play Console › Data safety (entered by hand, en-CA and fr-CA listings)"],
+      "versions": [
+        {
+          "version": "2026-10-02",
+          "effective": "2026-10-02",
+          "sha256": "3f4a5154645fc70987ebe845fdd19a14493259b73000ca11447dc7312c47a692",
+          "note": "Not submitted to either store yet (S-103).",
+          "signOff": null
+        }
+      ]
+    },
+    {
+      "id": "store-privacy-courier",
+      "title": "App Store App Privacy / Play Data safety answers — courier app (S-103)",
+      "kind": "file",
+      "source": "mobile/apps/courier/store/privacy.json",
+      "languages": ["en"],
+      "appearsIn": ["App Store Connect › App Privacy and Play Console › Data safety (entered by hand)"],
+      "versions": [
+        {
+          "version": "2026-10-02",
+          "effective": "2026-10-02",
+          "sha256": "2f13f73d9a59ed42934d7014e242c87aef4eef744e3abca1d12b4409f1cb0a1b",
+          "note": "Not submitted to either store yet (S-103).",
+          "signOff": null
+        }
+      ]
+    }
+  ]
+}
