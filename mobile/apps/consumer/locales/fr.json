@@ -1,0 +1,4 @@
+{
+  "CFBundleDisplayName": "Northline",
+  "NSLocationWhenInUseUsageDescription": "Northline utilise votre position pour suggérer votre adresse de livraison et afficher les commerces et prestataires qui la desservent. Elle n’est utilisée que lorsque l’app est ouverte et n’est jamais transmise aux entreprises."
+}

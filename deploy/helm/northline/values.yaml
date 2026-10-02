@@ -48,6 +48,17 @@ urls:
   # Registrable domain shared by the Studio and consumer origins (passkeys). Changing it invalidates every passkey.
   webauthnRpId: dev.northline.ca
 
+# S-97: the native apps that may open the consumer site's links (App Links / Universal Links) and use its passkeys —
+# the consumer web serves /.well-known/apple-app-site-association and /.well-known/assetlinks.json from these
+# (web/apps/consumer/server/app-links.mjs; docs/runbooks/mobile.md § App Links). Ids are the build variant this
+# environment's apps use (development → dev, preview → staging, production → prod). Empty team id / no certificate
+# fingerprint = that file answers 404 (the apps then fall back to their custom scheme).
+mobileApps:
+  appleTeamId: ""                  # Apple Developer team id (10 characters), not a secret
+  iosBundleIds: [ ca.northline.app, ca.northline.courier ]
+  androidPackages: [ ca.northline.app, ca.northline.courier ]
+  androidCertSha256: []            # SHA-256 of the Play app-signing certificate(s), AA:BB:… (Play Console › App integrity)
+
 # Non-secret values from Terraform (`terraform output -json config_env`, infra/terraform) → ConfigMap northline-infra,
 # loaded by api, auth, bff and worker. Pass them as a values file:
 #   terraform output -json config_env | jq '{configEnv: .}' > infra-values.json

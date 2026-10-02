@@ -189,8 +189,9 @@ location declarations below.
   signing key. Download a backup of the upload keystore (`eas credentials`) into the secrets manager — losing it means
   a Play support request. Never commit `.jks` / `.keystore` files.
 - **App Links / Universal Links** (`https://<consumer host>/courier/oauth2redirect`) need the team id + bundle id and the
-  package + signing-certificate SHA-256 in `apple-app-site-association` / `assetlinks.json` on the consumer host; they
-  are not served yet ([mobile-auth.md § Redirects](mobile-auth.md#redirects)), so the app uses the custom scheme.
+  package + signing-certificate SHA-256 in `apple-app-site-association` / `assetlinks.json` on the consumer host; the
+  consumer site serves them since S-97 once `mobileApps` is configured ([mobile.md § App Links](mobile.md#app-links));
+  the courier app still uses the custom scheme (it has no `associatedDomains` yet).
 
 ## Permissions and their texts
 

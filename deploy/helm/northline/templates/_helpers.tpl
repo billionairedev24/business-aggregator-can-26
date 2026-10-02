@@ -170,6 +170,13 @@ their own variables. (dict "root" $ "name" "<app>" "app" $appValues)
 {{- with $v.urls.pages }}{{- $_ := set $env "NL_PAGES_HOST" (urlParse .).host -}}{{- end -}}
 {{- /* S-61: "Sell or offer a service" enters the Studio's onboarding. */ -}}
 {{- $_ := set $env "NL_STUDIO_ORIGIN" $v.urls.studio -}}
+{{- /* S-97: the native apps' association files (App Links / Universal Links). */ -}}
+{{- with $v.mobileApps -}}
+{{- $_ := set $env "NL_APPLE_TEAM_ID" (default "" .appleTeamId) -}}
+{{- $_ := set $env "NL_IOS_BUNDLE_IDS" (join "," (default (list) .iosBundleIds)) -}}
+{{- $_ := set $env "NL_ANDROID_PACKAGES" (join "," (default (list) .androidPackages)) -}}
+{{- $_ := set $env "NL_ANDROID_CERT_SHA256" (join "," (default (list) .androidCertSha256)) -}}
+{{- end -}}
 {{- end -}}
 {{- $env = merge (deepCopy (default (dict) .app.env)) $env -}}
 {{- end -}}
