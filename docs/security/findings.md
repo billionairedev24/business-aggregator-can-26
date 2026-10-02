@@ -159,7 +159,7 @@ unsalted SHA-256; edge access logs hold single-use OAuth codes.
 
 ### S104-14 — Object-level and function-level authorization (API1, API5)
 
-`ObjectLevelAuthorizationTest` reads the committed OpenAPI documents and probes **every operation** (477 dynamic tests
+`ObjectLevelAuthorizationTest` reads the committed OpenAPI documents and probes **every operation** (482 dynamic tests
 when written), in the shared test context (no new Spring context):
 
 - every Studio and partner operation with `{merchantId}`, called by the owner of another business and by a partner
