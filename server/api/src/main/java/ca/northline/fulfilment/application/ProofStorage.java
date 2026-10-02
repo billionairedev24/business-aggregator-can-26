@@ -14,4 +14,7 @@ public interface ProofStorage {
     void put(String key, byte[] bytes, String contentType);
 
     Optional<StoredFile> get(String key);
+
+    /** Removes one file; nothing happens when it is already gone (S-107 retention). */
+    void delete(String key);
 }

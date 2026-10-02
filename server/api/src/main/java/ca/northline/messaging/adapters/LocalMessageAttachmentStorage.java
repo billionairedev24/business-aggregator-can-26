@@ -53,6 +53,15 @@ class LocalMessageAttachmentStorage implements AttachmentStorage {
     }
 
     @Override
+    public void delete(String key) {
+        try {
+            Files.deleteIfExists(resolve(key));
+        } catch (IOException ex) {
+            throw new UncheckedIOException(ex);
+        }
+    }
+
+    @Override
     public int deleteAll(String prefix) {
         var dir = resolve(prefix);
         if (!Files.isDirectory(dir) || dir.equals(root)) {

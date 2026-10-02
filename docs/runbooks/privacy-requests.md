@@ -176,3 +176,13 @@ SELECT r.number, s.module, s.holds FROM privacy.erasure_steps s JOIN privacy.req
 - **A regulator asks:** the request row and its audit entries show when it was received, verified, extended, answered
   and what each module kept.
 - **Never run here:** see the status note above.
+
+## 9. Retention (S-107)
+
+What happens to data nobody asked about once the Privacy Policy's period ends: [retention.md](retention.md). The
+retention jobs reuse this page's machinery — the same legal holds (`PersonalDataContributor.Hold`), the same rule for
+a person's province and law (`region.privacy_laws` now also says what a law keeps after a decision), and for
+"Account profile: deleted within 30 days of closure" the erasure pipeline itself: an erasure still unfinished 30 days
+after the account closed has its pending and failed steps run at once. A person with a request still open keeps their
+data as it is until the request ends. Console › Privacy › Retention shows the schedule, each job's last run, rows
+changed and held, and exports it as CSV.

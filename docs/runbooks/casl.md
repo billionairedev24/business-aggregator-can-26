@@ -119,11 +119,13 @@ them over.
 | data | kept | then |
 |---|---|---|
 | records of an active consent | while it is active (express consent doesn't expire) | — |
-| records of a withdrawn consent | **3 years after the withdrawal** (`ConsentRetention.PROOF_PERIOD`) | deleted by the daily purge (`CASL_PURGE_CRON`, default 04:23 platform zone) |
+| records of a withdrawn consent | **3 years after the withdrawal** (`ConsentRetention.PROOF_PERIOD`) | deleted by the nightly retention job `messaging.consent_records` (S-107, `RETENTION_CRON`; [retention.md](retention.md)) |
 | after an erasure (S-105) | granted consents withdrawn (`erasure`), network and browser evidence dropped; the rest kept as `consent_proof` | purged 3 years later like any withdrawal |
 
-`messaging.api.ConsentRetention` exposes the period and `purgeExpiredProofs(now)` for the retention jobs and report
-(S-107); calling it again is harmless.
+`messaging.api.ConsentRetention` exposes the period and `purgeExpiredProofs(now)`; the retention schedule's
+`messaging.consent_records` category (S-107) calls it nightly with the other retention jobs, counts it in dry runs and
+shows it in Console › Privacy › Retention. S-108's own daily purge (`CASL_PURGE_CRON`) is retired: one scheduler, one
+report, one audit trail. Calling the purge again is harmless.
 
 ## 7. Configuration
 
@@ -132,7 +134,7 @@ them over.
 | `EMAIL_LEGAL_NAME` | api, worker | `Northline Marketplace Inc.` | the legal sender (configuration, never code); required |
 | `EMAIL_MAILING_ADDRESS`, `EMAIL_CONTACT` | api, worker | see [email.md](email.md#variables) | the mailing address and contact every message and the unsubscribe page show |
 | `EMAIL_UNSUBSCRIBE_KEY`, `API_PUBLIC_URL` | api, worker | development key, `http://localhost:8080` | sign and host the unsubscribe links (required under staging/prod) |
-| `CASL_PURGE_CRON` | api | `0 23 4 * * *` | when expired proofs are purged |
+| `RETENTION_CRON` | api | `0 47 2 * * *` | when expired proofs are purged, with the other retention jobs ([retention.md](retention.md)); `CASL_PURGE_CRON` (S-108) is retired |
 
 No secret is added; the region and legal entity come from configuration, nothing province-specific is in code.
 

@@ -32,7 +32,6 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -212,11 +211,6 @@ class ConsentService implements ManageConsents, ConsentDesk, ConsentRetention, C
             log.info("Purged {} consent records withdrawn before {} (CASL proof period)", purged, before);
         }
         return purged;
-    }
-
-    @Scheduled(cron = "${northline.casl.purge-cron:0 23 4 * * *}", zone = "${northline.region.platform-zone}")
-    void purgeDaily() {
-        purgeExpiredProofs(clock.instant());
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────────────────────────────────────────

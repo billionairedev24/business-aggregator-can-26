@@ -4,6 +4,7 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import ca.northline.shared.privacy.PersonalDataContributor;
+import ca.northline.shared.privacy.RetentionContributor;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
@@ -49,6 +50,16 @@ class PrivacyContributorsTests {
             .because("each module erases only its own schema, behind its own adapter (S-105)");
 
     @ArchTest
+    static final ArchRule retentionJobsArePackagePrivateAdaptersOfTheirModule = classes()
+            .that()
+            .implement(RetentionContributor.class)
+            .should()
+            .resideInAPackage("ca.northline.*.persistence")
+            .andShould()
+            .notHaveModifier(JavaModifier.PUBLIC)
+            .because("each module purges only its own schema, behind its own adapter (S-107)");
+
+    @ArchTest
     static final ArchRule privacyKnowsOtherModulesOnlyThroughTheirApis = classes()
             .that()
             .resideInAPackage("ca.northline.privacy..")
@@ -64,6 +75,7 @@ class PrivacyContributorsTests {
                     "jakarta..",
                     "org..",
                     "io.swagger..",
+                    "io.micrometer..",
                     "lombok..",
                     "tools.jackson..",
                     "com.fasterxml..")

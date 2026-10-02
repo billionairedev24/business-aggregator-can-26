@@ -28,6 +28,11 @@ class ObjectStoreAttachmentStorage implements AttachmentStorage {
     }
 
     @Override
+    public void delete(String key) {
+        objects.delete(key);
+    }
+
+    @Override
     public int deleteAll(String prefix) {
         return objects.deleteAll(prefix);
     }

@@ -18,5 +18,6 @@ public interface PrivacyLawStore {
             String authorityUrl,
             int responseDays,
             boolean businessDays,
-            int extensionDays) {}
+            int extensionDays,
+            int decisionRetentionDays) {}
 }

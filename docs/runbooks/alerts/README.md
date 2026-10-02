@@ -23,5 +23,6 @@ Routing, SLOs and the on-call rota: [alerting.md](../alerting.md).
 | [lockout-spike](lockout-spike.md) | NorthlineLockoutSpike | threshold — ticket |
 | [payout-failed](payout-failed.md) | NorthlinePayoutFailed | threshold — ticket |
 | [kitchens-late](kitchens-late.md) | NorthlineKitchensLate | threshold — ticket |
+| [retention-not-run](retention-not-run.md) | NorthlineRetentionNotRun, NorthlineRetentionMissing | threshold — ticket |
 
 These were written with the alerts (S-113) as stubs; S-115 filled the ones its runbooks cover (event-dead-lettered, consumer-lag, checkout, payout-run, payout-timeliness) from drills in tests. None has been used in a real incident yet.

@@ -169,7 +169,7 @@ module "dns" {
 module "storage" {
   source        = "../../modules/storage/azure"
   context       = local.context
-  buckets       = { uploads = {} }
+  buckets       = { uploads = { expire_prefixes = { "privacy/exports/" = 8 } } } # S-107: exports live 7 days
   name_suffix   = var.bucket_name_suffix
   kms_key       = { id = module.kms.key_ids["data"] }
   writers       = { api = module.kubernetes.workload_identities["api"].principal }
