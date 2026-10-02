@@ -7,7 +7,8 @@
 // GET /healthz answers "ok" for Kubernetes probes. Static files come from dist/client (hashed /assets/* are cached for
 // a year, everything else revalidates); every other request is rendered by the app. SIGTERM drains open connections.
 // Business pages on pages.<zone> and on merchants' own domains: page-hosts.mjs (S-54; NL_SITE_ORIGIN, NL_PAGES_HOST).
-// robots.txt and the sitemaps: seo.mjs (S-63).
+// robots.txt and the sitemaps: seo.mjs (S-63). Universal / App Links association files and app-link redirects:
+// app-links.mjs (S-102; NL_APPLE_TEAM_ID, NL_IOS_APPS, NL_ANDROID_APP_CERTS).
 import { createServer } from 'node:http';
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
@@ -16,6 +17,7 @@ import { Readable } from 'node:stream';
 import { fileURLToPath } from 'node:url';
 import { createPageRouter, PAGE_HEADERS } from './page-hosts.mjs';
 import { createSeo, isSeoPath } from './seo.mjs';
+import { createAppLinks, isAppLinkPath } from './app-links.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const clientDir = join(root, 'dist', 'client');
@@ -28,6 +30,7 @@ const trustProxy = process.env.TRUST_PROXY === 'true';
 const FORWARDED_HEADER = 'x-nl-forwarded-for';
 const pageRoute = createPageRouter({ siteOrigin: process.env.NL_SITE_ORIGIN, pagesHost: process.env.NL_PAGES_HOST, bffUrl: process.env.NL_BFF_URL });
 // robots.txt and the sitemaps (S-63): per host — the site, pages.<zone>, a merchant's own domain
+const appLinks = createAppLinks({ appleTeamId: process.env.NL_APPLE_TEAM_ID, iosApps: process.env.NL_IOS_APPS, androidApps: process.env.NL_ANDROID_APP_CERTS });
 const seo = createSeo({ siteOrigin: process.env.NL_SITE_ORIGIN ?? 'http://localhost:3000', bffUrl: process.env.NL_BFF_URL ?? 'http://localhost:8081' });
 
 const types = {
@@ -102,6 +105,14 @@ const server = createServer(async (req, res) => {
       res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
       res.end('ok');
       return;
+    }
+    if ((req.method === 'GET' || req.method === 'HEAD') && isAppLinkPath(pathname)) {
+      const answer = appLinks(await pageRoute.hostKind(publicHost(req)), pathname);
+      if (answer) {
+        res.writeHead(answer.status, { ...securityHeaders, ...answer.headers });
+        res.end(req.method === 'HEAD' ? undefined : answer.body);
+        return;
+      }
     }
     if (req.method === 'GET' || req.method === 'HEAD') {
       const found = await staticFile(pathname);

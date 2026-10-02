@@ -185,6 +185,8 @@ externalSecrets:
     APPLICATIONINSIGHTS_CONNECTION_STRING: applicationinsights-connection-string  # S-111: Azure Monitor (Collector)
     OPENROUTER_API_KEY: openrouter-api-key                            # S-129 AI platform (api)
     CONSOLE_HEALTH_PROMETHEUS_TOKEN: console-health-prometheus-token  # S-91 console overview health (api), optional
+    PUSH_APNS_KEY: push-apns-key                                      # S-102 push (worker): the APNs .p8 key (PEM)
+    PUSH_FCM_SERVICE_ACCOUNT: push-fcm-service-account                # S-102 push (worker): Firebase service account JSON
   # Optional variables (secretEnv: false) to map as well. List only those that hold a value in the secrets manager:
   # one empty or missing remote secret fails the app's whole ExternalSecret. Required variables are always mapped.
   optionalKeys: [REDIS_PASSWORD, KAFKA_SASL_JAAS_CONFIG, ES_PASSWORD]
@@ -629,6 +631,8 @@ apps:
       SMTP_PASSWORD: false          # EMAIL_PROVIDER=smtp
       SMS_AUTH_TOKEN: false         # SMS_PROVIDER=twilio
       WEBHOOK_SECRET_KEY: true      # S-33: decrypts partner webhook signing secrets (the api's key; required in the cloud)
+      PUSH_APNS_KEY: false          # S-102: PUSH_PROVIDER=native (required in prod, values-prod.yaml)
+      PUSH_FCM_SERVICE_ACCOUNT: false  # S-102: PUSH_PROVIDER=native (required in prod)
     runAsUser: 65532
     probes:
       startup: { path: /actuator/health/liveness, periodSeconds: 5, failureThreshold: 60 }
@@ -685,6 +689,11 @@ apps:
       limits: { memory: 256Mi }
     env:
       TRUST_PROXY: "true"
+      # S-102 universal / App Links (docs/runbooks/push.md § Deep links): set per environment once the apps are signed;
+      # empty = /.well-known/apple-app-site-association and assetlinks.json answer 404.
+      NL_APPLE_TEAM_ID: ""
+      NL_IOS_APPS: "ca.northline.app,ca.northline.courier"   # dev/preview builds: ca.northline.app.dev, …
+      NL_ANDROID_APP_CERTS: ""      # ca.northline.app=<SHA-256 of the signing cert>;ca.northline.courier=<…>
     runAsUser: 65532
     probes:
       liveness: { path: /healthz, periodSeconds: 10, failureThreshold: 3 }
