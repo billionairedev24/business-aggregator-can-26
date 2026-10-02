@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Bank, House } from '@phosphor-icons/react';
-import { AppShell, Button, ChipTabs, DataTable, Dialog, I18nProvider, LineChart, Menu, Meter, SiteHeader, StackedBarChart, UnderlineTabs, type Locale } from './index';
+import { AppShell, Button, ChipTabs, codeValue, DataTable, Dialog, I18nProvider, LineChart, Menu, Meter, SiteHeader, StackedBarChart, UnderlineTabs, type Locale } from './index';
 import { CAN, listingColumns, listings } from './DataTable/DataTable.fixtures';
 
 const wrap = (ui: React.ReactNode, locale: Locale = 'en') => render(<I18nProvider initial={locale}>{ui}</I18nProvider>);
@@ -178,5 +178,13 @@ describe('DataTable announcements', () => {
     await user.type(screen.getByRole('searchbox', { name: 'Search table' }), 'zzzz-no-match');
     await waitFor(() => expect(status()).toContain('No matching listings'));
     rect.mockRestore();
+  });
+});
+
+describe('one-time codes', () => {
+  it('drops the spaces and dashes an SMS or authenticator app shows', () => {
+    expect(codeValue('123 456')).toBe('123456');
+    expect(codeValue('123-456')).toBe('123456');
+    expect(codeValue(' 12345 6 ')).toBe('123456');
   });
 });

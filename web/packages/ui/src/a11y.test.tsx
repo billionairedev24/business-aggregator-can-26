@@ -28,6 +28,7 @@ describe.each(['en', 'fr'] as const)('axe · primitives (%s)', locale => {
       <Checkbox checked onChange={noop} label="Remember me" /><Checkbox checked={false} indeterminate onChange={noop} aria-label="Select all" />
       <Switch checked={false} onChange={noop} label="Instant book" />
       <OptionCard selected title="Passkey" description="Use your device" />
+      <div role="radiogroup" aria-label="Second factor"><OptionCard role="radio" selected title="Passkey" /><OptionCard role="radio" selected={false} title="Authenticator app" /></div>
       <Chip selected>Open</Chip>
       <ChipTabs aria-label="Settings" options={[{ value: 'a', label: 'Business' }, { value: 'b', label: 'Team' }]} value="a" onChange={noop} />
       <Segmented name="view" aria-label="View" options={[{ value: 'w', label: 'Week' }, { value: 'm', label: 'Month' }]} value="w" onChange={noop} />

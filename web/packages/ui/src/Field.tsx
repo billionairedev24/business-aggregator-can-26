@@ -36,6 +36,13 @@ export function Field({ label, note, hint, error, span, className, children }: F
   );
 }
 
+/**
+ * A one-time code as typed or pasted (S-109, WCAG 3.3.8): authenticator apps and SMS show "123 456" or "123-456", so
+ * spaces and dashes are dropped. Code fields carry no `maxLength` of 6 — it truncated a pasted "123 456" to "123 45"
+ * before this could clean it; the 6-digit rule is the form's validation.
+ */
+export const codeValue = (typed: string): string => typed.replace(/[\s-]/g, '');
+
 export const TextInput = ({ className, ...p }: InputHTMLAttributes<HTMLInputElement>) => <input className={clsx('input', className)} {...p} />;
 export const TextArea = ({ className, ...p }: TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea className={clsx('input', className)} {...p} />;
 

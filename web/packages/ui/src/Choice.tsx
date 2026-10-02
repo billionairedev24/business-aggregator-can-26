@@ -22,10 +22,15 @@ export function Switch({ checked, onChange, label, disabled }: SwitchProps) {
 }
 
 export interface OptionCardProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'title'> { selected: boolean; title: ReactNode; description?: ReactNode; trailing?: ReactNode }
-/** Selectable row: MFA method pickers, business type, verification options. */
+/**
+ * Selectable row: MFA method pickers, business type, verification options. A toggle button (aria-pressed) by default;
+ * given a `role` (radio in a radiogroup, option…) it states `aria-checked` instead — aria-pressed is not allowed there
+ * (S-109: axe critical aria-allowed-attr on the sign-up factor picker).
+ */
 export function OptionCard({ selected, title, description, trailing, className, ...p }: OptionCardProps) {
+  const checkable = p.role === 'radio' || p.role === 'menuitemradio' || p.role === 'checkbox' || p.role === 'switch';
   return (
-    <button type="button" aria-pressed={selected} className={clsx('nl-option', className)} {...p}>
+    <button type="button" aria-pressed={p.role ? undefined : selected} aria-checked={checkable ? selected : undefined} className={clsx('nl-option', className)} {...p}>
       <span style={{ flex: 1, minWidth: 0 }}><span className="nl-option-title">{title}</span>{description ? <span className="nl-option-desc">{description}</span> : null}</span>
       {trailing}
     </button>
