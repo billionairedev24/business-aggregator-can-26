@@ -77,7 +77,9 @@ class KeyRewrapTest extends IntegrationTest {
                 assertThat(outcome.failedRows()).hasSize(Math.min(outcome.failed(), 20));
                 for (var row : outcome.failedRows()) {
                     assertThat(wrappedKeyLength(column, row))
-                            .as("%s.%s row %s: an envelope the re-wrap couldn't move", column.table(), column.wrappedKey(), row)
+                            .as(
+                                    "%s.%s row %s: an envelope the re-wrap couldn't move",
+                                    column.table(), column.wrappedKey(), row)
                             .isLessThan(28); // a real wrapped key is 60 bytes; test fixtures write 1-byte placeholders
                 }
             }
@@ -88,7 +90,9 @@ class KeyRewrapTest extends IntegrationTest {
             assertThat(after.keyRef()).isNotEqualTo(old.keyRef());
             assertThat(appSealer.open(after, context)).contains("dana@example.test");
         } finally {
-            jdbc.sql("delete from privacy.requests where id = :id").param("id", request).update();
+            jdbc.sql("delete from privacy.requests where id = :id")
+                    .param("id", request)
+                    .update();
         }
     }
 
