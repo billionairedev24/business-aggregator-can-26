@@ -2,14 +2,19 @@ package ca.northline.worker.search;
 
 import ca.northline.searchindex.IndexLayout;
 import ca.northline.searchindex.ListingIndices;
+import ca.northline.searchindex.SearchLanguage;
 import ca.northline.worker.events.EnvelopeParser;
 import ca.northline.worker.events.EventSchemas;
 import ca.northline.worker.topics.TopicCatalogue;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.BiFunction;
 import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -40,7 +45,9 @@ import tools.jackson.databind.json.JsonMapper;
  *
  * <pre>
  * ./gradlew :worker:searchReindex                      # build new indices from Postgres, catch up, swap, delete the old
- * ./gradlew :worker:searchReindex --args='--keep-old'  # keep the previous indices (swap back by hand if needed)
+ * ./gradlew :worker:searchReindex --args='--keep-old'  # keep the previous indices (for --rollback)
+ * ./gradlew :worker:searchReindex --args='--partial --merchant=01J…,01J… [--since=2026-10-02T08:00:00Z]'
+ * ./gradlew :worker:searchReindex --args='--rollback'  # aliases back to the indices --keep-old kept
  * java -cp @/app/jib-classpath-file ca.northline.worker.search.SearchReindexCommand [--keep-old] [--batch=200]
  * </pre>
  *
@@ -55,7 +62,14 @@ public final class SearchReindexCommand {
     public static void main(String[] args) {
         int status;
         try {
-            run(args);
+            var list = Arrays.asList(args);
+            if (list.contains("--partial")) {
+                partial(args);
+            } else if (list.contains("--rollback")) {
+                rollback(args);
+            } else {
+                run(args);
+            }
             status = 0;
         } catch (IllegalStateException e) {
             log.error("Search reindex: {}", e.getMessage(), e);
@@ -68,6 +82,27 @@ public final class SearchReindexCommand {
     }
 
     public static SearchReindex.Result run(String... args) {
+        return withReindex(args, SearchReindex::run);
+    }
+
+    /** {@code --partial}: re-read merchants into the live aliases; returns how many. */
+    public static int partial(String... args) {
+        var merchants = option(args, "merchant").map(v -> List.of(v.split(","))).orElse(List.of());
+        var since = option(args, "since").map(Instant::parse);
+        if (merchants.isEmpty() && since.isEmpty()) {
+            throw new IllegalArgumentException("--partial needs --merchant=<id>[,<id>…] and/or --since=<instant>");
+        }
+        var batch = option(args, "batch").map(Integer::parseInt).orElse(SearchReindex.Options.DEFAULT.batch());
+        return withReindex(args, (reindex, _) -> reindex.partial(merchants, since, batch));
+    }
+
+    /** {@code --rollback}: the aliases back to the indices a {@code --keep-old} run left. */
+    public static Map<SearchLanguage, String> rollback(String... args) {
+        var batch = option(args, "batch").map(Integer::parseInt).orElse(SearchReindex.Options.DEFAULT.batch());
+        return withReindex(args, (reindex, _) -> reindex.rollback(batch));
+    }
+
+    private static <T> T withReindex(String[] args, BiFunction<SearchReindex, SearchReindex.Options, T> what) {
         var options = new SearchReindex.Options(
                 Arrays.asList(args).contains("--keep-old"),
                 option(args, "batch").map(Integer::parseInt).orElse(SearchReindex.Options.DEFAULT.batch()),
@@ -90,20 +125,20 @@ public final class SearchReindexCommand {
                 var source = new DocumentSource(jdbc);
                 var projection = new SearchProjection(
                         jdbc, source, new DocumentBuilder(new CategoryTree(jdbc, clock), json), es);
-                return new SearchReindex(
-                                context.getBean(DataSource.class),
-                                jdbc,
-                                context.getBean(TransactionOperations.class),
-                                source,
-                                projection,
-                                new ListingIndices(es),
-                                IndexLayout.fromClasspath(),
-                                kafka,
-                                new EnvelopeParser(json, EventSchemas.fromClasspath(json)),
-                                SearchIndexer.topics(TopicCatalogue.fromClasspath()),
-                                clock,
-                                (phase, indices) -> log.info("Search reindex: {} {}", phase, indices.values()))
-                        .run(options);
+                var reindex = new SearchReindex(
+                        context.getBean(DataSource.class),
+                        jdbc,
+                        context.getBean(TransactionOperations.class),
+                        source,
+                        projection,
+                        new ListingIndices(es),
+                        IndexLayout.fromClasspath(),
+                        kafka,
+                        new EnvelopeParser(json, EventSchemas.fromClasspath(json)),
+                        SearchIndexer.topics(TopicCatalogue.fromClasspath()),
+                        clock,
+                        (phase, indices) -> log.info("Search reindex: {} {}", phase, indices.values()));
+                return what.apply(reindex, options);
             }
         }
     }

@@ -185,6 +185,85 @@ class CustomerNotificationsTest extends WorkerIntegrationTest {
         assertThat(deferred(amara.id())).isZero();
     }
 
+    /**
+     * S-115 runbook drill (docs/runbooks/events.md § Deferred notifications): an outage longer than the deferred
+     * attempts leaves a dead row (kept, not deleted); the replay tool lists it, refuses to requeue without an operator,
+     * requeues it with an audit entry, and the job sends it once.
+     */
+    @Test
+    void runbookDrill_aDeadDeferredNotification_isKept_listed_requeuedWithAnAudit_andSentOnce() throws Exception {
+        var amara = customer("en-CA");
+        prefs(amara.id(), """
+                {"order_updates": {"push": true, "sms": true, "email": false}}""", null, null);
+        texts.fail(amara.phone(), ca.northline.sms.SmsDeliveryFailed.Kind.PROVIDER_UNAVAILABLE, 11);
+        var order = order(amara, "goods");
+        var id = Events.id();
+        publish("orders.order", id, "orders.order_delivered", delivered(id, order, "goods"));
+        awaitProcessed(id);
+        assertThat(deferred(amara.id())).isEqualTo(1);
+
+        var at = NotificationTestBeans.NOON_IN_EDMONTON;
+        for (int i = 0; i < Notifier.DEFERRED_ATTEMPTS; i++) {
+            at = at.plus(Duration.ofMinutes(6));
+            clock.set(at);
+            notifier.sendDue(50);
+        }
+        assertThat(texts.to(amara.phone())).isEmpty();
+        assertThat(deferred(amara.id())).isEqualTo(1); // kept as dead, no longer deleted
+        assertThat(jdbc.sql("""
+                        select dead_at is not null and last_error = 'SmsDeliveryFailed'
+                          from messaging.deferred_notifications where user_id = :u""").param("u", amara.id()).query(Boolean.class).single())
+                .isTrue();
+        clock.set(at.plus(Duration.ofHours(1)));
+        notifier.sendDue(50);
+        assertThat(texts.to(amara.phone())).isEmpty(); // the job leaves dead rows alone
+
+        var listed = ca.northline.worker.events.DlqReplayCommand.runDeferred(
+                deferredArgs("list", "--event=" + id, "--channel=sms"));
+        assertThat(listed.rows()).singleElement().satisfies(r -> {
+            assertThat(r.userId()).isEqualTo(amara.id());
+            assertThat(r.eventType()).isEqualTo("orders.order_delivered");
+            assertThat(r.attempts()).isEqualTo(Notifier.DEFERRED_ATTEMPTS);
+        });
+        assertThat(listed.requeued()).isZero();
+        assertThat(ca.northline.worker.events.DlqReplayCommand.runDeferred(
+                                deferredArgs("list", "--event=" + id, "--channel=push"))
+                        .rows())
+                .isEmpty();
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                        () -> ca.northline.worker.events.DlqReplayCommand.runDeferred(
+                                deferredArgs("replay", "--event=" + id)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("--actor");
+
+        var due = at.plus(Duration.ofHours(1));
+        var requeued = ca.northline.worker.events.DlqReplayCommand.runDeferred(deferredArgs(
+                "replay", "--event=" + id, "--at=" + due, "--actor=oncall@northline.test", "--reason=INC-115"));
+        assertThat(requeued.requeued()).isEqualTo(1);
+        assertThat(jdbc.sql("""
+                        select after->>'actor' || '|' || (after->'details'->>'requeued')
+                          from developer.audit_log where action = 'notifications.deferred_requeued'
+                           and after->'details'->'eventIds' @> to_jsonb(cast(:id as text))""").param("id", id).query(String.class).single()).isEqualTo("oncall@northline.test|1");
+
+        clock.set(due);
+        notifier.sendDue(50);
+        notifier.sendDue(50);
+        assertThat(texts.to(amara.phone())).hasSize(1);
+        assertThat(pushes.to(amara.id())).hasSize(1); // the push went out at the start and isn't repeated
+        assertThat(deferred(amara.id())).isZero();
+    }
+
+    static String[] deferredArgs(String command, String... extra) {
+        var args = new java.util.ArrayList<>(java.util.List.of(
+                command,
+                "--deferred",
+                "--spring.datasource.url=" + WorkerContainers.POSTGRES.getJdbcUrl(),
+                "--spring.datasource.username=" + WorkerContainers.POSTGRES.getUsername(),
+                "--spring.datasource.password=" + WorkerContainers.POSTGRES.getPassword()));
+        args.addAll(java.util.List.of(extra));
+        return args.toArray(String[]::new);
+    }
+
     @Test
     void bookingConfirmed_andQuoteReceived_reachTheCustomer_withTheBusinessName() throws Exception {
         var amara = customer("en-CA");

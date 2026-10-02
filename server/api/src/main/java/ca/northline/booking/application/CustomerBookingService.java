@@ -134,6 +134,6 @@ class CustomerBookingService implements CustomerBookings {
 
     /** The AES-GCM additional data: a note sealed for one booking can't be opened for another. */
     static String context(String bookingId) {
-        return "booking.access_notes:" + bookingId;
+        return CustomerBookingStore.ACCESS_NOTE_CONTEXT + bookingId;
     }
 }

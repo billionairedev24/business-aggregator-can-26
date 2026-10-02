@@ -124,7 +124,8 @@ public final class Notifier {
     /**
      * Sends the due deferred notifications (the {@code DeferredNotificationsJob}, every minute, in one transaction):
      * re-reads the person and their preferences — a cell turned off meanwhile cancels it — and retries an unavailable
-     * provider every 5 minutes, giving up after 10 attempts with an ERROR (the alert, like a DLQ record).
+     * provider every 5 minutes, giving up after 10 attempts with an ERROR (the alert, like a DLQ record); a row given
+     * up stays in the table as dead until an operator requeues it (S-115).
      */
     public int sendDue(int limit) {
         var sent = 0;
@@ -144,10 +145,10 @@ public final class Notifier {
                 deferred.done(row.id());
                 sent++;
             } else if (row.attempts() + 1 >= DEFERRED_ATTEMPTS) {
-                deferred.done(row.id());
+                deferred.dead(row.id(), now, failure.getClass().getSimpleName());
                 log.error(
-                        "DEAD-LETTERED deferred {} {} for user {} after {} attempts: {} — see"
-                                + " docs/runbooks/notifications.md",
+                        "DEAD-LETTERED deferred {} {} for user {} after {} attempts: {} — kept as dead; requeue with"
+                                + " DlqReplayCommand --deferred (docs/runbooks/events.md § Deferred notifications)",
                         row.channel().code(),
                         row.eventType(),
                         row.userId(),

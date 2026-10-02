@@ -9,6 +9,9 @@ import java.util.Optional;
 /** Outbound port: bookings customers make (S-55) and their sealed access notes ({@code booking.access_notes}). */
 public interface CustomerBookingStore {
 
+    /** An access note is sealed with this + the booking id as its context (the key re-wrap needs it too, S-115). */
+    String ACCESS_NOTE_CONTEXT = "booking.access_notes:";
+
     /**
      * Serialises bookings of one member (transaction-scoped advisory lock) and tells whether a job that isn't cancelled
      * overlaps [from, to).

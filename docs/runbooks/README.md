@@ -22,6 +22,8 @@ say where a step is still manual or missing.
 | [google-maps.md](google-maps.md) | addresses on the consumer site: Google Maps Platform project, Places API (New) and Geocoding API, the server key and its restrictions, billing and quotas, local fixtures, operations (S-47) |
 | [registries.md](registries.md) | business registry lookups: Corporations Canada API, Alberta Corporate Registry (search service or registry-agent searches), City of Calgary licences (Socrata), manual review queue, re-checks (S-23) |
 | [stripe.md](stripe.md) | Stripe Connect Express: platform account setup (test/live), money flow, idempotency, local stripe-mock, operations (S-11), webhooks (S-12), Stripe Tax (S-21) |
+| [stripe-incidents.md](stripe-incidents.md) | Stripe incidents: an outage (checkout degrades to 503, what queues), a webhook backlog or replay, Stripe vs ledger mismatches, a dispute spike, leaked keys — decision trees, commands, comms (S-115) |
+| [key-rotation.md](key-rotation.md) | rotating every key and secret: auth signing keys (JWKS rollover), KMS data keys and the envelope re-wrap job, merchants' webhook secrets, Stripe keys, DB / Kafka / push / OpenRouter / on-call credentials, External Secrets commands per cloud (S-7, S-115) |
 | [email.md](email.md) | transactional email: Mailpit locally, SES / SendGrid / Azure Communication Services / SMTP set-up, SPF/DKIM/DMARC, CASL (S-13) |
 | [notifications.md](notifications.md) | team notifications: who sends which email / SMS / push (api vs worker), matrix and quiet hours, failures (S-13/S-27) |
 | [push.md](push.md) | push notifications (APNs, FCM) and deep links: the device registry, customers' and couriers' notifications, back-off, Apple / Firebase set-up (S-102) |
@@ -31,7 +33,7 @@ say where a step is still manual or missing.
 | [logging.md](logging.md) | structured JSON logs (ECS), the redaction layer (emails, phones, tokens, cards, postal codes, codes), shipping over OTLP through the Collector, the local SMS stand-in rule (S-112) |
 | [observability.md](observability.md) | traces, metrics and logs over OpenTelemetry: the Collector per environment and its exporters (any OTLP backend, AWS X-Ray/CloudWatch, Google Cloud Operations, Azure Monitor), sampling, business metrics, dashboards as code, alerts, the local Grafana LGTM stack (S-111) |
 | [alerting.md](alerting.md) | alerting and on-call: SLOs as code (sign-in, checkout, payouts, KDS) and their multi-window burn-rate alerts, threshold alerts, page/ticket routing to PagerDuty / Opsgenie / a webhook, the Helm toggle per metrics store, the on-call rota export, one runbook per alert in [alerts/](alerts/README.md) (S-113) |
-| [events.md](events.md) | domain events: wire format, the worker's consumer framework (dedupe, retries, DLQ), alerts and metrics, DLQ replay (S-25/S-26) |
+| [events.md](events.md) | domain events: wire format, the worker's consumer framework (dedupe, retries, DLQ), alerts and metrics, DLQ replay with filters, rate limit and audit, dead deferred notifications (S-25/S-26, S-115) |
 | [docs-site.md](docs-site.md) | the Docusaurus documentation site: public variant on docs.<zone>, internal variant behind an IP allowlist, build, images, Pages export (S-126) |
 | [api-docs.md](api-docs.md) | OpenAPI 3.1 documents per audience (api, auth, BFFs), Swagger UI / Scalar / Redoc in local, dev and staging, the committed specs and their drift check, Redocly lint, none in prod (S-125) |
 | [ci.md](ci.md) | CI pipelines on GitHub Actions and GitLab CI, manual trigger only (S-4/S-5, infra checks S-2/S-3) |
@@ -188,6 +190,8 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `KMS_PROVIDER`, `KMS_KEY_ID` | ✓ (`KMS_PROVIDER`) | ✓ | | | `KMS_PROVIDER` everywhere, `KMS_KEY_ID` in staging and prod (S-7, [key-rotation.md](key-rotation.md)) |
 | `KMS_ENCRYPTION_KEY_ID` | ✓ | | | | staging and prod (S-32: the api's envelope key, Terraform output; [calendar-sync.md](calendar-sync.md#the-envelope-key-kms_encryption_key_id)) |
 | `KMS_LOCAL_KEY` | ✓ | | | | no (`KMS_PROVIDER=local` outside local/test only; refused in staging/prod) |
+| `KMS_LOCAL_PREVIOUS_KEYS` | ✓ | | | | no (empty; during a local key rotation the old key(s), unwrap only — S-115, [key-rotation.md § 2](key-rotation.md#2-kms-data-keys-and-envelope-re-wrap)) |
+| `KMS_REWRAP_EVERY` | ✓ | | | | no (`1h`: the job that re-wraps data keys sealed by an older key — S-115, [key-rotation.md § 2](key-rotation.md#2-kms-data-keys-and-envelope-re-wrap)) |
 | `KMS_PUBLISHED_KEY_IDS`, `SIGNING_KEYS_DIR`, `SIGNING_KEYS_ROTATE_EVERY` | | ✓ | | | no |
 | `KMS_REGION`, `KMS_ENDPOINT` | ✓ | ✓ | | | no (AWS region chain; LocalStack) |
 | `CALENDAR_PROVIDER` | ✓ | | | | staging and prod: `oauth` (`local` refused there — S-32, [calendar-sync.md](calendar-sync.md)) |

@@ -3,8 +3,11 @@ package ca.northline.payments.infra;
 import ca.northline.payments.application.PaymentGateway;
 import ca.northline.payments.application.PayoutGateway;
 import ca.northline.payments.domain.Payout;
+import ca.northline.shared.ProviderUnavailable;
 import ca.northline.shared.stripe.StripeIdempotencyKeys;
 import com.stripe.StripeClient;
+import com.stripe.exception.ApiConnectionException;
+import com.stripe.exception.RateLimitException;
 import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
 import com.stripe.net.RequestOptions;
@@ -51,6 +54,32 @@ class StripeConnectGateway implements PaymentGateway, PayoutGateway {
         }
     }
 
+    /**
+     * Stripe is down, timing out or throttling us (S-115): no connection, 429, or a 5xx. Checkout answers 503
+     * {@code payments_unavailable} with Retry-After; jobs retry it like any failure (same idempotency key).
+     */
+    static final class StripeUnavailable extends ProviderUnavailable {
+        static final String MESSAGE =
+                "Payments are unavailable right now. Nothing was charged — try again in a few" + " minutes.";
+
+        StripeUnavailable(String what, StripeException cause) {
+            super("payments_unavailable", MESSAGE, 60, new StripeCallFailed(what, cause));
+        }
+    }
+
+    /** Stripe's own outage (connection, throttling, 5xx) vs a refusal of this request. */
+    static boolean outage(StripeException e) {
+        var status = e.getStatusCode();
+        return e instanceof ApiConnectionException
+                || e instanceof RateLimitException
+                || (status != null && status >= 500);
+    }
+
+    /** The exception for a failed Stripe call: {@link StripeUnavailable} during an outage, else StripeCallFailed. */
+    static RuntimeException failure(String what, StripeException e) {
+        return outage(e) ? new StripeUnavailable(what, e) : new StripeCallFailed(what, e);
+    }
+
     @FunctionalInterface
     private interface StripeCall<T> {
         T run() throws StripeException;
@@ -60,7 +89,7 @@ class StripeConnectGateway implements PaymentGateway, PayoutGateway {
         try {
             return call.run();
         } catch (StripeException e) {
-            throw new StripeCallFailed(what, e);
+            throw failure(what, e);
         }
     }
 
