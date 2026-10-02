@@ -315,7 +315,7 @@ class AccountSettingsApiTest extends IntegrationTest {
                     .andExpect(jsonPath("$.quietOn").value(true))
                     .andExpect(jsonPath("$.quietFrom").value("22:00:00"))
                     .andExpect(jsonPath("$.quietTo").value("07:00:00"))
-                    .andExpect(jsonPath("$.marketing").value("weekly"));
+                    .andExpect(jsonPath("$.marketing").value("none")); // S-108: no consent, nothing pre-ticked
             mvc.perform(put("/api/v1/me/notifications")
                             .with(TestJwt.customer(amara))
                             .contentType(MediaType.APPLICATION_JSON)

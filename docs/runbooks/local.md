@@ -231,6 +231,10 @@ Notes:
 - **Mail:** the api emails team invitations and money notices to Mailpit (`EMAIL_PROVIDER=local`, the default); without
   Mailpit each email's text is logged instead. Template previews: http://localhost:8080/api/v1/dev/emails
   ([email.md](email.md#local-mailpit)).
+- **Marketing consent (S-108, [casl.md](casl.md)):** Account › Notifications › "Marketing messages" records CASL
+  consents in `messaging.consent_records`; no commercial message is sent by anything yet. The unsubscribe page is
+  `http://localhost:8080/api/v1/email/unsubscribe?t=…` (no sign-in); `EMAIL_LEGAL_NAME` defaults to
+  `Northline Marketplace Inc.`.
 - **Owners' identity (S-22):** `IDENTITY_PROVIDER=local` (the default) — "This is me · verify now" in Onboarding ›
   Verification opens http://localhost:8080/api/v1/dev/identity-sessions/vs_fake_… where you pick how Stripe Identity
   ends (verified, name mismatch, `document_expired`, …); emailed links land in Mailpit and open the same page. To try

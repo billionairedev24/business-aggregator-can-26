@@ -1,6 +1,7 @@
 --
 [(${reason})]
 [# th:if="${purpose == 'transactional'}"][(#{footer.transactional})]
+[/][# th:if="${purpose == 'commercial'}"][(#{footer.commercial(${legalName})})]
 [/][# th:if="${!#strings.isEmpty(unsubscribe)}"][(#{footer.unsubscribe})] [(#{footer.unsubscribeLink})]: [(${unsubscribe})]
-[(#{footer.unsubscribeHint})]
+[(#{__${'footer.unsubscribeHint.' + settingsPlace}__})]
 [/][(#{footer.sender(${mailingAddress}, ${contact})})]

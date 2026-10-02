@@ -118,4 +118,48 @@ class MessagingPersonalDataTest extends PersonalDataTest {
         assertThat(teamOutcome.retained())
                 .containsExactly(new Kept<>("messaging.businessMessages", Retention.BUSINESS_RECORDS));
     }
+
+    /** S-108: the consent history is exported; erasure withdraws what is granted and keeps the minimal proof. */
+    @Test
+    void consents_areExported_andErasureWithdrawsThem_keepingTheProofWithoutTheEvidence() {
+        var person = person();
+        var u = person.userId();
+        var p = Map.of("u", u);
+        jdbc.sql("""
+                        insert into messaging.consent_records (id, user_id, category, action, at, source, wording_version,
+                                                               language, address_hash, ip_prefix, user_agent_hash)
+                        values (:a, :u, 'marketing_email', 'granted', now() - interval '2 days', 'web_settings',
+                                'account.email.2026-10', 'en', :h, '203.0.113.0/24', :ua),
+                               (:b, :u, 'marketing_sms', 'granted', now() - interval '2 days', 'app_settings',
+                                'account.sms.2026-10', 'en', null, '203.0.113.0/24', :ua),
+                               (:c, :u, 'marketing_sms', 'withdrawn', now() - interval '1 day', 'unsubscribe_link',
+                                null, 'en', null, null, null)
+                        """)
+                .param("a", Ids.next())
+                .param("b", Ids.next())
+                .param("c", Ids.next())
+                .param("u", u)
+                .param("h", "a".repeat(64))
+                .param("ua", "b".repeat(64))
+                .update();
+
+        assertThat(records(person, "messaging.consents")).isEqualTo(3);
+        assertThat(section(person, "messaging.consents").orElseThrow().json())
+                .contains("account.email.2026-10", "unsubscribe_link")
+                .doesNotContain("bbbbbbbb"); // the user-agent hash isn't the person's data to read back
+
+        var outcome = erase(person);
+
+        assertThat(count("""
+                        select count(*) from messaging.consent_records
+                         where user_id = :u and category = 'marketing_email' and action = 'withdrawn'
+                           and source = 'erasure' and address_hash is not null""", p)).isEqualTo(1);
+        assertThat(count("select count(*) from messaging.consent_records where user_id = :u", p))
+                .isEqualTo(4); // no second withdrawal of the SMS consent
+        assertThat(count("""
+                        select count(*) from messaging.consent_records
+                         where user_id = :u and (ip_prefix is not null or user_agent_hash is not null)""", p)).isZero();
+        assertThat(outcome.retained()).contains(new Kept<>("messaging.consents", Retention.CONSENT_PROOF));
+        assertIdempotent(person, outcome);
+    }
 }

@@ -132,7 +132,22 @@ export interface NotificationPrefs {
   /** weekly | rewards | none */
   marketing: string;
 }
-export type NotificationChange = Partial<Omit<NotificationPrefs, 'matrix' | 'events' | 'channels'>> & { matrix?: Matrix };
+export type NotificationChange = Partial<Omit<NotificationPrefs, 'matrix' | 'events' | 'channels'>> & {
+  matrix?: Matrix;
+  /** S-108: where consent changes happen and the wording versions shown, by channel. */
+  consentSource?: 'app_settings';
+  consentWordings?: Record<string, string>;
+};
+
+/**
+ * CASL consent to Northline's marketing (S-108, `GET /me/consents`): per channel whether it is given and the wording
+ * to read before saying yes (the legal sender filled in), who asks, and every grant and withdrawal, newest first.
+ */
+export interface Consents {
+  categories: { category: string; channel: NotifyChannel; granted: boolean; since?: string | null; source?: string | null; wordingVersion: string; wording: string }[];
+  history: { id: string; category: string; action: 'granted' | 'withdrawn'; at: string; source: string; wordingVersion?: string | null }[];
+  requester: string;
+}
 
 // ── preferences: language & region, dietary & accessibility (S-59) ───────────────────────────────────────────────
 export const DIETARY = ['halal', 'kosher', 'vegetarian', 'vegan', 'gluten_free', 'dairy_free', 'nut_free', 'low_sodium'] as const;
@@ -228,6 +243,7 @@ export const accountApi = (api: ApiClient) => ({
 
   notifications: () => need(api.get<NotificationPrefs>('/me/notifications')),
   saveNotifications: (c: NotificationChange) => need(api.put<NotificationPrefs>('/me/notifications', { json: c })),
+  consents: () => need(api.get<Consents>('/me/consents')),
   prefs: () => need(api.get<Prefs>('/me/preferences')),
   savePrefs: (c: Partial<Prefs>) => need(api.patch<Prefs>('/me/preferences', { json: c })),
 

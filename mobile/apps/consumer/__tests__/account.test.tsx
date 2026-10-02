@@ -540,19 +540,39 @@ describe('Notifications', () => {
     fireEvent(screen.getByTestId('cell-offers-push'), 'valueChange', false);
     fireEvent.press(screen.getByTestId('quiet-from-23:00'));
     fireEvent.press(screen.getByTestId('notif-lang-fr'));
-    fireEvent.press(screen.getByTestId('marketing-none'));
+    fireEvent.press(screen.getByTestId('marketing-rewards'));
+    expect(screen.getByTestId('cell-offers-email').props.value).toBe(true); // one consent: the cell follows
     fireEvent.press(screen.getByTestId('notif-save'));
     expect(await screen.findByText('Saved · applies to all your devices')).toBeTruthy();
     expect(rec.sent.find((s) => s.method === 'PUT')!.body).toEqual({
-      matrix: { order_updates: { email: false }, offers: { push: false } },
+      matrix: { order_updates: { email: false }, offers: { push: false, email: true } },
       quietOn: true,
       quietFrom: '23:00',
       quietTo: '07:00',
       language: 'fr',
-      marketing: 'none',
+      marketing: 'rewards',
+      consentSource: 'app_settings',
+      consentWordings: { email: 'account.email.2026-10', sms: 'account.sms.2026-10', push: 'account.push.2026-10' },
     });
     expect(server.account.notifications.matrix.order_updates!.email).toBe(false);
     expect(server.services.quiet).toMatchObject({ quietOn: true, quietFrom: '23:00' }); // the quiet hours C's inbox shows
+  });
+
+  it('S-108: marketing consents — the wording, who asks and the history; a push promo opt-out is recorded', async () => {
+    const rec = recorder();
+    await signedIn('/account/notifications', { wrap: rec.wrap });
+    expect(await screen.findByText('Marketing messages')).toBeTruthy();
+    expect(screen.getByText('Yes, Northline Marketplace Inc. may send me Northline’s offers by email.')).toBeTruthy();
+    expect(screen.getByText('Asked by Northline Marketplace Inc. · 1 Test Street, Testville · support@northline.ca.')).toBeTruthy();
+    expect(screen.getByTestId('consent-history-consent-1')).toHaveTextContent(/Promotional push · Given · Account settings \(app\)/);
+    fireEvent(screen.getByTestId('cell-offers-push'), 'valueChange', false);
+    fireEvent.press(screen.getByTestId('notif-save'));
+    expect(await screen.findByText(/Promotional push · Withdrawn · Account settings \(app\)/)).toBeTruthy();
+    // a save without a consent change sends no consent fields
+    fireEvent.press(screen.getByTestId('quiet-from-21:00'));
+    fireEvent.press(screen.getByTestId('notif-save'));
+    await waitFor(() => expect(rec.sent.filter((s) => s.method === 'PUT')).toHaveLength(2));
+    expect(rec.sent.filter((s) => s.method === 'PUT')[1]!.body).not.toHaveProperty('consentSource');
   });
 
   it('a failed save keeps the changes on screen', async () => {
@@ -589,6 +609,8 @@ describe('Notifications', () => {
     await signedIn('/account/notifications');
     expect(await screen.findByText('Rappels de réservation et heure d’arrivée')).toBeTruthy();
     expect(screen.getByTestId('quiet-from-22:00')).toHaveTextContent('22 h');
+    expect(await screen.findByText('Historique de vos consentements')).toBeTruthy();
+    expect(screen.getByTestId('consent-history-consent-1')).toHaveTextContent(/Notifications promotionnelles · Donné/);
   });
 });
 

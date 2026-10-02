@@ -2517,6 +2517,136 @@ paths:
           description: Not found.
       tags:
       - checkout-controller
+  /api/v1/me/consents:
+    get:
+      operationId: myConsentsGet
+      parameters:
+      - in: query
+        name: surface
+        required: false
+        schema:
+          type: string
+          default: account
+          pattern: account|studio
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ConsentsResponse"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      summary: "The caller's consents to marketing messages, with the wording and\
+        \ the history"
+      tags:
+      - my-consents-controller
+  /api/v1/me/consents/{category}:
+    put:
+      operationId: myConsentsPut
+      parameters:
+      - in: path
+        name: category
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConsentRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ConsentsResponse"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      summary: Give or withdraw one consent to marketing messages
+      tags:
+      - my-consents-controller
   /api/v1/me/devices/{installationId}:
     delete:
       operationId: myDevicesDelete
@@ -6917,6 +7047,24 @@ components:
           type: string
         name:
           type: string
+    CategoryView:
+      type: object
+      properties:
+        category:
+          type: string
+        channel:
+          type: string
+        granted:
+          type: boolean
+        since:
+          type: string
+          format: date-time
+        source:
+          type: string
+        wording:
+          type: string
+        wordingVersion:
+          type: string
     ChangeItemRequest:
       type: object
       properties:
@@ -7077,6 +7225,37 @@ components:
           type: string
         type:
           type: string
+    ConsentRequest:
+      type: object
+      properties:
+        granted:
+          type: boolean
+        source:
+          type: string
+          pattern: web_signup|app_signup|web_settings|app_settings|checkout|studio
+        wordingVersion:
+          type: string
+          description: The wording version the person read; omitted = the current
+            one
+          pattern: "[a-z0-9_.-]{3,64}"
+      required:
+      - granted
+      - source
+    ConsentsResponse:
+      type: object
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryView"
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/HistoryItem"
+        requester:
+          type: string
+          description: "Who asks for consent: legal name, mailing address and contact\
+            \ (CASL)"
     Consult:
       type: object
       properties:
@@ -7577,6 +7756,24 @@ components:
         start:
           type: integer
           format: int32
+    HistoryItem:
+      type: object
+      properties:
+        action:
+          type: string
+        at:
+          type: string
+          format: date-time
+        category:
+          type: string
+        id:
+          type: string
+        language:
+          type: string
+        source:
+          type: string
+        wordingVersion:
+          type: string
     HoldRequest:
       type: object
       properties:
@@ -8463,6 +8660,17 @@ components:
     PrefsRequest:
       type: object
       properties:
+        consentSource:
+          type: string
+          description: "Where the consent changes happen: web_settings (default) or\
+            \ app_settings"
+          pattern: web_settings|app_settings
+        consentWordings:
+          type: object
+          additionalProperties:
+            type: string
+          description: "The consent wording versions shown, by channel (email, sms,\
+            \ push)"
         language:
           type: string
         marketing:

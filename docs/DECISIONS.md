@@ -6843,3 +6843,91 @@ Branch `ops/s-113-alerting`. **No migration** (the V280–V284 range offered is 
   stores, Elastic Cloud, a managed Kafka, Apple / Firebase / OpenRouter, a Kubernetes cluster; a status banner for
   outages; re-encryption of `TOTP_KEY` / `WEBHOOK_SECRET_KEY`; a metric and alert for dead deferred notifications (the
   ERROR log line is the signal); submitting dispute evidence from Northline (S-12's open item).
+
+## 2026-09-30 — S-108 CASL consent capture and unsubscribe for commercial messages
+
+Branch `security/s-108-casl`. Runbook: [runbooks/casl.md](runbooks/casl.md). Migration **V300** (range V300–V304).
+
+- **Never run against a real email or SMS provider, nor a real mailbox.** Commercial email went only to the library's
+  in-memory sender and the worker's recording fakes; the RFC 8058 one-click POST was exercised with MockMvc, not by
+  Gmail/Outlook/Yahoo; the commercial SMS's opt-out link only reached the recording SMS transport; DKIM coverage of the
+  `List-Unsubscribe` headers is unchecked. casl.md § 8 is the first-real-send checklist. Counsel has not reviewed the
+  consent wordings.
+- **Classification is code, in the shared email library** (`ca.northline.email.MessageClasses`, used by the api and
+  the worker): every notification row of both matrices (`team.<row>`, `customer.<row>`), messages outside them
+  (`sms:*`, `push:*`), and each email template's existing `EmailContent.Purpose`. Only the customer row **`offers`**
+  and the new template `marketing-offer` are commercial; every Studio row, every other customer row, invitations,
+  codes and courier pushes are transactional/relationship (CASL s. 6(6)). Tests fail on an unclassified template file
+  (`MessageClassesTest`), api row (`ConsentApiTest`) or worker-defaults row (`CommercialNoticesTest`); an unclassified
+  row counts as commercial at send time (fail closed).
+- **Express consent only; no implied consent.** The Privacy Policy promises "only with your express opt-in", so the
+  2-year/6-month implied consents are not modelled (`basis` is `express` only). **No double opt-in:** consent is given
+  in a signed-in session for the account's own address. **Merchants' own marketing** is not sent by the platform
+  (the Privacy Policy forbids it), so it has no category.
+- **Categories per channel:** `marketing_email`, `marketing_sms`, `marketing_push`. Push promos are treated as needing
+  consent too (CASL's reach over app push is unsettled; the stricter reading).
+- **Schema (V300):** `messaging.consent_records`, append-only (grant/withdrawal, `at`, `source`, `wording_version`,
+  `language`, `address_hash` = SHA-256 of the lower-cased email or the E.164 phone, `ip_prefix` = /24 or /48,
+  `user_agent_hash` = SHA-256, `actor_id` for staff). The current state is the newest row. Unsalted SHA-256 for the
+  address: it must stay matchable by staff after an erasure, and a key would break lookups when rotated.
+- **Wordings are versioned code** (`ConsentWordings`, en/fr-CA, `{legalName}` from configuration): a published
+  wording is never edited (`ConsentWordingsTest` pins each version's hash); a stale version from a client is 409
+  `consent_wording_changed`. The requester's legal name, mailing address and contact (CASL regulations s. 4) are
+  returned with them (`requester`).
+- **The design's controls became the consents.** Account › Notifications' "Offers & rewards" cells and "Marketing
+  emails" now read and write `consent_records` (`/me/notifications` gains `consentSource` and `consentWordings`): the
+  offers row's email cell and "Marketing emails" are one consent and move together in both clients; "None (CASL
+  opt-out)" withdraws; "Weekly digest"/"Only rewards" keep the frequency in the old `marketing` column. **Deviation:**
+  the design's defaults had offers push **on** and marketing **weekly** — pre-ticked consent is not consent under CASL,
+  so the offers defaults are all off (`notification-matrix-defaults.json`, `CustomerNotificationPrefs`) and
+  `marketing` reads `none` without a consent. **No grandfathering:** stored `marketing = weekly` values and offers
+  cells from S-59 are not consent (no proof of what was shown); everyone starts without consent (no real users yet).
+- **New endpoints:** `GET /api/v1/me/consents[?surface=account|studio]` (state, wording, history, requester), `PUT
+  /api/v1/me/consents/{category}` (`granted`, `source` ∈ web_signup | app_signup | web_settings | app_settings |
+  checkout | studio, `wordingVersion?`), console `GET /api/v1/console/consents?userId=|contact=` and `POST
+  /api/v1/console/consents/withdrawals` — `@RequiresConsole(PRIVACY)` (admin, privacy officer, support lead; the
+  withdrawal needs action `privacy`, audit `consent.withdrawn`). No new console screen: the lookup is a section of the
+  privacy screen.
+- **Unsubscribe:** the S-13 page and token format are reused; new token rows `consent.<category>` (and the customer's
+  `customer.offers`) **withdraw the consent in the same request** (CASL allows 10 business days). The POST tells the
+  mailbox's RFC 8058 one-click (`List-Unsubscribe=One-Click` → source `list_unsubscribe`) from the page's button
+  (`unsubscribe_link`). The page now says "text messages" for an SMS opt-out and points customers to Account ›
+  Notifications instead of Studio (also fixed for S-102's customer emails, and in the email footer's hint).
+- **SMS STOP/ARRET is not handled:** the SMS port only sends (no inbound). Commercial texts carry an opt-out link to
+  the unsubscribe page instead (CASL allows a link; the page shows the mailing address — regulations s. 3(2)). The
+  source `sms_keyword` is reserved for an inbound webhook.
+- **Send-time checks:** the `Mailer` gains `CommercialConsent` (the api: `ConsentService`; the worker: `JdbcConsents`
+  over the same table; none = nothing commercial is sent) and refuses a commercial delivery without the recipient's
+  id; the worker's `Deliveries` asks per channel before every send, including what quiet hours or an outage deferred.
+  `Mailer.Delivery` gains `recipientId` (old 5-argument constructor kept); `Mailer.Outcome` and
+  `Deliveries.Outcome` gain `NO_CONSENT`.
+- **Sender identification check:** new `EMAIL_LEGAL_NAME` (`northline.email.legal-name`, required, default in the
+  yml). `CommercialMessageCheck` refuses a rendered commercial email whose text or HTML lacks the legal name, the
+  mailing address or the unsubscribe link, and a commercial SMS without the legal name and opt-out link. Commercial
+  footers add "<legal name> sent you this marketing message because you agreed…" (en/fr).
+- **No commercial producer yet.** The worker understands an offer (pseudo-event `messaging.offer`, payload
+  `PersonalNotices.offer(...)`, re-read from `deferred_notifications` at send time) and the library has
+  `marketing-offer`; no campaign/offer feature hands them over. Sign-up and checkout opt-in checkboxes are not built
+  (the api accepts their sources).
+- **Consent history:** consumer web and app (Account › Notifications › "Marketing messages"), Studio (Settings ›
+  Notifications › "Marketing from Northline", email only, source `studio`), the console lookup, and S-105's access
+  export (`messaging.consents`, without the hashes).
+- **Retention, and S-107's overlap:** records stay while a consent is active and **3 years after its withdrawal**;
+  `messaging.api.ConsentRetention` exposes the period and an idempotent `purgeExpiredProofs(now)` for S-107's
+  retention jobs and report; until S-107 takes it over, messaging runs it daily (`CASL_PURGE_CRON`, 04:23 platform
+  zone). Erasure (S-105's messaging contributor) withdraws granted consents (source `erasure`), drops `ip_prefix` and
+  `user_agent_hash`, and keeps the rest as new `Retention.CONSENT_PROOF` (shared enum; export summary en/fr).
+- **Also:** `ClientAddress` moved from `search.web` to the shared kernel (`ca.northline.shared`) (search's rate limit and the consent evidence use
+  it); the Studio settings hint in notification email footers is now per audience (`settingsPlace`).
+- **Tests:** email `MessageClassesTest` (classification, content check, legal name), `DefaultMailerTest` +2
+  (consent asked at send time, no consent source = nothing commercial), `EmailTemplatesTest` (commercial footer),
+  `EmailAutoConfigurationTest` +1; api `ConsentApiTest` (capture with evidence, validation and French, stale wording,
+  Studio, 401; settings as consents; one-click and page unsubscribe, SMS link, idempotence; console lookup by contact,
+  403s, withdrawal + audit; 3-year purge; classification), `ConsentWordingsTest`, `MessagingPersonalDataTest` +1
+  (export, erasure withdrawal, evidence dropped, `consent_proof`, idempotent), `AccountSettingsApiTest` (marketing
+  defaults to `none`); worker `CommercialNoticesTest` (nothing without consent whatever the stored cells; each
+  channel with sender and unsubscribe; a withdrawal stops a deferred SMS; rows classified); web consumer
+  `settings.test.tsx` +3, Studio `settings.test.tsx` +1, console `privacy.test.tsx` +2; mobile `account.test.tsx` +1
+  (and the save test updated).
+- **Not done:** inbound SMS STOP/ARRET; sign-up and checkout checkboxes; any commercial producer (campaigns, offers);
+  counsel review of the wordings; a separate console screen (the privacy screen hosts the lookup).

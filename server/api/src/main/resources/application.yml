@@ -344,6 +344,7 @@ northline:
     provider: ${EMAIL_PROVIDER:local}
     from: ${EMAIL_FROM:Northline <no-reply@northline.ca>}
     reply-to: ${EMAIL_REPLY_TO:}
+    legal-name: ${EMAIL_LEGAL_NAME:Northline Marketplace Inc.}   # CASL sender identification (S-108)
     mailing-address: ${EMAIL_MAILING_ADDRESS:Northline Marketplace Inc. · 1200 – 8th Avenue SW, Calgary, Alberta T2P 1B5, Canada}
     contact: ${EMAIL_CONTACT:support@northline.ca}
     time-zone: ${EMAIL_TIME_ZONE:${REGION_PLATFORM_ZONE:America/Edmonton}}   # dates in emails (S-134)
@@ -361,6 +362,9 @@ northline:
     link-ttl: ${PRIVACY_LINK_TTL:PT15M}              # a download link's life (at most PT1H)
     hold-retry: ${PRIVACY_HOLD_RETRY:P1D}            # a held erasure step (open order, dispute) is tried again after this
     run-every: ${PRIVACY_RUN_INTERVAL:PT1M}          # how often the pipeline looks for work
+  # S-108 CASL (docs/runbooks/casl.md): proofs of consents withdrawn more than three years ago are purged daily.
+  casl:
+    purge-cron: "${CASL_PURGE_CRON:0 23 4 * * *}"
   notifications:                                 # links in notification emails (S-13)
     studio-url: ${STUDIO_ORIGIN:http://localhost:3100}
     api-url: ${API_PUBLIC_URL:http://localhost:8080}   # unsubscribe links: the api's public URL (not the BFF)

@@ -175,6 +175,7 @@ mail-tester.com or by viewing the headers of a received email (`spf=pass dkim=pa
 | `EMAIL_PROVIDER` | api (worker later) | staging, prod (`local` refused there) | `ses` · `sendgrid` · `azure` · `smtp` | default `local` |
 | `EMAIL_FROM` | api | staging, prod | `Northline <no-reply@northline.ca>` | domain verified at the provider |
 | `EMAIL_REPLY_TO` | api | no | `support@northline.ca` | empty = no Reply-To |
+| `EMAIL_LEGAL_NAME` | api, worker | no | `Northline Marketplace Inc.` | CASL: the legal sender commercial messages name (S-108); required (the yml has the default) |
 | `EMAIL_MAILING_ADDRESS` | api | no | `Northline Marketplace Inc. · 1200 – 8th Avenue SW, Calgary, Alberta T2P 1B5, Canada` | CASL footer (default = the Terms' address) |
 | `EMAIL_CONTACT` | api | no | `support@northline.ca` | CASL footer |
 | `EMAIL_REGION` | api | with `ses` (else SDK default chain) | `ca-central-1` | |
@@ -196,8 +197,11 @@ mail-tester.com or by viewing the headers of a received email (`spf=pass dkim=pa
 - **Notifications** a member can turn off (payout receipts, disputes, refunds) carry an unsubscribe link and the
   RFC 8058 one-click headers. The link turns that row's email cell off in Settings › Notifications at once (CASL
   allows up to 10 business days) and keeps working indefinitely (CASL: at least 60 days).
-- **Commercial** messages (none yet) must use `Purpose.COMMERCIAL`: the renderer refuses them without an unsubscribe
-  link. They also need recorded consent — out of scope until marketing email exists.
+- **Commercial** messages use `Purpose.COMMERCIAL` (S-108, [casl.md](casl.md)): the `Mailer` sends one only when the
+  recipient's express consent is recorded *at send time*; the renderer refuses one without an unsubscribe link and
+  checks the rendered email names the legal sender (`EMAIL_LEGAL_NAME`), the mailing address and the link. Their
+  unsubscribe link withdraws the consent at once. The only commercial template is `marketing-offer`; nothing sends it
+  yet.
 
 ## Operations
 

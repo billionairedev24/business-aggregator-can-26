@@ -126,6 +126,11 @@ paths:
         required: false
         schema:
           type: string
+      - in: query
+        name: List-Unsubscribe
+        required: false
+        schema:
+          type: string
       - in: header
         name: Accept-Language
         required: false

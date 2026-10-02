@@ -8,6 +8,8 @@
 .nl-acct-body { min-width: 0; }
 .nl-acct-h1 { font-size: 36px; margin: 0; letter-spacing: -0.02em; }
 .nl-acct-h2 { font-size: 22px; margin: 28px 0 8px; }
+.nl-acct-h3 { font-size: 17px; margin: 20px 0 6px; }
+.nl-consents { list-style: none; padding: 0; margin: 8px 0 12px; display: grid; gap: 12px; }
 .nl-acct-lede { font-size: 14px; color: var(--color-neutral-700); margin: 6px 0 18px; max-width: 60ch; }
 .nl-acct-strong { font-weight: 600; }
 .nl-acct-panel { margin-top: 22px; padding: 16px; border-radius: var(--radius-md); background: var(--color-surface); display: flex; justify-content: space-between; align-items: center; gap: 12px; max-width: 640px; flex-wrap: wrap; }
