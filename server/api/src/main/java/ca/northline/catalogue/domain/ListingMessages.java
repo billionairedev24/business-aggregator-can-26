@@ -81,6 +81,11 @@ public final class ListingMessages {
 
     // service
     public static final String NAME_REQUIRED = "Enter a service name.";
+
+    // S-116: French listing text where the region configuration asks for it (french_listings)
+    public static final String FRENCH_TITLE_REQUIRED = "Enter the French name.";
+    public static final String FRENCH_REQUIRED =
+            "Add the French name and description first: listings in {province} need them before they go live.";
     public static final String NAME_TOO_LONG = "At most 80 characters.";
     public static final String PRICING_REQUIRED = "Choose how you price this service.";
     public static final String DURATION_REQUIRED = "Choose a duration.";

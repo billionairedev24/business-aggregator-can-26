@@ -306,7 +306,7 @@ export const useCatalogueT = defineMessages({
     imported: 'Importé · {created} créées en brouillon, {updated} mises à jour. Les brouillons sont dans vos annonces.',
     recentUploads: 'Téléversements récents', noUploads: 'Aucun téléversement — téléchargez un modèle pour commencer.',
     colRow: 'Ligne', colError: 'Erreur', colFile: 'Fichier', colRows: 'Lignes', colResult: 'Résultat', colWhen: 'Quand',
-    entityError: "erreur d'import", pluralError: "erreurs d'import", entityImport: 'import', pluralImport: 'imports',
+    entityError: "erreur d'import", pluralError: "erreurs d'import", entityImport: 'importation', pluralImport: 'importations',
     resultImported: '{created} importées', resultUpdated: '{updated} mises à jour', resultBoth: '{created} créées · {updated} mises à jour', resultValidated: 'Validé · non importé',
     uploadFailed: 'Impossible de lire ce fichier.', importsError: 'Impossible de charger vos téléversements.',
     int_shopify: 'Shopify', int_square: 'Square', int_lightspeed: 'Lightspeed', intApi: 'API · inventory:write',

@@ -52,6 +52,8 @@ class MerchantController {
     private MerchantResponse.Region region(String merchantId) {
         var place = places.of(merchantId);
         var profile = place.profile();
+        var language =
+                regions.languageRules(place.province(), place.marketId() != null ? place.marketId() : place.city());
         return new MerchantResponse.Region(
                 place.province(),
                 new MerchantResponse.Names(place.provinceNameEn(), place.provinceNameFr()),
@@ -66,6 +68,8 @@ class MerchantController {
                 place.zone().getId(),
                 regions.province(place.province())
                         .map(p -> p.privacyLaw().code())
-                        .orElse(null));
+                        .orElse(null),
+                language.frenchFirst(),
+                language.frenchListings());
     }
 }

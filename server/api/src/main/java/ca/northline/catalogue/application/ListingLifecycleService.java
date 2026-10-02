@@ -44,10 +44,13 @@ class ListingLifecycleService implements ManageListing, VetListing {
     private final ApplicationEventPublisher events;
     private final Clock clock;
     private final ListingKeywordRules keywords;
+    private final ListingFrench french;
+    private final ListingTexts texts;
 
     @Override
     public ListingView submit(String merchantId, String listingId, String actorId) {
         var listing = load(merchantId, listingId);
+        french.checkBeforeLive(merchantId, listingId); // S-116: French text where the place requires it
         var category = profile(listing.categoryId());
         var completeness = switch (listing) {
             case ProductListing p -> p.completeness(category);
@@ -80,6 +83,7 @@ class ListingLifecycleService implements ManageListing, VetListing {
     @Override
     public void publish(String merchantId, String listingId) {
         var listing = load(merchantId, listingId);
+        french.checkBeforeLive(merchantId, listingId);
         var event = listing.publish(clock.instant());
         save(listing);
         event.ifPresent(events::publishEvent);
@@ -100,6 +104,7 @@ class ListingLifecycleService implements ManageListing, VetListing {
             throw new Conflict("listing_in_bundle", ListingMessages.LISTING_IN_BUNDLE);
         }
         listings.delete(listing);
+        texts.delete(listingId);
         events.publishEvent(listing.deleted(actorId, clock.instant()));
     }
 

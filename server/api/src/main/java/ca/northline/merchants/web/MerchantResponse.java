@@ -3,6 +3,7 @@ package ca.northline.merchants.web;
 import ca.northline.merchants.domain.MerchantStatus;
 import ca.northline.merchants.domain.MerchantTier;
 import ca.northline.merchants.domain.MerchantType;
+import ca.northline.region.api.FrenchListings;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -28,6 +29,8 @@ record MerchantResponse(
      *     needs it in each language
      * @param privacyLaw the province's privacy law code ({@code pipeda}, {@code ab_pipa}, {@code bc_pipa},
      *     {@code qc_law25})
+     * @param frenchFirst the place is French-first (S-116, region configuration): the Studio opens in French unless the
+     *     person chose English, and {@code frenchListings} says what listings there need in French
      */
     record Region(
             @Nullable String province,
@@ -35,7 +38,9 @@ record MerchantResponse(
             Names provinceIn,
             Names provinceOf,
             String timeZone,
-            @Nullable String privacyLaw) {}
+            @Nullable String privacyLaw,
+            boolean frenchFirst,
+            FrenchListings frenchListings) {}
 
     record Names(String en, String fr) {}
 
