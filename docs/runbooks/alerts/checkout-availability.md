@@ -8,17 +8,23 @@
 
 ## First checks
 
-1. Dashboard **checkout and payouts** (`northline-checkout-payouts`): checkouts by status, Stripe call errors (`http_client_requests` to `api.stripe.com`).
-2. Stripe status page; the api's logs for `StripeException` by `trace.id` ([stripe.md](../stripe.md)).
+1. Status codes on the **checkout and payouts** dashboard (`northline-checkout-payouts`): **503** with
+   `code: payments_unavailable` = Stripe is down, slow or throttling us (since S-115); **500** = our bug or database.
+2. <https://status.stripe.com>; the api's logs: `Provider unavailable (payments_unavailable)`, `StripeCallFailed`
+   (`Invalid API Key` = a key problem, not an outage), by `trace.id`.
 3. Tax provider (`TAX_PROVIDER=stripe`): Stripe Tax errors fail the quote and the checkout ([stripe.md § 6](../stripe.md#6-stripe-tax-s-21)).
 4. Database: escrow writes, idempotency keys in Valkey.
+5. A release in the last hour? Roll back ([gitops.md](../gitops.md)).
 
 ## Mitigate
 
-Roll back a bad release. During a Stripe outage there is no fallback — communicate; holds retried by the customer are idempotent.
+Stripe outage: nothing to switch — checkout already answers 503 "try again in a few minutes" and nothing queues
+wrongly; follow [stripe-incidents.md § 1](../stripe-incidents.md#1-stripe-is-down-degrade-checkout-what-queues)
+(what queues, comms, the catch-up afterwards). A rolled or leaked key:
+[stripe-incidents.md § 5](../stripe-incidents.md#5-leaked-keys). Our bug: roll back.
 
 ## Afterwards
 
 Write down what happened in the incident notes (cause, impact, time to detect and fix); if the alert was noise, tune
-it in `deploy/observability/` (make obs-rules-check) rather than silencing it for good. *Stub (S-113): never exercised
-in a real incident — improve it the first time it is used.*
+it in `deploy/observability/` (make obs-rules-check) rather than silencing it for good. *Updated in S-115; never
+exercised in a real incident — improve it the first time it is used.*

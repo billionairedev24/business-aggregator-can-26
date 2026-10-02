@@ -49,7 +49,7 @@ events aren't published to Kafka yet.
 |---|---|---|---|
 | bad / opted-out / suppressed address or number | logged, claim kept, not retried | same | dead token: the device is deleted |
 | provider down, throttling, credentials | claim released; the event is retried (10 s, 60 s, 5 min on `<topic>.notifications.retry-<n>`), then `.dlq` + alert | same | same, and the provider is paused |
-| deferred notification can't be sent | — | retried every 5 min, given up after 10 attempts with `DEAD-LETTERED deferred …` (ERROR) | same |
+| deferred notification can't be sent | — | retried every 5 min; after 10 attempts kept as **dead** with `DEAD-LETTERED deferred …` (ERROR) until requeued (`DlqReplayCommand --deferred`, [events.md § Deferred notifications](events.md#deferred-notifications-the-tables-own-dead-letters-s-115)) or purged after 30 days | same |
 
 A retry sends only what is missing (sent deliveries stay claimed). A dead-lettered event is replayed with
 `DlqReplayCommand` ([events.md § 3](events.md#3-dlq-investigate-and-replay)), group `notifications`.

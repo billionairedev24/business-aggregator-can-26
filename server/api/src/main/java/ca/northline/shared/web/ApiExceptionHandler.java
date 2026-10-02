@@ -4,6 +4,7 @@ import ca.northline.platform.MessageCatalogue;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.PlaceNames;
+import ca.northline.shared.ProviderUnavailable;
 import ca.northline.shared.RuleViolation;
 import ca.northline.shared.RuleViolation.Violation;
 import ca.northline.shared.security.MerchantAccessDenied;
@@ -115,6 +116,18 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
                 HttpStatus.CONFLICT,
                 ex.getCode(),
                 localize(Objects.requireNonNullElse(ex.getMessage(), HttpStatus.CONFLICT.getReasonPhrase()), request));
+    }
+
+    /** S-115: a provider outage (Stripe during checkout) — 503, nothing done, try again later. */
+    @ExceptionHandler
+    ResponseEntity<ProblemDetail> providerUnavailable(ProviderUnavailable ex, WebRequest request) {
+        log.warn("Provider unavailable ({}): {}", ex.getCode(), String.valueOf(ex.getCause()));
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(ex.getRetryAfterSeconds()))
+                .body(problem(
+                        HttpStatus.SERVICE_UNAVAILABLE,
+                        ex.getCode(),
+                        localize(Objects.requireNonNullElse(ex.getMessage(), "Unavailable"), request)));
     }
 
     @ExceptionHandler

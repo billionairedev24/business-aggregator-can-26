@@ -53,7 +53,7 @@ class StripeTaxGateway implements TaxGateway {
         try {
             return call.run();
         } catch (StripeException e) {
-            throw new StripeConnectGateway.StripeCallFailed(what, e);
+            throw StripeConnectGateway.failure(what, e);
         }
     }
 

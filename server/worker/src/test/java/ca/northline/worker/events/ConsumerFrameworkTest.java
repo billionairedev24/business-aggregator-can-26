@@ -142,7 +142,7 @@ class ConsumerFrameworkTest extends WorkerIntegrationTest {
         await().atMost(Duration.ofSeconds(10)).until(() -> bystander.calls.count(id) == 1);
 
         // Replay: list first (dry run), then replay; the failure is fixed now.
-        var args = replayArgs("--event=" + id);
+        var args = replayArgs("--event=" + id, "--actor=oncall@northline.test", "--reason=S-26 test");
         var listed = DlqReplayCommand.run(concat("list", args));
         assertThat(listed).singleElement().satisfies(e -> {
             assertThat(e.status()).isEqualTo(DlqReplay.Status.WOULD_REPLAY);
@@ -164,6 +164,105 @@ class ConsumerFrameworkTest extends WorkerIntegrationTest {
                 .singleElement()
                 .extracting(DlqReplay.Entry::status)
                 .isEqualTo(DlqReplay.Status.ALREADY_REPLAYED);
+    }
+
+    /**
+     * S-115 runbook drill (docs/runbooks/events.md § DLQ): two events of the group dead-lettered; the filters pick
+     * them and nothing else; a replay needs an operator and a reason; it is paced, audited once, redone only by the
+     * failed group (the bystander's dedupe claim absorbs it) and never twice.
+     */
+    @Test
+    void runbookDrill_filtersPaceAndAuditTheReplay_andOnlyTheFailedGroupRedoesTheWork() throws Exception {
+        var first = Events.id();
+        var second = Events.id();
+        scripted.calls.failNext(first, 3);
+        scripted.calls.failNext(second, 3);
+        send(first);
+        send(second);
+        await().atMost(Duration.ofSeconds(40))
+                .untilAsserted(() -> assertThat(scripted.calls.deadLettered()).contains(first, second));
+        await().atMost(Duration.ofSeconds(10))
+                .until(() -> bystander.calls.count(first) == 1 && bystander.calls.count(second) == 1);
+        var both = "--event=" + first + "," + second;
+
+        assertThat(DlqReplayCommand.run(concat("list", replayArgs(both))))
+                .extracting(DlqReplay.Entry::eventId, DlqReplay.Entry::status)
+                .containsExactlyInAnyOrder(
+                        org.assertj.core.groups.Tuple.tuple(first, DlqReplay.Status.WOULD_REPLAY),
+                        org.assertj.core.groups.Tuple.tuple(second, DlqReplay.Status.WOULD_REPLAY));
+        assertThat(DlqReplayCommand.run(concat("list", replayArgs(both, "--type=payments.payout_failed"))))
+                .hasSize(2);
+        assertThat(DlqReplayCommand.run(concat("list", replayArgs(both, "--type=payments.payout_sent"))))
+                .isEmpty();
+        assertThat(DlqReplayCommand.run(concat("list", replayArgs(both, "--failure=SCRIPTED FAILURE"))))
+                .hasSize(2);
+        assertThat(DlqReplayCommand.run(concat("list", replayArgs(both, "--failure=connection refused"))))
+                .isEmpty();
+        assertThat(DlqReplayCommand.run(concat("list", replayArgs(both, "--since=10m"))))
+                .hasSize(2);
+        assertThat(DlqReplayCommand.run(concat("list", replayArgs(both, "--until=10m"))))
+                .isEmpty();
+        assertThat(DlqReplayCommand.run(concat("list", replayArgs(both, "--limit=1"))))
+                .hasSize(1);
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                        () -> DlqReplayCommand.run(concat("replay", replayArgs(both))))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("--actor");
+
+        var audits = audits();
+        var started = System.nanoTime();
+        var replayed = DlqReplayCommand.run(
+                concat("replay", replayArgs(both, "--rate=2", "--actor=oncall@northline.test", "--reason=INC-115")));
+        var elapsed = Duration.ofNanos(System.nanoTime() - started);
+        assertThat(replayed).extracting(DlqReplay.Entry::status).containsOnly(DlqReplay.Status.REPLAYED);
+        assertThat(replayed).hasSize(2);
+        assertThat(elapsed).isGreaterThanOrEqualTo(Duration.ofMillis(450)); // 2 a second: one wait between the two
+
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            assertThat(claims(TEST_GROUP, first)).isEqualTo(1);
+            assertThat(claims(TEST_GROUP, second)).isEqualTo(1);
+        });
+        sleep(1_000);
+        assertThat(bystander.calls.count(first)).isEqualTo(1); // its claim absorbed the replay: idempotent
+        assertThat(bystander.calls.count(second)).isEqualTo(1);
+
+        assertThat(audits()).isEqualTo(audits + 1);
+        var entry = jdbc.sql("""
+                        select role, target_type, target_id, merchant_id, actor_id,
+                               after->>'actor' as actor, after->>'reason' as reason,
+                               after->'details'->>'replayed' as replayed, after->'details'->>'group' as grp,
+                               after->'details'->'eventIds' as ids
+                          from developer.audit_log where action = 'events.dlq_replayed'
+                         order by id desc limit 1""")
+                .query((rs, _) -> Map.of(
+                        "role", rs.getString("role"),
+                        "target", rs.getString("target_type") + ":" + rs.getString("target_id"),
+                        "merchant", String.valueOf(rs.getString("merchant_id")),
+                        "actor", rs.getString("actor") + "|" + rs.getString("reason"),
+                        "replayed", rs.getString("replayed"),
+                        "group", rs.getString("grp"),
+                        "ids", rs.getString("ids")))
+                .single();
+        assertThat(entry)
+                .containsEntry("role", "operator")
+                .containsEntry("target", "kafka_topic:" + TEST_TOPIC + ".dlq")
+                .containsEntry("merchant", "null")
+                .containsEntry("actor", "oncall@northline.test|INC-115")
+                .containsEntry("replayed", "2")
+                .containsEntry("group", TEST_GROUP);
+        assertThat(entry.get("ids")).contains(first, second);
+
+        assertThat(DlqReplayCommand.run(
+                        concat("replay", replayArgs(both, "--actor=oncall@northline.test", "--reason=INC-115"))))
+                .extracting(DlqReplay.Entry::status)
+                .containsOnly(DlqReplay.Status.ALREADY_REPLAYED);
+        assertThat(scripted.calls.count(first)).isEqualTo(4); // 3 failures + the replay, never a second replay
+    }
+
+    private int audits() {
+        return jdbc.sql("select count(*) from developer.audit_log where action = 'events.dlq_replayed'")
+                .query(Integer.class)
+                .single();
     }
 
     @Test

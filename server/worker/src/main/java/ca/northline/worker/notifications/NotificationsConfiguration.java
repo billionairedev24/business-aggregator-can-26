@@ -9,7 +9,9 @@ import ca.northline.sms.SmsTransportConfiguration;
 import ca.northline.worker.events.ProcessedEvents;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.ZoneId;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -150,18 +152,38 @@ public class NotificationsConfiguration {
     }
 
     @Bean
-    DeferredNotificationsJob deferredNotificationsJob(Notifier notifier, TransactionOperations transactions) {
-        return new DeferredNotificationsJob(notifier, transactions);
+    DeferredNotificationsJob deferredNotificationsJob(
+            Notifier notifier,
+            DeferredNotifications deferred,
+            TransactionOperations transactions,
+            Clock clock,
+            @Value("${northline.notifications.deferred-dead-retention:30d}") Duration deadRetention) {
+        return new DeferredNotificationsJob(notifier, deferred, transactions, clock, deadRetention);
     }
 
-    /** Every minute: send what quiet hours held back (replicas share rows through {@code skip locked}). */
+    /**
+     * Every minute: send what quiet hours or an outage held back (replicas share rows through {@code skip locked}).
+     * Nightly: delete rows given up more than {@code deadRetention} ago (S-115: dead rows wait that long for a requeue).
+     */
+    @Slf4j
     static class DeferredNotificationsJob {
         private final Notifier notifier;
+        private final DeferredNotifications deferred;
         private final TransactionOperations transactions;
+        private final Clock clock;
+        private final Duration deadRetention;
 
-        DeferredNotificationsJob(Notifier notifier, TransactionOperations transactions) {
+        DeferredNotificationsJob(
+                Notifier notifier,
+                DeferredNotifications deferred,
+                TransactionOperations transactions,
+                Clock clock,
+                Duration deadRetention) {
             this.notifier = notifier;
+            this.deferred = deferred;
             this.transactions = transactions;
+            this.clock = clock;
+            this.deadRetention = deadRetention;
         }
 
         @Scheduled(
@@ -169,6 +191,14 @@ public class NotificationsConfiguration {
                 initialDelayString = "${northline.notifications.deferred-initial-delay:30s}")
         void run() {
             transactions.executeWithoutResult(_ -> notifier.sendDue(50));
+        }
+
+        @Scheduled(
+                cron = "${northline.notifications.deferred-purge-cron:0 27 3 * * *}",
+                zone = "${northline.region.platform-zone}")
+        void purgeDead() {
+            var deleted = deferred.purgeDead(clock.instant().minus(deadRetention));
+            log.info("Purged {} dead deferred notification(s) older than {}", deleted, deadRetention);
         }
     }
 }

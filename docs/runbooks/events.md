@@ -57,28 +57,110 @@ alerted once, by the group that failed.
 
 ## 3. DLQ: investigate and replay
 
-1. **Find the record.** The alert/log line gives the consumer group, event id, type, the DLQ position
-   (`<topic>.dlq-<partition>@<offset>`) and the exception. Kafka UI (`--profile tools` locally) shows the headers
-   (`kafka_exception-message`, `kafka_exception-cause-fqcn`, `kafka_original-topic`).
-2. **Decide.** Poison (`PoisonEventException`): a producer bug or a schema without a version bump — fix the producer
-   or the schema, then replay. Handler failure: fix the cause (a provider down, a bug) and deploy, then replay.
-3. **List** what would be replayed (changes nothing):
+**Symptoms.** The page `NorthlineEventDeadLettered` ([alerts/event-dead-lettered.md](alerts/event-dead-lettered.md));
+the worker's ERROR line `DEAD-LETTERED consumer=<group> event=<id> type=<type> topic=<topic> dlq=<topic>.dlq-<p>@<offset>
+reason=…`; `northline_events_dead_lettered_total{consumer,topic}` rising; a customer, a business or a partner says
+something never arrived (an email, a push, a webhook, a listing in search).
 
-   ```sh
-   # locally or anywhere with the worker's KAFKA_* and DB_* variables
-   cd server && ./gradlew :worker:dlqReplay --args='list --topic=payments.payout.dlq --group=notifications'
-   ```
-4. **Replay** (all of the group's records in that DLQ, or one event):
+**Impact.** Only that event's effect for that consumer group is missing — the other groups processed it. Nothing is
+lost: the `.dlq` keeps the record 30 days (`deploy/kafka/topics.yaml`), the outbox and the source rows are intact.
 
-   ```sh
-   ./gradlew :worker:dlqReplay --args='replay --topic=payments.payout.dlq --group=notifications --event=01J…'
-   ```
+| group | what didn't happen | how bad |
+|---|---|---|
+| `notifications` | a team email / SMS / push, or a customer's or courier's push | late or missing notice; money notices matter most (`payout.failed`, disputes) |
+| `webhooks` | a partner webhook delivery row (nothing was queued) | the partner's integration misses an event until replayed |
+| `search-indexer` | a listing or merchant document refresh | search shows stale data; the reconcile sweep fixes edits within a minute, events it can't see (hidden / deleted) wait |
 
-   Each record is republished to its **original topic** with its key, value and `nl-*` headers (plus
-   `nl-replayed-from`). Every group of that topic receives it; the groups that had processed the event find their
-   dedupe claim and skip it, so only the failed group does the work. A replayed DLQ record is remembered
-   (`dlq-replay` claim): running the command again doesn't replay it twice — `--force` does. `--limit=N` (default
-   100) caps one run. The DLQ itself is never modified (retention 30 days).
+**Decide** (read the failure first — the alert's `reason`, or `list` below, which prints it):
+
+```
+reason / kafka_exception-cause-fqcn
+├─ PoisonEventException (not JSON, unknown type/version, schema violation, id mismatch)
+│    → a producer or schema bug: replaying unchanged sends it straight back to the DLQ.
+│      Fix the producer / add the schema version, deploy the worker, THEN replay (--type=…).
+│      Obsolete event (the bug is fixed and the effect no longer matters)? Don't replay; note it in the incident.
+├─ a provider outage (SMTP/SES/SendGrid, Twilio, APNs/FCM, Elasticsearch, the database) — many records, one window
+│    → wait until the provider is healthy (its status page, the worker's logs), then replay that window
+│      (--since/--until) at a gentle rate (--rate=5…20).
+├─ a handler bug (NullPointerException, IllegalStateException from our code)
+│    → fix, deploy, replay (--type=… to stay narrow).
+└─ old notifications (> 24 h) — replaying a "your order is out for delivery" push days later confuses people
+     → replay only what is still useful (--since=24h); for money notices (payout.failed, disputes) replay anyway.
+search-indexer: a replay works, but a partial reindex of the merchants concerned does the same job without Kafka
+(search.md § 9). webhooks: replaying queues the deliveries; partners dedupe on the event id.
+```
+
+**1. Inspect.** The tool lists without changing anything (no consumer group, nothing committed); each line has the
+status, the DLQ position, event id, type, original topic and the failure:
+
+```sh
+# locally, or anywhere with the worker's KAFKA_* and DB_* variables (server/.env)
+cd server && ./gradlew :worker:dlqReplay --args='list --topic=payments.payout.dlq --group=notifications'
+# narrower: one or more events, a type, a time window (instant or age), a text in the failure
+./gradlew :worker:dlqReplay --args='list --topic=payments.payout.dlq --group=notifications
+    --type=payments.payout_failed --since=6h --until=2026-10-02T09:30:00Z --failure=timeout --limit=500'
+```
+
+Raw records with their headers (`kafka_exception-message`, `kafka_exception-cause-fqcn`, `kafka_original-topic`,
+`kafka_dlt-original-consumer-group`): the Kafka UI locally (`docker compose --profile tools up -d`, then
+<http://localhost:8190>), or
+
+```sh
+docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:29092 \
+  --topic payments.payout.dlq --from-beginning --timeout-ms 10000 \
+  --property print.headers=true --property print.timestamp=true --property print.key=true
+```
+
+**2. Replay.** Same filters, plus who you are and why — both go to the platform audit log, the run is refused
+without them:
+
+```sh
+./gradlew :worker:dlqReplay --args='replay --topic=payments.payout.dlq --group=notifications --since=6h --rate=10
+    --actor=you@northline.ca --reason=INC-2026-10-02-smtp'
+```
+
+| option | meaning |
+|---|---|
+| `--event=<id>[,<id>…]` | these events only |
+| `--type=<type>` | `nl-event-type`, e.g. `payments.payout_failed` |
+| `--since=`, `--until=` | the DLQ record's timestamp: an instant (`2026-10-02T08:00:00Z`) or an age (`30m`, `6h`, `2d`) |
+| `--failure=<text>` | the failure message contains it (case-insensitive) |
+| `--limit=N` | at most N records per run (default 100; already-replayed ones don't count) — run again for the next N |
+| `--rate=N` | at most N records a second (default 20) |
+| `--force` | replay records already replayed once (normally refused: `ALREADY_REPLAYED`) |
+| `--actor=`, `--reason=` | required for `replay`: your staff email (or id) and the incident or ticket |
+
+Each record is republished to its **original topic** with its key, value and `nl-*` headers (plus
+`nl-replayed-from=<dlq>:<partition>:<offset>`). Every group of that topic receives it; the groups that had processed
+the event find their dedupe claim (`events.processed_events`) and skip it, so only the failed group does the work.
+Each replayed record is remembered (`dlq-replay` claim): a second run reports `ALREADY_REPLAYED`. The DLQ itself is
+never modified. One audit entry per run: action `events.dlq_replayed`, role `operator`, target the DLQ topic, with
+the actor, reason, filters, counts and up to 200 event ids (console › Audit log, area `events.`).
+
+**3. Verify** (idempotency included):
+
+```sql
+-- the failed group processed it now; every other group still has exactly one claim (it did no work twice)
+select consumer, processed_at from events.processed_events where event_id = '<event id>' order by consumer;
+-- what was replayed, and by whom
+select event_id, processed_at from events.processed_events where consumer = 'dlq-replay' and event_id like 'payments.payout.dlq:%' order by processed_at desc limit 20;
+select at, after->>'actor' as actor, after->>'reason' as reason, after->'details'->>'replayed' as replayed
+  from developer.audit_log where action = 'events.dlq_replayed' order by at desc limit 5;
+```
+
+Then the effect itself: `northline_notifications_sent_total` / Mailpit or the provider's log (notifications), the
+endpoint's Deliveries drawer or `select state, attempt from developer.webhook_deliveries where event_id = '<id>'`
+(webhooks), `curl -s "$ES_URIS/listings_en/_doc/<listing id>"` (search). A replayed record that fails again goes back
+to the DLQ with a new offset and pages again: stop, re-read the failure.
+
+**Rollback.** A replay can't be undone, but it can't double anything either: consumers dedupe on the event id, and
+notifications claim per person and channel. To stop a running replay, interrupt it (Ctrl-C, or delete the Job);
+what was sent stays claimed, the rest can be replayed later.
+
+**Comms.** Tell support when customers or businesses missed notices (which type, the window, that they are being
+sent now). Partners: nothing to announce for a short delay (at-least-once delivery is the contract); for a gap of
+more than a day, the business owner is told by support. Write the incident note: cause, window, records replayed
+(the audit entry), time to detect and fix.
 
 **In a cluster** — a one-off Job with the worker image and the worker Deployment's environment:
 
@@ -99,7 +181,8 @@ spec:
           image: <the worker Deployment's image>          # kubectl -n northline-<env> get deploy northline-worker -o jsonpath='{..image}'
           command: ["java", "-XX:MaxRAMPercentage=75", "-cp", "@/app/jib-classpath-file",
                     "ca.northline.worker.events.DlqReplayCommand",
-                    "list", "--topic=payments.payout.dlq", "--group=notifications"]   # then: replay (+ --event=…)
+                    "list", "--topic=payments.payout.dlq", "--group=notifications"]
+                    # then: "replay", …, "--rate=10", "--actor=you@northline.ca", "--reason=INC-…"
           envFrom:
             - configMapRef: { name: northline-infra }
             - configMapRef: { name: northline-worker }
@@ -116,6 +199,47 @@ spec:
 `ALREADY_REPLAYED`, position, event id, type, original topic, reason). With the plain-Secret mode (no External
 Secrets) the secret is `secrets.existingSecret`. The worker's Spring profile comes from its ConfigMap, so the
 command checks the same required variables as the worker.
+
+**Azure Event Hubs.** The DLQs are ordinary event hubs (Terraform creates one per catalogue topic, S-25): the tool
+works through the Kafka endpoint with the worker's connection string, nothing differs. The 100-topic limit per
+processing unit is about creating topics, not replaying.
+
+### Deferred notifications (the table's own dead letters, S-115)
+
+SMS, push (and a customer's email after an outage) that quiet hours or a provider outage held back live in
+`messaging.deferred_notifications`, not in Kafka: the every-minute job sends them, retrying an outage every 5 minutes.
+After 10 attempts the row is **dead** — kept (`dead_at`, `last_error` = the failure's class, V290), logged
+`DEAD-LETTERED deferred <channel> <type> for user <id> after 10 attempts`, and no longer tried. Dead rows are deleted
+after 30 days (`northline.notifications.deferred-dead-retention`, nightly 03:27 platform zone). Before S-115 they were
+deleted at once.
+
+```sh
+# list (dry run): filters --channel=sms|push|email, --type=<event type>, --event=<id>, --since/--until (dead_at)
+./gradlew :worker:dlqReplay --args='list --deferred --channel=sms --since=12h'
+# requeue: fresh attempts, due now (or --at=<instant>, e.g. the next morning — requeued rows are not held for
+# quiet hours again, so don't requeue SMS / push in the middle of the night)
+./gradlew :worker:dlqReplay --args='replay --deferred --channel=sms --since=12h --at=2026-10-03T14:00:00Z
+    --actor=you@northline.ca --reason=INC-2026-10-02-twilio'
+```
+
+```sql
+select channel, event_type, count(*), min(dead_at), max(dead_at), max(last_error)
+  from messaging.deferred_notifications where dead_at is not null group by 1, 2;
+```
+
+The job sends a requeued row like any other: it re-reads the person (still on the team, account active) and their
+matrix (a channel turned off meanwhile cancels it); a delivery that did go out is claimed in `events.processed_events`
+and isn't sent twice. One audit entry per run: `notifications.deferred_requeued`. Verify: the query above no longer
+lists them, `northline_notifications_sent_total{channel="sms",outcome="sent"}` rises, the provider's log shows the
+messages.
+
+### Exercised
+
+| date | what was run | outcome |
+|---|---|---|
+| 2026-10-02 | `ConsumerFrameworkTest.runbookDrill_filtersPaceAndAuditTheReplay_andOnlyTheFailedGroupRedoesTheWork` — Kafka 4 + PostGIS (Testcontainers) with the whole worker: two events dead-lettered by one group after its retries; `DlqReplayCommand list` with `--event`, `--type`, `--failure`, `--since`/`--until` (ages), `--limit`; `replay` refused without `--actor`; `replay --rate=2 --actor --reason` | **passed** (9.5 s): both replayed in ≥ 0.5 s (paced), processed once by the failed group, the bystander group's claim absorbed the replay (no second run of its handler), one `events.dlq_replayed` audit entry with the actor, reason, group and event ids, a second run `ALREADY_REPLAYED` |
+| 2026-10-02 | `CustomerNotificationsTest.runbookDrill_aDeadDeferredNotification_isKept_listed_requeuedWithAnAudit_andSentOnce` — an SMS provider down for 11 attempts | **passed**: the row stays dead (`last_error = SmsDeliveryFailed`), the job ignores it, `list --deferred` shows it, `replay --deferred` without an actor is refused, with one it is requeued (audit `notifications.deferred_requeued`) and the job sends the SMS once; the push that went out earlier isn't repeated |
+| — | **not exercised:** a cluster Job against MSK / Managed Kafka / Event Hubs (no cloud environment exists); the Kafka UI / console-consumer inspection steps (manual, read-only) | |
 
 ## 4. Writing a consumer
 
