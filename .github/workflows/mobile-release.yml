@@ -1,0 +1,249 @@
+# S-103 — the store release of the native apps (consumer: mobile/apps/consumer, courier: mobile/apps/courier).
+# docs/runbooks/mobile-release.md; the same steps on GitLab: ci/gitlab/mobile-release.yml.
+#
+# MANUAL ONLY: like every workflow here (docs/runbooks/ci.md), it runs only when started from
+# Actions › mobile-release › Run workflow, or e.g.
+#   gh workflow run mobile-release.yml --ref main -f app=consumer -f action=build -f profile=production
+# Never add push / pull_request / schedule / tag triggers without the lead's say-so.
+#
+#   check                    the offline release checks (also first in every other action)
+#   build                    EAS Build of `profile` for `platform`; production: the tag <app>-v<version> is created
+#                            (or must already name this commit) and EAS submits to TestFlight + the Play internal track
+#   listing                  App Store listing (eas metadata:push) + Play listing text (fastlane android listing)
+#   submit-review            iOS: send `build_number` from TestFlight to App Review (manual release, 7-day phased)
+#   promote                  Android: `version_code` from internal to production at `rollout` (default 0.1 = 10 %)
+#   rollout                  Android: raise the production rollout (1 completes it)
+#   halt                     Android: halt the production rollout
+#   update                   EAS Update to `channel` (JS only; reaches binaries with the same runtime fingerprint)
+#   update-republish         roll an update back: republish the known good update `group`
+#   update-rollback-embedded roll `channel` back to the JS inside the binaries
+#
+# listing, submit-review and promote run the checks with --strict: nothing goes public while the store ids, real
+# screenshots or account deletion are pending. Inert (skipped with a notice) until the secrets exist:
+#   secrets  EXPO_TOKEN; ASC_API_KEY_P8 (the App Store Connect API key's .p8 text); PLAY_SERVICE_ACCOUNT_JSON
+#   vars     EAS_OWNER, EAS_CONSUMER_PROJECT_ID, EAS_COURIER_PROJECT_ID (or EAS_PROJECT_ID), ASC_API_KEY_ID, ASC_API_ISSUER_ID
+# Signing keys stay in EAS (`eas credentials`); nothing here is ever written to the repository.
+name: mobile-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: Which app
+        type: choice
+        options: [consumer, courier]
+        default: consumer
+      action:
+        description: What to do (see the header of this file)
+        type: choice
+        options: [check, build, listing, submit-review, promote, rollout, halt, update, update-republish, update-rollback-embedded]
+        default: check
+      profile:
+        description: "build: EAS build profile (production = store build, submitted to TestFlight + Play internal)"
+        type: choice
+        options: [production, preview, development-device, development]
+        default: production
+      platform:
+        description: "build: platform"
+        type: choice
+        options: [all, ios, android]
+        default: all
+      build_number:
+        description: "submit-review: the iOS build number"
+        required: false
+      version_code:
+        description: "promote, rollout, halt: the Android versionCode"
+        required: false
+      rollout:
+        description: "promote, rollout: Play production fraction (0.1 = 10 %, 1 = everyone)"
+        required: false
+        default: "0.1"
+      channel:
+        description: "update, update-rollback-embedded: EAS Update channel"
+        type: choice
+        options: [preview, production, development]
+        default: preview
+      message:
+        description: "update: what changed (shown in EAS)"
+        required: false
+      group:
+        description: "update-republish: the update group id to republish (eas update:list)"
+        required: false
+      update_rollout:
+        description: "update: percentage of the channel that gets it first (empty = everyone)"
+        required: false
+
+permissions:
+  contents: write # the release tag (build, production only)
+
+concurrency:
+  group: mobile-release-${{ inputs.app }}
+  cancel-in-progress: false
+
+env:
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+  APP: ${{ inputs.app }}
+  # going public refuses anything still pending (store ids, placeholder screenshots, account deletion); a build for
+  # TestFlight / internal testing does not need the screenshots
+  STRICT: ${{ contains(fromJSON('["listing","submit-review","promote"]'), inputs.action) }}
+
+jobs:
+  check:
+    name: release checks (${{ inputs.app }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - name: Inputs for this action
+        env:
+          ACTION: ${{ inputs.action }}
+          BUILD_NUMBER: ${{ inputs.build_number }}
+          VERSION_CODE: ${{ inputs.version_code }}
+          MESSAGE: ${{ inputs.message }}
+          GROUP: ${{ inputs.group }}
+        run: |
+          case "$ACTION" in
+            submit-review) [[ "$BUILD_NUMBER" =~ ^[0-9]+$ ]] || { echo "::error::submit-review needs build_number"; exit 1; } ;;
+            promote|rollout|halt) [[ "$VERSION_CODE" =~ ^[0-9]+$ ]] || { echo "::error::$ACTION needs version_code"; exit 1; } ;;
+            update) [ -n "$MESSAGE" ] || { echo "::error::update needs a message"; exit 1; } ;;
+            update-republish) [ -n "$GROUP" ] || { echo "::error::update-republish needs the group id"; exit 1; } ;;
+          esac
+      - name: Release checks (offline)
+        run: |
+          set -o pipefail
+          flags=(--app "$APP"); [ "$STRICT" = true ] && flags+=(--strict)
+          node packages/release/src/cli.mjs check "${flags[@]}" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: The release tag names this commit (production builds)
+        if: inputs.action == 'build' && inputs.profile == 'production'
+        run: |
+          tag="$APP-v$(node packages/release/src/cli.mjs version "$APP")"
+          node packages/release/src/cli.mjs tag "$APP" "$tag"
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            [ "$(git rev-list -n1 "$tag")" = "$(git rev-parse HEAD)" ] || { echo "::error::$tag already names another commit: raise the version (make mobile-version-set)"; exit 1; }
+          else
+            git tag "$tag" && git push origin "$tag"
+          fi
+          echo "Release tag: $tag" >> "$GITHUB_STEP_SUMMARY"
+
+  eas:
+    name: EAS ${{ inputs.action }} (${{ inputs.app }})
+    needs: check
+    if: contains(fromJSON('["build","update","update-republish","update-rollback-embedded","listing"]'), inputs.action)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EAS_OWNER: ${{ vars.EAS_OWNER }}
+      EAS_PROJECT_ID: ${{ inputs.app == 'consumer' && vars.EAS_CONSUMER_PROJECT_ID || inputs.app == 'courier' && (vars.EAS_COURIER_PROJECT_ID || vars.EAS_PROJECT_ID) || '' }}
+      ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+      ASC_API_KEY_ID: ${{ vars.ASC_API_KEY_ID }}
+      ASC_API_ISSUER_ID: ${{ vars.ASC_API_ISSUER_ID }}
+    steps:
+      - name: Is EAS configured?
+        id: gate
+        run: |
+          ok=true
+          { [ -n "$EXPO_TOKEN" ] && [ -n "$EAS_PROJECT_ID" ]; } || ok=false
+          if [ "${{ inputs.action }}" = listing ] && [ -z "$ASC_API_KEY_P8" ]; then ok=false; fi
+          echo "enabled=$ok" >> "$GITHUB_OUTPUT"
+          [ "$ok" = true ] || echo "EXPO_TOKEN / the EAS project id (or, for listing, ASC_API_KEY_P8) is not set: nothing was done (docs/runbooks/mobile-release.md § One-time setup)." >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/checkout@v5
+        if: steps.gate.outputs.enabled == 'true'
+      - uses: actions/setup-node@v5
+        if: steps.gate.outputs.enabled == 'true'
+        with:
+          node-version: "22"
+      - name: pnpm install
+        if: steps.gate.outputs.enabled == 'true'
+        working-directory: mobile
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+      - name: EAS Build (queued on Expo's builders; production submits itself when it finishes)
+        if: steps.gate.outputs.enabled == 'true' && inputs.action == 'build'
+        run: make mobile-eas-build MOBILE_APP="$APP" EAS_PROFILE=${{ inputs.profile }} EAS_PLATFORM=${{ inputs.platform }} EAS_FLAGS=--no-wait
+      - name: EAS Update
+        if: steps.gate.outputs.enabled == 'true' && inputs.action == 'update'
+        env:
+          UPDATE_MESSAGE: ${{ inputs.message }}
+          UPDATE_ROLLOUT: ${{ inputs.update_rollout }}
+        run: make mobile-update MOBILE_APP="$APP" UPDATE_CHANNEL=${{ inputs.channel }} UPDATE_MESSAGE="$UPDATE_MESSAGE" UPDATE_ROLLOUT="$UPDATE_ROLLOUT"
+      - name: EAS Update rollback (republish a known good group)
+        if: steps.gate.outputs.enabled == 'true' && inputs.action == 'update-republish'
+        env:
+          UPDATE_GROUP: ${{ inputs.group }}
+        run: make mobile-update-republish MOBILE_APP="$APP" UPDATE_GROUP="$UPDATE_GROUP"
+      - name: EAS Update rollback to the embedded bundle
+        if: steps.gate.outputs.enabled == 'true' && inputs.action == 'update-rollback-embedded'
+        run: make mobile-update-rollback-embedded MOBILE_APP="$APP" UPDATE_CHANNEL=${{ inputs.channel }}
+      - name: App Store listing (EAS Metadata)
+        if: steps.gate.outputs.enabled == 'true' && inputs.action == 'listing'
+        run: |
+          umask 077
+          printf '%s\n' "$ASC_API_KEY_P8" > "$RUNNER_TEMP/asc.p8"
+          EXPO_ASC_API_KEY_PATH="$RUNNER_TEMP/asc.p8" EXPO_ASC_KEY_ID="$ASC_API_KEY_ID" EXPO_ASC_ISSUER_ID="$ASC_API_ISSUER_ID" \
+            make mobile-store-metadata MOBILE_APP="$APP"
+          rm -f "$RUNNER_TEMP/asc.p8"
+
+  store:
+    name: Store ${{ inputs.action }} (${{ inputs.app }})
+    needs: check
+    if: contains(fromJSON('["listing","submit-review","promote","rollout","halt"]'), inputs.action)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      NL_APP: ${{ inputs.app }}
+      ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+      ASC_KEY_ID: ${{ vars.ASC_API_KEY_ID }}
+      ASC_ISSUER_ID: ${{ vars.ASC_API_ISSUER_ID }}
+      PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+      BUILD_NUMBER: ${{ inputs.build_number }}
+      VERSION_CODE: ${{ inputs.version_code }}
+      ROLLOUT: ${{ inputs.rollout }}
+    steps:
+      - name: Are the store keys configured?
+        id: gate
+        working-directory: .
+        run: |
+          if [ "${{ inputs.action }}" = submit-review ]; then need="$ASC_API_KEY_P8"; else need="$PLAY_SERVICE_ACCOUNT_JSON"; fi
+          if [ -n "$need" ]; then echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else echo "enabled=false" >> "$GITHUB_OUTPUT"; echo "The store key for this action is not set: nothing was done (docs/runbooks/mobile-release.md § One-time setup)." >> "$GITHUB_STEP_SUMMARY"; fi
+      - uses: actions/checkout@v5
+        if: steps.gate.outputs.enabled == 'true'
+      - uses: ruby/setup-ruby@v1
+        if: steps.gate.outputs.enabled == 'true'
+        with:
+          ruby-version: "3.3"
+      - name: Store keys for this run (temp directory, deleted after)
+        if: steps.gate.outputs.enabled == 'true'
+        run: |
+          umask 077
+          gem install fastlane -N --no-document >/dev/null
+          printf '%s\n' "$ASC_API_KEY_P8" > "$RUNNER_TEMP/asc.p8"
+          printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/play.json"
+          { echo "ASC_KEY_PATH=$RUNNER_TEMP/asc.p8"; echo "PLAY_SERVICE_ACCOUNT_JSON_PATH=$RUNNER_TEMP/play.json"; } >> "$GITHUB_ENV"
+      - name: fastlane
+        if: steps.gate.outputs.enabled == 'true'
+        run: |
+          case "${{ inputs.action }}" in
+            listing) fastlane android listing ;;
+            submit-review) fastlane ios submit_review ;;
+            promote) fastlane android promote ;;
+            rollout) fastlane android rollout ;;
+            halt) fastlane android halt ;;
+          esac
+      - name: Delete the keys
+        if: always()
+        working-directory: .
+        run: rm -f "$RUNNER_TEMP/asc.p8" "$RUNNER_TEMP/play.json"
