@@ -81,7 +81,11 @@ class RetentionJobsTest extends IntegrationTest {
     }
 
     private @Nullable Object value(String sql, Object... params) {
-        return jdbc.sql(sql).params(params).query((rs, _) -> java.util.Optional.ofNullable(rs.getObject(1))).single().orElse(null);
+        return jdbc.sql(sql)
+                .params(params)
+                .query((rs, _) -> java.util.Optional.ofNullable(rs.getObject(1)))
+                .single()
+                .orElse(null);
     }
 
     private long count(String sql, Object... params) {
@@ -91,8 +95,11 @@ class RetentionJobsTest extends IntegrationTest {
     /** A person whose default address is in {@code province} (whose privacy law applies to them). */
     private String person(String province) {
         var id = data.user("Retention " + province);
-        sql("insert into identity.addresses (id, user_id, street, city, province, is_default) values (?, ?, '1 Main St', 'Town', ?, true)",
-                Ids.next(), id, province);
+        sql(
+                "insert into identity.addresses (id, user_id, street, city, province, is_default) values (?, ?, '1 Main St', 'Town', ?, true)",
+                Ids.next(),
+                id,
+                province);
         return id;
     }
 
@@ -101,14 +108,23 @@ class RetentionJobsTest extends IntegrationTest {
         var user = data.user("Sign In");
         var old = Ids.next();
         var recent = Ids.next();
-        sql("insert into identity.sessions (id, user_id, device, method, created_at, last_seen_at) "
-                + "values (?, ?, 'Pixel', 'passkey', now() - interval '14 months', now() - interval '13 months')", old, user);
-        sql("insert into identity.sessions (id, user_id, device, method, created_at, last_seen_at) "
-                + "values (?, ?, 'Pixel', 'passkey', now() - interval '14 months', now() - interval '20 days')", recent, user);
+        sql(
+                "insert into identity.sessions (id, user_id, device, method, created_at, last_seen_at) "
+                        + "values (?, ?, 'Pixel', 'passkey', now() - interval '14 months', now() - interval '13 months')",
+                old,
+                user);
+        sql(
+                "insert into identity.sessions (id, user_id, device, method, created_at, last_seen_at) "
+                        + "values (?, ?, 'Pixel', 'passkey', now() - interval '14 months', now() - interval '20 days')",
+                recent,
+                user);
         var asking = data.user("Asking");
         var kept = Ids.next();
-        sql("insert into identity.sessions (id, user_id, device, method, created_at, revoked_at) "
-                + "values (?, ?, 'iPhone', 'passkey', now() - interval '2 years', now() - interval '13 months')", kept, asking);
+        sql(
+                "insert into identity.sessions (id, user_id, device, method, created_at, revoked_at) "
+                        + "values (?, ?, 'iPhone', 'passkey', now() - interval '2 years', now() - interval '13 months')",
+                kept,
+                asking);
         mvc.perform(post("/api/v1/me/privacy-requests")
                         .with(TestJwt.customer(asking))
                         .header("X-Step-Up", "dev")
@@ -120,13 +136,15 @@ class RetentionJobsTest extends IntegrationTest {
         assertThat(dry.dryRun()).isTrue();
         assertThat(dry.affected()).isPositive();
         assertThat(dry.held()).isPositive();
-        assertThat(count("select count(*) from identity.sessions where id = ?", old)).isOne();
+        assertThat(count("select count(*) from identity.sessions where id = ?", old))
+                .isOne();
 
         var real = run("identity.sign_ins", false);
         assertThat(real.affected()).isPositive();
         assertThat(count("select count(*) from identity.sessions where id in (?, ?, ?)", old, recent, kept))
                 .isEqualTo(2);
-        assertThat(count("select count(*) from identity.sessions where id = ?", old)).isZero();
+        assertThat(count("select count(*) from identity.sessions where id = ?", old))
+                .isZero();
         assertThat(run("identity.sign_ins", false).affected()).as("idempotent").isZero();
         assertThat(meters.counter("northline.retention.rows", "category", "identity.sign_ins", "action", "delete")
                         .count())
@@ -141,18 +159,29 @@ class RetentionJobsTest extends IntegrationTest {
         var key = merchant + "/" + Ids.next() + ".jpg";
         attachments.put(key, new byte[] {1, 2, 3}, "image/jpeg");
         var file = Ids.next();
-        sql("insert into messaging.attachments (id, merchant_id, storage_key, file_name, content_type, byte_size, "
-                + "uploaded_by) values (?, ?, ?, 'a.jpg', 'image/jpeg', 3, ?)", file, merchant, key, customer);
+        sql(
+                "insert into messaging.attachments (id, merchant_id, storage_key, file_name, content_type, byte_size, "
+                        + "uploaded_by) values (?, ?, ?, 'a.jpg', 'image/jpeg', 3, ?)",
+                file,
+                merchant,
+                key,
+                customer);
         sql("update messaging.messages set attachments = array[?] where thread_id = ?", file, old);
         var recent = thread(merchant, customer, "order", Ids.next(), "1 year");
         var openOrder = Ids.next();
-        sql("insert into orders.orders (id, customer_id, type, state, placed_at) values (?, ?, 'goods', 'placed', "
-                + "now() - interval '3 years')", openOrder, customer);
+        sql(
+                "insert into orders.orders (id, customer_id, type, state, placed_at) values (?, ?, 'goods', 'placed', "
+                        + "now() - interval '3 years')",
+                openOrder,
+                customer);
         var held = thread(merchant, customer, "order", openOrder, "3 years");
         var dispute = Ids.next();
-        sql("insert into payments.disputes (id, opened_by, state, decided_at, opened_at, case_number) "
-                + "values (?, ?, 'decided', now() - interval '6 months', now() - interval '3 years', ?)",
-                dispute, customer, "DS-" + dispute);
+        sql(
+                "insert into payments.disputes (id, opened_by, state, decided_at, opened_at, case_number) "
+                        + "values (?, ?, 'decided', now() - interval '6 months', now() - interval '3 years', ?)",
+                dispute,
+                customer,
+                "DS-" + dispute);
         var disputed = thread(merchant, customer, "dispute", dispute, "3 years");
 
         var dry = run("messaging.conversations", true);
@@ -160,9 +189,12 @@ class RetentionJobsTest extends IntegrationTest {
         assertThat(dry.held()).isGreaterThanOrEqualTo(2);
 
         run("messaging.conversations", false);
-        assertThat(count("select count(*) from messaging.threads where id = ?", old)).isZero();
-        assertThat(count("select count(*) from messaging.messages where thread_id = ?", old)).isZero();
-        assertThat(count("select count(*) from messaging.attachments where id = ?", file)).isZero();
+        assertThat(count("select count(*) from messaging.threads where id = ?", old))
+                .isZero();
+        assertThat(count("select count(*) from messaging.messages where thread_id = ?", old))
+                .isZero();
+        assertThat(count("select count(*) from messaging.attachments where id = ?", file))
+                .isZero();
         assertThat(attachments.get(key)).isEmpty();
         assertThat(count("select count(*) from messaging.threads where id in (?, ?, ?)", recent, held, disputed))
                 .isEqualTo(3);
@@ -176,11 +208,24 @@ class RetentionJobsTest extends IntegrationTest {
 
     private String thread(String merchant, String customer, String refType, String refId, String age) {
         var id = Ids.next();
-        sql("insert into messaging.threads (id, merchant_id, kind, ref_type, ref_id, counterpart_id, counterpart_name, "
-                + "last_message_at, created_at) values (?, ?, 'customer', ?, ?, ?, 'A. Customer', now() - cast(? as "
-                + "interval), now() - cast(? as interval))", id, merchant, refType, refId, customer, age, age);
-        sql("insert into messaging.messages (id, thread_id, sender_id, body, at, sender_role) "
-                + "values (?, ?, ?, 'Is it ready?', now() - cast(? as interval), 'customer')", Ids.next(), id, customer, age);
+        sql(
+                "insert into messaging.threads (id, merchant_id, kind, ref_type, ref_id, counterpart_id, counterpart_name, "
+                        + "last_message_at, created_at) values (?, ?, 'customer', ?, ?, ?, 'A. Customer', now() - cast(? as "
+                        + "interval), now() - cast(? as interval))",
+                id,
+                merchant,
+                refType,
+                refId,
+                customer,
+                age,
+                age);
+        sql(
+                "insert into messaging.messages (id, thread_id, sender_id, body, at, sender_role) "
+                        + "values (?, ?, ?, 'Is it ready?', now() - cast(? as interval), 'customer')",
+                Ids.next(),
+                id,
+                customer,
+                age);
         return id;
     }
 
@@ -188,25 +233,39 @@ class RetentionJobsTest extends IntegrationTest {
     void helpCasesLoseTheirConversationAndWordsTwoYearsAfterResolution_photosTwoYearsAfterUpload() {
         var customer = data.user("Asker");
         var ticket = Ids.next();
-        sql("insert into messaging.tickets (id, requester_type, requester_id, topic, state, subject, context, "
-                + "resolution_note, resolved_at, created_at) values (?, 'customer', ?, 'order', 'resolved', 'Broken', "
-                + "'{\"portal\":\"consumer\"}', 'in your favour', now() - interval '3 years', now() - interval '3 years')",
-                ticket, customer);
+        sql(
+                "insert into messaging.tickets (id, requester_type, requester_id, topic, state, subject, context, "
+                        + "resolution_note, resolved_at, created_at) values (?, 'customer', ?, 'order', 'resolved', 'Broken', "
+                        + "'{\"portal\":\"consumer\"}', 'in your favour', now() - interval '3 years', now() - interval '3 years')",
+                ticket,
+                customer);
         var caseThread = Ids.next();
-        sql("insert into messaging.threads (id, kind, ref_type, ref_id, last_message_at, created_at) "
-                + "values (?, 'case', 'ticket', ?, now() - interval '3 years', now() - interval '3 years')", caseThread, ticket);
+        sql(
+                "insert into messaging.threads (id, kind, ref_type, ref_id, last_message_at, created_at) "
+                        + "values (?, 'case', 'ticket', ?, now() - interval '3 years', now() - interval '3 years')",
+                caseThread,
+                ticket);
         var key = "customers/" + customer + "/" + Ids.next() + ".jpg";
         attachments.put(key, new byte[] {4}, "image/jpeg");
         var upload = Ids.next();
-        sql("insert into messaging.customer_uploads (id, customer_id, storage_key, file_name, content_type, byte_size, "
-                + "created_at) values (?, ?, ?, 'p.jpg', 'image/jpeg', 1, now() - interval '25 months')", upload, customer, key);
+        sql(
+                "insert into messaging.customer_uploads (id, customer_id, storage_key, file_name, content_type, byte_size, "
+                        + "created_at) values (?, ?, ?, 'p.jpg', 'image/jpeg', 1, now() - interval '25 months')",
+                upload,
+                customer,
+                key);
 
         run("messaging.help_cases", false);
-        assertThat(count("select count(*) from messaging.threads where id = ?", caseThread)).isZero();
-        assertThat(value("select subject from messaging.tickets where id = ?", ticket)).isNull();
-        assertThat(value("select resolution_note from messaging.tickets where id = ?", ticket)).isNull();
-        assertThat(value("select state from messaging.tickets where id = ?", ticket)).isEqualTo("resolved");
-        assertThat(count("select count(*) from messaging.customer_uploads where id = ?", upload)).isZero();
+        assertThat(count("select count(*) from messaging.threads where id = ?", caseThread))
+                .isZero();
+        assertThat(value("select subject from messaging.tickets where id = ?", ticket))
+                .isNull();
+        assertThat(value("select resolution_note from messaging.tickets where id = ?", ticket))
+                .isNull();
+        assertThat(value("select state from messaging.tickets where id = ?", ticket))
+                .isEqualTo("resolved");
+        assertThat(count("select count(*) from messaging.customer_uploads where id = ?", upload))
+                .isZero();
         assertThat(attachments.get(key)).isEmpty();
     }
 
@@ -235,8 +294,12 @@ class RetentionJobsTest extends IntegrationTest {
         assertThat(located(plainOld)).isFalse();
         assertThat(located(plainRecent)).isTrue();
         assertThat(located(upcomingOld)).as("upcoming booking").isTrue();
-        assertThat(located(bcOld)).as("BC PIPA: a year after the decision (region.privacy_laws)").isTrue();
-        assertThat(located(abOld)).as("no minimum: gone once the dispute is decided").isFalse();
+        assertThat(located(bcOld))
+                .as("BC PIPA: a year after the decision (region.privacy_laws)")
+                .isTrue();
+        assertThat(located(abOld))
+                .as("no minimum: gone once the dispute is decided")
+                .isFalse();
         assertThat(located(openOld)).as("open dispute").isTrue();
         assertThat(count("select count(*) from booking.booking_events where id = ?", plainOld))
                 .as("the transition stays")
@@ -245,16 +308,27 @@ class RetentionJobsTest extends IntegrationTest {
 
     private String booking(String merchant, String customer, String state) {
         var id = Ids.next();
-        sql("insert into booking.bookings (id, customer_id, merchant_id, state, starts_at, ends_at, address_line, details) "
-                + "values (?, ?, ?, ?, now() - interval '200 days', now() - interval '200 days', '1 Main St', "
-                + "'{\"note\":\"gate code\"}')", id, customer, merchant, state);
+        sql(
+                "insert into booking.bookings (id, customer_id, merchant_id, state, starts_at, ends_at, address_line, details) "
+                        + "values (?, ?, ?, ?, now() - interval '200 days', now() - interval '200 days', '1 Main St', "
+                        + "'{\"note\":\"gate code\"}')",
+                id,
+                customer,
+                merchant,
+                state);
         return id;
     }
 
     private String event(String booking, String actor, String age) {
         var id = Ids.next();
-        sql("insert into booking.booking_events (id, booking_id, type, at, actor_id, geom) "
-                + "values (?, ?, 'on_site', now() - cast(? as interval), ?, cast(? as geography))", id, booking, age, actor, POINT);
+        sql(
+                "insert into booking.booking_events (id, booking_id, type, at, actor_id, geom) "
+                        + "values (?, ?, 'on_site', now() - cast(? as interval), ?, cast(? as geography))",
+                id,
+                booking,
+                age,
+                actor,
+                POINT);
         return id;
     }
 
@@ -265,23 +339,38 @@ class RetentionJobsTest extends IntegrationTest {
     /** A dispute decided {@code ago} about a booking or an order line, through its escrow. */
     private String decidedDispute(String refType, String refId, String customer, String ago) {
         var escrow = Ids.next();
-        sql("insert into payments.escrows (id, ref_type, ref_id, state, customer_id, occurred_at, created_at) "
-                + "values (?, ?, ?, 'refunded', ?, now() - interval '3 years', now() - interval '3 years')",
-                escrow, refType, refId, customer);
+        sql(
+                "insert into payments.escrows (id, ref_type, ref_id, state, customer_id, occurred_at, created_at) "
+                        + "values (?, ?, ?, 'refunded', ?, now() - interval '3 years', now() - interval '3 years')",
+                escrow,
+                refType,
+                refId,
+                customer);
         var dispute = Ids.next();
-        sql("insert into payments.disputes (id, ref_id, opened_by, state, decided_at, opened_at, case_number) "
-                + "values (?, ?, ?, 'decided', now() - cast(? as interval), now() - interval '3 years', ?)",
-                dispute, escrow, customer, ago, "DS-" + dispute);
+        sql(
+                "insert into payments.disputes (id, ref_id, opened_by, state, decided_at, opened_at, case_number) "
+                        + "values (?, ?, ?, 'decided', now() - cast(? as interval), now() - interval '3 years', ?)",
+                dispute,
+                escrow,
+                customer,
+                ago,
+                "DS-" + dispute);
         return dispute;
     }
 
     private void openDispute(String refType, String refId) {
         var escrow = Ids.next();
-        sql("insert into payments.escrows (id, ref_type, ref_id, state, created_at) values (?, ?, ?, 'disputed', now())",
-                escrow, refType, refId);
+        sql(
+                "insert into payments.escrows (id, ref_type, ref_id, state, created_at) values (?, ?, ?, 'disputed', now())",
+                escrow,
+                refType,
+                refId);
         var dispute = Ids.next();
-        sql("insert into payments.disputes (id, ref_id, state, opened_at, case_number) values (?, ?, 'open', now(), ?)",
-                dispute, escrow, "DS-" + dispute);
+        sql(
+                "insert into payments.disputes (id, ref_id, state, opened_at, case_number) values (?, ?, 'open', now(), ?)",
+                dispute,
+                escrow,
+                "DS-" + dispute);
     }
 
     @Test
@@ -290,9 +379,11 @@ class RetentionJobsTest extends IntegrationTest {
         var key = Ids.next() + "/" + Ids.next() + ".pdf";
         evidence.put(key, new byte[] {9}, "application/pdf");
         var old = decidedDispute("booking", Ids.next(), customer, "400 days");
-        sql("update payments.disputes set customer_statement = 'It leaked', response = 'It did not', "
-                + "evidence = cast(? as jsonb) where id = ?",
-                "[{\"id\":\"e1\",\"kind\":\"photo\",\"name\":\"leak.pdf\",\"storageKey\":\"" + key + "\"}]", old);
+        sql(
+                "update payments.disputes set customer_statement = 'It leaked', response = 'It did not', "
+                        + "evidence = cast(? as jsonb) where id = ?",
+                "[{\"id\":\"e1\",\"kind\":\"photo\",\"name\":\"leak.pdf\",\"storageKey\":\"" + key + "\"}]",
+                old);
         var recent = decidedDispute("booking", Ids.next(), customer, "200 days");
         sql("update payments.disputes set customer_statement = 'Late' where id = ?", recent);
 
@@ -301,11 +392,15 @@ class RetentionJobsTest extends IntegrationTest {
         assertThat(dry.held()).isPositive();
 
         run("payments.dispute_evidence", false);
-        assertThat(value("select customer_statement from payments.disputes where id = ?", old)).isNull();
-        assertThat(value("select evidence::text from payments.disputes where id = ?", old)).isEqualTo("[]");
-        assertThat(value("select state from payments.disputes where id = ?", old)).isEqualTo("decided");
+        assertThat(value("select customer_statement from payments.disputes where id = ?", old))
+                .isNull();
+        assertThat(value("select evidence::text from payments.disputes where id = ?", old))
+                .isEqualTo("[]");
+        assertThat(value("select state from payments.disputes where id = ?", old))
+                .isEqualTo("decided");
         assertThat(evidence.get(key)).isEmpty();
-        assertThat(value("select customer_statement from payments.disputes where id = ?", recent)).isEqualTo("Late");
+        assertThat(value("select customer_statement from payments.disputes where id = ?", recent))
+                .isEqualTo("Late");
     }
 
     @Test
@@ -314,12 +409,18 @@ class RetentionJobsTest extends IntegrationTest {
         var key = Ids.next() + ".jpg";
         proofs.put(key, new byte[] {7}, "image/jpeg");
         var stop = Ids.next();
-        sql("insert into fulfilment.stops (id, order_id, kind, seq, state, done_at, proof_kind, proof_media_id) "
-                + "values (?, ?, 'dropoff', 1, 'done', now() - interval '25 months', 'photo', ?)", stop, order, key);
+        sql(
+                "insert into fulfilment.stops (id, order_id, kind, seq, state, done_at, proof_kind, proof_media_id) "
+                        + "values (?, ?, 'dropoff', 1, 'done', now() - interval '25 months', 'photo', ?)",
+                stop,
+                order,
+                key);
 
         run("fulfilment.delivery_proofs", false);
-        assertThat(value("select proof_media_id from fulfilment.stops where id = ?", stop)).isNull();
-        assertThat(value("select proof_kind from fulfilment.stops where id = ?", stop)).isEqualTo("photo");
+        assertThat(value("select proof_media_id from fulfilment.stops where id = ?", stop))
+                .isNull();
+        assertThat(value("select proof_kind from fulfilment.stops where id = ?", stop))
+                .isEqualTo("photo");
         assertThat(proofs.get(key)).isEmpty();
     }
 
@@ -327,44 +428,70 @@ class RetentionJobsTest extends IntegrationTest {
     void salesRecordsLoseThePersonAfterSevenYears_amountsStay_openOrdersHold() {
         var customer = data.user("Old Customer");
         var old = Ids.next();
-        sql("insert into orders.orders (id, customer_id, type, state, placed_at, delivery_area, subtotal_cents, tax_cents) "
-                + "values (?, ?, 'goods', 'delivered', now() - interval '8 years', 'Downtown', 1000, 50)", old, customer);
+        sql(
+                "insert into orders.orders (id, customer_id, type, state, placed_at, delivery_area, subtotal_cents, tax_cents) "
+                        + "values (?, ?, 'goods', 'delivered', now() - interval '8 years', 'Downtown', 1000, 50)",
+                old,
+                customer);
         var open = Ids.next();
-        sql("insert into orders.orders (id, customer_id, type, state, placed_at) "
-                + "values (?, ?, 'goods', 'placed', now() - interval '8 years')", open, customer);
+        sql(
+                "insert into orders.orders (id, customer_id, type, state, placed_at) "
+                        + "values (?, ?, 'goods', 'placed', now() - interval '8 years')",
+                open,
+                customer);
         var merchant = data.merchant("provider", "Retention Seven");
         var booking = Ids.next();
-        sql("insert into booking.bookings (id, customer_id, merchant_id, state, starts_at, ends_at, address_line, "
-                + "price_cents, details) values (?, ?, ?, 'completed', now() - interval '8 years', now() - interval "
-                + "'8 years', '1 Main St', 9000, '{\"note\":\"x\"}')", booking, customer, merchant);
+        sql(
+                "insert into booking.bookings (id, customer_id, merchant_id, state, starts_at, ends_at, address_line, "
+                        + "price_cents, details) values (?, ?, ?, 'completed', now() - interval '8 years', now() - interval "
+                        + "'8 years', '1 Main St', 9000, '{\"note\":\"x\"}')",
+                booking,
+                customer,
+                merchant);
         var escrow = Ids.next();
-        sql("insert into payments.escrows (id, ref_type, ref_id, state, customer_id, customer_name, amount_cents, "
-                + "created_at) values (?, 'booking', ?, 'released', ?, 'O. Customer', 9000, now() - interval '8 years')",
-                escrow, booking, customer);
+        sql(
+                "insert into payments.escrows (id, ref_type, ref_id, state, customer_id, customer_name, amount_cents, "
+                        + "created_at) values (?, 'booking', ?, 'released', ?, 'O. Customer', 9000, now() - interval '8 years')",
+                escrow,
+                booking,
+                customer);
 
         run("orders.sales_records", false);
         run("booking.sales_records", false);
         run("payments.financial_records", false);
-        assertThat(value("select customer_id from orders.orders where id = ?", old)).isNull();
-        assertThat(value("select subtotal_cents from orders.orders where id = ?", old)).isEqualTo(1000L);
-        assertThat(value("select customer_id from orders.orders where id = ?", open)).isEqualTo(customer);
-        assertThat(value("select customer_id from booking.bookings where id = ?", booking)).isNull();
-        assertThat(value("select address_line from booking.bookings where id = ?", booking)).isNull();
-        assertThat(value("select price_cents from booking.bookings where id = ?", booking)).isEqualTo(9000L);
-        assertThat(value("select customer_name from payments.escrows where id = ?", escrow)).isNull();
-        assertThat(value("select amount_cents from payments.escrows where id = ?", escrow)).isEqualTo(9000L);
+        assertThat(value("select customer_id from orders.orders where id = ?", old))
+                .isNull();
+        assertThat(value("select subtotal_cents from orders.orders where id = ?", old))
+                .isEqualTo(1000L);
+        assertThat(value("select customer_id from orders.orders where id = ?", open))
+                .isEqualTo(customer);
+        assertThat(value("select customer_id from booking.bookings where id = ?", booking))
+                .isNull();
+        assertThat(value("select address_line from booking.bookings where id = ?", booking))
+                .isNull();
+        assertThat(value("select price_cents from booking.bookings where id = ?", booking))
+                .isEqualTo(9000L);
+        assertThat(value("select customer_name from payments.escrows where id = ?", escrow))
+                .isNull();
+        assertThat(value("select amount_cents from payments.escrows where id = ?", escrow))
+                .isEqualTo(9000L);
     }
 
     @Test
     void theAuditLogGoesAfterSevenYears() {
         var old = Ids.next();
         var recent = Ids.next();
-        sql("insert into developer.audit_log (id, action, at) values (?, 'test.retention', now() - interval '8 years')", old);
-        sql("insert into developer.audit_log (id, action, at) values (?, 'test.retention', now() - interval '6 years')",
+        sql(
+                "insert into developer.audit_log (id, action, at) values (?, 'test.retention', now() - interval '8 years')",
+                old);
+        sql(
+                "insert into developer.audit_log (id, action, at) values (?, 'test.retention', now() - interval '6 years')",
                 recent);
         run("developer.audit_log", false);
-        assertThat(count("select count(*) from developer.audit_log where id = ?", old)).isZero();
-        assertThat(count("select count(*) from developer.audit_log where id = ?", recent)).isOne();
+        assertThat(count("select count(*) from developer.audit_log where id = ?", old))
+                .isZero();
+        assertThat(count("select count(*) from developer.audit_log where id = ?", recent))
+                .isOne();
     }
 
     @Test
@@ -386,8 +513,10 @@ class RetentionJobsTest extends IntegrationTest {
                 .andExpect(status().isOk());
         privacy.run(id);
         sql("update privacy.requests set started_at = now() - interval '40 days' where id = ?", id);
-        sql("update privacy.erasure_steps set status = 'failed', next_attempt_at = now() + interval '6 hours', "
-                + "done_at = null where request_id = ? and module = 'account'", id);
+        sql(
+                "update privacy.erasure_steps set status = 'failed', next_attempt_at = now() + interval '6 hours', "
+                        + "done_at = null where request_id = ? and module = 'account'",
+                id);
 
         assertThat(run("account.closed_profile", true).affected()).isPositive();
         run("account.closed_profile", false);
@@ -415,7 +544,9 @@ class RetentionJobsTest extends IntegrationTest {
         assertThat(count("select count(*) from developer.audit_log where action = 'privacy.retention_run' "
                         + "and target_id = 'identity.sign_ins' and actor_id = 'system'"))
                 .isPositive();
-        assertThat(meters.find("northline.retention.last_success").tag("category", "identity.sign_ins").gauge())
+        assertThat(meters.find("northline.retention.last_success")
+                        .tag("category", "identity.sign_ins")
+                        .gauge())
                 .isNotNull();
     }
 
@@ -437,19 +568,24 @@ class RetentionJobsTest extends IntegrationTest {
 
         mvc.perform(get(PATH).with(TestJwt.staff(staff, StaffRole.PRIVACY)).header("Accept-Language", "fr-CA"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.categories.length()").value(catalogue.categories().size()))
-                .andExpect(jsonPath("$.categories[?(@.code == 'identity.sign_ins')].period").value("P12M"))
+                .andExpect(jsonPath("$.categories.length()")
+                        .value(catalogue.categories().size()))
+                .andExpect(jsonPath("$.categories[?(@.code == 'identity.sign_ins')].period")
+                        .value("P12M"))
                 .andExpect(jsonPath("$.categories[?(@.code == 'identity.sign_ins')].name")
                         .value("Connexions (appareil, adresse réseau, ville)"))
-                .andExpect(jsonPath("$.laws[?(@.code == 'bc_pipa')].decisionRetentionDays").value(365))
-                .andExpect(jsonPath("$.operational.length()").value(catalogue.operational().size()));
+                .andExpect(jsonPath("$.laws[?(@.code == 'bc_pipa')].decisionRetentionDays")
+                        .value(365))
+                .andExpect(jsonPath("$.operational.length()")
+                        .value(catalogue.operational().size()));
 
         mvc.perform(get(PATH + "/export").with(TestJwt.staff(staff, StaffRole.SUPPORT_LEAD)))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Disposition", "attachment; filename=\"retention-report.csv\""))
                 .andExpect(content().contentTypeCompatibleWith("text/csv"))
                 .andExpect(content().string(org.hamcrest.Matchers.startsWith("\"category\",\"module\",\"name\"")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("\"identity.sign_ins\",\"identity\"")));
+                .andExpect(
+                        content().string(org.hamcrest.Matchers.containsString("\"identity.sign_ins\",\"identity\"")));
 
         mvc.perform(post(PATH + "/runs")
                         .with(TestJwt.staff(staff, StaffRole.ADMIN))
@@ -467,8 +603,10 @@ class RetentionJobsTest extends IntegrationTest {
                 .andExpect(jsonPath("$.items[0].category").value("developer.audit_log"))
                 .andExpect(jsonPath("$.items[0].dryRun").value(true))
                 .andExpect(jsonPath("$.items[0].trigger").value("staff"));
-        assertThat(count("select count(*) from developer.audit_log where action = 'privacy.retention_run' "
-                        + "and actor_id = ? and role = 'support_lead' and after->>'dryRun' = 'true'", staff))
+        assertThat(count(
+                        "select count(*) from developer.audit_log where action = 'privacy.retention_run' "
+                                + "and actor_id = ? and role = 'support_lead' and after->>'dryRun' = 'true'",
+                        staff))
                 .isOne();
     }
 }

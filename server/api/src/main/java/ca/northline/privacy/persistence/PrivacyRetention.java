@@ -66,8 +66,8 @@ class PrivacyRetention implements RetentionContributor {
                           from privacy.erasure_steps s cross join jsonb_array_elements(s.holds) h
                          where s.status = 'held'
                         """)
-                .query((rs, _) -> HeldRef.open(
-                        "privacy_request", rs.getString("request_id"), hold(rs.getString("reason"))))
+                .query((rs, _) ->
+                        HeldRef.open("privacy_request", rs.getString("request_id"), hold(rs.getString("reason"))))
                 .list();
     }
 
@@ -100,10 +100,7 @@ class PrivacyRetention implements RetentionContributor {
                 var left = jdbc.sql("""
                                 select count(*) from privacy.erasure_steps
                                  where request_id = :id and status in ('pending', 'failed')
-                                """)
-                        .param("id", id)
-                        .query(Long.class)
-                        .single();
+                                """).param("id", id).query(Long.class).single();
                 done += left == 0 ? 1 : 0;
             } catch (RuntimeException e) {
                 log.warn("Overdue erasure {} still fails ({})", id, e.getClass().getSimpleName());

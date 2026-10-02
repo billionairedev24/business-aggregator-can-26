@@ -73,7 +73,8 @@ class BookingRetention implements RetentionContributor {
 
     @Override
     public List<HeldRef> holds(Instant now) {
-        return jdbc.sql("select id from booking.bookings where state in " + BookingPersonalData.UPCOMING)
+        return jdbc
+                .sql("select id from booking.bookings where state in " + BookingPersonalData.UPCOMING)
                 .query((rs, _) -> rs.getString(1))
                 .list()
                 .stream()
@@ -102,9 +103,7 @@ class BookingRetention implements RetentionContributor {
             case CHECKINS -> jdbc.sql("""
                             update booking.booking_events set geom = null
                              where id in (select e.id %s order by e.at limit :batch)
-                            """.formatted(LOCATED))
-                    .params(p)
-                    .update();
+                            """.formatted(LOCATED)).params(p).update();
             case SALES_RECORDS -> salesRecords(p);
             default -> throw new IllegalArgumentException(run.category());
         };
@@ -126,16 +125,12 @@ class BookingRetention implements RetentionContributor {
                                set customer_id = null, address_id = null, address_line = null, area = null,
                                    details = '{}'::jsonb, updated_at = now(), version = version + 1
                              where id = any(:ids)
-                            """)
-                    .param("ids", array)
-                    .update();
+                            """).param("ids", array).update();
         }
         done += jdbc.sql("""
                         update booking.quote_requests set customer_id = null, details = '{}'::jsonb, media = '{}'
                          where id in (select q.id %s limit :batch)
-                        """.formatted(QUOTE_REQUESTS))
-                .params(p)
-                .update();
+                        """.formatted(QUOTE_REQUESTS)).params(p).update();
         done += jdbc.sql("delete from booking.quote_acceptances where quote_id in (select a.quote_id %s limit :batch)"
                         .formatted(ACCEPTANCES))
                 .params(p)
@@ -144,7 +139,6 @@ class BookingRetention implements RetentionContributor {
     }
 
     private static Map<String, Object> params(Run run) {
-        return Map.of(
-                "cutoff", run.before(), "held", run.heldKeys(), "subjects", run.subjects(), "batch", run.batch());
+        return Map.of("cutoff", run.before(), "held", run.heldKeys(), "subjects", run.subjects(), "batch", run.batch());
     }
 }

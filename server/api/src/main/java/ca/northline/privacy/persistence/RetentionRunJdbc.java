@@ -50,9 +50,7 @@ class RetentionRunJdbc implements RetentionRunStore {
                         insert into privacy.retention_runs (%s)
                         values (:id, :category, :module, :dry, :trigger, :actor, :started, :finished, :outcome,
                                 :affected, :held, :remaining, :error)
-                        """.formatted(COLUMNS))
-                .params(p)
-                .update();
+                        """.formatted(COLUMNS)).params(p).update();
     }
 
     @Override
@@ -106,9 +104,7 @@ class RetentionRunJdbc implements RetentionRunStore {
         return Set.copyOf(jdbc.sql("""
                         select distinct subject_id from privacy.requests
                          where state in ('awaiting_verification', 'verified', 'in_progress')
-                        """)
-                .query((rs, _) -> rs.getString(1))
-                .list());
+                        """).query((rs, _) -> rs.getString(1)).list());
     }
 
     private static RunRecord row(ResultSet rs, int ignored) throws SQLException {

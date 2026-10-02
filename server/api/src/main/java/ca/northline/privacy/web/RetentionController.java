@@ -67,7 +67,6 @@ class RetentionController {
     @RequiresConsole(value = ConsoleScreen.PRIVACY, actions = ConsoleAction.PRIVACY)
     ListResponse<Retention.RunView> run(@RequestBody RunBody body, CurrentStaff staff) {
         return new ListResponse<>(desk.run(
-                new Retention.Command(body.dryRun(), body.category()),
-                new Actor(staff.userId(), staff.roleCodes())));
+                new Retention.Command(body.dryRun(), body.category()), new Actor(staff.userId(), staff.roleCodes())));
     }
 }

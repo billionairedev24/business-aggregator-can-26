@@ -145,8 +145,7 @@ class PaymentsRetention implements RetentionContributor {
         var p = params(run);
         return switch (run.category()) {
             case EVIDENCE -> count(EVIDENCE_DUE, p);
-            case FINANCIAL ->
-                count(ESCROWS, p) + count(INTENTS, p) + count(REFUNDS, p) + count(DISPUTES, p);
+            case FINANCIAL -> count(ESCROWS, p) + count(INTENTS, p) + count(REFUNDS, p) + count(DISPUTES, p);
             default -> throw new IllegalArgumentException(run.category());
         };
     }
@@ -167,8 +166,8 @@ class PaymentsRetention implements RetentionContributor {
 
     /** Statements blanked and files deleted; a file already gone is fine (idempotent). */
     private long evidence(Map<String, Object> p) {
-        var due = jdbc.sql("select d.id, coalesce(d.evidence, '[]'::jsonb)::text as evidence "
-                        + EVIDENCE_DUE + " order by d.decided_at limit :batch")
+        var due = jdbc.sql("select d.id, coalesce(d.evidence, '[]'::jsonb)::text as evidence " + EVIDENCE_DUE
+                        + " order by d.decided_at limit :batch")
                 .params(p)
                 .query((rs, _) -> Map.entry(rs.getString("id"), rs.getString("evidence")))
                 .list();
@@ -181,9 +180,7 @@ class PaymentsRetention implements RetentionContributor {
                                set evidence = '[]'::jsonb, customer_statement = null, response = null,
                                    decision_note = null, version = version + 1
                              where id = :id
-                            """)
-                    .param("id", dispute.getKey())
-                    .update();
+                            """).param("id", dispute.getKey()).update();
         }
         return due.size();
     }
@@ -207,11 +204,10 @@ class PaymentsRetention implements RetentionContributor {
         var done = jdbc.sql("""
                         update payments.escrows set customer_id = null, customer_name = null, version = version + 1
                          where id in (select e.id %s limit :batch)
-                        """.formatted(ESCROWS))
-                .params(p)
-                .update();
-        done += jdbc.sql("update payments.payment_intents set customer_id = null where id in (select p.id %s limit :batch)"
-                        .formatted(INTENTS))
+                        """.formatted(ESCROWS)).params(p).update();
+        done += jdbc.sql(
+                        "update payments.payment_intents set customer_id = null where id in (select p.id %s limit :batch)"
+                                .formatted(INTENTS))
                 .params(p)
                 .update();
         done += jdbc.sql("""
@@ -219,20 +215,15 @@ class PaymentsRetention implements RetentionContributor {
                            set customer_name = null, what = null, reason = null, contest_reason = null,
                                version = version + 1
                          where id in (select r.id %s limit :batch)
-                        """.formatted(REFUNDS))
-                .params(p)
-                .update();
+                        """.formatted(REFUNDS)).params(p).update();
         done += jdbc.sql("""
                         update payments.disputes set customer_name = null, opened_by = null, version = version + 1
                          where id in (select d.id %s limit :batch)
-                        """.formatted(DISPUTES))
-                .params(p)
-                .update();
+                        """.formatted(DISPUTES)).params(p).update();
         return done;
     }
 
     private static Map<String, Object> params(Run run) {
-        return Map.of(
-                "cutoff", run.before(), "held", run.heldKeys(), "subjects", run.subjects(), "batch", run.batch());
+        return Map.of("cutoff", run.before(), "held", run.heldKeys(), "subjects", run.subjects(), "batch", run.batch());
     }
 }

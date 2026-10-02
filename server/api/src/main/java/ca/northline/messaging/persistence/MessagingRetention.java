@@ -109,17 +109,13 @@ class MessagingRetention implements RetentionContributor {
         jdbc.sql("""
                         update messaging.support_refund_requests set note = null, decision_note = null
                          where ticket_id = any(:k) and (note is not null or decision_note is not null)
-                        """)
-                .param("k", array)
-                .update();
+                        """).param("k", array).update();
         jdbc.sql("""
                         update messaging.tickets
                            set subject = null, ref_label = null, context = null, resolution_note = null,
                                updated_at = now()
                          where id = any(:k)
-                        """)
-                .param("k", array)
-                .update();
+                        """).param("k", array).update();
         return cases.size();
     }
 
@@ -169,11 +165,13 @@ class MessagingRetention implements RetentionContributor {
     }
 
     private List<String> ids(String select, Map<String, Object> p) {
-        return jdbc.sql(select + " limit :batch").params(p).query((rs, _) -> rs.getString(1)).list();
+        return jdbc.sql(select + " limit :batch")
+                .params(p)
+                .query((rs, _) -> rs.getString(1))
+                .list();
     }
 
     private static Map<String, Object> params(Run run) {
-        return Map.of(
-                "cutoff", run.before(), "held", run.heldKeys(), "subjects", run.subjects(), "batch", run.batch());
+        return Map.of("cutoff", run.before(), "held", run.heldKeys(), "subjects", run.subjects(), "batch", run.batch());
     }
 }

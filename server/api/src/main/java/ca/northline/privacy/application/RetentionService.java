@@ -105,7 +105,8 @@ class RetentionService implements Retention.Work, Retention.Desk {
         var map = new HashMap<String, RetentionContributor>();
         for (var contributor : contributors) {
             for (var code : contributor.categories()) {
-                var category = catalogue.category(code)
+                var category = catalogue
+                        .category(code)
                         .orElseThrow(() -> new IllegalStateException(
                                 contributor.module() + " runs " + code + ", which is not in the retention schedule"));
                 if (!category.runs() || !category.module().equals(contributor.module())) {
@@ -146,7 +147,8 @@ class RetentionService implements Retention.Work, Retention.Desk {
         var code = command.category();
         var categories = code == null
                 ? catalogue.runnable()
-                : List.of(catalogue.category(code)
+                : List.of(catalogue
+                        .category(code)
                         .filter(Category::runs)
                         .orElseThrow(() -> RuleViolation.of("category", "unknown", UNKNOWN_CATEGORY)));
         var context = context(clock.instant());
@@ -249,7 +251,8 @@ class RetentionService implements Retention.Work, Retention.Desk {
     private long purge(RetentionContributor contributor, Run run) {
         long total = 0;
         for (var batch = 0; batch < settings.batchLimit(); batch++) {
-            var done = Objects.requireNonNull(tx.execute(_ -> store.tryLock(run.category()) ? contributor.purge(run) : -1L));
+            var done = Objects.requireNonNull(
+                    tx.execute(_ -> store.tryLock(run.category()) ? contributor.purge(run) : -1L));
             if (done < 0) {
                 log.info("Retention {}: another replica is running it", run.category());
                 break;
@@ -326,7 +329,9 @@ class RetentionService implements Retention.Work, Retention.Desk {
                             c.clause(),
                             c.policy(),
                             c.period() == null ? null : c.period().toString(),
-                            c.afterDisputeClosed() == null ? null : c.afterDisputeClosed().toString(),
+                            c.afterDisputeClosed() == null
+                                    ? null
+                                    : c.afterDisputeClosed().toString(),
                             c.lawMinimum(),
                             c.starts().in(locale),
                             c.basis().in(locale),
@@ -343,7 +348,8 @@ class RetentionService implements Retention.Work, Retention.Desk {
                 })
                 .toList();
         var operational = catalogue.operational().stream()
-                .map(o -> new Retention.OperationalView(o.code(), o.name().in(locale), o.period(), o.where(), o.setting()))
+                .map(o -> new Retention.OperationalView(
+                        o.code(), o.name().in(locale), o.period(), o.where(), o.setting()))
                 .toList();
         var laws = Arrays.stream(PrivacyLaw.values())
                 .map(law -> regimes.of(law, ""))
@@ -365,14 +371,45 @@ class RetentionService implements Retention.Work, Retention.Desk {
         var fr = locale.getLanguage().equals("fr");
         var header = fr
                 ? List.of(
-                        "categorie", "module", "nom", "clause de la politique", "duree", "apres un litige",
-                        "minimum de la loi", "depart", "action", "application", "blocages", "derniere execution",
-                        "resultat", "essai", "dernier succes", "lignes traitees", "lignes bloquees", "prochaine echeance",
+                        "categorie",
+                        "module",
+                        "nom",
+                        "clause de la politique",
+                        "duree",
+                        "apres un litige",
+                        "minimum de la loi",
+                        "depart",
+                        "action",
+                        "application",
+                        "blocages",
+                        "derniere execution",
+                        "resultat",
+                        "essai",
+                        "dernier succes",
+                        "lignes traitees",
+                        "lignes bloquees",
+                        "prochaine echeance",
                         "en retard")
                 : List.of(
-                        "category", "module", "name", "policy clause", "period", "after a dispute", "law minimum",
-                        "starts", "action", "enforcement", "holds", "last run", "outcome", "dry run", "last success",
-                        "rows affected", "rows held", "next due", "overdue");
+                        "category",
+                        "module",
+                        "name",
+                        "policy clause",
+                        "period",
+                        "after a dispute",
+                        "law minimum",
+                        "starts",
+                        "action",
+                        "enforcement",
+                        "holds",
+                        "last run",
+                        "outcome",
+                        "dry run",
+                        "last success",
+                        "rows affected",
+                        "rows held",
+                        "next due",
+                        "overdue");
         var lines = new ArrayList<String>();
         lines.add(line(header));
         for (var c : report(locale).categories()) {

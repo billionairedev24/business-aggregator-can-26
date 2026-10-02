@@ -68,7 +68,11 @@ public interface RetentionContributor {
      * @param closedAt when the reason ended (a dispute decided); {@code null} while it is open
      * @param subjectId whom it is about, when a law of their province may keep it longer (a dispute's customer)
      */
-    record HeldRef(Ref ref, Hold reason, @Nullable Instant closedAt, @Nullable String subjectId) {
+    record HeldRef(
+            Ref ref,
+            Hold reason,
+            @Nullable Instant closedAt,
+            @Nullable String subjectId) {
 
         public static HeldRef open(String type, String id, Hold reason) {
             return new HeldRef(new Ref(type, id), reason, null, null);

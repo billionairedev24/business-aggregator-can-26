@@ -73,7 +73,8 @@ class RetentionMetrics implements RetentionMeter {
             var now = clock.instant();
             var current = snapshot.get();
             if (current == null || current.at().plus(CACHE).isBefore(now)) {
-                current = new Snapshot(now, store.latestSucceeded(), store.firstRun().orElse(started));
+                current = new Snapshot(
+                        now, store.latestSucceeded(), store.firstRun().orElse(started));
                 snapshot.set(current);
             }
             var success = current.succeeded().get(category);

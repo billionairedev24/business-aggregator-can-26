@@ -45,7 +45,8 @@ class FulfilmentRetention implements RetentionContributor {
 
     @Override
     public List<HeldRef> holds(Instant now) {
-        return jdbc.sql("select order_id from fulfilment.deliveries where state in " + FulfilmentPersonalData.ACTIVE)
+        return jdbc
+                .sql("select order_id from fulfilment.deliveries where state in " + FulfilmentPersonalData.ACTIVE)
                 .query((rs, _) -> rs.getString(1))
                 .list()
                 .stream()

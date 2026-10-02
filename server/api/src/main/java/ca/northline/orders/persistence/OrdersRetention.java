@@ -56,7 +56,8 @@ class OrdersRetention implements RetentionContributor {
 
     @Override
     public List<HeldRef> holds(Instant now) {
-        return jdbc.sql("select id from orders.orders where state in " + OrdersPersonalData.OPEN)
+        return jdbc
+                .sql("select id from orders.orders where state in " + OrdersPersonalData.OPEN)
                 .query((rs, _) -> rs.getString(1))
                 .list()
                 .stream()
@@ -77,8 +78,11 @@ class OrdersRetention implements RetentionContributor {
             }
         }
         if (!lines.isEmpty()) {
-            var orderOf = jdbc.sql("select id, order_id from orders.order_lines where id = any(:ids)")
-                    .param("ids", lines.stream().map(h -> h.ref().id()).distinct().toArray(String[]::new))
+            var orderOf = jdbc
+                    .sql("select id, order_id from orders.order_lines where id = any(:ids)")
+                    .param(
+                            "ids",
+                            lines.stream().map(h -> h.ref().id()).distinct().toArray(String[]::new))
                     .query((rs, _) -> Map.entry(rs.getString("id"), rs.getString("order_id")))
                     .list()
                     .stream()
@@ -109,9 +113,7 @@ class OrdersRetention implements RetentionContributor {
         var done = jdbc.sql("""
                         update orders.orders set customer_id = null, address_id = null, delivery_area = null
                          where id in (select o.id %s limit :batch)
-                        """.formatted(ORDERS))
-                .params(p)
-                .update();
+                        """.formatted(ORDERS)).params(p).update();
         done += jdbc.sql("delete from orders.checkouts where id in (select c.id %s limit :batch)".formatted(CHECKOUTS))
                 .params(p)
                 .update();
@@ -123,7 +125,6 @@ class OrdersRetention implements RetentionContributor {
     }
 
     private static Map<String, Object> params(Run run) {
-        return Map.of(
-                "cutoff", run.before(), "held", run.heldKeys(), "subjects", run.subjects(), "batch", run.batch());
+        return Map.of("cutoff", run.before(), "held", run.heldKeys(), "subjects", run.subjects(), "batch", run.batch());
     }
 }

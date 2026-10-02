@@ -49,7 +49,10 @@ class RetentionScheduleTest {
         }
         assertThat(clauses).isNotEmpty();
         var covered = new TreeSet<String>();
-        catalogue.categories().stream().map(Category::clause).filter(c -> c != null).forEach(covered::add);
+        catalogue.categories().stream()
+                .map(Category::clause)
+                .filter(c -> c != null)
+                .forEach(covered::add);
         assertThat(covered).containsAll(clauses);
         assertThat(section6()).contains("Backups roll off within 35 days of deletion.");
     }
@@ -59,13 +62,16 @@ class RetentionScheduleTest {
         var text = section6();
         for (var c : catalogue.categories()) {
             if (c.clause() == null) {
-                assertThat(c.policy()).as(c.code() + " is not in the policy: no quote").isNull();
-                assertThat(c.basis().en()).as(c.code() + " says it is for counsel").contains("Privacy Policy");
+                assertThat(c.policy())
+                        .as(c.code() + " is not in the policy: no quote")
+                        .isNull();
+                assertThat(c.basis().en())
+                        .as(c.code() + " says it is for counsel")
+                        .contains("Privacy Policy");
                 continue;
             }
-            var quote = "Backups".equals(c.clause())
-                    ? c.policy()
-                    : "<strong>" + c.clause() + ":</strong> " + c.policy();
+            var quote =
+                    "Backups".equals(c.clause()) ? c.policy() : "<strong>" + c.clause() + ":</strong> " + c.policy();
             assertThat(text).as(c.code()).contains(quote);
         }
     }
@@ -114,7 +120,8 @@ class RetentionScheduleTest {
                 assertThat(c.note()).as(c.code() + " explains itself").isNotNull();
             }
         }
-        assertThat(catalogue.operational()).allSatisfy(o -> assertThat(o.name().fr()).isNotBlank());
+        assertThat(catalogue.operational())
+                .allSatisfy(o -> assertThat(o.name().fr()).isNotBlank());
     }
 
     @Test
@@ -137,7 +144,10 @@ class RetentionScheduleTest {
     @Test
     void noProvinceIsWrittenIntoTheSchedule() throws IOException {
         var yml = Files.readString(Path.of("src/main/resources/" + RetentionCatalogue.RESOURCE));
-        assertThat(yml).doesNotContainIgnoringCase("alberta").doesNotContainIgnoringCase("calgary")
-                .doesNotContainIgnoringCase("edmonton").doesNotContain("America/");
+        assertThat(yml)
+                .doesNotContainIgnoringCase("alberta")
+                .doesNotContainIgnoringCase("calgary")
+                .doesNotContainIgnoringCase("edmonton")
+                .doesNotContain("America/");
     }
 }
