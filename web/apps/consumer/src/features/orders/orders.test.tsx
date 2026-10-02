@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { useParams } from '@tanstack/react-router';
 import { mockFetch, renderApp, type Call } from '../../test/render';
 import { OrderStatus } from './OrderStatus';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const AMARA = { id: 'C1', firstName: 'Amara', lastName: 'Osei', email: 'amara@example.ca', phone: null, initials: 'AO', locale: 'en-CA', memberSince: '2026-03-02' };
 const steps = (current: number) => ['paid', 'packing', 'pickup', 'delivered'].map((key, i) => ({ key, state: i < current ? 'done' : i === current ? 'current' : 'todo' }));
@@ -57,6 +58,7 @@ describe('Order confirmed and tracking (design 06 confirmed)', () => {
   it('shows the confirmation, the timeline and the run', async () => {
     open();
     expect(await screen.findByRole('heading', { level: 1, name: /^Order placed\. Arriving tonight 6.9.p\.m\.$/ })).toBeInTheDocument();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('NL-48213 · $47.76 · 3 shops packing now. Live tracking starts when the courier leaves.')).toBeInTheDocument();
     const steps = within(screen.getByRole('list')).getAllByRole('listitem').map(li => li.textContent);
     expect(steps).toEqual([

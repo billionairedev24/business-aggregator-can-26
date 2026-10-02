@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Alert, Button, Field, OptionCard, StepBars, TextInput } from '@northline/ui';
+import { Alert, Button, Field, OptionCard, StepBars, TextInput, codeValue } from '@northline/ui';
 import { authApi, backupCodeSchema, codeSchema, firstIssue, type AuthSession, fieldErrors, flowError, isRestart, RateLimitNotice, useRateLimit, getPasskey, PasskeyError, passkeysSupported, type AuthKitKey } from '@northline/auth-kit';
 import { useAuthT, type AuthKey } from './messages';
 import { SocialButtons } from './SocialButtons';
@@ -113,9 +113,9 @@ export function SignInFlow({ onboarding, resumeIdentifier, recover, onRegister, 
           {factor !== 'passkey' && (
             <Field label={factor === 'totp' ? t('code6') : t('backupLabel')} error={shownCodeError || undefined} className="nl-auth-factor-code">
               <TextInput className={factor === 'totp' ? 'nl-auth-code' : undefined} name="code" autoComplete="one-time-code"
-                inputMode={factor === 'totp' ? 'numeric' : 'text'} maxLength={factor === 'totp' ? 6 : 16}
+                inputMode={factor === 'totp' ? 'numeric' : 'text'} maxLength={factor === 'totp' ? undefined : 16}
                 placeholder={factor === 'totp' ? t('codePh') : t('backupPh')} value={code}
-                onChange={e => { setCode(e.target.value); setCodeError(''); }} />
+                onChange={e => { setCode(factor === 'totp' ? codeValue(e.target.value) : e.target.value); setCodeError(''); }} />
             </Field>
           )}
           {failure && <Alert tone="error">{failure}</Alert>}

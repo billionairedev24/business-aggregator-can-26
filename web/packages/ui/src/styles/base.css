@@ -13,11 +13,17 @@ button, input, select, textarea { font: inherit; }
 .text-muted { color: var(--color-neutral-700); }
 :focus { outline: none; }
 :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+/* S-109 (WCAG 2.4.11): a sticky top bar never hides the focused control — the shells publish their height here. */
+html { scroll-padding-top: var(--nl-sticky-top, 0px); }
+/* S-109 (WCAG 2.3.3, reduced motion): no animation or transition when the system asks for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
 ::selection { background: var(--color-accent-200); }
 .hr { height: 1px; border: 0; margin: var(--space-4) 0; background: var(--color-divider); }
 
 /* ── buttons ── */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; text-decoration: none; min-height: 40px; padding: 8px 16px; font-family: var(--font-body); font-size: 14px; font-weight: 600; line-height: 1.2; color: var(--color-text); background: transparent; border: 1px solid transparent; border-radius: var(--radius-md); transition: background .15s, border-color .15s, box-shadow .15s; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; text-decoration: none; min-height: 44px; padding: 8px 16px; font-family: var(--font-body); font-size: 14px; font-weight: 600; line-height: 1.2; color: var(--color-text); background: transparent; border: 1px solid transparent; border-radius: var(--radius-md); transition: background .15s, border-color .15s, box-shadow .15s; }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .btn-primary { background: var(--color-accent); color: var(--color-on-accent); }
 .btn-primary:hover { background: var(--color-accent-600); color: var(--color-on-accent); }
@@ -30,20 +36,21 @@ button, input, select, textarea { font: inherit; }
 .btn-ghost:active { background: var(--color-accent-200); }
 .btn-highlight { background: var(--color-highlight); color: var(--color-on-highlight); }
 .btn-highlight:hover { background: color-mix(in oklch, var(--color-highlight), black 8%); }
-.btn-icon { width: 40px; height: 40px; min-height: 40px; padding: 0; }
+.btn-icon { width: 44px; height: 44px; min-height: 44px; padding: 0; }
 .btn-block { width: 100%; margin-top: var(--space-2); }
 
 /* ── forms ── */
 .field > label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: var(--color-neutral-800); }
-.input { width: 100%; min-height: 44px; padding: 10px 14px; font-size: 15px; color: var(--color-text); caret-color: var(--color-accent); background: var(--color-surface); border: 1px solid var(--color-neutral-300); border-radius: var(--radius-md); transition: border-color .15s, box-shadow .15s; }
-.input::placeholder { color: var(--color-neutral-600); opacity: 1; }
-.input:hover { border-color: var(--color-neutral-500); }
+.input { width: 100%; min-height: 44px; padding: 10px 14px; font-size: 15px; color: var(--color-text); caret-color: var(--color-accent); background: var(--color-surface); border: 1px solid var(--color-neutral-600); border-radius: var(--radius-md); transition: border-color .15s, box-shadow .15s; }
+/* S-109: placeholders 4.5:1 (1.4.3) and field borders 3:1 against the page and the panel (1.4.11) — neutral-600/-300 were 4.2:1/1.5:1. */
+.input::placeholder { color: var(--color-neutral-700); opacity: 1; }
+.input:hover { border-color: var(--color-neutral-800); }
 .input:focus-visible, .input:focus { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-200); outline: none; }
 textarea.input { min-height: 96px; resize: vertical; }
 select.input { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--color-neutral-700) 50%), linear-gradient(135deg, var(--color-neutral-700) 50%, transparent 50%); background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 36px; }
 .radio { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; }
 .radio input, .seg-opt input { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
-.radio .dot { width: 18px; height: 18px; flex: none; border-radius: 50%; border: 1.5px solid var(--color-neutral-400); background: var(--color-surface); }
+.radio .dot { width: 18px; height: 18px; flex: none; border-radius: 50%; border: 1.5px solid var(--color-neutral-600); background: var(--color-surface); }
 .radio:hover .dot { border-color: var(--color-accent); }
 .radio input:checked + .dot { border-color: var(--color-accent); background: var(--color-accent); box-shadow: inset 0 0 0 4px var(--color-surface); }
 .radio input:focus-visible + .dot { outline: 2px solid var(--color-accent); outline-offset: 2px; }

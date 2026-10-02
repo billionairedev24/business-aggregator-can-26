@@ -8,6 +8,7 @@ import { SecurityTab, deviceName } from './SecurityTab';
 import { TeamTab } from './TeamTab';
 import { ApiTab, ago, outcome } from './ApiTab';
 import { businessErrors, dollarsToCents, inviteErrors, webhookErrors } from './validation';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 let role = 'owner';
 let type = 'provider';
@@ -67,6 +68,7 @@ describe('Settings › Business', () => {
     renderWithProviders(<BusinessTab />);
     await screen.findByLabelText('Business name');
     expect(await screen.findByText('Verified · renews 2027-01')).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('Verified')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: '+ Français' }));
     await user.click(screen.getByRole('button', { name: 'Save changes' }));

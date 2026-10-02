@@ -199,6 +199,14 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
     if (pageIndex > pageCount - 1) setPagination((p) => ({ ...p, pageIndex: pageCount - 1 }));
   }, [pageIndex, pageCount]);
   const page = Math.min(pageIndex, pageCount - 1);
+  const filterKey = JSON.stringify([query, facets, ranges]);
+  const firstFilter = useRef<string | null>(filterKey);
+  useEffect(() => {
+    if (firstFilter.current === filterKey) return;
+    firstFilter.current = null; // from now on every change is announced, including back to no filter
+    const id = setTimeout(() => setAnnouncement(t('results', { count: filtered.length, plural, noun: entity })), 600);
+    return () => clearTimeout(id);
+  }, [filterKey, filtered.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── selection ─────────────────────────────────────────────────────────────
   const isSel = (r: T) => !!selection[getRowId(r)];
@@ -216,8 +224,15 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
   const toggleAll = () => setSel(filtered.map(getRowId), !allOn);
 
   // ── sorting ───────────────────────────────────────────────────────────────
+  // S-109 (WCAG 4.1.3): aria-sort alone is not announced reliably when it changes; say what the click did, and how many
+  // rows a search or filter leaves, in a polite status region.
+  const [announcement, setAnnouncement] = useState('');
   const onSort = (key: string, multi: boolean) => {
-    setSorting((s) => nextSorting(s, key, multi));
+    const next = nextSorting(sorting, key, multi);
+    const entry = next.find((s) => s.id === key);
+    const label = colByKey(key)?.label ?? key;
+    setAnnouncement(t(entry ? (entry.desc ? 'sortedDesc' : 'sortedAsc') : 'sortOff', { label }));
+    setSorting(next);
     firstPage();
   };
 
@@ -845,6 +860,7 @@ export function DataTable<T extends object>(props: DataTableProps<T>) {
         />
       )}
 
+      <span className="nl-dt-sr" role="status" aria-live="polite" aria-atomic="true">{announcement}</span>
       <div className="nl-dt-toast-region" role="status" aria-live="polite">
         {toast && (
           <div key={toast.n} className={clsx('nl-dt-toast', toast.tone === 'error' && 'is-error')}>

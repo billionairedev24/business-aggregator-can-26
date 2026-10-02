@@ -7190,6 +7190,57 @@ engagement, contacts, retest, STRIDE), [docs/security/README.md](security/README
   provider's geo-permissions or a real cluster's NetworkPolicy enforcement. The pentest packet's names, addresses,
   dates and budgets are placeholders.
 
+## 2026-09-30 — S-109 Accessibility audit (WCAG 2.2 AA) of Studio, consumer web and console
+
+Report, findings and the accessibility statement draft (en/fr): [docs/a11y/audit.md](a11y/audit.md). Result: no
+critical or serious issue left; 2 moderate and 6 minor issues ticketed (S-140–S-148 in `docs/a11y/tickets.csv`).
+
+- **Tools.** Component level: `vitest-axe` (axe-core 4.13) through `expectNoAxeViolations()` in the new
+  `@northline/a11y` package, WCAG 2.0–2.2 A/AA tags; `color-contrast`, `target-size` and `region` off in jsdom (no
+  layout) and covered by the token contrast test and the page sweep. `@northline/ui` gets a `dom` vitest project
+  (`pnpm test` runs `unit` + `dom`; the Storybook project is unchanged). The apps' axe checks sit in their existing
+  Testing Library tests, after the screen has loaded, not in separate files.
+- **Page sweep without a backend.** The built apps (`vite preview`; the consumer's Node server) answer from fixtures
+  **recorded from the apps' own vitest suites** (`src/record.ts` wraps `vi.stubGlobal('fetch', …)` when
+  `NL_A11Y_RECORD` is set; inert otherwise; hooked into each app's `src/test/setup.ts`). Reduced to the first 2xx JSON
+  answer per request, preferring a test of the feature the path names (a catch-all stub in another feature's test
+  answered `/api/v1/cart` with shop data); ids in paths are wildcards. Hand-written overrides only where screens must
+  agree (session, one merchant per portal, an admin's grants, the onboarding state). Chosen over hand-made fixtures
+  (60+ endpoints) and over a real api (Gradle build, database; the smoke sweep already does that for the Studio). The
+  fixtures (~800 kB JSON) are committed; `make a11y-record` refreshes them.
+- **What fails the sweep:** WCAG critical/serious violations, a wrong `<html lang>`, horizontal scroll at 320 px.
+  Moderate/minor, best practice, text spacing, hidden focus, running animations and targets under 44 px are reported
+  in `a11y-results/pages/*.json`, not failing — they are the tickets' measure.
+- **CI:** `web.yml` input `a11y` and GitLab `RUN_A11Y`, both default off, manual like everything else; never run here.
+- **Design changes made for WCAG / the SCREENS rules** (the design is locked; these are the minimum): kit buttons,
+  icon buttons, chips, tabs, menu and nav items 44 px (SCREENS "hit targets ≥ 44px"; were 40); input borders, check
+  boxes, radio dots, multi-select boxes and the switch's off track `neutral-600` (were 300/400: 1.5–2.1:1);
+  placeholders and four muted texts `neutral-700`; a 2 px focus ring on menu items; the KDS ticket list is no longer a
+  live region; the kitchen menu builder shows move up/down buttons next to the drag handle; the catalogue editor's
+  selected tab is styled from `aria-selected`. `tokens.json`/`derived.css` (the design copy) are untouched: the
+  overrides live in `@northline/ui`'s stylesheets, which load after them.
+- **Charts** carry their numbers as a visually hidden table (`LineChart` gains `format` and `dataTable`; the console's
+  reports keep their own visible table and pass `dataTable={false}`).
+- **One-time codes:** `codeValue()` drops spaces and dashes; code fields lose `maxLength={6}` (it truncated a pasted
+  "123 456" before the handler ran) — the 6-digit rule stays the form's validation, client and server.
+- **KDS announcements:** only orders that are new since the previous refresh, as one polite line; nothing on the first
+  load, nothing when an order moves stage (the cook did it). Order cancellations are not announced (no event for it on
+  the board yet).
+- **`<html lang>`** is set by `I18nProvider` on every locale (an effect), so the Studio and console no longer start in
+  `en-CA` for French users; the consumer's server-rendered `lang` is unchanged.
+- **Dark mode:** there is none; nothing to audit. The contrast test takes a list of themes for when one comes.
+- **Backlog:** the generator (`stories.py`/`build.py`) is kept outside the repo, so the open issues are in
+  `docs/a11y/tickets.csv` in the backlog's columns with provisional ids S-140–S-148 (E-11, Sprint 22); the next
+  generator run should take them in (it keeps ids by summary). Noted in `docs/backlog/README.md`.
+- **Consumer app (cheap wins only):** a test walks every pressable on 17 key screens for role, name and a ≥ 44 pt touch
+  area (height or hitSlop; padding-only sizing estimated as padding + one 18 pt line). One fix: the home address kicker
+  (hitSlop to 48 pt, a label without "▾"). No other app change.
+- **Docs site:** `docs/a11y/` is rendered (internal variant), category "Accessibility" / « Accessibilité ».
+- **Not done / never run:** no screen reader was used (S-148); the page sweep runs on recorded fixtures, not real data,
+  and was run here only (Chromium 1194); the CI jobs have never run; Safari/WebKit and Firefox not checked; the
+  courier app was out of scope; the accessibility statement's mailbox is a placeholder and needs legal review with the
+  other footer documents; no migration, no server change.
+
 ## 2026-10-02 — S-116 Loi 96 French-first readiness for Québec expansion
 
 Branch `i18n/s-116-loi96`. Runbook: [runbooks/i18n.md](runbooks/i18n.md). Acceptance criterion: all customer-facing text

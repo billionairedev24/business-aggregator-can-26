@@ -18,6 +18,7 @@ import { ReportsScreen } from './ReportsScreen';
 import { PayoutsScreen } from './PayoutsScreen';
 import { RefundsScreen } from './RefundsScreen';
 import { weekdayLong } from './format';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 // ── fake api ──────────────────────────────────────────────────────────────────────────────────────────────────────
 type Reply = { status: number; body?: unknown };
@@ -106,6 +107,7 @@ describe('Earnings', () => {
   it('shows the headline, KPIs, money in motion and a view-only ledger', async () => {
     renderScreen(<EarningsScreen />);
     expect(await screen.findByRole('heading', { level: 1, name: `$2,140.60 releasing ${weekdayLong(nextPayout, 'en')}` })).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('$1,318.00')).toBeTruthy();
     expect(screen.getByText('in escrow · 11 jobs')).toBeTruthy();
     expect(screen.getByText('released, next payout')).toBeTruthy();
@@ -141,6 +143,7 @@ describe('Reports', () => {
   it('shows the KPIs and switches the period', async () => {
     const ui = renderScreen(<ReportsScreen />);
     expect(await screen.findByText('$19,440')).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('gross sales · +22%')).toBeTruthy();
     expect(screen.getByText('$164.75')).toBeTruthy();
     expect(screen.getByText('71%')).toBeTruthy();
@@ -171,6 +174,7 @@ describe('Payouts', () => {
   it('instant payout: validates the amount, steps up, sends the Idempotency-Key and shows the receipt', async () => {
     const ui = renderScreen(<PayoutsScreen />);
     expect(await screen.findByText('$822.60')).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     await ui.click(screen.getByRole('button', { name: 'Instant payout · 1% fee' }));
     const amount = screen.getByLabelText('Amount');
     await ui.clear(amount);

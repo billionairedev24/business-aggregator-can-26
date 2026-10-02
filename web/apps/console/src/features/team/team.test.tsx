@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { renderConsole, staffApi, type Call } from '../../test/render';
 import type { AuditPage, Team } from './api';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const TEAM: Team = {
   roles: [
@@ -42,6 +43,7 @@ describe('team, roles & audit (S-96, design 03)', () => {
     const finance = screen.getAllByText('Finance').map(e => e.closest('tr, .nl-dt-card')).find(Boolean) as HTMLElement;
     expect(within(finance).getByText('2')).toBeTruthy();
     expect(await screen.findByText('payments.reconciliation_exported')).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getAllByText('Marc Leblanc').length).toBeGreaterThan(1);
     expect(screen.getByText('payments.reconciliation_exported')).toBeTruthy();
     expect(screen.getByText('Northline (automatic)')).toBeTruthy();

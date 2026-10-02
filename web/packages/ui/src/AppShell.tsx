@@ -1,6 +1,7 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { CaretDown, CaretUp, List, SidebarSimple, X, type Icon } from '@phosphor-icons/react';
 import { defineMessages } from './i18n';
+import { SkipLink, useFocusTrap, useStickyOffset } from './A11y';
 
 const useT = defineMessages({
   en: { menu: 'Menu', collapse: 'Collapse sidebar', expand: 'Expand sidebar', open: 'Open menu', close: 'Close menu', nav: 'Main navigation', here: 'You are in this section' },
@@ -48,13 +49,12 @@ export function AppShell({ brand, headerStart, headerEnd, pinned, groups, curren
   useEffect(() => { setOpenGroup(undefined); }, [activeGroup]);
   const open = openGroup === undefined ? (activeGroup ?? groups[0]?.label) : openGroup;
   const headerRef = useRef<HTMLElement>(null);
+  // S-109: the top bar's height also becomes the page's scroll padding (focus not obscured, WCAG 2.4.11)
   const [top, setTop] = useState(72);
-  useLayoutEffect(() => {
-    const el = headerRef.current; if (!el) return;
-    const ro = new ResizeObserver(() => setTop(Math.round(el.getBoundingClientRect().height)));
-    ro.observe(el); return () => ro.disconnect();
-  }, []);
+  useStickyOffset(headerRef, setTop);
   useEffect(() => { if (!narrow) setDrawer(false); }, [narrow]);
+  // S-109: the off-canvas menu is modal — focus moves in, Tab stays in, Escape or close returns focus to the menu button
+  const sheet = useFocusTrap<HTMLDivElement>(narrow && drawer);
 
   const go = (i: NavItem) => { setDrawer(false); onNavigate(i); };
   const itemEl = (i: NavItem, mode: 'full' | 'rail') => {
@@ -86,6 +86,7 @@ export function AppShell({ brand, headerStart, headerEnd, pinned, groups, curren
 
   return (
     <div className="nl-shell">
+      <SkipLink />
       <header ref={headerRef} className="nav nl-topbar">
         {narrow ? <button type="button" className="btn btn-secondary btn-icon nl-topbar-menu" aria-label={t('open')} onClick={() => setDrawer(true)}><List size={20} weight="duotone" /></button> : null}
         {brand}
@@ -110,12 +111,13 @@ export function AppShell({ brand, headerStart, headerEnd, pinned, groups, curren
         )}
         {narrow && drawer && <>
           <div className="nl-drawer-backdrop" onClick={() => setDrawer(false)} />
-          <nav aria-label={t('nav')} className="nl-side-drawer" onKeyDown={e => e.key === 'Escape' && setDrawer(false)}>
-            <div className="nl-side-top">{brand}<button type="button" className="nl-side-toggle" aria-label={t('close')} onClick={() => setDrawer(false)} autoFocus><X size={18} /></button></div>
-            {fullNav}
-          </nav>
+          <div ref={sheet.ref} role="dialog" aria-modal="true" aria-label={t('nav')} tabIndex={-1} className="nl-side-drawer"
+            onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); setDrawer(false); } else sheet.onKeyDown(e); }}>
+            <div className="nl-side-top">{brand}<button type="button" className="nl-side-toggle" aria-label={t('close')} onClick={() => setDrawer(false)} data-autofocus><X size={18} /></button></div>
+            <nav aria-label={t('nav')} className="nl-side-drawer-nav">{fullNav}</nav>
+          </div>
         </>}
-        <main className="nl-main" id="main">{children}</main>
+        <main className="nl-main" id="main" tabIndex={-1}>{children}</main>
       </div>
     </div>
   );

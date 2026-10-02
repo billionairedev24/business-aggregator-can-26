@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderConsole, SESSION, staffApi, type Call } from '../../test/render';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const NOW = new Date('2026-09-08T18:00:00Z');
 const ME = SESSION.user.id;
@@ -66,6 +67,7 @@ describe('support desk (S-83, design 03 support)', () => {
     expect(within(row).getByText('10 min')).toBeTruthy();
     expect(within(rowOf('HD-4471')).getByText('Unassigned')).toBeTruthy();
     expect(await screen.findByRole('heading', { level: 2, name: 'Prairie Wrench · master' })).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('Portal: provider · tier master · role owner')).toBeTruthy();
     expect(screen.getByText('HD-4471 · Unassigned · Document · WCB clearance')).toBeTruthy();
     expect(screen.getByText('Can instant book be turned back on today?')).toBeTruthy();

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Dialog, Field, TextInput } from '@northline/ui';
+import { Dialog, Field, TextInput, codeValue } from '@northline/ui';
 import { signInHref } from '../session/api';
 import { useCartT } from './messages';
 import { enrolPasskey, stepUpWithCode, stepUpWithPasskey, StepUpFailed } from './stepUp';
@@ -34,7 +34,7 @@ export function StepUpDialog({ mode, onProof, onClose }: { mode: 'required' | 'e
       {mode === 'required' && !useCode ? <button type="button" className="btn btn-ghost" onClick={() => setUseCode(true)}>{t('useCode')}</button> : null}
       {mode === 'required' && useCode ? (
         <Field label={t('code')} error={error && !signedOut ? error : undefined}>
-          <TextInput value={code} onChange={e => setCode(e.target.value)} inputMode="numeric" autoComplete="one-time-code" maxLength={6} />
+          <TextInput value={code} onChange={e => setCode(codeValue(e.target.value))} inputMode="numeric" autoComplete="one-time-code" />
         </Field>
       ) : null}
       {error && (signedOut || !useCode) ? <p className="cart-field-error" role="alert">{error}{signedOut ? <> <a href={signInHref('/cart')}>{t('signInToPay')}</a></> : null}</p> : null}

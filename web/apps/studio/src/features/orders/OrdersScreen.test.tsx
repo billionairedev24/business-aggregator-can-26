@@ -5,6 +5,7 @@ import { mockFetch, renderWithProviders } from '../../test/ops';
 import { OrdersScreen, courierText } from './OrdersScreen';
 import { useOrdersT } from './messages';
 import { renderHook } from '@testing-library/react';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 let role = 'owner';
 vi.mock('../shell/api', () => ({ useMerchantId: () => 'm1', useRole: () => role }));
@@ -28,6 +29,7 @@ describe('Orders · products', () => {
     const user = userEvent.setup({ delay: null });
     renderWithProviders(<OrdersScreen />);
     expect(await screen.findByText('To pack · 1')).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('Delivered today · 6')).toBeTruthy();
     expect(screen.getByRole('heading', { level: 1 }).textContent).toMatch(/^Pack by /);
     expect(screen.getAllByText('Issue · wrong size').length).toBeGreaterThan(0);

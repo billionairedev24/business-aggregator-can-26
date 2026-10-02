@@ -96,6 +96,10 @@ variables:
     value: "false"
     options: ["false", "true"]
     description: Also run the studio smoke sweep (Postgres + api + studio + Playwright; slower).
+  RUN_A11Y:
+    value: "false"
+    options: ["false", "true"]
+    description: Also run the accessibility page sweep (S-109; Playwright + axe against the built apps, no backend).
 
 stages:
   - check

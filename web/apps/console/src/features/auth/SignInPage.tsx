@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Alert, Button, Field, OptionCard, StepBars, TextInput } from '@northline/ui';
+import { Alert, Button, Field, OptionCard, StepBars, TextInput, codeValue } from '@northline/ui';
 import {
   authApi, backupCodeSchema, codeSchema, fieldErrors, firstIssue, flowError, getPasskey, isRestart, PasskeyError, passkeysSupported,
   RateLimitNotice, useAuthKitT, useRateLimit, type AuthKitKey, type AuthSession,
@@ -141,9 +141,9 @@ export function SignInPage({ next, error, navigate = url => window.location.assi
               {factor !== 'passkey' && (
                 <Field label={factor === 'totp' ? t('code6') : t('backupLabel')} error={shownCodeError || undefined}>
                   <TextInput className={factor === 'totp' ? 'nl-auth-code' : undefined} name="code" autoComplete="one-time-code"
-                    inputMode={factor === 'totp' ? 'numeric' : 'text'} maxLength={factor === 'totp' ? 6 : 16}
+                    inputMode={factor === 'totp' ? 'numeric' : 'text'} maxLength={factor === 'totp' ? undefined : 16}
                     placeholder={factor === 'totp' ? t('codePh') : t('backupPh')} value={code}
-                    onChange={e => { setCode(e.target.value); setCodeError(''); }} />
+                    onChange={e => { setCode(factor === 'totp' ? codeValue(e.target.value) : e.target.value); setCodeError(''); }} />
                 </Field>
               )}
               {failure && <Alert tone="error">{failure}</Alert>}

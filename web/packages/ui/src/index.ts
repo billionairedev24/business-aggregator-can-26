@@ -1,3 +1,4 @@
+export * from './A11y';
 export * from './Button';
 export * from './Tag';
 export * from './Input';

@@ -63,7 +63,7 @@ function ReportBody({ r }: { r: Report }) {
         <section aria-labelledby="fin-gross">
           <h2 id="fin-gross" className="fin-h2" style={{ marginBottom: 4 }}>{t(GROSS[r.granularity])}</h2>
           <div className="fin-muted" style={{ marginBottom: 10 }}>{t('chartLegend')}</div>
-          <LineChart title={t(GROSS[r.granularity])} current={r.series.map(p => p.currentCents / 100)} previous={r.series.map(p => p.previousCents / 100)} labels={labels} />
+          <LineChart title={t(GROSS[r.granularity])} current={r.series.map(p => p.currentCents / 100)} previous={r.series.map(p => p.previousCents / 100)} labels={labels} format={v => f.money(v * 100, { whole: true })} />
         </section>
         <section>
           <h2 className="fin-h2">{t('byListing')}</h2>

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { renderConsole, staffApi } from '../../test/render';
 import type { Report } from './api';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const weeks: Report['weeks'] = Array.from({ length: 13 }, (_, i) => ({
   week: new Date(Date.UTC(2026, 5, 8 + i * 7)).toISOString().slice(0, 10), customers: 1200 + i * 40, previous: 1100 + i * 30,
@@ -27,6 +28,7 @@ describe('reports & analytics (S-95, design 03)', () => {
     staffApi(['analyst'], c => (c.url.includes('/api/v1/console/reports') ? { body: REPORT } : undefined));
     renderConsole('/reports');
     expect(await screen.findByRole('heading', { level: 1, name: 'Marketplace health · 90 days' })).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByRole('img', { name: 'Weekly active customers' })).toBeTruthy();
     expect(screen.getByText('Solid: this period · dotted: previous')).toBeTruthy();
     const step = (name: string) => screen.getByText(name).closest('.nl-meter') as HTMLElement;

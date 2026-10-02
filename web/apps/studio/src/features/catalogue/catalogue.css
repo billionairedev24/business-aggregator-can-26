@@ -18,6 +18,7 @@
 /* tabs with completion dots */
 .nl-cat-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
 .nl-cat-tab { display: inline-flex; gap: 8px; align-items: center; }
+.nl-cat-tab[aria-selected='true'] { border-color: var(--color-accent); background: var(--color-accent); color: var(--color-bg); }
 .nl-cat-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--color-accent-2); }
 .nl-cat-dot[data-done='true'] { background: var(--color-accent); }
 .nl-cat-tab[aria-selected='true'] .nl-cat-dot[data-done='true'] { background: var(--color-bg); }

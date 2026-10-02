@@ -5,6 +5,7 @@ import { onboarding } from '../../test/fixtures';
 import { mockFetch, renderWithProviders } from '../../test/render';
 import { ListingsStep } from './ListingsStep';
 import { validGtin } from './ListingForms';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 /** user-event with no timer between keystrokes: typing costs one pass, not a macrotask per character. */
 const user = () => userEvent.setup({ delay: null });
@@ -43,6 +44,7 @@ describe('ListingsStep (catalogue contract, mocked)', () => {
     await waitFor(() => expect(calls.some(c => c.url.endsWith('/services'))).toBe(true));
     expect(calls.find(c => c.url.endsWith('/services'))!.body).toEqual({ name: 'Brake inspection', pricingMode: 'fixed', priceCents: 8900, durationMin: 45, bufferMin: 0, included: '', instantBook: true });
     expect(await screen.findByText('Brake inspection')).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('Vetting · ~2 min')).toBeTruthy();
     expect(screen.getByText('Listings · 1')).toBeTruthy();
   });

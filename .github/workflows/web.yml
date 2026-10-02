@@ -20,6 +20,10 @@ on:
         description: Studio smoke sweep (Postgres + api + auth + studio dev server + Playwright; slower)
         type: boolean
         default: false
+      a11y:
+        description: Accessibility page sweep (S-109) — builds the three apps, Playwright + axe against a mock api
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -149,5 +153,29 @@ jobs:
           path: |
             smoke-out/
             !smoke-out/runner/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # S-109: WCAG 2.2 AA page sweep (docs/a11y/audit.md). No backend: the built apps answer from recorded fixtures.
+  a11y:
+    name: accessibility page sweep (Playwright + axe)
+    if: ${{ inputs.a11y }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/pnpm-setup
+        with:
+          playwright: "true"
+      - name: make a11y
+        env:
+          CI: "true"
+        run: make -C .. a11y
+      - name: Upload the page reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: a11y-results
+          path: web/packages/a11y/a11y-results/
           retention-days: 7
           if-no-files-found: ignore

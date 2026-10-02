@@ -13,6 +13,7 @@ vi.mock('../shell/api', () => ({
 vi.mock('@tanstack/react-router', async orig => ({ ...(await orig<typeof import('@tanstack/react-router')>()), useNavigate: () => shell.navigate }));
 
 import { HelpScreen, type HelpSearch } from './HelpScreen';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 /** user-event with no timer between keystrokes: typing costs one pass, not a macrotask per character. */
 const user = () => userEvent.setup({ delay: null });
@@ -82,6 +83,7 @@ describe('Help centre', () => {
     expect(screen.getByText('3 articles')).toBeTruthy();
     expect(screen.getByText('Master tier: priority queue · first reply within 1 h (business hours).')).toBeTruthy();
     expect(await screen.findByText('HD-4471')).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText(/Open · agent Dev K\. · replied 2 h ago · Reply by tomorrow 10/)).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Stripe & compliance' })).toBeTruthy();
     await user().click(screen.getByRole('link', { name: 'Earnings' }));

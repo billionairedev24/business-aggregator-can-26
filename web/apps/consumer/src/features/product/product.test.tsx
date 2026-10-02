@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { useParams, useSearch } from '@tanstack/react-router';
 import { mockFetch, renderApp, type Call } from '../../test/render';
 import { ProductDetail, ProductSkeleton } from './ProductDetail';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 // Tonight 6–9 pm (Edmonton), shops pack by 5:45, customers order by 5:20; then tomorrow 8–11 am.
 const TONIGHT = { windowId: 'W1', label: 'R-611', day: 'today', startsAt: '2026-10-01T00:00:00Z', endsAt: '2026-10-01T03:00:00Z', orderBy: '2026-09-30T23:20:00Z', packBy: '2026-09-30T23:45:00Z', feeCents: 299, households: 5 };
@@ -52,6 +53,7 @@ describe('Product detail (design 06 product)', () => {
   it('shows the product, the shop, options, price and the delivery cut-off', async () => {
     open('/products/P1');
     expect(await screen.findByRole('heading', { level: 1, name: 'Country sourdough' })).toBeInTheDocument();
+    await expectNoAxeViolations(document.body); // S-109
     const crumbs = screen.getByRole('navigation', { name: 'Breadcrumb' });
     expect(within(crumbs).getByRole('link', { name: 'Shop' })).toHaveAttribute('href', '/shop');
     expect(within(crumbs).getByRole('link', { name: 'Bakery' })).toHaveAttribute('href', '/shop/bakery');

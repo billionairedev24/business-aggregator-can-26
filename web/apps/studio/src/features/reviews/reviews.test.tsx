@@ -11,6 +11,7 @@ vi.mock('../shell/api', () => ({
 }));
 
 import { ReviewsScreen } from './ReviewsScreen';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 /** user-event with no timer between keystrokes: typing costs one pass, not a macrotask per character. */
 const user = () => userEvent.setup({ delay: null });
@@ -35,6 +36,7 @@ describe('ReviewsScreen', () => {
     stubFetch(routes());
     renderScreen(<ReviewsScreen />);
     expect(await screen.findByRole('heading', { name: '4.9 from 312 verified customers' })).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('Praise tags: On time 88% · Clear explanation 81% · Fair price 76%')).toBeTruthy();
     expect(screen.getByText('5 stars: 279')).toBeTruthy();
     expect(screen.getByText(/Dana K\. · verified alternator/)).toBeTruthy();

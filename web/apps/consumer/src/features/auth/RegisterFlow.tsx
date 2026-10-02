@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Alert, Button, Checkbox, Field, OptionCard, StepBars, TextInput, useLocale } from '@northline/ui';
+import { Alert, Button, Checkbox, Field, OptionCard, StepBars, TextInput, useLocale, codeValue } from '@northline/ui';
 import { authApi, codeSchema, createPasskey, fieldErrors, firstIssue, flowError, isRestart, PasskeyError, passkeysSupported, RateLimitNotice, registerSchema, useRateLimit, type AuthSession, type TotpSetup } from '@northline/auth-kit';
 import { termsPresentation } from '../../lib/legal';
 import { useFrenchFirst } from '../location/regions';
@@ -225,8 +225,8 @@ function SecondFactorStep({ onCreated, onRestart }: { onCreated: (s: AuthSession
             </div>
           </div>
           <Field label={t('code6')} error={codeError || undefined}>
-            <TextInput className="nl-auth-code" name="totp" inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder={t('codePh')}
-              value={code} onChange={e => { setCode(e.target.value.replace(/\s/g, '')); setServer(''); }} />
+            <TextInput className="nl-auth-code" name="totp" inputMode="numeric" autoComplete="one-time-code" placeholder={t('codePh')}
+              value={code} onChange={e => { setCode(codeValue(e.target.value)); setServer(''); }} />
           </Field>
           {failure && <Alert tone="error">{failure}</Alert>}
           <Button type="submit" className="nl-auth-primary" disabled={busy} aria-busy={busy || undefined}>{t('verifyCode')}</Button>

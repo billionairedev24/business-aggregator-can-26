@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { mockFetch, renderApp, type Call } from '../../test/render';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const AMARA = { id: '01J9ZD3V00000000000000AMA1', firstName: 'Amara', lastName: 'Osei', email: 'amara@example.ca', initials: 'AO', locale: 'en-CA' };
 const guest = (call: Call) => (call.url === '/bff/session' ? { body: { user: null, guestId: 'g_x' } } : undefined);
@@ -16,6 +17,7 @@ describe('consumer header', () => {
     mockFetch(guest);
     renderApp('/');
     const header = await screen.findByRole('banner');
+    await expectNoAxeViolations(document.body); // S-109
     expect(within(header).getByRole('link', { name: 'Northline — home' })).toHaveAttribute('href', '/');
     const nav = within(header).getByRole('navigation', { name: 'Main' });
     expect(within(nav).getAllByRole('link').map(a => a.textContent)).toEqual(['Services', 'Shop', 'Food']);

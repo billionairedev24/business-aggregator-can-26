@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { renderConsole, staffApi } from '../../test/render';
 import type { Monitor } from './api';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const AS_OF = '2026-09-08T18:00:00Z';
 const row = (o: Partial<Monitor['items'][number]>): Monitor['items'][number] => ({
@@ -21,6 +22,7 @@ describe('orders & bookings (S-81, design 03)', () => {
     const calls = staffApi(['dispatch'], c => (c.url.includes('/api/v1/console/orders') ? { body: monitor() } : undefined));
     renderConsole('/orders');
     expect(await screen.findByRole('heading', { level: 1, name: '6,812 this week · 14 need attention' })).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('Orders & bookings', { selector: '.nl-or-kicker' })).toBeTruthy();
     for (const chip of ['Needs attention · 14', 'Live · 431', 'Escrow > 48 h · 6', 'Late · 9', 'All']) expect(screen.getByRole('button', { name: chip })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Needs attention · 14' }).getAttribute('aria-pressed')).toBe('true');

@@ -9,6 +9,7 @@ import { LiveOrdersScreen } from './LiveOrdersScreen';
 import { MenuBuilderScreen } from './MenuBuilderScreen';
 import { parseDollars, rangeErrors, whereText } from './model';
 import type { Ticket } from './api';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 let role = 'owner';
 vi.mock('../shell/api', () => ({ useMerchantId: () => 'm1', useRole: () => role, useMerchant: () => ({ id: 'm1', displayName: 'Pho Dau Bo', type: 'kitchen', role }) }));
@@ -47,6 +48,7 @@ describe('Live orders', () => {
     const user = userEvent.setup({ delay: null });
     renderWithProviders(<LiveOrdersScreen />);
     expect(await screen.findByText('FD-9931')).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByRole('heading', { level: 1 }).textContent).toMatch(/· 2 open$/);
     expect(screen.getAllByText('1× Pho dac biet · Large, extra beef')).toHaveLength(2);
     expect(screen.getByText('Deliver · Sam waiting')).toBeTruthy();
@@ -55,6 +57,22 @@ describe('Live orders', () => {
     await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url.endsWith('/o1/accept'))).toBe(true));
     expect(await screen.findByRole('button', { name: 'Mark ready' })).toBeTruthy();
     expect(screen.getByText(/min left/)).toBeTruthy();
+  });
+
+  it('announces only the orders that arrived, once, politely — the board itself is not a live region (S-109)', async () => {
+    let items = [ticket('o1', 'FD-9931', 'new')];
+    mockFetch({ [`GET ${B}/kitchen/live`]: () => board(items) });
+    const { client } = renderWithProviders(<LiveOrdersScreen />);
+    expect(await screen.findByText('FD-9931')).toBeTruthy();
+    const status = () => screen.getAllByRole('status').map(s => s.textContent).join('|');
+    expect(status()).toBe(''); // the first load is not news
+    expect(screen.getByRole('list').getAttribute('aria-live')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Accept · start cooking' }).getAttribute('aria-describedby')).toBeTruthy();
+    items = [ticket('o1', 'FD-9931', 'cooking'), ticket('o2', 'FD-9932', 'new'), ticket('o3', 'FD-9933', 'new')];
+    await client.refetchQueries();
+    await waitFor(() => expect(status()).toBe('2 new orders: FD-9932, FD-9933'));
+    await client.refetchQueries(); // nothing new: the message stays as it was, no repeat
+    expect(status()).toBe('2 new orders: FD-9932, FD-9933');
   });
 
   it('bumps prep and pauses', async () => {
@@ -115,6 +133,7 @@ describe('Menu builder', () => {
     const user = userEvent.setup({ delay: null });
     renderWithProviders(<MenuBuilderScreen />);
     expect(await screen.findByText('Pho dac biet')).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Dinner menu · live');
     expect(screen.getByText('Sold out today')).toBeTruthy();
     expect(screen.getAllByText('Contains milk').length).toBe(1);
@@ -122,6 +141,21 @@ describe('Menu builder', () => {
     const avail = screen.getByRole('button', { name: 'Available' });
     await user.click(avail);
     await waitFor(() => expect(calls.find(c => c.url.endsWith('/i1/sold-out'))?.body).toEqual({ soldOut: true }));
+  });
+
+  it('moves a section with a single tap, not only by dragging (S-109, WCAG 2.5.7)', async () => {
+    const calls = mockFetch({
+      [`GET ${B}/menus/mn1`]: () => menuDetail(),
+      [`GET ${B}/menus`]: () => menus(),
+      [`GET ${B}/modifier-groups`]: () => ({ items: [group] }),
+      [`PUT ${B}/menus/mn1/sections/order`]: () => undefined,
+    });
+    const user = userEvent.setup({ delay: null });
+    renderWithProviders(<MenuBuilderScreen />);
+    expect((await screen.findByRole('button', { name: 'Move Mains up' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'Move Drinks down' }) as HTMLButtonElement).disabled).toBe(true);
+    await user.click(screen.getByRole('button', { name: 'Move Drinks up' }));
+    await waitFor(() => expect(calls.find(c => c.method === 'PUT')?.body).toEqual({ sectionIds: ['s2', 's1'] }));
   });
 
   it('validates the item editor, maps server errors and saves', async () => {

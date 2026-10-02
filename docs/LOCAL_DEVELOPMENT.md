@@ -135,6 +135,7 @@ The profiles are docker-compose.yml's: `db`, `cache`, `events` (Kafka + topic cr
 | `make openapi` · `openapi-check` · `openapi-lint` | regenerate the committed OpenAPI specs from the code · compare · Redocly lint ([runbooks/api-docs.md](runbooks/api-docs.md)) |
 | `make docs [DOCS_VARIANT=public]` · `docs-serve` · `docs-dev` | build the documentation site and check every page · serve it · live dev server |
 | `make e2e` | the Studio smoke sweep against a **disposable** database ([runbooks/ci.md](runbooks/ci.md)) |
+| `make a11y` | the accessibility page sweep (S-109): builds the three web apps, Playwright + axe against them with a mock api ([a11y/audit.md](a11y/audit.md)); `make a11y-record` refreshes its fixtures |
 | `make all` · `make build` · `make test` · `make lint` · `make format` | both stacks |
 | `make clean` · `make clean-all` | build outputs and runner logs · also `node_modules` and `server/.gradle` |
 

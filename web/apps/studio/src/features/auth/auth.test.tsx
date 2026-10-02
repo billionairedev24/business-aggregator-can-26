@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { I18nProvider } from '@northline/ui';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SignedOutPage, type AuthMode } from './SignedOutPage';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 // ── fake northline-auth ───────────────────────────────────────────────────────────────────────────────────────────
 
@@ -71,6 +72,7 @@ describe('Create account — validation (validation-rules.md § Registration)', 
     await ui.click(screen.getByRole('button', { name: 'Send verification code' }));
 
     expect(await screen.findByText('First name is required.')).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('Last name is required.')).toBeTruthy();
     expect(screen.getByText('Mobile number is required for verification.')).toBeTruthy();
     expect(screen.getByText('Email is required.')).toBeTruthy();
@@ -135,8 +137,11 @@ describe('Create account — steps', () => {
     await ui.type(screen.getByLabelText(/Enter the 6-digit code/), '000000');
     await ui.click(screen.getByRole('button', { name: 'Verify' }));
     expect(await screen.findByText("That code doesn't match. Check it and try again.")).toBeTruthy();
+    // S-109 (WCAG 3.3.8): the code pastes as the SMS shows it ("123 456"), not cut to "123 45" by a 6-character limit
     await ui.clear(screen.getByLabelText(/Enter the 6-digit code/));
-    await ui.type(screen.getByLabelText(/Enter the 6-digit code/), '123456');
+    await ui.click(screen.getByLabelText(/Enter the 6-digit code/));
+    await ui.paste('123 456');
+    expect((screen.getByLabelText(/Enter the 6-digit code/) as HTMLInputElement).value).toBe('123456');
     await ui.click(screen.getByRole('button', { name: 'Verify' }));
 
     expect(await screen.findByText('Second factor · required for business accounts')).toBeTruthy();
@@ -146,6 +151,7 @@ describe('Create account — steps', () => {
     await ui.click(screen.getByRole('button', { name: 'Scan QR code' }));
 
     expect((await screen.findByRole('img', { name: 'QR code for your authenticator app' })).getAttribute('src')).toBe('data:image/png;base64,AAAA');
+    await expectNoAxeViolations(document.body); // S-109
     await ui.type(screen.getByLabelText('6-digit code'), '111111');
     await ui.click(screen.getByRole('button', { name: 'Verify code' }));
 

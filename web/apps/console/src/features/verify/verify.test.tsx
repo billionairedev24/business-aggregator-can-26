@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderConsole, staffApi, type Call } from '../../test/render';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const NOW = new Date('2026-09-08T18:00:00Z');
 const check = (key: string, state: string, registry: string | null = null, type = 'kyc') => ({ id: `v-${key}`, key, type, registry, status: state === 'passed' ? 'verified' : 'submitted', state, reference: null, expiresAt: null });
@@ -45,6 +46,7 @@ describe('verification queue (S-79, design 03 verify)', () => {
     api(['trust_safety']);
     renderConsole('/verification');
     expect(await screen.findByRole('heading', { level: 1, name: '2 applications · median 1.4 days · SLA 2' })).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('Seller verification')).toBeTruthy();
     expect(screen.getByText(/Automated checks run first \(KYC, registry, insurance OCR, sanctions\)\. Humans decide the rest\./)).toBeTruthy();
     const quick = screen.getByText('QuickFix Auto').closest('tr, .nl-dt-card') as HTMLElement;

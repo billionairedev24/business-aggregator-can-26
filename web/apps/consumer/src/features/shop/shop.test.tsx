@@ -7,6 +7,7 @@ import { mockFetch, renderApp, type Call } from '../../test/render';
 import { DepartmentPage } from './DepartmentPage';
 import { ShopSkeleton } from './parts';
 import { ShopLanding } from './ShopLanding';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 // Tonight's run: 6–9 pm in Edmonton (MDT = UTC−6), order by 5:20 pm.
 const RUN = { windowId: 'W1', label: 'R-611', day: 'today', startsAt: '2026-10-01T00:00:00Z', endsAt: '2026-10-01T03:00:00Z', orderBy: '2026-09-30T23:20:00Z', feeCents: 299, households: 5 };
@@ -69,6 +70,7 @@ describe('Shop landing (design 06 shop)', () => {
   it('shows the next run, departments, the shops on it and popular products', async () => {
     const { calls } = open('/shop');
     expect(await screen.findByRole('heading', { level: 1, name: 'Tonight’s pooled run leaves 6:00 p.m.' })).toBeInTheDocument();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('Shop · groceries & goods')).toBeInTheDocument();
     expect(screen.getByText('order by 5:20 p.m. · 3 shops · 5 neighbours in · Calgary')).toBeInTheDocument();
     expect(screen.getByText('Pooled run · Calgary')).toBeInTheDocument();

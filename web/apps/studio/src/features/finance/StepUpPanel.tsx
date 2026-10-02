@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
-import { Button, Field, TextInput } from '@northline/ui';
+import { Button, Field, TextInput, codeValue } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { useFinanceT, type FinanceKey } from './messages';
 import { StepUpFailed, stepUpWithCode, stepUpWithPasskey } from './stepUp';
@@ -59,7 +59,7 @@ export function StepUpPanel({ intro, confirmLabel, onProof, onCancel, busy }: {
       ) : (
         <form onSubmit={submitCode} noValidate style={{ marginTop: 12 }}>
           <Field label={t('code')} error={codeError}>
-            <TextInput inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={e => setCode(e.target.value)} style={{ maxWidth: 160 }} />
+            <TextInput inputMode="numeric" autoComplete="one-time-code" value={code} onChange={e => setCode(codeValue(e.target.value))} style={{ maxWidth: 160 }} />
           </Field>
           <div className="fin-actions">
             <Button type="submit" disabled={working} aria-busy={working}>{working ? t('working') : t('confirm')}</Button>

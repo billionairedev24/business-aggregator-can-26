@@ -7,6 +7,8 @@ export const shop = {
   // Home
   'shop.home.place': '{place} ▾',
   'shop.home.placeHint': 'Changes the delivery address',
+  'shop.home.placeLabel': 'Delivery address: {place}',
+  'shop.home.setAddressLabel': 'Set your delivery address',
   'shop.home.setAddress': 'Set your delivery address ▾',
   'shop.home.morning': 'Good morning',
   'shop.home.afternoon': 'Good afternoon',

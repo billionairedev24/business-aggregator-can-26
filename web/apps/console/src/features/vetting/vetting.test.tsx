@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { renderConsole, staffApi, type Call } from '../../test/render';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const base = { merchantId: 'M1', province: 'AB', category: null, medianCents: null, deviationPct: null, regulator: null, flags: [], revetReasons: [], trustFlags: [], submittedAt: '2026-09-08T16:00:00Z', decidedAt: null, reasons: [], note: null };
 const BRAKES = { ...base, id: 'L1', kind: 'service', businessName: 'QuickFix Auto', name: 'Full brake job', priceCents: 4900, medianCents: 18000, deviationPct: -73, flags: ['price_outlier'], state: 'pending' };
@@ -30,6 +31,7 @@ describe('listing vetting (S-92, design 03 vetting)', () => {
     api(['trust_safety']);
     renderConsole('/vetting');
     expect(await screen.findByRole('heading', { level: 1, name: '2,318 listings auto-approved this week · 4 flagged for a human' })).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('Listing vetting', { selector: '.nl-q-kicker' })).toBeTruthy();
     expect(screen.getByText(/Rules: banned categories, price ±60% from category median/)).toBeTruthy();
     expect(within(row('Full brake job')).getByText('Price −73% vs median')).toBeTruthy();

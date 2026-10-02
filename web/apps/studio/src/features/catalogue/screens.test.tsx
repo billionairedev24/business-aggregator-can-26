@@ -20,6 +20,7 @@ import { ListingsScreen } from './ListingsScreen';
 import { ServiceEditor } from './ServiceEditor';
 import { ProductEditor } from './ProductEditor';
 import { BulkUploadScreen } from './BulkUploadScreen';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 /** user-event with no timer between keystrokes: typing costs one pass, not a macrotask per character. */
 const user = () => userEvent.setup({ delay: null });
@@ -49,6 +50,7 @@ describe('ListingsScreen', () => {
     renderScreen(<ListingsScreen />);
     expect(screen.getByRole('heading', { name: 'Products & variants' })).toBeTruthy();
     expect(await screen.findAllByText('Brake pads · ceramic (front)')).not.toHaveLength(0);
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.queryByText('Brake inspection')).toBeNull();
     expect(screen.queryByRole('columnheader', { name: /Type/ })).toBeNull();
     expect(screen.getAllByText('Pending · 2 min').length).toBeGreaterThan(0);
@@ -142,6 +144,22 @@ describe('ProductEditor', () => {
     expect(await screen.findByText('GTIN check digit invalid')).toBeTruthy();
     expect((screen.getByRole('button', { name: 'Submit for vetting' }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByText('Completeness · 33%')).toBeTruthy();
+  });
+});
+
+describe('ProductEditor tabs (S-109)', () => {
+  it('are ARIA tabs: aria-selected without aria-pressed, one tab stop, arrows move; the editor passes axe', async () => {
+    stubFetch({ [`GET ${base}/catalogue/categories`]: CATEGORIES });
+    renderScreen(<ProductEditor portal="seller" />);
+    const identity = screen.getByRole('tab', { name: /^Identity & category/ });
+    expect(identity.getAttribute('aria-selected')).toBe('true');
+    expect(identity.hasAttribute('aria-pressed')).toBe(false);
+    expect(screen.getByRole('tab', { name: /^Variants/ }).getAttribute('tabindex')).toBe('-1');
+    await expectNoAxeViolations(document.body);
+    identity.focus();
+    await user().keyboard('{ArrowRight}');
+    expect(screen.getByRole('tab', { name: /^Variants/ }).getAttribute('aria-selected')).toBe('true');
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: /^Variants/ }));
   });
 });
 

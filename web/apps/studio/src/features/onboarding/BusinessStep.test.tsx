@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TAXONOMY, onboarding } from '../../test/fixtures';
 import { mockFetch, renderWithProviders, type Call } from '../../test/render';
 import { BusinessStep } from './BusinessStep';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 /** user-event with no timer between keystrokes: typing costs one pass, not a macrotask per character. */
 const user = () => userEvent.setup({ delay: null });
@@ -61,6 +62,7 @@ describe('BusinessStep', () => {
     await type(/Legal name of owner/, 'Amara Okafor');
     await type(/Home \/ business address/, '12 Glenmore Trail SW, Calgary');
     const picker = await screen.findByRole('combobox', { name: 'Services you offer' });
+    await expectNoAxeViolations(document.body); // S-109
     await user().click(picker);
     await user().click(screen.getByRole('option', { name: /Mobile mechanic/ }));
     await user().click(within(screen.getByRole('listbox').parentElement!).getByRole('button', { name: 'Done' }));

@@ -4,7 +4,7 @@ import {
   addPasskey, createPasskey, passkeyOptions, PasskeyError, removePasskey, revokeOtherSessions, revokeSession, securityChangeError,
   securityKey, securityQuery, type ActiveSession, type Security, type SecurityChangeError,
 } from '@northline/auth-kit';
-import { Button, Dialog, ErrorState, Field, Tag, TextInput } from '@northline/ui';
+import { Button, Dialog, ErrorState, Field, Tag, TextInput, codeValue } from '@northline/ui';
 import { enrolPasskey, StepUpFailed, stepUpWithCode, stepUpWithPasskey } from '../cart/stepUp';
 import { signInHref, useSession, useSignOut } from '../session/api';
 import { accountSummaryQuery, useAccountSummary } from './api';
@@ -69,7 +69,7 @@ function ConfirmItsYou({ onDone }: { onDone: () => void }) {
         <p className="nl-small nl-muted">{hasFactor ? t('confirmBody') : t('enrolBody')}</p>
         {hasFactor && useCode ? (
           <Field label={t('code')} error={error}>
-            <TextInput value={code} onChange={e => setCode(e.target.value)} inputMode="numeric" autoComplete="one-time-code" maxLength={6} />
+            <TextInput value={code} onChange={e => setCode(codeValue(e.target.value))} inputMode="numeric" autoComplete="one-time-code" />
           </Field>
         ) : error ? <p className="nl-error" role="alert">{error}</p> : null}
         {signInAgain ? <p className="nl-small">{t('signInAgain')} <a href={signInHref(tabHref('security'))}>{t('signInAgainAction')}</a></p> : null}
