@@ -1,0 +1,25 @@
+{
+  "name": "@northline/a11y",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Accessibility checks (S-109): the axe helper for the vitest component tests and the Playwright + axe page sweep of the built apps against a mock api (`make a11y`).",
+  "exports": {
+    "./vitest": "./src/vitest.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "a11y": "playwright test"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.56.1",
+    "@types/node": "^22.0.0",
+    "axe-core": "4.13.0",
+    "jsdom": "^26.1.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0",
+    "vitest-axe": "0.1.0"
+  }
+}
