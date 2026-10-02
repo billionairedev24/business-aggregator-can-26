@@ -1,7 +1,6 @@
-import type * as StripeSdk from '@stripe/stripe-react-native';
-
 import { config } from '../config';
 import type { Started } from '../api/shop';
+import { stripeSdk } from './stripeSdk';
 
 /**
  * Card payments (the port). The api opens one manual-capture PaymentIntent per order line plus one for the delivery fee
@@ -33,9 +32,8 @@ export const stripeCardPayments: CardPayments = {
   async pay(started, method) {
     const key = started.payment.publishableKey;
     if (!key) return { status: 'failed' };
-    // required only when Stripe is configured: the native module stays off the fixture and local builds' paths
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const stripe = require('@stripe/stripe-react-native') as typeof StripeSdk;
+    const stripe = stripeSdk();
+    if (!stripe) return { status: 'failed' };
     // the app's scheme brings the person back from a bank's own app or page (3-D Secure redirects)
     await stripe.initStripe({ publishableKey: key, urlScheme: SCHEME, setReturnUrlSchemeOnAndroid: true });
     const pending = pendingIntents(started);

@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { router } from 'expo-router';
 import { useEffect, useMemo, useRef } from 'react';
 
 import { ApiError, type Locale } from '@northline/mobile-kit';
@@ -185,4 +186,13 @@ export function appRoute(href: string): string | null {
   m = /^\/quotes\/(?!requests\/)([^/]+)$/.exec(path);
   if (m) return `/quotes/${m[1]}`;
   return null;
+}
+
+/**
+ * Back to a tab from deep in a flow (Order confirmed → Home, a case → Orders): close the screens above the tabs, then
+ * show the tab — `push`/`replace` would stack a second set of tabs.
+ */
+export function backToTab(path: '/home' | '/orders' | '/cart') {
+  if (router.canDismiss()) router.dismissAll();
+  router.navigate(path);
 }

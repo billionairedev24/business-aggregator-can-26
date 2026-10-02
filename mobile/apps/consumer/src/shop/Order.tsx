@@ -12,7 +12,7 @@ import type { MessageKey } from '../i18n';
 import { Body, Button, Notice, Tag, Title } from '../ui/primitives';
 import { Screen } from '../ui/screen';
 import { QueryView, SignInPrompt, Skeleton, errorMessage } from '../ui/states';
-import { shop, useShopFormat } from './common';
+import { backToTab, shop, useShopFormat } from './common';
 import { Ladder, Panel, Thumb, shopStyles } from './parts';
 
 /**
@@ -106,7 +106,7 @@ export function Confirmed() {
       footer={() => (
         <>
           <Button label={t('shop.order.track')} large onPress={() => router.push({ pathname: '/orders/[id]/track', params: { id } })} testID="confirmed-track" />
-          <Button label={t('shop.order.backHome')} tone="ghost" onPress={() => router.replace('/home')} />
+          <Button label={t('shop.order.backHome')} tone="ghost" onPress={() => backToTab('/home')} />
         </>
       )}
     >
@@ -116,7 +116,8 @@ export function Confirmed() {
             <Circle cx={36} cy={36} r={34} fill={colors.accent100} stroke={colors.accent} strokeWidth={2} />
             <Path d="M22 37 L32 47 L51 27" fill="none" stroke={colors.accent700} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />
           </Svg>
-          <Title>{t('shop.order.placed', { when: when(o) })}</Title>
+          {/* the sentence's own full stop, not a second one after "p.m." */}
+          <Title>{t('shop.order.placed', { when: when(o).replace(/\.$/, '') })}</Title>
           <Body tone="muted">{t('shop.order.sub', { ref: o.ref ?? '', total: f.money(o.totalCents), shops: o.shops.length })}</Body>
           <Ladder steps={steps(o)} />
         </View>
@@ -217,7 +218,7 @@ export function Delivered() {
     <OrderScreen
       id={id}
       testID="delivered"
-      footer={() => <Button label={t('shop.delivered.viewOrder')} tone="ghost" onPress={() => router.push('/orders')} />}
+      footer={() => <Button label={t('shop.delivered.viewOrder')} tone="ghost" onPress={() => backToTab('/orders')} />}
     >
       {(o) => {
         if (!o.deliveredAt) {

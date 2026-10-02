@@ -17,6 +17,7 @@ jest.mock('@stripe/stripe-react-native', () => ({
   retrievePaymentIntent: jest.fn(async () => ({ paymentIntent: { paymentMethod: { id: 'pm_new' } } })),
   confirmPayment: jest.fn(async () => ({ paymentIntent: { status: 'RequiresCapture' } })),
   PaymentSheetError: { Canceled: 'Canceled', Failed: 'Failed' },
+  handleURLCallback: jest.fn(async () => true),
 }));
 
 afterEach(async () => {
@@ -344,7 +345,7 @@ describe('B6 Payment', () => {
     expect(screen.getByText('Northline Marketplace · $23.35. Approve in your banking app or enter the code we texted.')).toBeTruthy();
     fireEvent.press(screen.getByTestId('bank-approve'));
     await waitFor(() => expect(view.getPathname()).toBe('/orders/ord-48213/confirmed'));
-    expect(await screen.findByText(/^Order placed\. Arriving tonight 6:00 p\.m\.–9:00 p\.m\.\.$/)).toBeTruthy();
+    expect(await screen.findByText(/^Order placed\. Arriving tonight 6:00 p\.m\.–9:00 p\.m\.$/)).toBeTruthy();
     expect(screen.getByText('Order NL-48213 · $23.35 · 2 shops packing now. We’ll notify you when the courier leaves.')).toBeTruthy();
     expect(screen.getByLabelText('Paid · receipt emailed, done')).toBeTruthy();
     expect(screen.getByLabelText('Shops packing · 0 of 2 accepted, now')).toBeTruthy();
@@ -504,6 +505,17 @@ describe('the Stripe adapter (the payment port’s real side, Stripe’s SDK moc
     expect(await stripeCardPayments.pay(started, { kind: 'new' })).toEqual({ status: 'cancelled' });
     stripe().confirmPayment!.mockResolvedValueOnce({ error: { code: 'Failed', message: 'declined', localizedMessage: 'Your card was declined.' } });
     expect(await stripeCardPayments.pay(started, { kind: 'saved', paymentMethodId: 'pm_saved' })).toEqual({ status: 'failed', message: 'Your card was declined.' });
+  });
+});
+
+describe('the 3-D Secure return link', () => {
+  it('hands the bank’s link to Stripe’s SDK and goes on', async () => {
+    const spy = jest.spyOn(Linking, 'useURL').mockReturnValue('ca.northline.app://stripe-redirect?payment_intent=pi_1');
+    const { view } = await start({ welcomed: true, url: '/stripe-redirect' });
+    const sdk = jest.requireMock('@stripe/stripe-react-native') as { handleURLCallback: jest.Mock };
+    await waitFor(() => expect(sdk.handleURLCallback).toHaveBeenCalledWith('ca.northline.app://stripe-redirect?payment_intent=pi_1'));
+    await waitFor(() => expect(view.getPathname()).toBe('/cart'));
+    spy.mockRestore();
   });
 });
 

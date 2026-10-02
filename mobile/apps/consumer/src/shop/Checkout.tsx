@@ -1,14 +1,14 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { ApiError, colors, fonts, space } from '@northline/mobile-kit';
+import { ApiError, MIN_TARGET, colors, fonts, radius, space } from '@northline/mobile-kit';
 
 import type { AddressInput, CheckoutBody, CheckoutSetup, DeliveryOption, Substitution } from '../api/shop';
 import { useAuth } from '../auth/AuthProvider';
 import { useDeliveryLocation, type DeliveryLocation } from '../location/DeliveryLocation';
-import { Body, Button, Notice, Option } from '../ui/primitives';
+import { Body, Button, Notice } from '../ui/primitives';
 import { Screen } from '../ui/screen';
 import { EmptyState, ErrorState, LoadingList, QueryView, SignInPrompt, Skeleton, errorMessage } from '../ui/states';
 import { serverMessage, shop, useMarket, useShopFormat } from './common';
@@ -220,7 +220,24 @@ function WindowOption({ option, selected, onPress }: { option: DeliveryOption; s
       : option.households > 0
         ? t('shop.win.pooledWith', { n: option.households })
         : t('shop.win.pooled', { time: f.time(option.orderBy) });
-  return <Option selected={selected} onPress={onPress} title={name} description={desc} tag={f.fee(option.feeCents)} testID={`window-${option.id}`} />;
+  const price = f.fee(option.feeCents);
+  // the design's `opt` with the price on the right
+  return (
+    <Pressable
+      accessibilityRole="radio"
+      accessibilityLabel={`${name}, ${desc}, ${price}`}
+      accessibilityState={{ selected, checked: selected }}
+      onPress={onPress}
+      style={({ pressed }) => [styles.option, selected && styles.optionOn, pressed && !selected && styles.optionOn]}
+      testID={`window-${option.id}`}
+    >
+      <View style={shopStyles.rowText}>
+        <Text style={[styles.body15, shopStyles.strong]}>{name}</Text>
+        <Text style={styles.small}>{desc}</Text>
+      </View>
+      <Text style={shopStyles.price}>{price}</Text>
+    </Pressable>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -230,4 +247,6 @@ const styles = StyleSheet.create({
   body15: { fontFamily: fonts.body, fontSize: 15, color: colors.text },
   small: { fontFamily: fonts.body, fontSize: 13, color: colors.neutral700 },
   sums: { gap: 6, paddingTop: space[3] },
+  option: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: MIN_TARGET, paddingHorizontal: 14, paddingVertical: space[3], borderRadius: radius.md, borderWidth: 1, borderColor: colors.divider },
+  optionOn: { borderColor: colors.accent, backgroundColor: colors.accent100 },
 });

@@ -44,7 +44,7 @@ export function Product() {
     if (!offer) return;
     add.mutate(
       { offerId: offer.offerId, ...(variant ? { variantId: variant.variantId } : {}), qty },
-      { onSuccess: () => router.push('/cart') },
+      { onSuccess: () => router.navigate('/cart') },
     );
   };
   const addError = add.error
@@ -96,7 +96,7 @@ export function Product() {
           </View>
         }
         isEmpty={(p) => !p || !p.served || p.offers.length === 0}
-        empty={<EmptyState message={t('shop.product.notServed', { place: product.data?.market ?? market.label ?? '' })} action={t('shop.cart.browse')} onAction={() => router.replace('/home')} />}
+        empty={<EmptyState message={t('shop.product.notServed', { place: product.data?.market ?? market.label ?? '' })} action={t('shop.cart.browse')} onAction={() => router.navigate('/home')} />}
       >
         {(p) =>
           p && offer ? (

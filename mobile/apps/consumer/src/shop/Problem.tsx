@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -11,7 +11,7 @@ import type { MessageKey } from '../i18n';
 import { Body, Button, Field, Notice } from '../ui/primitives';
 import { Screen } from '../ui/screen';
 import { LoadingList, QueryView, SignInPrompt, errorMessage } from '../ui/states';
-import { shop, useShopFormat } from './common';
+import { backToTab, shop, useShopFormat } from './common';
 import { Chip, Kicker, Ladder, Panel } from './parts';
 
 const NOTE_MAX = 1000;
@@ -146,7 +146,7 @@ function Done({ reported }: { reported: Reported }) {
   const first = reported.refunds[0];
   const card = reported.card ? t('shop.pay.card', { brand: reported.card.brand, last4: reported.card.last4 }) : t('shop.problem.yourCard');
   return (
-    <Screen title={t('title.refund')} testID="refund-done" footer={<Button label={t('shop.problem.backToOrders')} large onPress={() => router.replace('/orders')} />}>
+    <Screen title={t('title.refund')} testID="refund-done" footer={<Button label={t('shop.problem.backToOrders')} large onPress={() => backToTab('/orders')} />}>
       <Panel>
         <Kicker>{t('shop.problem.caseInReview', { number: reported.caseCode })}</Kicker>
         <Text style={styles.h3}>{t('shop.problem.received', { amount: f.money(reported.totalCents) })}</Text>
