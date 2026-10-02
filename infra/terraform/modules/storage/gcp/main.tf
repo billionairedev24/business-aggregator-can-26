@@ -39,6 +39,19 @@ resource "google_storage_bucket" "this" {
     }
   }
 
+  dynamic "lifecycle_rule" {
+    for_each = each.value.expire_prefixes
+    content {
+      condition {
+        age            = lifecycle_rule.value
+        matches_prefix = [lifecycle_rule.key]
+      }
+      action {
+        type = "Delete"
+      }
+    }
+  }
+
   dynamic "encryption" {
     for_each = var.kms_key == null ? [] : [try(var.kms_key.id, null)]
     content {
@@ -117,6 +130,19 @@ resource "google_storage_bucket" "replica" {
     }
     action {
       type = "Delete"
+    }
+  }
+
+  dynamic "lifecycle_rule" {
+    for_each = each.value.expire_prefixes
+    content {
+      condition {
+        age            = lifecycle_rule.value
+        matches_prefix = [lifecycle_rule.key]
+      }
+      action {
+        type = "Delete"
+      }
     }
   }
 

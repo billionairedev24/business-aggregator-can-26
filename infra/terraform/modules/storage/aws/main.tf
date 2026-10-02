@@ -65,6 +65,20 @@ resource "aws_s3_bucket_lifecycle_configuration" "this" {
     }
   }
 
+  dynamic "rule" {
+    for_each = var.buckets[each.key].expire_prefixes
+    content {
+      id     = "expire-${trimsuffix(replace(rule.key, "/", "-"), "-")}"
+      status = "Enabled"
+      filter {
+        prefix = rule.key
+      }
+      expiration {
+        days = rule.value
+      }
+    }
+  }
+
   depends_on = [aws_s3_bucket_versioning.this]
 }
 
@@ -212,6 +226,20 @@ resource "aws_s3_bucket_lifecycle_configuration" "replica" {
     }
     abort_incomplete_multipart_upload {
       days_after_initiation = 7
+    }
+  }
+
+  dynamic "rule" {
+    for_each = var.buckets[each.key].expire_prefixes
+    content {
+      id     = "expire-${trimsuffix(replace(rule.key, "/", "-"), "-")}"
+      status = "Enabled"
+      filter {
+        prefix = rule.key
+      }
+      expiration {
+        days = rule.value
+      }
     }
   }
 
