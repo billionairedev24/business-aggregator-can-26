@@ -97,7 +97,7 @@ cat >&2 <<NEXT
 
 Staging now holds masked prod data (Flyway $(awk -F'\t' '$1=="flyway" && $2=="version" { print $3 }' "$DR_WORK/target-$stamp.tsv")). Before scaling the apps up again:
   - Valkey: FLUSHALL on staging's cache (sessions and caches of the old staging data)
-  - search: run the search-reindex Job (docs/runbooks/search.md § Full reindex) — the index still holds the old data
+  - search: run the search-reindex Job (docs/runbooks/search.md § 9 Reindex) — the index still holds the old data
   - OAuth clients: sync the chart (the oauth-clients Job writes staging's client secrets; masking removed prod's)
   - Kafka: nothing — outbox rows that were pending in prod are re-published to staging's topics (no personal data)
   - object storage: not copied; masked rows point at prod object keys staging cannot read (images show as missing)
