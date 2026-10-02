@@ -2073,6 +2073,9 @@ Worker: `WebhookDeliveryTest` (Kafka 4 + PostGIS + WireMock receiver: signed `bo
 - **validate.sh:** the two Job checks render first and grep the result; `helm template | grep -q` under `pipefail` failed at random when grep closed the pipe early (the existing Kafka topics check flaked the same way and is fixed too).
 - **Least-privilege role** documented (search.md § 5: `monitor`, `manage_search_synonyms`, `listings_*` create/manage/read/write): the S-3 `elastic` superuser stays until the Elastic Cloud deployment exists.
 - **Tests:** `IndexLayoutTest` (both languages, names, hashes, synonym parsing, create body); `IndexBootstrapTest` on Testcontainers Elasticsearch 9.1 (the compose image): empty cluster → plan reports all missing and changes nothing; apply creates the sets, then versioned indices behind the aliases; second run in sync; French elision/folding/stemming and English possessives through `_analyze`; cross-language synonyms (`pain au levain` ↔ `sourdough`, `mobile mechanic` → `Mécanicien mobile`) in both indices; a changed synonym file is live at once without a reindex; a new field is added in place; a changed analyzer or an incompatible field type → reindex required, nothing touched. Worker `SearchIndicesCommandTest` (exit codes against its own empty cluster).
+- **Accessibility sweep (S-109):** `make a11y` passes on the 32 screens with the committed fixtures. `make a11y-record`
+  was run: it captured no new request (the Studio's French panel isn't in the recorded suites), only reordered answers
+  — one of which made the console's French audit log scroll at 320 px — so the re-recorded fixtures were not kept.
 - **Not done / never run for real:** no Elastic Cloud deployment or credentials exist (known open item) — nothing has run against Elastic Cloud, only against local/Testcontainers Elasticsearch 9.1 with security off; the `northline_app` role is documented, not created; the reindex itself (S-71); `i18n.synonyms` and a console synonym editor.
 
 ## 2026-09-30 — S-43 Search indexer consumer (catalogue, food, merchants, trust events)
@@ -7274,9 +7277,9 @@ available in fr-CA before a Québec launch.
 
   | surface | before (main) | after |
   |---|---|---|
-  | web bundles (consumer, Studio, console, docs site, packages) | 7066 / 7077 (11 English-in-French) | 7094 / 7094 |
+  | web bundles (consumer, Studio, console, docs site, packages) | 7066 / 7077 (11 English-in-French) | 7106 / 7106 (after S-109's merge) |
   | hard-coded JSX text | 0 language gaps (6 hits, all sample values or brand labels; docs pages use `<Translate>`) | 0 |
-  | mobile (consumer, courier, system strings) | 1264 / 1265 | 1265 / 1265 |
+  | mobile (consumer, courier, system strings) | 1264 / 1265 | 1267 / 1267 |
   | server (validation TSV, 404 details, status titles, e-mail, SMS/push) | 1101 / 1236 (93 NotFound resources, 42 titles) | 1383 / 1383 |
   | category taxonomy | 50 / 182 (shop only) | 182 / 182 |
   | store listings | 23 / 23 | 23 / 23 |
