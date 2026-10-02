@@ -8,6 +8,7 @@
 // a year, everything else revalidates); every other request is rendered by the app. SIGTERM drains open connections.
 // Business pages on pages.<zone> and on merchants' own domains: page-hosts.mjs (S-54; NL_SITE_ORIGIN, NL_PAGES_HOST).
 // robots.txt and the sitemaps: seo.mjs (S-63). The native apps' association files and OAuth redirect page: app-links.mjs (S-97).
+// The report-only Content-Security-Policy and POST /csp-report (S-110, PCI SAQ A payment-page scripts): csp.mjs.
 import { createServer } from 'node:http';
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
@@ -18,6 +19,7 @@ import { deepLinkAnswer, isDeepLinkPath } from './deep-links.mjs'; // S-102: the
 import { createPageRouter, PAGE_HEADERS } from './page-hosts.mjs';
 import { createSeo, isSeoPath } from './seo.mjs';
 import { appLinkAnswer, appLinksConfig, isAppLinkPath } from './app-links.mjs';
+import { CSP_REPORT_MAX_BODY, createCspReporter, cspHeaders, isCspReportPath } from './csp.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const clientDir = join(root, 'dist', 'client');
@@ -47,7 +49,21 @@ const securityHeaders = {
   'referrer-policy': 'strict-origin-when-cross-origin',
   'x-frame-options': 'DENY',
   'permissions-policy': 'camera=(), microphone=(), payment=(self), geolocation=(self)',
+  ...cspHeaders({ authOrigin: process.env.NL_AUTH_ORIGIN }),
 };
+const cspReport = createCspReporter();
+
+/** A request body as text, up to `limit` bytes (null when larger). */
+async function readBody(req, limit) {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of req) {
+    size += chunk.length;
+    if (size > limit) return null;
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks).toString('utf8');
+}
 
 async function staticFile(pathname) {
   if (pathname === '/' || pathname.endsWith('/')) return null;
@@ -105,6 +121,12 @@ const server = createServer(async (req, res) => {
     if (pathname === '/healthz') {
       res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
       res.end('ok');
+      return;
+    }
+    if (req.method === 'POST' && isCspReportPath(pathname)) {
+      const body = await readBody(req, CSP_REPORT_MAX_BODY);
+      res.writeHead(body === null ? 413 : cspReport(body), { 'cache-control': 'no-store' });
+      res.end();
       return;
     }
     if ((req.method === 'GET' || req.method === 'HEAD') && isDeepLinkPath(pathname)) {
