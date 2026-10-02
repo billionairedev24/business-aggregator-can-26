@@ -1,6 +1,6 @@
-import { Stub } from '../../src/ui/Stub';
+import { Browse } from '../../src/services/Browse';
 
-/** Design 01 `services` — a stub until its story builds it (src/screens.ts, docs/MOBILE_PLAN.md). */
+/** Design 01 `services` (S-100): the Services tab. */
 export default function Services() {
-  return <Stub screen="services" />;
+  return <Browse />;
 }
