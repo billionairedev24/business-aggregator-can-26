@@ -6093,16 +6093,16 @@ Branch `mobile/s-102-push`. Mostly server side; runbook [push.md](runbooks/push.
   `ca.northline.courier://run`. S-102 serves no `apple-app-site-association` / `assetlinks.json` of its own (an
   earlier commit on this branch did, removed to avoid doing it twice). The consumer web redirects each `/app/…` link
   to its web page (`server/deep-links.mjs`; bookings and cases to the account's orders list — no web page of their
-  own), so a phone without the app never lands on a 404. MOBILE_PLAN.md is not on main yet (S-97): the mapping is in
+  own), so a phone without the app never lands on a 404. The mapping is in MOBILE_PLAN.md § Contracts and
   push.md § 5.
 - **mobile-kit** (`src/push`): `PushRegistration` (installation id in secure storage; sync only on change; one at a
   time; offline/5xx → `false`, sent by the next sync; `enable()` asks for permission only when the app calls it;
-  `unregister()` before sign-out), `pushRegistrar()` shaped like S-97's `PushRegistrar` hook point (not on main yet —
-  once #134 merges, the consumer app installs it with `setPushRegistrar(pushRegistrar({...}))`), `expoPushPlatform`
+  `unregister()` before sign-out), `pushRegistrar()` for S-97's `PushRegistrar` hook point (the consumer app installs it
+  with `setPushRegistrar(pushRegistrar({...}))` once it depends on `expo-notifications`), `expoPushPlatform`
   (a structural adapter over `expo-notifications`, so mobile-kit gains no dependency), `handleNotificationTaps`,
   `parseDeepLink` / `routeOf` (strict: known host, known path, ids `[A-Za-z0-9_-]{1,64}`). **Not wired** into the
-  courier app (it would need `expo-notifications`, the Android notification channel and EAS push credentials) nor the
-  consumer app (on #134's branch).
+  courier app nor the consumer app: both need `expo-notifications` (a native module, its config plugin, the Android
+  notification channel) and EAS push credentials — a follow-up with the Apple/Firebase set-up.
 - **Secrets:** `PUSH_APNS_KEY` (`push-apns-key`), `PUSH_FCM_SERVICE_ACCOUNT` (`push-fcm-service-account`) in Terraform
   `app_secrets` (AWS, GCP, Azure), Helm `externalSecrets.secretNames` and `apps.worker.secretEnv` (required in prod);
   `PUSH_APNS_KEY_ID`, `PUSH_APNS_TEAM_ID` and the optional URLs/topics in the runbooks and `server/.env.example`.

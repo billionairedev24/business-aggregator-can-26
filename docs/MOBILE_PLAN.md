@@ -212,6 +212,25 @@ api above; personal stubs already show guests the sign-in prompt.
   tokens; until S-102 installs a registrar (at start-up, e.g. in `app/_layout.tsx`) they do nothing. The registrar
   owns the push SDK, the device-registration api and asking for the notification permission (at a moment the design
   chooses — not at launch). Deep links from notifications open the routes in § Screens.
+  S-102 ships the parts: `pushRegistrar({platform, storage, appVersion, locale})` (pass it to `setPushRegistrar`),
+  `PushRegistration.enable()` for the permission screen, `expoPushPlatform(Notifications, Platform.OS)` over
+  `expo-notifications` (not yet a dependency of the app: it needs the config plugin and EAS push credentials) and
+  `handleNotificationTaps(platform, hosts, link => router.push(routeOf(link)))`. Server side, set-up and failures:
+  [runbooks/push.md](runbooks/push.md).
+- **Deep links** (S-102) — under the paths the association files give each app (`/app/*`, `/courier/*`); the consumer
+  web redirects each to its web page when the app isn't installed:
+
+  | link | custom scheme | screen (`routeOf`) |
+  |---|---|---|
+  | `https://<zone>/app/orders/<id>` | `ca.northline.app://orders/<id>` | `/orders/<id>` |
+  | `https://<zone>/app/food/orders/<id>` | `ca.northline.app://food/orders/<id>` | `/food/orders/<id>` |
+  | `https://<zone>/app/bookings/<id>` | `ca.northline.app://bookings/<id>` | `/bookings/<id>` |
+  | `https://<zone>/app/quotes/<id>` | `ca.northline.app://quotes/<id>` | `/quotes/<id>` |
+  | `https://<zone>/app/cases/<number>` | `ca.northline.app://cases/<number>` | `/cases/<number>` |
+  | `https://<zone>/courier/run` | `ca.northline.courier://run` | courier app `/run` |
+
+  Journeys B–D add the screens behind `/orders/<id>`, `/bookings/<id>`, `/quotes/<id>` and `/cases/<number>` (or map
+  `routeOf`'s paths onto theirs in one place).
 
 ## Working in parallel (S-99, S-100, S-101)
 
@@ -235,7 +254,8 @@ Areas: `shop` (S-99), `services` (S-100), `account` (S-101). Don't edit another 
   publishable key per environment); Apple Pay / Google Pay need merchant ids.
 - **Passkeys in the app:** creating or using a passkey natively needs a native module (none in Expo); the app sends
   people to the consumer site in the system browser for passkeys, Google and Apple (S-98).
-- **Push:** device registration and deep links are S-102's.
+- **Push:** the server, mobile-kit's registration and the deep links are S-102's; the app still needs
+  `expo-notifications` and the registrar installed (above).
 
 ## Migration ranges
 
