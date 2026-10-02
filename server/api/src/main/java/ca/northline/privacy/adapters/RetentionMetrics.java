@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Component;
 
 /**
@@ -38,7 +39,7 @@ class RetentionMetrics implements RetentionMeter {
     private final RetentionRunStore store;
     private final Clock clock;
     private final Instant started;
-    private final AtomicReference<Snapshot> snapshot = new AtomicReference<>();
+    private final AtomicReference<@Nullable Snapshot> snapshot = new AtomicReference<>();
 
     private record Snapshot(Instant at, Map<String, RunRecord> succeeded, Instant baseline) {}
 
@@ -57,7 +58,7 @@ class RetentionMetrics implements RetentionMeter {
 
     @Override
     public void purged(String category, String action, long rows) {
-        meters.counter(ROWS, "category", category, "action", action).increment(rows);
+        meters.counter(ROWS, "category", category, "action", action).increment((double) rows);
     }
 
     @Override

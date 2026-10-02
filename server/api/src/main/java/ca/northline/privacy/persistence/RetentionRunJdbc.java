@@ -63,9 +63,9 @@ class RetentionRunJdbc implements RetentionRunStore {
 
     @Override
     public Map<String, RunRecord> latestSucceeded() {
-        return byCategory("select distinct on (category) " + COLUMNS + """
-                 from privacy.retention_runs where outcome = 'succeeded' and not dry_run
-                 order by category, finished_at desc""");
+        return byCategory("select distinct on (category) " + COLUMNS
+                + " from privacy.retention_runs where outcome = 'succeeded' and not dry_run"
+                + " order by category, finished_at desc");
     }
 
     private Map<String, RunRecord> byCategory(String sql) {
@@ -107,7 +107,7 @@ class RetentionRunJdbc implements RetentionRunStore {
                         select distinct subject_id from privacy.requests
                          where state in ('awaiting_verification', 'verified', 'in_progress')
                         """)
-                .query(String.class)
+                .query((rs, _) -> rs.getString(1))
                 .list());
     }
 

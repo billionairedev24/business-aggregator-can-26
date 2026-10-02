@@ -27,7 +27,7 @@ class FulfilmentRetention implements RetentionContributor {
     private static final String DUE = """
             from fulfilment.stops s
              where s.kind = 'dropoff' and s.proof_media_id is not null and s.state = 'done' and s.done_at < :cutoff
-               and not ('order:' || s.order_id = any(:held))
+               and not ('order:' || coalesce(s.order_id, '') = any(:held))
             """;
 
     private final JdbcClient jdbc;
@@ -46,7 +46,7 @@ class FulfilmentRetention implements RetentionContributor {
     @Override
     public List<HeldRef> holds(Instant now) {
         return jdbc.sql("select order_id from fulfilment.deliveries where state in " + FulfilmentPersonalData.ACTIVE)
-                .query(String.class)
+                .query((rs, _) -> rs.getString(1))
                 .list()
                 .stream()
                 .map(id -> HeldRef.open("order", id, Hold.ACTIVE_DELIVERY))

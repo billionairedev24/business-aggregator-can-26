@@ -87,7 +87,7 @@ class PrivacyRetention implements RetentionContributor {
     public long purge(Run run) {
         var ids = jdbc.sql("select r.id " + EXPIRED + " order by r.started_at limit :batch")
                 .params(Map.of("cutoff", run.before(), "held", run.heldKeys(), "batch", run.batch()))
-                .query(String.class)
+                .query((rs, _) -> rs.getString(1))
                 .list();
         var done = 0L;
         for (var id : ids) {

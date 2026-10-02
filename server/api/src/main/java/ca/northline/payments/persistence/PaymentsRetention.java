@@ -55,7 +55,7 @@ class PaymentsRetention implements RetentionContributor {
             from payments.escrows e
              where e.created_at < :cutoff and e.state in ('released', 'refunded')
                and (e.customer_id is not null or e.customer_name is not null)
-               and not (e.ref_type || ':' || e.ref_id = any(:held)) and not (coalesce(e.customer_id, '') = any(:subjects))
+               and not (coalesce(e.ref_type, '') || ':' || coalesce(e.ref_id, '') = any(:held)) and not (coalesce(e.customer_id, '') = any(:subjects))
             """;
     private static final String INTENTS = """
             from payments.payment_intents p
@@ -110,8 +110,10 @@ class PaymentsRetention implements RetentionContributor {
                 .forEach(d -> {
                     var hold = new HeldRef(new Ref("dispute", d.id()), Hold.OPEN_DISPUTE, d.decidedAt(), d.openedBy());
                     holds.add(hold);
-                    if (d.refType() != null && d.refId() != null) {
-                        holds.add(hold.as(d.refType(), d.refId()));
+                    var type = d.refType();
+                    var ref = d.refId();
+                    if (type != null && ref != null) {
+                        holds.add(hold.as(type, ref));
                     }
                 });
         jdbc.sql("select ref_type, ref_id from payments.escrows where state = 'held' and ref_id is not null")

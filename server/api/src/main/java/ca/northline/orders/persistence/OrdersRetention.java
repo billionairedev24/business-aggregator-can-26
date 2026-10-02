@@ -57,7 +57,7 @@ class OrdersRetention implements RetentionContributor {
     @Override
     public List<HeldRef> holds(Instant now) {
         return jdbc.sql("select id from orders.orders where state in " + OrdersPersonalData.OPEN)
-                .query(String.class)
+                .query((rs, _) -> rs.getString(1))
                 .list()
                 .stream()
                 .map(id -> HeldRef.open("order", id, Hold.OPEN_ORDER))

@@ -81,7 +81,7 @@ class RetentionJobsTest extends IntegrationTest {
     }
 
     private @Nullable Object value(String sql, Object... params) {
-        return jdbc.sql(sql).params(params).query().singleValue();
+        return jdbc.sql(sql).params(params).query((rs, _) -> java.util.Optional.ofNullable(rs.getObject(1))).single().orElse(null);
     }
 
     private long count(String sql, Object... params) {
@@ -91,7 +91,7 @@ class RetentionJobsTest extends IntegrationTest {
     /** A person whose default address is in {@code province} (whose privacy law applies to them). */
     private String person(String province) {
         var id = data.user("Retention " + province);
-        sql("insert into identity.addresses (id, user_id, city, province, is_default) values (?, ?, 'Town', ?, true)",
+        sql("insert into identity.addresses (id, user_id, street, city, province, is_default) values (?, ?, '1 Main St', 'Town', ?, true)",
                 Ids.next(), id, province);
         return id;
     }

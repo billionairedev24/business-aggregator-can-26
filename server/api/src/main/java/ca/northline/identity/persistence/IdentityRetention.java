@@ -22,7 +22,7 @@ class IdentityRetention implements RetentionContributor {
     private static final String EXPIRED = """
             from identity.sessions s
              where coalesce(s.revoked_at, s.last_seen_at, s.created_at) < :cutoff
-               and not (s.user_id = any(:subjects))
+               and not (coalesce(s.user_id, '') = any(:subjects))
             """;
 
     private final JdbcClient jdbc;

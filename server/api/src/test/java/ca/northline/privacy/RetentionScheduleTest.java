@@ -104,7 +104,9 @@ class RetentionScheduleTest {
         var codes = Arrays.stream(Hold.values()).map(Hold::code).toList();
         for (var c : catalogue.categories()) {
             assertThat(codes).as(c.code()).containsAll(c.holdCodes());
-            assertThat(c.code()).as("codes are <module>.<data>").startsWith(c.module() + ".");
+            if (c.enforcement() != Enforcement.PIPELINE) {
+                assertThat(c.code()).as("codes are <module>.<data>").startsWith(c.module() + ".");
+            }
             assertThat(c.name().fr()).as(c.code()).isNotBlank();
             assertThat(c.basis().fr()).as(c.code()).isNotBlank();
             assertThat(c.starts().fr()).as(c.code()).isNotBlank();

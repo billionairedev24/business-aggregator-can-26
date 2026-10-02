@@ -104,7 +104,7 @@ class MessagingRetention implements RetentionContributor {
                         select id from messaging.threads where kind = 'case' and ref_type = 'ticket' and ref_id = any(:k)
                         """)
                 .param("k", array)
-                .query(String.class)
+                .query((rs, _) -> rs.getString(1))
                 .list());
         jdbc.sql("""
                         update messaging.support_refund_requests set note = null, decision_note = null
@@ -169,7 +169,7 @@ class MessagingRetention implements RetentionContributor {
     }
 
     private List<String> ids(String select, Map<String, Object> p) {
-        return jdbc.sql(select + " limit :batch").params(p).query(String.class).list();
+        return jdbc.sql(select + " limit :batch").params(p).query((rs, _) -> rs.getString(1)).list();
     }
 
     private static Map<String, Object> params(Run run) {

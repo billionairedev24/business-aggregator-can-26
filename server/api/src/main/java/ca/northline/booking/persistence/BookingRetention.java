@@ -36,7 +36,7 @@ class BookingRetention implements RetentionContributor {
     private static final String LOCATED = """
             from booking.booking_events e
              where e.geom is not null and e.at < :cutoff
-               and not ('booking:' || e.booking_id = any(:held)) and not (coalesce(e.actor_id, '') = any(:subjects))
+               and not ('booking:' || coalesce(e.booking_id, '') = any(:held)) and not (coalesce(e.actor_id, '') = any(:subjects))
             """;
     private static final String BOOKINGS = """
             from booking.bookings b
@@ -74,7 +74,7 @@ class BookingRetention implements RetentionContributor {
     @Override
     public List<HeldRef> holds(Instant now) {
         return jdbc.sql("select id from booking.bookings where state in " + BookingPersonalData.UPCOMING)
-                .query(String.class)
+                .query((rs, _) -> rs.getString(1))
                 .list()
                 .stream()
                 .map(id -> HeldRef.open("booking", id, Hold.UPCOMING_BOOKING))
@@ -113,7 +113,7 @@ class BookingRetention implements RetentionContributor {
     private long salesRecords(Map<String, Object> p) {
         var ids = jdbc.sql("select b.id " + BOOKINGS + " limit :batch")
                 .params(p)
-                .query(String.class)
+                .query((rs, _) -> rs.getString(1))
                 .list();
         long done = 0;
         if (!ids.isEmpty()) {

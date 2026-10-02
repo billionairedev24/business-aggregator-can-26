@@ -402,7 +402,7 @@ class RetentionService implements Retention.Work, Retention.Desk {
     }
 
     /** RFC 4180: every field quoted, quotes doubled. */
-    private static String line(List<@Nullable String> fields) {
+    private static String line(List<? extends @Nullable String> fields) {
         return fields.stream()
                 .map(f -> f == null ? "" : '"' + f.replace("\"", "\"\"") + '"')
                 .collect(Collectors.joining(","));
