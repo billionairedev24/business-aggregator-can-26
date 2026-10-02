@@ -6931,3 +6931,78 @@ Branch `security/s-108-casl`. Runbook: [runbooks/casl.md](runbooks/casl.md). Mig
   (and the save test updated).
 - **Not done:** inbound SMS STOP/ARRET; sign-up and checkout checkboxes; any commercial producer (campaigns, offers);
   counsel review of the wordings; a separate console screen (the privacy screen hosts the lookup).
+
+## 2026-09-30 — S-110 PCI SAQ-A attestation and Stripe compliance review; S-106 legal counsel review packet
+
+Branch `compliance/s-110-s-106-packets`. Packets: [compliance/README.md](compliance/README.md). **Nothing was attested
+or signed off**: no Stripe account exists and no lawyer has seen the texts. No migration, no new environment variable.
+
+- **SAQ A is the right questionnaire** (e-commerce only, card entry only in Stripe's Payment Element iframe and
+  PaymentSheet). The answer sheet follows **SAQ A v4.0.1 as revised in January 2025**, which removed 6.4.3 and 11.6.1
+  from SAQ A and added the eligibility criterion "site not susceptible to script attacks"; both requirements are kept
+  as the means to meet that criterion. The requirement list was transcribed by engineering (the PCI SSC library was
+  blocked from the build sandbox) and must be checked against the official PDF before signing — the sheet says so.
+- **Card-data guard in the api** (`shared.web.CardDataGuard`, a `RequestBodyAdvice`): every JSON body read by the
+  Jackson converter is scanned before the handler runs; a PAN (13–19 digits, separators allowed, Luhn-valid, a card
+  brand's issuer range, not glued to an id or a `+` phone number), track data, a verification code next to its name,
+  or a field named like card data (`cardNumber`, `cvc`, `pan`, `track2`, …) → **422 `card_data`** "Card numbers can't
+  be sent here. Enter card details only in the secure card form." (fr-CA in the catalogue). Refusing rather than
+  masking: the person learns not to paste a card, nothing is half-saved, and AI prompts never carry one. Barcode
+  fields (`gtin`, `ean`, `upc`, `isbn`, `barcode`, `sku`) are exempt from the number check (an EAN-13 can pass Luhn).
+  Bodies read raw (the Stripe webhooks) are not scanned — the signature covers them and Stripe never sends a PAN.
+  The warning names the handler, the field and `[CARD …4242]`, never the value.
+- **Recogniser in the platform library** (`platform.pci.CardData`), used by the guard and the scanners. The Redactor
+  (S-112) gained card-verification codes after their name (`cvc: [REDACTED]`), magnetic-stripe track data
+  (`[TRACK]`) and the names `cvc`, `cvv`, `cvn`, `csc`, `track1/2`, `track_data`. The Collector already had a card
+  rule; the scanner now fails if it disappears.
+- **Scanner = tests + `make pci-scan`:** `CardDataScanTest` migrates a fresh database (all migrations + the dev seed)
+  and checks every column of every schema (names; contents of text, JSON, array, numeric and enum columns — `bytea`
+  holds only sealed values and is skipped), the seed and migration files, event and webhook JSON Schemas, every
+  OpenAPI document (property and parameter names, requests and responses), the Redactor against six brands, the
+  Collector rule, the web and mobile sources (no card autofill hints, no card-named fields, scripts only from Stripe)
+  and the Studio's CSP. `CardDataRegressionTest` sends Stripe's 4242 card through a request body under
+  `LOG_FORMAT=ecs`: 422, nothing anywhere in the shared database, the ECS line shows `[CARD …4242]` only.
+- **Consumer web CSP is report-only** (`web/apps/consumer/server/csp.mjs`): generated from `SCRIPT_INVENTORY` (Stripe.js
+  only), `report-uri /csp-report` + `Reporting-Endpoints`; the Node server logs one JSON line per violation
+  (`event.dataset: csp.violation`, origins and paths only — no query strings), ≤ 300 a minute, bodies ≤ 16 KB.
+  Not enforced because TanStack Start's inline hydration scripts carry no nonce; enforcement with nonces, an alert on
+  the lines and a weekly synthetic check are the "not yet" items of E7 / 11.6.1. The Studio's CSP was already
+  enforced and allows only Stripe scripts and frames. `csp.test.ts` fails when code loads a script origin that is not
+  inventoried. Stripe.js can't take SRI (Stripe forbids pinned copies) — authorised by origin.
+- **Mobile:** both apps checked — the consumer app takes cards only in PaymentSheet (`initPaymentSheet` /
+  `presentPaymentSheet`, setup mode for saved cards); the courier app has no payments. No change.
+- **Incident response (12.10.1):** new [stripe-incidents.md § 6](runbooks/stripe-incidents.md#6-payment-page-tampering-or-card-data-found)
+  (skimming suspected, card data found). **stripe.md § 2 step 12** had a merge-duplicated paragraph; rewritten as one
+  restricted-key permission list that also covers SetupIntents / PaymentMethods (S-59), Identity (S-22), Balance
+  transactions (S-85) and Disputes.
+- **SAQ A "not yet" items and owners** (roles; people named in aoc.md when assigned): Stripe AOC review and yearly
+  monitoring (payments owner); script-attack confirmation E7 — enforce consumer CSP, alert, synthetic check (security
+  lead with web and SRE leads); vendor defaults in the cloud accounts 2.2.2 (platform/SRE lead); vulnerability
+  identification and patching 6.3.1 / 6.3.3 (security lead, S-104); accounts, leavers, IdP password policy 8.2.1,
+  8.2.5, 8.3.6, 8.3.7 (platform/SRE lead, ops lead); ASV scans 11.3.2 / 11.3.2.1 (security lead); TPSP agreements and
+  process 12.8.2 / 12.8.3 (payments owner, legal, security lead); every Stripe dashboard setting in stripe-review.md
+  (payments owner).
+- **S-106 — legal document registry** (`web/packages/legal/registry.json` + `registry.mjs`), reusing the version the
+  pages already print ("Version 3.0 · Effective 1 October 2026") and northline-auth's `TERMS_VERSION`: each legal text
+  has its versions, effective dates and a counsel sign-off record (`counsel`, `firm`, `date`, `sha256` of the reviewed
+  text, `reference`). Pages (Terms, Privacy Policy) and files (the store privacy answers) are hashed over their visible
+  text / canonical JSON; `legal.test.mjs` fails on a text change without a new version, a page line that disagrees,
+  two versions with one text, or a sign-off of another text, and checks the versions kept in code (auth's default
+  `termsVersion`, `OBLIGATIONS_VERSION`, every `ConsentWordings` id). Code-held texts keep their own pins
+  (`ConsentWordingsTest`). `make legal-check`, `make legal-status`. Consequence for other stories: changing
+  `mobile/apps/*/store/privacy.json` now needs a registry version too.
+- **Review packet and questions:** [review-packet.md](compliance/legal/review-packet.md) (12 texts with route/screen,
+  version and languages; no cookie notice exists; no courier terms, sub-processor page or French version) and
+  [counsel-questions.md](compliance/legal/counsel-questions.md) — **51 questions** with source and decision: S-105
+  deadlines, grace period, holds, verification; S-107's flagged mismatches (PR #147); S-108 wordings, push, SMS STOP,
+  hashes; Law 25 and Loi 96 (French texts, PIA, privacy officer, off-by-default, CPA forum clause); OpenRouter as a US
+  processor and the "no training" sentence; policy statements the product contradicts (precise location, cookies and
+  GPC, named cities, pen test / SOC 2 / segregated accounts, the sub-processor page); "escrow" vs merchant of record
+  and the Retail Payment Activities Act; the marketplace-facilitator checkbox; unversioned Business Terms acceptance;
+  the 18+ rating vs age of majority and no age check; alcohol, tobacco and vape; courier notices; bundled sign-up
+  consent; merchant attestations naming one province's bodies.
+- **Docs site:** `compliance/**/*.md` added to the internal variant with a sidebar category.
+- **Region-neutral:** no province, city or zone in the new code; the documents quote the legal drafts' place names
+  only to question them (G5, F3).
+- **Never run against the real services:** Stripe (dashboard settings, restricted key, AOC, Payment Element,
+  PaymentSheet), browsers sending CSP reports to a deployed site, a log backend receiving them, an ASV scan.

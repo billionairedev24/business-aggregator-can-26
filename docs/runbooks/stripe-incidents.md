@@ -15,6 +15,7 @@ section's *Exercised*). The Northline-side steps (SQL, jobs, the console, the ap
 | Stripe and the ledger disagree | the nightly reconciliation says `mismatch` | [3](#3-stripe-and-the-ledger-disagree) |
 | many disputes at once | `charge.dispute.created` spike, finance | [4](#4-dispute-spike) |
 | a Stripe key or webhook secret leaked | anyone who sees one outside the secrets manager | [5](#5-leaked-keys) |
+| a payment page loads something it shouldn't, or card data is found in a log or the database | a `csp.violation` log line, a `Refused card data` warning spike, the S-110 scanner failing | [6](#6-payment-page-tampering-or-card-data-found) |
 
 First five minutes, whatever it is: open <https://status.stripe.com>, the **checkout and payouts** dashboard
 (`northline-checkout-payouts`), and the api's logs for `Stripe` (`StripeCallFailed`, `Provider unavailable
@@ -323,3 +324,56 @@ comms for a leak without misuse.
 Secrets refresh; the S-6 kind rehearsal covers the refresh → restart path for another secret, [secrets.md § Rotation](secrets.md#rotation)).
 The api's behaviour with a wrong key (Stripe answers 401 → `StripeCallFailed`, not `payments_unavailable`) follows from
 `StripeOutageTest` (a 4xx is not an outage).
+
+## 6. Payment page tampering or card data found
+
+The PCI DSS incident response plan for SAQ A (requirement 12.10.1; [compliance/pci/saq-a.md](../compliance/pci/saq-a.md)).
+Northline never holds card data, so the two things that can go wrong are a payment page that loads a script, frame or
+connection it shouldn't (a skimmer reads what the customer types before Stripe's iframe gets it — e.g. a fake card
+form drawn over the page) and card data turning up where it should never be.
+
+**Symptoms.** Log lines `"event.dataset":"csp.violation"` from the consumer web for `script-src*`, `frame-src` or
+`connect-src` naming an origin outside [the inventory](../compliance/pci/payment-page-scripts.md); a customer reports a
+card form that looked different; Stripe Radar or a card brand reports a common point of purchase; the api logs many
+`Refused card data in a request body` warnings (someone, or a client bug, sending card numbers); `make pci-scan` fails;
+a card number found unmasked in a log, a ticket or a database export.
+
+**Impact.** A skimmer on a payment page steals cards before Stripe tokenises them: the cards are compromised even though
+Northline never stored them, and the card brands treat Northline as the point of compromise. Card data in our logs or
+database puts those systems in PCI scope until it is purged.
+
+**Decide:**
+
+```
+what was found?
+├─ csp.violation for script/frame/connect from an unknown origin
+│   ├─ one browser, an extension's origin (chrome-extension:, moz-extension:, a known ad blocker) → note it, no incident
+│   └─ many browsers, or an origin that serves JavaScript → INCIDENT: contain the payment pages (below)
+├─ Refused card data warnings → the guard did its job (nothing stored); find the client: a bug → fix it; a person → none
+└─ card data in a log, ticket, export or table → INCIDENT: purge (below)
+```
+
+**Commands — contain the payment pages.** Roll the consumer web back to the last image you trust (Argo CD, gitops.md);
+then compare the served pages with the build — `curl -sI https://<site>/cart` for the headers and the script tags of
+the HTML against the commit's `dist/client`. If the origin came through a dependency, pin or remove it and rebuild.
+If no image is known to be clean, take the consumer web offline (scale its Deployment to 0 behind the edge's error
+page) rather than serve a tampered payment page — the apps keep working, they don't use the web's pages.
+
+**Commands — purge card data.** Logs: delete the affected streams or time range in the log backend (S-112's backends
+each have a delete API; note what was deleted). Database: find it with the scanner against the environment
+(`CardDataScanner.contents`, or the SQL hint in it), overwrite the value in a transaction, and check backups —
+PITR copies keep it until they roll off (backups-dr.md). Tickets / chat: delete the message, ask the tool's admin to
+purge it.
+
+**Verify.** No new `csp.violation` from that origin after the rollback; `make pci-scan` green; the scanner finds
+nothing in the environment's database.
+
+**Rollback.** Scale the consumer web back up (or roll forward to the fixed image) once the pages are clean.
+
+**Comms.** Security lead, CTO and legal at once; a suspected skimmer is reported to **Stripe** (which informs the card
+brands and its acquirer) the same day; customers who paid during the window and the privacy commissioners as the
+privacy incident procedure requires (real risk of significant harm); keep a record of the breach (PIPEDA s. 10.3).
+
+**Exercised:** **not exercised** end to end (no deployed site, no log backend). The detection pieces ran in tests on
+2026-10-02: `csp.test.ts` (report parsing, rate cap), `CardDataRegressionTest` (refusal, nothing stored, masked log),
+`CardDataScanTest`.
