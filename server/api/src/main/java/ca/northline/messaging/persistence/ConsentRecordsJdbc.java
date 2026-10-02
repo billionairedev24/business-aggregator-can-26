@@ -7,7 +7,6 @@ import ca.northline.messaging.domain.ConsentSource;
 import ca.northline.shared.CodedEnum;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -57,7 +56,7 @@ class ConsentRecordsJdbc implements ConsentStore {
                 .param("u", r.userId())
                 .param("c", r.category().code())
                 .param("action", r.granted() ? "granted" : "withdrawn")
-                .param("at", Timestamp.from(r.at()))
+                .param("at", MessagingSql.ts(r.at()))
                 .param("source", r.source().code())
                 .param("wording", r.wordingVersion())
                 .param("lang", r.language())
@@ -97,7 +96,7 @@ class ConsentRecordsJdbc implements ConsentStore {
                          using latest l
                          where r.user_id = l.user_id and r.category = l.category
                            and l.action = 'withdrawn' and l.at < :before
-                        """).param("before", Timestamp.from(before)).update();
+                        """).param("before", MessagingSql.ts(before)).update();
     }
 
     static ConsentRecord row(ResultSet rs) throws SQLException {
@@ -106,7 +105,7 @@ class ConsentRecordsJdbc implements ConsentStore {
                 rs.getString("user_id"),
                 CodedEnum.fromCode(ConsentCategory.class, rs.getString("category")),
                 "granted".equals(rs.getString("action")),
-                rs.getTimestamp("at").toInstant(),
+                MessagingSql.requiredInstant(rs, "at"),
                 CodedEnum.fromCode(ConsentSource.class, rs.getString("source")),
                 rs.getString("wording_version"),
                 rs.getString("language"),
