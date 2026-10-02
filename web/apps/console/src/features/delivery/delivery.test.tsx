@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { renderConsole, staffApi, type Call } from '../../test/render';
 import { fit, project, tiles, toView } from './mapGeometry';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const NOW = Date.now();
 const iso = (minutes: number) => new Date(NOW + minutes * 60_000).toISOString();
@@ -38,6 +39,7 @@ describe('delivery ops (S-81, design 03)', () => {
     const calls = api(['dispatch']);
     renderConsole('/delivery');
     expect(await screen.findByRole('heading', { level: 1, name: '3 couriers on 3 runs · 66.7% on time · 1 stuck' })).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('Delivery operations · Calgary')).toBeTruthy();
     expect(calls.some(c => c.url.endsWith('/api/v1/console/fulfilment/runs?market=Calgary'))).toBe(true);
     expect(calls.some(c => c.url.endsWith('/api/v1/console/delivery/map?market=calgary'))).toBe(true);

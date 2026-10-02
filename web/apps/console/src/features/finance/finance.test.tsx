@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { renderConsole, SESSION, staffApi, type Call } from '../../test/render';
 import type { Day, Finance } from './api';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const FINANCE: Finance = {
   asOf: '2026-09-08T18:00:00Z', timeZone: 'America/Edmonton', escrowHeldCents: 41_822_000, escrowItems: 3104, payoutsInFlightCents: 18_640_000, payoutsInFlightSellers: 1140,
@@ -47,6 +48,7 @@ describe('finance (S-85, design 03)', () => {
     api(['finance']);
     renderConsole('/finance');
     expect(await screen.findByRole('heading', { level: 1, name: 'Escrow, payouts and reconciliation' })).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('escrow held · 3,104 items').previousElementSibling?.textContent).toBe('$418,220');
     expect(screen.getByText('payouts in flight · 1,140 sellers').previousElementSibling?.textContent).toBe('$186,400');
     expect(screen.getByText('net revenue · week').previousElementSibling?.textContent).toBe('$24,100');

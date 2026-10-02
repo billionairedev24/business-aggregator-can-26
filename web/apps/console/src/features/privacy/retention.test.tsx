@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { renderConsole, staffApi, type Call } from '../../test/render';
 import { periodParts } from './retentionApi';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const RUN = { category: 'messaging.conversations', dryRun: false, trigger: 'schedule', startedAt: '2026-10-02T08:47:00Z', finishedAt: '2026-10-02T08:47:03Z',
   outcome: 'succeeded', affected: 12, held: 3, remaining: 0 };
@@ -47,6 +48,7 @@ describe('retention report (S-107)', () => {
     api(['privacy']);
     renderConsole('/privacy?view=retention');
     expect(await screen.findByRole('heading', { level: 1, name: '3 categories · 1 overdue' })).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getAllByText('2 years; a dispute: 1 year after its decision').length).toBeGreaterThan(0);
     expect(screen.getAllByText('12 months').length).toBeGreaterThan(0);
     expect(screen.getAllByText('While public').length).toBeGreaterThan(0);

@@ -4,12 +4,14 @@ import { describe, expect, it } from 'vitest';
 import { overview } from '../../test/fixtures';
 import { renderConsole, staffApi } from '../../test/render';
 import { compactMoney } from './Overview';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 describe('console overview (S-91, design 03)', () => {
   it('shows the day, the headline, the KPIs, GMV, health, the work queue and live now', async () => {
     staffApi(['admin'], c => (c.url.includes('/api/v1/console/overview') ? { body: overview() } : undefined));
     renderConsole('/');
     expect(await screen.findByRole('heading', { level: 1, name: '$212k GMV this week, 1,204 sellers, 7 verifications and 3 disputes waiting.' })).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('Tuesday 8 September · live')).toBeTruthy();
     const kpis: [string, string][] = [['$212k', 'GMV · week · +9% w/w'], ['$24.1k', 'net revenue · 11.4% blended take'], ['6,812', 'orders + bookings · 61% goods'],
       ['96.8%', 'on-time · target 95'], ['0.9%', 'dispute rate · target < 1.2'], ['$2.71', 'avg delivery fee paid']];

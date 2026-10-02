@@ -13,6 +13,6 @@
 .nl-rp-table summary { cursor: pointer; color: var(--color-neutral-700); }
 .nl-rp-cohorts { width: 100%; }
 .nl-rp-cell { display: inline-block; min-width: 44px; padding: 2px 6px; border-radius: var(--radius-sm, 4px); background: color-mix(in srgb, var(--color-accent) var(--rate, 0%), transparent); color: var(--color-ink, inherit); }
-.nl-rp-empty { color: var(--color-neutral-500); }
+.nl-rp-empty { color: var(--color-neutral-700); } /* S-109: 4.5:1 (neutral-500 was 2.8:1) */
 .nl-rp-gaps { font-size: 14px; display: flex; flex-direction: column; gap: 6px; }
 .nl-rp-gaps > div { display: flex; justify-content: space-between; gap: 12px; }

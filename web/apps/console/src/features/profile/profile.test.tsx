@@ -2,6 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { renderConsole, staffApi } from '../../test/render';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const SECURITY = {
   email: 'priya@example.test', mfaPrimary: 'passkey',
@@ -23,6 +24,7 @@ describe('my profile (S-96, design 03)', () => {
     const user = userEvent.setup({ delay: null });
     renderConsole('/profile');
     expect(await screen.findByText('Passkey · MacBook Pro (Touch ID)')).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('Primary')).toBeTruthy();
     expect(screen.getByText('7 of 10 unused')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Sign out everywhere' }));

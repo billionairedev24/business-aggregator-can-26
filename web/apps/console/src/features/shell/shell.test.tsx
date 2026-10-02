@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { overview } from '../../test/fixtures';
 import { renderConsole, staffApi } from '../../test/render';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const sidebar = (name = 'Main navigation') => screen.getByRole('navigation', { name });
 const navLabels = () => within(sidebar()).getAllByRole('link').map(a => a.textContent);
@@ -16,6 +17,7 @@ describe('console shell (S-90, design 03)', () => {
     expect(await screen.findByRole('searchbox', { name: 'Search the console' })).toHaveProperty('placeholder', 'Search sellers, orders, customers, cases…');
     expect(screen.getByText('Console')).toBeTruthy();
     expect(await screen.findByText('Ops · Alberta + BC pilot')).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     const account = screen.getByRole('button', { name: 'Account menu' });
     expect(account.textContent).toContain('Priya N.');
     expect(account.textContent).toContain('Admin');

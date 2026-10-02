@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { renderConsole, staffApi, type Call } from '../../test/render';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const rule = (key: string, value: Record<string, unknown>, fields: { name: string; kind: string; min: number; max: number }[] = []) => ({ key, value, defaults: value, fields, updatedBy: null, edited: null });
 const RULES = { items: [
@@ -41,6 +42,7 @@ describe('trust & safety (S-93, design 03 trust)', () => {
     api(['trust_safety']);
     renderConsole('/trust');
     expect(await screen.findByRole('heading', { level: 1, name: 'Rules that keep sellers honest, and the levers to tune them' })).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('20+ jobs · quality ≥ 80 · on-time ≥ 92% · disputes ≤ 1.5%')).toBeTruthy();
     expect(screen.getByText('Instant book, 12% take, badge')).toBeTruthy();
     expect(screen.getByText('9% take, first placement, weekly payouts, priority support')).toBeTruthy();

@@ -6,6 +6,7 @@ import { configureAuthOrigin } from '@northline/auth-kit';
 import { I18nProvider } from '@northline/ui';
 import { mockFetch } from '../../test/render';
 import { SignInPage } from './SignInPage';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const renderPage = (props: Parameters<typeof SignInPage>[0] = {}) => {
   configureAuthOrigin('http://auth.test');
@@ -41,6 +42,7 @@ describe('console sign-in (design 03 signed out)', () => {
     await user.type(screen.getByRole('textbox', { name: 'Work email or mobile' }), 'priya.natarajan@example.com');
     await user.click(screen.getByRole('button', { name: 'Continue' }));
     expect(await screen.findByText('Second factor required for priya.natarajan@example.com.')).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     await user.click(screen.getByRole('radio', { name: /Backup code/ }));
     await user.type(screen.getByRole('textbox', { name: 'Backup code' }), 'priya-n-00001');
     await user.click(screen.getByRole('button', { name: 'Verify backup code' }));
