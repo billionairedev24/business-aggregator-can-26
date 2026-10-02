@@ -71,4 +71,16 @@ class OrderDeliveriesJdbc implements OrderDeliveries {
                 .query((rs, _) -> rs.getString("id"))
                 .list();
     }
+
+    @Override
+    public List<String> merchants(String orderId) {
+        return jdbc.sql("""
+                        select distinct merchant_id from orders.order_lines
+                         where order_id = :id and merchant_id is not null
+                         order by merchant_id
+                        """)
+                .param("id", orderId)
+                .query((rs, _) -> rs.getString("merchant_id"))
+                .list();
+    }
 }

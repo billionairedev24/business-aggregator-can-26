@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ca.northline.region.api.Regions;
 import ca.northline.shared.Ids;
 import ca.northline.support.IntegrationTest;
 import ca.northline.support.TestJwt;
@@ -33,6 +34,9 @@ class AccountSettingsApiTest extends IntegrationTest {
 
     @Autowired
     JdbcClient jdbc;
+
+    @Autowired
+    Regions regions;
 
     String amara;
     String phone;
@@ -396,6 +400,43 @@ class AccountSettingsApiTest extends IntegrationTest {
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.errors[0].field").value("dietary"))
                 .andExpect(jsonPath("$.errors[0].message").value("Choose from the list."));
+    }
+
+    @Test
+    void preferences_provinceBackToFollowMyLocation_omittedOrNullLeavesIt() throws Exception {
+        var province = regions.provinces().getFirst().code(); // whichever the region model lists first
+        mvc.perform(patchPrefs("{\"province\":\"" + province.toLowerCase(java.util.Locale.ROOT) + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.province").value(province));
+        // omitted or null: unchanged (as before)
+        mvc.perform(patchPrefs("{\"units\":\"imperial\"}"))
+                .andExpect(jsonPath("$.province").value(province))
+                .andExpect(jsonPath("$.units").value("imperial"));
+        mvc.perform(patchPrefs("{\"province\":null}"))
+                .andExpect(jsonPath("$.province").value(province));
+
+        // "" (or blank): follow my location again
+        mvc.perform(patchPrefs("{\"province\":\"  \"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.province").doesNotExist())
+                .andExpect(jsonPath("$.units").value("imperial"));
+        mvc.perform(get("/api/v1/me/preferences").with(TestJwt.customer(amara)))
+                .andExpect(jsonPath("$.province").doesNotExist());
+        mvc.perform(get("/api/v1/me/account-summary").with(TestJwt.customer(amara)))
+                .andExpect(jsonPath("$.province").doesNotExist());
+        mvc.perform(patchPrefs("{\"province\":\"\"}")).andExpect(status().isOk()); // again: nothing to clear
+
+        mvc.perform(patchPrefs("{\"province\":\"ZZ\"}"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.errors[0].field").value("province"))
+                .andExpect(jsonPath("$.errors[0].message").value("Choose from the list."));
+    }
+
+    private org.springframework.test.web.servlet.RequestBuilder patchPrefs(String json) {
+        return patch("/api/v1/me/preferences")
+                .with(TestJwt.customer(amara))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json);
     }
 
     @Test

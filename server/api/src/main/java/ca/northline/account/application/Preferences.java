@@ -35,7 +35,7 @@ public final class Preferences {
         }
     }
 
-    /** Only what is sent changes. */
+    /** Only what is sent changes; {@code ""} clears {@code province} (follow my location), allergies and notes. */
     public record Change(
             @Nullable String language,
             @Nullable String province,

@@ -35,7 +35,8 @@ Body (version 1; the JSON Schemas are the contract: [`docs/spec/webhooks/<type>.
 | `webhook.test` | "Send test event" in the endpoint's Deliveries drawer | `endpointId` |
 | `booking.confirmed` | a customer booked and paid (escrow held) or accepted a quote with its deposit (S-55) | `bookingId`, `memberUserId`, `serviceId`, `quoteId`, `bookingType`, `startsAt`, `endsAt`, `priceCents`, `depositCents`, `currency` |
 | `order.placed` | a customer placed an order with your shop (one event per shop, your lines only) | `orderId`, `orderRef` (`NL-…`), `orderType` (`goods`), `delivery` (`pooled`\|`direct`), `windowId` (or null), `lines [{lineId, offerId, variantId, qty, amountCents}]`, `subtotalCents`, `taxCents`, `currency` |
-| `order.delivered`, `review.created` | subscribable, **not sent yet**: their domain events aren't published on Kafka yet (see DECISIONS § S-33) | — |
+| `order.delivered` | an order with lines from your shop or kitchen reached the customer (courier's drop-off with proof); each business on the order gets its own copy | `orderId`, `orderType` (`goods`\|`food`), `proof` (`photo`\|`signature`\|`pin`) |
+| `review.created` | subscribable, **not sent yet**: its domain event isn't published on Kafka yet (see DECISIONS § S-33) | — |
 
 Payloads carry ids and amounts your business already sees in the Studio — never customer names, contact details,
 addresses or customer ids. Look details up through the API with a key (Settings › API keys).

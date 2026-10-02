@@ -3,9 +3,9 @@ package ca.northline.worker.webhooks;
 import ca.northline.worker.events.EventEnvelope;
 import ca.northline.worker.events.EventSchemas;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -21,6 +21,10 @@ import tools.jackson.databind.node.ObjectNode;
  * { "id": event id (ULID, dedupe key), "type": "booking.completed", "version": 1, "createdAt": ISO-8601 UTC,
  *   "merchantId": "…", "data": { … } }
  * </pre>
+ *
+ * <p>Most events belong to one business ({@code merchantId}); {@code order.delivered} names every business on the
+ * order ({@code merchantIds}) and each gets its own copy. An event without one (an older {@code order.delivered},
+ * or an event no partner gets) is delivered to nobody rather than failed: failing would only send it to the DLQ.
  *
  * <p><b>Personal data:</b> {@code data} holds only what the business already has in its Studio — its own ids (booking,
  * escrow, refund, case number, its team members' user ids) and amounts. Never customer ids, names, contact details or
@@ -38,13 +42,17 @@ public final class WebhookPayloads {
             "booking.completed", "booking.booking_completed:1",
             "payment.released", "payments.escrow_released:1",
             "refund.issued", "payments.refund_issued:1",
-            "order.placed", "orders.order_placed:1");
+            "order.placed", "orders.order_placed:1",
+            "order.delivered", "orders.order_delivered:1");
 
     /** Types endpoints can subscribe to (Settings › API) whose domain event isn't published on Kafka yet. */
-    public static final List<String> NOT_YET_PUBLISHED = List.of("order.delivered", "review.created");
+    public static final List<String> NOT_YET_PUBLISHED = List.of("review.created");
 
     /** A payload ready to send. */
     public record PublicEvent(String eventId, String type, String merchantId, ObjectNode payload) {}
+
+    /** The public type and {@code data} of an event, and the businesses it goes to. */
+    private record Mapped(String type, ObjectNode data, List<String> merchantIds) {}
 
     private final JsonMapper json;
     private final EventSchemas schemas;
@@ -54,10 +62,12 @@ public final class WebhookPayloads {
         this.schemas = schemas;
     }
 
-    /** The public payload of a domain event, or empty when partners don't get this event. */
-    public Optional<PublicEvent> of(EventEnvelope event) {
+    /**
+     * The public payloads of a domain event, one per business it concerns; empty when partners don't get this event.
+     * {@code merchantId} is read only for the events that are delivered (the topics carry others without it).
+     */
+    public List<PublicEvent> of(EventEnvelope event) {
         var d = event.data();
-        var merchant = event.text("merchantId");
         var mapped = switch (event.type() + ":" + event.version()) {
             case "booking.booking_confirmed:1" -> {
                 // S-55: no customer id (S-33 PII rule) — the booking id leads to everything in the Studio
@@ -72,14 +82,14 @@ public final class WebhookPayloads {
                 data.put("priceCents", d.path("priceCents").asLong());
                 data.put("depositCents", d.path("depositCents").asLong());
                 data.put("currency", "CAD");
-                yield envelope(event, "booking.confirmed", merchant, data);
+                yield one(event, "booking.confirmed", data);
             }
             case "booking.booking_completed:1" -> {
                 var data = json.createObjectNode();
                 data.put("bookingId", event.aggregateId());
                 data.put("completedBy", event.text("actorId"));
                 data.put("photoCount", d.path("photoCount").asInt());
-                yield envelope(event, "booking.completed", merchant, data);
+                yield one(event, "booking.completed", data);
             }
             case "payments.escrow_released:1" -> {
                 var data = json.createObjectNode();
@@ -91,7 +101,7 @@ public final class WebhookPayloads {
                 data.put("feeCents", d.path("feeCents").asLong());
                 data.put("netCents", d.path("netCents").asLong());
                 data.put("currency", "CAD");
-                yield envelope(event, "payment.released", merchant, data);
+                yield one(event, "payment.released", data);
             }
             case "payments.refund_issued:1" -> {
                 var data = json.createObjectNode();
@@ -101,7 +111,7 @@ public final class WebhookPayloads {
                 data.put("amountCents", d.path("amountCents").asLong());
                 data.put("currency", "CAD");
                 data.put("chargedTo", event.text("chargedTo"));
-                yield envelope(event, "refund.issued", merchant, data);
+                yield one(event, "refund.issued", data);
             }
             case "orders.order_placed:1" -> {
                 // S-51: one event per shop, that shop's lines only; the customer id stays out (see class comment)
@@ -128,14 +138,39 @@ public final class WebhookPayloads {
                 data.put("subtotalCents", d.path("subtotalCents").asLong());
                 data.put("taxCents", d.path("taxCents").asLong());
                 data.put("currency", "CAD");
-                yield envelope(event, "order.placed", merchant, data);
+                yield one(event, "order.placed", data);
+            }
+            case "orders.order_delivered:1" -> {
+                // S-78's event is per order: every business on it gets the same ids, each under its own merchantId
+                var data = json.createObjectNode();
+                data.put("orderId", event.aggregateId());
+                data.put("orderType", event.text("orderType"));
+                data.put("proof", event.text("proof"));
+                var merchants = new ArrayList<String>();
+                d.path("merchantIds").forEach(m -> merchants.add(m.asString()));
+                if (merchants.isEmpty()) {
+                    log.info(
+                            "order.delivered {} names no businesses (published before merchantIds) — not delivered",
+                            event.id());
+                }
+                yield new Mapped("order.delivered", data, merchants);
             }
             default -> null;
         };
-        if (mapped == null && SOURCES.containsKey(publicTypeOf(event.type()))) {
-            log.warn("{} v{} has no public webhook mapping yet — not delivered", event.type(), event.version());
+        if (mapped == null) {
+            if (SOURCES.containsKey(publicTypeOf(event.type()))) {
+                log.warn("{} v{} has no public webhook mapping yet — not delivered", event.type(), event.version());
+            }
+            return List.of();
         }
-        return Optional.ofNullable(mapped).map(this::checked);
+        return mapped.merchantIds().stream()
+                .map(merchant -> checked(
+                        envelope(event, mapped.type(), merchant, mapped.data().deepCopy())))
+                .toList();
+    }
+
+    private static Mapped one(EventEnvelope event, String type, ObjectNode data) {
+        return new Mapped(type, data, List.of(event.text("merchantId")));
     }
 
     /** The {@code webhook.test} payload of "Send test event". */

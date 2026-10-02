@@ -17,9 +17,9 @@ import { Heading, accountStyles } from './parts';
 /**
  * Region, dietary & accessibility (the consumer web's S-59 "Language & region" and "Dietary & accessibility" tabs,
  * reached from You; signed in): the province the person shops in (the region model's served provinces, or "follow my
- * location" until one is chosen), units, the clock, dietary needs and allergies (shops and kitchens see them on orders), accessibility needs
- * and notes for providers (`GET`/`PATCH /me/preferences`, only what changed). The language is You › "Language /
- * Langue".
+ * location", which a chosen province can go back to: `province: ""`), units, the clock, dietary needs and allergies
+ * (shops and kitchens see them on orders), accessibility needs and notes for providers (`GET`/`PATCH /me/preferences`,
+ * only what changed). The language is You › "Language / Langue".
  */
 export function Preferences() {
   const { t } = useI18n();
@@ -48,6 +48,8 @@ function Form({ initial }: { initial: Prefs }) {
   const { t, locale } = useI18n();
   const regions = useQuery({ queryKey: ['geo', 'regions', locale], queryFn: () => geoApi(services().api).regions(locale === 'fr-CA' ? 'fr' : 'en'), staleTime: 3_600_000 });
   const [p, setP] = useState(initial);
+  /** What the api has: the last answer, so a second save right after the first compares with it. */
+  const [base, setBase] = useState(initial);
   const [saved, setSaved] = useState(false);
   const [errors, setErrors] = useState<{ allergies?: string; accessNotes?: string }>({});
   const save = useAccountMutation((c: Partial<Prefs>) => account().savePrefs(c), { set: KEYS.prefs });
@@ -62,14 +64,19 @@ function Form({ initial }: { initial: Prefs }) {
     setErrors(e);
     if (Object.keys(e).length) return;
     const change: Partial<Prefs> = {};
-    if (p.province && p.province !== initial.province) change.province = p.province;
-    if (p.units !== initial.units) change.units = p.units;
-    if (p.timeFormat !== initial.timeFormat) change.timeFormat = p.timeFormat;
-    if (p.dietary.join() !== initial.dietary.join()) change.dietary = p.dietary;
-    if ((p.allergies ?? '') !== (initial.allergies ?? '')) change.allergies = p.allergies ?? '';
-    if (p.accessibility.join() !== initial.accessibility.join()) change.accessibility = p.accessibility;
-    if ((p.accessNotes ?? '') !== (initial.accessNotes ?? '')) change.accessNotes = p.accessNotes ?? '';
-    save.mutate(change, { onSuccess: () => setSaved(true) });
+    if ((p.province ?? null) !== (base.province ?? null)) change.province = p.province ?? ''; // "" = follow my location
+    if (p.units !== base.units) change.units = p.units;
+    if (p.timeFormat !== base.timeFormat) change.timeFormat = p.timeFormat;
+    if (p.dietary.join() !== base.dietary.join()) change.dietary = p.dietary;
+    if ((p.allergies ?? '') !== (base.allergies ?? '')) change.allergies = p.allergies ?? '';
+    if (p.accessibility.join() !== base.accessibility.join()) change.accessibility = p.accessibility;
+    if ((p.accessNotes ?? '') !== (base.accessNotes ?? '')) change.accessNotes = p.accessNotes ?? '';
+    save.mutate(change, {
+      onSuccess: (next) => {
+        setBase(next);
+        setSaved(true);
+      },
+    });
   };
 
   return (
@@ -80,15 +87,15 @@ function Form({ initial }: { initial: Prefs }) {
         <LoadingList rows={1} height={40} />
       ) : (
         <View style={accountStyles.chips} accessibilityRole="radiogroup" accessibilityLabel={t('account.prefs.province')}>
-          {/* the api can't go back to "follow my location" once a province is chosen (MOBILE_PLAN § API gaps) */}
-          {!initial.province ? <Chip role="radio" label={t('account.prefs.followLocation')} on={!p.province} onPress={() => update({ province: null })} testID="province-auto" /> : null}
+          <Chip role="radio" label={t('account.prefs.followLocation')} on={!p.province} onPress={() => update({ province: null })} testID="province-auto" />
           {(regions.data?.provinces ?? [])
-            .filter((r) => r.status === 'live' || r.status === 'pilot' || r.code === initial.province)
+            .filter((r) => r.status === 'live' || r.status === 'pilot' || r.code === base.province)
             .map((r) => (
               <Chip key={r.code} role="radio" label={r.name} on={p.province === r.code} onPress={() => update({ province: r.code })} testID={`province-${r.code}`} />
             ))}
         </View>
       )}
+      {!p.province ? <Body tone="small">{t('account.prefs.followLocationHint')}</Body> : null}
       <Body tone="small">{t('account.prefs.units')}</Body>
       <View style={accountStyles.chips} accessibilityRole="radiogroup" accessibilityLabel={t('account.prefs.units')}>
         {(['metric', 'imperial'] as const).map((u) => (

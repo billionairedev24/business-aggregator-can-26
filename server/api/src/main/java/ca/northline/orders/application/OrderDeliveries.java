@@ -20,6 +20,9 @@ public interface OrderDeliveries {
     /** The order's lines that hold goods escrow ({@code order_line} references), refunded lines left out. */
     List<String> escrowLines(String orderId);
 
+    /** The businesses with lines on the order, by id (an order from several shops has several). */
+    List<String> merchants(String orderId);
+
     record Order(
             String id,
             @Nullable String customerId,

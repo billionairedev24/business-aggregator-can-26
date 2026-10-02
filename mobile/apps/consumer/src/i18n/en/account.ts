@@ -284,6 +284,7 @@ export const account = {
   'account.prefs.province': 'Province you shop in',
   'account.prefs.provinceHint': 'Province you shop in — taxes, catalogue and the time your notifications use.',
   'account.prefs.followLocation': 'Follow my location',
+  'account.prefs.followLocationHint': 'Taxes, the catalogue and your notification times follow your delivery address, or where you are.',
   'account.prefs.units': 'Units',
   'account.prefs.unit.metric': 'Metric (km, kg)',
   'account.prefs.unit.imperial': 'Imperial (mi, lb)',

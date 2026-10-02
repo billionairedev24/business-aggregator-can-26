@@ -34,6 +34,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.support.TransactionTemplate;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * S-78: goods delivery drives escrow. The courier's drop-off ({@code delivery.completed}) starts each line's 7-day
@@ -45,6 +47,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 class DeliveryEscrowTest extends IntegrationTest {
 
     static final String MARKET = "Deliveryville";
+    static final JsonMapper JSON = JsonMapper.builder().build();
 
     @Autowired
     JdbcClient jdbc;
@@ -201,6 +204,30 @@ class DeliveryEscrowTest extends IntegrationTest {
         clock.advance(Duration.ofMinutes(2));
         jobs.releaseDueEscrows();
         order.lineIds().forEach(l -> assertThat(escrow(l).state()).isEqualTo("released"));
+    }
+
+    @Test
+    void orderDeliveredNamesEveryShopOnTheOrder_forTheirWebhooks() throws Exception {
+        var order = delivered();
+        var published = jdbc.sql("""
+                        select serialized_event from events.event_publication
+                         where event_type like '%.OrderDelivered' and serialized_event like :order
+                        union
+                        select serialized_event from events.event_publication_archive
+                         where event_type like '%.OrderDelivered' and serialized_event like :order
+                        """)
+                .param("order", "%" + order.orderId() + "%")
+                .query(String.class)
+                .list();
+
+        assertThat(published).hasSize(1); // one event (a publication row per listener, the same payload)
+        var event = JSON.readTree(published.getFirst());
+        assertThat(java.util.stream.StreamSupport.stream(
+                                event.path("merchantIds").spliterator(), false)
+                        .map(JsonNode::asString)
+                        .toList())
+                .containsExactlyInAnyOrder(bread.merchantId(), steak.merchantId());
+        assertThat(event.has("customerId")).isFalse(); // ids of businesses only, never the customer's
     }
 
     @Test

@@ -89,6 +89,7 @@ export const useSettingsT = defineMessages({
     langTitle: 'Language / Langue & region', appLanguage: 'App language',
     l_en: 'English', l_en_sub: 'Interface, receipts, notifications', l_fr: 'Français', l_fr_sub: 'Interface, reçus, notifications · requis au Québec',
     regionProvince: 'Province', provinceAuto: 'Follow my location', pilot: '{name} (pilot)',
+    provinceAutoHint: 'Taxes, the catalogue and your notification times follow your delivery address, or where you are.',
     units: 'Units', u_metric: 'Metric (km, kg, °C)', u_imperial: 'Imperial', currency: 'Currency', timeFormat: 'Time format', t_12h: '12-hour', t_24h: '24-hour',
     langNote: 'Providers list the languages they serve; we show that on their profile and let you filter by it.', save: 'Save',
 
@@ -197,6 +198,7 @@ export const useSettingsT = defineMessages({
     langTitle: 'Langue / Language et région', appLanguage: 'Langue de l’application',
     l_en: 'English', l_en_sub: 'Interface, receipts, notifications', l_fr: 'Français', l_fr_sub: 'Interface, reçus, notifications · requis au Québec',
     regionProvince: 'Province', provinceAuto: 'Selon ma position', pilot: '{name} (projet pilote)',
+    provinceAutoHint: 'Les taxes, le catalogue et l’heure de vos notifications suivent votre adresse de livraison ou votre position.',
     units: 'Unités', u_metric: 'Métrique (km, kg, °C)', u_imperial: 'Impérial', currency: 'Devise', timeFormat: 'Format de l’heure', t_12h: '12 heures', t_24h: '24 heures',
     langNote: 'Les prestataires indiquent les langues qu’ils parlent; nous l’affichons sur leur profil et vous pouvez filtrer selon la langue.', save: 'Enregistrer',
 

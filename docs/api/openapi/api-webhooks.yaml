@@ -164,6 +164,67 @@ components:
       - type
       - version
       title: Northline webhook booking.confirmed v1
+    OrderDeliveredWebhookV1:
+      type: object
+      additionalProperties: false
+      description: "An order with lines from your business reached the customer (the\
+        \ courier's drop-off with proof). Goods: your lines' payment releases 7 days\
+        \ later unless the customer confirms sooner or reports a problem. No customer\
+        \ details."
+      properties:
+        createdAt:
+          type: string
+          format: date-time
+          description: When it happened (UTC).
+        data:
+          type: object
+          additionalProperties: false
+          properties:
+            orderId:
+              type: string
+              description: The order of your order.placed event.
+            orderType:
+              type: string
+              enum:
+              - goods
+              - food
+            proof:
+              type: string
+              description: How the courier proved the drop-off.
+              enum:
+              - photo
+              - signature
+              - pin
+          required:
+          - orderId
+          - orderType
+          - proof
+        id:
+          type: string
+          description: "Event id (ULID). The same event keeps its id on every retry\
+            \ and resend: deduplicate on it."
+          pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
+        merchantId:
+          type: string
+          description: Your business (Studio URL /b/<merchantId>).
+          pattern: "^[0-9A-HJKMNP-TV-Z]{26}$"
+        type:
+          type: string
+          enum:
+          - order.delivered
+        version:
+          type: integer
+          description: Payload version; a breaking change ships as a new version.
+          enum:
+          - 1
+      required:
+      - createdAt
+      - data
+      - id
+      - merchantId
+      - type
+      - version
+      title: Northline webhook order.delivered v1
     OrderPlacedWebhookV1:
       type: object
       additionalProperties: false
@@ -588,6 +649,66 @@ webhooks:
       security:
       - webhookSignature: []
       summary: booking.confirmed
+      tags:
+      - webhooks
+  order.delivered:
+    post:
+      description: |-
+        An order with lines from your business reached the customer (the courier's drop-off with proof). Goods: your lines' payment releases 7 days later unless the customer confirms sooner or reports a problem. No customer details.
+
+        Sent as `POST` to each endpoint subscribed to `order.delivered` in Studio › Settings › API. Verify `Northline-Signature` (HMAC-SHA256 of `<t>.<raw body>` with the endpoint's `whsec_…` secret; reject timestamps older than 5 minutes) and deduplicate on the event `id`. Any 2xx acknowledges; everything else is retried with back-off for about 3 days (docs/runbooks/webhooks.md).
+      operationId: webhook_order_delivered_v1
+      parameters:
+      - description: "`t=<unix seconds>,v1=<hex HMAC-SHA256>` — one `v1` per valid\
+          \ secret while a rotated secret overlaps."
+        example: "t=1790790312,v1=5257a869e7…"
+        in: header
+        name: Northline-Signature
+        required: true
+        schema:
+          type: string
+      - description: "Event id (ULID), the same on every retry."
+        example: 01J9ZD3V00000000000000EVT1
+        in: header
+        name: Northline-Event-Id
+        required: true
+        schema:
+          type: string
+      - description: The event type.
+        example: order.delivered
+        in: header
+        name: Northline-Event-Type
+        required: true
+        schema:
+          type: string
+      - description: This delivery (a resend gets a new one).
+        example: 01J9ZD3V00000000000000DLV1
+        in: header
+        name: Northline-Delivery-Id
+        required: true
+        schema:
+          type: string
+      - description: 1 for the first attempt.
+        example: "1"
+        in: header
+        name: Northline-Delivery-Attempt
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderDeliveredWebhookV1"
+        required: true
+      responses:
+        "2XX":
+          description: Received. The body is ignored.
+        default:
+          description: "Anything else (and timeouts, TLS errors, redirects) is retried."
+      security:
+      - webhookSignature: []
+      summary: order.delivered
       tags:
       - webhooks
   order.placed:

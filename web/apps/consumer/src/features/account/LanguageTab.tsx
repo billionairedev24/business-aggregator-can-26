@@ -8,8 +8,8 @@ import { useSettingsT } from './settingsMessages';
 
 /**
  * Language / Langue & region (design 06 `at.language`): the app language (it switches in place and is the language of
- * receipts and notifications), the province you shop in (the served ones from the region model, pilots marked),
- * units, currency (CAD only) and the time format.
+ * receipts and notifications), the province you shop in (the served ones from the region model, pilots marked, or
+ * "Follow my location", which a chosen province can go back to), units, currency (CAD only) and the time format.
  */
 export function LanguageTab() {
   const t = useSettingsT();
@@ -36,7 +36,8 @@ function LanguageForm({ initial }: { initial: Prefs }) {
   const served = (regions?.provinces ?? []).filter(r => r.status === 'live' || r.status === 'pilot');
   const provinces = served.map(r => ({ value: r.code, label: r.status === 'pilot' ? t('pilot', { name: r.name }) : r.name }));
   if (p.province && !provinces.some(o => o.value === p.province)) provinces.push({ value: p.province, label: p.province });
-  const submit = () => save.mutate({ language: p.language, province: p.province ?? undefined, units: p.units, timeFormat: p.timeFormat }, {
+  // province "" = follow my location (the api clears a chosen province with it)
+  const submit = () => save.mutate({ language: p.language, province: p.province ?? '', units: p.units, timeFormat: p.timeFormat }, {
     onSuccess: next => { setSaved(true); if (next.language !== locale) setLocale(next.language); },
   });
   return (
@@ -51,7 +52,7 @@ function LanguageForm({ initial }: { initial: Prefs }) {
         </div>
       </fieldset>
       <FormGrid min={200} className="nl-acct-form">
-        <Field label={t('regionProvince')}>
+        <Field label={t('regionProvince')} hint={p.province ? undefined : t('provinceAutoHint')}>
           <Select value={p.province ?? ''} onChange={e => update({ province: e.target.value || null })} options={[{ value: '', label: t('provinceAuto') }, ...provinces]} />
         </Field>
         <Field label={t('units')}>

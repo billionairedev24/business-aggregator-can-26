@@ -7984,6 +7984,9 @@ components:
           type: string
         province:
           type: string
+          description: "Two-letter province or territory code from GET /geo/regions;\
+            \ \"\" goes back to following the person's location. Omitted or null:\
+            \ unchanged."
         timeFormat:
           type: string
         units:

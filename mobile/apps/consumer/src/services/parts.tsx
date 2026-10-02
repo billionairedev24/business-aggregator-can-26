@@ -1,8 +1,10 @@
+import type { QueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { MIN_TARGET, colors, fonts, radius, space } from '@northline/mobile-kit';
 
+import { KEYS as ACCOUNT_KEYS } from '../account/common';
 import { servicesApi } from '../api/services';
 import { useI18n, type MessageKey } from '../i18n';
 import { services } from '../services';
@@ -11,6 +13,16 @@ import { type, type TagTone } from '../ui/primitives';
 /** Journey C's building blocks: the design's chips, the provider mark, summary lines, the wizard's progress bar. */
 
 export const useServicesApi = () => servicesApi(services().api);
+
+/** The favourites C reads (the heart on a provider's profile). */
+export const FAVOURITES_KEY = ['services', 'favourites'] as const;
+
+/**
+ * After a favourite is added or removed here: C's heart, and Journey D's You count and Favourites list, which would
+ * otherwise wait out their minute of staleness (MOBILE_PLAN § Contracts › Account summary).
+ */
+export const favouritesChanged = (qc: QueryClient) =>
+  Promise.all([FAVOURITES_KEY, ACCOUNT_KEYS.summary, ACCOUNT_KEYS.favourites].map((queryKey) => qc.invalidateQueries({ queryKey })));
 
 /** Tier code → its words and tag colour (design: Master accent, Trusted rosehip, Registered neutral). */
 export function useTier() {

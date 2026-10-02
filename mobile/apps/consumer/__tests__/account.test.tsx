@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Linking from 'expo-linking';
+import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { Share } from 'react-native';
 
@@ -610,6 +611,31 @@ describe('Dietary, accessibility & region', () => {
     expect(rec.sent.find((s) => s.method === 'PATCH')!.body).toEqual({ province: 'XA', dietary: ['halal'], allergies: 'Peanuts', accessibility: ['step_free'] });
   });
 
+  it('goes back to following the location once a province is chosen', async () => {
+    const rec = recorder();
+    const { server } = await signedIn('/account/preferences', { wrap: rec.wrap });
+    expect((await screen.findByTestId('province-auto')).props.accessibilityState).toMatchObject({ checked: true });
+    expect(screen.getByText('Taxes, the catalogue and your notification times follow your delivery address, or where you are.')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('province-XA'));
+    fireEvent.press(screen.getByTestId('prefs-save'));
+    expect(await screen.findByTestId('prefs-saved')).toBeTruthy();
+    expect(server.account.prefs.province).toBe('XA');
+    expect(screen.queryByText('Taxes, the catalogue and your notification times follow your delivery address, or where you are.')).toBeNull();
+
+    fireEvent.press(screen.getByTestId('province-auto'));
+    fireEvent.press(screen.getByTestId('prefs-save'));
+    await waitFor(() => expect(server.account.prefs.province).toBeNull());
+    expect(rec.sent.filter((s) => s.method === 'PATCH').map((s) => s.body)).toEqual([{ province: 'XA' }, { province: '' }]);
+    expect(screen.getByTestId('province-auto').props.accessibilityState).toMatchObject({ checked: true });
+  });
+
+  it('is in French', async () => {
+    french();
+    await signedIn('/account/preferences');
+    expect(await screen.findByText('Suivre ma position')).toBeTruthy();
+    expect(screen.getByText('Les taxes, le catalogue et l’heure de vos notifications suivent votre adresse de livraison ou votre position.')).toBeTruthy();
+  });
+
   it('loading, error and Try again', async () => {
     await failsThenRecovers('/account/preferences', /\/me\/preferences$/, 'Dietary needs');
   }, 15000);
@@ -638,6 +664,21 @@ describe('Favourites', () => {
     fireEvent.press(await screen.findByTestId('fav-remove-m-prairie'));
     expect(await screen.findByText('No favourites yet. Tap the heart on a provider to keep them here.')).toBeTruthy();
     expect(server.services.favourites.size).toBe(0);
+  });
+
+  it('a heart on a provider’s profile (Journey C) shows on You and in the list at once, not a minute later', async () => {
+    await signedIn('/account');
+    expect(await screen.findByRole('button', { name: 'Favourite providers, 0' })).toBeTruthy();
+    act(() => router.push('/account/favourites'));
+    expect(await screen.findByText('No favourites yet. Tap the heart on a provider to keep them here.')).toBeTruthy();
+    act(() => router.push('/providers/prairie-wrench'));
+    fireEvent.press(await screen.findByRole('button', { name: 'Add to favourites' }));
+    expect(await screen.findByRole('button', { name: 'In favourites' })).toBeTruthy();
+
+    act(() => router.back());
+    expect(await screen.findByTestId('fav-remove-m-prairie')).toBeTruthy();
+    act(() => router.back());
+    expect(await screen.findByRole('button', { name: 'Favourite providers, 1' })).toBeTruthy();
   });
 
   it('empty, loading, error and Try again', async () => {

@@ -6434,3 +6434,53 @@ is inert (skips with a notice) until the secrets exist. Runbook: `docs/runbooks/
   CI), every fastlane lane, both pipelines end to end, the stores' validation of the listing files, push delivery.
   What ran: the release checks and their 22 unit tests, the consumer `expo prebuild` native check with the push
   plugin, `expo config` per profile, the fingerprint comparisons, `actionlint`, `ruby -c`.
+
+## 2026-10-02 — Phase 4 follow-ups: webhooks order_delivered DLQ, favourites refresh, province follow-location
+
+Branch `fix/phase4-followups`. Three small fixes; no migration, no new configuration.
+
+- **Webhooks dead-lettered `orders.order` events.** `WebhookPayloads.of` read `merchantId` before deciding whether an
+  event is delivered at all, so every event on a webhooks topic without one failed, was retried and went to the
+  `.dlq`: `orders.order_delivered` (seen in S-102) and also **`orders.order_confirmed`**. `merchantId` is now read
+  only inside the mappings that use it; an event partners don't get is skipped, as the others already were.
+- **`order.delivered` names its businesses — event change, not a module call.** The webhooks consumer runs in the
+  worker, outside the api's modules, so "resolve the merchant through a module API" would have meant the worker reading
+  `orders` tables (SchemaOwnershipTests' rule) or calling the api over HTTP. Instead `orders.api.OrderDelivered` gains
+  **`merchantIds`** (every business with lines on the order, from `orders.order_lines`; one for food, several for a
+  pooled goods order) as an **optional field of `orders.order_delivered` v1** — additive under S-34 (not required, so no
+  `v2`; the contract check's breaking-change rule passes). Ids only, no customer id. A list rather than one
+  `merchantId`: the event is per order, and one event per shop (as `order.placed`) would have run the escrow, tracking
+  and customer-notice listeners once per shop.
+- **Partner webhook `order.delivered` is now sent** (it was subscribable but in `NOT_YET_PUBLISHED`, DECISIONS S-33,
+  S-78): one copy per business in `merchantIds`, each under its own `merchantId` with the same event id (dedupe is per
+  endpoint). Public payload v1 `docs/spec/webhooks/order.delivered.v1.schema.json`: `data` = `orderId`, `orderType`,
+  `proof` — no lines (the per-shop lines would need a per-shop event; partners have them from `order.placed`). An
+  `order.delivered` published before `merchantIds` existed goes to nobody (logged), not to the DLQ.
+  `WebhookPayloads.of` now returns a list (one payload per business).
+- **Other events checked for the same gap:** on the webhooks consumer's topics (`booking.booking`, `payments.escrow`,
+  `payments.refund`, `orders.order`) only `order.delivered` and `order.confirmed` lacked `merchantId`; the food events
+  on `orders.order` (`order.accepted/ready/handed_off`) carry it. `order.confirmed` has no public webhook type, so it
+  gets no `merchantIds` here (it is only no longer dead-lettered). The `fulfilment.*` events have no `merchantId`
+  either, but no consumer needs one: the webhooks consumer doesn't read those topics, and the notifications and search
+  consumers don't read `merchantId` from them.
+- **Mobile favourites:** the provider profile's heart and the review's "add to my favourites" (Journey C) invalidated
+  only `['services', 'favourites']`; they now also invalidate Journey D's `['account', 'summary']` and
+  `['account', 'favourites']` (`favouritesChanged` in `src/services/parts.tsx`), so You's count and the Favourites
+  list refresh at once instead of after their minute of staleness.
+- **Province back to "follow my location":** the endpoint is `PATCH /api/v1/me/preferences` (not a PUT). **`province:
+  ""`** (or blank) now clears the choice, the same convention the endpoint already uses for `allergies` and
+  `accessNotes`; omitted or `null` still means unchanged, and `""` used to be a 422, so no existing client changes
+  behaviour. JSON `null` as "clear" was not chosen: the request record can't tell a sent null from a missing field.
+  The mobile Region screen always offers "Follow my location" now (it was hidden once a province was chosen) and the
+  consumer web's Language & region page sends `""` for it (it sent nothing, so the choice never cleared); both show a
+  line saying what it means (en + fr-CA). The mobile form compares a save with the api's last answer, so a second save
+  right after the first sends the right change. MOBILE_PLAN § API gaps updated.
+- **Tests:** api `DeliveryEscrowTest` +1 (the published `order.delivered` names both shops of a pooled order, no
+  customer id), `AccountSettingsApiTest` +1 (choose → omitted / null keep it → `""` clears it, in preferences and the
+  account summary → unknown code 422; the province is the region model's first, no literal); worker
+  `WebhookPayloadsTest` +2 (one copy per business; an old `order.delivered` and `order.confirmed` map to nothing),
+  `WebhookDeliveryTest` +1 (Kafka → both shops' subscribed endpoints get a signed `order.delivered`, an unsubscribed
+  endpoint and another shop get nothing, `order.confirmed` and an old `order.delivered` are processed, nothing failed
+  or dead-lettered); mobile `account.test.tsx` +3 (heart on C → You's count and the list at once; back to follow my
+  location sends `""`; French); web `settings.test.tsx` +2. The mobile and web tests fail without their fix.
+- **Not done:** `order.confirmed` as a partner webhook; per-shop lines in the `order.delivered` payload.

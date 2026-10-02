@@ -273,6 +273,7 @@ export const account: { [k in keyof typeof en]: string } = {
   'account.prefs.province': 'Province où vous magasinez',
   'account.prefs.provinceHint': 'Province où vous magasinez — taxes, catalogue et heure de vos notifications.',
   'account.prefs.followLocation': 'Suivre ma position',
+  'account.prefs.followLocationHint': 'Les taxes, le catalogue et l’heure de vos notifications suivent votre adresse de livraison ou votre position.',
   'account.prefs.units': 'Unités',
   'account.prefs.unit.metric': 'Métriques (km, kg)',
   'account.prefs.unit.imperial': 'Impériales (mi, lb)',

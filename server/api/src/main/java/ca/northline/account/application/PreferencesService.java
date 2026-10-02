@@ -69,7 +69,7 @@ class PreferencesService implements ManagePreferences {
         store.save(
                 userId,
                 new Stored(
-                        province != null ? province : s.province(),
+                        province != null ? emptyToNull(province) : s.province(),
                         Objects.requireNonNullElse(units, s.units()),
                         Objects.requireNonNullElse(time, s.timeFormat()),
                         Objects.requireNonNullElse(dietary, s.dietary()),

@@ -23,7 +23,7 @@ class WebhookPayloadsTest {
         var out = payloads.of(event("booking.booking_completed", 1, """
                         {"eventId":"01J9ZD3V000000000000000EV1","occurredAt":"2026-09-30T18:00:00Z",
                          "aggregateId":"bk_1","merchantId":"%s","actorId":"u_tech","photoCount":3}""".formatted(MERCHANT)))
-                .orElseThrow();
+                .getFirst();
 
         assertThat(out.type()).isEqualTo("booking.completed");
         assertThat(out.payload().toString())
@@ -39,7 +39,7 @@ class WebhookPayloadsTest {
                          "merchantId":"%s","customerId":"u_customer","memberUserId":"u_tech","serviceId":"svc_1",
                          "quoteId":null,"bookingType":"visit","startsAt":"2026-10-02T15:00:00Z",
                          "endsAt":"2026-10-02T16:00:00Z","priceCents":8900,"depositCents":8900}""".formatted(MERCHANT)))
-                .orElseThrow();
+                .getFirst();
 
         assertThat(out.type()).isEqualTo("booking.confirmed");
         assertThat(out.payload().path("data").toString())
@@ -56,7 +56,7 @@ class WebhookPayloadsTest {
                         {"eventId":"01J9ZD3V000000000000000EV2","occurredAt":"2026-09-30T18:00:00Z","aggregateId":"esc_1",
                          "merchantId":"%s","refType":"booking","refId":"bk_1","grossCents":38900,"feeCents":3890,
                          "netCents":35010}""".formatted(MERCHANT)))
-                .orElseThrow();
+                .getFirst();
 
         assertThat(out.type()).isEqualTo("payment.released");
         assertThat(out.payload().path("data").toString())
@@ -69,7 +69,7 @@ class WebhookPayloadsTest {
         var out = payloads.of(event("payments.refund_issued", 1, """
                         {"eventId":"01J9ZD3V000000000000000EV3","occurredAt":"2026-09-30T18:00:00Z","aggregateId":"rf_1",
                          "merchantId":"%s","escrowId":null,"amountCents":4500,"chargedTo":"merchant"}""".formatted(MERCHANT)))
-                .orElseThrow();
+                .getFirst();
 
         assertThat(out.payload().path("data").toString())
                 .isEqualTo("{\"refundId\":\"rf_1\",\"caseNumber\":null,\"escrowId\":null,\"amountCents\":4500,"
@@ -83,7 +83,7 @@ class WebhookPayloadsTest {
                          "merchantId":"%s","customerId":"u_customer","orderRef":"NL-50001","orderType":"goods",
                          "delivery":"pooled","windowId":"win_1","subtotalCents":1500,"taxCents":75,
                          "lines":[{"lineId":"ln_1","offerId":"of_1","variantId":null,"qty":2,"amountCents":1500}]}""".formatted(MERCHANT)))
-                .orElseThrow();
+                .getFirst();
 
         assertThat(out.type()).isEqualTo("order.placed");
         assertThat(out.merchantId()).isEqualTo(MERCHANT);
@@ -93,6 +93,38 @@ class WebhookPayloadsTest {
                         + "\"offerId\":\"of_1\",\"variantId\":null,\"qty\":2,\"amountCents\":1500}],"
                         + "\"subtotalCents\":1500,\"taxCents\":75,\"currency\":\"CAD\"}");
         assertThat(out.payload().toString()).doesNotContain("u_customer");
+    }
+
+    @Test
+    void orderDelivered_oneCopyPerBusinessOnTheOrder() {
+        var other = "01J9ZD3V00000000000000PWP1";
+        var out = payloads.of(event("orders.order_delivered", 1, """
+                {"eventId":"01J9ZD3V00000000000000EV10","occurredAt":"2026-09-30T18:00:00Z","aggregateId":"ord_1",
+                 "orderType":"goods","proof":"photo","merchantIds":["%s","%s"]}""".formatted(MERCHANT, other)));
+
+        assertThat(out).extracting(WebhookPayloads.PublicEvent::merchantId).containsExactly(MERCHANT, other);
+        assertThat(out).allSatisfy(e -> {
+            assertThat(e.type()).isEqualTo("order.delivered");
+            assertThat(e.eventId()).isEqualTo("01J9ZD3V00000000000000EV10");
+            assertThat(e.payload().path("merchantId").asString()).isEqualTo(e.merchantId());
+            assertThat(e.payload().path("data").toString())
+                    .isEqualTo("{\"orderId\":\"ord_1\",\"orderType\":\"goods\",\"proof\":\"photo\"}");
+        });
+    }
+
+    @Test
+    void orderEventsWithoutABusinessAreSkipped_notFailed() {
+        // published before merchantIds was added (S-78 v1): nobody to deliver to — not a reason for the DLQ
+        var olderDelivered = payloads.of(event("orders.order_delivered", 1, """
+                {"eventId":"01J9ZD3V00000000000000EV11","occurredAt":"2026-09-30T18:00:00Z","aggregateId":"ord_1",
+                 "orderType":"food","proof":"pin"}"""));
+        // order.confirmed carries no business and has no public type
+        var confirmed = payloads.of(event("orders.order_confirmed", 1, """
+                {"eventId":"01J9ZD3V00000000000000EV12","occurredAt":"2026-09-30T18:00:00Z","aggregateId":"ord_1",
+                 "orderType":"goods"}"""));
+
+        assertThat(olderDelivered).isEmpty();
+        assertThat(confirmed).isEmpty();
     }
 
     @Test
