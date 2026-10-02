@@ -33,6 +33,17 @@ output "admin_secret_ref" {
   value       = azurerm_key_vault_secret.admin.name
 }
 
+output "backup" {
+  description = "S-114: what protects the database (docs/runbooks/backups-dr.md): automated backups with point-in-time recovery for retention_days (pitr_days of transaction logs), and the copy in the secondary region (copy_kind empty = none)."
+  value = {
+    retention_days = var.backup_retention_days
+    pitr_days      = var.backup_retention_days
+    copy_region    = azurerm_postgresql_flexible_server.this.geo_redundant_backup_enabled ? coalesce(try(var.backup_copy.region, null), local.paired_region) : ""
+    copy_kind      = azurerm_postgresql_flexible_server.this.geo_redundant_backup_enabled ? "geo-redundant-backup" : ""
+    copy_id        = azurerm_postgresql_flexible_server.this.geo_redundant_backup_enabled ? azurerm_postgresql_flexible_server.this.id : ""
+  }
+}
+
 output "cloud" {
   description = "Azure-only details."
   value = {

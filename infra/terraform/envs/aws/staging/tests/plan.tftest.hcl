@@ -128,3 +128,13 @@ run "edge" {
     error_message = "gitops_addon_values must hold the identity of every platform add-on (S-6, S-17)."
   }
 }
+
+# S-114: staging keeps backups in its own region only (it is re-created from a masked prod copy).
+run "backups_single_region" {
+  command = plan
+
+  assert {
+    condition     = output.backup.secondary_region == "" && length(output.backup.storage.replica_buckets) == 0 && output.backup.postgres.retention_days == 7
+    error_message = "staging has no cross-region copies; 7 days of point-in-time recovery."
+  }
+}

@@ -226,7 +226,9 @@ by the old indices until the new ones are complete, and by the new ones from the
 - after a layout change that needs it (the search-indices Job logs `REINDEX REQUIRED`: a new analyzer, a changed field,
   a `schema` bump in `deploy/search/listings.json`);
 - when the index has drifted from Postgres (lost events, a restore of the database, a new environment filled from a
-  dump), or to repair documents after a bug fix in the indexer.
+  dump), or to repair documents after a bug fix in the indexer. After **any** database restore and every masked
+  prod → staging refresh this is mandatory: the index is rebuilt from the restored database, not restored from a
+  snapshot (S-114, [backups-dr.md](backups-dr.md#elasticsearch-snapshots-but-rebuilt-rather-than-restored)).
 
 **What it does** (`SearchReindex`, one run at a time — a Postgres advisory lock):
 

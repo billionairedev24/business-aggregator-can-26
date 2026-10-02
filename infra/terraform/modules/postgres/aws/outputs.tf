@@ -33,6 +33,17 @@ output "admin_secret_ref" {
   value       = aws_db_instance.this.master_user_secret[0].secret_arn
 }
 
+output "backup" {
+  description = "S-114: what protects the database (docs/runbooks/backups-dr.md): automated backups with point-in-time recovery for retention_days (pitr_days of transaction logs), and the copy in the secondary region (copy_kind empty = none)."
+  value = {
+    retention_days = var.backup_retention_days
+    pitr_days      = var.backup_retention_days
+    copy_region    = try(var.backup_copy.region, "")
+    copy_kind      = var.backup_copy == null ? "" : "replicated-automated-backups"
+    copy_id        = try(aws_db_instance_automated_backups_replication.copy[0].id, "")
+  }
+}
+
 output "cloud" {
   description = "AWS-only details."
   value = {
