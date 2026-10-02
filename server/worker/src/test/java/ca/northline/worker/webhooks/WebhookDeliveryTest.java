@@ -128,6 +128,54 @@ class WebhookDeliveryTest extends WorkerIntegrationTest {
     }
 
     @Test
+    void orderDelivered_reachesEveryShopOnTheOrder_andTheOrdersTopicIsNotDeadLettered() throws Exception {
+        var bakery = merchant();
+        var butcher = merchant();
+        var bakeryHook = endpoint(bakery, List.of("order.delivered"));
+        var butcherHook = endpoint(butcher, List.of("order.placed", "order.delivered"));
+        var placedOnly = endpoint(bakery, List.of("order.placed"));
+        var notOnTheOrder = endpoint(merchant(), List.of("order.delivered"));
+        ok(bakeryHook, butcherHook, placedOnly, notOnTheOrder);
+        var failed = outcome("orders.order_delivered", "failed") + outcome("orders.order_confirmed", "failed");
+        var confirmedBefore = outcome("orders.order_confirmed", "processed");
+        var olderBefore = outcome("orders.order_delivered", "processed");
+        var id = Events.id();
+        var older = Events.id();
+        var confirmed = Events.id();
+
+        publish("orders.order", older, "orders.order_delivered", """
+                {"eventId":"%s","occurredAt":"2026-09-30T15:00:00Z","aggregateId":"ord_%s","orderType":"goods",
+                 "proof":"photo"}""".formatted(
+                        older, older)); // published before merchantIds
+        publish("orders.order", id, "orders.order_delivered", """
+                {"eventId":"%s","occurredAt":"2026-09-30T15:00:00Z","aggregateId":"ord_%s","orderType":"goods",
+                 "proof":"photo","merchantIds":["%s","%s"]}""".formatted(id, id, bakery, butcher));
+        publish("orders.order", confirmed, "orders.order_confirmed", """
+                {"eventId":"%s","occurredAt":"2026-09-30T15:00:00Z","aggregateId":"ord_%s","orderType":"goods"}""".formatted(confirmed, id));
+
+        await().atMost(Duration.ofSeconds(30))
+                .until(() -> "succeeded".equals(state(bakeryHook, id)) && "succeeded".equals(state(butcherHook, id)));
+        await().atMost(Duration.ofSeconds(30))
+                .until(() -> outcome("orders.order_confirmed", "processed") > confirmedBefore
+                        && outcome("orders.order_delivered", "processed") >= olderBefore + 2);
+        for (var shop : List.of(Map.entry(bakeryHook, bakery), Map.entry(butcherHook, butcher))) {
+            var requests = requests(shop.getKey());
+            assertThat(requests).hasSize(1);
+            assertThat(requests.getFirst().getHeader(WebhookDispatcher.EVENT_TYPE))
+                    .isEqualTo("order.delivered");
+            assertThat(map(requests.getFirst().getBodyAsString()))
+                    .isEqualTo(map("""
+                            {"id":"%s","type":"order.delivered","version":1,"createdAt":"2026-09-30T15:00:00Z",
+                             "merchantId":"%s","data":{"orderId":"ord_%s","orderType":"goods","proof":"photo"}}""".formatted(id, shop.getValue(), id)));
+        }
+        assertThat(requests(placedOnly)).isEmpty();
+        assertThat(requests(notOnTheOrder)).isEmpty();
+        assertThat(outcome("orders.order_delivered", "failed") + outcome("orders.order_confirmed", "failed"))
+                .isEqualTo(failed);
+        assertThat(deadLettered("orders.order")).isZero();
+    }
+
+    @Test
     void failuresAreRetriedWithExponentialBackOff_andEveryAttemptIsLogged() throws Exception {
         var shop = merchant();
         var endpoint = endpoint(shop, List.of("payment.released"));
@@ -485,6 +533,20 @@ class WebhookDeliveryTest extends WorkerIntegrationTest {
         return jdbc.sql("""
                         select active, consecutive_failures, disabled_reason, disabled_notified_at
                           from developer.webhook_endpoints where id = ?""").params(endpointId).query().singleRow();
+    }
+
+    double outcome(String type, String outcome) {
+        var counter = meters.find(EventProcessing.CONSUMED)
+                .tags("consumer", "webhooks", "type", type, "outcome", outcome)
+                .counter();
+        return counter == null ? 0 : counter.count();
+    }
+
+    double deadLettered(String topic) {
+        var counter = meters.find(EventProcessing.DEAD_LETTERED)
+                .tags("consumer", "webhooks", "topic", topic)
+                .counter();
+        return counter == null ? 0 : counter.count();
     }
 
     double duplicates(String type) {
