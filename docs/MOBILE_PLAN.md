@@ -196,15 +196,61 @@ port; `stepUp.ts`), `src/api/shop.ts`, `src/fixtures/shop.ts`, `__tests__/shop.t
 | `signoff` | `/bookings/[id]/sign-off` | ✓ | `GET /me/bookings/{id}`, `POST /me/problems` ("raise an issue") |
 | `review` | `/bookings/[id]/review` | ✓ | `GET /me/bookings/{id}`, `PUT /me/favourites/{businessId}`; posting a review has no consumer endpoint yet (§ API gaps) |
 
-### D — Account (S-101)
+### D — Account (S-101, **built**)
 
 | screen | route | personal | api |
 |---|---|---|---|
-| `orders` | `/orders` (tab) | ✓ | `GET /me/activity?view=active\|past\|cases` |
-| `quote` | `/quotes/[id]` | ✓ | `GET /me/quotes/{id}`, `POST /me/quotes/{id}/accept` (Idempotency-Key, X-Step-Up), `/accept/confirm`, `/decline` |
-| `account` | `/account` (tab) | | `GET /me/account-summary`, `GET /me/profile`, `GET /me/preferences`; sign-out (S-98 puts it here until S-101 builds the screen) |
-| `security` | `/security` | ✓ | `GET /me/profile`, sessions and sign-out everywhere through northline-auth, `GET /me/export` |
-| `wallet` | `/wallet` | ✓ | `GET /me/wallet`, `GET`/`POST /me/plus`, `GET /me/payment-methods` |
+| `orders` | `/orders` (tab) | ✓ | `GET /me/activity` (the "Active · n" / "Past" / "Refunds" filters are the app's: `active`, `caseRef`) |
+| `quote` | `/quotes/[id]` (where S-102's quote links land) | ✓ | `GET /me/quotes/{id}?lang`, `POST /me/quotes/{id}/accept` (Idempotency-Key, X-Step-Up), `/accept/confirm` (Idempotency-Key), `/decline`; `GET /me/payment-methods`; `POST /api/auth/step-up/totp` |
+| `account` | `/account` (tab) | | `GET /me/account-summary`, `GET /me/profile`, `PATCH /me/preferences` (the language); sign-out |
+| `security` | `/security` | ✓ | northline-auth `GET /api/auth/security`, `POST /api/auth/security/sessions/{id}/revoke`, `/revoke-others` (auth session), `POST /api/auth/step-up/totp`; `GET /me/profile`, `GET /me/export` |
+| `wallet` | `/wallet` | ✓ | `GET /me/wallet`, `POST`/`DELETE /me/plus`, `GET /me/payment-methods` |
+
+The You tab's rows open screens of the account area that design 01 draws only as rows (routes of our own, under
+`/account/…`, plus the case S-102 links to):
+
+| row | route | api |
+|---|---|---|
+| Personal details (ours) | `/account/profile` | `GET`/`PATCH /me/profile`, `POST /me/erasure-request` ("Delete account…") |
+| Addresses & household | `/account/addresses` | `GET`/`POST /me/addresses`, `POST /me/addresses/{id}/default`, `DELETE /me/addresses/{id}`, `GET /me/household`; `GET /geo/regions` (provinces) |
+| Payment methods | `/account/payments` | `GET /me/payment-methods`, `POST /me/payment-methods/setup-intents`, `POST /me/payment-methods`, `…/{id}/default`, `DELETE …/{id}` |
+| Notifications | `/account/notifications` | `GET`/`PUT /me/notifications` (the S-59 matrix, push included); this phone's permission (S-102) |
+| Dietary, accessibility & region | `/account/preferences` | `GET`/`PATCH /me/preferences`; `GET /geo/regions` |
+| Favourite providers | `/account/favourites` | `GET /me/favourites`, `DELETE /me/favourites/{id}` |
+| Refunds & help | `/account/help` | `GET /me/cases` |
+| a case | `/cases/[number]` (S-102's case links) | `GET /me/cases`, `GET /me/cases/{id}`, `POST /me/cases/{id}/notes` |
+
+Built in `src/account/` (one file per screen; `common.ts` the query keys, the summary hook and formatting;
+`routes.ts` where an Orders row opens; `security.ts` northline-auth's security API; `cardSetup.ts` the card-saving
+port; `phonePush.ts` this phone's push), `src/api/account.ts`, `src/fixtures/account.ts`, `__tests__/account.test.tsx`.
+S-98's temporary You screen (`src/journeyA/You.tsx`) is gone. What S-101 decided (DECISIONS § S-101):
+
+- **Rows link into the other journeys by route, rebuilding none of them** (`targetOf`): an open case → `/cases/<number>`;
+  "Something's wrong" → B's `/problem/<kind>/<id>`; a shop order → B's tracking (`/orders/<id>/track`, or
+  `/delivered` once delivered); a booking → C's ETA, sign-off once completed, review once done, the provider to
+  re-book; a quote request with one open quote → `/quotes/<id>`. A food order and comparing several quotes have no app
+  screen and open the consumer site.
+- **Query keys** are all under `['account', …]`; `['account', 'summary']` is the Home contract. After a change the app
+  also refreshes the other journeys' copies it knows of: `['shop', 'cards']` (B's Payment) and
+  `['services', 'notification-prefs']` (C's inbox).
+- **Accepting a quote** follows the web (S-56): where the job is (prefilled from the address saved on the phone), then
+  the hold with one Idempotency-Key per body (kept for retries, a new one after a refusal), the authenticator step-up
+  when the api asks (S-99's), the card through S-99's payments port (the default saved card, else PaymentSheet), then
+  `/accept/confirm`.
+- **Security** runs on northline-auth's S-19 API in the app's auth session (the cookie store the in-app sign-in left,
+  like the step-up); a session without a recent second factor confirms with the authenticator code; a phone signed in
+  in the system browser is sent to the website. Passkeys, security keys and setting up the authenticator open the
+  website (no native WebAuthn, S-98). "Download my data" hands the JSON export to the system share sheet (no file
+  module). "Sign out of all devices" = revoke the others, then this phone's sign-out.
+- **Notifications:** every row × push / SMS / email, security locked on, quiet hours, the language and marketing
+  email, saved together with only the changed cells. "This phone" (the permission, `PushRegistration.enable()`) shows
+  once the app installs push (`setPhonePush`, with S-102's registrar — not yet, § Contracts › Push).
+- **Language / Langue** stays on the You tab (in place, S-98) and also sets the account's language
+  (`PATCH /me/preferences {language}`; offline it stays the phone's choice and says so).
+- **Payment methods:** a card is saved with a SetupIntent — Stripe's PaymentSheet in setup mode, or nothing with the
+  api's stand-in (`cardSetup.ts`, the same switch as paying).
+- **Not drawn, for lack of an api:** the wallet's "Provider-funded rewards near you" and points "Activity", "Invite a
+  neighbour", the quote's "Ask a question", the security centre's "Require Face ID for payments over $100" (§ API gaps).
 
 Until its story builds it, each route renders `<Stub screen="…" />`: the design's header or name, the story and the
 api above; personal stubs already show guests the sign-in prompt.
@@ -228,7 +274,9 @@ api above; personal stubs already show guests the sign-in prompt.
   language change). Another journey that changes the cart sets or invalidates `['cart']`.
 - **Back to a tab** from deep in a flow: `backToTab('/home' | '/orders' | '/cart')` (`src/shop/common.ts`) closes the
   screens above the tabs first — `router.push`/`replace` to a tab path stacks a second set of tabs.
-- **Account summary** (S-101): `GET /me/account-summary` (query key `['account', 'summary']`) — Home and You read it.
+- **Account summary** (S-101, built): `GET /me/account-summary` (query key `['account', 'summary']`; 404 / 401 → `null`,
+  no values) — Home and You read it (`useAccountSummary()` in `src/account/common.ts`). Everything else of the account
+  area is under `['account', …]`: another journey that changes the account invalidates `['account']`.
 - **Push notifications** (S-102): `@northline/mobile-kit` exports `setPushRegistrar(registrar)` and `PushHooks`. The
   AuthProvider calls `PushHooks.signedIn(api)` after every sign-in and `PushHooks.signingOut(api)` before revoking the
   tokens; until S-102 installs a registrar (at start-up, e.g. in `app/_layout.tsx`) they do nothing. The registrar
@@ -252,7 +300,7 @@ api above; personal stubs already show guests the sign-in prompt.
   | `https://<zone>/courier/run` | `ca.northline.courier://run` | courier app `/run` |
 
   Journeys B–D add the screens behind `/orders/<id>` (S-99: → the order's tracking), `/bookings/<id>`, `/quotes/<id>` and `/cases/<number>` (or map
-  `routeOf`'s paths onto theirs in one place).
+  `routeOf`'s paths onto theirs in one place). S-101: `/quotes/<id>` is the quote, `/cases/<number>` the case.
 
 ## Working in parallel (S-99, S-100, S-101)
 
@@ -278,6 +326,11 @@ Areas: `shop` (S-99), `services` (S-100), `account` (S-101). Don't edit another 
 - **Shop (S-99):** no consumer api for a promo / points code or redeeming points at checkout, the delivery rating
   (B9) and the courier tip, nor a URL for the proof-of-delivery photo; photos on a report need a photo picker (a
   native module and a permission).
+- **Account (S-101):** no consumer api for points activity (the ledger has no earning rules yet, DECISIONS S-58),
+  provider-funded rewards near a person, referrals ("Invite a neighbour"), messages to a provider about a quote ("Ask a
+  question"), or a payment step-up threshold ("Require Face ID for payments over $100"). `PATCH /me/preferences`
+  can't clear the province back to "follow my location" (null = unchanged, "" = 422) — the web has the same gap. The
+  data export has no file to save without a file-system module: it goes through the share sheet.
 - **Passkeys in the app:** creating or using a passkey natively needs a native module (none in Expo); the app sends
   people to the consumer site in the system browser for passkeys, Google and Apple (S-98).
 - **Push:** the server, mobile-kit's registration and the deep links are S-102's; the app still needs

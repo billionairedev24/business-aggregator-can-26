@@ -12,6 +12,9 @@ runbook ([courier-app.md](courier-app.md)); sign-in and tokens: [mobile-auth.md]
 > Keystore, the system-browser sign-in, location services, App Links / Universal Links, EAS Build and Submit, the stores,
 > and (S-99) Stripe's React Native SDK — PaymentSheet, 3-D Secure and the bank's return link have never run, nor
 > against a real Stripe account (none exists); the Jest tests mock the SDK.
+> S-101 (Journey D) adds more that only a device can prove: saving a card in PaymentSheet's setup mode, the security
+> centre and the step-up in the auth session's cookies (northline-auth's security API from a phone), the share sheet
+> for "Download my data", and the notification permission prompt (the app doesn't install push yet).
 
 ## Contents
 
@@ -83,7 +86,7 @@ One build per environment; the EAS profile sets the variables (`eas.json`), Metr
 | `mobile-consumer-test` | Jest + RNTL: the shell, tabs, header, states, guest id, sign-in, en/fr parity, region and colour rules, the screen list against the design and MOBILE_PLAN, the native config against the auth server's client registration; the kit's tests |
 | `mobile-consumer-export` | `expo export` of the iOS and Android Hermes bundles — Metro resolves and Hermes compiles everything |
 | `mobile-consumer-native-check` | `expo prebuild` of both platforms for the development and production variants, then checks: bundle ids, the OAuth redirect scheme, the verified App Link, associated domains, location-while-in-use only, no camera / microphone / storage / backup, cleartext only in development, French localisation, privacy manifest; the generated `android/` and `ios/` are deleted |
-| `mobile-consumer-web-smoke` | the web build on the fixture backend in headless Chromium at 402 × 874: the journeys built so far (A; B with the payment stand-in), the tabs, no horizontal scroll, no page errors (screenshots in `smoke-out/`) |
+| `mobile-consumer-web-smoke` | the web build on the fixture backend in headless Chromium at 402 × 874: the journeys built so far (A; B with the payment stand-in; D: Orders, a quote accepted, You, Wallet, Security, Notifications), the tabs, no horizontal scroll, no page errors (screenshots in `smoke-out/`) |
 | `mobile-consumer-eas-build` | queues an EAS Build (`EAS_PROFILE`, `EAS_PLATFORM`, `EAS_FLAGS`) |
 
 CI: `.github/workflows/mobile-consumer.yml` (Actions › mobile-consumer › Run workflow) and
@@ -108,6 +111,11 @@ anything from a refresh answer is used; one refresh at a time.
   `ca.northline.app:/oauth2redirect`.
 - **Sign-out** (the You tab, S-98): the push hook (`PushHooks.signingOut`), then `POST /oauth2/revoke` (ends the sign-in, S-20),
   then the key and tokens are deleted. A sign-in that ends on the server (refresh refused) shows "Your sign-in ended".
+- **Security centre** (You › Security & sign-in, S-101): methods and sessions come from northline-auth's
+  `/api/auth/security` in the same auth session as the in-app sign-in, with a recent second factor (the authenticator
+  code confirms it, `POST /api/auth/step-up/totp`). A phone signed in in the system browser has no such session: the
+  screen opens the website's Security page. "Sign out of all devices" revokes the other sessions, then signs this phone
+  out as above.
 
 ## Payments (S-99)
 
