@@ -176,6 +176,40 @@ class PrivacyRequestsApiTest extends IntegrationTest {
                     .andExpect(jsonPath("$.code").value("not_awaiting"));
         }
 
+        /**
+         * S-104: withdrawing and reopening used to text a fresh code every time — unlimited texts at Northline's cost,
+         * and five more guesses with each code. Texts are now capped per person across requests (3 an hour, 6 a day);
+         * past the cap a request still opens and waits for a step-up proof.
+         */
+        @Test
+        void reopeningAgainAndAgain_stopsTextingAfterTheHourlyBudget() throws Exception {
+            for (var i = 0; i < 3; i++) {
+                var id = id(open("{\"type\":\"access\"}", "").andExpect(status().isCreated()));
+                mvc.perform(post(PATH + "/{id}/withdraw", id).with(TestJwt.customer(person)))
+                        .andExpect(status().isOk());
+            }
+            assertThat(texts.to(phone)).hasSize(3);
+
+            var fourth = id(open("{\"type\":\"access\"}", "")
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.state").value("awaiting_verification")));
+            assertThat(texts.to(phone)).as("no fourth text within the hour").hasSize(3);
+            jdbc.sql("update privacy.requests set code_expires_at = null where id = :id")
+                    .param("id", fourth)
+                    .update();
+            mvc.perform(post(PATH + "/{id}/verification-code", fourth)
+                            .with(TestJwt.customer(person))
+                            .header("Accept-Language", "fr-CA"))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.code").value("too_many_codes"))
+                    .andExpect(jsonPath("$.detail").value(containsString("plusieurs codes")));
+            assertThat(texts.to(phone)).hasSize(3);
+
+            open("{\"type\":\"erasure\"}", "dev")
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.state").value("verified"));
+        }
+
         @Test
         void aStaleProofIs403StepUpRequired_inTheCallersLanguage() throws Exception {
             open("{\"type\":\"erasure\"}", "not-a-proof")
