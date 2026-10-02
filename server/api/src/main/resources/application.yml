@@ -348,6 +348,14 @@ northline:
     configuration-set: ${EMAIL_CONFIGURATION_SET:}
     smtp: { host: "${SMTP_HOST:localhost}", port: "${SMTP_PORT:1025}", username: "${SMTP_USERNAME:}", password: "${SMTP_PASSWORD:}", starttls: "${SMTP_STARTTLS:false}" }
     retry: { attempts: "${EMAIL_RETRY_ATTEMPTS:3}", backoff: "${EMAIL_RETRY_BACKOFF:2s}" }
+  # S-105 privacy requests (docs/runbooks/privacy-requests.md). Deadlines are the law's, in the region model
+  # (region.privacy_laws), not configuration here.
+  privacy:
+    erasure-grace: ${PRIVACY_ERASURE_GRACE:P7D}      # a verified "delete my account" starts after this (withdrawable)
+    export-ttl: ${PRIVACY_EXPORT_TTL:P7D}            # an access export can be downloaded this long, then it is deleted
+    link-ttl: ${PRIVACY_LINK_TTL:PT15M}              # a download link's life (at most PT1H)
+    hold-retry: ${PRIVACY_HOLD_RETRY:P1D}            # a held erasure step (open order, dispute) is tried again after this
+    run-every: ${PRIVACY_RUN_INTERVAL:PT1M}          # how often the pipeline looks for work
   notifications:                                 # links in notification emails (S-13)
     studio-url: ${STUDIO_ORIGIN:http://localhost:3100}
     api-url: ${API_PUBLIC_URL:http://localhost:8080}   # unsubscribe links: the api's public URL (not the BFF)

@@ -18,5 +18,7 @@ public enum ConsoleAction implements CodedEnum {
     DISPATCH,
     SUPPORT,
     /** S-83: write the support desk's reply macros (support leads, admins). */
-    MACROS
+    MACROS,
+    /** S-105: act on privacy requests (record, verify, extend, refuse, start an erasure, apply corrections). */
+    PRIVACY
 }
