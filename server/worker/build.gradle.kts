@@ -77,7 +77,8 @@ tasks.register<JavaExec>("searchReindex") {
     mainClass.set("ca.northline.worker.search.SearchReindexCommand")
 }
 
-// ./gradlew :worker:dlqReplay --args='list|replay --topic=<topic>.dlq --group=<consumer group> [--event=<id>] [--force]'
+// ./gradlew :worker:dlqReplay --args='list|replay --topic=<topic>.dlq --group=<consumer group> [filters] [--rate=20] --actor=… --reason=…'
+// or --args='list|replay --deferred [filters] [--at=…] --actor=… --reason=…' (dead deferred notifications, S-115)
 // (docs/runbooks/events.md § DLQ). KAFKA_* and DB_* from the environment or server/.env.
 tasks.register<JavaExec>("dlqReplay") {
     group = "northline"
