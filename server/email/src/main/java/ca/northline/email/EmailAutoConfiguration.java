@@ -41,18 +41,24 @@ public class EmailAutoConfiguration {
     @ConditionalOnMissingBean
     EmailTemplates emailTemplates(EmailProperties email) {
         var address = email.mailingAddress();
+        var legalName = email.legalName();
         var zone = email.timeZone();
         if (address == null || address.isBlank()) {
             throw new IllegalStateException(
                     "EMAIL_MAILING_ADDRESS is required: every email names the sender's mailing address (CASL; "
                             + RUNBOOK + ")");
         }
+        if (legalName == null || legalName.isBlank()) {
+            throw new IllegalStateException(
+                    "EMAIL_LEGAL_NAME is required: commercial messages name the sender's legal name (CASL; " + RUNBOOK
+                            + ")");
+        }
         if (zone == null) {
             throw new IllegalStateException(
                     "northline.email.time-zone (EMAIL_TIME_ZONE, else REGION_PLATFORM_ZONE) is required (" + RUNBOOK
                             + ")");
         }
-        return new EmailTemplates(address, email.contact(), zone);
+        return new EmailTemplates(legalName.strip(), address, email.contact(), zone);
     }
 
     @Bean
@@ -79,8 +85,9 @@ public class EmailAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    Mailer mailer(EmailSender sender, EmailTemplates templates, SentEmails sent) {
-        return new DefaultMailer(sender, templates, sent);
+    Mailer mailer(
+            EmailSender sender, EmailTemplates templates, SentEmails sent, ObjectProvider<CommercialConsent> consents) {
+        return new DefaultMailer(sender, templates, sent, consents.getIfAvailable(() -> CommercialConsent.NONE));
     }
 
     /** The configured adapter behind the retry policy — exactly what the bean is (contract tests use it). */

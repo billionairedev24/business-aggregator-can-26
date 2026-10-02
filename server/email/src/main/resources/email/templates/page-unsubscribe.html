@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<!--/* The page behind an email's unsubscribe link (GET = confirm with a button, POST = done). Same look as the
-       emails; served by the api, so it carries its own inline styles. */-->
+<!--/* The page behind an email's (or a commercial SMS's, S-108) unsubscribe link (GET = confirm with a button,
+       POST = done, at once). Same look as the emails; served by the api, so it carries its own inline styles. Its
+       footer identifies the sender (legal name and mailing address): a commercial SMS points here for that. */-->
 <html xmlns:th="http://www.thymeleaf.org" th:lang="${lang}">
 <head>
   <meta charset="utf-8">
@@ -17,15 +18,15 @@
           <tr>
             <td th:style="${s.card}" th:switch="${state}">
               <th:block th:case="'confirm'">
-                <h1 th:style="${s.h1}" th:text="#{page.unsubscribe.confirm(${eventLabel})}">Stop these emails?</h1>
+                <h1 th:style="${s.h1}" th:text="${channel == 'sms'} ? #{page.unsubscribe.confirmSms(${eventLabel})} : #{page.unsubscribe.confirm(${eventLabel})}">Stop these emails?</h1>
                 <form method="post" th:action="${action}">
                   <input type="hidden" name="t" th:value="${token}">
                   <button type="submit" th:style="${s.button} + ';border:0;cursor:pointer'" th:text="#{page.unsubscribe.button}">Unsubscribe</button>
                 </form>
               </th:block>
               <th:block th:case="'done'">
-                <h1 th:style="${s.h1}" th:text="#{page.unsubscribe.done(${eventLabel})}">Done</h1>
-                <p th:style="${s.p}" th:text="#{page.unsubscribe.settings}">Settings</p>
+                <h1 th:style="${s.h1}" th:text="${channel == 'sms'} ? #{page.unsubscribe.doneSms(${eventLabel})} : #{page.unsubscribe.done(${eventLabel})}">Done</h1>
+                <p th:style="${s.p}" th:text="#{__${'page.unsubscribe.settings.' + settingsPlace}__}">Settings</p>
               </th:block>
               <th:block th:case="*">
                 <h1 th:style="${s.h1}" th:text="#{page.unsubscribe.invalid}">Invalid link</h1>

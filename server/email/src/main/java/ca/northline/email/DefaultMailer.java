@@ -12,10 +12,31 @@ final class DefaultMailer implements Mailer {
     private final EmailSender sender;
     private final EmailTemplates templates;
     private final SentEmails sent;
+    private final CommercialConsent consents;
+
+    DefaultMailer(EmailSender sender, EmailTemplates templates, SentEmails sent) {
+        this(sender, templates, sent, CommercialConsent.NONE);
+    }
 
     @Override
     public Outcome send(Delivery delivery) {
         var content = delivery.content();
+        var category = content.consentCategory();
+        if (content.purpose() == EmailContent.Purpose.COMMERCIAL) {
+            var recipient = delivery.recipientId();
+            if (recipient == null || category == null) {
+                throw new IllegalArgumentException(
+                        content.template() + " is commercial: the delivery needs the recipient's id (CASL consent)");
+            }
+            if (!consents.allows(recipient, category)) {
+                log.info(
+                        "Commercial email {} not sent ({}): no {} consent now",
+                        content.template(),
+                        delivery.key(),
+                        category.code());
+                return Outcome.NO_CONSENT;
+            }
+        }
         // Render first: a template bug must not leave a claim behind.
         var rendered = templates.render(content, delivery.locale(), delivery.unsubscribe());
         if (!sent.claim(delivery.key())) {

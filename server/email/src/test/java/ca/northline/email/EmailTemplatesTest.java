@@ -16,6 +16,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 class EmailTemplatesTest {
 
     static final EmailTemplates TEMPLATES = new EmailTemplates(
+            "Northline Marketplace Inc.",
             "Northline Marketplace Inc. · 1200 – 8th Avenue SW, Calgary, Alberta T2P 1B5, Canada",
             "support@northline.ca",
             java.time.ZoneId.of("America/Edmonton"));
@@ -35,7 +36,7 @@ class EmailTemplatesTest {
         // customer's update, which links to the consumer site (S-102: a deep link the app opens when installed)
         var link = switch (content) {
             case EmailContent.IdentityVerificationLink _ -> "https://verify.stripe.com/";
-            case EmailContent.CustomerUpdate _ -> "http://localhost:3000/";
+            case EmailContent.CustomerUpdate _, EmailContent.MarketingOffer _ -> "http://localhost:3000/";
             default -> "http://localhost:3100/";
         };
 
@@ -56,6 +57,11 @@ class EmailTemplatesTest {
                 .contains("href=\"" + link)
                 .doesNotContain("<style", "class=\"", "th:text", "th:style", "var(--"); // inline styles only
         assertThat(email.text()).doesNotContain("<", ">").contains(link);
+        if (content.purpose() == EmailContent.Purpose.COMMERCIAL) {
+            // S-108: the legal sender and the consent the message relies on
+            assertThat(email.text()).contains("Northline Marketplace Inc. ");
+            assertThat(email.text()).containsAnyOf("agreed to get offers", "accepté de recevoir les offres");
+        }
         if (content.purpose().needsUnsubscribe()) {
             assertThat(email.html()).contains("href=\"" + UNSUBSCRIBE + "\"");
             assertThat(email.text()).contains(UNSUBSCRIBE.toString());

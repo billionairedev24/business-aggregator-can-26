@@ -29,7 +29,10 @@ public sealed interface EmailContent {
          * unsubscribe link that turns that notification's email off.
          */
         NOTIFICATION,
-        /** A commercial electronic message (CASL): needs consent and an unsubscribe link. None exist yet. */
+        /**
+         * A commercial electronic message (CASL s. 6): sent only with the recipient's express consent, checked at send
+         * time ({@link Mailer}), and it names the legal sender and carries an unsubscribe link (S-108).
+         */
         COMMERCIAL;
 
         public boolean needsUnsubscribe() {
@@ -46,6 +49,19 @@ public sealed interface EmailContent {
     }
 
     Purpose purpose();
+
+    /**
+     * The consent category a {@link Purpose#COMMERCIAL} email needs ({@link MessageClasses.ConsentCategory}); null
+     * for the others.
+     */
+    default MessageClasses.@Nullable ConsentCategory consentCategory() {
+        return null;
+    }
+
+    /** Where the reader chooses what we send: {@code studio} (team members) or {@code account} (customers). */
+    default String settingsPlace() {
+        return "studio";
+    }
 
     String businessName();
 
@@ -739,6 +755,11 @@ public sealed interface EmailContent {
         }
 
         @Override
+        public String settingsPlace() {
+            return "account";
+        }
+
+        @Override
         public Map<String, Object> variables(EmailFormat format) {
             return Map.of("businessName", businessName, "heading", heading, "body", body, "link", link.toString());
         }
@@ -746,6 +767,60 @@ public sealed interface EmailContent {
         @Override
         public List<Object> subjectArgs(EmailFormat format) {
             return List.of(heading, businessName);
+        }
+
+        @Override
+        public List<Object> reasonArgs() {
+            return List.of();
+        }
+    }
+
+    // ── Commercial (S-108) ───────────────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Northline's own offer, reward or news to a customer (Account › Notifications row {@code offers}): a commercial
+     * electronic message. Sent only with an express {@code marketing_email} consent, checked by the {@link Mailer} at
+     * send time; its footer names the legal sender, the mailing address and the one-click unsubscribe link, which
+     * withdraws the consent. No producer sends one yet: the first campaign or offer feature plugs in here.
+     *
+     * @param heading the heading (and the subject), already in the reader's language
+     * @param body the offer, already in the reader's language
+     */
+    record MarketingOffer(String heading, String body, URI link) implements EmailContent {
+
+        @Override
+        public String template() {
+            return "marketing-offer";
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.COMMERCIAL;
+        }
+
+        @Override
+        public MessageClasses.ConsentCategory consentCategory() {
+            return MessageClasses.ConsentCategory.MARKETING_EMAIL;
+        }
+
+        @Override
+        public String settingsPlace() {
+            return "account";
+        }
+
+        @Override
+        public String businessName() {
+            return "Northline";
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            return Map.of("heading", heading, "body", body, "link", link.toString());
+        }
+
+        @Override
+        public List<Object> subjectArgs(EmailFormat format) {
+            return List.of(heading);
         }
 
         @Override
@@ -898,6 +973,12 @@ public sealed interface EmailContent {
                         "Your booking is confirmed",
                         "Prairie Wrench confirmed your booking for Fri, Oct 2 at 9:00 a.m.",
                         URI.create("http://localhost:3000/app/bookings/01J9ZD3V00000000000000BK01")));
+        all.put(
+                "marketing-offer",
+                new MarketingOffer(
+                        "Free delivery this weekend",
+                        "Order from any shop on Northline before Sunday night and delivery is on us.",
+                        URI.create("http://localhost:3000/shop")));
         return java.util.Collections.unmodifiableMap(all);
     }
 
