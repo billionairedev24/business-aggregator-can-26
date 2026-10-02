@@ -1,0 +1,19 @@
+{
+  "name": "@northline/mobile-release",
+  "version": "0.1.0",
+  "private": true,
+  "description": "S-103: the offline checks of the apps' release set-up (eas.json, store listings en/fr-CA, privacy answers, screenshots, versions) and the release helpers used by make and CI. No Expo account needed.",
+  "type": "module",
+  "bin": {
+    "northline-release": "src/cli.mjs"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test test/*.test.mjs",
+    "check": "node src/cli.mjs check"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "typescript": "~5.9.3"
+  }
+}

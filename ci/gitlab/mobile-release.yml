@@ -1,0 +1,109 @@
+# S-103 — the store release of the native apps on GitLab; the same steps as .github/workflows/mobile-release.yml.
+# docs/runbooks/mobile-release.md. Included from .gitlab-ci.yml.
+# Pipelines only exist when started by hand (workflow: rules in .gitlab-ci.yml), these jobs only with
+# PIPELINE_PART=mobile-release (never part of `all`), and every job that talks to Expo, Apple or Google is a further
+# manual job inside that pipeline. RELEASE_APP and RELEASE_ACTION (and the other RELEASE_* inputs) are set in the
+# "Run pipeline" form.
+#
+# CI/CD variables (masked / protected; File type for the two key files):
+#   EXPO_TOKEN                      Expo access token
+#   EAS_OWNER, EAS_CONSUMER_PROJECT_ID, EAS_COURIER_PROJECT_ID   the Expo projects (from `eas init`)
+#   ASC_API_KEY_P8 (File)           App Store Connect API key (.p8);  ASC_API_KEY_ID, ASC_API_ISSUER_ID
+#   PLAY_SERVICE_ACCOUNT_JSON (File)  Google Play service account key (JSON)
+
+.mobile-release:
+  variables:
+    COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+    CI: "1"
+  rules:
+    - if: $PIPELINE_PART == "mobile-release"
+
+# The offline checks (strict for listing, submit-review and promote) and, for a production build, the release tag.
+mobile-release:check:
+  extends: .mobile-release
+  stage: check
+  image: node:22-bookworm
+  timeout: 10m
+  variables:
+    GIT_DEPTH: "0"
+  script:
+    - cd mobile
+    - |
+      flags="--app $RELEASE_APP"
+      case "$RELEASE_ACTION" in listing|submit-review|promote) flags="$flags --strict" ;; esac
+      node packages/release/src/cli.mjs check $flags
+    - |
+      case "$RELEASE_ACTION" in
+        submit-review) echo "$RELEASE_BUILD_NUMBER" | grep -Eq '^[0-9]+$' || { echo "submit-review needs RELEASE_BUILD_NUMBER"; exit 1; } ;;
+        promote|rollout|halt) echo "$RELEASE_VERSION_CODE" | grep -Eq '^[0-9]+$' || { echo "$RELEASE_ACTION needs RELEASE_VERSION_CODE"; exit 1; } ;;
+        update) [ -n "$RELEASE_MESSAGE" ] || { echo "update needs RELEASE_MESSAGE"; exit 1; } ;;
+        update-republish) [ -n "$RELEASE_GROUP" ] || { echo "update-republish needs RELEASE_GROUP"; exit 1; } ;;
+      esac
+    - |
+      if [ "$RELEASE_ACTION" = build ] && [ "$RELEASE_PROFILE" = production ]; then
+        tag="$RELEASE_APP-v$(node packages/release/src/cli.mjs version "$RELEASE_APP")"
+        node packages/release/src/cli.mjs tag "$RELEASE_APP" "$tag"
+        # the job token cannot push tags: the person releasing creates it (git tag $tag && git push origin $tag)
+        git rev-parse -q --verify "refs/tags/$tag" >/dev/null || { echo "Create the release tag first: git tag $tag $CI_COMMIT_SHA && git push origin $tag"; exit 1; }
+        [ "$(git rev-list -n1 "$tag")" = "$CI_COMMIT_SHA" ] || { echo "$tag names another commit: raise the version (make mobile-version-set)"; exit 1; }
+      fi
+
+# EAS: build (production submits itself to TestFlight + Play internal), update and its rollbacks, the App Store listing.
+mobile-release:eas:
+  extends: .mobile-release
+  stage: build
+  image: node:22-bookworm
+  needs: [mobile-release:check]
+  timeout: 30m
+  rules:
+    - if: $PIPELINE_PART == "mobile-release" && $EXPO_TOKEN && $RELEASE_ACTION =~ /^(build|update|update-republish|update-rollback-embedded|listing)$/
+      when: manual
+      allow_failure: true
+  before_script:
+    - command -v make >/dev/null || (apt-get update -qq && apt-get install -y -qq --no-install-recommends make >/dev/null)
+    - corepack enable
+    - (cd mobile && pnpm install --frozen-lockfile)
+    - |
+      if [ "$RELEASE_APP" = consumer ]; then export EAS_PROJECT_ID="$EAS_CONSUMER_PROJECT_ID"; else export EAS_PROJECT_ID="${EAS_COURIER_PROJECT_ID:-$EAS_PROJECT_ID}"; fi
+      [ -n "$EAS_PROJECT_ID" ] || { echo "The EAS project id for $RELEASE_APP is not set (docs/runbooks/mobile-release.md § One-time setup)"; exit 1; }
+  script:
+    - |
+      case "$RELEASE_ACTION" in
+        build) make mobile-eas-build MOBILE_APP="$RELEASE_APP" EAS_PROFILE="${RELEASE_PROFILE:-production}" EAS_PLATFORM="${RELEASE_PLATFORM:-all}" EAS_FLAGS=--no-wait ;;
+        update) make mobile-update MOBILE_APP="$RELEASE_APP" UPDATE_CHANNEL="${RELEASE_CHANNEL:-preview}" UPDATE_MESSAGE="$RELEASE_MESSAGE" UPDATE_ROLLOUT="$RELEASE_UPDATE_ROLLOUT" ;;
+        update-republish) make mobile-update-republish MOBILE_APP="$RELEASE_APP" UPDATE_GROUP="$RELEASE_GROUP" ;;
+        update-rollback-embedded) make mobile-update-rollback-embedded MOBILE_APP="$RELEASE_APP" UPDATE_CHANNEL="${RELEASE_CHANNEL:-preview}" ;;
+        listing) EXPO_ASC_API_KEY_PATH="$ASC_API_KEY_P8" EXPO_ASC_KEY_ID="$ASC_API_KEY_ID" EXPO_ASC_ISSUER_ID="$ASC_API_ISSUER_ID" make mobile-store-metadata MOBILE_APP="$RELEASE_APP" ;;
+      esac
+
+# fastlane: Play listing text, promotion, rollout, halt; iOS App Review.
+mobile-release:store:
+  extends: .mobile-release
+  stage: build
+  image: ruby:3.3-bookworm
+  needs: [mobile-release:check]
+  timeout: 20m
+  rules:
+    - if: $PIPELINE_PART == "mobile-release" && $RELEASE_ACTION =~ /^(listing|promote|rollout|halt)$/ && $PLAY_SERVICE_ACCOUNT_JSON
+      when: manual
+      allow_failure: true
+    - if: $PIPELINE_PART == "mobile-release" && $RELEASE_ACTION == "submit-review" && $ASC_API_KEY_P8
+      when: manual
+      allow_failure: true
+  variables:
+    NL_APP: $RELEASE_APP
+    BUILD_NUMBER: $RELEASE_BUILD_NUMBER
+    VERSION_CODE: $RELEASE_VERSION_CODE
+    ROLLOUT: $RELEASE_ROLLOUT
+  script:
+    - gem install fastlane -N --no-document >/dev/null
+    - export PLAY_SERVICE_ACCOUNT_JSON_PATH="$PLAY_SERVICE_ACCOUNT_JSON" ASC_KEY_PATH="$ASC_API_KEY_P8" ASC_KEY_ID="$ASC_API_KEY_ID" ASC_ISSUER_ID="$ASC_API_ISSUER_ID"
+    - cd mobile
+    - |
+      case "$RELEASE_ACTION" in
+        listing) fastlane android listing ;;
+        submit-review) fastlane ios submit_review ;;
+        promote) fastlane android promote ;;
+        rollout) fastlane android rollout ;;
+        halt) fastlane android halt ;;
+      esac

@@ -1,0 +1,38 @@
+{
+  "$comment": "S-103: Play Console settings with no file upload (Store settings, App content). Entered by hand; the release check keeps them complete. docs/runbooks/mobile-release.md § Google Play.",
+  "defaultLanguage": "en-CA",
+  "category": "SHOPPING",
+  "tags": ["Shopping", "Home services", "Local"],
+  "contactEmail": "support@northline.ca",
+  "website": "https://northline.ca",
+  "privacyPolicyUrl": "https://northline.ca/legal/privacy.html",
+  "containsAds": false,
+  "inAppProducts": false,
+  "targetAudience": ["18 and over"],
+  "appealsToChildren": false,
+  "governmentApp": false,
+  "financialFeatures": ["Payments: the customer pays businesses on the platform (Stripe); no lending, investing or crypto"],
+  "healthApp": false,
+  "newsApp": false,
+  "appAccess": "Browsing works without an account. Booking and paying need one: the review account (email, mobile and how the 6-digit code reaches the reviewer) is entered under App content › App access, never in this repository.",
+  "contentRating": {
+    "$comment": "IARC questionnaire, category \"All other app types\". The marketplace lists alcohol, tobacco and vape products from licensed shops, so the expected result is 18+ / Mature (Apple: 18+).",
+    "category": "All other app types",
+    "expected": { "esrb": "Mature 17+", "pegi": "18", "iarcGeneric": "18+" },
+    "answers": {
+      "violence": false,
+      "fear": false,
+      "sexuality": false,
+      "gambling": false,
+      "simulatedGambling": false,
+      "crudeHumourOrProfanity": false,
+      "controlledSubstancesReferenced": true,
+      "sellsAlcoholTobaccoOrAgeRestrictedGoods": true,
+      "usersInteractOrCommunicate": false,
+      "sharesUserLocationWithOtherUsers": false,
+      "purchasesOfDigitalGoods": false,
+      "purchasesOfPhysicalGoods": true,
+      "unrestrictedInternetAccess": false
+    }
+  }
+}

@@ -154,13 +154,17 @@ domain event (Kafka) ──► worker: notifications / personal-notifications co
    `PUSH_APNS_KEY_ID`, `PUSH_APNS_TEAM_ID`. Development builds (installed from Xcode / EAS development) register
    **sandbox** tokens: in dev set `PUSH_APNS_URL=https://api.sandbox.push.apple.com` and the `.dev` bundle ids as
    `PUSH_APNS_CONSUMER_TOPIC` / `PUSH_APNS_COURIER_TOPIC`. TestFlight and App Store builds use production APNs.
-4. EAS / the app config: the `aps-environment` entitlement comes with `expo-notifications`' config plugin.
+4. EAS / the app config: the `aps-environment` entitlement comes with `expo-notifications`' config plugin — in both
+   apps since S-103 (`production` for preview and store builds, `development` for development builds; checked by
+   `make mobile-consumer-native-check`). EAS needs no APNs key: the worker sends with its own provider token.
 
 ### Firebase (FCM)
 
 1. Firebase console → a project per environment (`northline-<env>`). APNs and FCM are global services with no
    Canadian region: that is why only tokens, words and ids are sent (§ 1). Add the Android apps
-   (`ca.northline.app`, `ca.northline.courier`, the variants); the apps' `google-services.json` comes from here.
+   (`ca.northline.app`, `ca.northline.courier`, the variants); the apps' `google-services.json` comes from here — store
+   it per environment as the EAS file variable `GOOGLE_SERVICES_JSON` (`app.config.ts` passes it to
+   `android.googleServicesFile`; never commit it — [mobile-release.md § Push credentials](mobile-release.md#push-credentials)).
 2. Project settings → **Service accounts** → "Generate new private key" (a service account with the "Firebase Cloud
    Messaging API Admin" role, nothing more). Enable the **Firebase Cloud Messaging API (V1)**.
 3. Secrets manager: `push-fcm-service-account` = the JSON key (one line). The project id is read from it.

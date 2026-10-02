@@ -14,6 +14,7 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
  *   EXPO_PUBLIC_SITE_ORIGIN   https://<zone> — the consumer web: legal pages, the claimed https redirect and App Links
  *   EXPO_PUBLIC_FIXTURES      1 = the in-app fixture backend (web smoke test, demos); refused for production
  *   EAS_PROJECT_ID, EAS_OWNER the Expo project (from `eas init`)
+ *   GOOGLE_SERVICES_JSON      path of the environment's google-services.json (FCM); an EAS file variable, never committed
  *   NL_IOS_BUILD_NUMBER, NL_ANDROID_VERSION_CODE  only for local builds (EAS keeps them remotely)
  */
 type Env = Record<string, string | undefined>;
@@ -37,7 +38,11 @@ export const CLIENT_ID = 'mobile-consumer';
 /** Paths of the consumer site this app claims (App Links / Universal Links): its OAuth redirect; S-102 adds deep links. */
 export const APP_LINK_PATH_PREFIX = '/app';
 
-export const APP_VERSION = '0.1.0';
+/**
+ * The marketing version (CFBundleShortVersionString / versionName): package.json's `version` is its one source
+ * (`make mobile-version-set`); build numbers are EAS's (`appVersionSource: remote`). docs/runbooks/mobile-release.md.
+ */
+export const APP_VERSION: string = (JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf8')) as { version: string }).version;
 
 /** Permission texts (en; fr-CA in locales/fr.json). Store reviewers read them: keep them exact and honest. */
 export const PERMISSION_TEXT = {
@@ -49,7 +54,13 @@ export const PERMISSION_TEXT = {
  * Android permissions the app asks for; what libraries would add and the app does not use is removed from the merged
  * manifest. Location only while the app is open: no background location, no foreground service.
  */
-export const ANDROID_PERMISSIONS = ['android.permission.INTERNET', 'android.permission.ACCESS_COARSE_LOCATION', 'android.permission.ACCESS_FINE_LOCATION'] as const;
+export const ANDROID_PERMISSIONS = [
+  'android.permission.INTERNET',
+  'android.permission.ACCESS_COARSE_LOCATION',
+  'android.permission.ACCESS_FINE_LOCATION',
+  // push (S-102/S-103): Android 13+ asks; the app asks at the moment the design chooses, never at launch
+  'android.permission.POST_NOTIFICATIONS',
+] as const;
 export const ANDROID_BLOCKED_PERMISSIONS = [
   'android.permission.ACCESS_BACKGROUND_LOCATION',
   'android.permission.FOREGROUND_SERVICE',
@@ -139,7 +150,8 @@ export function createConfig(env: Env = process.env): ExpoConfig {
           { NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryDiskSpace', NSPrivacyAccessedAPITypeReasons: ['E174.1'] },
         ],
         // Linked to the person, for app functionality only: their account (name, email, phone), the delivery address
-        // and location they choose. No tracking.
+        // and location they choose, the push token (device id), orders and bookings, the card (entered in Stripe's
+        // sheet), problem reports, booking notes. No tracking. Kept equal to store/privacy.json (S-103 release check).
         NSPrivacyCollectedDataTypes: [
           'NSPrivacyCollectedDataTypeName',
           'NSPrivacyCollectedDataTypeEmailAddress',
@@ -147,6 +159,11 @@ export function createConfig(env: Env = process.env): ExpoConfig {
           'NSPrivacyCollectedDataTypePhysicalAddress',
           'NSPrivacyCollectedDataTypePreciseLocation',
           'NSPrivacyCollectedDataTypeUserID',
+          'NSPrivacyCollectedDataTypeDeviceID',
+          'NSPrivacyCollectedDataTypePurchaseHistory',
+          'NSPrivacyCollectedDataTypePaymentInfo',
+          'NSPrivacyCollectedDataTypeCustomerSupport',
+          'NSPrivacyCollectedDataTypeOtherUserContent',
         ].map((type) => ({
           NSPrivacyCollectedDataType: type,
           NSPrivacyCollectedDataTypeLinked: true,
@@ -170,6 +187,9 @@ export function createConfig(env: Env = process.env): ExpoConfig {
       permissions: [...ANDROID_PERMISSIONS],
       blockedPermissions: [...ANDROID_BLOCKED_PERMISSIONS],
       allowBackup: false,
+      // FCM (push): the environment's Firebase file, given to EAS Build as a file variable (docs/runbooks/push.md).
+      // Without it the app builds and runs; it only gets no push token.
+      googleServicesFile: env.GOOGLE_SERVICES_JSON || undefined,
     },
     web: { bundler: 'metro', output: 'single' },
     plugins: [
@@ -191,6 +211,9 @@ export function createConfig(env: Env = process.env): ExpoConfig {
           isAndroidForegroundServiceEnabled: false,
         },
       ],
+      // Push (S-102's registration in @northline/mobile-kit): the native module, the aps-environment entitlement
+      // (production APNs for store builds) and the Android channel `updates` the worker sends to.
+      ['expo-notifications', { mode: isDev ? 'development' : 'production', defaultChannel: 'updates', color: brand.accent, enableBackgroundRemoteNotifications: false }],
       ['expo-splash-screen', { image: './assets/splash-icon.png', imageWidth: 160, resizeMode: 'contain', backgroundColor: brand.bg }],
       [
         'expo-build-properties',

@@ -153,19 +153,24 @@ new for S-87.
 
 One-time setup (an owner of the Expo organisation):
 
-1. `cd mobile/apps/courier && npx eas-cli login && npx eas-cli init` → note the project id; set `EAS_PROJECT_ID`
-   and `EAS_OWNER` as GitHub Actions *variables* (and GitLab CI/CD variables).
+1. `cd mobile/apps/courier && npx eas-cli login && npx eas-cli init` → note the project id; set `EAS_COURIER_PROJECT_ID`
+   (the older `EAS_PROJECT_ID` still works for this workflow) and `EAS_OWNER` as GitHub Actions *variables* (and GitLab
+   CI/CD variables).
 2. Create an access token (Expo › Access tokens) → GitHub secret / GitLab masked variable `EXPO_TOKEN`.
 3. `npx eas-cli credentials` per platform and profile: let EAS create the iOS distribution certificate and profiles
    and the Android upload keystore ([Signing](#signing)).
-4. Fill `submit.production` in `eas.json` (App Store Connect app id, Apple team id) once the store records exist.
+4. Fill `submit.base.ios` in `eas.json` (App Store Connect app id, Apple team id) once the store records exist —
+   the whole store release (submit profiles, listings, privacy answers, rollout, rollback) is
+   [mobile-release.md](mobile-release.md) (S-103).
 
 Build: `make courier-eas-build EAS_PROFILE=preview` (both platforms; `EAS_PLATFORM=ios|android`), or Actions ›
 courier › Run workflow with `eas=preview`. Preview builds are internal distribution (an install link: iOS devices must be
 registered with `eas device:create`; Android gets an APK). Production builds are store builds (app-bundle / IPA) with
-auto-incremented build numbers; submit with `npx eas-cli submit -p ios|android --profile production` (Android goes to
-the internal track as a draft). Over-the-air updates: `runtimeVersion` is the native fingerprint, so a JS update only
-reaches binaries with the same native layer (`npx eas-cli update --channel preview`).
+auto-incremented build numbers; `make mobile-eas-build MOBILE_APP=courier EAS_PROFILE=production` builds and submits
+them to TestFlight and the Play internal track (submit profile `internal`). The version is `package.json`'s.
+Over-the-air updates: `runtimeVersion` is the native fingerprint, so a JS update only reaches binaries with the same
+native layer (`make mobile-update MOBILE_APP=courier UPDATE_CHANNEL=preview UPDATE_MESSAGE=…`;
+[mobile-release.md § Over-the-air updates](mobile-release.md#over-the-air-updates)).
 
 ## Store accounts
 

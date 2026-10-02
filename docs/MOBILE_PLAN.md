@@ -33,7 +33,8 @@ Studio). Source-of-truth order: `CLAUDE.md`. Running it: [runbooks/mobile.md](ru
 ```
 mobile/apps/consumer/
   app.config.ts               the native projects: variants, bundle ids, schemes, App Links, permissions, privacy manifest
-  eas.json                    EAS profiles: development (dev), preview (staging), production (prod)
+  eas.json                    EAS profiles: development (dev), preview (staging), production (prod); submit profiles
+  store/                      store listings en-CA / fr-CA, privacy answers, screenshots (S-103, runbooks/mobile-release.md)
   app/                        expo-router routes — thin: read params, render a screen from src/
     _layout.tsx               fonts, QueryClient, i18n, AuthProvider, the root Stack
     index.tsx                 entry: Welcome the first time, Home afterwards
@@ -296,7 +297,9 @@ api above; personal stubs already show guests the sign-in prompt.
   `PushRegistration.enable()` for the permission screen, `expoPushPlatform(Notifications, Platform.OS)` over
   `expo-notifications` (not yet a dependency of the app: it needs the config plugin and EAS push credentials) and
   `handleNotificationTaps(platform, hosts, link => router.push(routeOf(link)))`. Server side, set-up and failures:
-  [runbooks/push.md](runbooks/push.md).
+  [runbooks/push.md](runbooks/push.md). S-103 added `expo-notifications` and its config plugin to both apps (the
+  native module, the `aps-environment` entitlement, Android's `updates` channel, `POST_NOTIFICATIONS`); installing the
+  registrar is app code still to do, and can ship as an over-the-air update (the native layer is already there).
 - **Deep links** (S-102) — under the paths the association files give each app (`/app/*`, `/courier/*`); the consumer
   web redirects each to its web page when the app isn't installed:
 
@@ -348,8 +351,8 @@ Areas: `shop` (S-99), `services` (S-100), `account` (S-101). Don't edit another 
   follow-ups: `PATCH /me/preferences` with `province: ""` goes back to "follow my location".) The data export has no file to save without a file-system module: it goes through the share sheet.
 - **Passkeys in the app:** creating or using a passkey natively needs a native module (none in Expo); the app sends
   people to the consumer site in the system browser for passkeys, Google and Apple (S-98).
-- **Push:** the server, mobile-kit's registration and the deep links are S-102's; the app still needs
-  `expo-notifications` and the registrar installed (above).
+- **Push:** the server, mobile-kit's registration and the deep links are S-102's; `expo-notifications` is in the app
+  since S-103; the registrar still needs installing (above), and APNs / Firebase accounts to deliver anything.
 
 ## Journey C as built (S-100)
 

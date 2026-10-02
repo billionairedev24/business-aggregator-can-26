@@ -1,0 +1,77 @@
+{
+  "configVersion": 0,
+  "apple": {
+    "copyright": "2026 Northline Marketplace Inc.",
+    "categories": [
+      "SHOPPING",
+      "LIFESTYLE"
+    ],
+    "advisory": {
+      "alcoholTobaccoOrDrugUseOrReferences": "FREQUENT_OR_INTENSE",
+      "contests": "NONE",
+      "gamblingSimulated": "NONE",
+      "horrorOrFearThemes": "NONE",
+      "matureOrSuggestiveThemes": "NONE",
+      "medicalOrTreatmentInformation": "NONE",
+      "profanityOrCrudeHumor": "NONE",
+      "sexualContentGraphicAndNudity": "NONE",
+      "sexualContentOrNudity": "NONE",
+      "violenceCartoonOrFantasy": "NONE",
+      "violenceRealistic": "NONE",
+      "violenceRealisticProlongedGraphicOrSadistic": "NONE",
+      "gambling": false,
+      "unrestrictedWebAccess": false
+    },
+    "release": {
+      "automaticRelease": false,
+      "phasedRelease": true
+    },
+    "info": {
+      "en-CA": {
+        "title": "Northline: Shop & Book Local",
+        "subtitle": "Local shops and services",
+        "description": "Northline brings the shops and service providers near you into one bilingual app.\n\nSHOP LOCAL\n• Browse local stores by department and fill one cart from several shops.\n• Get it delivered on the evening’s pooled run.\n• Follow your order from packed to delivered, and confirm when it arrives.\n\nBOOK TRUSTED SERVICES\n• Find cleaners, plumbers, mechanics and more, with their reviews, prices and next available times.\n• Book a fixed-price visit in a few taps, or ask for a quote. Every quote is itemized, with the scope, exclusions, warranty and deposit shown up front.\n• See when your provider is on the way, then sign off when the job is done.\n\nPAY WITH CONFIDENCE\n• Your payment is held and released to the business only after the job is complete or your order is delivered.\n• Cards are entered in Stripe’s secure payment sheet. Northline never sees or stores your card number.\n• Something wrong? Report a problem from the order and follow your refund case.\n\nMADE FOR YOU\n• English and French throughout.\n• Browse as a guest; sign in to book and pay.\n• Your location is used only while the app is open, to show what serves your address, and is never shared with businesses.\n• Notifications for your orders, bookings and quotes, with quiet hours you choose.\n• No ads and no tracking.\n\nNorthline is opening province by province. If we don’t serve your area yet, join the waitlist in the app.",
+        "keywords": [
+          "marketplace",
+          "local",
+          "shopping",
+          "delivery",
+          "services",
+          "booking",
+          "quotes",
+          "cleaning",
+          "plumber",
+          "mechanic",
+          "handyman"
+        ],
+        "promoText": "Shop local stores and book trusted services in one app. Your payment is held until the job is done or your order arrives.",
+        "releaseNotes": "The first version of Northline: shop local stores, book services, and follow your orders and bookings.",
+        "supportUrl": "https://northline.ca/help",
+        "privacyPolicyUrl": "https://northline.ca/legal/privacy.html",
+        "marketingUrl": "https://northline.ca"
+      },
+      "fr-CA": {
+        "title": "Northline : achats et services",
+        "subtitle": "Commerces et services locaux",
+        "description": "Northline réunit les commerces et les prestataires de services près de chez vous dans une seule app bilingue.\n\nACHETEZ LOCAL\n• Parcourez les commerces d’ici par rayon et remplissez un seul panier auprès de plusieurs boutiques.\n• Faites-vous livrer lors de la tournée groupée du soir.\n• Suivez votre commande, de l’emballage à la livraison, et confirmez sa réception.\n\nRÉSERVEZ DES SERVICES DE CONFIANCE\n• Trouvez des entreprises de ménage, des plombiers, des mécaniciens et plus encore, avec leurs avis, leurs prix et leurs prochaines disponibilités.\n• Réservez une visite à prix fixe en quelques touches ou demandez une soumission. Chaque soumission est détaillée : travaux, exclusions, garantie et acompte sont indiqués d’emblée.\n• Voyez quand votre prestataire est en route, puis approuvez le travail une fois terminé.\n\nPAYEZ EN TOUTE CONFIANCE\n• Votre paiement est retenu et versé à l’entreprise seulement une fois le travail terminé ou la commande livrée.\n• Les cartes sont saisies dans le formulaire de paiement sécurisé de Stripe. Northline ne voit ni ne conserve jamais votre numéro de carte.\n• Un problème? Signalez-le depuis la commande et suivez votre demande de remboursement.\n\nCONÇUE POUR VOUS\n• En français et en anglais, partout dans l’app.\n• Naviguez sans compte; connectez-vous pour réserver et payer.\n• Votre position n’est utilisée que lorsque l’app est ouverte, pour afficher ce qui dessert votre adresse, et n’est jamais transmise aux entreprises.\n• Des notifications pour vos commandes, réservations et soumissions, avec les heures de silence de votre choix.\n• Aucune publicité, aucun pistage.\n\nNorthline ouvre province par province. Si nous ne desservons pas encore votre région, inscrivez-vous à la liste d’attente dans l’app.",
+        "keywords": [
+          "marché",
+          "local",
+          "achats",
+          "livraison",
+          "services",
+          "réservation",
+          "soumission",
+          "ménage",
+          "plombier",
+          "mécanicien"
+        ],
+        "promoText": "Magasinez dans les commerces d’ici et réservez des services de confiance. Votre paiement est retenu jusqu’au travail terminé ou à la livraison.",
+        "releaseNotes": "La première version de Northline : magasinez dans les commerces d’ici, réservez des services et suivez vos commandes et réservations.",
+        "supportUrl": "https://northline.ca/help",
+        "privacyPolicyUrl": "https://northline.ca/legal/privacy.html",
+        "marketingUrl": "https://northline.ca"
+      }
+    }
+  }
+}

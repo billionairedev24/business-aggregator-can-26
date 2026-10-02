@@ -13,6 +13,7 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
  *   EXPO_PUBLIC_AUTH_ISSUER  https://auth.<zone>
  *   EXPO_PUBLIC_FIXTURES     1 = the in-app fixture backend (web smoke test, demos); refused for production
  *   EAS_PROJECT_ID, EAS_OWNER  the Expo project (from `eas init`)
+ *   GOOGLE_SERVICES_JSON     path of the environment's google-services.json (FCM); an EAS file variable, never committed
  */
 type Env = Record<string, string | undefined>;
 
@@ -32,7 +33,11 @@ export const SCHEME = 'ca.northline.courier';
 export const REDIRECT_URI = `${SCHEME}:/oauth2redirect`;
 export const CLIENT_ID = 'courier-app';
 
-export const APP_VERSION = '0.1.0';
+/**
+ * The marketing version (CFBundleShortVersionString / versionName): package.json's `version` is its one source
+ * (`make mobile-version-set`); build numbers are EAS's (`appVersionSource: remote`). docs/runbooks/mobile-release.md.
+ */
+export const APP_VERSION: string = (JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf8')) as { version: string }).version;
 
 /** Permission texts (en; fr-CA in locales/fr.json). Store reviewers read them: keep them exact and honest. */
 export const PERMISSION_TEXT = {
@@ -55,6 +60,8 @@ export const ANDROID_PERMISSIONS = [
   'android.permission.ACCESS_BACKGROUND_LOCATION',
   'android.permission.FOREGROUND_SERVICE',
   'android.permission.FOREGROUND_SERVICE_LOCATION',
+  // push (S-102/S-103): "New run", "Run changed"; Android 13+ asks
+  'android.permission.POST_NOTIFICATIONS',
 ] as const;
 export const ANDROID_BLOCKED_PERMISSIONS = [
   'android.permission.RECORD_AUDIO',
@@ -133,11 +140,14 @@ export function createConfig(env: Env = process.env): ExpoConfig {
           { NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategorySystemBootTime', NSPrivacyAccessedAPITypeReasons: ['35F9.1'] },
           { NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryDiskSpace', NSPrivacyAccessedAPITypeReasons: ['E174.1'] },
         ],
-        // Linked to the courier, for app functionality only: precise location while on a run, proof photos.
+        // Linked to the courier, for app functionality only: precise location while on a run, proof photos, the
+        // push token (device id), the customer's signature at the door. Kept equal to store/privacy.json (S-103).
         NSPrivacyCollectedDataTypes: [
           'NSPrivacyCollectedDataTypePreciseLocation',
           'NSPrivacyCollectedDataTypePhotosorVideos',
           'NSPrivacyCollectedDataTypeUserID',
+          'NSPrivacyCollectedDataTypeDeviceID',
+          'NSPrivacyCollectedDataTypeOtherUserContent',
         ].map((type) => ({
           NSPrivacyCollectedDataType: type,
           NSPrivacyCollectedDataTypeLinked: true,
@@ -157,6 +167,8 @@ export function createConfig(env: Env = process.env): ExpoConfig {
       permissions: [...ANDROID_PERMISSIONS],
       blockedPermissions: [...ANDROID_BLOCKED_PERMISSIONS],
       allowBackup: false,
+      // FCM (push): the environment's Firebase file, given to EAS Build as a file variable (docs/runbooks/push.md).
+      googleServicesFile: env.GOOGLE_SERVICES_JSON || undefined,
     },
     web: { bundler: 'metro', output: 'single' },
     plugins: [
@@ -176,6 +188,9 @@ export function createConfig(env: Env = process.env): ExpoConfig {
           isAndroidForegroundServiceEnabled: true,
         },
       ],
+      // Push (S-102's registration in @northline/mobile-kit): the native module, the aps-environment entitlement
+      // (production APNs for store builds) and the Android channel `updates` the worker sends to.
+      ['expo-notifications', { mode: isDev ? 'development' : 'production', defaultChannel: 'updates', color: brand.accent, enableBackgroundRemoteNotifications: false }],
       ['expo-splash-screen', { image: './assets/splash-icon.png', imageWidth: 160, resizeMode: 'contain', backgroundColor: brand.bg }],
       [
         'expo-build-properties',

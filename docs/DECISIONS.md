@@ -6346,6 +6346,95 @@ tab id and a step block in `e2e/smoke.mjs`. How it is built: MOBILE_PLAN § Jour
   northline-auth from the app's cookie store; push → `/bookings/<id>` on a device. The web smoke test runs the journey
   in headless Chromium on the fixture backend.
 
+## 2026-10-02 — S-103 App Store / Play Store release pipeline and store listings (en/fr)
+
+**Nothing has been submitted to Apple or Google, and no EAS build, submit, update or metadata push has run: no Expo
+organisation, Apple Developer account, App Store Connect record, Google Play Console account or Firebase project
+exists.** Everything that talks to them is written against Expo's, fastlane's and the stores' documented behaviour and
+is inert (skips with a notice) until the secrets exist. Runbook: `docs/runbooks/mobile-release.md`.
+
+- **Tooling: EAS Build + EAS Submit + EAS Update + EAS Metadata, plus fastlane for what EAS doesn't do.** Both apps
+  already had `eas.json`, `credentialsSource: remote`, `appVersionSource: remote` and `expo-updates` (S-87, S-97), so
+  EAS stays the build and upload path. EAS Submit can only upload a new binary to a track; promoting the tested
+  internal build to production as a staged rollout, changing / halting the rollout and sending a TestFlight build to
+  App Review are fastlane lanes (`mobile/fastlane/Fastfile`: `android listing|promote|rollout|halt`, `ios
+  submit_review`), as samop-inv-ship-26 does it. One Fastfile for both apps (`NL_APP`).
+- **Flow:** version bump → production build (tag `<app>-vX.Y.Z`) → EAS submits with profile `internal` (TestFlight +
+  Play internal, completed) → device checklist → iOS App Review with manual release and 7-day phased release; Android
+  promote to production at 10 % → 50 % → 100 % (or halt). `submit.production` (Play production as a draft) stays as a
+  manual fallback. Submit profiles share `submit.base.ios` (placeholders until the records exist).
+- **Environments:** unchanged profiles — `development`/`development-device` = dev, `preview` = staging, `production` =
+  prod; channel = profile name = EAS environment. The origins are the runbooks' (`api.<zone>/api/v1`, `auth.<zone>`,
+  `<zone>`); the release check holds `eas.json` to one table (`packages/release/src/spec.mjs`). The courier app has no
+  `EXPO_PUBLIC_SITE_ORIGIN` (it doesn't use one) — not added.
+- **One version source:** each app's `package.json` `version`; `app.config.ts` reads it (`APP_VERSION`), the release
+  tag must equal it, `make mobile-version-set` writes it. Build numbers stay EAS's (remote, auto-increment). The apps
+  are versioned and released independently (`consumer-v*`, `courier-v*`).
+- **OTA pinned to the runtime:** `runtimeVersion: { policy: 'fingerprint' }` kept; new `fingerprint.config.js` in both
+  apps skips `extra` (the `EXPO_PUBLIC_*` values, project id) and the version numbers. Verified offline: a version bump
+  and a different api URL leave the fingerprint unchanged; another variant changes it. `make mobile-update` exports
+  the profile's variables before `eas update` (otherwise the bundle carries localhost URLs) and passes
+  `--environment`. Rollback: `update:republish` of a good group or `update:roll-back-to-embedded`.
+- **Push (S-102's follow-up):** `expo-notifications` (~57.0.21) and its config plugin added to **both** apps:
+  `aps-environment` (`production` for preview and store builds, `development` for development), Android channel
+  `updates` (what the worker sends to), `POST_NOTIFICATIONS` listed explicitly, `android.googleServicesFile` from the
+  EAS file variable `GOOGLE_SERVICES_JSON` (absent → builds still work, no FCM token). The consumer native check now
+  asserts the entitlement and the channel. **Not done:** installing the registrar (`setPushRegistrar` in
+  `app/_layout.tsx` and the permission moment) — app code, and the consumer app is being changed concurrently; since
+  the native module is now in the binary, that wiring can ship as an over-the-air update. Needs real accounts: the
+  Push Notifications capability on the bundle ids, the APNs key and the Firebase projects (worker side, push.md), the
+  `google-services.json` per environment (EAS).
+- **Store listings as files:** App Store via EAS Metadata (`store/store.config.json`: texts, URLs, categories, age
+  rating answers, manual + phased release); Play in fastlane supply's layout (`store/play/<locale>/…`), with Play's
+  console-only settings, the IARC answers, target audience and app access in `store/play/details.json`. Locales
+  **en-CA and fr-CA** in both stores (the brief's "en" taken as English (Canada), the stores' Canadian English).
+  Region-neutral copy ("opening province by province"); the check refuses province, territory, city and zone names.
+- **Privacy answers** (`store/privacy.json`, entered by hand — neither console has an API): consistent with what the
+  apps send. Consumer: name, email, phone, address, precise location (optional, in use), user id, **device id (push
+  token + installation id)**, purchase history, **payment info (Stripe's SDK in the app's sheet)**, customer support
+  (problem reports), other user content (booking notes). Courier: precise location (incl. background during a run),
+  photos, user id, device id, other user content (the customer's signature). No tracking, nothing shared (Stripe,
+  APNs, FCM are service providers), encrypted in transit. The privacy manifests in both `app.config.ts` gained the
+  missing types (device id, purchases, payment info, support, user content), and the check keeps manifest ↔ answers ↔
+  Android permissions equal.
+- **Age ratings:** consumer **18+** — the marketplace lists alcohol, tobacco and vape (seed categories) and the Terms
+  require the age of majority; courier mild alcohol references, audience 18+. Apple's newer questionnaire items aren't
+  in EAS Metadata — answered in the console.
+- **Screenshots:** a documented list per app (`store/screenshots.json`: route, state, caption en/fr) and flat
+  placeholders at the stores' sizes (iPhone 6.9" 1320 × 2868, Play 1080 × 1920, feature graphic 1024 × 500) written
+  from the brand tokens by `make mobile-store-placeholders` (~740 KB for both apps). The listing step never uploads
+  images; `--strict` refuses while `placeholder: true`.
+- **Offline validation:** new workspace package `@northline/mobile-release` (`mobile/packages/release`, plain ESM with
+  JSDoc, `tsc --checkJs`, `node --test`): eas.json rules (profiles, origins, channels, remote versions, autoIncrement,
+  store distribution, AAB, no secrets / key paths / `releaseChannel`, submit profiles), listing limits per store
+  (keywords counted in UTF-8 bytes), en/fr-CA parity and "not the English text", region-neutral text, https URLs,
+  categories, every age-rating answer, no review account in the repo, privacy answers ↔ manifest ↔ permissions,
+  screenshots and sizes, version source and fingerprint runtime. **Errors** fail `pnpm lint` (appended to the mobile
+  workspace's lint) and so every mobile CI `checks` job; **pending** items (store ids, placeholder screenshots, account
+  deletion) fail only `check --strict`, which the release pipeline runs before `listing`, `submit-review`, `promote`.
+- **CI:** `.github/workflows/mobile-release.yml` (workflow_dispatch only; `contents: write` for the release tag) and
+  `ci/gitlab/mobile-release.yml` (`PIPELINE_PART=mobile-release`, `RELEASE_*` inputs, EAS and store jobs `when:
+  manual`; the job token can't push tags, so on GitLab the person creates the tag first). Store keys are written to the
+  runner's temp directory per run and deleted. `actionlint` clean.
+- **Secrets:** `EXPO_TOKEN`, `ASC_API_KEY_P8` (+ `ASC_API_KEY_ID`, `ASC_API_ISSUER_ID`), `PLAY_SERVICE_ACCOUNT_JSON`,
+  `EAS_CONSUMER_PROJECT_ID` / `EAS_COURIER_PROJECT_ID` / `EAS_OWNER`, EAS file variable `GOOGLE_SERVICES_JSON` — in CI
+  and EAS, not the cluster (secrets.md § Mobile release); no Helm / Terraform / `.env` change (no running app reads
+  them). No schema, no server change.
+- **Make:** `make/mobile-release.mk` (`MOBILE_APP=consumer|courier`): offline `mobile-release-check(-strict)`,
+  `mobile-release-test`, `mobile-version(-set)`, `mobile-release-config`, `mobile-fingerprint`,
+  `mobile-store-placeholders`; with accounts `mobile-eas-build`, `mobile-eas-submit`, `mobile-store-metadata`,
+  `mobile-update`, `mobile-update-republish`, `mobile-update-rollback-embedded`.
+- **Open (blocks going public, listed by `--strict`):** the App Store Connect app ids and Apple team id; real
+  screenshots; **account deletion** — Apple 5.1.1(v) needs in-app deletion for the consumer app (it creates accounts)
+  and Play a deletion link; S-105 builds erasure. Also: `https://northline.ca/help` (the support URL, as the design's
+  footer names it) doesn't exist yet; the privacy policy is English only (fr-CA listing links the same page);
+  `support@northline.ca` as the Play contact is assumed; whether the courier app should be unlisted / private; the
+  store icon is still S-97's placeholder.
+- **Never exercised:** `eas build/submit/update/metadata:push` (incl. the `EXPO_ASC_*` variables EAS Metadata reads in
+  CI), every fastlane lane, both pipelines end to end, the stores' validation of the listing files, push delivery.
+  What ran: the release checks and their 22 unit tests, the consumer `expo prebuild` native check with the push
+  plugin, `expo config` per profile, the fingerprint comparisons, `actionlint`, `ruby -c`.
+
 ## 2026-10-02 — Phase 4 follow-ups: webhooks order_delivered DLQ, favourites refresh, province follow-location
 
 Branch `fix/phase4-followups`. Three small fixes; no migration, no new configuration.

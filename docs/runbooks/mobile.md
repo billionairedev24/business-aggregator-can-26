@@ -36,6 +36,7 @@ mobile/
   eslint.config.mjs     one lint config; colour literals are errors
 make/mobile-consumer.mk the make targets below
 .github/workflows/mobile-consumer.yml, ci/gitlab/mobile-consumer.yml   manual-only CI
+apps/consumer/store/    the store listings en-CA / fr-CA, privacy answers, screenshots (S-103: mobile-release.md)
 ```
 
 ## Run it
@@ -84,11 +85,11 @@ One build per environment; the EAS profile sets the variables (`eas.json`), Metr
 | make target | what |
 |---|---|
 | `mobile-consumer-check` | what the manual CI job runs: lint, typecheck, test, export |
-| `mobile-consumer-lint` | ESLint over the apps and the kit, warnings fail; colour literals are errors |
+| `mobile-consumer-lint` | ESLint over the apps and the kit, warnings fail; colour literals are errors; then both apps' release checks (S-103, `make mobile-release-check`) |
 | `mobile-consumer-typecheck` | `tsc --noEmit` (strict, `noUncheckedIndexedAccess`) for the app and the kit |
 | `mobile-consumer-test` | Jest + RNTL: the shell, tabs, header, states, guest id, sign-in, en/fr parity, region and colour rules, the screen list against the design and MOBILE_PLAN, the native config against the auth server's client registration; the kit's tests |
 | `mobile-consumer-export` | `expo export` of the iOS and Android Hermes bundles — Metro resolves and Hermes compiles everything |
-| `mobile-consumer-native-check` | `expo prebuild` of both platforms for the development and production variants, then checks: bundle ids, the OAuth redirect scheme, the verified App Link, associated domains, location-while-in-use only, no camera / microphone / storage / backup, cleartext only in development, French localisation, privacy manifest; the generated `android/` and `ios/` are deleted |
+| `mobile-consumer-native-check` | `expo prebuild` of both platforms for the development and production variants, then checks: bundle ids, the OAuth redirect scheme, the verified App Link, associated domains, location-while-in-use only, no camera / microphone / storage / backup, cleartext only in development, French localisation, privacy manifest, the push entitlement (`aps-environment`) and Android's `updates` channel; the generated `android/` and `ios/` are deleted |
 | `mobile-consumer-web-smoke` | the web build on the fixture backend in headless Chromium at 402 × 874: the journeys built so far (A; B with the payment stand-in; D: Orders, a quote accepted, You, Wallet, Security, Notifications), the tabs, no horizontal scroll, no page errors (screenshots in `smoke-out/`) |
 | `mobile-consumer-eas-build` | queues an EAS Build (`EAS_PROFILE`, `EAS_PLATFORM`, `EAS_FLAGS`) |
 
@@ -171,8 +172,10 @@ custom scheme. One-time setup per environment:
 `app.config.ts` is the only source of both native projects. Variants: development / preview / production (own bundle
 id and name, so all three install side by side). Every variant uses the one registered redirect
 `ca.northline.app:/oauth2redirect` (the server matches exactly): on Android keep one variant installed at a time when
-testing the browser sign-in, or Android may ask which app opens it. `NL_IOS_BUILD_NUMBER` / `NL_ANDROID_VERSION_CODE`
-only for local builds (EAS keeps version numbers remotely, `appVersionSource: remote`).
+testing the browser sign-in, or Android may ask which app opens it. The marketing version is `package.json`'s
+(`APP_VERSION`, S-103); `NL_IOS_BUILD_NUMBER` / `NL_ANDROID_VERSION_CODE` only for local builds (EAS keeps build
+numbers remotely, `appVersionSource: remote`). `GOOGLE_SERVICES_JSON` (an EAS file variable) gives Android its
+Firebase config for push.
 
 ## EAS builds
 
@@ -183,13 +186,14 @@ One-time setup (an owner of the Expo organisation):
 2. An access token (Expo › Access tokens) → GitHub secret / GitLab masked variable `EXPO_TOKEN` (shared with the
    courier app).
 3. `npx eas-cli credentials` per platform and profile ([Signing](#signing)).
-4. `submit.production` in `eas.json` (App Store Connect app id, Apple team id) once the store records exist.
+4. `submit.base.ios` in `eas.json` (App Store Connect app id, Apple team id) once the store records exist.
 
 Build: `make mobile-consumer-eas-build EAS_PROFILE=preview` (both platforms; `EAS_PLATFORM=ios|android`), or Actions ›
 mobile-consumer › Run workflow with `eas=preview`. Preview = internal distribution (registered iOS devices, Android
-APK); production = store builds with auto-incremented build numbers; `npx eas-cli submit -p ios|android --profile
-production`. Over-the-air updates: `runtimeVersion` is the native fingerprint (`npx eas-cli update --channel preview`).
-The store release pipeline and listings are S-103.
+APK); production = store builds with auto-incremented build numbers, submitted to TestFlight and the Play internal
+track (`make mobile-eas-build MOBILE_APP=consumer EAS_PROFILE=production`). Over-the-air updates: `runtimeVersion` is
+the native fingerprint (`make mobile-update`). The store release — submit profiles, listings, privacy answers, App
+Review, the staged rollout, rollback — is [mobile-release.md](mobile-release.md) (S-103).
 
 ## Store accounts
 
@@ -214,9 +218,14 @@ The store release pipeline and listings are S-103.
 | Location while using (`NSLocationWhenInUseUsageDescription`, `ACCESS_FINE_LOCATION` / `COARSE`) | Delivery address › "Use my location" (S-98), never at launch; once allowed, the app also uses it to name where you are until you save an address | Northline uses your location to suggest your delivery address and show the shops and providers that serve it. It is used only while you have the app open and is never shared with businesses. | Northline utilise votre position pour suggérer votre adresse de livraison et afficher les commerces et prestataires qui la desservent. Elle n’est utilisée que lorsque l’app est ouverte et n’est jamais transmise aux entreprises. |
 
 No background location, camera, microphone, storage or motion: removed from the merged Android manifest and kept
-out of Info.plist (checked by `mobile-consumer-native-check`). `allowBackup=false`. Notifications are S-102's.
-App Privacy / Data safety: name, email, phone, address, precise location, user id — linked to the person, app
-functionality only, no tracking (the privacy manifest in `app.config.ts`).
+out of Info.plist (checked by `mobile-consumer-native-check`). `allowBackup=false`. Notifications (S-103 adds
+`expo-notifications`): `POST_NOTIFICATIONS` on Android 13+, asked at the moment the design chooses, never at launch
+(the registrar isn't wired yet — [mobile-release.md § Push credentials](mobile-release.md#push-credentials)); the
+`aps-environment` entitlement (checked by `mobile-consumer-native-check`).
+App Privacy / Data safety: name, email, phone, address, precise location, user id, device id (push), purchase
+history, payment info (Stripe's sheet), support reports, booking notes — linked to the person, app functionality
+only, no tracking (the privacy manifest in `app.config.ts`, equal to `store/privacy.json` —
+[mobile-release.md § Privacy answers](mobile-release.md#privacy-answers)).
 
 ## Troubleshooting
 

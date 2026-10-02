@@ -1,0 +1,17 @@
+Northline Courier is the app for couriers who deliver with Northline. You need a Northline courier account to sign in.
+
+ON A SHIFT
+• Start and end your shift.
+• See your run’s stops in order, with the address, what to pick up and any delivery instructions.
+• Pick up at each shop and mark what you collected.
+• Drop off with proof of delivery: a photo at the door, the customer’s signature or their delivery PIN.
+• Get a notification when you are given a new run or your run changes.
+
+BUILT FOR THE ROAD
+• Works on weak networks: your steps are saved on the phone and sent as soon as you are back online.
+• English and French.
+
+YOUR PRIVACY
+• While you are on a run, the app shares your location so customers can follow their order on its way, also when the app is in the background. Only your latest position is kept, never a history, and sharing stops when your run ends.
+• The camera is used only to photograph a delivery as proof.
+• No ads and no tracking.
