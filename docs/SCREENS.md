@@ -21,6 +21,12 @@ home · location · search · category · svcCategory · shop · product · cart
 - C Services: services, providers, provider, book_service, book_slot, book_review, booked, notifications, eta, signoff, review
 - D Account: orders, quote, account, security, wallet
 
+`mobile/apps/consumer` (S-97, Expo): every screen above is a route — the registry is `src/screens.ts`, the routes and
+the api each uses are in `docs/MOBILE_PLAN.md` § Screens. Tabs Home · Services · Cart · Orders · You (text labels, as
+the design); sub-screens with the design's "← Back" header. Additions with no design (DECISIONS S-97/S-98): `/sign-in`
+(phone + code for an existing account; the system-browser sign-in for passkeys, Google, Apple) and the stub shown until
+a journey's story builds its screens.
+
 ## Studios — `design/02 Provider Studio.dc.html` (`portal` prop: provider | seller | kitchen)
 - Signed out: sign in, register (phone → OTP → MFA → done)
 - Provider/Seller: dashboard, appointments (provider), orders (seller), messages, products, product_new, bulk, availability (provider), storefront, earnings, reports, payouts, refunds, compliance, reviews, settings, help

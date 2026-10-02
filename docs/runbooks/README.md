@@ -33,6 +33,7 @@ say where a step is still manual or missing.
 | [ci.md](ci.md) | CI pipelines on GitHub Actions and GitLab CI, manual trigger only (S-4/S-5, infra checks S-2/S-3) |
 | [fulfilment.md](fulfilment.md) | deliveries, pooled run planning and its stop-order heuristic, courier shifts and assignment, proof of delivery, events, the courier app API (S-87) and the console's dispatch API (S-81), privacy (S-86) |
 | [courier-app.md](courier-app.md) | the courier app (S-87, `mobile/`, Expo): run it locally, the fixture backend, checks, EAS builds, store accounts, signing, permission texts, what has never run on a device |
+| [mobile.md](mobile.md) | the consumer app (S-97, `mobile/apps/consumer`, Expo): run it locally, environments, the fixture backend, checks, the native prebuild check, EAS builds, App Links (the consumer site's association files), the in-app sign-in, what has never run on a device |
 | [mobile-auth.md](mobile-auth.md) | the consumer and courier apps: sign-in with PKCE, DPoP-bound tokens, nonces, rotating refresh tokens and reuse detection, calling the api, sign-out, sessions (S-29) |
 | [mcp.md](mcp.md) | the built-in MCP server for AI agents (Claude, IDEs, the MCP Inspector): connecting, OAuth 2.1 sign-in and consent, scopes, tools and confirmations, limits, audit, operations (S-127); the developer docs MCP server over docs/ and the OpenAPI documents (S-128) |
 | [partners.md](partners.md) | partner API clients: `client_credentials` with `private_key_jwt`, keys (JWK Set URL or registered), scopes, business binding, rotation, revocation, rate limits, audit (S-30) |
@@ -356,7 +357,7 @@ the database but not in configuration is logged as `stored but not in configurat
 | `studio-bff` | confidential (`client_secret_basic`) | always — `STUDIO_BFF_SECRET_HASH` is required | `${STUDIO_ORIGIN}/login/oauth2/code/studio` | openid profile merchant |
 | `consumer-bff` | confidential | always since S-45 — `CONSUMER_BFF_SECRET_HASH` is required | `${CONSUMER_ORIGIN}/login/oauth2/code/northline` (locally also the consumer dev server, `http://localhost:3000/…`) | openid profile orders bookings |
 | `console-bff` | confidential | always since S-90 — `CONSOLE_BFF_SECRET_HASH` is required | `${CONSOLE_ORIGIN}/login/oauth2/code/console` (locally also the console dev server, `http://localhost:3200/…`) | openid profile console (the ID token carries `roles` for this scope) |
-| `mobile-consumer` ("Northline") | public (PKCE S256, no secret), **DPoP required** (S-29) | always | `${CONSUMER_ORIGIN}/app/oauth2redirect` (App Link / Universal Link), `ca.northline.app:/oauth2redirect` | openid profile orders bookings offline_access; refresh 30 d |
+| `mobile-consumer` ("Northline") | public (PKCE S256, no secret), **DPoP required** (S-29) | always | `${CONSUMER_ORIGIN}/app/oauth2redirect` (App Link / Universal Link), `ca.northline.app:/oauth2redirect` | openid profile orders bookings offline_access; refresh 30 d; signs in on the consumer site's page (S-97) — [mobile.md](mobile.md) |
 | `partner:<name>` (S-30) | client credentials, `private_key_jwt` (no secret) | when declared under `northline.oauth.partners` (chart value `partners`) | — | `api.read` / `api.write`, bound to named businesses; 15 min tokens — [partners.md](partners.md) |
 | `northline-mcp` ("Northline MCP (AI agents)", S-127) | public (PKCE S256), **consent screen**, needs `acr=mfa` | always | `http://127.0.0.1/callback`, `http://127.0.0.1/oauth/callback` (any port), `https://claude.ai/api/mcp/auth_callback`, `https://claude.com/api/mcp/auth_callback` | openid profile merchant mcp mcp.write mcp.ops; 1 h access tokens, no refresh token — [mcp.md](mcp.md) |
 | `https://…` (any HTTPS URL, S-127) | public (PKCE S256), consent screen, needs `acr=mfa` | registered on first use from the agent's [Client ID Metadata Document](mcp.md#client-registration) | from the document | at most openid profile merchant mcp mcp.write |
@@ -534,7 +535,7 @@ Limits: the registration's `otp-send` / `otp-verify` (above), 5 tries per code, 
 `northline.auth.mfa-required-clients` (default `studio-bff`, `console-bff`): the browser is sent to that app's
 sign-in page, where signing in with a passkey / authenticator / backup code replaces the session. The api refuses
 merchant and staff endpoints without `acr=mfa` anyway. Unauthenticated authorization requests of the clients in
-`northline.auth.consumer-clients` (default `consumer-bff`, `courier-app` — S-87: couriers are people, not businesses) go to `northline.auth.consumer-login-page`
+`northline.auth.consumer-clients` (default `consumer-bff`, `courier-app`, `mobile-consumer` — S-87: couriers are people, not businesses; S-97: the consumer app) go to `northline.auth.consumer-login-page`
 (`${CONSUMER_ORIGIN}/sign-in`); every other client to `login-page` (the Studio's). No new variables: both pages come
 from `STUDIO_ORIGIN` / `CONSUMER_ORIGIN`.
 

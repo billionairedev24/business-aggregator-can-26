@@ -9,8 +9,9 @@ use and end the sign-in when an old one comes back. For mobile developers first,
 > [courier-app.md](courier-app.md)) implements the app side in `@northline/mobile-kit` (`mobile/packages/mobile-kit`),
 > tested in Jest and in a headless-browser build against an in-app stand-in of the servers; it has **not run on a real
 > iPhone or Android device**, and its key is a software key in the Keychain / Keystore-encrypted storage, not yet a
-> Secure Enclave / StrongBox key (§ 1). The consumer app comes in phase 4. The App Link / Universal Link association
-> files are not served anywhere yet (see [Redirects](#redirects)).
+> Secure Enclave / StrongBox key (§ 1). The consumer app (S-97, [mobile.md](mobile.md)) uses the same kit. Since S-97
+> the consumer site serves the App Link / Universal Link association files once the Apple team id and the Play
+> signing certificate are configured (see [Redirects](#redirects)).
 
 Other runbooks: [README § OAuth clients](README.md#oauth-clients-s-122) · [README § Sessions](README.md#sessions-s-19)
 · [edge](edge.md) · [local](local.md)
@@ -71,9 +72,9 @@ https://auth.<zone>/oauth2/authorize?response_type=code
 
 - `code_verifier`: 43–128 characters of `[A-Za-z0-9-._~]`, random per request. `plain` is refused; a request without
   a challenge gets no code.
-- Not signed in yet: the browser goes to the client's sign-in page — for `courier-app` the consumer site's
-  (`CONSUMER_ORIGIN/sign-in`, S-87: it is in `northline.auth.consumer-clients`); for `mobile-consumer` still the
-  Studio's (`STUDIO_ORIGIN/sign-in`) until the consumer app (phase 4) moves it too. After the sign-in or "Create account" succeeds, the page **goes back to your
+- Not signed in yet: the browser goes to the client's sign-in page — the consumer site's (`CONSUMER_ORIGIN/sign-in`)
+  for both apps: `courier-app` since S-87 and `mobile-consumer` since S-97 (both are in
+  `northline.auth.consumer-clients`). After the sign-in or "Create account" succeeds, the page **goes back to your
   authorization request** (northline-auth answers the sign-in with `continueTo`), and northline-auth redirects to your
   redirect URI with `code` and `state`. Already signed in on this phone's browser: the code comes back at once.
 - Every sign-in today uses a second factor (passkey, authenticator app or backup code), so the tokens carry
@@ -84,8 +85,11 @@ https://auth.<zone>/oauth2/authorize?response_type=code
 - **Preferred: the claimed https link** — iOS Universal Link / Android App Link on the consumer host
   (`/app/oauth2redirect`, `/courier/oauth2redirect`). The consumer host must serve
   `/.well-known/apple-app-site-association` and `/.well-known/assetlinks.json` naming the apps (team id + bundle id;
-  package + signing certificate SHA-256) and claiming those paths. **Not served yet** — the consumer web isn't built
-  (E-7); add them when it is. With iOS 17.4+ use `ASWebAuthenticationSession.Callback.https(host:path:)`.
+  package + signing certificate SHA-256) and claiming those paths. **Served since S-97** by the consumer web
+  (`web/apps/consumer/server/app-links.mjs`) from the chart's `mobileApps` values (`NL_APPLE_TEAM_ID`,
+  `NL_IOS_BUNDLE_IDS`, `NL_ANDROID_PACKAGES`, `NL_ANDROID_CERT_SHA256`); each answers 404 until its team id /
+  certificate is configured ([mobile.md § App Links](mobile.md#app-links)). With iOS 17.4+ use
+  `ASWebAuthenticationSession.Callback.https(host:path:)`.
 - **Fallback: the custom scheme** `ca.northline.app:/oauth2redirect` / `ca.northline.courier:/oauth2redirect`
   (RFC 8252 § 7.1). Works today; another app could claim the same scheme, which PKCE makes harmless (it can't redeem
   the code without your `code_verifier`).
