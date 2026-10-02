@@ -12,6 +12,7 @@ import static ca.northline.auth.domain.AuthMessages.LAST_NAME_REQUIRED;
 import static ca.northline.auth.domain.AuthMessages.PHONE_FORMAT;
 import static ca.northline.auth.domain.AuthMessages.PHONE_REQUIRED;
 import static ca.northline.auth.domain.AuthMessages.SIX_DIGITS;
+import static ca.northline.auth.domain.AuthMessages.TERMS_LANGUAGE;
 import static ca.northline.auth.domain.AuthMessages.TERMS_REQUIRED;
 
 import ca.northline.auth.domain.PhoneNumber;
@@ -30,7 +31,12 @@ final class AuthRequests {
 
     private AuthRequests() {}
 
-    /** Create account, step 1. Strings are trimmed before validation ("required, trimmed"). */
+    /**
+     * Create account, step 1. Strings are trimmed before validation ("required, trimmed"). S-116: {@code termsLanguage}
+     * is the language the Terms and Privacy Policy were shown in ({@code en} | {@code fr}; absent = not said), and
+     * {@code termsEnglishRequested} records that the person expressly asked for the English version where the Terms
+     * are presented in French first (a French-first place, region configuration) — kept with the acceptance.
+     */
     record Register(
             @NotBlank(message = FIRST_NAME_REQUIRED) @Nullable
             String firstName,
@@ -45,7 +51,12 @@ final class AuthRequests {
             String email,
 
             @NotNull(message = TERMS_REQUIRED) @AssertTrue(message = TERMS_REQUIRED)
-            Boolean terms) {
+            Boolean terms,
+
+            @Pattern(regexp = "^(en|fr)$", message = TERMS_LANGUAGE) @Nullable
+            String termsLanguage,
+
+            @Nullable Boolean termsEnglishRequested) {
 
         Register {
             firstName = trim(firstName);

@@ -11,6 +11,8 @@ import org.jspecify.annotations.Nullable;
  *
  * @param userId the ULID the account will get (also the WebAuthn user name)
  * @param totpSecret the authenticator secret offered to the user, until it is confirmed
+ * @param termsLanguage the language the Terms were shown in ({@code en} | {@code fr}), null when the client didn't say
+ * @param termsEnglishRequested the person expressly asked for the English Terms where French comes first (S-116)
  */
 @With
 public record PendingRegistration(
@@ -22,7 +24,9 @@ public record PendingRegistration(
         String termsVersion,
         OtpChallenge otp,
         boolean phoneVerified,
-        @Nullable String totpSecret)
+        @Nullable String totpSecret,
+        @Nullable String termsLanguage,
+        boolean termsEnglishRequested)
         implements Serializable {
 
     public String fullName() {

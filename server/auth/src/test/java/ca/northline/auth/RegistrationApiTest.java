@@ -98,6 +98,64 @@ class RegistrationApiTest extends AuthIntegrationTest {
                 .isEqualTo(1);
     }
 
+    /**
+     * S-116 (Loi 96): the language the Terms were accepted in is kept with the acceptance, and an express request for
+     * the English version (where they come in French first) is recorded with its time.
+     */
+    @Test
+    void termsLanguageAndAnExpressRequestForEnglishAreRecorded() throws Exception {
+        var french = newPerson();
+        completeRegistration(
+                french, french.json().replace("\"terms\":true", "\"terms\":true,\"termsLanguage\":\"fr\""));
+        assertThat(termsOf(french.email()))
+                .containsEntry("terms_language", "fr")
+                .containsEntry("english_requested", false);
+
+        var english = newPerson();
+        completeRegistration(
+                english,
+                english.json()
+                        .replace(
+                                "\"terms\":true",
+                                "\"terms\":true,\"termsLanguage\":\"fr\",\"termsEnglishRequested\":true"));
+        assertThat(termsOf(english.email()))
+                .containsEntry("terms_language", "en") // asking for English means it was shown in English
+                .containsEntry("english_requested", true);
+
+        var unsaid = newPerson();
+        completeRegistration(unsaid, unsaid.json());
+        assertThat(termsOf(unsaid.email())).containsEntry("terms_language", null);
+
+        postJson(
+                        "/api/auth/register",
+                        new MockHttpSession(),
+                        newPerson().json().replace("\"terms\":true", "\"terms\":true,\"termsLanguage\":\"de\""))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.errors[?(@.field=='termsLanguage')].message")
+                        .value(AuthMessages.TERMS_LANGUAGE));
+    }
+
+    private void completeRegistration(Person person, String form) throws Exception {
+        var session = new MockHttpSession();
+        postJson("/api/auth/register", session, form).andExpect(status().isOk());
+        postJson("/api/auth/register/verify", session, json(Map.of("code", sms.lastCodeTo(person.e164()))))
+                .andExpect(status().isOk());
+        var setup = mvc.perform(post("/api/auth/register/totp").session(session))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String secret = com.jayway.jsonpath.JsonPath.read(setup, "$.secret");
+        postJson("/api/auth/register/totp/verify", session, json(Map.of("code", totpNow(secret))))
+                .andExpect(status().isCreated());
+        clock.advanceSeconds(ca.northline.auth.domain.Totp.PERIOD_SECONDS);
+    }
+
+    private Map<String, Object> termsOf(String email) {
+        return jdbc.sql("""
+                        SELECT terms_language, terms_english_requested_at IS NOT NULL AS english_requested
+                          FROM identity.users WHERE email = CAST(:e AS citext)""").param("e", email).query().singleRow();
+    }
+
     @Nested
     class Validation {
 

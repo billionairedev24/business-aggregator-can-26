@@ -37,6 +37,9 @@ const usePageT = defineMessages({
     mobile: 'Mobile number', mobilePh: '+1 (403) …',
     email: 'Email (receipts)', emailPh: 'you@example.ca',
     termsBefore: 'I agree to the ', terms: 'Terms', termsAnd: ' and ', privacy: 'Privacy Policy', termsAfter: '. Data stays in Canada.',
+    // S-116: French-first places (region configuration) — the Terms in French first, English on request
+    termsFrenchFirst: 'The Terms are shown in French.', termsEnglish: 'Show me the English version', termsEnglishChosen: 'You asked for the Terms in English.', termsFrench: 'Back to French',
+    termsFrenchPending: 'The Terms and Privacy Policy are only available in English for now; the French version is coming.',
     sendCode: 'Send code', sending: 'Sending…',
     attention: '{count, plural, one {# thing needs attention.} other {# things need attention.}}',
     // shared
@@ -97,6 +100,8 @@ const usePageT = defineMessages({
     mobile: 'Numéro de mobile', mobilePh: '+1 (403) …',
     email: 'Courriel (reçus)', emailPh: 'vous@exemple.ca',
     termsBefore: "J'accepte les ", terms: 'Conditions', termsAnd: ' et la ', privacy: 'Politique de confidentialité', termsAfter: '. Les données restent au Canada.',
+    termsFrenchFirst: 'Les conditions vous sont présentées en français.', termsEnglish: 'Voir la version anglaise', termsEnglishChosen: 'Vous avez demandé les conditions en anglais.', termsFrench: 'Revenir au français',
+    termsFrenchPending: 'Les conditions et la politique de confidentialité ne sont offertes qu’en anglais pour le moment; la version française s’en vient.',
     sendCode: 'Envoyer le code', sending: 'Envoi…',
     attention: '{count, plural, one {# élément à corriger.} other {# éléments à corriger.}}',
     foot: 'Soutien bilingue de 7 h à 23 h (HR) · northline.ca/aide',
