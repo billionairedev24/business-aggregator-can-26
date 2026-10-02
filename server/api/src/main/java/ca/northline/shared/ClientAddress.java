@@ -1,4 +1,4 @@
-package ca.northline.shared.web;
+package ca.northline.shared;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.Inet6Address;

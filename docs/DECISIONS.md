@@ -6826,7 +6826,7 @@ Branch `security/s-108-casl`. Runbook: [runbooks/casl.md](runbooks/casl.md). Mig
   retention jobs and report; until S-107 takes it over, messaging runs it daily (`CASL_PURGE_CRON`, 04:23 platform
   zone). Erasure (S-105's messaging contributor) withdraws granted consents (source `erasure`), drops `ip_prefix` and
   `user_agent_hash`, and keeps the rest as new `Retention.CONSENT_PROOF` (shared enum; export summary en/fr).
-- **Also:** `ClientAddress` moved from `search.web` to `shared.web` (search's rate limit and the consent evidence use
+- **Also:** `ClientAddress` moved from `search.web` to the shared kernel (`ca.northline.shared`) (search's rate limit and the consent evidence use
   it); the Studio settings hint in notification email footers is now per audience (`settingsPlace`).
 - **Tests:** email `MessageClassesTest` (classification, content check, legal name), `DefaultMailerTest` +2
   (consent asked at send time, no consent source = nothing commercial), `EmailTemplatesTest` (commercial footer),

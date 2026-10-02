@@ -6,7 +6,7 @@ import ca.northline.search.application.SearchSettings;
 import ca.northline.search.application.SuggestListings;
 import ca.northline.search.web.SearchDtos.SearchResponse;
 import ca.northline.search.web.SearchDtos.SuggestResponse;
-import ca.northline.shared.web.ClientAddress;
+import ca.northline.shared.ClientAddress;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;

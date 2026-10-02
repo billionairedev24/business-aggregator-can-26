@@ -285,7 +285,12 @@ class ConsentApiTest extends IntegrationTest {
 
         @Test
         void staffFindTheProofByContact_andRecordAWithdrawal() throws Exception {
-            grant(amara, "marketing_email");
+            // through the api: the grant hashes the account's email, which is what staff search by
+            mvc.perform(put("/api/v1/me/consents/marketing_email")
+                            .with(TestJwt.customer(amara))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"granted\": true, \"source\": \"web_signup\"}"))
+                    .andExpect(status().isOk());
             var officer = data.user("Priya Officer");
 
             mvc.perform(get("/api/v1/console/consents")

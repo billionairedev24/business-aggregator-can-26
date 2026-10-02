@@ -2,7 +2,7 @@ package ca.northline.search.web;
 
 import ca.northline.search.application.InterpretSearch;
 import ca.northline.search.application.SearchRateLimit;
-import ca.northline.shared.web.ClientAddress;
+import ca.northline.shared.ClientAddress;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
