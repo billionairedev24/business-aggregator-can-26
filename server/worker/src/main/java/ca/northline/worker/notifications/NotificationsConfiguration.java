@@ -9,7 +9,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
 import java.time.ZoneId;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,19 +24,14 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Wiring of the notifications consumer: the shared email ({@code server/email}, auto-configured) and SMS
- * ({@code server/sms}, {@link SmsTransportConfiguration}) libraries, the push stub, the team read model and the job
- * that sends notifications held back by quiet hours.
+ * ({@code server/sms}, {@link SmsTransportConfiguration}) libraries, push (the log, or APNs / FCM from
+ * {@code ca.northline.worker.push}, S-102), the team, customer and courier read models, the job that sends
+ * notifications held back by quiet hours and the evening-before booking reminders.
  */
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(NotificationProperties.class)
 @Import(SmsTransportConfiguration.class)
 public class NotificationsConfiguration {
-
-    @Bean
-    @ConditionalOnMissingBean
-    PushSender pushSender() {
-        return PushSender.LOGGING;
-    }
 
     @Bean
     Preferences.Defaults notificationDefaults(JsonMapper json) {
@@ -52,7 +46,21 @@ public class NotificationsConfiguration {
             @Value("${northline.region.default-province:}") String defaultProvince,
             @Value("${northline.region.platform-zone}") ZoneId platformZone) {
         return new JdbcRecipients(
-                jdbc, json, defaults, new JdbcRecipients.RegionSettings(defaultProvince.strip(), platformZone));
+                jdbc,
+                json,
+                defaults,
+                Preferences.Defaults.customers(json),
+                new JdbcRecipients.RegionSettings(defaultProvince.strip(), platformZone));
+    }
+
+    @Bean
+    Subjects notificationSubjects(JdbcClient jdbc) {
+        return new JdbcSubjects(jdbc);
+    }
+
+    @Bean
+    PersonalNotices personalNotices(Subjects subjects) {
+        return new PersonalNotices(subjects);
     }
 
     @Bean
@@ -84,8 +92,49 @@ public class NotificationsConfiguration {
     }
 
     @Bean
-    Notifier notifier(Recipients recipients, Deliveries deliveries, DeferredNotifications deferred, Clock clock) {
-        return new Notifier(recipients, deliveries, deferred, clock);
+    Notifier notifier(
+            Recipients recipients,
+            Deliveries deliveries,
+            DeferredNotifications deferred,
+            PersonalNotices personal,
+            Clock clock) {
+        return new Notifier(recipients, deliveries, deferred, personal, clock);
+    }
+
+    @Bean
+    BookingReminders bookingReminders(
+            Subjects subjects,
+            Recipients recipients,
+            PersonalNotices personal,
+            Notifier notifier,
+            ProcessedEvents claims,
+            PlatformTransactionManager transactions,
+            JsonMapper json,
+            Clock clock) {
+        var separately = new TransactionTemplate(transactions);
+        separately.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        return new BookingReminders(subjects, recipients, personal, notifier, claims, separately, json, clock);
+    }
+
+    @Bean
+    BookingRemindersJob bookingRemindersJob(BookingReminders reminders) {
+        return new BookingRemindersJob(reminders);
+    }
+
+    /** Every 15 minutes: the evening-before booking reminders that are due (S-102). */
+    static class BookingRemindersJob {
+        private final BookingReminders reminders;
+
+        BookingRemindersJob(BookingReminders reminders) {
+            this.reminders = reminders;
+        }
+
+        @Scheduled(
+                fixedDelayString = "${northline.notifications.reminders-every:15m}",
+                initialDelayString = "${northline.notifications.reminders-initial-delay:2m}")
+        void run() {
+            reminders.run();
+        }
     }
 
     @Bean

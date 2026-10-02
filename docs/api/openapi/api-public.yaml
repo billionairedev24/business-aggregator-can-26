@@ -2457,6 +2457,142 @@ paths:
           description: Not found.
       tags:
       - checkout-controller
+  /api/v1/me/devices/{installationId}:
+    delete:
+      operationId: myDevicesDelete
+      parameters:
+      - in: path
+        name: installationId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      responses:
+        "200":
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      summary: Remove this app installation (sign-out)
+      tags:
+      - my-devices-controller
+    put:
+      operationId: myDevicesPut
+      parameters:
+      - in: path
+        name: installationId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeviceRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DeviceResponse"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      summary: Register or refresh this app installation's push token
+      tags:
+      - my-devices-controller
   /api/v1/me/erasure-request:
     post:
       operationId: myAccountErasure
@@ -6724,6 +6860,51 @@ components:
             $ref: "#/components/schemas/Step"
         thread:
           $ref: "#/components/schemas/CaseThread"
+    DeviceRequest:
+      type: object
+      properties:
+        appVersion:
+          type: string
+          maxLength: 32
+          minLength: 0
+        locale:
+          type: string
+          minLength: 1
+          pattern: (?i)(en|fr)(-CA)?
+        permission:
+          type: string
+          minLength: 1
+          pattern: granted|provisional|denied|undetermined
+        platform:
+          type: string
+          minLength: 1
+          pattern: ios|android
+        token:
+          type: string
+          maxLength: 4096
+          minLength: 16
+          pattern: "[\\x21-\\x7e]+"
+      required:
+      - appVersion
+      - locale
+      - permission
+      - platform
+    DeviceResponse:
+      type: object
+      properties:
+        app:
+          type: string
+        installationId:
+          type: string
+        locale:
+          type: string
+        permission:
+          type: string
+        platform:
+          type: string
+        refreshedAt:
+          type: string
+          format: date-time
     Direct:
       type: object
       properties:

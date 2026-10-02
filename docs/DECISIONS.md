@@ -6029,6 +6029,88 @@ Branch `mobile/s-98-journey-a` (on S-97). **No migration** (V240–V244 unused) 
   the landed URL (React Native's `Response.url`), SMS autofill, the location permission dialogs, the Keychain.
   The fixture backend simulates the redirect-following. **This is the first thing to try on a phone.**
 
+## 2026-09-30 — S-102 Push notifications (APNs/FCM) and deep links
+
+Branch `mobile/s-102-push`. Mostly server side; runbook [push.md](runbooks/push.md).
+
+- **Never run against Apple or Google.** No Apple developer key and no Firebase project exist. The APNs adapter (HTTP/2,
+  token-based auth with the `.p8` key) and the FCM HTTP v1 adapter (OAuth 2.0 with a service account) follow the
+  providers' documented APIs and are tested only against WireMock stand-ins; TLS/ALPN HTTP/2 to APNs, the providers'
+  real answers and delivery to a phone are unverified (push.md § First real send checklist). No JOSE library in the
+  worker: the APNs provider JWT (`ES256`, `SHA256withECDSAinP1363Format`) and the Google assertion (`RS256`) are signed
+  with the JDK; FCM is called over HTTP/1.1, APNs over HTTP/2 (JDK `HttpClient`, `@HttpExchange` clients).
+- **Port and providers.** S-27's `PushSender` port now takes a `PushMessage` (person, app, words in en and fr, deep
+  link, ids, collapse key) and answers `DELIVERED | NO_DEVICE`. `northline.push.provider` (`PUSH_PROVIDER`): `local` =
+  `PushSender.LOGGING` (default; also with no credentials), `native` = `DevicePushSender` (APNs for `ios`
+  installations, FCM for `android`). Prod refuses `local` and requires the credentials (`required-env`,
+  `values-prod.yaml`); dev and staging may keep `local` (a warning) until the accounts exist — unlike SMS/email, which
+  staging refuses, because there is nothing to configure yet.
+- **Native tokens, not Expo's push service.** The apps register the APNs device token / FCM registration token
+  (`getDevicePushTokenAsync`); the worker talks to Apple and Google directly, with no third service holding tokens.
+- **Device registry in the messaging module** (it owns notification preferences): `messaging.push_devices` (V245),
+  one row per person × app × installation (a random id the app makes, not a hardware id), the token unique per app and
+  platform — registering it for someone else moves it (shared phones). `PUT|DELETE /api/v1/me/devices/{installationId}`
+  is open to DPoP-bound tokens only (SecurityConfig, like `/api/v1/courier/**`); the app comes from the token (scope
+  `courier` → courier app, else consumer app), never from the body. Permission `denied`/`undetermined` is stored
+  without a token. Removal: the app at sign-out (before revoking), the worker when a provider says the token is dead,
+  and a daily prune of installations not refreshed for 90 days (`PUSH_STALE_AFTER`; the apps refresh at every start).
+  Revoking a sign-in in Settings › Security doesn't remove its installation (the api isn't told): the prune does.
+- **Customers' notifications** (new `PersonalNotices`): order packed (whole order `ready`) — the spec's "shipped": no
+  parcel carrier exists, local couriers deliver —, out for delivery (`delivery.picked_up`), delivered, booking
+  confirmed, the **evening-before reminder** (design 06 Account › Notifications "Evening-before reminder"; a worker
+  job every 15 min, 18:00 the day before in the customer's zone, once per booking and start time — claim
+  `booking-reminder`), ETA (`booking.en_route`: "on the way", the minutes are in the app), job completed (`sign_off`
+  row), quote received / revised, refund case updates and refund paid. Rows: design 06's (`booking_reminders`,
+  `order_updates`, `sign_off`, `quotes_messages`, `refunds_cases`); defaults copied into
+  `docs/spec/notification-matrix-defaults.json` § `customer` and kept equal to the api's `CustomerNotificationPrefs`
+  by `NotificationMatrixDefaultsSpecTest`. Push, SMS ("Northline: …") and email (new template `customer-update`: the
+  same line, a button to the deep link, an unsubscribe link `customer.<row>` that the api's S-13 endpoint now honours
+  for the customer matrix; security rows can't be unsubscribed). Quiet hours: the person's shared `quiet_from/to`,
+  off with `quiet_on=false`, in the zone of `account.preferences.province` (region model), else the platform zone.
+  Language: `notify_lang` en/fr, or "same as app" = each installation's own registered language for push and the
+  account's language for SMS/email. Not sent: offers, security alerts, provider messages, support cases other than
+  refund cases (no events for them).
+- **Couriers:** `delivery.assigned` → "New run"; new event **`run.changed`** (`fulfilment.run`, schema
+  `fulfilment.run_changed.v1`) published when dispatch gives a planned run to another courier — the courier who lost
+  it is told. Push only, never held by quiet hours (they are on shift), not governed by any matrix.
+- **Team members get no push yet.** Studio has no native app, so no installation registers for it; their pushes find
+  no device (counted `unreachable`). The S-27 matrix and quiet hours are unchanged.
+- **A second consumer group without retry topics.** Customers' order/delivery/run/booking/quote topics are read by
+  `personal-notifications` (`retryDelaysSeconds: []`, `@RetryableTopic(attempts = "1")`): 15 more retry topics would
+  pass Event Hubs Premium's 100 per processing unit (`TopicCatalogueTest`; 97 now). Its provider outages (push
+  throttling included, SMS and email too) never fail the event: they go to `messaging.deferred_notifications`, which
+  the deferred job retries every 5 min (or at the provider's `Retry-After`), 10 attempts, then an ERROR — the table now
+  takes `email` rows and an `audience` (V245). Team notices keep S-27's retry topics; a refund event's customer notice
+  rides the `notifications` group with them and is deferred the same way.
+- **Back-off:** a throttled or failing provider is paused per worker replica — `Retry-After` when given, else 30 s
+  doubled per failure, at most 15 min — and isn't called while paused. Delivered to one installation = sent.
+- **Payloads:** title, body, `link` (https on `CONSUMER_ORIGIN`), `data` with `type` and ids, collapse key
+  `order:<id>` / `booking:<id>` / `quote:<id>` / `case:<number>` / `run:<id>`. No names, emails, phones or addresses;
+  order notices carry no order number. APNs and FCM have no Canadian region: this is what goes to them.
+- **Deep links** live under the paths S-97's association files (#134, `app-links.mjs`) already claim: `/app/*` for the
+  consumer app, `/courier/*` for the courier app — `/app/orders/<id>`, `/app/food/orders/<id>`, `/app/bookings/<id>`,
+  `/app/quotes/<id>`, `/app/cases/<number>`, `/courier/run`; custom schemes `ca.northline.app://…` and
+  `ca.northline.courier://run`. S-102 serves no `apple-app-site-association` / `assetlinks.json` of its own (an
+  earlier commit on this branch did, removed to avoid doing it twice). The consumer web redirects each `/app/…` link
+  to its web page (`server/deep-links.mjs`; bookings and cases to the account's orders list — no web page of their
+  own), so a phone without the app never lands on a 404. The mapping is in MOBILE_PLAN.md § Contracts and
+  push.md § 5.
+- **mobile-kit** (`src/push`): `PushRegistration` (installation id in secure storage; sync only on change; one at a
+  time; offline/5xx → `false`, sent by the next sync; `enable()` asks for permission only when the app calls it;
+  `unregister()` before sign-out), `pushRegistrar()` for S-97's `PushRegistrar` hook point (the consumer app installs it
+  with `setPushRegistrar(pushRegistrar({...}))` once it depends on `expo-notifications`), `expoPushPlatform`
+  (a structural adapter over `expo-notifications`, so mobile-kit gains no dependency), `handleNotificationTaps`,
+  `parseDeepLink` / `routeOf` (strict: known host, known path, ids `[A-Za-z0-9_-]{1,64}`). **Not wired** into the
+  courier app nor the consumer app: both need `expo-notifications` (a native module, its config plugin, the Android
+  notification channel) and EAS push credentials — a follow-up with the Apple/Firebase set-up.
+- **Secrets:** `PUSH_APNS_KEY` (`push-apns-key`), `PUSH_FCM_SERVICE_ACCOUNT` (`push-fcm-service-account`) in Terraform
+  `app_secrets` (AWS, GCP, Azure), Helm `externalSecrets.secretNames` and `apps.worker.secretEnv` (required in prod);
+  `PUSH_APNS_KEY_ID`, `PUSH_APNS_TEAM_ID` and the optional URLs/topics in the runbooks and `server/.env.example`.
+- **Schema (V245):** `messaging.push_devices`; `messaging.deferred_notifications.audience`, `merchant_id` nullable (an
+  order from several shops has no one business), channel `email` allowed. Event `fulfilment.run_changed` v1.
+- **Seen, not fixed:** the `webhooks` consumer sends `orders.order_delivered` to its DLQ ("has no merchantId" — the event
+  carries none); unrelated to S-102, left for its owner.
+
 ## 2026-10-02 — S-99 Consumer app Journey B: shop — home, search, product, cart, checkout (Stripe), confirmed, tracking, delivered, refund
 
 Branch `mobile/s-99-journey-b`. **No migration** (V250–V254 unused), **no server or web change**, no new environment

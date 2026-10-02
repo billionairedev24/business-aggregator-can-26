@@ -1,4 +1,5 @@
-# Pre-production (also activates `cloud`, see application-cloud.yml). Nothing differs from prod yet.
+# Pre-production (also activates `cloud`, see application-cloud.yml). Push may still be `local` here (S-102, push.md).
 northline.required-env:               # S-27 notifications: real providers only (`local` is refused here)
   email: EMAIL_PROVIDER, EMAIL_FROM, EMAIL_UNSUBSCRIBE_KEY, API_PUBLIC_URL, STUDIO_ORIGIN
   sms-provider: SMS_PROVIDER, SMS_FROM
+  links: CONSUMER_ORIGIN                # S-102: deep links in pushes and customer emails

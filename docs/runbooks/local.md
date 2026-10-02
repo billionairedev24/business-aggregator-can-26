@@ -244,6 +244,11 @@ Notes:
   providers from your laptop: `CALENDAR_PROVIDER=oauth` with your own Google / Microsoft test app registrations and
   the redirect URIs `http://localhost:3100/api/v1/calendar/oauth/<google|outlook>/callback`; push notifications stay
   off (they need a public HTTPS `API_PUBLIC_URL`), the 5-minute read does the work. [calendar-sync.md](calendar-sync.md)
+- **Push notifications (S-102):** `PUSH_PROVIDER=local` (the default) logs every push the worker would send
+  (`PUSH (local — no push provider) to user … (consumer app): Out for delivery`); the apps' device registrations
+  (`PUT /api/v1/me/devices/{installationId}`) are stored all the same. Real pushes from your laptop need an Apple `.p8`
+  key and a Firebase service account: `PUSH_PROVIDER=native` and the `PUSH_*` variables of `server/.env.example`
+  (development builds: `PUSH_APNS_URL=https://api.sandbox.push.apple.com`). [push.md](push.md)
 - **Custom domains (S-31):** `DOMAINS_DNS_PROVIDER=local` and `DOMAINS_EDGE_PROVIDER=local` (the defaults): enter a
   domain in Studio › Business page › Custom domain, then **Simulate DNS records →** (dev builds only) writes its CNAME
   and TXT records into the api's in-memory zone and checks them; a published page of an approved business goes live at

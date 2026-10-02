@@ -14,6 +14,7 @@ import { stat } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
 import { Readable } from 'node:stream';
 import { fileURLToPath } from 'node:url';
+import { deepLinkAnswer, isDeepLinkPath } from './deep-links.mjs'; // S-102: the apps' /app/… links without the app
 import { createPageRouter, PAGE_HEADERS } from './page-hosts.mjs';
 import { createSeo, isSeoPath } from './seo.mjs';
 import { appLinkAnswer, appLinksConfig, isAppLinkPath } from './app-links.mjs';
@@ -105,6 +106,14 @@ const server = createServer(async (req, res) => {
       res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
       res.end('ok');
       return;
+    }
+    if ((req.method === 'GET' || req.method === 'HEAD') && isDeepLinkPath(pathname)) {
+      const answer = deepLinkAnswer(await pageRoute.hostKind(publicHost(req)), pathname);
+      if (answer) {
+        res.writeHead(answer.status, { ...securityHeaders, ...answer.headers });
+        res.end();
+        return;
+      }
     }
     if (req.method === 'GET' || req.method === 'HEAD') {
       const found = await staticFile(pathname);

@@ -10,5 +10,18 @@
     "dispute":          { "push": true,  "sms": true,  "email": true },
     "low_stock":        { "push": true,  "sms": false, "email": true },
     "quality":          { "push": false, "sms": false, "email": true }
+  },
+  "customer": {
+    "$comment": "Account › Notifications defaults (design 06, S-59): which updates reach a customer by push, SMS and email until they change a cell, and their quiet hours (in the time zone of the province they shop in, else the platform zone). The api's CustomerNotificationPrefs and the worker's customer notifications (S-102) both follow this; NotificationMatrixDefaultsSpecTest keeps the api's copy equal. Security alerts are always on.",
+    "quietHours": { "from": "22:00", "to": "07:00" },
+    "rows": {
+      "booking_reminders": { "push": true,  "sms": true,  "email": false },
+      "order_updates":     { "push": true,  "sms": false, "email": true },
+      "sign_off":          { "push": true,  "sms": true,  "email": true },
+      "quotes_messages":   { "push": true,  "sms": false, "email": false },
+      "refunds_cases":     { "push": true,  "sms": false, "email": true },
+      "offers":            { "push": true,  "sms": false, "email": false },
+      "security":          { "push": true,  "sms": true,  "email": true }
+    }
   }
 }

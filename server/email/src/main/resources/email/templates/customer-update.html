@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout.html :: email(#{customer-update.preheader}, ~{::content})}">
+<body>
+<div th:fragment="content">
+  <h1 th:style="${s.h1}" th:text="${heading}">Heading</h1>
+  <p th:style="${s.p}" th:text="${body}">Body</p>
+  <th:block th:replace="~{button.html :: button(#{customer-update.cta}, ${link})}"/>
+</div>
+</body>
+</html>

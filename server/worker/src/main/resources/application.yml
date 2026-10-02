@@ -91,6 +91,22 @@ northline:
     studio-url: ${STUDIO_ORIGIN:http://localhost:3100}        # links in the payout.failed email
     api-url: ${API_PUBLIC_URL:http://localhost:8080}          # unsubscribe links point at the api
     unsubscribe-key: ${EMAIL_UNSUBSCRIBE_KEY:}                # same key as the api (it verifies the tokens)
+    consumer-url: ${CONSUMER_ORIGIN:http://localhost:3000}    # S-102: deep links in customers' and couriers' pushes
+  # Push (S-102, docs/runbooks/push.md): `local` logs; `native` = APNs (iOS) + FCM (Android) to the device registry.
+  # Production refuses `local`. Secrets: PUSH_APNS_KEY, PUSH_FCM_SERVICE_ACCOUNT.
+  push:
+    provider: ${PUSH_PROVIDER:local}
+    stale-after: ${PUSH_STALE_AFTER:90d}                      # installations not refreshed for this long are pruned
+    apns:
+      url: ${PUSH_APNS_URL:https://api.push.apple.com}        # https://api.sandbox.push.apple.com for development builds
+      key-id: ${PUSH_APNS_KEY_ID:}
+      team-id: ${PUSH_APNS_TEAM_ID:}
+      key: ${PUSH_APNS_KEY:}                                  # the .p8 key (PEM text)
+      consumer-topic: ${PUSH_APNS_CONSUMER_TOPIC:ca.northline.app}
+      courier-topic: ${PUSH_APNS_COURIER_TOPIC:ca.northline.courier}
+    fcm:
+      url: ${PUSH_FCM_URL:https://fcm.googleapis.com}
+      service-account: ${PUSH_FCM_SERVICE_ACCOUNT:}            # the Firebase service account's JSON key
   # Search read model (S-43, docs/runbooks/search.md): events refresh documents at once; the reconcile sweep picks up
   # edits no event announces (prices, names, hours, reviews) within `every`.
   search:
