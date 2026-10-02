@@ -37,6 +37,11 @@ public record UserAccount(
         return space < 0 ? "" : dn.substring(space + 1);
     }
 
+    /** S-105: the account was erased (a privacy request): no sign-in, no token, ever again. */
+    public boolean erased() {
+        return "erased".equals(status.toLowerCase(Locale.ROOT));
+    }
+
     public boolean active() {
         return "active".equals(status.toLowerCase(Locale.ROOT));
     }
