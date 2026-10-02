@@ -5,12 +5,14 @@
   "type": "module",
   "description": "Accessibility checks (S-109): the axe helper for the vitest component tests and the Playwright + axe page sweep of the built apps against a mock api (`make a11y`).",
   "exports": {
-    "./vitest": "./src/vitest.ts"
+    "./vitest": "./src/vitest.ts",
+    "./record": "./src/record.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "a11y": "playwright test"
+    "a11y": "playwright test",
+    "record": "node scripts/record.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
