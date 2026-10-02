@@ -1,6 +1,7 @@
 package ca.northline.fulfilment.application;
 
 import ca.northline.fulfilment.api.DeliveryAssigned;
+import ca.northline.fulfilment.api.RunChanged;
 import ca.northline.fulfilment.api.RunPlanned;
 import ca.northline.fulfilment.application.DeliveryStore.Delivery;
 import ca.northline.fulfilment.application.DispatchUseCases.AssignCouriers;
@@ -239,6 +240,12 @@ class DispatchService implements PlanRuns, AssignCouriers {
         events.publishEvent(
                 new DeliveryAssigned(Ids.next(), now, run.id(), courierId, orderIds, merchantIds, orderType));
         log.info("Run {} assigned to courier {}", run.id(), courierId);
+    }
+
+    /** The run was taken from {@code courierId} (given to someone else); {@code run.changed}. */
+    void taken(String runId, String courierId, Instant now) {
+        events.publishEvent(new RunChanged(Ids.next(), now, runId, courierId, "unassigned"));
+        log.info("Run {} taken from courier {}", runId, courierId);
     }
 
     private List<RoutePlanner.Pickup> pickups(List<Delivery> orders, Map<String, RoutePlanner.Pickup> shops) {
