@@ -56,7 +56,10 @@ public record AuthProperties(
 
         @Nullable String clientCityHeader,
         @Nullable String consumerLoginPage,
-        @DefaultValue({"consumer-bff", "courier-app", "mobile-consumer"}) List<String> consumerClients,
+
+        @DefaultValue({"consumer-bff", "courier-app", "mobile-consumer"})
+        List<String> consumerClients,
+
         @Nullable String consoleLoginPage,
         @DefaultValue("console-bff") List<String> consoleClients,
         @DefaultValue({"studio-bff", "console-bff"}) List<String> mfaRequiredClients,
