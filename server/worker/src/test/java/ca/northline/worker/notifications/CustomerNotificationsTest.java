@@ -92,14 +92,14 @@ class CustomerNotificationsTest extends WorkerIntegrationTest {
         var push = pushes.to(amara.id()).getFirst();
         assertThat(push.app()).isEqualTo(PushApp.CONSUMER);
         assertThat(push.title()).isEqualTo("Out for delivery");
-        assertThat(push.link()).isEqualTo(URI.create("http://localhost:3000/orders/" + order));
+        assertThat(push.link()).isEqualTo(URI.create("http://localhost:3000/app/orders/" + order));
         assertThat(push.data()).containsEntry("orderId", order).containsOnlyKeys("type", "orderId");
         assertThat(push.language()).isNull(); // "same as app": each installation in its own language
         assertThat(texts.to(amara.phone())).isEmpty(); // order updates: no SMS by default
 
         EmailMessage email = emails.to(amara.email()).getFirst();
         assertThat(email.subject()).isEqualTo("Out for delivery");
-        assertThat(email.text()).contains("Your order is out for delivery.", "http://localhost:3000/orders/" + order);
+        assertThat(email.text()).contains("Your order is out for delivery.", "http://localhost:3000/app/orders/" + order);
         assertThat(email.headers().get(EmailMessage.LIST_UNSUBSCRIBE)).contains("/api/v1/email/unsubscribe?t=");
         // nothing about the customer goes to the push provider
         assertThat(push.toString()).doesNotContain(amara.email(), amara.phone(), "Amara");
@@ -208,9 +208,9 @@ class CustomerNotificationsTest extends WorkerIntegrationTest {
                 .isEqualTo(
                         merchantName(merchant) + " confirmed your booking for Saturday, October 3, 2026 at 10:00 a.m.");
         assertThat(byType.get("booking.confirmed").link())
-                .isEqualTo(URI.create("http://localhost:3000/bookings/" + booking));
+                .isEqualTo(URI.create("http://localhost:3000/app/bookings/" + booking));
         assertThat(byType.get("quote.sent").title()).isEqualTo("New quote from " + merchantName(merchant));
-        assertThat(byType.get("quote.sent").link()).isEqualTo(URI.create("http://localhost:3000/quotes/qt_" + quote));
+        assertThat(byType.get("quote.sent").link()).isEqualTo(URI.create("http://localhost:3000/app/quotes/qt_" + quote));
         awaitProcessed(confirmed);
         assertThat(texts.to(amara.phone())).hasSize(1); // booking reminders: SMS on by default
         assertThat(emails.to(amara.email())).isEmpty(); // neither row emails by default
@@ -260,7 +260,7 @@ class CustomerNotificationsTest extends WorkerIntegrationTest {
             assertThat(spaces(p.body()))
                     .isEqualTo("Reminder: " + merchantName(merchant)
                             + " is booked for Saturday, October 3, 2026 at 9:00 a.m.");
-            assertThat(p.link()).isEqualTo(URI.create("http://localhost:3000/bookings/" + booking));
+            assertThat(p.link()).isEqualTo(URI.create("http://localhost:3000/app/bookings/" + booking));
         });
         assertThat(texts.to(amara.phone())).hasSize(1);
     }

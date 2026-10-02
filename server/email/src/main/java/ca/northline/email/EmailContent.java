@@ -897,7 +897,7 @@ public sealed interface EmailContent {
                         business,
                         "Your booking is confirmed",
                         "Prairie Wrench confirmed your booking for Fri, Oct 2 at 9:00 a.m.",
-                        URI.create("http://localhost:3000/bookings/01J9ZD3V00000000000000BK01")));
+                        URI.create("http://localhost:3000/app/bookings/01J9ZD3V00000000000000BK01")));
         return java.util.Collections.unmodifiableMap(all);
     }
 

@@ -141,6 +141,23 @@ export class PushRegistration {
 }
 
 /**
+ * The app's push registrar for mobile-kit's sign-in / sign-out hook point (S-97's `setPushRegistrar`): registers this
+ * installation after every sign-in and removes it before the sign-out revokes the tokens. Structurally a
+ * `PushRegistrar` (it takes the signed-in api client on each call). Asking for the permission stays with the screen
+ * that explains it ({@link PushRegistration#enable}).
+ */
+export function pushRegistrar(options: Omit<PushRegistrationOptions, 'api'>) {
+  return {
+    async signedIn(api: DeviceRegistryApi): Promise<void> {
+      await new PushRegistration({ ...options, api }).sync();
+    },
+    async signingOut(api: DeviceRegistryApi): Promise<void> {
+      await new PushRegistration({ ...options, api }).unregister();
+    },
+  };
+}
+
+/**
  * Routes notification taps — including the one that launched the app — to the screen of their deep link (`link` in
  * the payload). A link for another host or an unknown screen is ignored.
  */

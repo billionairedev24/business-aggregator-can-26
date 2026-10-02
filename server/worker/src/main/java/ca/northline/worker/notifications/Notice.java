@@ -115,7 +115,7 @@ public record Notice(
     /**
      * Where a push leads and what it carries besides its words: ids only, never personal data (docs/runbooks/push.md).
      *
-     * @param path the deep link's path on the consumer host ({@code /orders/<id>}), null = none
+     * @param path the deep link's path on the consumer host ({@code /app/orders/<id>}), null = none
      * @param data ids for the app ({@code orderId}, {@code bookingId} …), plus {@code type}
      * @param collapseKey a newer push with the same key replaces the older one on the phone
      */

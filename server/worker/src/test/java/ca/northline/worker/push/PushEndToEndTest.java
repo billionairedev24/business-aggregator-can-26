@@ -159,7 +159,7 @@ class PushEndToEndTest extends WorkerIntegrationTest {
                 .getBodyAsString();
         for (var body : java.util.List.of(apns, fcm)) {
             assertThat(body)
-                    .contains(order, "https://northline.test/orders/" + order)
+                    .contains(order, "https://northline.test/app/orders/" + order)
                     .doesNotContain(email, phone, "Amara", "Osei", user);
         }
         assertThat(apns).contains("Out for delivery");

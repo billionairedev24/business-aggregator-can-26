@@ -22,14 +22,14 @@ import tools.jackson.databind.JsonNode;
  *
  * <table>
  *   <tr><th>event</th><th>to</th><th>Account › Notifications row</th><th>deep link</th></tr>
- *   <tr><td>order.packed (whole order ready)</td><td>customer</td><td>order_updates</td><td>/orders/{id}</td></tr>
- *   <tr><td>delivery.picked_up</td><td>customer</td><td>order_updates</td><td>/orders/{id}, /food/orders/{id}</td></tr>
+ *   <tr><td>order.packed (whole order ready)</td><td>customer</td><td>order_updates</td><td>/app/orders/{id}</td></tr>
+ *   <tr><td>delivery.picked_up</td><td>customer</td><td>order_updates</td><td>/app/orders/{id}, /app/food/orders/{id}</td></tr>
  *   <tr><td>order.delivered</td><td>customer</td><td>order_updates</td><td>same</td></tr>
  *   <tr><td>booking.confirmed, the evening-before reminder, booking.en_route</td><td>customer</td>
- *       <td>booking_reminders</td><td>/bookings/{id}</td></tr>
- *   <tr><td>booking.completed</td><td>customer</td><td>sign_off</td><td>/bookings/{id}</td></tr>
- *   <tr><td>quote.sent</td><td>customer</td><td>quotes_messages</td><td>/quotes/{id}</td></tr>
- *   <tr><td>refund.case_updated, refund.issued</td><td>customer</td><td>refunds_cases</td><td>/cases/{caseNumber}</td></tr>
+ *       <td>booking_reminders</td><td>/app/bookings/{id}</td></tr>
+ *   <tr><td>booking.completed</td><td>customer</td><td>sign_off</td><td>/app/bookings/{id}</td></tr>
+ *   <tr><td>quote.sent</td><td>customer</td><td>quotes_messages</td><td>/app/quotes/{id}</td></tr>
+ *   <tr><td>refund.case_updated, refund.issued</td><td>customer</td><td>refunds_cases</td><td>/app/cases/{caseNumber}</td></tr>
  *   <tr><td>delivery.assigned, run.changed</td><td>courier</td><td>— (always, push only)</td><td>/courier/run</td></tr>
  * </table>
  *
@@ -91,7 +91,7 @@ public final class PersonalNotices {
         if (order == null) {
             return null;
         }
-        var path = ("food".equals(order.type()) ? "/food/orders/" : "/orders/") + orderId;
+        var path = ("food".equals(order.type()) ? "/app/food/orders/" : "/app/orders/") + orderId;
         return customer(
                 eventId,
                 type,
@@ -126,7 +126,7 @@ public final class PersonalNotices {
                 key,
                 (f, business) -> new Object[] {business, startsAt == null ? "" : f.dateTime(startsAt)},
                 new Notice.Push(
-                        "/bookings/" + bookingId, Map.of("type", key, "bookingId", bookingId), "booking:" + bookingId));
+                        "/app/bookings/" + bookingId, Map.of("type", key, "bookingId", bookingId), "booking:" + bookingId));
     }
 
     private @Nullable Notice quote(String eventId, String type, JsonNode data, String quoteId) {
@@ -149,7 +149,7 @@ public final class PersonalNotices {
                 "quotes_messages",
                 key,
                 (f, business) -> new Object[] {business, f.money(total), validUntil == null ? "" : f.date(validUntil)},
-                new Notice.Push("/quotes/" + quoteId, Map.of("type", key, "quoteId", quoteId), "quote:" + quoteId));
+                new Notice.Push("/app/quotes/" + quoteId, Map.of("type", key, "quoteId", quoteId), "quote:" + quoteId));
     }
 
     private @Nullable Notice refund(String eventId, String type, JsonNode data, String refundId) {
@@ -177,7 +177,7 @@ public final class PersonalNotices {
                     caseNumber, business, f.money(amount), respondBy == null ? "" : f.dateTime(respondBy)
                 },
                 new Notice.Push(
-                        "/cases/" + caseNumber, Map.of("type", key, "caseNumber", caseNumber), "case:" + caseNumber));
+                        "/app/cases/" + caseNumber, Map.of("type", key, "caseNumber", caseNumber), "case:" + caseNumber));
     }
 
     private @Nullable Notice courier(String eventId, String type, JsonNode data, String runId, String key) {

@@ -1,15 +1,16 @@
 /**
  * Northline's deep links (S-102, docs/runbooks/push.md § Deep links). A push, an email or a web page opens one of
  *
- *   https://<consumer host>/orders/<id>           ca.northline.app://orders/<id>          → the order (tracking)
- *   https://<consumer host>/food/orders/<id>      ca.northline.app://food/orders/<id>     → the food order
- *   https://<consumer host>/bookings/<id>         ca.northline.app://bookings/<id>        → the booking (ETA, sign-off)
- *   https://<consumer host>/quotes/<id>           ca.northline.app://quotes/<id>          → the quote received
- *   https://<consumer host>/cases/<number>        ca.northline.app://cases/<number>       → the refund case
- *   https://<consumer host>/courier/run           ca.northline.courier://run              → the courier's run
+ *   https://<consumer host>/app/orders/<id>        ca.northline.app://orders/<id>          → the order (tracking)
+ *   https://<consumer host>/app/food/orders/<id>   ca.northline.app://food/orders/<id>     → the food order
+ *   https://<consumer host>/app/bookings/<id>      ca.northline.app://bookings/<id>        → the booking (ETA, sign-off)
+ *   https://<consumer host>/app/quotes/<id>        ca.northline.app://quotes/<id>          → the quote received
+ *   https://<consumer host>/app/cases/<number>     ca.northline.app://cases/<number>       → the refund case
+ *   https://<consumer host>/courier/run            ca.northline.courier://run              → the courier's run
  *
- * The https links are universal links / App Links (the consumer host serves the association files); the custom schemes
- * work without them. Links carry ids only.
+ * The https links are universal links / App Links: the consumer host's association files (S-97) give `/app/*` to the
+ * consumer app and `/courier/*` to the courier app; without the app installed the web sends each to its own page. The
+ * custom schemes work without the association files. Links carry ids only.
  */
 export type DeepLink =
   | { screen: 'order'; orderId: string; food: boolean }
@@ -40,7 +41,11 @@ export function parseDeepLink(link: string, hosts: readonly string[]): DeepLink 
   const scheme = url.protocol.replace(/:$/, '');
   if (scheme === 'https' || scheme === 'http') {
     if (!hosts.includes(url.host)) return null;
-    segments = url.pathname.split('/').filter(Boolean);
+    const path = url.pathname.split('/').filter(Boolean);
+    // the consumer app's links live under /app (what its association claims); the courier's under /courier
+    if (path[0] === 'app') segments = path.slice(1);
+    else if (path[0] === 'courier') segments = path;
+    else return null;
   } else if (scheme === CONSUMER_SCHEME || scheme === COURIER_SCHEME) {
     // ca.northline.app://orders/1 → host "orders", path "/1"; ca.northline.app:/orders/1 → path "/orders/1"
     segments = [url.host, ...url.pathname.split('/')].filter(Boolean);

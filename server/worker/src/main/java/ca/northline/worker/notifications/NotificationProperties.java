@@ -25,7 +25,7 @@ public record NotificationProperties(
         return URI.create(base(studioUrl, "http://localhost:3100") + "/b/" + encode(merchantId) + "/" + page);
     }
 
-    /** A deep link: {@code path} ({@code /orders/<id>}) on the consumer host. */
+    /** A deep link: {@code path} ({@code /app/orders/<id>}) on the consumer host. */
     public URI app(String path) {
         return URI.create(base(consumerUrl, "http://localhost:3000") + path);
     }

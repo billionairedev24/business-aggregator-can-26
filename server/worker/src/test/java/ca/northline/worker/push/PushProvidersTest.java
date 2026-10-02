@@ -144,7 +144,7 @@ class PushProvidersTest {
         var payload = JSON.readTree(request.getBodyAsString());
         assertThat(payload.path("aps").path("alert").path("title").asString()).isEqualTo("En livraison"); // device: fr
         assertThat(payload.path("link").asString())
-                .isEqualTo("https://northline.test/orders/01J9ZD3V00000000000000ORD1");
+                .isEqualTo("https://northline.test/app/orders/01J9ZD3V00000000000000ORD1");
         assertThat(payload.path("data").path("orderId").asString()).isEqualTo("01J9ZD3V00000000000000ORD1");
         assertThat(fieldNames(payload)).containsExactlyInAnyOrder("aps", "link", "data");
         assertThat(fieldNames(payload.path("data"))).containsExactlyInAnyOrder("type", "orderId");
@@ -250,7 +250,7 @@ class PushProvidersTest {
         assertThat(message.path("token").asString()).isEqualTo(token);
         assertThat(message.path("notification").path("title").asString()).isEqualTo("Out for delivery");
         assertThat(message.path("data").path("link").asString())
-                .isEqualTo("https://northline.test/orders/01J9ZD3V00000000000000ORD1");
+                .isEqualTo("https://northline.test/app/orders/01J9ZD3V00000000000000ORD1");
         assertThat(message.path("android").path("collapse_key").asString())
                 .isEqualTo("order:01J9ZD3V00000000000000ORD1");
         assertThat(fieldNames(message.path("data"))).containsExactlyInAnyOrder("type", "orderId", "link");
@@ -329,7 +329,7 @@ class PushProvidersTest {
                         "en", new PushSender.Content("Out for delivery", "Your order is out for delivery."),
                         "fr", new PushSender.Content("En livraison", "Votre commande est en livraison.")),
                 language,
-                URI.create("https://northline.test/orders/01J9ZD3V00000000000000ORD1"),
+                URI.create("https://northline.test/app/orders/01J9ZD3V00000000000000ORD1"),
                 Map.of("type", "order.out_for_delivery", "orderId", "01J9ZD3V00000000000000ORD1"),
                 "order:01J9ZD3V00000000000000ORD1");
     }

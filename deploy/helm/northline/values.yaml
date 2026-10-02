@@ -689,11 +689,6 @@ apps:
       limits: { memory: 256Mi }
     env:
       TRUST_PROXY: "true"
-      # S-102 universal / App Links (docs/runbooks/push.md § Deep links): set per environment once the apps are signed;
-      # empty = /.well-known/apple-app-site-association and assetlinks.json answer 404.
-      NL_APPLE_TEAM_ID: ""
-      NL_IOS_APPS: "ca.northline.app,ca.northline.courier"   # dev/preview builds: ca.northline.app.dev, …
-      NL_ANDROID_APP_CERTS: ""      # ca.northline.app=<SHA-256 of the signing cert>;ca.northline.courier=<…>
     runAsUser: 65532
     probes:
       liveness: { path: /healthz, periodSeconds: 10, failureThreshold: 3 }

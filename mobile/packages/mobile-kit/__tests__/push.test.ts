@@ -2,6 +2,7 @@ import { ApiError, NetworkError } from '../src/api/errors';
 import {
   PushRegistration,
   expoPushPlatform,
+  pushRegistrar,
   handleNotificationTaps,
   parseDeepLink,
   routeOf,
@@ -175,13 +176,27 @@ describe('push registration', () => {
   });
 });
 
+describe("the sign-in / sign-out hook point's registrar", () => {
+  it('registers after a sign-in and removes the installation before the sign-out', async () => {
+    const phone = fakePlatform();
+    phone.state.permission = 'granted';
+    const server = fakeApi();
+    const storage = memorySecureStorage();
+    const registrar = pushRegistrar({ platform: phone.platform, storage, appVersion: '1.0.0', locale: () => 'fr-CA' });
+    await registrar.signedIn(server.api);
+    expect(server.calls[0]).toMatchObject({ method: 'PUT', json: { token: 'apns-token-0001', locale: 'fr-CA' } });
+    await registrar.signingOut(server.api);
+    expect(server.calls[1]).toMatchObject({ method: 'DELETE', path: server.calls[0]!.path });
+  });
+});
+
 describe('deep links', () => {
   it.each([
-    ['https://northline.ca/orders/01J9ZD3V00000000000000ORD1', { screen: 'order', orderId: '01J9ZD3V00000000000000ORD1', food: false }, '/orders/01J9ZD3V00000000000000ORD1'],
-    ['https://staging.northline.ca/food/orders/O1', { screen: 'order', orderId: 'O1', food: true }, '/food/orders/O1'],
-    ['https://northline.ca/bookings/B1', { screen: 'booking', bookingId: 'B1' }, '/bookings/B1'],
-    ['https://northline.ca/quotes/qt_1', { screen: 'quote', quoteId: 'qt_1' }, '/quotes/qt_1'],
-    ['https://northline.ca/cases/RF-2214', { screen: 'case', caseNumber: 'RF-2214' }, '/cases/RF-2214'],
+    ['https://northline.ca/app/orders/01J9ZD3V00000000000000ORD1', { screen: 'order', orderId: '01J9ZD3V00000000000000ORD1', food: false }, '/orders/01J9ZD3V00000000000000ORD1'],
+    ['https://staging.northline.ca/app/food/orders/O1', { screen: 'order', orderId: 'O1', food: true }, '/food/orders/O1'],
+    ['https://northline.ca/app/bookings/B1', { screen: 'booking', bookingId: 'B1' }, '/bookings/B1'],
+    ['https://northline.ca/app/quotes/qt_1', { screen: 'quote', quoteId: 'qt_1' }, '/quotes/qt_1'],
+    ['https://northline.ca/app/cases/RF-2214', { screen: 'case', caseNumber: 'RF-2214' }, '/cases/RF-2214'],
     ['https://northline.ca/courier/run', { screen: 'courierRun' }, '/run'],
     ['ca.northline.app://orders/O1', { screen: 'order', orderId: 'O1', food: false }, '/orders/O1'],
     ['ca.northline.app:/bookings/B1', { screen: 'booking', bookingId: 'B1' }, '/bookings/B1'],
@@ -193,10 +208,12 @@ describe('deep links', () => {
   });
 
   it.each([
-    'https://evil.example/orders/O1', // another host
+    'https://evil.example/app/orders/O1', // another host
+    'https://northline.ca/orders/O1', // the web's own order page, not an app link
     'https://northline.ca/account', // not an app screen
-    'https://northline.ca/orders/O1/extra',
-    'https://northline.ca/orders/..%2Fsecrets',
+    'https://northline.ca/app/orders/O1/extra',
+    'https://northline.ca/app/oauth2redirect', // the OAuth redirect (S-29), not a screen
+    'https://northline.ca/app/orders/..%2Fsecrets',
     'javascript:alert(1)',
     'ca.northline.courier://orders/O1',
     'not a url',
@@ -206,15 +223,15 @@ describe('deep links', () => {
 
   it('routes taps, including the one that launched the app, and ignores foreign links', async () => {
     const phone = fakePlatform();
-    phone.launchWith({ link: 'https://northline.ca/quotes/qt_9', quoteId: 'qt_9' });
+    phone.launchWith({ link: 'https://northline.ca/app/quotes/qt_9', quoteId: 'qt_9' });
     const opened: string[] = [];
     const stop = handleNotificationTaps(phone.platform, HOSTS, (l) => opened.push(routeOf(l)));
     await new Promise((r) => setTimeout(r, 0));
-    phone.tap({ link: 'https://northline.ca/orders/O7' });
-    phone.tap({ link: 'https://evil.example/orders/O7' });
+    phone.tap({ link: 'https://northline.ca/app/orders/O7' });
+    phone.tap({ link: 'https://evil.example/app/orders/O7' });
     phone.tap({});
     stop();
-    phone.tap({ link: 'https://northline.ca/orders/O8' });
+    phone.tap({ link: 'https://northline.ca/app/orders/O8' });
     expect(opened).toEqual(['/quotes/qt_9', '/orders/O7']);
   });
 });

@@ -2,6 +2,7 @@ export { COURIER_SCHEME, CONSUMER_SCHEME, parseDeepLink, routeOf, type DeepLink 
 export {
   PushRegistration,
   expoPushPlatform,
+  pushRegistrar,
   handleNotificationTaps,
   type DeviceRegistryApi,
   type ExpoNotificationsModule,

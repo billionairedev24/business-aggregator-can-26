@@ -1,10 +1,27 @@
 /**
  * @northline/mobile-kit — what every Northline native app shares (S-87 builds it for the courier app; the consumer
  * app reuses it in phase 4): DPoP-bound OAuth with PKCE, the api client, secure storage, the theme from
- * `@northline/tokens`, en/fr-CA i18n and (S-102) push registration and deep links.
+ * `@northline/tokens` and en/fr-CA i18n.
  */
 export { ApiClient, type ApiAnswer, type RequestOptions } from './api/client';
 export { ApiError, NetworkError, SignedOutError, apiErrorOf, retryAfterSeconds, type FieldError } from './api/errors';
+// S-102: push registration, notification taps and deep links
+export {
+  COURIER_SCHEME,
+  CONSUMER_SCHEME,
+  PushRegistration,
+  expoPushPlatform,
+  pushRegistrar,
+  handleNotificationTaps,
+  parseDeepLink,
+  routeOf,
+  type DeepLink,
+  type DeviceRegistryApi,
+  type ExpoNotificationsModule,
+  type PushPermission,
+  type PushPlatform,
+  type PushRegistrationOptions,
+} from './push';
 export { DpopSession, OAuthError, type OAuthConfig, type PendingSignIn } from './auth/session';
 export { codeChallenge, codeVerifier } from './auth/pkce';
 export {
@@ -32,18 +49,3 @@ export {
   type Params,
 } from './i18n';
 export { MIN_TARGET, colors, fonts, radius, space, theme, type Theme } from './theme';
-export {
-  COURIER_SCHEME,
-  CONSUMER_SCHEME,
-  PushRegistration,
-  expoPushPlatform,
-  handleNotificationTaps,
-  parseDeepLink,
-  routeOf,
-  type DeepLink,
-  type DeviceRegistryApi,
-  type ExpoNotificationsModule,
-  type PushPermission,
-  type PushPlatform,
-  type PushRegistrationOptions,
-} from './push';
