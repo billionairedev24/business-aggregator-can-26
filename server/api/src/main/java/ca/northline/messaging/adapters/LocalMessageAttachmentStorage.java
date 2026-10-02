@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -46,6 +47,27 @@ class LocalMessageAttachmentStorage implements AttachmentStorage {
         var file = resolve(key);
         try {
             return Files.isRegularFile(file) ? Optional.of(Files.readAllBytes(file)) : Optional.empty();
+        } catch (IOException ex) {
+            throw new UncheckedIOException(ex);
+        }
+    }
+
+    @Override
+    public int deleteAll(String prefix) {
+        var dir = resolve(prefix);
+        if (!Files.isDirectory(dir) || dir.equals(root)) {
+            return 0;
+        }
+        try (var files = Files.walk(dir)) {
+            var all = files.sorted(Comparator.reverseOrder()).toList();
+            var deleted = 0;
+            for (var file : all) {
+                if (Files.isRegularFile(file)) {
+                    deleted++;
+                }
+                Files.deleteIfExists(file);
+            }
+            return deleted;
         } catch (IOException ex) {
             throw new UncheckedIOException(ex);
         }

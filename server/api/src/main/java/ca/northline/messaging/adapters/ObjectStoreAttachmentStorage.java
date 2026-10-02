@@ -26,4 +26,9 @@ class ObjectStoreAttachmentStorage implements AttachmentStorage {
     public Optional<byte[]> get(String key) {
         return objects.get(key).map(c -> c.bytes().toArray());
     }
+
+    @Override
+    public int deleteAll(String prefix) {
+        return objects.deleteAll(prefix);
+    }
 }

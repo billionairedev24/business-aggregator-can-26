@@ -10,6 +10,7 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
+import java.util.Comparator;
 import java.util.Optional;
 
 /**
@@ -75,6 +76,27 @@ final class FileSystemObjectStore implements ObjectStore {
         try {
             Files.deleteIfExists(file);
             Files.deleteIfExists(typeFile(file));
+        } catch (IOException ex) {
+            throw new UncheckedIOException(ex);
+        }
+    }
+
+    @Override
+    public int deleteAll(String prefix) {
+        var dir = resolve(prefix);
+        if (!Files.isDirectory(dir)) {
+            return 0;
+        }
+        try (var files = Files.walk(dir)) {
+            var all = files.sorted(Comparator.reverseOrder()).toList();
+            var objects = 0;
+            for (var file : all) {
+                if (Files.isRegularFile(file) && !file.getFileName().toString().endsWith(TYPE_SUFFIX)) {
+                    objects++;
+                }
+                Files.deleteIfExists(file);
+            }
+            return objects;
         } catch (IOException ex) {
             throw new UncheckedIOException(ex);
         }

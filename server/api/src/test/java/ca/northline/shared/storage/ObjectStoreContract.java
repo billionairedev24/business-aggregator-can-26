@@ -99,6 +99,23 @@ abstract class ObjectStoreContract {
     }
 
     @Test
+    void deleteAllRemovesEverythingUnderAPrefixOnly() {
+        var person = "contract/customers/" + Ids.next();
+        var kept = "contract/customers/" + Ids.next() + "/" + Ids.next() + ".pdf";
+        store.put(person + "/" + Ids.next() + ".pdf", randomBytes(10), PDF);
+        store.put(person + "/cases/" + Ids.next() + ".png", randomBytes(20), "image/png");
+        store.put(kept, randomBytes(10), PDF);
+        var within = store.within(person);
+        within.put("note.pdf", randomBytes(5), PDF);
+
+        assertThat(store.deleteAll(person)).isEqualTo(3);
+        assertThat(store.deleteAll(person)).isZero();
+        assertThat(within.exists("note.pdf")).isFalse();
+        assertThat(store.exists(kept)).isTrue();
+        assertThat(within.deleteAll("cases")).isZero();
+    }
+
+    @Test
     void emptyObject() {
         var key = key(PDF);
         store.put(key, new byte[0], PDF);

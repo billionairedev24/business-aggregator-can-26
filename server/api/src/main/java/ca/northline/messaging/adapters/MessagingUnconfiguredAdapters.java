@@ -29,6 +29,11 @@ class MessagingUnconfiguredAdapters {
             public Optional<byte[]> get(String key) {
                 return Optional.empty();
             }
+
+            @Override
+            public int deleteAll(String prefix) {
+                return 0; // nothing was ever stored
+            }
         };
     }
 }
