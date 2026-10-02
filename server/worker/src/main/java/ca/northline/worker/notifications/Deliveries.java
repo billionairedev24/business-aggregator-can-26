@@ -1,7 +1,10 @@
 package ca.northline.worker.notifications;
 
+import ca.northline.email.CommercialConsent;
+import ca.northline.email.CommercialMessageCheck;
 import ca.northline.email.EmailAddress;
 import ca.northline.email.Mailer;
+import ca.northline.email.MessageClasses.ConsentCategory;
 import ca.northline.email.UnsubscribeTokens;
 import ca.northline.sms.PhoneNumbers;
 import ca.northline.sms.SmsDeliveryFailed;
@@ -18,6 +21,11 @@ import org.springframework.transaction.support.TransactionOperations;
  * both send — is committed on its own before the provider is called. Permanent refusals (bad number, rejected
  * address) keep the claim and are logged; an unavailable provider releases it and throws, so the Kafka retry (or the
  * deferred-notification job) sends it later.
+ *
+ * <p>S-108: a commercial notice ({@link Notice#commercial()}) goes only when the person's consent for the channel is
+ * granted now — asked here, at send time, also for what quiet hours or an outage held back. A commercial SMS ends with
+ * the legal sender and an opt-out link (the api's unsubscribe page, which names the mailing address); a commercial
+ * email gets the consent's one-click unsubscribe link; a commercial push is turned off in Account › Notifications.
  */
 @Slf4j
 public final class Deliveries {
@@ -27,10 +35,14 @@ public final class Deliveries {
     public enum Outcome {
         SENT,
         ALREADY_SENT,
-        UNREACHABLE
+        UNREACHABLE,
+        /** A commercial notice without the person's consent (S-108): not sent. */
+        NO_CONSENT
     }
 
     private final Mailer mailer;
+    private final CommercialConsent consents;
+    private final String legalName;
     private final SmsTransport sms;
     private final PushSender push;
     private final ProcessedEvents claims;
@@ -41,6 +53,8 @@ public final class Deliveries {
 
     public Deliveries(
             Mailer mailer,
+            CommercialConsent consents,
+            String legalName,
             SmsTransport sms,
             PushSender push,
             ProcessedEvents claims,
@@ -49,6 +63,8 @@ public final class Deliveries {
             UnsubscribeTokens unsubscribe,
             MeterRegistry meters) {
         this.mailer = mailer;
+        this.consents = consents;
+        this.legalName = legalName;
         this.sms = sms;
         this.push = push;
         this.claims = claims;
@@ -60,11 +76,13 @@ public final class Deliveries {
 
     public Outcome deliver(Notice notice, Recipient to, Channel channel, String business) {
         var key = notice.eventId() + ":" + to.userId();
-        var outcome = switch (channel) {
-            case EMAIL -> email(notice, to, business, key);
-            case SMS -> sms(notice, to, business, key);
-            case PUSH -> push(notice, to, business, key);
-        };
+        var outcome = notice.commercial() && !consents.allows(to.userId(), category(channel))
+                ? Outcome.NO_CONSENT
+                : switch (channel) {
+                    case EMAIL -> email(notice, to, business, key);
+                    case SMS -> sms(notice, to, business, key);
+                    case PUSH -> push(notice, to, business, key);
+                };
         meters.counter(
                         SENT,
                         "channel",
@@ -97,11 +115,13 @@ public final class Deliveries {
         }
         var row = notice.unsubscribeRow();
         var link = row == null ? null : links.unsubscribe(unsubscribe.issue(to.userId(), row, to.locale()));
-        // The Mailer claims (email, key) itself — the same claim the api's S-13 notices use.
-        return switch (mailer.send(new Mailer.Delivery(key, address, content, to.locale(), link))) {
+        // The Mailer claims (email, key) itself — the same claim the api's S-13 notices use — and asks for the
+        // consent of a commercial email again, right before it goes.
+        return switch (mailer.send(new Mailer.Delivery(key, address, content, to.locale(), link, to.userId()))) {
             case SENT -> Outcome.SENT;
             case ALREADY_SENT -> Outcome.ALREADY_SENT;
             case REJECTED -> Outcome.UNREACHABLE;
+            case NO_CONSENT -> Outcome.NO_CONSENT;
         };
     }
 
@@ -110,13 +130,15 @@ public final class Deliveries {
         if (phone == null || !PhoneNumbers.isE164(phone)) {
             return Outcome.UNREACHABLE;
         }
+        var text = notice.texts().sms(business, to.locale(), to.preferences().zone());
+        if (notice.commercial()) {
+            text = commercialSms(text, to);
+        }
         if (!claim(Channel.SMS, key)) {
             return Outcome.ALREADY_SENT;
         }
         try {
-            sms.sendText(
-                    phone,
-                    notice.texts().sms(business, to.locale(), to.preferences().zone()));
+            sms.sendText(phone, text);
             return Outcome.SENT;
         } catch (SmsDeliveryFailed e) {
             if (e.getKind() == SmsDeliveryFailed.Kind.UNDELIVERABLE_NUMBER) {
@@ -168,6 +190,23 @@ public final class Deliveries {
             release(Channel.PUSH, key);
             throw e;
         }
+    }
+
+    /**
+     * CASL s. 6(2) in a text: the legal sender and an opt-out link that withdraws the SMS consent at once; the page
+     * behind it names the mailing address and contact (regulations s. 3(2): a link where it isn't practicable inline).
+     */
+    private String commercialSms(String text, Recipient to) {
+        var optOut = links.unsubscribe(
+                unsubscribe.issue(to.userId(), "consent." + ConsentCategory.MARKETING_SMS.code(), to.locale()));
+        var french = "fr".equals(to.locale().getLanguage());
+        var tail =
+                french ? " — " + legalName + ". Désabonnement : " + optOut : " — " + legalName + ". Opt out: " + optOut;
+        return CommercialMessageCheck.sms(text + tail, legalName, optOut);
+    }
+
+    private static ConsentCategory category(Channel channel) {
+        return ConsentCategory.ofChannel(channel.code());
     }
 
     private boolean claim(Channel channel, String key) {
