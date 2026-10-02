@@ -13,7 +13,7 @@ import { Body, Button, Checkbox, Field, Notice, Section, Tag, Title, type } from
 import { Screen } from '../ui/screen';
 import { errorMessage, Loading, QueryView, SignInPrompt, Skeleton } from '../ui/states';
 import { hoursUntil, money } from './format';
-import { Chip, Kicker, Panel, useServicesApi, type T } from './parts';
+import { Chip, favouritesChanged, Kicker, Panel, useServicesApi, type T } from './parts';
 
 /** The live states refresh on their own (the push says so too, S-102); the rest only on demand. */
 const LIVE: ReadonlySet<string> = new Set(['confirmed', 'en_route', 'on_site']);
@@ -283,9 +283,13 @@ export function Review({ id }: { id: string }) {
   const [praise, setPraise] = useState<ReadonlySet<string>>(new Set());
   const [note, setNote] = useState('');
   const [favourite, setFavourite] = useState(true);
+  const qc = useQueryClient();
   const save = useMutation({
     mutationFn: (b: Booking) => (favourite ? api.favourite(b.merchantId, true) : Promise.resolve(null)),
-    onSuccess: () => router.replace('/orders'),
+    onSuccess: () => {
+      if (favourite) void favouritesChanged(qc);
+      router.replace('/orders');
+    },
   });
   return (
     <BookingScreen id={id} title={t('title.review')} testID="review">

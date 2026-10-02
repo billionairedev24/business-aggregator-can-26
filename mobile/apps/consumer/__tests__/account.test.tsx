@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Linking from 'expo-linking';
+import { router } from 'expo-router';
 import { act, fireEvent, screen, waitFor, within } from 'expo-router/testing-library';
 import { Share } from 'react-native';
 
@@ -638,6 +639,21 @@ describe('Favourites', () => {
     fireEvent.press(await screen.findByTestId('fav-remove-m-prairie'));
     expect(await screen.findByText('No favourites yet. Tap the heart on a provider to keep them here.')).toBeTruthy();
     expect(server.services.favourites.size).toBe(0);
+  });
+
+  it('a heart on a provider’s profile (Journey C) shows on You and in the list at once, not a minute later', async () => {
+    await signedIn('/account');
+    expect(await screen.findByRole('button', { name: 'Favourite providers, 0' })).toBeTruthy();
+    act(() => router.push('/account/favourites'));
+    expect(await screen.findByText('No favourites yet. Tap the heart on a provider to keep them here.')).toBeTruthy();
+    act(() => router.push('/providers/prairie-wrench'));
+    fireEvent.press(await screen.findByRole('button', { name: 'Add to favourites' }));
+    expect(await screen.findByRole('button', { name: 'In favourites' })).toBeTruthy();
+
+    act(() => router.back());
+    expect(await screen.findByTestId('fav-remove-m-prairie')).toBeTruthy();
+    act(() => router.back());
+    expect(await screen.findByRole('button', { name: 'Favourite providers, 1' })).toBeTruthy();
   });
 
   it('empty, loading, error and Try again', async () => {

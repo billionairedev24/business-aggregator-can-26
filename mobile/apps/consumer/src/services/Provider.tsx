@@ -12,7 +12,7 @@ import { Screen } from '../ui/screen';
 import { errorMessage, QueryView, Skeleton } from '../ui/states';
 import { updateDraft } from './draft';
 import { price } from './format';
-import { Mark, Row, useServicesApi, useTier } from './parts';
+import { FAVOURITES_KEY, favouritesChanged, Mark, Row, useServicesApi, useTier } from './parts';
 
 /** "45 min" / "1 h 30" — a service's length. */
 export function duration(min: number, t: (k: 'services.minutes' | 'services.hours', p: Record<string, number>) => string) {
@@ -153,11 +153,11 @@ function Actions({ p }: { p: ProviderPage }) {
   const api = useServicesApi();
   const qc = useQueryClient();
   const signedIn = status === 'signedIn';
-  const favourites = useQuery({ queryKey: ['services', 'favourites'], queryFn: () => api.favourites(), enabled: signedIn, staleTime: 60_000 });
+  const favourites = useQuery({ queryKey: FAVOURITES_KEY, queryFn: () => api.favourites(), enabled: signedIn, staleTime: 60_000 });
   const isFavourite = !!favourites.data?.items.some((f) => f.merchantId === p.merchantId);
   const toggle = useMutation({
     mutationFn: (on: boolean) => api.favourite(p.merchantId, on),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['services', 'favourites'] }),
+    onSuccess: () => favouritesChanged(qc),
   });
   const bookable = p.services.length > 0;
   return (
