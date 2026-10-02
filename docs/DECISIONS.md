@@ -6484,3 +6484,91 @@ Branch `fix/phase4-followups`. Three small fixes; no migration, no new configura
   or dead-lettered); mobile `account.test.tsx` +3 (heart on C → You's count and the list at once; back to follow my
   location sends `""`; French); web `settings.test.tsx` +2. The mobile and web tests fail without their fix.
 - **Not done:** `order.confirmed` as a partner webhook; per-shop lines in the `order.delivered` payload.
+
+## 2026-10-02 — S-113 Alerting and on-call (SLOs for sign-in, checkout, payouts, KDS)
+
+Branch `ops/s-113-alerting`. **No migration** (the V280–V284 range offered is unused). Runbook:
+[runbooks/alerting.md](runbooks/alerting.md); one runbook per alert in [runbooks/alerts/](runbooks/alerts/README.md).
+
+- **No pager has ever fired for real.** No metrics store with rules, no Alertmanager and no PagerDuty, Opsgenie or
+  Grafana OnCall account exists in any environment. Everything here is checked offline only: `promtool check rules`
+  and `promtool test rules` (Prometheus 3.5.0) on every rule, `amtool check-config` (Alertmanager 0.28.1) on the
+  reference and the chart's rendered configurations, Sloth 0.12.0 regenerating the SLO rules without a diff,
+  kubeconform on the rendered PrometheusRule / AlertmanagerConfig / GMP Rules. No alert has reached a phone, no
+  receiver key has been used, and the Docker fallbacks of `make obs-rules-check` (images `prom/prometheus`,
+  `prom/alertmanager`, `ghcr.io/slok/sloth`) could not be pulled in the build sandbox (rate limit / blocked) — they
+  ran from the binaries.
+- **SLOs as code = Sloth `prometheus/v1` specs** (`deploy/observability/slo`), not a home-grown generator and not
+  OpenSLO: Sloth produces the standard multi-window multi-burn-rate rules (page 14.4x 1 h/5 m or 6x 6 h/30 m; ticket
+  3x 1 d/2 h or 1x 3 d/6 h) and the `slo:*` recording rules dashboards read; its output is plain Prometheus rules, so
+  every store loads it. The generated files are committed (reviewable, no tool needed to deploy) and drift-checked.
+  Eight SLOs: sign-in availability 99.9 % / latency ≤ 1 s 99 %; checkout availability 99.9 % / latency ≤ 2.5 s 99 %;
+  payout run success 99 % / payouts ≤ 1 h late 99 %; KDS ticket delivery ≤ 5 s 99.5 % / freshness (bus ≤ 2 s) 99.5 %.
+  The targets are a first guess with no production traffic to calibrate them; revisit after a month of data.
+- **SLIs where the user feels them.** Sign-in and checkout: the HTTP server metrics of the exact routes (5xx = bad, 4xx
+  — wrong factor, declined card — good), not the business counters (which can't see a request that crashed). To count
+  "within 1 s / 2.5 s" exactly, the platform's observability defaults add SLO histogram buckets
+  (`management.metrics.distribution.slo`) for `http.server.requests` and the new timers; the rules match `le="1"` and
+  `le="1.0"` (Prometheus 3 normalises). "Checkout" = `POST /api/v1/me/checkouts`, `…/{checkoutId}/place` and
+  `/api/v1/me/bookings/checkout` (consumer orders, food included, and booking deposits).
+- **New metrics** (no ids in labels): `northline.jobs.runs{job,outcome}` + `northline.jobs.last_success{job}` for every
+  payments job step (`JobRuns`, called by `PaymentsScheduler`; the run's "success" = the step didn't throw);
+  `northline.payouts.delay{kind=scheduled}` (sent − the business's payout time in its zone, negative = 0);
+  `northline.kds.ticket_delivery` (food `OrderPlaced.occurredAt` → the kitchen's signal published, measured in
+  `StudioLiveEvents` — it covers the outbox and listener delay, not the last hop to the browser, which carries no
+  timestamp); `northline.studio.live.probe{outcome}` (`LiveBusProbe`: every replica signals itself through
+  `StudioLive` every 30 s on channel `probe.<ulid>`, never a merchant id; one not back by the next probe is `lost`) —
+  the KDS **freshness** SLI, because a broken Valkey pub/sub leaves streams open with keep-alives and the Studio never
+  falls back to polling; `northline.events.outbox.pending` / `.oldest_age` (platform `OutboxBacklog`, auto-configured
+  wherever `spring.modulith.events.jdbc.schema` is set: api and auth; one count/min query on the partial index,
+  cached 15 s, NaN when unreadable). Consumer lag and DLQ counts already existed (S-26).
+- **Threshold alerts added:** `NorthlineOutboxBacklog` (ticket, oldest > 5 min) / `NorthlineOutboxStuck` (page,
+  > 30 min); `NorthlineConsumerLagCritical` (page, > 10,000 for 15 min, next to S-111's ticket at 1,000);
+  `NorthlinePayoutRunStalled` (ticket 30 min, page 2 h since the last success) and `NorthlinePayoutRunMissing`
+  (ticket, no replica reports it for 30 min) — a run that never happens burns no SLO. S-111's alerts keep their
+  thresholds; their `runbook` annotation became the standard `runbook_url`, absolute, pointing at
+  `docs/runbooks/alerts/<name>.md` on GitHub (Helm rewrites the base: `alerting.runbookBaseUrl`).
+- **Routing: Alertmanager format, two receivers `page` and `ticket` selected by the `severity` label**, a page
+  inhibiting the same SLO's ticket. Providers per receiver by configuration (`alerting.routing.page|ticket.provider`:
+  `pagerduty` — Events API v2, critical vs warning; `opsgenie` — P1 vs P3; `webhook`; `none`); keys only from the
+  secrets manager (ExternalSecret `northline-alerting`, Terraform creates the five secrets empty in all three clouds),
+  only the selected providers' keys mapped. The reference config (`deploy/observability/alertmanager/alertmanager.yml`)
+  holds obviously fake keys.
+- **Helm toggle `alerting.enabled` (default off)** with `rules.format` `prometheusRule` (Prometheus Operator on any
+  cluster), `gmpRules` (Google Managed Prometheus, group `interval` required) or `configMap` (raw files for Mimir /
+  Grafana Cloud, Amazon Managed Prometheus, Azure's converter), and `routing.format` `alertmanagerConfig` or
+  `configMap` (credentials as `*_file` under a mounted Secret) or `none`. The chart can't read files outside itself, so
+  the rule files are copied into `deploy/helm/northline/files/alerting` by `make obs-slo` and the copies are checked
+  byte for byte. Every alert gets `namespace` (the operator's AlertmanagerConfig matches its own namespace only) and
+  `environment` labels. Off by default because no environment runs a rule loader yet; the Argo CD AppProject now
+  allows `PrometheusRule`, `AlertmanagerConfig` and GMP `Rules`.
+- **The rota has an API, but for people** (console, staff token with a second factor), so routing can't read it. Added a
+  read-only machine export: `GET /api/v1/ops/oncall` (JSON: who is on now, shifts 12 h back to 8 days ahead, with
+  work emails) and `/api/v1/ops/oncall.ics` (iCalendar, SUMMARY = email, which Grafana OnCall's iCal schedules map to
+  users). One shared token `ONCALL_EXPORT_TOKEN` (header, or `?token=` for calendar clients), constant-time compare,
+  404 while unset; its own security filter chain (`/api/v1/ops/**`, GET only) because the resource server would try to
+  decode the token as a JWT. In the `internal` OpenAPI group. Not built: a sync of the rota into PagerDuty / Opsgenie
+  schedule overrides (no account to test against), and the console's "Page current on-call" button — paging goes
+  through Alertmanager so it works when the api is down; the api is never in the paging path.
+- **Offline validation:** `make obs-rules-check` → `scripts/validate-alerts.py` (pure Python + PyYAML: severity
+  page|ticket, summary, `runbook_url` to an existing page, no orphan runbook, SLO specs valid and generated, chart
+  copies identical, page/ticket reach their receivers, no province/city/zone literal), then Sloth drift, promtool
+  check + test, amtool on the reference and on the chart's alertmanager.yml for each provider — each tool from PATH,
+  else Docker, else skipped with a notice. `make obs-check` (S-111) now ends with it. `deploy/helm/validate.sh` renders
+  the three formats with each provider through kubeconform, checks the mapped keys and the namespace labels, and
+  refuses unknown formats/providers.
+- **Dashboards:** four SLO dashboards (`northline-slo-sign-in|checkout|payouts|kds`) over Sloth's recording rules
+  (objective, budget left, burn rate now/period, SLI by window); payments job runs and payout delay, ticket delivery and
+  probes, and the outbox backlog added to the existing flow dashboards.
+- **Tests:** platform `OutboxBacklogTest` (one query for both gauges, 15 s cache, NaN on failure, schema name refused),
+  `ObservabilityDefaultsTest` (+SLO buckets); api `JobRunsTest`, `PaymentMetricsTest` (+payout delay),
+  `LiveBusProbeTest` (round trip, lost, foreign signal ignored), `StudioLiveEventsMetricsTest` (food only),
+  `OncallExportServiceTest`, `OncallExportControllerTest` (404 when off, RFC 5545 escaping), `OncallExportApiTest`
+  (JSON and iCal through the real security chain; 401 for no/wrong token and for a user's token),
+  `OutboxBacklogMetricsTest` (the api binds the gauges); promtool: 12 SLO cases, 4 new threshold cases.
+- **Variables:** `ONCALL_EXPORT_TOKEN` (api, optional secret, `oncall-export-token`), `LIVE_PROBE_INTERVAL` (api,
+  `30s`); Alertmanager secrets `ALERTING_PAGERDUTY_ROUTING_KEY`, `ALERTING_OPSGENIE_API_KEY`,
+  `ALERTING_PAGE_WEBHOOK_URL`, `ALERTING_TICKET_WEBHOOK_URL`.
+- **Not done:** rules for Azure Monitor managed Prometheus and Amazon Managed Prometheus as Terraform resources (the
+  ConfigMap files are loaded with their CLIs, documented); an in-cluster Prometheus/Alertmanager add-on; per-tenant
+  (per-kitchen) SLOs; a measured "order placed → shown on the screen" (the browser reports nothing back).
