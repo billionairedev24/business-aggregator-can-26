@@ -7104,7 +7104,7 @@ or signed off**: no Stripe account exists and no lawyer has seen the texts. No m
 - **Review packet and questions:** [review-packet.md](compliance/legal/review-packet.md) (12 texts with route/screen,
   version and languages; no cookie notice exists; no courier terms, sub-processor page or French version) and
   [counsel-questions.md](compliance/legal/counsel-questions.md) — **51 questions** with source and decision: S-105
-  deadlines, grace period, holds, verification; S-107's flagged mismatches (PR #147); S-108 wordings, push, SMS STOP,
+  deadlines, grace period, holds, verification; S-107's flagged mismatches (retention.md § 7); S-108 wordings, push, SMS STOP,
   hashes; Law 25 and Loi 96 (French texts, PIA, privacy officer, off-by-default, CPA forum clause); OpenRouter as a US
   processor and the "no training" sentence; policy statements the product contradicts (precise location, cookies and
   GPC, named cities, pen test / SOC 2 / segregated accounts, the sub-processor page); "escrow" vs merchant of record

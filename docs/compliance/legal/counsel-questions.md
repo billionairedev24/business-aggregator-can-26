@@ -1,8 +1,9 @@
 # Questions for counsel (S-106)
 
-Every point the project has left for legal review, gathered from [DECISIONS.md](../../DECISIONS.md), the open S-107
-pull request ([#147](https://github.com/billionairedev24/business-aggregator-can-26/pull/147)) and a read of the two
-legal pages against what the product does. Each item names its source and the decision needed. The texts themselves
+Every point the project has left for legal review, gathered from [DECISIONS.md](../../DECISIONS.md), S-107's
+retention runbook ([retention.md § 7](../../runbooks/retention.md#7-mismatches-between-the-policy-and-the-code), merged
+in [#147](https://github.com/billionairedev24/business-aggregator-can-26/pull/147)) and a read of the two legal pages
+against what the product does. Each item names its source and the decision needed. The texts themselves
 are listed in [review-packet.md](review-packet.md).
 
 **51 questions** in ten groups. "Product" means the answer may change code; "Text" means it changes a legal text (a
@@ -20,17 +21,17 @@ new registered version, [review-packet.md § Sign-off](review-packet.md#sign-off
 | A6 | Policy § 8 says "From Settings → Privacy … Export … in JSON and CSV"; the product has Account › Profile › Your data and exports JSON plus a readable summary (no CSV). Change the text or the product? | privacy.html § 8; DECISIONS § S-105 "Access export" | Text or Product |
 | A7 | Not built: telling third parties a corrected record was shared with; deleting the Stripe Customer object (cards are detached); revoking Google / Microsoft calendar grants at the provider; verifying by email an account with no mobile and no second factor. Which are legally required before launch? | DECISIONS § S-105 "Not done" | must-have list |
 
-## B. Retention (S-107, PR #147 — open)
+## B. Retention (S-107, #147)
 
 | # | question | source | decision needed |
 |---|---|---|---|
-| B1 | **CASL proof of consent** is kept 3 years after withdrawal; the policy's § 6 doesn't list it. Add it? Is 3 years right? | PR #147 retention.md § 7 item 1; DECISIONS § S-108 "Retention" | Text; period |
+| B1 | **CASL proof of consent** is kept 3 years after withdrawal; the policy's § 6 doesn't list it. Add it? Is 3 years right? | retention.md § 7 item 1; DECISIONS § S-108 "Retention" | Text; period |
 | B2 | The **audit log** (ids and codes of privileged actions, some of them sign-ins and security changes) is kept 7 years; the policy doesn't name it and says "Login and security logs: 12 months". Which applies to which entries? | retention.md § 7 item 2 | period per kind of entry; Text |
 | B3 | **Québec**: civil prescription is 3 years for most claims (C.c.Q. art. 2925); "messages and dispute evidence: 2 years after the transaction" may be short for Québec customers. Lengthen for Québec (the region model can) or for everyone? | retention.md § 7 item 3 | period |
 | B4 | **KYC "5 years after the relationship ends"**: no business can be closed or refused yet, so nothing starts the clock; the documents are at Stripe, Northline keeps owner names and outcomes. What ends the relationship? | retention.md § 7 item 4 | trigger definition (Product) |
 | B5 | Personal data **kept with no end** because the policy gives no period: notification inbox, abandoned carts, saved addresses of open accounts, trust flags, AI usage counters, storefront visit counts, merchants' job photos. A period for each? | retention.md § 7 item 7 | periods; Text |
-| B6 | What a privacy law keeps **after a decision about a person**: BC PIPA 365 days (s. 35(1)); PIPEDA, Alberta PIPA, Québec 0. Right? | DECISIONS § S-107 "Province-dependent periods" (PR #147) | confirm values |
-| B7 | Seven-year transaction records are **pseudonymised, not deleted** (customer id and words cleared; amounts, tax, dates and the business kept) because deleting breaks merchants' books; "after the transaction" is a conversation's last message, a case's resolution, an escrow's date. Acceptable reading of § 6? | DECISIONS § S-107 "Actions" and "Clocks" (PR #147) | approve |
+| B6 | What a privacy law keeps **after a decision about a person**: BC PIPA 365 days (s. 35(1)); PIPEDA, Alberta PIPA, Québec 0. Right? | DECISIONS § S-107 "Province-dependent periods" | confirm values |
+| B7 | Seven-year transaction records are **pseudonymised, not deleted** (customer id and words cleared; amounts, tax, dates and the business kept) because deleting breaks merchants' books; "after the transaction" is a conversation's last message, a case's resolution, an escrow's date. Acceptable reading of § 6? | DECISIONS § S-107 "Actions" and "Clocks" | approve |
 | B8 | No **litigation hold** exists (keep everything about a case past the policy); stopping the jobs is the only lever. Required before launch? | DECISIONS § S-107 "Not done" | yes / no |
 | B9 | **Backup replicas** on Google Cloud and Azure don't receive deletions (S-114), so a deleted file survives there; AWS replicates deletes. The policy says backups roll off within 35 days. Fix before launch on those clouds? | retention.md § 7 item 5 | risk acceptance or fix (Product) |
 | B10 | An erasure step held by an open order keeps that module's data **past the 30 days** after account closure the policy promises. Acceptable as the law's exception, and does the text need to say so? | retention.md § 7 item 6 | Text |
