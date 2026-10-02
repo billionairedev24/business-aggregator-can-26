@@ -1,5 +1,7 @@
 dependencies {
     implementation(project(":platform"))
+    // S-104: Client ID Metadata Documents are fetched under the platform egress rules (EgressDnsResolver, HttpClient 5)
+    implementation("org.apache.httpcomponents.client5:httpclient5")
     implementation(project(":sms")) // SMS / voice adapters shared with the api and the worker (S-27)
     implementation(project(":openapi")) // S-125: the JSON API and the OAuth endpoints as OpenAPI 3.1
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
