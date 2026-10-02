@@ -1,6 +1,6 @@
-import { Stub } from '../src/ui/Stub';
+import { Search } from '../src/shop/Search';
 
-/** Design 01 `search` — a stub until its story builds it (src/screens.ts, docs/MOBILE_PLAN.md). */
-export default function Search() {
-  return <Stub screen="search" />;
+/** Design 01 `search` (S-99, src/screens.ts, docs/MOBILE_PLAN.md § B). */
+export default function SearchRoute() {
+  return <Search />;
 }

@@ -1,6 +1,6 @@
-import { Stub } from '../../src/ui/Stub';
+import { Cart } from '../../src/shop/Cart';
 
-/** Design 01 `cart` — a stub until its story builds it (src/screens.ts, docs/MOBILE_PLAN.md). */
-export default function Cart() {
-  return <Stub screen="cart" />;
+/** Design 01 `cart` (S-99, src/screens.ts, docs/MOBILE_PLAN.md § B). */
+export default function CartRoute() {
+  return <Cart />;
 }

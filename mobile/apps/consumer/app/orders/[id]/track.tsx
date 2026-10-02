@@ -1,6 +1,6 @@
-import { Stub } from '../../../src/ui/Stub';
+import { Track } from '../../../src/shop/Order';
 
-/** Design 01 `track` — a stub until its story builds it (src/screens.ts, docs/MOBILE_PLAN.md). */
-export default function Track() {
-  return <Stub screen="track" />;
+/** Design 01 `track` (S-99, src/screens.ts, docs/MOBILE_PLAN.md § B). */
+export default function TrackRoute() {
+  return <Track />;
 }

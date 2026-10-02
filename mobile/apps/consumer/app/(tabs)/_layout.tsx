@@ -2,6 +2,7 @@ import { Tabs } from 'expo-router/js-tabs';
 
 import { colors } from '@northline/mobile-kit';
 
+import { useCartCount } from '../../src/shop/common';
 import { TabBar } from '../../src/ui/TabBar';
 
 /**
@@ -10,10 +11,11 @@ import { TabBar } from '../../src/ui/TabBar';
  * S-99 passes the cart's item count to the badge.
  */
 export default function TabsLayout() {
+  const cartCount = useCartCount();
   return (
     <Tabs
       screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: colors.bg } }}
-      tabBar={(props) => <TabBar state={props.state} navigation={props.navigation} />}
+      tabBar={(props) => <TabBar state={props.state} navigation={props.navigation} cartCount={cartCount} />}
     >
       <Tabs.Screen name="home" />
       <Tabs.Screen name="services" />

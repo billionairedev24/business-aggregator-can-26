@@ -1,6 +1,6 @@
-import { Stub } from '../src/ui/Stub';
+import { Checkout } from '../src/shop/Checkout';
 
-/** Design 01 `checkout` — a stub until its story builds it (src/screens.ts, docs/MOBILE_PLAN.md). */
-export default function Checkout() {
-  return <Stub screen="checkout" />;
+/** Design 01 `checkout` (S-99, src/screens.ts, docs/MOBILE_PLAN.md § B). */
+export default function CheckoutRoute() {
+  return <Checkout />;
 }
