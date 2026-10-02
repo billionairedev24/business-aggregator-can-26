@@ -53,7 +53,7 @@ describe('the shell', () => {
     expect(await routerScreen.findByTestId('sign-in-prompt')).toBeTruthy();
     setServices(null);
     await start({ signedIn: true, url: '/wallet' });
-    expect(await routerScreen.findByText('This screen is being built (S-101).')).toBeTruthy();
+    expect(await routerScreen.findByText('Northline points')).toBeTruthy();
   });
 
   it('is in French on a French phone', async () => {

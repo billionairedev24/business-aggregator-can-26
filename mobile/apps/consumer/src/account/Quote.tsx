@@ -71,7 +71,9 @@ function QuoteView({ page, f, title }: { page: QuotePage; f: Format; title: stri
   const open = !q.expired && (q.state === 'sent' || q.state === 'viewed');
   const held = q.depositCents > 0 ? q.depositCents : q.totalCents;
   const [phase, setPhase] = useState<Phase>('view');
-  const [visit, setVisit] = useState<Visit>({ addressLine: location.street ? [location.street, location.city].filter(Boolean).join(', ') : (location.label ?? ''), unit: location.unit ?? '', accessNote: '', contactPhone: '' });
+  // the address saved on this phone (Location, S-98), when there is one; the person checks it before accepting
+  const saved = location.status === 'saved' && location.street;
+  const [visit, setVisit] = useState<Visit>({ addressLine: saved ? [location.street, location.city].filter(Boolean).join(', ') : '', unit: saved ? (location.unit ?? '') : '', accessNote: '', contactPhone: '' });
   const [addressError, setAddressError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -173,7 +175,7 @@ function QuoteView({ page, f, title }: { page: QuotePage; f: Format; title: stri
       await accept(proof);
     } catch (e) {
       setBusy(false);
-      setCodeError(e instanceof StepUpFailed ? t(`shop.stepUp.${e.reason}` as MessageKey) : errorMessage(e, t));
+      setCodeError(e instanceof StepUpFailed ? t(e.reason === 'wrong_code' ? 'shop.stepUp.wrong' : e.reason === 'locked' ? 'shop.stepUp.locked' : 'account.quote.elsewhere') : errorMessage(e, t));
     }
   };
 

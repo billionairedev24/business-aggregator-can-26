@@ -139,7 +139,7 @@ try {
   });
   await step('You: signed in, French, sign out', async () => {
     await page.getByRole('tab', { name: 'You' }).click();
-    await page.getByText('Signed in as Grace Hopper').waitFor();
+    await page.getByText('Grace Hopper').waitFor();
     await page.getByRole('radio', { name: 'Français' }).click();
     await page.getByRole('button', { name: 'Se déconnecter' }).waitFor();
     await noSideScroll('you');

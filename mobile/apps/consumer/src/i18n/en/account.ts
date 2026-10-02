@@ -90,6 +90,7 @@ export const account = {
   'account.quote.accessPrivate': 'Only this provider sees them, and only around the visit.',
   'account.quote.phone': 'Phone for the day (optional)',
   'account.quote.v.address': 'Enter the street address.',
+  'account.quote.elsewhere': 'This phone can’t confirm your second factor right now. Sign in again here, or accept the quote on the Northline website.',
   'account.quote.stepUpBody': "Accepting holds money in escrow. Enter the 6-digit code from your authenticator app to confirm it's you.",
   'account.quote.accepted': 'Accepted. {amount} held · booking {ref} created · {name} notified.',
   'account.quote.acceptedShort': 'Accepted — this quote is booked.',
@@ -396,5 +397,6 @@ export const account = {
   'account.sec.confirmTitle': 'Confirm it’s you',
   'account.sec.confirmBody': 'Your sign-in methods and devices need a second factor. Enter the 6-digit code from your authenticator app.',
   'account.sec.confirmFirst': 'Confirm it’s you first, then try again.',
+  'account.sec.elsewhere': 'This phone can’t confirm your second factor right now. Sign in again here, or manage security on the website.',
   'account.sec.onWebsite': 'Manage security on the website',
 };

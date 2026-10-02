@@ -86,6 +86,7 @@ export const account: { [k in keyof typeof en]: string } = {
   'account.quote.accessPrivate': 'Seul ce prestataire les voit, et seulement autour de la visite.',
   'account.quote.phone': 'Téléphone pour la journée (facultatif)',
   'account.quote.v.address': 'Entrez l’adresse.',
+  'account.quote.elsewhere': 'Ce téléphone ne peut pas confirmer votre deuxième facteur pour l’instant. Reconnectez-vous ici, ou acceptez le devis sur le site Web de Northline.',
   'account.quote.stepUpBody': 'Accepter retient de l’argent en fiducie. Entrez le code à 6 chiffres de votre application d’authentification pour confirmer que c’est bien vous.',
   'account.quote.accepted': 'Accepté. {amount} retenus · réservation {ref} créée · {name} avisé.',
   'account.quote.acceptedShort': 'Accepté — ce devis est réservé.',
@@ -382,5 +383,6 @@ export const account: { [k in keyof typeof en]: string } = {
   'account.sec.confirmTitle': 'Confirmez que c’est vous',
   'account.sec.confirmBody': 'Vos méthodes de connexion et vos appareils demandent un deuxième facteur. Entrez le code à 6 chiffres de votre application d’authentification.',
   'account.sec.confirmFirst': 'Confirmez d’abord que c’est vous, puis réessayez.',
+  'account.sec.elsewhere': 'Ce téléphone ne peut pas confirmer votre deuxième facteur pour l’instant. Reconnectez-vous ici, ou gérez la sécurité sur le site Web.',
   'account.sec.onWebsite': 'Gérer la sécurité sur le site Web',
 };

@@ -131,7 +131,7 @@ function ConfirmItsYou({ onDone }: { onDone: () => void }) {
       onDone();
     } catch (e) {
       if (e instanceof StepUpFailed && e.reason === 'elsewhere') setElsewhere(true);
-      setError(e instanceof StepUpFailed ? t(`shop.stepUp.${e.reason}` as MessageKey) : errorMessage(e, t));
+      setError(e instanceof StepUpFailed ? t(e.reason === 'wrong_code' ? 'shop.stepUp.wrong' : e.reason === 'locked' ? 'shop.stepUp.locked' : 'account.sec.elsewhere') : errorMessage(e, t));
     } finally {
       setBusy(false);
     }

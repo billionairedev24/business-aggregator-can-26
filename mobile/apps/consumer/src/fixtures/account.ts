@@ -39,10 +39,13 @@ export interface AccountFixtureState {
   security: { confirmed: boolean; authenticator: boolean; passkeys: Array<{ id: string; label: string }>; sessions: Array<{ id: string; device: string; city: string; current: boolean; lastSeenAt: number }> };
   setups: number;
   idempotent: Map<string, unknown>;
+  /** Who the auth area signed in last (a new account's name and contact, until the profile is edited here). */
+  who: () => { firstName: string; lastName: string; email: string; phone: string } | null;
+  edited: boolean;
 }
 
 /** The account with a week of activity (`seedAccount`); tests empty what they need empty. */
-export function newAccountState(shop: ShopFixtureState, now = Date.now()): AccountFixtureState {
+export function newAccountState(shop: ShopFixtureState, now = Date.now(), who: AccountFixtureState['who'] = () => null): AccountFixtureState {
   const state: AccountFixtureState = {
     shop,
     activity: [],
@@ -81,6 +84,8 @@ export function newAccountState(shop: ShopFixtureState, now = Date.now()): Accou
     },
     setups: 0,
     idempotent: new Map(),
+    who,
+    edited: false,
   };
   seedAccount(state, now);
   return state;
@@ -154,12 +159,16 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
     card: { brand: 'Visa', last4: '4471' },
     thread: { id: `th-${c.id}`, code: 'HD-1001', state: c.open ? 'in_progress' : 'resolved', notes: c.notes.map((n) => ({ at: iso(n.at), by: n.by, body: n.body, attachments: [] })) },
   });
-  const profile = () => ({ id: 'acct-ada', ...state.profile, locale: state.prefs.language === 'fr' ? 'fr-CA' : 'en-CA' });
+  const person = () => {
+    const w = state.edited ? null : state.who();
+    return w ? { ...state.profile, firstName: w.firstName, lastName: w.lastName, email: w.email, phone: w.phone } : state.profile;
+  };
+  const profile = () => ({ id: 'acct-ada', ...person(), locale: state.prefs.language === 'fr' ? 'fr-CA' : 'en-CA' });
   const addresses = () => ({ items: [...shop.addresses].sort((a, b) => Number(b.isDefault) - Number(a.isDefault)).map((a) => ({ ...a, label: state.labels.get(a.id) ?? null })) });
   const cards = () => ({ provider: shop.provider, publishableKey: shop.provider === 'stripe' ? 'pk_test_fixture' : null, items: shop.cards });
   const household = () => ({
     id: 'hh-1',
-    members: [{ userId: 'acct-ada', name: `${state.profile.firstName} ${state.profile.lastName}`, role: 'owner', you: true }, { userId: 'acct-kofi', name: 'Kofi Example', role: 'member', you: false }],
+    members: [{ userId: 'acct-ada', name: `${person().firstName} ${person().lastName}`, role: 'owner', you: true }, { userId: 'acct-kofi', name: 'Kofi Example', role: 'member', you: false }],
     plan: state.plus?.plan ?? 'none', plusSince: state.plus?.since ?? null, renewsAt: state.plus ? iso(Date.parse(state.plus.since) + 30 * DAY) : null,
   });
   const wallet = () => ({
@@ -200,7 +209,7 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
       const sec = state.security;
       if (method === 'GET' && path === '/api/auth/security') {
         return ctx.answer(200, {
-          email: state.profile.email, mfaPrimary: sec.passkeys.length ? 'passkey' : 'totp', passkeys: sec.passkeys, authenticator: sec.authenticator, authenticatorSince: null,
+          email: person().email, mfaPrimary: sec.passkeys.length ? 'passkey' : 'totp', passkeys: sec.passkeys, authenticator: sec.authenticator, authenticatorSince: null,
           backupCodesRemaining: 8, backupCodesIssuedAt: null, signIns: [],
           sessions: sec.sessions.map((s) => ({ id: s.id, device: s.device, city: s.city, ipApprox: null, method: 'otp', signedInAt: iso(s.lastSeenAt - DAY), lastSeenAt: iso(s.lastSeenAt), apps: [], current: s.current })),
         });
@@ -280,6 +289,8 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
       if (!String(b.lastName ?? '').trim()) return invalid('lastName', 'Last name is required.');
       if (String(b.email ?? '').toLowerCase() === 'taken@example.com') return invalid('email', 'That email is already used by another account.');
       const bd = b.birthday ?? null;
+      Object.assign(state.profile, person());
+      state.edited = true;
       Object.assign(state.profile, { firstName: String(b.firstName).trim(), lastName: String(b.lastName).trim(), email: String(b.email).trim(), pronouns: b.pronouns ?? null, birthday: bd });
       return ctx.answer(200, profile());
     }
