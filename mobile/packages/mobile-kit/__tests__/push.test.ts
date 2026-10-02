@@ -217,6 +217,8 @@ describe('deep links', () => {
     'javascript:alert(1)',
     'ca.northline.courier://orders/O1',
     'not a url',
+    'https://northline.ca/app/orders/%E0%A4%A', // malformed escape: ignored, not thrown (S-104)
+    'ca.northline.app://orders/%ZZ',
   ])('ignores %s', (link) => {
     expect(parseDeepLink(link, HOSTS)).toBeNull();
   });

@@ -53,7 +53,14 @@ export function parseDeepLink(link: string, hosts: readonly string[]): DeepLink 
   } else {
     return null;
   }
-  const [first, second, third] = segments.map((s) => decodeURIComponent(s));
+  // a malformed escape ("%E0") is no link of ours — decodeURIComponent would throw out of the tap handler (S-104)
+  let decoded: string[];
+  try {
+    decoded = segments.map((s) => decodeURIComponent(s));
+  } catch {
+    return null;
+  }
+  const [first, second, third] = decoded;
   const id = (value: string | undefined, length: number) => (segments.length === length && value && ID.test(value) ? value : null);
   switch (first) {
     case 'orders': {
