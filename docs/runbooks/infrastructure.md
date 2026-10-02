@@ -247,6 +247,7 @@ Other outputs, for the stories that consume them:
 | `data_stores.cache.cloud` | Google Cloud: `server_ca_certs` to trust (§ 5.2); AWS: reader endpoint |
 | `data_stores.kafka.replication_factor`, `.topic_policy`, `.cloud` | topic creation (§ 5.3, S-25); Azure: `admin_jaas_secret_name`, `event_hubs` (the event hubs created from the catalogue) |
 | `data_stores.search.cloud.deployment_id` | Elastic Cloud console / API, least-privilege user (§ 5.4) |
+| `backup` (S-114) | `scripts/dr/restore.sh` and [backups-dr.md](backups-dr.md): primary/secondary region, the database's retention, PITR window and secondary-region copy (`postgres.copy_kind`: replicated automated backups / cross-region read replica / geo-redundant backup), the bucket replicas, and the stores that are rebuilt rather than restored |
 
 ## 5. Data stores after the first apply (S-3)
 
@@ -256,7 +257,7 @@ internet. Sizes are the `data_stores` block of `envs/<cloud>/<env>/main.tf`:
 
 | | dev | staging | prod |
 |---|---|---|---|
-| PostgreSQL 17 | smallest burstable, 1 zone, 7-day backups | HA (standby in another zone), 7 days | HA, 35-day backups + PITR, deletion protection, final snapshot; Azure: geo-redundant backup to the paired Canadian region |
+| PostgreSQL 17 | smallest burstable, 1 zone, 7-day backups | HA (standby in another zone), 7 days | HA, 35-day backups + PITR, deletion protection, final snapshot; a copy in the other Canadian region (S-114, `backup.cross_region`): AWS replicated automated backups, Google Cloud a cross-region read replica, Azure geo-redundant backup ([backups-dr.md](backups-dr.md)) |
 | Valkey / Redis | 1 node | primary + 1 replica, automatic failover | primary + replicas across zones; AWS/Google Cloud keep RDB snapshots |
 | Kafka | MSK 2 × `kafka.t3.small` / Managed Kafka 3 vCPU / Event Hubs Premium 1 PU | MSK 3 brokers / 3 vCPU / 1 PU | MSK 3 × `kafka.m7g.large` / 6 vCPU / 2 PU; RF 3, `min.insync.replicas=2` |
 | Elasticsearch 9 | 2 GB, 1 zone | 2 GB × 2 zones | 4 GB × 2 zones |
@@ -413,7 +414,7 @@ cd infra/terraform/envs/<cloud>/<env> && terraform destroy
 
 - **prod** has `deletion_protection = true` (EKS/GKE deletion protection, an Azure resource lock on AKS, longest
   key/secret recovery windows): set it to `false` in `main.tf`, apply, then destroy. Never destroy prod without
-  an exported backup (S-114).
+  an exported backup ([backups-dr.md](backups-dr.md), S-114).
 - Things that outlive a destroy: **AWS** KMS keys wait 7 days (30 in prod) before deletion and Secrets Manager
   secrets 7 days (30) — re-creating the same environment within that window fails on the secret names until they
   are restored or `aws secretsmanager delete-secret --force-delete-without-recovery`; **Google Cloud** key rings are

@@ -6484,3 +6484,78 @@ Branch `fix/phase4-followups`. Three small fixes; no migration, no new configura
   or dead-lettered); mobile `account.test.tsx` +3 (heart on C → You's count and the list at once; back to follow my
   location sends `""`; French); web `settings.test.tsx` +2. The mobile and web tests fail without their fix.
 - **Not done:** `order.confirmed` as a partner webhook; per-shop lines in the `order.delivered` payload.
+
+## 2026-09-30 — S-114 Backups, point-in-time restore and DR drill
+
+Branch `ops/s-114-backups-dr`. Terraform for the three clouds, restore/masking/verification scripts, a local drill
+that was run, and [docs/runbooks/backups-dr.md](runbooks/backups-dr.md) (RPO/RTO, procedures, roles, quarterly
+drills). **No real cloud backup, copy or restore has ever run**: no cloud account exists; the Terraform is validated
+and planned offline against mocked providers, and `scripts/dr/restore.sh` has only printed its `aws`/`gcloud`/`az`
+commands (`--dry-run`). The local drill (PostgreSQL 17 + PostGIS containers) did run and passed. No migration, no
+new application variable or secret, no Helm chart change.
+
+- **Targets.** Postgres is the source of truth; prod targets: zone failure RPO 0 / RTO 5 min (HA), logical damage
+  RPO 5 min / RTO 2 h (PITR into a new instance), regional loss RPO 15 min (AWS, Google Cloud) or 1 h (Azure) / RTO
+  4 h. Object storage: versions (RPO 0), replica RPO 15 min / RTO 1 h. All targets until the first cloud drill.
+- **Restores never overwrite.** Every restore creates a new instance; switching is a reviewed `configEnv.DB_URL` in
+  `deploy/argocd/envs/<env>/values.yaml` (layered after Terraform's `infra.yaml`), so no chart change was needed and
+  the migration Job follows the same value. `DB_PASSWORD` stays (a restored database keeps its roles).
+- **Copy in the other Canadian region, per cloud** (contract input `backup_copy` on `postgres`, prod only via the
+  stack's `backup.cross_region`): AWS replicates the automated backups (`aws_db_instance_automated_backups_replication`,
+  14 days, PITR there) and prod now keeps automated backups when the instance is deleted; Google Cloud gets a
+  **cross-region read replica** instead of moving backups, because Cloud SQL backups are encrypted with the primary
+  region's CMEK key and could not be restored while that region is down; Azure uses geo-redundant backup to the paired
+  region (only settable at creation — prod already had it, so nothing is replaced). The secondary region is derived
+  from the primary (ca-central-1 ⇄ ca-west-1, northamerica-northeast1 ⇄ -northeast2, canadacentral ⇄ canadaeast), and
+  module validations refuse any other region.
+- **Keys for the copies.** "Encryption with the existing KMS keys" cannot hold literally on AWS and Google Cloud: keys
+  are regional, and a copy encrypted with the primary region's key is unreadable in the disaster it is for. The
+  existing `kms` module is instantiated a second time in the secondary region (`kms_backup`, one `data` key, the Cloud
+  SQL and Cloud Storage service agents granted); `kms/aws` now sets `region` on its resources (a no-op for the
+  primary). Azure reuses the existing `data` key: Key Vault keeps a read-only copy in the paired region.
+- **Object storage** (contract input `replica` on `storage`, prod only): S3 replication with delete markers,
+  Replication Time Control (15 min) and metrics; Google Cloud an event-driven Storage Transfer Service replication job
+  (deletes not propagated); Azure object replication to a second account (change feed on the source; deletes not
+  propagated). Replicas are versioned with lifecycle rules: a cooler class after 30 days, older versions expire after
+  90. Existing objects need one batch copy on AWS / Google Cloud after the first apply (runbook).
+- **Elasticsearch**: no repository of our own. Elastic Cloud already snapshots every deployment to `found-snapshots`;
+  the ec provider can only configure snapshots on ECE; the read model is rebuilt from Postgres with S-71's alias
+  reindex, which is mandatory after any database restore.
+- **Kafka is not backed up**: topics are transient or re-derivable, the outbox (`events.event_publication`) is in
+  Postgres, consumers dedupe; restoring old topic contents next to a restored database would replay events. Lost:
+  events Kafka accepted that no consumer processed.
+- **Valkey is not backed up**: sessions, caches, rate limits, 24 h idempotency keys (payments also record them in
+  Postgres), slot holds, live tracking. AWS's existing ElastiCache snapshots stay but must not be restored.
+- **Prod → staging masks inside prod's boundary.** The backlog's acceptance ("restore of prod snapshot to staging")
+  overrides the earlier runbook rule "staging holds synthetic data only": staging may now hold a **masked** copy, and
+  only through `scripts/dr/prod-to-staging.sh` — restore into a temporary instance in prod's account, mask in one
+  transaction, `mask-check.sql` (fails → staging untouched), dump, restore into a re-created staging database as the
+  owner role, fingerprints compared, mask check again on staging. staging.md and dev.md say so.
+- **Masking is per schema SQL** (`db/dr/mask/<schema>.sql`), not S-105's code: S-105 (privacy rights) was not merged and
+  its per-module `PersonalDataContributor`s erase one subject, not a whole database. Pseudonyms derive from row ids
+  (unique e-mails `…@example.invalid`, `+1555…` phones by row, valid unique business/GST numbers, lowercase suffixes so
+  the scan doesn't mistake them for postal codes); locations snap to ~1 km; credentials, tokens, sessions, passkeys,
+  push devices and gate codes are deleted; webhooks are switched off and pointed at `webhooks.example.invalid`; API
+  keys revoked. The immutability triggers of `trust.reviews` and `developer.audit_log` are disabled for the masking
+  transaction only (the masking runs as the table owner). Quotes stay (merchant text, immutable). Follow-up once S-105
+  merges: a test that every column a contributor erases is masked.
+- **mask-check** = invariants per table + a scan of every text/JSON column for e-mails (outside example/documentation/
+  platform domains), North American phone numbers (outside 555) and full postal codes; public business content is
+  skipped by name. It catches a new personal column holding those three kinds of value, not names or free text.
+- **Verification** (`db/dr/fingerprint.sql`): Flyway version/count/failed, exact row counts of every application table,
+  order-independent checksums (count + sum of 60-bit row-hash prefixes: constant memory) of key tables, and `asof`
+  checksums of append-only tables (ledger, audit log, Flyway history) up to a time — how a PITR copy is compared with
+  the live database.
+- **Tools**: client tools must match the server major (17); the scripts run `pg_dump`/`pg_restore`/`psql` from the
+  PostGIS image through Docker when the local ones are older (`DR_PG_TOOLS`). Restores are refused on databases with
+  other sessions; `restore.sh delete` only deletes instances named `*restore*`/`*mask*`/`*drill*`.
+- **Local drill run (2026-10-02)**: base backup + WAL archive, PITR to a restore point after a simulated disaster
+  (verified equal to the source at T; disaster undone), dump restore (identical), prod → staging masking (mask check
+  passed both sides, fingerprints identical). PITR restore 7.0 s, prod → staging 37.4 s on a 76 MB database with
+  200 000 ledger rows; numbers in the runbook's drill log. A 2 000 000-row run was not possible: the shared machine ran
+  out of disk.
+- **Not done**: no cloud run of anything; backups live in the same account/project/subscription as prod (a locked
+  vault in a separate account is the next step); secrets are not replicated to the secondary region; no
+  Elasticsearch copy in the secondary region; alerts on backup failure are listed per cloud in the runbook but not
+  wired (S-113 was not merged — link its runbook when it is); Cloud SQL Enterprise keeps 7 days of logs (35 needs
+  Enterprise Plus).
