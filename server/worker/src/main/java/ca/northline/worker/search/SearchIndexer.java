@@ -54,8 +54,7 @@ class SearchIndexer {
                 "merchants.merchant",
                 "merchants.storefront",
                 "trust.review",
-                "availability.availability",
-                "privacy.merchant"
+                "availability.availability"
             },
             groupId = GROUP)
     void on(ConsumerRecord<String, byte[]> record) {

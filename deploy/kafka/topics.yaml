@@ -88,12 +88,10 @@ topics:
     owner: developer
   - name: developer.webhook_endpoint
     owner: developer
-  - name: privacy.merchant
-    owner: privacy             # S-105: an erasure changed a business's public data (ids only; search refreshes it)
 
 consumers:
-  - group: search-indexer      # S-43: listings, dishes, kitchens, merchants, pages, reviews, weekly hours → Elasticsearch; S-105: erasures
-    topics: [catalogue.listing, food.menu, food.kitchen, merchants.merchant, merchants.storefront, trust.review, availability.availability, privacy.merchant]
+  - group: search-indexer      # S-43: listings, dishes, kitchens, merchants, pages, reviews, weekly hours → Elasticsearch
+    topics: [catalogue.listing, food.menu, food.kitchen, merchants.merchant, merchants.storefront, trust.review, availability.availability]
     retryDelaysSeconds: [10, 60, 300]
   - group: notifications        # S-27 team money notices; S-102 also customers' refund cases (payments.refund)
     topics: [payments.payout, payments.payout_account, payments.dispute, payments.refund]
