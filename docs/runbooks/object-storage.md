@@ -160,6 +160,14 @@ Least-privilege policy for the api role (`s3:ListBucket` is what makes a missing
 | RBAC | "Storage Blob Data Contributor" scoped to the **container**. For presigned URLs (not used yet): "Storage Blob Delegator" on the account (user-delegation SAS) |
 | env | `STORAGE_PROVIDER=azure`, `STORAGE_BUCKET=uploads`, `STORAGE_ENDPOINT=https://nl<env>uploads.blob.core.windows.net`; no keys |
 
+## Versions, replicas and restores (S-114)
+
+Every bucket is versioned: an overwritten or deleted object is recoverable for 30 days (older versions expire after
+that). In prod, Terraform also replicates every bucket to the other Canadian region (`replica_bucket_names` /
+`terraform output -json backup` → `storage`): S3 replication, a Storage Transfer Service replication job, or Azure
+object replication, with their own lifecycle rules. Restoring a version, failing over to the replica and what a
+database restore means for objects: [backups-dr.md](backups-dr.md).
+
 ## Checks after a deploy
 
 1. Start-up log: `Providers: storage=s3 …` and `Object storage: s3 bucket=northline-<env>-uploads …`.

@@ -13,6 +13,9 @@ locals {
     "managed-by"     = "terraform"
   }
 
+  # S-114: the other Canadian region of this cloud, for the backup copies and bucket replicas.
+  secondary_region = { "northamerica-northeast1" = "northamerica-northeast2", "northamerica-northeast2" = "northamerica-northeast1" }[var.region]
+
   context = {
     project_id  = var.project_id
     name        = local.name
@@ -225,7 +228,8 @@ module "storage" {
   kms_key       = { id = module.kms.key_ids["data"] }
   writers       = { api = module.kubernetes.workload_identities["api"].principal }
   force_destroy = var.environment == "dev"
-  depends_on    = [module.kms]
+  replica       = local.storage_replica
+  depends_on    = [module.kms, module.kms_backup]
 }
 
 module "secrets" {
@@ -236,6 +240,42 @@ module "secrets" {
   kms_key             = { id = module.kms.key_ids["data"] }
   deletion_protection = var.deletion_protection
   depends_on          = [module.kms]
+}
+
+# ---- backups and disaster recovery (S-114) ------------------------------------------------------------------------
+# prod keeps a copy of the database and of every bucket in the other Canadian region (backup.cross_region);
+# docs/runbooks/backups-dr.md has the targets, the restore paths and the drill.
+
+# The data key of the secondary region for the DR replica and the replica buckets (Cloud KMS keys are regional; the
+# primary's key would be unreachable in the disaster this copy is for). Same service agents as the primary data key.
+module "kms_backup" {
+  count   = var.backup.cross_region ? 1 : 0
+  source  = "../../modules/kms/gcp"
+  context = merge(local.context, { name = "${local.name}-backup", region = local.secondary_region })
+  keys    = { data = { usage = "encrypt" } }
+  key_users = {
+    data = {
+      sqladmin = google_project_service_identity.cmek["sqladmin.googleapis.com"].member
+      storage  = "serviceAccount:${data.google_storage_project_service_account.this.email_address}"
+    }
+  }
+  deletion_protection = var.deletion_protection
+  depends_on          = [google_project_service.this]
+}
+
+locals {
+  backup_key = var.backup.cross_region ? { id = module.kms_backup[0].key_ids["data"] } : null
+  backup_copy = var.backup.cross_region ? {
+    region         = local.secondary_region
+    kms_key        = local.backup_key
+    retention_days = var.backup.copy_retention_days
+  } : null
+  storage_replica = var.backup.cross_region ? {
+    region          = local.secondary_region
+    kms_key         = local.backup_key
+    cool_after_days = var.backup.replica_cool_after_days
+    noncurrent_days = var.backup.replica_noncurrent_days
+  } : null
 }
 
 # ---- managed data stores (S-3) ------------------------------------------------------------------------------------
@@ -250,10 +290,11 @@ module "postgres" {
   storage_gb            = var.data_stores.postgres.storage_gb
   high_availability     = var.data_stores.postgres.high_availability
   backup_retention_days = var.data_stores.postgres.backup_retention_days
+  backup_copy           = local.backup_copy
   kms_key               = { id = module.kms.key_ids["data"] }
   secret_store          = module.secrets.store
   deletion_protection   = var.deletion_protection
-  depends_on            = [module.network, module.kms] # Private Service Access; CMEK grant
+  depends_on            = [module.network, module.kms, module.kms_backup] # Private Service Access; CMEK grants
 }
 
 module "cache" {

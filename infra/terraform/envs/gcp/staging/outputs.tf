@@ -94,3 +94,8 @@ output "gitops_addon_values" {
     }
   }
 }
+
+output "backup" {
+  description = "S-114: backups, point-in-time recovery and the secondary-region copies per data store (docs/runbooks/backups-dr.md; read by scripts/dr/restore.sh)."
+  value       = module.northline.backup
+}

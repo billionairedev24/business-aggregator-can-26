@@ -105,3 +105,25 @@ variable "postgres_version" {
   type        = string
   default     = "17"
 }
+
+variable "backup_copy" {
+  description = "S-114: keep a copy of the database in the other Canadian region of the cloud, so a regional loss is recoverable; null = backups only in the primary region. AWS: automated backups replicated to that region (point-in-time restore there, retention_days); Google Cloud: a cross-region read replica to promote (Cloud SQL backups are encrypted with the primary region's key); Azure: geo-redundant backup to the paired region (geo-restore; the region must be the pair, retention follows backup_retention_days). kms_key = a key in that region (kms module instantiated there; ignored on Azure, service-managed keys)."
+  type = object({
+    region = string
+    kms_key = optional(object({
+      id = string
+    }))
+    retention_days = optional(number, 14)
+  })
+  default = null
+
+  validation {
+    condition     = var.backup_copy == null || (contains(["canadacentral", "canadaeast"], try(var.backup_copy.region, "")) && try(var.backup_copy.region, "") != var.context.region)
+    error_message = "Canadian data residency: backup_copy.region must be the other Canadian region of Azure (canadacentral ⇄ canadaeast, the paired regions)."
+  }
+
+  validation {
+    condition     = var.backup_copy == null || (try(var.backup_copy.retention_days, 0) >= 1 && try(var.backup_copy.retention_days, 0) <= 35)
+    error_message = "backup_copy.retention_days must be between 1 and 35."
+  }
+}

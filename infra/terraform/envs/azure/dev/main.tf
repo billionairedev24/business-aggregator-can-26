@@ -36,6 +36,9 @@ module "northline" {
   deletion_protection = false
   signing_key_ids     = var.signing_key_ids
 
+  # S-114: backups and point-in-time recovery in this region only; dev holds nothing to recover.
+  backup = { cross_region = false }
+
   data_stores = {
     postgres = { instance_size = "B_Standard_B1ms", storage_gb = 32, high_availability = false, backup_retention_days = 7 }
     cache    = { node_size = "Balanced_B0", replicas = 0 }

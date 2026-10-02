@@ -54,3 +54,21 @@ variable "force_destroy" {
   type        = bool
   default     = false
 }
+
+variable "replica" {
+  description = "S-114: replicate every bucket to the other Canadian region of the cloud (new and changed objects, deletes as delete markers / versions), versioned, with lifecycle rules: current objects move to a cooler class after cool_after_days, older versions expire after noncurrent_days. null = no replica. AWS: S3 replication to a bucket <name>-replica; Google Cloud: an event-driven Storage Transfer Service replication job to a bucket <name>-replica; Azure: object replication to a second storage account. kms_key = a key in that region on AWS and Google Cloud (kms module instantiated there); on Azure the primary key vault's key (Key Vault keeps a read-only copy in the paired region)."
+  type = object({
+    region = string
+    kms_key = optional(object({
+      id = string
+    }))
+    cool_after_days = optional(number, 30)
+    noncurrent_days = optional(number, 90)
+  })
+  default = null
+
+  validation {
+    condition     = var.replica == null || (contains(["ca-central-1", "ca-west-1"], try(var.replica.region, "")) && try(var.replica.region, "") != var.context.region)
+    error_message = "Canadian data residency: replica.region must be the other Canadian region of AWS (ca-central-1 ⇄ ca-west-1)."
+  }
+}

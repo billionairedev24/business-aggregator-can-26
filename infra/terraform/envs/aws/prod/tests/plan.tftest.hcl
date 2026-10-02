@@ -132,3 +132,36 @@ run "edge" {
     error_message = "gitops_addon_values must hold the identity of every platform add-on (S-6, S-17)."
   }
 }
+
+# S-114: prod keeps a copy of the database and of the buckets in the other Canadian region, never outside Canada.
+run "backups_cross_region" {
+  command = plan
+
+  assert {
+    condition     = output.backup.secondary_region == "ca-west-1" && output.backup.postgres.copy_region == "ca-west-1" && output.backup.postgres.copy_kind == "replicated-automated-backups"
+    error_message = "prod must copy the database to the other Canadian region (ca-west-1) (docs/runbooks/backups-dr.md)."
+  }
+
+  assert {
+    condition     = output.backup.postgres.retention_days == 35 && output.backup.storage.replica_region == "ca-west-1" && length(output.backup.storage.replica_buckets) == length(output.backup.storage.buckets)
+    error_message = "prod: 35 days of point-in-time recovery and a replica of every bucket in ca-west-1."
+  }
+
+  assert {
+    condition     = !output.backup.kafka.backed_up && !output.backup.cache.backed_up && output.backup.search.snapshot_repository == "found-snapshots"
+    error_message = "Kafka and Valkey are rebuilt, not restored; search snapshots go to Elastic Cloud's found-snapshots."
+  }
+}
+
+run "backups_follow_the_primary_region" {
+  command = plan
+
+  variables {
+    region = "ca-west-1"
+  }
+
+  assert {
+    condition     = output.backup.secondary_region == "ca-central-1" && output.backup.storage.replica_region == "ca-central-1"
+    error_message = "With the primary in ca-west-1, the copies go to ca-central-1 (still Canada)."
+  }
+}

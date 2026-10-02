@@ -184,7 +184,8 @@ help: ## This list, and the common variables
 ##> PROJECT TESTS  server-build/server-test: one Gradle project (api, auth, bff, worker), a test filter
 ##> DB_URL DB_USER DB_PASSWORD  database for db-* and the apps (default: server/.env, then localhost:5432/northline)
 ##> GRADLE_FLAGS  Gradle flags (default --max-workers=2)
-##> CLOUD  tf-validate: all, aws, gcp or azure
+##> CLOUD  tf-validate: all, aws, gcp or azure; dr-restore-*: the cloud of the environment
+##> DR_ENV TIME DRY_RUN  dr-restore-*: environment (default prod), restore time, DRY_RUN=1 prints the commands (S-114)
 ##> REGISTRY IMAGE_TAG PUSH  images-*: registry path, tag, PUSH=1 pushes
 
 include $(ROOT)/make/server.mk
@@ -198,4 +199,5 @@ include $(ROOT)/make/search.mk
 include $(ROOT)/make/docs.mk
 include $(ROOT)/make/deploy.mk
 include $(ROOT)/make/infra.mk
+include $(ROOT)/make/dr.mk
 include $(ROOT)/make/observability.mk

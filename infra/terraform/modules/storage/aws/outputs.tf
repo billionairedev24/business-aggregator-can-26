@@ -23,7 +23,21 @@ output "storage_encryption_key" {
   value       = var.kms_key == null ? "" : var.kms_key.id
 }
 
+output "replica_bucket_names" {
+  description = "S-114: purpose => replica bucket (container on Azure) in the secondary region; empty without a replica."
+  value       = { for k, v in aws_s3_bucket.replica : k => v.bucket }
+}
+
+output "replica_region" {
+  description = "S-114: region of the replica; empty without one."
+  value       = try(var.replica.region, "")
+}
+
 output "cloud" {
   description = "AWS-only details."
-  value       = { bucket_arns = { for k, v in aws_s3_bucket.this : k => v.arn } }
+  value = {
+    bucket_arns         = { for k, v in aws_s3_bucket.this : k => v.arn }
+    replica_bucket_arns = { for k, v in aws_s3_bucket.replica : k => v.arn }
+    replication_role    = try(aws_iam_role.replication[0].arn, "")
+  }
 }

@@ -36,6 +36,9 @@ module "northline" {
   deletion_protection = true
   signing_key_ids     = var.signing_key_ids
 
+  # S-114: copies of the database and the buckets in the other Canadian region (docs/runbooks/backups-dr.md).
+  backup = { cross_region = true, copy_retention_days = 14 }
+
   sms_origination_identity = var.sms_origination_identity
 
   data_stores = {

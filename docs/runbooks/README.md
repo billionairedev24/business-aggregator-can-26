@@ -13,6 +13,7 @@ say where a step is still manual or missing.
 | [dev.md](dev.md) | the shared cloud development environment |
 | [staging.md](staging.md) | pre-production: prod shape, Stripe test mode |
 | [prod.md](prod.md) | production (Calgary launch) |
+| [backups-dr.md](backups-dr.md) | backups, point-in-time restore and disaster recovery: RPO/RTO per data store and cloud, copies in the other Canadian region, restore scripts, the masked prod → staging refresh, verification, the local drill and the quarterly drill schedule (S-114) |
 | [infrastructure.md](infrastructure.md) | Terraform on AWS / Google Cloud / Azure: accounts, state bucket, plan/apply, outputs → variables, cost, teardown (S-2/S-3) |
 | [object-storage.md](object-storage.md) | uploads in S3 / RustFS, Cloud Storage or Azure Blob: variables, buckets, least-privilege access per cloud (S-10) |
 | [calendar-sync.md](calendar-sync.md) | Google and Microsoft calendar two-way sync: Google Cloud and Microsoft Entra app registrations, redirect and notification URIs per environment, secrets, KMS envelope key, operations (S-32) |

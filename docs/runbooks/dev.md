@@ -191,7 +191,7 @@ docker run --rm httpd:2.4-alpine htpasswd -bnBC 12 "" "$SECRET" | tr -d ':\n' | 
 - Elastic Cloud: the deployment is created by Terraform in the Canadian region of the chosen cloud (`aws-ca-central-1`, `gcp-northamerica-northeast1`, `azure-canadacentral`).
 - Leave Canada by design, disclosed in the Privacy Policy (`design/10`): Stripe (payments, identity), the SMS provider, Google/Apple sign-in, and the email provider unless it runs in Canada (Amazon SES in `ca-central-1` does).
 - No personal data in event payloads (CLAUDE.md), so Kafka holds ids only; logs must not carry PII (S-112). Telemetry (traces, metrics, logs) goes to a backend in a Canadian region: X-Ray / CloudWatch in `ca-central-1`, Cloud Trace / Monitoring / Logging with the project's Canadian location, Application Insights in Canada Central, or an OTLP backend hosted in Canada ([observability.md](observability.md#canadian-data-residency)).
-- Staging and dev hold synthetic data only; never restore a production backup into them.
+- Dev holds synthetic data only; never restore a production backup into it. Staging may hold a **masked** prod copy ([backups-dr.md](backups-dr.md#prod-snapshot-to-staging), S-114).
 
 ## Blockers
 
@@ -213,7 +213,7 @@ What still stops a complete deployment. Under the `local`/`test` profiles each o
 | Google / Apple sign-in (auth) | real registrations from `GOOGLE_*` / `APPLE_*` (S-18) | without them the buttons say "not available" | — ([federation.md](federation.md)) |
 | Search (api, worker) | Elasticsearch 9 at `ES_URIS`: indices (S-42), indexer (S-43), API (S-44) ([search.md](search.md)) | work once an Elastic Cloud deployment exists and `ES_*` are set; never run against Elastic Cloud yet | — |
 
-Terraform for the cloud foundation exists but is unapplied (S-2, [infrastructure.md](infrastructure.md)). The managed data stores are in the same Terraform, also unapplied (S-3). Delivery pieces that don't exist yet: observability (S-111–S-113), backups and DR drill (S-114). Container images and the Helm chart exist since S-14 ([deploy.md](deploy.md)), Kafka topic provisioning since S-25 ([infrastructure.md § 5.3](infrastructure.md#53-kafka-topics-and-credentials)), Argo CD definitions since S-15 ([gitops.md](gitops.md), not installed in any cloud yet), the edge since S-17 ([edge.md](edge.md): Envoy Gateway, cert-manager, external-dns); the worker now has a health-only HTTP port (8084).
+Terraform for the cloud foundation exists but is unapplied (S-2, [infrastructure.md](infrastructure.md)). The managed data stores are in the same Terraform, also unapplied (S-3). Delivery pieces that don't exist yet: observability (S-111–S-113). Backups, point-in-time restore and the DR tooling exist since S-114 ([backups-dr.md](backups-dr.md); drilled locally, never run in a cloud). Container images and the Helm chart exist since S-14 ([deploy.md](deploy.md)), Kafka topic provisioning since S-25 ([infrastructure.md § 5.3](infrastructure.md#53-kafka-topics-and-credentials)), Argo CD definitions since S-15 ([gitops.md](gitops.md), not installed in any cloud yet), the edge since S-17 ([edge.md](edge.md): Envoy Gateway, cert-manager, external-dns); the worker now has a health-only HTTP port (8084).
 
 ## Deploy, migrate, roll back
 

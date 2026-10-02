@@ -93,6 +93,7 @@ resource "aws_db_instance" "this" {
   deletion_protection                   = var.deletion_protection
   skip_final_snapshot                   = !var.deletion_protection
   final_snapshot_identifier             = var.deletion_protection ? "${local.name}-final" : null
+  delete_automated_backups              = !var.deletion_protection # S-114: prod keeps its backups if the instance goes
   performance_insights_enabled          = true
   performance_insights_kms_key_id       = try(var.kms_key.id, null)
   performance_insights_retention_period = 7
@@ -118,4 +119,14 @@ resource "aws_secretsmanager_secret" "app" {
 resource "aws_secretsmanager_secret_version" "app" {
   secret_id     = aws_secretsmanager_secret.app.id
   secret_string = random_password.app.result
+}
+
+# S-114: automated backups (snapshots + transaction logs) replicated to the other Canadian region, encrypted there with
+# that region's key: point-in-time restore in the secondary region within retention_days (docs/runbooks/backups-dr.md).
+resource "aws_db_instance_automated_backups_replication" "copy" {
+  count                  = var.backup_copy == null ? 0 : 1
+  region                 = try(var.backup_copy.region, null)
+  source_db_instance_arn = aws_db_instance.this.arn
+  kms_key_id             = try(var.backup_copy.kms_key.id, null)
+  retention_period       = try(var.backup_copy.retention_days, null)
 }

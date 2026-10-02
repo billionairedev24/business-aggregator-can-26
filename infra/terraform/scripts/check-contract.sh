@@ -6,8 +6,9 @@ cd "$(dirname "$0")/../modules"
 
 status=0
 normalise_vars() {
-  # Drop the cloud-specific region list and its message; everything else must match byte for byte.
-  sed -E -e '/contains\(\[.*\], var\.context\.region\)/d' -e '/Canadian data residency/d' "$1/variables.tf"
+  # Drop the cloud-specific region lists (context.region, and S-114's secondary region of backup_copy / replica) and
+  # their messages; everything else must match byte for byte.
+  sed -E -e '/contains\(\[.*\], (try\()?var\.[a-z_.]*region/d' -e '/Canadian data residency/d' "$1/variables.tf"
 }
 output_names() {
   grep -hoE '^output "[^"]+"' "$1"/*.tf | sort

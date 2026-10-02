@@ -118,3 +118,14 @@ variable "sms_origination_identity" {
     error_message = "sms_origination_identity must be the ARN of an End User Messaging phone number or pool in a Canadian region."
   }
 }
+
+variable "backup" {
+  description = "S-114 backups and disaster recovery (docs/runbooks/backups-dr.md). cross_region = keep a copy of the database and of every bucket in the other Canadian region of this cloud (prod); copy_retention_days = how long that region keeps the database's replicated backups (AWS); replica_cool_after_days / replica_noncurrent_days = the replica buckets' lifecycle."
+  type = object({
+    cross_region            = optional(bool, false)
+    copy_retention_days     = optional(number, 14)
+    replica_cool_after_days = optional(number, 30)
+    replica_noncurrent_days = optional(number, 90)
+  })
+  default = {}
+}
