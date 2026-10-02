@@ -39,7 +39,7 @@ describe('content security policy (S-110, payment-page scripts)', () => {
     const inventory = new Set(SCRIPT_INVENTORY.map(s => s.origin));
     const loaded = new Set<string>();
     for (const file of sources(SRC)) {
-      for (const m of readFileSync(file, 'utf8').matchAll(/\.src\s*=\s*['"`](https?:\/\/[^'"`/]+)/g)) loaded.add(m[1]);
+      for (const m of readFileSync(file, 'utf8').matchAll(/\.src\s*=\s*['"`](https?:\/\/[^'"`/]+)/g)) loaded.add(m[1]!);
     }
     expect(loaded.size).toBeGreaterThan(0);
     for (const origin of loaded) expect(inventory, `${origin} is loaded but not in SCRIPT_INVENTORY`).toContain(origin);
@@ -55,7 +55,7 @@ describe('POST /csp-report', () => {
 
   it('logs one line per violation without queries', () => {
     const [line] = cspReportLines(legacy);
-    const parsed = JSON.parse(line);
+    const parsed = JSON.parse(line!);
     expect(parsed).toMatchObject({ 'event.dataset': 'csp.violation', 'csp.directive': 'script-src-elem',
       'csp.blocked': 'https://evil.example/skim.js', 'csp.document': 'https://northline.test/cart' });
     expect(line).not.toContain('secret');
@@ -68,7 +68,7 @@ describe('POST /csp-report', () => {
       { type: 'deprecation', body: {} },
     ]);
     expect(cspReportLines(body)).toHaveLength(1);
-    expect(JSON.parse(cspReportLines(body)[0])['csp.blocked']).toBe('inline');
+    expect(JSON.parse(cspReportLines(body)[0]!)['csp.blocked']).toBe('inline');
     expect(cspReportLines('not json')).toEqual([]);
     expect(cspReportLines('')).toEqual([]);
   });
