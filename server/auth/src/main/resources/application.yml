@@ -86,7 +86,8 @@ northline:
     consumer-login-page: ${CONSUMER_ORIGIN:http://localhost:3000}/sign-in
     # S-87: couriers sign in on the consumer site's page too (a courier is a person, not a business): the courier app's
     # authorization request lands there and its continueTo goes back to the app — never the Studio's sign-in.
-    consumer-clients: [ consumer-bff, courier-app ]
+    # S-97: so does the consumer app (mobile-consumer).
+    consumer-clients: [ consumer-bff, courier-app, mobile-consumer ]
     # S-90: Northline staff sign in on the platform console (console-bff's authorization requests).
     console-login-page: ${CONSOLE_ORIGIN:http://localhost:3200}/sign-in
     console-clients: [ console-bff ]

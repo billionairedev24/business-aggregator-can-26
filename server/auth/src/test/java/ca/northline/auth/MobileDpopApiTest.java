@@ -414,12 +414,13 @@ class MobileDpopApiTest extends AuthIntegrationTest {
         }
 
         @Test
-        void theAppsSignInPage_goesBackToTheAppsAuthorizationRequest() throws Exception {
+        void theAppsSignInPage_isTheConsumerSites_andGoesBackToTheAppsAuthorizationRequest() throws Exception {
             var user = register(newPerson());
             var browser = new MockHttpSession();
+            // S-97: the consumer app's people sign in on the consumer site's page, not the Studio's
             mvc.perform(authorize(browser, APP, APP_REDIRECT, APP_SCOPES))
                     .andExpect(status().is3xxRedirection())
-                    .andExpect(redirectedUrl("http://localhost:3100/sign-in"));
+                    .andExpect(redirectedUrl("http://localhost:3000/sign-in"));
 
             clock.advanceSeconds(Totp.PERIOD_SECONDS);
             postJson(
