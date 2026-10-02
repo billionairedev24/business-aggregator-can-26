@@ -98,8 +98,9 @@ class CustomerNotificationsTest extends WorkerIntegrationTest {
         assertThat(texts.to(amara.phone())).isEmpty(); // order updates: no SMS by default
 
         EmailMessage email = emails.to(amara.email()).getFirst();
-        assertThat(email.subject()).isEqualTo("Out for delivery");
-        assertThat(email.text()).contains("Your order is out for delivery.", "http://localhost:3000/app/orders/" + order);
+        assertThat(email.subject()).isEqualTo("Out for delivery — Northline"); // an order may span several shops
+        assertThat(email.text())
+                .contains("Your order is out for delivery.", "http://localhost:3000/app/orders/" + order);
         assertThat(email.headers().get(EmailMessage.LIST_UNSUBSCRIBE)).contains("/api/v1/email/unsubscribe?t=");
         // nothing about the customer goes to the push provider
         assertThat(push.toString()).doesNotContain(amara.email(), amara.phone(), "Amara");
@@ -210,7 +211,8 @@ class CustomerNotificationsTest extends WorkerIntegrationTest {
         assertThat(byType.get("booking.confirmed").link())
                 .isEqualTo(URI.create("http://localhost:3000/app/bookings/" + booking));
         assertThat(byType.get("quote.sent").title()).isEqualTo("New quote from " + merchantName(merchant));
-        assertThat(byType.get("quote.sent").link()).isEqualTo(URI.create("http://localhost:3000/app/quotes/qt_" + quote));
+        assertThat(byType.get("quote.sent").link())
+                .isEqualTo(URI.create("http://localhost:3000/app/quotes/qt_" + quote));
         awaitProcessed(confirmed);
         assertThat(texts.to(amara.phone())).hasSize(1); // booking reminders: SMS on by default
         assertThat(emails.to(amara.email())).isEmpty(); // neither row emails by default

@@ -126,7 +126,9 @@ public final class PersonalNotices {
                 key,
                 (f, business) -> new Object[] {business, startsAt == null ? "" : f.dateTime(startsAt)},
                 new Notice.Push(
-                        "/app/bookings/" + bookingId, Map.of("type", key, "bookingId", bookingId), "booking:" + bookingId));
+                        "/app/bookings/" + bookingId,
+                        Map.of("type", key, "bookingId", bookingId),
+                        "booking:" + bookingId));
     }
 
     private @Nullable Notice quote(String eventId, String type, JsonNode data, String quoteId) {
@@ -177,7 +179,9 @@ public final class PersonalNotices {
                     caseNumber, business, f.money(amount), respondBy == null ? "" : f.dateTime(respondBy)
                 },
                 new Notice.Push(
-                        "/app/cases/" + caseNumber, Map.of("type", key, "caseNumber", caseNumber), "case:" + caseNumber));
+                        "/app/cases/" + caseNumber,
+                        Map.of("type", key, "caseNumber", caseNumber),
+                        "case:" + caseNumber));
     }
 
     private @Nullable Notice courier(String eventId, String type, JsonNode data, String runId, String key) {

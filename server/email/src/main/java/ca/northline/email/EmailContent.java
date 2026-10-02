@@ -723,7 +723,7 @@ public sealed interface EmailContent {
      * email off (Account › Notifications), so it carries the unsubscribe link.
      *
      * @param businessName the shop or provider, or "Northline" for an order from several shops
-     * @param heading the subject and heading, already in the reader's language
+     * @param heading the heading (and the subject, with the business), already in the reader's language
      * @param body the line, already in the reader's language
      */
     record CustomerUpdate(String businessName, String heading, String body, URI link) implements EmailContent {
@@ -745,7 +745,7 @@ public sealed interface EmailContent {
 
         @Override
         public List<Object> subjectArgs(EmailFormat format) {
-            return List.of(heading);
+            return List.of(heading, businessName);
         }
 
         @Override
