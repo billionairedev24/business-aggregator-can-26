@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import ca.northline.platform.logging.Redactor;
 import ca.northline.platform.pci.CardData;
 import ca.northline.support.SharedPostgres;
-import java.nio.file.Path;
 import java.sql.DriverManager;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -89,7 +88,7 @@ class CardDataScanTest {
     @Test
     void eventAndWebhookContractsHaveNoCardFields() {
         var dirs = List.of(
-                Path.of("src/main/resources/events"),
+                REPO.resolve("server/api/src/main/resources/events"),
                 REPO.resolve("docs/spec/webhooks"),
                 REPO.resolve("server/event-contracts/src"));
         assertThat(CardDataScanner.jsonSchemaProperties(dirs)).isEmpty();
