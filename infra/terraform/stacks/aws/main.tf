@@ -50,6 +50,9 @@ locals {
     GOOGLE_CLIENT_SECRET     = "google-client-secret"
     APPLE_PRIVATE_KEY        = "apple-private-key"
     SMS_AUTH_TOKEN           = "sms-auth-token"
+    # S-102 push (worker): the APNs .p8 signing key (PEM) and the Firebase service account JSON key.
+    PUSH_APNS_KEY            = "push-apns-key"
+    PUSH_FCM_SERVICE_ACCOUNT = "push-fcm-service-account"
     # S-12 Stripe webhook signing secrets, S-13 email (unsubscribe HMAC key, SendGrid/Azure key, SMTP relay password).
     STRIPE_WEBHOOK_SECRET         = "stripe-webhook-secret"
     STRIPE_CONNECT_WEBHOOK_SECRET = "stripe-connect-webhook-secret"

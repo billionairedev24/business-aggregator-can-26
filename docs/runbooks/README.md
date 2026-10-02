@@ -208,6 +208,10 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `SMS_PROVIDER`, `SMS_FROM` | ✓ | ✓ | | ✓ | staging and prod (`local` refused there; `dev` may keep `local`). api: team invitations, worker: notifications (S-27) |
 | `SMS_ACCOUNT_ID`, `SMS_AUTH_TOKEN` | ✓ | ✓ | | ✓ | with `SMS_PROVIDER=twilio` |
 | `SMS_VOICE_FROM`, `SMS_REGION`, `SMS_ENDPOINT` | ✓ | ✓ | | ✓ | no (`= SMS_FROM`; SDK default region; provider API) |
+| `PUSH_PROVIDER` | | | | ✓ | prod: `native` (`local` refused there; dev and staging may keep `local` until the Apple and Firebase accounts exist — S-102, [push.md](push.md)) |
+| `PUSH_APNS_KEY_ID`, `PUSH_APNS_TEAM_ID`, `PUSH_APNS_KEY`, `PUSH_FCM_SERVICE_ACCOUNT` | | | | ✓ | with `PUSH_PROVIDER=native`; `PUSH_APNS_KEY` and `PUSH_FCM_SERVICE_ACCOUNT` are secrets ([push.md § Set-up](push.md#set-up)) |
+| `PUSH_APNS_URL`, `PUSH_APNS_CONSUMER_TOPIC`, `PUSH_APNS_COURIER_TOPIC`, `PUSH_FCM_URL`, `PUSH_STALE_AFTER` | | | | ✓ | no (`https://api.push.apple.com` — `https://api.sandbox.push.apple.com` for development builds; `ca.northline.app`; `ca.northline.courier`; `https://fcm.googleapis.com`; `90d`) |
+| `CONSUMER_ORIGIN` (worker) | | | | ✓ | staging and prod (the chart sets it from `urls.consumer`): the deep links in customers' and couriers' pushes and emails (S-102) |
 | `TRUSTED_PROXIES` | | ✓ | | | no (private ranges + loopback; narrow it to the ingress subnet) |
 | `RATE_LIMIT_STORE` | | ✓ | | | no (`redis`; `memory` only under `local`/`test`) |
 | `RATE_LIMIT_WHEN_UNAVAILABLE` | | ✓ | | | no (`closed` in staging/prod, `open` elsewhere — S-20, [Rate limits](#rate-limits-s-9)) |

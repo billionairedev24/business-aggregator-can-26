@@ -98,8 +98,13 @@ apps:
   worker:
     env:
       EMAIL_FROM: "Northline <no-reply@northline.ca>"   # S-27 notifications (payout.failed email)
+      # S-102 push: APNs (production endpoint) + FCM; prod refuses `local`. PUSH_APNS_KEY_ID and PUSH_APNS_TEAM_ID
+      # come from the operator's overlay with the key (docs/runbooks/push.md § Set-up).
+      PUSH_PROVIDER: native
     secretEnv:
       EMAIL_UNSUBSCRIBE_KEY: true   # S-27: required under staging/prod (the same key as the api)
+      PUSH_APNS_KEY: true           # S-102: required in prod
+      PUSH_FCM_SERVICE_ACCOUNT: true  # S-102: required in prod
     replicas: 2
     resources:
       requests: { cpu: 250m, memory: 768Mi }
