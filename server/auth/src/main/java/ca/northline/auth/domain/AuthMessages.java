@@ -8,6 +8,9 @@ public final class AuthMessages {
 
     // validation-rules.md § Registration (exact)
     public static final String FIRST_NAME_REQUIRED = "First name is required.";
+    /** S-105: the account was erased at the person's request. */
+    public static final String ACCOUNT_DELETED = "This account has been deleted.";
+
     public static final String LAST_NAME_REQUIRED = "Last name is required.";
     public static final String PHONE_REQUIRED = "Mobile number is required for verification.";
     public static final String PHONE_FORMAT = "Enter a valid Canadian mobile, e.g. +1 403 555 0148.";

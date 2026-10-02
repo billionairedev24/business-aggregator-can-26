@@ -577,7 +577,7 @@ describe('Journey C’s rules', () => {
       { ...base, slug: 'a', tier: 'master', instantBook: true, fromCents: 7900, nextAvailable: '2026-10-02T02:00:00Z' },
       { ...base, slug: 'b', tier: 'trusted', instantBook: false, fromCents: 9900, nextAvailable: '2026-10-02T06:00:00Z' },
     ];
-    expect(applyFilters(items, new Set(['today'])).map((p) => p.slug)).toEqual(['a']);
+    expect(applyFilters(items, new Set(['today']), now).map((p) => p.slug)).toEqual(['a']);
     expect(applyFilters(items, new Set(['under80', 'master'])).map((p) => p.slug)).toEqual(['a']);
     expect(applyFilters(items, new Set(['instant', 'master'])).map((p) => p.slug)).toEqual(['a']);
     expect(nextSlot(en.t, en.time, 'en', '2026-10-02T02:00:00Z', BUSINESS_ZONE, now)).toBe('Today 9:00 p.m.');

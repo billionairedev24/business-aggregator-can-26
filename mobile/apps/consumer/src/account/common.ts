@@ -31,6 +31,7 @@ export const KEYS = {
   cases: ['account', 'cases'] as const,
   case: (id: string) => ['account', 'case', id] as const,
   security: ['account', 'security'] as const,
+  privacy: ['account', 'privacy'] as const,
 };
 
 /**

@@ -192,6 +192,9 @@ public class SignInService {
     }
 
     private SignedIn succeed(UserAccount account, Factor factor, Client client) {
+        if (account.erased()) {
+            throw new FlowRejected(Reason.UNAUTHENTICATED, AuthMessages.ACCOUNT_DELETED);
+        }
         flow.remove(FlowStore.SIGN_IN);
         var sessionId = signIns.succeeded(account.id(), factor.code(), factor.isSecondFactor(), client);
         federation.complete(account.id(), false); // S-18: "Continue with Google/Apple" waiting for this factor

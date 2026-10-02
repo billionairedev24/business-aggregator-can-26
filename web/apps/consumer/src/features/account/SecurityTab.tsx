@@ -9,7 +9,6 @@ import { enrolPasskey, StepUpFailed, stepUpWithCode, stepUpWithPasskey } from '.
 import { signInHref, useSession, useSignOut } from '../session/api';
 import { accountSummaryQuery, useAccountSummary } from './api';
 import { FormSkeleton } from './ProfileTab';
-import { EXPORT_HREF } from './settingsApi';
 import { useSettingsT, type SettingsT } from './settingsMessages';
 import { tabHref } from './tabs';
 
@@ -151,7 +150,7 @@ function SecurityView({ security, sid, phone }: { security: Security; sid: strin
       </ul>
       {error ? <p className="nl-error" role="alert">{t(`err_${error}`)}</p> : null}
       <div className="nl-acct-actions">
-        <a className="btn btn-secondary" href={EXPORT_HREF} download="northline-my-data.json">{t('download')}</a>
+        <a className="btn btn-secondary" href={`${tabHref('profile')}#your-data`}>{t('download')}</a>
         <Button type="button" variant="ghost" className="nl-danger" disabled={busy}
           onClick={() => setConfirm({ title: t('everywhereTitle'), body: t('everywhereBody'), run: async () => { if (others.length) await revokeOtherSessions(sid); await signOut('/'); } })}>
           {t('signOutEverywhere')}

@@ -32,6 +32,12 @@ public interface ObjectStore {
     void delete(String key);
 
     /**
+     * Removes every object whose key starts with {@code <prefix>/} — a person's or a business's uploads, on erasure
+     * (S-105). Idempotent; returns how many objects were removed.
+     */
+    int deleteAll(String prefix);
+
+    /**
      * A URL anyone holding it can GET the object with until {@code ttl} (≤ {@link #MAX_PRESIGN_TTL}) passes. Hand it out
      * only after the caller's own authorization check — the URL itself carries no user.
      */

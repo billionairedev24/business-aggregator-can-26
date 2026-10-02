@@ -11,6 +11,7 @@ import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.blob.models.BlobHttpHeaders;
 import com.azure.storage.blob.models.BlobStorageException;
+import com.azure.storage.blob.models.ListBlobsOptions;
 import com.azure.storage.blob.options.BlobParallelUploadOptions;
 import com.azure.storage.blob.sas.BlobSasPermission;
 import com.azure.storage.blob.sas.BlobServiceSasSignatureValues;
@@ -109,6 +110,17 @@ final class AzureBlobObjectStore implements ObjectStore {
     @Override
     public void delete(String key) {
         container.getBlobClient(key).deleteIfExists();
+    }
+
+    @Override
+    public int deleteAll(String prefix) {
+        var deleted = 0;
+        for (var item : container.listBlobs(new ListBlobsOptions().setPrefix(prefix + "/"), null)) {
+            if (container.getBlobClient(item.getName()).deleteIfExists()) {
+                deleted++;
+            }
+        }
+        return deleted;
     }
 
     @Override

@@ -8,6 +8,7 @@ import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.HttpMethod;
 import com.google.cloud.storage.Storage;
+import com.google.cloud.storage.Storage.BlobListOption;
 import com.google.cloud.storage.Storage.BlobTargetOption;
 import com.google.cloud.storage.Storage.SignUrlOption;
 import com.google.cloud.storage.StorageOptions;
@@ -102,6 +103,18 @@ final class GcsObjectStore implements ObjectStore, AutoCloseable {
     @Override
     public void delete(String key) {
         storage.delete(BlobId.of(bucket, key));
+    }
+
+    @Override
+    public int deleteAll(String prefix) {
+        var deleted = 0;
+        for (var blob :
+                storage.list(bucket, BlobListOption.prefix(prefix + "/")).iterateAll()) {
+            if (storage.delete(blob.getBlobId())) {
+                deleted++;
+            }
+        }
+        return deleted;
     }
 
     @Override

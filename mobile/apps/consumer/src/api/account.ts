@@ -83,6 +83,16 @@ export interface Profile {
   id: string; firstName: string; lastName: string; email?: string | null; phone?: string | null; locale: string;
   memberSince: string; pronouns?: string | null; birthday?: string | null; reliability?: number | null; erasureRequestedAt?: string | null;
 }
+/** A privacy request (S-105): a copy of one's data, a correction, or deleting the account — under the province's law. */
+export type PrivacyType = 'access' | 'correction' | 'erasure';
+export interface PrivacyRequest {
+  id: string; reference: string; type: PrivacyType;
+  state: 'awaiting_verification' | 'verified' | 'in_progress' | 'completed' | 'rejected' | 'withdrawn';
+  law: { code: string; name: string; shortName: string; authority: string; authorityUrl: string };
+  receivedAt: string; dueAt: string; extendedTo?: string | null; scheduledFor?: string | null; completedAt?: string | null;
+  codeSentTo?: string | null; decision?: string | null; export?: { ready: boolean; expiresAt?: string | null } | null;
+}
+export interface DownloadLink { url: string; summaryUrl: string; expiresAt: string }
 export interface ProfileChange { firstName: string; lastName: string; email: string; pronouns: string | null; birthday: string | null }
 export interface Address { id: string; label?: string | null; street: string; unit?: string | null; city: string; province: string; postal: string; note?: string | null; isDefault: boolean }
 export interface AddressInput { label?: string; street: string; unit?: string; city: string; province: string; postal: string; note?: string }
@@ -189,7 +199,18 @@ export const accountApi = (api: ApiClient) => ({
 
   profile: () => need(api.get<Profile>('/me/profile')),
   saveProfile: (c: ProfileChange) => need(api.patch<Profile>('/me/profile', { json: c })),
-  requestErasure: () => need(api.post<Profile>('/me/erasure-request')),
+  /** Privacy requests (S-105): `X-Step-Up` verifies at once; without it the api texts a code. */
+  privacyRequests: async () => (await api.get<{ items: PrivacyRequest[] }>('/me/privacy-requests'))?.items ?? [],
+  correctableFields: async () => (await api.get<{ items: string[] }>('/me/privacy-requests/correctable-fields'))?.items ?? [],
+  openPrivacyRequest: (r: { type: PrivacyType; corrections?: { field: string; value: string }[]; note?: string }, stepUp?: string) =>
+    need(api.post<PrivacyRequest>('/me/privacy-requests', { json: r, headers: stepUp ? { 'X-Step-Up': stepUp } : undefined })),
+  verifyPrivacyRequest: (requestId: string, v: { code: string } | { stepUp: string }) =>
+    need(api.post<PrivacyRequest>(`/me/privacy-requests/${id(requestId)}/verify`, 'code' in v ? { json: { code: v.code } } : { headers: { 'X-Step-Up': v.stepUp } })),
+  resendPrivacyCode: (requestId: string) => need(api.post<PrivacyRequest>(`/me/privacy-requests/${id(requestId)}/verification-code`)),
+  withdrawPrivacyRequest: (requestId: string) => need(api.post<PrivacyRequest>(`/me/privacy-requests/${id(requestId)}/withdraw`)),
+  downloadLink: (requestId: string) => need(api.post<DownloadLink>(`/me/privacy-requests/${id(requestId)}/download-link`)),
+  /** The export behind a link (`/api/v1/public/privacy-exports/…`; the token is the authorization). */
+  exportData: (link: DownloadLink) => api.get<unknown>(link.url.replace(/^\/api\/v1/, ''), { auth: 'none' }),
   addresses: async () => (await api.get<{ items: Address[] }>('/me/addresses'))?.items ?? [],
   addAddress: (a: AddressInput) => need(api.post<Address>('/me/addresses', { json: a })),
   defaultAddress: async (addressId: string) => (await api.post<{ items: Address[] }>(`/me/addresses/${id(addressId)}/default`))?.items ?? [],
@@ -209,8 +230,6 @@ export const accountApi = (api: ApiClient) => ({
   saveNotifications: (c: NotificationChange) => need(api.put<NotificationPrefs>('/me/notifications', { json: c })),
   prefs: () => need(api.get<Prefs>('/me/preferences')),
   savePrefs: (c: Partial<Prefs>) => need(api.patch<Prefs>('/me/preferences', { json: c })),
-  /** "Download my data": the JSON export, as text (the phone's share sheet saves or sends it). */
-  exportData: () => api.get<unknown>('/me/export'),
 
   favourites: async () => (await api.get<{ items: Favourite[] }>('/me/favourites'))?.items ?? [],
   removeFavourite: (merchantId: string) => api.delete<void>(`/me/favourites/${id(merchantId)}`),

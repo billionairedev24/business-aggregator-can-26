@@ -252,6 +252,12 @@ Notes:
   (`PUT /api/v1/me/devices/{installationId}`) are stored all the same. Real pushes from your laptop need an Apple `.p8`
   key and a Firebase service account: `PUSH_PROVIDER=native` and the `PUSH_*` variables of `server/.env.example`
   (development builds: `PUSH_APNS_URL=https://api.sandbox.push.apple.com`). [push.md](push.md)
+- **Privacy requests (S-105):** Account › Profile › Your data (consumer site), You › Personal details › Your data
+  (app) and Studio › Settings › Security ask for a copy, a correction or deletion. Without northline-auth the step-up
+  proof is `dev` (`VITE_NL_DEV_STEP_UP=1`); with real auth the code to confirm is texted to the account's mobile and
+  shows in the api log (`SMS_PROVIDER=local`). The pipeline runs every minute (`PRIVACY_RUN_INTERVAL`); an erasure waits
+  `PRIVACY_ERASURE_GRACE` (7 days) unless the console's Privacy requests screen starts it (the seeded admin opens it).
+  Sealed exports go to a temp folder under `STORAGE_PROVIDER=local`. [privacy-requests.md](privacy-requests.md)
 - **Custom domains (S-31):** `DOMAINS_DNS_PROVIDER=local` and `DOMAINS_EDGE_PROVIDER=local` (the defaults): enter a
   domain in Studio › Business page › Custom domain, then **Simulate DNS records →** (dev builds only) writes its CNAME
   and TXT records into the api's in-memory zone and checks them; a published page of an approved business goes live at

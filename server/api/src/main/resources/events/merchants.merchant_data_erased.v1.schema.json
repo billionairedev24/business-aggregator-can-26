@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "northline:merchants.merchant_data_erased:1",
+  "type": "object",
+  "required": ["eventId", "occurredAt", "aggregateId", "requestId"],
+  "additionalProperties": true,
+  "properties": {
+    "eventId": { "type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$" },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "aggregateId": { "type": "string", "description": "merchants.merchants.id of the business whose public data changed" },
+    "requestId": { "type": "string", "description": "privacy.requests.id (never whose data was erased)" }
+  }
+}

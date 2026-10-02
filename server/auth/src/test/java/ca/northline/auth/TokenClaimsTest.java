@@ -5,9 +5,11 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ca.northline.auth.application.ErasedAccounts;
 import ca.northline.auth.domain.Factor;
 import ca.northline.auth.support.AuthIntegrationTest;
 import com.github.f4b6a3.ulid.UlidCreator;
@@ -17,7 +19,9 @@ import java.security.MessageDigest;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -164,6 +168,53 @@ class TokenClaimsTest extends AuthIntegrationTest {
         mvc.perform(authorize(CONSOLE).session(new MockHttpSession()).with(authentication(singleFactor)))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("http://localhost:3200/sign-in"));
+    }
+
+    @Autowired
+    ErasedAccounts erasedAccounts;
+
+    /** S-105: an account the privacy pipeline closed gets no token, and its auth rows are purged. */
+    @Test
+    void erasedAccount_getsNoTokens_andItsAuthDataIsPurged() throws Exception {
+        var user = register(newPerson());
+        var location = mvc.perform(authorize(STUDIO).session(user.session()))
+                .andExpect(status().is3xxRedirection())
+                .andReturn()
+                .getResponse()
+                .getRedirectedUrl();
+        var code = UriComponentsBuilder.fromUriString(Objects.requireNonNull(location))
+                .build()
+                .getQueryParams()
+                .getFirst("code");
+        jdbc.sql("UPDATE identity.users SET status = 'erased' WHERE id = :u")
+                .param("u", user.userId())
+                .update();
+
+        mvc.perform(post("/oauth2/token")
+                        .with(httpBasic(STUDIO.id(), STUDIO.secret()))
+                        .param("grant_type", "authorization_code")
+                        .param("code", code)
+                        .param("redirect_uri", STUDIO.redirect())
+                        .param("code_verifier", VERIFIER))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("invalid_grant"));
+
+        assertThat(erasedAccounts.purge(1000)).isPositive();
+        for (var table : List.of(
+                "auth.oauth2_authorization WHERE principal_name = :u",
+                "auth.totp_secrets WHERE user_id = :u",
+                "auth.backup_codes WHERE user_id = :u",
+                "auth.user_entities WHERE name = :u")) {
+            assertThat(jdbc.sql("SELECT count(*) FROM " + table)
+                            .param("u", user.userId())
+                            .query(Integer.class)
+                            .single())
+                    .as(table)
+                    .isZero();
+        }
+        assertThat(erasedAccounts.purge(1000))
+                .as("nothing left for that account")
+                .isZero();
     }
 
     private MockHttpServletRequestBuilder authorize(Client client) throws Exception {

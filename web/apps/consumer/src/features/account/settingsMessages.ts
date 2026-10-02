@@ -28,9 +28,8 @@ export const useSettingsT = defineMessages({
     mobileHint: 'Your verified number signs you in. To change it, sign in with the new number’s code.',
     reliabilityTitle: 'Reliability score · {score}', reliabilityNone: 'Reliability score',
     reliabilityBody: 'Providers see this before accepting a job. Built from on-time sign-offs, no-shows and disputes over 12 months.',
-    saveChanges: 'Save changes', deleteAccount: 'Delete account…',
-    deleteTitle: 'Delete your account?', deleteBody: 'We’ll close your account and erase your personal data within 30 days, except what the law makes us keep (receipts, tax records). Open orders and bookings must finish first.',
-    deleteConfirm: 'Ask to delete my account', deleteRequested: 'Deletion requested on {date}. Our team will confirm by email.',
+    saveChanges: 'Save changes',
+    deleteRequested: 'You asked to delete your account on {date}. See “Your data” below.',
     v_firstName: 'First name is required.', v_lastName: 'Last name is required.', v_email: 'Email is required.', v_emailFormat: 'That doesn’t look like an email address.',
     v_birthday: 'Enter a birthday like 03/14 (month / day).', v_nameLong: 'Keep names under 60 characters.',
 
@@ -141,9 +140,8 @@ export const useSettingsT = defineMessages({
     mobileHint: 'Votre numéro vérifié sert à vous connecter. Pour le changer, connectez-vous avec le code du nouveau numéro.',
     reliabilityTitle: 'Score de fiabilité · {score}', reliabilityNone: 'Score de fiabilité',
     reliabilityBody: 'Les prestataires le voient avant d’accepter un travail. Calculé sur 12 mois : approbations à temps, absences et litiges.',
-    saveChanges: 'Enregistrer', deleteAccount: 'Supprimer le compte…',
-    deleteTitle: 'Supprimer votre compte?', deleteBody: 'Nous fermerons votre compte et effacerons vos renseignements personnels dans les 30 jours, sauf ce que la loi nous oblige à garder (reçus, dossiers fiscaux). Les commandes et réservations en cours doivent d’abord se terminer.',
-    deleteConfirm: 'Demander la suppression', deleteRequested: 'Suppression demandée le {date}. Notre équipe confirmera par courriel.',
+    saveChanges: 'Enregistrer',
+    deleteRequested: 'Vous avez demandé la suppression de votre compte le {date}. Voyez « Vos données » ci-dessous.',
     v_firstName: 'Le prénom est requis.', v_lastName: 'Le nom est requis.', v_email: 'Le courriel est requis.', v_emailFormat: 'Ce courriel ne semble pas valide.',
     v_birthday: 'Entrez une date comme 03/14 (mois / jour).', v_nameLong: 'Gardez les noms sous 60 caractères.',
 

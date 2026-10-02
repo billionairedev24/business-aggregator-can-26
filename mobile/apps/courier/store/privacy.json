@@ -8,8 +8,8 @@
   "encryptedInTransit": true,
   "accountDeletion": {
     "inApp": false,
-    "webUrl": null,
-    "status": "courier accounts are created by Northline, not in the app; deletion on request until S-105 (privacy rights) builds it — confirm with review whether Apple 5.1.1(v) applies"
+    "webUrl": "https://northline.ca/account?tab=profile#your-data",
+    "status": "courier accounts are created by Northline, not in the app (5.1.1(v) covers apps that create accounts); a courier deletes the account on the consumer site's Your data page (S-105) — confirm with review"
   },
   "collected": {
     "PreciseLocation": {

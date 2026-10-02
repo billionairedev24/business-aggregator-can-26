@@ -1,6 +1,5 @@
 package ca.northline.account.web;
 
-import ca.northline.account.application.ExportMyData;
 import ca.northline.account.application.Preferences.Change;
 import ca.northline.account.application.Preferences.ManagePreferences;
 import ca.northline.account.application.Preferences.Prefs;
@@ -11,8 +10,6 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.CacheControl;
-import org.springframework.http.ContentDisposition;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -21,13 +18,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Language &amp; region, Dietary &amp; accessibility and "Download my data" (S-59):
+ * Language &amp; region and Dietary &amp; accessibility (S-59). "Download my data" is a privacy access request since
+ * S-105 ({@code /api/v1/me/privacy-requests}):
  *
  * <pre>
  * GET   /api/v1/me/preferences   {language, province, units, timeFormat, dietary, allergies, accessibility, accessNotes, display}
  * PATCH /api/v1/me/preferences   any of those (only what is sent changes; codes outside the lists → 422;
  *                                province "" = follow my location again, as "" clears allergies and notes)
- * GET   /api/v1/me/export        the person's account data as a JSON download
  * </pre>
  */
 @RestController
@@ -36,7 +33,6 @@ import org.springframework.web.bind.annotation.RestController;
 class MyPreferencesController {
 
     private final ManagePreferences preferences;
-    private final ExportMyData export;
 
     record PreferencesRequest(
             @Nullable String language,
@@ -76,19 +72,5 @@ class MyPreferencesController {
                         b.accessibility(),
                         b.accessNotes(),
                         b.display()));
-    }
-
-    @Operation(summary = "Download the caller's account data (JSON)")
-    @GetMapping("/export")
-    ResponseEntity<ExportMyData.Export> export(CurrentUser user) {
-        return ResponseEntity.ok()
-                .cacheControl(CacheControl.noStore())
-                .header(
-                        HttpHeaders.CONTENT_DISPOSITION,
-                        ContentDisposition.attachment()
-                                .filename("northline-my-data.json")
-                                .build()
-                                .toString())
-                .body(export.of(user.userId()));
     }
 }

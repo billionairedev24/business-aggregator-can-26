@@ -13,7 +13,7 @@ Interactive version: `design/05 Architecture.dc.html`.
 | web/apps/studio, web/apps/console | TanStack Router SPA | Business studio, platform console |
 
 ## Modules (server/api, package ca.northline.<module>, schema <module>)
-identity · region · merchants · catalogue · food · availability · booking · orders · fulfilment · payments · trust · messaging · search (projection only) · ai (S-129: the `LlmClient` port, budgets, the tool loop; features live in the modules that own the data and use only `ai.api`) · shared (kernel). Boundaries verified by `ApplicationModules.verify()`.
+identity · region · merchants · catalogue · food · availability · booking · orders · fulfilment · payments · trust · messaging · search (projection only) · ai (S-129: the `LlmClient` port, budgets, the tool loop; features live in the modules that own the data and use only `ai.api`) · privacy (S-105: access, correction and erasure requests; every module with personal data takes part through `shared.privacy.PersonalDataContributor`) · shared (kernel). Boundaries verified by `ApplicationModules.verify()`.
 
 ## Event management
 1. Aggregate changes state and publishes a `DomainEvent` in the same transaction.

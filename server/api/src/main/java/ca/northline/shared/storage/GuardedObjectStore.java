@@ -54,6 +54,11 @@ final class GuardedObjectStore implements ObjectStore, AutoCloseable {
     }
 
     @Override
+    public int deleteAll(String prefix) {
+        return provider.deleteAll(ObjectKeys.requireValid(prefix));
+    }
+
+    @Override
     public URI presignGet(String key, Duration ttl) {
         if (ttl.isNegative() || ttl.isZero() || ttl.compareTo(MAX_PRESIGN_TTL) > 0) {
             throw new IllegalArgumentException(

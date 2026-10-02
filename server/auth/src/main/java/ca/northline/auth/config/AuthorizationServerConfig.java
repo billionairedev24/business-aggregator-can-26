@@ -257,6 +257,7 @@ class AuthorizationServerConfig {
                 }
                 return;
             }
+            claims.requireNotErased(user.getName()); // S-105
             var factors = UserClaimsService.factorsOf(user);
             if (OAuth2TokenType.ACCESS_TOKEN.equals(ctx.getTokenType())) {
                 var audience = new ArrayList<>(List.of(ctx.getRegisteredClient().getClientId()));

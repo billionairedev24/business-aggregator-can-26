@@ -20,6 +20,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.ServerSideEncryption;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
@@ -125,6 +126,23 @@ final class S3ObjectStore implements ObjectStore, AutoCloseable {
     @Override
     public void delete(String key) {
         s3.deleteObject(b -> b.bucket(bucket).key(key));
+    }
+
+    @Override
+    public int deleteAll(String prefix) {
+        var deleted = 0;
+        for (var page : s3.listObjectsV2Paginator(b -> b.bucket(bucket).prefix(prefix + "/"))) {
+            var keys = page.contents().stream()
+                    .map(o -> ObjectIdentifier.builder().key(o.key()).build())
+                    .toList();
+            if (!keys.isEmpty()) {
+                // at most 1000 keys per page, the DeleteObjects limit
+                s3.deleteObjects(
+                        b -> b.bucket(bucket).delete(d -> d.objects(keys).quiet(true)));
+                deleted += keys.size();
+            }
+        }
+        return deleted;
     }
 
     @Override
