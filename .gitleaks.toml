@@ -1,0 +1,30 @@
+# Secret scanning (S-104, `make security-secrets`): gitleaks' default rules over the whole git history, minus what is
+# known to be fake. Every entry says why; a real secret never belongs here — rotate it (docs/runbooks/secrets.md) and
+# rewrite history instead.
+title = "Northline gitleaks configuration"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Test fixtures, documented local-only keys and secret names (not values)"
+paths = [
+  # tests use obviously fake keys and tokens (CLAUDE.md, the brief's security rules)
+  '''(^|/)src/test/''',
+  '''(^|/)__tests__/''',
+  '''\.test\.tsx?$''',
+  '''(^|/)src/fixtures/''',
+]
+regexes = [
+  # the base64 of "northline-…-dev/local/kind-…-key-32byt…": local/test-only keys, refused outside local (CryptoConfiguration,
+  # WebhookSecretBox, the kind values files)
+  '''bm9ydGhsaW5l[A-Za-z0-9+/=]{16,}''',
+  # PEM markers in parsing code and doc comments, not keys
+  '''-----BEGIN PRIVATE KEY-----(\}|", "")''',
+  # Terraform: names of secrets in the secret store, not their values
+  '''^"?smtp-password"?$''',
+  # the local on-call export token in docs/runbooks/local.md
+  '''local-oncall-token''',
+  # a Postgres advisory-lock key
+  '''0x4e4c_4f41_7574_6863L''',
+]

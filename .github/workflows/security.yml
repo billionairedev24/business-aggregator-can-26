@@ -1,0 +1,90 @@
+# S-104 — security scans (docs/security/README.md; findings: docs/security/findings.md).
+#
+# MANUAL ONLY: CI credits are depleted, so this workflow runs only when started from
+# Actions › security › Run workflow (or `gh workflow run security.yml`). It is never triggered by pushes or pull requests;
+# to change that, see docs/runbooks/ci.md § Enabling automatic runs.
+#
+#   scan   make security-tools + make security-scan: gitleaks (history), CycloneDX SBOMs + osv-scanner (Gradle and pnpm),
+#          semgrep (java, typescript, react, secrets), checkov (Terraform, rendered chart), kube-score. Reports uploaded.
+#   dast   optional: the api under the `local` profile + scripted negative tests + ZAP's API scan of the public spec.
+name: security
+
+on:
+  workflow_dispatch:
+    inputs:
+      dast:
+        description: Also start the api (local profile, Postgres service) and run the negative tests and ZAP
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scan:
+    name: secrets, dependencies, SAST, IaC
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      MAVEN_MIRROR_URL: ${{ vars.MAVEN_MIRROR_URL }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0            # gitleaks scans the whole history
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@v5
+      - uses: azure/setup-helm@v4
+      - name: make security-tools
+        run: make security-tools
+      - name: make security-scan
+        run: make security-scan GRADLE_FLAGS="--max-workers=2 --console=plain"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports
+          path: build/security/
+          retention-days: 30
+
+  dast:
+    name: negative tests + ZAP (local profile)
+    if: ${{ inputs.dast }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_DB: northline
+          POSTGRES_USER: northline
+          POSTGRES_PASSWORD: northline
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U northline" --health-interval 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@v5
+      - name: start the api (local profile)
+        run: |
+          make server-assemble GRADLE_FLAGS="--max-workers=2 --console=plain"
+          nohup java -jar server/api/build/libs/api.jar --spring.profiles.active=local > api.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf localhost:8080/actuator/health && break; sleep 5; done
+      - name: make security-dast
+        run: make security-dast API=http://localhost:8080
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dast-reports
+          path: |
+            build/security/zap/
+            api.log
+          retention-days: 30
