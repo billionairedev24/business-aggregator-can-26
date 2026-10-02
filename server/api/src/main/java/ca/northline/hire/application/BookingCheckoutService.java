@@ -13,8 +13,10 @@ import ca.northline.hire.application.BookingCheckout.Day;
 import ca.northline.hire.application.BookingCheckout.HoldSlot;
 import ca.northline.hire.application.BookingCheckout.HoldView;
 import ca.northline.hire.application.BookingCheckout.ReleaseSlot;
+import ca.northline.hire.application.BookingCheckout.SignOffBooking;
 import ca.northline.hire.application.BookingCheckout.Slot;
 import ca.northline.hire.application.BookingCheckout.StartCheckout;
+import ca.northline.hire.application.BookingCheckout.Step;
 import ca.northline.hire.application.BookingCheckout.ViewBooking;
 import ca.northline.hire.application.BookingCheckout.ViewCalendar;
 import ca.northline.hire.domain.BookingRequest;
@@ -53,7 +55,7 @@ import tools.jackson.databind.json.JsonMapper;
 @Service
 @RequiredArgsConstructor
 class BookingCheckoutService
-        implements ViewCalendar, HoldSlot, ReleaseSlot, StartCheckout, ConfirmBooking, ViewBooking {
+        implements ViewCalendar, HoldSlot, ReleaseSlot, StartCheckout, ConfirmBooking, ViewBooking, SignOffBooking {
 
     /** Design 06: "free cancellation until 12 h before". */
     static final Duration FREE_CANCEL = Duration.ofHours(12);
@@ -92,7 +94,8 @@ class BookingCheckoutService
             String slug, String serviceId, @Nullable LocalDate from, int days, @Nullable String customerId) {
         var provider = provider(slug);
         var offer = offer(provider, serviceId);
-        var today = LocalDate.now(clock.withZone(region.zone(provider.province())));
+        var zone = region.zone(provider.province());
+        var today = LocalDate.now(clock.withZone(zone));
         var start = from == null || from.isBefore(today) ? today : from;
         var duration = offer.durationMin();
         return new Calendar(
@@ -106,7 +109,8 @@ class BookingCheckoutService
                                 d.slots().stream()
                                         .map(s -> new Slot(s.startsAt(), s.free()))
                                         .toList()))
-                        .toList());
+                        .toList(),
+                zone.getId());
     }
 
     @Override
@@ -230,7 +234,12 @@ class BookingCheckoutService
     @Override
     public Confirmation booking(String customerId, String bookingId) {
         var b = bookings.find(customerId, bookingId).orElseThrow(() -> new NotFound("booking", bookingId));
-        return confirmation(b);
+        return confirmation(customerId, b);
+    }
+
+    @Override
+    public Confirmation signOff(String customerId, String bookingId) {
+        return confirmation(customerId, bookings.signOff(customerId, bookingId));
     }
 
     private Confirmation book(
@@ -265,14 +274,23 @@ class BookingCheckoutService
                 taxCents,
                 escrowId,
                 priceCents == 0 ? null : hold.startsAt().minus(FREE_CANCEL)));
-        return confirmation(booked);
+        return confirmation(hold.customerId(), booked);
     }
 
-    private Confirmation confirmation(CustomerBookings.CustomerBooking b) {
+    private Confirmation confirmation(String customerId, CustomerBookings.CustomerBooking b) {
         var provider =
                 providers.published(List.of(b.merchantId()), "en").stream().findFirst();
         var memberId = b.memberUserId();
         var member = memberId == null ? null : people.people(List.of(memberId)).get(memberId);
+        var progress = bookings.progress(customerId, b.id())
+                .orElseGet(() -> new CustomerBookings.Progress(List.of(), null, 0));
+        var completedAt = progress.steps().stream()
+                .filter(s -> "completed".equals(s.type()))
+                .map(CustomerBookings.Step::at)
+                .reduce((first, last) -> last);
+        var releasesAt = b.paid() && "completed".equals(b.state())
+                ? completedAt.map(EscrowKind.SERVICE::releaseAt).orElse(null)
+                : null;
         return new Confirmation(
                 b.id(),
                 b.ref(),
@@ -287,7 +305,14 @@ class BookingCheckoutService
                 b.priceCents(),
                 b.taxCents(),
                 b.paid() ? b.depositCents() + b.taxCents() : 0,
-                b.freeCancelUntil());
+                b.freeCancelUntil(),
+                b.merchantId(),
+                b.state(),
+                region.zone(province(b.merchantId())).getId(),
+                progress.steps().stream().map(s -> new Step(s.type(), s.at())).toList(),
+                progress.report(),
+                progress.photoCount(),
+                releasesAt);
     }
 
     private SlotHolds.Hold ownHold(String customerId, String holdId) {

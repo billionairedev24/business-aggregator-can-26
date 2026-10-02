@@ -1,6 +1,7 @@
 package ca.northline.booking.api;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
@@ -73,4 +74,34 @@ public interface CustomerBookings {
 
     /** The customer's own booking; empty for anyone else's. */
     Optional<CustomerBooking> find(String customerId, String bookingId);
+
+    /**
+     * How the customer's job went so far (consumer app S-100: the day-of ETA and the sign-off): the steps the member
+     * recorded, the written report and how many completion photos there are. Empty for anyone else's booking.
+     */
+    Optional<Progress> progress(String customerId, String bookingId);
+
+    /**
+     * The customer signs the completed job off (consumer app S-100): the job moves to {@code signed_off} and
+     * {@link BookingSignedOff} is published, which releases the escrow at once. Signing off again answers the same; a job
+     * that isn't completed is a 409 {@code job_state}; someone else's booking is a 404.
+     */
+    CustomerBooking signOff(String customerId, String bookingId);
+
+    /**
+     * @param type {@code en_route | on_site | completed | signed_off}
+     * @param at when the member (or the customer, for sign-off) recorded it
+     */
+    record Step(String type, Instant at) {}
+
+    /**
+     * @param steps oldest first; only the job-flow steps (no GPS, no approvals, no photos)
+     * @param report the member's written report at completion
+     * @param photoCount completion photos (the customer can't download them yet: MOBILE_PLAN § API gaps)
+     */
+    record Progress(List<Step> steps, @Nullable String report, int photoCount) {
+        public Progress {
+            steps = List.copyOf(steps);
+        }
+    }
 }

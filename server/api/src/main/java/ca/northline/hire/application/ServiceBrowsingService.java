@@ -60,6 +60,7 @@ class ServiceBrowsingService implements ListCategories, ViewCategory, ListProvid
     private final RatingQuery ratings;
     private final QualityQuery quality;
     private final CategoryOrder order;
+    private final RegionDefaults region;
 
     @Override
     public Landing landing(String lang) {
@@ -164,7 +165,8 @@ class ServiceBrowsingService implements ListCategories, ViewCategory, ListProvid
                 cheapest.map(Offer::pricingMode).orElse("quote"),
                 offered.stream().anyMatch(Offer::instantBook),
                 slots.next(p.merchantId(), shortest).orElse(null),
-                zones);
+                zones,
+                region.zone(region.province(p.province())).getId());
     }
 
     /** Offers of published, active service businesses only. */

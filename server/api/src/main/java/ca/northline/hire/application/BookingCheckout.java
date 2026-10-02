@@ -53,7 +53,16 @@ public final class BookingCheckout {
         Confirmation booking(String customerId, String bookingId);
     }
 
-    public record Calendar(String serviceId, int durationMin, List<Day> days) {}
+    /**
+     * "Release payment" (consumer app, design 01 {@code signoff}): the customer signs the completed job off and the
+     * escrow releases at once. Signing off again answers the same.
+     */
+    public interface SignOffBooking {
+        Confirmation signOff(String customerId, String bookingId);
+    }
+
+    /** @param timeZone the business's time zone (its province's, from the region model): days and times are read in it */
+    public record Calendar(String serviceId, int durationMin, List<Day> days, String timeZone) {}
 
     public record Day(LocalDate date, @Nullable String closed, int free, List<Slot> slots) {}
 
@@ -79,7 +88,16 @@ public final class BookingCheckout {
             @Nullable String publishableKey,
             @Nullable Confirmation booking) {}
 
-    /** The booked job as the confirmation shows it. */
+    /**
+     * The booked job as the confirmation shows it, and how it went so far (consumer app S-100: day-of ETA, sign-off).
+     *
+     * @param state {@code confirmed | en_route | on_site | completed | signed_off | disputed | cancelled}
+     * @param timeZone the business's time zone: the booking's times are shown in it
+     * @param steps the job-flow steps so far, oldest first
+     * @param report the member's written report at completion
+     * @param photoCount completion photos the member took
+     * @param releasesAt when the escrow releases by itself (48 h after completion) while the customer hasn't signed off
+     */
     public record Confirmation(
             String bookingId,
             String ref,
@@ -94,5 +112,15 @@ public final class BookingCheckout {
             long priceCents,
             long taxCents,
             long heldCents,
-            @Nullable Instant freeCancelUntil) {}
+            @Nullable Instant freeCancelUntil,
+            String merchantId,
+            String state,
+            String timeZone,
+            List<Step> steps,
+            @Nullable String report,
+            int photoCount,
+            @Nullable Instant releasesAt) {}
+
+    /** @param type {@code en_route | on_site | completed | signed_off} */
+    public record Step(String type, Instant at) {}
 }

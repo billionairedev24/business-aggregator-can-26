@@ -86,6 +86,7 @@ public final class BrowseServices {
      * @param rebookPct re-book rate (percent)
      * @param fromCents the lowest price in the category (hourly rate for hourly work), null when everything is quoted
      * @param nextAvailable the earliest free start for the shortest service in the category
+     * @param timeZone the business's time zone (its province's): {@code nextAvailable} is read in it
      */
     public record ProviderCard(
             String merchantId,
@@ -103,5 +104,6 @@ public final class BrowseServices {
             String pricingMode,
             boolean instantBook,
             @Nullable Instant nextAvailable,
-            List<String> zones) {}
+            List<String> zones,
+            String timeZone) {}
 }

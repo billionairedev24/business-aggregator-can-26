@@ -1,6 +1,7 @@
 package ca.northline.payments.application;
 
 import ca.northline.booking.api.BookingProgressed.BookingCompleted;
+import ca.northline.booking.api.BookingSignedOff;
 import ca.northline.payments.api.EscrowLifecycle;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,7 +12,8 @@ import org.springframework.stereotype.Component;
  * Starts the escrow release clock when a job is completed (CLAUDE.md: services release 48 h after completion). Food
  * handoff is wired from the food module ({@code food.application.KitchenEscrowRelease}) to keep module dependencies
  * acyclic. Money is only held when the customer's payment was authorized, so work without an escrow (e.g. seeded
- * or cash-free test data) is skipped rather than failed. {@link EscrowLifecycle} is idempotent, so retried
+ * or cash-free test data) is skipped rather than failed. The customer's sign-off (consumer app, S-100) releases at
+ * once. {@link EscrowLifecycle} is idempotent, so retried
  * publications are safe.
  */
 @Slf4j
@@ -26,6 +28,13 @@ class EscrowFulfilmentListener {
     @ApplicationModuleListener
     void on(BookingCompleted event) {
         fulfil(BOOKING, event.aggregateId(), event);
+    }
+
+    @ApplicationModuleListener
+    void on(BookingSignedOff event) {
+        if (!escrow.confirmedIfHeld(BOOKING, event.aggregateId(), event.occurredAt())) {
+            log.debug("No escrow for booking {} signed off; nothing to release", event.aggregateId());
+        }
     }
 
     private void fulfil(String refType, String refId, ca.northline.shared.DomainEvent event) {

@@ -96,7 +96,8 @@ class ProviderPageService implements ViewProvider, ListProviderReviews {
                 areas.zones(List.of(p.merchantId())).getOrDefault(p.merchantId(), List.of()),
                 offered.isEmpty() ? null : slots.next(p.merchantId(), shortest).orElse(null),
                 taxRates.bpsFor(region.province(p.province())),
-                reviews.newest(p.merchantId(), FIRST_REVIEWS, 0));
+                reviews.newest(p.merchantId(), FIRST_REVIEWS, 0),
+                region.zone(region.province(p.province())).getId());
     }
 
     @Override

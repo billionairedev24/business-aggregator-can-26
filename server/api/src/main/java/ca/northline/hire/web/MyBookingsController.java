@@ -6,6 +6,7 @@ import ca.northline.hire.application.BookingCheckout.Confirmation;
 import ca.northline.hire.application.BookingCheckout.HoldSlot;
 import ca.northline.hire.application.BookingCheckout.HoldView;
 import ca.northline.hire.application.BookingCheckout.ReleaseSlot;
+import ca.northline.hire.application.BookingCheckout.SignOffBooking;
 import ca.northline.hire.application.BookingCheckout.StartCheckout;
 import ca.northline.hire.application.BookingCheckout.ViewBooking;
 import ca.northline.hire.application.BookingCheckout.ViewCalendar;
@@ -52,6 +53,7 @@ class MyBookingsController {
     private final StartCheckout checkouts;
     private final ConfirmBooking confirmations;
     private final ViewBooking bookings;
+    private final SignOffBooking signOffs;
     private final IdempotentRequests idempotent;
 
     record HoldRequest(
@@ -117,6 +119,15 @@ class MyBookingsController {
     @GetMapping("/api/v1/me/bookings/{bookingId}")
     Confirmation booking(@PathVariable String bookingId, CurrentUser user) {
         return bookings.booking(user.userId(), bookingId);
+    }
+
+    /**
+     * "Release payment" (consumer app S-100): signs the completed job off and releases the escrow at once. Repeating it
+     * answers the same booking; a job that isn't completed yet is 409 {@code job_state}.
+     */
+    @PostMapping("/api/v1/me/bookings/{bookingId}/sign-off")
+    Confirmation signOff(@PathVariable String bookingId, CurrentUser user) {
+        return signOffs.signOff(user.userId(), bookingId);
     }
 
     static ResponseEntity<String> json(IdempotentRequests.Outcome answer) {

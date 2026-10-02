@@ -169,6 +169,7 @@ class ServicesBrowsingApiTest extends IntegrationTest {
                     .andExpect(jsonPath("$.items[?(@.merchantId == '%s')].zones[0]".formatted(master.merchantId()))
                             .value("Kensington"))
                     .andExpect(jsonPath("$.items[*].nextAvailable", everyItem(notNullValue())))
+                    .andExpect(jsonPath("$.items[*].timeZone", everyItem(notNullValue())))
                     .andExpect(jsonPath("$.items[?(@.merchantId == '%s')].instantBook".formatted(master.merchantId()))
                             .value(true));
         }
