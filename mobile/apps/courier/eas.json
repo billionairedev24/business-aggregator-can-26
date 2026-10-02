@@ -62,12 +62,20 @@
     }
   },
   "submit": {
-    "production": {
+    "base": {
       "ios": {
         "ascAppId": "REPLACE_WITH_APP_STORE_CONNECT_APP_ID",
-        "appleTeamId": "REPLACE_WITH_APPLE_TEAM_ID"
-      },
-      "android": { "track": "internal", "releaseStatus": "draft" }
+        "appleTeamId": "REPLACE_WITH_APPLE_TEAM_ID",
+        "metadataPath": "./store/store.config.json"
+      }
+    },
+    "internal": {
+      "extends": "base",
+      "android": { "track": "internal", "releaseStatus": "completed" }
+    },
+    "production": {
+      "extends": "base",
+      "android": { "track": "production", "releaseStatus": "draft" }
     }
   }
 }

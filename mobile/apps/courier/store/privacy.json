@@ -1,0 +1,45 @@
+{
+  "$comment": "S-103: the App Privacy (App Store Connect) and Data safety (Google Play) answers for the courier app, entered by hand in each console (neither has an API for them). Keep equal to the privacy manifest in app.config.ts — the release check compares them. docs/runbooks/mobile-release.md § Privacy answers.",
+  "tracking": false,
+  "sharedWithThirdParties": [],
+  "serviceProviders": [
+    { "name": "Apple Push Notification service, Firebase Cloud Messaging", "data": ["DeviceID"], "why": "\"New run\" and \"Run changed\" notifications: the push token, the words, a link and ids (docs/runbooks/push.md)." }
+  ],
+  "encryptedInTransit": true,
+  "accountDeletion": {
+    "inApp": false,
+    "webUrl": null,
+    "status": "courier accounts are created by Northline, not in the app; deletion on request until S-105 (privacy rights) builds it — confirm with review whether Apple 5.1.1(v) applies"
+  },
+  "collected": {
+    "PreciseLocation": {
+      "linked": true, "tracking": false, "optional": false, "ephemeral": false,
+      "applePurposes": ["App Functionality"], "playPurposes": ["App functionality"],
+      "why": "While a run is open, also in the background (a visible notification on Android): customers follow their order. Only the latest position is kept, never a history."
+    },
+    "PhotosorVideos": {
+      "linked": true, "tracking": false, "optional": true, "ephemeral": false,
+      "applePurposes": ["App Functionality"], "playPurposes": ["App functionality"],
+      "why": "The photo at the door as proof of delivery (one of three proofs)."
+    },
+    "UserID": {
+      "linked": true, "tracking": false, "optional": false, "ephemeral": false,
+      "applePurposes": ["App Functionality"], "playPurposes": ["App functionality", "Account management"],
+      "why": "The courier's account id behind every call."
+    },
+    "DeviceID": {
+      "linked": true, "tracking": false, "optional": true, "ephemeral": false,
+      "applePurposes": ["App Functionality"], "playPurposes": ["App functionality"],
+      "why": "The push token and a random installation id (never a hardware id), only when notifications are allowed."
+    },
+    "OtherUserContent": {
+      "linked": true, "tracking": false, "optional": true, "ephemeral": false,
+      "applePurposes": ["App Functionality"], "playPurposes": ["App functionality"],
+      "why": "The customer's signature at the door (one of three proofs) and pickup notes."
+    }
+  },
+  "notCollected": [
+    "Name, email or phone (the courier signs in on Northline's site; the app does not send them)", "Contacts", "Audio",
+    "Browsing history", "Search history", "Purchase history", "Payment info", "Advertising data", "Crash or performance data"
+  ]
+}

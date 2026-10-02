@@ -1,0 +1,76 @@
+{
+  "$comment": "S-103: the App Privacy (App Store Connect) and Data safety (Google Play) answers for the consumer app, entered by hand in each console (neither has an API for them). Keep equal to the privacy manifest in app.config.ts — the release check compares them. docs/runbooks/mobile-release.md § Privacy answers.",
+  "tracking": false,
+  "sharedWithThirdParties": [],
+  "serviceProviders": [
+    { "name": "Stripe", "data": ["PaymentInfo"], "why": "Card payments: the card is entered in Stripe's payment sheet and goes to Stripe, never to Northline (processor acting for Northline, not sharing)." },
+    { "name": "Apple Push Notification service, Firebase Cloud Messaging", "data": ["DeviceID"], "why": "Delivering notifications: the push token, the words, a link and ids — no name, email, phone or address (docs/runbooks/push.md)." }
+  ],
+  "encryptedInTransit": true,
+  "accountDeletion": {
+    "inApp": false,
+    "webUrl": null,
+    "status": "no self-service deletion yet — S-105 (privacy rights: access, correction and erasure) builds it; both stores require it before the first review"
+  },
+  "collected": {
+    "Name": {
+      "linked": true, "tracking": false, "optional": false, "ephemeral": false,
+      "applePurposes": ["App Functionality"], "playPurposes": ["App functionality", "Account management"],
+      "why": "The account (Create account) and the name on orders and bookings."
+    },
+    "EmailAddress": {
+      "linked": true, "tracking": false, "optional": false, "ephemeral": false,
+      "applePurposes": ["App Functionality"], "playPurposes": ["App functionality", "Account management"],
+      "why": "The account; receipts and order emails."
+    },
+    "PhoneNumber": {
+      "linked": true, "tracking": false, "optional": false, "ephemeral": false,
+      "applePurposes": ["App Functionality"], "playPurposes": ["App functionality", "Account management", "Fraud prevention, security, and compliance"],
+      "why": "Sign-in codes by SMS or call; the courier or provider can reach the customer about a delivery or visit."
+    },
+    "PhysicalAddress": {
+      "linked": true, "tracking": false, "optional": false, "ephemeral": false,
+      "applePurposes": ["App Functionality"], "playPurposes": ["App functionality"],
+      "why": "The delivery address and where a service visit happens."
+    },
+    "PreciseLocation": {
+      "linked": true, "tracking": false, "optional": true, "ephemeral": false,
+      "applePurposes": ["App Functionality"], "playPurposes": ["App functionality"],
+      "why": "Only after \"Use my location\" and only while the app is open: suggests the delivery address and shows what serves it. Never shared with businesses."
+    },
+    "UserID": {
+      "linked": true, "tracking": false, "optional": false, "ephemeral": false,
+      "applePurposes": ["App Functionality"], "playPurposes": ["App functionality", "Account management"],
+      "why": "The Northline account id behind every signed-in call."
+    },
+    "DeviceID": {
+      "linked": true, "tracking": false, "optional": true, "ephemeral": false,
+      "applePurposes": ["App Functionality"], "playPurposes": ["App functionality"],
+      "why": "The push token and a random installation id (never a hardware id), only when notifications are allowed (PUT /me/devices)."
+    },
+    "PurchaseHistory": {
+      "linked": true, "tracking": false, "optional": false, "ephemeral": false,
+      "applePurposes": ["App Functionality"], "playPurposes": ["App functionality"],
+      "why": "Orders, bookings, quotes and refunds on the account."
+    },
+    "PaymentInfo": {
+      "linked": true, "tracking": false, "optional": false, "ephemeral": false,
+      "applePurposes": ["App Functionality"], "playPurposes": ["App functionality", "Fraud prevention, security, and compliance"],
+      "why": "Collected by Stripe's SDK in the app's payment sheet; Northline keeps the card brand and last 4 only."
+    },
+    "CustomerSupport": {
+      "linked": true, "tracking": false, "optional": true, "ephemeral": false,
+      "applePurposes": ["App Functionality"], "playPurposes": ["App functionality"],
+      "why": "What the customer writes when reporting a problem with an order or booking."
+    },
+    "OtherUserContent": {
+      "linked": true, "tracking": false, "optional": true, "ephemeral": false,
+      "applePurposes": ["App Functionality"], "playPurposes": ["App functionality"],
+      "why": "Notes on a booking or quote request (the vehicle, access instructions) sent to the business."
+    }
+  },
+  "notCollected": [
+    "Health and fitness", "Contacts", "Photos or videos", "Audio", "Browsing history", "Search history (queries are answered, not kept)",
+    "Sensitive info", "Advertising data", "Crash or performance data (no crash reporter in the app yet)", "Coarse location beyond the precise location above"
+  ]
+}

@@ -3,8 +3,9 @@ node_modules/
 dist/
 dist-*/
 web-build/
-ios/
-android/
+# the native projects expo prebuild generates (never committed); not store/screenshots/ios/
+/apps/*/ios/
+/apps/*/android/
 *.jks
 *.p8
 *.p12

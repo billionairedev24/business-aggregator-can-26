@@ -88,6 +88,23 @@ externalSecrets:
 
 (values-staging/prod.yaml already make the Stripe and email keys required there.)
 
+## Mobile release (CI and EAS)
+
+The store release of the native apps (S-103, [mobile-release.md](mobile-release.md#secrets)) uses credentials that no
+running app reads, so they are **not** in the cluster's secrets manager or the chart: they live in the CI system
+(GitHub Actions secrets and variables / GitLab CI/CD variables, masked and protected) and in EAS (`eas credentials`,
+`eas env:create`). Never commit them; examples in the repository use fake values.
+
+| name | kind | holds | rotate |
+|---|---|---|---|
+| `EXPO_TOKEN` | CI secret | an Expo robot user's access token (builds, submit, update, metadata) | create a new token in Expo › Access tokens, update the secret, revoke the old |
+| `ASC_API_KEY_P8` | CI secret (GitLab: File variable) | the App Store Connect API key's `.p8` text (role App Manager) — fastlane App Review, EAS Metadata | create a second key, update `ASC_API_KEY_P8` and `ASC_API_KEY_ID` (and the copy in `eas credentials -p ios`), revoke the old key |
+| `ASC_API_KEY_ID`, `ASC_API_ISSUER_ID` | CI variables | the key's id and the team's issuer id (not secret) | with the key |
+| `PLAY_SERVICE_ACCOUNT_JSON` | CI secret (GitLab: File variable) | the Google Play service account's JSON key — fastlane listing, promote, rollout, halt | add a key to the service account, update the secret and `eas credentials -p android`, delete the old key |
+| `EAS_OWNER`, `EAS_CONSUMER_PROJECT_ID`, `EAS_COURIER_PROJECT_ID` | CI variables | the Expo organisation and projects (not secret) | — |
+| `GOOGLE_SERVICES_JSON` | EAS file variable per environment (`development`, `preview`, `production`) | the app's Firebase config for FCM tokens (not a secret by Google's definition, but per environment and kept out of git) | replace the file variable; the next build uses it |
+| signing (iOS distribution certificate and profiles, Android upload keystore) | EAS credentials (`credentialsSource: remote`) | — | EAS renews iOS certificates; back up the Android upload keystore in the secrets manager (`mobile-upload-keystore-<app>`, by hand); a lost upload key is reset through Play Console support |
+
 ## Setting it up (once per cluster and environment)
 
 1. **Terraform** (`infra/terraform/envs/<cloud>/<env>`): applied as in [infrastructure.md](infrastructure.md). It

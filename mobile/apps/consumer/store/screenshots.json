@@ -1,0 +1,36 @@
+{
+  "$comment": "S-103: the store screenshots to take, in this order, for both stores and both locales (portrait; iOS 6.9-inch 1320 × 2868, Play phone 1080 × 1920; Play also a 1024 × 500 feature graphic). The files under store/screenshots/ios/<locale>/ and store/play/<locale>/images/ are flat placeholders (make mobile-store-placeholders) until they are captured on a device against staging with the demo data — then set placeholder to false. Captions are for the framed versions. docs/runbooks/mobile-release.md § Screenshots.",
+  "placeholder": true,
+  "shots": [
+    {
+      "name": "01-home",
+      "route": "/home",
+      "state": "signed in, a saved delivery address, \"Your week\" with one booking, tonight's run open",
+      "caption": { "en-CA": "Local shops and services, one app", "fr-CA": "Commerces et services d’ici, une seule app" }
+    },
+    {
+      "name": "02-services",
+      "route": "/services",
+      "state": "the categories with their counts",
+      "caption": { "en-CA": "Book trusted local pros", "fr-CA": "Réservez des pros d’ici de confiance" }
+    },
+    {
+      "name": "03-provider",
+      "route": "/providers/[slug]",
+      "state": "a provider with reviews, fixed-price services and the next times",
+      "caption": { "en-CA": "Real reviews, clear prices", "fr-CA": "De vrais avis, des prix clairs" }
+    },
+    {
+      "name": "04-book",
+      "route": "/book/[slug]/time",
+      "state": "the calendar with free times, one selected",
+      "caption": { "en-CA": "Pick a time in a few taps", "fr-CA": "Choisissez une heure en quelques touches" }
+    },
+    {
+      "name": "05-track",
+      "route": "/orders/[id]/track",
+      "state": "an order out for delivery on the evening run",
+      "caption": { "en-CA": "Paid only when it’s delivered", "fr-CA": "Payé seulement une fois livré" }
+    }
+  ]
+}

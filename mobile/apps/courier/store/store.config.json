@@ -1,0 +1,71 @@
+{
+  "configVersion": 0,
+  "apple": {
+    "copyright": "2026 Northline Marketplace Inc.",
+    "categories": [
+      "BUSINESS",
+      "PRODUCTIVITY"
+    ],
+    "advisory": {
+      "alcoholTobaccoOrDrugUseOrReferences": "INFREQUENT_OR_MILD",
+      "contests": "NONE",
+      "gamblingSimulated": "NONE",
+      "horrorOrFearThemes": "NONE",
+      "matureOrSuggestiveThemes": "NONE",
+      "medicalOrTreatmentInformation": "NONE",
+      "profanityOrCrudeHumor": "NONE",
+      "sexualContentGraphicAndNudity": "NONE",
+      "sexualContentOrNudity": "NONE",
+      "violenceCartoonOrFantasy": "NONE",
+      "violenceRealistic": "NONE",
+      "violenceRealisticProlongedGraphicOrSadistic": "NONE",
+      "gambling": false,
+      "unrestrictedWebAccess": false
+    },
+    "release": {
+      "automaticRelease": false,
+      "phasedRelease": true
+    },
+    "info": {
+      "en-CA": {
+        "title": "Northline Courier",
+        "subtitle": "Runs and deliveries",
+        "description": "Northline Courier is the app for couriers who deliver with Northline. You need a Northline courier account to sign in.\n\nON A SHIFT\n• Start and end your shift.\n• See your run’s stops in order, with the address, what to pick up and any delivery instructions.\n• Pick up at each shop and mark what you collected.\n• Drop off with proof of delivery: a photo at the door, the customer’s signature or their delivery PIN.\n• Get a notification when you are given a new run or your run changes.\n\nBUILT FOR THE ROAD\n• Works on weak networks: your steps are saved on the phone and sent as soon as you are back online.\n• English and French.\n\nYOUR PRIVACY\n• While you are on a run, the app shares your location so customers can follow their order on its way, also when the app is in the background. Only your latest position is kept, never a history, and sharing stops when your run ends.\n• The camera is used only to photograph a delivery as proof.\n• No ads and no tracking.",
+        "keywords": [
+          "courier",
+          "delivery",
+          "driver",
+          "run",
+          "route",
+          "stops",
+          "proof of delivery",
+          "dispatch",
+          "shift"
+        ],
+        "promoText": "Your run in order, pickups at each shop and proof of delivery at the door, even on a weak connection.",
+        "releaseNotes": "The first version of Northline Courier: shifts, runs, pickups and proof of delivery.",
+        "supportUrl": "https://northline.ca/help",
+        "privacyPolicyUrl": "https://northline.ca/legal/privacy.html"
+      },
+      "fr-CA": {
+        "title": "Northline Coursier",
+        "subtitle": "Tournées et livraisons",
+        "description": "Northline Coursier est l’app des coursiers qui livrent avec Northline. Un compte de coursier Northline est nécessaire pour vous connecter.\n\nPENDANT VOTRE QUART\n• Commencez et terminez votre quart.\n• Voyez les arrêts de votre tournée dans l’ordre, avec l’adresse, ce qu’il faut ramasser et les instructions de livraison.\n• Ramassez à chaque boutique et indiquez ce que vous avez pris.\n• Livrez avec une preuve : une photo à la porte, la signature du client ou son NIP de livraison.\n• Recevez une notification quand une nouvelle tournée vous est confiée ou que la vôtre change.\n\nPENSÉE POUR LA ROUTE\n• Fonctionne avec un réseau faible : vos étapes sont gardées sur le téléphone et envoyées dès que vous êtes de nouveau en ligne.\n• En français et en anglais.\n\nVOTRE VIE PRIVÉE\n• Pendant une tournée, l’app partage votre position pour que les clients suivent leur commande en route, aussi quand l’app est en arrière-plan. Seule votre dernière position est conservée, jamais un historique, et le partage s’arrête à la fin de la tournée.\n• L’appareil photo sert uniquement à photographier une livraison comme preuve.\n• Aucune publicité, aucun pistage.",
+        "keywords": [
+          "coursier",
+          "livraison",
+          "livreur",
+          "tournée",
+          "arrêts",
+          "preuve de livraison",
+          "répartition",
+          "quart"
+        ],
+        "promoText": "Votre tournée dans l’ordre, les ramassages en boutique et la preuve de livraison à la porte, même avec un réseau faible.",
+        "releaseNotes": "La première version de Northline Coursier : quarts, tournées, ramassages et preuves de livraison.",
+        "supportUrl": "https://northline.ca/help",
+        "privacyPolicyUrl": "https://northline.ca/legal/privacy.html"
+      }
+    }
+  }
+}

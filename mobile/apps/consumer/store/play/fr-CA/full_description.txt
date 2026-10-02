@@ -1,0 +1,25 @@
+Northline réunit les commerces et les prestataires de services près de chez vous dans une seule app bilingue.
+
+ACHETEZ LOCAL
+• Parcourez les commerces d’ici par rayon et remplissez un seul panier auprès de plusieurs boutiques.
+• Faites-vous livrer lors de la tournée groupée du soir.
+• Suivez votre commande, de l’emballage à la livraison, et confirmez sa réception.
+
+RÉSERVEZ DES SERVICES DE CONFIANCE
+• Trouvez des entreprises de ménage, des plombiers, des mécaniciens et plus encore, avec leurs avis, leurs prix et leurs prochaines disponibilités.
+• Réservez une visite à prix fixe en quelques touches ou demandez une soumission. Chaque soumission est détaillée : travaux, exclusions, garantie et acompte sont indiqués d’emblée.
+• Voyez quand votre prestataire est en route, puis approuvez le travail une fois terminé.
+
+PAYEZ EN TOUTE CONFIANCE
+• Votre paiement est retenu et versé à l’entreprise seulement une fois le travail terminé ou la commande livrée.
+• Les cartes sont saisies dans le formulaire de paiement sécurisé de Stripe. Northline ne voit ni ne conserve jamais votre numéro de carte.
+• Un problème? Signalez-le depuis la commande et suivez votre demande de remboursement.
+
+CONÇUE POUR VOUS
+• En français et en anglais, partout dans l’app.
+• Naviguez sans compte; connectez-vous pour réserver et payer.
+• Votre position n’est utilisée que lorsque l’app est ouverte, pour afficher ce qui dessert votre adresse, et n’est jamais transmise aux entreprises.
+• Des notifications pour vos commandes, réservations et soumissions, avec les heures de silence de votre choix.
+• Aucune publicité, aucun pistage.
+
+Northline ouvre province par province. Si nous ne desservons pas encore votre région, inscrivez-vous à la liste d’attente dans l’app.

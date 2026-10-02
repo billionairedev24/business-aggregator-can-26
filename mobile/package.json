@@ -5,7 +5,8 @@
   "scripts": {
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
-    "lint": "eslint . --max-warnings=0",
+    "lint": "eslint . --max-warnings=0 && node packages/release/src/cli.mjs check",
+    "release:check": "node packages/release/src/cli.mjs check",
     "courier": "pnpm --filter @northline/courier start",
     "consumer": "pnpm --filter @northline/consumer-app start"
   },
