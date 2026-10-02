@@ -176,4 +176,9 @@ tasks.matching { it.name.startsWith("jib") && it.name != "jibTools" }.configureE
 // import, on top of every cached test context; 768m (the root default) ran out of heap at the end of the suite.
 // S-130: the AI features' scripted-model context (ScriptedModelTest, one for all of them) tipped 1g at the end of
 // the suite too.
-tasks.named<Test>("test") { maxHeapSize = "1280m" }
+// S-105: the privacy contributors' contexts tipped 1280m. Rather than raise the heap again, cap Spring's test context
+// cache (default 32): least recently used contexts are closed, at the cost of rebuilding one if a later class needs it.
+tasks.named<Test>("test") {
+    maxHeapSize = "1280m"
+    systemProperty("spring.test.context.cache.maxSize", "12")
+}

@@ -23,6 +23,8 @@ public enum ConsoleScreen implements CodedEnum {
     REPORTS,
     API,
     TEAM,
+    /** S-105: people's privacy requests (access, correction, erasure). */
+    PRIVACY,
     PROFILE,
     ONCALL;
 

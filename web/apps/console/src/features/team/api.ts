@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { http } from '../../lib/http';
 
 /** The console roles an admin grants (api `StaffRole`). */
-export const ROLES = ['admin', 'trust_safety', 'dispatch', 'finance', 'support', 'support_lead', 'analyst'] as const;
+export const ROLES = ['admin', 'trust_safety', 'dispatch', 'finance', 'support', 'support_lead', 'analyst', 'privacy'] as const;
 
 /** S-96 (api `StaffAdmin`). */
 export const Member = z.object({ id: z.string(), name: z.string(), email: z.string().nullish(), roles: z.array(z.string()), since: z.string().nullish() });

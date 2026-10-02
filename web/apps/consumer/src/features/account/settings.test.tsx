@@ -39,7 +39,7 @@ const server = (c: Call): Reply => {
   if (u === '/api/v1/me/wallet') return { body: { points: { balance: 0, valueCents: 0, weekly: [0, 0, 0, 0, 0, 0, 0, 0] }, plus: null } };
   if (u === '/api/v1/me/profile' && c.method === 'GET') return { body: PROFILE };
   if (u === '/api/v1/me/profile' && c.method === 'PATCH') return profilePatch ?? { body: { ...PROFILE, ...(c.body as object) } };
-  if (u === '/api/v1/me/erasure-request') return { body: { ...PROFILE, erasureRequestedAt: '2026-10-01T12:00:00Z' } };
+  if (u === '/api/v1/me/privacy-requests') return { body: { items: [] } };
   if (u === '/api/v1/me/payment-methods' && c.method === 'GET') return { body: cards };
   if (u === '/api/v1/me/payment-methods/setup-intents') return { status: 201, body: { setupIntentId: 'seti_1', clientSecret: 'seti_1_secret', provider: 'fake', publishableKey: null } };
   if (u === '/api/v1/me/payment-methods' && c.method === 'POST') {
@@ -157,14 +157,6 @@ describe('Profile (design 06 profile)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     expect(await screen.findByText('That email is already used by another account.')).toBeInTheDocument();
   });
-
-  it('Delete account… asks first, then records the request', async () => {
-    open('profile');
-    await userEvent.click(await screen.findByRole('button', { name: 'Delete account…' }));
-    const dialog = await screen.findByRole('alertdialog', { name: 'Delete your account?' });
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Ask to delete my account' }));
-    expect(await screen.findByText(/^Deletion requested on/)).toBeInTheDocument();
-  });
 });
 
 describe('Addresses & household (design 06 addresses)', () => {
@@ -209,7 +201,7 @@ describe('Security & sign-in (design 06 security)', () => {
     expect(screen.getByText('SMS backup · ··0148')).toBeInTheDocument();
     expect(screen.getByText('Safari · MacBook · Calgary · this session')).toBeInTheDocument();
     expect(screen.getByText('iPhone 16 · Calgary · 2 h ago')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Download my data' })).toHaveAttribute('href', '/api/v1/me/export');
+    expect(screen.getByRole('link', { name: 'Download my data' })).toHaveAttribute('href', '/account?tab=profile#your-data');
     expect(screen.getByRole('button', { name: 'Sign out everywhere' })).toBeInTheDocument();
   });
 

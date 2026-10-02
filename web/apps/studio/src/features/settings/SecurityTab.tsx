@@ -10,6 +10,7 @@ import {
   useNewBackupCodes, type ActiveSession, type AuditEntry, type Security, type SecurityChangeError,
 } from './api';
 import { useSettingsT, type SettingsT } from './messages';
+import { PersonalData } from './PersonalData';
 
 /** "Mozilla/5.0 (iPhone; …)" → "iPhone". */
 export function deviceName(ua: string | null | undefined, t: SettingsT): string {
@@ -37,7 +38,7 @@ export function SecurityTab() {
         : q.isPending ? <PageSkeleton kpis={0} rows={6} />
         : q.isError ? <ErrorState message={t('securityError')} onRetry={() => void q.refetch()} />
         : q.data === null ? <ConfirmItsYou />
-        : <Factors security={q.data} />}
+        : <><Factors security={q.data} /><PersonalData /></>}
     </div>
   );
 }

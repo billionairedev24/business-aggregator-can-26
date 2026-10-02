@@ -323,10 +323,13 @@ development builds). Every data type is *linked to the person* and used for *app
 | Other user content › Other user-generated content | ✓ (optional) | ✓ (optional) | consumer: booking notes; courier: the customer's signature |
 
 Data safety also asks: *Is all collected data required?* (no — the optional ones above), *Can users request deletion?*
-— **open**: Apple (guideline 5.1.1(v)) wants account deletion inside an app that creates accounts, and Google a web
-link for deletion requests. Northline has no self-service deletion until S-105 (privacy rights: erasure); until then
-the release check lists it as pending and `--strict` refuses to go public. The courier app creates no accounts — ask
-App Review whether 5.1.1(v) applies.
+— **yes (S-105)**: the consumer app deletes the account in the app (You › Personal details › Your data › Delete my
+account: a privacy request confirmed with the texted code or the authenticator app, withdrawable during its grace
+period — docs/runbooks/privacy-requests.md), and the web link Google asks for is the consumer site's same page,
+`https://northline.ca/account?tab=profile#your-data` (`store/privacy.json` `accountDeletion`). What the law makes
+Northline keep after deletion (receipts, tax and payment records, without the name) is the Data safety form's "some
+data is retained" answer. The courier app creates no accounts: couriers use the same web page — ask App Review whether
+5.1.1(v) applies (the release check keeps it pending).
 
 ## Age ratings
 

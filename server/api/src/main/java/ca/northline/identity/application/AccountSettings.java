@@ -18,7 +18,7 @@ public final class AccountSettings {
 
     /**
      * @param pronouns {@code she | he | they | none}, or null when never chosen
-     * @param erasureRequestedAt when the person asked to delete the account (staff erase it), else null
+     * @param erasureRequestedAt when the person's verified erasure request (S-105, privacy module) was made, else null
      */
     public record Profile(
             String id,
@@ -86,9 +86,6 @@ public final class AccountSettings {
 
         /** {@code en-CA | fr-CA} — the language of receipts and notifications (the Language tab). */
         void locale(String userId, String locale);
-
-        /** "Delete account…": recorded for staff, who erase the account (idempotent). */
-        Profile requestErasure(String userId);
     }
 
     public interface ManageAddresses {
@@ -126,8 +123,6 @@ public final class AccountSettings {
         void updateProfile(String userId, ProfileChange change, Instant at);
 
         void locale(String userId, String locale, Instant at);
-
-        void erasureRequested(String userId, Instant at);
 
         List<Address> addresses(String userId);
 

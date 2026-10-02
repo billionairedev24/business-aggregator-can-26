@@ -2,13 +2,11 @@ package ca.northline.account;
 
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -105,19 +103,6 @@ class AccountSettingsApiTest extends IntegrationTest {
                     .andExpect(status().isUnprocessableContent())
                     .andExpect(jsonPath("$.errors[0].field").value("birthday"))
                     .andExpect(jsonPath("$.errors[0].message").value("Enter a birthday like 03/14 (month / day)."));
-        }
-
-        @Test
-        void deleteAccountRequest_isRecordedOnce() throws Exception {
-            var first = JsonPath.read(
-                    mvc.perform(post("/api/v1/me/erasure-request").with(TestJwt.customer(amara)))
-                            .andExpect(status().isOk())
-                            .andReturn()
-                            .getResponse()
-                            .getContentAsString(),
-                    "$.erasureRequestedAt");
-            mvc.perform(post("/api/v1/me/erasure-request").with(TestJwt.customer(amara)))
-                    .andExpect(jsonPath("$.erasureRequestedAt").value(first));
         }
     }
 
@@ -440,18 +425,6 @@ class AccountSettingsApiTest extends IntegrationTest {
     }
 
     @Test
-    void downloadMyData() throws Exception {
-        mvc.perform(get("/api/v1/me/export").with(TestJwt.customer(amara)))
-                .andExpect(status().isOk())
-                .andExpect(header().string(
-                                "Content-Disposition", startsWith("attachment; filename=\"northline-my-data.json\"")))
-                .andExpect(jsonPath("$.profile.firstName").value("Amara"))
-                .andExpect(jsonPath("$.addresses").isArray())
-                .andExpect(jsonPath("$.ordersAndBookings").isArray())
-                .andExpect(jsonPath("$.wallet.points.balance").value(0));
-    }
-
-    @Test
     void signedOut_401() throws Exception {
         for (var path : List.of(
                 "/api/v1/me/profile",
@@ -461,7 +434,7 @@ class AccountSettingsApiTest extends IntegrationTest {
                 "/api/v1/me/billing-history",
                 "/api/v1/me/notifications",
                 "/api/v1/me/preferences",
-                "/api/v1/me/export")) {
+                "/api/v1/me/privacy-requests")) {
             mvc.perform(get(path)).andExpect(status().isUnauthorized());
         }
     }

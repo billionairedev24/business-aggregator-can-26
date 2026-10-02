@@ -28,6 +28,11 @@ record PrefixedObjectStore(ObjectStore store, String prefix) implements ObjectSt
     }
 
     @Override
+    public int deleteAll(String keyPrefix) {
+        return store.deleteAll(full(keyPrefix));
+    }
+
+    @Override
     public URI presignGet(String key, Duration ttl) {
         return store.presignGet(full(key), ttl);
     }

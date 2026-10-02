@@ -8,4 +8,7 @@ public interface AttachmentStorage {
     void put(String key, byte[] bytes, String contentType);
 
     Optional<byte[]> get(String key);
+
+    /** Removes everything under {@code <prefix>/} (a customer's uploads on erasure, S-105); returns how many. */
+    int deleteAll(String prefix);
 }

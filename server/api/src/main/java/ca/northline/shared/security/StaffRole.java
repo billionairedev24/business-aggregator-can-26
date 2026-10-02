@@ -24,7 +24,9 @@ public enum StaffRole implements CodedEnum {
     SUPPORT,
     /** S-83: a support agent who also keeps the desk's macros (design: "support leads"). */
     SUPPORT_LEAD,
-    ANALYST;
+    ANALYST,
+    /** S-105: the privacy officer — people's access, correction and erasure requests. */
+    PRIVACY;
 
     /** The platform role that opens the console at all ({@code /api/v1/console/**}). */
     public static final String STAFF = "staff";
@@ -52,14 +54,24 @@ public enum StaffRole implements CodedEnum {
                         ConsoleScreen.REPORTS,
                         ConsoleScreen.DISPUTES,
                         ConsoleScreen.TEAM);
-            case SUPPORT, SUPPORT_LEAD ->
+            case SUPPORT ->
                 Set.of(
                         ConsoleScreen.OVERVIEW,
                         ConsoleScreen.SUPPORT,
                         ConsoleScreen.ORDERS,
                         ConsoleScreen.SELLERS,
                         ConsoleScreen.DISPUTES);
+            // S-105: support leads take the privacy requests that arrive at the help desk
+            case SUPPORT_LEAD ->
+                Set.of(
+                        ConsoleScreen.OVERVIEW,
+                        ConsoleScreen.SUPPORT,
+                        ConsoleScreen.ORDERS,
+                        ConsoleScreen.SELLERS,
+                        ConsoleScreen.DISPUTES,
+                        ConsoleScreen.PRIVACY);
             case ANALYST -> Set.of(ConsoleScreen.OVERVIEW, ConsoleScreen.REPORTS);
+            case PRIVACY -> Set.of(ConsoleScreen.OVERVIEW, ConsoleScreen.PRIVACY, ConsoleScreen.SUPPORT);
         };
     }
 
@@ -77,8 +89,9 @@ public enum StaffRole implements CodedEnum {
             case DISPATCH -> Set.of(ConsoleAction.DISPATCH);
             case FINANCE -> Set.of(ConsoleAction.REFUND, ConsoleAction.PAYOUTS);
             case SUPPORT -> Set.of(ConsoleAction.SUPPORT);
-            case SUPPORT_LEAD -> Set.of(ConsoleAction.SUPPORT, ConsoleAction.MACROS);
+            case SUPPORT_LEAD -> Set.of(ConsoleAction.SUPPORT, ConsoleAction.MACROS, ConsoleAction.PRIVACY);
             case ANALYST -> Set.of();
+            case PRIVACY -> Set.of(ConsoleAction.PRIVACY);
         };
     }
 

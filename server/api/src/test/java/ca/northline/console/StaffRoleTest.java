@@ -43,6 +43,17 @@ class StaffRoleTest {
     }
 
     @Test
+    void privacyRequests_belongToThePrivacyOfficerSupportLeadsAndAdmins() {
+        assertThat(List.of(StaffRole.values()).stream().filter(r -> r.opens(ConsoleScreen.PRIVACY)))
+                .containsExactlyInAnyOrder(StaffRole.ADMIN, StaffRole.PRIVACY, StaffRole.SUPPORT_LEAD);
+        assertThat(List.of(StaffRole.values()).stream().filter(r -> r.allows(ConsoleAction.PRIVACY)))
+                .containsExactlyInAnyOrder(StaffRole.ADMIN, StaffRole.PRIVACY, StaffRole.SUPPORT_LEAD);
+        assertThat(StaffRole.SUPPORT.opens(ConsoleScreen.PRIVACY)).isFalse();
+        assertThat(StaffRole.PRIVACY.actions()).containsExactly(ConsoleAction.PRIVACY);
+        assertThat(StaffRole.fromCode("privacy")).contains(StaffRole.PRIVACY);
+    }
+
+    @Test
     void heldRoles_comeFromTheTokensPlatformRoles() {
         assertThat(StaffRole.held(List.of("staff", "TRUST_SAFETY", "finance", "partner")))
                 .containsExactlyInAnyOrder(StaffRole.TRUST_SAFETY, StaffRole.FINANCE);

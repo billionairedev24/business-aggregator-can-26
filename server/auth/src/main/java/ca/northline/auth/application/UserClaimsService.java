@@ -11,6 +11,9 @@ import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2ErrorCodes;
 import org.springframework.stereotype.Service;
 
 /**
@@ -37,6 +40,17 @@ public class UserClaimsService {
                 .flatMap(a -> Factor.fromAuthority(a).stream())
                 .forEach(factors::add);
         return factors;
+    }
+
+    /**
+     * S-105: no token — new or refreshed — for an erased account (its sign-ins were ended when its erasure started; this
+     * stops the refresh tokens still held by a browser session or an app).
+     */
+    public void requireNotErased(String userId) {
+        if (accounts.findById(userId).map(UserAccount::erased).orElse(false)) {
+            throw new OAuth2AuthenticationException(
+                    new OAuth2Error(OAuth2ErrorCodes.INVALID_GRANT, "The account was deleted.", null));
+        }
     }
 
     public Map<String, Object> accessTokenClaims(String userId, Collection<Factor> factors) {
