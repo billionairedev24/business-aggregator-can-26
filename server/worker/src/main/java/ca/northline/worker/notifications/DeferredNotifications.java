@@ -4,13 +4,14 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * {@code messaging.deferred_notifications} (V074): SMS and push held back by a member's quiet hours, one row per
- * (channel, member, event) — deferring twice (a redelivered event) keeps one row.
+ * {@code messaging.deferred_notifications} (V074; {@code audience} V245): SMS and push held back by a team member's or
+ * a customer's quiet hours, one row per (channel, person, event) — deferring twice (a redelivered event) keeps one row.
  */
 public final class DeferredNotifications {
 
@@ -18,8 +19,9 @@ public final class DeferredNotifications {
     public record Deferred(
             String id,
             Channel channel,
+            String audience,
             String userId,
-            String merchantId,
+            @Nullable String merchantId,
             String eventId,
             String eventType,
             int eventVersion,
@@ -37,11 +39,14 @@ public final class DeferredNotifications {
     public void defer(String id, Notice notice, Recipient to, Channel channel, Instant dueAt) {
         jdbc.sql("""
                         insert into messaging.deferred_notifications
-                               (id, channel, user_id, merchant_id, event_id, event_type, event_version, payload, due_at)
-                        values (:id, :channel, :user, :merchant, :event, :type, :version, cast(:payload as jsonb), :due)
+                               (id, channel, audience, user_id, merchant_id, event_id, event_type, event_version,
+                                payload, due_at)
+                        values (:id, :channel, :audience, :user, :merchant, :event, :type, :version,
+                                cast(:payload as jsonb), :due)
                         on conflict (channel, user_id, event_id) do nothing""")
                 .param("id", id)
                 .param("channel", channel.code())
+                .param("audience", audience(notice.audience()))
                 .param("user", to.userId())
                 .param("merchant", notice.merchantId())
                 .param("event", notice.eventId())
@@ -55,7 +60,7 @@ public final class DeferredNotifications {
     /** Due rows, locked for this transaction ({@code skip locked}: replicas share the work). */
     public List<Deferred> lockDue(Instant now, int limit) {
         return jdbc.sql("""
-                        select id, channel, user_id, merchant_id, event_id, event_type, event_version, payload::text,
+                        select id, channel, audience, user_id, merchant_id, event_id, event_type, event_version, payload::text,
                                attempts
                           from messaging.deferred_notifications
                          where due_at <= :now
@@ -67,6 +72,7 @@ public final class DeferredNotifications {
                 .query((rs, _) -> new Deferred(
                         rs.getString("id"),
                         Channel.valueOf(rs.getString("channel").toUpperCase(java.util.Locale.ROOT)),
+                        rs.getString("audience"),
                         rs.getString("user_id"),
                         rs.getString("merchant_id"),
                         rs.getString("event_id"),
@@ -95,6 +101,14 @@ public final class DeferredNotifications {
                 .param("u", userId)
                 .query(Integer.class)
                 .single();
+    }
+
+    static String audience(Notice.Audience audience) {
+        return switch (audience) {
+            case Notice.Audience.Team _ -> "team";
+            case Notice.Audience.Customer _ -> "customer";
+            case Notice.Audience.Courier _ -> "courier";
+        };
     }
 
     private static OffsetDateTime at(Instant instant) {

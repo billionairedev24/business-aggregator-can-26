@@ -12,7 +12,8 @@ import org.springframework.kafka.retrytopic.TopicSuffixingStrategy;
 import org.springframework.stereotype.Component;
 
 /**
- * Consumer group {@code notifications} (deploy/kafka/topics.yaml): the money topics, through the S-26 framework
+ * Consumer group {@code notifications} (deploy/kafka/topics.yaml): the money topics (S-27) and, for customers and
+ * couriers (S-102), the order, delivery, run, booking and quote topics, through the S-26 framework
  * (schema validation, dedupe per event, retries 10 s / 60 s / 5 min on its own retry topics, then {@code .dlq}). The
  * back-off is a property only so tests can shorten it; the catalogue test reads the defaults.
  */
@@ -39,7 +40,17 @@ class NotificationsConsumer {
             exclude = PoisonEventException.class,
             traversingCauses = "true")
     @KafkaListener(
-            topics = {"payments.payout", "payments.payout_account", "payments.dispute", "payments.refund"},
+            topics = {
+                "payments.payout",
+                "payments.payout_account",
+                "payments.dispute",
+                "payments.refund",
+                "orders.order",
+                "fulfilment.delivery",
+                "fulfilment.run",
+                "booking.booking",
+                "booking.quote"
+            },
             groupId = GROUP)
     void on(ConsumerRecord<String, byte[]> record) {
         events.process(GROUP, record, notifier::on);

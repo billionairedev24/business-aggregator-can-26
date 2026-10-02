@@ -55,21 +55,39 @@ public record Preferences(
     /** The design's defaults, read once from the spec file packaged into the worker. */
     public record Defaults(Map<String, Map<String, Boolean>> matrix, LocalTime quietFrom, LocalTime quietTo) {
 
+        /** The team members' defaults (design 02, Settings › Notifications). */
         public static Defaults load(JsonMapper json) {
+            return of(spec(json));
+        }
+
+        /** The customers' defaults (design 06, Account › Notifications; S-102). */
+        public static Defaults customers(JsonMapper json) {
+            return of(spec(json).get("customer"));
+        }
+
+        /** Never quiet, nothing governed by the matrix: a courier's run notices (S-102). */
+        public static Preferences unconditional(ZoneId zone) {
+            return new Preferences(Map.of(), LocalTime.MIDNIGHT, LocalTime.MIDNIGHT, zone);
+        }
+
+        private static JsonNode spec(JsonMapper json) {
             try (var in = Preferences.class.getClassLoader().getResourceAsStream(DEFAULTS)) {
                 if (in == null) {
                     throw new IllegalStateException("classpath:" + DEFAULTS + " is missing");
                 }
-                var spec = json.readTree(in);
-                var rows = new LinkedHashMap<String, Map<String, Boolean>>();
-                spec.get("rows").properties().forEach(row -> rows.put(row.getKey(), flags(row.getValue())));
-                return new Defaults(
-                        rows,
-                        LocalTime.parse(spec.get("quietHours").get("from").asString()),
-                        LocalTime.parse(spec.get("quietHours").get("to").asString()));
+                return json.readTree(in);
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
+        }
+
+        private static Defaults of(JsonNode spec) {
+            var rows = new LinkedHashMap<String, Map<String, Boolean>>();
+            spec.get("rows").properties().forEach(row -> rows.put(row.getKey(), flags(row.getValue())));
+            return new Defaults(
+                    rows,
+                    LocalTime.parse(spec.get("quietHours").get("from").asString()),
+                    LocalTime.parse(spec.get("quietHours").get("to").asString()));
         }
 
         /** Stored cells over the defaults (a member who never saved has no row; new rows get their defaults). */

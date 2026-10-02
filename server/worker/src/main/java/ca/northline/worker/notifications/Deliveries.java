@@ -78,10 +78,13 @@ public final class Deliveries {
     }
 
     private Outcome email(Notice notice, Recipient to, String business, String key) {
-        var content = notice.texts()
-                .email(
-                        business,
-                        links.studio(notice.merchantId(), notice.texts().studioPage()));
+        var zone = to.preferences().zone();
+        var path = notice.push().path();
+        var merchant = notice.merchantId();
+        var page = path != null && !(notice.audience() instanceof Notice.Audience.Team)
+                ? links.app(path)
+                : links.studio(merchant == null ? "" : merchant, notice.texts().studioPage());
+        var content = notice.texts().email(business, page, to.locale(), zone);
         if (content == null || to.email() == null || to.email().isBlank()) {
             return Outcome.UNREACHABLE;
         }
@@ -89,12 +92,11 @@ public final class Deliveries {
         try {
             address = new EmailAddress(to.email(), to.displayName());
         } catch (IllegalArgumentException e) {
-            log.warn("Member {} has an unusable email address; {} not emailed", to.userId(), notice.eventId());
+            log.warn("User {} has an unusable email address; {} not emailed", to.userId(), notice.eventId());
             return Outcome.UNREACHABLE;
         }
-        var link = notice.row() == null
-                ? null
-                : links.unsubscribe(unsubscribe.issue(to.userId(), notice.row(), to.locale()));
+        var row = notice.unsubscribeRow();
+        var link = row == null ? null : links.unsubscribe(unsubscribe.issue(to.userId(), row, to.locale()));
         // The Mailer claims (email, key) itself — the same claim the api's S-13 notices use.
         return switch (mailer.send(new Mailer.Delivery(key, address, content, to.locale(), link))) {
             case SENT -> Outcome.SENT;
@@ -114,7 +116,7 @@ public final class Deliveries {
         try {
             sms.sendText(
                     phone,
-                    notice.texts().text(business, to.locale(), to.preferences().zone()));
+                    notice.texts().sms(business, to.locale(), to.preferences().zone()));
             return Outcome.SENT;
         } catch (SmsDeliveryFailed e) {
             if (e.getKind() == SmsDeliveryFailed.Kind.UNDELIVERABLE_NUMBER) {
@@ -134,16 +136,34 @@ public final class Deliveries {
         }
     }
 
+    /**
+     * Both languages are written: an installation shows the person's notification language, or — a customer who
+     * reads notifications in the app's language — its own. The link and the data carry ids only.
+     */
     private Outcome push(Notice notice, Recipient to, String business, String key) {
         if (!claim(Channel.PUSH, key)) {
             return Outcome.ALREADY_SENT;
         }
+        var zone = to.preferences().zone();
+        var content = new java.util.LinkedHashMap<String, PushSender.Content>();
+        for (var language : java.util.List.of(Locale.CANADA, Locale.CANADA_FRENCH)) {
+            content.put(
+                    Recipient.language(language),
+                    new PushSender.Content(
+                            notice.texts().title(business, language, zone),
+                            notice.texts().text(business, language, zone)));
+        }
+        var path = notice.push().path();
         try {
-            push.send(
+            var result = push.send(new PushSender.PushMessage(
                     to.userId(),
-                    notice.texts().title(business, to.locale(), to.preferences().zone()),
-                    notice.texts().text(business, to.locale(), to.preferences().zone()));
-            return Outcome.SENT;
+                    notice.audience().app(),
+                    content,
+                    to.pushLanguage(),
+                    path == null ? null : links.app(path),
+                    notice.push().data(),
+                    notice.push().collapseKey()));
+            return result == PushSender.Result.DELIVERED ? Outcome.SENT : Outcome.UNREACHABLE;
         } catch (RuntimeException e) {
             release(Channel.PUSH, key);
             throw e;
