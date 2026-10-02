@@ -41,7 +41,6 @@ import org.springframework.web.bind.annotation.RestController;
  * <pre>
  * GET    /api/v1/me/profile                     the profile (name, contact, pronouns, birthday, reliability)
  * PATCH  /api/v1/me/profile                     {firstName, lastName, email, pronouns?, birthday? "MM-DD"}
- * POST   /api/v1/me/erasure-request             "Delete account…" (staff erase it; idempotent)
  * GET    /api/v1/me/addresses                   the address book, default first
  * POST   /api/v1/me/addresses                   {label?, street, unit?, city, province, postal, note?} → 201
  * PATCH  /api/v1/me/addresses/{id}              {label?, unit?, note?}
@@ -163,12 +162,6 @@ class MyAccountController {
                 body.pronouns(),
                 AccountRules.birthday(body.birthday()));
         return ProfileResponse.of(profiles.update(user.userId(), change));
-    }
-
-    @Operation(summary = "Ask Northline to delete the caller's account")
-    @PostMapping("/erasure-request")
-    ProfileResponse erasure(CurrentUser user) {
-        return ProfileResponse.of(profiles.requestErasure(user.userId()));
     }
 
     @Operation(summary = "The caller's address book")

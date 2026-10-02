@@ -71,15 +71,6 @@ class AccountSettingsService implements ManageProfile, ManageAddresses, ManageHo
         store.locale(userId, locale.toLowerCase(Locale.ROOT).startsWith("fr") ? "fr-CA" : "en-CA", clock.instant());
     }
 
-    @Override
-    public Profile requestErasure(String userId) {
-        var profile = profile(userId);
-        if (profile.erasureRequestedAt() == null) {
-            store.erasureRequested(userId, clock.instant());
-        }
-        return profile(userId);
-    }
-
     // ── Addresses ─────────────────────────────────────────────────────────────────────────────────────────────────
 
     @Override

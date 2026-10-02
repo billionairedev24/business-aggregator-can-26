@@ -126,14 +126,6 @@ class AccountSettingsJdbc implements AccountSettingsStore {
     }
 
     @Override
-    public void erasureRequested(String userId, Instant at) {
-        jdbc.sql("update identity.users set erasure_requested_at = :at where id = :u and erasure_requested_at is null")
-                .param("at", ts(at))
-                .param("u", userId)
-                .update();
-    }
-
-    @Override
     public List<Address> addresses(String userId) {
         return jdbc.sql(ADDRESS + " order by is_default desc nulls last, created_at desc, id desc")
                 .param("u", userId)
