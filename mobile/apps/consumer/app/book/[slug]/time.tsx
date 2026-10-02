@@ -1,6 +1,9 @@
-import { Stub } from '../../../src/ui/Stub';
+import { useLocalSearchParams } from 'expo-router';
 
-/** Design 01 `book_slot` — a stub until its story builds it (src/screens.ts, docs/MOBILE_PLAN.md). */
-export default function BookSlot() {
-  return <Stub screen="book_slot" />;
+import { BookTime as Screen } from '../../../src/services/BookTime';
+
+/** Design 01 `book_slot` (S-100): the live calendar. */
+export default function BookTime() {
+  const { slug } = useLocalSearchParams<{ slug: string }>();
+  return <Screen slug={String(slug)} />;
 }

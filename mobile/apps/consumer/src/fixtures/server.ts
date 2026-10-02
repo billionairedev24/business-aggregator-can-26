@@ -1,6 +1,7 @@
 import { authFixtures, newAuthState, type AuthFixtureState } from './auth';
 import { lower, type FixtureArea, type FixtureContext, type FixtureRequest } from './context';
 import { geoFixtures } from './geo';
+import { newServicesState, servicesFixtures } from './services';
 import { newShopState, shopFixtures } from './shop';
 
 /**
@@ -28,7 +29,8 @@ export function createFixtureServer(options: FixtureOptions = {}) {
   const geo = { waitlist: [] as Array<{ regionId: string; email?: string }> };
   const calls: Array<{ method: string; path: string; signed: boolean; guest?: string }> = [];
   const shop = newShopState();
-  const areas: FixtureArea[] = [authFixtures(ctx, auth), geoFixtures(ctx, geo), shopFixtures(ctx, shop)];
+  const servicesState = newServicesState(now);
+  const areas: FixtureArea[] = [authFixtures(ctx, auth), geoFixtures(ctx, geo), shopFixtures(ctx, shop), servicesFixtures(ctx, servicesState)];
 
   async function handle(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
     const url = new URL(String(input), 'http://fixtures.invalid');
@@ -55,6 +57,7 @@ export function createFixtureServer(options: FixtureOptions = {}) {
     auth,
     geo,
     shop,
+    services: servicesState,
     calls,
   };
 }

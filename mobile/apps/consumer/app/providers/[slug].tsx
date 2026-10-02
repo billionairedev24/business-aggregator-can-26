@@ -1,6 +1,9 @@
-import { Stub } from '../../src/ui/Stub';
+import { useLocalSearchParams } from 'expo-router';
 
-/** Design 01 `provider` — a stub until its story builds it (src/screens.ts, docs/MOBILE_PLAN.md). */
+import { Provider as ProviderProfile } from '../../src/services/Provider';
+
+/** Design 01 `provider` (S-100): the provider profile. */
 export default function Provider() {
-  return <Stub screen="provider" />;
+  const { slug } = useLocalSearchParams<{ slug: string }>();
+  return <ProviderProfile slug={String(slug)} />;
 }

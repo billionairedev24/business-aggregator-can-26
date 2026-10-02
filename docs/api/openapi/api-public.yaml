@@ -1892,6 +1892,66 @@ paths:
           description: Not found.
       tags:
       - my-bookings-controller
+  /api/v1/me/bookings/{bookingId}/sign-off:
+    post:
+      operationId: myBookingsSignOff
+      parameters:
+      - in: path
+        name: bookingId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Confirmation"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - my-bookings-controller
   /api/v1/me/case-uploads:
     post:
       operationId: myProblemsUpload
@@ -6276,6 +6336,8 @@ components:
           format: int32
         serviceId:
           type: string
+        timeZone:
+          type: string
     Card:
       type: object
       properties:
@@ -6591,6 +6653,11 @@ components:
           description: Cents of Canadian dollars (CAD).
         memberFirstName:
           type: string
+        merchantId:
+          type: string
+        photoCount:
+          type: integer
+          format: int32
         priceCents:
           type: integer
           format: int64
@@ -6601,13 +6668,26 @@ components:
           type: string
         ref:
           type: string
+        releasesAt:
+          type: string
+          format: date-time
+        report:
+          type: string
         startsAt:
           type: string
           format: date-time
+        state:
+          type: string
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/Step"
         taxCents:
           type: integer
           format: int64
           description: Cents of Canadian dollars (CAD).
+        timeZone:
+          type: string
         title:
           type: string
         type:
@@ -8164,6 +8244,8 @@ components:
           type: string
         tier:
           type: string
+        timeZone:
+          type: string
         zones:
           type: array
           items:
@@ -8222,6 +8304,8 @@ components:
           type: integer
           format: int32
         tier:
+          type: string
+        timeZone:
           type: string
         vehicle:
           type: boolean

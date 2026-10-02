@@ -1,6 +1,9 @@
-import { Stub } from '../../../src/ui/Stub';
+import { useLocalSearchParams } from 'expo-router';
 
-/** Design 01 `eta` — a stub until its story builds it (src/screens.ts, docs/MOBILE_PLAN.md). */
+import { Eta as Screen } from '../../../src/services/Booking';
+
+/** Design 01 `eta` (S-100): the day-of screen. */
 export default function Eta() {
-  return <Stub screen="eta" />;
+  const { id } = useLocalSearchParams<{ id: string }>();
+  return <Screen id={String(id)} />;
 }

@@ -10,8 +10,8 @@ runbook ([courier-app.md](courier-app.md)); sign-in and tokens: [mobile-auth.md]
 > `expo export` of the iOS and Android bundles, `expo prebuild` of both native projects with checks of the generated
 > manifests, entitlements and permissions, and the web build in headless Chromium. Never exercised: the Keychain /
 > Keystore, the system-browser sign-in, location services, App Links / Universal Links, EAS Build and Submit, the stores,
-> and (S-99) Stripe's React Native SDK — PaymentSheet, 3-D Secure and the bank's return link have never run, nor
-> against a real Stripe account (none exists); the Jest tests mock the SDK.
+> and Stripe's React Native SDK (S-99 orders, S-100 bookings) — PaymentSheet, saved cards, 3-D Secure and the bank's
+> return link have never run, nor against a real Stripe account (none exists); the Jest tests use test doubles.
 
 ## Contents
 

@@ -6188,3 +6188,87 @@ variable. One new app dependency: `@stripe/stripe-react-native` 0.64.0 (the vers
   saved cards) — no Stripe account exists and the tests mock the SDK; the step-up against a real northline-auth
   session cookie on a device. **First things to try on a device with a Stripe test account:** a 3-D Secure test card
   (4000 0027 6000 3184) through PaymentSheet, then a saved card, then an order with two shops (three PaymentIntents).
+
+## 2026-10-02 — S-100 Consumer app Journey C: find & book a service
+
+Branch `mobile/s-100-journey-c`. **No migration** (V255–V259 unused) and no new environment variable. Files of the
+`services` area only (MOBILE_PLAN § Working in parallel); shared files touched by one line or one case: the fixture
+server's `areas`, the auth fixture (`POST /api/auth/step-up/totp`), `app/(tabs)`'s services route, the shell test's
+tab id and a step block in `e2e/smoke.mjs`. How it is built: MOBILE_PLAN § Journey C as built.
+
+- **Server additions (module `hire`, `booking`, `payments`):**
+  - `GET /me/bookings/{id}` (and the checkout / confirm answers) gain `merchantId`, `state`, `timeZone` (the business's,
+    from its province through the region model), `steps` (`en_route | on_site | completed | signed_off` with times; no
+    GPS, approvals or photos), `report`, `photoCount` and `releasesAt` (completion + 48 h while not signed off, paid
+    jobs only). New `CustomerBookings.progress(customerId, bookingId)` reads the job's log for its own customer only.
+  - `POST /me/bookings/{id}/sign-off` — the customer's "Release payment": `Booking.signOff` (already in the domain,
+    never wired), the log row, and a new in-process event `BookingSignedOff` that `EscrowFulfilmentListener` turns into
+    `EscrowLifecycle.confirmedIfHeld` (releases at once, whichever of completion and sign-off is handled first).
+    Signing off again answers the same booking; a job that isn't completed is 409 `job_state`; someone else's is 404.
+    `BookingSignedOff` is **not externalized** (no worker needs it; no Kafka schema).
+  - `timeZone` on the calendar (`GET /public/providers/{slug}/slots`), the provider page and each provider card, so the
+    app never guesses a zone. Additive JSON only; the consumer web's zod schemas ignore the new fields.
+  - Tests: `BookingCheckoutApiTest.SignOff` (the job followed en route → on site → completed, the report, `releasesAt`,
+    409 before completion, 404 for someone else, 401 signed out, idempotent repeat, the event once, the escrow's
+    `release_at` due), time zone assertions in the calendar, provider page and provider list tests; OpenAPI regenerated.
+- **Times** are always the business's (`timeZone` from the api): slots, the calendar's day buttons (the api's dates),
+  "Today 3:00 p.m." on cards (and the "Today" filter uses the business's day), steps, cancellation deadline. Fixtures
+  keep businesses in `Etc/GMT+5` so tests prove the phone's zone is not used.
+- **Booking wizard choices the design leaves open:**
+  - The design's single "Vehicle" field stays one field ("2018 Honda Civic · ABC 1234") and is split for the api
+    (year make model · plate); unparseable → the api's "Tell us the vehicle year, make and model.".
+  - The api needs a spot and access instructions for visits (S-55); the time step adds the consumer web's "Where is the
+    vehicle?" / "How do we get in?" chips and "Access instructions" under "Where" (prefilled from the saved address).
+  - The review step adds the two checkboxes the api requires (cancellation policy, terms), worded like the web's.
+  - The app books **fixed-price, instant-book visits and appointments**. Hourly (home) jobs, events and consultations
+    need the web wizard's extra steps: the app opens the provider's booking page on the consumer site. Quote-only
+    services, services needing approval, and "Not sure? Ask for a quote" send a quote request to **this provider**
+    (`POST /me/quote-requests`, category and provider slugs); the quote itself is Journey D's screen (`/quotes/[id]`,
+    S-101), where the S-102 quote link lands.
+  - The wizard's answers live in memory per provider (no personal data on the phone); a guest signs in at "Review
+    booking" and the answers wait.
+  - `Idempotency-Key`: one per set of checkout answers (`randomId`), so a retry after a failed card replays the same
+    PaymentIntent, and changed answers don't collide with the stored one (409 `idempotency_key_reused`); one key for the
+    confirmation.
+  - Step-up (S-51) with the **authenticator code only** (`POST /api/auth/step-up/totp` in the app's auth session, as
+    S-99 does); no auth session on the phone (browser sign-in) → "confirm on the website". No second factor at all →
+    "Add a passkey" on the consumer site's security page.
+- **Payments:** like the consumer web — the api opens a manual-capture PaymentIntent and says the provider. A port,
+  `src/services/payments.ts`: `stripe` → `@stripe/stripe-react-native` 0.64.0 (the same version S-99 adds): a saved
+  card's PaymentMethod via `confirmPayment`, or a new card in **PaymentSheet** (Stripe's native UI; 3-D Secure is
+  Stripe's); `fake` → nothing to collect. The adapter is `stripe.native.ts` (iOS/Android only) with a `stripe.ts`
+  stand-in for the web build: bundled for the web, the SDK broke the whole page at start ("__fbBatchedBridgeConfig is
+  not set") even behind a lazy `require` (S-99 met the same and keeps its SDK off the web build too). The app never handles card numbers.
+  The design's "Pay with Visa ··4471 · Change" is the saved cards (`GET /me/payment-methods`) plus "New card".
+- **Copy left out because no data backs it:** "62 categories" (the api's count is used), the seasonal tags ("Snow
+  removal season"; "Popular: {category}" from the api's provider counts instead), distances on provider cards, the
+  member's SLA, "Earn N points", "Added to your calendar", the receipt PDF, the reliability score on the review.
+- **Day-of ETA (C9)** shows the booking's state ("comes Thu · 9:00 a.m.", "is on the way", "has arrived", "has
+  finished"), who comes, the address and the steps with times; it refreshes every 30 s while en route / on site (the
+  push says so too). Not built (no api): the live map and minutes away, member photo / vehicle / plate, Call, sharing
+  the access code; "Simulate job complete →" is a design demo control.
+- **Sign-off (C10):** report, "N completion photos on file" (the customer can't download job media yet), receipt line,
+  "Release payment" (the new endpoint), "Raise an issue" → Journey B's `/problem/booking/[id]`, the automatic release
+  in N h from `releasesAt`; signed off: "Released. $… paid to …" and "Rate …".
+- **Two-way review (C11):** no consumer endpoint posts reviews (MOBILE_PLAN § API gaps, raised, not worked around). The
+  screen keeps the design's form but says on screen that the rating isn't sent yet; "Submit review" saves only the
+  favourite (`PUT /me/favourites/{id}`) and returns to Orders.
+- **Notifications (C8)** is `GET /me/activity` as an inbox (All / Bookings / Orders / Offers — no offers feed exists, so
+  that filter is empty) with "Quiet hours 10:00 p.m. – 7:00 a.m." from `GET /me/notifications` and a switch for them
+  (`PUT`). Rows open the booking (its deep-link screen), the order's tracking (Journey B) or Orders (Journey D).
+- **Deep link:** `/bookings/<id>` (S-102) is a new route file in the area (`app/bookings/[id]/index.tsx`) that opens the
+  sign-off once the job is completed / signed off and the ETA screen otherwise; guests see the sign-in prompt.
+- **Provider page:** the design's "Message" button has no consumer messaging api; the second button is favourites
+  (`GET`/`PUT`/`DELETE /me/favourites`). The hero is the accent colour (the provider page api has no brand colour; the
+  cards' `brandColor` is used for their marks when it is a `#rrggbb`).
+- **Tests:** api `BookingCheckoutApiTest` +2 (sign-off), time zone assertions in 3 classes; app
+  `__tests__/services.test.tsx` 72 tests — every C screen's loading skeleton, error with Try again and offline banner
+  (11 × 3), the empty states, each screen's behaviour on the fixture backend (what is sent: holds, checkout,
+  confirmation, sign-off, quote request, favourites, quiet hours), the Stripe port (saved card, cancelled sheet,
+  declined card), step-up and enrol, slot taken, hold expired, the deep link, French, and the rules (vehicle split,
+  first-step messages en/fr, filters on the business's day, "ago"). The web smoke test (`e2e/smoke.mjs`) runs Journey
+  C end to end in headless Chromium: browse as a guest, sign in, book a visit, notifications, sign-off, review.
+- **Never exercised:** a phone, simulator or emulator; real Stripe (PaymentSheet, `confirmPayment`, 3-D Secure, saved
+  cards) — only the port with a test double, and the api's fake gateway; the authenticator step-up against a real
+  northline-auth from the app's cookie store; push → `/bookings/<id>` on a device. The web smoke test runs the journey
+  in headless Chromium on the fixture backend.

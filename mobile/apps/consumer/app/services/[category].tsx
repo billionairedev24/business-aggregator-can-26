@@ -1,6 +1,9 @@
-import { Stub } from '../../src/ui/Stub';
+import { useLocalSearchParams } from 'expo-router';
 
-/** Design 01 `providers` — a stub until its story builds it (src/screens.ts, docs/MOBILE_PLAN.md). */
+import { Providers as ProviderList } from '../../src/services/Providers';
+
+/** Design 01 `providers` (S-100): a category's providers. */
 export default function Providers() {
-  return <Stub screen="providers" />;
+  const { category } = useLocalSearchParams<{ category: string }>();
+  return <ProviderList slug={String(category)} />;
 }

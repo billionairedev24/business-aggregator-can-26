@@ -29,6 +29,7 @@ public final class ProviderPages {
      * @param vehicle that category is about vehicles
      * @param since when Northline approved the business
      * @param taxBps the sales tax on its services (its province's rate, S-55), for the booking summary
+     * @param timeZone its time zone (its province's, from the region model): {@code nextAvailable} is read in it
      */
     public record ProviderPage(
             String merchantId,
@@ -51,7 +52,8 @@ public final class ProviderPages {
             List<String> zones,
             @Nullable Instant nextAvailable,
             int taxBps,
-            ReviewPage reviews) {}
+            ReviewPage reviews,
+            String timeZone) {}
 
     public record CategoryRef(String id, String slug, Map<String, String> names) {}
 
