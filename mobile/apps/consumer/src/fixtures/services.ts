@@ -8,8 +8,9 @@ import type { FixtureArea, FixtureContext, FixtureRequest } from './context';
  * Journey C's api (S-100) with made-up businesses: the services landing, one bookable category (a mobile mechanic, with
  * vehicles) and a quoted one, providers, the live calendar, holds, the escrow checkout (the api's payment stand-in, or
  * Stripe-shaped intents), bookings at every step of the job, the sign-off, quote requests, favourites, the activity
- * inbox and quiet hours. The businesses keep their time in {@link BUSINESS_ZONE} (a fixed offset that names no place),
- * so screens prove they show the business's time, not the phone's.
+ * inbox and quiet hours. Saved cards (`GET /me/payment-methods`) are the shop area's (`server.shop.cards`, `.provider`).
+ * The businesses keep their time in {@link BUSINESS_ZONE} (a fixed offset that names no place), so screens prove they
+ * show the business's time, not the phone's.
  */
 export const BUSINESS_ZONE = 'Etc/GMT+5';
 const OFFSET_H = 5; // Etc/GMT+5 is UTC−5 all year
@@ -73,7 +74,6 @@ export interface ServicesFixtureState {
   holds: Map<string, { holdId: string; bookingId: string; slug: string; serviceId: string; startsAt: string; endsAt: string; checkout?: Record<string, unknown> }>;
   bookings: Map<string, FixtureBooking>;
   favourites: Set<string>;
-  cards: Array<{ id: string; brand: string; last4: string; expMonth: number; expYear: number; isDefault: boolean }>;
   quoteRequests: Array<Record<string, unknown>>;
   quiet: { quietOn: boolean; quietFrom: string; quietTo: string };
   idempotent: Map<string, unknown>;
@@ -140,7 +140,6 @@ export function newServicesState(now: () => number = Date.now): ServicesFixtureS
       ].map((b) => [b.bookingId, b]),
     ),
     favourites: new Set(),
-    cards: [{ id: 'pm_visa', brand: 'visa', last4: '4471', expMonth: 9, expYear: 2028, isDefault: true }],
     quoteRequests: [],
     quiet: { quietOn: true, quietFrom: '22:00', quietTo: '07:00' },
     idempotent: new Map(),
@@ -239,7 +238,7 @@ export function servicesFixtures(ctx: FixtureContext, state: ServicesFixtureStat
       return ctx.answer(200, { serviceId, durationMin: 45, days: calendarDays(ctx.now(), serviceId, state.taken).map(({ serviceId: _s, ...d }) => d), timeZone: BUSINESS_ZONE });
     }
 
-    const mine = ['/me/bookings', '/me/quote-requests', '/me/favourites'].some((x) => p.startsWith(x)) || ['/me/activity', '/me/notifications', '/me/payment-methods'].includes(p);
+    const mine = ['/me/bookings', '/me/quote-requests', '/me/favourites'].some((x) => p.startsWith(x)) || ['/me/activity', '/me/notifications'].includes(p);
     if (!mine) return undefined;
     if (!signed(req)) return unauthorized(ctx);
 
@@ -333,9 +332,6 @@ export function servicesFixtures(ctx: FixtureContext, state: ServicesFixtureStat
       return ctx.answer(201, { requestId: `qr-${state.quoteRequests.length}`, ref: 'QR-3104', respondBy: new Date(ctx.now() + 2 * 3_600_000).toISOString(), expiresAt: new Date(ctx.now() + 72 * 3_600_000).toISOString(), providers: (body.providers as string[]).length });
     }
     if (req.method === 'GET' && p === '/me/favourites') return ctx.answer(200, { items: [...state.favourites].map((merchantId) => ({ merchantId })) });
-    if (req.method === 'GET' && p === '/me/payment-methods') {
-      return ctx.answer(200, { provider: state.payment, publishableKey: state.payment === 'stripe' ? 'pk_test_fixture' : null, items: state.cards });
-    }
     if ((r = m(/^\/me\/favourites\/([^/]+)$/))) {
       if (req.method === 'PUT') state.favourites.add(r[1]!);
       else if (req.method === 'DELETE') state.favourites.delete(r[1]!);

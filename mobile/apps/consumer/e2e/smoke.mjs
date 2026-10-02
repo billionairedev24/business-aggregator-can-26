@@ -102,7 +102,40 @@ try {
     await noSideScroll('location');
     await shot('05-location');
     await page.getByRole('button', { name: 'Save and continue' }).click();
-    await page.getByTestId('stub-home').waitFor();
+    await page.getByTestId('home').waitFor();
+  });
+  // Journey B (S-99): signed in with the address just saved; the fixture backend's payment stand-in
+  await step('B1–B7 shop: home, search, product, cart, checkout, payment, confirmed', async () => {
+    await page.getByText("Tonight's pooled run").waitFor({ timeout: 30_000 });
+    await noSideScroll('home');
+    await shot('20-home');
+    await page.getByTestId('home-search').click();
+    await page.getByLabel('Search the shops').fill('sourdough');
+    await page.getByText('1 result · sorted by').waitFor();
+    await noSideScroll('search');
+    await shot('21-search');
+    await page.getByRole('button', { name: /^Country sourdough/ }).click();
+    await page.getByText('Maple Lane Bakery · Master tier · ★ 4.8 (211)').waitFor();
+    await noSideScroll('product');
+    await shot('22-product');
+    await page.getByTestId('product-add').click();
+    await page.getByText('1 item · 1 shop · one delivery').waitFor();
+    await noSideScroll('cart');
+    await shot('23-cart');
+    await page.getByTestId('cart-checkout').click();
+    await page.getByText('GST 5%').waitFor();
+    await noSideScroll('checkout');
+    await shot('24-checkout');
+    await page.getByTestId('checkout-continue').click();
+    await page.getByRole('button', { name: /^Pay \$/ }).click();
+    await page.getByText('Confirm this payment').waitFor();
+    await shot('25-bank-step');
+    await page.getByTestId('bank-approve').click();
+    await page.getByText(/^Order placed\. Arriving/).waitFor();
+    await noSideScroll('confirmed');
+    await shot('26-confirmed');
+    await page.getByRole('button', { name: 'Back to home' }).click();
+    await page.getByTestId('home').waitFor();
   });
   await step('You: signed in, French, sign out', async () => {
     await page.getByRole('tab', { name: 'You' }).click();
@@ -119,7 +152,7 @@ try {
 
   await step('the tab shell: Home · Services · Cart · Orders · You', async () => {
     await page.getByRole('tab', { name: 'Home' }).click();
-    await page.getByTestId('stub-home').waitFor({ timeout: 30_000 });
+    await page.getByTestId('home').waitFor({ timeout: 30_000 });
     const tabs = await page.getByRole('tab').allTextContents();
     if (tabs.join('|') !== 'Home|Services|Cart|Orders|You') throw new Error(tabs.join('|'));
     await page.getByRole('tab', { name: 'Services' }).click();

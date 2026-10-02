@@ -337,12 +337,13 @@ describe('C4–C7 booking a visit', () => {
     setBookingPayments({ pay });
     const { server, view } = await start({ signedIn: true, url: '/book/prairie-wrench/review' });
     server.services.payment = 'stripe';
+    server.shop.provider = 'stripe';
     holdFor(server);
     expect(await screen.findByText('Pay with')).toBeTruthy();
     expect(screen.getByText('Visa ··4471')).toBeTruthy();
     await agreeAndPay();
     await waitFor(() => expect(view.getPathname()).toBe('/bookings/01J9BKTEST/booked'));
-    expect(pay).toHaveBeenCalledWith(expect.objectContaining({ clientSecret: 'pi_01J9BKTEST_secret_fixture', publishableKey: 'pk_test_fixture' }), { kind: 'saved', paymentMethodId: 'pm_visa' });
+    expect(pay).toHaveBeenCalledWith(expect.objectContaining({ clientSecret: 'pi_01J9BKTEST_secret_fixture', publishableKey: 'pk_test_fixture' }), { kind: 'saved', paymentMethodId: 'pm_fixture_visa' });
   });
 
   it('stays on the review when the card sheet is cancelled, and says a declined card plainly', async () => {
@@ -350,6 +351,7 @@ describe('C4–C7 booking a visit', () => {
     setBookingPayments({ pay });
     const { server, view } = await start({ signedIn: true, url: '/book/prairie-wrench/review' });
     server.services.payment = 'stripe';
+    server.shop.provider = 'stripe';
     holdFor(server);
     fireEvent.press(await screen.findByTestId('card-new'));
     await agreeAndPay();

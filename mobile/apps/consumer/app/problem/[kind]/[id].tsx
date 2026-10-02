@@ -1,6 +1,6 @@
-import { Stub } from '../../../src/ui/Stub';
+import { Problem } from '../../../src/shop/Problem';
 
-/** Design 01 `refund` — a stub until its story builds it (src/screens.ts, docs/MOBILE_PLAN.md). */
-export default function Refund() {
-  return <Stub screen="refund" />;
+/** Design 01 `refund` (S-99, src/screens.ts, docs/MOBILE_PLAN.md § B). */
+export default function RefundRoute() {
+  return <Problem />;
 }

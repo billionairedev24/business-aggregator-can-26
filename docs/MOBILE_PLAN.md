@@ -146,20 +146,39 @@ signed in only. Paths are under `/api/v1` unless they start with `/api/auth` or 
 | `mfa` | `/second-factor` | | `POST /api/auth/register/totp`, `/register/totp/verify`, `/register/complete`, then `POST /oauth2/token` |
 | `location` | `/location` | | `GET /geo/markets`, `/geo/reverse`, `/geo/autocomplete`, `/geo/places/{placeId}`, `POST /geo/waitlist` |
 
-### B — Shop & get it delivered (S-99)
+### B — Shop & get it delivered (S-99, **built**)
 
 | screen | route | personal | api |
 |---|---|---|---|
-| `home` | `/home` (tab) | | `GET /public/home?city=`, `GET /public/shop?market=` (departments, tonight's pooled run), `GET /me/upcoming`, `GET /me/account-summary` (signed in) |
-| `search` | `/search` | | `GET /search`, `GET /search/suggest`, `POST /search/interpret` (when `GET /ai/status` says available) |
-| `product` | `/product/[id]` | | `GET /public/shop/products/{id}?market=`, `POST /cart/items` |
+| `home` | `/home` (tab) | | `GET /public/shop?market=` (departments, tonight's pooled run), `GET /public/home?city=` ("Trusted near you"), signed in: `GET /me` (the name), `GET /me/upcoming` ("Your week"), `GET /me/account-summary` (Plus: the run is free) |
+| `search` | `/search` (`?q=`, `?department=&name=` from a Home tile) | | `GET /search` (kind=product, the province and position), `GET /public/shop/departments/{slug}` |
+| `product` | `/product/[id]` (`?offer=`) | | `GET /public/shop/products/{id}?market=`, `POST /cart/items` |
 | `cart` | `/cart` (tab) | | `GET /cart`, `PATCH`/`DELETE /cart/items/{id}` (guest-keyed by `X-Northline-Guest`) |
 | `checkout` | `/checkout` | ✓ | `GET /me/checkout?market=`, `POST /me/checkout/quote` |
-| `pay` | `/pay` | ✓ | `GET /me/payment-methods`, `POST /me/checkouts` (Idempotency-Key, X-Step-Up), `POST /me/checkouts/{id}/place`; Stripe's native SDK for 3-D Secure — a new native module (DECISIONS) |
+| `pay` | `/pay` (`?kind&window&sub&address`) | ✓ | `GET /me/payment-methods`, `POST /me/checkouts` (Idempotency-Key, X-Step-Up), `POST /me/checkouts/{id}/place`; `POST /api/auth/step-up/totp`; Stripe's React Native SDK (PaymentSheet, 3-D Secure; return link `/stripe-redirect`) |
 | `confirmed` | `/orders/[id]/confirmed` | ✓ | `GET /me/orders/{id}` |
-| `track` | `/orders/[id]/track` | ✓ | `GET /me/orders/{id}`, `GET /me/orders/{id}/events` (SSE; React Native has no EventSource — poll every 15 s or add one, S-99 decides) |
-| `delivered` | `/orders/[id]/delivered` | ✓ | `GET /me/orders/{id}` (proof photo, confirm) |
-| `refund` | `/problem/[kind]/[id]` | ✓ | `GET /me/problems/{kind}/{id}`, `POST /me/problems`, `POST /me/case-uploads`, `POST /me/help/triage` |
+| `track` | `/orders/[id]/track` (and `/orders/[id]`, where S-102's order links land) | ✓ | `GET /me/orders/{id}`, read again every 15 s (no EventSource in React Native) |
+| `delivered` | `/orders/[id]/delivered` | ✓ | `GET /me/orders/{id}`, `POST /me/orders/{id}/confirm` |
+| `refund` | `/problem/[kind]/[id]` | ✓ | `GET /me/problems/{kind}/{id}`, `POST /me/problems` |
+
+Built in `src/shop/` (one file per screen, `common.ts` for the market, money, the cart hooks; `payments.ts` the card
+port; `stepUp.ts`), `src/api/shop.ts`, `src/fixtures/shop.ts`, `__tests__/shop.test.tsx`. What S-99 decided
+(DECISIONS § S-99):
+
+- **Payments follow the consumer web, through a port** (`src/shop/payments.ts`): the api's `payment.provider` picks
+  Stripe's React Native SDK (a new card in PaymentSheet, a saved card by its PaymentMethod, the order's other
+  PaymentIntents with the same one, 3-D Secure native) or nothing (the api's stand-in: the design's bank step). The
+  app never sees a card number; the publishable key comes from the api. Apple Pay / Google Pay aren't offered.
+- **Step-up** before paying: the authenticator app's code in the app's auth session (passkeys need a native module);
+  no second factor → the consumer site's Security.
+- **Tracking polls** `GET /me/orders/{id}` every 15 s instead of the SSE stream; the map is the design's schematic
+  (no map SDK), where the courier is in words ("You're next", "2 stops before yours").
+- **Not on the phone** for lack of an api: promo / points codes and "Redeem points" (checkout has no points), the
+  delivery rating and the tip, the proof photo itself, "Because you booked …" (Home shows "Trusted near you"),
+  photos on a report (no photo picker; the case takes them on the site). "Organic" isn't a search filter (no data, as
+  on the web). Suggestions (`/search/suggest`) and AI search (`/search/interpret`) aren't used: results follow the
+  typing.
+- Every amount, tax name and rate, time (the market's zone) and place comes from the api or the region model.
 
 ### C — Find & book a service (S-100, **built**)
 
@@ -208,8 +227,11 @@ api above; personal stubs already show guests the sign-in prompt.
   permission was already given, named by `GET /geo/reverse` → the api's fallback market (`GET /geo/markets`).
   Screens filter by `location.city` / coordinates; checkout reads the address parts. `/location?next=/checkout` comes
   back to `next` after Save.
-- **Cart count** (S-99): the tab bar takes `cartCount`; S-99 feeds it from `GET /cart` → `itemCount` (query key
-  `['cart']`, invalidated by every cart mutation).
+- **Cart count** (S-99, built): the tab bar takes `cartCount`; `useCartCount()` (`src/shop/common.ts`) feeds it from
+  `GET /cart` → `itemCount` (query key `['cart']`, set by every cart mutation, re-read at sign-in / sign-out and on a
+  language change). Another journey that changes the cart sets or invalidates `['cart']`.
+- **Back to a tab** from deep in a flow: `backToTab('/home' | '/orders' | '/cart')` (`src/shop/common.ts`) closes the
+  screens above the tabs first — `router.push`/`replace` to a tab path stacks a second set of tabs.
 - **Account summary** (S-101): `GET /me/account-summary` (query key `['account', 'summary']`) — Home and You read it.
 - **Push notifications** (S-102): `@northline/mobile-kit` exports `setPushRegistrar(registrar)` and `PushHooks`. The
   AuthProvider calls `PushHooks.signedIn(api)` after every sign-in and `PushHooks.signingOut(api)` before revoking the
@@ -233,7 +255,7 @@ api above; personal stubs already show guests the sign-in prompt.
   | `https://<zone>/app/cases/<number>` | `ca.northline.app://cases/<number>` | `/cases/<number>` |
   | `https://<zone>/courier/run` | `ca.northline.courier://run` | courier app `/run` |
 
-  Journeys B–D add the screens behind `/orders/<id>`, `/bookings/<id>`, `/quotes/<id>` and `/cases/<number>` (or map
+  Journeys B–D add the screens behind `/orders/<id>` (S-99: → the order's tracking), `/bookings/<id>`, `/quotes/<id>` and `/cases/<number>` (or map
   `routeOf`'s paths onto theirs in one place).
 
 ## Working in parallel (S-99, S-100, S-101)
@@ -258,9 +280,14 @@ Areas: `shop` (S-99), `services` (S-100), `account` (S-101). Don't edit another 
   call, no time-boxed sharing of the access code; completion photos can't be downloaded by the customer (the screen
   shows how many there are). S-100 shows the job's state and steps instead (§ Journey C as built).
 - **Messages (C3 "Message"):** no consumer messaging endpoint; the provider page offers favourites instead.
-- **SSE on React Native:** `GET /me/orders/{id}/events` needs an EventSource; React Native has none built in.
-- **Payments:** card entry and 3-D Secure need Stripe's React Native SDK (a native module, a config plugin and the
-  publishable key per environment); Apple Pay / Google Pay need merchant ids.
+- **SSE on React Native:** `GET /me/orders/{id}/events` needs an EventSource; React Native has none built in (S-99
+  polls every 15 s).
+- **Payments:** S-99 added Stripe's React Native SDK (no config plugin needed for cards; the publishable key comes
+  from the api); S-100 uses it for bookings. Apple Pay / Google Pay need an Apple merchant id, the config plugin and
+  Google Pay on the account.
+- **Shop (S-99):** no consumer api for a promo / points code or redeeming points at checkout, the delivery rating
+  (B9) and the courier tip, nor a URL for the proof-of-delivery photo; photos on a report need a photo picker (a
+  native module and a permission).
 - **Passkeys in the app:** creating or using a passkey natively needs a native module (none in Expo); the app sends
   people to the consumer site in the system browser for passkeys, Google and Apple (S-98).
 - **Push:** the server, mobile-kit's registration and the deep links are S-102's; the app still needs

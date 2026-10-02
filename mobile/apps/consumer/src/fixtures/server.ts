@@ -2,6 +2,7 @@ import { authFixtures, newAuthState, type AuthFixtureState } from './auth';
 import { lower, type FixtureArea, type FixtureContext, type FixtureRequest } from './context';
 import { geoFixtures } from './geo';
 import { newServicesState, servicesFixtures } from './services';
+import { newShopState, shopFixtures } from './shop';
 
 /**
  * An in-memory northline-auth + api for the web smoke test, demos and screen tests (`EXPO_PUBLIC_FIXTURES=1`; never
@@ -27,8 +28,9 @@ export function createFixtureServer(options: FixtureOptions = {}) {
   const auth: AuthFixtureState = newAuthState();
   const geo = { waitlist: [] as Array<{ regionId: string; email?: string }> };
   const calls: Array<{ method: string; path: string; signed: boolean; guest?: string }> = [];
+  const shop = newShopState();
   const servicesState = newServicesState(now);
-  const areas: FixtureArea[] = [authFixtures(ctx, auth), geoFixtures(ctx, geo), servicesFixtures(ctx, servicesState)];
+  const areas: FixtureArea[] = [authFixtures(ctx, auth), geoFixtures(ctx, geo), shopFixtures(ctx, shop), servicesFixtures(ctx, servicesState)];
 
   async function handle(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
     const url = new URL(String(input), 'http://fixtures.invalid');
@@ -54,6 +56,7 @@ export function createFixtureServer(options: FixtureOptions = {}) {
     fetch: handle as typeof fetch,
     auth,
     geo,
+    shop,
     services: servicesState,
     calls,
   };

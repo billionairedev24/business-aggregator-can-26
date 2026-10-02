@@ -34,7 +34,7 @@ describe('A1 Welcome', () => {
     expect(screen.getByRole('button', { name: 'Create account' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: 'Browse first' }));
-    await screen.findByTestId('stub-home');
+    await screen.findByTestId('home');
     expect(view.getPathname()).toBe('/home');
     expect(store.data.get('nl.app.welcomed')).toBe('1');
   });
@@ -193,7 +193,7 @@ describe('signing in to an existing account', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Send code' }));
     expect(await screen.findByText('Enter the 6-digit code we sent to the mobile number on your account.')).toBeTruthy();
     fireEvent.changeText(screen.getByTestId('code-input'), FIXTURE_CODE);
-    await screen.findByTestId('stub-home');
+    await screen.findByTestId('home');
     expect(view.getPathname()).toBe('/home');
     expect(await services.session.restore()).toBe(true);
     expect(server.auth.api.map((c) => c.path)).toEqual(['/api/auth/sign-in', '/api/auth/sign-in/code', '/api/auth/sign-in/code/verify']);
@@ -276,7 +276,7 @@ describe('A5 Province & address', () => {
 
   it('never asks for location outside this screen (an undecided permission stays undecided)', async () => {
     await start({ welcomed: true });
-    await screen.findByTestId('stub-home');
+    await screen.findByTestId('home');
     expect(Location.requestForegroundPermissionsAsync).not.toHaveBeenCalled();
     expect(Location.getCurrentPositionAsync).not.toHaveBeenCalled();
   });
