@@ -35,6 +35,12 @@ networkPolicy:
         matchLabels:
           kubernetes.io/metadata.name: envoy-gateway-system
 
+# S-97: this environment's apps are the preview builds (eas.json); set appleTeamId and androidCertSha256 once the
+# Apple team and the Play app-signing key exist (docs/runbooks/mobile.md § App Links).
+mobileApps:
+  iosBundleIds: [ ca.northline.app.preview, ca.northline.courier.preview ]
+  androidPackages: [ ca.northline.app.preview, ca.northline.courier.preview ]
+
 apps:
   api:
     docsRoutes: true            # S-125: Swagger UI, Scalar, Redoc and the specs on the api host
