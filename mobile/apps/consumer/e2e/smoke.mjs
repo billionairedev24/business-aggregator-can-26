@@ -102,7 +102,7 @@ try {
     await noSideScroll('location');
     await shot('05-location');
     await page.getByRole('button', { name: 'Save and continue' }).click();
-    await page.getByTestId('stub-home').waitFor();
+    await page.getByTestId('home').waitFor();
   });
   await step('You: signed in, French, sign out', async () => {
     await page.getByRole('tab', { name: 'You' }).click();
@@ -119,7 +119,7 @@ try {
 
   await step('the tab shell: Home · Services · Cart · Orders · You', async () => {
     await page.getByRole('tab', { name: 'Home' }).click();
-    await page.getByTestId('stub-home').waitFor({ timeout: 30_000 });
+    await page.getByTestId('home').waitFor({ timeout: 30_000 });
     const tabs = await page.getByRole('tab').allTextContents();
     if (tabs.join('|') !== 'Home|Services|Cart|Orders|You') throw new Error(tabs.join('|'));
     await page.getByRole('tab', { name: 'Services' }).click();
