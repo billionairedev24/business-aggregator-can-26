@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "northline:privacy.merchant_data_erased:1",
+  "$id": "northline:merchants.merchant_data_erased:1",
   "type": "object",
   "required": ["eventId", "occurredAt", "aggregateId", "requestId"],
   "additionalProperties": true,

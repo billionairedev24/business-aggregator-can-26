@@ -6536,7 +6536,7 @@ Branch `security/s-105-privacy-rights`. Runbook: [runbooks/privacy-requests.md](
   the folder store, prefixed and guarded wrappers; the shared contract test covers all four providers). Messaging's
   `AttachmentStorage.deleteAll` removes `messaging/customers/<id>/`. Proof-of-delivery photos and dispute evidence are
   kept (chargeback evidence).
-- **Events, ids only:** `privacy.personal_data_erased` (in-process) and `privacy.merchant_data_erased` (request id,
+- **Events, ids only:** `privacy.personal_data_erased` (in-process) and `merchants.merchant_data_erased` (request id,
   business id) for each business whose public data changed. The latter is **published on `merchants.merchant`**, not a
   topic of its own: a `privacy.merchant` topic with the search indexer's three retry topics took Azure Event Hubs to
   102 of its 100 hubs (`TopicCatalogueTest`); on the business's topic it is ordered with the business's other events and

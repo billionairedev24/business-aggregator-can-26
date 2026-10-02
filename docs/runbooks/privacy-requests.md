@@ -78,7 +78,7 @@ When a verified erasure is due (`PrivacyScheduler`, every `PRIVACY_RUN_INTERVAL`
    `holds_open` counting what is still held; the sealed contact is wiped when the last hold clears (audit
    `privacy.request_holds_cleared`).
 5. **Events carry ids only:** `privacy.personal_data_erased` (in-process: request id, account id, holds left) and
-   `privacy.merchant_data_erased` (request id, business id) for every business whose public data changed — published
+   `merchants.merchant_data_erased` (request id, business id) for every business whose public data changed — published
    on the business's own topic `merchants.merchant`, so the search indexer re-reads it (a review's author name and
    words gone). The Elasticsearch documents hold no personal data (listings and businesses only), so there is nothing
    else to remove from search.

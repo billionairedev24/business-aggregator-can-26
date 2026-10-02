@@ -27,6 +27,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.event.ApplicationEvents;
 import org.springframework.test.context.event.RecordApplicationEvents;
 
@@ -38,6 +39,7 @@ import org.springframework.test.context.event.RecordApplicationEvents;
  */
 @RecordApplicationEvents
 @Import(ErasurePipelineTest.Flaky.class)
+@DirtiesContext // its own context (the flaky contributor): closed afterwards so the cached ones fit in the heap
 class ErasurePipelineTest extends IntegrationTest {
 
     /** Fails the first time it runs for each person — a crash or an outage halfway through the pipeline. */

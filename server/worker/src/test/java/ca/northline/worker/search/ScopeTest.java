@@ -28,7 +28,7 @@ class ScopeTest {
     @Test
     void anErasureTouchingABusiness_rereadsThatBusiness() {
         // S-105: published on the business's own topic; ids only (the privacy request, never whose data)
-        var scope = Scope.of(event("privacy.merchant_data_erased", """
+        var scope = Scope.of(event("merchants.merchant_data_erased", """
                 {"eventId": "01JA0000000000000000000001", "occurredAt": "2026-10-02T12:00:00Z",
                  "aggregateId": "01J9ZD3V00000000000000PWM1", "requestId": "01JA0000000000000000000002"}
                 """));
