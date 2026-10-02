@@ -359,6 +359,14 @@ northline:
     link-ttl: ${PRIVACY_LINK_TTL:PT15M}              # a download link's life (at most PT1H)
     hold-retry: ${PRIVACY_HOLD_RETRY:P1D}            # a held erasure step (open order, dispute) is tried again after this
     run-every: ${PRIVACY_RUN_INTERVAL:PT1M}          # how often the pipeline looks for work
+  # S-107 retention jobs (docs/runbooks/retention.md). The periods are the Privacy Policy's, in
+  # privacy/retention-schedule.yml — not settings.
+  retention:
+    enabled: ${RETENTION_ENABLED:true}               # nightly runs; off = only runs from the console
+    cron: ${RETENTION_CRON:0 47 2 * * *}             # when, in the platform zone (REGION_PLATFORM_ZONE)
+    batch: ${RETENTION_BATCH:500}                    # rows per transaction
+    max-batches: ${RETENTION_MAX_BATCHES:40}         # batches per category per run; the rest waits for the next night
+    dry-run: ${RETENTION_DRY_RUN:false}              # nightly runs only count what they would change
   notifications:                                 # links in notification emails (S-13)
     studio-url: ${STUDIO_ORIGIN:http://localhost:3100}
     api-url: ${API_PUBLIC_URL:http://localhost:8080}   # unsubscribe links: the api's public URL (not the BFF)

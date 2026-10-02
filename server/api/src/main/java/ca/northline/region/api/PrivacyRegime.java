@@ -10,6 +10,8 @@ import java.util.Locale;
  * @param province the province the regime was chosen for (two-letter code)
  * @param responseDays days to answer a request (business days when {@code businessDays})
  * @param extensionDays the one extension the law allows (0 = none)
+ * @param decisionRetentionDays S-107: information used to make a decision about a person (a dispute decided with it)
+ *     is kept at least this many days after the decision (0 = the law sets no number)
  */
 public record PrivacyRegime(
         PrivacyLaw law,
@@ -23,7 +25,8 @@ public record PrivacyRegime(
         String authorityUrl,
         int responseDays,
         boolean businessDays,
-        int extensionDays) {
+        int extensionDays,
+        int decisionRetentionDays) {
 
     public String name(Locale locale) {
         return locale.getLanguage().equals("fr") ? nameFr : nameEn;

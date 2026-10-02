@@ -54,7 +54,8 @@ class PrivacyRegimeCatalogue implements PrivacyRegimes {
                 row.authorityUrl(),
                 row.responseDays(),
                 row.businessDays(),
-                row.extensionDays());
+                row.extensionDays(),
+                row.decisionRetentionDays());
     }
 
     @Override

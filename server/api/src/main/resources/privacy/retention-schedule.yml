@@ -1,0 +1,229 @@
+# S-107 — the retention schedule: section 6 of the Privacy Policy ("How long we keep it",
+# web/packages/legal/pages/privacy.html, shipped verbatim from design 10) as configuration. One entry per category of
+# data: the policy's clause and words, the period and what starts its clock, the legal basis, the action at expiry, the
+# owning module and the legal holds that stop it. RetentionScheduleTest fails when a clause of the policy has no
+# category, a category quotes the policy differently, or a period isn't the one the policy states. Runbook:
+# docs/runbooks/retention.md.
+#
+# action:       delete | pseudonymise (the person's id and every personal field go; amounts and dates stay) |
+#               aggregate (only totals stay)
+# enforcement:  job (the module's RetentionContributor, nightly) | pipeline (the S-105 erasure pipeline) |
+#               infrastructure (bucket / database settings, Terraform) | none (kept while the policy says so) |
+#               blocked (nothing in the product ends the period yet — see note)
+# afterDisputeClosed: a dispute about the row keeps it this long after the dispute is decided (policy: "until a dispute
+#               is closed plus 1 year"); lawMinimum: also at least region.privacy_laws.decision_retention_days of the
+#               person's province after the decision (information used to decide about a person).
+# Periods are fixed by the policy: they are not environment variables. Change the policy first (counsel), then here.
+retention:
+  categories:
+    - code: account.closed_profile
+      module: privacy
+      clause: Account profile
+      policy: while your account is open, then deleted within 30 days of closure.
+      period: P30D
+      starts: { en: "the account's closure (an erasure starts)", fr: "la fermeture du compte (début de la suppression)" }
+      name: { en: "Profiles of closed accounts", fr: "Profils des comptes fermés" }
+      basis:
+        en: "PIPEDA Sch. 1 cl. 4.5.3 and the provincial acts: information no longer needed is destroyed or made anonymous; consent ends with the account."
+        fr: "LPRPDE ann. 1 art. 4.5.3 et lois provinciales : les renseignements dont on n'a plus besoin sont détruits ou anonymisés; le consentement prend fin avec le compte."
+      action: pseudonymise
+      enforcement: pipeline
+      holds: [open_order, upcoming_booking, escrow_held, open_dispute, open_refund, active_delivery, business_owner]
+      note:
+        en: "The S-105 erasure pipeline blanks the profile and contact; what a law keeps stays under the blanked id. The nightly job finds erasures still unfinished 30 days after the account closed and runs their steps now."
+        fr: "Le processus de suppression (S-105) efface le profil et les coordonnées; ce qu'une loi oblige à garder reste sous l'identifiant effacé. La tâche de nuit relance les suppressions encore inachevées 30 jours après la fermeture du compte."
+    - code: orders.sales_records
+      module: orders
+      clause: Transaction and tax records
+      policy: 7 years, as required by the Income Tax Act and Excise Tax Act, held in restricted archives.
+      period: P7Y
+      starts: { en: "the order being placed", fr: "la passation de la commande" }
+      name: { en: "Orders and checkouts", fr: "Commandes et paiements de commande" }
+      basis:
+        en: "Income Tax Act s. 230(4) and Excise Tax Act s. 286(3): books and records kept six years after the tax year they concern; the policy promises 7 years."
+        fr: "Loi de l'impôt sur le revenu, par. 230(4), et Loi sur la taxe d'accise, par. 286(3) : registres conservés six ans après l'année d'imposition visée; la politique promet 7 ans."
+      action: pseudonymise
+      enforcement: job
+      holds: [open_order]
+    - code: booking.sales_records
+      module: booking
+      clause: Transaction and tax records
+      policy: 7 years, as required by the Income Tax Act and Excise Tax Act, held in restricted archives.
+      period: P7Y
+      starts: { en: "the booking's date", fr: "la date de la réservation" }
+      name: { en: "Bookings, quote requests and accepted quotes", fr: "Réservations, demandes de soumission et soumissions acceptées" }
+      basis:
+        en: "Income Tax Act s. 230(4) and Excise Tax Act s. 286(3): books and records kept six years after the tax year they concern; the policy promises 7 years."
+        fr: "Loi de l'impôt sur le revenu, par. 230(4), et Loi sur la taxe d'accise, par. 286(3) : registres conservés six ans après l'année d'imposition visée; la politique promet 7 ans."
+      action: pseudonymise
+      enforcement: job
+      holds: [upcoming_booking]
+    - code: payments.financial_records
+      module: payments
+      clause: Transaction and tax records
+      policy: 7 years, as required by the Income Tax Act and Excise Tax Act, held in restricted archives.
+      period: P7Y
+      starts: { en: "the payment", fr: "le paiement" }
+      name: { en: "Payments, escrows, refunds and disputes", fr: "Paiements, entiercements, remboursements et litiges" }
+      basis:
+        en: "Income Tax Act s. 230(4) and Excise Tax Act s. 286(3): books and records kept six years after the tax year they concern; the policy promises 7 years."
+        fr: "Loi de l'impôt sur le revenu, par. 230(4), et Loi sur la taxe d'accise, par. 286(3) : registres conservés six ans après l'année d'imposition visée; la politique promet 7 ans."
+      action: pseudonymise
+      enforcement: job
+      holds: [escrow_held, open_dispute, open_refund]
+    - code: messaging.conversations
+      module: messaging
+      clause: Messages and dispute evidence
+      policy: 2 years after the transaction, or until a dispute is closed plus 1 year, whichever is later.
+      period: P2Y
+      afterDisputeClosed: P1Y
+      starts: { en: "the conversation's last message", fr: "le dernier message de la conversation" }
+      name: { en: "Conversations between customers and businesses, with their files", fr: "Conversations entre clients et entreprises, avec leurs fichiers" }
+      basis:
+        en: "Claims about a transaction (limitation periods) and card network chargeback rules; a decided dispute's file is kept a year for appeals."
+        fr: "Recours liés à une transaction (délais de prescription) et règles des réseaux de cartes sur les rétrofacturations; le dossier d'un litige tranché est gardé un an pour les appels."
+      action: delete
+      enforcement: job
+      holds: [open_order, upcoming_booking, active_delivery, open_dispute]
+    - code: messaging.help_cases
+      module: messaging
+      clause: Messages and dispute evidence
+      policy: 2 years after the transaction, or until a dispute is closed plus 1 year, whichever is later.
+      period: P2Y
+      afterDisputeClosed: P1Y
+      starts: { en: "the case being resolved (photos: their upload)", fr: "la résolution de la demande (photos : leur téléversement)" }
+      name: { en: "Help cases' conversations and the photos customers sent", fr: "Échanges des demandes d'aide et photos envoyées par les clients" }
+      basis:
+        en: "Claims about a transaction (limitation periods); the case row stays as a support record without the person's words."
+        fr: "Recours liés à une transaction (délais de prescription); la demande reste comme dossier de soutien, sans les mots de la personne."
+      action: delete
+      enforcement: job
+      holds: [open_order, upcoming_booking, open_dispute]
+    - code: payments.dispute_evidence
+      module: payments
+      clause: Messages and dispute evidence
+      policy: 2 years after the transaction, or until a dispute is closed plus 1 year, whichever is later.
+      period: P2Y
+      afterDisputeClosed: P1Y
+      lawMinimum: true
+      starts: { en: "the transaction the dispute is about", fr: "la transaction visée par le litige" }
+      name: { en: "Dispute statements and evidence files", fr: "Déclarations et pièces des litiges" }
+      basis:
+        en: "Card network chargeback rules and appeals; the decision and amounts stay with the financial records."
+        fr: "Règles des réseaux de cartes sur les rétrofacturations et appels; la décision et les montants restent avec les registres financiers."
+      action: pseudonymise
+      enforcement: job
+      holds: [open_dispute]
+    - code: fulfilment.delivery_proofs
+      module: fulfilment
+      clause: Messages and dispute evidence
+      policy: 2 years after the transaction, or until a dispute is closed plus 1 year, whichever is later.
+      period: P2Y
+      afterDisputeClosed: P1Y
+      lawMinimum: true
+      starts: { en: "the drop-off", fr: "la livraison" }
+      name: { en: "Proof-of-delivery photos and signatures", fr: "Photos et signatures de preuve de livraison" }
+      basis:
+        en: "Chargeback evidence (card network rules): proof the order arrived."
+        fr: "Preuve pour les rétrofacturations (règles des réseaux de cartes) : la commande est bien arrivée."
+      action: delete
+      enforcement: job
+      holds: [open_order, active_delivery, open_dispute]
+    - code: booking.checkin_locations
+      module: booking
+      clause: GPS check-in records
+      policy: 90 days, or until a related dispute is closed.
+      period: P90D
+      afterDisputeClosed: P0D
+      lawMinimum: true
+      starts: { en: "the check-in", fr: "l'enregistrement de l'arrivée" }
+      name: { en: "Where a team member checked in at a job (GPS)", fr: "Lieu où un membre de l'équipe a signalé son arrivée (GPS)" }
+      basis:
+        en: "Needed only to settle a dispute about the visit; a province's law may keep what decided a dispute longer (region.privacy_laws)."
+        fr: "Utile seulement pour régler un litige sur la visite; la loi d'une province peut faire garder plus longtemps ce qui a servi à trancher un litige (region.privacy_laws)."
+      action: delete
+      enforcement: job
+      holds: [upcoming_booking, open_dispute]
+    - code: identity.sign_ins
+      module: identity
+      clause: Login and security logs
+      policy: 12 months.
+      period: P12M
+      starts: { en: "the sign-in's last activity", fr: "la dernière activité de la connexion" }
+      name: { en: "Sign-ins (device, network address, city)", fr: "Connexions (appareil, adresse réseau, ville)" }
+      basis:
+        en: "Safeguards (PIPEDA Sch. 1 cl. 4.7): investigating account takeovers and abuse."
+        fr: "Mesures de sécurité (LPRPDE ann. 1 art. 4.7) : enquêter sur les prises de contrôle de comptes et les abus."
+      action: delete
+      enforcement: job
+      holds: []
+    - code: merchants.kyc_records
+      module: merchants
+      clause: KYC documents
+      policy: held by our payment processor under its own legal retention schedule (5 years after the relationship ends under Canadian AML rules).
+      period: P5Y
+      starts: { en: "the business relationship ending", fr: "la fin de la relation d'affaires" }
+      name: { en: "Business owners' identity checks (outcomes; documents are at Stripe)", fr: "Vérifications d'identité des propriétaires (résultats; les pièces sont chez Stripe)" }
+      basis:
+        en: "Proceeds of Crime (Money Laundering) and Terrorist Financing Act and Regulations: records kept 5 years after the relationship ends — by the payment processor."
+        fr: "Loi sur le recyclage des produits de la criminalité et le financement des activités terroristes et son règlement : registres gardés 5 ans après la fin de la relation — par le processeur de paiement."
+      action: pseudonymise
+      enforcement: blocked
+      holds: [business_owner]
+      note:
+        en: "No business can be closed or refused yet (applications are approved or sent back), so no relationship ends and nothing is due. The identity documents themselves are at Stripe Identity; Northline keeps the outcome and the owner's name."
+        fr: "Aucune entreprise ne peut encore être fermée ou refusée (les demandes sont approuvées ou renvoyées) : aucune relation ne prend fin, rien n'est échu. Les pièces d'identité sont chez Stripe Identity; Northline garde le résultat et le nom du propriétaire."
+    - code: trust.reviews
+      module: trust
+      clause: Reviews
+      policy: remain public, attributed to your first name and initial, unless you delete them; you may also anonymise them on account closure.
+      starts: { en: "—", fr: "—" }
+      name: { en: "Reviews", fr: "Avis" }
+      basis:
+        en: "Consent: the author published them. Erasure (S-105) blanks the words and the author's name; the rating stays."
+        fr: "Consentement : l'auteur les a publiés. La suppression (S-105) efface le texte et le nom de l'auteur; la note reste."
+      action: pseudonymise
+      enforcement: none
+      holds: []
+    - code: infrastructure.backups
+      module: infrastructure
+      clause: Backups
+      policy: Backups roll off within 35 days of deletion.
+      period: P35D
+      starts: { en: "the deletion", fr: "la suppression" }
+      name: { en: "Database backups and point-in-time restore; older versions of stored files", fr: "Sauvegardes et restauration à un instant donné; anciennes versions des fichiers" }
+      basis:
+        en: "Disaster recovery (S-114): 35 days of backups, older object versions expire after 30 days."
+        fr: "Reprise après sinistre (S-114) : 35 jours de sauvegardes, les anciennes versions d'objets expirent après 30 jours."
+      action: delete
+      enforcement: infrastructure
+      holds: []
+      note:
+        en: "Terraform: backup_retention_days 35 (prod); bucket lifecycle noncurrent_days 30 and replica noncurrent_days 30. Google Cloud and Azure replicas don't receive deletions — see the runbook."
+        fr: "Terraform : backup_retention_days 35 (prod); cycle de vie des compartiments noncurrent_days 30, répliques 30. Les répliques Google Cloud et Azure ne reçoivent pas les suppressions — voir le guide."
+    - code: developer.audit_log
+      module: developer
+      period: P7Y
+      starts: { en: "the action", fr: "l'action" }
+      name: { en: "Audit log of privileged actions (ids and codes)", fr: "Journal d'audit des actions privilégiées (identifiants et codes)" }
+      basis:
+        en: "Accountability for actions on financial and personal records, kept as long as the records they concern (7 years). Not named in the Privacy Policy — for counsel."
+        fr: "Responsabilité des actions sur les registres financiers et personnels, gardée aussi longtemps que ces registres (7 ans). Absent de la politique — à revoir par les conseillers juridiques."
+      action: delete
+      enforcement: job
+      holds: []
+  # Short-lived technical data that other jobs already delete (not in the policy: none of it outlives the categories
+  # above). Listed so the report shows every automatic deletion in one place.
+  operational:
+    - { code: privacy.exports, period: P7D, where: "api · PrivacyScheduler, hourly · bucket lifecycle on privacy/exports/ (8 days)", setting: PRIVACY_EXPORT_TTL, name: { en: "Access export bundles", fr: "Copies des données (exports)" } }
+    - { code: fulfilment.dropoff_addresses, period: P30D, where: "api · DispatchJobs, hourly", setting: northline.fulfilment.address-retention, name: { en: "Drop-off addresses after the delivery ends", fr: "Adresses de livraison après la livraison" } }
+    - { code: payments.stripe_events, period: P30D, where: "api · PaymentsScheduler, every minute", setting: "—", name: { en: "Processed Stripe webhook events", fr: "Événements de webhook Stripe traités" } }
+    - { code: catalogue.commerce_receipts, period: P7D, where: "api · CommerceScheduler, hourly", setting: "—", name: { en: "Commerce webhook receipts and expired connection requests", fr: "Reçus de webhooks commerce et demandes de connexion expirées" } }
+    - { code: availability.calendar_notifications, period: P7D, where: "api · CalendarScheduler, hourly", setting: "—", name: { en: "Calendar notification dedupe rows and expired connection requests", fr: "Déduplication des avis d'agenda et demandes de connexion expirées" } }
+    - { code: payments.idempotency_keys, period: PT24H, where: "api · Valkey key expiry (Postgres only under local/test)", setting: "—", name: { en: "Idempotency keys", fr: "Clés d'idempotence" } }
+    - { code: fulfilment.live_positions, period: PT24H, where: "Valkey key expiry", setting: "—", name: { en: "Live courier positions", fr: "Positions des livreurs en direct" } }
+    - { code: messaging.push_devices, period: P90D, where: "worker · PushPruneJob, daily", setting: PUSH_STALE_AFTER, name: { en: "Push installations not refreshed", fr: "Installations push non actualisées" } }
+    - { code: messaging.deferred_notifications, period: P30D, where: "worker · DeferredNotificationsJob, nightly (S-115)", setting: northline.notifications.deferred-dead-retention, name: { en: "Notifications given up on", fr: "Notifications abandonnées" } }
+    - { code: events.processed_events, period: P60D, where: "worker · nightly", setting: EVENTS_PROCESSED_RETENTION, name: { en: "Event dedupe claims", fr: "Réclamations de déduplication d'événements" } }
+    - { code: developer.webhook_deliveries, period: P30D, where: "worker · nightly", setting: WEBHOOKS_LOG_RETENTION, name: { en: "Partner webhook delivery log", fr: "Journal de livraison des webhooks partenaires" } }
+    - { code: auth.erased_accounts, period: PT5M, where: "auth · ErasedAccountsJob, every 5 minutes", setting: "—", name: { en: "Sign-in credentials of erased accounts", fr: "Identifiants de connexion des comptes supprimés" } }
