@@ -56,7 +56,7 @@ function ReportView({ data, province }: { data: Report; province?: string }) {
           <h2 className="nl-rp-h2">{t('wacTitle')}</h2>
           <div className="nl-rp-sub">{t('wacSub')}</div>
           <LineChart title={t('wacTitle')} current={data.weeks.map(w => w.customers ?? 0)} previous={data.weeks.map(w => w.previous ?? 0)}
-            labels={data.weeks.map(w => dayLabel(w.week, locale))} legend={{ current: t('thisPeriod'), previous: t('previous') }} />
+            labels={data.weeks.map(w => dayLabel(w.week, locale))} legend={{ current: t('thisPeriod'), previous: t('previous') }} dataTable={false} />
           <details className="nl-rp-table">
             <summary>{t('asTable')}</summary>
             <table className="table">

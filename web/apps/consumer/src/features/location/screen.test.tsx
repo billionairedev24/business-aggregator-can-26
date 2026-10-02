@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { mockFetch, renderApp, type Call } from '../../test/render';
 import { LocationScreen } from './LocationScreen';
 import { SAVED_KEY } from './useDeliveryLocation';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const MARKETS = {
   fallback: { id: 'mkt-calgary', city: 'Calgary', province: 'AB', stage: 'live', lat: 51.0447, lng: -114.0719 },
@@ -63,6 +64,7 @@ describe('location screen', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Where should we bring things?' })).toBeInTheDocument();
     expect(screen.getByText('Your province sets taxes, delivery zones and which providers you see.')).toBeInTheDocument();
     const group = await screen.findByRole('group', { name: 'Province' });
+    await expectNoAxeViolations(document.body); // S-109
     const alberta = within(group).getByRole('button', { name: /Alberta/ });
     expect(alberta).toHaveTextContent('Live · Calgary, Edmonton');
     expect(alberta).toHaveAttribute('aria-pressed', 'true');

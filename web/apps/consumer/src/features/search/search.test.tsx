@@ -7,6 +7,7 @@ import { SAVED_KEY } from '../location/useDeliveryLocation';
 import { apiQuery, categoryHref, itemHref, SearchParams, suggestionHref, type SearchItem } from './api';
 import { RECENT_KEY } from './recent';
 import { SearchResults } from './SearchResults';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const merchant = (name: string, type: string, slug: string | null, tier = 'master') => ({ id: `m-${name}`, name, type, slug, tier });
 const item = (id: string, kind: string, name: string, extra: Partial<SearchItem> = {}) => ({
@@ -58,6 +59,7 @@ describe('search results (design 06 search)', () => {
   it('shows the results with the design’s heading, filters, facets and cards', async () => {
     const { calls } = open('/search?q=sourdough');
     expect(await screen.findByRole('heading', { level: 1, name: '“sourdough” · 4 results' })).toBeInTheDocument();
+    await expectNoAxeViolations(document.body); // S-109
     const filters = screen.getByRole('complementary', { name: 'Filters' });
     for (const name of ['On tonight’s run', 'Under $10', 'Master sellers', 'Halal', 'Gluten-free']) {
       expect(within(filters).getByRole('button', { name })).toHaveAttribute('aria-pressed', 'false');

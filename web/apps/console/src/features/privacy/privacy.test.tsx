@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { renderConsole, staffApi, type Call } from '../../test/render';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const LAW = { code: 'ab_pipa', name: 'Personal Information Protection Act', shortName: 'PIPA', authority: 'Commissioner', responseDays: 45, businessDays: false, extensionDays: 30 };
 const ITEM = { id: 'R1', reference: 'PR-1001', type: 'erasure', state: 'awaiting_verification', subjectId: 'U1', subjectName: 'Dana Kowalski', subjectKind: 'customer',
@@ -34,6 +35,7 @@ describe('privacy requests (S-105)', () => {
     api(['privacy']);
     renderConsole('/privacy');
     expect(await screen.findByRole('heading', { level: 1, name: '2 open requests · 1 overdue' })).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getAllByText('Dana Kowalski').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Erased account').length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Overdue/).length).toBeGreaterThan(0);
@@ -44,6 +46,7 @@ describe('privacy requests (S-105)', () => {
     const calls = api(['support_lead']);
     renderConsole('/privacy?request=R1');
     const drawer = await screen.findByRole('dialog', { name: 'PR-1001 · Erasure' });
+    await expectNoAxeViolations(document.body); // S-109
     expect(await within(drawer).findByText(/Personal Information Protection Act · 45 days · extension 30 days/)).toBeTruthy();
     expect(within(drawer).getByText(/Kept: orders.orders \(tax_records\)/)).toBeTruthy();
     expect(within(drawer).getByText(/Note: Asked by email/)).toBeTruthy();

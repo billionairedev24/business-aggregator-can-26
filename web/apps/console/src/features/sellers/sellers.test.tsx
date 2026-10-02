@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { renderConsole, staffApi, type Call } from '../../test/render';
 import type { Detail, Seller } from './api';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const seller = (o: Partial<Seller>): Seller => ({
   id: 'm1', name: 'Prairie Wrench', category: { id: 'c1', names: { en: 'Mobile mechanic', fr: 'Mécanicien mobile' } }, type: 'provider', province: 'AB', city: 'Calgary',
@@ -46,6 +47,7 @@ describe('sellers & providers (S-82, design 03)', () => {
     api(['trust_safety']);
     renderConsole('/sellers');
     expect(await screen.findByRole('heading', { level: 1, name: '1,204 active · 41 at risk' })).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     const bow = card('Bow River Mechanics');
     expect(within(bow).getByText('Services · AB')).toBeTruthy();
     expect(within(bow).getByText('Trusted')).toBeTruthy();

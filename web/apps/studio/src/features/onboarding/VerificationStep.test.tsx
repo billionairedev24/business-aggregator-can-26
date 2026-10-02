@@ -9,6 +9,7 @@ import { IdentityDialog } from './IdentityDialog';
 import { IdentityDoneScreen } from './IdentityDoneScreen';
 import { ReviewStep } from './ReviewStep';
 import { VerificationStep } from './VerificationStep';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 /** user-event with no timer between keystrokes: typing costs one pass, not a macrotask per character. */
 const user = () => userEvent.setup({ delay: null });
@@ -42,6 +43,7 @@ describe('VerificationStep', () => {
     renderWithProviders(<ProvincePlace code="AB"><VerificationStep onboarding={o} onBack={() => {}} onSubmitted={() => {}} /></ProvincePlace>);
     expect(screen.getByText('AMVIC licence')).toBeTruthy();
     expect(await screen.findByText('Required for automotive services in Alberta.')).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     await user().click(screen.getByRole('button', { name: 'Enter licence #' }));
     const dialog = screen.getByRole('dialog', { name: 'AMVIC licence' });
     await user().click(within(dialog).getByRole('button', { name: 'Verify' }));

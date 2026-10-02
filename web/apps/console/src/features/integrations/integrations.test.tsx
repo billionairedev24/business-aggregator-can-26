@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { renderConsole, staffApi } from '../../test/render';
 import type { Key } from './api';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const key = (o: Partial<Key>): Key => ({
   id: 'k1', merchantId: 'm1', businessName: 'Prairie Wrench', name: 'embed', scopes: ['storefront:read', 'booking:write'], prefix: 'nl_live_',
@@ -21,6 +22,7 @@ describe('API & webhooks (S-96, design 03)', () => {
     const user = userEvent.setup({ delay: null });
     renderConsole('/integrations');
     expect(await screen.findByRole('heading', { level: 1, name: "Every screen you've seen runs on this API." })).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     const row = screen.getByText('Prairie Wrench · embed').closest('tr, .nl-dt-card') as HTMLElement;
     expect(within(row).getByText('storefront:read booking:write')).toBeTruthy();
     expect(within(screen.getByText('Bridgeland Butcher · POS').closest('tr, .nl-dt-card') as HTMLElement).getByText('Revoked')).toBeTruthy();

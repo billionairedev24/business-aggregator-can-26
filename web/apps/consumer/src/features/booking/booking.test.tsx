@@ -6,6 +6,7 @@ import { mockFetch, renderApp, type Call } from '../../test/render';
 import type { ProviderFacts, Storefront } from '../provider/api';
 import { BookingWizard, complete, stepsFor, type Step } from './BookingWizard';
 import { EMPTY, toRequest, type Draft } from './draft';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const user = () => userEvent.setup({ delay: null });
 const Book = () => {
@@ -96,6 +97,7 @@ describe('booking wizard (design 06 book)', () => {
     renderApp('/providers/prairie-wrench/book', { routes });
     const u = user();
     expect(await screen.findByRole('heading', { level: 1, name: 'What do you need done?' })).toBeInTheDocument();
+    await expectNoAxeViolations(document.body); // S-109
     const next = screen.getByRole('button', { name: 'Continue to location' });
     expect(next).toBeDisabled();
     await u.type(screen.getByLabelText(/Describe the problem/), 'Grinding noise when braking.');

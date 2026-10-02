@@ -1,6 +1,7 @@
 import { afterEach } from 'vitest';
 import { cleanup, configure } from '@testing-library/react';
 import { configurePlatformTimeZone } from '@northline/ui';
+import { recordFetches } from '@northline/a11y/record';
 // Test data: a Mountain-time platform zone, as the launch configuration has (the apps get it from the region model).
 configurePlatformTimeZone('America/Edmonton');
 afterEach(() => cleanup());
@@ -14,3 +15,6 @@ if (!('ResizeObserver' in globalThis)) {
 if (!window.matchMedia) {
   window.matchMedia = (q: string) => ({ matches: false, media: q, onchange: null, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent: () => false }) as MediaQueryList;
 }
+// S-109: `pnpm --filter @northline/a11y record` replays this suite with NL_A11Y_RECORD set to keep the api answers for
+// the Playwright page sweep; a no-op otherwise.
+recordFetches(process.env.NL_A11Y_RECORD);

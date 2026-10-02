@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Button, DataTable, Dialog, Drawer, ErrorState, Field, PageSkeleton, Tag, TextInput, useFormatters, type DataTableColumn } from '@northline/ui';
+import { Alert, Button, DataTable, Dialog, Drawer, ErrorState, Field, PageSkeleton, Tag, TextInput, useFormatters, codeValue, type DataTableColumn } from '@northline/ui';
 import { useSession } from '../../lib/session';
 import { authApi, createPasskey, getPasskey, PasskeyError } from '@northline/auth-kit';
 import { useMerchantId, useRole } from '../shell/api';
@@ -280,7 +280,7 @@ function StepUpDialog({ onDone, onCancel }: { onDone: () => void; onCancel: () =
         <Button onClick={() => void run(stepUpWithPasskey)} disabled={busy}>{t('usePasskey')}</Button>
         <form onSubmit={submit} className="nl-set-confirmcode" noValidate>
           <Field label={t('codeLabel')}>
-            <TextInput inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={e => setCode(e.target.value)} />
+            <TextInput inputMode="numeric" autoComplete="one-time-code" value={code} onChange={e => setCode(codeValue(e.target.value))} />
           </Field>
           <Button type="submit" variant="secondary" disabled={busy}>{busy ? t('confirming') : t('confirm')}</Button>
         </form>
@@ -341,7 +341,7 @@ function ConfirmItsYou() {
         <Button onClick={() => void passkey()} disabled={busy || !identifier}>{t('usePasskey')}</Button>
         <form onSubmit={totp} className="nl-set-confirmcode" noValidate>
           <Field label={t('codeLabel')}>
-            <TextInput inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={e => setCode(e.target.value)} />
+            <TextInput inputMode="numeric" autoComplete="one-time-code" value={code} onChange={e => setCode(codeValue(e.target.value))} />
           </Field>
           <Button type="submit" variant="secondary" disabled={busy || !identifier}>{busy ? t('confirming') : t('confirm')}</Button>
         </form>

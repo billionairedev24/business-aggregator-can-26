@@ -1,5 +1,6 @@
 import { useEffect, useState, type KeyboardEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { ArrowDown, ArrowUp } from '@phosphor-icons/react';
 import { Alert, Dialog, EmptyState, ErrorState, Field, PageSkeleton, Select, Skeleton, TextInput, UnderlineTabs, useFormatters } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { useMerchantId, useRole } from '../shell/api';
@@ -128,6 +129,11 @@ function Sections({ merchantId, menu, canEdit, onEdit }: { merchantId: string; m
           <div className="nl-k-section-head">
             <h2>
               {canEdit ? <button type="button" className="nl-k-handle" aria-label={t('reorder', { name: sec.name })} onKeyDown={onHandleKey(sec.id, i)}>⋮⋮</button> : <span className="nl-k-handle" aria-hidden>⋮⋮</span>}
+              {/* S-109 (WCAG 2.5.7): dragging is not the only way — a single tap moves a section up or down */}
+              {canEdit ? <span className="nl-k-move">
+                <button type="button" className="btn btn-ghost btn-icon" aria-label={t('moveUp', { name: sec.name })} disabled={i === 0 || reorder.isPending} onClick={() => move(sec.id, i - 1)}><ArrowUp size={16} aria-hidden /></button>
+                <button type="button" className="btn btn-ghost btn-icon" aria-label={t('moveDown', { name: sec.name })} disabled={i === sections.length - 1 || reorder.isPending} onClick={() => move(sec.id, i + 1)}><ArrowDown size={16} aria-hidden /></button>
+              </span> : null}
               {canEdit ? <button type="button" className="nl-k-linkish" aria-label={t('renameSection', { name: sec.name })} onClick={() => onEdit({ kind: 'section', sectionId: sec.id, name: sec.name })}>{sec.name}</button> : sec.name}
             </h2>
             <span className="nl-k-muted">{t('itemCount', { n: sec.items.length })}{canEdit ? <> · <button type="button" className="nl-k-link" aria-label={t('addItemIn', { section: sec.name })} onClick={() => onEdit({ kind: 'item', sectionId: sec.id })}>{t('addItem')}</button></> : null}</span>

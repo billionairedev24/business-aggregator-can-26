@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent, type InputHTMLAttributes } from 'react';
 import { useForm, useStore } from '@tanstack/react-form';
-import { Alert, Button, Checkbox, Field, OptionCard, StepBars, TextInput, useLocale } from '@northline/ui';
+import { Alert, Button, Checkbox, Field, OptionCard, StepBars, TextInput, useLocale, codeValue } from '@northline/ui';
 import { visibleError } from '../../lib/forms';
 import { authApi, codeSchema, firstIssue, registerSchema, useAuthMutation, type AuthSession, type RegisterValues, type RegistrationStep, type TotpSetup, fieldErrors, flowError, isRestart, retryAfter, RateLimitNotice, useRateLimit, mmss, useCountdown, createPasskey, PasskeyError, passkeysSupported } from '@northline/auth-kit';
 import { useAuthT } from './messages';
@@ -194,9 +194,9 @@ function PhoneCodeStep({ phone, sent, onResent, onVerified, onBack, onRestart }:
   return (
     <form noValidate onSubmit={e => void submit(e)}>
       <Field label={t('codeLabel', { phone })} error={error || undefined}>
-        <TextInput className="nl-auth-code" name="code" inputMode="numeric" autoComplete="one-time-code" maxLength={6}
+        <TextInput className="nl-auth-code" name="code" inputMode="numeric" autoComplete="one-time-code"
           placeholder={t('codePh')} value={code} onBlur={() => setTouched(true)}
-          onChange={e => { setCode(e.target.value.replace(/\s/g, '')); setTouched(true); setServer(''); }} />
+          onChange={e => { setCode(codeValue(e.target.value)); setTouched(true); setServer(''); }} />
       </Field>
       <div className="nl-auth-hint">
         {left > 0
@@ -271,8 +271,8 @@ function SecondFactorStep({ onCreated, onBack, onRestart }: { onCreated: (s: Aut
             </div>
           </div>
           <Field label={t('code6')} error={codeError || undefined} className="nl-auth-totp">
-            <TextInput className="nl-auth-code" name="totp" inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder={t('codePh')}
-              value={code} onChange={e => { setCode(e.target.value.replace(/\s/g, '')); setServer(''); }} />
+            <TextInput className="nl-auth-code" name="totp" inputMode="numeric" autoComplete="one-time-code" placeholder={t('codePh')}
+              value={code} onChange={e => { setCode(codeValue(e.target.value)); setServer(''); }} />
           </Field>
           {failure && <Alert tone="error">{failure}</Alert>}
           <div className="nl-auth-row">

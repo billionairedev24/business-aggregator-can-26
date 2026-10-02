@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { renderConsole, staffApi, type Call } from '../../test/render';
 import { cents } from './Switchboard';
 import type { Province } from './api';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const province = (o: Partial<Province>): Province => ({
   id: 'prov-ab', code: 'AB', names: { en: 'Alberta', fr: 'Alberta' }, stage: 'live', languages: ['en', 'fr'], courierModel: 'own', tax: { gst: 500 },
@@ -34,6 +35,7 @@ describe('province switchboard (S-84, design 03)', () => {
     api(['admin']);
     renderConsole('/provinces');
     expect(await screen.findByRole('heading', { level: 1, name: 'Turning on a province is a record, not a release.' })).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     const list = screen.getByRole('list');
     expect(within(list).getByText('GST 5% + PST 7% · en · fr')).toBeTruthy();
     expect(within(list).getByText('GST 5% + QST 9.975% · fr · en')).toBeTruthy();

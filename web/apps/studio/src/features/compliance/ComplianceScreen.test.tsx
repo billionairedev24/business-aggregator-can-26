@@ -3,6 +3,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { mockFetch, renderWithProviders } from '../../test/ops';
 import { ComplianceScreen } from './ComplianceScreen';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 let role = 'owner';
 vi.mock('../shell/api', () => ({ useMerchantId: () => 'm1', useRole: () => role }));
@@ -39,6 +40,7 @@ describe('Stripe & compliance', () => {
     mockFetch({ 'GET /api/v1/merchants/m1/compliance': () => data() });
     renderWithProviders(<ComplianceScreen />);
     expect(await screen.findByRole('heading', { level: 1, name: 'One item due: WCB clearance letter' })).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('acct_1Kx9…Q2 · Express · payouts enabled · charges enabled')).toBeTruthy();
     expect(screen.getByText('Identity · Ravi Sandhu')).toBeTruthy();
     expect(screen.getByText('Business · Prairie Wrench Automotive Ltd. · BN 78123 4567')).toBeTruthy();

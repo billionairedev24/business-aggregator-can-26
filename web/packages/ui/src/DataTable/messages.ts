@@ -98,6 +98,10 @@ export const useDataTableMessages = defineMessages({
     toastReport: 'Report generated · {count, plural, one {# row} other {# rows}}',
     actionFailed: '{action} failed. {message}',
     working: 'Working…',
+    sortedAsc: 'Sorted by {label}, ascending',
+    sortedDesc: 'Sorted by {label}, descending',
+    sortOff: 'Sort by {label} removed',
+    results: '{count, plural, =0 {No matching {plural}} one {# matching {noun}} other {# matching {plural}}}',
   },
   fr: {
     tableLabel: '{plural}',
@@ -195,6 +199,10 @@ export const useDataTableMessages = defineMessages({
     toastReport: 'Rapport généré · {count, plural, one {# ligne} other {# lignes}}',
     actionFailed: 'Échec : {action}. {message}',
     working: 'En cours…',
+    sortedAsc: 'Trié par {label}, ordre croissant',
+    sortedDesc: 'Trié par {label}, ordre décroissant',
+    sortOff: 'Tri par {label} retiré',
+    results: '{count, plural, =0 {Aucun résultat} one {# résultat} other {# résultats}}',
   },
 });
 

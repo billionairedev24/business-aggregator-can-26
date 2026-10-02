@@ -1,5 +1,5 @@
 import { IntlMessageFormat } from 'intl-messageformat';
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 export type Locale = 'en' | 'fr';
 export const LOCALES: readonly Locale[] = ['en', 'fr'];
@@ -41,12 +41,18 @@ const LocaleContext = createContext<LocaleState>({ locale: 'en', setLocale: () =
 
 export function I18nProvider({ initial = 'en', children, onChange }: { initial?: Locale; children: ReactNode; onChange?: (l: Locale) => void }) {
   const [locale, set] = useState<Locale>(initial);
-  const setLocale = useCallback((l: Locale) => { set(l); onChange?.(l); if (typeof document !== 'undefined') document.documentElement.lang = INTL_LOCALE[l]; }, [onChange]);
+  const setLocale = useCallback((l: Locale) => { set(l); onChange?.(l); }, [onChange]);
+  // S-109 (WCAG 3.1.1): <html lang> follows the language on screen from the first render, not only after a switch —
+  // a French visitor arriving with French saved got lang="en-CA" until they toggled.
+  useEffect(() => { if (typeof document !== 'undefined') document.documentElement.lang = INTL_LOCALE[locale]; }, [locale]);
   const value = useMemo(() => ({ locale, setLocale }), [locale, setLocale]);
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
 }
 
 export const useLocale = () => useContext(LocaleContext);
+
+/** The BCP 47 tag of a locale (`lang` attributes): en → en-CA, fr → fr-CA. */
+export const langTag = (l: Locale): string => INTL_LOCALE[l];
 
 type Values = Record<string, string | number | boolean | Date | null | undefined>;
 export type Translate<K extends string> = (key: K, values?: Values) => string;

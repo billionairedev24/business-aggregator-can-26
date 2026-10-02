@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
+import { useStickyOffset } from './A11y';
 import { ShoppingBag } from '@phosphor-icons/react';
-import { defineMessages, type Locale } from './i18n';
+import { defineMessages, langTag, type Locale } from './i18n';
 import { SiteLink } from './SiteLink';
 
 const useT = defineMessages({
@@ -36,8 +37,10 @@ export interface SiteHeaderProps {
  */
 export function SiteHeader({ homeHref = '/', location, search, links, locale, onToggleLocale, cart, account }: SiteHeaderProps) {
   const t = useT();
+  const ref = useRef<HTMLElement>(null);
+  useStickyOffset(ref); // S-109: focused controls scroll clear of this sticky header (WCAG 2.4.11)
   return (
-    <header className="nav nl-site-header">
+    <header ref={ref} className="nav nl-site-header">
       <SiteLink href={homeHref} className="nav-brand nl-site-brand" aria-label={t('home')}>Northline</SiteLink>
       {location}
       {search && <div className="nl-site-search">{search}</div>}
@@ -45,8 +48,10 @@ export function SiteHeader({ homeHref = '/', location, search, links, locale, on
       <nav className="nl-site-nav" aria-label={t('nav')}>
         {links.map(l => <SiteLink key={l.key} href={l.href} className="nl-site-link" aria-current={l.current ? 'page' : undefined}>{l.label}</SiteLink>)}
       </nav>
-      <button type="button" className="nl-site-lang" onClick={onToggleLocale} aria-label={`${t('language')} — ${t('otherLanguage')}`} title={t('otherLanguage')}>
-        {locale === 'fr' ? 'FR' : 'EN'}
+      {/* S-109: the name starts with the visible "EN"/"FR" (WCAG 2.5.3) and the other language's name is marked up in that
+          language (3.1.2): "EN — Switch language: Français" with lang="fr-CA" on "Français". */}
+      <button type="button" className="nl-site-lang" onClick={onToggleLocale} title={t('otherLanguage')}>
+        {locale === 'fr' ? 'FR' : 'EN'}<span className="nl-sr-only"> — {t('language')}{locale === 'fr' ? ' : ' : ': '}</span><span className="nl-sr-only" lang={langTag(locale === 'fr' ? 'en' : 'fr')}>{t('otherLanguage')}</span>
       </button>
       <SiteLink href={cart.href} className="nl-site-cart" aria-label={t('cart', { count: cart.count })}>
         <ShoppingBag weight="duotone" size={22} aria-hidden />

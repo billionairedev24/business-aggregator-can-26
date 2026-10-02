@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { renderConsole, staffApi, type Call } from '../../test/render';
 import type { Category, Screen } from './api';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const cat = (o: Partial<Category>): Category => ({
   id: 'service.automotive.mobile-mechanic', parentId: 'service.automotive', root: 'service', group: false, nameEn: 'Mobile mechanic', nameFr: 'Mécanicien mobile',
@@ -53,6 +54,7 @@ describe('catalogue taxonomy (S-94, design 03)', () => {
     api(['admin']);
     renderConsole('/catalogue');
     expect(await screen.findByRole('heading', { level: 1, name: '62 service categories · 9 shop departments · per-province rules' })).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     const mechanic = card('Mobile mechanic');
     expect(within(mechanic).getByText('Services › Automotive')).toBeTruthy();
     expect(within(mechanic).getByText('Yes · AMVIC (AB), BC: none')).toBeTruthy();

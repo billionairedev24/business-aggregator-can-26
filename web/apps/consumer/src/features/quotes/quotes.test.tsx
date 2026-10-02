@@ -7,6 +7,7 @@ import type { Quote, QuotePage as Page } from './api';
 import { QuoteCompare } from './QuoteCompare';
 import { QuotePage } from './QuotePage';
 import { QuoteRequest, requestComplete, toAsk, type RequestDraft, type RequestStep } from './QuoteRequest';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const user = () => userEvent.setup({ delay: null });
 const AMARA = { id: '01J9ZD3V00000000000000AMA1', firstName: 'Amara', lastName: 'Osei', email: 'amara@example.ca', initials: 'AO', locale: 'en-CA' };
@@ -95,6 +96,7 @@ describe('quote request (design 06 book, quote mode)', () => {
     renderApp('/services/mobile-mechanic/quote', { routes });
     const u = user();
     expect(await screen.findByRole('heading', { level: 1, name: 'Describe the job, get up to 3 quotes' })).toBeInTheDocument();
+    await expectNoAxeViolations(document.body); // S-109
     const next = screen.getByRole('button', { name: 'Continue' });
     expect(next).toBeDisabled();
     await u.type(screen.getByLabelText(/^Describe the job ·/), 'Battery light on, car died twice.');

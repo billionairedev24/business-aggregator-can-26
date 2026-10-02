@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderConsole, staffApi, type Call } from '../../test/render';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const NOW = new Date('2026-09-08T18:00:00Z');
 const row = (o: Record<string, unknown>) => ({
@@ -45,6 +46,7 @@ describe('disputes & refunds (S-80, design 03 disputes)', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'DS-1188 · Pre-purchase inspection · missed leak' })).toBeTruthy();
     expect(screen.getByText('Amara Osei → Prairie Wrench · $160.00 in escrow · opened 2.0 d ago')).toBeTruthy();
     expect(await screen.findByText('Quality 91')).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('1 prior · 1 won')).toBeTruthy();
     expect(screen.getByText('0 prior disputes')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'job-photos.zip' }).getAttribute('href')).toBe('/api/v1/console/disputes/dispute/D1/evidence/E1');

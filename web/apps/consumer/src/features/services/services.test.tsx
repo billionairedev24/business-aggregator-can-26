@@ -8,6 +8,7 @@ import { ServiceCategory } from './ServiceCategory';
 import { applyFilters, placeOf, ProviderList } from './ProviderList';
 import { nextAvailable, price } from './format';
 import type { ProviderCard } from './api';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const user = () => userEvent.setup({ delay: null });
 const guest = (c: Call) => (c.url === '/bff/session' ? { body: { user: null, guestId: 'g_x' } } : undefined);
@@ -83,6 +84,7 @@ describe('services landing (design 06 services)', () => {
     const calls = mockFetch(api());
     renderApp('/services', { routes });
     expect(await screen.findByRole('heading', { level: 1, name: 'Services' })).toBeInTheDocument();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('4 categories live in Alberta · every provider verified, every job paid into escrow')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Automotive' })).toBeInTheDocument();
     expect(screen.getByText('Mobile visits · fixed prices · licence checked')).toBeInTheDocument();

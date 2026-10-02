@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { renderConsole, SESSION, staffApi } from '../../test/render';
 import type { Rota } from './api';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const ME = SESSION.user.id;
 const ROTA: Rota = {
@@ -31,6 +32,7 @@ describe('on-call & escalations (S-96, design 03)', () => {
     expect(screen.queryByRole('button', { name: 'Add shift' })).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Swap a shift' }));
     const dialog = await screen.findByRole('dialog', { name: 'Hand over · Ops lead · province & finance approvals' });
+    await expectNoAxeViolations(document.body); // S-109
     await user.click(within(dialog).getByRole('button', { name: 'Hand over' }));
     await waitFor(() => expect(calls.find(c => c.url.endsWith('/shifts/s1/hand-over'))?.body).toEqual({ userId: 'u2' }));
   });

@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from 'react';
+import { useId, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { WarningCircle } from '@phosphor-icons/react';
 import { defineMessages } from './i18n';
@@ -35,12 +35,15 @@ export interface LinkRowProps extends ButtonHTMLAttributes<HTMLButtonElement> { 
 /** Full-width actionable row with a trailing arrow ("Needs you" list). */
 export const LinkRow = ({ children, className, ...p }: LinkRowProps) => <button type="button" className={clsx('nl-linkrow', className)} {...p}><span>{children}</span><span className="nl-linkrow-arrow" aria-hidden>→</span></button>;
 
+/** A 0–100 bar. The visible label names it (aria-labelledby), whatever the label's markup (S-109: a non-string label left it unnamed). */
 export function Meter({ label, value, display, floor = 0 }: { label: ReactNode; value: number; display?: ReactNode; floor?: number }) {
   const pct = Math.max(0, Math.min(100, value));
+  const id = useId();
   return (
     <div className="nl-meter">
-      <span className="nl-meter-label">{label}</span>
-      <div className="nl-meter-track" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label={typeof label === 'string' ? label : undefined}><div className="nl-meter-fill" data-low={pct < floor} style={{ width: `${pct}%` }} /></div>
+      <span className="nl-meter-label" id={`${id}-label`}>{label}</span>
+      <div className="nl-meter-track" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-labelledby={`${id}-label`}
+        aria-valuetext={typeof display === 'string' || typeof display === 'number' ? String(display) : undefined}><div className="nl-meter-fill" data-low={pct < floor} style={{ width: `${pct}%` }} /></div>
       <span className="nl-meter-value">{display ?? pct}</span>
     </div>
   );

@@ -5,6 +5,7 @@ import { useParams } from '@tanstack/react-router';
 import { mockFetch, renderApp, type Call } from '../../test/render';
 import { ago, ProviderPage } from './ProviderPage';
 import type { ProviderFacts, Storefront } from './api';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const user = () => userEvent.setup({ delay: null });
 const Provider = () => { const { slug } = useParams({ strict: false }) as { slug: string }; return <ProviderPage slug={slug} />; };
@@ -50,6 +51,7 @@ describe('provider page (design 06 provider)', () => {
     mockFetch(api());
     renderApp('/providers/prairie-wrench', { routes });
     expect(await screen.findByRole('heading', { level: 1, name: 'Prairie Wrench' })).toBeInTheDocument();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('Mobile mechanic · Calgary & Airdrie · since 2019')).toBeInTheDocument();
     expect(screen.getByText('Master tier · verified')).toBeInTheDocument();
     expect(screen.getByRole('note')).toHaveTextContent('Winter tire swaps: book before Oct 15 for $99');
