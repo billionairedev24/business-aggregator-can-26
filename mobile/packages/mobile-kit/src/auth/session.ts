@@ -31,6 +31,8 @@ export interface PendingSignIn {
   url: string;
   state: string;
   verifier: string;
+  /** The redirect URI the request named (the token request must repeat it); default the client's. */
+  redirectUri?: string;
 }
 
 type Fetch = typeof fetch;
@@ -90,21 +92,24 @@ export class DpopSession {
     this.listeners.forEach((l) => l(signedIn));
   }
 
-  /** The authorization request to open in the system browser (ASWebAuthenticationSession / Custom Tabs). */
-  beginSignIn(extra: Record<string, string> = {}): PendingSignIn {
+  /**
+   * The authorization request to open in the system browser (ASWebAuthenticationSession / Custom Tabs). `redirectUri`
+   * picks another of the client's registered redirects (the consumer app's claimed https link, src/auth/handoff.ts).
+   */
+  beginSignIn(extra: Record<string, string> = {}, redirectUri: string = this.config.redirectUri): PendingSignIn {
     const verifier = codeVerifier();
     const state = randomToken(16);
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: this.config.clientId,
-      redirect_uri: this.config.redirectUri,
+      redirect_uri: redirectUri,
       scope: this.config.scopes.join(' '),
       state,
       code_challenge: codeChallenge(verifier),
       code_challenge_method: 'S256',
       ...extra,
     });
-    return { url: `${this.config.issuer}/oauth2/authorize?${params.toString()}`, state, verifier };
+    return { url: `${this.config.issuer}/oauth2/authorize?${params.toString()}`, state, verifier, redirectUri };
   }
 
   /** The redirect came back: check it, create this sign-in's key and exchange the code. */
@@ -120,7 +125,7 @@ export class DpopSession {
     const tokens = await this.tokenRequest({
       grant_type: 'authorization_code',
       code,
-      redirect_uri: this.config.redirectUri,
+      redirect_uri: pending.redirectUri ?? this.config.redirectUri,
       code_verifier: pending.verifier,
     });
     await this.accept(tokens);

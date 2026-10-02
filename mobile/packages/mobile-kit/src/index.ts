@@ -7,6 +7,7 @@ export { ApiClient, DEFAULT_TIMEOUT_MS, type ApiAnswer, type CallAuth, type Requ
 export { ApiError, NetworkError, SignedOutError, apiErrorOf, retryAfterSeconds, type FieldError } from './api/errors';
 export { DpopSession, OAuthError, type OAuthConfig, type PendingSignIn } from './auth/session';
 export { codeChallenge, codeVerifier } from './auth/pkce';
+export { AppSignIn } from './auth/handoff';
 export {
   SoftwareDeviceKey,
   createDeviceKey,
