@@ -231,6 +231,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `RATE_LIMIT_STORE` | | ✓ | | | no (`redis`; `memory` only under `local`/`test`) |
 | `RATE_LIMIT_WHEN_UNAVAILABLE` | | ✓ | | | no (`closed` in staging/prod, `open` elsewhere — S-20, [Rate limits](#rate-limits-s-9)) |
 | `REPLAY_STORE`, `DPOP_NONCE_LIFETIME` | | ✓ | | | no (`redis` — `memory` only under `local`/`test`; `5m`) — S-29, [mobile-auth.md](mobile-auth.md) |
+| `OTP_SEND_PLATFORM_PER_HOUR` | | ✓ | | | no (`1000`): texted/voice codes for everyone together per hour (S-104, SMS pumping); reaching it pauses codes for 15 min and logs an error — [Rate limits](#rate-limits-s-9) |
 | `CLIENT_CITY_HEADER` | | ✓ | ✓ (`consumer` profile) | | no (empty: no city in the session list — S-19; no IP guess for the consumer location pill — S-45) |
 | `SESSION_STEP_UP_MAX_AGE` | | ✓ | | | no (`10m`: how recent a second factor revoking sessions / removing passkeys needs) |
 | `SESSION_CHECK_INTERVAL` | | | ✓ | | no (`60s`: how often the BFF checks its session wasn't revoked) |
@@ -499,7 +500,7 @@ per phone code, 45 s resend cool-down, 5 failed factors per sign-in attempt or s
 
 | action | account | IP | session | first lockout (doubles each time, max 24 h) |
 |---|---|---|---|---|
-| phone code sent / re-sent / voice call (`otp-send`, every "Send code" counts) | 5 / h | 20 / h | 5 / h | 1 h |
+| phone code sent / re-sent / voice call (`otp-send`, every "Send code" counts) | 5 / h | 20 / h | 5 / h | 1 h; plus a platform-wide budget, `OTP_SEND_PLATFORM_PER_HOUR` (1000 / h, then 15 min for everyone — S-104) |
 | wrong phone code (`otp-verify`) | 10 / h | 50 / h | 10 / h | 15 min |
 | email or mobile looked up at sign-in (`sign-in-lookup`) | — (typing someone's email must not lock them out) | 30 / 10 min | 20 / 10 min | 10 min |
 | wrong authenticator code / backup code / failed passkey (`totp-verify`, `backup-code-verify`, `passkey-assertion`) | 10 / 15 min each | 30 / 15 min | 10 / 15 min | 15 min |

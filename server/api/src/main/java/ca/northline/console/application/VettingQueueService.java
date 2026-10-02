@@ -9,6 +9,7 @@ import ca.northline.region.api.MerchantPlaces;
 import ca.northline.shared.Conflict;
 import ca.northline.shared.MerchantScope;
 import ca.northline.shared.NotFound;
+import ca.northline.shared.RuleViolation;
 import ca.northline.trust.api.ListingFlags;
 import ca.northline.trust.api.ListingFlags.ListingFlag;
 import java.time.Clock;
@@ -83,8 +84,14 @@ class VettingQueueService implements ListingVettingQueue {
                 trustFlags.resolve(d.id(), !d.approve(), d.staffId(), d.role(), d.note());
                 yield item(decided, List.of(), businesses);
             }
-            case "dish" ->
-                item(dishes.decide(d.id(), d.approve(), d.reasons(), d.note(), d.staffId(), d.role()), businesses);
+            case "dish" -> {
+                // S-104: the same reasons as a listing — they reach the business's email as message keys
+                if (!d.approve() && d.reasons().stream().anyMatch(r -> !ListingVetting.REASONS.contains(r))) {
+                    throw RuleViolation.of("reasons", "option", ListingVetting.UNKNOWN_REASON);
+                }
+                yield item(
+                        dishes.decide(d.id(), d.approve(), d.reasons(), d.note(), d.staffId(), d.role()), businesses);
+            }
             default -> throw new NotFound(d.kind(), d.id());
         };
     }

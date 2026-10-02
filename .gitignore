@@ -5,3 +5,6 @@
 smoke-out/
 # make up / make run (scripts/stack.sh): pids and app logs
 .run/
+# S-104: pinned security scanners (make security-tools)
+.cache/security-tools/
+/build/

@@ -1,16 +1,14 @@
 package ca.northline.catalogue.adapters;
 
 import ca.northline.catalogue.application.ImageInspector;
+import ca.northline.shared.storage.ImageDecoding;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.util.Optional;
-import javax.imageio.ImageIO;
 import org.springframework.stereotype.Component;
 
 /**
- * JDK ImageIO: accepts JPG and PNG (by magic bytes), measures size, whether the border is near-white (main image on
+ * JDK ImageIO ({@link ImageDecoding}): accepts JPG and PNG (by magic bytes), measures size, whether the border is near-white (main image on
  * pure white) and a 64-bit average hash (8×8 greyscale, one bit per pixel above the mean) for the duplicate index.
  */
 @Component
@@ -21,26 +19,20 @@ class ImageIoInspector implements ImageInspector {
     /** Share of border samples that must be white. */
     static final double WHITE_SHARE = 0.95;
 
-    static {
-        ImageIO.setUseCache(false);
-    }
-
     @Override
     public Optional<ImageFacts> inspect(byte[] bytes) {
         var type = contentType(bytes);
         if (type == null) {
             return Optional.empty();
         }
-        try {
-            var image = ImageIO.read(new ByteArrayInputStream(bytes));
-            if (image == null) {
-                return Optional.empty();
-            }
-            return Optional.of(
-                    new ImageFacts(type, image.getWidth(), image.getHeight(), onWhite(image), averageHash(image)));
-        } catch (IOException | RuntimeException ex) {
+        // S-104: dimensions from the header, pixels subsampled — a small file can't claim a gigabyte raster
+        var size = ImageDecoding.size(bytes);
+        if (size.isEmpty()) {
             return Optional.empty();
         }
+        return ImageDecoding.forAnalysis(bytes)
+                .map(image -> new ImageFacts(
+                        type, size.get().width(), size.get().height(), onWhite(image), averageHash(image)));
     }
 
     static @org.jspecify.annotations.Nullable String contentType(byte[] b) {

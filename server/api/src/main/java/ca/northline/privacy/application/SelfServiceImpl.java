@@ -14,6 +14,7 @@ import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -40,6 +41,8 @@ class SelfServiceImpl implements SelfService {
     static final String PUBLIC_PATH = "/api/v1/public/privacy-exports/";
     private static final Pattern CODE = Pattern.compile("[0-9]{6}");
     private static final Duration RESEND_AFTER = Duration.ofMinutes(1);
+    static final int TEXTS_PER_HOUR = 3;
+    static final int TEXTS_PER_DAY = 6;
 
     private final PrivacyRequestStore store;
     private final Intake intake;
@@ -69,7 +72,8 @@ class SelfServiceImpl implements SelfService {
         var now = clock.instant();
         var request =
                 intake.open(holder, command.type(), command.corrections(), command.note(), verification, null, now);
-        if (verification == null && holder.phone() != null) {
+        // S-104: over the person's texting budget the request still opens; it waits for a step-up proof or a later code
+        if (verification == null && holder.phone() != null && withinTextBudget(command.userId(), now)) {
             request = text(request, holder.phone(), locale);
         }
         return views.view(request, locale, true);
@@ -88,7 +92,20 @@ class SelfServiceImpl implements SelfService {
                 && expires.minus(settings.codeLife()).plus(RESEND_AFTER).isAfter(now)) {
             throw new Conflict("code_too_soon", PrivacyRules.CODE_TOO_SOON);
         }
+        if (!withinTextBudget(userId, now)) {
+            throw new Conflict("too_many_codes", PrivacyRules.TOO_MANY_CODES);
+        }
         return views.view(text(request, holder.phone(), locale), locale, true);
+    }
+
+    /**
+     * S-104: codes texted to one person, across all their requests — {@value #TEXTS_PER_HOUR} an hour,
+     * {@value #TEXTS_PER_DAY} a day. Without it, opening, withdrawing and reopening a request texted without limit (SMS
+     * cost) and every new code allowed {@link PrivacyRules#MAX_CODE_ATTEMPTS} more guesses.
+     */
+    private boolean withinTextBudget(String userId, Instant now) {
+        return store.textsSince(userId, now.minus(Duration.ofHours(1))) < TEXTS_PER_HOUR
+                && store.textsSince(userId, now.minus(Duration.ofDays(1))) < TEXTS_PER_DAY;
     }
 
     private Request text(Request request, String phone, Locale locale) {
@@ -104,6 +121,7 @@ class SelfServiceImpl implements SelfService {
                     e.getClass().getSimpleName());
             throw new Conflict("code_not_sent", PrivacyRules.CODE_NOT_SENT);
         }
+        store.textSent(saved.subjectId(), saved.id(), clock.instant());
         intake.record(saved, saved.subjectId(), "self", "code_sent", Map.of("channel", "sms"));
         return saved;
     }

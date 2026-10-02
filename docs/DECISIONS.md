@@ -7042,6 +7042,154 @@ console, metrics, mismatches); privacy-requests.md § 9 links it.
   northline-auth's tables and the worker's operational purges are not in the report's run history (they keep their own
   jobs and metrics).
 
+## 2026-09-30 — S-110 PCI SAQ-A attestation and Stripe compliance review; S-106 legal counsel review packet
+
+Branch `compliance/s-110-s-106-packets`. Packets: [compliance/README.md](compliance/README.md). **Nothing was attested
+or signed off**: no Stripe account exists and no lawyer has seen the texts. No migration, no new environment variable.
+
+- **SAQ A is the right questionnaire** (e-commerce only, card entry only in Stripe's Payment Element iframe and
+  PaymentSheet). The answer sheet follows **SAQ A v4.0.1 as revised in January 2025**, which removed 6.4.3 and 11.6.1
+  from SAQ A and added the eligibility criterion "site not susceptible to script attacks"; both requirements are kept
+  as the means to meet that criterion. The requirement list was transcribed by engineering (the PCI SSC library was
+  blocked from the build sandbox) and must be checked against the official PDF before signing — the sheet says so.
+- **Card-data guard in the api** (`shared.web.CardDataGuard`, a `RequestBodyAdvice`): every JSON body read by the
+  Jackson converter is scanned before the handler runs; a PAN (13–19 digits, separators allowed, Luhn-valid, a card
+  brand's issuer range, not glued to an id or a `+` phone number), track data, a verification code next to its name,
+  or a field named like card data (`cardNumber`, `cvc`, `pan`, `track2`, …) → **422 `card_data`** "Card numbers can't
+  be sent here. Enter card details only in the secure card form." (fr-CA in the catalogue). Refusing rather than
+  masking: the person learns not to paste a card, nothing is half-saved, and AI prompts never carry one. Barcode
+  fields (`gtin`, `ean`, `upc`, `isbn`, `barcode`, `sku`) are exempt from the number check (an EAN-13 can pass Luhn).
+  Bodies read raw (the Stripe webhooks) are not scanned — the signature covers them and Stripe never sends a PAN.
+  The warning names the handler, the field and `[CARD …4242]`, never the value.
+- **Recogniser in the platform library** (`ca.northline.platform.CardData`, the library's public package — Modulith exposes only that one to the api), used by the guard and the scanners. The Redactor
+  (S-112) gained card-verification codes after their name (`cvc: [REDACTED]`), magnetic-stripe track data
+  (`[TRACK]`) and the names `cvc`, `cvv`, `cvn`, `csc`, `track1/2`, `track_data`. The Collector already had a card
+  rule; the scanner now fails if it disappears.
+- **Scanner = tests + `make pci-scan`:** `CardDataScanTest` migrates a fresh database (all migrations + the dev seed)
+  and checks every column of every schema (names; contents of text, JSON, array, numeric and enum columns — `bytea`
+  holds only sealed values and is skipped), the seed and migration files, event and webhook JSON Schemas, every
+  OpenAPI document (property and parameter names, requests and responses), the Redactor against six brands, the
+  Collector rule, the web and mobile sources (no card autofill hints, no card-named fields, scripts only from Stripe)
+  and the Studio's CSP. `CardDataRegressionTest` sends Stripe's 4242 card through a request body under
+  `LOG_FORMAT=ecs`: 422, nothing anywhere in the shared database, the ECS line shows `[CARD …4242]` only.
+- **Consumer web CSP: one enforced policy, S-104's** (`web/apps/consumer/server/security-headers.mjs`). S-104 (#148)
+  merged an enforced CSP while this branch had a report-only one in `csp.mjs`; reconciled into S-104's file, `csp.mjs`
+  deleted. `script-src` is built from `SCRIPT_INVENTORY` (the payment-page script inventory: Stripe.js only), so an
+  origin can't be allowed without being inventoried; the policy carries `report-uri /csp-report` and `report-to csp`
+  (+ `Reporting-Endpoints`). The Node server's `POST /csp-report` logs one JSON line per violation
+  (`event.dataset: csp.violation`, origins and paths only — no query strings), ≤ 300 a minute, bodies ≤ 16 KB
+  (413 above, checked on `Content-Length` and while reading). S-104's `connect-src`/`frame-src` (Stripe's documented
+  `api.stripe.com`, `js.stripe.com`, `hooks.stripe.com`) are kept — narrower than this branch's `*.stripe.com`.
+  **No second, report-only policy:** a strict one without `'unsafe-inline'` would report TanStack Start's inline
+  hydration scripts on every page view, burying real violations in the 300-a-minute budget; it belongs to the nonce
+  work (S104-09's follow-up), which is also what E7 waits for. The tests (`securityHeaders.test.ts`) pin the policy,
+  check that the code loads no script origin outside the inventory, and cover report parsing and the rate cap. The
+  Studio's nginx CSP was already enforced and allows only Stripe scripts and frames.
+- **Mobile:** both apps checked — the consumer app takes cards only in PaymentSheet (`initPaymentSheet` /
+  `presentPaymentSheet`, setup mode for saved cards); the courier app has no payments. No change.
+- **Incident response (12.10.1):** new [stripe-incidents.md § 6](runbooks/stripe-incidents.md#6-payment-page-tampering-or-card-data-found)
+  (skimming suspected, card data found). **stripe.md § 2 step 12** had a merge-duplicated paragraph; rewritten as one
+  restricted-key permission list that also covers SetupIntents / PaymentMethods (S-59), Identity (S-22), Balance
+  transactions (S-85) and Disputes.
+- **SAQ A "not yet" items and owners** (roles; people named in aoc.md when assigned): Stripe AOC review and yearly
+  monitoring (payments owner); script-attack confirmation E7 — nonces so the consumer CSP drops `'unsafe-inline'`, alert, synthetic check (security
+  lead with web and SRE leads); vendor defaults in the cloud accounts 2.2.2 (platform/SRE lead); vulnerability
+  identification and patching 6.3.1 / 6.3.3 (security lead, S-104); accounts, leavers, IdP password policy 8.2.1,
+  8.2.5, 8.3.6, 8.3.7 (platform/SRE lead, ops lead); ASV scans 11.3.2 / 11.3.2.1 (security lead); TPSP agreements and
+  process 12.8.2 / 12.8.3 (payments owner, legal, security lead); every Stripe dashboard setting in stripe-review.md
+  (payments owner).
+- **S-106 — legal document registry** (`web/packages/legal/registry.json` + `registry.mjs`), reusing the version the
+  pages already print ("Version 3.0 · Effective 1 October 2026") and northline-auth's `TERMS_VERSION`: each legal text
+  has its versions, effective dates and a counsel sign-off record (`counsel`, `firm`, `date`, `sha256` of the reviewed
+  text, `reference`). Pages (Terms, Privacy Policy) and files (the store privacy answers) are hashed over their visible
+  text / canonical JSON; `legal.test.mjs` fails on a text change without a new version, a page line that disagrees,
+  two versions with one text, or a sign-off of another text, and checks the versions kept in code (auth's default
+  `termsVersion`, `OBLIGATIONS_VERSION`, every `ConsentWordings` id). Code-held texts keep their own pins
+  (`ConsentWordingsTest`). `make legal-check`, `make legal-status`. Consequence for other stories: changing
+  `mobile/apps/*/store/privacy.json` now needs a registry version too.
+- **Review packet and questions:** [review-packet.md](compliance/legal/review-packet.md) (12 texts with route/screen,
+  version and languages; no cookie notice exists; no courier terms, sub-processor page or French version) and
+  [counsel-questions.md](compliance/legal/counsel-questions.md) — **51 questions** with source and decision: S-105
+  deadlines, grace period, holds, verification; S-107's flagged mismatches (retention.md § 7); S-108 wordings, push, SMS STOP,
+  hashes; Law 25 and Loi 96 (French texts, PIA, privacy officer, off-by-default, CPA forum clause); OpenRouter as a US
+  processor and the "no training" sentence; policy statements the product contradicts (precise location, cookies and
+  GPC, named cities, pen test / SOC 2 / segregated accounts, the sub-processor page); "escrow" vs merchant of record
+  and the Retail Payment Activities Act; the marketplace-facilitator checkbox; unversioned Business Terms acceptance;
+  the 18+ rating vs age of majority and no age check; alcohol, tobacco and vape; courier notices; bundled sign-up
+  consent; merchant attestations naming one province's bodies.
+- **Docs site:** `compliance/**/*.md` added to the internal variant with a sidebar category.
+- **Region-neutral:** no province, city or zone in the new code; the documents quote the legal drafts' place names
+  only to question them (G5, F3).
+- **Never run against the real services:** Stripe (dashboard settings, restricted key, AOC, Payment Element,
+  PaymentSheet), browsers sending CSP reports to a deployed site, a log backend receiving them, an ASV scan.
+
+## 2026-09-30 — S-104 External penetration test and remediation (internal review, fixes, testers' packet)
+
+The third-party test itself can't happen in this repository. This story is the internal review that comes first, the
+fixes, and the packet for the testers: [docs/security/findings.md](security/findings.md) (every finding with severity,
+status and test), [docs/security/pentest-scope.md](security/pentest-scope.md) (environments, accounts, scope, rules of
+engagement, contacts, retest, STRIDE), [docs/security/README.md](security/README.md) (how to run the scans).
+
+- **Result:** no open critical or high finding. Fixed: S104-01 unbounded request bodies (High), S104-02 expression
+  injection into email templates through dish rejection reasons (High, worst case), S104-03 Tomcat/Jackson/lz4-java
+  advisories (High), S104-04 image decompression bombs, S104-05 the MCP client-metadata fetch's SSRF guard, S104-06
+  privacy verification texts, S104-07 SMS pumping, S104-08 CSV formula injection, S104-09 no CSP on the consumer site,
+  S104-10 a malformed deep link. Open (Low): build-time-only package advisories, staging's cluster API without CIDRs,
+  job photos checked by declared type only.
+- **Request body cap in the platform library**, not at the edge: `RequestSizeLimitFilter` (auto-configured for every
+  servlet app) answers 413 for a declared length over `northline.http.max-request-body` (5 MB) or, for uploads (multipart or a raw file body such as refund evidence),
+  `northline.http.max-multipart-body` (26 MB), and counts chunked bodies while they are read. The edge could cap too
+  (Envoy Gateway has no simple per-route body limit in `ClientTrafficPolicy`), but the apps are where the bodies are
+  read and the cap is testable there. Properties only, no new environment variable.
+- **Email key fragments are codes:** `EmailTemplates` refuses to render when a variable pre-processed into a message key
+  is not `[A-Za-z0-9][A-Za-z0-9_.-]{0,63}` (empty allowed: a dispute update before its decision). A test fails when a
+  template pre-processes a variable the guard doesn't check. Dish rejection reasons now use the listing reasons
+  (`ListingVetting.REASONS`), validated in the console's `VettingQueueService` (food doesn't depend on catalogue).
+- **Images:** `shared.storage.ImageDecoding` — header dimensions only, 100-megapixel ceiling, analysis subsampled to about
+  2 megapixels (the white-border share and the 8 × 8 average hash barely change). The kitchen's photo check reads only
+  the header.
+- **MCP client metadata fetch** uses Apache HttpClient 5 with `EgressDnsResolver` (auth gains the `httpclient5`
+  dependency the api and worker already had); `allowInsecure` maps to `EgressPolicy(allowLocal)`, which allows loopback
+  and `http`, nothing else private (before, `allowInsecure` skipped the address check entirely).
+- **Privacy texts budget:** 3 an hour, 6 a day per person across requests (`SelfServiceImpl.TEXTS_PER_HOUR/DAY`). Opening
+  a request over the budget still opens it (it waits for a step-up proof, or a code once the budget allows);
+  "send a new code" answers `409 too_many_codes` (fr-CA in the catalogue). **Schema: V305**
+  `privacy.verification_texts` (id, subject, request with `ON DELETE CASCADE`, sent_at; rows older than two days are
+  deleted on insert) — V305–V309 is S-104's range, above main's V301 (S-107).
+- **SMS pumping:** new rate-limit scope `PLATFORM` (key `all`) beside account/IP/session; only `otp-send` uses it:
+  `OTP_SEND_PLATFORM_PER_HOUR` (default 1000/h, lockout 15 min, max 1 h), logged at ERROR when reached; never reset by a
+  success. New optional variable in runbooks README/dev/staging/prod and `.env.example`; no secret. Restricting
+  destinations to Canada is left to the SMS provider's geo-permissions (go-live checklist) — a list of Canadian area
+  codes in code would need upkeep and the spec says "Canadian (NANP)".
+- **CSV formula guard** (server sales export and the Studio's `report.ts`): a leading `-` is neutralised unless the whole
+  cell is a negative amount (digits, separators, spaces, `$`), closing `-2+cmd|…`. The Studio's earlier test
+  expectation that `-3 credit` stays bare changed to the quoted form.
+- **Consumer CSP** in `web/apps/consumer/server/security-headers.mjs` (`NL_AUTH_ORIGIN` already reaches the pod).
+  `script-src 'unsafe-inline'` stays until the SSR inline scripts carry nonces (follow-up); COOP
+  `same-origin-allow-popups` so Stripe 3-D Secure pop-ups keep working. (S-110 later folded its payment-page script
+  inventory and the `/csp-report` receiver into this file; see the S-110 section.)
+- **Dependencies:** Boot BOM properties overridden (`tomcat.version` 11.0.26, `jackson-bom.version` 3.1.7,
+  `jackson-2-bom.version` 2.21.7) and `at.yawk.lz4:lz4-java` 1.11.4 in dependency management; versions in
+  `libs.versions.toml` with a note to drop them once Spring Boot's BOM has them.
+- **Scans as make targets** (`make/security.mk`, `scripts/security/{scan,tools,negative-tests}.sh`): each part runs what
+  is installed and skips the rest; `make security-tools` pins gitleaks 8.21.2, osv-scanner 1.9.2, kube-score 1.19.0,
+  semgrep 1.179.0, checkov 3.3.20 into `.cache/security-tools`. Gating: secrets and dependencies fail the run; SAST and
+  IaC only report (their rule sets mix hardening advice that is triaged by hand). `.gitleaks.toml` allow-lists test
+  paths and the documented local keys, each with its reason. CycloneDX Gradle plugin 3.4.1 on the four apps
+  (`cyclonedxDirectBom`) gives osv-scanner the runtime dependency set — no Gradle lockfiles exist. CI: GitHub
+  `security.yml` and GitLab `PIPELINE_PART=security`, both manual only and never part of `all`; never triggered here.
+- **Object-level authorization harness** (`ObjectLevelAuthorizationTest`) drives every operation of the committed
+  OpenAPI documents in the shared `IntegrationTest` context (no new Spring context). Foreign objects come from the shared
+  test database (the caller's business and customer are new and own nothing) plus fixtures for the main kinds; request
+  bodies are synthesised from the documented schemas. Acceptance per probe: not 2xx and not 5xx (409/422 allowed: they
+  show the record wasn't served). DAST: ZAP's API scan and the negative tests ran against an api started from the boot
+  jar under `local` with a Postgres container of this story's own (removed afterwards).
+- **Not done / never run for real:** the external test itself; ZAP against the BFFs, auth and the browser apps (only the
+  api's specs were scanned); CodeQL and OWASP dependency-check (no CLI or NVD feed offline); semgrep's registry packs
+  (blocked here — the same rules ran from the rules repository); anything against a deployed environment, a real SMS
+  provider's geo-permissions or a real cluster's NetworkPolicy enforcement. The pentest packet's names, addresses,
+  dates and budgets are placeholders.
+
 ## 2026-09-30 — S-109 Accessibility audit (WCAG 2.2 AA) of Studio, consumer web and console
 
 Report, findings and the accessibility statement draft (en/fr): [docs/a11y/audit.md](a11y/audit.md). Result: no

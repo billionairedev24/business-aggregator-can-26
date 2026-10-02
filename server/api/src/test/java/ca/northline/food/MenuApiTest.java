@@ -188,6 +188,16 @@ class MenuApiTest extends IntegrationTest {
                         .with(owner))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.errors[0].message").value("Use a photo at least 1000 px on the short side."));
+        // S-104: a few hundred bytes that claim 60 000 × 60 000 pixels are refused from the header, never decoded
+        mvc.perform(multipart(k.base() + "/menu-items/{id}/photo", itemId)
+                        .file(new MockMultipartFile(
+                                "file",
+                                "bomb.png",
+                                "image/png",
+                                ca.northline.shared.storage.ImageDecodingTest.bomb(60_000, 60_000)))
+                        .with(owner))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.errors[0].message").value("Upload a JPEG, PNG or WebP photo under 10 MB."));
         mvc.perform(multipart(k.base() + "/menu-items/{id}/photo", itemId)
                         .file(new MockMultipartFile("file", "a.gif", "image/gif", new byte[] {1, 2}))
                         .with(owner))

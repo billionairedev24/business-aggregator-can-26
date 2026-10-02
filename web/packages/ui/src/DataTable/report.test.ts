@@ -43,7 +43,12 @@ describe('CSV', () => {
     expect(csvEscape('=HYPERLINK("x")')).toBe(`"'=HYPERLINK(""x"")"`);
     expect(csvEscape('@SUM(A1)')).toBe("'@SUM(A1)");
     expect(csvEscape('-cmd')).toBe("'-cmd");
-    expect(csvEscape('-3 credit')).toBe('-3 credit');
+    expect(csvEscape('-3.50')).toBe('-3.50');
+    expect(csvEscape('-.75')).toBe('-.75');
+    expect(csvEscape('-$1,079.00')).toBe('"-$1,079.00"');
+    expect(csvEscape('-79,00\u00a0$')).toBe('"-79,00\u00a0$"');
+    expect(csvEscape('-3 credit')).toBe("'-3 credit");
+    expect(csvEscape("-2+cmd|' /C calc'!A0")).toBe("'-2+cmd|' /C calc'!A0"); // S-104
     expect(csvEscape('+1')).toBe("'+1");
   });
 });

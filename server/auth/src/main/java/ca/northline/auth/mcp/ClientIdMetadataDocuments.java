@@ -1,12 +1,10 @@
 package ca.northline.auth.mcp;
 
+import ca.northline.platform.EgressDnsResolver;
+import ca.northline.platform.EgressPolicy;
+import ca.northline.platform.HostResolver;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.URI;
-import java.net.UnknownHostException;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -18,6 +16,13 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.config.ConnectionConfig;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.core5.util.Timeout;
 import org.jspecify.annotations.Nullable;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
@@ -33,7 +38,7 @@ import tools.jackson.databind.json.JsonMapper;
  * OAuth Client ID Metadata Documents (draft-ietf-oauth-client-id-metadata-document, the MCP specification's way for a
  * client and an authorization server with no prior relationship): when an authorization request's {@code client_id} is
  * an HTTPS URL, the client is described by the JSON document at that URL. This repository fetches it (no redirects,
- * a time-out, a size cap, only public addresses — no request into the cluster), checks it — {@code client_id} equals
+ * a time-out, a size cap, only public addresses under the platform's {@link EgressPolicy} — no request into the cluster), checks it — {@code client_id} equals
  * the URL, a name, redirect URIs that are HTTPS or loopback (RFC 8252), no client secret — and registers a public,
  * PKCE-only client that needs the person's consent, with at most the MCP scopes. The registration is stored (Spring
  * Authorization Server looks clients up by id when it reads authorizations back) and refreshed from the document after
@@ -51,7 +56,8 @@ public class ClientIdMetadataDocuments implements RegisteredClientRepository {
     private final McpAuthProperties.MetadataDocuments props;
     private final JsonMapper json;
     private final Clock clock;
-    private final HttpClient http;
+    private final EgressPolicy policy;
+    private final CloseableHttpClient http;
     private final ConcurrentHashMap<String, Instant> fetchedAt = new ConcurrentHashMap<>();
 
     public ClientIdMetadataDocuments(
@@ -59,13 +65,46 @@ public class ClientIdMetadataDocuments implements RegisteredClientRepository {
             McpAuthProperties.MetadataDocuments props,
             JsonMapper json,
             Clock clock) {
+        this(delegate, props, json, clock, HostResolver.SYSTEM);
+    }
+
+    /**
+     * S-104: the fetch follows the platform's egress rules ({@link EgressPolicy}, as partner webhooks and import images
+     * do): every resolved address is checked — private, loopback, link-local and cloud metadata, carrier-grade NAT,
+     * IPv4 inside IPv6 — and the connection uses exactly the checked addresses, so DNS rebinding can't swap one in.
+     */
+    ClientIdMetadataDocuments(
+            RegisteredClientRepository delegate,
+            McpAuthProperties.MetadataDocuments props,
+            JsonMapper json,
+            Clock clock,
+            HostResolver resolver) {
         this.delegate = delegate;
         this.props = props;
         this.json = json;
         this.clock = clock;
-        this.http = HttpClient.newBuilder()
-                .followRedirects(HttpClient.Redirect.NEVER)
-                .connectTimeout(props.timeout())
+        this.policy = new EgressPolicy(props.allowInsecure());
+        var timeout = Timeout.ofMilliseconds(props.timeout().toMillis());
+        this.http = HttpClients.custom()
+                .setConnectionManager(PoolingHttpClientConnectionManagerBuilder.create()
+                        .setDnsResolver(new EgressDnsResolver(policy, resolver))
+                        .setDefaultConnectionConfig(ConnectionConfig.custom()
+                                .setConnectTimeout(timeout)
+                                .setSocketTimeout(timeout)
+                                .build())
+                        .setMaxConnTotal(8)
+                        .setMaxConnPerRoute(2)
+                        .build())
+                .disableRedirectHandling()
+                .disableAutomaticRetries()
+                .disableCookieManagement()
+                .disableAuthCaching()
+                .setUserAgent("Northline-Auth/1.0 (+https://northline.ca)")
+                .setDefaultRequestConfig(RequestConfig.custom()
+                        .setResponseTimeout(timeout)
+                        .setConnectionRequestTimeout(timeout)
+                        .setRedirectsEnabled(false)
+                        .build())
                 .build();
     }
 
@@ -184,32 +223,33 @@ public class ClientIdMetadataDocuments implements RegisteredClientRepository {
             throw new InvalidDocument(
                     "host " + uri.getHost() + " is not in northline.auth.mcp.metadata-documents.allowed-hosts");
         }
-        if (!props.allowInsecure()) {
-            requirePublicAddress(uri.getHost());
+        var refused = policy.refuseUrl(uri).or(() -> policy.refuseLiteral(uri.getHost()));
+        if (refused.isPresent()) {
+            throw new InvalidDocument(refused.get());
         }
-        HttpResponse<byte[]> response;
+        byte[] body;
+        var request = new HttpGet(uri);
+        request.setHeader("Accept", "application/json");
+        try (var response = http.executeOpen(null, request, null)) {
+            if (response.getCode() != 200) {
+                throw new InvalidDocument("HTTP " + response.getCode());
+            }
+            var entity = response.getEntity();
+            if (entity == null) {
+                throw new InvalidDocument("empty response");
+            }
+            body = entity.getContent().readNBytes(props.maxBytes() + 1);
+            if (body.length > props.maxBytes()) {
+                request.cancel(); // over the cap: drop the connection instead of reading on
+                throw new InvalidDocument("larger than " + props.maxBytes() + " bytes");
+            }
+        } catch (EgressDnsResolver.Refused e) {
+            throw new InvalidDocument(String.valueOf(e.getMessage()));
+        } catch (IOException | RuntimeException e) {
+            throw new InvalidDocument("fetch failed: " + e.getClass().getSimpleName());
+        }
         try {
-            response = http.send(
-                    HttpRequest.newBuilder(uri)
-                            .timeout(props.timeout())
-                            .header("Accept", "application/json")
-                            .GET()
-                            .build(),
-                    HttpResponse.BodyHandlers.ofByteArray());
-        } catch (IOException e) {
-            throw new InvalidDocument("fetch failed: " + e.getMessage());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new InvalidDocument("fetch interrupted");
-        }
-        if (response.statusCode() != 200) {
-            throw new InvalidDocument("HTTP " + response.statusCode());
-        }
-        if (response.body().length > props.maxBytes()) {
-            throw new InvalidDocument("larger than " + props.maxBytes() + " bytes");
-        }
-        try {
-            var node = json.readTree(new String(response.body(), StandardCharsets.UTF_8));
+            var node = json.readTree(new String(body, StandardCharsets.UTF_8));
             if (node == null || !node.isObject()) {
                 throw new InvalidDocument("not a JSON object");
             }
@@ -240,29 +280,6 @@ public class ClientIdMetadataDocuments implements RegisteredClientRepository {
             throw new InvalidDocument("redirect URI " + redirect + " must be https, http on a loopback IP, or a"
                     + " reverse-domain scheme, without wildcard or fragment");
         }
-    }
-
-    /** No document fetched from inside the cluster or the cloud's metadata service (SSRF). */
-    private static void requirePublicAddress(String host) throws InvalidDocument {
-        try {
-            for (var address : InetAddress.getAllByName(host)) {
-                if (address.isLoopbackAddress()
-                        || address.isSiteLocalAddress()
-                        || address.isLinkLocalAddress()
-                        || address.isAnyLocalAddress()
-                        || address.isMulticastAddress()
-                        || isUniqueLocal(address)) {
-                    throw new InvalidDocument(host + " resolves to a private address");
-                }
-            }
-        } catch (UnknownHostException e) {
-            throw new InvalidDocument("unknown host " + host);
-        }
-    }
-
-    private static boolean isUniqueLocal(InetAddress address) {
-        var bytes = address.getAddress();
-        return bytes.length == 16 && (bytes[0] & 0xfe) == 0xfc;
     }
 
     static String hash(String value) {

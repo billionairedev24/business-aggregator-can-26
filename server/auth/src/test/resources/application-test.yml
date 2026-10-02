@@ -21,6 +21,7 @@ northline:
       store: memory
       limits:
         otp-send.ip.max: 100000
+        otp-send.platform.max: 100000
         otp-verify.ip.max: 100000
         sign-in-lookup.ip.max: 100000
         totp-verify.ip.max: 100000

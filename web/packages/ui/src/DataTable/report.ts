@@ -49,8 +49,13 @@ export function buildReport<T>(
 }
 
 // ── CSV ──────────────────────────────────────────────────────────────────────
-/** Neutralises spreadsheet formula injection (=, +, @, tab, CR, or "-" not followed by a number). */
-const guardFormula = (t: string) => (/^[=+@\t\r]/.test(t) || /^-(?![\d.])/.test(t) ? `'${t}` : t);
+/**
+ * Neutralises spreadsheet formula injection: =, +, @, tab, CR, or "-" unless the whole cell is a negative amount
+ * (digits, separators, spaces, $ — "-$79.00", "-79,00 $"). S-104: "-2+cmd|' /C calc'!A0" starts with a digit after
+ * the minus and is still a formula.
+ */
+const NEGATIVE_AMOUNT = /^-(?=.*\d)[\d\s.,\u00a0\u202f$]+$/;
+const guardFormula = (t: string) => (/^[=+@\t\r]/.test(t) || (t.startsWith('-') && !NEGATIVE_AMOUNT.test(t)) ? `'${t}` : t);
 
 export function csvEscape(value: string): string {
   const t = guardFormula(value);
