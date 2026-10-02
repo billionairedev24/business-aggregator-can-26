@@ -3,6 +3,7 @@ package ca.northline.messaging.persistence;
 import static ca.northline.shared.privacy.PersonalDataSql.section;
 
 import ca.northline.messaging.application.AttachmentStorage;
+import ca.northline.shared.Ids;
 import ca.northline.shared.privacy.PersonalDataContributor;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +19,10 @@ import org.springframework.stereotype.Component;
  * and objects under {@code messaging/customers/<id>/}) go. What a customer wrote in a conversation is blanked; what a
  * team member wrote stays the business's record without their name. Help cases stay as support records with the
  * person's name, subject and account context removed.
+ *
+ * <p>S-108: the export includes the consent history; erasure withdraws every consent still granted (source
+ * {@code erasure}) and drops the network and browser evidence, but keeps the records themselves — the CASL proof of
+ * consent ({@code consent_proof}) — until {@code ConsentRetention.PROOF_PERIOD} after the withdrawal.
  */
 @Component
 @RequiredArgsConstructor
@@ -72,12 +77,23 @@ class MessagingPersonalData implements PersonalDataContributor {
                 section(jdbc, "messaging.uploads", "Photos you uploaded", "Photos téléversées", """
                         select id, file_name, content_type, byte_size, created_at
                           from messaging.customer_uploads where customer_id = :u
-                        """, p));
+                        """, p),
+                section(
+                        jdbc,
+                        "messaging.consents",
+                        "Your consent to marketing messages",
+                        "Vos consentements aux messages publicitaires",
+                        """
+                        select category, action, at, source, wording_version, language, ip_prefix
+                          from messaging.consent_records where user_id = :u order by at, id
+                        """,
+                        p));
     }
 
     @Override
     public Erasure erase(Subject subject) {
         var u = subject.userId();
+        var consentProof = eraseConsents(u);
         for (var table : List.of(
                 "messaging.push_devices",
                 "messaging.notification_prefs",
@@ -111,11 +127,50 @@ class MessagingPersonalData implements PersonalDataContributor {
                          where requester_id = :u
                         """).param("u", u).update();
         var outcome = Erasure.done();
+        if (consentProof) {
+            outcome = outcome.retaining("messaging.consents", Retention.CONSENT_PROOF);
+        }
         if (cases > 0) {
             outcome = outcome.retaining("messaging.cases", Retention.BUSINESS_RECORDS);
         }
         return wroteForBusinesses > 0
                 ? outcome.retaining("messaging.businessMessages", Retention.BUSINESS_RECORDS)
                 : outcome;
+    }
+
+    /**
+     * Withdraws every consent still granted (idempotent: an already withdrawn category gets no second row) and drops
+     * the evidence; returns whether any proof is kept.
+     */
+    private boolean eraseConsents(String u) {
+        var granted = jdbc.sql("""
+                        select category, address_hash
+                          from (select distinct on (category) category, action, address_hash
+                                  from messaging.consent_records where user_id = :u
+                                 order by category, at desc, id desc) l
+                         where l.action = 'granted'
+                        """)
+                .param("u", u)
+                .query((rs, _) -> new String[] {rs.getString("category"), rs.getString("address_hash")})
+                .list();
+        for (var g : granted) {
+            jdbc.sql("""
+                            insert into messaging.consent_records (id, user_id, category, action, at, source, address_hash)
+                            values (:id, :u, :c, 'withdrawn', now(), 'erasure', :h)
+                            """)
+                    .param("id", Ids.next())
+                    .param("u", u)
+                    .param("c", g[0])
+                    .param("h", g[1])
+                    .update();
+        }
+        jdbc.sql("""
+                        update messaging.consent_records set ip_prefix = null, user_agent_hash = null
+                         where user_id = :u and (ip_prefix is not null or user_agent_hash is not null)
+                        """).param("u", u).update();
+        return jdbc.sql("select exists (select 1 from messaging.consent_records where user_id = :u)")
+                .param("u", u)
+                .query(Boolean.class)
+                .single();
     }
 }

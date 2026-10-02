@@ -1,4 +1,4 @@
-package ca.northline.search.web;
+package ca.northline.shared.web;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.Inet6Address;
@@ -6,15 +6,16 @@ import java.net.InetAddress;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Who a search comes from, for the per-address rate limit. The api sits behind the ingress and the BFFs, so the peer
+ * Who a request comes from: for search's per-address rate limit (S-44) and the minimised evidence of a CASL consent
+ * (S-108). The api sits behind the ingress and the BFFs, so the peer
  * is usually a private address; then the client is the right-most public address of {@code X-Forwarded-For} (each
  * proxy appends the address it saw; entries a client wrote itself are further left and are ignored).
  */
-final class ClientAddress {
+public final class ClientAddress {
 
     private ClientAddress() {}
 
-    static String of(HttpServletRequest request) {
+    public static String of(HttpServletRequest request) {
         var peer = request.getRemoteAddr();
         var forwarded = request.getHeader("X-Forwarded-For");
         if (forwarded == null || forwarded.isBlank() || !internal(peer)) {

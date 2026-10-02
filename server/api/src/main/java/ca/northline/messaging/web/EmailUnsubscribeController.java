@@ -31,7 +31,9 @@ import org.springframework.web.bind.annotation.RestController;
  * POST /api/v1/email/unsubscribe?t=…   turns the email off; also RFC 8058 one-click (body List-Unsubscribe=One-Click)
  * </pre>
  *
- * Both answer a small HTML page in the member's language; an invalid token is 400 with a pointer to Settings.
+ * Both answer a small HTML page in the member's language; an invalid token is 400 with a pointer to Settings. A
+ * commercial message's link (S-108: {@code consent.<category>} — email, and the opt-out link of a commercial SMS)
+ * withdraws the CASL consent on the POST, at once; the page names the legal sender and its mailing address.
  */
 @RestController
 @RequestMapping(NotificationLinks.UNSUBSCRIBE_PATH)
@@ -52,8 +54,11 @@ class EmailUnsubscribeController {
     @PostMapping(produces = MediaType.TEXT_HTML_VALUE)
     ResponseEntity<String> unsubscribe(
             @RequestParam(name = "t", required = false) @Nullable String token,
+            @RequestParam(name = "List-Unsubscribe", required = false) @Nullable String oneClick,
             @RequestHeader(name = "Accept-Language", required = false) @Nullable String language) {
-        var done = token == null ? Optional.<Subscription>empty() : unsubscribe.unsubscribe(token);
+        var done = token == null
+                ? Optional.<Subscription>empty()
+                : unsubscribe.unsubscribe(token, "One-Click".equals(oneClick));
         return page(done, "done", token, language);
     }
 
@@ -64,6 +69,8 @@ class EmailUnsubscribeController {
         variables.put("state", subscription.isPresent() ? state : "invalid");
         subscription.ifPresent(s -> {
             variables.put("eventLabel", templates.message(locale, "event." + s.event(), List.of()));
+            variables.put("channel", s.channel());
+            variables.put("settingsPlace", s.settingsPlace());
             variables.put("token", token == null ? "" : token);
             variables.put("action", NotificationLinks.UNSUBSCRIBE_PATH);
         });

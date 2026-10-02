@@ -137,7 +137,12 @@ public interface PersonalDataContributor {
         /** Identity checks of a business's owners. */
         KYC_RECORDS,
         /** The append-only audit log (ids and codes only, seven years). */
-        AUDIT_LOG
+        AUDIT_LOG,
+        /**
+         * S-108: proof of consent to commercial messages and of its withdrawal (CASL s. 13), three years after the
+         * withdrawal (who, what, when, where, the wording; no network or browser evidence).
+         */
+        CONSENT_PROOF
     }
 
     /** What stops erasure for now; the step is retried until it clears. */
