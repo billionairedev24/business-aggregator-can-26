@@ -200,8 +200,7 @@ public final class Deliveries {
         var optOut = links.unsubscribe(
                 unsubscribe.issue(to.userId(), "consent." + ConsentCategory.MARKETING_SMS.code(), to.locale()));
         var french = "fr".equals(to.locale().getLanguage());
-        var tail =
-                french ? " — " + legalName + ". Désabonnement : " + optOut : " — " + legalName + ". Opt out: " + optOut;
+        var tail = " — " + legalName + (french ? " · Désabonnement : " : " · Opt out: ") + optOut;
         return CommercialMessageCheck.sms(text + tail, legalName, optOut);
     }
 

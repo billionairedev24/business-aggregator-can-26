@@ -92,7 +92,7 @@ class CommercialNoticesTest extends WorkerIntegrationTest {
                         t -> assertThat(t.body())
                                 .startsWith("Northline : Livraison gratuite ce week-end.")
                                 .contains(
-                                        "— Northline Marketplace Inc. Désabonnement : http://localhost:8080/api/v1/email/unsubscribe?t="));
+                                        "— Northline Marketplace Inc. · Désabonnement : http://localhost:8080/api/v1/email/unsubscribe?t="));
         EmailMessage email = emails.to(amara.email()).getFirst();
         assertThat(email.subject()).isEqualTo("Livraison gratuite ce week-end — Northline");
         assertThat(email.headers())
