@@ -94,7 +94,13 @@ the app creates at sign-in and keeps in the Keychain / Keystore-encrypted storag
 app's — the Secure Enclave / StrongBox key is a follow-up); the refresh token (30 days, rotating) is stored before
 anything from a refresh answer is used; one refresh at a time.
 
-- **In the system browser** (`/sign-in` › "Sign in in the browser"; RFC 8252): the authorization request opens in
+- **On the app's own screens** (S-98: Create account, Sign in): northline-auth's JSON sign-in API in the app's cookie
+  session, then the authorization code on the claimed https redirect — [mobile-auth.md § On the app's own
+  screens](mobile-auth.md#on-the-apps-own-screens-consumer-app-s-98). Create account: mobile, full name, email, terms
+  → a 6-digit code by SMS (or a call) → an authenticator app or "SMS code · backup only" (no second factor, S-62) →
+  Location. Sign in: email or mobile → a code to the account's phone. The redirect URI
+  `${EXPO_PUBLIC_SITE_ORIGIN}/app/oauth2redirect` must equal the registered `${CONSUMER_ORIGIN}/app/oauth2redirect`.
+- **In the system browser** (Sign in › "Sign in with a passkey", "Continue with Apple" / "Google"; RFC 8252): the authorization request opens in
   ASWebAuthenticationSession / Custom Tabs; northline-auth sends `mobile-consumer` to the **consumer site's** sign-in
   page (`northline.auth.consumer-clients`, S-97), where passkeys, Google and Apple work; the code comes back to
   `ca.northline.app:/oauth2redirect`.
@@ -170,7 +176,7 @@ The store release pipeline and listings are S-103.
 
 | permission | when the app asks | en (`app.config.ts`) | fr-CA (`locales/fr.json`) |
 |---|---|---|---|
-| Location while using (`NSLocationWhenInUseUsageDescription`, `ACCESS_FINE_LOCATION` / `COARSE`) | Delivery address › "Use my location" (S-98), never at launch | Northline uses your location to suggest your delivery address and show the shops and providers that serve it. It is used only while you have the app open and is never shared with businesses. | Northline utilise votre position pour suggérer votre adresse de livraison et afficher les commerces et prestataires qui la desservent. Elle n’est utilisée que lorsque l’app est ouverte et n’est jamais transmise aux entreprises. |
+| Location while using (`NSLocationWhenInUseUsageDescription`, `ACCESS_FINE_LOCATION` / `COARSE`) | Delivery address › "Use my location" (S-98), never at launch; once allowed, the app also uses it to name where you are until you save an address | Northline uses your location to suggest your delivery address and show the shops and providers that serve it. It is used only while you have the app open and is never shared with businesses. | Northline utilise votre position pour suggérer votre adresse de livraison et afficher les commerces et prestataires qui la desservent. Elle n’est utilisée que lorsque l’app est ouverte et n’est jamais transmise aux entreprises. |
 
 No background location, camera, microphone, storage or motion: removed from the merged Android manifest and kept
 out of Info.plist (checked by `mobile-consumer-native-check`). `allowBackup=false`. Notifications are S-102's.
@@ -184,6 +190,7 @@ functionality only, no tracking (the privacy manifest in `app.config.ts`).
 | "Sign-in was cancelled" at once on Android | another installed variant took `ca.northline.app:` → keep one variant installed |
 | the browser sign-in lands on the Studio's page | northline-auth older than S-97 (`mobile-consumer` not in `northline.auth.consumer-clients`) |
 | sign-in loops back | the phone can't reach `AUTH_ISSUER` / `CONSUMER_ORIGIN`, or `AUTH_ISSUER` ≠ `EXPO_PUBLIC_AUTH_ISSUER` |
+| "Signing in didn't finish" after the code / second factor | no code on the https redirect: `EXPO_PUBLIC_SITE_ORIGIN` ≠ the auth server's `CONSUMER_ORIGIN` (the redirect isn't registered), or the platform cookie store dropped the auth session → "Finish signing in", else start again |
 | `/.well-known/apple-app-site-association` 404 | `mobileApps.appleTeamId` not set for the environment |
 | `make mobile-consumer-export` can't resolve `@northline/tokens` | `web/packages/tokens` missing from the checkout (the kit links it) |
 | `native-check` leaves `package.json` changed | it was interrupted: `git checkout mobile/apps/consumer/package.json` (prebuild rewrites its scripts) |

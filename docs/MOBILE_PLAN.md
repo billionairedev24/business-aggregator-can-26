@@ -136,7 +136,7 @@ modules are mocked in `jest.setup.ts`. Each journey adds `__tests__/<area>.test.
 The registry is `src/screens.ts` (a test checks every design screen has a route file and a row here). "Personal" =
 signed in only. Paths are under `/api/v1` unless they start with `/api/auth` or `/oauth2` (northline-auth).
 
-### A — Account & security (S-98)
+### A — Account & security (S-98, **built**)
 
 | screen | route | personal | api |
 |---|---|---|---|
@@ -195,8 +195,10 @@ api above; personal stubs already show guests the sign-in prompt.
 - **Session** (`src/auth/AuthProvider.tsx`): `useAuth()` → `{ status: 'loading' | 'signedIn' | 'guest', ended,
   welcomed, signInWithBrowser(), signedIn(), signOut() }`. `status === 'signedIn'` gates personal screens;
   `SignedOutError` from a call means the sign-in ended (the provider already switched to `guest`). Sign-in screens are
-  `/sign-in` and `/sign-up`; send people there with `router.push`.
-- **Delivery location** (S-98, `src/location/`): `useDeliveryLocation()` → `{ location: { status: 'locating' |
+  `/sign-in` and `/sign-up`; send people there with `router.push`. After a sign-in the app lands on `/home` when an
+  address is saved, else `/location` (`useAfterSignIn`). The geo api is `src/api/geo.ts` (`geoApi(api)`); the region
+  model (`GET /geo/regions`, query key `['geo', 'regions', locale]`) gives markets' time zones.
+- **Delivery location** (S-98, `src/location/DeliveryLocation.tsx`): `useDeliveryLocation()` → `{ location: { status: 'locating' |
   'saved' | 'detected' | 'fallback', label?, city?, province?, lat?, lng?, marketId?, zoneId?, zone?, street?, unit?,
   postalCode?, placeId? }, save(l), forget() }` — saved (the Location screen) → the device's position when the
   permission was already given, named by `GET /geo/reverse` → the api's fallback market (`GET /geo/markets`).

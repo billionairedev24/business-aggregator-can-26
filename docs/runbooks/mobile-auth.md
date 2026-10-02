@@ -80,7 +80,31 @@ https://auth.<zone>/oauth2/authorize?response_type=code
 - Every sign-in today uses a second factor (passkey, authenticator app or backup code), so the tokens carry
   `acr=mfa` and `amr`; the consumer and courier apps must not depend on it.
 
-### Redirects
+### On the app's own screens (consumer app, S-98)
+
+The consumer app's Journey A (welcome, sign up, code, second factor) is drawn natively (design 01), so it signs people
+in without the browser — as a first-party app — and still ends with the same authorization code, PKCE and DPoP:
+
+1. `GET /oauth2/authorize?…&redirect_uri=https://<consumer host>/app/oauth2redirect` (PKCE S256, `state`) in the app's
+   own HTTP session (the platform cookie store), `Accept: text/html`. Not signed in: northline-auth keeps the request
+   in that session and redirects to the sign-in page (the app ignores the page).
+2. The JSON sign-in API in the same session, exactly as the consumer site's pages call it (S-62):
+   `POST /api/auth/register` → `/register/verify` → `/register/totp` + `/register/totp/verify` or `/register/complete`;
+   or `POST /api/auth/sign-in` → `/sign-in/code` → `/sign-in/code/verify`. A native request has no `Origin`, which the
+   origin check lets through. The answer that signs the person in carries **`continueTo`** = the kept request.
+3. `GET continueTo` (rebuilt on the issuer, only this client's request with this `state`): northline-auth redirects to
+   the https redirect with `code` and `state`; the platform's fetch follows it to the consumer site's small
+   `/app/oauth2redirect` page and reports where it landed; the app reads the code from that URL and exchanges it
+   (`POST /oauth2/token` with the same `redirect_uri` and a DPoP proof). No answer to this step: the app asks again
+   ("Finish signing in") — the session is signed in, so the request answers with a new code at once.
+
+The custom scheme can't be used here (fetch can't land on `ca.northline.app:`), hence the https redirect; the code in
+that URL is useless without the app's `code_verifier` and key. Passkeys, Google and Apple still go through the system
+browser (above) — the app has no native module for them. Code: `AppSignIn` in `@northline/mobile-kit`
+(`src/auth/handoff.ts`); server proof: `MobileDpopApiTest.Sessions` (registration with a phone code and none, sign-in
+with a phone code).
+
+
 
 - **Preferred: the claimed https link** — iOS Universal Link / Android App Link on the consumer host
   (`/app/oauth2redirect`, `/courier/oauth2redirect`). The consumer host must serve

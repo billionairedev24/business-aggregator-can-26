@@ -5961,3 +5961,70 @@ environment variable; four new consumer-web variables (below). Plan: [MOBILE_PLA
 - **Not done / never run:** no device, simulator, emulator or native compile; never exercised: Keychain / Keystore,
   the system-browser sign-in against a real northline-auth, App Links verification by iOS / Android (no team id, no
   certificate), EAS Build / Submit. The app's DPoP key is the kit's software key (S-87's follow-up stands).
+
+## 2026-10-02 — S-98 Consumer app Journey A: welcome, sign up, OTP, MFA, location
+
+Branch `mobile/s-98-journey-a` (on S-97). **No migration** (V240–V244 unused) and no new environment variable.
+
+- **Sign-in on the app's own screens (first-party), ending in the same OAuth code + PKCE + DPoP tokens.** Design 01
+  draws sign up, the code and the second factor natively, and the brief asks for them as app screens; S-29/S-87's
+  system-browser flow would have shown the consumer site's pages instead. So the app drives northline-auth's JSON
+  sign-in API (the one S-62's pages use) in its own cookie session and hands off to the authorization endpoint:
+  `GET /oauth2/authorize` first (northline-auth keeps the request), the JSON calls, then `GET continueTo` → the code on
+  the claimed **https** redirect `${CONSUMER_ORIGIN}/app/oauth2redirect` (already registered for `mobile-consumer`;
+  fetch can't land on the custom scheme), read from the URL fetch landed on, exchanged with DPoP. **No server change**:
+  `AppAuthorizationResume`'s `continueTo` and the origin check (no `Origin` from a native request) already allow it;
+  `MobileDpopApiTest.Sessions` now proves registration with a phone code and no second factor, and phone-code
+  sign-in, ending in DPoP tokens on the https redirect. `continueTo` is followed only when it is the issuer's
+  `/oauth2/authorize` for this client and this `state` (rebuilt on the configured issuer, so a proxy's host in it
+  doesn't matter); without one (lost), the original request is asked again — the session is signed in by then.
+  Kit: `AppSignIn` (`src/auth/handoff.ts`); `beginSignIn` takes a redirect URI and `PendingSignIn` carries it to the
+  code exchange. Passkeys, Google and Apple still use the **system browser** on the consumer site's page (the app has
+  no native passkey / Sign in with Apple / Google module): "Sign in with a passkey", "Continue with Apple", "Google".
+- **The cookie session** lives in the platform's HTTP cookie store (NSHTTPCookieStorage / Android CookieManager via
+  React Native's networking), never in JS; the half-done flow (what was typed, the PKCE verifier) lives in memory —
+  closing the app mid-way means starting again.
+- **Sign in (an addition: design 01's Welcome "Sign in" leads to Sign up):** `/sign-in` — "Welcome back", email or
+  mobile, Send code → the code to the account's phone (S-62's consumer sign-in; the same answer whether or not an
+  account matched), plus the browser buttons. Copy from the consumer web (S-62) where it has it, ours otherwise.
+- **The second factor "as the consumer design allows":** design 01 says two factors are mandatory, but S-62 (design
+  06) allows "SMS code · backup only" = no second factor (`POST /register/complete`), and the app follows S-62. The
+  three options are shown with the design's words: **Passkey is shown but can't be picked** (no native passkey module;
+  a line of ours says to add one later on the Northline site), **Authenticator app** ("Scan QR code": the QR for
+  another device, the key, and "Open my authenticator app" = the `otpauth://` link for one on this phone; then its
+  6-digit code), **SMS code** ("Continue with SMS"). Default selection: Authenticator app (the design's default,
+  passkey, isn't available). Consumer tokens without `acr=mfa` are fine (S-29/S-62); paying asks for a step-up (S-51).
+- **Code entry:** six boxes over one real field (`textContentType="oneTimeCode"`, `autoComplete="sms-otp"`: iOS and
+  Android fill it from the SMS); six digits submit once by themselves when online; "Resend in 0:45" from the server's
+  `resendAfterSeconds`, then "Resend code"; "Call me instead" = a voice code (the server throttles inside 45 s and the
+  app shows how long to wait); "Edit" goes back to the form with what was typed.
+- **Validation:** the rules and exact messages of docs/spec/validation-rules.md § Registration on the phone (the same as
+  `@northline/auth-kit`), "Full name" split like the consumer site (last word = last name); the auth server's 422 rules
+  are mapped to the same messages so French people read French; flow errors (`otp_throttled`, `rate_limited`,
+  `code_not_sent`, `flow_not_started` → start again, no connection) in the kit's words. "Send code" stays off until the
+  mobile and the terms are filled (S-62's rule).
+- **Legal links** (Terms, Privacy Policy) open the consumer site's verbatim pages **outside the app** (`Linking.openURL`).
+- **Location (A5):** the provinces from `GET /geo/markets` with their stage (live and pilot pickable; waitlist and
+  not-yet greyed, as the design's Ontario/Québec), Google suggestions through the api, the unit / buzzer note, tags
+  "Zone · …", "N pooled runs / day" and "Sales tax N%" (the design's "GST 5%" names a tax of one province; the rate
+  comes from the province, the label is the consumer web's), Save — or the waitlist outside a live market (S-47).
+  "Use my location" is the **only** place the app asks for the location permission; granted → `GET /geo/reverse`
+  inside a live/pilot market; refused → a message (and "Open Settings" when it can't ask again) and the **api's
+  fallback market** stands ("Showing {city} for now…"). The saved address is kept on the phone (`nl.location`, like
+  the web's localStorage), not in `/me/addresses` (S-101 decides). `useDeliveryLocation()` (saved → the position only
+  if location was already allowed → fallback) is the contract for journeys B–D.
+- **Welcome's kicker** "Northline · {province}" names the person's province, else the region model's default
+  (`GET /geo/regions`); never a fixed one.
+- **Sign out** (the You tab, until S-101 builds Profile): the S-102 push hook, `/oauth2/revoke` (ends the sign-in,
+  S-20), the key and tokens deleted, back to Home as a guest; plus "Language / Langue" and the legal links.
+- **Offline-tolerant:** requests give up after 20 s; failures keep what was typed and say so; the hand-off can be
+  retried ("Finish signing in") without repeating the sign-in; the offline banner shows on every screen.
+- **Tests:** app 25 new (journeyA: every step on the fixture backend incl. the hand-off's two authorize calls and DPoP
+  token exchange, rules, server errors, waitlist, permission granted/refused, push hooks at sign-in/out, French;
+  rules: messages en/fr, 422 mapping, flow errors, the countdown); kit 4 new (hand-off: kept request, continueTo, no
+  continueTo, refused continueTo, no code, offline); server 2 new in `MobileDpopApiTest`; the web smoke runs all of
+  Journey A in headless Chromium.
+- **Never run:** on a device — so never exercised: the platform cookie store carrying the auth session between the
+  JSON calls and the authorize request, fetch following northline-auth's redirect to the consumer site and reporting
+  the landed URL (React Native's `Response.url`), SMS autofill, the location permission dialogs, the Keychain.
+  The fixture backend simulates the redirect-following. **This is the first thing to try on a phone.**
