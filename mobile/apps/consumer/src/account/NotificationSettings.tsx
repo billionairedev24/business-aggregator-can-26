@@ -4,7 +4,7 @@ import { Text, View } from 'react-native';
 
 import type { PushPermission } from '@northline/mobile-kit';
 
-import { NOTIFY_CHANNELS, NOTIFY_EVENTS, type NotificationPrefs, type Matrix } from '../api/account';
+import { NOTIFY_CHANNELS, NOTIFY_EVENTS, type Consents, type NotificationPrefs, type Matrix } from '../api/account';
 import { useAuth } from '../auth/AuthProvider';
 import { useI18n } from '../i18n';
 import { Chip } from '../shop/parts';
@@ -26,12 +26,18 @@ const hhmm = (v: string) => v.slice(0, 5);
  * email (CASL). `GET`/`PUT /me/notifications`, only the changed cells sent. Push is S-102's: the server sends to every
  * installation of the app that allows notifications; "This phone" asks this phone's permission (`phonePush.ts`).
  * Changes stay on screen until "Save preferences" (a failed save keeps them).
+ *
+ * S-108: "Offers & rewards" and the marketing-email choice are the person's CASL consents (`/me/consents`), never on by
+ * default: "Marketing messages" shows what each one means (the wording), who asks and the consent history; a save that
+ * changes one sends the wording versions shown and `consentSource: app_settings`. Turning the offers push off here is
+ * the push promo opt-out. The offers row's email cell and the marketing-email choice are one consent and move together.
  */
 export function NotificationSettings() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { status } = useAuth();
   const signedIn = status === 'signedIn';
   const prefs = useQuery({ queryKey: KEYS.notifications, queryFn: () => account().notifications(), enabled: signedIn, staleTime: 60_000 });
+  const consents = useQuery({ queryKey: KEYS.consents(locale), queryFn: () => account().consents(), enabled: signedIn, staleTime: 60_000 });
   if (!signedIn) {
     return (
       <Screen title={t('account.notif.title')} testID="notification-settings">
@@ -44,7 +50,7 @@ export function NotificationSettings() {
       <Body tone="muted">{t('account.notif.lede')}</Body>
       <ThisPhone />
       <QueryView query={prefs} skeleton={<LoadingList rows={7} height={48} />}>
-        {(p) => <Form initial={p} />}
+        {(p) => <Form initial={p} consents={consents.data} />}
       </QueryView>
     </Screen>
   );
@@ -87,20 +93,26 @@ function ThisPhone() {
   );
 }
 
-function Form({ initial }: { initial: NotificationPrefs }) {
+function Form({ initial, consents }: { initial: NotificationPrefs; consents?: Consents }) {
   const { t, locale } = useI18n();
   const [p, setP] = useState(initial);
   const [saved, setSaved] = useState(false);
   // S-100's inbox shows the quiet hours from its own copy of /me/notifications: read it again after a save
   const save = useAccountMutation((c: Parameters<ReturnType<typeof account>['saveNotifications']>[0]) => account().saveNotifications(c), {
     set: KEYS.notifications,
-    refresh: [['services', 'notification-prefs']],
+    refresh: [['services', 'notification-prefs'], ['account', 'consents']],
   });
   const update = (next: Partial<NotificationPrefs>) => {
     setP((x) => ({ ...x, ...next }));
     setSaved(false);
   };
-  const toggle = (event: string, channel: string) => update({ matrix: { ...p.matrix, [event]: { ...p.matrix[event], [channel]: !p.matrix[event]?.[channel] } } });
+  const toggle = (event: string, channel: string) => {
+    const on = !p.matrix[event]?.[channel];
+    // the offers row's email cell is the marketing-email consent: the choice below follows it
+    const marketing = event === 'offers' && channel === 'email' ? (on ? (p.marketing === 'none' ? 'weekly' : p.marketing) : 'none') : p.marketing;
+    update({ matrix: { ...p.matrix, [event]: { ...p.matrix[event], [channel]: on } }, marketing });
+  };
+  const chooseMarketing = (marketing: string) => update({ marketing, matrix: { ...p.matrix, offers: { ...p.matrix.offers, email: marketing !== 'none' } } });
   const changed = (): Matrix => {
     const out: Matrix = {};
     for (const e of NOTIFY_EVENTS)
@@ -109,11 +121,25 @@ function Form({ initial }: { initial: NotificationPrefs }) {
       }
     return out;
   };
-  const submit = () =>
+  const submit = () => {
+    const matrix = changed();
+    const marketingChanged = p.marketing !== initial.marketing;
+    const consentChanged = marketingChanged || 'offers' in matrix;
     save.mutate(
-      { matrix: changed(), quietOn: p.quietOn, quietFrom: hhmm(p.quietFrom), quietTo: hhmm(p.quietTo), language: p.language, marketing: p.marketing },
+      {
+        matrix,
+        quietOn: p.quietOn,
+        quietFrom: hhmm(p.quietFrom),
+        quietTo: hhmm(p.quietTo),
+        language: p.language,
+        ...(marketingChanged ? { marketing: p.marketing } : {}),
+        ...(consentChanged
+          ? { consentSource: 'app_settings' as const, consentWordings: Object.fromEntries((consents?.categories ?? []).map((c) => [c.channel, c.wordingVersion])) }
+          : {}),
+      },
       { onSuccess: () => setSaved(true) },
     );
+  };
 
   return (
     <View style={accountStyles.form}>
@@ -164,13 +190,50 @@ function Form({ initial }: { initial: NotificationPrefs }) {
       <Heading>{t('account.notif.marketing')}</Heading>
       <View style={accountStyles.chips} accessibilityRole="radiogroup" accessibilityLabel={t('account.notif.marketing')}>
         {(['weekly', 'rewards', 'none'] as const).map((m) => (
-          <Chip key={m} role="radio" label={t(`account.notif.mk.${m}`)} on={p.marketing === m} onPress={() => update({ marketing: m })} testID={`marketing-${m}`} />
+          <Chip key={m} role="radio" label={t(`account.notif.mk.${m}`)} on={p.marketing === m} onPress={() => chooseMarketing(m)} testID={`marketing-${m}`} />
         ))}
       </View>
+
+      {consents ? <MarketingConsents consents={consents} /> : null}
 
       {save.error ? <Notice message={errorMessage(save.error, t)} testID="notif-error" /> : null}
       {saved ? <Notice tone="info" message={t('account.notif.saved')} testID="notif-saved" /> : null}
       <Button label={t('account.notif.save')} busy={save.isPending} onPress={submit} testID="notif-save" />
+    </View>
+  );
+}
+
+/** S-108: what each marketing consent means (the wording the person agrees to), who asks, and its history. */
+function MarketingConsents({ consents }: { consents: Consents }) {
+  const { t, locale } = useI18n();
+  const date = (iso: string) => new Intl.DateTimeFormat(locale === 'fr-CA' ? 'fr-CA' : 'en-CA', { dateStyle: 'medium' }).format(new Date(iso));
+  // categories and sources are the api's codes (S-108): every one has a key in both languages
+  const label = (key: string) => t(key as 'account.notif.consent.cat.marketing_email');
+  return (
+    <View testID="marketing-consents">
+      <Heading>{t('account.notif.consent.title')}</Heading>
+      <Body tone="small">{t('account.notif.consent.lede')}</Body>
+      {consents.categories.map((c) => (
+        <View key={c.category} testID={`consent-${c.category}`}>
+          <Text style={[type.body, type.strong]}>
+            {label(`account.notif.consent.cat.${c.category}`)} · {c.granted && c.since ? t('account.notif.consent.givenOn', { date: date(c.since) }) : t('account.notif.consent.notGiven')}
+          </Text>
+          <Text style={type.small}>{c.wording}</Text>
+        </View>
+      ))}
+      <Body tone="small">{t('account.notif.consent.requester', { requester: consents.requester })}</Body>
+      <Heading>{t('account.notif.consent.history')}</Heading>
+      {consents.history.length === 0 ? <Body tone="small">{t('account.notif.consent.historyEmpty')}</Body> : null}
+      {consents.history.map((h) => (
+        <Text key={h.id} style={type.small} testID={`consent-history-${h.id}`}>
+          {t('account.notif.consent.line', {
+            date: date(h.at),
+            what: label(`account.notif.consent.cat.${h.category}`),
+            action: t(`account.notif.consent.act.${h.action}`),
+            where: label(`account.notif.consent.src.${h.source}`),
+          })}
+        </Text>
+      ))}
     </View>
   );
 }

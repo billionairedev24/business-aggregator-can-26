@@ -26,6 +26,7 @@ export const KEYS = {
   wallet: ['account', 'wallet'] as const,
   cards: ['account', 'cards'] as const,
   notifications: ['account', 'notifications'] as const,
+  consents: (locale: string) => ['account', 'consents', locale] as const,
   prefs: ['account', 'preferences'] as const,
   favourites: ['account', 'favourites'] as const,
   cases: ['account', 'cases'] as const,
