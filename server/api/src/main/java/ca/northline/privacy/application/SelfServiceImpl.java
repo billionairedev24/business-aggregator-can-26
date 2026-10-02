@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
  * verified mobile — a phone-code account has no other factor, and the app must be able to delete it (App Store
  * 5.1.1(v), Google Play).
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -92,7 +94,16 @@ class SelfServiceImpl implements SelfService {
     private Request text(Request request, String phone, Locale locale) {
         var issued = intake.newCode(request, clock.instant());
         var saved = intake.save(issued.request());
-        codes.send(phone, issued.code(), locale);
+        try {
+            codes.send(phone, issued.code(), locale);
+        } catch (RuntimeException e) {
+            // the request (or the new code) rolls back: the person tries again
+            log.warn(
+                    "Privacy request {}: verification code not sent ({})",
+                    saved.id(),
+                    e.getClass().getSimpleName());
+            throw new Conflict("code_not_sent", PrivacyRules.CODE_NOT_SENT);
+        }
         intake.record(saved, saved.subjectId(), "self", "code_sent", Map.of("channel", "sms"));
         return saved;
     }
