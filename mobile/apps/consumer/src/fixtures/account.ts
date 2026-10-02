@@ -390,7 +390,8 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
     if (path === '/me/preferences') {
       if (method === 'GET') return ctx.answer(200, state.prefs);
       const b = req.body as Partial<AccountFixtureState['prefs']>;
-      if (b.province !== undefined && !PROVINCES.some((p) => p.code === b.province)) return invalid('province', 'Choose from the list.');
+      if (b.province === '') b.province = null; // "" = follow my location again (the api's rule)
+      if (b.province !== undefined && b.province !== null && !PROVINCES.some((p) => p.code === b.province)) return invalid('province', 'Choose from the list.');
       if (b.language !== undefined && !['en', 'fr'].includes(b.language)) return invalid('language', 'Choose from the list.');
       Object.assign(state.prefs, Object.fromEntries(Object.entries(b).filter(([, v]) => v !== undefined)));
       return ctx.answer(200, state.prefs);

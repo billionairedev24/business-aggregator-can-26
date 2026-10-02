@@ -344,9 +344,8 @@ Areas: `shop` (S-99), `services` (S-100), `account` (S-101). Don't edit another 
   native module and a permission).
 - **Account (S-101):** no consumer api for points activity (the ledger has no earning rules yet, DECISIONS S-58),
   provider-funded rewards near a person, referrals ("Invite a neighbour"), messages to a provider about a quote ("Ask a
-  question"), or a payment step-up threshold ("Require Face ID for payments over $100"). `PATCH /me/preferences`
-  can't clear the province back to "follow my location" (null = unchanged, "" = 422) — the web has the same gap. The
-  data export has no file to save without a file-system module: it goes through the share sheet.
+  question"), or a payment step-up threshold ("Require Face ID for payments over $100"). (Closed in the phase 4
+  follow-ups: `PATCH /me/preferences` with `province: ""` goes back to "follow my location".) The data export has no file to save without a file-system module: it goes through the share sheet.
 - **Passkeys in the app:** creating or using a passkey natively needs a native module (none in Expo); the app sends
   people to the consumer site in the system browser for passkeys, Google and Apple (S-98).
 - **Push:** the server, mobile-kit's registration and the deep links are S-102's; the app still needs

@@ -611,6 +611,31 @@ describe('Dietary, accessibility & region', () => {
     expect(rec.sent.find((s) => s.method === 'PATCH')!.body).toEqual({ province: 'XA', dietary: ['halal'], allergies: 'Peanuts', accessibility: ['step_free'] });
   });
 
+  it('goes back to following the location once a province is chosen', async () => {
+    const rec = recorder();
+    const { server } = await signedIn('/account/preferences', { wrap: rec.wrap });
+    expect((await screen.findByTestId('province-auto')).props.accessibilityState).toMatchObject({ checked: true });
+    expect(screen.getByText('Taxes, the catalogue and your notification times follow your delivery address, or where you are.')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('province-XA'));
+    fireEvent.press(screen.getByTestId('prefs-save'));
+    expect(await screen.findByTestId('prefs-saved')).toBeTruthy();
+    expect(server.account.prefs.province).toBe('XA');
+    expect(screen.queryByText('Taxes, the catalogue and your notification times follow your delivery address, or where you are.')).toBeNull();
+
+    fireEvent.press(screen.getByTestId('province-auto'));
+    fireEvent.press(screen.getByTestId('prefs-save'));
+    await waitFor(() => expect(server.account.prefs.province).toBeNull());
+    expect(rec.sent.filter((s) => s.method === 'PATCH').map((s) => s.body)).toEqual([{ province: 'XA' }, { province: '' }]);
+    expect(screen.getByTestId('province-auto').props.accessibilityState).toMatchObject({ checked: true });
+  });
+
+  it('is in French', async () => {
+    french();
+    await signedIn('/account/preferences');
+    expect(await screen.findByText('Suivre ma position')).toBeTruthy();
+    expect(screen.getByText('Les taxes, le catalogue et l’heure de vos notifications suivent votre adresse de livraison ou votre position.')).toBeTruthy();
+  });
+
   it('loading, error and Try again', async () => {
     await failsThenRecovers('/account/preferences', /\/me\/preferences$/, 'Dietary needs');
   }, 15000);
