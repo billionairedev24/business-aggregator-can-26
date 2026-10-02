@@ -8,9 +8,9 @@
   ],
   "encryptedInTransit": true,
   "accountDeletion": {
-    "inApp": false,
-    "webUrl": null,
-    "status": "no self-service deletion yet — S-105 (privacy rights: access, correction and erasure) builds it; both stores require it before the first review"
+    "inApp": true,
+    "webUrl": "https://northline.ca/account?tab=profile#your-data",
+    "status": "S-105: You › Personal details › Your data › Delete my account (a privacy request confirmed with the texted code or the authenticator app; the account closes when the grace period ends); the web link is the consumer site's same page"
   },
   "collected": {
     "Name": {

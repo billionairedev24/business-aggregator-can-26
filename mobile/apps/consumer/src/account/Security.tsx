@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Share, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { ApiError, colors, radius, space } from '@northline/mobile-kit';
 
@@ -34,7 +34,7 @@ export function ago(iso: string | null | undefined, t: (k: MessageKey, p?: Recor
 /**
  * D4 Security centre (design 01 `security`; signed in): how well the account is protected, the sign-in methods
  * (passkeys, the authenticator app, the SMS backup, a security key), devices & sessions with "Sign out" for each other
- * one, login alerts, "Download my data" (`GET /me/export` → the phone's share sheet) and "Sign out of all devices".
+ * one, login alerts, "Download my data" (S-105: the Your data screen's privacy request) and "Sign out of all devices".
  * Methods and sessions are northline-auth's (`security.ts`), in the auth session with a recent second factor — the
  * authenticator code confirms it (S-51's step-up). Adding a passkey, a security key or the authenticator app needs
  * WebAuthn or a QR code the app can't show natively (S-98): those open the website's Security page. The design's
@@ -48,8 +48,6 @@ export function Security() {
   const signedIn = status === 'signedIn';
   const security = useQuery({ queryKey: KEYS.security, queryFn: () => securityApi.overview(), enabled: signedIn, retry: false, staleTime: 30_000 });
   const profile = useQuery({ queryKey: KEYS.profile, queryFn: () => account().profile(), enabled: signedIn, staleTime: 300_000 });
-  const [exporting, setExporting] = useState(false);
-  const [exported, setExported] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [leaving, setLeaving] = useState(false);
 
@@ -60,21 +58,6 @@ export function Security() {
       </Screen>
     );
   }
-
-  const download = async () => {
-    setError(null);
-    setExported(false);
-    setExporting(true);
-    try {
-      const data = await account().exportData();
-      const r = await Share.share({ title: 'northline-my-data.json', message: JSON.stringify(data, null, 2) });
-      if (r.action !== Share.dismissedAction) setExported(true);
-    } catch (e) {
-      setError(errorMessage(e, t));
-    } finally {
-      setExporting(false);
-    }
-  };
 
   const everywhere = async () => {
     setError(null);
@@ -99,8 +82,7 @@ export function Security() {
       footer={
         <>
           {error ? <Notice message={error} testID="security-error" /> : null}
-          {exported ? <Notice tone="info" message={t('account.sec.exported')} /> : null}
-          <Button label={t('account.sec.download')} tone="secondary" busy={exporting} onPress={() => void download()} testID="export" />
+          <Button label={t('account.sec.download')} tone="secondary" onPress={() => router.push('/account/data')} testID="export" />
           {security.data ? (
             <Button label={t('account.sec.signOutAll')} tone="danger" busy={leaving} onPress={() => void everywhere()} testID="sign-out-all" />
           ) : null}

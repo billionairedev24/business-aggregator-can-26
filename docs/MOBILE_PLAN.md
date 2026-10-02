@@ -208,7 +208,7 @@ additions — is in [§ Journey C as built](#journey-c-as-built-s-100).
 | `orders` | `/orders` (tab) | ✓ | `GET /me/activity` (the "Active · n" / "Past" / "Refunds" filters are the app's: `active`, `caseRef`) |
 | `quote` | `/quotes/[id]` (where S-102's quote links land) | ✓ | `GET /me/quotes/{id}?lang`, `POST /me/quotes/{id}/accept` (Idempotency-Key, X-Step-Up), `/accept/confirm` (Idempotency-Key), `/decline`; `GET /me/payment-methods`; `POST /api/auth/step-up/totp` |
 | `account` | `/account` (tab) | | `GET /me/account-summary`, `GET /me/profile`, `PATCH /me/preferences` (the language); sign-out |
-| `security` | `/security` | ✓ | northline-auth `GET /api/auth/security`, `POST /api/auth/security/sessions/{id}/revoke`, `/revoke-others` (auth session), `POST /api/auth/step-up/totp`; `GET /me/profile`, `GET /me/export` |
+| `security` | `/security` | ✓ | northline-auth `GET /api/auth/security`, `POST /api/auth/security/sessions/{id}/revoke`, `/revoke-others` (auth session), `POST /api/auth/step-up/totp`; `GET /me/profile`; "Download my data" opens Your data (S-105) |
 | `wallet` | `/wallet` | ✓ | `GET /me/wallet`, `POST`/`DELETE /me/plus`, `GET /me/payment-methods` |
 
 The You tab's rows open screens of the account area that design 01 draws only as rows (routes of our own, under
@@ -216,7 +216,8 @@ The You tab's rows open screens of the account area that design 01 draws only as
 
 | row | route | api |
 |---|---|---|
-| Personal details (ours) | `/account/profile` | `GET`/`PATCH /me/profile`, `POST /me/erasure-request` ("Delete account…") |
+| Personal details (ours) | `/account/profile` | `GET`/`PATCH /me/profile`; links to Your data |
+| Your data (ours, S-105) | `/account/data` | `GET`/`POST /me/privacy-requests`, `…/{id}/verify` (texted code or `X-Step-Up`), `…/verification-code`, `…/withdraw`, `…/download-link`, `GET /public/privacy-exports/{token}` — copy, correction, in-app account deletion |
 | Addresses & household | `/account/addresses` | `GET`/`POST /me/addresses`, `POST /me/addresses/{id}/default`, `DELETE /me/addresses/{id}`, `GET /me/household`; `GET /geo/regions` (provinces) |
 | Payment methods | `/account/payments` | `GET /me/payment-methods`, `POST /me/payment-methods/setup-intents`, `POST /me/payment-methods`, `…/{id}/default`, `DELETE …/{id}` |
 | Notifications | `/account/notifications` | `GET`/`PUT /me/notifications` (the S-59 matrix, push included); this phone's permission (S-102) |

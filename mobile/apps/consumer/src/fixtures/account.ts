@@ -1,4 +1,7 @@
 import { FIXTURE_ACCOUNT, STEP_UP_PROOF } from './auth';
+
+/** The code the fixture api "texts" to confirm a privacy request (S-105). */
+export const FIXTURE_PRIVACY_CODE = '246810';
 import type { FixtureArea, FixtureContext, FixtureRequest } from './context';
 import { PROVINCES } from './geo';
 import type { ServicesFixtureState } from './services';
@@ -7,7 +10,7 @@ import type { ShopFixtureState } from './shop';
 /**
  * Journey D's api (S-101) on the fixture backend: the account summary, Orders & bookings, a quote to accept, the
  * profile, address book and household, wallet & Plus, saving a card (the api's stand-in or Stripe-shaped), the
- * notification matrix, preferences, refund cases, the data export and erasure request — and northline-auth's
+ * notification matrix, preferences, refund cases, privacy requests (S-105: copy, correction, erasure) — and northline-auth's
  * security API. Made-up people, businesses and places.
  *
  * One owner per endpoint, one state per fact: the address book and the cards are the shop area's state (checkout and
@@ -40,6 +43,8 @@ export interface AccountFixtureState {
   /** The matrix, language and marketing; the quiet hours are `services.quiet`. */
   notifications: { matrix: Matrix; language: string; marketing: string };
   prefs: { language: string; province: string | null; units: string; timeFormat: string; dietary: string[]; allergies: string | null; accessibility: string[]; accessNotes: string | null; display: string[] };
+  /** S-105 privacy requests, newest first (the api's RequestView shape). */
+  privacy: Array<Record<string, unknown> & { id: string; type: string; state: string }>;
   cases: Array<{ id: string; number: string; state: string; open: boolean; what: string; amountCents: number; taxCents: number; merchantName: string; openedAt: number; respondBy: number | null; notes: Array<{ at: number; by: string; body: string }> }>;
   /** northline-auth: whether the auth session has a recent second factor (else 401 → confirm it's you); a step-up
    * the auth area accepted counts too. */
@@ -91,6 +96,7 @@ export function newAccountState(o: {
       marketing: 'weekly',
     },
     prefs: { language: 'en', province: null, units: 'metric', timeFormat: '12h', dietary: [], allergies: null, accessibility: [], accessNotes: null, display: [] },
+    privacy: [],
     cases: [],
     security: {
       confirmed: false,
@@ -140,6 +146,15 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
   const iso = (t: number) => new Date(t).toISOString();
   const invalid = (field: string, message: string) => ctx.answer(422, { errors: [{ field, rule: 'invalid', message }] });
   const notFound = () => ctx.answer(404, { code: 'not_found', detail: 'Not found.' });
+  /** What the api does once a request is verified — the pipeline's outcome, at once (S-105). */
+  const verified = (r: AccountFixtureState['privacy'][number]) => {
+    Object.assign(r, { state: 'verified', codeSentTo: null });
+    if (r.type === 'access') Object.assign(r, { state: 'completed', completedAt: iso(ctx.now()), export: { ready: true, expiresAt: iso(ctx.now() + 7 * DAY) } });
+    if (r.type === 'erasure') {
+      r.scheduledFor = iso(ctx.now() + 7 * DAY);
+      state.profile.erasureRequestedAt ??= iso(ctx.now());
+    }
+  };
   const shop = state.shop;
 
   const quotePage = (id: string) => {
@@ -249,10 +264,14 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
       return notFound();
     }
 
+    if (method === 'GET' && path === '/public/privacy-exports/fixture-token') {
+      return ctx.answer(200, { format: 'northline.privacy-export/v1', sections: { 'identity.account': [{ first_name: state.profile.firstName, email: state.profile.email }], 'identity.addresses': addresses().items } });
+    }
+
     // ── the api: personal ─────────────────────────────────────────────────────────────────────────────────────────
     const mine =
-      ['/me/account-summary', '/me/activity', '/me/profile', '/me/erasure-request', '/me/addresses', '/me/household', '/me/plus', '/me/wallet', '/me/notifications', '/me/preferences', '/me/export', '/me/cases'].includes(path) ||
-      /^\/me\/(quotes|addresses|cases)\//.test(path) ||
+      ['/me/account-summary', '/me/activity', '/me/profile', '/me/addresses', '/me/household', '/me/plus', '/me/wallet', '/me/notifications', '/me/preferences', '/me/privacy-requests', '/me/cases'].includes(path) ||
+      /^\/me\/(quotes|addresses|cases|privacy-requests)\//.test(path) ||
       (path.startsWith('/me/payment-methods') && !(method === 'GET' && path === '/me/payment-methods'));
     if (!mine) return undefined;
     if (!signedIn(req)) return ctx.answer(401, { error: 'invalid_token' });
@@ -313,9 +332,49 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
       Object.assign(state.profile, { firstName: String(b.firstName).trim(), lastName: String(b.lastName).trim(), email: String(b.email).trim(), pronouns: b.pronouns ?? null, birthday: bd });
       return ctx.answer(200, profile());
     }
-    if (method === 'POST' && path === '/me/erasure-request') {
-      state.profile.erasureRequestedAt ??= iso(ctx.now());
-      return ctx.answer(200, profile());
+
+    // privacy requests (S-105): verified at once with a step-up proof, else a code is "texted"
+    if (path === '/me/privacy-requests') {
+      if (method === 'GET') return ctx.answer(200, { items: state.privacy });
+      const b = req.body as { type?: string; corrections?: Array<{ field: string; value: string }> };
+      if (!['access', 'correction', 'erasure'].includes(String(b.type))) return invalid('type', "Choose what you're asking for: a copy, a correction or deletion.");
+      if (b.type === 'correction' && !b.corrections?.length) return invalid('corrections', 'Say what to correct.');
+      if (state.privacy.some((r) => r.type === b.type && ['awaiting_verification', 'verified', 'in_progress'].includes(r.state))) {
+        return ctx.answer(409, { code: 'request_open', detail: "You already asked for this. We're working on it." });
+      }
+      const proven = req.headers['x-step-up'] === STEP_UP_PROOF;
+      const r: AccountFixtureState['privacy'][number] = {
+        id: `pr-${state.privacy.length + 1}`, reference: `PR-${1001 + state.privacy.length}`, type: String(b.type), state: 'awaiting_verification',
+        law: { code: 'ab_pipa', name: 'Personal Information Protection Act', shortName: 'PIPA', authority: 'the Information and Privacy Commissioner', authorityUrl: 'https://example.ca/privacy-commissioner' },
+        receivedAt: iso(ctx.now()), dueAt: iso(ctx.now() + 45 * DAY), extendedTo: null, scheduledFor: null, completedAt: null,
+        codeSentTo: proven ? null : `•••• ${state.profile.phone.slice(-4)}`, decision: null, export: null, corrections: b.corrections ?? [], holdsOpen: 0,
+      };
+      state.privacy.unshift(r);
+      if (proven) verified(r);
+      return ctx.answer(201, r);
+    }
+    if ((m = /^\/me\/privacy-requests\/([^/]+)\/(verify|verification-code|withdraw|download-link)$/.exec(path)) && method === 'POST') {
+      const r = state.privacy.find((x) => x.id === decodeURIComponent(m![1]!));
+      if (!r) return notFound();
+      switch (m[2]) {
+        case 'verify': {
+          if (r.state !== 'awaiting_verification') return ctx.answer(409, { code: 'not_awaiting', detail: 'This request is already verified or closed.' });
+          const code = (req.body as { code?: string } | undefined)?.code;
+          if (code === undefined && req.headers['x-step-up'] !== STEP_UP_PROOF) return ctx.answer(403, { code: 'step_up_required', detail: "Confirm it's you with your passkey or authenticator app, then try again." });
+          if (code !== undefined && code !== FIXTURE_PRIVACY_CODE) return invalid('code', "That code didn't match. Check the text and try again.");
+          verified(r);
+          return ctx.answer(200, r);
+        }
+        case 'verification-code':
+          return ctx.answer(200, r);
+        case 'withdraw':
+          if (r.state === 'in_progress') return ctx.answer(409, { code: 'not_withdrawable', detail: "Deletion has started and can't be cancelled." });
+          r.state = 'withdrawn';
+          if (r.type === 'erasure') state.profile.erasureRequestedAt = null;
+          return ctx.answer(200, r);
+        default:
+          return ctx.answer(200, { url: '/api/v1/public/privacy-exports/fixture-token', summaryUrl: '/api/v1/public/privacy-exports/fixture-token?part=summary', expiresAt: iso(ctx.now() + 15 * 60_000) });
+      }
     }
 
     // addresses & household & Plus
@@ -396,7 +455,6 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
       Object.assign(state.prefs, Object.fromEntries(Object.entries(b).filter(([, v]) => v !== undefined)));
       return ctx.answer(200, state.prefs);
     }
-    if (method === 'GET' && path === '/me/export') return ctx.answer(200, { profile: profile(), addresses: addresses().items, preferences: state.prefs, notifications: notifications() });
 
     // cases
     if (method === 'GET' && path === '/me/cases') return ctx.answer(200, { items: state.cases.map(caseRow) });

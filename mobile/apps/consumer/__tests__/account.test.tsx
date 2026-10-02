@@ -10,6 +10,7 @@ import { setCardSetup, type CardSetupCollector } from '../src/account/cardSetup'
 import { setPhonePush } from '../src/account/phonePush';
 import { targetOf } from '../src/account/routes';
 import type { ActivityItem } from '../src/api/account';
+import { FIXTURE_PRIVACY_CODE } from '../src/fixtures/account';
 import { FIXTURE_TOTP } from '../src/fixtures/auth';
 import { FIXTURE_PROOF } from '../src/fixtures/shop';
 import { setServices } from '../src/services';
@@ -348,13 +349,10 @@ describe('D4 Security centre', () => {
     expect(Linking.openURL).toHaveBeenCalledWith(expect.stringMatching(/\/account\?tab=security$/));
   });
 
-  it('downloads my data through the share sheet', async () => {
-    const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
-    await signedIn('/security');
+  it('“Download my data” opens Your data (S-105)', async () => {
+    const { view } = await signedIn('/security');
     fireEvent.press(await screen.findByTestId('export'));
-    expect(await screen.findByText('Your data is ready — save or send it from the share sheet.')).toBeTruthy();
-    const message = JSON.parse(share.mock.calls[0]![0].message!) as { profile: { email: string } };
-    expect(message.profile.email).toBe('ada@example.com');
+    await waitFor(() => expect(view.getPathname()).toBe('/account/data'));
   });
 
   it('signs out of all devices', async () => {
@@ -481,13 +479,10 @@ describe('Personal details', () => {
     expect(server.account.profile.email).toBe('ada.new@example.com');
   });
 
-  it('asks to delete the account', async () => {
-    const { server } = await signedIn('/account/profile');
-    fireEvent.press(await screen.findByTestId('erasure-start'));
-    expect(screen.getByText(/^We’ll close your account and erase your personal data within 30 days/)).toBeTruthy();
-    fireEvent.press(screen.getByTestId('erasure-confirm'));
-    expect(await screen.findByText(/^Deletion requested on .*\. Our team will confirm by email\.$/)).toBeTruthy();
-    expect(server.account.profile.erasureRequestedAt).not.toBeNull();
+  it('opens Your data from the profile', async () => {
+    const { view } = await signedIn('/account/profile');
+    fireEvent.press(await screen.findByTestId('your-data-link'));
+    await waitFor(() => expect(view.getPathname()).toBe('/account/data'));
   });
 
   it('is in French, and loads with Try again', async () => {
@@ -723,4 +718,64 @@ describe('Refunds & help, and one case', () => {
     expect(await screen.findByText('Dossier RF-2201')).toBeTruthy();
     expect(await within(screen.getByTestId('case')).findByText(/^Envoyée/)).toBeTruthy();
   }, 15000);
+});
+
+describe('Your data (S-105: privacy requests; in-app account deletion)', () => {
+  it('asks for a copy, confirms with the texted code, and shares it through the share sheet', async () => {
+    const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: Share.sharedAction });
+    const rec = recorder();
+    await signedIn('/account/data', { wrap: rec.wrap });
+    fireEvent.press(await screen.findByTestId('export'));
+    expect(await screen.findByText(/^We texted a code to •••• \d{4}\.$/)).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId('privacy-code'), '12');
+    fireEvent.press(screen.getByTestId('privacy-confirm'));
+    expect(await screen.findByText('Enter the 6-digit code we texted you.')).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId('privacy-code'), '000000');
+    fireEvent.press(screen.getByTestId('privacy-confirm'));
+    expect(await screen.findByText("That code didn't match. Check the text and try again.")).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId('privacy-code'), FIXTURE_PRIVACY_CODE);
+    fireEvent.press(screen.getByTestId('privacy-confirm'));
+    fireEvent.press(await screen.findByTestId('share-pr-1'));
+    expect(await screen.findByText('Your data is ready — save or send it from the share sheet.')).toBeTruthy();
+    const message = JSON.parse(share.mock.calls[0]![0].message!) as { sections: Record<string, Array<{ email?: string }>> };
+    expect(message.sections['identity.account']![0]!.email).toBe('ada@example.com');
+    expect(rec.sent.find((s) => s.method === 'POST' && s.url.endsWith('/me/privacy-requests'))!.body).toEqual({ type: 'access' });
+    expect(screen.getByText(/^Ready to share until /)).toBeTruthy();
+  });
+
+  it('deletes the account in the app: asks first, confirms with the authenticator, and can be cancelled before it starts', async () => {
+    const { server } = await signedIn('/account/data');
+    fireEvent.press(await screen.findByTestId('erasure-start'));
+    expect(screen.getByText(/receipts, tax and payment records — stays, without your name/)).toBeTruthy();
+    fireEvent.press(screen.getByTestId('erasure-confirm'));
+    fireEvent.press(await screen.findByTestId('privacy-authenticator'));
+    fireEvent.changeText(screen.getByTestId('privacy-code'), FIXTURE_TOTP);
+    fireEvent.press(screen.getByTestId('privacy-confirm'));
+    expect(await screen.findByText(/^Your account will be deleted on /)).toBeTruthy();
+    expect(screen.getByText(/\(PIPA\)\.$/)).toBeTruthy();
+    expect(server.account.profile.erasureRequestedAt).not.toBeNull();
+    fireEvent.press(screen.getByTestId('withdraw-pr-1'));
+    expect(await screen.findByText('Withdrawn.')).toBeTruthy();
+    expect(server.account.profile.erasureRequestedAt).toBeNull();
+  });
+
+  it('asks for a correction of a detail people can’t change themselves', async () => {
+    const rec = recorder();
+    await signedIn('/account/data', { wrap: rec.wrap });
+    fireEvent.press(await screen.findByTestId('correction-start'));
+    fireEvent.press(screen.getByTestId('field-receiptName'));
+    fireEvent.press(screen.getByTestId('correction-send'));
+    expect(await screen.findByText('Enter the correct value, up to 200 characters.')).toBeTruthy();
+    fireEvent.changeText(screen.getByTestId('correction-value'), 'Ada Lovelace');
+    fireEvent.press(screen.getByTestId('correction-send'));
+    expect(await screen.findByTestId('privacy-verify')).toBeTruthy();
+    expect(rec.sent.find((s) => s.method === 'POST' && s.url.endsWith('/me/privacy-requests'))!.body).toEqual({ type: 'correction', corrections: [{ field: 'receiptName', value: 'Ada Lovelace' }] });
+  });
+
+  it('is in French', async () => {
+    french();
+    await signedIn('/account/data');
+    expect(await screen.findByText('Télécharger mes données')).toBeTruthy();
+    expect(await screen.findByText('Aucune demande pour l’instant.')).toBeTruthy();
+  });
 });

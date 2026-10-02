@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import * as Linking from 'expo-linking';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
@@ -35,8 +36,8 @@ const SERVER: Record<string, MessageKey> = {
 /**
  * Personal details (the consumer web's S-59 Profile tab, reached from You): name, email, pronouns, birthday
  * (`GET`/`PATCH /me/profile`, the rules checked here first with the api's words); the mobile number is shown — changing
- * it needs a code and happens on the website. "Delete account…" asks Northline to erase the account
- * (`POST /me/erasure-request`; staff confirm by email, as on the web).
+ * it needs a code and happens on the website. "Your data" (S-105) opens the privacy requests: a copy, a correction,
+ * deleting the account (the App Store's and Google Play's in-app deletion).
  */
 export function Profile() {
   const { t } = useI18n();
@@ -78,9 +79,7 @@ function ProfileForm({ initial }: { initial: ProfileData }) {
   const [setFirst, setLast, setEmail, setBirthday] = [edited(setFirstRaw), edited(setLastRaw), edited(setEmailRaw), edited(setBirthdayRaw)];
   const setPronouns = edited(setPronounsRaw);
   const [errors, setErrors] = useState<Errors>({});
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const save = useAccountMutation((c: Parameters<ReturnType<typeof account>['saveProfile']>[0]) => account().saveProfile(c), { set: KEYS.profile });
-  const erase = useAccountMutation(() => account().requestErasure(), { set: KEYS.profile });
   const server = (m: string | undefined) => (m ? (SERVER[m] ? t(SERVER[m]) : m) : undefined);
 
   const submit = () => {
@@ -113,7 +112,6 @@ function ProfileForm({ initial }: { initial: ProfileData }) {
     );
   };
 
-  const requested = erase.data?.erasureRequestedAt ?? initial.erasureRequestedAt;
   const saveError = save.error && !(save.error instanceof ApiError && save.error.status === 422) ? errorMessage(save.error, t) : null;
   return (
     <View style={accountStyles.form}>
@@ -145,18 +143,10 @@ function ProfileForm({ initial }: { initial: ProfileData }) {
       <Button label={t('account.profile.save')} busy={save.isPending} onPress={submit} testID="profile-save" />
 
       <Heading>{t('account.profile.privacy')}</Heading>
-      {requested ? (
-        <Notice tone="info" message={t('account.profile.deleteRequested', { date: f.date(requested) })} testID="erasure-requested" />
-      ) : confirmDelete ? (
-        <View style={accountStyles.actions}>
-          <Body>{t('account.profile.deleteBody')}</Body>
-          {erase.error ? <Notice message={errorMessage(erase.error, t)} /> : null}
-          <Button label={t('account.profile.deleteConfirm')} tone="danger" busy={erase.isPending} onPress={() => erase.mutate(undefined)} testID="erasure-confirm" />
-          <Button label={t('account.profile.keep')} tone="ghost" onPress={() => setConfirmDelete(false)} />
-        </View>
-      ) : (
-        <Button label={t('account.profile.delete')} tone="danger" onPress={() => setConfirmDelete(true)} testID="erasure-start" />
-      )}
+      {initial.erasureRequestedAt ? (
+        <Notice tone="info" message={t('account.profile.deleteRequested', { date: f.date(initial.erasureRequestedAt) })} testID="erasure-requested" />
+      ) : null}
+      <Button label={t('account.profile.dataLink')} tone="secondary" onPress={() => router.push('/account/data')} testID="your-data-link" />
       <Button label={t('account.profile.phoneSite')} tone="ghost" hint={t('common.opensInBrowser')} onPress={() => void Linking.openURL(`${config.siteOrigin}/account?tab=profile`)} />
     </View>
   );
