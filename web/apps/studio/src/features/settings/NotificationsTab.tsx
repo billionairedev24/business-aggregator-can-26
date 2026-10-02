@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { ErrorState, PageSkeleton, useLocale } from '@northline/ui';
+import { ErrorState, PageSkeleton, Switch, useLocale } from '@northline/ui';
 import { useMerchant, useMerchantId } from '../shell/api';
-import { CHANNELS, NOTIFICATION_EVENTS, notificationsQuery, useToggleNotification, type NotificationEvent } from './api';
+import { CHANNELS, NOTIFICATION_EVENTS, notificationsQuery, studioConsentsQuery, useStudioConsent, useToggleNotification, type NotificationEvent } from './api';
 import { useSettingsT } from './messages';
 
 /** Rows that make sense for the portal: quotes are provider-only, stock is for sellers. */
@@ -57,6 +57,41 @@ export function NotificationsTab() {
       </div>
       {toggle.isError && <p role="alert" className="nl-error">{t('matrixError')}</p>}
       <p className="nl-set-quiet">{t('quietHours', { from: hour(q.data.quietFrom, locale), to: hour(q.data.quietTo, locale) })}</p>
+      <MarketingConsent />
     </div>
+  );
+}
+
+/**
+ * S-108: Northline's marketing email to the person (CASL express consent). The rows above are service notifications
+ * (not marketing); this is the only commercial message, off until the person turns it on after reading the wording.
+ */
+function MarketingConsent() {
+  const t = useSettingsT();
+  const { locale } = useLocale();
+  const q = useQuery(studioConsentsQuery(locale));
+  const change = useStudioConsent(locale);
+  const email = q.data?.categories.find(c => c.category === 'marketing_email');
+  if (q.isError) return <ErrorState message={t('loadError')} onRetry={() => void q.refetch()} />;
+  if (!q.data || !email) return null;
+  const date = (iso: string) => new Intl.DateTimeFormat(locale === 'fr' ? 'fr-CA' : 'en-CA', { dateStyle: 'medium' }).format(new Date(iso));
+  return (
+    <section className="nl-set-consent" aria-labelledby="nl-set-consent">
+      <h3 id="nl-set-consent">{t('consentTitle')}</h3>
+      <p className="nl-set-quiet">{t('consentLede')}</p>
+      <div className="nl-set-consent-row">
+        <Switch checked={email.granted} disabled={change.isPending} label={t('consentSwitch')}
+          onChange={on => change.mutate({ granted: on, wordingVersion: email.wordingVersion })} />
+        <span aria-hidden="true">{t('consentSwitch')}</span>
+      </div>
+      <p className="nl-set-quiet">{email.wording}</p>
+      <p className="nl-set-quiet">{t('consentRequester', { requester: q.data.requester })}</p>
+      {change.isError && <p role="alert" className="nl-error">{t('matrixError')}</p>}
+      <ul className="nl-set-consent-history" aria-label={t('consentHistory')}>
+        {q.data.history.length === 0 ? <li>{t('consentHistoryEmpty')}</li> : q.data.history.map(h => (
+          <li key={h.id}>{t(h.action === 'granted' ? 'consentGranted' : 'consentWithdrawn', { date: date(h.at) })}</li>
+        ))}
+      </ul>
+    </section>
   );
 }

@@ -25,6 +25,19 @@ const MATRIX = {
   security: { push: true, sms: true, email: true },
 };
 const NOTIF = { events: Object.keys(MATRIX), channels: ['push', 'sms', 'email'], matrix: MATRIX, quietOn: true, quietFrom: '22:00:00', quietTo: '07:00:00', language: 'app', marketing: 'weekly' };
+const CONSENTS = {
+  categories: [
+    { category: 'marketing_email', channel: 'email', granted: true, since: '2026-09-20T15:00:00Z', source: 'web_settings', wordingVersion: 'account.email.2026-10',
+      wording: 'Yes, Northline Marketplace Inc. may email me Northline’s offers, rewards and news.' },
+    { category: 'marketing_sms', channel: 'sms', granted: false, since: null, source: null, wordingVersion: 'account.sms.2026-10', wording: 'Yes, Northline Marketplace Inc. may text me.' },
+    { category: 'marketing_push', channel: 'push', granted: true, since: '2026-09-20T15:00:00Z', source: 'app_settings', wordingVersion: 'account.push.2026-10', wording: 'Yes, as app notifications.' },
+  ],
+  history: [
+    { id: 'R2', category: 'marketing_push', action: 'granted', at: '2026-09-20T15:00:00Z', source: 'app_settings', wordingVersion: 'account.push.2026-10', language: 'en' },
+    { id: 'R1', category: 'marketing_email', action: 'withdrawn', at: '2026-09-01T15:00:00Z', source: 'list_unsubscribe', wordingVersion: null, language: 'en' },
+  ],
+  requester: 'Northline Marketplace Inc. · 1 Test Street, Testville · support@northline.ca',
+};
 const PREFS = { language: 'en', province: 'AB', units: 'metric', timeFormat: '12h', dietary: ['halal'], allergies: null, accessibility: ['step_free'], accessNotes: null, display: [] };
 
 type Reply = { status?: number; body?: unknown } | undefined;
@@ -56,6 +69,7 @@ const server = (c: Call): Reply => {
   if (u === '/api/v1/me/household') return { body: HOUSEHOLD };
   if (u === '/api/v1/me/plus' && c.method === 'POST') return { body: { ...HOUSEHOLD, plan: 'monthly', plusSince: '2026-10-01T00:00:00Z', renewsAt: '2026-10-31T00:00:00Z' } };
   if (u === '/api/v1/me/notifications' && c.method === 'GET') return { body: NOTIF };
+  if (u === '/api/v1/me/consents') return { body: CONSENTS };
   if (u === '/api/v1/me/notifications' && c.method === 'PUT') return { body: { ...NOTIF, ...(c.body as object), matrix: MATRIX } };
   if (u === '/api/v1/me/preferences' && c.method === 'GET') return { body: PREFS };
   if (u === '/api/v1/me/preferences' && c.method === 'PATCH') return { body: { ...PREFS, ...(c.body as object) } };
@@ -232,7 +246,39 @@ describe('Notifications (design 06 notifications)', () => {
     await userEvent.selectOptions(screen.getByLabelText('Marketing emails'), 'none');
     await userEvent.click(screen.getByRole('button', { name: 'Save preferences' }));
     expect(await screen.findByText('Saved · applies to all your devices')).toBeInTheDocument();
-    expect(body('PUT', '/api/v1/me/notifications')).toEqual([{ matrix: { offers: { push: false } }, quietOn: true, quietFrom: '23:00', quietTo: '07:00', language: 'app', marketing: 'none' }]);
+    expect(body('PUT', '/api/v1/me/notifications')).toEqual([{
+      matrix: { offers: { push: false } }, quietOn: true, quietFrom: '23:00', quietTo: '07:00', language: 'app', marketing: 'none',
+      consentSource: 'web_settings', consentWordings: { email: 'account.email.2026-10', sms: 'account.sms.2026-10', push: 'account.push.2026-10' },
+    }]);
+  });
+
+  it('S-108: marketing consents — the wording, who asks, the history; saving other settings sends no consent change', async () => {
+    open('notifications');
+    expect(await screen.findByRole('heading', { name: 'Marketing messages' })).toBeInTheDocument();
+    expect(screen.getByText('Yes, Northline Marketplace Inc. may email me Northline’s offers, rewards and news.')).toBeInTheDocument();
+    expect(screen.getByText('Asked by Northline Marketplace Inc. · 1 Test Street, Testville · support@northline.ca.')).toBeInTheDocument();
+    const history = within(screen.getByRole('heading', { name: 'Your consent history' }).parentElement!).getAllByRole('row');
+    expect(history[1]).toHaveTextContent(/Promotional push.*Given.*Account settings \(app\)/);
+    expect(history[2]).toHaveTextContent(/Marketing email.*Withdrawn.*Your mailbox’s unsubscribe button/);
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Quiet from' }), '21:00');
+    await userEvent.click(screen.getByRole('button', { name: 'Save preferences' }));
+    await screen.findByText('Saved · applies to all your devices');
+    expect(body('PUT', '/api/v1/me/notifications')).toEqual([{ matrix: {}, quietOn: true, quietFrom: '21:00', quietTo: '07:00', language: 'app' }]);
+  });
+
+  it('S-108: the offers email cell and Marketing emails are one consent', async () => {
+    open('notifications');
+    await userEvent.selectOptions(await screen.findByLabelText('Marketing emails'), 'rewards');
+    expect(screen.getByRole('switch', { name: 'Email for Offers & rewards: on' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('switch', { name: 'Email for Offers & rewards: on' }));
+    expect(screen.getByLabelText('Marketing emails')).toHaveValue('none');
+  });
+
+  it('S-108: in French', async () => {
+    open('notifications', 'fr');
+    expect(await screen.findByRole('heading', { name: 'Messages publicitaires' })).toBeInTheDocument();
+    expect(screen.getByText('Historique de vos consentements')).toBeInTheDocument();
+    expect(screen.getAllByText('Bouton de désabonnement de votre messagerie')).toHaveLength(1);
   });
 });
 

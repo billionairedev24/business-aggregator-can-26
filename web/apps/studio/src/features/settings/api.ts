@@ -133,6 +133,28 @@ export function useToggleNotification(m: string) {
   });
 }
 
+/**
+ * S-108: the team member's own consent to Northline's marketing email for businesses (CASL) — the only commercial
+ * message a team member can get; every row of the matrix above is a service notification. `GET /api/v1/me/consents
+ * ?surface=studio` gives the wording (in the UI's language) and the history; a change saves at once (source `studio`).
+ */
+export const StudioConsents = z.object({
+  categories: z.array(z.object({ category: z.string(), granted: z.boolean(), since: z.string().nullish(), wordingVersion: z.string(), wording: z.string() })),
+  history: z.array(z.object({ id: z.string(), category: z.string(), action: z.enum(['granted', 'withdrawn']), at: z.string(), source: z.string() })),
+  requester: z.string(),
+});
+export type StudioConsents = z.infer<typeof StudioConsents>;
+export const studioConsentsQuery = (locale: string) =>
+  queryOptions({ queryKey: ['me', 'consents', 'studio', locale], queryFn: () => http('/api/v1/me/consents?surface=studio', {}, StudioConsents) });
+export function useStudioConsent(locale: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ granted, wordingVersion }: { granted: boolean; wordingVersion: string }) =>
+      http('/api/v1/me/consents/marketing_email', { method: 'PUT', body: { granted, source: 'studio', wordingVersion } }, StudioConsents),
+    onSuccess: () => qc.invalidateQueries({ queryKey: studioConsentsQuery(locale).queryKey }),
+  });
+}
+
 // ── API & integrations ──────────────────────────────────────────────────────────────────────────────────────────────
 export const ApiKey = z.object({ id: z.string(), name: z.string(), scopes: z.array(z.string()), prefix: z.string(), rateLimit: z.number(), createdAt: z.string(), lastUsedAt: z.string().nullish() });
 export type ApiKey = z.infer<typeof ApiKey>;
