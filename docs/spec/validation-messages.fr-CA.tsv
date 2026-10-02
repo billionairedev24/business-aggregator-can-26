@@ -749,3 +749,32 @@ Choose en or fr.	Choisissez en ou fr.	new
 Send the push token the platform gave this app.	Envoyez le jeton de notification que la plateforme a donné à cette appli.	new
 A device that allows notifications needs its push token.	Un appareil qui accepte les notifications doit envoyer son jeton.	new
 Send the app version (at most 32 characters).	Envoyez la version de l’appli (32 caractères au plus).	new
+Choose what you're asking for: a copy, a correction or deletion.	Choisissez ce que vous demandez : une copie, une correction ou la suppression.	new
+Say what to correct.	Indiquez ce qu’il faut corriger.	new
+Choose a detail we can correct.	Choisissez un renseignement que nous pouvons corriger.	new
+Enter the correct value, up to 200 characters.	Entrez la bonne valeur, 200 caractères au plus.	new
+Keep the note under 1,000 characters.	Gardez la note sous 1 000 caractères.	new
+Enter the 6-digit code we texted you.	Entrez le code à 6 chiffres que nous vous avons texté.	new
+That code didn't match. Check the text and try again.	Ce code ne correspond pas. Vérifiez le texto et réessayez.	new
+Enter the person's email or mobile number.	Entrez le courriel ou le numéro de mobile de la personne.	new
+No Northline account uses that email or mobile number.	Aucun compte Northline n’utilise ce courriel ou ce numéro de mobile.	new
+Choose why the request is refused.	Choisissez pourquoi la demande est refusée.	new
+Choose why more time is needed.	Choisissez pourquoi il faut plus de temps.	new
+You already asked for this. We're working on it.	Vous l’avez déjà demandé. Nous nous en occupons.	new
+This request is already verified or closed.	Cette demande est déjà vérifiée ou fermée.	new
+Too many wrong codes. Ask for a new code.	Trop de codes erronés. Demandez un nouveau code.	new
+We just sent a code. Wait a minute before asking for another.	Nous venons d’envoyer un code. Attendez une minute avant d’en demander un autre.	new
+Your account has no verified mobile number. Confirm it's you with your passkey or authenticator app instead.	Votre compte n’a pas de numéro de mobile vérifié. Confirmez plutôt votre identité avec votre clé d’accès ou votre appli d’authentification.	new
+Deletion has started and can't be cancelled.	La suppression a commencé et ne peut pas être annulée.	new
+This request is closed.	Cette demande est fermée.	new
+The law that applies to this request allows no extension.	La loi qui s’applique à cette demande ne permet aucune prolongation.	new
+This request was already extended once.	Cette demande a déjà été prolongée une fois.	new
+Only a verified deletion request that hasn't started can be started.	Seule une demande de suppression vérifiée qui n’a pas commencé peut être lancée.	new
+Only a verified correction request can be applied.	Seule une demande de correction vérifiée peut être appliquée.	new
+This download has expired. Ask for a new copy of your data.	Ce téléchargement a expiré. Demandez une nouvelle copie de vos données.	new
+Your data isn't ready yet.	Vos données ne sont pas encore prêtes.	new
+This account has been deleted.	Ce compte a été supprimé.	new
+This request changed meanwhile. Reload it and try again.	Cette demande a changé entre-temps. Rechargez-la et réessayez.	new
+Confirm it's you with your passkey or authenticator app, then try again.	Confirmez votre identité avec votre clé d’accès ou votre appli d’authentification, puis réessayez.	new
+That mobile number is already used by another account.	Ce numéro de mobile est déjà utilisé par un autre compte.	new
+Enter the name as it should appear, up to 80 characters.	Entrez le nom tel qu’il doit paraître, 80 caractères au plus.	new

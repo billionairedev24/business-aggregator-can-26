@@ -23,6 +23,8 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 class PrivacyRegimeCatalogue implements PrivacyRegimes {
 
+    private static final LocalTime LAST_SECOND = LocalTime.of(23, 59, 59);
+
     private final Regions regions;
     private final Markets markets;
     private final PrivacyLawStore laws;
@@ -87,6 +89,7 @@ class PrivacyRegimeCatalogue implements PrivacyRegimes {
     }
 
     private static Instant endOf(LocalDate day, ZoneId zone) {
-        return day.atTime(LocalTime.MAX).atZone(zone).toInstant();
+        // whole seconds: the database keeps microseconds and would round LocalTime.MAX up to the next day
+        return day.atTime(LAST_SECOND).atZone(zone).toInstant();
     }
 }
