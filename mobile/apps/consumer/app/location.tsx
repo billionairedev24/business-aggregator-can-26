@@ -1,6 +1,4 @@
-import { Stub } from '../src/ui/Stub';
+import { LocationScreen } from '../src/journeyA/LocationScreen';
 
-/** Design 01 `location` — a stub until its story builds it (src/screens.ts, docs/MOBILE_PLAN.md). */
-export default function Location() {
-  return <Stub screen="location" />;
-}
+/** Design 01 Journey A (S-98) — src/journeyA/LocationScreen.tsx. */
+export default LocationScreen;

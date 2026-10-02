@@ -23,8 +23,6 @@ export const common: { [k in keyof typeof en]: string } = {
   'tab.account': 'Vous',
   'tab.cartCount': '{n, plural, one {# article} other {# articles}} dans votre panier',
 
-  'browserSignIn.body': 'Connectez-vous sur le site Northline dans votre navigateur, avec une clé d’accès, Google ou Apple. Vous revenez ici une fois connecté.',
-  'browserSignIn.button': 'Se connecter dans le navigateur',
   'browserSignIn.cancelled': 'La connexion a été annulée.',
   'browserSignIn.failed': 'Impossible de vous connecter. {detail}',
   'browserSignIn.webOnly': 'La connexion dans le navigateur fonctionne sur iPhone et Android. Cet aperçu a besoin du serveur de démonstration.',

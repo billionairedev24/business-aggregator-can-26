@@ -1,6 +1,4 @@
-import { Stub } from '../src/ui/Stub';
+import { SignUp } from '../src/journeyA/SignUp';
 
-/** Design 01 `signup` — a stub until its story builds it (src/screens.ts, docs/MOBILE_PLAN.md). */
-export default function Signup() {
-  return <Stub screen="signup" />;
-}
+/** Design 01 Journey A (S-98) — src/journeyA/SignUp.tsx. */
+export default SignUp;

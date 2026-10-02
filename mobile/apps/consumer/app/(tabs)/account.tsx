@@ -1,6 +1,4 @@
-import { Stub } from '../../src/ui/Stub';
+import { You } from '../../src/journeyA/You';
 
-/** Design 01 `account` — a stub until its story builds it (src/screens.ts, docs/MOBILE_PLAN.md). */
-export default function Account() {
-  return <Stub screen="account" />;
-}
+/** The You tab: S-98's language and sign-out until S-101 builds design 01's Profile (`account`). */
+export default You;

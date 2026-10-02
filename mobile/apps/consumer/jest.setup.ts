@@ -52,8 +52,8 @@ jest.mock('expo-location', () => ({
   getLastKnownPositionAsync: jest.fn(async () => null),
 }));
 jest.mock('expo-linking', () => ({
+  ...jest.requireActual('expo-linking'),
   openURL: jest.fn(async () => true),
-  canOpenURL: jest.fn(async () => true),
-  createURL: jest.fn((p: string) => `ca.northline.app://${p}`),
+  openSettings: jest.fn(async () => undefined),
 }));
 jest.mock('expo-constants', () => ({ __esModule: true, default: { expoConfig: { version: '0.1.0' } } }));

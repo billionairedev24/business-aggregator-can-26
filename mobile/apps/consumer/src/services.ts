@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 
 import {
   ApiClient,
+  AppSignIn,
   ApiError,
   DEFAULT_TIMEOUT_MS,
   DpopSession,
@@ -14,6 +15,7 @@ import {
   type SecureStorage,
 } from '@northline/mobile-kit';
 
+import { AuthApi } from './api/auth';
 import { config } from './config';
 import { createFixtureServer, type FixtureServer } from './fixtures/server';
 
@@ -28,6 +30,10 @@ export interface Services {
   session: DpopSession;
   /** `https://api.<zone>/api/v1`, DPoP-signed (public reads: `auth: 'optional'`). */
   api: ApiClient;
+  /** northline-auth's JSON sign-in API in the app's cookie session (Journey A). */
+  authApi: AuthApi;
+  /** The in-app sign-in's hand-off to DPoP-bound tokens (the claimed https redirect). */
+  appSignIn: AppSignIn;
   /** The fetch every request goes through (the fixture backend's in fixture mode and in tests). */
   fetch: typeof fetch;
   queryClient: QueryClient;
@@ -72,6 +78,8 @@ export function createServices(options: ServiceOptions = {}): Services {
   );
   const guestHeader = (): Record<string, string> => (guest ? { 'X-Northline-Guest': guest } : {});
   const api = new ApiClient(config.apiUrl, session, () => language, fetchImpl, DEFAULT_TIMEOUT_MS, guestHeader);
+  const authApi = new AuthApi(config.authIssuer, fetchImpl, () => language);
+  const appSignIn = new AppSignIn(session, config.httpsRedirectUri, fetchImpl);
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -89,6 +97,8 @@ export function createServices(options: ServiceOptions = {}): Services {
   return {
     session,
     api,
+    authApi,
+    appSignIn,
     fetch: fetchImpl,
     queryClient,
     store,

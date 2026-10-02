@@ -1,6 +1,4 @@
-import { Stub } from '../src/ui/Stub';
+import { SecondFactor } from '../src/journeyA/SecondFactor';
 
-/** Design 01 `mfa` — a stub until its story builds it (src/screens.ts, docs/MOBILE_PLAN.md). */
-export default function Mfa() {
-  return <Stub screen="mfa" />;
-}
+/** Design 01 Journey A (S-98) — src/journeyA/SecondFactor.tsx. */
+export default SecondFactor;

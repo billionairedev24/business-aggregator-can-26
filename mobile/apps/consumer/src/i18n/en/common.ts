@@ -22,8 +22,6 @@ export const common = {
   'tab.account': 'You',
   'tab.cartCount': '{n, plural, one {# item} other {# items}} in your cart',
 
-  'browserSignIn.body': 'Sign in on the Northline site in your browser, with a passkey, Google or Apple. You come back here once you are in.',
-  'browserSignIn.button': 'Sign in in the browser',
   'browserSignIn.cancelled': 'Sign-in was cancelled.',
   'browserSignIn.failed': "We couldn't sign you in. {detail}",
   'browserSignIn.webOnly': 'Signing in in the browser works on iPhone and Android. This preview needs the fixture backend.',

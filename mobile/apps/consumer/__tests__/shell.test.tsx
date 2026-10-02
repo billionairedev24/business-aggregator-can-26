@@ -20,7 +20,7 @@ afterEach(async () => {
 describe('the shell', () => {
   it('opens on Welcome the first time, and on Home with the five tabs afterwards', async () => {
     const first = await start();
-    expect(await routerScreen.findByTestId('stub-welcome')).toBeTruthy();
+    expect(await routerScreen.findByTestId('welcome')).toBeTruthy();
     expect(first.view.getPathname()).toBe('/welcome');
     first.view.unmount();
 
@@ -86,11 +86,9 @@ describe('the shell', () => {
 
 describe('signing in in the browser (consumer site page, RFC 8252)', () => {
   it('opens the mobile-consumer authorization request with PKCE and the app scheme, then signs in', async () => {
-    const { services, view, server } = await start({ welcomed: true, url: '/sign-in' });
-    // fixture mode completes without a browser; the real path is the system browser:
-    services.fixtures!.calls.length = 0;
-    expect(await routerScreen.findByText('Sign in on the Northline site in your browser, with a passkey, Google or Apple. You come back here once you are in.')).toBeTruthy();
-    fireEvent.press(routerScreen.getByRole('button', { name: 'Sign in in the browser' }));
+    const { services, view, server } = await start({ welcomed: true, url: '/sign-in', store: { 'nl.location': JSON.stringify({ label: 'Old Town', city: 'Sampleville' }) } });
+    // fixture mode completes without a browser; the real path is the system browser (next test)
+    fireEvent.press(await routerScreen.findByRole('button', { name: 'Sign in with a passkey' }));
     expect(await routerScreen.findByTestId('stub-home')).toBeTruthy();
     expect(view.getPathname()).toBe('/home');
     expect(await services.session.restore()).toBe(true);

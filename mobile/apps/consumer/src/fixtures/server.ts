@@ -1,4 +1,4 @@
-import { authFixtures, type AuthFixtureState } from './auth';
+import { authFixtures, newAuthState, type AuthFixtureState } from './auth';
 import { lower, type FixtureArea, type FixtureContext, type FixtureRequest } from './context';
 import { geoFixtures } from './geo';
 
@@ -23,7 +23,7 @@ export function createFixtureServer(options: FixtureOptions = {}) {
       }),
     redirect: (location) => new Response(null, { status: 302, headers: { location, date: new Date(now()).toUTCString() } }),
   };
-  const auth: AuthFixtureState = { issued: 0, revoked: [], live: new Set(), nonce: null };
+  const auth: AuthFixtureState = newAuthState();
   const geo = { waitlist: [] as Array<{ regionId: string; email?: string }> };
   const calls: Array<{ method: string; path: string; signed: boolean; guest?: string }> = [];
   const areas: FixtureArea[] = [authFixtures(ctx, auth), geoFixtures(ctx, geo)];

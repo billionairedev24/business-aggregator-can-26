@@ -1,6 +1,4 @@
-import { Stub } from '../src/ui/Stub';
+import { Verify } from '../src/journeyA/Verify';
 
-/** Design 01 `otp` — a stub until its story builds it (src/screens.ts, docs/MOBILE_PLAN.md). */
-export default function Otp() {
-  return <Stub screen="otp" />;
-}
+/** Design 01 Journey A (S-98) — src/journeyA/Verify.tsx. */
+export default Verify;

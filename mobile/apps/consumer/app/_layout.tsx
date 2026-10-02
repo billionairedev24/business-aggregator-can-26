@@ -11,8 +11,10 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { LOCALES, colors, type Locale } from '@northline/mobile-kit';
 
+import { AccountFlowProvider } from '../src/auth/AccountFlow';
 import { AuthProvider, useAuth } from '../src/auth/AuthProvider';
 import { I18nProvider, useI18n } from '../src/i18n';
+import { DeliveryLocationProvider } from '../src/location/DeliveryLocation';
 import { services } from '../src/services';
 import { Loading } from '../src/ui/states';
 
@@ -50,8 +52,12 @@ export default function RootLayout() {
         <I18nProvider onChange={(l) => void services().store.setItem(LANGUAGE_KEY, l).catch(() => undefined)}>
           <LanguageSync>
             <AuthProvider>
-              <StatusBar style="dark" />
-              {ready ? <Routes /> : null}
+              <DeliveryLocationProvider>
+                <AccountFlowProvider>
+                  <StatusBar style="dark" />
+                  {ready ? <Routes /> : null}
+                </AccountFlowProvider>
+              </DeliveryLocationProvider>
             </AuthProvider>
           </LanguageSync>
         </I18nProvider>

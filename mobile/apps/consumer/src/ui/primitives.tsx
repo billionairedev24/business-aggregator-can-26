@@ -57,12 +57,12 @@ export function Body({ children, tone = 'body', style }: { children: ReactNode; 
   return <Text style={[type[tone], style]}>{children}</Text>;
 }
 
-/** An inline link that opens something (`onPress`); 48 dp high via hitSlop. */
+/** A text link standing on its own ("Edit", "Call me instead"): a 48 dp target around the words. */
 export function Link({ label, onPress, hint, testID }: { label: string; onPress: () => void; hint?: string; testID?: string }) {
   return (
-    <Text accessibilityRole="link" accessibilityHint={hint} onPress={onPress} suppressHighlighting style={type.link} testID={testID}>
-      {label}
-    </Text>
+    <Pressable accessibilityRole="link" accessibilityLabel={label} accessibilityHint={hint} onPress={onPress} hitSlop={4} style={styles.link} testID={testID}>
+      <Text style={type.link}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -246,6 +246,20 @@ export function Option({
   );
 }
 
+/** A message about the whole form or step: rosehip for errors (announced), accent for news ("New code sent."). */
+export function Notice({ message, tone = 'error', testID }: { message: string; tone?: 'error' | 'info'; testID?: string }) {
+  return (
+    <View
+      accessibilityRole={tone === 'error' ? 'alert' : 'text'}
+      accessibilityLiveRegion="polite"
+      style={[styles.notice, tone === 'error' ? styles.noticeError : styles.noticeInfo]}
+      testID={testID ?? `notice-${tone}`}
+    >
+      <Text style={[type.body, tone === 'error' && styles.noticeErrorText]}>{message}</Text>
+    </View>
+  );
+}
+
 export function Row({ children, style, wrap }: { children: ReactNode; style?: StyleProp<ViewStyle>; wrap?: boolean }) {
   return <View style={[styles.row, wrap && styles.wrap, style]}>{children}</View>;
 }
@@ -313,7 +327,12 @@ const styles = StyleSheet.create({
   optionText: { flex: 1, gap: 2 },
   optionTitle: { fontSize: 16 },
   optionDesc: { color: colors.neutral700 },
+  notice: { borderRadius: radius.md, borderWidth: 1, padding: space[3] },
+  noticeError: { borderColor: colors.accent2, backgroundColor: colors.accent2_100 },
+  noticeErrorText: { color: colors.accent2_700 },
+  noticeInfo: { borderColor: colors.accent200, backgroundColor: colors.accent100 },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
   wrap: { flexWrap: 'wrap' },
   spacer: { flex: 1, minHeight: space[6] },
+  link: { minHeight: MIN_TARGET, justifyContent: 'center' },
 });

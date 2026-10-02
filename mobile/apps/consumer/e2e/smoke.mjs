@@ -59,10 +59,66 @@ try {
   };
   const shot = (name) => page.screenshot({ path: join(OUT, `${name}.png`), fullPage: true });
 
-  // JOURNEY-A-STEPS
+  await step('A1 welcome', async () => {
+    await page.getByText('Northline · Sample Province').waitFor({ timeout: 30_000 });
+    await page.getByText('Every trusted local,').waitFor();
+    await noSideScroll('welcome');
+    await shot('01-welcome');
+  });
+  await step('A2 sign up: the rules, then the code is sent', async () => {
+    await page.getByRole('button', { name: 'Create account' }).click();
+    await page.getByText('Create your account').waitFor();
+    await page.getByLabel('Mobile number').fill('555 555 0148');
+    await page.getByLabel('Full name').fill('Grace');
+    await page.getByLabel('Email (receipts)').fill('grace@example.com');
+    await page.getByRole('checkbox').click();
+    await page.getByRole('button', { name: 'Send code' }).click();
+    await page.getByText('Last name is required.').waitFor();
+    await page.getByLabel('Full name').fill('Grace Hopper');
+    await noSideScroll('sign-up');
+    await shot('02-sign-up');
+    await page.getByRole('button', { name: 'Send code' }).click();
+    await page.getByText('Enter the 6-digit code').waitFor();
+    await page.getByText('Resend in 0:4', { exact: false }).waitFor();
+    await shot('03-verify');
+  });
+  await step('A3 verify (six digits submit by themselves)', async () => {
+    await page.getByLabel('6-digit code').fill('246810');
+    await page.getByText('Protect your account').waitFor();
+    await noSideScroll('second factor');
+    await shot('04-second-factor');
+  });
+  await step('A4 second factor: SMS only, signed in through the hand-off', async () => {
+    await page.getByRole('radio', { name: /^SMS code/ }).click();
+    await page.getByRole('button', { name: 'Continue with SMS' }).click();
+    await page.getByText('Where should we bring things?').waitFor();
+  });
+  await step('A5 province & address, saved', async () => {
+    await page.getByText('Live · Sampleville, Exampleton').waitFor();
+    await page.getByLabel('Street address').fill('1204 Exa');
+    await page.getByRole('button', { name: '1204 Example Ave, Sampleville, XA' }).click();
+    await page.getByText('Zone · Old Town').waitFor();
+    await page.getByText('Sales tax 5%').waitFor();
+    await noSideScroll('location');
+    await shot('05-location');
+    await page.getByRole('button', { name: 'Save and continue' }).click();
+    await page.getByTestId('stub-home').waitFor();
+  });
+  await step('You: signed in, French, sign out', async () => {
+    await page.getByRole('tab', { name: 'You' }).click();
+    await page.getByText('Signed in as Grace Hopper').waitFor();
+    await page.getByRole('radio', { name: 'Français' }).click();
+    await page.getByRole('button', { name: 'Se déconnecter' }).waitFor();
+    await noSideScroll('you');
+    await shot('06-you-fr');
+    await page.getByRole('button', { name: 'Se déconnecter' }).click();
+    await page.getByRole('tab', { name: 'Vous' }).click();
+    await page.getByText('Connectez-vous pour voir vos commandes, vos réservations et vos points.').waitFor();
+    await page.getByRole('radio', { name: 'English' }).click();
+  });
 
   await step('the tab shell: Home · Services · Cart · Orders · You', async () => {
-    await page.goto(`${base}/home`);
+    await page.getByRole('tab', { name: 'Home' }).click();
     await page.getByTestId('stub-home').waitFor({ timeout: 30_000 });
     const tabs = await page.getByRole('tab').allTextContents();
     if (tabs.join('|') !== 'Home|Services|Cart|Orders|You') throw new Error(tabs.join('|'));
