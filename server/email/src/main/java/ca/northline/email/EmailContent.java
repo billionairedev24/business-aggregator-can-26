@@ -714,6 +714,46 @@ public sealed interface EmailContent {
         }
     }
 
+    // ── Customers (S-102) ────────────────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * A customer's order, booking, quote or refund case moved (the worker's notifications consumer, S-102): one line in
+     * the customer's language — the same words as the push and the SMS, written by the worker — and a button to the
+     * page (a universal link: the app opens it when installed). Notification purpose: the customer can turn the row's
+     * email off (Account › Notifications), so it carries the unsubscribe link.
+     *
+     * @param businessName the shop or provider, or "Northline" for an order from several shops
+     * @param heading the heading (and the subject, with the business), already in the reader's language
+     * @param body the line, already in the reader's language
+     */
+    record CustomerUpdate(String businessName, String heading, String body, URI link) implements EmailContent {
+
+        @Override
+        public String template() {
+            return "customer-update";
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.NOTIFICATION;
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            return Map.of("businessName", businessName, "heading", heading, "body", body, "link", link.toString());
+        }
+
+        @Override
+        public List<Object> subjectArgs(EmailFormat format) {
+            return List.of(heading, businessName);
+        }
+
+        @Override
+        public List<Object> reasonArgs() {
+            return List.of();
+        }
+    }
+
     // ── Samples (preview endpoint, rendering tests) ──────────────────────────────────────────────────────────────
 
     /**
@@ -851,6 +891,13 @@ public sealed interface EmailContent {
                             action == SellerOversightNotice.Action.REVERIFICATION_REQUIRED ? "insurance" : null,
                             URI.create(studio + "/help")));
         }
+        all.put(
+                "customer-update",
+                new CustomerUpdate(
+                        business,
+                        "Your booking is confirmed",
+                        "Prairie Wrench confirmed your booking for Fri, Oct 2 at 9:00 a.m.",
+                        URI.create("http://localhost:3000/app/bookings/01J9ZD3V00000000000000BK01")));
         return java.util.Collections.unmodifiableMap(all);
     }
 

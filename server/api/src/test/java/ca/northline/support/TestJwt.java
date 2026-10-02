@@ -45,6 +45,17 @@ public final class TestJwt {
                 .authorities(NorthlineJwtConverter::authorities);
     }
 
+    /**
+     * S-102: the consumer app's token as northline-auth issues it (S-29: scope {@code orders bookings}, bound to the
+     * app's key). MockMvc skips the DPoP proof check; DpopResourceServerTest runs the real one.
+     */
+    public static JwtRequestPostProcessor consumerApp(String userId) {
+        return jwt().jwt(j -> j.subject(userId)
+                        .claim("scope", "openid profile orders bookings offline_access")
+                        .claim("cnf", java.util.Map.of("jkt", "test-key-thumbprint")))
+                .authorities(NorthlineJwtConverter::authorities);
+    }
+
     /** A courier-scoped token that isn't bound to a key (a bearer token): the courier API refuses it. */
     public static JwtRequestPostProcessor courierBearer(String userId) {
         return token(userId, "openid courier deliveries", null);

@@ -5,6 +5,23 @@
  */
 export { ApiClient, DEFAULT_TIMEOUT_MS, type ApiAnswer, type CallAuth, type RequestOptions } from './api/client';
 export { ApiError, NetworkError, SignedOutError, apiErrorOf, retryAfterSeconds, type FieldError } from './api/errors';
+// S-102: push registration, notification taps and deep links
+export {
+  COURIER_SCHEME,
+  CONSUMER_SCHEME,
+  PushRegistration,
+  expoPushPlatform,
+  pushRegistrar,
+  handleNotificationTaps,
+  parseDeepLink,
+  routeOf,
+  type DeepLink,
+  type DeviceRegistryApi,
+  type ExpoNotificationsModule,
+  type PushPermission,
+  type PushPlatform,
+  type PushRegistrationOptions,
+} from './push';
 export { DpopSession, OAuthError, type OAuthConfig, type PendingSignIn } from './auth/session';
 export { codeChallenge, codeVerifier } from './auth/pkce';
 export { AppSignIn } from './auth/handoff';

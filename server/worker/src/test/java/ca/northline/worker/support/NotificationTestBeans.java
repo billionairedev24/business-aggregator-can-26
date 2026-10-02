@@ -4,7 +4,9 @@ import ca.northline.email.EmailMessage;
 import ca.northline.email.EmailSender;
 import ca.northline.sms.SmsDeliveryFailed;
 import ca.northline.sms.SmsTransport;
+import ca.northline.worker.notifications.PushApp;
 import ca.northline.worker.notifications.PushSender;
+import java.net.URI;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -15,6 +17,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jspecify.annotations.Nullable;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
@@ -42,8 +46,10 @@ public class NotificationTestBeans {
         return new Texts();
     }
 
+    /** Recorded instead of sent, unless a test runs the real APNs/FCM adapters ({@code northline.push.provider=native}). */
     @Bean
     @Primary
+    @ConditionalOnProperty(name = "northline.push.provider", havingValue = "local", matchIfMissing = true)
     Pushes recordingPushSender() {
         return new Pushes();
     }
@@ -127,13 +133,30 @@ public class NotificationTestBeans {
     }
 
     public static final class Pushes implements PushSender {
-        public record Push(String userId, String title, String body) {}
+        /** One push as the person's phone would show it (their language, or English when they follow the app). */
+        public record Push(
+                String userId,
+                PushApp app,
+                String title,
+                String body,
+                @Nullable URI link,
+                Map<String, String> data,
+                @Nullable String language) {}
 
         private final List<Push> sent = new CopyOnWriteArrayList<>();
 
         @Override
-        public void send(String userId, String title, String body) {
-            sent.add(new Push(userId, title, body));
+        public Result send(PushMessage message) {
+            var words = message.in("en"); // an installation in English when the person follows the app
+            sent.add(new Push(
+                    message.userId(),
+                    message.app(),
+                    words.title(),
+                    words.body(),
+                    message.link(),
+                    message.data(),
+                    message.language()));
+            return Result.DELIVERED;
         }
 
         public List<Push> to(String userId) {

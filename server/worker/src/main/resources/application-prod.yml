@@ -1,4 +1,5 @@
-# Production (also activates `cloud`, see application-cloud.yml). Nothing differs from staging yet.
+# Production (also activates `cloud`, see application-cloud.yml). Unlike staging, push must be real (S-102: no `local`).
 northline.required-env:               # S-27 notifications: real providers only (`local` is refused here)
   email: EMAIL_PROVIDER, EMAIL_FROM, EMAIL_UNSUBSCRIBE_KEY, API_PUBLIC_URL, STUDIO_ORIGIN
   sms-provider: SMS_PROVIDER, SMS_FROM
+  push: PUSH_PROVIDER, PUSH_APNS_KEY_ID, PUSH_APNS_TEAM_ID, PUSH_APNS_KEY, PUSH_FCM_SERVICE_ACCOUNT, CONSUMER_ORIGIN

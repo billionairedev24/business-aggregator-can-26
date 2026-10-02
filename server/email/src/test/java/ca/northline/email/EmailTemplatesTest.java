@@ -31,10 +31,13 @@ class EmailTemplatesTest {
     @MethodSource("samples")
     void rendersEveryTemplate_inBothLanguages(String name, EmailContent content, Locale locale) {
         var email = TEMPLATES.render(content, locale, UNSUBSCRIBE);
-        // every email links into the Studio, except the identity link, which goes to Stripe's hosted flow (S-22)
-        var link = content instanceof EmailContent.IdentityVerificationLink
-                ? "https://verify.stripe.com/"
-                : "http://localhost:3100/";
+        // every email links into the Studio, except the identity link, which goes to Stripe's hosted flow (S-22), and a
+        // customer's update, which links to the consumer site (S-102: a deep link the app opens when installed)
+        var link = switch (content) {
+            case EmailContent.IdentityVerificationLink _ -> "https://verify.stripe.com/";
+            case EmailContent.CustomerUpdate _ -> "http://localhost:3000/";
+            default -> "http://localhost:3100/";
+        };
 
         assertThat(email.subject())
                 .isNotBlank()

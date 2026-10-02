@@ -199,6 +199,7 @@ class DispatchConsoleService implements DispatchConsole {
         if (previous != null) {
             runs.unassign(runId);
             couriers.status(previous, couriers.onShift(previous).isPresent() ? "available" : "offline");
+            dispatch.taken(runId, previous, now);
         }
         dispatch.give(run, courierId, now);
         audit(

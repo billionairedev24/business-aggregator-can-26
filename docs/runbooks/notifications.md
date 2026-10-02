@@ -1,5 +1,7 @@
 # Runbook — team notifications: email, SMS, push (S-13, S-27)
 
+> Customers' and couriers' notifications (S-102) are in [push.md](push.md).
+
 Who tells a business's team about money events, on which channel, and how the Settings › Notifications matrix and
 quiet hours apply. Events and the consumer framework: [events.md](events.md). Email providers: [email.md](email.md).
 SMS providers: [README § SMS and voice codes](README.md#sms-and-voice-codes-s-8).
@@ -43,10 +45,10 @@ events aren't published to Kafka yet.
 
 ## 3. Failures
 
-| what | email | SMS | push (stub) |
+| what | email | SMS | push (S-102, [push.md § 4](push.md#4-failures-and-back-off)) |
 |---|---|---|---|
-| bad / opted-out / suppressed address or number | logged, claim kept, not retried | same | — |
-| provider down, throttling, credentials | claim released; the event is retried (10 s, 60 s, 5 min on `<topic>.notifications.retry-<n>`), then `.dlq` + alert | same | — |
+| bad / opted-out / suppressed address or number | logged, claim kept, not retried | same | dead token: the device is deleted |
+| provider down, throttling, credentials | claim released; the event is retried (10 s, 60 s, 5 min on `<topic>.notifications.retry-<n>`), then `.dlq` + alert | same | same, and the provider is paused |
 | deferred notification can't be sent | — | retried every 5 min, given up after 10 attempts with `DEAD-LETTERED deferred …` (ERROR) | same |
 
 A retry sends only what is missing (sent deliveries stay claimed). A dead-lettered event is replayed with
@@ -57,10 +59,12 @@ Metrics: `northline_notifications_sent_total{channel,type,outcome=sent|already_s
 
 ## 4. Push
 
-**Stub.** No push provider and no device registration exist yet (no app ships push). The worker applies the matrix,
-quiet hours and once-per-member rules and hands each push to `PushSender`, whose only implementation logs
-`PUSH (stub — no push provider yet) to user … : <title>`. A real adapter (FCM/APNs, or one provider in front of both)
-replaces that bean; nothing else changes.
+Since S-102 the worker sends push for real: `PUSH_PROVIDER=native` sends to the device registry
+(`messaging.push_devices`, written by the apps) through APNs and FCM; `local` (the default) logs
+`PUSH (local — no push provider) to user …`. The matrix, quiet hours and once-per-member rules are unchanged. **Team
+members get no push yet:** Studio has no native app, so no installation registers for it (their pushes find no device
+and count as `unreachable`). Customers' and couriers' notifications, the providers' answers and back-off, deep links
+and the Apple / Firebase set-up: [push.md](push.md).
 
 ## 5. Configuration
 

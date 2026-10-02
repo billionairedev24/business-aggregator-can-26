@@ -77,6 +77,7 @@ Terraform (AWS, Google Cloud) or not at all (Azure: Key Vault has no empty secre
 | `CONSOLE_HEALTH_PROMETHEUS_TOKEN` | `console-health-prometheus-token` | api | no — only for a metrics store that needs a bearer token (S-91; add to `optionalKeys` once set) | the store's read-only token (Grafana Cloud access policy with `metrics:read`, …) |
 | `OPENROUTER_API_KEY` | `openrouter-api-key` | api | no — until it exists AI features answer 503 (S-129; add to `optionalKeys` once set) | openrouter.ai › Settings › Keys, one key per environment with a credit limit ([ai.md](ai.md#set-up-per-environment)) |
 | `SMS_AUTH_TOKEN` | `sms-auth-token` | auth | with `SMS_PROVIDER=twilio` | Twilio console ([README § SMS](README.md#sms-and-voice-codes-s-8)) |
+| `PUSH_APNS_KEY`, `PUSH_FCM_SERVICE_ACCOUNT` | `push-apns-key`, `push-fcm-service-account` | worker | prod (S-102, `values-prod.yaml`); dev and staging once `PUSH_PROVIDER=native` (then set them to `true` in the overlay's `apps.worker.secretEnv`) | Apple Developer › Keys (an APNs key, the `.p8` file's PEM text) / Firebase console › Project settings › Service accounts (a JSON key) ([push.md § Set-up](push.md#set-up)) |
 
 Which optional variables to map is a per-environment decision in the values, e.g. dev on AWS with Twilio and SendGrid:
 
@@ -183,6 +184,8 @@ kubectl -n northline-<env> rollout restart deploy/northline-<app>
 | `SHOPIFY_CLIENT_SECRET`, `LIGHTSPEED_CLIENT_SECRET`, `SQUARE_CLIENT_SECRET`, `SQUARE_WEBHOOK_SIGNATURE_KEY` | rotate in the platform's console, update, restart api | Shopify / Lightspeed webhooks signed with the old secret fail verification until the restart (the platforms retry); Square: replace the signature key the same way. Stored tokens stay valid ([commerce-sync.md](commerce-sync.md#operations)) |
 | `CLOVER_CLIENT_SECRET`, `TOAST_CLIENT_SECRET` | rotate in the Clover dashboard / ask Toast for new partner credentials, update, restart api | none: stored Clover tokens stay valid; Toast tokens are fetched per api instance ([pos-menu-import.md](pos-menu-import.md#operations)) |
 | `GOOGLE_MAPS_API_KEY` | create a second key with the same restrictions, update, restart api, delete the old key | none (both keys work until the old one is deleted) |
+| `PUSH_APNS_KEY` | create a second APNs key in Apple Developer › Keys (two may exist), set it with its `PUSH_APNS_KEY_ID`, restart worker, revoke the old key | none (tokens are minted per worker; both keys are valid until the revoke) |
+| `PUSH_FCM_SERVICE_ACCOUNT` | add a key to the service account in Google Cloud › IAM › Service accounts, update, restart worker, delete the old key | none |
 
 Rehearsed on kind: the `STUDIO_BFF_SECRET` row end to end (new value → ESO refresh → OAuth client sync
 `studio-bff: update secret` → bff restart → the token endpoint accepts the new secret and answers 401 to the old one).

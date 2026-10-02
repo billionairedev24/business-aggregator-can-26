@@ -22,7 +22,8 @@ say where a step is still manual or missing.
 | [registries.md](registries.md) | business registry lookups: Corporations Canada API, Alberta Corporate Registry (search service or registry-agent searches), City of Calgary licences (Socrata), manual review queue, re-checks (S-23) |
 | [stripe.md](stripe.md) | Stripe Connect Express: platform account setup (test/live), money flow, idempotency, local stripe-mock, operations (S-11), webhooks (S-12), Stripe Tax (S-21) |
 | [email.md](email.md) | transactional email: Mailpit locally, SES / SendGrid / Azure Communication Services / SMTP set-up, SPF/DKIM/DMARC, CASL (S-13) |
-| [notifications.md](notifications.md) | team notifications: who sends which email / SMS / push (api vs worker), matrix and quiet hours, failures, push stub (S-13/S-27) |
+| [notifications.md](notifications.md) | team notifications: who sends which email / SMS / push (api vs worker), matrix and quiet hours, failures (S-13/S-27) |
+| [push.md](push.md) | push notifications (APNs, FCM) and deep links: the device registry, customers' and couriers' notifications, back-off, Apple / Firebase set-up (S-102) |
 | [webhooks.md](webhooks.md) | partner webhooks: payloads and signature for integrators, delivery design (per-endpoint scheduling, retries, auto-disable), SSRF rules, operations (S-33) |
 | [search.md](search.md) | the Elasticsearch read model: index layout and naming, analyzers per language, synonyms, the search-indices Job, least-privilege access (S-42); the indexer, visibility rules, versions, the reconcile sweep, merchant locations (S-43); the search API and its contract for the consumer web (S-44); the full reindex with an alias swap (S-71) |
 | [logging.md](logging.md) | structured JSON logs (ECS), the redaction layer (emails, phones, tokens, cards, postal codes, codes), shipping over OTLP through the Collector, the local SMS stand-in rule (S-112) |
@@ -117,6 +118,7 @@ say where a step is still manual or missing.
   | `northline.tax.provider` | `TAX_PROVIDER` | `local` (fixed Canadian rates) · `stripe` (Stripe Tax) | **done** (S-21, api sales tax — [stripe.md § 6](stripe.md#6-stripe-tax-s-21)) |
   | `northline.identity.provider` | `IDENTITY_PROVIDER` | `local` (fake with an outcome page) · `stripe` (Stripe Identity) | **done** (S-22, owners' identity verification — [stripe.md § Identity](stripe.md#8-identity-s-22)) |
   | `northline.registries.<source>.provider` | `REGISTRY_CORPORATIONS_CANADA_PROVIDER`, `REGISTRY_ALBERTA_PROVIDER`, `REGISTRY_CALGARY_PROVIDER` | `fixtures` · `manual` · `api` (Corporations Canada) / `opencorporates` (Alberta) / `socrata` (Calgary) | **done** (S-23, business registry lookups — [registries.md](registries.md)) |
+  | `northline.push.provider` | `PUSH_PROVIDER` | `local` (the worker log) · `native` (APNs + FCM) | **done** (S-102, worker push — [push.md](push.md)) |
   | `northline.sms.provider` | `SMS_PROVIDER` | `local` · `twilio` · `aws` (End User Messaging SMS and voice) · `azure` (reserved) | **done** (S-8, auth phone codes — [SMS and voice codes](#sms-and-voice-codes-s-8); S-27: shared library `server/sms`, also api invitations and worker notifications — [notifications.md](notifications.md)) |
 
   Secrets reach the apps as environment variables in every cloud (External Secrets from AWS Secrets Manager, Google
@@ -209,6 +211,10 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `SMS_PROVIDER`, `SMS_FROM` | ✓ | ✓ | | ✓ | staging and prod (`local` refused there; `dev` may keep `local`). api: team invitations, worker: notifications (S-27) |
 | `SMS_ACCOUNT_ID`, `SMS_AUTH_TOKEN` | ✓ | ✓ | | ✓ | with `SMS_PROVIDER=twilio` |
 | `SMS_VOICE_FROM`, `SMS_REGION`, `SMS_ENDPOINT` | ✓ | ✓ | | ✓ | no (`= SMS_FROM`; SDK default region; provider API) |
+| `PUSH_PROVIDER` | | | | ✓ | prod: `native` (`local` refused there; dev and staging may keep `local` until the Apple and Firebase accounts exist — S-102, [push.md](push.md)) |
+| `PUSH_APNS_KEY_ID`, `PUSH_APNS_TEAM_ID`, `PUSH_APNS_KEY`, `PUSH_FCM_SERVICE_ACCOUNT` | | | | ✓ | with `PUSH_PROVIDER=native`; `PUSH_APNS_KEY` and `PUSH_FCM_SERVICE_ACCOUNT` are secrets ([push.md § Set-up](push.md#set-up)) |
+| `PUSH_APNS_URL`, `PUSH_APNS_CONSUMER_TOPIC`, `PUSH_APNS_COURIER_TOPIC`, `PUSH_FCM_URL`, `PUSH_STALE_AFTER` | | | | ✓ | no (`https://api.push.apple.com` — `https://api.sandbox.push.apple.com` for development builds; `ca.northline.app`; `ca.northline.courier`; `https://fcm.googleapis.com`; `90d`) |
+| `CONSUMER_ORIGIN` (worker) | | | | ✓ | staging and prod (the chart sets it from `urls.consumer`): the deep links in customers' and couriers' pushes and emails (S-102) |
 | `TRUSTED_PROXIES` | | ✓ | | | no (private ranges + loopback; narrow it to the ingress subnet) |
 | `RATE_LIMIT_STORE` | | ✓ | | | no (`redis`; `memory` only under `local`/`test`) |
 | `RATE_LIMIT_WHEN_UNAVAILABLE` | | ✓ | | | no (`closed` in staging/prod, `open` elsewhere — S-20, [Rate limits](#rate-limits-s-9)) |

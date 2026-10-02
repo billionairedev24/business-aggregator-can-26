@@ -210,4 +210,34 @@ class DpopResourceServerTest extends IntegrationTest {
                         .header("DPoP", proof(app, "GET", url, consumer)))
                 .andExpect(status().isForbidden());
     }
+
+    /** S-102: the push device registry takes the app's key-bound token with its proof; a bearer token never. */
+    @Test
+    void theDeviceRegistry_takesOnlyAKeyBoundAppToken() throws Exception {
+        var app = key();
+        var user = data.user("Amara Osei");
+        var url = "http://localhost/api/v1/me/devices/inst0123456789abcdef";
+        var body = """
+                {"platform":"ios","token":"0123456789abcdef0123456789abcdef","locale":"en","appVersion":"1.0.0",\
+                "permission":"granted"}""";
+        var token = accessToken(user, "openid profile orders bookings offline_access", thumbprint(app));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(url)
+                        .header("Authorization", "DPoP " + token)
+                        .header("DPoP", proof(app, "PUT", url, token))
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.app").value("consumer"));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(url)
+                        .header("Authorization", "DPoP " + token)
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isUnauthorized()); // no proof
+        var bearer = accessToken(user, "openid profile orders bookings", null);
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(url)
+                        .header("Authorization", "Bearer " + bearer)
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isForbidden());
+    }
 }

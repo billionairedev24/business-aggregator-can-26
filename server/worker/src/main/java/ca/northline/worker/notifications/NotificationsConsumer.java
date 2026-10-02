@@ -12,7 +12,8 @@ import org.springframework.kafka.retrytopic.TopicSuffixingStrategy;
 import org.springframework.stereotype.Component;
 
 /**
- * Consumer group {@code notifications} (deploy/kafka/topics.yaml): the money topics, through the S-26 framework
+ * Consumer group {@code notifications} (deploy/kafka/topics.yaml): the money topics (S-27; since S-102 also the
+ * customer's side of {@code payments.refund}), through the S-26 framework
  * (schema validation, dedupe per event, retries 10 s / 60 s / 5 min on its own retry topics, then {@code .dlq}). The
  * back-off is a property only so tests can shorten it; the catalogue test reads the defaults.
  */
