@@ -123,7 +123,7 @@ export const services: { [k in keyof typeof en]: string } = {
   'services.book.newCard': 'Nouvelle carte',
   'services.book.newCardNote': 'Saisie dans le formulaire sécurisé de Stripe. Les données de carte vont à Stripe seulement — jamais à Northline.',
   'services.book.fakePayments': 'Paiements de test · rien n’est facturé. Stripe n’est pas configuré ici; un substitut approuve chaque paiement.',
-  'services.book.cancelUntil': 'Annulation : gratuite jusqu’à {when}.',
+  'services.book.cancelUntil': 'Annulation : gratuite jusqu’à {when}',
   'services.book.agreePolicies': 'Je comprends que les pièces ou travaux hors prix exigent mon approbation dans l’application, et que l’annulation est gratuite jusqu’à 12 h avant.',
   'services.book.agreeTerms': 'J’accepte les conditions de Northline et les règles de versement de la fiducie.',
   'services.book.hold': 'Retenir {total} en fiducie',
@@ -160,7 +160,7 @@ export const services: { [k in keyof typeof en]: string } = {
   'services.quote.seeOrders': 'Voir les commandes et réservations',
 
   'services.booking.signIn': 'Connectez-vous pour voir votre réservation.',
-  'services.booked.title': 'Réservé. {name} vient {when}.',
+  'services.booked.title': 'Réservé. {name} vient {when}',
   'services.booked.held': 'Réservation {ref} · {total} retenus en fiducie.',
   'services.booked.free': 'Réservation {ref} · rien à payer.',
   'services.booked.next': 'Prochaines étapes',

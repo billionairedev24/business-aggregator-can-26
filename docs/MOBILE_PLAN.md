@@ -161,21 +161,25 @@ signed in only. Paths are under `/api/v1` unless they start with `/api/auth` or 
 | `delivered` | `/orders/[id]/delivered` | ✓ | `GET /me/orders/{id}` (proof photo, confirm) |
 | `refund` | `/problem/[kind]/[id]` | ✓ | `GET /me/problems/{kind}/{id}`, `POST /me/problems`, `POST /me/case-uploads`, `POST /me/help/triage` |
 
-### C — Find & book a service (S-100)
+### C — Find & book a service (S-100, **built**)
 
 | screen | route | personal | api |
 |---|---|---|---|
-| `services` | `/services` (tab) | | `GET /public/services` |
+| `services` | `/services` (tab) | | `GET /public/services`, `GET /geo/regions` (the province in the line under the title) |
 | `providers` | `/services/[category]` | | `GET /public/services/{slug}`, `GET /public/services/{slug}/providers?lat&lng&city` |
-| `provider` | `/providers/[slug]` | | `GET /public/providers/{slug}`, `/public/providers/{slug}/reviews`, `PUT /me/favourites/{businessId}` |
+| `provider` | `/providers/[slug]` | | `GET /public/providers/{slug}`, `/public/providers/{slug}/reviews`, `GET /me/favourites`, `PUT`/`DELETE /me/favourites/{businessId}` |
 | `book_service` | `/book/[slug]/service` | | `GET /public/providers/{slug}`, `POST /me/quote-requests` ("ask for a quote") |
-| `book_slot` | `/book/[slug]/time` | | `GET /public/providers/{slug}/slots`, `POST`/`DELETE /me/bookings/holds` |
-| `book_review` | `/book/[slug]/review` | ✓ | `POST /me/bookings/checkout` (Idempotency-Key, X-Step-Up), `POST /me/bookings/holds/{id}/confirm` |
+| `book_slot` | `/book/[slug]/time` | | `GET /public/providers/{slug}/slots`, `POST /me/bookings/holds` |
+| `book_review` | `/book/[slug]/review` | ✓ | `GET /me/payment-methods`, `POST /me/bookings/checkout` (Idempotency-Key, X-Step-Up), Stripe's PaymentSheet (port), `POST /me/bookings/holds/{id}/confirm` |
 | `booked` | `/bookings/[id]/booked` | ✓ | `GET /me/bookings/{id}` |
 | `notifications` | `/notifications` | ✓ | `GET /me/activity`, `GET`/`PUT /me/notifications` (quiet hours) |
-| `eta` | `/bookings/[id]/eta` | ✓ | `GET /me/bookings/{id}` |
-| `signoff` | `/bookings/[id]/sign-off` | ✓ | `GET /me/bookings/{id}`, `POST /me/problems` ("raise an issue") |
+| `eta` | `/bookings/[id]/eta` | ✓ | `GET /me/bookings/{id}` (state, steps; every 30 s while en route / on site) |
+| `signoff` | `/bookings/[id]/sign-off` | ✓ | `GET /me/bookings/{id}`, `POST /me/bookings/{id}/sign-off` (S-100), "Raise an issue" → `/problem/booking/[id]` (Journey B's screen) |
 | `review` | `/bookings/[id]/review` | ✓ | `GET /me/bookings/{id}`, `PUT /me/favourites/{businessId}`; posting a review has no consumer endpoint yet (§ API gaps) |
+
+`/bookings/[id]` (no screen of its own) is where S-102's booking deep link lands: it opens `sign-off` once the job is
+completed or signed off, `eta` before. How S-100 built it — the files, the wizard, payments, time zones, the server
+additions — is in [§ Journey C as built](#journey-c-as-built-s-100).
 
 ### D — Account (S-101)
 
@@ -248,7 +252,12 @@ Areas: `shop` (S-99), `services` (S-100), `account` (S-101). Don't edit another 
 
 ## API gaps (for the journeys to raise, not to work around)
 
-- **Reviews:** no consumer endpoint posts a two-way review (design C11) or a delivery rating (B9).
+- **Reviews:** no consumer endpoint posts a two-way review (design C11) or a delivery rating (B9). S-100's review screen
+  says so on the screen and saves only the favourite.
+- **Day-of ETA (C9):** no live position or minutes away for a booking, no member photo, vehicle or plate, no in-app
+  call, no time-boxed sharing of the access code; completion photos can't be downloaded by the customer (the screen
+  shows how many there are). S-100 shows the job's state and steps instead (§ Journey C as built).
+- **Messages (C3 "Message"):** no consumer messaging endpoint; the provider page offers favourites instead.
 - **SSE on React Native:** `GET /me/orders/{id}/events` needs an EventSource; React Native has none built in.
 - **Payments:** card entry and 3-D Secure need Stripe's React Native SDK (a native module, a config plugin and the
   publishable key per environment); Apple Pay / Google Pay need merchant ids.
@@ -257,7 +266,38 @@ Areas: `shop` (S-99), `services` (S-100), `account` (S-101). Don't edit another 
 - **Push:** the server, mobile-kit's registration and the deep links are S-102's; the app still needs
   `expo-notifications` and the registrar installed (above).
 
+## Journey C as built (S-100)
+
+- **Files** (the `services` area): routes `app/(tabs)/services.tsx`, `app/services/[category].tsx`,
+  `app/providers/[slug].tsx`, `app/book/[slug]/{service,time,review}.tsx`, `app/bookings/[id]/{index,booked,eta,
+  sign-off,review}.tsx`, `app/notifications.tsx`; screens in `src/services/` (`Browse`, `Providers`, `Provider`,
+  `BookService`, `BookTime`, `BookReview`, `Booking` — booked, ETA, sign-off, review and the deep-link landing —,
+  `Notifications`), `src/api/services.ts`, `src/fixtures/services.ts`, `src/i18n/{en,fr-CA}/services.ts`,
+  `__tests__/services.test.tsx`. `src/services/` sits next to `src/services.ts` (the app's services): imports of
+  `../services` from inside the folder resolve to the file.
+- **Time zones:** every booking answer carries the business's `timeZone` (`GET /public/providers/{slug}`, `…/slots`,
+  the provider cards, `GET /me/bookings/{id}` — S-100 server additions); the calendar's days are the business's dates,
+  and slots, steps, reminders and cancellation times are shown in that zone, never the phone's.
+- **The wizard** (`book_service` → `book_slot` → `book_review`) keeps its answers in memory per provider
+  (`src/services/draft.ts`): service, the design's single vehicle field ("2018 Honda Civic · ABC 1234", split into
+  year / make / model / plate for the api), the note, the slot, where (prefilled from the saved delivery address), the
+  vehicle's spot or the way in, access instructions. A guest is asked to sign in when holding the slot; the answers
+  wait. "Review booking" holds the slot 10 minutes (`POST /me/bookings/holds`). The app books fixed-price,
+  instant-book visits and appointments; hourly, event and consultation services open the provider's booking page on
+  the consumer site; quote-only services (and "Not sure? Ask for a quote") send a quote request to this provider.
+- **Paying** (`book_review`): `POST /me/bookings/checkout` with an `Idempotency-Key` per set of answers (a retry with
+  the same answers replays the same PaymentIntent); `403 step_up_required` → the authenticator code
+  (`POST /api/auth/step-up/totp`, the proof as `X-Step-Up`), `403 second_factor_required` → add a passkey on the
+  consumer site; `provider: stripe` → `src/services/payments.ts` (the port; Stripe's SDK in `stripe.native.ts`, a
+  stand-in `stripe.ts` for the web build, where the native module can't load): the saved card's PaymentMethod
+  (`confirmPayment`) or Stripe's PaymentSheet for a new card, 3-D Secure in Stripe's own UI; `provider: fake` → nothing
+  to collect. Then `POST /me/bookings/holds/{id}/confirm` → `booked`. The app never sees a card number.
+- **Sign-off:** "Release payment" calls `POST /me/bookings/{id}/sign-off` (S-100): the job becomes `signed_off` and
+  the escrow releases at once; "Raise an issue" opens Journey B's report screen for the booking.
+- **Notifications** is the activity list (`GET /me/activity`) as an inbox — All / Bookings / Orders / Offers (no offers
+  feed yet) — with the quiet hours and a switch for them; push itself is S-102's.
+
 ## Migration ranges
 
-The app needs no schema. S-97/S-98 used none of the V240–V244 range offered; later mobile stories ask the lead for a
+The app needs no schema. S-97/S-98 used none of the V240–V244 range offered, S-100 none of V255–V259; later mobile stories ask the lead for a
 range above the highest version on main (IMPLEMENTATION_PLAN "Ordering rule").

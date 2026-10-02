@@ -9,7 +9,9 @@ runbook ([courier-app.md](courier-app.md)); sign-in and tokens: [mobile-auth.md]
 > where it was built. What is proven: Jest + React Native Testing Library on an in-app fixture backend, `tsc`, ESLint,
 > `expo export` of the iOS and Android bundles, `expo prebuild` of both native projects with checks of the generated
 > manifests, entitlements and permissions, and the web build in headless Chromium. Never exercised: the Keychain /
-> Keystore, the system-browser sign-in, location services, App Links / Universal Links, EAS Build and Submit, the stores.
+> Keystore, the system-browser sign-in, location services, App Links / Universal Links, EAS Build and Submit, the stores,
+> and (S-100) Stripe's React Native SDK for booking payments — PaymentSheet, saved cards and 3-D Secure have only run
+> as a test double behind the app's payment port, the api's fake gateway on the server side.
 
 ## Contents
 

@@ -127,7 +127,7 @@ export const services = {
   'services.book.newCard': 'New card',
   'services.book.newCardNote': 'Entered on Stripe’s secure form. Card details go to Stripe only — never Northline.',
   'services.book.fakePayments': 'Test payments · nothing is charged. Stripe isn’t configured here, so a stand-in approves every payment.',
-  'services.book.cancelUntil': 'Cancellation: free until {when}.',
+  'services.book.cancelUntil': 'Cancellation: free until {when}',
   'services.book.agreePolicies': 'I understand extra parts or work beyond the price need my approval in the app, and that cancellation is free until 12 h before.',
   'services.book.agreeTerms': 'I agree to the Northline terms and the escrow release rules.',
   'services.book.hold': 'Hold {total} in escrow',
@@ -165,7 +165,7 @@ export const services = {
 
   // C7 Booked
   'services.booking.signIn': 'Sign in to see your booking.',
-  'services.booked.title': 'Booked. {name} is coming {when}.',
+  'services.booked.title': 'Booked. {name} is coming {when}',
   'services.booked.held': 'Booking {ref} · {total} held in escrow.',
   'services.booked.free': 'Booking {ref} · nothing to pay.',
   'services.booked.next': 'What happens next',
