@@ -22,6 +22,8 @@ import org.jspecify.annotations.Nullable;
  *       ({@code sk_}, {@code rk_}, {@code whsec_}), OpenRouter/OpenAI ({@code sk-…}), AWS access keys, GitHub tokens,
  *       {@code key=value} / {@code "key":"value"} pairs with a sensitive key;
  *   <li>email addresses → {@code [EMAIL]};
+ *   <li>card verification codes after their name ({@code cvc 123}) → {@code [REDACTED]}, magnetic-stripe track data →
+ *       {@code [TRACK]} (S-110);
  *   <li>card-like numbers (13–19 digits, spaces or dashes allowed, Luhn-valid) → {@code [CARD …4242]};
  *   <li>phone numbers (North American, any punctuation; E.164) → {@code [PHONE]}. The masked form
  *       {@code +1 403 *** **48} the SMS adapters log is left as it is;
@@ -40,7 +42,8 @@ public final class Redactor {
             "(?i)(^|.*[._-])(authorization|proxy-authorization|cookie|set-cookie|password|passwd|pwd|secret"
                     + "|client[-_.]?secret|token|access[-_.]?token|refresh[-_.]?token|id[-_.]?token|api[-_.]?key|apikey"
                     + "|credentials?|private[-_.]?key|totp|otp|code|backup[-_.]?codes?|verification[-_.]?code"
-                    + "|x-xsrf-token|x-dev-user|card[-_.]?number|pan|sin)($|[._-].*)");
+                    + "|x-xsrf-token|x-dev-user|card[-_.]?number|pan|sin|cvc2?|cvv2?|cvn|csc|track[-_.]?[12]|track[-_.]?data)"
+                    + "($|[._-].*)");
 
     private static final String NOT_WORD_BEFORE = "(?<![\\w*+@.-])";
     private static final String NOT_WORD_AFTER = "(?![\\w@-])";
@@ -69,6 +72,12 @@ public final class Redactor {
                         var quote = value.startsWith("\"") ? "\"" : value.startsWith("'") ? "'" : "";
                         return m.group(1) + quote + MASK + quote;
                     }),
+            // S-110: card verification codes next to their name, and magnetic-stripe track data (before the card rule).
+            Rule.fixed(
+                    "(?i)\\b(cvv2?|cvc2?|cvn|csc|security[ _-]?code)(\"?\\s*[:=]\\s*\"?|\\s+)\\d{3,4}\\b",
+                    "$1$2" + MASK),
+            Rule.fixed("%?B\\d{13,19}\\^[^^\\r\\n]{2,26}\\^\\d{4}[^\\s\",;}]*", "[TRACK]"),
+            Rule.fixed(";\\d{13,19}=\\d{4}[\\d?]*", "[TRACK]"),
             // Personal data.
             Rule.fixed("[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*\\.[A-Za-z]{2,}", "[EMAIL]"),
             Rule.of(NOT_WORD_BEFORE + "\\d(?:[ -]?\\d){12,18}" + NOT_WORD_AFTER, Redactor::card),

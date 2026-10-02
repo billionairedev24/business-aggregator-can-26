@@ -73,13 +73,13 @@ objects, connected accounts, webhooks and keys don't carry over.
 11. **Payment methods** (Settings → Payment methods): cards only (manual capture). Apple Pay / Google Pay can be added
     later (they are cards to Stripe).
 12. **API keys.** Developers → API keys: the *secret key* (`sk_test_…` / `sk_live_…`) and *publishable key*
-    (`pk_…`). Prefer a **restricted key** for the api with write access to: PaymentIntents, Customers, Refunds,
-    Transfers, Payouts, Accounts (Connect), Account links, Login links, Tokens, Financial Connections sessions, Tax
-    calculations and transactions (S-21); read access to Balance, Charges, Events. Store them as `STRIPE_SECRET_KEY` / `STRIPE_PUBLISHABLE_KEY` in the secrets
-
-    Transfers, Payouts, Accounts (Connect), Account links, Login links, Tokens, Financial Connections sessions; read
-    access to Balance, Charges, Events, Financial Connections accounts (S-24). Store them as `STRIPE_SECRET_KEY` / `STRIPE_PUBLISHABLE_KEY` in the secrets
-    manager (see the environment runbooks). Never commit a key; never put a live key in dev or staging.
+    (`pk_…`). Prefer a **restricted key** for the api (S-110 review, [compliance/pci/stripe-review.md](../compliance/pci/stripe-review.md))
+    with **write** access to: PaymentIntents, SetupIntents and PaymentMethods (saved cards, S-59), Customers, Refunds,
+    Transfers, Payouts, Accounts (Connect), Account links, Login links, Tokens, Financial Connections sessions (S-24),
+    Identity verification sessions (S-22), Tax calculations and transactions (S-21); **read** access to Balance,
+    Balance transactions (S-85), Charges, Disputes, Events, Financial Connections accounts (S-24). Store them as
+    `STRIPE_SECRET_KEY` / `STRIPE_PUBLISHABLE_KEY` in the secrets manager (see the environment runbooks). Never commit
+    a key; never put a live key in dev or staging.
 13. **Webhooks** — § 5.
 
 ### Test mode data

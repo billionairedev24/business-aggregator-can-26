@@ -3,11 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Design 09 Terms of Service and 10 Privacy Policy, verbatim (scripts/legal-pages.mjs), served at /legal/ by every web app.",
+  "description": "Design 09 Terms of Service and 10 Privacy Policy, verbatim (scripts/legal-pages.mjs), served at /legal/ by every web app; registry.json records every legal text's version and counsel sign-off (S-106).",
   "exports": {
     "./vite": { "types": "./vite.d.mts", "default": "./vite.mjs" }
   },
   "scripts": {
-    "test": "node --test legal.test.mjs"
+    "test": "node --test legal.test.mjs",
+    "registry": "node registry.mjs status"
   }
 }
