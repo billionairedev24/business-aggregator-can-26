@@ -33,6 +33,7 @@ Docker executor that allows `docker:dind` (GitLab), plus public images and packa
 | mobile-release | `mobile-release.yml` › `eas` (actions `build`, `update`, `update-republish`, `update-rollback-embedded`, `listing`) | `mobile-release:eas` (manual, needs `EXPO_TOKEN`) | S-103: EAS Build (production → TestFlight + Play internal), EAS Update and its rollbacks, `eas metadata:push`; skipped without `EXPO_TOKEN` and the app's EAS project id. |
 | mobile-release | `mobile-release.yml` › `store` (actions `listing`, `submit-review`, `promote`, `rollout`, `halt`) | `mobile-release:store` (manual, needs the store key) | S-103: fastlane (`mobile/fastlane/Fastfile`): Play listing text, promotion to a staged rollout, rollout, halt; iOS App Review; skipped without `PLAY_SERVICE_ACCOUNT_JSON` / `ASC_API_KEY_P8`. |
 | web | `web.yml` › `studio-smoke` (optional) | `web:studio-smoke` (optional) | `ci/studio-smoke.sh`: PostGIS service → `:api:flywayMigrate -Pdb.devSeed=true` + `:api:seedCategories` → api and auth with the `local` profile → studio dev server (dev auth as Ravi Sandhu) → `scripts/studio-smoke.mjs` (135 screen/width/locale checks). Screenshots and logs in the `studio-smoke` artifact. |
+| web | `web.yml` › `a11y` (optional) | `web:a11y` (optional) | `make a11y` (S-109): builds the Studio, console and consumer, then Playwright + axe on 32 journey screens at 1280 px (en) and 320 px (fr-CA) against a mock api replaying the apps' test fixtures — no backend. Critical/serious WCAG 2.2 A/AA violations, a wrong `<html lang>` or horizontal scroll at 320 px fail. Page reports in the `a11y-results` artifact; findings in [docs/a11y/audit.md](../a11y/audit.md). |
 
 Expected durations (hosted runners; first run in brackets, before caches are warm):
 
@@ -62,6 +63,7 @@ Expected durations (hosted runners; first run in brackets, before caches are war
 | server | `rerun-tasks` | `false` | ignore the Gradle build cache (`--rerun-tasks`) |
 | web | `storybook` | `true` | run the Storybook job |
 | web | `studio-smoke` | `false` | run the studio smoke sweep job |
+| web | `a11y` | `false` | run the accessibility page sweep job (S-109) |
 | infra | `cloud` | `all` | `all`, `aws`, `gcp` or `azure`: which modules and env roots to validate |
 | infra | `tflint` | `true` | run the tflint job |
 | deploy | `registry` | — | registry including its path (required to push) |
@@ -91,6 +93,7 @@ A new run on the same branch cancels the previous one of the same workflow (conc
 | `EVENT_SCHEMAS_BASE` | `main` | events: the branch the schemas are compared with |
 | `SERVER_GRADLE_ARGS` | `build` | Gradle arguments for server/, e.g. `:api:build`, `build -x test`, `build --rerun-tasks` |
 | `RUN_STUDIO_SMOKE` | `false` | `true` adds the studio smoke sweep |
+| `RUN_A11Y` | `false` | `true` adds the accessibility page sweep (S-109) |
 | `INFRA_CLOUD` | `all` | infra: `all`, `aws`, `gcp` or `azure` |
 | `RUN_TFLINT` | `true` | infra: `false` skips tflint (it downloads its rulesets from GitHub) |
 | `IMAGE_REGISTRY` | the project's registry | images: registry including its path |
@@ -141,6 +144,7 @@ The jobs call make targets (S-124), so the same targets run them on a laptop:
 | server build | `make server-build` (`PROJECT=api`, `TASKS=':api:build -x test'`) |
 | web checks | `make web-check` (= `web-lint` + `web-test` + `web-build-studio`) |
 | web storybook | `make web-storybook-test` |
+| web a11y (S-109) | `make a11y` |
 | studio smoke | `make e2e` (disposable database!) |
 | infra validate / tflint | `make tf-validate CLOUD=…` / `make tf-lint` |
 | chart / gitops validate | `make helm-validate` / `make argocd-validate` |

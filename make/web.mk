@@ -65,10 +65,21 @@ web-storybook-build: $(WEB_INSTALLED) ## Build the static Storybook (web/package
 web-storybook-test: web-storybook-build ## Storybook interaction + a11y tests in headless Chromium (Playwright)
 	$(PNPM) --filter @northline/ui test-storybook
 
+.PHONY: a11y
+a11y: $(WEB_INSTALLED) ## Accessibility page sweep (S-109): builds Studio, console, consumer; Playwright + axe on 32 screens (CHROMIUM=path)
+	$(PNPM) --filter @northline/studio build
+	$(PNPM) --filter @northline/console build
+	$(PNPM) --filter @northline/consumer build
+	$(PNPM) --filter @northline/a11y a11y
+
+.PHONY: a11y-record
+a11y-record: $(WEB_INSTALLED) ## Re-record the sweep's mock api answers from the apps' vitest suites (packages/a11y/fixtures)
+	$(PNPM) --filter @northline/a11y record
+
 .PHONY: web-clean
 web-clean:
 	rm -rf $(ROOT)/web/apps/*/dist $(ROOT)/web/apps/*/.output $(ROOT)/web/apps/*/.tanstack \
-		$(ROOT)/web/packages/ui/storybook-static $(ROOT)/web/packages/tokens/dist
+		$(ROOT)/web/packages/ui/storybook-static $(ROOT)/web/packages/tokens/dist $(ROOT)/web/packages/a11y/a11y-results
 
 .PHONY: run-studio
 run-studio: $(WEB_INSTALLED) ## Studio dev server on :3100 through the studio-bff (real sign-in)

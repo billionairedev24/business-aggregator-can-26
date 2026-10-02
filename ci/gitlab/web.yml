@@ -111,3 +111,23 @@ web:studio-smoke:
     expire_in: 7 days
     paths: [smoke-out/]
     exclude: [smoke-out/runner/**/*]
+
+# Optional: Run pipeline with RUN_A11Y=true (S-109). Builds the Studio, console and consumer, then Playwright + axe
+# against them with a mock api replaying the apps' test fixtures (docs/a11y/audit.md).
+web:a11y:
+  extends: .web
+  stage: smoke
+  image: mcr.microsoft.com/playwright:v1.56.1-noble
+  needs: []
+  timeout: 30m
+  variables:
+    CI: "true"
+  rules:
+    - if: ($PIPELINE_PART == "all" || $PIPELINE_PART == "web") && $RUN_A11Y == "true"
+  script:
+    - command -v make >/dev/null || (apt-get update -qq && apt-get install -y -qq --no-install-recommends make >/dev/null)
+    - make -C .. a11y
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths: [web/packages/a11y/a11y-results/]
