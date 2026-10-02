@@ -142,6 +142,9 @@ northline:
   live:
     bus: ${LIVE_BUS:memory}
     stream: ${LIVE_STREAM:10m}
+    probe-interval: ${LIVE_PROBE_INTERVAL:30s}   # S-113: the live bus probe behind the KDS freshness SLO
+  # S-113 (docs/runbooks/alerting.md): the on-call rota for paging tools, GET /api/v1/ops/oncall[.ics]; empty = off (404)
+  oncall.export.token: ${ONCALL_EXPORT_TOKEN:}
   studio.base-url: ${STUDIO_ORIGIN:http://localhost:3100}      # invitation links, Stripe return URLs
   # S-76: the consumer site that serves the website embed script (<site>/embed.js) shown in the Studio's snippet
   developer.embed.site-origin: ${CONSUMER_ORIGIN:http://localhost:3000}

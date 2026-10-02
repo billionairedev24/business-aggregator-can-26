@@ -15,12 +15,17 @@ dependencies {
     compileOnly("jakarta.servlet:jakarta.servlet-api")
     // S-33/S-72: EgressDnsResolver is an HttpClient 5 resolver; the apps that make outbound calls bring the client.
     compileOnly("org.apache.httpcomponents.client5:httpclient5")
+    // S-113: the outbox backlog gauges (OutboxBacklog) in the apps with a Modulith JDBC event registry (api, auth).
+    compileOnly("org.springframework:spring-jdbc")
+    compileOnly("io.micrometer:micrometer-core")
     testImplementation("org.springframework.modulith:spring-modulith-events-api")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.apache.httpcomponents.client5:httpclient5")
     testImplementation("org.springframework.boot:spring-boot-starter-opentelemetry")
     testImplementation("org.springframework:spring-web")
     testImplementation("jakarta.servlet:jakarta.servlet-api")
+    testImplementation("org.springframework:spring-jdbc")
+    testImplementation("io.micrometer:micrometer-core")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     // S-111 test fixture shared by the apps' tests: an OTLP/HTTP receiver that decodes what the apps export.
     testFixturesImplementation(libs.otel.proto)

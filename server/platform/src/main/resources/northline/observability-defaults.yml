@@ -31,6 +31,15 @@ management:
       http.server.requests: true
       http.client.requests: true
       northline: true
+    # S-113: exact buckets at the latency SLOs' thresholds (deploy/observability/slo, docs/runbooks/alerting.md), so a
+    # burn-rate rule counts "good" requests with one bucket instead of interpolating between the default ones.
+    distribution.slo:
+      http.server.requests: 1s,2500ms           # sign-in ≤ 1 s, checkout ≤ 2.5 s
+      northline.kds.ticket_delivery: 5s         # a food order on the kitchen's bus within 5 s
+      northline.studio.live.probe: 2s           # the live bus delivers within 2 s (KDS freshness)
+      northline.payouts.delay: 1h               # a scheduled payout within 1 h of the business's payout time
+    distribution.maximum-expected-value:
+      northline.payouts.delay: 1d
   observations:
     # Spring Security's filter-chain spans double every request's span count and say little; the request span stays.
     enable.spring.security: false

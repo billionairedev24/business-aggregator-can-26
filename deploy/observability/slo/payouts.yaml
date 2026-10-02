@@ -1,0 +1,57 @@
+# S-113 SLOs as code (docs/runbooks/alerting.md) — see sign-in.yaml. The payout run is the api's payments job
+# (every minute; JobRuns), the timeliness the scheduled payouts' delay after the business's payout time
+# (PaymentMetrics). A run that never happens is not an "error" here: NorthlinePayoutRunStalled (northline-alerts.yml).
+version: "prometheus/v1"
+service: "northline-payouts"
+labels:
+  owner: platform
+  journey: payouts
+slos:
+  - name: "run-success"
+    objective: 99
+    description: "Payout job runs (scheduled payouts and settlement of payouts in transit) that finish without an error."
+    sli:
+      events:
+        error_query: |
+          sum(rate(northline_jobs_runs_total{job="payments.payouts",outcome="failed"}[{{.window}}]))
+        total_query: |
+          sum(rate(northline_jobs_runs_total{job="payments.payouts"}[{{.window}}]))
+    alerting:
+      name: NorthlinePayoutRunFailureBurn
+      labels:
+        category: availability
+      annotations:
+        summary: "Failing payout runs are burning the 30-day error budget (99 %)"
+        runbook_url: "https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/payout-run.md"
+      page_alert:
+        labels:
+          severity: page
+      ticket_alert:
+        labels:
+          severity: ticket
+  - name: "timeliness"
+    objective: 99
+    description: "Scheduled payouts sent within 1 h of the business's payout time (its own time zone)."
+    sli:
+      events:
+        error_query: |
+          (
+            sum(rate(northline_payouts_delay_seconds_count{kind="scheduled"}[{{.window}}]))
+            -
+            sum(rate(northline_payouts_delay_seconds_bucket{kind="scheduled",le=~"3600(\\.0)?"}[{{.window}}]))
+          )
+        total_query: |
+          sum(rate(northline_payouts_delay_seconds_count{kind="scheduled"}[{{.window}}]))
+    alerting:
+      name: NorthlinePayoutTimelinessBurn
+      labels:
+        category: freshness
+      annotations:
+        summary: "Late scheduled payouts are burning the 30-day error budget (99 %)"
+        runbook_url: "https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/payout-timeliness.md"
+      page_alert:
+        labels:
+          severity: page
+      ticket_alert:
+        labels:
+          severity: ticket

@@ -270,6 +270,11 @@ Notes:
   `db/seed-dev/V119__dev_markets.sql`, a few outside every market for the waitlist) and
   names the device's position when it is within 3 km of one. To try Google from a laptop:
   `PLACES_PROVIDER=google GOOGLE_MAPS_API_KEY=…` in `server/.env` ([google-maps.md](google-maps.md)).
+- **Alerting and on-call (S-113):** nothing pages locally. `make obs-rules-check` validates the alert rules, SLOs and
+  routing offline (Python; promtool, amtool and Sloth from `PATH` or Docker). The on-call rota export is off until
+  `ONCALL_EXPORT_TOKEN` is set in `server/.env` (any string, e.g. `local-oncall-token`); then
+  `curl -H 'Authorization: Bearer local-oncall-token' localhost:8080/api/v1/ops/oncall` lists the console rota's
+  shifts. `LIVE_PROBE_INTERVAL` (30 s) paces the live bus probe. [alerting.md](alerting.md)
 - **Console delivery map (S-81):** without `CONSOLE_MAP_TILES` the ops map draws the zones and couriers on a plain
   grid. To see a basemap, set an https XYZ tile template in `server/.env` ([README § Console map](README.md#console-map-s-81)).
 - **Your own Kafka:** create the topics with `make kafka-topics` (`-plan`, `-verify`; `make kafka-topics-list` prints

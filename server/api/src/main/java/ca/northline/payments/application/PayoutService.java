@@ -13,6 +13,7 @@ import ca.northline.shared.RuleViolation;
 import ca.northline.shared.stripe.StripeIdempotencyKeys;
 import java.text.NumberFormat;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -44,6 +45,7 @@ class PayoutService implements ViewPayouts, MovePayouts, PayoutPlan, RecentPayou
     private final ApplicationEventPublisher events;
     private final Clock clock;
     private final BusinessTime time;
+    private final PaymentMetrics metrics;
 
     @Override
     public Overview overview(String merchantId) {
@@ -217,6 +219,7 @@ class PayoutService implements ViewPayouts, MovePayouts, PayoutPlan, RecentPayou
                     account,
                     null,
                     now));
+            metrics.scheduledPayoutSent(Duration.between(payoutTime, now)); // S-113 timeliness SLI
             sent++;
         }
         return sent;

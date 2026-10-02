@@ -68,6 +68,9 @@ northline:
     - { group: cert-manager.io, kind: Certificate }
     - { group: rbac.authorization.k8s.io, kind: Role }             # S-31: the api's custom-domain reconciler, this
     - { group: rbac.authorization.k8s.io, kind: RoleBinding }      # namespace only
+    - { group: monitoring.coreos.com, kind: PrometheusRule }       # S-113: alerting.enabled — alert rules (operator)
+    - { group: monitoring.coreos.com, kind: AlertmanagerConfig }   # S-113: severity routing (operator)
+    - { group: monitoring.googleapis.com, kind: Rules }            # S-113: alert rules (Google Managed Prometheus)
   # S-31: objects the api's custom-domain reconciler writes at run time (not in Git, on purpose): not "orphaned".
   runtimeResources:
     - { group: gateway.networking.k8s.io, kind: Gateway, name: "northline-custom-*" }

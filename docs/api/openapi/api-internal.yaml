@@ -5,8 +5,9 @@ info:
     url: https://northline.ca
   description: "Not for clients: callbacks from providers (Stripe, Google and Microsoft\
     \ calendars, Shopify / Square / Lightspeed), each authenticated by the provider's\
-    \ signature or a single-use state instead of a token; signed email links; and\
-    \ the `local`-only dev tools. Never published outside local, dev and staging."
+    \ signature or a single-use state instead of a token; signed email links; the\
+    \ on-call rota for paging tools (its own shared token, S-113); and the `local`-only\
+    \ dev tools. Never published outside local, dev and staging."
   license:
     identifier: LicenseRef-Northline
     name: Proprietary
@@ -139,6 +140,60 @@ paths:
           description: OK
       tags:
       - email-unsubscribe-controller
+  /api/v1/ops/oncall:
+    get:
+      description: "The rota from 12 h ago to 8 days ahead and who is on call now,\
+        \ with each person's email. Authorization: Bearer <ONCALL_EXPORT_TOKEN>. 404\
+        \ when the export is not configured."
+      operationId: oncallExportJson
+      parameters:
+      - in: header
+        name: Authorization
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: token
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+          description: OK
+      summary: Who is on call (for paging tools)
+      tags:
+      - oncall-export-controller
+  /api/v1/ops/oncall.ics:
+    get:
+      description: "One event per shift; SUMMARY is the person's email. Authorization:\
+        \ Bearer <ONCALL_EXPORT_TOKEN>, or ?token= for calendar clients. 404 when\
+        \ the export is not configured."
+      operationId: oncallExportCalendar
+      parameters:
+      - in: header
+        name: Authorization
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: token
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: object
+          description: OK
+      summary: The on-call rota as an iCalendar feed
+      tags:
+      - oncall-export-controller
   /api/v1/webhooks/calendar/google:
     post:
       operationId: calendarWebhookGoogle

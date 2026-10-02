@@ -22,5 +22,13 @@ obs-env: ## The OTEL_* variables that make an app you start yourself export to t
 obs-dashboards: ## Regenerate the Grafana dashboards (deploy/observability/grafana/dashboards.py)
 	@$(ROOT)/scripts/observability.sh dashboards
 
-obs-check: ## Dashboards up to date, Collector config valid, alert rules' unit tests (Docker)
+obs-check: ## Dashboards up to date, Collector config valid (Docker), then obs-rules-check
 	@$(ROOT)/scripts/observability.sh check
+
+# S-113 alerting and on-call (docs/runbooks/alerting.md): SLOs as code (Sloth specs → burn-rate rules), rule unit tests.
+.PHONY: obs-slo obs-rules-check
+obs-slo: ## Regenerate the SLO burn-rate rules from deploy/observability/slo (Sloth) and the chart's copies
+	@$(ROOT)/scripts/observability.sh slo
+
+obs-rules-check: ## Offline: alerts' severity/runbooks, SLO drift, promtool check+test rules, amtool (tools or Docker)
+	@$(ROOT)/scripts/observability.sh rules-check
