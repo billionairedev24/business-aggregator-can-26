@@ -6797,7 +6797,9 @@ Branch `ops/s-113-alerting`. **No migration** (the V280–V284 range offered is 
   cached 5 min). Modules declare where they keep sealed values as `SealedColumn` beans (table, id, key-ref, wrapped-key,
   ciphertext columns, context prefix): availability `calendar_links`, catalogue `integrations`, food `pos_connections`,
   booking `access_notes` (its context prefix moved to `CustomerBookingStore.ACCESS_NOTE_CONTEXT` so the job and the
-  service share it). `KeyRewrap` (shared.crypto) runs every `KMS_REWRAP_EVERY` (1 h, first after 2 min) on every
+  service share it), and after the merge with S-105 privacy `requests` (`sealed_*`, prefix
+  `PrivacyRequestStore.SEALED_CONTEXT`). S-105's export bundles (object storage, 7 days) are not re-wrapped: the old key
+  stays enabled until they expired. A failed row is reported with its table, column and id (`Outcome.failedRows`). `KeyRewrap` (shared.crypto) runs every `KMS_REWRAP_EVERY` (1 h, first after 2 min) on every
   replica, ≤ 200 rows per table, updating only while the row still has the old reference (no coordination needed);
   metric `northline.crypto.rewrapped{table,outcome}`; `stale()` counts what is left. **Google Cloud references are now
   the key version** that encrypted (`EncryptResponse.name`), decrypt goes to the crypto key — so a new primary version

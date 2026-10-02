@@ -19,6 +19,9 @@ import org.jspecify.annotations.Nullable;
 /** Outbound port: {@code privacy.requests} and {@code privacy.erasure_steps} (V270). */
 public interface PrivacyRequestStore {
 
+    /** A request's sealed contact and corrections use this + the request id as context (the key re-wrap too, S-115). */
+    String SEALED_CONTEXT = "privacy-request:";
+
     /** Inserts the request; returns it with its number. */
     Request insert(Request request);
 

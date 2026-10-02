@@ -1,6 +1,7 @@
 package ca.northline.shared.crypto;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,8 +36,20 @@ public class KeyRewrap {
         this.batch = batch;
     }
 
-    /** What one run did per table. */
-    public record Outcome(int rewrapped, int failed) {}
+    /**
+     * What one run did per table.
+     *
+     * @param failedRows ids of the rows that couldn't be re-wrapped (at most 20), for the log and the operator
+     */
+    public record Outcome(int rewrapped, int failed, List<String> failedRows) {
+        public Outcome {
+            failedRows = List.copyOf(failedRows);
+        }
+
+        public Outcome(int rewrapped, int failed) {
+            this(rewrapped, failed, List.of());
+        }
+    }
 
     @Scheduled(
             fixedDelayString = "${northline.crypto.rewrap-every:1h}",
@@ -57,15 +70,20 @@ public class KeyRewrap {
         for (var column : columns) {
             var rewrapped = 0;
             var failed = 0;
+            var failedRows = new ArrayList<String>();
             for (var row : staleRows(column, current)) {
                 try {
                     var fresh = sealer.rewrap(row.sealed(), column.context(row.id()));
                     rewrapped += replace(column, row, fresh);
                 } catch (RuntimeException e) {
                     failed++;
+                    if (failedRows.size() < 20) {
+                        failedRows.add(row.id());
+                    }
                     log.warn(
-                            "Key re-wrap: {} {} (wrapped by {}) failed: {}",
+                            "Key re-wrap: {}.{} row {} (wrapped by {}) failed: {}",
                             column.table(),
+                            column.wrappedKey(),
                             row.id(),
                             row.sealed().keyRef(),
                             e.toString());
@@ -82,7 +100,7 @@ public class KeyRewrap {
                         current,
                         failed);
             }
-            outcomes.put(column.table(), new Outcome(rewrapped, failed));
+            outcomes.put(column.table(), new Outcome(rewrapped, failed, failedRows));
         }
         return outcomes;
     }

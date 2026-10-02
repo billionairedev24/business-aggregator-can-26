@@ -217,8 +217,10 @@ key name), or the Key Vault key version URL.
 200 rows per table at a time, every value whose reference isn't the current one: unwrap with the old key, wrap with
 the current key, store the new wrapped data key. The ciphertext never changes, the plaintext never leaves memory.
 Tables come from the modules (`SealedColumn` beans): `availability.calendar_links`, `catalogue.integrations`,
-`food.pos_connections`, `booking.access_notes`. Metric `northline_crypto_rewrapped_total{table,outcome}`; log
-`Key re-wrap: <table> — N re-wrapped with <ref>, M failed`. Slot holds in Valkey (sealed checkout drafts, ≤ 15 min)
+`food.pos_connections`, `booking.access_notes`, `privacy.requests` (S-105: the requester's contact and corrections).
+S-105's access-export bundles are sealed too but live in object storage only `PRIVACY_EXPORT_TTL` (7 days): they are
+not re-wrapped — keep the old key enabled until the last bundle built before the rotation has expired. Metric `northline_crypto_rewrapped_total{table,outcome}`; log
+`Key re-wrap: <table> — N re-wrapped with <ref>, M failed`, and per failing row `Key re-wrap: <table>.<column> row <id> (wrapped by <ref>) failed: …`. Slot holds in Valkey (sealed checkout drafts, ≤ 15 min)
 expire on their own.
 
 **Symptoms that call for it.** Yearly; the `tokens` key (or `KMS_LOCAL_KEY`) may have leaked; someone with decrypt on it
@@ -274,7 +276,8 @@ run is 2 minutes after start), or set `KMS_REWRAP_EVERY=5m` for the day.
 select 'availability.calendar_links' as t, token_ref as ref, count(*) from availability.calendar_links where refresh_token_enc is not null group by 2
 union all select 'catalogue.integrations', token_ref, count(*) from catalogue.integrations where credentials_enc is not null group by 2
 union all select 'food.pos_connections', token_ref, count(*) from food.pos_connections where credentials_enc is not null group by 2
-union all select 'booking.access_notes', key_ref, count(*) from booking.access_notes group by 2;
+union all select 'booking.access_notes', key_ref, count(*) from booking.access_notes group by 2
+union all select 'privacy.requests', sealed_key_ref, count(*) from privacy.requests where sealed_data is not null group by 2;
 ```
 
 Every row shows the new reference (`local:<new fingerprint>`, the new ARN, `…/cryptoKeyVersions/<new>`, the new Key
@@ -302,7 +305,7 @@ authenticator. Neither has been built (open item).
 | date | what was run | outcome |
 |---|---|---|
 | 2026-10-02 | `KeyRewrapTest.rotateTheLocalKey_rewrapEverything_thenTheOldKeyCanGo` — PostGIS (Testcontainers), the full api context: three values sealed under the old local key; the api's sealer rebuilt with a new key and the old one as previous; the job run in batches of 2 | **passed**: old values readable meanwhile, 2 + 1 re-wrapped, `stale()` 0, ciphertexts unchanged, the metric counted 3, the new key alone opens everything |
-| 2026-10-02 | `KeyRewrapTest.theModulesDeclareTheirSealedColumns_andTheQueriesRunOnTheRealSchema` | the four modules' tables are found and their columns queried on the migrated schema; a run over them fails nothing |
+| 2026-10-02 | `KeyRewrapTest.theModulesDeclareTheirSealedColumns_andARotationReWrapsThemOnTheRealSchema` (after the merge with S-105) | the five modules' tables are found on the migrated schema; a privacy request sealed under another key is re-wrapped with the privacy module's context and opens with the api's sealer; the only rows that fail are other test classes' 1-byte placeholders, reported by table, column and row id |
 | 2026-10-02 | `EnvelopeSealerTest` (+ S-115 cases): local rotation with a previous key; Google Cloud key versions (the reference is the version, decrypt on the key, a pre-S-115 key-name reference still opens, a new primary version makes a value due and the re-wrap moves it) over SDK mocks; `AwsKmsSealerLocalStackTest` (S-32, real KMS API in LocalStack) | **passed** |
 | — | **not exercised:** AWS automatic rotation, Cloud KMS and Key Vault versions against the real services (no cloud account), `CryptoConfiguration` reading `KMS_LOCAL_PREVIOUS_KEYS` from the environment in a running api (covered by the constructor the bean calls) | |
 
