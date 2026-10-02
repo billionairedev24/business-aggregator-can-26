@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.spotless) apply false
     alias(libs.plugins.errorprone) apply false
     alias(libs.plugins.jib) apply false
+    alias(libs.plugins.cyclonedx) apply false
 }
 
 val catalog = libs
@@ -26,7 +27,16 @@ subprojects {
     }
     repositories { mavenCentral() }
 
+    // S-104: Boot BOM properties overridden with patched versions (libs.versions.toml explains when to drop them)
+    extra["tomcat.version"] = catalog.versions.tomcat.get()
+    extra["jackson-bom.version"] = catalog.versions.jackson3.get()
+    extra["jackson-2-bom.version"] = catalog.versions.jackson2.get()
+
     the<io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension>().apply {
+        dependencies {
+            // Kafka clients' LZ4 (CVE-2026-59949)
+            dependency("at.yawk.lz4:lz4-java:${catalog.versions.lz4.java.get()}")
+        }
         imports {
             mavenBom("org.springframework.modulith:spring-modulith-bom:${catalog.versions.spring.modulith.get()}")
             mavenBom("org.springframework.cloud:spring-cloud-dependencies:${catalog.versions.spring.cloud.get()}")
@@ -125,6 +135,8 @@ val gitRevision: String = providers.environmentVariable("GIT_SHA").orElse(
 
 configure(subprojects.filter { it.name in appImages }) {
     apply(plugin = "com.google.cloud.tools.jib")
+    // S-104: `./gradlew cyclonedxDirectBom` writes each app's runtime SBOM (make security-sbom, docs/security/)
+    apply(plugin = "org.cyclonedx.bom")
     val app = appImages.getValue(name)
     extensions.configure<com.google.cloud.tools.jib.gradle.JibExtension> {
         from {

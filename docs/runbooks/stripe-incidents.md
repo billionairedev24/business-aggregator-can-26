@@ -375,5 +375,5 @@ brands and its acquirer) the same day; customers who paid during the window and 
 privacy incident procedure requires (real risk of significant harm); keep a record of the breach (PIPEDA s. 10.3).
 
 **Exercised:** **not exercised** end to end (no deployed site, no log backend). The detection pieces ran in tests on
-2026-10-02: `csp.test.ts` (report parsing, rate cap), `CardDataRegressionTest` (refusal, nothing stored, masked log),
+2026-10-02: `securityHeaders.test.ts` (the policy, the inventory, report parsing, rate cap), `CardDataRegressionTest` (refusal, nothing stored, masked log),
 `CardDataScanTest`.

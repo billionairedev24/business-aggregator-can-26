@@ -35,6 +35,12 @@ public interface PrivacyRequestStore {
 
     boolean hasOpen(String subjectId, RequestType type);
 
+    /** S-104: verification codes texted to this person since {@code since}, across all their requests. */
+    int textsSince(String subjectId, Instant since);
+
+    /** S-104: records a texted code (and forgets texts older than two days). */
+    void textSent(String subjectId, String requestId, Instant at);
+
     /** The person's requests, newest first. */
     List<Request> of(String subjectId);
 

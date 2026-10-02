@@ -3,12 +3,15 @@ package ca.northline.email;
 import java.net.URI;
 import java.text.MessageFormat;
 import java.time.ZoneId;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
+import java.util.Set;
+import java.util.regex.Pattern;
 import org.jspecify.annotations.Nullable;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
@@ -89,6 +92,7 @@ public final class EmailTemplates {
                 content.purpose().needsUnsubscribe() && unsubscribe != null ? unsubscribe.toString() : "");
         variables.put("lang", language.toLanguageTag());
         variables.put("s", EmailBrand.styles());
+        requireCodes(content.template(), variables);
         var context = new Context(language, variables);
         var html = engine.process(content.template() + ".html", context);
         var text = engine.process(content.template() + ".txt", context).strip() + "\n";
@@ -97,6 +101,41 @@ public final class EmailTemplates {
             CommercialMessageCheck.email(content.template(), rendered, legalName, mailingAddress, unsubscribe);
         }
         return rendered;
+    }
+
+    /**
+     * S-104: the variables templates turn into message keys ({@code #{__${'payout-failed.heading.' + outcome}__}}).
+     * Thymeleaf pre-processes {@code __…__} into the expression itself, so such a value must be a plain code — text
+     * someone typed (a reviewer's reason, a note) there would be evaluated as an expression.
+     */
+    static final Set<String> KEY_VARIABLES =
+            Set.of("decision", "phase", "change", "kind", "outcome", "role", "action", "rule", "settingsPlace");
+
+    /** Lists whose items (or items' {@code code}) become message keys: {@code reasons}, {@code checks}. */
+    static final Set<String> KEY_LISTS = Set.of("reasons", "checks");
+
+    private static final Pattern CODE = Pattern.compile("[A-Za-z0-9][A-Za-z0-9_.-]{0,63}");
+
+    static void requireCodes(String template, Map<String, Object> variables) {
+        for (var name : KEY_VARIABLES) {
+            var value = variables.get(name);
+            // empty is fine (e.g. a dispute update before its decision); anything else must be a code
+            if (value != null
+                    && !String.valueOf(value).isEmpty()
+                    && !CODE.matcher(String.valueOf(value)).matches()) {
+                throw new IllegalArgumentException(template + ": " + name + " must be a code, not text");
+            }
+        }
+        for (var name : KEY_LISTS) {
+            if (variables.get(name) instanceof Collection<?> items) {
+                for (var item : items) {
+                    var code = item instanceof Map<?, ?> m ? m.get("code") : item;
+                    if (code == null || !CODE.matcher(String.valueOf(code)).matches()) {
+                        throw new IllegalArgumentException(template + ": every " + name + " item must be a code");
+                    }
+                }
+            }
+        }
     }
 
     /** A small standalone page in the email look ({@code email/templates/page-<name>.html}), e.g. unsubscribe. */
@@ -110,6 +149,8 @@ public final class EmailTemplates {
         variables.put("contact", contact);
         variables.putIfAbsent("settingsPlace", "studio");
         variables.putIfAbsent("channel", "email");
+        // pages pre-process only settingsPlace (their `action` is the form's URL, not a key)
+        requireCodes("page-" + name, Map.of("settingsPlace", String.valueOf(variables.get("settingsPlace"))));
         return engine.process("page-" + name + ".html", new Context(language, variables));
     }
 

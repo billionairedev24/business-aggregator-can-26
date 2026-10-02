@@ -22,7 +22,7 @@ roles (see [saq-a.md § Who signs](saq-a.md#who-signs-and-what-needs-a-real-stri
 | 12 | **Dashboard access** | — | two-step authentication for every member; roles Administrator (2), Developer, Support specialist, View only; leavers removed the same day (with a key roll if they were Developers) | **not yet** — owner: payments owner |
 | 13 | **Stripe's PCI documents** | — | download Stripe's PCI DSS **Attestation of Compliance** (service provider) and keep it with this folder (requirement 12.8.4, yearly); Stripe's dashboard also offers its own SAQ A questionnaire under Settings › Compliance, pre-filled for Elements users — answer it with [saq-a.md](saq-a.md) | **not yet** |
 | 14 | **No card data on Northline** | `CardDataGuard` (422 `card_data` on any JSON body with a PAN, track data, CVC or card-named field), `CardDataScanTest` (schema, contents, seeds, contracts, logs, clients), Redactor and Collector rules, `CardDataRegressionTest` | — | done |
-| 15 | **Payment-page script control** | Studio enforced CSP; consumer report-only CSP from the script inventory + `/csp-report` ([payment-page-scripts.md](payment-page-scripts.md)) | — | partly; enforcement and alerting **not yet** |
+| 15 | **Payment-page script control** | both apps enforce a CSP; the consumer's (S-104) builds `script-src` from the script inventory and reports to `/csp-report` ([payment-page-scripts.md](payment-page-scripts.md)) | — | partly; nonces (no `'unsafe-inline'`) and alerting **not yet** |
 
 ## Responsibility split (requirement 12.8.5)
 

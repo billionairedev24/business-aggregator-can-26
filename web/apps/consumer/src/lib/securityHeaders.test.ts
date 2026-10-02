@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { SCRIPT_INVENTORY, contentSecurityPolicy, createCspReporter, cspHeaders, cspReportLines, isCspReportPath } from '../../server/csp.mjs';
+import { SCRIPT_INVENTORY, contentSecurityPolicy, createCspReporter, cspReportLines, isCspReportPath, securityHeaders } from '../../server/security-headers.mjs';
 
 const SRC = resolve(__dirname, '..');
 
@@ -13,8 +13,38 @@ function sources(dir: string): string[] {
   });
 }
 
-describe('content security policy (S-110, payment-page scripts)', () => {
-  const policy = contentSecurityPolicy({ authOrigin: 'https://auth.northline.test/' });
+const directives = (csp: string) => Object.fromEntries(csp.split('; ').map((d) => [d.split(' ')[0], d.split(' ').slice(1)]));
+
+describe('consumer security headers (S-104)', () => {
+  it('sends a Content-Security-Policy with every answer, next to the framing and sniffing headers', () => {
+    const headers = securityHeaders({ NL_AUTH_ORIGIN: 'https://auth.staging.northline.ca' });
+    expect(headers['x-frame-options']).toBe('DENY');
+    expect(headers['x-content-type-options']).toBe('nosniff');
+    expect(headers['content-security-policy']).toBe(contentSecurityPolicy({ NL_AUTH_ORIGIN: 'https://auth.staging.northline.ca' }));
+  });
+
+  it('keeps the site out of frames, forbids plugins and <base>, and pins scripts to the site and Stripe', () => {
+    const d = directives(contentSecurityPolicy({ NL_AUTH_ORIGIN: 'https://auth.staging.northline.ca' }));
+    expect(d['frame-ancestors']).toEqual(["'none'"]);
+    expect(d['object-src']).toEqual(["'none'"]);
+    expect(d['base-uri']).toEqual(["'self'"]);
+    expect(d['script-src']).toEqual(["'self'", "'unsafe-inline'", 'https://js.stripe.com']);
+  });
+
+  it('lets the browser reach and post to the auth origin only (its origin, never a path)', () => {
+    const d = directives(contentSecurityPolicy({ NL_AUTH_ORIGIN: 'https://auth.staging.northline.ca/some/path' }));
+    expect(d['connect-src']).toContain('https://auth.staging.northline.ca');
+    expect(d['form-action']).toEqual(["'self'", 'https://auth.staging.northline.ca']);
+  });
+
+  it('falls back to the local auth server when NL_AUTH_ORIGIN is missing or not a URL', () => {
+    expect(directives(contentSecurityPolicy({}))['form-action']).toEqual(["'self'", 'http://localhost:9000']);
+    expect(directives(contentSecurityPolicy({ NL_AUTH_ORIGIN: 'not a url' }))['form-action']).toEqual(["'self'", 'http://localhost:9000']);
+  });
+});
+
+describe('payment-page scripts and violation reports (S-110)', () => {
+  const policy = contentSecurityPolicy({ NL_AUTH_ORIGIN: 'https://auth.northline.test/' });
   const directive = (name: string) => policy.split('; ').find(d => d.startsWith(`${name} `))?.split(' ').slice(1) ?? [];
 
   it('lets scripts in only from this site and the inventory', () => {
@@ -27,9 +57,11 @@ describe('content security policy (S-110, payment-page scripts)', () => {
     expect(directive('report-uri')).toEqual(['/csp-report']);
   });
 
-  it('is sent report-only with a reporting endpoint', () => {
-    const headers = cspHeaders({ authOrigin: 'https://auth.northline.test' });
-    expect(headers['content-security-policy-report-only']).toContain("default-src 'self'");
+  it('is one enforced policy that reports to /csp-report', () => {
+    const headers = securityHeaders({ NL_AUTH_ORIGIN: 'https://auth.northline.test' });
+    expect(headers['content-security-policy']).toContain("default-src 'self'");
+    expect(headers['content-security-policy-report-only']).toBeUndefined();
+    expect(directive('report-to')).toEqual(['csp']);
     expect(headers['reporting-endpoints']).toBe('csp="/csp-report"');
     expect(isCspReportPath('/csp-report')).toBe(true);
     expect(isCspReportPath('/csp-report/x')).toBe(false);

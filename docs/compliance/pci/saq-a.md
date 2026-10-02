@@ -32,7 +32,7 @@ iframe served from `js.stripe.com`) on the website, Stripe PaymentSheet (Stripe'
 | E4 | Has reviewed the TPSP's PCI DSS attestation and confirmed it covers the services used | **Not yet** — download Stripe's AOC once the account exists | [stripe-review.md](stripe-review.md) #13 | payments owner |
 | E5 | Any account data retained is on paper and not received electronically | Not Applicable — no paper records of card data | — | ops lead |
 | E6 | Every element of the payment page(s) delivered to the consumer's browser originates only and directly from a PCI DSS compliant TPSP (embedded iframe) | Yes — the card fields are Stripe's iframe; the hosting page is Northline's | `Payment.tsx`, `StripeCard.tsx`, `CardForm.tsx`; app: PaymentSheet | engineering lead |
-| E7 | The merchant has confirmed its site is not susceptible to attacks from scripts that could affect its e-commerce systems (added January 2025, in place of 6.4.3 and 11.6.1) | **Not yet** — supported by the script inventory, the Studio's enforced CSP and the consumer's report-only CSP; confirm after the consumer CSP is enforced and violations alert | [payment-page-scripts.md](payment-page-scripts.md) | security lead |
+| E7 | The merchant has confirmed its site is not susceptible to attacks from scripts that could affect its e-commerce systems (added January 2025, in place of 6.4.3 and 11.6.1) | **Not yet** — supported by the script inventory and both apps' enforced CSPs (the consumer's from S-104, generated from the inventory, reporting to `/csp-report`); confirm once the consumer `script-src` drops `'unsafe-inline'` (nonces) and violations alert | [payment-page-scripts.md](payment-page-scripts.md) | security lead |
 
 ## Requirements
 
@@ -53,9 +53,9 @@ iframe served from `js.stripe.com`) on the website, Stripe PaymentSheet (Stripe'
 
 | req. | requirement | answer | evidence | owner |
 |---|---|---|---|---|
-| 6.3.1 | Security vulnerabilities are identified from industry sources and risk-ranked | **Not yet** — no dependency or image vulnerability scanning runs (CI is manual-only); S-104 (security) owns it | CI workflows `.github/workflows/*.yml` | security lead |
+| 6.3.1 | Security vulnerabilities are identified from industry sources and risk-ranked | **Not yet** as a routine — the tooling exists (S-104: `make security-scan` = osv-scanner over CycloneDX SBOMs and the pnpm lockfiles, semgrep, gitleaks, checkov; findings risk-ranked in `docs/security/findings.md`), but CI is manual-only, so nothing runs on a schedule | `.github/workflows/security.yml`, `make/security.mk`, [findings.md](../../security/findings.md) | security lead |
 | 6.3.3 | Critical patches installed within one month of release | **Not yet** — follows 6.3.1; base images and dependencies are pinned (lock files, image digests), so patches are deliberate pull requests | `web/pnpm-lock.yaml`, `server/gradle/libs.versions.toml`, Dockerfiles | security lead |
-| 6.4.3 | *(removed from SAQ A in January 2025; kept as the means for E7)* Payment-page scripts authorised, integrity-assured, inventoried | In Place for the inventory and authorisation; integrity by origin only (Stripe.js can't take SRI) | [payment-page-scripts.md](payment-page-scripts.md), `SCRIPT_INVENTORY` + `csp.test.ts` | web lead |
+| 6.4.3 | *(removed from SAQ A in January 2025; kept as the means for E7)* Payment-page scripts authorised, integrity-assured, inventoried | In Place for the inventory and authorisation; integrity by origin only (Stripe.js can't take SRI) | [payment-page-scripts.md](payment-page-scripts.md), `SCRIPT_INVENTORY` + `securityHeaders.test.ts` | web lead |
 
 ### Requirement 8 — identify users and authenticate access
 
@@ -90,7 +90,7 @@ accounts and cluster, the source repository and CI, the container registry.
 |---|---|---|---|---|
 | 11.3.2 | External vulnerability scans by a PCI SSC Approved Scanning Vendor (ASV) at least every three months, passing | **Not yet** — needs the public hosts (site, api, auth, Studio) and an ASV contract; Stripe's dashboard can connect an ASV | — | security lead |
 | 11.3.2.1 | External scans after any significant change | **Not yet** — follows 11.3.2 | — | security lead |
-| 11.6.1 | *(removed from SAQ A in January 2025; kept as the means for E7)* Unauthorised changes to payment pages detected | Partly — report-only CSP + `/csp-report` log lines; alerting and a weekly synthetic check not yet | [payment-page-scripts.md § Change detection](payment-page-scripts.md#change-detection-1161) | SRE lead |
+| 11.6.1 | *(removed from SAQ A in January 2025; kept as the means for E7)* Unauthorised changes to payment pages detected | Partly — enforced CSP with violation reports logged from `/csp-report`; alerting and a weekly synthetic check not yet | [payment-page-scripts.md § Change detection](payment-page-scripts.md#change-detection-1161) | SRE lead |
 
 ### Requirement 12 — policies and third-party service providers
 
@@ -108,9 +108,9 @@ accounts and cluster, the source repository and CI, the container registry.
 | item | owner | needs |
 |---|---|---|
 | E4 Stripe AOC reviewed; 12.8.4 yearly | payments owner | the Stripe account |
-| E7 site not susceptible to script attacks (enforce consumer CSP with nonces, alert on violations, weekly synthetic check) | security lead (web lead, SRE lead) | engineering work; a deployed site for the check |
+| E7 site not susceptible to script attacks (nonces so the consumer `script-src` drops `'unsafe-inline'`, alert on violations, weekly synthetic check) | security lead (web lead, SRE lead) | engineering work; a deployed site for the check |
 | 2.2.2 vendor defaults in the cloud accounts | platform/SRE lead | the cloud accounts |
-| 6.3.1, 6.3.3 vulnerability identification and patching | security lead | S-104, a scanner in CI |
+| 6.3.1, 6.3.3 vulnerability identification and patching | security lead | a scheduled run of S-104's `security-scan`, a patch window |
 | 8.2.1, 8.2.5, 8.3.6, 8.3.7 accounts, leavers, IdP policy | platform/SRE lead, ops lead | the IdP and accounts |
 | 11.3.2, 11.3.2.1 ASV scans | security lead | public hosts, an ASV |
 | 12.8.2, 12.8.3 TPSP agreements and process | payments owner, legal, security lead | the Stripe account, cloud contract |

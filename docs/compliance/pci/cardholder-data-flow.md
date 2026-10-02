@@ -26,7 +26,7 @@ flowchart LR
   end
 
   subgraph Northline["Northline (Canadian cloud region)"]
-    NODE["consumer web server (Node)<br/>serves the payment pages, CSP"]
+    NODE["consumer web server (Node)<br/>serves the payment pages, enforced CSP"]
     BFF["consumer BFF"]
     API["api (payments module)<br/>CardDataGuard on every JSON body"]
     DB[("PostgreSQL<br/>ids, brand, last4, expiry")]
@@ -51,7 +51,7 @@ flowchart LR
 | from → to | carries | never carries | controls |
 |---|---|---|---|
 | customer → Stripe (Payment Element, PaymentSheet) | PAN, expiry, CVC, 3-D Secure challenge | — (this is the only place card data flows) | Stripe's iframe / native SDK; TLS 1.2+; CSP `frame-src` and `script-src` allow only Stripe |
-| consumer web server → browser | the pages, the app bundle, the policy headers | card fields of our own | `Content-Security-Policy-Report-Only` + `/csp-report` (consumer), enforced CSP (Studio); [payment-page-scripts.md](payment-page-scripts.md) |
+| consumer web server → browser | the pages, the app bundle, the policy headers | card fields of our own | enforced CSP on both (consumer: generated from the script inventory, reports to `/csp-report`); [payment-page-scripts.md](payment-page-scripts.md) |
 | browser / app → BFF → api | cart, checkout, the PaymentIntent and PaymentMethod ids, the step-up proof | PAN, CVC, track data | `CardDataGuard` refuses any JSON body that carries them (422 `card_data`) |
 | api → Stripe | amounts, currency, customer id, metadata (`northline_*` ids), idempotency keys | personal data beyond the Stripe Customer's `northline_user_id` | pinned API version, restricted key preferred, TLS ([stripe-review.md](stripe-review.md)) |
 | Stripe → api (responses, webhooks) | object ids, statuses, brand, last4, expiry, billing details on some objects | full PAN or CVC (Stripe never returns them) | signature verification, 5-minute tolerance, dedupe; personal fields dropped before storage (`StripeEventStore`) |

@@ -2,3 +2,4 @@ ca.northline.platform.PlatformAutoConfiguration
 ca.northline.platform.observability.ObservabilityAutoConfiguration
 ca.northline.platform.logging.LoggingAutoConfiguration
 ca.northline.platform.observability.OutboxMetricsAutoConfiguration
+ca.northline.platform.web.RequestSizeAutoConfiguration

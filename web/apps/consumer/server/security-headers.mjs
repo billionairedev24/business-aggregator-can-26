@@ -1,12 +1,14 @@
-// Content-Security-Policy of the consumer web (S-110, PCI DSS SAQ A — docs/compliance/pci/payment-page-scripts.md).
-// Card entry happens only in Stripe's Payment Element (an iframe from js.stripe.com), but the pages that host it must
-// not let another script in: that is the SAQ A eligibility criterion that replaced requirements 6.4.3 and 11.6.1.
+// Response headers the consumer server sets on every answer (S-104). The Studio and console get theirs from nginx
+// (web/docker/security-headers.inc.template); this is the same policy for the SSR app, plus a Content-Security-Policy.
 //
-// The policy is sent as Content-Security-Policy-Report-Only for now: TanStack Start's server rendering writes inline
-// hydration scripts without a nonce, so an enforced script-src would need 'unsafe-inline' anyway; what the report-only
-// policy buys is detection — any script, frame or connection from an origin outside the inventory below is reported
-// to POST /csp-report and logged as one JSON line (csp.violation) the log pipeline keeps and alerts on.
-// Enforcing it (with nonces) is the follow-up listed in saq-a.md.
+// script-src keeps 'unsafe-inline': the SSR document carries inline scripts (the public configuration, TanStack
+// Start's hydration state, JSON-LD) without nonces yet. The policy still pins where scripts, frames, forms and
+// connections may come from or go to, forbids plugins and <base> rewrites, and keeps the site out of frames.
+//
+// S-110 (PCI DSS SAQ A, docs/compliance/pci/payment-page-scripts.md): the third-party script origins come from
+// SCRIPT_INVENTORY — the payment-page script inventory — so no script origin can be allowed without being inventoried,
+// and every violation is reported to POST /csp-report (report-uri + Reporting API), which logs one JSON line per
+// violation (csp.violation) for the log pipeline to alert on. One policy, enforced; no second report-only policy.
 
 /** Every third-party script origin the consumer web may load, with why (the payment-page script inventory). */
 export const SCRIPT_INVENTORY = Object.freeze([
@@ -19,11 +21,21 @@ export const SCRIPT_INVENTORY = Object.freeze([
 ]);
 
 export const CSP_REPORT_PATH = '/csp-report';
+export const CSP_REPORT_MAX_BODY = 16 * 1024;
 const REPORT_GROUP = 'csp';
 
-/** The consumer web's policy. `authOrigin` is northline-auth (sign-in JSON API and form posts). */
-export function contentSecurityPolicy({ authOrigin } = {}) {
-  const auth = authOrigin ? ` ${new URL(authOrigin).origin}` : '';
+/** The auth origin the browser calls (JSON sign-in, form posts), from NL_AUTH_ORIGIN like the app's config. */
+function origin(value, fallback) {
+  try {
+    return new URL(value ?? fallback).origin;
+  } catch {
+    return new URL(fallback).origin;
+  }
+}
+
+/** The Content-Security-Policy of the consumer site for this auth origin. */
+export function contentSecurityPolicy(env = process.env) {
+  const auth = origin(env.NL_AUTH_ORIGIN, 'http://localhost:9000');
   const scripts = SCRIPT_INVENTORY.map(s => s.origin).join(' ');
   return [
     "default-src 'self'",
@@ -31,9 +43,9 @@ export function contentSecurityPolicy({ authOrigin } = {}) {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: blob: https:",
-    `connect-src 'self'${auth} https://api.stripe.com https://*.stripe.com`,
-    'frame-src https://js.stripe.com https://hooks.stripe.com https://*.stripe.com',
-    `form-action 'self'${auth}`,
+    `connect-src 'self' ${auth} https://api.stripe.com`,
+    'frame-src https://js.stripe.com https://hooks.stripe.com',
+    `form-action 'self' ${auth}`,
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "object-src 'none'",
@@ -42,17 +54,20 @@ export function contentSecurityPolicy({ authOrigin } = {}) {
   ].join('; ');
 }
 
-/** Headers for every answer: the report-only policy and where browsers send reports (Reporting API). */
-export function cspHeaders(options) {
+/** Every answer's security headers (lower-case names, as Node writes them). */
+export function securityHeaders(env = process.env) {
   return {
-    'content-security-policy-report-only': contentSecurityPolicy(options),
+    'x-content-type-options': 'nosniff',
+    'referrer-policy': 'strict-origin-when-cross-origin',
+    'x-frame-options': 'DENY',
+    'permissions-policy': 'camera=(), microphone=(), payment=(self), geolocation=(self)',
+    'cross-origin-opener-policy': 'same-origin-allow-popups',
+    'content-security-policy': contentSecurityPolicy(env),
     'reporting-endpoints': `${REPORT_GROUP}="${CSP_REPORT_PATH}"`,
   };
 }
 
 export const isCspReportPath = pathname => pathname === CSP_REPORT_PATH;
-
-const MAX_BODY = 16 * 1024;
 
 /** Origin and path of a reported URL — never its query or fragment (they can carry tokens or personal data). */
 function trimUrl(value) {
@@ -71,7 +86,7 @@ function trimUrl(value) {
  * — an array). Returns the lines; an unreadable body gives none.
  */
 export function cspReportLines(body) {
-  if (typeof body !== 'string' || body.length === 0 || body.length > MAX_BODY) return [];
+  if (typeof body !== 'string' || body.length === 0 || body.length > CSP_REPORT_MAX_BODY) return [];
   let parsed;
   try { parsed = JSON.parse(body); } catch { return []; }
   const reports = Array.isArray(parsed) ? parsed.filter(r => r?.type === 'csp-violation').map(r => r.body) : [parsed?.['csp-report']];
@@ -82,7 +97,7 @@ export function cspReportLines(body) {
     'csp.blocked': trimUrl(r['blocked-uri'] ?? r.blockedURL),
     'csp.document': trimUrl(r['document-uri'] ?? r.documentURL),
     'csp.source': trimUrl(r['source-file'] ?? r.sourceFile),
-    'csp.disposition': String(r.disposition ?? 'report').slice(0, 10),
+    'csp.disposition': String(r.disposition ?? 'enforce').slice(0, 10),
   }));
 }
 
@@ -94,7 +109,7 @@ export function createCspReporter({ log = line => console.log(line), perMinute =
   let windowStart = 0;
   let count = 0;
   return body => {
-    if (typeof body === 'string' && body.length > MAX_BODY) return 413;
+    if (typeof body === 'string' && body.length > CSP_REPORT_MAX_BODY) return 413;
     const t = now();
     if (t - windowStart >= 60_000) { windowStart = t; count = 0; }
     for (const line of cspReportLines(body)) {
@@ -105,5 +120,3 @@ export function createCspReporter({ log = line => console.log(line), perMinute =
     return 204;
   };
 }
-
-export const CSP_REPORT_MAX_BODY = MAX_BODY;

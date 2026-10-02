@@ -23,8 +23,9 @@ policy below covers the whole site, not only these routes.
 
 ## Script inventory (6.4.3)
 
-The source of truth is `SCRIPT_INVENTORY` in `web/apps/consumer/server/csp.mjs`; `src/lib/csp.test.ts` fails when the
-code loads a script from an origin that is not in it.
+The source of truth is `SCRIPT_INVENTORY` in `web/apps/consumer/server/security-headers.mjs` (the consumer site's one
+header file, S-104); `src/lib/securityHeaders.test.ts` fails when the code loads a script from an origin that is not
+in it.
 
 | script | origin | why | integrity |
 |---|---|---|---|
@@ -44,13 +45,15 @@ without being inventoried.
 | control | where | status |
 |---|---|---|
 | Studio: enforced CSP (`script-src 'self' https://js.stripe.com https://connect-js.stripe.com`, `frame-src` Stripe only, `object-src 'none'`) | `web/docker/security-headers.inc.template` | in place; `CardDataScanTest.theStudioPolicyLetsOnlyStripeScriptAndFrameIn` pins it |
-| Consumer web: `Content-Security-Policy-Report-Only` from the inventory, `report-uri /csp-report`, `Reporting-Endpoints` | `web/apps/consumer/server/csp.mjs`, `node-server.mjs` | in place (report-only) |
+| Consumer web: one **enforced** `Content-Security-Policy` (S-104) whose `script-src` comes from the inventory, with `report-uri /csp-report`, `report-to csp` and `Reporting-Endpoints`; `frame-src` and `connect-src` limited to Stripe's documented hosts | `web/apps/consumer/server/security-headers.mjs`, `node-server.mjs` | in place — `script-src` still allows `'unsafe-inline'` (below) |
 | Violation reports logged as one JSON line each (`event.dataset: csp.violation`, directive, blocked origin + path, document path — never a query string), at most 300 a minute per pod | `POST /csp-report` on the consumer web server | in place |
 | An alert on `csp.violation` lines for `script-src*` / `frame-src` / `connect-src` | log backend (S-112 ships the lines; S-113 alerting) | **not yet** — owner: SRE |
-| Enforce the consumer CSP: nonces for TanStack Start's inline scripts, then switch the header to `Content-Security-Policy` | consumer web | **not yet** — owner: web lead |
+| Drop `'unsafe-inline'` from the consumer `script-src`: nonces for TanStack Start's inline scripts (S104-09's follow-up), measured first with a report-only copy of the policy without `'unsafe-inline'` | consumer web | **not yet** — owner: web lead |
 | A weekly synthetic check of the payment pages as a browser receives them (headers and script list compared with the inventory) | CI schedule or an external monitor | **not yet** — owner: SRE; needs the public URLs |
 
-Why report-only first: TanStack Start writes its hydration scripts inline without a nonce, so an enforced
-`script-src` would need `'unsafe-inline'` anyway and an enforcing mistake would take checkout down. Report-only still
-detects the attack that matters for SAQ A — a script, frame or connection from an origin outside the inventory — and
-the alert turns that into an incident ([stripe-incidents.md § 6](../../runbooks/stripe-incidents.md#6-payment-page-tampering-or-card-data-found)).
+What the enforced policy does and doesn't stop today: a script, frame, form target or connection from an origin
+outside the inventory is **blocked** and reported — the classic skimmer that loads its code or sends card data to its
+own host. Because TanStack Start writes its hydration scripts inline without a nonce, `script-src` keeps
+`'unsafe-inline'`, so an attacker who can inject markup into our own HTML could still run an inline script (its
+exfiltration would still be blocked by `connect-src` / `form-action`). Nonces close that; until then the report and
+the alert turn any blocked attempt into an incident ([stripe-incidents.md § 6](../../runbooks/stripe-incidents.md#6-payment-page-tampering-or-card-data-found)).

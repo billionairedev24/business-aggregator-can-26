@@ -42,7 +42,7 @@ import org.springframework.web.bind.annotation.RestController;
  * </pre>
  *
  * 403 {@code step_up_required} for a stale or missing proof; 409 {@code request_open}, {@code not_awaiting}, {@code
- * code_locked}, {@code code_too_soon}, {@code no_mobile}, {@code not_withdrawable}, {@code closed}, {@code
+ * code_locked}, {@code code_too_soon}, {@code too_many_codes} (S-104), {@code no_mobile}, {@code not_withdrawable}, {@code closed}, {@code
  * export_not_ready}, {@code export_gone}, {@code account_erased}. Someone else's request is a 404.
  */
 @RestController

@@ -7,7 +7,7 @@
 pci-scan: ## S-110: no card data in the schema, data, seeds, contracts, logs or clients; the request guard (Docker)
 	$(GRADLE) :platform:test --tests '*CardDataTest' --tests '*RedactorTest' \
 		:api:test --tests '*CardDataGuardTest' --tests '*CardDataScanTest' --tests '*CardDataRegressionTest'
-	$(PNPM) --filter @northline/consumer exec vitest run src/lib/csp.test.ts
+	$(PNPM) --filter @northline/consumer exec vitest run src/lib/securityHeaders.test.ts
 
 .PHONY: legal-check
 legal-check: $(WEB_INSTALLED) ## S-106: every legal text matches its registered version; sign-offs cover the exact text
