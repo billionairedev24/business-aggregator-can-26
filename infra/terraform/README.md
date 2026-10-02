@@ -70,9 +70,9 @@ time before the key exists).
 | kms | `keys`, `key_users`, `deletion_protection` | `kms_provider`, `key_ids`, `key_refs` |
 | registry | `repositories`, `kms_key`, `readers`, `keep_images` | `registry_url`, `repository_urls` |
 | dns | `zone_name`, `record_writers` | `zone_id`, `zone_name`, `name_servers`, `cert_manager_dns01`, `external_dns` |
-| storage | `buckets`, `name_suffix`, `kms_key`, `writers`, `force_destroy` | `storage_provider`, `bucket_names`, `storage_region`, `storage_endpoint`, `storage_encryption_key` |
+| storage | `buckets`, `name_suffix`, `kms_key`, `writers`, `force_destroy`, `replica` (S-114) | `storage_provider`, `bucket_names`, `storage_region`, `storage_endpoint`, `storage_encryption_key`, `replica_bucket_names`, `replica_region` |
 | secrets | `secret_names`, `readers`, `kms_key`, `deletion_protection` | `secrets_provider`, `store`, `secret_refs` |
-| postgres | `network_id`, `subnet_ids`, `allowed_cidrs`, `kms_key`, `secret_store`, `deletion_protection`, `instance_size`, `storage_gb`, `high_availability`, `backup_retention_days`, `database_name`, `app_user`, `postgres_version` | `db_host`, `db_port`, `db_name`, `db_user`, `db_url`, `db_password_secret_ref`, `admin_secret_ref` |
+| postgres | `network_id`, `subnet_ids`, `allowed_cidrs`, `kms_key`, `secret_store`, `deletion_protection`, `instance_size`, `storage_gb`, `high_availability`, `backup_retention_days`, `database_name`, `app_user`, `postgres_version`, `backup_copy` (S-114) | `db_host`, `db_port`, `db_name`, `db_user`, `db_url`, `db_password_secret_ref`, `admin_secret_ref`, `backup` |
 | cache | `network_id`, `subnet_ids`, `allowed_cidrs`, `kms_key`, `secret_store`, `deletion_protection`, `node_size`, `replicas` | `redis_host`, `redis_port`, `redis_ssl`, `redis_username`, `redis_password_secret_ref` |
 | kafka | `network_id`, `subnet_ids`, `allowed_cidrs`, `kms_key`, `secret_store`, `deletion_protection`, `tier`, `capacity`, `storage_gb` | `kafka_bootstrap`, `kafka_security_protocol`, `kafka_sasl_mechanism`, `kafka_sasl_jaas_config_secret_ref`, `kafka_replication_factor`, `kafka_topic_policy` |
 | search | `network_id`, `subnet_ids`, `allowed_cidrs`, `kms_key`, `secret_store`, `deletion_protection`, `size`, `zone_count`, `elastic_version` | `es_uris`, `es_username`, `es_password_secret_ref` |
@@ -81,6 +81,11 @@ The data-store modules generate their credentials (random passwords, SCRAM users
 environment's secrets store (`secret_store = module.secrets.store`), so External Secrets finds every secret under
 one prefix. Those values do pass through Terraform state: keep state in the bootstrapped, encrypted, access-controlled
 bucket only.
+
+S-114's `backup_copy` (postgres) and `replica` (storage) name a region that must be the *other* Canadian region of the
+cloud; their validations carry the cloud's region list, which `check-contract.sh` ignores like the context's. The
+stacks derive that region from the primary (`backup.cross_region`), and AWS / Google Cloud instantiate the `kms`
+module a second time there (`kms_backup`) because keys are regional — [docs/runbooks/backups-dr.md](../../docs/runbooks/backups-dr.md).
 
 Where a cloud has no use for an input it says so in `main.tf` (`unused_contract_inputs`), for example `zone_count`
 on Google Cloud and Azure (regional subnets) or `kms_key` on ACR (customer-managed keys need Premium).
@@ -95,7 +100,7 @@ on Google Cloud and Azure (regional subnets) or `kms_key` on ACR (customer-manag
 | signing key (`KMS_KEY_ID`, S-7) | key ARN, `ECC_NIST_P256` | key **version** name `…/cryptoKeys/signing/cryptoKeyVersions/1`, `EC_SIGN_P256_SHA256` (HSM in prod) | **versioned** key URL, EC P-256 (HSM in prod) |
 | uploads (`STORAGE_*`, S-10) | bucket `northline-<env>-uploads`, SSE-KMS with the `data` key (`STORAGE_ENCRYPTION_KEY` = its ARN) | bucket `northline-<env>-uploads`, CMEK `data` (`STORAGE_ENCRYPTION_KEY` = its name) | container `uploads` (`STORAGE_BUCKET`) in account `nl<env>st<suffix>`, `STORAGE_ENDPOINT` = its blob endpoint; account-level CMK, so `STORAGE_ENCRYPTION_KEY` stays empty |
 | secrets | `northline/<env>/<name>`, created empty | `northline-<env>-<name>`, user-managed replication in the region only, created empty | one vault per environment; Key Vault has no empty secrets, so the operator creates them |
-| PostgreSQL 17 | RDS in the isolated data subnets, SG limited to the VPC, `rds.force_ssl`, gp3 + KMS, PITR, Multi-AZ when HA, master password managed by RDS | Cloud SQL Enterprise, private IP only (Private Service Access), `ENCRYPTED_ONLY`, CMEK, backups pinned to the region, PITR, REGIONAL when HA | Flexible Server in the delegated subnet + private DNS zone, `azure.extensions=POSTGIS,CITEXT,PGCRYPTO,PG_STAT_STATEMENTS`, zone-redundant HA, geo-redundant backup in prod (paired region is Canadian) |
+| PostgreSQL 17 | RDS in the isolated data subnets, SG limited to the VPC, `rds.force_ssl`, gp3 + KMS, PITR, Multi-AZ when HA, master password managed by RDS; S-114: automated backups replicated to the other Canadian region in prod | Cloud SQL Enterprise, private IP only (Private Service Access), `ENCRYPTED_ONLY`, CMEK, backups pinned to the region, PITR, REGIONAL when HA; S-114: a cross-region read replica in prod | Flexible Server in the delegated subnet + private DNS zone, `azure.extensions=POSTGIS,CITEXT,PGCRYPTO,PG_STAT_STATEMENTS`, zone-redundant HA, geo-redundant backup in prod (paired region is Canadian); S-114: geo-redundant backup whenever a backup copy is asked for |
 | Valkey / Redis | ElastiCache for Valkey 8, cluster mode off, TLS + AUTH token, Multi-AZ failover with replicas | Memorystore for Valkey 8, cluster mode off, PSC endpoint, TLS (server CA to trust), **no password** (IAM auth only; the apps have no IAM client yet) | Azure Managed Redis, `EnterpriseCluster` single endpoint, TLS on port 10000, access key, private endpoint |
 | Kafka | MSK 3.9 (KRaft), SASL/SCRAM-SHA-512 on 9096, `auto.create.topics.enable=false`, RF 3 (2 in dev) | Managed Kafka (vCPU-sized, min 3), SASL/PLAIN on 9092 with a service-account key, PSC | Event Hubs **Premium** (Standard caps at 10 event hubs; Northline has ~50 with `.dlq`), SASL/PLAIN with `$ConnectionString`, private endpoint; topics need the Manage right to create |
 | Elasticsearch 9 | Elastic Cloud `aws-ca-central-1` | Elastic Cloud `gcp-northamerica-northeast1` | Elastic Cloud `azure-canadacentral` |

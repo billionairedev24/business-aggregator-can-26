@@ -23,7 +23,21 @@ output "storage_encryption_key" {
   value       = var.kms_key == null ? "" : var.kms_key.id
 }
 
+output "replica_bucket_names" {
+  description = "S-114: purpose => replica bucket (container on Azure) in the secondary region; empty without a replica."
+  value       = { for k, v in google_storage_bucket.replica : k => v.name }
+}
+
+output "replica_region" {
+  description = "S-114: region of the replica; empty without one."
+  value       = try(var.replica.region, "")
+}
+
 output "cloud" {
   description = "Google Cloud-only details."
-  value       = { bucket_urls = { for k, v in google_storage_bucket.this : k => v.url } }
+  value = {
+    bucket_urls       = { for k, v in google_storage_bucket.this : k => v.url }
+    replica_jobs      = { for k, v in google_storage_transfer_job.replica : k => v.name }
+    transfer_identity = try(data.google_storage_transfer_project_service_account.this[0].email, "")
+  }
 }

@@ -84,6 +84,57 @@ resource "google_sql_database_instance" "this" {
   }
 }
 
+# S-114: the copy in the other Canadian region is a cross-region read replica (asynchronous, seconds behind), encrypted
+# with that region's key: the primary's backups use the primary region's key, so they cannot be restored while that
+# region is down. Promote it in a regional disaster (docs/runbooks/backups-dr.md § Google Cloud); logical mistakes are
+# undone with point-in-time recovery on the primary instead, since a replica replays them. Read replicas take no
+# automated backups: enable them right after a promotion.
+resource "google_sql_database_instance" "copy" {
+  count                = var.backup_copy == null ? 0 : 1
+  project              = var.context.project_id
+  name                 = "${local.name}-dr"
+  region               = try(var.backup_copy.region, null)
+  database_version     = "POSTGRES_${var.postgres_version}"
+  master_instance_name = google_sql_database_instance.this.name
+  encryption_key_name  = try(var.backup_copy.kms_key.id, null)
+  deletion_protection  = var.deletion_protection
+
+  replica_configuration {
+    failover_target = false
+  }
+
+  settings {
+    edition                     = "ENTERPRISE"
+    tier                        = var.instance_size
+    availability_type           = "ZONAL"
+    disk_type                   = "PD_SSD"
+    disk_size                   = var.storage_gb
+    disk_autoresize             = true
+    deletion_protection_enabled = var.deletion_protection
+    user_labels                 = merge(var.context.tags, { role = "dr-replica" })
+
+    ip_configuration {
+      ipv4_enabled                                  = false
+      private_network                               = var.network_id
+      ssl_mode                                      = "ENCRYPTED_ONLY"
+      enable_private_path_for_google_cloud_services = true
+    }
+
+    backup_configuration {
+      enabled = false
+    }
+
+    database_flags {
+      name  = "idle_in_transaction_session_timeout"
+      value = "600000"
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [settings[0].disk_size]
+  }
+}
+
 resource "google_sql_database" "this" {
   project  = var.context.project_id
   name     = var.database_name

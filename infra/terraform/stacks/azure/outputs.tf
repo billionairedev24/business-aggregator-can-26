@@ -156,3 +156,24 @@ output "edge" {
     }
   }
 }
+
+# S-114: what protects each data store and where the copies are (docs/runbooks/backups-dr.md); scripts/dr/restore.sh
+# reads it (`terraform output -json backup`).
+output "backup" {
+  description = "Backups and disaster recovery: the database's backups and secondary-region copy, the bucket replicas, and the stores that are rebuilt rather than restored."
+  value = {
+    primary_region   = var.region
+    secondary_region = var.backup.cross_region ? local.secondary_region : ""
+    postgres         = merge(module.postgres.backup, { instance = module.postgres.cloud.server_id })
+    storage = {
+      buckets         = module.storage.bucket_names
+      replica_buckets = module.storage.replica_bucket_names
+      replica_region  = module.storage.replica_region
+    }
+    # Elastic Cloud snapshots every deployment to its managed found-snapshots repository (policy
+    # cloud-snapshot-policy); restoring is optional, the read model is rebuilt from Postgres (search-reindex Job).
+    search = { snapshot_repository = "found-snapshots", snapshot_policy = "cloud-snapshot-policy", rebuild = "search-reindex" }
+    kafka  = { backed_up = false, rebuild = "topics re-created by the provisioning Job; the outbox re-publishes what was not delivered" }
+    cache  = { backed_up = false, lost = "sessions (sign in again), caches, rate-limit counters, idempotency keys, slot holds, live tracking" }
+  }
+}

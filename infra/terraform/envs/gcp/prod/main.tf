@@ -48,6 +48,9 @@ module "northline" {
   deletion_protection = true
   signing_key_ids     = var.signing_key_ids
 
+  # S-114: copies of the database and the buckets in the other Canadian region (docs/runbooks/backups-dr.md).
+  backup = { cross_region = true, copy_retention_days = 14 }
+
   data_stores = {
     postgres = { instance_size = "db-custom-4-16384", storage_gb = 100, high_availability = true, backup_retention_days = 35 }
     cache    = { node_size = "STANDARD_SMALL", replicas = 2 }

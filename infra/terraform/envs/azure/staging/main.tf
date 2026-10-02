@@ -37,6 +37,9 @@ module "northline" {
   deletion_protection = false
   signing_key_ids     = var.signing_key_ids
 
+  # S-114: backups and point-in-time recovery in this region only; staging is re-created from a masked prod copy, not restored.
+  backup = { cross_region = false }
+
   data_stores = {
     postgres = { instance_size = "GP_Standard_D2ds_v5", storage_gb = 64, high_availability = true, backup_retention_days = 7 }
     cache    = { node_size = "Balanced_B1", replicas = 1 }

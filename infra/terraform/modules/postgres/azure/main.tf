@@ -13,6 +13,8 @@ resource "random_string" "suffix" {
 
 locals {
   name = "${var.context.name}-pg-${random_string.suffix.result}"
+  # Azure's paired regions in Canada: geo-redundant backups land in the pair (S-114).
+  paired_region = { canadacentral = "canadaeast", canadaeast = "canadacentral" }[var.context.region]
 }
 
 resource "random_password" "admin" {
@@ -52,9 +54,12 @@ resource "azurerm_postgresql_flexible_server" "this" {
   administrator_login           = "northline_admin"
   administrator_password        = random_password.admin.result
   backup_retention_days         = var.backup_retention_days
-  geo_redundant_backup_enabled  = var.deletion_protection
-  zone                          = "1"
-  tags                          = var.context.tags
+  # S-114: backups are geo-replicated to the paired Canadian region when a backup_copy is asked for (and always in
+  # prod, as before). Only settable at creation: turning it on later replaces the server, so decide per environment
+  # before the first apply (docs/runbooks/backups-dr.md § Azure).
+  geo_redundant_backup_enabled = var.deletion_protection || var.backup_copy != null
+  zone                         = "1"
+  tags                         = var.context.tags
 
   authentication {
     password_auth_enabled = true
@@ -128,4 +133,7 @@ resource "azurerm_key_vault_secret" "app" {
 locals {
   # tflint-ignore: terraform_unused_declarations
   unused_contract_inputs = [var.allowed_cidrs, var.kms_key] # the delegated subnet is only reachable from the VNet
+  # S-114: geo-redundant backup has no key or retention of its own (backup_retention_days, service-managed keys).
+  # tflint-ignore: terraform_unused_declarations
+  unused_backup_copy_inputs = [try(var.backup_copy.kms_key, null), try(var.backup_copy.retention_days, null)]
 }
