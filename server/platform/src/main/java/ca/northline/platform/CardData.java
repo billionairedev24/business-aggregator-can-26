@@ -1,4 +1,4 @@
-package ca.northline.platform.pci;
+package ca.northline.platform;
 
 import java.util.List;
 import java.util.Locale;

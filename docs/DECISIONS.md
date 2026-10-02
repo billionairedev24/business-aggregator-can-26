@@ -7061,7 +7061,7 @@ or signed off**: no Stripe account exists and no lawyer has seen the texts. No m
   fields (`gtin`, `ean`, `upc`, `isbn`, `barcode`, `sku`) are exempt from the number check (an EAN-13 can pass Luhn).
   Bodies read raw (the Stripe webhooks) are not scanned — the signature covers them and Stripe never sends a PAN.
   The warning names the handler, the field and `[CARD …4242]`, never the value.
-- **Recogniser in the platform library** (`platform.pci.CardData`), used by the guard and the scanners. The Redactor
+- **Recogniser in the platform library** (`ca.northline.platform.CardData`, the library's public package — Modulith exposes only that one to the api), used by the guard and the scanners. The Redactor
   (S-112) gained card-verification codes after their name (`cvc: [REDACTED]`), magnetic-stripe track data
   (`[TRACK]`) and the names `cvc`, `cvv`, `cvn`, `csc`, `track1/2`, `track_data`. The Collector already had a card
   rule; the scanner now fails if it disappears.

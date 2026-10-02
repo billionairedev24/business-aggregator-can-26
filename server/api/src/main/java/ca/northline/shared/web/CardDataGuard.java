@@ -1,6 +1,6 @@
 package ca.northline.shared.web;
 
-import ca.northline.platform.pci.CardData;
+import ca.northline.platform.CardData;
 import ca.northline.shared.RuleViolation;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;

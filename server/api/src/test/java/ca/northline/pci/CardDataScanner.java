@@ -1,6 +1,6 @@
 package ca.northline.pci;
 
-import ca.northline.platform.pci.CardData;
+import ca.northline.platform.CardData;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;

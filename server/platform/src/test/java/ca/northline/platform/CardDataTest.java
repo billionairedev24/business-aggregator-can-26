@@ -1,4 +1,4 @@
-package ca.northline.platform.pci;
+package ca.northline.platform;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

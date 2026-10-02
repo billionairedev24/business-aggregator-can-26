@@ -3,8 +3,8 @@ package ca.northline.pci;
 import static ca.northline.pci.CardDataScanner.REPO;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import ca.northline.platform.CardData;
 import ca.northline.platform.logging.Redactor;
-import ca.northline.platform.pci.CardData;
 import ca.northline.support.SharedPostgres;
 import java.sql.DriverManager;
 import java.util.List;
