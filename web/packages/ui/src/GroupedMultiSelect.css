@@ -14,7 +14,7 @@
 .nl-gms-opt-active { box-shadow: inset 2px 0 0 var(--color-accent); background: var(--color-neutral-100); }
 .nl-gms-opt[aria-selected='true'].nl-gms-opt-active { background: var(--color-accent-200); }
 .nl-gms-opt[aria-disabled='true'] { cursor: not-allowed; opacity: .45; }
-.nl-gms-box { width: 16px; height: 16px; flex: none; border-radius: 4px; border: 1px solid var(--color-neutral-400); display: grid; place-items: center; color: var(--color-on-accent); }
+.nl-gms-box { width: 16px; height: 16px; flex: none; border-radius: 4px; border: 1px solid var(--color-neutral-600); display: grid; place-items: center; color: var(--color-on-accent); }
 .nl-gms-box[data-on='true'] { border-color: var(--color-accent); background: var(--color-accent); }
 .nl-gms-badge { font-size: 11px; }
 .nl-gms-empty { padding: 12px 14px; font-size: 13px; color: var(--color-neutral-700); }

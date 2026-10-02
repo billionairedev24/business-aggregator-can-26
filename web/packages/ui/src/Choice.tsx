@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { useEffect, useRef, type ButtonHTMLAttributes, type KeyboardEvent, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { Check, Minus } from '@phosphor-icons/react';
 
@@ -36,10 +36,32 @@ export interface ChipProps extends ButtonHTMLAttributes<HTMLButtonElement> { sel
 // A chip inside a tablist carries aria-selected instead; aria-pressed is not allowed on role="tab".
 export const Chip = ({ selected = false, className, ...p }: ChipProps) => <button type="button" aria-pressed={p.role === 'tab' ? undefined : selected} className={clsx('nl-chip', className)} {...p} />;
 
+/**
+ * ARIA tabs keyboard model (S-109): one tab stop for the row (the selected tab), ←/→ (and ↑/↓) move and select,
+ * Home/End jump to the ends.
+ */
+function tabKeys<V extends string>(values: readonly V[], value: V, onChange: (v: V) => void) {
+  return (e: KeyboardEvent<HTMLElement>) => {
+    const i = values.indexOf(value);
+    const next = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? (i + 1) % values.length
+      : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? (i - 1 + values.length) % values.length
+        : e.key === 'Home' ? 0 : e.key === 'End' ? values.length - 1 : -1;
+    if (next < 0) return;
+    e.preventDefault();
+    onChange(values[next]!);
+    const tabs = e.currentTarget.querySelectorAll<HTMLElement>('[role="tab"]');
+    tabs[next]?.focus();
+  };
+}
+
+/** The selected tab is the row's tab stop; with none selected, the first one. */
+const rovingIndex = <V extends string>(options: readonly { value: V }[], value: V, i: number) =>
+  (options[i]!.value === value || (i === 0 && !options.some(o => o.value === value)) ? 0 : -1);
+
 export interface ChipGroupProps<V extends string> { options: readonly { value: V; label: ReactNode }[]; value: V; onChange: (v: V) => void; 'aria-label': string }
 /** Single-select chip row (settings tabs, Phone/Web preview toggle). */
 export function ChipTabs<V extends string>({ options, value, onChange, ...aria }: ChipGroupProps<V>) {
-  return <div className="nl-chips" role="tablist" aria-label={aria['aria-label']}>{options.map(o => <Chip key={o.value} role="tab" aria-selected={o.value === value} selected={o.value === value} onClick={() => onChange(o.value)}>{o.label}</Chip>)}</div>;
+  return <div className="nl-chips" role="tablist" aria-label={aria['aria-label']} onKeyDown={tabKeys(options.map(o => o.value), value, onChange)}>{options.map((o, i) => <Chip key={o.value} role="tab" aria-selected={o.value === value} tabIndex={rovingIndex(options, value, i)} selected={o.value === value} onClick={() => onChange(o.value)}>{o.label}</Chip>)}</div>;
 }
 
 export interface SegmentedProps<V extends string> { name: string; options: readonly { value: V; label: ReactNode }[]; value: V; onChange: (v: V) => void; 'aria-label'?: string }
@@ -53,7 +75,7 @@ export function Segmented<V extends string>({ name, options, value, onChange, ..
 
 export interface UnderlineTabsProps<V extends string> { options: readonly { value: V; label: ReactNode }[]; value: V; onChange: (v: V) => void; 'aria-label': string }
 export function UnderlineTabs<V extends string>({ options, value, onChange, ...aria }: UnderlineTabsProps<V>) {
-  return <div className="nl-utabs" role="tablist" aria-label={aria['aria-label']}>{options.map(o => <button key={o.value} type="button" role="tab" aria-selected={o.value === value} className="nl-utab" onClick={() => onChange(o.value)}>{o.label}</button>)}</div>;
+  return <div className="nl-utabs" role="tablist" aria-label={aria['aria-label']} onKeyDown={tabKeys(options.map(o => o.value), value, onChange)}>{options.map((o, i) => <button key={o.value} type="button" role="tab" aria-selected={o.value === value} tabIndex={rovingIndex(options, value, i)} className="nl-utab" onClick={() => onChange(o.value)}>{o.label}</button>)}</div>;
 }
 
 /** Thin progress bars (auth: 3 steps). */
