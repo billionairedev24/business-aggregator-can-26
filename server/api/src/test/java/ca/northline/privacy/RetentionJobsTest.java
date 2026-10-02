@@ -478,6 +478,24 @@ class RetentionJobsTest extends IntegrationTest {
     }
 
     @Test
+    void consentProofGoesThreeYearsAfterTheWithdrawal_anActiveConsentStays() {
+        var gone = data.user("Withdrew");
+        var active = data.user("Subscribed");
+        for (var user : new String[] {gone, active}) {
+            sql("insert into messaging.consent_records (id, user_id, category, action, at, source, wording_version, "
+                    + "language) values (?, ?, 'marketing_email', 'granted', now() - interval '5 years', 'web_signup', "
+                    + "'marketing.v1', 'en')", Ids.next(), user);
+        }
+        sql("insert into messaging.consent_records (id, user_id, category, action, at, source) "
+                + "values (?, ?, 'marketing_email', 'withdrawn', now() - interval '4 years', 'unsubscribe_link')",
+                Ids.next(), gone);
+        assertThat(run("messaging.consent_records", true).affected()).isGreaterThanOrEqualTo(2);
+        run("messaging.consent_records", false);
+        assertThat(count("select count(*) from messaging.consent_records where user_id = ?", gone)).isZero();
+        assertThat(count("select count(*) from messaging.consent_records where user_id = ?", active)).isOne();
+    }
+
+    @Test
     void theAuditLogGoesAfterSevenYears() {
         var old = Ids.next();
         var recent = Ids.next();

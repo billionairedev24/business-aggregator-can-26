@@ -151,6 +151,32 @@ describe('Settings › Notifications', () => {
     expect(screen.queryByText('Low stock')).toBeNull();
   });
 
+  it('S-108: Northline marketing is off until the person says yes; the switch records the wording shown', async () => {
+    const matrix = { new_booking: { push: true, sms: true, email: false } };
+    let granted = false;
+    const consents = () => ({
+      categories: [{ category: 'marketing_email', granted, since: granted ? '2026-10-02T15:00:00Z' : null, wordingVersion: 'studio.email.2026-10', wording: 'Yes, Northline Marketplace Inc. may email me news.' }],
+      history: granted ? [{ id: 'R1', category: 'marketing_email', action: 'granted', at: '2026-10-02T15:00:00Z', source: 'studio' }] : [],
+      requester: 'Northline Marketplace Inc. · 1 Test Street · support@northline.ca',
+    });
+    const calls = mockFetch({
+      [`GET ${S}/notifications`]: () => ({ matrix, quietFrom: '21:00:00', quietTo: '07:00:00' }),
+      'GET /api/v1/me/consents': consents,
+      'PUT /api/v1/me/consents/marketing_email': () => { granted = true; return consents(); },
+    });
+    const user = userEvent.setup({ delay: null });
+    renderWithProviders(<NotificationsTab />);
+    const toggle = await screen.findByRole('switch', { name: 'Email me Northline’s news and offers for businesses' });
+    expect(toggle.getAttribute('aria-checked')).toBe('false');
+    expect(screen.getByText('Yes, Northline Marketplace Inc. may email me news.')).toBeTruthy();
+    expect(screen.getByText('Asked by Northline Marketplace Inc. · 1 Test Street · support@northline.ca.')).toBeTruthy();
+    expect(screen.getByText('No consent given or withdrawn yet.')).toBeTruthy();
+    await user.click(toggle);
+    expect(calls.find(c => c.method === 'PUT')?.body).toEqual({ granted: true, source: 'studio', wordingVersion: 'studio.email.2026-10' });
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Email me Northline’s news and offers for businesses' }).getAttribute('aria-checked')).toBe('true'));
+    expect(screen.getByText(/^Given on /)).toBeTruthy();
+  });
+
   it('shows the rows for each portal', () => {
     expect(eventsFor('kitchen')).not.toContain('quote_request');
     expect(eventsFor('seller')).toContain('low_stock');

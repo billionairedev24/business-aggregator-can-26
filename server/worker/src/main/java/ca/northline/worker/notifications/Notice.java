@@ -1,6 +1,7 @@
 package ca.northline.worker.notifications;
 
 import ca.northline.email.EmailContent;
+import ca.northline.email.MessageClasses;
 import java.net.URI;
 import java.time.ZoneId;
 import java.util.Locale;
@@ -63,18 +64,39 @@ public record Notice(
         return row == null;
     }
 
-    /** Whether the person's matrix lets this notice through on {@code channel} (security notices always pass). */
+    /**
+     * A commercial electronic message (S-108, {@link MessageClasses}): the customer's {@code offers} row. Sent only
+     * with the person's express consent for the channel, checked by {@link Deliveries} right before it goes; an
+     * unclassified row counts as commercial (fail closed).
+     */
+    public boolean commercial() {
+        var governing = row;
+        return governing != null
+                && MessageClasses.commercialRow(audience instanceof Audience.Team ? "team" : "customer", governing);
+    }
+
+    /**
+     * Whether the person's matrix lets this notice through on {@code channel} (security notices always pass; a
+     * commercial notice's matrix cells are its consents, which {@link Deliveries} checks at send time).
+     */
     public boolean wantedBy(Recipient person, Channel channel) {
         var governing = row;
-        return governing == null || person.preferences().wants(governing, channel);
+        return governing == null || commercial() || person.preferences().wants(governing, channel);
     }
 
     /**
      * The row an email's unsubscribe link turns off: a Studio row for the team, {@code customer.<row>} for a customer
-     * (the api's unsubscribe endpoint edits the matching matrix).
+     * (the api's unsubscribe endpoint edits the matching matrix); for a commercial message the consent it withdraws
+     * ({@code consent.marketing_email}, S-108).
      */
     public @Nullable String unsubscribeRow() {
-        return row == null ? null : audience instanceof Audience.Customer ? "customer." + row : row;
+        if (row == null) {
+            return null;
+        }
+        if (commercial()) {
+            return "consent." + MessageClasses.ConsentCategory.MARKETING_EMAIL.code();
+        }
+        return audience instanceof Audience.Customer ? "customer." + row : row;
     }
 
     /** Who a notice is for. */

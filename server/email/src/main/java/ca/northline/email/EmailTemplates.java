@@ -22,24 +22,33 @@ import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
  * {@link EmailBrand}, shared {@code layout.html}) and {@code .txt} (plain-text alternative, shared {@code footer.txt}),
  * copy from {@code email/messages[_fr].properties}. Every email ends with the CASL sender identification (mailing
  * address + contact) and why the address got it; {@link EmailContent.Purpose#NOTIFICATION} and
- * {@link EmailContent.Purpose#COMMERCIAL} emails also get the unsubscribe link, which is then mandatory.
+ * {@link EmailContent.Purpose#COMMERCIAL} emails also get the unsubscribe link, which is then mandatory. A commercial
+ * email (S-108) also names the legal sender and why it may be sent (consent), and is checked after rendering: one that
+ * lacks the legal name, the mailing address or the unsubscribe link is refused ({@link CommercialMessageCheck}).
  */
 public final class EmailTemplates {
 
     static final String BUNDLE = "email/messages";
 
     private final TemplateEngine engine;
+    private final String legalName;
     private final String mailingAddress;
+    /** The footer's sender line: the mailing address, prefixed with the legal name unless it already starts with it. */
+    private final String sender;
+
     private final String contact;
     private final ZoneId zone;
 
     /**
+     * @param legalName {@code northline.email.legal-name} (the sender's legal name: configuration)
      * @param mailingAddress {@code northline.email.mailing-address} (the legal entity's address: configuration)
      * @param contact {@code northline.email.contact}
      * @param zone {@code northline.email.time-zone}: the zone dates and times are written in
      */
-    public EmailTemplates(String mailingAddress, String contact, ZoneId zone) {
+    public EmailTemplates(String legalName, String mailingAddress, String contact, ZoneId zone) {
+        this.legalName = legalName;
         this.mailingAddress = mailingAddress;
+        this.sender = mailingAddress.contains(legalName) ? mailingAddress : legalName + " · " + mailingAddress;
         this.contact = contact;
         this.zone = zone;
         var resolver = new ClassLoaderTemplateResolver(EmailTemplates.class.getClassLoader());
@@ -71,8 +80,10 @@ public final class EmailTemplates {
         variables.put("variant", content.variant());
         variables.put("purpose", content.purpose().name().toLowerCase(Locale.ROOT));
         variables.put("reason", message(language, content.template() + ".reason", content.reasonArgs()));
-        variables.put("mailingAddress", mailingAddress);
+        variables.put("legalName", legalName);
+        variables.put("mailingAddress", sender);
         variables.put("contact", contact);
+        variables.put("settingsPlace", content.settingsPlace());
         variables.put(
                 "unsubscribe",
                 content.purpose().needsUnsubscribe() && unsubscribe != null ? unsubscribe.toString() : "");
@@ -81,7 +92,11 @@ public final class EmailTemplates {
         var context = new Context(language, variables);
         var html = engine.process(content.template() + ".html", context);
         var text = engine.process(content.template() + ".txt", context).strip() + "\n";
-        return new RenderedEmail(subject, html, text);
+        var rendered = new RenderedEmail(subject, html, text);
+        if (content.purpose() == EmailContent.Purpose.COMMERCIAL && unsubscribe != null) {
+            CommercialMessageCheck.email(content.template(), rendered, legalName, mailingAddress, unsubscribe);
+        }
+        return rendered;
     }
 
     /** A small standalone page in the email look ({@code email/templates/page-<name>.html}), e.g. unsubscribe. */
@@ -90,9 +105,17 @@ public final class EmailTemplates {
         var variables = new HashMap<String, Object>(pageVariables);
         variables.put("lang", language.toLanguageTag());
         variables.put("s", EmailBrand.styles());
-        variables.put("mailingAddress", mailingAddress);
+        variables.put("legalName", legalName);
+        variables.put("mailingAddress", sender);
         variables.put("contact", contact);
+        variables.putIfAbsent("settingsPlace", "studio");
+        variables.putIfAbsent("channel", "email");
         return engine.process("page-" + name + ".html", new Context(language, variables));
+    }
+
+    /** The sender's legal name ({@code EMAIL_LEGAL_NAME}): commercial SMS name it too (S-108). */
+    public String legalName() {
+        return legalName;
     }
 
     /** One message from the email bundle, formatted with {@link MessageFormat} in the given language. */

@@ -5,6 +5,7 @@ import { Button, DataTable, Dialog, Drawer, ErrorState, Field, PageSkeleton, Seg
 import { ValidationError } from '../../lib/http';
 import { useGrant } from '../shell/grant';
 import { SCREEN_PATH } from '../shell/screens';
+import { ConsentLookup } from './ConsentLookup';
 import { DECISIONS, detailQuery, EXTENSIONS, queueQuery, TYPES, useAct, useRecord, type Detail, type Item } from './api';
 import { usePrivacyT, type PrivacyKey, type PrivacyT } from './messages';
 import '../shell/queues.css';
@@ -64,6 +65,7 @@ export function PrivacyQueue() {
         can={{ create: false, update: false, delete: false }} roleName={roleName} emptyText={t('empty')} onOpen={r => go({ request: r.id })} />
       {search.request ? <RequestDrawer id={search.request} canAct={can('privacy')} t={t} onClose={() => go({ request: undefined })} /> : null}
       {recording ? <RecordDialog t={t} onClose={() => setRecording(false)} onDone={id => { setRecording(false); go({ state: 'open', request: id }); }} /> : null}
+      <ConsentLookup />
     </div>
   );
 }

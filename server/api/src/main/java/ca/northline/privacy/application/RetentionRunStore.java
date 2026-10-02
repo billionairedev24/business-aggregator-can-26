@@ -6,7 +6,7 @@ import java.util.Optional;
 import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
-/** Outbound port: {@code privacy.retention_runs} (V295) and what the jobs need of {@code privacy.requests}. */
+/** Outbound port: {@code privacy.retention_runs} (V301) and what the jobs need of {@code privacy.requests}. */
 public interface RetentionRunStore {
 
     void insert(RunRecord run);

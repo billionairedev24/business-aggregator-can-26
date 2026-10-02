@@ -31,6 +31,8 @@ import tools.jackson.databind.JsonNode;
  *   <tr><td>quote.sent</td><td>customer</td><td>quotes_messages</td><td>/app/quotes/{id}</td></tr>
  *   <tr><td>refund.case_updated, refund.issued</td><td>customer</td><td>refunds_cases</td><td>/app/cases/{caseNumber}</td></tr>
  *   <tr><td>delivery.assigned, run.changed</td><td>courier</td><td>— (always, push only)</td><td>/courier/run</td></tr>
+ *   <tr><td>{@value #OFFER} (S-108; no producer yet)</td><td>customer</td><td>offers — commercial: the person's
+ *       consent per channel, checked at send time</td><td>the offer's page</td></tr>
  * </table>
  *
  * Customers get push, SMS and email as their matrix says (quiet hours hold push and SMS). The words are one line in
@@ -40,6 +42,12 @@ public final class PersonalNotices {
 
     /** The evening-before reminder is not a domain event: the worker's job makes it (type, payload: the booking). */
     public static final String REMINDER = "booking.booking_reminder";
+
+    /**
+     * S-108: Northline's own offer to one customer — a commercial message, not a domain event: whatever sends offers
+     * hands the worker this type and {@link #offer} as the payload (kept by a deferred row and re-read at send time).
+     */
+    public static final String OFFER = "messaging.offer";
 
     private static final Set<Channel> ALL = EnumSet.allOf(Channel.class);
     private static final Set<Channel> PUSH = EnumSet.of(Channel.PUSH);
@@ -72,6 +80,7 @@ public final class PersonalNotices {
                             case "booking.quote_sent" -> quote(eventId, type, data, id);
                             case "payments.refund_case_updated", "payments.refund_issued" ->
                                 refund(eventId, type, data, id);
+                            case OFFER -> offer(eventId, type, data);
                             case "fulfilment.delivery_assigned" -> courier(eventId, type, data, id, "run.assigned");
                             case "fulfilment.run_changed" ->
                                 courier(
@@ -184,6 +193,53 @@ public final class PersonalNotices {
                         "case:" + caseNumber));
     }
 
+    private static @Nullable Notice offer(String eventId, String type, JsonNode data) {
+        var customer = data.path("customerId").asString("");
+        var path = data.path("path").asString("");
+        if (customer.isEmpty() || !path.startsWith("/")) {
+            return null;
+        }
+        var titles = new String[] {
+            data.path("titleEn").asString(""), data.path("titleFr").asString("")
+        };
+        var bodies = new String[] {
+            data.path("bodyEn").asString(""), data.path("bodyFr").asString("")
+        };
+        return new Notice(
+                eventId,
+                type,
+                1,
+                null,
+                new Notice.Audience.Customer(customer),
+                "offers",
+                ALL,
+                data,
+                new Notice.Texts() {
+                    @Override
+                    public String text(String business, Locale locale, ZoneId zone) {
+                        return bodies[french(locale) ? 1 : 0];
+                    }
+
+                    @Override
+                    public String title(String business, Locale locale, ZoneId zone) {
+                        return titles[french(locale) ? 1 : 0];
+                    }
+
+                    @Override
+                    public String sms(String business, Locale locale, ZoneId zone) {
+                        return (french(locale) ? "Northline : " : "Northline: ") + title(business, locale, zone) + ". "
+                                + text(business, locale, zone);
+                    }
+
+                    @Override
+                    public EmailContent email(String business, URI link, Locale locale, ZoneId zone) {
+                        return new EmailContent.MarketingOffer(
+                                title(business, locale, zone), text(business, locale, zone), link);
+                    }
+                },
+                new Notice.Push(path, Map.of("type", "offer"), "offer:" + eventId));
+    }
+
     private @Nullable Notice courier(String eventId, String type, JsonNode data, String runId, String key) {
         var user = subjects.courierUser(data.path("courierId").asString("")).orElse(null);
         if (user == null) {
@@ -279,6 +335,20 @@ public final class PersonalNotices {
         var payload = new LinkedHashMap<String, Object>();
         payload.put("aggregateId", bookingId);
         payload.put("occurredAt", at.toString());
+        return payload;
+    }
+
+    /** An offer's payload (S-108): who it is for, its words in both languages and the page it opens. */
+    public static Map<String, Object> offer(
+            String customerId, String titleEn, String bodyEn, String titleFr, String bodyFr, String path) {
+        var payload = new LinkedHashMap<String, Object>();
+        payload.put("aggregateId", customerId);
+        payload.put("customerId", customerId);
+        payload.put("titleEn", titleEn);
+        payload.put("bodyEn", bodyEn);
+        payload.put("titleFr", titleFr);
+        payload.put("bodyFr", bodyFr);
+        payload.put("path", path);
         return payload;
     }
 

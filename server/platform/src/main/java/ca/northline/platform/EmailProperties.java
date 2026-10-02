@@ -15,6 +15,9 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  *     {@code azure} (Azure Communication Services Email) ({@code EMAIL_PROVIDER})
  * @param from sender, {@code Name <address>}; its domain must be verified at the provider ({@code EMAIL_FROM})
  * @param replyTo where replies go; empty = no Reply-To header ({@code EMAIL_REPLY_TO})
+ * @param legalName CASL sender identification: the legal name of the entity that sends (S-108; commercial messages
+ *     name it in their footer, SMS and the unsubscribe page), configuration only — no default in code ({@code
+ *     EMAIL_LEGAL_NAME}, required)
  * @param mailingAddress CASL sender identification printed in every footer: the legal entity's address, configuration
  *     only — no default in code ({@code EMAIL_MAILING_ADDRESS}, required)
  * @param timeZone the zone dates and times in emails are written in ({@code EMAIL_TIME_ZONE}, else the platform zone
@@ -37,7 +40,7 @@ public record EmailProperties(
         @DefaultValue("local") Provider provider,
         @DefaultValue("Northline <no-reply@northline.ca>") String from,
         @Nullable String replyTo,
-
+        @Nullable String legalName,
         @Nullable String mailingAddress,
 
         @DefaultValue("support@northline.ca") String contact,

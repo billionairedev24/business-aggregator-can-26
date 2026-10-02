@@ -30,11 +30,12 @@ job has no module to run it.
 | `trust.reviews` | Reviews | while public | — | pseudonymised on erasure (S-105) | trust · none | — |
 | `infrastructure.backups` | Backups | 35 days | the deletion | delete (provider settings) | Terraform · infrastructure | — |
 | `developer.audit_log` | *not in the policy* | 7 years | the action | delete (V181's trigger lets only this purge) | developer · job | — |
+| `messaging.consent_records` | *not in the policy's section 6* (CASL, S-108) | 3 years after the withdrawal | the consent's withdrawal | delete (`ConsentRetention.purgeExpiredProofs`; an active consent's proof stays) | messaging · job | — |
 
 Every job also leaves alone the data of a person with a **privacy request still open** (PIPEDA s. 8(8) and the
 provincial acts: what a request is about is kept until the person has had their answer).
 
-**The law of the person's province.** `region.privacy_laws.decision_retention_days` (V295) is what a law adds after a
+**The law of the person's province.** `region.privacy_laws.decision_retention_days` (V301) is what a law adds after a
 decision about a person: categories marked `lawMinimum` (dispute evidence, delivery proofs, check-in locations) keep
 what decided a dispute at least that many days after the decision, by the customer's province (their default
 address, else the configured default — the same rule as S-105). Values drafted from the statutes, for legal review:
@@ -139,26 +140,28 @@ Fixed here (the policy was clearly right):
 
 Flagged for counsel / the product (not changed):
 
-1. **Audit log (7 years)** is not named in the policy. It holds ids and codes of privileged actions (some of them
+1. **CASL proof of consent (3 years after withdrawal, S-108)** is not in section 6 (the policy's Marketing paragraph
+   names CASL but no period). S-108's own daily purge (`CASL_PURGE_CRON`) is retired in favour of this job.
+2. **Audit log (7 years)** is not named in the policy. It holds ids and codes of privileged actions (some of them
    sign-ins and security changes — "Login and security logs: 12 months"?). Kept at 7 years as the records it concerns.
-2. **Québec**: the civil prescription for most claims is 3 years (C.c.Q. art. 2925); "2 years after the transaction"
+3. **Québec**: the civil prescription for most claims is 3 years (C.c.Q. art. 2925); "2 years after the transaction"
    for messages and evidence may be short for Québec customers.
-3. **KYC (5 years after the relationship ends)**: no business can be closed or refused yet, so no relationship ends.
+4. **KYC (5 years after the relationship ends)**: no business can be closed or refused yet, so no relationship ends.
    The documents are at Stripe Identity; Northline keeps owner names and check outcomes (`merchants.kyc_records` is
    `blocked` until business closure exists).
-4. **Google Cloud and Azure replicas don't receive deletions** (S-114: Storage Transfer Service / object replication),
+5. **Google Cloud and Azure replicas don't receive deletions** (S-114: Storage Transfer Service / object replication),
    so a file the jobs delete stays in the replica bucket. Fix proposed: a periodic sync with deletion (STS
    `deleteObjectsUniqueInSink` batch job, `azcopy sync --delete-destination`), or replicate with deletes. AWS
    replicates delete markers and is compliant.
-5. **Account closure beyond 30 days**: an erasure step held by an open order or dispute keeps that module's data after
+6. **Account closure beyond 30 days**: an erasure step held by an open order or dispute keeps that module's data after
    30 days (the hold is the legal reason). The profile itself is blanked at once.
-6. Not in the policy and **kept with no end**: notification inbox (`messaging.notifications`), abandoned carts,
+7. Not in the policy and **kept with no end**: notification inbox (`messaging.notifications`), abandoned carts,
    saved addresses of open accounts, trust flags, AI usage counters, storefront visit counts, job photos merchants
    upload (`booking.media`). Each needs a period from counsel before a job can delete it.
-7. **Login and security logs in northline-auth** (`auth.authorization_sessions`, `auth.issued_refresh_tokens`, Spring
+8. **Login and security logs in northline-auth** (`auth.authorization_sessions`, `auth.issued_refresh_tokens`, Spring
    Authorization Server's `oauth2_authorization`) have no purge of their own beyond sign-outs and erasures; the auth
    server is its own deployable and schema — a job there is a follow-up.
-8. **Payment intents without an escrow** (delivery fees) have no date column, so the 7-year unlinking can't reach them.
+9. **Payment intents without an escrow** (delivery fees) have no date column, so the 7-year unlinking can't reach them.
 
 ## 8. Operations
 

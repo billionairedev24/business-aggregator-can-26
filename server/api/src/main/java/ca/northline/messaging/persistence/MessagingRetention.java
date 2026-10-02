@@ -1,7 +1,10 @@
 package ca.northline.messaging.persistence;
 
+import ca.northline.messaging.api.ConsentRetention;
 import ca.northline.messaging.application.AttachmentStorage;
 import ca.northline.shared.privacy.RetentionContributor;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -22,6 +25,9 @@ import org.springframework.stereotype.Component;
  *       and the person's words (subject, reference label, account context, resolution note); the case number,
  *       topic, dates and refund amounts stay as the support record. Photos customers uploaded go two years after
  *       their upload.
+ *   <li>{@code messaging.consent_records} (S-108, not in the policy's section 6): the CASL proof of a consent goes
+ *       three years after it was withdrawn, through {@link ConsentRetention#purgeExpiredProofs} (idempotent; the
+ *       messaging module no longer runs its own daily purge).
  * </ul>
  */
 @Component
@@ -30,6 +36,15 @@ class MessagingRetention implements RetentionContributor {
 
     static final String CONVERSATIONS = "messaging.conversations";
     static final String HELP_CASES = "messaging.help_cases";
+    static final String CONSENTS = "messaging.consent_records";
+
+    /** The withdrawals {@link ConsentRetention#purgeExpiredProofs} deletes: the latest record of a category withdrawn. */
+    private static final String WITHDRAWN = """
+            from (select distinct on (user_id, category) user_id, category, action, at
+                    from messaging.consent_records order by user_id, category, at desc, id desc) l
+            join messaging.consent_records r on r.user_id = l.user_id and r.category = l.category
+           where l.action = 'withdrawn' and l.at < :before
+            """;
 
     private static final String THREADS = """
             from messaging.threads t
@@ -55,6 +70,7 @@ class MessagingRetention implements RetentionContributor {
 
     private final JdbcClient jdbc;
     private final AttachmentStorage storage;
+    private final ConsentRetention consents;
 
     @Override
     public String module() {
@@ -63,7 +79,7 @@ class MessagingRetention implements RetentionContributor {
 
     @Override
     public Set<String> categories() {
-        return Set.of(CONVERSATIONS, HELP_CASES);
+        return Set.of(CONVERSATIONS, HELP_CASES, CONSENTS);
     }
 
     @Override
@@ -72,8 +88,14 @@ class MessagingRetention implements RetentionContributor {
         return switch (run.category()) {
             case CONVERSATIONS -> count(THREADS, p);
             case HELP_CASES -> count(CASES, p) + count(UPLOADS, p);
+            case CONSENTS -> count(WITHDRAWN, Map.<String, Object>of("before", proofCutoff(run)));
             default -> throw new IllegalArgumentException(run.category());
         };
+    }
+
+    /** CASL's own period ({@link ConsentRetention#proofPeriod()}), which the schedule's entry must equal. */
+    private OffsetDateTime proofCutoff(Run run) {
+        return run.now().atOffset(ZoneOffset.UTC).minus(consents.proofPeriod());
     }
 
     private long count(String from, Map<String, Object> p) {
@@ -90,6 +112,7 @@ class MessagingRetention implements RetentionContributor {
                 yield threads.size();
             }
             case HELP_CASES -> cases(p) + uploads(p);
+            case CONSENTS -> consents.purgeExpiredProofs(run.now());
             default -> throw new IllegalArgumentException(run.category());
         };
     }

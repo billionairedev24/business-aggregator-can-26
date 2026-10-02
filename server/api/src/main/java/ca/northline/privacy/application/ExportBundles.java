@@ -52,7 +52,13 @@ class ExportBundles {
             Retention.AUDIT_LOG,
             List.of(
                     "The security audit log (ids only, seven years)",
-                    "Le journal d’audit de sécurité (identifiants seulement, sept ans)"));
+                    "Le journal d’audit de sécurité (identifiants seulement, sept ans)"),
+            Retention.CONSENT_PROOF,
+            List.of(
+                    "Proof of your consent to marketing messages and of its withdrawal (three years, as anti-spam law"
+                            + " allows)",
+                    "La preuve de votre consentement aux messages publicitaires et de son retrait (trois ans, comme le"
+                            + " permet la loi anti-pourriel)"));
 
     private final SecretSealer sealer;
     private final JsonMapper json;

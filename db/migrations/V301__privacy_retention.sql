@@ -1,4 +1,4 @@
--- S-107 data retention jobs per the Privacy Policy's retention schedule (range V295–V299, docs/IMPLEMENTATION_PLAN.md).
+-- S-107 data retention jobs per the Privacy Policy's retention schedule (range V301–V304, docs/IMPLEMENTATION_PLAN.md).
 -- Additive only. Runbook: docs/runbooks/retention.md. The schedule itself is configuration
 -- (server/api/src/main/resources/privacy/retention-schedule.yml); this records its runs and the one figure a province's
 -- law adds to it.

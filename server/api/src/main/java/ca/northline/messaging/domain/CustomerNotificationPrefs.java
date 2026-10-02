@@ -15,6 +15,9 @@ import org.jspecify.annotations.Nullable;
  * always go to every channel and can't be turned off. Stored next to the Studio member matrix of the same person
  * ({@code messaging.notification_prefs}); quiet hours are the person's, shared by both.
  *
+ * <p>S-108: the {@code offers} row is commercial (CASL) — its cells are the person's express consents per channel
+ * ({@link #withConsents}), never pre-ticked, and {@code marketing} reads {@code none} without an email consent.
+ *
  * @param language {@code app | en | fr} ("Same as app", English, Français)
  * @param marketing {@code weekly | rewards | none} ("Weekly digest", "Only rewards I'm eligible for", "None (CASL
  *     opt-out)")
@@ -29,6 +32,7 @@ public record CustomerNotificationPrefs(
 
     public static final List<String> CHANNELS = List.of("push", "sms", "email");
     public static final String SECURITY = "security";
+    public static final String OFFERS = "offers";
     public static final String CHOOSE = "Choose from the list.";
     public static final String LOCKED = "Security alerts always go to every channel.";
 
@@ -77,6 +81,22 @@ public record CustomerNotificationPrefs(
                 quietTo == null ? LocalTime.of(7, 0) : quietTo,
                 language == null ? "app" : language,
                 marketing == null ? "weekly" : marketing);
+    }
+
+    /**
+     * The commercial parts from the consent records (S-108): each {@code offers} cell is its channel's consent, and
+     * {@code marketing} is {@code none} without an email consent, else the frequency chosen (weekly by default).
+     */
+    public CustomerNotificationPrefs withConsents(Map<ConsentCategory, Boolean> granted) {
+        var out = new LinkedHashMap<String, Map<String, Boolean>>(matrix);
+        var offers = new LinkedHashMap<String, Boolean>();
+        for (var channel : CHANNELS) {
+            offers.put(channel, granted.getOrDefault(ConsentCategory.ofChannel(channel), false));
+        }
+        out.put(OFFERS, offers);
+        var email = granted.getOrDefault(ConsentCategory.MARKETING_EMAIL, false);
+        var frequency = "rewards".equals(marketing) ? "rewards" : "weekly";
+        return new CustomerNotificationPrefs(out, quietOn, quietFrom, quietTo, language, email ? frequency : "none");
     }
 
     public static CustomerNotificationPrefs defaultsOnly() {
@@ -132,7 +152,7 @@ public record CustomerNotificationPrefs(
         d.put("sign_off", List.of(true, true, true));
         d.put("quotes_messages", List.of(true, false, false));
         d.put("refunds_cases", List.of(true, false, true));
-        d.put("offers", List.of(true, false, false));
+        d.put(OFFERS, List.of(false, false, false)); // S-108: commercial — consent, never on by default
         d.put(SECURITY, List.of(true, true, true));
         return Collections.unmodifiableMap(d);
     }

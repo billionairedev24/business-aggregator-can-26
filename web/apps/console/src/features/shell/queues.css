@@ -20,3 +20,6 @@
 .nl-q-field { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; font-size: 14px; }
 .nl-q-field textarea { min-height: 70px; }
 .nl-q-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+/* S-108: a second section on a queue screen (the privacy screen's consent records) */
+.nl-q-section { margin-top: 40px; border-top: 1px solid var(--color-divider); padding-top: 20px; }
+.nl-q-tablewrap { overflow-x: auto; margin-top: 12px; }

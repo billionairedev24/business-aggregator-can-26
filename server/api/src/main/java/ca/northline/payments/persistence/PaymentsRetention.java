@@ -41,7 +41,7 @@ class PaymentsRetention implements RetentionContributor {
     static final String FINANCIAL = "payments.financial_records";
     static final String EVIDENCE = "payments.dispute_evidence";
 
-    /** Decided disputes older than this can't hold anything any more (the law minimum is at most 10 years, V295). */
+    /** Decided disputes older than this can't hold anything any more (the law minimum is at most 10 years, V301). */
     private static final String DECIDED_WINDOW = "interval '10 years'";
 
     private static final String EVIDENCE_DUE = """

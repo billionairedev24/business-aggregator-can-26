@@ -19,7 +19,7 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
-/** {@link RetentionRunStore} over {@code privacy.retention_runs} (V295) and {@code privacy.requests}. */
+/** {@link RetentionRunStore} over {@code privacy.retention_runs} (V301) and {@code privacy.requests}. */
 @Repository
 @RequiredArgsConstructor
 class RetentionRunJdbc implements RetentionRunStore {

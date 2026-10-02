@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <!--/* Shared frame of every HTML email: table layout (Outlook), inline styles from EmailBrand (s.*), preheader,
-       wordmark, the content card, then the CASL footer: sender identification, why this address got the email and,
-       for notifications, the one-click unsubscribe link. */-->
+       wordmark, the content card, then the CASL footer: sender identification, why this address got the email,
+       for commercial messages the legal sender and the consent they rely on (S-108), and for notifications and
+       commercial messages the one-click unsubscribe link. */-->
 <html xmlns:th="http://www.thymeleaf.org" th:fragment="email(preheader, content)" th:lang="${lang}">
 <head>
   <meta charset="utf-8">
@@ -22,10 +23,11 @@
             <td th:style="${s.footer}">
               <p style="margin:0 0 6px" th:text="${reason}">Why you got this</p>
               <p style="margin:0 0 6px" th:if="${purpose == 'transactional'}" th:text="#{footer.transactional}">Service message</p>
+              <p style="margin:0 0 6px" th:if="${purpose == 'commercial'}" th:text="#{footer.commercial(${legalName})}">Marketing message</p>
               <p style="margin:0 0 6px" th:if="${!#strings.isEmpty(unsubscribe)}">
                 <span th:text="#{footer.unsubscribe}">Don’t want these?</span>
                 <a th:href="${unsubscribe}" th:style="${s.footerLink}" th:text="#{footer.unsubscribeLink}">Unsubscribe</a>.
-                <span th:text="#{footer.unsubscribeHint}">Settings hint</span>
+                <span th:text="#{__${'footer.unsubscribeHint.' + settingsPlace}__}">Settings hint</span>
               </p>
               <p style="margin:0" th:text="#{footer.sender(${mailingAddress}, ${contact})}">Sent by Northline</p>
             </td>

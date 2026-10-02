@@ -70,6 +70,7 @@ northline:
     provider: ${EMAIL_PROVIDER:local}
     from: ${EMAIL_FROM:Northline <no-reply@northline.ca>}
     reply-to: ${EMAIL_REPLY_TO:}
+    legal-name: ${EMAIL_LEGAL_NAME:Northline Marketplace Inc.}   # CASL sender identification (S-108)
     mailing-address: ${EMAIL_MAILING_ADDRESS:Northline Marketplace Inc. · 1200 – 8th Avenue SW, Calgary, Alberta T2P 1B5, Canada}
     contact: ${EMAIL_CONTACT:support@northline.ca}
     time-zone: ${EMAIL_TIME_ZONE:${REGION_PLATFORM_ZONE:America/Edmonton}}   # dates in emails (S-134)

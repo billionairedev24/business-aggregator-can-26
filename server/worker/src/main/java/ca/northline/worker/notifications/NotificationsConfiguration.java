@@ -1,5 +1,7 @@
 package ca.northline.worker.notifications;
 
+import ca.northline.email.CommercialConsent;
+import ca.northline.email.EmailTemplates;
 import ca.northline.email.Mailer;
 import ca.northline.email.UnsubscribeTokens;
 import ca.northline.sms.SmsTransport;
@@ -70,9 +72,17 @@ public class NotificationsConfiguration {
         return new DeferredNotifications(jdbc, json);
     }
 
+    /** S-108: the consent records the worker's Mailer and SMS/push deliveries check before a commercial message. */
+    @Bean
+    CommercialConsent commercialConsent(JdbcClient jdbc) {
+        return new JdbcConsents(jdbc);
+    }
+
     @Bean
     Deliveries deliveries(
             Mailer mailer,
+            CommercialConsent consents,
+            EmailTemplates templates,
             SmsTransport sms,
             PushSender push,
             ProcessedEvents claims,
@@ -84,6 +94,8 @@ public class NotificationsConfiguration {
         separately.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         return new Deliveries(
                 mailer,
+                consents,
+                templates.legalName(),
                 sms,
                 push,
                 claims,

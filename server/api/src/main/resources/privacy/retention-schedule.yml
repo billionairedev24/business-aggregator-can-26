@@ -201,6 +201,17 @@ retention:
       note:
         en: "Terraform: backup_retention_days 35 (prod); bucket lifecycle noncurrent_days 30 and replica noncurrent_days 30. Google Cloud and Azure replicas don't receive deletions — see the runbook."
         fr: "Terraform : backup_retention_days 35 (prod); cycle de vie des compartiments noncurrent_days 30, répliques 30. Les répliques Google Cloud et Azure ne reçoivent pas les suppressions — voir le guide."
+    - code: messaging.consent_records
+      module: messaging
+      period: P3Y
+      starts: { en: "the consent's withdrawal", fr: "le retrait du consentement" }
+      name: { en: "Proof of consent to commercial messages (CASL)", fr: "Preuve du consentement aux messages commerciaux (LCAP)" }
+      basis:
+        en: "CASL s. 13: the sender must prove consent; three years covers the limitation period. An active consent's proof stays as long as it lasts. Not named in the Privacy Policy's retention section — for counsel."
+        fr: "LCAP, art. 13 : l'expéditeur doit prouver le consentement; trois ans couvrent le délai de prescription. La preuve d'un consentement actif reste tant qu'il dure. Absent de la section sur la conservation de la Politique de confidentialité — à revoir par les conseillers juridiques."
+      action: delete
+      enforcement: job
+      holds: []
     - code: developer.audit_log
       module: developer
       period: P7Y

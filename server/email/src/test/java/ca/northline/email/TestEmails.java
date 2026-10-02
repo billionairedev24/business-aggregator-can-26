@@ -26,6 +26,7 @@ final class TestEmails {
                 provider,
                 FROM,
                 "support@northline.test",
+                "Northline Marketplace Inc.",
                 "Northline Marketplace Inc. · 1200 – 8th Avenue SW, Calgary, Alberta T2P 1B5, Canada",
                 "support@northline.ca",
                 java.time.ZoneId.of("America/Edmonton"),

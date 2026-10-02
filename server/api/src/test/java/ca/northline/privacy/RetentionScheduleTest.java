@@ -142,6 +142,12 @@ class RetentionScheduleTest {
     }
 
     @Test
+    void consentProofIsKeptAsLongAsCaslSays() {
+        assertThat(catalogue.category("messaging.consent_records").orElseThrow().period())
+                .isEqualTo(ca.northline.messaging.api.ConsentRetention.PROOF_PERIOD);
+    }
+
+    @Test
     void noProvinceIsWrittenIntoTheSchedule() throws IOException {
         var yml = Files.readString(Path.of("src/main/resources/" + RetentionCatalogue.RESOURCE));
         assertThat(yml)

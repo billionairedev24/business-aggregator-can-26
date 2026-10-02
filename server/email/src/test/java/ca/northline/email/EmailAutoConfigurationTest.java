@@ -20,6 +20,7 @@ class EmailAutoConfigurationTest {
             .withSystemProperties("aws.accessKeyId=test-access-key", "aws.secretAccessKey=test-secret-key")
             // legal entity and time zone are configuration only (S-134): the apps' application.yml sets them
             .withPropertyValues(
+                    "northline.email.legal-name=Example Marketplace Inc.",
                     "northline.email.mailing-address=Example Marketplace Inc. · 1 Test Street, Testville, Canada",
                     "northline.email.time-zone=Etc/UTC");
 
@@ -34,6 +35,20 @@ class EmailAutoConfigurationTest {
                         .hasRootCauseMessage(
                                 "EMAIL_MAILING_ADDRESS is required: every email names the sender's mailing address"
                                         + " (CASL; docs/runbooks/email.md)"));
+    }
+
+    @Test
+    void theLegalNameIsRequiredConfiguration() {
+        new ApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(EmailAutoConfiguration.class))
+                .withPropertyValues(
+                        "northline.email.mailing-address=1 Test Street, Testville, Canada",
+                        "northline.email.time-zone=Etc/UTC")
+                .run(context -> assertThat(context)
+                        .hasFailed()
+                        .getFailure()
+                        .hasRootCauseMessage("EMAIL_LEGAL_NAME is required: commercial messages name the sender's"
+                                + " legal name (CASL; docs/runbooks/email.md)"));
     }
 
     @Test
