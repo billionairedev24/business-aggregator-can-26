@@ -114,7 +114,7 @@ One bucket per environment in the environment's Canadian region, private, nothin
 | encryption | default SSE-S3; or SSE-KMS with a customer-managed key + S3 Bucket Key, and `STORAGE_ENCRYPTION_KEY` = that key ARN |
 | bucket policy | deny `aws:SecureTransport = false` |
 | versioning | on (recovery from accidental deletes/overwrites) |
-| lifecycle | noncurrent versions expire after 30 days; abort incomplete multipart uploads after 7 days; **no expiry of current objects** (retention rules are S-107) |
+| lifecycle | noncurrent versions expire after 30 days; abort incomplete multipart uploads after 7 days; current objects expire only under `expire_prefixes` (S-107: `privacy/exports/` after 8 days); everything else is deleted by the retention jobs, which honour legal holds ([retention.md](retention.md)) |
 | identity | EKS Pod Identity (or IRSA) role for the api's service account |
 | env | `STORAGE_PROVIDER=s3`, `STORAGE_BUCKET`, `STORAGE_REGION=ca-central-1`; no endpoint, no keys |
 
@@ -142,7 +142,7 @@ Least-privilege policy for the api role (`s3:ListBucket` is what makes a missing
 | bucket | `northline-<env>-uploads`, location `northamerica-northeast1` (single region), Standard class; uniform bucket-level access; public access prevention enforced |
 | encryption | Google-managed; or CMEK: a Cloud KMS key in the same region, grant `roles/cloudkms.cryptoKeyEncrypterDecrypter` to the Cloud Storage service agent (`service-<project-number>@gs-project-accounts.iam.gserviceaccount.com`), set it as the bucket default key and as `STORAGE_ENCRYPTION_KEY` (`projects/…/locations/northamerica-northeast1/keyRings/…/cryptoKeys/…`) |
 | recovery | soft delete (default 7 days) on; object versioning optional (then a lifecycle rule deleting noncurrent versions after 30 days) |
-| lifecycle | no deletion of live objects (S-107) |
+| lifecycle | live objects under `privacy/exports/` deleted after 8 days (S-107); the rest by the retention jobs ([retention.md](retention.md)) |
 | identity | GKE Workload Identity: the api's Kubernetes service account → Google service account `northline-api-<env>` |
 | IAM | on the **bucket**: `roles/storage.objectUser` for the service account (create/get/delete/list objects, no bucket admin). For presigned URLs (not used yet): `roles/iam.serviceAccountTokenCreator` for the service account on itself (the SDK signs through IAM `signBlob`) |
 | env | `STORAGE_PROVIDER=gcs`, `STORAGE_BUCKET`; no endpoint, no keys |
@@ -155,7 +155,7 @@ Least-privilege policy for the api role (`s3:ListBucket` is what makes a missing
 | container | `uploads`, private access level |
 | encryption | Microsoft-managed; or a customer-managed key: an **encryption scope** backed by a Key Vault key (`az storage account encryption-scope create --key-source Microsoft.KeyVault …`), `STORAGE_ENCRYPTION_KEY` = the scope name |
 | recovery | blob soft delete 30 days, container soft delete 7 days; versioning optional |
-| lifecycle | no deletion of live blobs (S-107) |
+| lifecycle | live blobs under `uploads/privacy/exports/` deleted after 8 days (S-107); the rest by the retention jobs ([retention.md](retention.md)) |
 | identity | AKS Workload Identity: user-assigned managed identity federated with the api's Kubernetes service account (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_FEDERATED_TOKEN_FILE` are injected by the webhook) |
 | RBAC | "Storage Blob Data Contributor" scoped to the **container**. For presigned URLs (not used yet): "Storage Blob Delegator" on the account (user-delegation SAS) |
 | env | `STORAGE_PROVIDER=azure`, `STORAGE_BUCKET=uploads`, `STORAGE_ENDPOINT=https://nl<env>uploads.blob.core.windows.net`; no keys |

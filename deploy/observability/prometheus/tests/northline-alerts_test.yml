@@ -167,3 +167,38 @@ tests:
             exp_annotations:
               summary: "No api replica has reported a successful payout run for 30 minutes (none running, or the run always fails)"
               runbook_url: https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/payout-run.md
+  - name: a retention category that stops succeeding raises a ticket after two days and an hour
+    interval: 1m
+    input_series:
+      # identity.sign_ins last succeeded at t=0 and never again; messaging.conversations keeps succeeding
+      - series: 'northline_retention_last_success_seconds{application="northline-api",category="identity.sign_ins"}'
+        values: '0x3100'
+      - series: 'northline_retention_last_success_seconds{application="northline-api",category="messaging.conversations"}'
+        values: '0+60x3100'
+    alert_rule_test:
+      - eval_time: 48h
+        alertname: NorthlineRetentionNotRun
+        exp_alerts: []
+      - eval_time: 50h
+        alertname: NorthlineRetentionNotRun
+        exp_alerts:
+          - exp_labels: { severity: ticket, category: identity.sign_ins }
+            exp_annotations:
+              summary: "Retention of identity.sign_ins last succeeded 2d 2h 0m 0s ago — expired data outlives the Privacy Policy's period"
+              runbook_url: https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/retention-not-run.md
+  - name: no replica reports the retention jobs
+    interval: 1m
+    input_series:
+      - series: 'northline_jobs_last_success_seconds{application="northline-api",job="payments.payouts"}'
+        values: '0+60x400'
+    alert_rule_test:
+      - eval_time: 5h
+        alertname: NorthlineRetentionMissing
+        exp_alerts: []
+      - eval_time: 6h5m
+        alertname: NorthlineRetentionMissing
+        exp_alerts:
+          - exp_labels: { severity: ticket }
+            exp_annotations:
+              summary: "No api replica has reported the retention jobs for 6 hours"
+              runbook_url: https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/retention-not-run.md
