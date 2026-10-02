@@ -76,7 +76,11 @@ export function Home() {
         <View style={shopStyles.rowText}>
           <Pressable
             accessibilityRole="button"
+            // S-109: a name without the ▾ glyph (read out as "down-pointing triangle"); the 32 pt kicker gets a 48 pt
+            // touch area through hitSlop
+            accessibilityLabel={place ? t('shop.home.placeLabel', { place }) : t('shop.home.setAddressLabel')}
             accessibilityHint={t('shop.home.placeHint')}
+            hitSlop={{ top: 8, bottom: 8 }}
             onPress={() => router.push('/location?next=/home')}
             style={styles.place}
             testID="home-place"

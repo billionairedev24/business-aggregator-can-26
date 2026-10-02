@@ -4,6 +4,8 @@ import type { shop as en } from '../en/shop';
 export const shop: { [k in keyof typeof en]: string } = {
   'shop.home.place': '{place} ▾',
   'shop.home.placeHint': 'Modifie l’adresse de livraison',
+  'shop.home.placeLabel': 'Adresse de livraison : {place}',
+  'shop.home.setAddressLabel': 'Saisir mon adresse',
   'shop.home.setAddress': 'Saisir mon adresse ▾',
   'shop.home.morning': 'Bonjour',
   'shop.home.afternoon': 'Bon après-midi',
