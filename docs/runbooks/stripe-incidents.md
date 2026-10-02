@@ -87,7 +87,7 @@ raison d'une panne chez notre fournisseur de paiement. Rien n'a été débité ;
 for businesses: payouts and releases due during the outage go out automatically once it ends. Finance: payouts paid
 late (the timeliness SLO). No banner mechanism exists yet — post on the status page and social accounts.
 
-**Exercised** (2026-10-02): `StripeOutageTest` — the real Stripe adapter against an address where nothing listens and
+**Exercised** (2026-10-02, passed): `StripeOutageTest` — the real Stripe adapter against an address where nothing listens and
 against a stand-in answering 500 → `payments_unavailable` with `Retry-After` 60, a 400 stays an ordinary failure;
 `ProviderUnavailableTest` — the 503 ProblemDetail, its `Retry-After` header, English and French. **Not exercised:** a
 real Stripe outage; the jobs' catch-up after one (their retry-with-the-same-key behaviour is S-11's, tested against
@@ -156,7 +156,7 @@ If the requeue `update` matched too much, the extra rows simply get applied or f
 delayed; the money moved on time". If disputes arrived late: the dispute's reply-by date is Stripe's evidence deadline
 − 2 days — tell the affected businesses directly.
 
-**Exercised** (2026-10-02): `StripeWebhookApiTest` (S-12) re-run — signed fixtures through the real verification:
+**Exercised** (2026-10-02, passed, 12 tests): `StripeWebhookApiTest` (S-12) re-run — signed fixtures through the real verification:
 wrong/other-endpoint/stale signatures 400, a duplicate delivery applied once, out-of-order payouts and disputes,
 unknown events ignored. **Not exercised:** the requeue `update` (written against the S-12 schema and the job's query
 `state in ('received','failed') and attempts < 10`); the Stripe CLI `events list` / `resend` steps (no account).
@@ -210,7 +210,7 @@ edits.
 **Comms.** Finance owns the conversation with the accountant; no customer or business comms unless a business's money
 was affected (then support, with finance's numbers).
 
-**Exercised** (2026-10-02): `StripeReconciliationApiTest` (S-85) re-run — a matched day, a mismatch with each kind of
+**Exercised** (2026-10-02, passed, 4 tests): `StripeReconciliationApiTest` (S-85) re-run — a matched day, a mismatch with each kind of
 difference against the fake balance transactions, resolve with a note, exports, roles. **Not exercised:** the real
 `GET /v1/balance_transactions` (stripe-mock only); the console buttons by hand.
 
@@ -267,7 +267,7 @@ customers).
 failure (support offers refunds); Stripe, if they reach out about the dispute rate (finance + the platform's Stripe
 contact). Legal for large fraud.
 
-**Exercised** (2026-10-02): `StripeWebhookApiTest` dispute flows re-run — created → updated → lost, closed before
+**Exercised** (2026-10-02, passed): `StripeWebhookApiTest` dispute flows re-run — created → updated → lost, closed before
 created, a dispute joining the customer's case, a late older update ignored. **Not exercised:** Radar, Stripe's
 monitoring programme, a real spike; the suspend endpoint's own tests are S-82's (`SellerOversightApiTest`), not re-run
 as part of this drill.
@@ -319,7 +319,7 @@ after the restart; checkout and the payments job succeed; for a webhook secret, 
 logs show misuse: legal and finance; affected businesses and customers per the privacy incident procedure. No public
 comms for a leak without misuse.
 
-**Exercised** (2026-10-02): **not exercised** — needs a Stripe account (rolling a key) and a cluster (the External
+**Exercised:** **not exercised** — needs a Stripe account (rolling a key) and a cluster (the External
 Secrets refresh; the S-6 kind rehearsal covers the refresh → restart path for another secret, [secrets.md § Rotation](secrets.md#rotation)).
 The api's behaviour with a wrong key (Stripe answers 401 → `StripeCallFailed`, not `payments_unavailable`) follows from
 `StripeOutageTest` (a 4xx is not an outage).

@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Configuration;
 class CalendarSealedColumns {
 
     @Bean
-    SealedColumn calendarRefreshTokens() {
+    SealedColumn calendarRefreshTokenSealedColumn() {
         return new SealedColumn(
                 "availability.calendar_links", "id", "token_ref", "refresh_token_key", "refresh_token_enc", "");
     }

@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Configuration;
 class AccessNoteSealedColumns {
 
     @Bean
-    SealedColumn accessNotes() {
+    SealedColumn accessNoteSealedColumn() {
         return new SealedColumn(
                 "booking.access_notes",
                 "booking_id",

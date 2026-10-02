@@ -176,6 +176,8 @@ it, so people stay signed in; calls with an old access token fail until the BFF 
 
 - **local**: `./gradlew :auth:signingKeys --args='rotate --immediately'`, then
   `./gradlew :auth:signingKeys --args='retire <compromised kid>'`.
+  A planned rotation still pending (a **NEXT** key in `status`) survives `rotate --immediately` and would take over
+  at its time: if it was created before the compromise, `retire` it too (found in the S-115 drill).
 - **cloud**: create a new key, set `KMS_KEY_ID=<new>` and `KMS_PUBLISHED_KEY_IDS=` (empty) in one deploy, then disable
   the compromised key in the KMS. Until JWK set caches expire (≤ 5 min) the api may still accept old tokens: restart the
   api and the bff to drop their caches at once.
@@ -193,6 +195,14 @@ it, so people stay signed in; calls with an old access token fail until the BFF 
 | api answers 401 `invalid_token` right after a switch | step 2 was skipped or shorter than 5 min: publish first, then switch |
 | `No usable signing key in …/signing-keys.jwks.json` | every key in the file has expired (clock jump, manual edit): `rotate --immediately` |
 
+
+### Exercised
+
+| date | what was run | outcome |
+|---|---|---|
+| 2026-10-02 | the local command against a scratch directory: `status` (creates the first key) → `rotate` (NEXT published, signs 10 min later, old key retires 1 h after) → `rotate --immediately` (new ACTIVE, old RETIRING) → `retire <old kid>` → `retire <pending NEXT kid>` → `status`; `jq '[.keys[].kid]' signing-keys.jwks.json` | **passed**: each state as the runbook says; one key left. Finding: a pending NEXT key survives `--immediately` (note added above) |
+| 2026-10-02 | auth `LocalFileSigningKeysTest`, `SigningKeysRestartTest` (three app contexts sharing a key directory: rotation published by all, tokens from either key verify), `SigningKeysConfigTest`, `SigningKeysStartupTest`, `CloudKeyServicesTest`, `AwsKmsLocalStackTest` (real KMS API in LocalStack) | **passed** (28 tests) |
+| — | **not exercised:** the cloud publish → switch → retire sequence against real AWS KMS / Cloud KMS / Key Vault, and `curl …/oauth2/jwks` on a deployed auth | |
 
 ## 2. KMS data keys and envelope re-wrap
 
@@ -291,9 +301,9 @@ authenticator. Neither has been built (open item).
 
 | date | what was run | outcome |
 |---|---|---|
-| 2026-10-02 | `KeyRewrapTest.rotateTheLocalKey_rewrapEverything_thenTheOldKeyCanGo` — PostGIS (Testcontainers), the full api context: three values sealed under the old local key; the api's sealer rebuilt with a new key and the old one as previous; the job run in batches of 2 | see the PR's test run: old values readable meanwhile, 2 + 1 re-wrapped, `stale()` 0, ciphertexts unchanged, the metric counted 3, the new key alone opens everything |
+| 2026-10-02 | `KeyRewrapTest.rotateTheLocalKey_rewrapEverything_thenTheOldKeyCanGo` — PostGIS (Testcontainers), the full api context: three values sealed under the old local key; the api's sealer rebuilt with a new key and the old one as previous; the job run in batches of 2 | **passed**: old values readable meanwhile, 2 + 1 re-wrapped, `stale()` 0, ciphertexts unchanged, the metric counted 3, the new key alone opens everything |
 | 2026-10-02 | `KeyRewrapTest.theModulesDeclareTheirSealedColumns_andTheQueriesRunOnTheRealSchema` | the four modules' tables are found and their columns queried on the migrated schema; a run over them fails nothing |
-| 2026-10-02 | `EnvelopeSealerTest` (+ S-115 cases): local rotation with a previous key; Google Cloud key versions (the reference is the version, decrypt on the key, a pre-S-115 key-name reference still opens, a new primary version makes a value due and the re-wrap moves it) over SDK mocks; `AwsKmsSealerLocalStackTest` (S-32, real KMS API in LocalStack) | passed |
+| 2026-10-02 | `EnvelopeSealerTest` (+ S-115 cases): local rotation with a previous key; Google Cloud key versions (the reference is the version, decrypt on the key, a pre-S-115 key-name reference still opens, a new primary version makes a value due and the re-wrap moves it) over SDK mocks; `AwsKmsSealerLocalStackTest` (S-32, real KMS API in LocalStack) | **passed** |
 | — | **not exercised:** AWS automatic rotation, Cloud KMS and Key Vault versions against the real services (no cloud account), `CryptoConfiguration` reading `KMS_LOCAL_PREVIOUS_KEYS` from the environment in a running api (covered by the constructor the bean calls) | |
 
 ## 3. Merchants' webhook signing secrets
@@ -341,7 +351,7 @@ and that failed deliveries will be retried.
 
 | date | what was run | outcome |
 |---|---|---|
-| 2026-10-02 | `WebhookDeliveryTest.duringARotationBothSecretsSign_afterTheOverlapOnlyTheNewOne` (S-33, worker: Kafka 4 + PostGIS + a WireMock receiver) and `DeveloperSettingsApiTest` `rotationKeepsTheOldSecretSigningFor24Hours_orStopsItAtOnce` (api: overlap 24 h / 0, the 422 message, roles) | see the PR's test run |
+| 2026-10-02 | `WebhookDeliveryTest.duringARotationBothSecretsSign_afterTheOverlapOnlyTheNewOne` (S-33, worker: Kafka 4 + PostGIS + a WireMock receiver) and `DeveloperSettingsApiTest` `rotationKeepsTheOldSecretSigningFor24Hours_orStopsItAtOnce` (api: overlap 24 h / 0, the 422 message, roles) | **passed** |
 | — | **not exercised:** a real partner endpoint (none exists) | |
 
 ## 4. Stripe API keys and webhook secrets
@@ -390,7 +400,7 @@ expired (or for a leak): roll again and deploy the new value — there is no way
 
 | date | what was run | outcome |
 |---|---|---|
-| 2026-10-02 | `StripeWebhookApiTest` (S-12): a delivery signed with the other endpoint's secret or a wrong one → 400 `invalid_signature`; stripe-java's verification accepts any matching `v1` (the dual-secret window) | see the PR's test run |
+| 2026-10-02 | `StripeWebhookApiTest` (S-12): a delivery signed with the other endpoint's secret or a wrong one → 400 `invalid_signature`; stripe-java's verification accepts any matching `v1` (the dual-secret window) | **passed** (12 tests) |
 | — | **not exercised:** rolling a key or secret in a Stripe account (none exists); the per-cloud secret update (§ 6) | |
 
 ## 5. Database, Kafka, push, OpenRouter, on-call export

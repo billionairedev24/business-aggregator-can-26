@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Configuration;
 class IntegrationSealedColumns {
 
     @Bean
-    SealedColumn commerceCredentials() {
+    SealedColumn commerceCredentialSealedColumn() {
         return new SealedColumn("catalogue.integrations", "id", "token_ref", "credentials_key", "credentials_enc", "");
     }
 }

@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Configuration;
 class PosSealedColumns {
 
     @Bean
-    SealedColumn posCredentials() {
+    SealedColumn posCredentialSealedColumn() {
         return new SealedColumn("food.pos_connections", "id", "token_ref", "credentials_key", "credentials_enc", "");
     }
 }
