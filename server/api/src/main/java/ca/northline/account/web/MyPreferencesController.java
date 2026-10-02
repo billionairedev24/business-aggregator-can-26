@@ -6,6 +6,7 @@ import ca.northline.account.application.Preferences.ManagePreferences;
 import ca.northline.account.application.Preferences.Prefs;
 import ca.northline.shared.security.CurrentUser;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
@@ -24,7 +25,8 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <pre>
  * GET   /api/v1/me/preferences   {language, province, units, timeFormat, dietary, allergies, accessibility, accessNotes, display}
- * PATCH /api/v1/me/preferences   any of those (only what is sent changes; codes outside the lists → 422)
+ * PATCH /api/v1/me/preferences   any of those (only what is sent changes; codes outside the lists → 422;
+ *                                province "" = follow my location again, as "" clears allergies and notes)
  * GET   /api/v1/me/export        the person's account data as a JSON download
  * </pre>
  */
@@ -38,7 +40,13 @@ class MyPreferencesController {
 
     record PreferencesRequest(
             @Nullable String language,
-            @Nullable String province,
+
+            @Schema(
+                    description = "Two-letter province or territory code from GET /geo/regions; \"\" goes back to"
+                            + " following the person's location. Omitted or null: unchanged.")
+            @Nullable
+            String province,
+
             @Nullable String units,
             @Nullable String timeFormat,
             @Nullable List<String> dietary,

@@ -18,6 +18,9 @@ public final class PreferenceRules {
     public static final String ALLERGIES = "Keep allergies under 200 characters.";
     public static final String NOTES = "Keep notes for providers under 500 characters.";
     public static final int ALLERGIES_MAX = 200;
+    /** {@code province: ""} clears the choice: the province follows the person's location again (as allergies do). */
+    public static final String FOLLOW_LOCATION = "";
+
     public static final int NOTES_MAX = 500;
 
     public static final List<String> DIETARY =
@@ -57,12 +60,20 @@ public final class PreferenceRules {
         return value;
     }
 
-    /** @param known the provinces and territories of the region model ({@code region.api.Regions}) */
+    /**
+     * The province code, upper-cased; {@link #FOLLOW_LOCATION} ({@code ""}, or blank) goes back to following the
+     * person's location; null stays null (unchanged).
+     *
+     * @param known the provinces and territories of the region model ({@code region.api.Regions})
+     */
     public static @Nullable String province(@Nullable String value, Set<String> known) {
         if (value == null) {
             return null;
         }
         var code = value.strip().toUpperCase(Locale.ROOT);
+        if (code.isEmpty()) {
+            return FOLLOW_LOCATION;
+        }
         if (!known.contains(code)) {
             throw RuleViolation.of("province", "allowed", CHOOSE);
         }
