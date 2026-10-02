@@ -91,6 +91,6 @@ export const useAppointmentsT = defineMessages({
     noPhotosWarning: 'Sans photos, le versement est retardé de 48 h.', completeCta: 'Terminer le travail',
     approvalTitle: "Demander l'approbation de pièces supplémentaires", approvalDesc: 'Ce qui doit être approuvé', approvalAmount: 'Montant', approvalSend: "Envoyer pour approbation", approvalsTitle: 'Approbations',
     approval_pending: 'En attente du client', approval_approved: 'Approuvé', approval_declined: 'Refusé',
-    approvalDescRequired: 'Describe the extra parts or work.', approvalAmountRequired: 'Enter an amount.', attention: '{n, plural, one {# élément demande} other {# éléments demandent}} votre attention.',
+    approvalDescRequired: 'Décrivez les pièces ou les travaux supplémentaires.', approvalAmountRequired: 'Entrez un montant.', attention: '{n, plural, one {# élément demande} other {# éléments demandent}} votre attention.',
   },
 });

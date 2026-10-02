@@ -189,7 +189,7 @@ export const useSettingsT = defineMessages({
 
     notifTitle: 'Notifications',
     notifLede: 'Choisissez comment chaque type de mise à jour vous parvient. Les alertes de sécurité passent toujours par tous les canaux et ne peuvent pas être désactivées.',
-    colEvent: 'Événement', ch_push: 'Push', ch_sms: 'SMS', ch_email: 'Courriel', cell: '{channel} pour {event} : {state}', on: 'activé', off: 'désactivé',
+    colEvent: 'Événement', ch_push: 'Notif. poussée', ch_sms: 'SMS', ch_email: 'Courriel', cell: '{channel} pour {event} : {state}', on: 'activé', off: 'désactivé',
     ev_booking_reminders: 'Rappels de réservation et heure d’arrivée', evd_booking_reminders: 'Rappel la veille, heure d’arrivée en direct, prestataire en route',
     ev_order_updates: 'Suivi des commandes et livraison', evd_order_updates: 'Acceptée, emballée, livreur en route, livrée',
     ev_sign_off: 'Approbation et paiement', evd_sign_off: 'Photos de fin de travail, libération de la fiducie, reçus',

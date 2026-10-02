@@ -64,7 +64,7 @@ export const useOverviewT = defineMessages({
     week: 'S{n}',
     healthTitle: 'État du système',
     h_api_p95: 'API p95', h_search_p95: 'Recherche', h_kafka_lag: 'Retard Kafka', h_stripe: 'Stripe', h_tracking_streams: 'Suivi WS', h_courier_app: 'App des livreurs',
-    ms: '{n} ms', lag: '{n} msgs', conns: '{n} conn.', ok: 'OK', degraded: 'Dégradé', offline: '{n} hors ligne', allOnline: 'Tous en ligne', unknown: '—',
+    ms: '{n} ms', lag: '{n} messages', conns: '{n} conn.', ok: 'OK', degraded: 'Dégradé', offline: '{n} hors ligne', allOnline: 'Tous en ligne', unknown: '—',
     statusOk: 'sain', statusDegraded: 'dégradé', statusUnknown: 'non mesuré',
     queueTitle: 'File de travail',
     q_verifications: '{n, plural, one {vérification de vendeur} other {vérifications de vendeurs}}',

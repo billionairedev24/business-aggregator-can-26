@@ -49,7 +49,7 @@ export const useShellT = defineMessages({
     console: 'Console',
     searchPlaceholder: 'Rechercher vendeurs, commandes, clients, dossiers…',
     searchLabel: 'Rechercher dans la console',
-    ops: 'Ops',
+    ops: 'Opérations',
     pilotIn: '{codes} pilote',
     accountMenu: 'Menu du compte',
     profile: 'Mon profil et sécurité',

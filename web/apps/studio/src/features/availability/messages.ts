@@ -101,7 +101,7 @@ export const useAvailabilityT = defineMessages({
     sourcesLine: 'Bloque les créneaux selon : {names}', chooseCalendars: 'Choisir les calendriers', chooseTitle: 'Calendriers qui bloquent vos créneaux',
     chooseHelp: 'Les périodes occupées de ces calendriers bloquent les créneaux Northline. Northline inscrit vos réservations dans votre calendrier principal.',
     chooseConsent: '{provider} doit d’abord permettre à Northline de voir la liste de vos calendriers.', chooseAllow: 'Continuer vers {provider}',
-    choosePrimary: 'calendrier principal', chooseSave: 'Enregistrer les calendriers', chooseCancel: 'Annuler', chooseNone: 'Choose at least one calendar.',
+    choosePrimary: 'calendrier principal', chooseSave: 'Enregistrer les calendriers', chooseCancel: 'Annuler', chooseNone: 'Choisissez au moins un calendrier.',
     chooseLoadError: 'Impossible de charger vos calendriers.', dismiss: 'Fermer',
     result_connected: '{provider} est connecté. Les périodes occupées bloqueront vos créneaux d’ici quelques minutes.',
     result_denied: "L'accès n'a pas été autorisé dans {provider}; rien n'a été connecté.",

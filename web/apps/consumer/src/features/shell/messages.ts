@@ -45,7 +45,7 @@ export const useShellT = defineMessages({
     plusTag: 'Plus · points ×2', standardTag: 'Standard', members: '{count} · {members} membres',
     quiet: 'Silence {from}–{to}', passkey: "Clé d'accès", authenticator: "Application d'authentification", sms: 'Code SMS',
     languageValue: 'Français · {province}',
-    pendingKicker: 'Design 06 · {state}', pendingBody: "Cet écran est en cours de construction ({story}).", backHome: "Retour à l'accueil",
+    pendingKicker: 'Maquette 06 · {state}', pendingBody: "Cet écran est en cours de construction ({story}).", backHome: "Retour à l'accueil",
     notFoundTitle: 'Page introuvable.', notFoundBody: 'Le lien est peut-être ancien, ou la page a été déplacée.',
     errorTitle: 'Un problème est survenu de notre côté.', retry: 'Réessayer',
   },
