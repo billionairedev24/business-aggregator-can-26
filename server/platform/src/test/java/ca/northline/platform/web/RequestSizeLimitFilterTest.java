@@ -70,6 +70,12 @@ class RequestSizeLimitFilterTest {
         filter.doFilter(upload, response, (req, _) -> seen.set((HttpServletRequest) req));
         assertThat(response.getStatus()).isEqualTo(200);
         assertThat(read(seen.get())).isEqualTo(4_000);
+
+        var pdf = new MockHttpServletRequest("POST", "/api/v1/me/cases/C-1/evidence");
+        pdf.setContentType("application/pdf");
+        pdf.setContent(new byte[4_000]);
+        filter.doFilter(pdf, new MockHttpServletResponse(), (req, _) -> seen.set((HttpServletRequest) req));
+        assertThat(read(seen.get())).as("a raw file upload gets the upload cap").isEqualTo(4_000);
     }
 
     private static int read(HttpServletRequest request) throws IOException {

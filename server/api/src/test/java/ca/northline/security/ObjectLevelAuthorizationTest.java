@@ -121,6 +121,30 @@ class ObjectLevelAuthorizationTest extends IntegrationTest {
             Map.entry("userId", List.of("identity.users")),
             Map.entry("id", List.of("privacy.requests")));
 
+    /**
+     * Operations that serve another business's object by design, because the same object is public: their public
+     * counterpart. A 2xx passes only when that public path serves the same id too (S-123: approved catalogue images are
+     * shared records; drafts stay the owner's).
+     */
+    private static final Map<String, String> SHARED_WITH_EVERYONE =
+            Map.of("GET /api/v1/merchants/{merchantId}/media/{mediaId}", "/api/v1/public/catalogue/media/{mediaId}");
+
+    private boolean publiclyServed(Operation op, Map<String, String> probe) throws Exception {
+        var publicPath = SHARED_WITH_EVERYONE.get(op.toString());
+        if (publicPath == null) {
+            return false;
+        }
+        var uri = publicPath;
+        for (var e : probe.entrySet()) {
+            uri = uri.replace("{" + e.getKey() + "}", URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8));
+        }
+        return mvc.perform(request(HttpMethod.GET, uri))
+                        .andReturn()
+                        .getResponse()
+                        .getStatus()
+                == 200;
+    }
+
     @Autowired
     JdbcClient jdbc;
 
@@ -193,6 +217,9 @@ class ObjectLevelAuthorizationTest extends IntegrationTest {
                                 var params = new LinkedHashMap<>(probe);
                                 params.put("merchantId", caller.getKey());
                                 var status = status(op, fill(op, params), TestJwt.member(caller.getValue()));
+                                if (status / 100 == 2 && publiclyServed(op, probe)) {
+                                    continue; // the same object is public (SHARED_WITH_EVERYONE)
+                                }
                                 assertThat(status)
                                         .as("%s with someone else's %s under the caller's own business", op, probe)
                                         .satisfies(ObjectLevelAuthorizationTest::refusedOrInvalid);

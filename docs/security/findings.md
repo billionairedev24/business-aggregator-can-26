@@ -43,8 +43,8 @@ Several endpoints are unauthenticated by design (webhooks, the guest cart, store
 **Fix:** `ca.northline.platform.web.RequestSizeLimitFilter`, auto-configured in every servlet app. A declared
 `Content-Length` over the cap is answered `413 payload_too_large` before anything reads it; a chunked body is counted
 while it is read and fails at the cap. Caps: `northline.http.max-request-body` (5 MB) and
-`northline.http.max-multipart-body` (26 MB, above the api's 25 MB multipart limit, which still applies inside it).
-**Tests:** `RequestSizeLimitFilterTest` (declared length, chunked, multipart), `RequestSizeLimitApiTest` (Stripe webhook
+`northline.http.max-multipart-body` for uploads — multipart or a raw file body (26 MB, above the api's 25 MB multipart limit, which still applies inside it).
+**Tests:** `RequestSizeLimitFilterTest` (declared length, chunked, multipart and raw-file uploads), `RequestSizeLimitApiTest` (Stripe webhook
 and guest cart answer 413). DoS testing stays out of the external test's scope.
 
 ### S104-02 — Expression injection into email templates (High, CVSS 8.0 worst case `AV:N/AC:H/PR:H/UI:N/S:C/C:H/I:H/A:H`)
@@ -172,7 +172,7 @@ when written), in the shared test context (no new Spring context):
 - every console operation: 403 for a customer, a business owner, staff without a second factor, and staff without a
   console role unless the screen is open to all staff.
 
-Request bodies are synthesised from the documented schemas so writes reach the services' own checks. Eleven writes
+One operation serves another business's object by design — `GET /merchants/{id}/media/{mediaId}` for an approved catalogue image, which is public anyway (S-123); the harness accepts a 2xx there only when the public media path serves the same id. Request bodies are synthesised from the documented schemas so writes reach the services' own checks. Eleven writes
 still stop at validation (enums missing from the spec, multipart fields); their ownership is covered by their own tests.
 A new operation is probed as soon as `make openapi` regenerates the specs.
 

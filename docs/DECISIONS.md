@@ -6946,7 +6946,7 @@ engagement, contacts, retest, STRIDE), [docs/security/README.md](security/README
   S104-10 a malformed deep link. Open (Low): build-time-only package advisories, staging's cluster API without CIDRs,
   job photos checked by declared type only.
 - **Request body cap in the platform library**, not at the edge: `RequestSizeLimitFilter` (auto-configured for every
-  servlet app) answers 413 for a declared length over `northline.http.max-request-body` (5 MB) or, for multipart,
+  servlet app) answers 413 for a declared length over `northline.http.max-request-body` (5 MB) or, for uploads (multipart or a raw file body such as refund evidence),
   `northline.http.max-multipart-body` (26 MB), and counts chunked bodies while they are read. The edge could cap too
   (Envoy Gateway has no simple per-route body limit in `ClientTrafficPolicy`), but the apps are where the bodies are
   read and the cap is testable there. Properties only, no new environment variable.

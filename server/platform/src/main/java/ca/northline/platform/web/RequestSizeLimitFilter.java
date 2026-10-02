@@ -23,8 +23,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * request of a few gigabytes could exhaust a pod's heap.
  *
  * <p>A declared {@code Content-Length} over the cap is answered {@code 413} at once; a body without one (chunked) is
- * counted while it is read and fails with {@link PayloadTooLarge} at the cap. Multipart uploads get their own, larger
- * cap (the per-file and per-request multipart limits still apply inside it).
+ * counted while it is read and fails with {@link PayloadTooLarge} at the cap. Uploads (multipart, or a raw file body)
+ * get their own, larger cap (the endpoints' own size limits still apply inside it).
  */
 public class RequestSizeLimitFilter extends OncePerRequestFilter implements Ordered {
 
@@ -50,9 +50,23 @@ public class RequestSizeLimitFilter extends OncePerRequestFilter implements Orde
         return Ordered.HIGHEST_PRECEDENCE + 5;
     }
 
+    /**
+     * Structured bodies (JSON, text, XML, forms) that the app parses into memory get the small cap; uploads — multipart
+     * and raw files such as a refund's evidence PDF — the upload cap (their own per-endpoint limits apply inside it).
+     */
     long capFor(HttpServletRequest request) {
         var type = request.getContentType();
-        return type != null && type.toLowerCase(Locale.ROOT).startsWith("multipart/") ? maxMultipart : maxBody;
+        if (type == null) {
+            return maxBody;
+        }
+        var t = type.toLowerCase(Locale.ROOT);
+        var parsed = t.startsWith("application/json")
+                || t.contains("+json")
+                || t.startsWith("text/")
+                || t.startsWith("application/xml")
+                || t.contains("+xml")
+                || t.startsWith("application/x-www-form-urlencoded");
+        return parsed ? maxBody : maxMultipart;
     }
 
     @Override

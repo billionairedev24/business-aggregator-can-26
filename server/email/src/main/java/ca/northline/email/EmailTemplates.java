@@ -79,7 +79,6 @@ public final class EmailTemplates {
         var subjectKey = content.template() + ".subject" + (content.variant().isEmpty() ? "" : "." + content.variant());
         var subject = message(language, subjectKey, content.subjectArgs(format));
         var variables = new HashMap<String, Object>(content.variables(format));
-        requireCodes(content.template(), variables);
         variables.put("subject", subject);
         variables.put("variant", content.variant());
         variables.put("purpose", content.purpose().name().toLowerCase(Locale.ROOT));
@@ -93,6 +92,7 @@ public final class EmailTemplates {
                 content.purpose().needsUnsubscribe() && unsubscribe != null ? unsubscribe.toString() : "");
         variables.put("lang", language.toLanguageTag());
         variables.put("s", EmailBrand.styles());
+        requireCodes(content.template(), variables);
         var context = new Context(language, variables);
         var html = engine.process(content.template() + ".html", context);
         var text = engine.process(content.template() + ".txt", context).strip() + "\n";
@@ -109,7 +109,7 @@ public final class EmailTemplates {
      * someone typed (a reviewer's reason, a note) there would be evaluated as an expression.
      */
     static final Set<String> KEY_VARIABLES =
-            Set.of("decision", "phase", "change", "kind", "outcome", "role", "action", "rule");
+            Set.of("decision", "phase", "change", "kind", "outcome", "role", "action", "rule", "settingsPlace");
 
     /** Lists whose items (or items' {@code code}) become message keys: {@code reasons}, {@code checks}. */
     static final Set<String> KEY_LISTS = Set.of("reasons", "checks");
@@ -149,6 +149,8 @@ public final class EmailTemplates {
         variables.put("contact", contact);
         variables.putIfAbsent("settingsPlace", "studio");
         variables.putIfAbsent("channel", "email");
+        // pages pre-process only settingsPlace (their `action` is the form's URL, not a key)
+        requireCodes("page-" + name, Map.of("settingsPlace", String.valueOf(variables.get("settingsPlace"))));
         return engine.process("page-" + name + ".html", new Context(language, variables));
     }
 
