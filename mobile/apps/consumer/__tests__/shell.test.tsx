@@ -25,7 +25,7 @@ describe('the shell', () => {
     first.view.unmount();
 
     const again = await start({ welcomed: true });
-    expect(await routerScreen.findByTestId('stub-home')).toBeTruthy();
+    expect(await routerScreen.findByTestId('home')).toBeTruthy();
     expect(again.view.getPathname()).toBe('/home');
     const tabs = routerScreen.getAllByRole('tab').map((t) => t.props.accessibilityLabel);
     expect(tabs).toEqual(['Home', 'Services', 'Cart', 'Orders', 'You']);
@@ -65,7 +65,7 @@ describe('the shell', () => {
 
   it('keeps one random guest id per installation and sends it on api calls (the guest cart, S-51)', async () => {
     const { services, store, server } = await start({ welcomed: true });
-    await routerScreen.findByTestId('stub-home');
+    await routerScreen.findByTestId('home');
     const id = services.guestId();
     expect(id).toMatch(/^g_[A-Za-z0-9_-]{16,}$/);
     expect(store.data.get('nl.app.guestId')).toBe(id);
@@ -75,7 +75,7 @@ describe('the shell', () => {
 
   it('shows the offline banner while the phone has no connection', async () => {
     await start({ welcomed: true });
-    await routerScreen.findByTestId('stub-home');
+    await routerScreen.findByTestId('home');
     const netinfo = jest.requireMock('@react-native-community/netinfo') as { __emit: (s: object) => void };
     act(() => netinfo.__emit({ isConnected: false, isInternetReachable: false }));
     expect(await routerScreen.findByText("You're offline. Northline will catch up when you're back online.")).toBeTruthy();
@@ -89,7 +89,7 @@ describe('signing in in the browser (consumer site page, RFC 8252)', () => {
     const { services, view, server } = await start({ welcomed: true, url: '/sign-in', store: { 'nl.location': JSON.stringify({ label: 'Old Town', city: 'Sampleville' }) } });
     // fixture mode completes without a browser; the real path is the system browser (next test)
     fireEvent.press(await routerScreen.findByRole('button', { name: 'Sign in with a passkey' }));
-    expect(await routerScreen.findByTestId('stub-home')).toBeTruthy();
+    expect(await routerScreen.findByTestId('home')).toBeTruthy();
     expect(view.getPathname()).toBe('/home');
     expect(await services.session.restore()).toBe(true);
     expect(server.calls.filter((c) => c.path === '/oauth2/token')).toHaveLength(2); // use_dpop_nonce, then tokens
