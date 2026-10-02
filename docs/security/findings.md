@@ -134,9 +134,15 @@ negative amount. **Tests:** `SalesCsvTest`, `report.test.ts`.
 console have one from nginx). The site renders merchant-written content (storefronts, custom domains).
 **Fix:** `web/apps/consumer/server/security-headers.mjs`: `default-src 'self'`; scripts from the site and Stripe; frames
 from Stripe only; `connect-src` and `form-action` limited to the site and the auth origin; `frame-ancestors 'none'`,
-`object-src 'none'`, `base-uri 'self'`; COOP `same-origin-allow-popups`. **Residual:** `script-src` keeps
-`'unsafe-inline'` because the SSR document's inline configuration and hydration scripts carry no nonce yet (follow-up).
-**Test:** `securityHeaders.test.ts`.
+`object-src 'none'`, `base-uri 'self'`; COOP `same-origin-allow-popups`. Merged with S-110 (PCI SAQ A): the
+third-party script origins come from `SCRIPT_INVENTORY`, the payment-page script inventory (Stripe.js only;
+docs/compliance/pci/payment-page-scripts.md), and the policy reports violations (`report-uri /csp-report`,
+`report-to csp`, `Reporting-Endpoints`) to the Node server, which logs one `csp.violation` JSON line each (no query
+strings, ≤ 300 a minute, bodies ≤ 16 KB). One enforced policy; no separate report-only one. **Residual:**
+`script-src` keeps `'unsafe-inline'` because the SSR document's inline configuration and hydration scripts carry no
+nonce yet (follow-up; a report-only copy without `'unsafe-inline'` should measure the nonce work first). The same
+residual keeps SAQ A eligibility criterion E7 "not yet" (docs/compliance/pci/saq-a.md).
+**Test:** `securityHeaders.test.ts` (policy, inventory vs the code's script loads, report parsing, rate cap).
 
 ### S104-10 — Malformed deep link threw in the tap handler (Low)
 

@@ -29,7 +29,7 @@ Application Insights' transaction view).
 
 `Redactor` runs on **every string** of every record — message, MDC entries, exception message and stack trace — in
 both outputs. A field whose **name** is sensitive is replaced whole (`password`, `secret`, `token`, `authorization`,
-`cookie`, `code`, `otp`, `totp`, `api_key`, `client_secret`, `x-xsrf-token`, `x-dev-user`, `card_number`, `sin` …).
+`cookie`, `code`, `otp`, `totp`, `api_key`, `client_secret`, `x-xsrf-token`, `x-dev-user`, `card_number`, `cvc`, `cvv`, `track2`, `sin` …).
 Everything else is scanned:
 
 | what | example in | example out |
@@ -37,6 +37,8 @@ Everything else is scanned:
 | email addresses | `amara.osei@example.ca` | `[EMAIL]` |
 | phone numbers (North American, any punctuation; E.164) | `(587) 555-0101`, `+15875550101` | `[PHONE]` |
 | card-like numbers (13–19 digits, Luhn-valid) | `4242 4242 4242 4242` | `[CARD …4242]` |
+| card verification codes after their name (S-110) | `cvc: 123` | `cvc: [REDACTED]` |
+| magnetic-stripe track data (S-110) | `;4242424242424242=2912…?` | `[TRACK]` |
 | Canadian postal codes | `T2P 1B5` | `T2P ***` (the forward sortation area stays) |
 | one-time codes after "verification / sign-in / security / backup / OTP code" (en/fr) | `verification code 482913` | `verification code [CODE]` |
 | bearer / basic / DPoP credentials, `Authorization` and `Cookie` echoes, JWTs | `Bearer eyJhbGci…` | `[REDACTED]` |

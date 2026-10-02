@@ -128,6 +128,7 @@ export const REPO_DOCS_INCLUDE: readonly string[] = [
   '*.md',
   'runbooks/**/*.md',
   'security/**/*.md',
+  'compliance/**/*.md',
   'backlog/README.md',
   'ai/**/*.{md,mdx}',
 ];

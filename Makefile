@@ -190,6 +190,7 @@ help: ## This list, and the common variables
 
 include $(ROOT)/make/server.mk
 include $(ROOT)/make/web.mk
+include $(ROOT)/make/compliance.mk
 include $(ROOT)/make/courier.mk
 include $(ROOT)/make/mobile-consumer.mk
 include $(ROOT)/make/mobile-release.mk
