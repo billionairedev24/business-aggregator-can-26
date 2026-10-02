@@ -7241,7 +7241,7 @@ critical or serious issue left; 2 moderate and 6 minor issues ticketed (S-140–
   courier app was out of scope; the accessibility statement's mailbox is a placeholder and needs legal review with the
   other footer documents; no migration, no server change.
 
-## 2026-10-02 — S-116 Loi 96 French-first readiness for Québec expansion
+## 2026-09-30 — S-116 Loi 96 French-first readiness for Québec expansion
 
 Branch `i18n/s-116-loi96`. Runbook: [runbooks/i18n.md](runbooks/i18n.md). Acceptance criterion: all customer-facing text
 available in fr-CA before a Québec launch.
