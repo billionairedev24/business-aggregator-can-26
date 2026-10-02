@@ -1,0 +1,39 @@
+{
+  "$comment": "S-103: Play Console settings with no file upload (Store settings, App content). Entered by hand; the release check keeps them complete. docs/runbooks/mobile-release.md § Google Play.",
+  "defaultLanguage": "en-CA",
+  "category": "BUSINESS",
+  "tags": ["Delivery", "Business"],
+  "contactEmail": "support@northline.ca",
+  "website": "https://northline.ca",
+  "privacyPolicyUrl": "https://northline.ca/legal/privacy.html",
+  "containsAds": false,
+  "inAppProducts": false,
+  "targetAudience": ["18 and over"],
+  "appealsToChildren": false,
+  "governmentApp": false,
+  "financialFeatures": [],
+  "healthApp": false,
+  "newsApp": false,
+  "appAccess": "Every screen needs a Northline courier account: the review account and a staging run to deliver are entered under App content › App access, never in this repository.",
+  "backgroundLocation": "Declared in App content › Sensitive permissions: location in the background only while a run is open (a foreground service with a visible notification), so customers can follow their delivery; a short video of the run screen is required by Google.",
+  "contentRating": {
+    "$comment": "IARC questionnaire, category \"All other app types\". Couriers deliver orders that may contain alcohol (an item name on a stop), hence the mild reference.",
+    "category": "All other app types",
+    "expected": "whatever IARC answers (likely Teen / PEGI 12 for the alcohol reference) — record it here after the questionnaire",
+    "answers": {
+      "violence": false,
+      "fear": false,
+      "sexuality": false,
+      "gambling": false,
+      "simulatedGambling": false,
+      "crudeHumourOrProfanity": false,
+      "controlledSubstancesReferenced": true,
+      "sellsAlcoholTobaccoOrAgeRestrictedGoods": false,
+      "usersInteractOrCommunicate": false,
+      "sharesUserLocationWithOtherUsers": true,
+      "purchasesOfDigitalGoods": false,
+      "purchasesOfPhysicalGoods": false,
+      "unrestrictedInternetAccess": false
+    }
+  }
+}

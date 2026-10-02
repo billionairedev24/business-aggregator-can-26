@@ -1,0 +1,30 @@
+{
+  "$comment": "S-103: the store screenshots to take, in this order, for both stores and both locales (portrait; iOS 6.9-inch 1320 × 2868, Play phone 1080 × 1920; Play also a 1024 × 500 feature graphic). The files under store/screenshots/ios/<locale>/ and store/play/<locale>/images/ are flat placeholders (make mobile-store-placeholders) until they are captured on a device against staging with a demo run — then set placeholder to false. docs/runbooks/mobile-release.md § Screenshots.",
+  "placeholder": true,
+  "shots": [
+    {
+      "name": "01-shift",
+      "route": "/",
+      "state": "shift started, a run assigned",
+      "caption": { "en-CA": "Start your shift, get your run", "fr-CA": "Commencez votre quart, recevez votre tournée" }
+    },
+    {
+      "name": "02-run",
+      "route": "/run",
+      "state": "the run's stops in order, two done",
+      "caption": { "en-CA": "Every stop, in order", "fr-CA": "Chaque arrêt, dans l’ordre" }
+    },
+    {
+      "name": "03-pickup",
+      "route": "/stops/[id]/pickup",
+      "state": "a pickup with its items checked off",
+      "caption": { "en-CA": "Pick up at each shop", "fr-CA": "Ramassez à chaque boutique" }
+    },
+    {
+      "name": "04-dropoff",
+      "route": "/stops/[id]/dropoff",
+      "state": "proof of delivery: photo, signature or PIN",
+      "caption": { "en-CA": "Proof of delivery at the door", "fr-CA": "Preuve de livraison à la porte" }
+    }
+  ]
+}

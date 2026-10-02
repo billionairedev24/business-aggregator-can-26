@@ -1,0 +1,17 @@
+Northline Coursier est l’app des coursiers qui livrent avec Northline. Un compte de coursier Northline est nécessaire pour vous connecter.
+
+PENDANT VOTRE QUART
+• Commencez et terminez votre quart.
+• Voyez les arrêts de votre tournée dans l’ordre, avec l’adresse, ce qu’il faut ramasser et les instructions de livraison.
+• Ramassez à chaque boutique et indiquez ce que vous avez pris.
+• Livrez avec une preuve : une photo à la porte, la signature du client ou son NIP de livraison.
+• Recevez une notification quand une nouvelle tournée vous est confiée ou que la vôtre change.
+
+PENSÉE POUR LA ROUTE
+• Fonctionne avec un réseau faible : vos étapes sont gardées sur le téléphone et envoyées dès que vous êtes de nouveau en ligne.
+• En français et en anglais.
+
+VOTRE VIE PRIVÉE
+• Pendant une tournée, l’app partage votre position pour que les clients suivent leur commande en route, aussi quand l’app est en arrière-plan. Seule votre dernière position est conservée, jamais un historique, et le partage s’arrête à la fin de la tournée.
+• L’appareil photo sert uniquement à photographier une livraison comme preuve.
+• Aucune publicité, aucun pistage.

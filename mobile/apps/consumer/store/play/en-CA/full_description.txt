@@ -1,0 +1,25 @@
+Northline brings the shops and service providers near you into one bilingual app.
+
+SHOP LOCAL
+• Browse local stores by department and fill one cart from several shops.
+• Get it delivered on the evening’s pooled run.
+• Follow your order from packed to delivered, and confirm when it arrives.
+
+BOOK TRUSTED SERVICES
+• Find cleaners, plumbers, mechanics and more, with their reviews, prices and next available times.
+• Book a fixed-price visit in a few taps, or ask for a quote. Every quote is itemized, with the scope, exclusions, warranty and deposit shown up front.
+• See when your provider is on the way, then sign off when the job is done.
+
+PAY WITH CONFIDENCE
+• Your payment is held and released to the business only after the job is complete or your order is delivered.
+• Cards are entered in Stripe’s secure payment sheet. Northline never sees or stores your card number.
+• Something wrong? Report a problem from the order and follow your refund case.
+
+MADE FOR YOU
+• English and French throughout.
+• Browse as a guest; sign in to book and pay.
+• Your location is used only while the app is open, to show what serves your address, and is never shared with businesses.
+• Notifications for your orders, bookings and quotes, with quiet hours you choose.
+• No ads and no tracking.
+
+Northline is opening province by province. If we don’t serve your area yet, join the waitlist in the app.
