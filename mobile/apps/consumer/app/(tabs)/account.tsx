@@ -1,4 +1,4 @@
-import { You } from '../../src/journeyA/You';
+import { Account } from '../../src/account/Account';
 
-/** The You tab: S-98's language and sign-out until S-101 builds design 01's Profile (`account`). */
-export default You;
+/** Design 01 `account` — the You tab (S-101; replaces S-98's temporary screen). */
+export default Account;

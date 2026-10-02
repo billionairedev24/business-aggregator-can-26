@@ -1,6 +1,4 @@
-import { Stub } from '../src/ui/Stub';
+import { Wallet } from '../src/account/Wallet';
 
-/** Design 01 `wallet` — a stub until its story builds it (src/screens.ts, docs/MOBILE_PLAN.md). */
-export default function Wallet() {
-  return <Stub screen="wallet" />;
-}
+/** Design 01 `wallet` (S-101). */
+export default Wallet;
