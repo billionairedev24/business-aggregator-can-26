@@ -5,8 +5,8 @@ import { http } from '../../lib/http';
 import { applyRole } from './roleView';
 import type { ScreenKey } from './screens';
 
-/** Console roles in design order (design 03 `ROLES`; api `StaffRole`; support lead: S-83). */
-export const ROLE_CODES = ['admin', 'trust_safety', 'dispatch', 'finance', 'support', 'support_lead', 'analyst'] as const;
+/** Console roles in design order (design 03 `ROLES`; api `StaffRole`; support lead: S-83; privacy officer: S-105). */
+export const ROLE_CODES = ['admin', 'trust_safety', 'dispatch', 'finance', 'support', 'support_lead', 'analyst', 'privacy'] as const;
 export const RoleCode = z.enum(ROLE_CODES);
 export type RoleCode = z.infer<typeof RoleCode>;
 

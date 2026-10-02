@@ -61,7 +61,7 @@ function Entry({ entry: e }: { entry: AuditRow }) {
   const t = useTeamT();
   const shell = useShellT();
   const fmt = useFormatters();
-  const role = (e.role ?? '').split(',').filter(Boolean).map(r => (['admin', 'trust_safety', 'dispatch', 'finance', 'support', 'support_lead', 'analyst'].includes(r) ? shell(`role_${r}` as ShellKey) : r)).join(', ');
+  const role = (e.role ?? '').split(',').filter(Boolean).map(r => (['admin', 'trust_safety', 'dispatch', 'finance', 'support', 'support_lead', 'analyst', 'privacy'].includes(r) ? shell(`role_${r}` as ShellKey) : r)).join(', ');
   const who = e.actorName ?? (e.actorId === 'system' || !e.actorId ? t('system') : e.actorId);
   const target = [e.businessName, e.targetType && e.targetId ? `${e.targetType} ${e.targetId}` : undefined].filter(Boolean).join(' · ');
   return (
