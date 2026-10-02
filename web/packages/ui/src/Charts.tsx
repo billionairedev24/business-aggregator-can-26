@@ -12,11 +12,14 @@ const useT = defineMessages({
  */
 function DataTableAlt({ caption, head, rows }: { caption: string; head: readonly string[]; rows: readonly (readonly string[])[] }) {
   return (
-    <table className="nl-sr-only">
-      <caption>{caption}</caption>
-      <thead><tr>{head.map((h, i) => <th key={i} scope="col">{h}</th>)}</tr></thead>
-      <tbody>{rows.map((r, i) => <tr key={i}>{r.map((c, j) => (j === 0 ? <th key={j} scope="row">{c}</th> : <td key={j}>{c}</td>))}</tr>)}</tbody>
-    </table>
+    // the wrapper clips: a table ignores width: 1px and would widen the page (horizontal scroll at 320 px)
+    <div className="nl-sr-only">
+      <table>
+        <caption>{caption}</caption>
+        <thead><tr>{head.map((h, i) => <th key={i} scope="col">{h}</th>)}</tr></thead>
+        <tbody>{rows.map((r, i) => <tr key={i}>{r.map((c, j) => (j === 0 ? <th key={j} scope="row">{c}</th> : <td key={j}>{c}</td>))}</tr>)}</tbody>
+      </table>
+    </div>
   );
 }
 
@@ -49,9 +52,11 @@ export function StackedBarChart({ series, data, height = 180, title, format = St
   );
 }
 
-export interface LineChartProps { current: readonly number[]; previous?: readonly number[]; labels?: readonly string[]; height?: number; title: string; legend?: { current: string; previous?: string } }
+export interface LineChartProps { current: readonly number[]; previous?: readonly number[]; labels?: readonly string[]; height?: number; title: string; legend?: { current: string; previous?: string }; format?: (n: number) => string;
+  /** false when the screen shows the numbers as a table of its own (the console's reports): no hidden copy then. */
+  dataTable?: boolean }
 /** Period-over-period line (Reports "Weekly gross"): solid accent line with dots, dotted neutral previous period, light grid. */
-export function LineChart({ current, previous, labels, height = 200, title, legend }: LineChartProps) {
+export function LineChart({ current, previous, labels, height = 200, title, legend, format = String, dataTable = true }: LineChartProps) {
   const t = useT();
   const W = 480, n = Math.max(current.length, previous?.length ?? 0, 2);
   const max = Math.max(1, ...current, ...(previous ?? [])) * 1.1;
@@ -66,12 +71,12 @@ export function LineChart({ current, previous, labels, height = 200, title, lege
         <path d={grid} stroke="var(--color-neutral-200)" strokeWidth={1} fill="none" />
         {previous ? <path d={path(previous)} stroke="var(--color-neutral-500)" strokeWidth={1.5} strokeDasharray="4 4" fill="none" /> : null}
         <path d={path(current)} stroke="var(--color-accent)" strokeWidth={2.5} fill="none" />
-        {current.map((v, i) => <circle key={i} cx={px(i)} cy={py(v)} r={3} fill="var(--color-accent)"><title>{`${labels?.[i] ?? i + 1}: ${v}`}</title></circle>)}
+        {current.map((v, i) => <circle key={i} cx={px(i)} cy={py(v)} r={3} fill="var(--color-accent)"><title>{`${labels?.[i] ?? i + 1}: ${format(v)}`}</title></circle>)}
         {labels?.map((l, i) => (i % Math.ceil(labels.length / 7) === 0 ? <text key={l + i} x={px(i)} y={height - 4} fontSize={10} textAnchor="middle">{l}</text> : null))}
       </svg>
-      <DataTableAlt caption={title}
+      {dataTable && <DataTableAlt caption={title}
         head={[t('point'), legend?.current ?? t('current'), ...(previous ? [legend?.previous ?? t('previous')] : [])]}
-        rows={Array.from({ length: Math.max(current.length, previous?.length ?? 0) }, (_, i) => [labels?.[i] ?? String(i + 1), String(current[i] ?? ''), ...(previous ? [String(previous[i] ?? '')] : [])])} />
+        rows={Array.from({ length: Math.max(current.length, previous?.length ?? 0) }, (_, i) => [labels?.[i] ?? String(i + 1), current[i] === undefined ? '' : format(current[i]!), ...(previous ? [previous[i] === undefined ? '' : format(previous[i]!)] : [])])} />}
     </figure>
   );
 }

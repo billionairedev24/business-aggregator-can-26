@@ -147,6 +147,22 @@ describe('ProductEditor', () => {
   });
 });
 
+describe('ProductEditor tabs (S-109)', () => {
+  it('are ARIA tabs: aria-selected without aria-pressed, one tab stop, arrows move; the editor passes axe', async () => {
+    stubFetch({ [`GET ${base}/catalogue/categories`]: CATEGORIES });
+    renderScreen(<ProductEditor portal="seller" />);
+    const identity = screen.getByRole('tab', { name: /^Identity & category/ });
+    expect(identity.getAttribute('aria-selected')).toBe('true');
+    expect(identity.hasAttribute('aria-pressed')).toBe(false);
+    expect(screen.getByRole('tab', { name: /^Variants/ }).getAttribute('tabindex')).toBe('-1');
+    await expectNoAxeViolations(document.body);
+    identity.focus();
+    await user().keyboard('{ArrowRight}');
+    expect(screen.getByRole('tab', { name: /^Variants/ }).getAttribute('aria-selected')).toBe('true');
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: /^Variants/ }));
+  });
+});
+
 describe('BulkUploadScreen', () => {
   it('uploads, shows the validation report and imports the valid rows', async () => {
     const batch = { id: 'b1', fileName: 'wipers-sept.xlsx', template: 'auto_parts', rowCount: 256, createCount: 212, updateCount: 38, errorCount: 1, errors: [{ row: 14, sku: 'WB-26', error: 'GTIN check digit invalid' }], status: 'validated', createdAt: '2026-09-29T15:00:00Z', importedAt: null };

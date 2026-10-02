@@ -3,7 +3,7 @@
 .nl-site-brand { min-height: 44px; }
 .nl-site-spacer { flex: 1; }
 .nl-site-search { flex: 1 1 220px; min-width: min(180px, 100%); max-width: 480px; }
-.nl-site-nav { display: flex; gap: 2px; }
+.nl-site-nav { display: flex; flex-wrap: wrap; gap: 2px; min-width: 0; } /* S-109: wraps under user text spacing at 320 px (1.4.12) */
 .nl-site-link { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 15px; font-weight: 500; color: var(--color-text); text-decoration: none; }
 .nl-site-link:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
 .nl-site-link[aria-current='page'] { color: var(--color-accent-800); }

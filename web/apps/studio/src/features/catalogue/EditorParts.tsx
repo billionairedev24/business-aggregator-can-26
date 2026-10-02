@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { CheckCircle, Circle, XCircle } from '@phosphor-icons/react';
-import { Alert, Button, Select, useFormatters, useLocale } from '@northline/ui';
+import { Alert, Button, Select, rovingIndex, tablistKeyDown, useFormatters, useLocale } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import type { Category, ListingDetail } from './api';
 import { useCatalogueT, type CatalogueT } from './messages';
@@ -113,10 +113,11 @@ export function RevetNotice({ detail, kind }: { detail: ListingDetail | undefine
 export function EditorTabs<K extends string>({ tabs, value, onChange, label }: { tabs: { key: K; name: string; done: boolean }[]; value: K; onChange: (k: K) => void; label: string }) {
   const t = useCatalogueT();
   return (
-    <div className="nl-cat-tabs" role="tablist" aria-label={label}>
-      {tabs.map(tab => (
-        <button key={tab.key} type="button" role="tab" id={`tab-${tab.key}`} aria-selected={tab.key === value} aria-controls={`panel-${tab.key}`}
-          className="nl-chip nl-cat-tab" aria-pressed={tab.key === value} onClick={() => onChange(tab.key)}
+    // S-109: tabs state aria-selected only (aria-pressed is not allowed on a tab: axe critical), one tab stop, arrows move
+    <div className="nl-cat-tabs" role="tablist" aria-label={label} onKeyDown={tablistKeyDown(tabs.map(x => x.key), value, onChange)}>
+      {tabs.map((tab, i) => (
+        <button key={tab.key} type="button" role="tab" id={`tab-${tab.key}`} aria-selected={tab.key === value} aria-controls={tab.key === value ? `panel-${tab.key}` : undefined}
+          tabIndex={rovingIndex(tabs.map(x => ({ value: x.key })), value, i)} className="nl-chip nl-cat-tab" onClick={() => onChange(tab.key)}
           aria-label={tab.done ? t('complete', { name: tab.name }) : t('incomplete', { name: tab.name })}>
           {tab.name}<span className="nl-cat-dot" data-done={tab.done} data-current={tab.key === value} aria-hidden />
         </button>

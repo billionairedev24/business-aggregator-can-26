@@ -15,6 +15,7 @@ describe('console shell (S-90, design 03)', () => {
     staffApi(['admin']);
     renderConsole('/');
     expect(await screen.findByRole('searchbox', { name: 'Search the console' })).toHaveProperty('placeholder', 'Search sellers, orders, customers, cases…');
+    expect(screen.getByRole('search', { name: 'Search the console' })).toBeTruthy(); // S-109: a named landmark (landmark-unique)
     expect(screen.getByText('Console')).toBeTruthy();
     expect(await screen.findByText('Ops · Alberta + BC pilot')).toBeTruthy();
     await expectNoAxeViolations(document.body); // S-109

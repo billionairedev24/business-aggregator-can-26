@@ -96,7 +96,7 @@
 .nl-dt-sub { display: block; font-size: 12px; color: var(--color-neutral-700); overflow-wrap: anywhere; }
 .nl-dt-table tbody tr.is-selected td { background: var(--color-accent-100); }
 .nl-dt-table tbody tr.is-clickable { cursor: pointer; }
-.nl-dt-tag-wrap { white-space: normal; }
+.tag.nl-dt-tag-wrap { white-space: normal; max-width: 100%; } /* S-109: long French tags wrapped inside cards at 320 px */
 
 .nl-dt-row-acts { display: flex; gap: 2px; justify-content: flex-end; flex-wrap: wrap; }
 .nl-dt-act { min-height: 36px; padding: 4px 8px; font-size: 13px; white-space: nowrap; overflow-wrap: normal; }

@@ -51,7 +51,7 @@ export function ConsoleLayout({ children, denied }: { children: ReactNode; denie
     <AppShell
       brand={<Brand label={t('console')} />}
       headerStart={<>
-        <form role="search" className="nl-console-search" onSubmit={e => e.preventDefault()}>
+        <form role="search" aria-label={t('searchLabel')} className="nl-console-search" onSubmit={e => e.preventDefault()}>
           <MagnifyingGlass size={18} weight="duotone" className="nl-console-search-icon" aria-hidden />
           <input className="input" type="search" aria-label={t('searchLabel')} placeholder={t('searchPlaceholder')} />
         </form>
