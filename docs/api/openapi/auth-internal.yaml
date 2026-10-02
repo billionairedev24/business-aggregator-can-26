@@ -1356,6 +1356,11 @@ components:
           pattern: "^\\+?1?[\\s.-]?\\(?\\d{3}\\)?[\\s.-]?\\d{3}[\\s.-]?\\d{4}$"
         terms:
           type: boolean
+        termsEnglishRequested:
+          type: boolean
+        termsLanguage:
+          type: string
+          pattern: ^(en|fr)$
       required:
       - email
       - firstName
