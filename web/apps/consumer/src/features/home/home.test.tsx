@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { mockFetch, renderApp, type Call } from '../../test/render';
 import { SAVED_KEY } from '../location/useDeliveryLocation';
 import { HomeScreen } from './HomeScreen';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const AMARA = { id: 'u1', firstName: 'Amara', lastName: 'Osei', email: 'amara@example.ca', initials: 'AO' };
 
@@ -44,6 +45,7 @@ describe('home', () => {
     renderApp('/', { routes: home });
     expect(await screen.findByRole('heading', { level: 1, name: 'What do you need in Beltline today?' })).toBeInTheDocument();
     expect(await screen.findByText(/^Good (morning|afternoon|evening) · Beltline, Calgary$/)).toBeInTheDocument();
+    await expectNoAxeViolations(document.body); // S-109
     const scopes = screen.getByRole('navigation', { name: 'Services, Shop and Food' });
     await waitFor(() => expect(within(scopes).getByRole('link', { name: /Services/ })).toHaveTextContent('Services412 pros'));
     expect(within(scopes).getByRole('link', { name: /Shop/ })).toHaveAttribute('href', '/shop');

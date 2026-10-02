@@ -8,6 +8,7 @@ import { FOOD_CART_KEY } from './foodCart';
 import { FoodScreen } from './FoodScreen';
 import { RestaurantScreen } from './RestaurantScreen';
 import { TrackScreen } from './TrackScreen';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const AMARA = { id: 'C1', firstName: 'Amara', lastName: 'Osei', email: 'amara@example.ca', phone: '+14035550201', initials: 'AO', locale: 'en-CA', memberSince: '2026-03-02' };
 
@@ -88,6 +89,7 @@ describe('Food landing (design 06 food)', () => {
   it('lists the kitchens delivering to the saved location, open ones with their ETA and fee', async () => {
     const { calls } = open('/food');
     expect(await screen.findByRole('heading', { level: 2, name: '2 kitchens delivering to Beltline' })).toBeInTheDocument();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText(/^1 kitchen open · delivering to Beltline in 25–35 min/)).toBeInTheDocument();
     expect(calls.find(c => c.url.startsWith('/api/v1/public/kitchens'))!.url).toBe('/api/v1/public/kitchens?city=Calgary&lat=51.04000&lng=-114.07000');
     const pho = screen.getByRole('link', { name: /Pho Lucky/ });

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Button, Dialog, ErrorState, Field, Select, Skeleton, TextArea, TextInput, useFormatters } from '@northline/ui';
+import { Button, Dialog, ErrorState, Field, Select, Skeleton, TextArea, TextInput, useFormatters, codeValue } from '@northline/ui';
 import { ValidationError } from '@northline/client';
 import { stepUpWithCode, stepUpWithPasskey } from '../cart/stepUp';
 import {
@@ -144,7 +144,7 @@ function VerifyDialog({ request, t, onClose }: { request: PrivacyRequest; t: Pri
       </>}>
       <p>{sentTo && !authenticator ? t('codeSent', { to: sentTo }) : t('noCode')}</p>
       <Field label={sentTo && !authenticator ? t('code') : t('authenticatorCode')} error={error}>
-        <TextInput value={code} onChange={e => setCode(e.target.value)} inputMode="numeric" autoComplete="one-time-code" maxLength={6} />
+        <TextInput value={code} onChange={e => setCode(codeValue(e.target.value))} inputMode="numeric" autoComplete="one-time-code" />
       </Field>
       <div className="nl-acct-actions">
         {sentTo && !authenticator ? <Button type="button" variant="ghost" disabled={resend.isPending}

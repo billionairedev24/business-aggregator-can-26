@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Alert, Button, Field, TextInput } from '@northline/ui';
+import { Alert, Button, Field, TextInput, codeValue } from '@northline/ui';
 import { codeSchema, fieldErrors, firstIssue, flowError, isRestart, mmss, retryAfter, RateLimitNotice, useCountdown, useRateLimit, type AuthKitKey, type CodeSent } from '@northline/auth-kit';
 import { useAuthT } from './messages';
 
@@ -61,8 +61,8 @@ export function CodeStep({ label, sent, onResend, onResent, onVerify, onRestart,
   return (
     <form noValidate onSubmit={e => void submit(e)}>
       <Field label={label} error={error || undefined}>
-        <TextInput className="nl-auth-code" name="code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder={t('codePh')}
-          value={code} onBlur={() => setTouched(true)} onChange={e => { setCode(e.target.value.replace(/\s/g, '')); setServer(''); }} />
+        <TextInput className="nl-auth-code" name="code" inputMode="numeric" autoComplete="one-time-code" placeholder={t('codePh')}
+          value={code} onBlur={() => setTouched(true)} onChange={e => { setCode(codeValue(e.target.value)); setServer(''); }} />
       </Field>
       <div className="nl-auth-hint">
         {left > 0

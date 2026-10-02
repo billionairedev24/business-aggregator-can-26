@@ -5,6 +5,7 @@ import { mockFetch, renderApp, type Call } from '../../test/render';
 import { AccountScreen } from './AccountScreen';
 import { OrdersScreen } from './OrdersScreen';
 import type { ActivityItem, Favourite, Wallet } from './api';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const AMARA = { id: 'C1', firstName: 'Amara', lastName: 'Osei', email: 'amara@example.ca', phone: null, initials: 'AO', locale: 'en-CA', memberSince: '2026-03-02' };
 const soon = (h: number) => new Date(Date.now() + h * 3_600_000).toISOString();
@@ -72,6 +73,7 @@ describe('Orders & bookings (design 06 orders)', () => {
     expect(screen.getByRole('button', { name: 'Past' })).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByRole('button', { name: 'Refunds & cases · 1' })).toBeInTheDocument();
     expect(await screen.findByText('Grocery run · 3 shops')).toBeInTheDocument();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('Bridgeland Butcher, Sunnyside Greens, Glenmore Bakery')).toBeInTheDocument();
     expect(screen.getByText('Packing')).toBeInTheDocument();
     expect(screen.getByText('$47.76')).toBeInTheDocument();

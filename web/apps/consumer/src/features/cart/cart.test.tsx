@@ -3,6 +3,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { mockFetch, renderApp, type Call } from '../../test/render';
 import { CartPage } from './CartPage';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const AMARA = { id: 'C1', firstName: 'Amara', lastName: 'Osei', email: 'amara@example.ca', phone: '+14035550201', initials: 'AO', locale: 'en-CA', memberSince: '2026-03-02' };
 const line = (itemId: string, merchantId: string, name: string, unitCents: number, qty: number, extra = {}) => ({
@@ -57,6 +58,7 @@ describe('Cart and checkout (design 06 cart)', () => {
   it('shows the multi-shop cart, windows, address, substitutions and the summary with tax', async () => {
     open();
     expect(await screen.findByRole('heading', { level: 1, name: 'Checkout' })).toBeInTheDocument();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('4 items · 2 shops · one delivery')).toBeInTheDocument();
     const butcher = screen.getByRole('region', { name: 'Bridgeland Butcher' });
     expect(within(butcher).getByRole('link', { name: 'Ribeye, AAA' })).toHaveAttribute('href', '/products/p-I1');

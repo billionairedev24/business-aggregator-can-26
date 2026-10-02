@@ -3,6 +3,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { mockFetch, renderApp, type Call } from '../../test/render';
 import { AccountScreen } from './AccountScreen';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const AMARA = { id: 'C1', firstName: 'Amara', lastName: 'Osei', email: 'amara@example.ca', phone: '+14035550148', initials: 'AO', locale: 'en-CA', memberSince: '2026-03-02' };
 const PROFILE = { id: 'C1', firstName: 'Amara', lastName: 'Osei', email: 'amara@example.ca', phone: '+14035550148', locale: 'en-CA', memberSince: '2026-03-02',
@@ -98,6 +99,7 @@ describe('Payment methods (design 06 payments)', () => {
   it('lists the cards, makes one default and removes one after confirming', async () => {
     open('payments');
     expect(await screen.findByRole('heading', { level: 1, name: 'Payment methods' })).toBeInTheDocument();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText(/Stored with Stripe as tokens — Northline never sees card numbers\./)).toBeInTheDocument();
     const list = await screen.findByRole('list', { name: 'Payment methods' });
     expect(within(list).getByText('Visa ··4471')).toBeInTheDocument();
@@ -106,6 +108,7 @@ describe('Payment methods (design 06 payments)', () => {
     await waitFor(() => expect(calls.some(c => c.url === '/api/v1/me/payment-methods/pm_2/default')).toBe(true));
     await userEvent.click(screen.getByRole('button', { name: 'Remove Mastercard ··0912' }));
     const dialog = await screen.findByRole('alertdialog');
+    await expectNoAxeViolations(document.body); // S-109
     await userEvent.click(within(dialog).getByRole('button', { name: 'Remove' }));
     await waitFor(() => expect(screen.queryByText('Mastercard ··0912')).not.toBeInTheDocument());
   });

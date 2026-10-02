@@ -5,6 +5,7 @@ import { useSearch } from '@tanstack/react-router';
 import { mockFetch, renderApp, type Call } from '../../test/render';
 import { AuthPage, type AuthSearch } from './AuthPage';
 import { splitName } from './RegisterFlow';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const AMARA = { id: '01J9ZD3V0000000000000C0001', firstName: 'Amara', lastName: 'Osei', email: 'amara@example.ca', phone: '+14035550201', initials: 'AO', locale: 'en-CA', memberSince: '2026-03-02' };
 const invalid = (field: string, rule: string, message: string) => ({ status: 422, body: { errors: [{ field, rule, message }] } });
@@ -52,6 +53,7 @@ describe('sign in (design 06 auth)', () => {
   it('shows the design: pitch, card, passkey, Apple / Google back to the consumer site', async () => {
     open('/sign-in?next=%2Fcart');
     expect(await screen.findByRole('heading', { level: 1, name: 'Sign in to pick up where you left off.' })).toBeInTheDocument();
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('Welcome back')).toBeInTheDocument();
     expect(screen.getAllByRole('listitem').map(li => li.textContent)).toEqual([
       '1Passkeys, not passwordsFace ID, Touch ID or Windows Hello. Phishing-resistant by design.',
@@ -74,6 +76,7 @@ describe('sign in (design 06 auth)', () => {
     await userEvent.type(await screen.findByLabelText('Mobile number'), '403 555 0201');
     await userEvent.click(screen.getByRole('button', { name: 'Continue' }));
     const code = await screen.findByLabelText('6-digit code sent to 403 555 0201');
+    await expectNoAxeViolations(document.body); // S-109
     expect(calls.find(c => c.url.endsWith('/api/auth/sign-in'))!.body).toEqual({ identifier: '403 555 0201' });
     const send = calls.find(c => c.url.endsWith('/api/auth/sign-in/code'))!;
     expect(send.body).toEqual({ channel: 'sms' });

@@ -3,6 +3,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { mockFetch, renderApp, type Call } from '../../test/render';
 import { AccountScreen } from './AccountScreen';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 vi.mock('../cart/stepUp', () => ({
   stepUpWithPasskey: vi.fn(async () => 'proof-passkey'),
@@ -54,6 +55,7 @@ describe('Your data (S-105 privacy requests)', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Download my data' }));
     expect(posts('/api/v1/me/privacy-requests')[0]?.body).toEqual({ type: 'access' });
     const dialog = await screen.findByRole('dialog', { name: 'Confirm it’s you' });
+    await expectNoAxeViolations(document.body); // S-109
     expect(within(dialog).getByText('We texted a code to •••• 0148.')).toBeInTheDocument();
 
     await userEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
