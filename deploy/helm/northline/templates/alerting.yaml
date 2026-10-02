@@ -1,0 +1,237 @@
+{{- /*
+S-113 alerting and on-call (docs/runbooks/alerting.md): the alert rules of files/alerting (copies of
+deploy/observability/prometheus/rules — threshold alerts and the Sloth-generated SLO burn-rate rules; make
+obs-rules-check keeps them identical) and the severity routing: page → the on-call pager, ticket → the team's queue.
+Every alert gets namespace (this release's, so the Prometheus Operator's per-namespace AlertmanagerConfig matches it)
+and environment labels; runbook_url points at alerting.runbookBaseUrl.
+*/ -}}
+{{- $a := .Values.alerting }}
+{{- if $a.enabled }}
+{{- if not (has $a.rules.format (list "prometheusRule" "gmpRules" "configMap")) }}
+{{- fail (printf "alerting.rules.format must be prometheusRule, gmpRules or configMap (got %q)" $a.rules.format) }}
+{{- end }}
+{{- if not (has $a.routing.format (list "alertmanagerConfig" "configMap" "none")) }}
+{{- fail (printf "alerting.routing.format must be alertmanagerConfig, configMap or none (got %q)" $a.routing.format) }}
+{{- end }}
+{{- range $sev := list "page" "ticket" }}
+{{- $p := (get $a.routing $sev).provider }}
+{{- if not (has $p (list "pagerduty" "opsgenie" "webhook" "none")) }}
+{{- fail (printf "alerting.routing.%s.provider must be pagerduty, opsgenie, webhook or none (got %q)" $sev $p) }}
+{{- end }}
+{{- end }}
+{{- $github := "https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts" }}
+{{- $base := trimSuffix "/" (default $github $a.runbookBaseUrl) }}
+{{- $alertLabels := dict "namespace" .Release.Namespace "environment" .Values.global.environment }}
+{{- $alertLabels = merge (deepCopy (default (dict) $a.rules.extraAlertLabels)) $alertLabels }}
+{{- $files := dict }}
+{{- range $path, $_ := .Files.Glob "files/alerting/**.y*ml" }}
+{{- $doc := $.Files.Get $path | fromYaml }}
+{{- $groups := list }}
+{{- range $g := $doc.groups }}
+{{- $rules := list }}
+{{- range $r := $g.rules }}
+{{- if hasKey $r "alert" }}
+{{- $_ := set $r "labels" (merge (deepCopy (default (dict) $r.labels)) $alertLabels) }}
+{{- with $r.annotations }}
+{{- if .runbook_url }}
+{{- $_ := set . "runbook_url" (replace $github $base .runbook_url) }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- $rules = append $rules $r }}
+{{- end }}
+{{- $group := dict "name" $g.name "rules" $rules }}
+{{- if eq $a.rules.format "gmpRules" }}{{ $_ := set $group "interval" $a.rules.interval }}{{ end }}
+{{- $groups = append $groups $group }}
+{{- end }}
+{{- $name := printf "%s%s" (ternary "slo-" "" (contains "/slo/" $path)) (base $path | trimSuffix ".yaml" | trimSuffix ".yml" | trimPrefix "northline-") }}
+{{- $_ := set $files $name $groups }}
+{{- end }}
+{{- if not $files }}
+{{- fail "alerting: no rule files under files/alerting (make obs-slo copies them)" }}
+{{- end }}
+{{- if eq $a.rules.format "configMap" }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: northline-alert-rules
+  labels:
+    {{- include "northline.labels" (dict "root" $ "app" "alerting") | nindent 4 }}
+    {{- with $a.rules.labels }}{{ toYaml . | nindent 4 }}{{ end }}
+data:
+  {{- range $name := keys $files | sortAlpha }}
+  {{ $name }}.yml: |
+    {{- toYaml (dict "groups" (get $files $name)) | nindent 4 }}
+  {{- end }}
+{{- else }}
+{{- range $name := keys $files | sortAlpha }}
+---
+apiVersion: {{ ternary "monitoring.googleapis.com/v1" "monitoring.coreos.com/v1" (eq $a.rules.format "gmpRules") }}
+kind: {{ ternary "Rules" "PrometheusRule" (eq $a.rules.format "gmpRules") }}
+metadata:
+  name: northline-{{ $name }}
+  labels:
+    {{- include "northline.labels" (dict "root" $ "app" "alerting") | nindent 4 }}
+    {{- with $a.rules.labels }}{{ toYaml . | nindent 4 }}{{ end }}
+spec:
+  groups: {{- toYaml (get $files $name) | nindent 4 }}
+{{- end }}
+{{- end }}
+{{- /* ---- routing ---- */ -}}
+{{- $r := $a.routing }}
+{{- if ne $r.format "none" }}
+{{- $secret := include "northline.secretName" (dict "root" $ "name" "alerting") }}
+{{- $keys := list }}
+{{- range $sev := list "page" "ticket" }}
+{{- $p := (get $r $sev).provider }}
+{{- if eq $p "pagerduty" }}{{ $keys = append $keys "ALERTING_PAGERDUTY_ROUTING_KEY" }}{{ end }}
+{{- if eq $p "opsgenie" }}{{ $keys = append $keys "ALERTING_OPSGENIE_API_KEY" }}{{ end }}
+{{- if eq $p "webhook" }}{{ $keys = append $keys (printf "ALERTING_%s_WEBHOOK_URL" (upper $sev)) }}{{ end }}
+{{- end }}
+{{- $keys = uniq $keys }}
+{{- $summary := "{{ .CommonAnnotations.summary }}" }}
+{{- $runbook := "{{ .CommonAnnotations.runbook_url }}" }}
+{{- $title := "[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }} ({{ .CommonLabels.environment }})" }}
+{{- if eq $r.format "alertmanagerConfig" }}
+---
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: northline
+  labels:
+    {{- include "northline.labels" (dict "root" $ "app" "alerting") | nindent 4 }}
+    {{- with $r.labels }}{{ toYaml . | nindent 4 }}{{ end }}
+spec:
+  route:
+    receiver: ticket
+    groupBy: {{ toYaml $r.groupBy | nindent 6 }}
+    groupWait: 30s
+    groupInterval: 5m
+    repeatInterval: {{ $r.ticket.repeatInterval }}
+    routes:
+      - receiver: page
+        matchers: [{ name: severity, value: page, matchType: "=" }]
+        groupWait: 10s
+        repeatInterval: {{ $r.page.repeatInterval }}
+      - receiver: ticket
+        matchers: [{ name: severity, value: ticket, matchType: "=" }]
+  inhibitRules:
+    # A page silences the ticket of the same alert (the slow burn of an SLO that also burns fast).
+    - sourceMatch: [{ name: severity, value: page, matchType: "=" }]
+      targetMatch: [{ name: severity, value: ticket, matchType: "=" }]
+      equal: [alertname, sloth_service, sloth_slo, application]
+  receivers:
+    {{- range $sev := list "page" "ticket" }}
+    {{- $p := (get $r $sev).provider }}
+    - name: {{ $sev }}
+      {{- if eq $p "pagerduty" }}
+      pagerdutyConfigs:
+        - routingKey: { name: {{ $secret }}, key: ALERTING_PAGERDUTY_ROUTING_KEY }
+          url: {{ $r.pagerduty.url }}
+          severity: {{ ternary "critical" "warning" (eq $sev "page") }}
+          description: {{ $summary | quote }}
+          sendResolved: true
+          pagerDutyLinkConfigs: [{ href: {{ $runbook | quote }}, alt: Runbook }]
+      {{- else if eq $p "opsgenie" }}
+      opsgenieConfigs:
+        - apiKey: { name: {{ $secret }}, key: ALERTING_OPSGENIE_API_KEY }
+          apiURL: {{ $r.opsgenie.apiUrl }}
+          priority: {{ ternary "P1" "P3" (eq $sev "page") }}
+          message: {{ $title | quote }}
+          description: {{ printf "%s\n\nRunbook: %s" $summary $runbook | quote }}
+          sendResolved: true
+      {{- else if eq $p "webhook" }}
+      webhookConfigs:
+        - urlSecret: { name: {{ $secret }}, key: ALERTING_{{ upper $sev }}_WEBHOOK_URL }
+          sendResolved: true
+      {{- end }}
+    {{- end }}
+{{- else }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: northline-alertmanager
+  labels:
+    {{- include "northline.labels" (dict "root" $ "app" "alerting") | nindent 4 }}
+    {{- with $r.labels }}{{ toYaml . | nindent 4 }}{{ end }}
+data:
+  # Mount Secret {{ $secret }} at {{ $r.credentialsDir }} in the Alertmanager (keys: {{ default "none" (join ", " $keys) }}).
+  alertmanager.yml: |
+    route:
+      receiver: ticket
+      group_by: {{ toJson $r.groupBy }}
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: {{ $r.ticket.repeatInterval }}
+      routes:
+        - receiver: page
+          matchers: ['severity="page"']
+          group_wait: 10s
+          repeat_interval: {{ $r.page.repeatInterval }}
+        - receiver: ticket
+          matchers: ['severity="ticket"']
+    inhibit_rules:
+      - source_matchers: ['severity="page"']
+        target_matchers: ['severity="ticket"']
+        equal: [alertname, sloth_service, sloth_slo, application]
+    receivers:
+      {{- range $sev := list "page" "ticket" }}
+      {{- $p := (get $r $sev).provider }}
+      - name: {{ $sev }}
+        {{- if eq $p "pagerduty" }}
+        pagerduty_configs:
+          - routing_key_file: {{ $r.credentialsDir }}/ALERTING_PAGERDUTY_ROUTING_KEY
+            url: {{ $r.pagerduty.url }}
+            severity: {{ ternary "critical" "warning" (eq $sev "page") }}
+            description: {{ $summary | quote }}
+            send_resolved: true
+            links: [{ href: {{ $runbook | quote }}, text: Runbook }]
+        {{- else if eq $p "opsgenie" }}
+        opsgenie_configs:
+          - api_key_file: {{ $r.credentialsDir }}/ALERTING_OPSGENIE_API_KEY
+            api_url: {{ $r.opsgenie.apiUrl }}
+            priority: {{ ternary "P1" "P3" (eq $sev "page") }}
+            message: {{ $title | quote }}
+            description: {{ printf "%s\n\nRunbook: %s" $summary $runbook | quote }}
+            send_resolved: true
+        {{- else if eq $p "webhook" }}
+        webhook_configs:
+          - url_file: {{ $r.credentialsDir }}/ALERTING_{{ upper $sev }}_WEBHOOK_URL
+            send_resolved: true
+        {{- end }}
+      {{- end }}
+{{- end }}
+{{- if and $.Values.externalSecrets.enabled $keys }}
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: northline-alerting
+  labels:
+    {{- include "northline.labels" (dict "root" $ "app" "alerting") | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"
+spec:
+  refreshInterval: {{ $.Values.externalSecrets.refreshInterval }}
+  secretStoreRef:
+    kind: {{ $.Values.externalSecrets.store.kind }}
+    name: {{ $.Values.externalSecrets.store.name }}
+  target:
+    name: {{ $secret }}
+    creationPolicy: Owner
+    deletionPolicy: Retain
+  data:
+    {{- range $keys }}
+    {{- $remote := include "northline.remoteKey" (dict "root" $ "key" .) }}
+    {{- if not $remote }}
+    {{- fail (printf "externalSecrets: no remote key for %s (alerting) — set externalSecrets.remoteKeys.%s or secretNames.%s" . . .) }}
+    {{- end }}
+    - secretKey: {{ . }}
+      remoteRef:
+        key: {{ $remote | quote }}
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

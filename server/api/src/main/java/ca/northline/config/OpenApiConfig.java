@@ -62,7 +62,8 @@ class OpenApiConfig {
         "/api/v1/commerce/oauth/**",
         "/api/v1/calendar/oauth/**",
         "/api/v1/email/**",
-        "/api/v1/dev/**"
+        "/api/v1/dev/**",
+        "/api/v1/ops/**"
     };
 
     @Bean
@@ -186,7 +187,8 @@ class OpenApiConfig {
                     ApiDocs.describeGroup(api, "Internal", """
                             Not for clients: callbacks from providers (Stripe, Google and Microsoft calendars, \
                             Shopify / Square / Lightspeed), each authenticated by the provider's signature or a \
-                            single-use state instead of a token; signed email links; and the `local`-only dev tools. \
+                            single-use state instead of a token; signed email links; the on-call rota for paging tools \
+                            (its own shared token, S-113); and the `local`-only dev tools. \
                             Never published outside local, dev and staging.""");
                     api.setSecurity(List.of());
                 })

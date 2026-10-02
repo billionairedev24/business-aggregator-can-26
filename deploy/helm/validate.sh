@@ -16,6 +16,10 @@ schema_args=(-schema-location default -schema-location "$CRD_CATALOG")
 for s in ${KUBECONFORM_SCHEMAS:-}; do schema_args+=(-schema-location "$s"); done
 
 failed=0
+refuse() {
+  local label=$1; shift
+  if helm template northline "$CHART" "$@" >/dev/null 2>&1; then echo "FAIL $label accepted"; failed=1; else echo "ok   $label refused"; fi
+}
 check() {
   local label=$1; shift
   if ! helm lint --quiet --strict "$CHART" "$@" >/tmp/helm-lint.$$ 2>&1; then
@@ -51,6 +55,31 @@ check "prod × aws, Collector → OTLP backend" -f "$CHART/values-prod.yaml" -f 
 if helm template northline "$CHART" -f "$CHART/values-dev.yaml" --set observability.collector.enabled=true --set 'observability.collector.pipelines.traces={nowhere}' >/dev/null 2>&1; then
   echo "FAIL Collector pipeline with an undefined exporter accepted"; failed=1
 else echo "ok   Collector pipelines only use defined exporters"; fi
+
+# S-113: alerting — the rules and the severity routing in each format, with each paging provider.
+check "prod × aws + alerting: PrometheusRule, AlertmanagerConfig (PagerDuty page, webhook ticket)" -f "$CHART/values-prod.yaml" \
+  -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml -f test-values/alerting.yaml
+check "prod × gcp + alerting: GMP Rules, AlertmanagerConfig (Opsgenie)" -f "$CHART/values-prod.yaml" -f "$CHART/values-gcp.yaml" \
+  -f test-values/identities-gcp.yaml -f test-values/alerting.yaml --set alerting.rules.format=gmpRules \
+  --set alerting.routing.page.provider=opsgenie --set alerting.routing.ticket.provider=opsgenie
+check "staging × azure + alerting: rule files and alertmanager.yml in ConfigMaps (webhooks)" -f "$CHART/values-staging.yaml" \
+  -f "$CHART/values-azure.yaml" -f test-values/identities-azure.yaml -f test-values/alerting.yaml \
+  --set alerting.rules.format=configMap --set alerting.routing.format=configMap --set alerting.routing.page.provider=webhook
+out=$(helm template northline "$CHART" --namespace northline-prod -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" \
+  -f test-values/identities-aws.yaml -f test-values/alerting.yaml)
+keys=$(awk '/^  name: northline-alerting$/{e=1} e && /secretKey:/{print $3} /^---/{e=0}' <<<"$out" | sort | tr '\n' ' ')
+if [[ $keys == "ALERTING_PAGERDUTY_ROUTING_KEY ALERTING_TICKET_WEBHOOK_URL " ]] \
+    && grep -q 'namespace: northline-prod' <<<"$(awk '/^kind: PrometheusRule$/{r=1} r' <<<"$out")" \
+    && ! grep -q 'runbook_url: docs/' <<<"$out" && ! grep -qE '^kind: Secret$' <<<"$out"; then
+  echo "ok   alerting: only the selected providers' keys, alerts labelled with the namespace, runbook URLs absolute"
+else echo "FAIL alerting render: keys [$keys]"; failed=1; fi
+if [[ -n "$(helm template northline "$CHART" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" -f test-values/identities-aws.yaml \
+    --show-only templates/alerting.yaml 2>/dev/null)" ]]; then echo "FAIL alerting renders while alerting.enabled=false"; failed=1
+else echo "ok   no alerting objects unless alerting.enabled"; fi
+refuse "an unknown paging provider" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" -f test-values/alerting.yaml \
+  --set alerting.routing.page.provider=pigeon
+refuse "an unknown rules format" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" -f test-values/alerting.yaml \
+  --set alerting.rules.format=thanos
 
 # Refusals the chart must keep: secrets from values outside local, http URLs in prod.
 if helm template northline "$CHART" -f "$CHART/values-prod.yaml" --set secrets.create=true >/dev/null 2>&1; then
@@ -91,10 +120,6 @@ for env in dev staging prod; do
     else echo "FAIL $env × $cloud edge: hosts [$hosts] certs [$certs] listeners $listeners hsts $hsts/$rules redirect $redirect"; failed=1; fi
   done
 done
-refuse() {
-  local label=$1; shift
-  if helm template northline "$CHART" "$@" >/dev/null 2>&1; then echo "FAIL $label accepted"; failed=1; else echo "ok   $label refused"; fi
-}
 refuse "wildcard without DNS-01" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" --set edge.certManager.wildcard=true
 refuse "DNS-01 without the cloud's solver" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" --set edge.certManager.issuer.solver=dns01
 refuse "a CA issuer in prod" -f "$CHART/values-prod.yaml" -f "$CHART/values-aws.yaml" --set edge.certManager.issuer.type=ca --set edge.certManager.issuer.caSecretName=x

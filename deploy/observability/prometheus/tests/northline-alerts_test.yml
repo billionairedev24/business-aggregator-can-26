@@ -21,7 +21,7 @@ tests:
           - exp_labels: { severity: page, application: northline-api }
             exp_annotations:
               summary: "northline-api: 10% of requests fail (5xx)"
-              runbook: docs/runbooks/observability.md#northlinehigherrorrate
+              runbook_url: https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/high-error-rate.md
   - name: a dead-lettered event pages at once
     interval: 1m
     input_series:
@@ -34,7 +34,7 @@ tests:
           - exp_labels: { severity: page, consumer: notifications, topic: payments.payout }
             exp_annotations:
               summary: "notifications dead-lettered an event from payments.payout"
-              runbook: docs/runbooks/events.md#3-dlq-investigate-and-replay
+              runbook_url: https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/event-dead-lettered.md
       - eval_time: 30m
         alertname: NorthlineEventDeadLettered
         exp_alerts: []
@@ -53,7 +53,7 @@ tests:
           - exp_labels: { severity: ticket, application: northline-worker, client_id: search-indexer-0 }
             exp_annotations:
               summary: "search-indexer-0 is 5000 records behind"
-              runbook: docs/runbooks/events.md#2-alerts-and-metrics
+              runbook_url: https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/consumer-lag.md
   - name: a failed payout opens a ticket
     interval: 1m
     input_series:
@@ -68,7 +68,7 @@ tests:
           - exp_labels: { severity: ticket, outcome: failed }
             exp_annotations:
               summary: "1 payouts failed in the last hour"
-              runbook: docs/runbooks/stripe.md
+              runbook_url: https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/payout-failed.md
   - name: most kitchen orders late
     interval: 1m
     input_series:
@@ -83,4 +83,87 @@ tests:
           - exp_labels: { severity: ticket }
             exp_annotations:
               summary: "66.67% of kitchen orders are ready after the promised time"
-              runbook: docs/runbooks/observability.md#northlinekitchenslate
+              runbook_url: https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/kitchens-late.md
+  # S-113
+  - name: lag over 10000 for 15 minutes pages (and the ticket fires too)
+    interval: 1m
+    input_series:
+      - series: 'kafka_consumer_fetch_manager_records_lag_max{application="northline-worker",client_id="notifications-0"}'
+        values: '20000x20'
+    alert_rule_test:
+      - eval_time: 16m
+        alertname: NorthlineConsumerLagCritical
+        exp_alerts:
+          - exp_labels: { severity: page, application: northline-worker, client_id: notifications-0 }
+            exp_annotations:
+              summary: "notifications-0 is 20000 records behind and not catching up — notifications, search and webhooks are late"
+              runbook_url: https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/consumer-lag.md
+  - name: an event stuck in the outbox — ticket after 5 minutes, page after 30
+    interval: 1m
+    input_series:
+      - series: 'northline_events_outbox_oldest_age_seconds{application="northline-api"}'
+        values: '0+60x40'
+      - series: 'northline_events_outbox_oldest_age_seconds{application="northline-auth"}'
+        values: '0x40'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: NorthlineOutboxBacklog
+        exp_alerts: []
+      - eval_time: 12m
+        alertname: NorthlineOutboxBacklog
+        exp_alerts:
+          - exp_labels: { severity: ticket, application: northline-api }
+            exp_annotations:
+              summary: "northline-api: an event has waited 12m 0s in the outbox"
+              runbook_url: https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/outbox-backlog.md
+      - eval_time: 20m
+        alertname: NorthlineOutboxStuck
+        exp_alerts: []
+      - eval_time: 36m
+        alertname: NorthlineOutboxStuck
+        exp_alerts:
+          - exp_labels: { severity: page, application: northline-api }
+            exp_annotations:
+              summary: "northline-api: events have not left the outbox for 36m 0s — kitchens, couriers and partners don't hear about orders"
+              runbook_url: https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/outbox-backlog.md
+  - name: the payout run stops succeeding — ticket after 30 minutes, page after 2 hours
+    interval: 1m
+    input_series:
+      # last success at t=0 (Unix 0 in promtool time), never again
+      - series: 'northline_jobs_last_success_seconds{application="northline-api",job="payments.payouts"}'
+        values: '0x150'
+    alert_rule_test:
+      - eval_time: 30m
+        alertname: NorthlinePayoutRunStalled
+        exp_alerts: []
+      - eval_time: 40m
+        alertname: NorthlinePayoutRunStalled
+        exp_alerts:
+          - exp_labels: { severity: ticket }
+            exp_annotations:
+              summary: "The payout run last succeeded 40m 0s ago"
+              runbook_url: https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/payout-run.md
+      - eval_time: 130m
+        alertname: NorthlinePayoutRunStalled
+        exp_alerts:
+          - exp_labels: { severity: ticket }
+            exp_annotations:
+              summary: "The payout run last succeeded 2h 10m 0s ago"
+              runbook_url: https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/payout-run.md
+          - exp_labels: { severity: page }
+            exp_annotations:
+              summary: "The payout run last succeeded 2h 10m 0s ago — today's payouts are late"
+              runbook_url: https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/payout-run.md
+  - name: no replica reports the payout run
+    interval: 1m
+    input_series:
+      - series: 'northline_jobs_last_success_seconds{application="northline-api",job="payments.release_escrow"}'
+        values: '0+60x40'
+    alert_rule_test:
+      - eval_time: 35m
+        alertname: NorthlinePayoutRunMissing
+        exp_alerts:
+          - exp_labels: { severity: ticket, job: payments.payouts }
+            exp_annotations:
+              summary: "No api replica has reported a successful payout run for 30 minutes (none running, or the run always fails)"
+              runbook_url: https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/payout-run.md

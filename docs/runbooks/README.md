@@ -29,6 +29,7 @@ say where a step is still manual or missing.
 | [search.md](search.md) | the Elasticsearch read model: index layout and naming, analyzers per language, synonyms, the search-indices Job, least-privilege access (S-42); the indexer, visibility rules, versions, the reconcile sweep, merchant locations (S-43); the search API and its contract for the consumer web (S-44); the full reindex with an alias swap (S-71) |
 | [logging.md](logging.md) | structured JSON logs (ECS), the redaction layer (emails, phones, tokens, cards, postal codes, codes), shipping over OTLP through the Collector, the local SMS stand-in rule (S-112) |
 | [observability.md](observability.md) | traces, metrics and logs over OpenTelemetry: the Collector per environment and its exporters (any OTLP backend, AWS X-Ray/CloudWatch, Google Cloud Operations, Azure Monitor), sampling, business metrics, dashboards as code, alerts, the local Grafana LGTM stack (S-111) |
+| [alerting.md](alerting.md) | alerting and on-call: SLOs as code (sign-in, checkout, payouts, KDS) and their multi-window burn-rate alerts, threshold alerts, page/ticket routing to PagerDuty / Opsgenie / a webhook, the Helm toggle per metrics store, the on-call rota export, one runbook per alert in [alerts/](alerts/README.md) (S-113) |
 | [events.md](events.md) | domain events: wire format, the worker's consumer framework (dedupe, retries, DLQ), alerts and metrics, DLQ replay (S-25/S-26) |
 | [docs-site.md](docs-site.md) | the Docusaurus documentation site: public variant on docs.<zone>, internal variant behind an IP allowlist, build, images, Pages export (S-126) |
 | [api-docs.md](api-docs.md) | OpenAPI 3.1 documents per audience (api, auth, BFFs), Swagger UI / Scalar / Redoc in local, dev and staging, the committed specs and their drift check, Redocly lint, none in prod (S-125) |
@@ -202,6 +203,8 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `PLACES_RATE_LIMIT` | ✓ | | | | no (60 address lookups per browsing session and minute) |
 | `CONSOLE_HEALTH_PROVIDER`, `CONSOLE_HEALTH_PROMETHEUS_URL`, `CONSOLE_HEALTH_PROMETHEUS_TIMEOUT` | ✓ | | | | no (`none` = the console overview's system health shows unknown; `prometheus` + the URL — S-91, [observability.md § Console health](observability.md#console-health-s-91)) |
 | `CONSOLE_HEALTH_PROMETHEUS_TOKEN` | ✓ | | | | no — secret, when the metrics store needs a bearer token |
+| `ONCALL_EXPORT_TOKEN` | ✓ | | | | no — secret; empty = the on-call rota export (`GET /api/v1/ops/oncall[.ics]`) answers 404 (S-113, [alerting.md](alerting.md#the-on-call-rota)) |
+| `LIVE_PROBE_INTERVAL` | ✓ | | | | no (`30s`: each api replica's live bus probe behind the KDS freshness SLO, S-113) |
 | `CONSOLE_MAP_TILES`, `CONSOLE_MAP_ATTRIBUTION` | ✓ | | | | no (empty = the console's delivery ops map draws the zones on its own grid; an `https://…/{z}/{x}/{y}.png` XYZ tile template + the provider's credit — S-81, [§ Console map](#console-map-s-81)) |
 | `AI_PROVIDER` | ✓ | | | | staging and prod: `openrouter` (`fake` refused there — S-129, [ai.md](ai.md)) |
 | `OPENROUTER_API_KEY` | ✓ | | | | no — empty = every AI feature answers 503 `ai_unavailable` (secret; [ai.md](ai.md#variables)) |

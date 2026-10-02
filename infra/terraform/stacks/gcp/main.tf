@@ -83,6 +83,13 @@ locals {
     OPENROUTER_API_KEY = "openrouter-api-key"
     # S-91 console overview health: a metrics store's read token (empty unless the store needs one).
     CONSOLE_HEALTH_PROMETHEUS_TOKEN = "console-health-prometheus-token"
+    # S-113 alerting and on-call: the on-call rota export token (api) and the alert receivers' keys (Alertmanager);
+    # empty until the paging tool is chosen (docs/runbooks/alerting.md).
+    ONCALL_EXPORT_TOKEN            = "oncall-export-token"
+    ALERTING_PAGERDUTY_ROUTING_KEY = "alerting-pagerduty-routing-key"
+    ALERTING_OPSGENIE_API_KEY      = "alerting-opsgenie-api-key"
+    ALERTING_PAGE_WEBHOOK_URL      = "alerting-page-webhook-url"
+    ALERTING_TICKET_WEBHOOK_URL    = "alerting-ticket-webhook-url"
   }
 
 

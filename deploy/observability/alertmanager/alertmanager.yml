@@ -1,0 +1,51 @@
+# S-113 severity routing (docs/runbooks/alerting.md) for an Alertmanager of your own — the reference the Helm chart
+# renders from values (alerting.routing: an AlertmanagerConfig for the Prometheus Operator, or this shape in a
+# ConfigMap). Grafana Cloud / Mimir and Amazon Managed Prometheus take an Alertmanager configuration in this format too.
+#
+#   severity="page"   → receiver page   — the person on call now (PagerDuty / Opsgenie / a webhook such as Grafana
+#                                          OnCall, whose schedule can follow the rota: GET /api/v1/ops/oncall.ics)
+#   severity="ticket" → receiver ticket — the team's queue, next working day
+#
+# This example pages through PagerDuty and files tickets through a webhook. The keys below are obviously fake: in a
+# cluster they are files mounted from the northline-alerting Secret (routing_key_file, url_file). Check it with
+#   make obs-rules-check     (amtool check-config + the routing tests in scripts/validate-alerts.py)
+route:
+  receiver: ticket
+  group_by: [alertname, severity, sloth_service, sloth_slo, application]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 24h
+  routes:
+    - receiver: page
+      matchers: ['severity="page"']
+      group_wait: 10s
+      repeat_interval: 1h
+    - receiver: ticket
+      matchers: ['severity="ticket"']
+inhibit_rules:
+  # A page silences the ticket of the same alert (an SLO burning fast also burns slowly).
+  - source_matchers: ['severity="page"']
+    target_matchers: ['severity="ticket"']
+    equal: [alertname, sloth_service, sloth_slo, application]
+receivers:
+  - name: page
+    pagerduty_configs:
+      - routing_key: FAKE-pagerduty-routing-key-not-real-000
+        url: https://events.pagerduty.com/v2/enqueue
+        severity: critical
+        description: '{{ .CommonAnnotations.summary }}'
+        send_resolved: true
+        links:
+          - href: '{{ .CommonAnnotations.runbook_url }}'
+            text: Runbook
+    # Opsgenie instead:
+    # opsgenie_configs:
+    #   - api_key: FAKE-opsgenie-api-key-not-real
+    #     api_url: https://api.opsgenie.com/
+    #     priority: P1
+    #     message: '[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }} ({{ .CommonLabels.environment }})'
+    #     description: "{{ .CommonAnnotations.summary }}\n\nRunbook: {{ .CommonAnnotations.runbook_url }}"
+  - name: ticket
+    webhook_configs:
+      - url: https://tickets.example.invalid/alertmanager/FAKE-token
+        send_resolved: true
