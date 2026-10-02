@@ -10,7 +10,6 @@ import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.LongSupplier;
 import org.jspecify.annotations.Nullable;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -30,21 +29,21 @@ public class LiveBusProbe {
 
     private final StudioLive live;
     private final MeterRegistry meters;
-    private final LongSupplier nanos;
     private final String channel = "probe." + Ids.next();
     private final AtomicReference<@Nullable Sent> pending = new AtomicReference<>();
     private final StudioLive.Subscription subscription;
+    private LongSupplier nanos = System::nanoTime;
 
-    @Autowired
     LiveBusProbe(StudioLive live, MeterRegistry meters) {
-        this(live, meters, System::nanoTime);
-    }
-
-    LiveBusProbe(StudioLive live, MeterRegistry meters, LongSupplier nanos) {
         this.live = live;
         this.meters = meters;
-        this.nanos = nanos;
         this.subscription = live.subscribe(channel, this::received);
+    }
+
+    /** Tests: a fake monotonic clock. */
+    LiveBusProbe nanos(LongSupplier nanos) {
+        this.nanos = nanos;
+        return this;
     }
 
     /** Counts the previous probe as lost when it never came back, then sends the next one. */

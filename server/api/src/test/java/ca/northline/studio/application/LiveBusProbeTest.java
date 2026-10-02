@@ -44,7 +44,7 @@ class LiveBusProbeTest {
     void timesTheRoundTrip() {
         var bus = new Bus();
         bus.beforeDelivery = () -> nanos.addAndGet(TimeUnit.MILLISECONDS.toNanos(40));
-        var probe = new LiveBusProbe(bus, meters, nanos::get);
+        var probe = new LiveBusProbe(bus, meters).nanos(nanos::get);
 
         probe.probe();
 
@@ -59,7 +59,7 @@ class LiveBusProbeTest {
     void aProbeThatNeverReturnsIsLostAtTheNextOne() {
         var bus = new Bus();
         bus.drop = true;
-        var probe = new LiveBusProbe(bus, meters, nanos::get);
+        var probe = new LiveBusProbe(bus, meters).nanos(nanos::get);
 
         probe.probe();
         assertThat(meters.find(LiveBusProbe.PROBE).timer()).isNull();
@@ -74,7 +74,7 @@ class LiveBusProbeTest {
     void ignoresSomeoneElsesSignal() {
         var bus = new Bus();
         bus.drop = true;
-        var probe = new LiveBusProbe(bus, meters, nanos::get);
+        var probe = new LiveBusProbe(bus, meters).nanos(nanos::get);
         probe.probe();
 
         bus.listeners.forEach(l -> l.accept(new Signal(StudioLive.Topic.KITCHEN, "not-the-nonce")));

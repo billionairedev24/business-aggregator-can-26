@@ -9,9 +9,8 @@ import java.time.Instant;
 import java.util.function.Supplier;
 import java.util.function.ToDoubleFunction;
 import java.util.regex.Pattern;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
@@ -30,13 +29,13 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * {@link #CACHE_FOR}, however often the registry is read (OTLP export every 30 s, a Prometheus scrape). A failing query
  * leaves the gauges empty (NaN) rather than failing the export.
  */
+@Slf4j
 public final class OutboxBacklog implements MeterBinder {
 
     static final String PENDING = "northline.events.outbox.pending";
     static final String OLDEST_AGE = "northline.events.outbox.oldest_age";
     static final Duration CACHE_FOR = Duration.ofSeconds(15);
     private static final Pattern SCHEMA = Pattern.compile("[a-z_][a-z0-9_]*");
-    private static final Logger log = LoggerFactory.getLogger(OutboxBacklog.class);
 
     /** What the registry holds now. */
     public record Snapshot(long pending, double oldestAgeSeconds) {}
