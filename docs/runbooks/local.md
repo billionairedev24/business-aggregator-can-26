@@ -262,6 +262,11 @@ Notes:
   shows in the api log (`SMS_PROVIDER=local`). The pipeline runs every minute (`PRIVACY_RUN_INTERVAL`); an erasure waits
   `PRIVACY_ERASURE_GRACE` (7 days) unless the console's Privacy requests screen starts it (the seeded admin opens it).
   Sealed exports go to a temp folder under `STORAGE_PROVIDER=local`. [privacy-requests.md](privacy-requests.md)
+- **Retention jobs (S-107):** run nightly at `RETENTION_CRON` (02:47 in the platform zone) — on a laptop, use the
+  console's Privacy › Retention tab instead: **Dry run everything** counts what is past its period, **Run everything
+  now** purges it, **Export CSV** downloads the report. Seed rows are recent, so a dry run finds little until you
+  backdate some (`update identity.sessions set last_seen_at = now() - interval '13 months' …`). Files go from the
+  module folders under the temp directory with `STORAGE_PROVIDER=local`. [retention.md](retention.md)
 - **Custom domains (S-31):** `DOMAINS_DNS_PROVIDER=local` and `DOMAINS_EDGE_PROVIDER=local` (the defaults): enter a
   domain in Studio › Business page › Custom domain, then **Simulate DNS records →** (dev builds only) writes its CNAME
   and TXT records into the api's in-memory zone and checks them; a published page of an approved business goes live at

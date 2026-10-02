@@ -26,4 +26,9 @@ class ObjectStoreProofStorage implements ProofStorage {
     public Optional<StoredFile> get(String key) {
         return objects.get(key).map(c -> new StoredFile(c.bytes(), c.info().contentType()));
     }
+
+    @Override
+    public void delete(String key) {
+        objects.delete(key);
+    }
 }

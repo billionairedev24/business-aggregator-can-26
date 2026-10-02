@@ -66,4 +66,15 @@ class DisputeEvidenceFiles implements DisputeEvidenceStorage {
             throw new UncheckedIOException(e);
         }
     }
+
+    @Override
+    public void delete(String key) {
+        var path = resolve(key);
+        try {
+            Files.deleteIfExists(path);
+            Files.deleteIfExists(path.resolveSibling(path.getFileName() + ".type"));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
 }
