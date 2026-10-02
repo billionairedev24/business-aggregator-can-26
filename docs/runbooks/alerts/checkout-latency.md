@@ -13,7 +13,8 @@
 
 ## Mitigate
 
-Fix the slow dependency; scale the api.
+Fix the slow dependency; scale the api. Stripe slow for everyone (its status page): wait — calls time out after
+30 s and answer 503 `payments_unavailable`, customers retry ([stripe-incidents.md § 1](../stripe-incidents.md#1-stripe-is-down-degrade-checkout-what-queues)).
 
 ## Afterwards
 

@@ -126,6 +126,9 @@ through the flow with curl: [mobile-auth.md § Try it locally](mobile-auth.md#tr
 (created on first start; `SIGNING_KEYS_DIR` moves it), so restarting auth keeps you signed in and two auth instances
 pointed at the same directory share tokens. Rotate or inspect it with `./gradlew :auth:signingKeys --args='status'`
 ([key-rotation.md](key-rotation.md)). Cloud KMS providers aren't needed locally (`KMS_PROVIDER=local`, the default).
+The api's stored tokens are sealed with the development key; to rehearse a key rotation set `KMS_LOCAL_KEY=<new>`,
+`KMS_LOCAL_PREVIOUS_KEYS=<old>` (and `KMS_REWRAP_EVERY=1m`), restart, and watch `Key re-wrap:` in the log
+([key-rotation.md § 2](key-rotation.md#2-kms-data-keys-and-envelope-re-wrap)).
 
 **Rate limits (S-9):** under `local` they are kept in memory (the auth log says `Rate limits (S-9) are kept IN
 MEMORY`), so a restart clears a lockout; with `local,valkey` they live in your Valkey like in the cloud. Limits and

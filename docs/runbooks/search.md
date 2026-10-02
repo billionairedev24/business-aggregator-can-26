@@ -9,6 +9,7 @@ the search API that reads them (S-44), and how to rebuild everything (S-71).
 | S-42 | indices `listings_en` / `listings_fr`, analyzers, synonyms, the bootstrap Job | `deploy/search`, `server/search-index`, `ca.northline.worker.search` |
 | S-43 | the `search-indexer` consumer, the reconcile sweep, `merchants.locations` | `ca.northline.worker.search`, `db/migrations/V120` |
 | S-71 | the full reindex from Postgres with an alias swap (§ 9) | `SearchReindex`, chart `searchReindex` |
+| S-115 | the reindex runbook: partial reindex, rollback, decision tree (§ 9) | `SearchReindexCommand --partial` / `--rollback` |
 | S-44 | the public search API `GET /api/v1/search` and `/api/v1/search/suggest` (contract § 8) | api module `ca.northline.search` |
 
 Environments: local uses the compose `search` profile (Elasticsearch 9.1, security off, [local.md](local.md)); dev,
@@ -273,6 +274,85 @@ java -cp @/app/jib-classpath-file ca.northline.worker.search.SearchReindexComman
 **Go back** (with `--keep-old`): `POST _aliases` with a `remove` of the new index and an `add` of the old one per
 language, then delete the new ones. **Duration:** about one merchant per few milliseconds plus Elasticsearch's bulk
 time; the catch-up is seconds. Nothing needs to be stopped: the indexer, the sweep and the API keep running.
+
+### Runbook: reindex, partial reindex, rollback (S-115)
+
+**Symptoms.** The search-indices Job logs `REINDEX REQUIRED`; a listing that is live in the Studio isn't found (or a
+hidden one still is); `_cat/indices` counts differ between `listings_en` and `listings_fr` or from Postgres;
+`DEAD-LETTERED consumer=search-indexer` in the worker log; `NorthlineConsumerLag` for `search-indexer`
+([alerts/consumer-lag.md](alerts/consumer-lag.md)); after a database restore (S-114).
+
+**Impact.** Customers see stale or missing results; nothing else depends on the index (Postgres is the source of
+truth, checkout re-checks everything). No data is lost by any step below.
+
+**Decide:**
+
+```
+a layout change (REINDEX REQUIRED), a restore, a new environment, drift everywhere ─▶ full reindex (with --keep-old)
+a few merchants wrong (an indexer bug fixed, a lost or dead-lettered event)       ─▶ partial reindex of those merchants
+everything changed in a time window (the indexer was down, events dead-lettered)   ─▶ partial reindex --since=<start>
+the new index after a reindex is worse (bad analyzer, missing documents)           ─▶ rollback (needs --keep-old)
+```
+
+**Compare one merchant** (its live services in Postgres against its documents; offers and dishes the same way from
+the Studio's Listings filtered to Live):
+
+```sql
+select count(*) from catalogue.services where merchant_id = '<merchant id>' and vetting = 'approved' and status = 'live';
+```
+
+```sh
+curl -s "$ES_URIS/listings_en/_count?q=merchantId:<merchant id>%20AND%20kind:service"
+```
+
+**Full reindex** — § 9 above; for anything but a trivial run use `--keep-old` (`searchReindex.keepOld: true` in the
+chart) so a rollback is possible, and delete the old indices once the new ones are confirmed.
+
+**Partial reindex** — re-reads merchants into the **live** aliases (no new index, no swap, nothing to roll back; the
+same projection, per-merchant lock and versions as the live indexer, so it can run any time):
+
+```sh
+cd server && ./gradlew :worker:searchReindex --args='--partial --merchant=01J9ZD3V00000000000000PWM1,01J…'
+./gradlew :worker:searchReindex --args='--partial --since=2026-10-02T08:00:00Z'     # every merchant whose rows changed since
+java -cp @/app/jib-classpath-file ca.northline.worker.search.SearchReindexCommand --partial --merchant=…   # worker image
+```
+
+`--since` uses the reconcile sweep's change query (rows' `updated_at`): edits, new listings, hours, reviews. A
+listing that disappeared without its row changing (a dead-lettered `listing.hidden`) is fixed by naming its merchant.
+
+**Rollback** — after a full reindex run with `--keep-old`: points both aliases back at the newest older index of each
+language in one request, then re-reads the merchants whose rows changed since the newer index was created (what the
+old index missed while it was not live):
+
+```sh
+./gradlew :worker:searchReindex --args='--rollback'
+curl -s "$ES_URIS/_cat/aliases/listings_*?v"                 # each alias on the old index again
+curl -s -X DELETE "$ES_URIS/<newer listings_en_v…>,<newer listings_fr_v…>"   # once you're sure (or ListingIndices.delete)
+```
+
+Exit 1 with "No older … index to go back to" when the reindex didn't keep it — then the way back is a full reindex
+(from the previous release's layout, if the layout was the problem: roll the worker back first). By hand, the same
+swap is `POST _aliases` with a `remove` of the new index and an `add` of the old one per language.
+
+**In a cluster** the partial and rollback run as a one-off Job like the DLQ replay's ([events.md § 3](events.md#3-dlq-investigate-and-replay)),
+with `ca.northline.worker.search.SearchReindexCommand` and `--partial …` / `--rollback` as arguments, the worker's
+ConfigMaps and `DB_PASSWORD`, `ES_PASSWORD`, `KAFKA_SASL_JAAS_CONFIG` from `northline-worker-secrets`. The chart's
+`searchReindex` Job runs only the full reindex.
+
+**Verify:** `_cat/aliases` (one index per alias), `_cat/indices/listings_*?v` (both languages the same count), the
+merchant query above against `_count`, a search on the consumer site for one of the merchant's listings (the hot-query
+cache answers up to 30 s from before).
+
+**Comms.** None for a reindex (searches keep working). For drift customers noticed: support says results catch up
+within minutes once the partial reindex has run.
+
+### Exercised
+
+| date | what was run | outcome |
+|---|---|---|
+| 2026-10-02 | `SearchReindexTest.runbookDrill_partialReindex_thenRollbackAfterKeepOld` — Kafka 4 + PostGIS + Elasticsearch 9.1 (Testcontainers) with the whole worker, through `SearchReindexCommand` (the operator's entry point): a document deleted from the live index; `--partial` without a merchant refused; `--partial --merchant=<id>`; full reindex `--keep-old`; a listing made live afterwards without an event; `--rollback`; the newer indices deleted; a second `--rollback` refused | **passed** (4.1 s): the lost document is back after the partial reindex (one merchant re-read); after the rollback both aliases point at the previous indices and the later listing is in them (the rollback's sweep); with nothing older left the rollback says to reindex instead |
+| 2026-10-02 | `SearchReindexTest` (S-71's tests, unchanged) | **passed**: full reindex while live, one run at a time, failure before the swap changes nothing, `--keep-old` |
+| — | **not exercised:** the chart's `searchReindex` Job and a cluster Job against Elastic Cloud (no deployment or credentials exist, § 5) | |
 
 ## 10. Troubleshooting
 
