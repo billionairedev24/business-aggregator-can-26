@@ -253,6 +253,23 @@ describe('Language & region, Dietary & accessibility, Plus', () => {
     expect(body('PATCH', '/api/v1/me/preferences')).toEqual([{ language: 'fr', province: 'AB', units: 'metric', timeFormat: '12h' }]);
   });
 
+  it('a chosen province goes back to Follow my location (province "")', async () => {
+    open('language');
+    const province = await screen.findByRole('combobox', { name: 'Province' });
+    await waitFor(() => expect(province).toHaveValue(PREFS.province));
+    expect(screen.queryByText(/follow your delivery address/)).not.toBeInTheDocument();
+    await userEvent.selectOptions(province, 'Follow my location');
+    expect(screen.getByText('Taxes, the catalogue and your notification times follow your delivery address, or where you are.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(body('PATCH', '/api/v1/me/preferences')).toEqual([{ language: 'en', province: '', units: 'metric', timeFormat: '12h' }]));
+  });
+
+  it('says what following the location means, in French', async () => {
+    open('language', 'fr');
+    await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Province' }), 'Selon ma position');
+    expect(screen.getByText('Les taxes, le catalogue et l’heure de vos notifications suivent votre adresse de livraison ou votre position.')).toBeInTheDocument();
+  });
+
   it('dietary chips and notes', async () => {
     open('dietary');
     expect(await screen.findByRole('button', { name: 'Halal' })).toHaveAttribute('aria-pressed', 'true');
