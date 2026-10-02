@@ -47,6 +47,10 @@ try {
     check(`${variant}: ios location text, no "Always" or motion`, plist.includes('Northline uses your location') && !plist.includes('NSLocationAlways') && !plist.includes('NSMotionUsageDescription'));
     check(`${variant}: ios associated domains applinks + webcredentials:${host}`, entitlements.includes(`applinks:${host}`) && entitlements.includes(`webcredentials:${host}`));
     check(`${variant}: ios French localisation`, plist.includes('<string>fr</string>'));
+    // Push (S-103): the native module's entitlement and channel; store builds talk to production APNs
+    const aps = variant === 'production' ? 'production' : 'development';
+    check(`${variant}: ios push entitlement aps-environment ${aps}`, new RegExp(`<key>aps-environment</key>\\s*<string>${aps}</string>`).test(entitlements));
+    check(`${variant}: android notifications permission and the "updates" channel`, manifest.includes('android.permission.POST_NOTIFICATIONS') && /default_notification_channel_id"[^>]*android:value="updates"/.test(manifest));
     check(`${variant}: ios privacy manifest without tracking`, /NSPrivacyTracking<\/key>\s*<false\/>/.test(read(`ios/${target}/PrivacyInfo.xcprivacy`)));
   }
 } finally {
