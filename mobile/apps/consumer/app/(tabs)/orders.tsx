@@ -1,6 +1,4 @@
-import { Stub } from '../../src/ui/Stub';
+import { Orders } from '../../src/account/Orders';
 
-/** Design 01 `orders` — a stub until its story builds it (src/screens.ts, docs/MOBILE_PLAN.md). */
-export default function Orders() {
-  return <Stub screen="orders" />;
-}
+/** Design 01 `orders` — the Orders tab (S-101). */
+export default Orders;

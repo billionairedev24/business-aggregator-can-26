@@ -1,6 +1,4 @@
-import { Stub } from '../../src/ui/Stub';
+import { Quote } from '../../src/account/Quote';
 
-/** Design 01 `quote` — a stub until its story builds it (src/screens.ts, docs/MOBILE_PLAN.md). */
-export default function Quote() {
-  return <Stub screen="quote" />;
-}
+/** Design 01 `quote` (S-101); S-102's quote notifications land here. */
+export default Quote;

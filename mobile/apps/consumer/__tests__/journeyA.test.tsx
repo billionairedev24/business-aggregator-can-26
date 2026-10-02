@@ -287,7 +287,7 @@ describe('signing out (You)', () => {
     const pushes: string[] = [];
     setPushRegistrar({ signedIn: async () => void pushes.push('in'), signingOut: async () => void pushes.push('out') });
     const { server, services, view } = await start({ signedIn: true, url: '/account' });
-    expect(await screen.findByText('Signed in as Ada Example')).toBeTruthy();
+    expect(await screen.findByText('Ada Example')).toBeTruthy();
     fireEvent.press(screen.getByRole('button', { name: 'Sign out' }));
     await waitFor(() => expect(view.getPathname()).toBe('/home'));
     expect(pushes).toEqual(['out']);

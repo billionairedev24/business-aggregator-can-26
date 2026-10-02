@@ -36,6 +36,9 @@ domain event (Kafka) ──► worker: notifications / personal-notifications co
   newer update replaces the older one on the lock screen); `aps.thread-id` groups them.
 - **FCM:** `notification` {title, body}, `data` {type, ids, link} (strings), `android.collapse_key` and
   `notification.tag` the same subject key, `priority: high`, `ttl: 86400s`, channel `updates` (the apps create it).
+- **Where people choose:** the consumer app's You › Notifications (S-101) edits the same matrix, quiet hours and
+  language as the website (`GET`/`PUT /api/v1/me/notifications`), and its "This phone" row asks for the system
+  permission (`PushRegistration.enable()`) — shown once the app installs push (`expo-notifications`, not yet).
 - **Language:** each installation shows the person's notification language (Account › Notifications "English" /
   "Français"); "Same as app" = each installation's own app language (the `locale` it registered). Couriers: their
   account language. Both languages are written for every push.

@@ -6189,6 +6189,79 @@ variable. One new app dependency: `@stripe/stripe-react-native` 0.64.0 (the vers
   session cookie on a device. **First things to try on a device with a Stripe test account:** a 3-D Secure test card
   (4000 0027 6000 3184) through PaymentSheet, then a saved card, then an order with two shops (three PaymentIntents).
 
+## 2026-09-30 — S-101 Consumer app Journey D: account — orders, quote received, account, security, wallet
+
+Branch `mobile/s-101-journey-d`. **No migration** (V260–V264 unused), **no server or web change**, no new environment
+variable, no new app dependency. Plan: [MOBILE_PLAN.md § D](MOBILE_PLAN.md); runbook: [runbooks/mobile.md](runbooks/mobile.md).
+
+- **The existing consumer endpoints were enough** for the five design screens and the rows of the You tab:
+  `/me/account-summary`, `/me/activity`, `/me/quotes/{id}` (+ `/accept`, `/accept/confirm`, `/decline`), `/me/profile`,
+  `/me/erasure-request`, `/me/addresses` (+ default, delete), `/me/household`, `/me/plus`, `/me/wallet`,
+  `/me/payment-methods` (+ setup-intents, default, delete), `/me/notifications`, `/me/preferences`, `/me/export`,
+  `/me/favourites`, `/me/cases` (+ detail, notes), and northline-auth's `/api/auth/security` and
+  `/api/auth/step-up/totp`. The gaps below were raised, not worked around with new endpoints (none of them is small:
+  points have no earning rules yet, rewards and referrals no read model, quotes no consumer messaging).
+- **Screens beyond design 01's five.** The design draws Addresses, Payment methods, Notifications settings, Favourites,
+  Refunds & help as rows of `account` that lead "somewhere real"; the app builds them as routes of its own under
+  `/account/…` (profile, addresses, payments, notifications, preferences, favourites, help) plus `/cases/[number]`, the
+  path S-102's case links already open. `src/screens.ts` is unchanged (it lists the design's screens). "Personal
+  details" and "Dietary, accessibility & region" are rows of ours (the web's Profile, Language & region and Dietary &
+  accessibility tabs); "Language / Langue" stays in place on the You tab (S-98) and now also sets the account's
+  language (`PATCH /me/preferences {language}`).
+- **Notifications:** C's `/notifications` (S-100) is the design's inbox with the quiet-hours switch; the You row opens
+  the settings (`/account/notifications`): the S-58/S-59 matrix (7 rows × push / SMS / email, security locked on),
+  quiet hours (21–23 h → 6–8 h, as the web), the notification language and marketing email; only changed cells are
+  sent. Push (S-102): the server column is editable now; "This phone" (the permission prompt, then the device
+  registration) is a port, `setPhonePush`, installed together with S-102's registrar once `expo-notifications` and its
+  config plugin are in the app — until then the row is hidden rather than offering something that can't work.
+- **Orders & bookings:** "Active · n" / "Past" / "Refunds" are filtered in the app (`active`; rows with a case), as the
+  web does — the api has no `view` parameter (MOBILE_PLAN listed one). Rows open the other journeys' screens by route
+  (`src/account/routes.ts`); a food order and a request with several quotes open the consumer site (no app screen).
+- **Quote received:** the design's accept button goes straight to escrow; the api needs where the job is, so a "Where
+  is the job?" step comes first (prefilled from the address saved on the phone, given to that provider only). Idempotency
+  as S-99: one key per acceptance body, kept for retries, renewed after a refusal; `/accept/confirm` has its own. The
+  card reuses S-99's payments port (the default saved card, else PaymentSheet); the step-up is S-99's authenticator code.
+  Title, validity ("Valid 70 h"), provider tier/rating/first verified fact and the proposed time make the design's
+  meta line; tax is named by its rate from the quote (no "GST" in code).
+- **Security centre** on northline-auth's S-19 API in the app's auth session; 401 → "Confirm it's you" with the
+  authenticator code; no auth session (system-browser sign-in) → the website. Adding a passkey / security key /
+  authenticator opens the website (WebAuthn and the QR code need native support the app lacks, S-98). "Login alerts by
+  email · On" reflects the security row that is always on. **Download my data** = `GET /me/export` handed to React
+  Native's share sheet (no file-system module in the app). **Sign out of all devices** = revoke-others, then this
+  phone's own sign-out (push hook, revoke, keys deleted).
+- **Delete account** sits under Personal details › "Your data" (the web's place), asking for erasure
+  (`POST /me/erasure-request`; staff confirm), shown as "Deletion requested on …" afterwards.
+- **Wallet:** balance, value, the 8-week chart (an image with each week read out), Plus "Try free" (monthly / annual,
+  the web's prices and 30-day trial) and "Manage" (renewal, cancel), payment methods. **Payment methods** save a card
+  with a SetupIntent through a port (`cardSetup.ts`): PaymentSheet in setup mode for `stripe`, nothing for the stand-in.
+- **Fixtures: one owner per endpoint, one state per fact** (after S-100 merged). Order in `src/fixtures/server.ts`:
+  account, auth, geo, shop, services — the account area is first because northline-auth's area answers 404 for any
+  `/api/auth/*` it doesn't know, and the security API lives in the account area. Owners: `/me/activity` and
+  `/me/notifications` → the account area (its activity list holds C's inbox items — the S-100 bookings `01J9BOOKING…`,
+  NL-48213, the Sable & Soda quote — plus D's past rows; the quiet hours are `server.services.quiet`, which C's
+  inbox switch and D's settings both write); `/me/favourites` → the services area (`server.services.favourites`, its GET
+  now returns the api's Favourite rows with name, tier and slug); `/api/auth/step-up/totp` → the auth area (D's
+  security API opens once the auth area accepted an authenticator code); addresses and cards → the shop area's state.
+  The fixture names the person the auth area signed in.
+- **Shared files touched:** `src/fixtures/server.ts` (the area, first), `src/fixtures/services.ts` (`/me/activity`
+  and `/me/notifications` handed to the account area, richer favourites), `src/shop/Pay.tsx` (the step-up words), `__tests__/shell.test.tsx` and
+  `journeyA.test.tsx` (the You tab and Wallet are real now), `e2e/smoke.mjs` (a Journey D step block; the You step's
+  name line), `src/journeyA/You.tsx` deleted (S-98's temporary screen).
+- **Fixed in S-99's file:** `src/shop/Pay.tsx` worded a step-up failure as `shop.stepUp.${reason}`, but the reasons
+  are `wrong_code | locked | elsewhere` and the key is `shop.stepUp.wrong` — a wrong code showed the raw key. It now
+  maps each reason to its key (`shop.test.tsx`: "words a wrong or locked authenticator code").
+- **Gaps (MOBILE_PLAN § API gaps):** points activity, provider-funded rewards near you, "Invite a neighbour", "Ask a
+  question" on a quote, a payment step-up threshold, and clearing the shop-in province back to "follow my location"
+  (`PATCH /me/preferences` treats null as unchanged and rejects "" — the web has the same gap).
+- **Tests:** `__tests__/account.test.tsx`, 51 tests (plus one in `shop.test.tsx`): every screen's loading / error + Try again / empty / offline /
+  guest states, en + fr-CA, validation messages, what is sent (Idempotency-Key reuse, X-Step-Up, only changed matrix
+  cells and preferences, profile and address bodies), the Stripe paths through mocked ports. The web smoke test runs
+  Orders → a quote accepted → You → Wallet → Security (confirmed with the code) → Notifications in headless Chromium.
+- **Never run:** on a phone, simulator or emulator; northline-auth's security API and step-up from a phone's cookie
+  store; PaymentSheet in setup mode and the quote's hold with Stripe (no Stripe account; the tests mock the ports); the
+  share sheet; the notification permission prompt and device registration from this screen (the app doesn't install
+  push yet).
+
 ## 2026-10-02 — S-100 Consumer app Journey C: find & book a service
 
 Branch `mobile/s-100-journey-c`. **No migration** (V255–V259 unused) and no new environment variable. Files of the
