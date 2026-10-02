@@ -1,0 +1,7 @@
+[(${heading})]
+
+[(${body})]
+
+[(#{customer-update.cta})]: [(${link})]
+
+[# th:insert="~{footer.txt}" /]
