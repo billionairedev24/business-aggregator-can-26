@@ -16,6 +16,9 @@ runbook ([courier-app.md](courier-app.md)); sign-in and tokens: [mobile-auth.md]
 > centre and the step-up in the auth session's cookies (northline-auth's security API from a phone), the share sheet
 > for "Download my data", and the notification permission prompt (the app doesn't install push yet).
 
+> and Stripe's React Native SDK (S-99 orders, S-100 bookings) — PaymentSheet, saved cards, 3-D Secure and the bank's
+> return link have never run, nor against a real Stripe account (none exists); the Jest tests use test doubles.
+
 ## Contents
 
 - [Layout](#layout) · [Run it](#run-it) · [Environments](#environments) · [Checks](#checks)

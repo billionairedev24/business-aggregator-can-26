@@ -309,7 +309,14 @@ class QuoteFlowService
                 c.priceCents(),
                 c.taxCents(),
                 a.amountCents() + a.taxCents(),
-                c.freeCancelUntil());
+                c.freeCancelUntil(),
+                c.merchantId(),
+                c.state(),
+                c.timeZone(),
+                c.steps(),
+                c.report(),
+                c.photoCount(),
+                c.releasesAt());
     }
 
     private static void requireOpen(CustomerQuote q) {

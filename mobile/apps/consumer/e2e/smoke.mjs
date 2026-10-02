@@ -1,6 +1,6 @@
-// Web-target smoke test of the consumer app in headless Chromium (S-97, S-98). The web build runs the same screens,
-// session, DPoP proofs and queries as the phones, against the in-app fixture backend (EXPO_PUBLIC_FIXTURES=1), in a
-// 402 × 874 viewport (design 01's frame). It proves the bundle starts and the shell and journeys work — not the native
+// Web-target smoke test of the consumer app in headless Chromium (S-97, S-98, S-100). The web build runs the same
+// screens, session, DPoP proofs and queries as the phones, against the in-app fixture backend
+// (EXPO_PUBLIC_FIXTURES=1), in a 402 × 874 viewport (design 01's frame). It proves the bundle starts and the shell and journeys work — not the native
 // modules (Keychain, location services, the system browser), which only a device can.
 //
 //   pnpm export:web && pnpm smoke:web     (PLAYWRIGHT_BROWSERS_PATH or CHROMIUM_PATH pick the browser)
@@ -195,7 +195,7 @@ try {
     const tabs = await page.getByRole('tab').allTextContents();
     if (tabs.join('|') !== 'Home|Services|Cart|Orders|You') throw new Error(tabs.join('|'));
     await page.getByRole('tab', { name: 'Services' }).click();
-    await page.getByTestId('stub-services').waitFor();
+    await page.getByTestId('services').waitFor();
     await noSideScroll('services');
     await shot('10-tabs-services');
   });
@@ -204,6 +204,72 @@ try {
     await page.getByText('Order NL-48213').waitFor();
     await page.getByText('← Back').waitFor();
     await shot('11-sub-screen');
+  });
+  // S-100 Journey C: a guest browses, signs in (fixture passkey), books a visit and signs a finished job off
+  // (the web keeps earlier screens of the stack in the page: look for the visible one)
+  const vis = (id) => page.locator(`[data-testid="${id}"]:visible`).first();
+  await step('Journey C: services, providers, profile (guest)', async () => {
+    await page.goto(`${base}/services`);
+    await vis('category-mobile-mechanic').click({ timeout: 30_000 });
+    await vis('provider-prairie-wrench').waitFor();
+    await noSideScroll('providers');
+    await shot('20-providers');
+    await vis('provider-prairie-wrench').click();
+    await page.getByText('Services & fixed prices').filter({ visible: true }).first().waitFor();
+    await noSideScroll('provider');
+    await shot('21-provider');
+  });
+  await step('Journey C: book a visit — service, time, review, escrow, booked', async () => {
+    await vis('book-visit').click();
+    await page.getByText('What does the car need?').filter({ visible: true }).first().waitFor();
+    await vis('field-vehicle').fill('2018 Honda Civic · ABC 1234');
+    await vis('field-note').fill('Grinding on braking, worse when cold.');
+    await shot('22-book-service');
+    await vis('book-next').click();
+    await page.getByText('Sign in to hold this time. Your answers stay here.').filter({ visible: true }).first().waitFor();
+    await page.getByRole('button', { name: 'Sign in' }).last().click();
+    await page.getByRole('button', { name: 'Sign in with a passkey' }).filter({ visible: true }).first().click();
+    await page.waitForURL(/\/(home|location)$/);
+    if (page.url().endsWith('/location')) {
+      // a fresh page has no saved address yet: the sign-in asks for one first (S-98)
+      await page.getByLabel('Street address').filter({ visible: true }).first().fill('1204 Exa');
+      await page.getByRole('button', { name: '1204 Example Ave, Sampleville, XA' }).filter({ visible: true }).first().click();
+      await page.getByRole('button', { name: 'Save and continue' }).filter({ visible: true }).first().click();
+    }
+    await page.getByRole('tab', { name: 'Services' }).filter({ visible: true }).first().click();
+    await vis('category-mobile-mechanic').click();
+    await vis('provider-prairie-wrench').click();
+    await vis('book-visit').click();
+    await vis('book-next').click();
+    await page.getByText('When suits you?').filter({ visible: true }).first().waitFor();
+    await page.locator('[data-testid^="slot-"]:not([aria-disabled="true"]):visible').first().click();
+    await vis('field-address').fill('1204 Example Ave');
+    await vis('spot-0').click();
+    await vis('field-access').fill('Driveway on the left');
+    await noSideScroll('book-time');
+    await shot('23-book-time');
+    await vis('book-next').click();
+    await page.getByText('Review and hold payment').filter({ visible: true }).first().waitFor();
+    await vis('agree-policies').click();
+    await vis('agree-terms').click();
+    await noSideScroll('book-review');
+    await shot('24-book-review');
+    await vis('pay').click();
+    await page.getByText(/^Booked\. Ravi is coming/).filter({ visible: true }).first().waitFor();
+    await shot('25-booked');
+  });
+  await step('Journey C: notifications, ETA, sign-off, review', async () => {
+    await vis('see-notifications').click();
+    await page.getByText('Prairie Wrench is on the way').filter({ visible: true }).first().waitFor();
+    await shot('26-notifications');
+    await vis('notification-01J9BOOKINGDONE').click();
+    await page.getByRole('button', { name: 'Release payment' }).filter({ visible: true }).first().click();
+    await page.getByText('Released.').filter({ visible: true }).first().waitFor();
+    await noSideScroll('sign-off');
+    await shot('27-sign-off');
+    await vis('rate').click();
+    await page.getByText('How was Ravi?').filter({ visible: true }).first().waitFor();
+    await shot('28-review');
   });
   await step('no page errors', async () => {
     if (errors.length) throw new Error(errors.join(' | '));

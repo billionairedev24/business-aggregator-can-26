@@ -1,6 +1,9 @@
-import { Stub } from '../../../src/ui/Stub';
+import { useLocalSearchParams } from 'expo-router';
 
-/** Design 01 `review` — a stub until its story builds it (src/screens.ts, docs/MOBILE_PLAN.md). */
+import { Review as Screen } from '../../../src/services/Booking';
+
+/** Design 01 `review` (S-100): the two-way review. */
 export default function Review() {
-  return <Stub screen="review" />;
+  const { id } = useLocalSearchParams<{ id: string }>();
+  return <Screen id={String(id)} />;
 }

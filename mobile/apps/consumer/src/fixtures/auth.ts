@@ -13,6 +13,8 @@ import type { FixtureArea, FixtureContext, FixtureRequest } from './context';
  * {@link FIXTURE_ACCOUNT} (made-up person and number).
  */
 export const FIXTURE_CODE = '246810';
+/** The step-up proof the fixture api accepts as `X-Step-Up`. */
+export const STEP_UP_PROOF = 'fixture-proof';
 export const FIXTURE_TOTP = '135790';
 export const FIXTURE_ACCOUNT = { phone: '+1 555 555 0100', email: 'ada@example.com', firstName: 'Ada', lastName: 'Example' };
 const SIGN_IN_PAGE = 'https://site.fixtures.invalid/sign-in';
@@ -180,6 +182,10 @@ export function authFixtures(ctx: FixtureContext, state: AuthFixtureState): Fixt
         if (!s.signIn.account || code(req) !== FIXTURE_CODE) return invalid('code', 'mismatch', "That code didn't work. Check it and try again.");
         return signedIn(s.signIn.account, null);
       }
+      case '/api/auth/step-up/totp':
+        // S-51's payment step-up: a 5-minute proof the api takes as X-Step-Up (S-100's booking checkout)
+        if (code(req) !== FIXTURE_TOTP) return invalid('code', 'mismatch', "That code doesn't match. Check it and try again.");
+        return ctx.answer(200, { proof: STEP_UP_PROOF, expiresAt: new Date(ctx.now() + 300_000).toISOString() });
     }
     return ctx.answer(404, { code: 'not_found' });
   };

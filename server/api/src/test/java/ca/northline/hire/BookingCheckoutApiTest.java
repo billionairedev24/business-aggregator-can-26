@@ -10,10 +10,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ca.northline.booking.api.BookingConfirmed;
+import ca.northline.booking.api.BookingSignedOff;
 import ca.northline.support.IntegrationTest;
 import ca.northline.support.TestJwt;
 import ca.northline.tools.CategorySeeder;
 import com.jayway.jsonpath.JsonPath;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -25,6 +27,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import javax.sql.DataSource;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -38,6 +41,8 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * S-55: the booking wizard's server side — the provider's live calendar, slot holds (races included), the escrow
  * payment with Idempotency-Key and step-up, the confirmation and {@code booking.confirmed}. Fake gateway (profile test).
+ * S-100 (consumer app): the business's time zone on the calendar and the booking, the job's progress, and the customer's
+ * sign-off releasing the escrow.
  */
 @RecordApplicationEvents
 class BookingCheckoutApiTest extends IntegrationTest {
@@ -121,6 +126,7 @@ class BookingCheckoutApiTest extends IntegrationTest {
                             .param("days", "1"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.durationMin").value(60))
+                    .andExpect(jsonPath("$.timeZone").value("America/Edmonton"))
                     .andExpect(jsonPath("$.days[0].date").value(date.toString()))
                     .andExpect(jsonPath("$.days[0].slots[?(@.startsAt == '%s')].free".formatted(at))
                             .value(false))
@@ -474,6 +480,108 @@ class BookingCheckoutApiTest extends IntegrationTest {
                     .andExpect(jsonPath("$.totalCents").value(0))
                     .andExpect(jsonPath("$.booking.ref", startsWith("BK-")))
                     .andExpect(jsonPath("$.booking.heldCents").value(0));
+        }
+    }
+
+    /** Books {@code at} and pays (fake gateway): the booking id. */
+    String book(Instant at) throws Exception {
+        var holdId = hold(customer, at);
+        mvc.perform(post("/api/v1/me/bookings/checkout")
+                        .with(TestJwt.customerWithMfa(customer))
+                        .header("Idempotency-Key", "p-" + holdId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(JSON.writeValueAsString(request(holdId))))
+                .andExpect(status().isOk());
+        var body = mvc.perform(post("/api/v1/me/bookings/holds/{id}/confirm", holdId)
+                        .with(TestJwt.customer(customer))
+                        .header("Idempotency-Key", "c-" + holdId))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.state").value("confirmed"))
+                .andExpect(jsonPath("$.timeZone").value("America/Edmonton"))
+                .andExpect(jsonPath("$.merchantId").value(provider.merchantId()))
+                .andExpect(jsonPath("$.steps").isEmpty())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        return JsonPath.read(body, "$.bookingId");
+    }
+
+    void job(String bookingId, String step, Map<String, Object> body) throws Exception {
+        mvc.perform(post("/api/v1/merchants/{m}/jobs/{id}/" + step, provider.merchantId(), bookingId)
+                        .with(TestJwt.member(provider.owner()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(JSON.writeValueAsString(body)))
+                .andExpect(status().isOk());
+    }
+
+    @Nested
+    class SignOff {
+
+        @Test
+        void followsTheJob_thenTheSignOffReleasesTheEscrowAtOnce() throws Exception {
+            var bookingId = book(tomorrowAt(18));
+            // not completed yet: nothing to sign off
+            mvc.perform(post("/api/v1/me/bookings/{id}/sign-off", bookingId).with(TestJwt.customer(customer)))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.code").value("job_state"));
+
+            job(bookingId, "en-route", Map.of());
+            mvc.perform(get("/api/v1/me/bookings/{id}", bookingId).with(TestJwt.customer(customer)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.state").value("en_route"))
+                    .andExpect(jsonPath("$.steps[0].type").value("en_route"))
+                    .andExpect(jsonPath("$.releasesAt").doesNotExist());
+            job(bookingId, "on-site", Map.of("lat", 51.04, "lng", -114.07));
+            job(bookingId, "complete", Map.of("report", "Front pads 4 mm. No parts used."));
+
+            var completed = mvc.perform(
+                            get("/api/v1/me/bookings/{id}", bookingId).with(TestJwt.customer(customer)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.state").value("completed"))
+                    .andExpect(jsonPath("$.steps.length()").value(3))
+                    .andExpect(jsonPath("$.steps[2].type").value("completed"))
+                    .andExpect(jsonPath("$.report").value("Front pads 4 mm. No parts used."))
+                    .andExpect(jsonPath("$.photoCount").value(0))
+                    .andReturn()
+                    .getResponse()
+                    .getContentAsString();
+            Instant doneAt = Instant.parse(JsonPath.read(completed, "$.steps[2].at"));
+            assertThat(Instant.parse(JsonPath.<String>read(completed, "$.releasesAt")))
+                    .isEqualTo(doneAt.plus(Duration.ofDays(2)));
+
+            // someone else can't sign it off
+            mvc.perform(post("/api/v1/me/bookings/{id}/sign-off", bookingId).with(TestJwt.customer(data.user("Nosy"))))
+                    .andExpect(status().isNotFound());
+            mvc.perform(post("/api/v1/me/bookings/{id}/sign-off", bookingId).with(TestJwt.customer(customer)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.state").value("signed_off"))
+                    .andExpect(jsonPath("$.steps[3].type").value("signed_off"))
+                    .andExpect(jsonPath("$.releasesAt").doesNotExist());
+            // again: the same answer, one sign-off
+            mvc.perform(post("/api/v1/me/bookings/{id}/sign-off", bookingId).with(TestJwt.customer(customer)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.state").value("signed_off"));
+            assertThat(events.stream(BookingSignedOff.class)
+                            .filter(e -> e.aggregateId().equals(bookingId)))
+                    .singleElement()
+                    .satisfies(e -> assertThat(e.customerId()).isEqualTo(customer));
+            Awaitility.await()
+                    .atMost(Duration.ofSeconds(10))
+                    .untilAsserted(() -> assertThat(jdbc.sql(
+                                            "select release_at <= now() from payments.escrows where ref_type = 'booking' and ref_id = ?")
+                                    .params(bookingId)
+                                    .query(Boolean.class)
+                                    .single())
+                            .isTrue());
+        }
+
+        @Test
+        void needsTheCustomersSignIn() throws Exception {
+            mvc.perform(post("/api/v1/me/bookings/{id}/sign-off", "01J9ZD3V000000000000000000"))
+                    .andExpect(status().isUnauthorized());
+            mvc.perform(post("/api/v1/me/bookings/{id}/sign-off", "01J9ZD3V000000000000000000")
+                            .with(TestJwt.customer(customer)))
+                    .andExpect(status().isNotFound());
         }
     }
 }

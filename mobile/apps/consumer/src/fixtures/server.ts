@@ -2,6 +2,7 @@ import { accountFixtures, newAccountState } from './account';
 import { authFixtures, newAuthState, type AuthFixtureState } from './auth';
 import { lower, type FixtureArea, type FixtureContext, type FixtureRequest } from './context';
 import { geoFixtures } from './geo';
+import { newServicesState, servicesFixtures } from './services';
 import { newShopState, shopFixtures } from './shop';
 
 /**
@@ -30,8 +31,15 @@ export function createFixtureServer(options: FixtureOptions = {}) {
   const calls: Array<{ method: string; path: string; signed: boolean; guest?: string }> = [];
   const shop = newShopState();
   const account = newAccountState(shop, now(), () => auth.session.signedIn ?? auth.accounts.at(-1) ?? null);
+  const servicesState = newServicesState(now);
   // the account area first: it holds northline-auth's security API, and the auth area answers 404 for /api/auth/* it doesn't know
-  const areas: FixtureArea[] = [accountFixtures(ctx, account), authFixtures(ctx, auth), geoFixtures(ctx, geo), shopFixtures(ctx, shop)];
+  const areas: FixtureArea[] = [
+    accountFixtures(ctx, account),
+    authFixtures(ctx, auth),
+    geoFixtures(ctx, geo),
+    shopFixtures(ctx, shop),
+    servicesFixtures(ctx, servicesState),
+  ];
 
   async function handle(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
     const url = new URL(String(input), 'http://fixtures.invalid');
@@ -59,6 +67,7 @@ export function createFixtureServer(options: FixtureOptions = {}) {
     geo,
     shop,
     account,
+    services: servicesState,
     calls,
   };
 }

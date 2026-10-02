@@ -35,7 +35,7 @@ describe('the shell', () => {
   it('moves between tabs, the current one marked', async () => {
     const { view } = await start({ welcomed: true });
     fireEvent.press(await routerScreen.findByRole('tab', { name: 'Services' }));
-    expect(await routerScreen.findByTestId('stub-services')).toBeTruthy();
+    expect(await routerScreen.findByTestId('services')).toBeTruthy();
     expect(view.getPathname()).toBe('/services');
     expect(routerScreen.getByRole('tab', { name: 'Services' }).props.accessibilityState).toEqual({ selected: true });
   });

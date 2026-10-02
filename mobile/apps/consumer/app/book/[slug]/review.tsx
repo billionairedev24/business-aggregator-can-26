@@ -1,6 +1,9 @@
-import { Stub } from '../../../src/ui/Stub';
+import { useLocalSearchParams } from 'expo-router';
 
-/** Design 01 `book_review` — a stub until its story builds it (src/screens.ts, docs/MOBILE_PLAN.md). */
+import { BookReview as Screen } from '../../../src/services/BookReview';
+
+/** Design 01 `book_review` (S-100): review and hold the payment in escrow. */
 export default function BookReview() {
-  return <Stub screen="book_review" />;
+  const { slug } = useLocalSearchParams<{ slug: string }>();
+  return <Screen slug={String(slug)} />;
 }
