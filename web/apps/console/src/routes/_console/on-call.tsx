@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { ScreenPending } from '../../features/shell/ScreenPending';
+import { OnCall } from '../../features/oncall/OnCall';
 
-export const Route = createFileRoute('/_console/on-call')({ component: () => <ScreenPending screen="oncall" /> });
+/** On-call & escalations (S-96): every staff member. */
+export const Route = createFileRoute('/_console/on-call')({ component: OnCall });

@@ -113,15 +113,23 @@ member.
 | `/verification?province=&market=&application=` | `verify` | `verify` | admin, trust_safety | S-79 | built |
 | `/vetting?province=&market=` | `vetting` | `vetting` | admin, trust_safety | S-92 | built |
 | `/trust?province=&market=` | `trust` | `trust` | admin, trust_safety | S-93 | built |
-| `/catalogue` | `taxonomy` | `taxonomy` | admin | S-94 | stand-in |
+| `/catalogue` | `taxonomy` | `taxonomy` | admin | S-94 | built |
 | `/support?province=&market=&filter=&ticket=` | `support` | `support` | admin, trust_safety, dispatch, support, support_lead | S-83 | built |
 | `/provinces?province=` | `regions` | `regions` | admin | S-84 | built |
-| `/finance` | `finance` | `finance` | admin, finance | S-85 | stand-in |
+| `/finance` | `finance` | `finance` | admin, finance | S-85 | built |
 | `/reports` | `reports` | `reports` | admin, finance, analyst | S-95 | stand-in |
+
+| `/finance` | `finance` | `finance` | admin, finance | S-85 | stand-in |
+| `/reports?province=` | `reports` | `reports` | admin, finance, analyst | S-95 | built |
 | `/integrations` | `api` | `api` | admin | S-96 | stand-in |
 | `/team` | `team` | `team` | admin, trust_safety, finance | S-96 | stand-in |
 | `/profile?tab=security\|sessions\|audit\|prefs` | `profile` | `profile` | every staff member | S-96 | stand-in |
 | `/on-call` | `oncall` | `oncall` | every staff member | S-96 | stand-in |
+
+| `/integrations` | `api` | `api` | admin | S-96 | built |
+| `/team` | `team` | `team` | admin, trust_safety, finance | S-96 | built |
+| `/profile?tab=security\|sessions\|audit\|prefs` | `profile` | `profile` | every staff member | S-96 | built |
+| `/on-call` | `oncall` | `oncall` | every staff member | S-96 | built |
 | any of the above, role can't open it | `denied` | — | — | S-90 | built (banner + overview) |
 
 ## Roles
@@ -138,7 +146,7 @@ member.
 
 Not modelled yet (later stories): the design's co-signatures ("province Off↔Live needs 2 admins", "Suspend requires a
 T&S lead co-sign"; "refunds > $500 need a 2nd approver" is built for disputes by S-80), the per-role second factor ("Passkey" / "App 2FA" / "SSO" —
-today every role needs `acr=mfa`), and granting roles from the Team screen (SQL until S-96 —
+today every role needs `acr=mfa`). Granting roles is the Team screen's since S-96 (the runbook's SQL only bootstraps the first admin —
 `docs/runbooks/README.md` § Console BFF).
 
 ## Contracts
@@ -336,6 +344,84 @@ DELETE /api/v1/console/regions/zones/{zoneId}                                   
 
 Every change is audited (`region.*`) and re-reads the region model after commit (DECISIONS "S-84").
 
+### Finance and reconciliation (S-85)
+
+```
+GET  /api/v1/console/finance                                         (screen finance)
+→ { asOf, timeZone, escrowHeldCents, escrowItems, payoutsInFlightCents, payoutsInFlightSellers, nextPayoutArrival,
+    revenueWeekCents, mix: {takeCents, deliveryCents, adjustmentsCents, plusCents: null, rewardsCents: null},
+    tiers: [{tier, sellers, rateBps, gmvShare}], tax: {period, platformFeeCents, facilitatorCents, nextFiling} }
+GET  /api/v1/console/payments/reconciliation?from=&to=               → {items: [Day]} (default: 14 days)
+GET  /api/v1/console/payments/reconciliation/{day}                   → {day: Day, items: [Item]}
+GET  /api/v1/console/payments/reconciliation/export?from=&to=        text/csv (audited)
+GET  /api/v1/console/payments/reconciliation/ledger-export?from=&to= text/csv (audited)
+POST /api/v1/console/payments/reconciliation/run {day}               (finance · payouts) Day
+POST /api/v1/console/payments/reconciliation/{day}/resolve {note}    (finance · payouts) Day   409 not_mismatched
+Day: {day, stripeCents, ledgerCents, varianceCents, feeCents, items, mismatches, status: matched|mismatch|resolved, …}
+GET  /api/v1/console/support/refund-requests                         (screen finance; S-83's) {items: [{request, ticket}]}
+POST /api/v1/console/support/refund-requests/{id}/decision {decision: approve|decline, note?}  (finance · refund; S-83's)
+```
+
+The screen lists support's pending refund requests under "Refund requests from support" and decides them there.
+
+Rules: DECISIONS "S-85"; operations: runbooks/stripe.md § 10.
+
+### Catalogue taxonomy (S-94)
+
+```
+GET  /api/v1/console/taxonomy                                          (screen taxonomy)
+→ { asOf, serviceCategories, shopDepartments, categories: [Row], regulators: [{code, name, province, website, categories}],
+    limits: [{merchantType, max, businessesAbove, updatedAt, updatedBy}], suggestions: [{id, name, businesses: [{id, name, type, province, status}]}] }
+Row: { id, parentId, root, group, nameEn, nameFr, bookingType, regulatedRegistry, requiresVsCheck,
+       regulators: [{province, regulator|null}], sellers, liveIn: [province], liveListings, medianPriceCents, priceMode: fixed|hourly|quote }
+POST /api/v1/console/taxonomy/categories {root?, parentId?, nameEn, nameFr?, bookingType?, regulatedRegistry?, requiresVsCheck}
+                                                                       (taxonomy · vet) 201 Row · 409 category_exists
+PUT  /api/v1/console/taxonomy/categories/{id} {nameEn, nameFr?, bookingType?, regulatedRegistry?, requiresVsCheck}   Row
+PUT  /api/v1/console/taxonomy/categories/{id}/regulators/{province} {regulator: code|none|null}                      Row
+POST /api/v1/console/taxonomy/regulators {code, name, province, website?}            201 · 409 regulator_exists
+PUT  /api/v1/console/taxonomy/regulators/{code} {name, province, website?}           409 regulator_in_use
+PUT  /api/v1/console/taxonomy/limits/{provider|seller|both|kitchen} {max}            Limit
+POST /api/v1/console/taxonomy/suggestions/{suggestionId}/approve {CategoryInput}     {category: Row, moved, alreadyHeld}
+POST /api/v1/console/taxonomy/suggestions/{suggestionId}/merge {categoryId}          {category: Row, moved, alreadyHeld}
+```
+
+Audit `catalogue.category_created | category_updated | category_regulated | regulator_created | regulator_updated |
+suggestion_approved | suggestion_merged`, `merchants.category_limit_changed`, and per moved business
+`merchant.category_assigned`; event `merchant.categories_changed` (search re-reads the business). DECISIONS "S-94".
+
+### Reports & analytics (S-95)
+
+```
+GET /api/v1/console/reports[?province=AB]                     (screen reports; admin, finance, analyst)
+→ { asOf, province, from, weeks: [{week, customers, previous}] (13),
+    funnel: [{step: app_opens|browsed|cart|checkout|paid, count, recorded}],
+    cohorts: [{month, customers, m1, m2, m3}] (4), topCategories: [{categoryId, names, salesCents}] (≤ 6),
+    waitlist: [{province, people}] }
+```
+
+Counts only; any count from 1 to 4 is null (withheld). DECISIONS "S-95".
+
+### Team, audit, API keys, on-call (S-96)
+
+```
+GET    /api/v1/console/team                                      (team) {roles: [{role, people, screens, actions}], members: [Member]}
+POST   /api/v1/console/team/invite {email, role}                 (team · province = admin) Member
+POST   /api/v1/console/team/{userId}/roles {role}                (team · province) Member
+DELETE /api/v1/console/team/{userId}/roles/{role}                (team · province) Member · 409 own_admin | last_admin
+GET    /api/v1/console/audit?actor=&action=&business=&target=&from=&to=&before=   (team) {items: [AuditRow], next}
+GET    /api/v1/console/me/audit?before=                          (profile) my own entries
+GET    /api/v1/console/api-keys                                  (api) {items: [KeyRow]}
+POST   /api/v1/console/api-keys {merchantId, name, scopes}       (api · keys) 201 {key, secret}
+POST   /api/v1/console/api-keys/{keyId}/revoke                   (api · keys) KeyRow
+GET    /api/v1/console/oncall?from=&to=                          (oncall) {asOf, shifts, now, staff}
+POST   /api/v1/console/oncall/shifts {userId, startsAt, endsAt, duty}   (oncall · province) 201
+POST   /api/v1/console/oncall/shifts/{id}/hand-over {userId}     (oncall; the person on it, or an admin) · 409 not_your_shift
+DELETE /api/v1/console/oncall/shifts/{id}                        (oncall · province) 204
+```
+
+Profile security and sessions call northline-auth's `/api/auth/security` (S-19) through `@northline/auth-kit`.
+DECISIONS "S-96".
+
 ## API: what exists, what's missing
 
 | screen | exists | missing (the screen's story adds it) |
@@ -349,20 +435,33 @@ Every change is audited (`region.*`) and re-reads the region model after commit 
 | vetting | `GET /api/v1/console/vetting`, `POST …/listings/{id}/decision`, `POST …/dishes/{id}/decision` (S-92) | — |
 | trust | `GET /api/v1/console/trust/flags`, `POST …/{id}/decision` (S-133); `GET …/flags/queue`, `POST …/flags/{id}/action`, `GET/PUT …/trust/rules[/{key}]`, `GET …/rules/rating_floor/impact` (S-93) | S-82 enforces the rating floor (hide from search) and warning-then-suspension; instant book off after no-shows and the photo delay have no state to act on |
 | taxonomy | `db/seed/categories.json` (seed only) | categories CRUD with regulators, limits, per-province rules (S-94) |
-| support | `GET /api/v1/console/support/tickets[/{id}]`, `POST …/tickets/{id}/reply\|take\|escalate\|refund-requests`, `GET …/refund-requests`, `POST …/refund-requests/{id}/decision`, `GET/POST/PUT/DELETE …/macros` (S-83) | the finance screen's list of refund requests (S-85 reads `GET …/support/refund-requests`); CSAT collection (no survey sends it yet) |
+| support | `GET /api/v1/console/support/tickets[/{id}]`, `POST …/tickets/{id}/reply\|take\|escalate\|refund-requests`, `GET …/refund-requests`, `POST …/refund-requests/{id}/decision`, `GET/POST/PUT/DELETE …/macros` (S-83) | CSAT collection (no survey sends it yet); the finance screen lists and decides refund requests (S-85) |
 | regions | S-84: stages with a confirmation and the go-live checklist, markets, zones (GeoJSON), courier model | the co-sign of a second admin, dry-run as customer, categories per province, drawing zones on a map |
+| finance | S-21 tax reconciliation; S-85: escrow, payouts in flight, revenue mix, take by tier, Stripe ↔ ledger reconciliation and exports, support's refund requests | Plus subscriptions and rewards (not recorded) |
+
+| trust | `GET /api/v1/console/trust/flags`, `POST …/{id}/decision` (S-133); `GET …/flags/queue`, `POST …/flags/{id}/action`, `GET/PUT …/trust/rules[/{key}]`, `GET …/rules/rating_floor/impact` (S-93) | the consequences' jobs (S-82) |
+| taxonomy | S-94: categories (add, edit), regulators by province, category limits, businesses' suggestions (approve / merge) | synonyms (fr/en) and search boosting rules (search reads neither yet); retiring a category |
+| support | `GET /api/v1/console/support/tickets[/{id}]`, `POST …/tickets/{id}/reply\|take\|escalate\|refund-requests`, `GET …/refund-requests`, `POST …/refund-requests/{id}/decision`, `GET/POST/PUT/DELETE …/macros` (S-83) | the finance screen's list of refund requests (S-85 reads `GET …/support/refund-requests`); CSAT collection (no survey sends it yet) |
+| regions | `region.api.Regions` reads; `GET /api/v1/geo/regions` | province / market / zone stage changes with co-sign (S-84) |
 | finance | `POST /api/v1/console/payments/tax-reconciliations` (S-21) | escrow / payouts / reconciliation / take rate by tier / revenue mix (S-85) |
-| reports | — | funnels, cohorts, top categories, supply gaps (S-95) |
+| reports | S-95: weekly active customers, shop funnel, signup-month cohorts, top categories, waitlist demand (counts only) | app opens and zero-result searches (nothing records them), scheduled email |
 | api | `developer` module (merchants' keys and webhooks) | platform-wide API clients and rate limits (S-96) |
 | team, profile | `developer.api.AuditTrail` (write); auth `GET /api/auth/security` (sessions, passkeys) | roles and people, audit log views ("My audit trail"), sessions (S-96) |
 | oncall | — | rota, incidents, escalation paths (S-96) |
+
+| reports | — | funnels, cohorts, top categories, supply gaps (S-95) |
+| api | S-96: every business's API keys, issue (secret shown once) and revoke | request metrics (4.1M · p95 · 5xx · webhook success: no metrics source), per-key rate-limit edits, webhook catalogue page |
+| team, profile | S-96: roles and people (grant / revoke / invite, admin only), audit log with filters and pages, my audit trail; profile security and sessions through `@northline/auth-kit` | Company SSO, backup-code regeneration from the console |
+| oncall | S-96: rota (add / hand over / remove shifts), escalation paths | incidents ("Declare incident"), paging ("Page current on-call") |
 
 ## Migration and seed ranges
 
 **V190–V199** (IMPLEMENTATION_PLAN.md, the next free range above V183); the console queues (S-79, S-80, S-83, S-92, S-93) **V210–V219**; the second batch (S-81, S-82, S-84, S-85, S-94–S-96) **V230–V239**. S-90: V190 (`identity.platform_roles` console
 roles, `granted_by`; `ix_audit_log_platform`), dev seed V191 (Priya Natarajan, staff with every role). Later console
 stories take the next numbers in the range; a seed stays in `db/seed-dev/`. The review queues (S-79, S-92, S-80, S-93,
-S-83) use **V210–V219** (fulfilment took V200–V209 first; ordering rule).
+S-83) use **V210–V219** (fulfilment took V200–V209 first; ordering rule). The second batch (S-81, S-82, S-84, S-85,
+S-94–S-96) uses **V230–V239**: S-94 V232 (catalogue regulators, category rules, `edited_at`) and V233
+(`merchants.category_limits`, the limit trigger's function reads it).
 
 ## Deploy
 

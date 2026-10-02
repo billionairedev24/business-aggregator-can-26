@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { ScreenPending } from '../../features/shell/ScreenPending';
+import { FinanceScreen } from '../../features/finance/FinanceScreen';
 
-export const Route = createFileRoute('/_console/finance')({ component: () => <ScreenPending screen="finance" /> });
+/** Finance (S-85): escrow, payouts, revenue, take by tier, the Stripe ↔ ledger reconciliation, tax. */
+export const Route = createFileRoute('/_console/finance')({ component: FinanceScreen });

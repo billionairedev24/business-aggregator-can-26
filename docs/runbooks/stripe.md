@@ -345,3 +345,27 @@ PaymentMethod back (`POST /api/v1/me/payment-methods`). The default card is the 
 - **Never run against the real Stripe API** in this repository: the adapter (`StripeSavedCards`) is tested against
   stripe-mock only. Before launch, run the flow once in test mode (3-D Secure test card `4000 0025 0000 3155` asks for
   authentication during `confirmSetup`).
+
+## 10. Stripe ↔ ledger reconciliation (S-85)
+
+Every night at 04:41 in the platform zone (`northline.payments.reconcile-cron`, `REGION_PLATFORM_ZONE`) the api
+reconciles the day before yesterday and yesterday, and finance can run any ended day from the console (Finance ›
+Reconciliation · daily). For one platform-zone day it compares, object by object:
+
+| Stripe | ledger (`payments.ledger_entries`, account `stripe_balance`) |
+|---|---|
+| the platform account's balance transactions (`GET /v1/balance_transactions?created[gte]&created[lt]`): `charge`/`payment` (+), `refund`/`payment_refund` (−), `adjustment` of a card dispute (`dp_…`, −) | the capture of an escrow (its PaymentIntent's charge) or of a delivery fee, a refund (`stripe_refund`), a dispute (`stripe_dispute`) |
+| payouts Stripe accepted (`payments.payouts` with a `stripe_payout`, not failed or canceled; their net) | the payout's posting |
+
+Transfers to connected accounts and Stripe's own fees stay at Stripe and are left out (the fees are shown apart). A day
+is **matched** when every object agrees and the totals are equal; otherwise **mismatch** with the differences
+(`missing_in_ledger`, `missing_at_stripe`, `amount_differs`). Most differences are timing (a refund booked after
+midnight): run the next day, then mark the day **resolved** with a note. Tables `payments.reconciliation_days` /
+`reconciliation_items` (V231); every run from the console, resolution and export is in the platform audit log
+(`payments.reconciliation_*`, `payments.ledger_exported`).
+
+- **Exports:** the days and their differences (`…/reconciliation/export?from=&to=`) and every ledger entry for the
+  accountant ("Export to accounting", `…/reconciliation/ledger-export`), CSV, at most 92 days.
+- **Without a Stripe key** (local, test) the balance transactions come from a fake that mirrors the ledger, so days
+  match. **Never run against a real Stripe account:** the balance-transaction call was written from Stripe's API
+  reference and tested against stripe-mock only. The restricted key needs `Balance transactions: read`.

@@ -20,7 +20,8 @@ import tools.jackson.databind.json.JsonMapper;
  * {@code parent_id}. Idempotent (ids are stable slugs, {@code ON CONFLICT (id) DO UPDATE}).
  *
  * <p>Ids: {@code <root>.<group-slug>} for groups and {@code <root>.<group-slug>.<leaf-slug>} for leaves, e.g.
- * {@code service.automotive.mobile-mechanic}. {@code name_i18n} gets {@code en} only (no French in the seed yet).
+ * {@code service.automotive.mobile-mechanic}. {@code name_i18n} gets {@code en} only (no French in the seed yet). A row
+ * staff edited in the console (S-94, {@code edited_at} set) is left as it is.
  * Also usable from tests: {@code new CategorySeeder(dataSource).seed()}.
  */
 public final class CategorySeeder {
@@ -33,6 +34,7 @@ public final class CategorySeeder {
             on conflict (id) do update set parent_id = excluded.parent_id, root = excluded.root,
               name_i18n = excluded.name_i18n, regulated_registry = excluded.regulated_registry,
               requires_vs_check = excluded.requires_vs_check
+              where catalogue.categories.edited_at is null
             """;
 
     record Category(

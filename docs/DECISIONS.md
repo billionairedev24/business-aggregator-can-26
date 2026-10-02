@@ -5718,3 +5718,174 @@ server environment variable. Runbook: [runbooks/courier-app.md](runbooks/courier
   the model), sellers per market, and the re-matching of addresses when a zone is removed (addresses are matched when
   saved; nothing stores a zone on an address). The lede and footer were reworded where the design promised these
   ("Flags propagate in 30 s" → "within a minute", the region cache period).
+
+## 2026-10-01 — S-85 Finance and reconciliation (Stripe vs ledger)
+
+- **What is reconciled.** The ledger already models cash at Stripe (`stripe_balance`, debited on capture, credited on
+  refunds, chargebacks and payouts), so a day's **ledger Δ** = Σ debits − credits on it and the **Stripe balance Δ** =
+  the platform's balance transactions that move it (charges +, refunds and dispute withdrawals −) plus the payouts
+  Stripe accepted (from `payments.payouts`, which the S-12 webhooks keep). Transfers to connected accounts (separate
+  charges and transfers: still at Stripe) and Stripe's fees (not posted in the ledger) are left out; fees are reported
+  apart. Payouts are created on connected accounts, so they are compared from our webhook-fed table rather than the
+  platform's balance transactions.
+- **Object by object:** Stripe ids join the two sides (an escrow's PaymentIntent `stripe_charge`, a delivery fee's,
+  `refunds.stripe_refund`, `disputes.stripe_dispute`, `payouts.stripe_payout`); one charge may hold several escrows.
+  Differences: `missing_in_ledger`, `missing_at_stripe` (also a posting whose Stripe id is unknown), `amount_differs`.
+  A day is `matched`, `mismatch`, or `resolved` (finance's note, kept while re-runs still differ).
+- **New:** port `payments.application.StripeBalance` (stripe-java `GET /v1/balance_transactions`, every page; fake
+  mirroring the ledger without a key, with a hook for tests), `ReconcileStripe` (nightly job for the two previous days,
+  run / resolve / export from the console), tables **V231** `payments.reconciliation_days` / `reconciliation_items`,
+  `payments.api.FinanceFigures` and the console's `GET /api/v1/console/finance`.
+- **Roles:** the finance screen (admin, finance) reads; running a day, resolving it and S-21's Stripe Tax reconciliation
+  need `payouts`. Runs from the console, resolutions and both exports are audited (`payments.reconciliation_run |
+  reconciliation_resolved | reconciliation_exported`, `payments.ledger_exported`; ids and codes only — the note stays
+  in the reconciliation table).
+- **Screen figures:** escrow held (+ items); "Friday payout batch" became **payouts in flight** (pending / in transit,
+  businesses) — payouts follow each business's own schedule, there is no single batch; net revenue of the last 7 days
+  and its mix from the ledger's `revenue` account by reference (escrow fees = take rate, delivery fees, give-backs);
+  take rate by tier = the tiers' default rates (`payments.domain.Tier`), approved businesses per tier, and each tier's
+  share of the week's money held; tax of the current quarter (platform-zone) from S-21's read model — GST/HST on
+  Northline's fees and what Northline remits as marketplace facilitator — with the GST/HST return due the last day of
+  the month after the quarter.
+- **Support's refund requests (coordinator: S-85 owns the finance list).** The screen lists S-83's pending requests
+  (`GET /api/v1/console/support/refund-requests`, already there, `finance` screen) under "Refund requests from support":
+  case code, requester, amount, subject, who asked and when, the agent's note. Approve / decline with an optional note
+  uses S-83's `POST …/refund-requests/{id}/decision` (`refund`: admin, finance); one's own request shows "You asked for
+  this one; someone else decides." (the api refuses it, 409 `request_self`). No new endpoint, role or audit code —
+  S-83's `support.refund_approved | refund_declined` apply. The heading, the note and the empty text are ours (design
+  03 has no such list). The province / market filter the endpoint takes is not offered (the finance screen has none).
+- **Nightly run:** `PAYMENTS_RECONCILE_CRON` (`northline.payments.reconcile-cron`, default `0 41 4 * * *`, platform
+  zone; prod runbook variables table, `.env.example`).
+- **Not done / never run:** Plus subscriptions and provider-funded rewards are not recorded anywhere (shown "—").
+  The real balance-transaction call has never run against Stripe (stripe-mock only). Exports are CSV only (the Data
+  Table still offers its own CSV/XLSX/PDF of what is on screen).
+
+## 2026-10-01 — S-94 Catalogue taxonomy: categories, regulators by province, category limits, suggested categories
+
+- **Where things live.** Catalogue owns the taxonomy: new port `catalogue.api.TaxonomyAdmin` (validation, ids, the
+  province rules) over `catalogue.categories`, the new `catalogue.regulators` and `catalogue.category_regulators`
+  (**V232**). Merchants owns businesses' categories: `merchants.api.MerchantCategories` (limits, who holds what, the
+  suggestions and moving businesses to a category) over `merchants.merchant_categories` and the new
+  `merchants.category_limits` (**V233**). The console module orchestrates and audits (`ManageTaxonomy`,
+  `/api/v1/console/taxonomy/**`), since catalogue already depends on merchants (no cycle). Screen `taxonomy`, admin
+  only; every change needs `vet` (design 03: the taxonomy table's perm).
+- **Categories.** Add a group (no parent, under a root) or a leaf (under a group of the same root); the id is the
+  parent's id plus a slug of the English name, as the seeder makes them, so ids stay stable and readable; 409
+  `category_exists`. Edit names (en, fr), booking type (services only), the default licence registry and the
+  vulnerable-sector check; id, root and parent never change (listings and businesses point at the id). French goes to
+  `name_i18n.fr` and to `catalogue.category_labels` (the shop reads the label, V111). **The dev seeder now leaves a
+  console-edited row alone** (`catalogue.categories.edited_at`, `seedCategories` upserts only rows without it), so a
+  re-seed never undoes an edit. Retiring or deleting a category is not built (listings, services and businesses
+  reference it).
+- **Regulators by province (design "Yes · AMVIC (AB), BC: none").** Regulators are a list staff keep: code, name,
+  province, website. None are seeded: which body licenses what is per province, and code may not assume it. A
+  category answers to one regulator per province (`category_regulators`), or staff say "not regulated here"; a
+  province without a rule falls back to the category's default licence registry (`regulated_registry`, the column
+  onboarding and vetting already read). A regulator's province can't change while categories point at it (409
+  `regulator_in_use`). **Known gap:** onboarding's licence check and listing vetting still read the default registry
+  only, not the per-province rule; switching them over is a follow-up.
+- **Category limits — V016's trigger still applies.** The limit per business type (provider 10, seller 5, both 10,
+  kitchen 3 to start) is in `merchants.category_limits`; V233 replaces only the function `trg_category_limit` calls, so
+  the constraint trigger on `merchant_categories` keeps enforcing it on every insert and update (tested: with the
+  kitchen limit at 4, a fifth category fails in the database). Onboarding's Business step validates and shows the
+  same number (`CategoryLimitLookup`). Lowering a limit doesn't remove anyone's categories; the screen says how many
+  businesses hold more, and they keep them until they change their categories.
+- **Suggested categories (approve or merge).** Onboarding stores a free-text category as `suggested:<slug>` with the
+  business's wording (S-37). The screen groups pending suggestions by id with the businesses that typed them.
+  *Approve* creates the category (the suggestion's wording unless staff change it) and *merge* picks an existing one;
+  either way every business holding the suggestion moves to the category — `approved`, or `requested` when the
+  category is regulated (a default registry or a regulator in some province), as onboarding does for regulated
+  picks. A business that already holds the category just loses the suggestion. Each moved business gets
+  `merchant.category_assigned` in its audit log and a `merchant.categories_changed` event (schema v1; search re-reads
+  the business).
+- **Screen figures:** "service categories" = service leaves, "shop departments" = shop groups (the design's headline);
+  sellers and "Live in" = active businesses holding the category and their provinces; median price = the live
+  listings' median in the pricing mode most of them use (`/h` for hourly, "quote" when all are quoted; shop goods by
+  their catalogue product's category).
+- **Audit (codes only):** `catalogue.category_created | category_updated` (the names of the fields that changed, not
+  the names themselves) `| category_regulated | regulator_created | regulator_updated | suggestion_approved |
+  suggestion_merged`, `merchants.category_limit_changed` (before/after max), `merchant.category_assigned`.
+- **Not done (design 03 shows them):** "Synonyms (fr/en)" and "Search boosting rules" — the search index reads
+  neither (`search_terms` is unused today), so the buttons would do nothing; they need a search mapping change.
+  Category name edits reach search documents when a business is next re-indexed (the worker's category cache is
+  five minutes; there is no event per category).
+- **Messages (fr in the catalogue):** "Enter the English name, 1 to 80 characters.", "Enter the French name, 1 to 80
+  characters.", "Choose services, shop or food.", "Choose a group of the same root.", "Choose visit, home, event,
+  appointment or consult.", "The licence registry is at most 80 characters.", "Use 2 to 40 lowercase letters, digits,
+  - or _.", "Enter the regulator's name, 1 to 80 characters.", "The website starts with https:// and is at most 200
+  characters.", "Choose a regulator from the list.", "That regulator is in another province.", "That group already
+  has a category with this name.", "A regulator with this code already exists.", "Enter a limit from 1 to 50.",
+  "Choose provider, seller, both or kitchen.". The dialogs and the sections below the table are ours (design 03 shows
+  the table and its buttons only).
+
+## 2026-10-01 — S-95 Reports & analytics: funnels and cohorts from privacy-safe aggregates
+
+- **Counts only, computed where the data lives.** `GET /api/v1/console/reports[?province=]` (screen `reports`: admin,
+  finance, analyst; read only) is composed in the console module from ports that answer with counts or opaque ids:
+  `shared.CustomerActivity` (orders and booking: paid purchases as customer id + instant, sales by listing),
+  `orders.api.ShopFunnel` (carts, checkouts started and paid), `merchants.api.StorefrontVisits.total`,
+  `catalogue.api.ListingCategories`, `identity.api.SignupDates` (created-at only) and `region.api.WaitlistDemand`.
+  Opaque customer ids exist only in memory while the counts are made; nothing is stored and the answer carries no id,
+  name, contact or address (the API test checks a customer id is absent from the response).
+- **Small-cell suppression:** any count from 1 to 4 (weekly active customers, funnel steps, a cohort's size, waitlist
+  people) comes back null and the screen says "fewer than 5"; a withheld cohort also withholds its rates.
+- **Region filter:** the region model's live and pilot provinces + All (design "Alberta | All"); a province means the
+  businesses there (`shared.PlaceFilter`, as on every console screen), weeks and months in the province's zone.
+- **Definitions.** Weekly active customers: distinct customers with a paid order (not cancelled) or a booking past
+  "requested" (not cancelled) in each of the last 13 weeks (Monday first), against the 13 before (dotted). Funnel · shop
+  over 90 days: storefront visits ("Searched / browsed"), carts with an item added, checkouts started, checkouts placed
+  (paid). Cohorts: customers who bought (in scope) by the month their account was created, for the four months before
+  this one, and the share who bought in each of the next three months (a month still to come shows "—"). Top
+  categories: sales of the last 90 days by the listing's category (goods by their catalogue product's), top six.
+  Supply & demand gaps: waitlist people in provinces not live yet.
+- **Not recorded (shown as such, not invented):** "App opens" (no app telemetry exists), carts by province (a cart's
+  items are offers; which business sells one is the catalogue's), "Searches with 0 results" and "Providers needed" (the
+  search API doesn't count queries). "Schedule email" is not built. No migration.
+- **Scaling note:** the ports read the source tables on each request (90 days, four months of cohorts). A nightly
+  rollup table is the follow-up once volume needs it.
+- **Charts:** the design system's `LineChart` (solid accent this period, dotted neutral previous, legend), meter bars
+  for the funnel and `BarList` for categories; the weekly figures also open as a table ("Show as table"); cohort cells
+  are tinted by rate with the number always printed.
+
+## 2026-10-01 — S-96 Platform console: team and roles, audit log viewer, API keys, on-call rota, staff profile
+
+- **Team replaces the SQL procedure.** `/team` (screen `team`: admin, trust & safety, finance) lists the console roles
+  (design "Roles": Role · People · Can · Needs, from `StaffRole`) and the people holding them. Admins (`province`, the
+  design's perm for the roles table) add and remove roles and "Invite" an existing account by email
+  (`POST /api/v1/console/team/invite`; 422 when no account uses the email — creating accounts stays northline-auth's).
+  Granting a role also grants `staff` (it opens the console); removing the last console role removes `staff`. 409
+  `own_admin` (nobody removes their own admin role) and `last_admin`. Audit `console.role_granted | role_revoked` (the
+  role code). Writes go through the new `identity.api.StaffDirectory`; the console module checks and audits. A change
+  reaches the person's token at its next refresh (≤ 10 min). The runbook keeps SQL only to bootstrap the first admin.
+  "Needs" shows "Second factor at sign-in" for every role: the design's per-role factor (Passkey / App 2FA / SSO) is not
+  modelled — every role needs `acr=mfa` today.
+- **Audit log viewer** over `developer.audit_log` (new `developer.api.AuditLogQuery`): filters by action area (a prefix
+  such as `payments.`), person, business id, target and dates; newest first, 50 a page with an opaque cursor (422 for a
+  token the api didn't make). Actor and business names are filled in for display; entries stay codes and ids as stored.
+  "My audit trail" on the profile is the same list for the signed-in person (`GET /api/v1/console/me/audit`). The
+  design's footer ("Immutable · exported nightly to cold storage · retained 7 years") is left out: no export job or
+  retention policy exists yet.
+- **Staff API keys** (`/integrations`, screen `api`: admin; issue and revoke need `keys`): every business's keys
+  ("Partner keys": owner, scopes, last used, status). Staff issue a key for a business — the Studio's rules and scopes,
+  secret shown once — and revoke one, through the developer module's own use cases (new `developer.api.PartnerKeys`), so
+  the business's audit log gets `api_key.issued | api_key.revoked` with the staff member as actor and `ApiKeyRevoked`
+  is published as before. Not built: the design's request metrics (no metrics source for them), the webhook event list
+  and example (documentation, not data), GraphQL (doesn't exist; the lede says what exists).
+- **On-call rota** (`/on-call`, every staff member; **V234** `identity.oncall_shifts`): shifts from 12 h ago to a week
+  ahead, who is on call now. Admins add and remove shifts (`province`); the person on a shift — or an admin — hands it to
+  a colleague ("Swap a shift"; 409 `not_your_shift`). Audit `console.oncall_shift_added | oncall_shift_swapped |
+  oncall_shift_removed`. The escalation paths and targets are the design's copy (without its tool column: PagerDuty,
+  Slack channels and an Unleash kill-switch aren't set up). Not built: incidents ("Declare incident", "Open incidents")
+  and paging ("Page current on-call") — no incident store or paging integration exists.
+- **Staff profile** (`/profile`, every staff member): name, email, roles and role view; **Security** (passkeys with
+  add / remove, the authenticator, backup codes left, "Sign out everywhere") and **Devices & sessions** (sign one out)
+  come from northline-auth's `/api/auth/security` through `@northline/auth-kit` (S-19, as the Studio and the consumer
+  site); changes that need a recent second factor answer `step_up_required` and the screen says how to confirm. With no
+  recent second factor the page asks the person to sign in again first. **Preferences**: the console's language. Not
+  built: Company SSO (no SSO), regenerating backup codes from the console.
+- **Messages (fr in the catalogue):** "Choose a role from the list.", "Enter the person's email.", "No Northline account
+  uses that email. They sign up first, then you add the role.", "You can't remove your own admin role.", "Northline
+  needs at least one admin.", "Say what the shift covers, 1 to 120 characters.", "A shift ends after it starts and lasts
+  at most 7 days.", "Choose a staff member.", "Only the person on the shift or an admin can hand it over.", "Use a date
+  and time like 2026-09-08T18:00:00Z.", "That page link is no longer valid. Start from the first page.", "Choose a
+  business.".

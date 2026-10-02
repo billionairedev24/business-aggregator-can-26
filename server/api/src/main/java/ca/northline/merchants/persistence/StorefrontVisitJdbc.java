@@ -35,4 +35,18 @@ class StorefrontVisitJdbc implements StorefrontVisitStore {
                 .query((rs, _) -> new DayVisits(rs.getObject("day", LocalDate.class), rs.getInt("visits")))
                 .list();
     }
+
+    @Override
+    public long total(ca.northline.shared.MerchantScope scope, LocalDate from, LocalDate to) {
+        return jdbc.sql("""
+                        select coalesce(sum(visits), 0) from merchants.storefront_visits
+                         where day >= :from and day < :to and (:everyone or merchant_id = any(:merchants))
+                        """)
+                .param("from", from)
+                .param("to", to)
+                .param("everyone", scope.everyone())
+                .param("merchants", scope.ids())
+                .query(Long.class)
+                .single();
+    }
 }

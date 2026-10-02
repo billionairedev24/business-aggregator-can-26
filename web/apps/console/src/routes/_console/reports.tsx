@@ -1,4 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { ScreenPending } from '../../features/shell/ScreenPending';
+import { z } from 'zod';
+import { Reports } from '../../features/reports/Reports';
 
-export const Route = createFileRoute('/_console/reports')({ component: () => <ScreenPending screen="reports" /> });
+/** Reports & analytics (S-95): every province, or one of the region model's. */
+export const Route = createFileRoute('/_console/reports')({
+  validateSearch: z.object({ province: z.string().optional() }),
+  component: Reports,
+});

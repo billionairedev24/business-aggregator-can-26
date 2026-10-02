@@ -115,6 +115,15 @@ class SellerOversightJdbc implements SellerDirectory, OversightStore {
                 .optional();
     }
 
+    @Override
+    public Map<String, String> tiers() {
+        var out = new HashMap<String, String>();
+        jdbc.sql("select id, tier from merchants.merchants where status = 'active' and tier is not null")
+                .query((rs, _) -> out.put(rs.getString("id"), rs.getString("tier")))
+                .list();
+        return Map.copyOf(out);
+    }
+
     // ── OversightStore ────────────────────────────────────────────────────────────────────────────────────────
 
     @Override

@@ -707,6 +707,38 @@ Choose one of the province's markets.	Choisissez un des marchés de la province.
 Pooled runs a day are 0 to 24.	Les tournées groupées par jour vont de 0 à 24.	new
 Paste a GeoJSON polygon (lng, lat) for the boundary.	Collez un polygone GeoJSON (lng, lat) pour la limite.	new
 A live market keeps at least one zone. Lower its stage first.	Un marché en service garde au moins une zone. Abaissez d’abord son étape.	new
+Say how the difference was resolved.	Indiquez comment l’écart a été résolu.	new
+Only a day that doesn't match can be resolved.	Seul un jour qui ne concorde pas peut être résolu.	new
+Choose a day that has ended.	Choisissez un jour terminé.	new
+Choose a day (YYYY-MM-DD).	Choisissez un jour (AAAA-MM-JJ).	new
+Choose at most 92 days, the first before the last.	Choisissez au plus 92 jours, le premier avant le dernier.	new
 This business is already hidden from search.	Cette entreprise est déjà masquée dans la recherche.	new
 This business isn't hidden from search.	Cette entreprise n’est pas masquée dans la recherche.	new
 Choose hide or show.	Choisissez Masquer ou Afficher.	new
+Enter the English name, 1 to 80 characters.	Entrez le nom anglais, de 1 à 80 caractères.	new
+Enter the French name, 1 to 80 characters.	Entrez le nom français, de 1 à 80 caractères.	new
+Choose services, shop or food.	Choisissez services, boutique ou restauration.	new
+Choose a group of the same root.	Choisissez un groupe de la même racine.	new
+Choose visit, home, event, appointment or consult.	Choisissez visite, domicile, événement, rendez-vous ou consultation.	new
+The licence registry is at most 80 characters.	Le registre de permis compte au plus 80 caractères.	new
+Use 2 to 40 lowercase letters, digits, - or _.	Utilisez de 2 à 40 lettres minuscules, chiffres, - ou _.	new
+Enter the regulator's name, 1 to 80 characters.	Entrez le nom de l’organisme de réglementation, de 1 à 80 caractères.	new
+The website starts with https:// and is at most 200 characters.	Le site Web commence par https:// et compte au plus 200 caractères.	new
+Choose a regulator from the list.	Choisissez un organisme de réglementation dans la liste.	new
+That regulator is in another province.	Cet organisme de réglementation est dans une autre province.	new
+That group already has a category with this name.	Ce groupe a déjà une catégorie de ce nom.	new
+A regulator with this code already exists.	Un organisme de réglementation avec ce code existe déjà.	new
+Enter a limit from 1 to 50.	Entrez une limite de 1 à 50.	new
+Choose provider, seller, both or kitchen.	Choisissez fournisseur, vendeur, les deux ou cuisine.	new
+Choose a role from the list.	Choisissez un rôle dans la liste.	new
+Enter the person's email.	Entrez le courriel de la personne.	new
+No Northline account uses that email. They sign up first, then you add the role.	Aucun compte Northline n’utilise ce courriel. La personne s’inscrit d’abord, puis vous ajoutez le rôle.	new
+You can't remove your own admin role.	Vous ne pouvez pas retirer votre propre rôle d’administrateur.	new
+Northline needs at least one admin.	Northline doit garder au moins un administrateur.	new
+Say what the shift covers, 1 to 120 characters.	Indiquez ce que couvre le quart, de 1 à 120 caractères.	new
+A shift ends after it starts and lasts at most 7 days.	Un quart se termine après son début et dure au plus 7 jours.	new
+Choose a staff member.	Choisissez un membre du personnel.	new
+Only the person on the shift or an admin can hand it over.	Seule la personne de garde ou un administrateur peut céder ce quart.	new
+Use a date and time like 2026-09-08T18:00:00Z.	Utilisez une date et une heure comme 2026-09-08T18:00:00Z.	new
+That page link is no longer valid. Start from the first page.	Ce lien de page n’est plus valide. Recommencez à la première page.	new
+Choose a business.	Choisissez une entreprise.	new
