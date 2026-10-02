@@ -19,7 +19,7 @@ export function FrenchFirst() {
   const { location } = useDeliveryLocation();
   const lang = locale === 'fr-CA' ? 'fr' : 'en';
   const regions = useQuery({ queryKey: ['geo', 'regions', locale], queryFn: () => geoApi(services().api).regions(lang), staleTime: 3_600_000, enabled: location.status !== 'locating' });
-  const first = location.status !== 'locating' && isFrenchFirst(regions.data, location);
+  const first = location.status !== 'locating' && isFrenchFirst(regions.data ?? undefined, location);
   useEffect(() => {
     if (!first || locale === 'fr-CA') return;
     void services()
