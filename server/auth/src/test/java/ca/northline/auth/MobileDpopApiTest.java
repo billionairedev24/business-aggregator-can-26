@@ -42,6 +42,9 @@ class MobileDpopApiTest extends AuthIntegrationTest {
     private static final String TOKEN_URL = "http://localhost/oauth2/token";
     private static final String APP = "mobile-consumer";
     private static final String APP_REDIRECT = "ca.northline.app:/oauth2redirect";
+    /** S-98: the claimed https redirect the consumer app's in-app sign-in lands on. */
+    private static final String APP_HTTPS_REDIRECT = "http://localhost:3000/app/oauth2redirect";
+
     private static final String APP_SCOPES = "openid profile orders bookings offline_access";
     private static final String COURIER = "courier-app";
     private static final String COURIER_REDIRECT = "ca.northline.courier:/oauth2redirect";
@@ -444,6 +447,79 @@ class MobileDpopApiTest extends AuthIntegrationTest {
                     .getRedirectedUrl();
             assertThat(location).startsWith(APP_REDIRECT + "?code=").contains("state=s29");
             assertThat(tokens(APP, APP_REDIRECT, codeOf(location), DpopKey.generate())
+                            .access())
+                    .isNotBlank();
+        }
+
+        /**
+         * S-98: the consumer app's own screens. Its HTTP session asks for the authorization first (kept, sent to the
+         * consumer sign-in page), then registers on the JSON API with a phone code and no second factor; the answer
+         * carries continueTo, which the app follows to a code on its claimed https redirect and exchanges with DPoP.
+         */
+        @Test
+        void theConsumerApp_registersOnItsOwnScreens_andItsSessionHandsTheCodeBackOnTheHttpsRedirect()
+                throws Exception {
+            var person = newPerson();
+            var app = new MockHttpSession();
+            mvc.perform(authorize(app, APP, APP_HTTPS_REDIRECT, APP_SCOPES))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrl("http://localhost:3000/sign-in"));
+
+            postJson("/api/auth/register", app, person.json()).andExpect(status().isOk());
+            postJson("/api/auth/register/verify", app, json(Map.of("code", sms.lastCodeTo(person.e164()))))
+                    .andExpect(status().isOk());
+            var body = postJson("/api/auth/register/complete", app, "{}")
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.acr").doesNotExist())
+                    .andExpect(jsonPath("$.continueTo", startsWith("http://localhost/oauth2/authorize?")))
+                    .andReturn()
+                    .getResponse()
+                    .getContentAsString();
+
+            var location = mvc.perform(get(URI.create(JsonPath.read(body, "$.continueTo")))
+                            .session(app)
+                            .accept(MediaType.TEXT_HTML))
+                    .andExpect(status().is3xxRedirection())
+                    .andReturn()
+                    .getResponse()
+                    .getRedirectedUrl();
+            assertThat(location).startsWith(APP_HTTPS_REDIRECT + "?code=").contains("state=s29");
+            var tokens = tokens(APP, APP_HTTPS_REDIRECT, codeOf(location), DpopKey.generate());
+            assertThat(tokens.access()).isNotBlank();
+            assertThat(tokens.refresh()).isNotBlank();
+            // a single-factor consumer token: no acr=mfa (consumers don't need it, S-62)
+            assertThat(claims(tokens.access()).get("acr")).isNull();
+        }
+
+        /** S-98: an existing account signs in on the app's screens with a code to its phone, then the same hand-off. */
+        @Test
+        void theConsumerApp_signsInWithAPhoneCode_andGetsItsCodeFromContinueTo() throws Exception {
+            var user = register(newPerson());
+            var app = new MockHttpSession();
+            mvc.perform(authorize(app, APP, APP_HTTPS_REDIRECT, APP_SCOPES)).andExpect(status().is3xxRedirection());
+            postJson(
+                            "/api/auth/sign-in",
+                            app,
+                            json(Map.of("identifier", user.person().email())))
+                    .andExpect(status().isOk());
+            postJson("/api/auth/sign-in/code", app, "{}").andExpect(status().isOk());
+            var body = postJson(
+                            "/api/auth/sign-in/code/verify",
+                            app,
+                            json(Map.of("code", sms.lastCodeTo(user.person().e164()))))
+                    .andExpect(status().isOk())
+                    .andReturn()
+                    .getResponse()
+                    .getContentAsString();
+            var location = mvc.perform(get(URI.create(JsonPath.read(body, "$.continueTo")))
+                            .session(app)
+                            .accept(MediaType.TEXT_HTML))
+                    .andExpect(status().is3xxRedirection())
+                    .andReturn()
+                    .getResponse()
+                    .getRedirectedUrl();
+            assertThat(location).startsWith(APP_HTTPS_REDIRECT + "?code=");
+            assertThat(tokens(APP, APP_HTTPS_REDIRECT, codeOf(location), DpopKey.generate())
                             .access())
                     .isNotBlank();
         }
