@@ -14,6 +14,7 @@ import com.stripe.net.RequestOptions;
 import com.stripe.param.AccountExternalAccountUpdateParams;
 import com.stripe.param.AccountUpdateParams;
 import com.stripe.param.CustomerCreateParams;
+import com.stripe.param.CustomerUpdateParams;
 import com.stripe.param.PaymentIntentCancelParams;
 import com.stripe.param.PaymentIntentCaptureParams;
 import com.stripe.param.PaymentIntentCreateParams;
@@ -118,6 +119,19 @@ class StripeConnectGateway implements PaymentGateway, PayoutGateway {
                                         .build(),
                                 key(idempotencyKey))
                         .getId());
+    }
+
+    @Override
+    public void receiptLocale(String stripeCustomer, String locale) {
+        call(
+                "customer locale",
+                () -> stripe.v1()
+                        .customers()
+                        .update(
+                                stripeCustomer,
+                                CustomerUpdateParams.builder()
+                                        .addPreferredLocale(locale)
+                                        .build()));
     }
 
     @Override

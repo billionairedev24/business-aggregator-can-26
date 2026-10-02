@@ -12,7 +12,11 @@ export const AuthUser = z.object({ id: z.string(), firstName: z.string(), lastNa
 export const PHONE_PATTERN = /^\+?1?[\s.-]?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/;
 export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-export interface RegisterValues { firstName: string; lastName: string; phone: string; email: string; terms: boolean }
+/**
+ * `termsLanguage` / `termsEnglishRequested` (S-116): the language the Terms were shown in, and an express request for the
+ * English version where they are presented in French first — recorded with the acceptance.
+ */
+export interface RegisterValues { firstName: string; lastName: string; phone: string; email: string; terms: boolean; termsLanguage?: 'en' | 'fr'; termsEnglishRequested?: boolean }
 export const REGISTER_FIELDS = ['firstName', 'lastName', 'phone', 'email', 'terms'] as const;
 
 export const registerSchema = (t: AuthKitT) => z.object({

@@ -17,6 +17,8 @@ public final class AuthMessages {
     public static final String EMAIL_REQUIRED = "Email is required.";
     public static final String EMAIL_FORMAT = "That doesn't look like an email address.";
     public static final String TERMS_REQUIRED = "You need to accept the Terms and Privacy Policy.";
+    /** S-116: the language the Terms were shown in at registration (API field, not on a form). */
+    public static final String TERMS_LANGUAGE = "Send en or fr as the language of the Terms you accepted.";
 
     // Not in the spec (DECISIONS.md)
     public static final String EMAIL_TAKEN = "An account already uses this email. Sign in instead.";

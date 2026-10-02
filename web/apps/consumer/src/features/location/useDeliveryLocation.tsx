@@ -144,6 +144,17 @@ export function DeliveryLocationProvider({ ipCity, children, geolocation }: Deli
 }
 
 /** `{ location, save, forget }` — `save` is what the Location screen calls with the chosen address. */
+/**
+ * S-116: the delivery location where a page may sit outside <DeliveryLocationProvider> (the sign-in and registration
+ * pages): the provider's when there is one, else the location saved in this browser, else none.
+ */
+export function useKnownLocation(): DeliveryLocation | null {
+  const v = useContext(LocationContext);
+  if (v) return v.location;
+  const saved = readJson(storages().local, SAVED_KEY, SavedLocation);
+  return saved ? { status: 'saved', source: 'saved', ...saved } : null;
+}
+
 export function useDeliveryLocation(): LocationContextValue {
   const v = useContext(LocationContext);
   if (!v) throw new Error('useDeliveryLocation outside <DeliveryLocationProvider>');

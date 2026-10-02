@@ -1,10 +1,11 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
-import { marketZone, type Courier, type Run, type Shift } from './api/courier';
+import { frenchFirst, marketZone, type Courier, type Run, type Shift } from './api/courier';
 import { RUN_REFRESH_MS } from './config';
-import { useI18n } from './i18n';
+import { LANGUAGE_KEY, useI18n } from './i18n';
 import { withPending, type OutboxState } from './offline/outbox';
 import { ME_KEY, RUN_KEY, SHIFTS_KEY, services } from './services';
 
@@ -33,11 +34,31 @@ export function useRun() {
   return { ...query, run: projected.run, unsent: projected.unsent };
 }
 
+function useRegions() {
+  const { locale } = useI18n();
+  return useQuery({ queryKey: ['regions', locale], queryFn: () => services().courier.regions(locale), staleTime: 3600_000, retry: 0 });
+}
+
 /** The run's market zone (region model, S-134); times show in it. Undefined until known: the device's zone then. */
 export function useMarketZone(market: string | null | undefined): string | undefined {
-  const { locale } = useI18n();
-  const regions = useQuery({ queryKey: ['regions', locale], queryFn: () => services().courier.regions(locale), staleTime: 3600_000, retry: 0 });
-  return marketZone(regions.data, market);
+  return marketZone(useRegions().data, market);
+}
+
+/**
+ * S-116 (Loi 96 readiness): a courier whose market is French-first (region configuration) gets the app in French
+ * unless they picked a language in Account. Their pick always wins.
+ */
+export function useFrenchFirst(market: string | null | undefined) {
+  const { locale, setLocale } = useI18n();
+  const first = frenchFirst(useRegions().data, market);
+  useEffect(() => {
+    if (!first || locale === 'fr-CA') return;
+    void AsyncStorage.getItem(LANGUAGE_KEY).then((picked) => {
+      if (!picked) setLocale('fr-CA');
+    });
+    // once per market: the courier's own pick afterwards is kept
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [first]);
 }
 
 /** Connectivity; coming back online wakes the outbox. */

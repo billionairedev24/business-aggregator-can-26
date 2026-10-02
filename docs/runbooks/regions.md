@@ -42,6 +42,11 @@ platform audit log (`region.*`) and is served at once by the instance that made 
 | `REGION_PLATFORM_ZONE` | `America/Edmonton` | work that belongs to no market: nightly jobs (`@Scheduled` zones), support hours, account "member since", tax reporting quarters. api, worker and auth |
 | `REGION_CACHE_TTL` | `60s` | how long each api instance keeps the rows before reading them again |
 | `EMAIL_TIME_ZONE` | `REGION_PLATFORM_ZONE` | dates and times in emails |
+| `REGION_FRENCH_FIRST` | (none) | S-116: province codes or market ids that are French-first with French listing text required, on top of the rows' `french_first` / `french_listings` (V315) — [i18n.md](i18n.md) |
+
+Language rules (S-116, [i18n.md](i18n.md)): `french_first` and `french_listings` on each province row (a market row's
+`NULL` = its province's) decide where interfaces default to French, the Terms come in French first, receipts are
+French and listings need French text. V315 seeded them from each province's first official language.
 
 Web: the Studio build takes `VITE_NL_PLATFORM_TIME_ZONE` until the model answers; the consumer reads the platform zone
 from the model and `NL_LEGAL_ENTITY` for its footer.

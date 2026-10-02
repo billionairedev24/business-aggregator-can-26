@@ -23,6 +23,7 @@ import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
@@ -55,8 +56,24 @@ public class RegistrationService {
     private final AuthProperties props;
     private final Clock clock;
 
-    /** Input of the first step, already shape-validated (validation-rules.md) by the web adapter. */
-    public record Start(String firstName, String lastName, String phone, String email) {}
+    /**
+     * Input of the first step, already shape-validated (validation-rules.md) by the web adapter.
+     *
+     * @param termsLanguage the language the Terms were shown in ({@code en} | {@code fr}), null when not said
+     * @param termsEnglishRequested an express request for the English Terms where they come in French first (S-116)
+     */
+    public record Start(
+            String firstName,
+            String lastName,
+            String phone,
+            String email,
+            @Nullable String termsLanguage,
+            boolean termsEnglishRequested) {
+
+        public Start(String firstName, String lastName, String phone, String email) {
+            this(firstName, lastName, phone, email, null, false);
+        }
+    }
 
     /** A new account, signed in with these factors; {@code sessionId} is its first session ({@code identity.sessions}). */
     public record Created(UserAccount account, Factor secondFactor, String sessionId) {}
@@ -89,7 +106,9 @@ public class RegistrationService {
             var same = open.get()
                     .withFirstName(in.firstName().trim())
                     .withLastName(in.lastName().trim())
-                    .withEmail(email);
+                    .withEmail(email)
+                    .withTermsLanguage(termsLanguage(in))
+                    .withTermsEnglishRequested(in.termsEnglishRequested());
             flow.put(FlowStore.REGISTRATION, same);
             return same;
         }
@@ -102,7 +121,9 @@ public class RegistrationService {
                 props.termsVersion(),
                 codes.send(phone, Channel.SMS, true),
                 false,
-                null);
+                null,
+                termsLanguage(in),
+                in.termsEnglishRequested());
         flow.remove(FlowStore.PASSKEY_CREATION);
         flow.put(FlowStore.REGISTRATION, registration);
         return registration;
@@ -230,7 +251,9 @@ public class RegistrationService {
                 requestLocale(),
                 factor == Factor.PHONE_OTP ? "sms" : factor.code(), // identity.users.mfa_primary: passkey | totp | sms
                 registration.termsVersion(),
-                now));
+                now,
+                registration.termsLanguage(),
+                registration.termsEnglishRequested() ? now : null));
         // S-28: in this transaction — the outbox row commits with the account, or neither does.
         events.publishEvent(new UserRegistered(UlidCreator.getMonotonicUlid().toString(), now, registration.userId()));
         flow.remove(FlowStore.REGISTRATION);
@@ -255,6 +278,11 @@ public class RegistrationService {
 
     private static AttemptLimits.Subject phoneSubject(PhoneNumber phone) {
         return AttemptLimits.Subject.identifier(phone.e164(), null);
+    }
+
+    /** An express request for the English Terms means they were shown in English. */
+    private static @Nullable String termsLanguage(Start in) {
+        return in.termsEnglishRequested() ? "en" : in.termsLanguage();
     }
 
     /** Locale for new accounts: fr-CA when the browser asked for French, else en-CA. */

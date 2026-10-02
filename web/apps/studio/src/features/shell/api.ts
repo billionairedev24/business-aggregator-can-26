@@ -24,6 +24,8 @@ export const MerchantRegion = z.object({
   provinceIn: z.object({ en: z.string(), fr: z.string() }).nullish(), provinceOf: z.object({ en: z.string(), fr: z.string() }).nullish(),
   timeZone: z.string(),
   privacyLaw: z.string().nullish(),
+  // S-116: the place's language rules (region configuration)
+  frenchFirst: z.boolean().nullish(), frenchListings: z.enum(['off', 'warn', 'require']).nullish(),
 });
 export type MerchantRegion = z.infer<typeof MerchantRegion>;
 

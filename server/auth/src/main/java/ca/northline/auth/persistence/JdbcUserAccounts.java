@@ -71,9 +71,9 @@ class JdbcUserAccounts implements UserAccounts {
         jdbc.sql("""
                         INSERT INTO identity.users (id, phone, email, display_name, first_name, last_name, locale,
                                mfa_primary, status, phone_verified_at, terms_version, terms_accepted_at,
-                               created_at, updated_at)
+                               terms_language, terms_english_requested_at, created_at, updated_at)
                         VALUES (:id, :phone, CAST(:email AS citext), :displayName, :firstName, :lastName, :locale,
-                               :mfa, 'active', :at, :terms, :at, :at, :at)
+                               :mfa, 'active', :at, :terms, :at, :termsLanguage, :englishRequestedAt, :at, :at)
                         """)
                 .param("id", a.id())
                 .param("phone", a.phone())
@@ -84,6 +84,12 @@ class JdbcUserAccounts implements UserAccounts {
                 .param("locale", a.locale())
                 .param("mfa", a.mfaPrimary())
                 .param("terms", a.termsVersion())
+                .param("termsLanguage", a.termsLanguage())
+                .param(
+                        "englishRequestedAt",
+                        a.termsEnglishRequestedAt() == null
+                                ? null
+                                : a.termsEnglishRequestedAt().atOffset(ZoneOffset.UTC))
                 .param("at", a.at().atOffset(ZoneOffset.UTC))
                 .update();
     }

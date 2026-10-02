@@ -2,10 +2,13 @@ package ca.northline.payments.application;
 
 import ca.northline.payments.api.PaymentAuthorizations;
 import ca.northline.payments.application.PaymentGateway.IntentStatus;
+import ca.northline.region.api.MerchantPlaces;
+import ca.northline.region.api.Regions;
 import ca.northline.shared.RuleViolation;
 import ca.northline.shared.stripe.StripeIdempotencyKeys;
 import java.time.Clock;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,6 +16,10 @@ import org.springframework.transaction.annotation.Transactional;
  * Opens the manual-capture PaymentIntent behind an escrow hold: one per job or order line, on the platform account,
  * CAD, in the order's / booking's transfer group, the card saved to the customer's Stripe Customer for off-session
  * re-authorization. The Stripe Customer carries only our user id.
+ *
+ * <p>S-116: Stripe's receipts go out in the buyer's language — French when the request prefers it or when the
+ * merchant's place is French-first (region configuration, Loi 96), else English — set on the Customer only when it
+ * changes.
  */
 @Service
 @RequiredArgsConstructor
@@ -24,6 +31,8 @@ class CheckoutPaymentService implements PaymentAuthorizations {
     private final TaxCalculationService taxCalculations;
     private final Clock clock;
     private final PaymentMetrics metrics;
+    private final MerchantPlaces places;
+    private final Regions regions;
 
     @Override
     public Started start(Request request) {
@@ -41,6 +50,7 @@ class CheckoutPaymentService implements PaymentAuthorizations {
             escrows.saveStripeCustomer(request.customerId(), created);
             return created;
         });
+        receiptLanguage(request.customerId(), customer, request.merchantId());
         var clientKey = request.clientKey();
         var key = clientKey == null
                 ? StripeIdempotencyKeys.of("authorize", request.refType(), request.refId())
@@ -74,6 +84,18 @@ class CheckoutPaymentService implements PaymentAuthorizations {
                 authorization.paymentIntent(),
                 authorization.clientSecret(),
                 authorization.status().code());
+    }
+
+    /** The receipts' language: the merchant's place's rule over the request's language (LanguageRules). */
+    private void receiptLanguage(String customerId, String stripeCustomer, String merchantId) {
+        var place = places.of(merchantId);
+        var rules = regions.languageRules(place.province(), place.marketId() != null ? place.marketId() : place.city());
+        var language = rules.language(null, LocaleContextHolder.getLocale());
+        var tag = language.getLanguage().equals("fr") ? "fr-CA" : "en-CA";
+        if (!escrows.receiptLocale(customerId).map(tag::equals).orElse(false)) {
+            gateway.receiptLocale(stripeCustomer, tag);
+            escrows.saveReceiptLocale(customerId, tag);
+        }
     }
 
     @Override

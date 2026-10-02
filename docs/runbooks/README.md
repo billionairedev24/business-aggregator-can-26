@@ -28,6 +28,7 @@ say where a step is still manual or missing.
 | [notifications.md](notifications.md) | team notifications: who sends which email / SMS / push (api vs worker), matrix and quiet hours, failures (S-13/S-27) |
 | [push.md](push.md) | push notifications (APNs, FCM) and deep links: the device registry, customers' and couriers' notifications, back-off, Apple / Firebase set-up (S-102) |
 | [casl.md](casl.md) | Canada's anti-spam law (S-108): which messages are commercial, express consent and its proof, one-click unsubscribe (RFC 8058) and the SMS opt-out link, the sender identification check, consent history for people and staff, the 3-year proof retention, what has never met a real provider |
+| [i18n.md](i18n.md) | French coverage and French-first places (S-116, Loi 96 readiness): `make i18n-check`, the translation review file, the region language rules, what changes in a French-first place, the launch checklist |
 | [privacy-requests.md](privacy-requests.md) | people's privacy rights (S-105): access, correction and erasure under each province's law (region model), identity checks, the SLA clock, the erasure pipeline across every module and object storage (what is kept and why), the console queue, the access export, in-app deletion, operations |
 | [retention.md](retention.md) | data retention (S-107): the Privacy Policy's retention schedule as configuration, the nightly job per module (periods, legal holds, the law of the person's province, object storage, dry runs), the console report and CSV, metrics and alerts, bucket lifecycle and backups, the mismatches flagged for counsel |
 | [webhooks.md](webhooks.md) | partner webhooks: payloads and signature for integrators, delivery design (per-endpoint scheduling, retries, auto-disable), SSRF rules, operations (S-33) |
@@ -183,6 +184,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `SEARCH_CACHE_TTL`, `SEARCH_RATE_LIMIT` | ✓ | | | | no (`30s`, `120`/min per address) |
 | `REGION_PROVINCES`, `REGION_DEFAULT_PROVINCE`, `REGION_CACHE_TTL` | ✓ | | | ✓ (`REGION_DEFAULT_PROVINCE`) | no (none extra — the live region rows are served, V131: Alberta; `AB`; `60s`) — S-134, [regions.md](regions.md); S-44's `SEARCH_MARKETS` / `SEARCH_DEFAULT_MARKET` are still read as their fallbacks |
 | `REGION_PLATFORM_ZONE` | ✓ | ✓ | | ✓ | no (`America/Edmonton`: nightly jobs, support hours, account dates — work that belongs to no market; [regions.md](regions.md)) |
+| `REGION_FRENCH_FIRST` | ✓ | | | | no (none: the region rows decide, V315) — S-116, places made French-first by configuration, [i18n.md](i18n.md) |
 | `EMAIL_TIME_ZONE` | ✓ | | | ✓ | no (= `REGION_PLATFORM_ZONE`: the zone dates in emails are written in) |
 | `REGISTRY_CALGARY_LICENCES` | ✓ | | | | no (`mobile permit,calgary business licence`: licence names the municipal dataset answers — [registries.md](registries.md)) |
 | `SEARCH_RECONCILE_ENABLED`, `SEARCH_RECONCILE_EVERY` | | | | ✓ | no (`true`, `1m` — [search.md § 6](search.md#6-the-indexer-s-43)) |

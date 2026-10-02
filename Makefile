@@ -187,6 +187,7 @@ help: ## This list, and the common variables
 ##> CLOUD  tf-validate: all, aws, gcp or azure; dr-restore-*: the cloud of the environment
 ##> DR_ENV TIME DRY_RUN  dr-restore-*: environment (default prod), restore time, DRY_RUN=1 prints the commands (S-114)
 ##> REGISTRY IMAGE_TAG PUSH  images-*: registry path, tag, PUSH=1 pushes
+##> STRICT  i18n-check: 1 = known gaps (legal texts, French awaiting a translator) fail too — before a French-first launch
 
 include $(ROOT)/make/server.mk
 include $(ROOT)/make/web.mk
@@ -203,3 +204,4 @@ include $(ROOT)/make/infra.mk
 include $(ROOT)/make/dr.mk
 include $(ROOT)/make/observability.mk
 include $(ROOT)/make/security.mk
+include $(ROOT)/make/i18n.mk

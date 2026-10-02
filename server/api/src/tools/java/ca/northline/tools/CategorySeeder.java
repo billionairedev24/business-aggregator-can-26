@@ -20,8 +20,9 @@ import tools.jackson.databind.json.JsonMapper;
  * {@code parent_id}. Idempotent (ids are stable slugs, {@code ON CONFLICT (id) DO UPDATE}).
  *
  * <p>Ids: {@code <root>.<group-slug>} for groups and {@code <root>.<group-slug>.<leaf-slug>} for leaves, e.g.
- * {@code service.automotive.mobile-mechanic}. {@code name_i18n} gets {@code en} only (no French in the seed yet). A row
- * staff edited in the console (S-94, {@code edited_at} set) is left as it is.
+ * {@code service.automotive.mobile-mechanic}. {@code name_i18n} gets {@code en} from the seed and {@code fr} from
+ * {@code catalogue.category_labels} (V111 shop, V316 services and food — S-116: every category has a French name). A
+ * row staff edited in the console (S-94, {@code edited_at} set) is left as it is.
  * Also usable from tests: {@code new CategorySeeder(dataSource).seed()}.
  */
 public final class CategorySeeder {
@@ -35,6 +36,13 @@ public final class CategorySeeder {
               name_i18n = excluded.name_i18n, regulated_registry = excluded.regulated_registry,
               requires_vs_check = excluded.requires_vs_check
               where catalogue.categories.edited_at is null
+            """;
+
+    /** S-116: the French names live in category_labels (the seed is English only); copied into name_i18n. */
+    private static final String FRENCH = """
+            update catalogue.categories c set name_i18n = coalesce(c.name_i18n, '{}'::jsonb) || jsonb_build_object('fr', l.name)
+              from catalogue.category_labels l
+             where l.category_id = c.id and l.lang = 'fr' and c.edited_at is null
             """;
 
     record Category(
@@ -68,6 +76,9 @@ public final class CategorySeeder {
                 ps.addBatch();
             }
             ps.executeBatch();
+            try (var french = c.prepareStatement(FRENCH)) {
+                french.executeUpdate();
+            }
             c.commit();
             return categories.size();
         } catch (SQLException ex) {

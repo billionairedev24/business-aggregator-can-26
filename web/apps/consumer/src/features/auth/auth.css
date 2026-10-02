@@ -25,6 +25,7 @@
 .nl-auth-card .input { min-height: 46px; }
 .nl-auth-code { letter-spacing: .3em; font-size: 18px; }
 .nl-auth-terms { margin-top: 12px; font-size: 12px; color: var(--color-neutral-700); }
+.nl-auth-note { margin: 6px 0 0; font-size: 12px; color: var(--color-neutral-700); } /* S-116: the Terms' language */
 .nl-auth-primary { width: 100%; min-height: 46px; margin-top: 14px; }
 .nl-auth-passkey { width: 100%; min-height: 44px; margin-top: 8px; }
 .nl-auth-social { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }

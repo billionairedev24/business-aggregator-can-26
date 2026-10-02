@@ -32,6 +32,8 @@ class FakeStripeGateway implements PaymentGateway, PayoutGateway {
     private final BusinessTime time;
     private final Map<String, Authorization> intents = new ConcurrentHashMap<>();
     private final Map<String, Instant> payouts = new ConcurrentHashMap<>();
+    /** S-116: the receipt language set per Customer (tests read it). */
+    final Map<String, String> receiptLocales = new ConcurrentHashMap<>();
 
     private String id(String prefix, int length) {
         var sb = new StringBuilder(prefix);
@@ -44,6 +46,11 @@ class FakeStripeGateway implements PaymentGateway, PayoutGateway {
     @Override
     public String customer(String customerId, String idempotencyKey) {
         return id("cus_", 14);
+    }
+
+    @Override
+    public void receiptLocale(String stripeCustomer, String locale) {
+        receiptLocales.put(stripeCustomer, locale);
     }
 
     @Override

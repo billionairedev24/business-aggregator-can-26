@@ -1,0 +1,191 @@
+key,source,french,status
+NotFound:account,No account with id %s,Aucun compte avec l’identifiant %s,needs translator review
+NotFound:address,No address with id %s,Aucune adresse avec l’identifiant %s,needs translator review
+NotFound:api key,No api key with id %s,Aucune clé d’API avec l’identifiant %s,needs translator review
+NotFound:application,No application with id %s,Aucune demande d’adhésion avec l’identifiant %s,needs translator review
+NotFound:article,No article with id %s,Aucun article avec l’identifiant %s,needs translator review
+NotFound:assistant action,No assistant action with id %s,Aucune action de l’assistant avec l’identifiant %s,needs translator review
+NotFound:attachment,No attachment with id %s,Aucune pièce jointe avec l’identifiant %s,needs translator review
+NotFound:booking,No booking with id %s,Aucune réservation avec l’identifiant %s,needs translator review
+NotFound:business,No business with id %s,Aucune entreprise avec l’identifiant %s,needs translator review
+NotFound:calendar,No calendar with id %s,Aucun calendrier avec l’identifiant %s,needs translator review
+NotFound:calendar provider,No calendar provider with id %s,Aucun fournisseur de calendrier avec l’identifiant %s,needs translator review
+NotFound:cart item,No cart item with id %s,Aucun article du panier avec l’identifiant %s,needs translator review
+NotFound:case,No case with id %s,Aucun dossier avec l’identifiant %s,needs translator review
+NotFound:case thread,No case thread with id %s,Aucune conversation de dossier avec l’identifiant %s,needs translator review
+NotFound:catalogue product,No catalogue product with id %s,Aucun produit du catalogue avec l’identifiant %s,needs translator review
+NotFound:category,No category with id %s,Aucune catégorie avec l’identifiant %s,needs translator review
+NotFound:checkout,No checkout with id %s,Aucun paiement de commande avec l’identifiant %s,needs translator review
+NotFound:combo,No combo with id %s,Aucun combo avec l’identifiant %s,needs translator review
+NotFound:consent category,No consent category with id %s,Aucune catégorie de consentement avec l’identifiant %s,needs translator review
+NotFound:courier,No courier with id %s,Aucun livreur avec l’identifiant %s,needs translator review
+NotFound:decision,No decision with id %s,Aucune décision avec l’identifiant %s,needs translator review
+NotFound:delivery,No delivery with id %s,Aucune livraison avec l’identifiant %s,needs translator review
+NotFound:department,No department with id %s,Aucun rayon avec l’identifiant %s,needs translator review
+NotFound:device,No device with id %s,Aucun appareil avec l’identifiant %s,needs translator review
+NotFound:dispute,No dispute with id %s,Aucun litige avec l’identifiant %s,needs translator review
+NotFound:dns sandbox,No dns sandbox with id %s,Aucun bac à sable DNS avec l’identifiant %s,needs translator review
+NotFound:document,No document with id %s,Aucun document avec l’identifiant %s,needs translator review
+NotFound:email template,No email template with id %s,Aucun modèle de courriel avec l’identifiant %s,needs translator review
+NotFound:embed key,No embed key with id %s,Aucune clé d’intégration avec l’identifiant %s,needs translator review
+NotFound:escrow,No escrow with id %s,Aucun séquestre avec l’identifiant %s,needs translator review
+NotFound:evidence,No evidence with id %s,Aucune preuve avec l’identifiant %s,needs translator review
+NotFound:file,No file with id %s,Aucun fichier avec l’identifiant %s,needs translator review
+NotFound:flag,No flag with id %s,Aucun signalement avec l’identifiant %s,needs translator review
+NotFound:holiday hours,No holiday hours with id %s,Aucun horaire de jour férié avec l’identifiant %s,needs translator review
+NotFound:identity review,No identity review with id %s,Aucun examen d’identité avec l’identifiant %s,needs translator review
+NotFound:identity session,No identity session with id %s,Aucune session de vérification d’identité avec l’identifiant %s,needs translator review
+NotFound:import,No import with id %s,Aucune importation avec l’identifiant %s,needs translator review
+NotFound:insight,No insight with id %s,Aucun aperçu avec l’identifiant %s,needs translator review
+NotFound:integration,No integration with id %s,Aucune intégration avec l’identifiant %s,needs translator review
+NotFound:invitation,No invitation with id %s,Aucune invitation avec l’identifiant %s,needs translator review
+NotFound:job,No job with id %s,Aucun travail avec l’identifiant %s,needs translator review
+NotFound:kitchen,No kitchen with id %s,Aucune cuisine avec l’identifiant %s,needs translator review
+NotFound:listing,No listing with id %s,Aucune annonce avec l’identifiant %s,needs translator review
+NotFound:logo,No logo with id %s,Aucun logo avec l’identifiant %s,needs translator review
+NotFound:macro,No macro with id %s,Aucune macro avec l’identifiant %s,needs translator review
+NotFound:media,No media with id %s,Aucun média avec l’identifiant %s,needs translator review
+NotFound:menu,No menu with id %s,Aucun menu avec l’identifiant %s,needs translator review
+NotFound:menu item,No menu item with id %s,Aucun plat avec l’identifiant %s,needs translator review
+NotFound:merchant,No merchant with id %s,Aucune entreprise avec l’identifiant %s,needs translator review
+NotFound:modifier group,No modifier group with id %s,Aucun groupe d’options avec l’identifiant %s,needs translator review
+NotFound:order,No order with id %s,Aucune commande avec l’identifiant %s,needs translator review
+NotFound:owner,No owner with id %s,Aucun propriétaire avec l’identifiant %s,needs translator review
+NotFound:payment_method,No payment_method with id %s,Aucun moyen de paiement avec l’identifiant %s,needs translator review
+NotFound:payout account,No payout account with id %s,Aucun compte de versement avec l’identifiant %s,needs translator review
+NotFound:person,No person with id %s,Aucune personne avec l’identifiant %s,needs translator review
+NotFound:place,No place with id %s,Aucun lieu avec l’identifiant %s,needs translator review
+NotFound:pos,No pos with id %s,Aucun système de point de vente avec l’identifiant %s,needs translator review
+NotFound:privacy_export,No privacy_export with id %s,Aucune exportation de vos données avec l’identifiant %s,needs translator review
+NotFound:privacy_request,No privacy_request with id %s,Aucune demande relative aux renseignements personnels avec l’identifiant %s,needs translator review
+NotFound:problem,No problem with id %s,Aucun problème signalé avec l’identifiant %s,needs translator review
+NotFound:product,No product with id %s,Aucun produit avec l’identifiant %s,needs translator review
+NotFound:promo,No promo with id %s,Aucune promotion avec l’identifiant %s,needs translator review
+NotFound:provider,No provider with id %s,Aucun prestataire avec l’identifiant %s,needs translator review
+NotFound:province,No province with id %s,Aucune province avec l’identifiant %s,needs translator review
+NotFound:publishable key,No publishable key with id %s,Aucune clé publiable avec l’identifiant %s,needs translator review
+NotFound:quality score,No quality score with id %s,Aucun score de qualité avec l’identifiant %s,needs translator review
+NotFound:quote,No quote with id %s,Aucun devis avec l’identifiant %s,needs translator review
+NotFound:quote request,No quote request with id %s,Aucune demande de devis avec l’identifiant %s,needs translator review
+NotFound:refund,No refund with id %s,Aucun remboursement avec l’identifiant %s,needs translator review
+NotFound:refund request,No refund request with id %s,Aucune demande de remboursement avec l’identifiant %s,needs translator review
+NotFound:registry review,No registry review with id %s,Aucun examen de registre avec l’identifiant %s,needs translator review
+NotFound:regulator,No regulator with id %s,Aucun organisme de réglementation avec l’identifiant %s,needs translator review
+NotFound:review,No review with id %s,Aucun avis avec l’identifiant %s,needs translator review
+NotFound:run,No run with id %s,Aucune tournée avec l’identifiant %s,needs translator review
+NotFound:section,No section with id %s,Aucune section avec l’identifiant %s,needs translator review
+NotFound:service,No service with id %s,Aucun service avec l’identifiant %s,needs translator review
+NotFound:service category,No service category with id %s,Aucune catégorie de service avec l’identifiant %s,needs translator review
+NotFound:setup_intent,No setup_intent with id %s,Aucun enregistrement de carte avec l’identifiant %s,needs translator review
+NotFound:shift,No shift with id %s,Aucun quart avec l’identifiant %s,needs translator review
+NotFound:sitemap section,No sitemap section with id %s,Aucune section du plan du site avec l’identifiant %s,needs translator review
+NotFound:stop,No stop with id %s,Aucun arrêt avec l’identifiant %s,needs translator review
+NotFound:storefront,No storefront with id %s,Aucune vitrine avec l’identifiant %s,needs translator review
+NotFound:stripe link,No stripe link with id %s,Aucun lien Stripe avec l’identifiant %s,needs translator review
+NotFound:suggestion,No suggestion with id %s,Aucune suggestion avec l’identifiant %s,needs translator review
+NotFound:team member,No team member with id %s,Aucun membre de l’équipe avec l’identifiant %s,needs translator review
+NotFound:thread,No thread with id %s,Aucune conversation avec l’identifiant %s,needs translator review
+NotFound:time off,No time off with id %s,Aucun congé avec l’identifiant %s,needs translator review
+NotFound:upload,No upload with id %s,Aucun téléversement avec l’identifiant %s,needs translator review
+NotFound:user,No user with id %s,Aucun utilisateur avec l’identifiant %s,needs translator review
+NotFound:verification,No verification with id %s,Aucune vérification avec l’identifiant %s,needs translator review
+NotFound:webhook delivery,No webhook delivery with id %s,Aucun envoi de webhook avec l’identifiant %s,needs translator review
+NotFound:webhook endpoint,No webhook endpoint with id %s,Aucun point de terminaison de webhook avec l’identifiant %s,needs translator review
+NotFound:zone,No zone with id %s,Aucune zone avec l’identifiant %s,needs translator review
+ProblemDetail.title:Bad Request,Bad Request,Requête invalide,needs translator review
+ProblemDetail.title:Unauthorized,Unauthorized,Non authentifié,needs translator review
+ProblemDetail.title:Forbidden,Forbidden,Accès refusé,needs translator review
+ProblemDetail.title:Not Found,Not Found,Introuvable,needs translator review
+ProblemDetail.title:Method Not Allowed,Method Not Allowed,Méthode non permise,needs translator review
+ProblemDetail.title:Not Acceptable,Not Acceptable,Format non acceptable,needs translator review
+ProblemDetail.title:Conflict,Conflict,Conflit,needs translator review
+ProblemDetail.title:Gone,Gone,N’existe plus,needs translator review
+ProblemDetail.title:Payload Too Large,Payload Too Large,Contenu trop volumineux,needs translator review
+ProblemDetail.title:Unsupported Media Type,Unsupported Media Type,Type de contenu non pris en charge,needs translator review
+ProblemDetail.title:Unprocessable Content,Unprocessable Content,Contenu non valide,needs translator review
+ProblemDetail.title:Unprocessable Entity,Unprocessable Entity,Contenu non valide,needs translator review
+ProblemDetail.title:Too Many Requests,Too Many Requests,Trop de requêtes,needs translator review
+ProblemDetail.title:Internal Server Error,Internal Server Error,Erreur interne du serveur,needs translator review
+ProblemDetail.title:Bad Gateway,Bad Gateway,Passerelle invalide,needs translator review
+ProblemDetail.title:Service Unavailable,Service Unavailable,Service indisponible,needs translator review
+ProblemDetail.title:Gateway Timeout,Gateway Timeout,Délai de la passerelle dépassé,needs translator review
+ProblemDetail.detail:No %s with id %s,No %s with id %s,Aucun élément « %s » avec l’identifiant %s,needs translator review
+ProblemDetail.detail:No static resource %s.,No static resource %s.,Aucune ressource statique %s.,needs translator review
+ProblemDetail.detail:Method '%s' is not supported.,Method '%s' is not supported.,La méthode « %s » n’est pas prise en charge.,needs translator review
+ProblemDetail.detail:Content-Type '%s' is not supported.,Content-Type '%s' is not supported.,Le type de contenu « %s » n’est pas pris en charge.,needs translator review
+ProblemDetail.detail:Required parameter '%s' is not present.,Required parameter '%s' is not present.,Le paramètre obligatoire « %s » est absent.,needs translator review
+ProblemDetail.detail:Required header '%s' is not present.,Required header '%s' is not present.,L’en-tête obligatoire « %s » est absent.,needs translator review
+ProblemDetail.detail:Failed to read request,Failed to read request,La requête n’a pas pu être lue.,needs translator review
+ProblemDetail.detail:Failed to convert '%s' with value: '%s',Failed to convert '%s' with value: '%s',Impossible de convertir « %s » avec la valeur « %s ».,needs translator review
+ProblemDetail.detail:Maximum upload size exceeded,Maximum upload size exceeded,Taille maximale de téléversement dépassée.,needs translator review
+ProblemDetail.title:Payment Required,Payment Required,Paiement requis,needs translator review
+ProblemDetail.title:Proxy Authentication Required,Proxy Authentication Required,Authentification par le mandataire requise,needs translator review
+ProblemDetail.title:Request Timeout,Request Timeout,Délai de la requête dépassé,needs translator review
+ProblemDetail.title:Length Required,Length Required,Longueur requise,needs translator review
+ProblemDetail.title:Precondition Failed,Precondition Failed,Précondition non remplie,needs translator review
+ProblemDetail.title:Content Too Large,Content Too Large,Contenu trop volumineux,needs translator review
+ProblemDetail.title:URI Too Long,URI Too Long,URI trop longue,needs translator review
+ProblemDetail.title:Requested range not satisfiable,Requested range not satisfiable,Plage demandée non disponible,needs translator review
+ProblemDetail.title:Expectation Failed,Expectation Failed,Attente non satisfaite,needs translator review
+ProblemDetail.title:Misdirected Request,Misdirected Request,Requête mal dirigée,needs translator review
+ProblemDetail.title:Locked,Locked,Verrouillé,needs translator review
+ProblemDetail.title:Failed Dependency,Failed Dependency,Dépendance en échec,needs translator review
+ProblemDetail.title:Too Early,Too Early,Trop tôt,needs translator review
+ProblemDetail.title:Upgrade Required,Upgrade Required,Mise à niveau requise,needs translator review
+ProblemDetail.title:Precondition Required,Precondition Required,Précondition requise,needs translator review
+ProblemDetail.title:Request Header Fields Too Large,Request Header Fields Too Large,En-têtes de requête trop volumineux,needs translator review
+ProblemDetail.title:Unavailable For Legal Reasons,Unavailable For Legal Reasons,Indisponible pour des raisons juridiques,needs translator review
+ProblemDetail.title:Not Implemented,Not Implemented,Non implémenté,needs translator review
+ProblemDetail.title:HTTP Version not supported,HTTP Version not supported,Version HTTP non prise en charge,needs translator review
+ProblemDetail.title:Variant Also Negotiates,Variant Also Negotiates,La variante négocie aussi,needs translator review
+ProblemDetail.title:Insufficient Storage,Insufficient Storage,Espace de stockage insuffisant,needs translator review
+ProblemDetail.title:Loop Detected,Loop Detected,Boucle détectée,needs translator review
+ProblemDetail.title:Bandwidth Limit Exceeded,Bandwidth Limit Exceeded,Limite de bande passante dépassée,needs translator review
+ProblemDetail.title:Not Extended,Not Extended,Extension requise,needs translator review
+ProblemDetail.title:Network Authentication Required,Network Authentication Required,Authentification réseau requise,needs translator review
+web/apps/studio/src/features/appointments/messages.ts#approvalDescRequired,Describe the extra parts or work.,Décrivez les pièces ou les travaux supplémentaires.,needs translator review
+web/apps/studio/src/features/appointments/messages.ts#approvalAmountRequired,Enter an amount.,Entrez un montant.,needs translator review
+web/apps/studio/src/features/availability/messages.ts#chooseNone,Choose at least one calendar.,Choisissez au moins un calendrier.,needs translator review
+web/apps/console/src/features/overview/messages.ts#lag,{n} msgs,{n} messages,needs translator review
+web/apps/console/src/features/shell/messages.ts#ops,Ops,Opérations,needs translator review
+web/apps/consumer/src/features/account/settingsMessages.ts#ch_push,Push,Notif. poussée,needs translator review
+web/apps/studio/src/features/settings/messages.ts#ch_push,Push,Notif. poussée,needs translator review
+web/apps/studio/src/features/settings/messages.ts#testEvent,test,essai,needs translator review
+web/apps/studio/src/features/catalogue/messages.ts#entityImport,import,importation,needs translator review
+web/apps/consumer/src/features/shell/messages.ts#pendingKicker,Design 06 · {state},Maquette 06 · {state},needs translator review
+web/apps/studio/src/features/catalogue/messages.ts#pluralImport,imports,importations,needs translator review
+mobile/apps/consumer/src/i18n/fr-CA/account.ts#account.notif.ch.push,Push,Notif. poussée,needs translator review
+catalogue.category_labels:food.format,Format,Format,needs translator review
+catalogue.category_labels:food.format.restaurant-dine-in-and-takeout,Restaurant · dine-in & takeout,Restaurant · sur place et à emporter,needs translator review
+catalogue.category_labels:food.format.takeout-only,Takeout only,Commandes à emporter seulement,needs translator review
+catalogue.category_labels:food.format.ghost-kitchen,Ghost kitchen,Cuisine virtuelle,needs translator review
+catalogue.category_labels:food.format.food-truck,Food truck,Camion-restaurant,needs translator review
+catalogue.category_labels:food.format.home-based-food-business,Home-based food business,Entreprise alimentaire à domicile,needs translator review
+catalogue.category_labels:food.format.grocery-with-hot-counter,Grocery with hot counter,Épicerie avec comptoir de mets chauds,needs translator review
+catalogue.category_labels:food.service,Service,Service,needs translator review
+catalogue.category_labels:food.service.caterer,Caterer,Traiteur,needs translator review
+catalogue.category_labels:food.service.meal-prep-weekly-plans,Meal prep · weekly plans,Repas préparés · formules hebdomadaires,needs translator review
+catalogue.category_labels:food.service.bakery,Bakery,Boulangerie,needs translator review
+catalogue.category_labels:food.service.coffee-and-dessert,Coffee & dessert,Café et desserts,needs translator review
+catalogue.category_labels:food.service.juice-and-smoothies,Juice & smoothies,Jus et smoothies,needs translator review
+catalogue.category_labels:food.service.alcohol-with-food,Alcohol with food,Alcool servi avec les repas,needs translator review
+ListingMessages.FRENCH_TITLE_REQUIRED,Enter the French name.,Entrez le nom en français.,needs translator review
+ListingMessages.FRENCH_REQUIRED,Add the French name and description first: listings in {province} need them before they go live.,Ajoutez d’abord le nom et la description en français : les annonces {province:in} en ont besoin pour être mises en ligne.,needs translator review
+AuthMessages.TERMS_LANGUAGE,Send en or fr as the language of the Terms you accepted.,Envoyez en ou fr comme langue des conditions acceptées.,needs translator review
+web/apps/consumer/src/features/auth/messages.ts#termsFrenchFirst,The Terms are shown in French.,Les conditions vous sont présentées en français.,needs translator review
+web/apps/consumer/src/features/auth/messages.ts#termsEnglish,Show me the English version,Voir la version anglaise,needs translator review
+web/apps/consumer/src/features/auth/messages.ts#termsEnglishChosen,You asked for the Terms in English.,Vous avez demandé les conditions en anglais.,needs translator review
+web/apps/consumer/src/features/auth/messages.ts#termsFrench,Back to French,Revenir au français,needs translator review
+web/apps/consumer/src/features/auth/messages.ts#termsFrenchPending,The Terms and Privacy Policy are only available in English for now; the French version is coming.,Les conditions et la politique de confidentialité ne sont offertes qu’en anglais pour le moment; la version française s’en vient.,needs translator review
+web/apps/studio/src/features/catalogue/french.ts#title,French name and description,Nom et description en français,needs translator review
+web/apps/studio/src/features/catalogue/french.ts#hint,Shown to customers who read Northline in French.,Affichés aux clients qui consultent Northline en français.,needs translator review
+web/apps/studio/src/features/catalogue/french.ts#warn,Listings {provinceIn} need a French name and description.,Les annonces {provinceIn} doivent avoir un nom et une description en français.,needs translator review
+web/apps/studio/src/features/catalogue/french.ts#require,Listings {provinceIn} need a French name and description before they can go live.,Les annonces {provinceIn} doivent avoir un nom et une description en français avant d’être mises en ligne.,needs translator review
+web/apps/studio/src/features/catalogue/french.ts#name,Name in French,Nom en français,needs translator review
+web/apps/studio/src/features/catalogue/french.ts#description,Description in French,Description en français,needs translator review
+web/apps/studio/src/features/catalogue/french.ts#save,Save French text,Enregistrer le texte français,needs translator review
+web/apps/studio/src/features/catalogue/french.ts#saving,Saving…,Enregistrement…,needs translator review
+web/apps/studio/src/features/catalogue/french.ts#saved,French text saved.,Texte français enregistré.,needs translator review
+web/apps/studio/src/features/catalogue/french.ts#error,The French text couldn't be saved. Try again.,Le texte français n’a pas pu être enregistré. Réessayez.,needs translator review
+web/apps/studio/src/features/catalogue/french.ts#loadError,The French text couldn't load.,Le texte français n’a pas pu être chargé.,needs translator review
+web/apps/studio/src/features/catalogue/french.ts#saveFirst,"Save the listing first, then add its French text.","Enregistrez d’abord l’annonce, puis ajoutez son texte en français.",needs translator review

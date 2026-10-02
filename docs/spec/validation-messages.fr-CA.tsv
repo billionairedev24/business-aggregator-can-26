@@ -786,3 +786,154 @@ The consent wording has changed. Read it again before you agree.	Le texte du con
 Card numbers can't be sent here. Enter card details only in the secure card form.	Les numéros de carte ne peuvent pas être envoyés ici. Entrez les données de carte seulement dans le formulaire de carte sécurisé.	new
 Choose a category of the retention schedule that has a job.	Choisissez une catégorie du calendrier de conservation qui a une tâche.	new
 We've texted you several codes already. Try again later, or confirm it's you with your passkey or authenticator app.	Nous vous avons déjà texté plusieurs codes. Réessayez plus tard ou confirmez que c’est vous avec votre clé d’accès ou votre application d’authentification.	new
+
+# S-116 (Loi 96 readiness): 404 details (`No <resource> with id …`, one line per resource of `new NotFound`), the
+# ProblemDetail titles (HTTP reason phrases) and the framework's own details. Every ProblemDetail the api answers goes
+# through the catalogue (shared.web.ProblemLanguage). First French wording: docs/i18n/translation-review.csv.
+No account with id %s	Aucun compte avec l’identifiant %s	new
+No address with id %s	Aucune adresse avec l’identifiant %s	new
+No api key with id %s	Aucune clé d’API avec l’identifiant %s	new
+No application with id %s	Aucune demande d’adhésion avec l’identifiant %s	new
+No article with id %s	Aucun article avec l’identifiant %s	new
+No assistant action with id %s	Aucune action de l’assistant avec l’identifiant %s	new
+No attachment with id %s	Aucune pièce jointe avec l’identifiant %s	new
+No booking with id %s	Aucune réservation avec l’identifiant %s	new
+No business with id %s	Aucune entreprise avec l’identifiant %s	new
+No calendar with id %s	Aucun calendrier avec l’identifiant %s	new
+No calendar provider with id %s	Aucun fournisseur de calendrier avec l’identifiant %s	new
+No cart item with id %s	Aucun article du panier avec l’identifiant %s	new
+No case with id %s	Aucun dossier avec l’identifiant %s	new
+No case thread with id %s	Aucune conversation de dossier avec l’identifiant %s	new
+No catalogue product with id %s	Aucun produit du catalogue avec l’identifiant %s	new
+No category with id %s	Aucune catégorie avec l’identifiant %s	new
+No checkout with id %s	Aucun paiement de commande avec l’identifiant %s	new
+No combo with id %s	Aucun combo avec l’identifiant %s	new
+No consent category with id %s	Aucune catégorie de consentement avec l’identifiant %s	new
+No courier with id %s	Aucun livreur avec l’identifiant %s	new
+No decision with id %s	Aucune décision avec l’identifiant %s	new
+No delivery with id %s	Aucune livraison avec l’identifiant %s	new
+No department with id %s	Aucun rayon avec l’identifiant %s	new
+No device with id %s	Aucun appareil avec l’identifiant %s	new
+No dispute with id %s	Aucun litige avec l’identifiant %s	new
+No dns sandbox with id %s	Aucun bac à sable DNS avec l’identifiant %s	new
+No document with id %s	Aucun document avec l’identifiant %s	new
+No email template with id %s	Aucun modèle de courriel avec l’identifiant %s	new
+No embed key with id %s	Aucune clé d’intégration avec l’identifiant %s	new
+No escrow with id %s	Aucun séquestre avec l’identifiant %s	new
+No evidence with id %s	Aucune preuve avec l’identifiant %s	new
+No file with id %s	Aucun fichier avec l’identifiant %s	new
+No flag with id %s	Aucun signalement avec l’identifiant %s	new
+No holiday hours with id %s	Aucun horaire de jour férié avec l’identifiant %s	new
+No identity review with id %s	Aucun examen d’identité avec l’identifiant %s	new
+No identity session with id %s	Aucune session de vérification d’identité avec l’identifiant %s	new
+No import with id %s	Aucune importation avec l’identifiant %s	new
+No insight with id %s	Aucun aperçu avec l’identifiant %s	new
+No integration with id %s	Aucune intégration avec l’identifiant %s	new
+No invitation with id %s	Aucune invitation avec l’identifiant %s	new
+No job with id %s	Aucun travail avec l’identifiant %s	new
+No kitchen with id %s	Aucune cuisine avec l’identifiant %s	new
+No listing with id %s	Aucune annonce avec l’identifiant %s	new
+No logo with id %s	Aucun logo avec l’identifiant %s	new
+No macro with id %s	Aucune macro avec l’identifiant %s	new
+No media with id %s	Aucun média avec l’identifiant %s	new
+No menu with id %s	Aucun menu avec l’identifiant %s	new
+No menu item with id %s	Aucun plat avec l’identifiant %s	new
+No merchant with id %s	Aucune entreprise avec l’identifiant %s	new
+No modifier group with id %s	Aucun groupe d’options avec l’identifiant %s	new
+No order with id %s	Aucune commande avec l’identifiant %s	new
+No owner with id %s	Aucun propriétaire avec l’identifiant %s	new
+No payment_method with id %s	Aucun moyen de paiement avec l’identifiant %s	new
+No payout account with id %s	Aucun compte de versement avec l’identifiant %s	new
+No person with id %s	Aucune personne avec l’identifiant %s	new
+No place with id %s	Aucun lieu avec l’identifiant %s	new
+No pos with id %s	Aucun système de point de vente avec l’identifiant %s	new
+No privacy_export with id %s	Aucune exportation de vos données avec l’identifiant %s	new
+No privacy_request with id %s	Aucune demande relative aux renseignements personnels avec l’identifiant %s	new
+No problem with id %s	Aucun problème signalé avec l’identifiant %s	new
+No product with id %s	Aucun produit avec l’identifiant %s	new
+No promo with id %s	Aucune promotion avec l’identifiant %s	new
+No provider with id %s	Aucun prestataire avec l’identifiant %s	new
+No province with id %s	Aucune province avec l’identifiant %s	new
+No publishable key with id %s	Aucune clé publiable avec l’identifiant %s	new
+No quality score with id %s	Aucun score de qualité avec l’identifiant %s	new
+No quote with id %s	Aucun devis avec l’identifiant %s	new
+No quote request with id %s	Aucune demande de devis avec l’identifiant %s	new
+No refund with id %s	Aucun remboursement avec l’identifiant %s	new
+No refund request with id %s	Aucune demande de remboursement avec l’identifiant %s	new
+No registry review with id %s	Aucun examen de registre avec l’identifiant %s	new
+No regulator with id %s	Aucun organisme de réglementation avec l’identifiant %s	new
+No review with id %s	Aucun avis avec l’identifiant %s	new
+No run with id %s	Aucune tournée avec l’identifiant %s	new
+No section with id %s	Aucune section avec l’identifiant %s	new
+No service with id %s	Aucun service avec l’identifiant %s	new
+No service category with id %s	Aucune catégorie de service avec l’identifiant %s	new
+No setup_intent with id %s	Aucun enregistrement de carte avec l’identifiant %s	new
+No shift with id %s	Aucun quart avec l’identifiant %s	new
+No sitemap section with id %s	Aucune section du plan du site avec l’identifiant %s	new
+No stop with id %s	Aucun arrêt avec l’identifiant %s	new
+No storefront with id %s	Aucune vitrine avec l’identifiant %s	new
+No stripe link with id %s	Aucun lien Stripe avec l’identifiant %s	new
+No suggestion with id %s	Aucune suggestion avec l’identifiant %s	new
+No team member with id %s	Aucun membre de l’équipe avec l’identifiant %s	new
+No thread with id %s	Aucune conversation avec l’identifiant %s	new
+No time off with id %s	Aucun congé avec l’identifiant %s	new
+No upload with id %s	Aucun téléversement avec l’identifiant %s	new
+No user with id %s	Aucun utilisateur avec l’identifiant %s	new
+No verification with id %s	Aucune vérification avec l’identifiant %s	new
+No webhook delivery with id %s	Aucun envoi de webhook avec l’identifiant %s	new
+No webhook endpoint with id %s	Aucun point de terminaison de webhook avec l’identifiant %s	new
+No zone with id %s	Aucune zone avec l’identifiant %s	new
+Bad Request	Requête invalide	new
+Unauthorized	Non authentifié	new
+Forbidden	Accès refusé	new
+Not Found	Introuvable	new
+Method Not Allowed	Méthode non permise	new
+Not Acceptable	Format non acceptable	new
+Conflict	Conflit	new
+Gone	N’existe plus	new
+Payload Too Large	Contenu trop volumineux	new
+Unsupported Media Type	Type de contenu non pris en charge	new
+Unprocessable Content	Contenu non valide	new
+Unprocessable Entity	Contenu non valide	new
+Too Many Requests	Trop de requêtes	new
+Internal Server Error	Erreur interne du serveur	new
+Bad Gateway	Passerelle invalide	new
+Service Unavailable	Service indisponible	new
+Gateway Timeout	Délai de la passerelle dépassé	new
+No %s with id %s	Aucun élément « %s » avec l’identifiant %s	new
+No static resource %s.	Aucune ressource statique %s.	new
+Method '%s' is not supported.	La méthode « %s » n’est pas prise en charge.	new
+Content-Type '%s' is not supported.	Le type de contenu « %s » n’est pas pris en charge.	new
+Required parameter '%s' is not present.	Le paramètre obligatoire « %s » est absent.	new
+Required header '%s' is not present.	L’en-tête obligatoire « %s » est absent.	new
+Failed to read request	La requête n’a pas pu être lue.	new
+Failed to convert '%s' with value: '%s'	Impossible de convertir « %s » avec la valeur « %s ».	new
+Maximum upload size exceeded	Taille maximale de téléversement dépassée.	new
+Payment Required	Paiement requis	new
+Proxy Authentication Required	Authentification par le mandataire requise	new
+Request Timeout	Délai de la requête dépassé	new
+Length Required	Longueur requise	new
+Precondition Failed	Précondition non remplie	new
+Content Too Large	Contenu trop volumineux	new
+URI Too Long	URI trop longue	new
+Requested range not satisfiable	Plage demandée non disponible	new
+Expectation Failed	Attente non satisfaite	new
+Misdirected Request	Requête mal dirigée	new
+Locked	Verrouillé	new
+Failed Dependency	Dépendance en échec	new
+Too Early	Trop tôt	new
+Upgrade Required	Mise à niveau requise	new
+Precondition Required	Précondition requise	new
+Request Header Fields Too Large	En-têtes de requête trop volumineux	new
+Unavailable For Legal Reasons	Indisponible pour des raisons juridiques	new
+Not Implemented	Non implémenté	new
+HTTP Version not supported	Version HTTP non prise en charge	new
+Variant Also Negotiates	La variante négocie aussi	new
+Insufficient Storage	Espace de stockage insuffisant	new
+Loop Detected	Boucle détectée	new
+Bandwidth Limit Exceeded	Limite de bande passante dépassée	new
+Not Extended	Extension requise	new
+Network Authentication Required	Authentification réseau requise	new
+Enter the French name.	Entrez le nom en français.	new
+Add the French name and description first: listings in {province} need them before they go live.	Ajoutez d’abord le nom et la description en français : les annonces {province:in} en ont besoin pour être mises en ligne.	new
+Send en or fr as the language of the Terms you accepted.	Envoyez en ou fr comme langue des conditions acceptées.	review

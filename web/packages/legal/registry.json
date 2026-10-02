@@ -13,7 +13,7 @@
         "consumer app welcome / sign-up / account (opens the consumer site's page)",
         "App Store and Play listings (terms URL)"
       ],
-      "acceptanceRecord": "identity.users.terms_version (northline-auth TERMS_VERSION, default 3.0) + terms_accepted_at; merchants.merchants.business_terms_accepted_at (no version stored)",
+      "acceptanceRecord": "identity.users.terms_version (northline-auth TERMS_VERSION, default 3.0) + terms_accepted_at, and since S-116 terms_language (en | fr, the language shown) + terms_english_requested_at (an express request for English where the Terms come in French first); merchants.merchants.business_terms_accepted_at (no version stored)",
       "versions": [
         {
           "version": "3.0",

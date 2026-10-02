@@ -5,7 +5,7 @@ import { ApiError, colors, fonts } from '@northline/mobile-kit';
 import { useAuth } from '../../src/auth';
 import { TrackingContext } from '../../src/components/tracking';
 import { Banner, Button, Heading, Screen } from '../../src/components/ui';
-import { useMe, useOnline, useRun } from '../../src/hooks';
+import { useFrenchFirst, useMe, useOnline, useRun } from '../../src/hooks';
 import { useI18n } from '../../src/i18n';
 import { useRunTracking } from '../../src/location/useRunTracking';
 
@@ -14,6 +14,7 @@ export default function AppLayout() {
   const { t } = useI18n();
   const { signOut } = useAuth();
   const me = useMe();
+  useFrenchFirst(me.data?.market); // S-116: French-first markets open in French unless the courier picked a language
   const { run } = useRun();
   const online = useOnline();
   const tracking = useRunTracking(!!run && run.state !== 'done');

@@ -58,6 +58,7 @@ public interface MarketStore {
      * @param timeZones IANA zone ids as stored (a market's may be empty: it keeps its province's)
      * @param taxBps the province's current combined tax rate, null without a tax profile
      * @param frIn / {@code frOf}: the French name with its preposition / article ("en Alberta", "de l'Alberta")
+     * @param frenchFirst / {@code frenchListings}: the language rules (V315; null on a market = its province's)
      */
     record ProfileRow(
             RegionRow region,
@@ -67,7 +68,23 @@ public interface MarketStore {
             List<String> registries,
             @Nullable Integer taxBps,
             @Nullable String frIn,
-            @Nullable String frOf) {}
+            @Nullable String frOf,
+            @Nullable Boolean frenchFirst,
+            @Nullable String frenchListings) {
+
+        /** Without language rules (before S-116). */
+        public ProfileRow(
+                RegionRow region,
+                List<String> timeZones,
+                List<String> holidays,
+                @Nullable String privacyLaw,
+                List<String> registries,
+                @Nullable Integer taxBps,
+                @Nullable String frIn,
+                @Nullable String frOf) {
+            this(region, timeZones, holidays, privacyLaw, registries, taxBps, frIn, frOf, null, null);
+        }
+    }
 
     record ZoneRow(
             String id,

@@ -112,3 +112,7 @@
 .nl-cat-variant-images .nl-cat-thumb { width: 32px; height: 32px; border-radius: var(--radius-md); }
 .nl-cat-documents { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .nl-cat-documents a { color: var(--color-accent); overflow-wrap: anywhere; }
+/* S-116: the listing's French name and description, below its own (FrenchTextPanel). */
+.nl-cat-french { display: grid; gap: 12px; margin-top: 8px; padding: 14px 16px; border: 1px solid var(--color-divider); border-radius: var(--radius-md); background: var(--color-surface); }
+.nl-cat-french h3 { margin: 0; }
+.nl-cat-french .nl-hint { margin: 0; }

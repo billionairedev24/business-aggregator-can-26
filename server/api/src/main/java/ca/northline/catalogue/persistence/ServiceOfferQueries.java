@@ -16,15 +16,19 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 class ServiceOfferQueries implements ServiceOffers {
 
+    /** S-116: the merchant's own text in the page's language (catalogue.listing_texts) wins over the stored one. */
     private static final String SELECT = """
-            select id, merchant_id, category_id, coalesce(name_i18n ->> :lang, name, name_i18n ->> 'en', id) as name,
-                   included, coalesce(pricing_mode, 'fixed') as pricing_mode, price_cents,
-                   coalesce(duration_min, 60) as duration_min, coalesce(buffer_min, 0) as buffer_min,
-                   coalesce(instant_book, false) as instant_book, sales_30d
-              from catalogue.services
-             where vetting = 'approved' and coalesce(status, 'live') = 'live'
+            select s.id, s.merchant_id, s.category_id,
+                   coalesce(t.title, s.name_i18n ->> :lang, s.name, s.name_i18n ->> 'en', s.id) as name,
+                   coalesce(t.description, s.included) as included, coalesce(s.pricing_mode, 'fixed') as pricing_mode,
+                   s.price_cents, coalesce(s.duration_min, 60) as duration_min, coalesce(s.buffer_min, 0) as buffer_min,
+                   coalesce(s.instant_book, false) as instant_book, s.sales_30d
+              from catalogue.services s
+              left join catalogue.listing_texts t on t.listing_id = s.id and t.lang = :lang
+             where s.vetting = 'approved' and coalesce(s.status, 'live') = 'live'
             """;
-    private static final String ORDER = " order by sales_30d desc, name, id";
+
+    private static final String ORDER = " order by s.sales_30d desc, name, s.id";
 
     private final JdbcClient jdbc;
 
@@ -33,7 +37,7 @@ class ServiceOfferQueries implements ServiceOffers {
         if (categoryIds.isEmpty()) {
             return List.of();
         }
-        return jdbc.sql(SELECT + " and category_id in (:categories)" + ORDER)
+        return jdbc.sql(SELECT + " and s.category_id in (:categories)" + ORDER)
                 .param("categories", List.copyOf(categoryIds))
                 .param("lang", lang)
                 .query((rs, _) -> offer(rs))
@@ -42,7 +46,7 @@ class ServiceOfferQueries implements ServiceOffers {
 
     @Override
     public List<Offer> ofMerchant(String merchantId, String lang) {
-        return jdbc.sql(SELECT + " and merchant_id = :merchantId" + ORDER)
+        return jdbc.sql(SELECT + " and s.merchant_id = :merchantId" + ORDER)
                 .param("merchantId", merchantId)
                 .param("lang", lang)
                 .query((rs, _) -> offer(rs))
@@ -51,7 +55,7 @@ class ServiceOfferQueries implements ServiceOffers {
 
     @Override
     public Optional<Offer> find(String serviceId, String lang) {
-        return jdbc.sql(SELECT + " and id = :id")
+        return jdbc.sql(SELECT + " and s.id = :id")
                 .param("id", serviceId)
                 .param("lang", lang)
                 .query((rs, _) -> offer(rs))

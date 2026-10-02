@@ -8239,6 +8239,14 @@ components:
       properties:
         city:
           type: string
+        frenchFirst:
+          type: boolean
+        frenchListings:
+          type: string
+          enum:
+          - "off"
+          - warn
+          - require
         id:
           type: string
         lat:
@@ -9046,6 +9054,14 @@ components:
       properties:
         code:
           type: string
+        frenchFirst:
+          type: boolean
+        frenchListings:
+          type: string
+          enum:
+          - "off"
+          - warn
+          - require
         name:
           type: string
         nameIn:

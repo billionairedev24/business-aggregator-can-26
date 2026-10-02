@@ -36,8 +36,21 @@ export interface Reverse {
 export interface Regions {
   platformTimeZone: string;
   defaultProvince?: string | null;
-  provinces: Array<{ code: string; name: string; status: Stage; timeZone: string }>;
-  markets: Array<{ id: string; city: string; province: string; timeZone: string; status: Stage }>;
+  /** S-116: `frenchFirst` — the place's language rule (region configuration); absent from older servers. */
+  provinces: Array<{ code: string; name: string; status: Stage; timeZone: string; frenchFirst?: boolean }>;
+  markets: Array<{ id: string; city: string; province: string; timeZone: string; status: Stage; frenchFirst?: boolean }>;
+}
+
+/**
+ * S-116 (Loi 96 readiness): whether a place is French-first — its market's rule (by id, else city), else its
+ * province's (region configuration; the app never names a place). Unknown place: no.
+ */
+export function isFrenchFirst(regions: Regions | undefined, place: { province?: string | null; marketId?: string | null; city?: string | null }): boolean {
+  if (!regions) return false;
+  const market = regions.markets.find((m) => (place.marketId && m.id === place.marketId) || (place.city && m.city.toLowerCase() === place.city.toLowerCase()));
+  if (market?.frenchFirst !== undefined) return market.frenchFirst;
+  const province = place.province ?? market?.province;
+  return regions.provinces.find((p) => p.code === province)?.frenchFirst ?? false;
 }
 
 const q = (p: Record<string, string | number | undefined>) =>

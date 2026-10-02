@@ -11,6 +11,7 @@ import { useCatalogueT } from './messages';
 import { emptyService, permissions, serviceCompleteness, serviceFromDetail, servicePayload, validateServiceDraft, vettingChecks, type Portal, type ServiceForm } from './model';
 import { parseMoney, useMessageT } from './validation';
 import { ListingCopyButton } from '../writing/WritingHelp';
+import { FrenchTextPanel } from './FrenchTextPanel';
 
 const DURATIONS = [30, 45, 60, 90, 120, 240] as const;
 const BUFFERS = [0, 15, 20, 30] as const;
@@ -120,6 +121,7 @@ export function ServiceEditor({ detail, portal, typePicker }: { detail?: Service
           <ListingCopyButton merchantId={merchantId} disabled={!perms.update}
             facts={{ kind: 'service', name: form.name, categoryId: form.categoryId, included: form.included, durationMin: form.durationMin }}
             onUse={c => update({ name: c.title, included: [c.description, ...c.bullets.map(b => `• ${b}`)].join('\n') }, ['name', 'included'])} />
+          <FrenchTextPanel merchantId={merchantId} listingId={saved?.id} disabled={!perms.update} />
           <Checkbox checked={form.instantBook} onChange={v => update({ instantBook: v })} label={t('instantBook')} />
           <Field label={t('skuLabel')} hint={t('skuHint')} error={err('sku')}>
             <TextInput value={form.sku} maxLength={60} style={{ maxWidth: 240 }} onChange={e => update({ sku: e.target.value })} onBlur={() => touch('sku')} />

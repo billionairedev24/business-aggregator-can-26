@@ -91,7 +91,9 @@ class ShopCatalogueAdapter implements ShopCatalogue {
         return jdbc.sql("""
                         with live as (
                           select o.id as offer_id, o.merchant_id, o.product_id, o.sales_30d, o.created_at,
-                                 coalesce(cp.title_i18n ->> :lang, cp.title, o.title, '') as name,
+                                 coalesce((select lt.title from catalogue.listing_texts lt
+                                            where lt.listing_id = o.id and lt.lang = :lang),
+                                          cp.title_i18n ->> :lang, cp.title, o.title, '') as name,
                                  coalesce(cp.attributes ->> 'volume', cp.attributes ->> 'size') as unit,
                                  coalesce((select min(v.price_cents) from catalogue.variants v where v.offer_id = o.id),
                                           o.price_cents, 0) as price,
@@ -129,10 +131,17 @@ class ShopCatalogueAdapter implements ShopCatalogue {
     @Override
     public Optional<ProductRecord> product(String productId, String lang) {
         return jdbc.sql("""
-                        select cp.id, coalesce(cp.title_i18n ->> :lang, cp.title, '') as name, cp.brand, cp.description,
-                               cp.bullets, coalesce(cp.attributes ->> 'volume', cp.attributes ->> 'size') as unit,
+                        select cp.id, coalesce(t.title, cp.title_i18n ->> :lang, cp.title, '') as name, cp.brand,
+                               coalesce(t.description, cp.description) as description, cp.bullets, coalesce(cp.attributes ->> 'volume', cp.attributes ->> 'size') as unit,
                                cp.category_id, cp.image_set
                           from catalogue.catalog_products cp
+                          -- S-116: a seller's own text in the page's language (the first live offer that has one)
+                          left join lateral (
+                            select lt.title, lt.description from catalogue.listing_texts lt
+                              join catalogue.offers lo on lo.id = lt.listing_id
+                             where lo.product_id = cp.id and lt.lang = :lang
+                               and lo.vetting = 'approved' and lo.status = 'live'
+                             order by lo.created_at, lo.id limit 1) t on true
                          where cp.id in (:id, (select o.product_id from catalogue.offers o where o.id = :id))
                            and cp.category_id like 'shop.%'
                            and exists (select 1 from catalogue.offers o where o.product_id = cp.id

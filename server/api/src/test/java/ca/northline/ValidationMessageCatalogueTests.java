@@ -83,6 +83,34 @@ class ValidationMessageCatalogueTests {
                 .isEmpty();
     }
 
+    /**
+     * S-116: every 404 detail ({@code new NotFound("order", id)} → "No order with id …") and every ProblemDetail title
+     * the api can answer has French in the catalogue — ProblemLanguage translates them on the way out.
+     */
+    @Test
+    void everyNotFoundResourceAndStatusTitleHasFrench() throws IOException {
+        var catalogue = MessageCatalogue.frenchCanadian();
+        var missing = new TreeSet<String>();
+        var resources = Pattern.compile("new NotFound\\(\\s*\"([^\"]+)\"");
+        for (var s : sources()) {
+            var m = resources.matcher(s.text());
+            while (m.find()) {
+                var detail = new ca.northline.shared.NotFound(m.group(1), "01J9ZD3V000000000000000001").getMessage();
+                if (detail == null || !catalogue.covers(detail)) {
+                    missing.add(String.valueOf(detail));
+                }
+            }
+        }
+        for (var status : org.springframework.http.HttpStatus.values()) {
+            if (status.isError() && !catalogue.covers(status.getReasonPhrase()) && status.value() != 418) {
+                missing.add(status.getReasonPhrase());
+            }
+        }
+        assertThat(missing)
+                .as("ProblemDetail details and titles without French")
+                .isEmpty();
+    }
+
     private record Constant(String owner, String value) {}
 
     private static List<Source> sources() throws IOException {

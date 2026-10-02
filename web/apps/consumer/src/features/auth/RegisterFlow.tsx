@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { Alert, Button, Checkbox, Field, OptionCard, StepBars, TextInput, useLocale, codeValue } from '@northline/ui';
 import { authApi, codeSchema, createPasskey, fieldErrors, firstIssue, flowError, isRestart, PasskeyError, passkeysSupported, RateLimitNotice, registerSchema, useRateLimit, type AuthSession, type TotpSetup } from '@northline/auth-kit';
+import { termsPresentation } from '../../lib/legal';
+import { useFrenchFirst } from '../location/regions';
 import { CodeStep, type Sent } from './CodeStep';
 import { LegalLink } from './LegalLink';
 import { useAuthT, type AuthT } from './messages';
@@ -58,6 +60,10 @@ export function RegisterFlow({ prefill, onSignIn, onFinished }: RegisterFlowProp
   const [phoneShown, setPhoneShown] = useState('');
   const [session, setSession] = useState<AuthSession | null>(null);
   const limit = useRateLimit();
+  // S-116: in a French-first place the Terms come in French first; English only when asked for (recorded)
+  const frenchFirst = useFrenchFirst();
+  const [englishRequested, setEnglishRequested] = useState(false);
+  const presented = termsPresentation({ frenchFirst, locale, englishRequested });
 
   const clientErrors = validate(values, t);
   const errorOf = (f: FieldName) => ((touched[f] || submitted) ? clientErrors[f] : undefined) ?? server[f];
@@ -76,7 +82,10 @@ export function RegisterFlow({ prefill, onSignIn, onFinished }: RegisterFlowProp
     setBusy(true); setFailure('');
     try {
       const { firstName, lastName } = splitName(values.fullName);
-      const info = await authApi.register({ firstName, lastName, phone: values.phone, email: values.email, terms: values.terms }, locale);
+      const info = await authApi.register({
+        firstName, lastName, phone: values.phone, email: values.email, terms: values.terms,
+        termsLanguage: presented.language, termsEnglishRequested: presented.frenchFirst && presented.frenchAvailable && englishRequested,
+      }, locale);
       setPhoneShown(info.phone);
       setSent({ resendAfterSeconds: info.resendAfterSeconds, channel: info.channel, at: Date.now() });
       setStep('code');
@@ -111,7 +120,13 @@ export function RegisterFlow({ prefill, onSignIn, onFinished }: RegisterFlowProp
             </Field>
           </div>
           <Checkbox className="nl-auth-terms" name="terms" checked={values.terms} onChange={c => change('terms', c)}
-            label={<span>{t('termsBefore')}<LegalLink doc="terms">{t('terms')}</LegalLink>{t('termsAnd')}<LegalLink doc="privacy">{t('privacy')}</LegalLink>{t('termsAfter')}</span>} />
+            label={<span>{t('termsBefore')}<LegalLink doc="terms" lang={presented.language}>{t('terms')}</LegalLink>{t('termsAnd')}<LegalLink doc="privacy" lang={presented.language}>{t('privacy')}</LegalLink>{t('termsAfter')}</span>} />
+          {presented.frenchFirst && (presented.frenchAvailable
+            ? <p className="nl-auth-note">
+              {englishRequested ? t('termsEnglishChosen') : t('termsFrenchFirst')}{' '}
+              <button type="button" className="nl-auth-link" onClick={() => setEnglishRequested(x => !x)}>{englishRequested ? t('termsFrench') : t('termsEnglish')}</button>
+            </p>
+            : <p className="nl-auth-note">{t('termsFrenchPending')}</p>)}
           {errorOf('terms') && <div role="alert" className="nl-error">{errorOf('terms')}</div>}
           {attention > 0 && <Alert tone="error">{t('attention', { count: attention })}</Alert>}
           {failure && <Alert tone="error">{failure}</Alert>}

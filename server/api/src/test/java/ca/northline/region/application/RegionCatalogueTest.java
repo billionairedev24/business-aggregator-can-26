@@ -3,6 +3,8 @@ package ca.northline.region.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import ca.northline.region.api.FrenchListings;
+import ca.northline.region.api.LanguageRules;
 import ca.northline.region.api.LaunchStatus;
 import ca.northline.region.api.PrivacyLaw;
 import ca.northline.region.application.MarketStore.ProfileRow;
@@ -51,6 +53,47 @@ class RegionCatalogueTest {
                     500,
                     "en " + code,
                     "de " + code));
+        }
+
+        /** S-116: a province row with its language rules. */
+        void province(String code, boolean frenchFirst, String frenchListings) {
+            rows.add(new ProfileRow(
+                    new RegionRow(
+                            "prov-" + code,
+                            "province",
+                            null,
+                            code,
+                            null,
+                            "Name " + code,
+                            "Nom " + code,
+                            Stage.LIVE,
+                            null,
+                            null),
+                    List.of("Etc/GMT+5"),
+                    List.of(),
+                    "pipeda",
+                    List.of(),
+                    500,
+                    "en " + code,
+                    "de " + code,
+                    frenchFirst,
+                    frenchListings));
+        }
+
+        /** S-116: a market row that sets its own rules (null = its province's). */
+        void marketWithRules(
+                String id, String province, String city, @Nullable Boolean frenchFirst, @Nullable String listings) {
+            rows.add(new ProfileRow(
+                    new RegionRow(id, "market", "prov-" + province, province, city, city, city, Stage.LIVE, 1.0, 2.0),
+                    List.of(),
+                    List.of(),
+                    null,
+                    List.of(),
+                    null,
+                    null,
+                    null,
+                    frenchFirst,
+                    listings));
         }
 
         void market(String id, String province, String city, Stage stage, @Nullable String zone) {
@@ -108,8 +151,12 @@ class RegionCatalogueTest {
     }
 
     static RegionCatalogue catalogue(Rows rows, String provinces, String defaultProvince) {
+        return catalogue(rows, provinces, defaultProvince, "");
+    }
+
+    static RegionCatalogue catalogue(Rows rows, String provinces, String defaultProvince, String frenchFirst) {
         return new RegionCatalogue(
-                rows, new RegionProperties(provinces, defaultProvince, PLATFORM, Duration.ofMinutes(1)));
+                rows, new RegionProperties(provinces, defaultProvince, PLATFORM, Duration.ofMinutes(1), frenchFirst));
     }
 
     @Test
@@ -162,6 +209,42 @@ class RegionCatalogueTest {
         regions.refresh();
         assertThat(regions.market("ALPHAVILLE", null).orElseThrow().zone()).isEqualTo(ZoneId.of("Etc/GMT+5"));
         assertThat(regions.defaultProvince()).isNull();
+    }
+
+    /** S-116: French-first and French listings are region data (rows, inherited by markets) or configuration. */
+    @Test
+    void languageRulesComeFromRowsAndConfiguration() {
+        var rows = new Rows();
+        rows.province("XA", false, "off");
+        rows.province("XF", true, "require");
+        rows.marketWithRules("mkt-f", "XF", "Effeville", null, null); // inherits its province's
+        rows.marketWithRules("mkt-g", "XF", "Gville", null, "warn"); // its own listing rule
+        rows.marketWithRules("mkt-a", "XA", "Alphaville", true, null); // French-first market, province not
+        var regions = catalogue(rows, "", "XA");
+
+        assertThat(regions.languageRules("XA", null)).isEqualTo(LanguageRules.NONE);
+        assertThat(regions.languageRules("XF", null)).isEqualTo(new LanguageRules(true, FrenchListings.REQUIRE));
+        assertThat(regions.languageRules("XF", "effeville").frenchListings()).isEqualTo(FrenchListings.REQUIRE);
+        assertThat(regions.languageRules("XF", "Gville")).isEqualTo(new LanguageRules(true, FrenchListings.WARN));
+        assertThat(regions.languageRules(null, "mkt-g").frenchListings()).isEqualTo(FrenchListings.WARN);
+        assertThat(regions.languageRules("XA", "Alphaville")).isEqualTo(new LanguageRules(true, FrenchListings.OFF));
+        assertThat(regions.languageRules("ZZ", "Nowhere")).isEqualTo(LanguageRules.NONE);
+
+        // configuration makes a place French-first whatever its row says (REGION_FRENCH_FIRST)
+        var configured = catalogue(rows, "", "XA", "xa, mkt-g");
+        assertThat(configured.languageRules("XA", null)).isEqualTo(new LanguageRules(true, FrenchListings.REQUIRE));
+        assertThat(configured.languageRules("XF", "Gville").frenchListings()).isEqualTo(FrenchListings.REQUIRE);
+    }
+
+    /** S-116: the language to write to someone — their own choice first, then the place, then their request. */
+    @Test
+    void languageOfAPlace() {
+        var first = new LanguageRules(true, FrenchListings.REQUIRE);
+        assertThat(first.language(null, java.util.Locale.ENGLISH)).isEqualTo(java.util.Locale.CANADA_FRENCH);
+        assertThat(first.language(java.util.Locale.CANADA, null)).isEqualTo(java.util.Locale.CANADA);
+        assertThat(LanguageRules.NONE.language(null, null)).isEqualTo(java.util.Locale.CANADA);
+        assertThat(LanguageRules.NONE.language(null, java.util.Locale.FRENCH))
+                .isEqualTo(java.util.Locale.CANADA_FRENCH);
     }
 
     @Test

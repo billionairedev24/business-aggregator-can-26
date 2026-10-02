@@ -14,6 +14,7 @@ import java.util.Locale;
  * @param holidays statutory holiday keys the province observes
  * @param taxBps combined sales-tax rate in basis points (GST 5 % = 500)
  * @param inFr / {@code ofFr}: the French name with its preposition / article ("au Québec", "du Québec")
+ * @param language the province's language rules (S-116: French first, French listing text)
  */
 public record ProvinceProfile(
         String code,
@@ -26,7 +27,8 @@ public record ProvinceProfile(
         List<String> holidays,
         int taxBps,
         String inFr,
-        String ofFr) {
+        String ofFr,
+        LanguageRules language) {
 
     public ProvinceProfile {
         timeZones = List.copyOf(timeZones);

@@ -185,7 +185,8 @@ describe('create account (design 06 auth, new)', () => {
     await userEvent.type(screen.getByLabelText('Email (receipts)'), 'amara@example.ca');
     await userEvent.click(screen.getByRole('checkbox'));
     await userEvent.click(screen.getByRole('button', { name: 'Send code' }));
-    expect(calls.find(c => c.url.endsWith('/api/auth/register'))!.body).toEqual({ firstName: 'Amara Kofi', lastName: 'Osei', phone: '4035550201', email: 'amara@example.ca', terms: true });
+    // S-116: the language the Terms were shown in (English: no French text yet) and no request for English
+    expect(calls.find(c => c.url.endsWith('/api/auth/register'))!.body).toEqual({ firstName: 'Amara Kofi', lastName: 'Osei', phone: '4035550201', email: 'amara@example.ca', terms: true, termsLanguage: 'en', termsEnglishRequested: false });
 
     await userEvent.type(await screen.findByLabelText('6-digit code sent to +1 403 555 0201'), '654321');
     await userEvent.click(screen.getByRole('button', { name: 'Verify' }));

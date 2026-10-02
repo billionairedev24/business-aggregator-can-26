@@ -2073,6 +2073,9 @@ Worker: `WebhookDeliveryTest` (Kafka 4 + PostGIS + WireMock receiver: signed `bo
 - **validate.sh:** the two Job checks render first and grep the result; `helm template | grep -q` under `pipefail` failed at random when grep closed the pipe early (the existing Kafka topics check flaked the same way and is fixed too).
 - **Least-privilege role** documented (search.md § 5: `monitor`, `manage_search_synonyms`, `listings_*` create/manage/read/write): the S-3 `elastic` superuser stays until the Elastic Cloud deployment exists.
 - **Tests:** `IndexLayoutTest` (both languages, names, hashes, synonym parsing, create body); `IndexBootstrapTest` on Testcontainers Elasticsearch 9.1 (the compose image): empty cluster → plan reports all missing and changes nothing; apply creates the sets, then versioned indices behind the aliases; second run in sync; French elision/folding/stemming and English possessives through `_analyze`; cross-language synonyms (`pain au levain` ↔ `sourdough`, `mobile mechanic` → `Mécanicien mobile`) in both indices; a changed synonym file is live at once without a reindex; a new field is added in place; a changed analyzer or an incompatible field type → reindex required, nothing touched. Worker `SearchIndicesCommandTest` (exit codes against its own empty cluster).
+- **Accessibility sweep (S-109):** `make a11y` passes on the 32 screens with the committed fixtures. `make a11y-record`
+  was run: it captured no new request (the Studio's French panel isn't in the recorded suites), only reordered answers
+  — one of which made the console's French audit log scroll at 320 px — so the re-recorded fixtures were not kept.
 - **Not done / never run for real:** no Elastic Cloud deployment or credentials exist (known open item) — nothing has run against Elastic Cloud, only against local/Testcontainers Elasticsearch 9.1 with security off; the `northline_app` role is documented, not created; the reindex itself (S-71); `i18n.synonyms` and a console synonym editor.
 
 ## 2026-09-30 — S-43 Search indexer consumer (catalogue, food, merchants, trust events)
@@ -7240,3 +7243,111 @@ critical or serious issue left; 2 moderate and 6 minor issues ticketed (S-140–
   and was run here only (Chromium 1194); the CI jobs have never run; Safari/WebKit and Firefox not checked; the
   courier app was out of scope; the accessibility statement's mailbox is a placeholder and needs legal review with the
   other footer documents; no migration, no server change.
+
+## 2026-09-30 — S-116 Loi 96 French-first readiness for Québec expansion
+
+Branch `i18n/s-116-loi96`. Runbook: [runbooks/i18n.md](runbooks/i18n.md). Acceptance criterion: all customer-facing text
+available in fr-CA before a Québec launch.
+
+> **Plainly:** no certified translator has reviewed any of the French in this repository — neither the 190 strings
+> written in this story (`docs/i18n/translation-review.csv`, all `needs translator review`) nor anything written
+> before it (the validation catalogue's `new`/`review` lines, every bundle). Counsel has not confirmed this reading of
+> the Charter of the French Language as amended by Bill 96 (S-106's counsel question D1 and D2–D3 are still open). The
+> French Terms of Service and Privacy Policy do not exist. A French-first launch is blocked on all three, and
+> `make i18n-check STRICT=1` fails until they are done.
+
+- **Region-neutral.** Nothing names Québec in code. The toggles are region data (V315): `region.regions.french_first`
+  (boolean) and `french_listings` (`off` | `warn` | `require`) on province rows, a market row's `NULL` = its
+  province's. Seeded from the region data itself — a province whose first official language in `region.regions.languages`
+  (V117) is French gets `true` / `require` — so the migration has no place literal either. `REGION_FRENCH_FIRST`
+  (province codes or market ids) adds places by configuration. `region.api.LanguageRules` (+ `FrenchListings`) on
+  `ProvinceProfile` / `MarketProfile`, `Regions.languageRules(province, market or city)`; exposed on
+  `GET /api/v1/geo/regions` (`frenchFirst`, `frenchListings`) and on the Studio header's `region`. The task's example
+  name `region.markets.french_first` became columns on `region.regions` because provinces and markets share that
+  table (V117); no new table.
+- **The gate: `make i18n-check`** (`make/i18n.mk`, `scripts/i18n/coverage.mjs` + `coverage.test.mjs`, node only — the
+  TypeScript compiler from `web/node_modules`). Surfaces and checks are in the runbook. A Node scanner rather than an
+  eslint rule: one tool covers TS catalogues, JSX, Java maps, properties, Thymeleaf templates, TSV, JSON store files
+  and the legal registry, and it reports coverage numbers. `allowlist.json` keeps the reviewed exceptions: brands and
+  units, values spelt the same in French (`sameInFrench`, each one looked at), three sample values in JSX, the legal
+  known gaps with their reason, and the store privacy answers as "not customer-facing text" (the stores render those
+  labels in each listing's language). Known gaps (Terms, Privacy Policy, translator review) print on every run and fail
+  only with `STRICT=1`. The S-40 Java test also fails the server build on a 404 resource or status title without French.
+- **Coverage, before → after** (strings with French / strings; the scanner run on origin/main and on this branch):
+
+  | surface | before (main) | after |
+  |---|---|---|
+  | web bundles (consumer, Studio, console, docs site, packages) | 7066 / 7077 (11 English-in-French) | 7106 / 7106 (after S-109's merge) |
+  | hard-coded JSX text | 0 language gaps (6 hits, all sample values or brand labels; docs pages use `<Translate>`) | 0 |
+  | mobile (consumer, courier, system strings) | 1264 / 1265 | 1267 / 1267 |
+  | server (validation TSV, 404 details, status titles, e-mail, SMS/push) | 1101 / 1236 (93 NotFound resources, 42 titles) | 1383 / 1383 |
+  | category taxonomy | 50 / 182 (shop only) | 182 / 182 |
+  | store listings | 23 / 23 | 23 / 23 |
+  | legal texts | 2 / 4 (Terms, Privacy Policy English only) | 2 / 4 — known gap, counsel D1 |
+
+- **Server messages.** `shared.web.ProblemLanguage` (api) and `auth.web.ProblemLanguage` (northline-auth), a
+  `ResponseBodyAdvice`, translate the title (HTTP reason phrase) and the detail of every `ProblemDetail` — the shared
+  handler's, each module's own advice (403/429/503) and Spring MVC's (405/415/400) — through the S-40 catalogue when
+  `Accept-Language` prefers French. Added to the TSV: one `No <resource> with id %s` line per `new NotFound` resource
+  (93), every 4xx/5xx reason phrase (42, 418 aside), a generic `No %s with id %s` and Spring's own detail templates.
+  English callers get the same bytes. E-mail bundles, templates and SMS/push maps were already complete (the scan found
+  the worker maps' last entries skipped by a first parser, fixed).
+- **Category names** (V316): 132 French labels for the service and food taxonomy (the shop's were V111). Service names
+  are the consumer web's existing `FR_NAMES`; the 14 food names are new (review file). The migration copies every label
+  into `name_i18n.fr` (rows staff didn't edit) and `CategorySeeder` does the same after each seed, so every reader of
+  `name_i18n ->> lang` (Studio pickers, onboarding, search, listings) gets French. `ConsoleTaxonomyApiTest` now edits the
+  seeded French name to a different one.
+- **Listing French text** (V317 `catalogue.listing_texts`: listing id, merchant, lang, title ≤ 80, description ≤ 4000).
+  `GET/PUT /api/v1/merchants/{m}/listings/{id}/french` (view: anyone on the team; write: owners and technicians) answers
+  `{rule, title, description, missing}`. Submit and publish call `ListingFrench.checkBeforeLive`: with `require` and a
+  missing French name or description → 422 `french` "Add the French name and description first: listings in {province}
+  need them before they go live." (`{province:in}` in French). `warn` only warns. The Studio product and service editors
+  show a French panel (new `FrenchTextPanel`, one line in each editor) with the warning. Customers reading French get the
+  text on service pages (`ServiceOfferQueries`) and the shop's product page and tiles (`ShopCatalogueAdapter`, the first
+  live offer with French text). Deleting a listing deletes its texts. Bulk imports and commerce sync don't submit, so
+  they are not refused; their listings meet the rule when submitted in the Studio. Kitchen menus already carry
+  `name_i18n`/`desc_i18n` and are not gated (follow-up if counsel asks).
+- **Terms in French first** (V319 `identity.users.terms_language`, `terms_english_requested_at`, with a CHECK that a
+  request means `en`). northline-auth's registration takes optional `termsLanguage` (`en`|`fr`) and
+  `termsEnglishRequested`; asking for English records `en` and the time. The consumer registration
+  (`lib/legal.ts` `termsPresentation`, `legalHref`) presents the Terms in French first when the visitor's place is
+  French-first or the interface is French, offers "Show me the English version" as the express request — and, since no
+  French text exists (`FRENCH_LEGAL` is empty), says "only available in English for now" and records `en`. The Studio's
+  registration and Business Terms (merchants, not consumers) and the mobile sign-up are unchanged. The registry's
+  acceptance record names the new columns.
+- **French by default.** Consumer web: `pickLocale` reads Accept-Language weights (French when it outweighs English —
+  "the browser asks for French"), and `<FrenchFirstLocale>` (in `VisitorPlace`) switches to French when the visitor's
+  place (delivery location, else the default province) is French-first and they haven't chosen (no `nl.locale` cookie,
+  no `?lang=`); the switch is remembered like the toggle. SSR renders the first page in the browser's language — the
+  location is only known in the browser. Studio: `lib/locale.ts` (`initialLocale` with weights; `useFrenchFirst` in the
+  `/b/$merchantId` layout) for a French-first business. Courier app: `useFrenchFirst(me.market)`; consumer app:
+  `<FrenchFirst>` on the delivery location. In every app a language the person chose wins, and the automatic switch is
+  stored like a choice (the next visit keeps it, the switch changes it).
+- **Receipts and invoices.** Northline's own e-mails, SMS, push and PDF statements were already in the person's
+  language with fr-CA formats (`EmailFormat`, `PdfBoxStatementRenderer`). New: Stripe's receipt e-mails follow the
+  Stripe Customer's `preferred_locales`, set at checkout from `LanguageRules.language(null, request locale)` — French
+  where the merchant's place is French-first, else the request's language — and only when it changed (V318
+  `payments.stripe_customers.receipt_locale`; `PaymentGateway.receiptLocale`, Stripe `customers.update`). Stripe
+  writes one language per receipt; an English-speaking customer of a French-first merchant gets French (Loi 96 art. 57
+  allows a bilingual receipt, Stripe doesn't make one) — a counsel item.
+- **Help centre and customer service:** already bilingual (help topics and articles en + fr since V072, support macros
+  since V214, cases keep the requester's `lang`); nothing changed.
+- **Formatting:** every app formats with `Intl` in `fr-CA` (`formatMoney`, `formatDate`, mobile-kit) and the server with
+  `fr-CA` locales; no hard-coded formats were found by the scan. Not changed.
+- **Bundle fixes** (all in the review file): Studio approval and calendar messages (now the catalogue's French), Kafka
+  lag "{n} messages", "Opérations", push channel "Notif. poussée" (web and app), "essai", "importation(s)",
+  "Maquette 06". The consumer language picker's French option keeps "· requis au Québec" — a fact about that place in
+  French copy, flagged here rather than changed (it predates S-116).
+- **Schema:** V315 region rules, V316 category labels (data), V317 `catalogue.listing_texts`, V318
+  `payments.stripe_customers.receipt_locale`, V319 `identity.users.terms_language` / `terms_english_requested_at`. All
+  additive. **Variable:** `REGION_FRENCH_FIRST` (api, optional; runbooks and `.env.example`).
+- **Tests:** `RegionCatalogueTest` (rules from rows, inheritance, configuration, the language choice),
+  `ListingFrenchApiTest` (require: 422 in both languages, validation, submit after French, customers' French, delete;
+  off: no rule; roles 403/404; the regions endpoint), `FrenchMessagesApiTest` (French 404 title and detail, English
+  unchanged, French 403 title), `ValidationMessageCatalogueTests` (every NotFound resource and status title),
+  `ReceiptLanguageTest`, auth `RegistrationApiTest` (language and the English request recorded, 422 on a bad
+  language), consumer `legal.test.ts` and `locale.test.ts`, the gate's node tests.
+- **Not done / never run for real:** no certified translator; no counsel sign-off; no French Terms or Privacy Policy;
+  Stripe's `preferred_locales` update (`StripeConnectGateway.receiptLocale`) has never run against Stripe — tests use
+  the fake gateway and a unit test; the console has no screen for the language toggles yet (SQL or
+  `REGION_FRENCH_FIRST`, runbook); marketing copy outside the repository is out of scope.

@@ -292,7 +292,7 @@ export const account: { [k in keyof typeof en]: string } = {
   'account.notif.evd.refunds_cases': 'Suivi et décisions des dossiers',
   'account.notif.evd.offers': 'Points offerts par les prestataires, avantages Plus, tournée de ce soir',
   'account.notif.evd.security': 'Nouvelles connexions, changements de clé d’accès, changements de mode de paiement',
-  'account.notif.ch.push': 'Push',
+  'account.notif.ch.push': 'Notif. poussée',
   'account.notif.ch.sms': 'SMS',
   'account.notif.ch.email': 'Courriel',
   'account.notif.cell': '{channel} · {event}',

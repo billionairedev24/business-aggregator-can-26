@@ -52,7 +52,9 @@ class RegistrationController {
                 Objects.requireNonNull(body.firstName()),
                 Objects.requireNonNull(body.lastName()),
                 Objects.requireNonNull(body.phone()),
-                Objects.requireNonNull(body.email())));
+                Objects.requireNonNull(body.email()),
+                body.termsLanguage(),
+                Boolean.TRUE.equals(body.termsEnglishRequested())));
         return step("otp", pending);
     }
 

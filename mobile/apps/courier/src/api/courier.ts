@@ -85,7 +85,9 @@ export interface ProofFile {
 
 export interface Regions {
   platformTimeZone: string;
-  markets: Array<{ id: string; city: string; province: string; timeZone: string }>;
+  /** S-116: `frenchFirst` — the place's language rule (region configuration); absent from older servers. */
+  provinces?: Array<{ code: string; frenchFirst?: boolean }>;
+  markets: Array<{ id: string; city: string; province: string; timeZone: string; frenchFirst?: boolean }>;
 }
 
 export class CourierApi {
@@ -153,6 +155,17 @@ export class CourierApi {
     if (!res.ok) throw new Error(`regions ${res.status}`);
     return (await res.json()) as Regions;
   }
+}
+
+/**
+ * S-116 (Loi 96 readiness): whether the courier's market is French-first — the market's own rule, else its province's
+ * (region configuration; the app never names a place). Unknown market: no.
+ */
+export function frenchFirst(regions: Regions | undefined, market: string | null | undefined): boolean {
+  if (!regions || !market) return false;
+  const m = regions.markets.find((x) => x.id === market || x.city === market);
+  if (!m) return false;
+  return m.frenchFirst ?? regions.provinces?.find((p) => p.code === m.province)?.frenchFirst ?? false;
 }
 
 /** The market's IANA zone from the region model; the platform's when the market isn't listed. */

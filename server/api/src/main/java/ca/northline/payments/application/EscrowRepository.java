@@ -89,6 +89,11 @@ public interface EscrowRepository {
 
     void saveStripeCustomer(String customerId, String stripeCustomer);
 
+    /** S-116: the receipt language last given to Stripe for the customer ({@code fr-CA} | {@code en-CA}). */
+    Optional<String> receiptLocale(String customerId);
+
+    void saveReceiptLocale(String customerId, String locale);
+
     void insert(Escrow escrow);
 
     void update(Escrow escrow);
