@@ -6843,3 +6843,69 @@ Branch `ops/s-113-alerting`. **No migration** (the V280–V284 range offered is 
   stores, Elastic Cloud, a managed Kafka, Apple / Firebase / OpenRouter, a Kubernetes cluster; a status banner for
   outages; re-encryption of `TOTP_KEY` / `WEBHOOK_SECRET_KEY`; a metric and alert for dead deferred notifications (the
   ERROR log line is the signal); submitting dispute evidence from Northline (S-12's open item).
+
+## 2026-09-30 — S-104 External penetration test and remediation (internal review, fixes, testers' packet)
+
+The third-party test itself can't happen in this repository. This story is the internal review that comes first, the
+fixes, and the packet for the testers: [docs/security/findings.md](security/findings.md) (every finding with severity,
+status and test), [docs/security/pentest-scope.md](security/pentest-scope.md) (environments, accounts, scope, rules of
+engagement, contacts, retest, STRIDE), [docs/security/README.md](security/README.md) (how to run the scans).
+
+- **Result:** no open critical or high finding. Fixed: S104-01 unbounded request bodies (High), S104-02 expression
+  injection into email templates through dish rejection reasons (High, worst case), S104-03 Tomcat/Jackson/lz4-java
+  advisories (High), S104-04 image decompression bombs, S104-05 the MCP client-metadata fetch's SSRF guard, S104-06
+  privacy verification texts, S104-07 SMS pumping, S104-08 CSV formula injection, S104-09 no CSP on the consumer site,
+  S104-10 a malformed deep link. Open (Low): build-time-only package advisories, staging's cluster API without CIDRs,
+  job photos checked by declared type only.
+- **Request body cap in the platform library**, not at the edge: `RequestSizeLimitFilter` (auto-configured for every
+  servlet app) answers 413 for a declared length over `northline.http.max-request-body` (5 MB) or, for multipart,
+  `northline.http.max-multipart-body` (26 MB), and counts chunked bodies while they are read. The edge could cap too
+  (Envoy Gateway has no simple per-route body limit in `ClientTrafficPolicy`), but the apps are where the bodies are
+  read and the cap is testable there. Properties only, no new environment variable.
+- **Email key fragments are codes:** `EmailTemplates` refuses to render when a variable pre-processed into a message key
+  is not `[A-Za-z0-9][A-Za-z0-9_.-]{0,63}` (empty allowed: a dispute update before its decision). A test fails when a
+  template pre-processes a variable the guard doesn't check. Dish rejection reasons now use the listing reasons
+  (`ListingVetting.REASONS`), validated in the console's `VettingQueueService` (food doesn't depend on catalogue).
+- **Images:** `shared.storage.ImageDecoding` — header dimensions only, 100-megapixel ceiling, analysis subsampled to about
+  2 megapixels (the white-border share and the 8 × 8 average hash barely change). The kitchen's photo check reads only
+  the header.
+- **MCP client metadata fetch** uses Apache HttpClient 5 with `EgressDnsResolver` (auth gains the `httpclient5`
+  dependency the api and worker already had); `allowInsecure` maps to `EgressPolicy(allowLocal)`, which allows loopback
+  and `http`, nothing else private (before, `allowInsecure` skipped the address check entirely).
+- **Privacy texts budget:** 3 an hour, 6 a day per person across requests (`SelfServiceImpl.TEXTS_PER_HOUR/DAY`). Opening
+  a request over the budget still opens it (it waits for a step-up proof, or a code once the budget allows);
+  "send a new code" answers `409 too_many_codes` (fr-CA in the catalogue). **Schema: V305**
+  `privacy.verification_texts` (id, subject, request with `ON DELETE CASCADE`, sent_at; rows older than two days are
+  deleted on insert) — V305–V309 is S-104's range, above main's V290.
+- **SMS pumping:** new rate-limit scope `PLATFORM` (key `all`) beside account/IP/session; only `otp-send` uses it:
+  `OTP_SEND_PLATFORM_PER_HOUR` (default 1000/h, lockout 15 min, max 1 h), logged at ERROR when reached; never reset by a
+  success. New optional variable in runbooks README/dev/staging/prod and `.env.example`; no secret. Restricting
+  destinations to Canada is left to the SMS provider's geo-permissions (go-live checklist) — a list of Canadian area
+  codes in code would need upkeep and the spec says "Canadian (NANP)".
+- **CSV formula guard** (server sales export and the Studio's `report.ts`): a leading `-` is neutralised unless the whole
+  cell is a negative amount (digits, separators, spaces, `$`), closing `-2+cmd|…`. The Studio's earlier test
+  expectation that `-3 credit` stays bare changed to the quoted form.
+- **Consumer CSP** in `web/apps/consumer/server/security-headers.mjs` (`NL_AUTH_ORIGIN` already reaches the pod).
+  `script-src 'unsafe-inline'` stays until the SSR inline scripts carry nonces (follow-up); COOP
+  `same-origin-allow-popups` so Stripe 3-D Secure pop-ups keep working.
+- **Dependencies:** Boot BOM properties overridden (`tomcat.version` 11.0.26, `jackson-bom.version` 3.1.7,
+  `jackson-2-bom.version` 2.21.7) and `at.yawk.lz4:lz4-java` 1.11.4 in dependency management; versions in
+  `libs.versions.toml` with a note to drop them once Spring Boot's BOM has them.
+- **Scans as make targets** (`make/security.mk`, `scripts/security/{scan,tools,negative-tests}.sh`): each part runs what
+  is installed and skips the rest; `make security-tools` pins gitleaks 8.21.2, osv-scanner 1.9.2, kube-score 1.19.0,
+  semgrep 1.179.0, checkov 3.3.20 into `.cache/security-tools`. Gating: secrets and dependencies fail the run; SAST and
+  IaC only report (their rule sets mix hardening advice that is triaged by hand). `.gitleaks.toml` allow-lists test
+  paths and the documented local keys, each with its reason. CycloneDX Gradle plugin 3.4.1 on the four apps
+  (`cyclonedxDirectBom`) gives osv-scanner the runtime dependency set — no Gradle lockfiles exist. CI: GitHub
+  `security.yml` and GitLab `PIPELINE_PART=security`, both manual only and never part of `all`; never triggered here.
+- **Object-level authorization harness** (`ObjectLevelAuthorizationTest`) drives every operation of the committed
+  OpenAPI documents in the shared `IntegrationTest` context (no new Spring context). Foreign objects come from the shared
+  test database (the caller's business and customer are new and own nothing) plus fixtures for the main kinds; request
+  bodies are synthesised from the documented schemas. Acceptance per probe: not 2xx and not 5xx (409/422 allowed: they
+  show the record wasn't served). DAST: ZAP's API scan and the negative tests ran against an api started from the boot
+  jar under `local` with a Postgres container of this story's own (removed afterwards).
+- **Not done / never run for real:** the external test itself; ZAP against the BFFs, auth and the browser apps (only the
+  api's specs were scanned); CodeQL and OWASP dependency-check (no CLI or NVD feed offline); semgrep's registry packs
+  (blocked here — the same rules ran from the rules repository); anything against a deployed environment, a real SMS
+  provider's geo-permissions or a real cluster's NetworkPolicy enforcement. The pentest packet's names, addresses,
+  dates and budgets are placeholders.
