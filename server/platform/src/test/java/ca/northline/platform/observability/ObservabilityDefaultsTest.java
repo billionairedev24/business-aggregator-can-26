@@ -25,6 +25,9 @@ class ObservabilityDefaultsTest {
         assertThat(env.getProperty("spring.kafka.template.observation-enabled")).isEqualTo("true");
         assertThat(env.getProperty("management.opentelemetry.resource-attributes.service.namespace"))
                 .isEqualTo("northline");
+        // S-113: buckets at the SLO thresholds
+        assertThat(env.getProperty("management.metrics.distribution.slo.http.server.requests"))
+                .isEqualTo("1s,2500ms");
     }
 
     @Test

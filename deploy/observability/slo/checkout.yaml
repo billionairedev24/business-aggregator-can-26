@@ -1,0 +1,56 @@
+# S-113 SLOs as code (docs/runbooks/alerting.md) — see sign-in.yaml. Checkout = the money-moving POSTs of the consumer
+# site and apps: start a checkout (orders: goods and food), place it, and a booking's checkout (deposit hold).
+version: "prometheus/v1"
+service: "northline-checkout"
+labels:
+  owner: platform
+  journey: checkout
+slos:
+  - name: "availability"
+    objective: 99.9
+    description: "Checkout calls (start, place, booking checkout) that don't fail on Northline's side (5xx). Declined cards and validation (4xx) count as good."
+    sli:
+      events:
+        error_query: |
+          sum(rate(http_server_requests_seconds_count{application="northline-api",method="POST",uri=~"/api/v1/me/(checkouts.*|bookings/checkout)",status=~"5.."}[{{.window}}]))
+        total_query: |
+          sum(rate(http_server_requests_seconds_count{application="northline-api",method="POST",uri=~"/api/v1/me/(checkouts.*|bookings/checkout)"}[{{.window}}]))
+    alerting:
+      name: NorthlineCheckoutAvailabilityBurn
+      labels:
+        category: availability
+      annotations:
+        summary: "Checkout errors are burning the 30-day error budget (99.9 %)"
+        runbook_url: "https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/checkout-availability.md"
+      page_alert:
+        labels:
+          severity: page
+      ticket_alert:
+        labels:
+          severity: ticket
+  - name: "latency"
+    objective: 99
+    description: "Checkout calls answered within 2.5 s (they call Stripe and the tax provider)."
+    sli:
+      events:
+        error_query: |
+          (
+            sum(rate(http_server_requests_seconds_count{application="northline-api",method="POST",uri=~"/api/v1/me/(checkouts.*|bookings/checkout)"}[{{.window}}]))
+            -
+            sum(rate(http_server_requests_seconds_bucket{application="northline-api",method="POST",uri=~"/api/v1/me/(checkouts.*|bookings/checkout)",le="2.5"}[{{.window}}]))
+          )
+        total_query: |
+          sum(rate(http_server_requests_seconds_count{application="northline-api",method="POST",uri=~"/api/v1/me/(checkouts.*|bookings/checkout)"}[{{.window}}]))
+    alerting:
+      name: NorthlineCheckoutLatencyBurn
+      labels:
+        category: latency
+      annotations:
+        summary: "Slow checkouts (over 2.5 s) are burning the 30-day error budget (99 %)"
+        runbook_url: "https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/checkout-latency.md"
+      page_alert:
+        labels:
+          severity: page
+      ticket_alert:
+        labels:
+          severity: ticket

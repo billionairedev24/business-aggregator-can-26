@@ -115,6 +115,52 @@ observability:
     tolerations: []
     affinity: {}
 
+# S-113 alerting and on-call (docs/runbooks/alerting.md): the alert rules — threshold alerts and the SLO burn-rate
+# alerts generated from deploy/observability/slo (files/alerting, kept identical by make obs-rules-check) — and the
+# severity routing (page → the on-call pager, ticket → the team's queue), for the Prometheus-compatible store that
+# holds the metrics (the Collector's backend). Off by default: nothing in the cluster reads these kinds until a
+# Prometheus Operator (kube-prometheus-stack), Google Managed Prometheus or another rule loader is there.
+alerting:
+  enabled: false
+  # Where the alerts' runbook_url points: docs/runbooks/alerts/<alert>.md under this base. Empty = the GitHub
+  # repository (main); the internal docs site (S-126) works too, e.g. https://docs-internal.<zone>/runbooks/alerts.
+  runbookBaseUrl: ""
+  rules:
+    # prometheusRule = monitoring.coreos.com/v1 PrometheusRule (Prometheus Operator / kube-prometheus-stack on any
+    # cluster; Grafana Alloy and the Mimir/Grafana Cloud operators read it too) · gmpRules = monitoring.googleapis.com/v1
+    # Rules (Google Managed Prometheus) · configMap = the plain rule files in a ConfigMap, for a Prometheus, Mimir
+    # (mimirtool rules load), Amazon Managed Prometheus (create-rule-groups-namespace) or Azure Monitor managed Prometheus
+    # (az-prom-rules-converter) that loads files.
+    format: prometheusRule
+    interval: 1m                     # gmpRules: how often each group is evaluated (GMP requires it)
+    # Labels on the rule objects, e.g. { release: kube-prometheus-stack } for the operator's ruleSelector.
+    labels: {}
+    # Labels added to every alert, next to namespace (the release's) and environment (global.environment).
+    extraAlertLabels: {}
+  routing:
+    # alertmanagerConfig = monitoring.coreos.com/v1alpha1 AlertmanagerConfig (Prometheus Operator; keys from the
+    # northline-alerting Secret) · configMap = an alertmanager.yml in a ConfigMap whose credentials are files under
+    # credentialsDir (mount the Secret there) · none = route in the backend's own alerting (Grafana alerting, …).
+    format: alertmanagerConfig
+    labels: {}                       # e.g. { alertmanagerConfig: northline } for the Alertmanager's selector
+    credentialsDir: /etc/alertmanager/secrets/northline-alerting
+    groupBy: [alertname, severity, sloth_service, sloth_slo, application]
+    # page: pages the person on call now; ticket: the next working day. provider: pagerduty | opsgenie | webhook | none.
+    # Secrets (externalSecrets.secretNames / secrets.existingSecret): ALERTING_PAGERDUTY_ROUTING_KEY (PagerDuty Events
+    # API v2 integration key), ALERTING_OPSGENIE_API_KEY (an Opsgenie API integration key), ALERTING_PAGE_WEBHOOK_URL /
+    # ALERTING_TICKET_WEBHOOK_URL (any receiver of Alertmanager's webhook JSON: Grafana OnCall, a chat bridge, a
+    # ticketing bridge). Only the selected providers' keys are required.
+    page:
+      provider: none
+      repeatInterval: 1h
+    ticket:
+      provider: none
+      repeatInterval: 24h
+    pagerduty:
+      url: https://events.pagerduty.com/v2/enqueue
+    opsgenie:
+      apiUrl: https://api.opsgenie.com/   # https://api.eu.opsgenie.com/ for an EU account
+
 # Volumes added to every Spring app and its Jobs (e.g. a CA certificate to trust — values-gcp.yaml).
 spring:
   extraVolumes: []
@@ -198,6 +244,11 @@ externalSecrets:
     CONSOLE_HEALTH_PROMETHEUS_TOKEN: console-health-prometheus-token  # S-91 console overview health (api), optional
     PUSH_APNS_KEY: push-apns-key                                      # S-102 push (worker): the APNs .p8 key (PEM)
     PUSH_FCM_SERVICE_ACCOUNT: push-fcm-service-account                # S-102 push (worker): Firebase service account JSON
+    ONCALL_EXPORT_TOKEN: oncall-export-token                          # S-113 on-call rota export (api), optional
+    ALERTING_PAGERDUTY_ROUTING_KEY: alerting-pagerduty-routing-key    # S-113 alert routing (Alertmanager)
+    ALERTING_OPSGENIE_API_KEY: alerting-opsgenie-api-key              # S-113 alert routing (Alertmanager)
+    ALERTING_PAGE_WEBHOOK_URL: alerting-page-webhook-url              # S-113 alert routing (Alertmanager)
+    ALERTING_TICKET_WEBHOOK_URL: alerting-ticket-webhook-url          # S-113 alert routing (Alertmanager)
   # Optional variables (secretEnv: false) to map as well. List only those that hold a value in the secrets manager:
   # one empty or missing remote secret fails the app's whole ExternalSecret. Required variables are always mapped.
   optionalKeys: [REDIS_PASSWORD, KAFKA_SASL_JAAS_CONFIG, ES_PASSWORD]
@@ -456,6 +507,7 @@ apps:
       GOOGLE_MAPS_API_KEY: false               # S-47: with PLACES_PROVIDER=google (required in staging/prod)
       OPENROUTER_API_KEY: false                # S-129: empty = every AI feature answers 503; add to optionalKeys once the key exists
       CONSOLE_HEALTH_PROMETHEUS_TOKEN: false   # S-91: only for a metrics store that needs a bearer token
+      ONCALL_EXPORT_TOKEN: false               # S-113: the on-call rota export for paging tools; empty = off (404)
     runAsUser: 65532
     probes:
       startup: { path: /actuator/health/liveness, periodSeconds: 5, failureThreshold: 60 }

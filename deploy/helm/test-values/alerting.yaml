@@ -1,0 +1,10 @@
+# S-113 (docs/runbooks/alerting.md): alert rules and routing for a cluster running the Prometheus Operator
+# (kube-prometheus-stack). The keys come from the secrets manager like every other secret; none is real anywhere.
+alerting:
+  enabled: true
+  rules:
+    labels: { release: kube-prometheus-stack }
+  routing:
+    labels: { alertmanagerConfig: northline }
+    page: { provider: pagerduty }
+    ticket: { provider: webhook }

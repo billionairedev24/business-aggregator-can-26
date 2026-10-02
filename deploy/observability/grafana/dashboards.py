@@ -206,6 +206,16 @@ def checkout():
     b.ts("Payout amounts (CAD / h)", [(f'sum by (outcome) (increase(northline_payouts_amount_dollars_sum[1h]))',
                                        "{{outcome}}")], unit="currencyUSD", w=12,
          description="Dollars (CAD) paid out per hour; the unit symbol is Grafana's.")
+    # S-113
+    b.ts("Payments job runs", [(rate("northline_jobs_runs_total", 'job=~"payments.*"', "job, outcome"),
+                                "{{job}} {{outcome}}")], unit="ops", w=12,
+         description="Alerts: NorthlinePayoutRunFailureBurn (SLO), NorthlinePayoutRunStalled")
+    b.ts("Since the last successful run", [('time() - max by (job) (northline_jobs_last_success_seconds)', "{{job}}")],
+         unit="s", w=12)
+    b.ts("Scheduled payout delay after the payout time", [(quantile(0.5, "northline_payouts_delay_seconds", ""), "p50"),
+                                                          (quantile(0.99, "northline_payouts_delay_seconds", ""),
+                                                           "p99")], unit="s", w=24,
+         description="SLO: 99 % within 1 h (NorthlinePayoutTimelinessBurn)")
     return b
 
 
@@ -225,6 +235,15 @@ def kitchens():
     b.ts("Kitchen API p95", [(quantile(0.95, "http_server_requests_seconds",
                                        'application="northline-api",uri=~".*/kitchen/.*"', "le, uri"), "{{uri}}")],
          unit="s", w=24)
+    # S-113
+    b.ts("Ticket delivery (placed → kitchen's bus)", [(quantile(0.5, "northline_kds_ticket_delivery_seconds", ""), "p50"),
+                                                      (quantile(0.99, "northline_kds_ticket_delivery_seconds", ""),
+                                                       "p99")], unit="s", w=12,
+         description="SLO: 99.5 % within 5 s (NorthlineKdsTicketDeliveryBurn)")
+    b.ts("Live bus probes", [(rate("northline_studio_live_probe_seconds_count", "", "outcome"), "{{outcome}}"),
+                             (quantile(0.99, "northline_studio_live_probe_seconds", 'outcome="delivered"'),
+                              "p99 round trip")], w=12,
+         description="Freshness SLO: 99.5 % back within 2 s (NorthlineKdsFreshnessBurn)")
     return b
 
 
@@ -243,6 +262,12 @@ def events():
                            "{{spring_kafka_listener_id}}")], unit="s", w=12)
     b.ts("Producer sends", [(rate("spring_kafka_template_seconds_count", "", "application, spring_kafka_template_name"),
                              "{{application}}")], unit="ops", w=12)
+    # S-113: the transactional outbox (Modulith event publication registry) of the api and auth
+    b.ts("Outbox: pending publications", [("max by (application) (northline_events_outbox_pending)",
+                                           "{{application}}")], w=12)
+    b.ts("Outbox: oldest pending", [("max by (application) (northline_events_outbox_oldest_age_seconds)",
+                                     "{{application}}")], unit="s", w=12,
+         description="Alerts: NorthlineOutboxBacklog (5 min), NorthlineOutboxStuck (30 min)")
     return b
 
 
@@ -275,6 +300,41 @@ def ai():
     return b
 
 
+# S-113: one dashboard per SLO service (deploy/observability/slo, docs/runbooks/alerting.md) over the recording rules
+# Sloth generates (slo:*), so it reads the same numbers the burn-rate alerts use. (service, title, [(slo, what)]).
+SLOS = [
+    ("sign-in", "sign-in", [("availability", "no 5xx · 99.9 %"), ("latency", "≤ 1 s · 99 %")]),
+    ("checkout", "checkout", [("availability", "no 5xx · 99.9 %"), ("latency", "≤ 2.5 s · 99 %")]),
+    ("payouts", "payouts", [("run-success", "runs succeed · 99 %"), ("timeliness", "≤ 1 h late · 99 %")]),
+    ("kds", "kitchen display (KDS)", [("ticket-delivery", "on the bus ≤ 5 s · 99.5 %"),
+                                      ("freshness", "live bus ≤ 2 s · 99.5 %")]),
+]
+BUDGET = [{"color": "red", "value": None}, {"color": "orange", "value": 0}, {"color": "green", "value": 0.25}]
+BURN = [{"color": "green", "value": None}, {"color": "orange", "value": 1}, {"color": "red", "value": 6}]
+
+
+def slo_board(service, title, slos):
+    b = Board(f"northline-slo-{service}", f"Northline · SLO · {title}",
+              f"S-113 SLOs of {title} over 30 days: error budget left, burn rates, the SLI by window. Alerts: page at "
+              "14.4x (1 h) / 6x (6 h) burn, ticket at 3x (1 d) / 1x (3 d) — docs/runbooks/alerting.md.",
+              ["slo", service])
+    for slo, what in slos:
+        sel = f'sloth_service="northline-{service}",sloth_slo="{slo}"'
+        b.row(f"{slo} — {what}")
+        b.stat("Objective", f"max(slo:objective:ratio{{{sel}}})", unit="percentunit")
+        b.stat("Error budget left (30 d)", f"max(slo:period_error_budget_remaining:ratio{{{sel}}})",
+               unit="percentunit", thresholds=BUDGET)
+        b.stat("Burn rate now (1 h)", f"max(slo:current_burn_rate:ratio{{{sel}}})", unit="x", thresholds=BURN)
+        b.stat("Burn rate over 30 d", f"max(slo:period_burn_rate:ratio{{{sel}}})", unit="x", thresholds=BURN)
+        b.ts("SLI error ratio by window", [(f"max(slo:sli_error:ratio_rate{w}{{{sel}}})", w)
+                                           for w in ("5m", "1h", "6h", "1d", "30d")]
+             + [(f"max(slo:error_budget:ratio{{{sel}}})", "budget (1 - objective)")], unit="percentunit", w=12)
+        b.ts("Burn rate (1 = budget gone in exactly 30 d)",
+             [(f"max(slo:sli_error:ratio_rate{w}{{{sel}}}) / max(slo:error_budget:ratio{{{sel}}})", f"{w}")
+              for w in ("1h", "6h", "1d", "3d")], unit="x", w=12)
+    return b
+
+
 def boards():
     yield overview()
     for key, app in SERVICES.items():
@@ -284,6 +344,8 @@ def boards():
     yield kitchens()
     yield events()
     yield ai()
+    for service, title, slos in SLOS:
+        yield slo_board(service, title, slos)
 
 
 def main(check):

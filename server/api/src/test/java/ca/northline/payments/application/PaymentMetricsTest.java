@@ -56,4 +56,15 @@ class PaymentMetricsTest {
                         .count())
                 .isEqualTo(1);
     }
+
+    @Test
+    void aScheduledPayoutsDelayIsTimedOnceCommitted() {
+        metrics.scheduledPayoutSent(java.time.Duration.ofMinutes(12));
+        metrics.scheduledPayoutSent(java.time.Duration.ofMinutes(-3)); // before the payout time: on time
+
+        var delay =
+                meters.get(PaymentMetrics.PAYOUT_DELAY).tag("kind", "scheduled").timer();
+        assertThat(delay.count()).isEqualTo(2);
+        assertThat(delay.totalTime(java.util.concurrent.TimeUnit.MINUTES)).isEqualTo(12);
+    }
 }

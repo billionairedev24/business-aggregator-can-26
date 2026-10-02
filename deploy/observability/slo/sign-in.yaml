@@ -1,0 +1,58 @@
+# S-113 SLOs as code (docs/runbooks/alerting.md): Sloth "prometheus/v1" specs. `make obs-slo` turns them into the
+# multi-window multi-burn-rate rules in ../prometheus/rules/slo/ (Sloth, https://sloth.dev); never edit those by hand.
+# SLI metrics: northline-auth's HTTP server requests (Micrometer, OTLP → any Prometheus-compatible store; S-111). The
+# 1 s bucket exists because observability-defaults.yml adds it (management.metrics.distribution.slo).
+version: "prometheus/v1"
+service: "northline-sign-in"
+labels:
+  owner: platform
+  journey: sign-in
+slos:
+  - name: "availability"
+    objective: 99.9
+    description: "Sign-in calls (password-less factors, codes, passkeys) that don't fail on Northline's side (5xx). A wrong factor is a 4xx and counts as good."
+    sli:
+      events:
+        error_query: |
+          sum(rate(http_server_requests_seconds_count{application="northline-auth",method="POST",uri=~"/api/auth/sign-in/.+",status=~"5.."}[{{.window}}]))
+        total_query: |
+          sum(rate(http_server_requests_seconds_count{application="northline-auth",method="POST",uri=~"/api/auth/sign-in/.+"}[{{.window}}]))
+    alerting:
+      name: NorthlineSignInAvailabilityBurn
+      labels:
+        category: availability
+      annotations:
+        summary: "Sign-in errors are burning the 30-day error budget (99.9 %)"
+        runbook_url: "https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/sign-in-availability.md"
+      page_alert:
+        labels:
+          severity: page
+      ticket_alert:
+        labels:
+          severity: ticket
+  - name: "latency"
+    objective: 99
+    description: "Sign-in calls answered within 1 s."
+    sli:
+      events:
+        error_query: |
+          (
+            sum(rate(http_server_requests_seconds_count{application="northline-auth",method="POST",uri=~"/api/auth/sign-in/.+"}[{{.window}}]))
+            -
+            sum(rate(http_server_requests_seconds_bucket{application="northline-auth",method="POST",uri=~"/api/auth/sign-in/.+",le=~"1(\\.0)?"}[{{.window}}]))
+          )
+        total_query: |
+          sum(rate(http_server_requests_seconds_count{application="northline-auth",method="POST",uri=~"/api/auth/sign-in/.+"}[{{.window}}]))
+    alerting:
+      name: NorthlineSignInLatencyBurn
+      labels:
+        category: latency
+      annotations:
+        summary: "Slow sign-ins (over 1 s) are burning the 30-day error budget (99 %)"
+        runbook_url: "https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/sign-in-latency.md"
+      page_alert:
+        labels:
+          severity: page
+      ticket_alert:
+        labels:
+          severity: ticket
