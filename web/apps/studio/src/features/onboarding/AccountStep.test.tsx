@@ -7,6 +7,7 @@ import { onboarding } from '../../test/fixtures';
 import { mockFetch, renderWithProviders } from '../../test/render';
 import { AccountStep } from './AccountStep';
 import { OnboardingLayout } from './OnboardingLayout';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 /** user-event with no timer between keystrokes: typing costs one pass, not a macrotask per character. */
 const user = () => userEvent.setup({ delay: null });
@@ -58,6 +59,7 @@ describe('AccountStep', () => {
     renderWithProviders(<AccountStep type="provider" onboarding={undefined} isNew onTypeChange={() => {}} onDone={() => {}} />);
     // the provinces and their launch status come from the region model (S-134; test data: src/test/regions.ts)
     expect(await screen.findByRole('option', { name: 'Ontario (waitlist)' })).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     await user().click(screen.getByRole('button', { name: /Continue as/ }));
     expect(screen.getByText('You need to accept the Business Terms.')).toBeTruthy();
     expect((screen.getByRole('link', { name: 'Business Terms' }) as HTMLAnchorElement).target).toBe('_blank');

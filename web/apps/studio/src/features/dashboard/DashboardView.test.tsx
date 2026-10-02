@@ -3,6 +3,7 @@ import { screen } from '@testing-library/react';
 import { renderWithProviders } from '../../test/ops';
 import { DashboardView } from './DashboardScreen';
 import type { Dashboard } from './api';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const navigate = vi.fn();
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigate }));
@@ -27,8 +28,9 @@ const data: Dashboard = {
 };
 
 describe('Dashboard', () => {
-  it('provider: headline, KPIs, today and needs-you like the design', () => {
+  it('provider: headline, KPIs, today and needs-you like the design', async () => {
     renderWithProviders(<DashboardView data={data} kind="provider" city="Calgary" merchantId="m1" />);
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Three visits today, two quotes waiting, $2,140 releasing Friday.');
     expect(screen.getByText('Tuesday 8 September · Calgary')).toBeTruthy();
     expect(screen.getByText('jobs this month · 2 quotes open')).toBeTruthy();

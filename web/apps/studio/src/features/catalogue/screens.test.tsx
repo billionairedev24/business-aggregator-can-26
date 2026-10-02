@@ -20,6 +20,7 @@ import { ListingsScreen } from './ListingsScreen';
 import { ServiceEditor } from './ServiceEditor';
 import { ProductEditor } from './ProductEditor';
 import { BulkUploadScreen } from './BulkUploadScreen';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 /** user-event with no timer between keystrokes: typing costs one pass, not a macrotask per character. */
 const user = () => userEvent.setup({ delay: null });
@@ -49,6 +50,7 @@ describe('ListingsScreen', () => {
     renderScreen(<ListingsScreen />);
     expect(screen.getByRole('heading', { name: 'Products & variants' })).toBeTruthy();
     expect(await screen.findAllByText('Brake pads · ceramic (front)')).not.toHaveLength(0);
+    await expectNoAxeViolations(document.body); // S-109
     expect(screen.queryByText('Brake inspection')).toBeNull();
     expect(screen.queryByRole('columnheader', { name: /Type/ })).toBeNull();
     expect(screen.getAllByText('Pending · 2 min').length).toBeGreaterThan(0);

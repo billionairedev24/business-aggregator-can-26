@@ -5,6 +5,7 @@ import { mockFetch, renderWithProviders } from '../../test/ops';
 import { HoursTab } from './HoursTab';
 import { HOURS_MESSAGES, slotCount, timeOffSchema, validateDays } from './rules';
 import type { Days } from './api';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 vi.mock('../shell/api', () => ({ useMerchantId: () => 'm1', useRole: () => 'owner' }));
 vi.mock('../../lib/session', () => ({ useSession: () => ({ data: { user: { id: 'ravi' } } }) }));
@@ -43,6 +44,7 @@ describe('Weekly hours', () => {
     renderWithProviders(<HoursTab onState={onState} />);
     expect(await screen.findByRole('button', { name: 'Ravi Sandhu', pressed: true })).toBeTruthy();
     expect(await screen.findByText(/1 of 2 start times free for a 45-min job/)).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
 
     await user.click(screen.getByRole('switch', { name: 'Bookable on Wed' }));
     expect(screen.getAllByRole('combobox', { name: /^Wed/ })).toHaveLength(2);

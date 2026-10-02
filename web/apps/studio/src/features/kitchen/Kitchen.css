@@ -44,7 +44,8 @@
 .nl-k-section { border-radius: var(--radius-md); }
 .nl-k-section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 18px 0 6px; }
 .nl-k-section-head h2 { font-size: 22px; margin: 0; display: flex; align-items: baseline; gap: 4px; }
-.nl-k-handle { font: inherit; color: var(--color-neutral-500); margin-right: 4px; background: none; border: 0; cursor: grab; min-width: 32px; min-height: 32px; padding: 0; }
+.nl-k-move { display: inline-flex; gap: 2px; align-self: center; }
+.nl-k-handle { font: inherit; color: var(--color-neutral-700); margin-right: 4px; background: none; border: 0; cursor: grab; min-width: 32px; min-height: 32px; padding: 0; }
 .nl-k-empty-line { margin: 6px 0; }
 .nl-k-item { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 10px 0; }
 @media (max-width: 480px) { .nl-k-item { grid-template-columns: 56px minmax(0, 1fr); } .nl-k-item-actions { grid-column: 1 / -1; } }

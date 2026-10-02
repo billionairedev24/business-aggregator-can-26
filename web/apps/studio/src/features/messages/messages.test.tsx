@@ -14,6 +14,7 @@ vi.mock('../shell/api', () => ({
 vi.mock('@tanstack/react-router', async orig => ({ ...(await orig<typeof import('@tanstack/react-router')>()), useNavigate: () => shell.navigate }));
 
 import { MessagesScreen } from './MessagesScreen';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 /** user-event with no timer between keystrokes: typing costs one pass, not a macrotask per character. */
 const user = () => userEvent.setup({ delay: null });
@@ -56,6 +57,7 @@ describe('MessagesScreen', () => {
     expect(screen.getByText('Phone numbers are masked; messages are kept for disputes.')).toBeTruthy();
     expect(screen.getByText('Booking BK-7712')).toBeTruthy();
     expect(await screen.findByText("Perfect, see you at 9. I'll send an ETA when I leave the previous job.")).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     for (const q of QUICK) expect(screen.getByRole('button', { name: q.text })).toBeTruthy();
     await waitFor(() => expect(calls.some(c => c.key === `POST ${base}/threads/t1/read`)).toBe(true));
   });

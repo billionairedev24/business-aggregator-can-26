@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { mockFetch, renderWithProviders } from '../../test/ops';
 import { addDays, localInstant, mondayOf, today } from '../../lib/time';
 import { AppointmentsScreen } from './AppointmentsScreen';
+import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 vi.mock('../shell/api', () => ({ useMerchantId: () => 'm1', useRole: () => 'owner' }));
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => vi.fn() }));
@@ -33,6 +34,7 @@ describe('Appointments calendar cells (S-74)', () => {
     });
     renderWithProviders(<AppointmentsScreen />);
     expect(await screen.findByText('Open slot')).toBeTruthy();
+    await expectNoAxeViolations(document.body); // S-109
     const wed = screen.getAllByRole('group').find(g => (g.getAttribute('aria-label') ?? '').startsWith('Wednesday'))!;
     const cells = within(wed).getAllByText(/Brake inspection|Open slot/).map(e => e.closest('.nl-appt-job')!);
     expect(cells.map(c => c.textContent)).toEqual([expect.stringContaining('Brake inspection'), expect.stringContaining('Open slot')]);

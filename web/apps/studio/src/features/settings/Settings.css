@@ -57,7 +57,7 @@
 .nl-set-matrix thead th:not(:first-child), .nl-set-matrix td { width: 18%; text-align: center; }
 .nl-set-cell { font: inherit; min-width: 44px; min-height: 44px; border: 0; background: transparent; cursor: pointer; border-radius: var(--radius-md); color: var(--color-text); }
 .nl-set-cell[aria-pressed='true'] { color: var(--color-accent-800); font-weight: 600; }
-.nl-set-cell[aria-pressed='false'] { color: var(--color-neutral-600); }
+.nl-set-cell[aria-pressed='false'] { color: var(--color-neutral-700); } /* S-109: 4.5:1 (neutral-600 was 4.2:1) */
 .nl-set-cell:hover { background: var(--color-accent-100); }
 .nl-set-cell:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
 .nl-set-quiet { font-size: 13px; color: var(--color-neutral-700); margin-top: 12px; }

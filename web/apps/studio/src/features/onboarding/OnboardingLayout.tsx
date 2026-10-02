@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { CaretDown } from '@phosphor-icons/react';
-import { Avatar, Menu, useLocale } from '@northline/ui';
+import { Avatar, Menu, useLocale, SkipLink } from '@northline/ui';
 import { useSession, useSignOut } from '../../lib/session';
 import type { MerchantType } from '../shell/api';
 import { Brand } from '../shell/StudioLayout';
@@ -47,6 +47,7 @@ export function OnboardingLayout({ step, type, onboarding, onGo, children }: Onb
   const approved = onboarding?.status === 'active';
   return (
     <div className="nl-shell">
+      <SkipLink />
       <TopBar onboarding={onboarding} />
       <div className="nl-ob">
         <aside>
@@ -69,7 +70,7 @@ export function OnboardingLayout({ step, type, onboarding, onGo, children }: Onb
           </nav>
           <p className="nl-ob-rail-note">{t('railNote')}</p>
         </aside>
-        <main className="nl-ob-main" id="main">{children}</main>
+        <main className="nl-ob-main" id="main" tabIndex={-1}>{children}</main>
       </div>
     </div>
   );
