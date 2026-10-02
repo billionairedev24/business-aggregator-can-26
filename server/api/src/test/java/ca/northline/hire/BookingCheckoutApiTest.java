@@ -565,8 +565,10 @@ class BookingCheckoutApiTest extends IntegrationTest {
                             .filter(e -> e.aggregateId().equals(bookingId)))
                     .singleElement()
                     .satisfies(e -> assertThat(e.customerId()).isEqualTo(customer));
+            // The escrow is released by payments' asynchronous listener, which shares the context's event executor
+            // with every other test class; 10 s timed out twice when the machine was busy, so allow 30 s.
             Awaitility.await()
-                    .atMost(Duration.ofSeconds(10))
+                    .atMost(Duration.ofSeconds(30))
                     .untilAsserted(() -> assertThat(jdbc.sql(
                                             "select release_at <= now() from payments.escrows where ref_type = 'booking' and ref_id = ?")
                                     .params(bookingId)
