@@ -149,6 +149,10 @@ class SecurityConfig {
                         .access(AuthorizationManagers.allOf(
                                 AuthorityAuthorizationManager.hasAuthority("SCOPE_courier"),
                                 (auth, _) -> new AuthorizationDecision(dpopBound(auth.get()))))
+                        // S-102: the push device registry is the apps' own (a DPoP-bound token of the consumer or
+                        // courier app); a browser session's or a partner's bearer token has no device to register
+                        .requestMatchers("/api/v1/me/devices", "/api/v1/me/devices/**")
+                        .access((auth, _) -> new AuthorizationDecision(dpopBound(auth.get())))
                         // Studio tokens (scope merchant) and partner clients (S-30: role partner — each handler
                         // must also be marked @PartnerAccess, and only the partner's businesses are open)
                         .requestMatchers("/api/v1/merchants/**")
