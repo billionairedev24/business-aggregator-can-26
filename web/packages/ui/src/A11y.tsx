@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
 import { defineMessages } from './i18n';
 
 const useT = defineMessages({ en: { skip: 'Skip to content' }, fr: { skip: 'Passer au contenu' } });
@@ -17,16 +17,17 @@ const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayout
 /**
  * Publishes the height of a sticky header as `--nl-sticky-top` on <html>, which `scroll-padding-top` reads, so the
  * browser scrolls a focused control clear of the header instead of under it (WCAG 2.4.11 focus not obscured).
- * Returns the measured height.
+ * `onHeight` also receives it (the Studio shell positions its sidebar under the top bar); without it nothing re-renders.
  */
-export function useStickyOffset<E extends HTMLElement>(ref: RefObject<E | null>, initial = 72): number {
-  const [height, setHeight] = useState(initial);
+export function useStickyOffset<E extends HTMLElement>(ref: RefObject<E | null>, onHeight?: (height: number) => void): void {
+  const listener = useRef(onHeight);
+  listener.current = onHeight;
   useIsoLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     const publish = () => {
       const h = Math.round(el.getBoundingClientRect().height);
-      setHeight(h);
+      listener.current?.(h);
       document.documentElement.style.setProperty('--nl-sticky-top', `${h + 8}px`);
     };
     publish();
@@ -35,7 +36,6 @@ export function useStickyOffset<E extends HTMLElement>(ref: RefObject<E | null>,
     ro.observe(el);
     return () => { ro.disconnect(); document.documentElement.style.removeProperty('--nl-sticky-top'); };
   }, [ref]);
-  return height;
 }
 
 /** Moves focus into `ref` when `active` turns on and back to what had it when it turns off; Tab stays inside. */

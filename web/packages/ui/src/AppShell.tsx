@@ -50,7 +50,8 @@ export function AppShell({ brand, headerStart, headerEnd, pinned, groups, curren
   const open = openGroup === undefined ? (activeGroup ?? groups[0]?.label) : openGroup;
   const headerRef = useRef<HTMLElement>(null);
   // S-109: the top bar's height also becomes the page's scroll padding (focus not obscured, WCAG 2.4.11)
-  const top = useStickyOffset(headerRef);
+  const [top, setTop] = useState(72);
+  useStickyOffset(headerRef, setTop);
   useEffect(() => { if (!narrow) setDrawer(false); }, [narrow]);
   // S-109: the off-canvas menu is modal — focus moves in, Tab stays in, Escape or close returns focus to the menu button
   const sheet = useFocusTrap<HTMLDivElement>(narrow && drawer);
