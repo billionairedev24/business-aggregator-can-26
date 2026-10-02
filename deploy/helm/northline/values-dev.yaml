@@ -26,6 +26,12 @@ edge:
   domainReconciler:
     enabled: true
 
+# S-97: this environment's apps are the development builds (eas.json); set appleTeamId and androidCertSha256 once the
+# Apple team and the Play app-signing key exist (docs/runbooks/mobile.md § App Links).
+mobileApps:
+  iosBundleIds: [ ca.northline.app.dev, ca.northline.courier.dev ]
+  androidPackages: [ ca.northline.app.dev, ca.northline.courier.dev ]
+
 apps:
   api:
     docsRoutes: true            # S-125: Swagger UI, Scalar, Redoc and the specs on the api host

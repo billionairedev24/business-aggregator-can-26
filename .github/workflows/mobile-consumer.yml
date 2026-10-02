@@ -1,0 +1,151 @@
+# S-97 — the consumer app (mobile/apps/consumer: Expo + React Native, @northline/mobile-kit). docs/runbooks/mobile.md.
+#
+# MANUAL ONLY: like every workflow here (docs/runbooks/ci.md), it runs only when started from
+# Actions › mobile-consumer › Run workflow, or
+# `gh workflow run mobile-consumer.yml --ref <branch> [-f web-smoke=false] [-f native-check=false] [-f eas=preview]`.
+# Never add push / pull_request / schedule triggers without the lead's say-so.
+#
+#   checks        make mobile-consumer-check: ESLint, tsc, Jest + RNTL, `expo export` of the iOS and Android bundles
+#   native-check  make mobile-consumer-native-check: `expo prebuild` of both platforms (dev + prod) and checks of the
+#                 generated manifests, entitlements and permissions (no Xcode or Android SDK needed)
+#   web-smoke     the web build on the fixture backend in headless Chromium (Journey A, the tabs, French)
+#   eas        optional EAS Build of a profile (needs the EXPO_TOKEN secret and the EAS project; skipped without them).
+#              Signing credentials live in EAS, never in this repository.
+name: mobile-consumer
+
+on:
+  workflow_dispatch:
+    inputs:
+      web-smoke:
+        description: Web build + headless Chromium smoke test
+        type: boolean
+        default: true
+      native-check:
+        description: expo prebuild of both platforms + manifest checks
+        type: boolean
+        default: true
+      eas:
+        description: EAS Build profile to build after the checks (none = no build)
+        type: choice
+        options: [none, development, preview, production]
+        default: none
+      platform:
+        description: EAS Build platform
+        type: choice
+        options: [all, ios, android]
+        default: all
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-consumer-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+
+defaults:
+  run:
+    working-directory: mobile
+
+jobs:
+  checks:
+    name: lint, typecheck, Jest, iOS + Android bundles
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - name: pnpm (corepack) and its store
+        run: |
+          corepack enable
+          pnpm --version
+          echo "PNPM_STORE=$(pnpm store path --silent)" >> "$GITHUB_ENV"
+      - uses: actions/cache@v4
+        with:
+          path: ${{ env.PNPM_STORE }}
+          key: pnpm-mobile-${{ runner.os }}-${{ hashFiles('mobile/pnpm-lock.yaml') }}
+          restore-keys: pnpm-mobile-${{ runner.os }}-
+      - run: pnpm install --frozen-lockfile
+      - name: make mobile-consumer-check
+        run: make -C .. mobile-consumer-check
+        env:
+          CI: "1"
+
+  native-check:
+    name: expo prebuild (iOS + Android) and manifest checks
+    if: ${{ inputs.native-check }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+      - name: make mobile-consumer-native-check
+        run: make -C .. mobile-consumer-native-check
+        env:
+          CI: "1"
+
+  web-smoke:
+    name: web build smoke (headless Chromium)
+    if: ${{ inputs.web-smoke }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    # Node 22, Chromium and its system libraries; the same Playwright version as the app's playwright-core.
+    container: mcr.microsoft.com/playwright:v1.56.1-noble
+    steps:
+      - uses: actions/checkout@v5
+      - name: pnpm install
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+      - name: make mobile-consumer-web-smoke
+        run: |
+          command -v make >/dev/null || (apt-get update -qq && apt-get install -y -qq --no-install-recommends make >/dev/null)
+          make -C .. mobile-consumer-web-smoke
+        env:
+          CI: "1"
+          PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobile-consumer-smoke
+          path: mobile/apps/consumer/smoke-out/
+          if-no-files-found: ignore
+
+  eas:
+    name: EAS Build (${{ inputs.eas }}, ${{ inputs.platform }})
+    if: ${{ inputs.eas != 'none' }}
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EAS_PROJECT_ID: ${{ vars.EAS_CONSUMER_PROJECT_ID }}
+      EAS_OWNER: ${{ vars.EAS_OWNER }}
+    steps:
+      - name: Is EAS configured?
+        id: gate
+        working-directory: .
+        run: |
+          if [ -n "$EXPO_TOKEN" ] && [ -n "$EAS_PROJECT_ID" ]; then echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else echo "enabled=false" >> "$GITHUB_OUTPUT"; echo "EXPO_TOKEN or EAS_PROJECT_ID is not set; skipping EAS (docs/runbooks/mobile.md § EAS)." >> "$GITHUB_STEP_SUMMARY"; fi
+      - uses: actions/checkout@v5
+        if: steps.gate.outputs.enabled == 'true'
+      - uses: actions/setup-node@v5
+        if: steps.gate.outputs.enabled == 'true'
+        with:
+          node-version: "22"
+      - name: EAS Build (queued on Expo's builders; this job waits for nothing)
+        if: steps.gate.outputs.enabled == 'true'
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          make -C .. mobile-consumer-eas-build EAS_PROFILE=${{ inputs.eas }} EAS_PLATFORM=${{ inputs.platform }} EAS_FLAGS=--no-wait

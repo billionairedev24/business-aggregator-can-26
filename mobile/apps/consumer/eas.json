@@ -1,0 +1,76 @@
+{
+  "$schema": "https://raw.githubusercontent.com/expo/eas-cli/main/packages/eas-json/schema/eas.schema.json",
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote",
+    "requireCommit": true
+  },
+  "build": {
+    "base": {
+      "node": "22.22.2",
+      "pnpm": "10.17.0",
+      "credentialsSource": "remote",
+      "env": {
+        "EXPO_PUBLIC_FIXTURES": "0"
+      }
+    },
+    "development": {
+      "extends": "base",
+      "environment": "development",
+      "developmentClient": true,
+      "distribution": "internal",
+      "channel": "development",
+      "env": {
+        "APP_VARIANT": "development",
+        "EXPO_PUBLIC_API_URL": "https://api.dev.northline.ca/api/v1",
+        "EXPO_PUBLIC_AUTH_ISSUER": "https://auth.dev.northline.ca",
+        "EXPO_PUBLIC_SITE_ORIGIN": "https://dev.northline.ca"
+      },
+      "ios": { "simulator": true, "resourceClass": "m-medium" },
+      "android": { "buildType": "apk" }
+    },
+    "development-device": {
+      "extends": "development",
+      "ios": { "simulator": false, "resourceClass": "m-medium" }
+    },
+    "preview": {
+      "extends": "base",
+      "environment": "preview",
+      "distribution": "internal",
+      "channel": "preview",
+      "autoIncrement": true,
+      "env": {
+        "APP_VARIANT": "preview",
+        "EXPO_PUBLIC_API_URL": "https://api.staging.northline.ca/api/v1",
+        "EXPO_PUBLIC_AUTH_ISSUER": "https://auth.staging.northline.ca",
+        "EXPO_PUBLIC_SITE_ORIGIN": "https://staging.northline.ca"
+      },
+      "ios": { "resourceClass": "m-medium" },
+      "android": { "buildType": "apk" }
+    },
+    "production": {
+      "extends": "base",
+      "environment": "production",
+      "distribution": "store",
+      "channel": "production",
+      "autoIncrement": true,
+      "env": {
+        "APP_VARIANT": "production",
+        "EXPO_PUBLIC_API_URL": "https://api.northline.ca/api/v1",
+        "EXPO_PUBLIC_AUTH_ISSUER": "https://auth.northline.ca",
+        "EXPO_PUBLIC_SITE_ORIGIN": "https://northline.ca"
+      },
+      "ios": { "resourceClass": "m-medium" },
+      "android": { "buildType": "app-bundle" }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascAppId": "REPLACE_WITH_APP_STORE_CONNECT_APP_ID",
+        "appleTeamId": "REPLACE_WITH_APPLE_TEAM_ID"
+      },
+      "android": { "track": "internal", "releaseStatus": "draft" }
+    }
+  }
+}

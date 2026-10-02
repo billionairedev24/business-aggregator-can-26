@@ -30,10 +30,13 @@ export const colors = {
   accent300: mix(WHITE, base.accent, 0.38),
   accent600: mix(base.accent, BLACK, 0.14),
   accent700: mix(base.accent, BLACK, 0.26),
+  accent800: mix(base.accent, BLACK, 0.4),
+  accent900: mix(base.accent, BLACK, 0.55),
 
   accent2_100: mix(WHITE, base['accent-2'], 0.09),
   accent2_200: mix(WHITE, base['accent-2'], 0.2),
   accent2_700: mix(base['accent-2'], BLACK, 0.24),
+  accent2_800: mix(base['accent-2'], BLACK, 0.38),
 
   highlight100: mix(WHITE, base.highlight, 0.18),
   highlight300: mix(WHITE, base.highlight, 0.5),
@@ -41,8 +44,12 @@ export const colors = {
   neutral100: mix(base.bg, base.text, 0.04),
   neutral200: mix(base.bg, base.text, 0.08),
   neutral300: mix(base.bg, base.text, 0.15),
+  neutral400: mix(base.bg, base.text, 0.28),
   neutral500: mix(base.bg, base.text, 0.42),
+  neutral600: mix(base.bg, base.text, 0.56),
   neutral700: mix(base.bg, base.text, 0.7),
+  neutral800: mix(base.bg, base.text, 0.82),
+  neutral900: mix(base.bg, base.text, 0.92),
 } as const;
 
 const px = (v: string) => Number.parseFloat(v);

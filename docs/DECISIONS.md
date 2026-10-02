@@ -5889,3 +5889,142 @@ server environment variable. Runbook: [runbooks/courier-app.md](runbooks/courier
   at most 7 days.", "Choose a staff member.", "Only the person on the shift or an admin can hand it over.", "Use a date
   and time like 2026-09-08T18:00:00Z.", "That page link is no longer valid. Start from the first page.", "Choose a
   business.".
+
+## 2026-10-02 — S-97 Consumer app: tech decision and project setup
+
+Branch `mobile/s-97-consumer-setup`. **No migration** (the V240–V244 range offered is unused) and no new server
+environment variable; four new consumer-web variables (below). Plan: [MOBILE_PLAN.md](MOBILE_PLAN.md); runbook:
+[runbooks/mobile.md](runbooks/mobile.md).
+
+- **Tech decision: Expo SDK 57 + React Native 0.86 + expo-router**, as the backlog recommends and S-87 already uses,
+  following samop-inv-ship-26's `apps/mobile` (Continuous Native Generation, `app.config.ts` as the single native
+  source, EAS profiles per environment, privacy manifest, a prebuild check). The app is `mobile/apps/consumer`
+  (`@northline/consumer-app`) in the `mobile/` workspace; the earlier `mobile/s-97-setup` branch had no commits and was
+  ignored.
+- **Tokens shared with the web** (the acceptance criterion): through `@northline/mobile-kit`'s theme, which reads
+  `web/packages/tokens/tokens.json`; the kit gained the ramp steps design 01 uses (accent-800/900, accent-2-800,
+  neutral-400/600/800/900, derived as `derived.css` does). Colour literals are ESLint errors and a test scans for them.
+- **Kit extensions** (shared with the courier app, tested in the kit): the api client can call **anonymously**
+  (`auth: 'optional' | 'none'`, for guests' public reads; an ended sign-in falls back to anonymous for optional
+  calls), gives up a request after **20 s** (`NetworkError`, flaky networks), takes extra and default headers, has
+  `put/patch/delete`, and keeps a 422's `rule` and the whole problem body on `ApiError`. **Push hook point for S-102:**
+  `setPushRegistrar()` / `PushHooks.signedIn(api)` / `PushHooks.signingOut(api)` — the AuthProvider calls them after
+  every sign-in and before sign-out; no-ops until S-102 installs a registrar; errors never block either.
+- **The `mobile-consumer` client signs in on the consumer site's page** (S-87's open point): it joins `consumer-bff`
+  and `courier-app` in `northline.auth.consumer-clients` (application.yml and the property default);
+  `MobileDpopApiTest` now expects `CONSUMER_ORIGIN/sign-in` and the `continueTo` back to the app.
+- **App Links / Universal Links files** (S-29's open point) are served by the consumer web's node server and its
+  Vite dev server (`server/app-links.mjs`): `/.well-known/apple-app-site-association` (each bundle id claims `/app/*`
+  or, for the courier ids, `/courier/*`; `webcredentials` for both, for native passkeys later) and
+  `/.well-known/assetlinks.json` (`handle_all_urls` + `get_login_creds`), plus a no-store "Open the Northline app" page
+  at `/app/oauth2redirect` and `/courier/oauth2redirect`. Configuration: `NL_APPLE_TEAM_ID`, `NL_IOS_BUNDLE_IDS`,
+  `NL_ANDROID_PACKAGES`, `NL_ANDROID_CERT_SHA256`, set by the chart from the new `mobileApps` values (dev and staging
+  list the `.dev` / `.preview` variants). **A file whose team id / certificate isn't configured answers 404** — nothing
+  is guessed; none is configured anywhere yet (no Apple team, no Play app). The consumer app declares
+  `applinks:`/`webcredentials:` for the site host and an `autoVerify` intent filter for `https://<site>/app/…` (only
+  when the site origin is https).
+- **Shell (design 01 `Consumer Screen`):** five tabs Home · Services · Cart · Orders · You with **text labels only**
+  (the design has no icons in the tab bar), current tab accent-700 semibold, a rosehip count badge on Cart (S-99 feeds
+  it); sub-screens on the root stack with the design's own header ("← Back" + centred title) instead of the native
+  navigation header. The first launch opens Welcome; after Create account, Sign in or Browse first the app opens on
+  Home (`nl.app.welcomed`). Personal screens show guests a sign-in prompt.
+- **Every screen of design 01 is a route now** (`src/screens.ts`: route, story, tab, personal, api), stubs for B–D
+  showing the design's header or name, the story and the api; a test checks the list against the design's `screen`
+  options (+ `quote`, which the options omit) and MOBILE_PLAN. Routes chosen for deep links: `/product/[id]`,
+  `/orders/[id]/{confirmed,track,delivered}`, `/problem/[kind]/[id]`, `/services/[category]`, `/providers/[slug]`,
+  `/book/[slug]/{service,time,review}`, `/bookings/[id]/{booked,eta,sign-off,review}`, `/quotes/[id]`.
+- **Parallel work:** copy is split per area (`src/i18n/{en,fr-CA}/{common,screens,journeyA,shop,services,account}.ts`)
+  and fixtures per area (`src/fixtures/<area>.ts`) so S-99/S-100/S-101 don't edit the same files (MOBILE_PLAN
+  § Working in parallel).
+- **States:** `QueryView` (skeleton → error with Retry, keeping data already shown → empty → content), `ErrorState`
+  (network / 429 / 5xx / ended sign-in / the api's own message), `EmptyState`, `OfflineBanner` (NetInfo),
+  `SignInPrompt`. Queries retry twice with back-off on no answer or 5xx, never on 4xx; mutations never retry
+  automatically.
+- **Guest id:** a random `g_…` key per installation (key-value store) sent as `X-Northline-Guest` on every api call,
+  as the consumer-bff does for the web (the api keys guest carts by it and merges at sign-in).
+- **Browser sign-in** (S-97's `/sign-in`): the RFC 8252 flow with `ca.northline.app:/oauth2redirect`; S-98 adds the
+  in-app flow. Copy ours ("Sign in in the browser", en/fr).
+- **Environment config:** `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_AUTH_ISSUER`, **`EXPO_PUBLIC_SITE_ORIGIN`** (new: legal
+  pages, the https redirect, App Links), `EXPO_PUBLIC_FIXTURES`; EAS profiles development → dev, preview → staging,
+  production → prod; preview/production refuse http and production refuses fixtures.
+- **Native config:** location **while in use only** — the expo-location plugin's generic "Always" and motion texts
+  are removed from Info.plist (`false`), background location / foreground service / camera / microphone / storage
+  removed from the Android manifest; `allowBackup=false`; privacy manifest (name, email, phone, address, precise
+  location, user id; linked; app functionality; no tracking). Icon: a placeholder pin drawn from the base tokens
+  (`scripts/gen-icons.mjs`) until design supplies one.
+- **Checks and CI:** `make mobile-consumer-{check,lint,typecheck,test,export,native-check,web-smoke,eas-build,…}`;
+  `.github/workflows/mobile-consumer.yml` (workflow_dispatch only) and `ci/gitlab/mobile-consumer.yml`
+  (`PIPELINE_PART=mobile-consumer`, never in `all`; the EAS build a further manual job). The native check runs
+  `expo prebuild` for both platforms (development and production) and asserts 26 settings of the generated projects
+  — the closest this environment gets to "builds for iOS and Android in CI": no binary is compiled (no Xcode, no
+  Android SDK); `expo export` proves the JS bundles for both.
+- **Not done / never run:** no device, simulator, emulator or native compile; never exercised: Keychain / Keystore,
+  the system-browser sign-in against a real northline-auth, App Links verification by iOS / Android (no team id, no
+  certificate), EAS Build / Submit. The app's DPoP key is the kit's software key (S-87's follow-up stands).
+
+## 2026-10-02 — S-98 Consumer app Journey A: welcome, sign up, OTP, MFA, location
+
+Branch `mobile/s-98-journey-a` (on S-97). **No migration** (V240–V244 unused) and no new environment variable.
+
+- **Sign-in on the app's own screens (first-party), ending in the same OAuth code + PKCE + DPoP tokens.** Design 01
+  draws sign up, the code and the second factor natively, and the brief asks for them as app screens; S-29/S-87's
+  system-browser flow would have shown the consumer site's pages instead. So the app drives northline-auth's JSON
+  sign-in API (the one S-62's pages use) in its own cookie session and hands off to the authorization endpoint:
+  `GET /oauth2/authorize` first (northline-auth keeps the request), the JSON calls, then `GET continueTo` → the code on
+  the claimed **https** redirect `${CONSUMER_ORIGIN}/app/oauth2redirect` (already registered for `mobile-consumer`;
+  fetch can't land on the custom scheme), read from the URL fetch landed on, exchanged with DPoP. **No server change**:
+  `AppAuthorizationResume`'s `continueTo` and the origin check (no `Origin` from a native request) already allow it;
+  `MobileDpopApiTest.Sessions` now proves registration with a phone code and no second factor, and phone-code
+  sign-in, ending in DPoP tokens on the https redirect. `continueTo` is followed only when it is the issuer's
+  `/oauth2/authorize` for this client and this `state` (rebuilt on the configured issuer, so a proxy's host in it
+  doesn't matter); without one (lost), the original request is asked again — the session is signed in by then.
+  Kit: `AppSignIn` (`src/auth/handoff.ts`); `beginSignIn` takes a redirect URI and `PendingSignIn` carries it to the
+  code exchange. Passkeys, Google and Apple still use the **system browser** on the consumer site's page (the app has
+  no native passkey / Sign in with Apple / Google module): "Sign in with a passkey", "Continue with Apple", "Google".
+- **The cookie session** lives in the platform's HTTP cookie store (NSHTTPCookieStorage / Android CookieManager via
+  React Native's networking), never in JS; the half-done flow (what was typed, the PKCE verifier) lives in memory —
+  closing the app mid-way means starting again.
+- **Sign in (an addition: design 01's Welcome "Sign in" leads to Sign up):** `/sign-in` — "Welcome back", email or
+  mobile, Send code → the code to the account's phone (S-62's consumer sign-in; the same answer whether or not an
+  account matched), plus the browser buttons. Copy from the consumer web (S-62) where it has it, ours otherwise.
+- **The second factor "as the consumer design allows":** design 01 says two factors are mandatory, but S-62 (design
+  06) allows "SMS code · backup only" = no second factor (`POST /register/complete`), and the app follows S-62. The
+  three options are shown with the design's words: **Passkey is shown but can't be picked** (no native passkey module;
+  a line of ours says to add one later on the Northline site), **Authenticator app** ("Scan QR code": the QR for
+  another device, the key, and "Open my authenticator app" = the `otpauth://` link for one on this phone; then its
+  6-digit code), **SMS code** ("Continue with SMS"). Default selection: Authenticator app (the design's default,
+  passkey, isn't available). Consumer tokens without `acr=mfa` are fine (S-29/S-62); paying asks for a step-up (S-51).
+- **Code entry:** six boxes over one real field (`textContentType="oneTimeCode"`, `autoComplete="sms-otp"`: iOS and
+  Android fill it from the SMS); six digits submit once by themselves when online; "Resend in 0:45" from the server's
+  `resendAfterSeconds`, then "Resend code"; "Call me instead" = a voice code (the server throttles inside 45 s and the
+  app shows how long to wait); "Edit" goes back to the form with what was typed.
+- **Validation:** the rules and exact messages of docs/spec/validation-rules.md § Registration on the phone (the same as
+  `@northline/auth-kit`), "Full name" split like the consumer site (last word = last name); the auth server's 422 rules
+  are mapped to the same messages so French people read French; flow errors (`otp_throttled`, `rate_limited`,
+  `code_not_sent`, `flow_not_started` → start again, no connection) in the kit's words. "Send code" stays off until the
+  mobile and the terms are filled (S-62's rule).
+- **Legal links** (Terms, Privacy Policy) open the consumer site's verbatim pages **outside the app** (`Linking.openURL`).
+- **Location (A5):** the provinces from `GET /geo/markets` with their stage (live and pilot pickable; waitlist and
+  not-yet greyed, as the design's Ontario/Québec), Google suggestions through the api, the unit / buzzer note, tags
+  "Zone · …", "N pooled runs / day" and "Sales tax N%" (the design's "GST 5%" names a tax of one province; the rate
+  comes from the province, the label is the consumer web's), Save — or the waitlist outside a live market (S-47).
+  "Use my location" is the **only** place the app asks for the location permission; granted → `GET /geo/reverse`
+  inside a live/pilot market; refused → a message (and "Open Settings" when it can't ask again) and the **api's
+  fallback market** stands ("Showing {city} for now…"). The saved address is kept on the phone (`nl.location`, like
+  the web's localStorage), not in `/me/addresses` (S-101 decides). `useDeliveryLocation()` (saved → the position only
+  if location was already allowed → fallback) is the contract for journeys B–D.
+- **Welcome's kicker** "Northline · {province}" names the person's province, else the region model's default
+  (`GET /geo/regions`); never a fixed one.
+- **Sign out** (the You tab, until S-101 builds Profile): the S-102 push hook, `/oauth2/revoke` (ends the sign-in,
+  S-20), the key and tokens deleted, back to Home as a guest; plus "Language / Langue" and the legal links.
+- **Offline-tolerant:** requests give up after 20 s; failures keep what was typed and say so; the hand-off can be
+  retried ("Finish signing in") without repeating the sign-in; the offline banner shows on every screen.
+- **Tests:** app 25 new (journeyA: every step on the fixture backend incl. the hand-off's two authorize calls and DPoP
+  token exchange, rules, server errors, waitlist, permission granted/refused, push hooks at sign-in/out, French;
+  rules: messages en/fr, 422 mapping, flow errors, the countdown); kit 4 new (hand-off: kept request, continueTo, no
+  continueTo, refused continueTo, no code, offline); server 2 new in `MobileDpopApiTest`; the web smoke runs all of
+  Journey A in headless Chromium.
+- **Never run:** on a device — so never exercised: the platform cookie store carrying the auth session between the
+  JSON calls and the authorize request, fetch following northline-auth's redirect to the consumer site and reporting
+  the landed URL (React Native's `Response.url`), SMS autofill, the location permission dialogs, the Keychain.
+  The fixture backend simulates the redirect-following. **This is the first thing to try on a phone.**
