@@ -11,3 +11,6 @@ terraform.tfvars
 *.auto.tfvars
 backend.hcl
 # .terraform.lock.hcl IS committed once generated for every platform (README § Provider lock files).
+
+# Lock files from offline validation use the local provider mirror; generate real ones against the registry (S-114).
+.terraform.lock.hcl
