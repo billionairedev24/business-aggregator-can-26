@@ -104,16 +104,17 @@ class ConsoleTaxonomyApiTest extends CatalogueApiTest {
 
         call(
                         put(BASE + "/categories/{id}", MECHANIC),
-                        "{\"nameEn\":\"Mobile mechanic\",\"nameFr\":\"Mécanicien mobile\",\"bookingType\":\"visit\",\"regulatedRegistry\":\"AMVIC\"}",
+                        // S-116: the seeded French name (V316) is replaced by staff's own
+                        "{\"nameEn\":\"Mobile mechanic\",\"nameFr\":\"Mécanique mobile\",\"bookingType\":\"visit\",\"regulatedRegistry\":\"AMVIC\"}",
                         StaffRole.ADMIN)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.nameFr").value("Mécanicien mobile"));
+                .andExpect(jsonPath("$.nameFr").value("Mécanique mobile"));
         new ca.northline.tools.CategorySeeder(dataSource).seed();
         assertThat(jdbc.sql("select name_i18n->>'fr' from catalogue.categories where id = ?")
                         .params(MECHANIC)
                         .query(String.class)
                         .single())
-                .isEqualTo("Mécanicien mobile");
+                .isEqualTo("Mécanique mobile");
         call(put(BASE + "/categories/{id}", "service.nope"), "{\"nameEn\":\"Nope\"}", StaffRole.ADMIN)
                 .andExpect(status().isNotFound());
 
@@ -124,7 +125,7 @@ class ConsoleTaxonomyApiTest extends CatalogueApiTest {
                         .query(String.class)
                         .single())
                 .contains("nameFr")
-                .doesNotContain("Mécanicien");
+                .doesNotContain("Mécanique");
     }
 
     @Test

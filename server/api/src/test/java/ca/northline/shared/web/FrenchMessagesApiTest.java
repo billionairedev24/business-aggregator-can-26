@@ -1,6 +1,7 @@
 package ca.northline.shared.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -68,6 +69,31 @@ class FrenchMessagesApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.detail")
                         .value("L’accès Entreprise exige un deuxième facteur. Reconnectez-vous avec votre clé d’accès"
                                 + " ou votre application d’authentification."));
+    }
+
+    /** S-116: every ProblemDetail — title and detail, 404s included — follows Accept-Language too. */
+    @Test
+    void problemTitlesAndNotFoundDetailsAreFrench() throws Exception {
+        var biz = data.business(MerchantRole.OWNER);
+        var missing = "01J9ZD3V0000000000000NONE1";
+
+        mvc.perform(get("/api/v1/merchants/{m}/listings/{id}", biz.merchantId(), missing)
+                        .header(HttpHeaders.ACCEPT_LANGUAGE, "fr-CA")
+                        .with(TestJwt.member(biz.userId())))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.title").value("Introuvable"))
+                .andExpect(jsonPath("$.detail").value("Aucune annonce avec l’identifiant " + missing))
+                .andExpect(jsonPath("$.code").value("not_found"));
+        mvc.perform(get("/api/v1/merchants/{m}/listings/{id}", biz.merchantId(), missing)
+                        .with(TestJwt.member(biz.userId())))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.title").value("Not Found"))
+                .andExpect(jsonPath("$.detail").value("No listing with id " + missing));
+        mvc.perform(patchName(biz.merchantId(), "Hijacked")
+                        .header(HttpHeaders.ACCEPT_LANGUAGE, "fr")
+                        .with(TestJwt.memberWithoutMfa(biz.userId())))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.title").value("Accès refusé"));
     }
 
     @Test
