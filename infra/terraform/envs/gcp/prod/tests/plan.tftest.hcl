@@ -132,3 +132,36 @@ run "edge" {
     error_message = "gitops_addon_values must hold the identity of every platform add-on (S-6, S-17)."
   }
 }
+
+# S-114: prod keeps a copy of the database and of the buckets in the other Canadian region, never outside Canada.
+run "backups_cross_region" {
+  command = plan
+
+  assert {
+    condition     = output.backup.secondary_region == "northamerica-northeast2" && output.backup.postgres.copy_region == "northamerica-northeast2" && output.backup.postgres.copy_kind == "cross-region-read-replica"
+    error_message = "prod must copy the database to the other Canadian region (northamerica-northeast2) (docs/runbooks/backups-dr.md)."
+  }
+
+  assert {
+    condition     = output.backup.postgres.retention_days == 35 && output.backup.storage.replica_region == "northamerica-northeast2" && length(output.backup.storage.replica_buckets) == length(output.backup.storage.buckets)
+    error_message = "prod: 35 days of point-in-time recovery and a replica of every bucket in northamerica-northeast2."
+  }
+
+  assert {
+    condition     = !output.backup.kafka.backed_up && !output.backup.cache.backed_up && output.backup.search.snapshot_repository == "found-snapshots"
+    error_message = "Kafka and Valkey are rebuilt, not restored; search snapshots go to Elastic Cloud's found-snapshots."
+  }
+}
+
+run "backups_follow_the_primary_region" {
+  command = plan
+
+  variables {
+    region = "northamerica-northeast2"
+  }
+
+  assert {
+    condition     = output.backup.secondary_region == "northamerica-northeast1" && output.backup.storage.replica_region == "northamerica-northeast1"
+    error_message = "With the primary in northamerica-northeast2, the copies go to northamerica-northeast1 (still Canada)."
+  }
+}

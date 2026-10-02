@@ -13,6 +13,9 @@ locals {
     "managed-by"     = "terraform"
   }
 
+  # S-114: the other Canadian region of this cloud, for the backup copies and bucket replicas.
+  secondary_region = { canadacentral = "canadaeast", canadaeast = "canadacentral" }[var.region]
+
   context = {
     resource_group_name = azurerm_resource_group.this.name
     name                = local.name
@@ -164,6 +167,7 @@ module "storage" {
   kms_key       = { id = module.kms.key_ids["data"] }
   writers       = { api = module.kubernetes.workload_identities["api"].principal }
   force_destroy = var.environment == "dev"
+  replica       = local.storage_replica
 }
 
 module "secrets" {
@@ -173,6 +177,27 @@ module "secrets" {
   readers             = { external-secrets = module.kubernetes.workload_identities["external-secrets"].principal }
   kms_key             = { id = module.kms.key_ids["data"] }
   deletion_protection = var.deletion_protection
+}
+
+# ---- backups and disaster recovery (S-114) ------------------------------------------------------------------------
+# prod keeps a copy of the database and of every bucket in the other Canadian region (backup.cross_region);
+# docs/runbooks/backups-dr.md has the targets, the restore paths and the drill.
+# Azure needs no second key: Key Vault keeps a read-only copy of the vault in the paired region, so the data key also
+# encrypts the replica account; the database's geo-redundant backup uses service-managed keys.
+
+locals {
+  backup_key = { id = module.kms.key_ids["data"] }
+  backup_copy = var.backup.cross_region ? {
+    region         = local.secondary_region
+    kms_key        = null
+    retention_days = var.backup.copy_retention_days
+  } : null
+  storage_replica = var.backup.cross_region ? {
+    region          = local.secondary_region
+    kms_key         = local.backup_key
+    cool_after_days = var.backup.replica_cool_after_days
+    noncurrent_days = var.backup.replica_noncurrent_days
+  } : null
 }
 
 # ---- managed data stores (S-3) ------------------------------------------------------------------------------------
@@ -187,6 +212,7 @@ module "postgres" {
   storage_gb            = var.data_stores.postgres.storage_gb
   high_availability     = var.data_stores.postgres.high_availability
   backup_retention_days = var.data_stores.postgres.backup_retention_days
+  backup_copy           = local.backup_copy
   kms_key               = { id = module.kms.key_ids["data"] }
   secret_store          = module.secrets.store
   deletion_protection   = var.deletion_protection

@@ -36,6 +36,9 @@ module "northline" {
   deletion_protection = false
   signing_key_ids     = var.signing_key_ids
 
+  # S-114: backups and point-in-time recovery in this region only; staging is re-created from a masked prod copy, not restored.
+  backup = { cross_region = false }
+
   sms_origination_identity = var.sms_origination_identity
 
   data_stores = {

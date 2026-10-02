@@ -25,10 +25,21 @@ output "storage_encryption_key" {
   value = ""
 }
 
+output "replica_bucket_names" {
+  description = "S-114: purpose => replica bucket (container on Azure) in the secondary region; empty without a replica."
+  value       = { for k, v in azurerm_storage_container.replica : k => v.name }
+}
+
+output "replica_region" {
+  description = "S-114: region of the replica; empty without one."
+  value       = try(var.replica.region, "")
+}
+
 output "cloud" {
   description = "Azure-only details."
   value = {
-    storage_account    = azurerm_storage_account.this.name
-    storage_account_id = azurerm_storage_account.this.id
+    storage_account         = azurerm_storage_account.this.name
+    storage_account_id      = azurerm_storage_account.this.id
+    replica_storage_account = try(azurerm_storage_account.replica[0].name, "")
   }
 }

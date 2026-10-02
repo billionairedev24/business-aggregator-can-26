@@ -13,6 +13,9 @@ locals {
     "managed-by"     = "terraform"
   }
 
+  # S-114: the other Canadian region of this cloud, for the backup copies and bucket replicas.
+  secondary_region = { "ca-central-1" = "ca-west-1", "ca-west-1" = "ca-central-1" }[var.region]
+
   context = {
     name        = local.name
     environment = var.environment
@@ -155,6 +158,7 @@ module "storage" {
   kms_key       = { id = module.kms.key_ids["data"] }
   writers       = { api = module.kubernetes.workload_identities["api"].principal }
   force_destroy = var.environment == "dev"
+  replica       = local.storage_replica
 }
 
 module "secrets" {
@@ -164,6 +168,35 @@ module "secrets" {
   readers             = { external-secrets = module.kubernetes.workload_identities["external-secrets"].principal }
   kms_key             = { id = module.kms.key_ids["data"] }
   deletion_protection = var.deletion_protection
+}
+
+# ---- backups and disaster recovery (S-114) ------------------------------------------------------------------------
+# prod keeps a copy of the database and of every bucket in the other Canadian region (backup.cross_region);
+# docs/runbooks/backups-dr.md has the targets, the restore paths and the drill.
+
+# The data key of the secondary region: the replicated backups and the replica buckets are encrypted there (a KMS key
+# is regional; the primary's key would be unreachable in the disaster this copy is for).
+module "kms_backup" {
+  count               = var.backup.cross_region ? 1 : 0
+  source              = "../../modules/kms/aws"
+  context             = merge(local.context, { name = "${local.name}-backup", region = local.secondary_region })
+  keys                = { data = { usage = "encrypt" } }
+  deletion_protection = var.deletion_protection
+}
+
+locals {
+  backup_key = var.backup.cross_region ? { id = module.kms_backup[0].key_ids["data"] } : null
+  backup_copy = var.backup.cross_region ? {
+    region         = local.secondary_region
+    kms_key        = local.backup_key
+    retention_days = var.backup.copy_retention_days
+  } : null
+  storage_replica = var.backup.cross_region ? {
+    region          = local.secondary_region
+    kms_key         = local.backup_key
+    cool_after_days = var.backup.replica_cool_after_days
+    noncurrent_days = var.backup.replica_noncurrent_days
+  } : null
 }
 
 # ---- managed data stores (S-3) ------------------------------------------------------------------------------------
@@ -178,6 +211,7 @@ module "postgres" {
   storage_gb            = var.data_stores.postgres.storage_gb
   high_availability     = var.data_stores.postgres.high_availability
   backup_retention_days = var.data_stores.postgres.backup_retention_days
+  backup_copy           = local.backup_copy
   kms_key               = { id = module.kms.key_ids["data"] }
   secret_store          = module.secrets.store
   deletion_protection   = var.deletion_protection

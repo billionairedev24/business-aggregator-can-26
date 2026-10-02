@@ -33,6 +33,17 @@ output "admin_secret_ref" {
   value       = google_secret_manager_secret.admin.secret_id
 }
 
+output "backup" {
+  description = "S-114: what protects the database (docs/runbooks/backups-dr.md): automated backups with point-in-time recovery for retention_days (pitr_days of transaction logs), and the copy in the secondary region (copy_kind empty = none)."
+  value = {
+    retention_days = var.backup_retention_days
+    pitr_days      = min(7, var.backup_retention_days)
+    copy_region    = try(var.backup_copy.region, "")
+    copy_kind      = var.backup_copy == null ? "" : "cross-region-read-replica"
+    copy_id        = try(google_sql_database_instance.copy[0].name, "")
+  }
+}
+
 output "cloud" {
   description = "Google Cloud-only details."
   value = {

@@ -17,6 +17,7 @@ locals {
 
 resource "aws_kms_key" "this" {
   for_each                 = var.keys
+  region                   = var.context.region # explicit, so the module also serves a secondary region (S-114)
   description              = "${var.context.name} ${each.key} (${each.value.usage})"
   key_usage                = each.value.usage == "sign" ? "SIGN_VERIFY" : "ENCRYPT_DECRYPT"
   customer_master_key_spec = each.value.usage == "sign" ? "ECC_NIST_P256" : "SYMMETRIC_DEFAULT"
@@ -52,6 +53,7 @@ resource "aws_kms_key" "this" {
 
 resource "aws_kms_alias" "this" {
   for_each      = var.keys
+  region        = var.context.region
   name          = "alias/${var.context.name}-${each.key}"
   target_key_id = aws_kms_key.this[each.key].key_id
 }
