@@ -6484,3 +6484,108 @@ Branch `fix/phase4-followups`. Three small fixes; no migration, no new configura
   or dead-lettered); mobile `account.test.tsx` +3 (heart on C → You's count and the list at once; back to follow my
   location sends `""`; French); web `settings.test.tsx` +2. The mobile and web tests fail without their fix.
 - **Not done:** `order.confirmed` as a partner webhook; per-shop lines in the `order.delivered` payload.
+
+## 2026-09-30 — S-105 Privacy rights: access, correction and erasure (PIPEDA, provincial acts, Law 25)
+
+Branch `security/s-105-privacy-rights`. Runbook: [runbooks/privacy-requests.md](runbooks/privacy-requests.md).
+
+- **Region-neutral law.** Which law applies is the person's province in the region model (`region.regions.privacy_law`,
+  V130); what the law requires is the new `region.privacy_laws` (V271): names en/fr, short names (PIPEDA / LPRPDE …),
+  the regulator and its URL, response days, business-day counting, the one extension. New `region.api.PrivacyRegimes`
+  (`forProvince`, `of(law, province)`, `deadline`); business days skip weekends and the province's holidays from the
+  region model. No law, deadline or province is in code; messages name the law from the request (`law.shortName`) or
+  the ambient `{privacyLaw}`. **Values drafted from the statutes, for legal review:** PIPEDA 30 + 30, Alberta PIPA 45 +
+  30, BC PIPA 30 business days + 30, Québec 30 + none. The person's province: their default address, else the first
+  business they are on the team of, else `REGION_DEFAULT_PROVINCE`. The clock starts at receipt.
+- **One module, one SPI.** New module `privacy` (schema `privacy`, V270): `privacy.requests` (state machine, channel,
+  law and province, due date, one extension, verification, decision, sealed contact and corrections, export key, link
+  hash, open holds) and `privacy.erasure_steps`. Every module that owns a schema implements
+  `shared.privacy.PersonalDataContributor` (export sections, idempotent erase, optional corrections) as a
+  package-private `<Module>PersonalData` in its `persistence` package over its own tables — the privacy module never
+  reads another schema. It lives in `shared` because privacy depends on identity, region, payments and developer, which
+  would make a `privacy.api` SPI a cycle. `PrivacyContributorsTests` (ArchUnit): every module with a schema has one,
+  they are package-private adapters, and the privacy module uses other modules' `api` packages only. `SchemaOwnershipTests`
+  knows the `privacy` schema.
+- **States:** awaiting_verification → verified → in_progress → completed, or withdrawn / rejected (codes:
+  identity_not_verified, not_our_data, legal_exception, duplicate, frivolous). One open request per person and type
+  (unique partial index; 409 `request_open`). Access starts when verified; erasure after `PRIVACY_ERASURE_GRACE` (7 days,
+  never later than a day before the deadline; staff can start it now; the person can withdraw until then); a correction
+  waits for staff. The request row is kept as the accountability record (ids and codes); the person's contact at the
+  time and the corrections they asked are sealed (`SecretSealer`, bound to the request id) and wiped when it closes.
+- **Identity check (step-up):** a fresh northline-auth step-up proof (`X-Step-Up`, the S-51 verifier through
+  `payments.api.PaymentStepUp`) verifies at once — `acr=mfa` alone is not enough (a refreshed token keeps an old
+  sign-in's acr). Without a proof the api texts a 6-digit code to the verified mobile (sha-256 stored, 15 min, 5 tries,
+  resend after a minute) — phone-code accounts have no other factor and must be able to delete themselves in the app.
+  Staff-recorded requests (email, mail) are verified by staff. 403 `step_up_required` is localised by the catalogue.
+- **Erasure pipeline:** on start the account closes (`identity.api.PrivacyAccounts.close`: status `erased`, sign-ins
+  ended with the new reason `erased` (V272), passkeys and console roles removed), then one step per contributor in
+  order, identity last. Each contributor's erase runs in one transaction with its step row (crash-safe: a step is done
+  or not), retried with back-off on failure, `held` steps every `PRIVACY_HOLD_RETRY`; replicas share work with `SKIP
+  LOCKED`. A request completes when nothing is pending or failed — holds may remain (`holds_open`), the law's answer
+  doesn't wait for a customer's open order. Kept data is pseudonymised under the blanked account id; the list per module
+  and its reasons is in the runbook. Holds: open orders, upcoming bookings, held escrow, open refunds and disputes,
+  deliveries under way, the only owner of an active / paused / pending / suspended business (an applicant's membership
+  goes; the application stays orphaned).
+- **Revoking sessions and tokens:** identity ends `identity.sessions` (northline-auth's `RevokedSessionFilter` drops the
+  auth session); northline-auth's token customizer refuses any token, new or refreshed, for an `erased` account
+  (`invalid_grant`), and its sign-in refuses one ("This account has been deleted."). `ErasedAccountsJob` (auth, every
+  5 minutes) deletes the account's WebAuthn credentials, TOTP secret, backup codes, federated identities, consents and
+  OAuth authorizations — the auth schema stays northline-auth's. Only `erased` is refused: suspended accounts keep their
+  current behaviour (out of scope). An access token already issued lives out its 10 minutes.
+- **Object storage behind the port:** `ObjectStore.deleteAll(prefix)` (S3 list + batch delete, GCS list, Azure list,
+  the folder store, prefixed and guarded wrappers; the shared contract test covers all four providers). Messaging's
+  `AttachmentStorage.deleteAll` removes `messaging/customers/<id>/`. Proof-of-delivery photos and dispute evidence are
+  kept (chargeback evidence).
+- **Events, ids only:** `privacy.personal_data_erased` (in-process) and `privacy.merchant_data_erased` (request id,
+  business id) for each business whose public data changed. The latter is **published on `merchants.merchant`**, not a
+  topic of its own: a `privacy.merchant` topic with the search indexer's three retry topics took Azure Event Hubs to
+  102 of its 100 hubs (`TopicCatalogueTest`); on the business's topic it is ordered with the business's other events and
+  the indexer already reads it (`Scope.Merchant`). The search index holds no personal data, so search removal is that
+  refresh.
+- **Reviews:** V272 replaces `trust.reviews_immutable()` so a transaction that sets `northline.privacy_change = on`
+  (`PersonalDataSql.allowPrivacyChange`) may blank a review's words and author name or correct the name; the rating and
+  everything else stays immutable, and words can only be blanked, never rewritten.
+- **Access export:** every contributor's sections rendered by Postgres (`json_agg`: timestamps, jsonb and arrays as
+  stored) in one JSON (`northline.privacy-export/v1`) plus a readable summary (en/fr), sealed together and stored at
+  `privacy/exports/<id>.bin` (new `ExportStorage` port: object storage, a temp folder under `local`/`test`, a loud
+  placeholder elsewhere with `STORAGE_PROVIDER=local`). Downloads through a link token (256 bits, stored hashed,
+  `PRIVACY_LINK_TTL`) at `GET /api/v1/public/privacy-exports/{token}` — public, so the app's share sheet and a browser
+  tab can fetch it; unknown or expired → 404. Bundles deleted after `PRIVACY_EXPORT_TTL` (hourly sweep). The old
+  `GET /api/v1/me/export` (S-59, unverified, unsealed) is **removed**, and so is `POST /api/v1/me/erasure-request`
+  (S-59, a flag staff acted on by hand): every client now uses the privacy requests. `identity.users.erasure_requested_at`
+  stays (set when an erasure is verified, cleared when withdrawn) for the profile's "You asked to delete…" line.
+- **Corrections** (fields people can't edit): `phone` (identity; E.164, unique), `receiptName` (payments), `reviewName`
+  (trust), `legalName` (merchants, principal). Staff apply what they accept; each field audit-logged by code.
+- **Console:** new role `privacy` (privacy officer; V272 widens `identity.platform_roles`), screen `privacy` (admin,
+  privacy, support lead) and action `privacy` (the same three). Support leads take requests that arrive at the help
+  desk. Endpoints `/api/v1/console/privacy-requests` (queue, record, detail, verify, extend, reject, start,
+  corrections, retry), all `@RequiresConsole`. Console web: `/privacy` with the queue, the detail drawer (law, dates,
+  what was asked, the erasure's steps with what is kept and held) and the actions; Team lists the new role.
+- **Audit:** every transition, step, link, download and correction is a `developer.audit_log` row
+  (`privacy.request_<what>`, target `privacy_request`); system steps have actor and role `system`.
+- **Clients.** Consumer web: Account › Profile › "Your data" (copy, correction, deletion; texted code, passkey); the
+  Security tab's "Download my data" links there. Consumer app: new `/account/data` screen (in-app deletion — App Store
+  5.1.1(v) — with the texted code or the authenticator, the copy to the share sheet, corrections); Profile and Security
+  link to it; `store/privacy.json` answers deletion `inApp: true` with the web URL; the courier app's stays pending
+  (accounts made by Northline). Studio: Settings › Security › "Your personal data" (copy and deletion with the
+  passkey / authenticator step-up) for team members and owners.
+- **Also fixed:** the mobile `services.test` filter test passed `now` nowhere and failed on 2026-10-02 (the real date).
+- **Schema (V270–V272):** `privacy` schema, `privacy.requests`, `privacy.erasure_steps`, `privacy.request_number_seq`;
+  `region.privacy_laws`; `identity.users.erased_at`; `identity.sessions.revoke_reason` + `erased`;
+  `identity.platform_roles.role` + `privacy`; `trust.reviews_immutable()` replaced. New optional variables
+  `PRIVACY_ERASURE_GRACE`, `PRIVACY_EXPORT_TTL`, `PRIVACY_LINK_TTL`, `PRIVACY_HOLD_RETRY`, `PRIVACY_RUN_INTERVAL`
+  (runbooks, `.env.example`); no secret.
+- **Tests:** a contributor test per module (15: export, erase, kept / held, idempotent, corrections), `ErasurePipelineTest`
+  (every module, a failing module retried and resumed, a hold completing the request and clearing later, events, audit,
+  within the deadline), `PrivacyRequestsApiTest` (step-up, texted code, wrong code counted, French, grace period, law by
+  province, withdrawal, export → link → download → expiry, someone else's 404), `PrivacyDeskApiTest` (roles, MFA, record,
+  verify, extend once, a law with no extension, refuse, start, corrections, audit roles), `PrivacyRegimesTest`,
+  `PrivacyContributorsTests`, storage contract `deleteAll` on four providers, auth `TokenClaimsTest` (no token for an
+  erased account, purge), worker `ScopeTest`; web consumer `privacy.test.tsx`, console `privacy.test.tsx`, Studio
+  settings; mobile `account.test.tsx` (Your data).
+- **Not done / never run:** legal review of the deadlines; staff email to the person when a request is answered (the
+  account shows the state; email templates are a follow-up); notices to third parties a correction was shared with;
+  closing a business as part of an owner's erasure; revoking Google / Microsoft calendar grants at the provider and
+  deleting the Stripe Customer object (cards are detached); verification by email for an account with no mobile and no
+  second factor (staff verify); access tokens already issued live out their 10 minutes. Nothing ran against a real KMS,
+  bucket or Stripe.
