@@ -20,6 +20,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
@@ -302,7 +303,11 @@ class SalesReportService implements ViewSalesReport {
                 .toPlainString();
     }
 
-    /** RFC 4180 CSV with a header row. */
+    /**
+     * RFC 4180 CSV with a header row. S-104: a cell a spreadsheet would run as a formula ({@code =}, {@code +},
+     * {@code @}, tab, CR, or {@code -} unless the cell is a negative amount — customer names and listing titles are typed by other
+     * people) gets a leading quote mark, as in the Studio's own exports ({@code web/packages/ui} report.ts).
+     */
     static final class Csv {
         private final StringBuilder out = new StringBuilder();
 
@@ -315,13 +320,24 @@ class SalesReportService implements ViewSalesReport {
                 if (i > 0) {
                     out.append(',');
                 }
-                var c = cells[i];
+                var c = guardFormula(cells[i]);
                 out.append(
-                        c.contains(",") || c.contains("\"") || c.contains("\n")
+                        c.contains(",") || c.contains("\"") || c.contains("\n") || c.contains("\r")
                                 ? '"' + c.replace("\"", "\"\"") + '"'
                                 : c);
             }
             out.append("\r\n");
+        }
+
+        private static final Pattern NEGATIVE_AMOUNT = Pattern.compile("-(?=.*\\d)[\\d\\s.,\u00a0\u202f$]+");
+
+        static String guardFormula(String cell) {
+            return !cell.isEmpty()
+                            && ("=+@\t\r".indexOf(cell.charAt(0)) >= 0
+                                    || (cell.charAt(0) == '-'
+                                            && !NEGATIVE_AMOUNT.matcher(cell).matches()))
+                    ? "'" + cell
+                    : cell;
         }
 
         void note(String text) {
