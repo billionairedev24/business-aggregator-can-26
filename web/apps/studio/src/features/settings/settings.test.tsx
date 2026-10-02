@@ -456,3 +456,47 @@ describe('validation', () => {
     expect(webhookErrors({ url: 'https://example.com/h', events: ['x'] }, t).url).toBeUndefined();
   });
 });
+
+describe('Settings › Security › Your personal data (S-105)', () => {
+  const AUTH_SEC = 'http://localhost:9000/api/auth/security';
+  const LAW = { shortName: 'PIPA' };
+  const sec = () => ({ email: 'ravi@prairiewrench.ca', mfaPrimary: 'passkey', passkeys: [{ id: 'p1', label: 'iPhone 16', createdAt: '2026-01-05T17:00:00Z' }],
+    authenticator: true, backupCodesRemaining: 8, signIns: [], sessions: [] });
+
+  it('a team member asks for a copy of their data, confirmed with the authenticator code (X-Step-Up)', async () => {
+    let items: unknown[] = [];
+    const calls = mockFetch({
+      [`GET ${AUTH_SEC}`]: () => sec(),
+      'POST http://localhost:9000/api/auth/step-up/totp': () => ({ proof: 'proof-1', expiresAt: '2026-10-02T12:05:00Z' }),
+      'GET /api/v1/me/privacy-requests': () => ({ items }),
+      'POST /api/v1/me/privacy-requests': () => {
+        items = [{ id: 'R1', reference: 'PR-1001', type: 'access', state: 'verified', law: LAW, dueAt: '2026-11-15T23:59:59Z' }];
+        return items[0];
+      },
+    });
+    const user = userEvent.setup({ delay: null });
+    renderWithProviders(<SecurityTab />);
+    await user.click(await screen.findByRole('button', { name: 'Download my data' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Confirm it’s you' });
+    await user.click(within(dialog).getByRole('button', { name: /code/i }));
+    await user.type(within(dialog).getByRole('textbox'), '123456');
+    await user.click(within(dialog).getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url === '/api/v1/me/privacy-requests')).toBe(true));
+    expect(calls.find(c => c.method === 'POST' && c.url === '/api/v1/me/privacy-requests')!.body).toEqual({ type: 'access' });
+    expect(await screen.findByText(/PR-1001 · answer by .* \(PIPA\)/)).toBeTruthy();
+  });
+
+  it('lists a scheduled deletion with a way to cancel it', async () => {
+    const calls = mockFetch({
+      [`GET ${AUTH_SEC}`]: () => sec(),
+      'GET /api/v1/me/privacy-requests': () => ({ items: [{ id: 'R2', reference: 'PR-1002', type: 'erasure', state: 'verified', law: LAW, dueAt: '2026-11-15T23:59:59Z', scheduledFor: '2026-10-09T12:00:00Z' }] }),
+      'POST /api/v1/me/privacy-requests/R2/withdraw': () => ({ id: 'R2', reference: 'PR-1002', type: 'erasure', state: 'withdrawn', law: LAW, dueAt: '2026-11-15T23:59:59Z' }),
+    });
+    const user = userEvent.setup({ delay: null });
+    renderWithProviders(<SecurityTab />);
+    expect(await screen.findByText(/Deletion on/)).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Delete my account…' }) as HTMLButtonElement).disabled).toBe(true);
+    await user.click(screen.getByRole('button', { name: 'Cancel deletion' }));
+    await waitFor(() => expect(calls.some(c => c.url === '/api/v1/me/privacy-requests/R2/withdraw')).toBe(true));
+  });
+});
