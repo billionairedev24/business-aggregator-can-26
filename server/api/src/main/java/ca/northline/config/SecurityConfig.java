@@ -94,6 +94,25 @@ class SecurityConfig {
                 .build();
     }
 
+    /**
+     * S-113: the on-call rota for paging tools ({@code /api/v1/ops/oncall[.ics]}). Its credential is one shared token
+     * ({@code ONCALL_EXPORT_TOKEN}) checked by the handler — not a JWT, so the resource server stays out of this chain
+     * (it would try to decode the bearer token); 404 while none is configured. Read-only, GET only.
+     */
+    @Bean
+    @Order(-1)
+    SecurityFilterChain ops(HttpSecurity http) {
+        return http.securityMatcher("/api/v1/ops/**")
+                .authorizeHttpRequests(
+                        a -> a.requestMatchers(HttpMethod.GET, "/api/v1/ops/oncall", "/api/v1/ops/oncall.ics")
+                                .permitAll()
+                                .anyRequest()
+                                .denyAll())
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .csrf(AbstractHttpConfigurer::disable)
+                .build();
+    }
+
     @Bean
     @Order(1)
     SecurityFilterChain api(
@@ -137,6 +156,11 @@ class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/webhooks/commerce/*")
                         .permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/commerce/oauth/*/callback")
+                        .permitAll()
+                        // S-113: the on-call rota for paging tools — its own shared token (ONCALL_EXPORT_TOKEN),
+                        // checked
+                        // by the handler; 404 while none is configured
+                        .requestMatchers(HttpMethod.GET, "/api/v1/ops/oncall", "/api/v1/ops/oncall.ics")
                         .permitAll()
                         // Staff tokens require acr=mfa like business ones (CLAUDE.md; S-20 found only the role checked)
                         .requestMatchers("/api/v1/console/**")
