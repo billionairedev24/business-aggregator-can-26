@@ -82,6 +82,12 @@ public interface PaymentGateway {
     /** A Stripe Customer holding nothing but our user id ({@code cus_…}); cards are attached by Stripe.js. */
     String customer(String customerId, String idempotencyKey);
 
+    /**
+     * S-116: the language Stripe writes the Customer's receipts in ({@code preferred_locales}: {@code fr-CA},
+     * {@code en-CA}); Stripe uses the first one it supports.
+     */
+    void receiptLocale(String stripeCustomer, String locale);
+
     /** Creates (and, with a payment method, confirms) a manual-capture PaymentIntent. */
     Authorization authorize(Authorize request);
 

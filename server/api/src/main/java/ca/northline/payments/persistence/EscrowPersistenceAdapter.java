@@ -204,6 +204,23 @@ class EscrowPersistenceAdapter implements EscrowRepository {
     }
 
     @Override
+    public Optional<String> receiptLocale(String customerId) {
+        return jdbc.sql("select receipt_locale from payments.stripe_customers where customer_id = :id")
+                .param("id", customerId)
+                .query((rs, _) -> Optional.ofNullable(rs.getString(1)))
+                .optional()
+                .flatMap(o -> o);
+    }
+
+    @Override
+    public void saveReceiptLocale(String customerId, String locale) {
+        jdbc.sql("update payments.stripe_customers set receipt_locale = :locale where customer_id = :id")
+                .param("id", customerId)
+                .param("locale", locale)
+                .update();
+    }
+
+    @Override
     public void insert(Escrow escrow) {
         rows.save(mapper.toRow(escrow));
     }
