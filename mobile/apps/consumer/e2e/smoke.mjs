@@ -139,10 +139,10 @@ try {
   });
   await step('Journey D: orders, a quote accepted, You, wallet, security, notifications', async () => {
     await page.getByRole('tab', { name: 'Orders' }).click();
-    await page.getByText('Grocery run · 2 shops').waitFor();
+    await page.getByText('Grocery run · 3 shops').waitFor();
     await noSideScroll('orders');
     await shot('30-orders');
-    await page.getByTestId('activity-req-2988').click();
+    await page.getByTestId('activity-qr-9').click();
     await page.getByText('Scope of work').waitFor();
     await noSideScroll('quote');
     await shot('31-quote');

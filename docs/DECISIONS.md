@@ -6234,19 +6234,26 @@ variable, no new app dependency. Plan: [MOBILE_PLAN.md § D](MOBILE_PLAN.md); ru
 - **Wallet:** balance, value, the 8-week chart (an image with each week read out), Plus "Try free" (monthly / annual,
   the web's prices and 30-day trial) and "Manage" (renewal, cancel), payment methods. **Payment methods** save a card
   with a SetupIntent through a port (`cardSetup.ts`): PaymentSheet in setup mode for `stripe`, nothing for the stand-in.
-- **Fixtures:** the account area is first in the fixture server's list — northline-auth's area answers 404 for any
-  `/api/auth/*` it doesn't know, and the security API and step-up live there; it shares the shop area's address book
-  and cards, and names the person the auth area signed in.
-- **Shared files touched:** `src/fixtures/server.ts` (the area, first), `__tests__/shell.test.tsx` and
+- **Fixtures: one owner per endpoint, one state per fact** (after S-100 merged). Order in `src/fixtures/server.ts`:
+  account, auth, geo, shop, services — the account area is first because northline-auth's area answers 404 for any
+  `/api/auth/*` it doesn't know, and the security API lives in the account area. Owners: `/me/activity` and
+  `/me/notifications` → the account area (its activity list holds C's inbox items — the S-100 bookings `01J9BOOKING…`,
+  NL-48213, the Sable & Soda quote — plus D's past rows; the quiet hours are `server.services.quiet`, which C's
+  inbox switch and D's settings both write); `/me/favourites` → the services area (`server.services.favourites`, its GET
+  now returns the api's Favourite rows with name, tier and slug); `/api/auth/step-up/totp` → the auth area (D's
+  security API opens once the auth area accepted an authenticator code); addresses and cards → the shop area's state.
+  The fixture names the person the auth area signed in.
+- **Shared files touched:** `src/fixtures/server.ts` (the area, first), `src/fixtures/services.ts` (`/me/activity`
+  and `/me/notifications` handed to the account area, richer favourites), `src/shop/Pay.tsx` (the step-up words), `__tests__/shell.test.tsx` and
   `journeyA.test.tsx` (the You tab and Wallet are real now), `e2e/smoke.mjs` (a Journey D step block; the You step's
   name line), `src/journeyA/You.tsx` deleted (S-98's temporary screen).
-- **Found, not fixed (S-99's file):** `src/shop/Pay.tsx` words a step-up failure with `shop.stepUp.${reason}`, but the
-  reasons are `wrong_code | locked | elsewhere` and the key is `shop.stepUp.wrong` — a wrong code shows the raw key
-  `shop.stepUp.wrong_code`. Journey D maps the reasons itself.
+- **Fixed in S-99's file:** `src/shop/Pay.tsx` worded a step-up failure as `shop.stepUp.${reason}`, but the reasons
+  are `wrong_code | locked | elsewhere` and the key is `shop.stepUp.wrong` — a wrong code showed the raw key. It now
+  maps each reason to its key (`shop.test.tsx`: "words a wrong or locked authenticator code").
 - **Gaps (MOBILE_PLAN § API gaps):** points activity, provider-funded rewards near you, "Invite a neighbour", "Ask a
   question" on a quote, a payment step-up threshold, and clearing the shop-in province back to "follow my location"
   (`PATCH /me/preferences` treats null as unchanged and rejects "" — the web has the same gap).
-- **Tests:** `__tests__/account.test.tsx`, 51 tests: every screen's loading / error + Try again / empty / offline /
+- **Tests:** `__tests__/account.test.tsx`, 51 tests (plus one in `shop.test.tsx`): every screen's loading / error + Try again / empty / offline /
   guest states, en + fr-CA, validation messages, what is sent (Idempotency-Key reuse, X-Step-Up, only changed matrix
   cells and preferences, profile and address bodies), the Stripe paths through mocked ports. The web smoke test runs
   Orders → a quote accepted → You → Wallet → Security (confirmed with the code) → Notifications in headless Chromium.

@@ -1,17 +1,23 @@
-import { FIXTURE_ACCOUNT, FIXTURE_TOTP } from './auth';
+import { FIXTURE_ACCOUNT, STEP_UP_PROOF } from './auth';
 import type { FixtureArea, FixtureContext, FixtureRequest } from './context';
 import { PROVINCES } from './geo';
-import { FIXTURE_PROOF, type ShopFixtureState } from './shop';
+import type { ServicesFixtureState } from './services';
+import type { ShopFixtureState } from './shop';
 
 /**
  * Journey D's api (S-101) on the fixture backend: the account summary, Orders & bookings, a quote to accept, the
  * profile, address book and household, wallet & Plus, saving a card (the api's stand-in or Stripe-shaped), the
- * notification matrix, preferences, favourites, refund cases, the data export and erasure request — and northline-auth's
- * security API and step-up in the auth session. Made-up people, businesses and places; the address book and the
- * cards are the shop area's (checkout and payment read the same ones).
+ * notification matrix, preferences, refund cases, the data export and erasure request — and northline-auth's
+ * security API. Made-up people, businesses and places.
+ *
+ * One owner per endpoint, one state per fact: the address book and the cards are the shop area's state (checkout and
+ * payment read the same ones); favourites (`/me/favourites`) and the quiet hours are the services area's state, and it
+ * answers `/me/favourites`; this area answers `/me/activity` (Orders and C's inbox read the same list) and
+ * `/me/notifications` (the matrix here, the quiet hours from the services state); the step-up
+ * (`/api/auth/step-up/totp`) is the auth area's, and a confirmed step-up opens the security API here.
  *
  * This area is first in the fixture server's list: northline-auth's area answers 404 for any `/api/auth/*` it
- * doesn't know, and the security API lives there.
+ * doesn't know, and the security API lives here.
  */
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -31,21 +37,34 @@ export interface AccountFixtureState {
   labels: Map<string, string>;
   points: { balance: number; weekly: number[] };
   plus: { plan: 'monthly' | 'annual'; since: string } | null;
-  notifications: { matrix: Matrix; quietOn: boolean; quietFrom: string; quietTo: string; language: string; marketing: string };
+  /** The matrix, language and marketing; the quiet hours are `services.quiet`. */
+  notifications: { matrix: Matrix; language: string; marketing: string };
   prefs: { language: string; province: string | null; units: string; timeFormat: string; dietary: string[]; allergies: string | null; accessibility: string[]; accessNotes: string | null; display: string[] };
-  favourites: Array<{ merchantId: string; name: string; type: string; tier: string; slug: string; visits: number; lastAt: string | null; addedAt: string }>;
   cases: Array<{ id: string; number: string; state: string; open: boolean; what: string; amountCents: number; taxCents: number; merchantName: string; openedAt: number; respondBy: number | null; notes: Array<{ at: number; by: string; body: string }> }>;
-  /** northline-auth: whether the auth session has a recent second factor (else 401 → confirm it's you). */
+  /** northline-auth: whether the auth session has a recent second factor (else 401 → confirm it's you); a step-up
+   * the auth area accepted counts too. */
   security: { confirmed: boolean; authenticator: boolean; passkeys: Array<{ id: string; label: string }>; sessions: Array<{ id: string; device: string; city: string; current: boolean; lastSeenAt: number }> };
   setups: number;
   idempotent: Map<string, unknown>;
   /** Who the auth area signed in last (a new account's name and contact, until the profile is edited here). */
   who: () => { firstName: string; lastName: string; email: string; phone: string } | null;
+  /** The auth area accepted an authenticator code (`POST /api/auth/step-up/totp`). */
+  steppedUp: () => boolean;
   edited: boolean;
+  /** Favourites and quiet hours (the services area's). */
+  services: ServicesFixtureState;
 }
 
 /** The account with a week of activity (`seedAccount`); tests empty what they need empty. */
-export function newAccountState(shop: ShopFixtureState, now = Date.now(), who: AccountFixtureState['who'] = () => null): AccountFixtureState {
+export function newAccountState(o: {
+  shop: ShopFixtureState;
+  services: ServicesFixtureState;
+  now?: number;
+  who?: AccountFixtureState['who'];
+  steppedUp?: () => boolean;
+}): AccountFixtureState {
+  const { shop, services } = o;
+  const now = o.now ?? Date.now();
   const state: AccountFixtureState = {
     shop,
     activity: [],
@@ -68,10 +87,10 @@ export function newAccountState(shop: ShopFixtureState, now = Date.now(), who: A
         offers: { push: true, sms: false, email: false },
         security: { push: true, sms: true, email: true },
       },
-      quietOn: true, quietFrom: '22:00:00', quietTo: '07:00:00', language: 'app', marketing: 'weekly',
+      language: 'app',
+      marketing: 'weekly',
     },
     prefs: { language: 'en', province: null, units: 'metric', timeFormat: '12h', dietary: [], allergies: null, accessibility: [], accessNotes: null, display: [] },
-    favourites: [{ merchantId: 'm-cleaners', name: 'Tidy Nook Cleaners', type: 'provider', tier: 'master', slug: 'tidy-nook-cleaners', visits: 2, lastAt: new Date(now - 4 * DAY).toISOString(), addedAt: new Date(now - 30 * DAY).toISOString() }],
     cases: [],
     security: {
       confirmed: false,
@@ -84,8 +103,10 @@ export function newAccountState(shop: ShopFixtureState, now = Date.now(), who: A
     },
     setups: 0,
     idempotent: new Map(),
-    who,
+    who: o.who ?? (() => null),
+    steppedUp: o.steppedUp ?? (() => false),
     edited: false,
+    services,
   };
   seedAccount(state, now);
   return state;
@@ -94,13 +115,16 @@ export function newAccountState(shop: ShopFixtureState, now = Date.now(), who: A
 /** Tests and demos: a week of orders, bookings, a quote and an open refund case (`seedAccount`). */
 export function seedAccount(state: AccountFixtureState, now: number) {
   const iso = (t: number) => new Date(t).toISOString();
+  // the inbox's four (S-100's bookings and fixture names, so C8 and Orders read one list), then two past ones
   state.activity = [
-    { id: 'ord-1001', kind: 'order', ref: 'NL-1001', title: '', with: ['Maple Lane Bakery', 'Leafy Lane Greens'], delivery: 'pooled', shops: 2, items: 3, when: iso(now + 2 * HOUR), whenEnd: iso(now + 5 * HOUR), amountCents: 2349, status: 'on_the_way', tone: 'accent', active: true, caseRef: null, action: 'track', href: '/orders/ord-1001' },
-    { id: 'bk-7712', kind: 'booking', ref: 'BK-7712', title: 'Deep clean', with: ['Tidy Nook Cleaners · Robin'], delivery: null, shops: 1, items: 1, when: iso(now + 2 * DAY), whenEnd: null, amountCents: 22050, status: 'escrow', tone: 'neutral', active: true, caseRef: null, action: 'details', href: '/providers/tidy-nook-cleaners/book?step=done&booking=bk-7712' },
-    { id: 'req-2988', kind: 'quote', ref: 'QR-2988', title: 'Mocktail bar · 40 guests', with: ['Copper & Soda'], delivery: null, shops: 1, items: 1, when: iso(now + 16 * DAY), whenEnd: null, amountCents: 64000, status: 'quote_ready', tone: 'accent-2', active: true, caseRef: null, action: 'view_quote', href: '/quotes/q-2988' },
+    { id: '01J9BOOKINGROUTE', kind: 'booking', ref: 'BK-7712', title: 'Brake inspection', with: ['Prairie Wrench'], delivery: null, shops: 1, items: 1, when: iso(now - 5 * 60_000), whenEnd: null, amountCents: 9345, status: 'on_the_way', tone: 'accent-2', active: true, caseRef: null, action: 'track', href: null },
+    { id: '01J9BOOKINGDONE', kind: 'booking', ref: 'BK-7713', title: 'Oil & filter', with: ['Prairie Wrench'], delivery: null, shops: 1, items: 1, when: iso(now - 26 * HOUR), whenEnd: null, amountCents: 8295, status: 'completed', tone: 'accent', active: true, caseRef: null, action: 'details', href: null },
+    { id: 'NL-48213', kind: 'order', ref: 'NL-48213', title: 'Grocery run · 3 shops', with: ['Old Town Bakery'], delivery: 'pooled', shops: 3, items: 5, when: iso(now - 28 * HOUR), whenEnd: null, amountCents: 6420, status: 'delivered', tone: 'accent', active: true, caseRef: null, action: 'track', href: '/orders/NL-48213' },
+    { id: 'qr-9', kind: 'quote', ref: 'QT-2988', title: 'Mocktail bar · 40 guests', with: ['Sable & Soda'], delivery: null, shops: 1, items: 1, when: iso(now - 50 * HOUR), whenEnd: null, amountCents: 64000, status: 'quote_ready', tone: 'accent-2', active: true, caseRef: null, action: 'view_quote', href: '/quotes/q-2988' },
     { id: 'bk-7001', kind: 'booking', ref: 'BK-7001', title: 'Window cleaning', with: ['Tidy Nook Cleaners'], delivery: null, shops: 1, items: 1, when: iso(now - 9 * DAY), whenEnd: null, amountCents: 12000, status: 'done', tone: 'neutral', active: false, caseRef: null, action: 'rebook', href: '/providers/tidy-nook-cleaners' },
     { id: 'ord-0990', kind: 'order', ref: 'NL-0990', title: '', with: ['Riverside Butcher'], delivery: 'direct', shops: 1, items: 2, when: iso(now - 3 * DAY), whenEnd: null, amountCents: 5995, status: 'case', tone: 'accent-2', active: false, caseRef: { id: 'rf-2201', number: 'RF-2201', kind: 'refund', open: true }, action: 'view_case', href: '/account?tab=help&case=rf-2201' },
   ];
+
   state.quotes.set('q-2988', { state: 'sent', validUntil: now + 71 * HOUR });
   state.cases = [
     {
@@ -133,14 +157,14 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
     const expired = q.validUntil < ctx.now() && q.state !== 'accepted';
     return {
       quote: {
-        id, requestId: 'req-2988', ref: 'QT-2988', merchantId: 'm-bar', version: 1, state: q.state, expired,
+        id, requestId: 'qr-9', ref: 'QT-2988', merchantId: 'm-sable', version: 1, state: q.state, expired,
         scope: 'Two bartenders, 4 hours on site plus setup and teardown. Four signature mocktails from the menu you picked, unlimited for 40 guests, glassware and ice included.',
         exclusions: 'Guest count over 45 adds $8/guest. A venue without a sink adds a $40 water-station fee.',
         proposedAt: iso(ctx.now() + 16 * DAY), durationMin: 240, warranty: 'none', depositKind: 'none', depositBps: null, lines,
         subtotalCents: subtotal, taxBps: 500, taxCents: tax, totalCents: subtotal + tax, depositCents: 0,
         sentAt: iso(ctx.now() - HOUR), validUntil: iso(q.validUntil), versions: [{ quoteId: id, version: 1, state: q.state, totalCents: subtotal + tax, sentAt: iso(ctx.now() - HOUR) }], currentQuoteId: id,
       },
-      provider: { merchantId: 'm-bar', slug: 'copper-and-soda', name: 'Copper & Soda', tier: 'master', rating: 4.9, reviewCount: 44, onTimePct: 0.98, disputePct: 0.01, verifiedFacts: ['Licensed server'] },
+      provider: { merchantId: 'm-sable', slug: 'sable-and-soda', name: 'Sable & Soda', tier: 'master', rating: 4.9, reviewCount: 44, onTimePct: 0.98, disputePct: 0.01, verifiedFacts: ['Licensed server'] },
       title: 'Mocktail bar · 40 guests', area: 'Sampleville', bookingId: q.booking ?? null, others: [],
     };
   };
@@ -177,35 +201,30 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
   });
   const summary = () => {
     const def = shop.cards.find((c) => c.isDefault) ?? shop.cards[0];
-    const n = state.notifications;
+    const q = state.services.quiet;
     return {
       reliability: state.profile.reliability,
       points: { balance: state.points.balance, valueCents: state.points.balance },
       plus: !!state.plus,
       activeOrders: state.activity.filter((i) => i.active).length,
-      favourites: state.favourites.length,
+      favourites: state.services.favourites.size,
       openCases: state.cases.filter((c) => c.open).length,
       paymentMethod: def ? { brand: def.brand, last4: def.last4 } : null,
       addresses: { count: shop.addresses.length, members: 2 },
       signIn: state.security.passkeys.length ? 'passkey' : state.security.authenticator ? 'totp' : 'sms',
-      quietHours: n.quietOn ? { from: n.quietFrom.slice(0, 5), to: n.quietTo.slice(0, 5) } : null,
+      quietHours: q.quietOn ? { from: q.quietFrom.slice(0, 5), to: q.quietTo.slice(0, 5) } : null,
       dietary: state.prefs.dietary,
       province: state.prefs.province,
     };
   };
-  const notifications = () => ({ events: Object.keys(state.notifications.matrix), channels: ['push', 'sms', 'email'], ...state.notifications });
+  const notifications = () => ({ events: Object.keys(state.notifications.matrix), channels: ['push', 'sms', 'email'], ...state.notifications, ...state.services.quiet });
 
   return (req) => {
     const { method, path } = req;
 
-    // ── northline-auth: step-up and the security API (the auth session's cookie; the fixture keeps one) ──────────────
-    if (path === '/api/auth/step-up/totp' && method === 'POST') {
-      if (String(req.body.code ?? '') !== FIXTURE_TOTP) return ctx.answer(422, { code: 'invalid_code', detail: "That code didn't work." });
-      state.security.confirmed = true;
-      return ctx.answer(200, { proof: FIXTURE_PROOF, expiresAt: iso(ctx.now() + 5 * 60_000) });
-    }
+    // ── northline-auth: the security API (the auth session's cookie; the fixture keeps one) ─────────────────────────
     if (path.startsWith('/api/auth/security')) {
-      if (!state.security.confirmed) return ctx.answer(401, { code: 'unauthenticated' });
+      if (!state.security.confirmed && !state.steppedUp()) return ctx.answer(401, { code: 'unauthenticated' });
       const sec = state.security;
       if (method === 'GET' && path === '/api/auth/security') {
         return ctx.answer(200, {
@@ -232,8 +251,8 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
 
     // ── the api: personal ─────────────────────────────────────────────────────────────────────────────────────────
     const mine =
-      ['/me/account-summary', '/me/activity', '/me/profile', '/me/erasure-request', '/me/addresses', '/me/household', '/me/plus', '/me/wallet', '/me/notifications', '/me/preferences', '/me/export', '/me/favourites', '/me/cases'].includes(path) ||
-      /^\/me\/(quotes|addresses|favourites|cases)\//.test(path) ||
+      ['/me/account-summary', '/me/activity', '/me/profile', '/me/erasure-request', '/me/addresses', '/me/household', '/me/plus', '/me/wallet', '/me/notifications', '/me/preferences', '/me/export', '/me/cases'].includes(path) ||
+      /^\/me\/(quotes|addresses|cases)\//.test(path) ||
       (path.startsWith('/me/payment-methods') && !(method === 'GET' && path === '/me/payment-methods'));
     if (!mine) return undefined;
     if (!signedIn(req)) return ctx.answer(401, { error: 'invalid_token' });
@@ -260,7 +279,7 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
       if (method === 'POST' && m[2] === '/accept') {
         const key = req.headers['idempotency-key'];
         if (key && state.idempotent.has(`accept:${key}`)) return ctx.answer(200, state.idempotent.get(`accept:${key}`), { 'Idempotent-Replayed': 'true' });
-        if (state.stepUp === 'required' && req.headers['x-step-up'] !== FIXTURE_PROOF) return ctx.answer(403, { code: 'step_up_required', detail: "Confirm it's you to accept." });
+        if (state.stepUp === 'required' && req.headers['x-step-up'] !== STEP_UP_PROOF) return ctx.answer(403, { code: 'step_up_required', detail: "Confirm it's you to accept." });
         if (!String(req.body.addressLine ?? '').trim()) return invalid('addressLine', 'Enter the street address.');
         const stripe = shop.provider === 'stripe';
         const answer = {
@@ -274,9 +293,9 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
       if (method === 'POST' && m[2] === '/accept/confirm') {
         q.state = 'accepted';
         q.booking = 'bk-8001';
-        const item = state.activity.find((i) => i.id === 'req-2988');
+        const item = state.activity.find((i) => i.id === 'qr-9');
         if (item) Object.assign(item, { id: 'bk-8001', kind: 'booking', ref: 'BK-8001', status: 'escrow', tone: 'neutral', action: 'details', href: null });
-        return ctx.answer(201, { bookingId: 'bk-8001', ref: 'BK-8001', providerName: 'Copper & Soda', providerSlug: 'copper-and-soda', title: page.title, type: 'quote', startsAt: page.quote.proposedAt, endsAt: page.quote.proposedAt, priceCents: page.quote.subtotalCents, taxCents: page.quote.taxCents, heldCents: page.quote.totalCents, freeCancelUntil: null });
+        return ctx.answer(201, { bookingId: 'bk-8001', ref: 'BK-8001', providerName: 'Sable & Soda', providerSlug: 'sable-and-soda', title: page.title, type: 'quote', startsAt: page.quote.proposedAt, endsAt: page.quote.proposedAt, priceCents: page.quote.subtotalCents, taxCents: page.quote.taxCents, heldCents: page.quote.totalCents, freeCancelUntil: null });
       }
       return notFound();
     }
@@ -358,10 +377,14 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
     // notifications & preferences & export
     if (path === '/me/notifications') {
       if (method === 'GET') return ctx.answer(200, notifications());
-      const b = req.body as Partial<AccountFixtureState['notifications']>;
+      const b = req.body as Partial<AccountFixtureState['notifications'] & ServicesFixtureState['quiet']>;
       if (b.matrix?.security && Object.values(b.matrix.security).some((v) => v === false)) return invalid('matrix', 'Security alerts stay on.');
       for (const [e, row] of Object.entries(b.matrix ?? {})) Object.assign((state.notifications.matrix[e] ??= {}), row);
-      for (const k of ['quietOn', 'quietFrom', 'quietTo', 'language', 'marketing'] as const) if (b[k] !== undefined) (state.notifications as Record<string, unknown>)[k] = k === 'quietFrom' || k === 'quietTo' ? `${String(b[k]).slice(0, 5)}:00` : b[k];
+      if (typeof b.quietOn === 'boolean') state.services.quiet.quietOn = b.quietOn;
+      if (b.quietFrom) state.services.quiet.quietFrom = String(b.quietFrom).slice(0, 5);
+      if (b.quietTo) state.services.quiet.quietTo = String(b.quietTo).slice(0, 5);
+      if (b.language !== undefined) state.notifications.language = b.language;
+      if (b.marketing !== undefined) state.notifications.marketing = b.marketing;
       return ctx.answer(200, notifications());
     }
     if (path === '/me/preferences') {
@@ -372,14 +395,7 @@ export function accountFixtures(ctx: FixtureContext, state: AccountFixtureState)
       Object.assign(state.prefs, Object.fromEntries(Object.entries(b).filter(([, v]) => v !== undefined)));
       return ctx.answer(200, state.prefs);
     }
-    if (method === 'GET' && path === '/me/export') return ctx.answer(200, { profile: profile(), addresses: addresses().items, preferences: state.prefs, notifications: state.notifications });
-
-    // favourites
-    if (method === 'GET' && path === '/me/favourites') return ctx.answer(200, { items: state.favourites });
-    if ((m = /^\/me\/favourites\/([^/]+)$/.exec(path)) && method === 'DELETE') {
-      state.favourites = state.favourites.filter((f) => f.merchantId !== decodeURIComponent(m![1]!));
-      return ctx.answer(204);
-    }
+    if (method === 'GET' && path === '/me/export') return ctx.answer(200, { profile: profile(), addresses: addresses().items, preferences: state.prefs, notifications: notifications() });
 
     // cases
     if (method === 'GET' && path === '/me/cases') return ctx.answer(200, { items: state.cases.map(caseRow) });

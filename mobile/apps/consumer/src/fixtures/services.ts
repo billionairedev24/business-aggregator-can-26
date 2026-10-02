@@ -1,14 +1,15 @@
 import { colors } from '@northline/mobile-kit';
 
-import type { ActivityItem, Booking, BookingState, ProviderPage, ProviderService, ReviewPage } from '../api/services';
+import type { Booking, BookingState, ProviderPage, ProviderService, ReviewPage } from '../api/services';
 import { STEP_UP_PROOF } from './auth';
 import type { FixtureArea, FixtureContext, FixtureRequest } from './context';
 
 /**
  * Journey C's api (S-100) with made-up businesses: the services landing, one bookable category (a mobile mechanic, with
  * vehicles) and a quoted one, providers, the live calendar, holds, the escrow checkout (the api's payment stand-in, or
- * Stripe-shaped intents), bookings at every step of the job, the sign-off, quote requests, favourites, the activity
- * inbox and quiet hours. Saved cards (`GET /me/payment-methods`) are the shop area's (`server.shop.cards`, `.provider`).
+ * Stripe-shaped intents), bookings at every step of the job, the sign-off, quote requests, favourites and the quiet
+ * hours (`/me/activity` and `/me/notifications` are answered by the account area from its state and this one, S-101).
+ * Saved cards (`GET /me/payment-methods`) are the shop area's (`server.shop.cards`, `.provider`).
  * The businesses keep their time in {@link BUSINESS_ZONE} (a fixed offset that names no place), so screens prove they
  * show the business's time, not the phone's.
  */
@@ -238,7 +239,9 @@ export function servicesFixtures(ctx: FixtureContext, state: ServicesFixtureStat
       return ctx.answer(200, { serviceId, durationMin: 45, days: calendarDays(ctx.now(), serviceId, state.taken).map(({ serviceId: _s, ...d }) => d), timeZone: BUSINESS_ZONE });
     }
 
-    const mine = ['/me/bookings', '/me/quote-requests', '/me/favourites'].some((x) => p.startsWith(x)) || ['/me/activity', '/me/notifications'].includes(p);
+    // GET /me/activity and /me/notifications are the account area's (S-101: one owner per endpoint; the inbox's
+    // bookings and the quiet hours live in this state and in its seed — fixtures/account.ts)
+    const mine = ['/me/bookings', '/me/quote-requests', '/me/favourites'].some((x) => p.startsWith(x));
     if (!mine) return undefined;
     if (!signed(req)) return unauthorized(ctx);
 
@@ -331,28 +334,20 @@ export function servicesFixtures(ctx: FixtureContext, state: ServicesFixtureStat
       state.quoteRequests.push(body);
       return ctx.answer(201, { requestId: `qr-${state.quoteRequests.length}`, ref: 'QR-3104', respondBy: new Date(ctx.now() + 2 * 3_600_000).toISOString(), expiresAt: new Date(ctx.now() + 72 * 3_600_000).toISOString(), providers: (body.providers as string[]).length });
     }
-    if (req.method === 'GET' && p === '/me/favourites') return ctx.answer(200, { items: [...state.favourites].map((merchantId) => ({ merchantId })) });
+    if (req.method === 'GET' && p === '/me/favourites') {
+      // the api's Favourite rows (S-58), newest first: Journey D's list shows them, C's profile reads merchantId
+      const items = [...state.favourites].reverse().map((merchantId) => {
+        const f = PROVIDERS.find((x) => x.merchantId === merchantId);
+        return { merchantId, name: f?.name ?? merchantId, type: 'provider', tier: f?.tier ?? 'registered', slug: f?.slug ?? null, visits: 0, lastAt: null, addedAt: new Date(ctx.now()).toISOString() };
+      });
+      return ctx.answer(200, { items });
+    }
     if ((r = m(/^\/me\/favourites\/([^/]+)$/))) {
       if (req.method === 'PUT') state.favourites.add(r[1]!);
       else if (req.method === 'DELETE') state.favourites.delete(r[1]!);
       return ctx.answer(204);
     }
 
-    // ── the inbox ──
-    if (req.method === 'GET' && p === '/me/activity') {
-      const t = ctx.now();
-      const items: ActivityItem[] = [
-        { id: '01J9BOOKINGROUTE', kind: 'booking', ref: 'BK-7712', title: 'Brake inspection', with: ['Prairie Wrench'], when: new Date(t - 5 * 60_000).toISOString(), amountCents: 9345, status: 'on_the_way', tone: 'accent-2', active: true, action: 'track' },
-        { id: '01J9BOOKINGDONE', kind: 'booking', ref: 'BK-7713', title: 'Oil & filter', with: ['Prairie Wrench'], when: new Date(t - 26 * 3_600_000).toISOString(), amountCents: 8295, status: 'completed', tone: 'accent', active: true, action: 'details' },
-        { id: 'NL-48213', kind: 'order', ref: 'NL-48213', title: 'Grocery run · 3 shops', with: ['Old Town Bakery'], when: new Date(t - 28 * 3_600_000).toISOString(), amountCents: 6420, status: 'delivered', tone: 'accent', active: true, action: 'track' },
-        { id: 'qr-9', kind: 'quote', ref: 'QT-2988', title: 'Mocktail bar · 40 guests', with: ['Sable & Soda'], when: new Date(t - 50 * 3_600_000).toISOString(), amountCents: 64000, status: 'quote_ready', tone: 'accent-2', active: true, action: 'view_quote' },
-      ];
-      return ctx.answer(200, { items });
-    }
-    if (p === '/me/notifications') {
-      if (req.method === 'PUT' && typeof req.body.quietOn === 'boolean') state.quiet.quietOn = req.body.quietOn;
-      return ctx.answer(200, { events: [], channels: ['push', 'email', 'sms'], matrix: {}, ...state.quiet, language: 'en', marketing: 'off' });
-    }
     return ctx.answer(404, { code: 'not_found', detail: `No fixture for ${req.method} ${p}` });
   };
 }

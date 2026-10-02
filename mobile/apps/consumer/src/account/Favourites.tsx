@@ -23,7 +23,8 @@ export function Favourites() {
   const { status } = useAuth();
   const signedIn = status === 'signedIn';
   const list = useQuery({ queryKey: KEYS.favourites, queryFn: () => account().favourites(), enabled: signedIn, staleTime: 60_000 });
-  const remove = useAccountMutation((id: string) => account().removeFavourite(id), { refresh: [KEYS.favourites] });
+  // C's provider profile keeps its own copy of the list (the heart): read again after a change here
+  const remove = useAccountMutation((id: string) => account().removeFavourite(id), { refresh: [KEYS.favourites, ['services', 'favourites']] });
   if (!signedIn) {
     return (
       <Screen title={t('account.fav.title')} testID="favourites">

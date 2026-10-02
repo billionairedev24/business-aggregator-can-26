@@ -77,13 +77,13 @@ describe('D1 Orders & bookings', () => {
 
   it('lists active orders, bookings and quotes, then past ones and refunds', async () => {
     const { server } = await signedIn('/orders');
-    expect(await screen.findByText('Grocery run · 2 shops')).toBeTruthy();
-    expect(screen.getByRole('radio', { name: 'Active · 3' }).props.accessibilityState).toMatchObject({ checked: true });
-    expect(screen.getByText('Deep clean')).toBeTruthy();
+    expect(await screen.findByText('Grocery run · 3 shops')).toBeTruthy();
+    expect(screen.getByRole('radio', { name: 'Active · 4' }).props.accessibilityState).toMatchObject({ checked: true });
+    expect(screen.getByText('Brake inspection')).toBeTruthy();
     expect(screen.getByText('Mocktail bar · 40 guests')).toBeTruthy();
     expect(screen.getByText('On the way')).toBeTruthy();
     expect(screen.getByText('Quote ready')).toBeTruthy();
-    expect(screen.getByText('$23.49')).toBeTruthy();
+    expect(screen.getByText('$64.20')).toBeTruthy();
     expect(screen.queryByText('Window cleaning')).toBeNull();
     fireEvent.press(screen.getByRole('radio', { name: 'Past' }));
     expect(await screen.findByText('Window cleaning')).toBeTruthy();
@@ -96,7 +96,7 @@ describe('D1 Orders & bookings', () => {
 
   it('opens each row on its journey’s screen', async () => {
     const { view } = await signedIn('/orders');
-    fireEvent.press(await screen.findByTestId('activity-req-2988'));
+    fireEvent.press(await screen.findByTestId('activity-qr-9'));
     await waitFor(() => expect(view.getPathname()).toBe('/quotes/q-2988'));
     const at = (id: string) => targetOf({ id, kind: 'order', status: 'on_the_way', action: 'track', active: true, with: [], shops: 1, items: 1, when: '', amountCents: 0, title: '', tone: 'accent' } as ActivityItem);
     expect(at('ord-1')).toEqual({ route: '/orders/ord-1/track' });
@@ -116,8 +116,8 @@ describe('D1 Orders & bookings', () => {
 
   it('opens an order’s tracking and a case', async () => {
     const { view } = await signedIn('/orders');
-    fireEvent.press(await screen.findByTestId('activity-ord-1001'));
-    await waitFor(() => expect(view.getPathname()).toBe('/orders/ord-1001/track'));
+    fireEvent.press(await screen.findByTestId('activity-NL-48213'));
+    await waitFor(() => expect(view.getPathname()).toBe('/orders/NL-48213/delivered'));
     view.unmount();
     setServices(null);
     const again = await signedIn('/orders');
@@ -138,15 +138,15 @@ describe('D1 Orders & bookings', () => {
   });
 
   it('loading, error and Try again', async () => {
-    await failsThenRecovers('/orders', /\/me\/activity$/, 'Grocery run · 2 shops');
+    await failsThenRecovers('/orders', /\/me\/activity$/, 'Grocery run · 3 shops');
   }, 15000);
 
   it('offline: the banner, and the list stays', async () => {
     await signedIn('/orders');
-    await screen.findByText('Deep clean');
+    await screen.findByText('Brake inspection');
     act(() => netinfo().__emit({ isConnected: false, isInternetReachable: false }));
     expect(await screen.findByText("You're offline. Northline will catch up when you're back online.")).toBeTruthy();
-    expect(screen.getByText('Deep clean')).toBeTruthy();
+    expect(screen.getByText('Brake inspection')).toBeTruthy();
     act(() => netinfo().__emit({ isConnected: true, isInternetReachable: true }));
   });
 
@@ -154,9 +154,9 @@ describe('D1 Orders & bookings', () => {
     french();
     await signedIn('/orders');
     expect(await screen.findByText('Commandes et réservations')).toBeTruthy();
-    expect(await screen.findByText('Tournée d’épicerie · 2 commerces')).toBeTruthy();
-    expect(screen.getByRole('radio', { name: 'En cours · 3' })).toBeTruthy();
-    expect(screen.getByText('23,49 $')).toBeTruthy();
+    expect(await screen.findByText('Tournée d’épicerie · 3 commerces')).toBeTruthy();
+    expect(screen.getByRole('radio', { name: 'En cours · 4' })).toBeTruthy();
+    expect(screen.getByText('64,20 $')).toBeTruthy();
   });
 });
 
@@ -166,7 +166,7 @@ describe('D2 Quote received', () => {
     expect(await screen.findByText('Mocktail bar · 40 guests')).toBeTruthy();
     expect(screen.getByText('Quote QT-2988')).toBeTruthy();
     expect(screen.getByText('Valid 70 h')).toBeTruthy();
-    expect(screen.getByText(/^Quote QT-2988 from Copper & Soda · Master · ★ 4\.9 · Licensed server/)).toBeTruthy();
+    expect(screen.getByText(/^Quote QT-2988 from Sable & Soda · Master · ★ 4\.9 · Licensed server/)).toBeTruthy();
     expect(screen.getByText('Scope of work')).toBeTruthy();
     expect(screen.getByText('Bartender × 2 · 4 h')).toBeTruthy();
     expect(screen.getByText('Labour · Certified · $45/h each')).toBeTruthy();
@@ -189,7 +189,7 @@ describe('D2 Quote received', () => {
     fireEvent.changeText(screen.getByTestId('visit-address'), '12 Sample Street, Sampleville');
     fireEvent.changeText(screen.getByTestId('visit-access'), 'Side door');
     fireEvent.press(screen.getByTestId('quote-accept-confirm'));
-    expect(await screen.findByText('Accepted. $640.00 held · booking BK-8001 created · Copper & Soda notified.')).toBeTruthy();
+    expect(await screen.findByText('Accepted. $640.00 held · booking BK-8001 created · Sable & Soda notified.')).toBeTruthy();
     const accept = rec.sent.find((s) => s.url.endsWith('/me/quotes/q-2988/accept'))!;
     expect(accept.body).toEqual({ addressLine: '12 Sample Street, Sampleville', accessNote: 'Side door' });
     expect(accept.headers['idempotency-key']).toMatch(/.{16,}/);
@@ -239,7 +239,7 @@ describe('D2 Quote received', () => {
   it('declines, and says an expired quote is closed', async () => {
     const { server } = await signedIn('/quotes/q-2988');
     fireEvent.press(await screen.findByTestId('quote-decline'));
-    expect(await screen.findByText('Declined. Copper & Soda has been told. Your other quotes stay open.')).toBeTruthy();
+    expect(await screen.findByText('Declined. Sable & Soda has been told. Your other quotes stay open.')).toBeTruthy();
     server.account.quotes.set('q-2988', { state: 'sent', validUntil: Date.now() - 60_000 });
     setServices(null);
     const again = await signedIn('/quotes/q-2988');
@@ -247,7 +247,7 @@ describe('D2 Quote received', () => {
     await act(async () => {
       await again.services.queryClient.invalidateQueries();
     });
-    expect(await screen.findByText('This quote expired. Ask Copper & Soda for an updated quote.')).toBeTruthy();
+    expect(await screen.findByText('This quote expired. Ask Sable & Soda for an updated quote.')).toBeTruthy();
     expect(screen.queryByTestId('quote-accept')).toBeNull();
   });
 
@@ -282,7 +282,7 @@ describe('D3 Profile (You)', () => {
     expect(screen.getByRole('button', { name: 'Payment methods, Visa ··4471' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Security & sign-in, Authenticator + SMS' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Notifications, Quiet 10 p.m.–7 a.m.' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Favourite providers, 1' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Favourite providers, 0' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Refunds & help, 1 case' })).toBeTruthy();
     fireEvent.press(screen.getByTestId('you-wallet'));
     await waitFor(() => expect(view.getPathname()).toBe('/wallet'));
@@ -556,6 +556,7 @@ describe('Notifications', () => {
       marketing: 'none',
     });
     expect(server.account.notifications.matrix.order_updates!.email).toBe(false);
+    expect(server.services.quiet).toMatchObject({ quietOn: true, quietFrom: '23:00' }); // the quiet hours C's inbox shows
   });
 
   it('a failed save keeps the changes on screen', async () => {
@@ -615,20 +616,32 @@ describe('Dietary, accessibility & region', () => {
 });
 
 describe('Favourites', () => {
-  it('opens a provider, removes one, and says when there are none', async () => {
-    const { view } = await signedIn('/account/favourites');
-    expect(await screen.findByText('Tidy Nook Cleaners')).toBeTruthy();
-    expect(screen.getByText(/^Master · 2 visits · last /)).toBeTruthy();
-    fireEvent.press(screen.getByRole('button', { name: 'Tidy Nook Cleaners' }));
-    await waitFor(() => expect(view.getPathname()).toBe('/providers/tidy-nook-cleaners'));
+  /** One favourite, saved the way Journey C saves it (the services area's state). */
+  const withFavourite = async (url: string, more: Partial<StartOptions> = {}) => {
+    const started = await signedIn(url, more);
+    started.server.services.favourites.add('m-prairie');
+    await act(async () => {
+      await started.services.queryClient.invalidateQueries();
+    });
+    return started;
+  };
+
+  it('opens a provider, removes one (C reads the same favourites), and says when there are none', async () => {
+    const { view } = await withFavourite('/account/favourites');
+    expect(await screen.findByText('Prairie Wrench')).toBeTruthy();
+    expect(screen.getByText('Master')).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: 'Prairie Wrench' }));
+    await waitFor(() => expect(view.getPathname()).toBe('/providers/prairie-wrench'));
+    view.unmount();
     setServices(null);
-    await signedIn('/account/favourites');
-    fireEvent.press(await screen.findByTestId('fav-remove-m-cleaners'));
+    const { server } = await withFavourite('/account/favourites');
+    fireEvent.press(await screen.findByTestId('fav-remove-m-prairie'));
     expect(await screen.findByText('No favourites yet. Tap the heart on a provider to keep them here.')).toBeTruthy();
+    expect(server.services.favourites.size).toBe(0);
   });
 
-  it('loading, error and Try again', async () => {
-    await failsThenRecovers('/account/favourites', /\/me\/favourites$/, 'Tidy Nook Cleaners');
+  it('empty, loading, error and Try again', async () => {
+    await failsThenRecovers('/account/favourites', /\/me\/favourites$/, 'No favourites yet. Tap the heart on a provider to keep them here.');
   }, 15000);
 });
 

@@ -18,9 +18,11 @@ import { SUBSTITUTIONS, Sums, chooseAddress, useQuote } from './Checkout';
 import { CART_KEY, problemCode, shop, useMarket, useShopFormat } from './common';
 import { cardPaymentsFor, pendingIntents, type PayMethod } from './payments';
 import { Kicker, Panel } from './parts';
-import { StepUpFailed, stepUpWithCode } from './stepUp';
+import { StepUpFailed, stepUpWithCode, type StepUpFailure } from './stepUp';
 
 type Phase = 'form' | 'stepUp' | 'enrol' | 'bank';
+/** Why the authenticator code wasn't taken, in words (the reasons aren't the copy keys: `wrong_code` → `wrong`). */
+const STEP_UP_MESSAGE: Record<StepUpFailure, MessageKey> = { wrong_code: 'shop.stepUp.wrong', locked: 'shop.stepUp.locked', elsewhere: 'shop.stepUp.elsewhere' };
 const KNOWN = ['out_of_stock', 'window_closed', 'cart_empty', 'checkout_expired', 'payment_not_authorized'];
 
 /**
@@ -164,7 +166,7 @@ export function Pay() {
       await pay(proof);
     } catch (e) {
       setBusy(false);
-      setCodeError(e instanceof StepUpFailed ? t(`shop.stepUp.${e.reason}` as MessageKey) : errorMessage(e, t));
+      setCodeError(e instanceof StepUpFailed ? t(STEP_UP_MESSAGE[e.reason]) : errorMessage(e, t));
     }
   };
 

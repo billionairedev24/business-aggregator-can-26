@@ -253,6 +253,12 @@ S-98's temporary You screen (`src/journeyA/You.tsx`) is gone. What S-101 decided
   (`PATCH /me/preferences {language}`; offline it stays the phone's choice and says so).
 - **Payment methods:** a card is saved with a SetupIntent — Stripe's PaymentSheet in setup mode, or nothing with the
   api's stand-in (`cardSetup.ts`, the same switch as paying).
+- **Two notification screens:** `/notifications` (C) is the design's inbox with the quiet-hours switch;
+  `/account/notifications` (D, You › Notifications) holds every setting. Both read `GET /me/notifications`; each
+  refreshes the other's copy after a change it makes.
+- **Fixtures:** one owner per endpoint (DECISIONS § S-101): `/me/activity` and `/me/notifications` are the account
+  area's, `/me/favourites` the services area's, the step-up the auth area's; facts both journeys show (the inbox's
+  bookings, the quiet hours, favourites) live in one state.
 - **Not drawn, for lack of an api:** the wallet's "Provider-funded rewards near you" and points "Activity", "Invite a
   neighbour", the quote's "Ask a question", the security centre's "Require Face ID for payments over $100" (§ API gaps).
 

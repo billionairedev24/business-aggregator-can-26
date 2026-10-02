@@ -82,7 +82,8 @@ function QuoteView({ page, f, title }: { page: QuotePage; f: Format; title: stri
   const [booking, setBooking] = useState<BookingConfirmation | null>(null);
   // one key per acceptance of this body, kept for every retry (MOBILE_PLAN § Data)
   const keys = useRef<{ body: string; key: string; confirm: string } | null>(null);
-  const refresh = () => qc.invalidateQueries({ queryKey: KEYS.all });
+  // Orders and C's inbox read the activity: both copies are read again
+  const refresh = () => Promise.all([qc.invalidateQueries({ queryKey: KEYS.all }), qc.invalidateQueries({ queryKey: ['services', 'activity'] })]);
 
   const clean = (v: Visit): Visit => ({
     addressLine: v.addressLine?.trim() || undefined,
