@@ -10,7 +10,7 @@ export type { PublicConfig } from './config';
 /** The locale of this request: on the server from the cookie / Accept-Language, in the browser from the cookie. */
 export const requestLocale = createIsomorphicFn()
   .server((): Locale => pickLocale(getCookie(LOCALE_COOKIE), getRequestHeader('accept-language'), urlLocale(getRequestUrl().href)))
-  .client((): Locale => pickLocale(readCookie(LOCALE_COOKIE), navigator.language, urlLocale(window.location.href)));
+  .client((): Locale => pickLocale(readCookie(LOCALE_COOKIE), navigator.languages?.join(',') || navigator.language, urlLocale(window.location.href)));
 
 /** Which business page this request is on another host (headers set by server/page-hosts.mjs only). */
 function pageFromHeaders(): PageHost | null {

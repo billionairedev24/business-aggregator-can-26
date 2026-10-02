@@ -9,6 +9,7 @@ import { homeScreen, screenFromPath, screenHref, screensFor } from '../features/
 import { StudioLayout } from '../features/shell/StudioLayout';
 import { PlaceValues } from '../features/shell/place';
 import { useStudioLive } from '../lib/live';
+import { useFrenchFirst } from '../lib/locale';
 
 export const Route = createFileRoute('/b/$merchantId')({
   // S-69: the business is requested with the session check, not after the layout's chunk (see vite.config.ts).
@@ -25,6 +26,7 @@ function StudioRoute() {
   const merchant = useQuery(merchantQuery(merchantId)).data!;
   const { locale } = useLocale();
   useStudioLive(merchantId);
+  useFrenchFirst(merchant.region?.frenchFirst); // S-116: a French-first place opens in French unless the person chose
   const pathname = useRouterState({ select: s => s.location.pathname });
   const screen = screenFromPath(pathname);
   if (!screensFor(merchant.type).includes(screen)) return <Navigate to={screenHref(merchant.id, homeScreen(merchant.type))} replace />;

@@ -14,14 +14,12 @@ import { LOCALES, colors, type Locale } from '@northline/mobile-kit';
 
 import { AuthProvider, useAuth } from '../src/auth';
 import { Loading } from '../src/components/ui';
-import { I18nProvider, useI18n } from '../src/i18n';
+import { I18nProvider, LANGUAGE_KEY, useI18n } from '../src/i18n';
 import { defineLocationTask } from '../src/location/tracker';
 import { services } from '../src/services';
 
 // The background location task must exist before anything else runs (also when the OS starts the app for it).
 defineLocationTask();
-
-const LANGUAGE_KEY = 'nl.courier.language';
 
 /** The language the courier picked (Account), else the device's; the api answers in it too (Accept-Language). */
 function LanguageSync({ children }: { children: ReactNode }) {

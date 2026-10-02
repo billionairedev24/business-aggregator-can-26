@@ -15,10 +15,9 @@ import { AccountFlowProvider } from '../src/auth/AccountFlow';
 import { AuthProvider, useAuth } from '../src/auth/AuthProvider';
 import { I18nProvider, useI18n } from '../src/i18n';
 import { DeliveryLocationProvider } from '../src/location/DeliveryLocation';
+import { FrenchFirst, LANGUAGE_KEY } from '../src/location/FrenchFirst';
 import { services } from '../src/services';
 import { Loading } from '../src/ui/states';
-
-const LANGUAGE_KEY = 'nl.app.language';
 
 /** The language the person picked (You › Language), else the device's; the api answers in it too (Accept-Language). */
 function LanguageSync({ children }: { children: ReactNode }) {
@@ -53,6 +52,7 @@ export default function RootLayout() {
           <LanguageSync>
             <AuthProvider>
               <DeliveryLocationProvider>
+                <FrenchFirst />
                 <AccountFlowProvider>
                   <StatusBar style="dark" />
                   {ready ? <Routes /> : null}

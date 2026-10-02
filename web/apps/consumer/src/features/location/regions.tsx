@@ -1,9 +1,10 @@
 import { queryOptions, useQuery } from '@tanstack/react-query';
-import { createContext, type ReactNode, useContext, useMemo } from 'react';
+import { createContext, type ReactNode, useContext, useEffect, useMemo } from 'react';
 import { z } from 'zod';
 import { http } from '@northline/client';
 import { configurePlatformTimeZone, defineMessages, MessageValues, platformTimeZone, useLocale, type Locale } from '@northline/ui';
-import { useDeliveryLocation } from './useDeliveryLocation';
+import { chosenLocale, LOCALE_COOKIE, readCookie } from '../../lib/locale';
+import { useDeliveryLocation, useKnownLocation } from './useDeliveryLocation';
 
 /*
  * The region model on the consumer site (S-134, region-neutral): province names, launch status, privacy laws, markets
@@ -19,8 +20,10 @@ export const Regions = z.object({
   provinces: z.array(z.object({
     code: z.string(), name: z.string(), nameIn: z.string(), nameOf: z.string(), status: Status, timeZone: z.string(),
     privacyLaw: z.string(),
+    // S-116: the province's language rule (region configuration); absent from older servers
+    frenchFirst: z.boolean().nullish(),
   })),
-  markets: z.array(z.object({ id: z.string(), city: z.string(), province: z.string(), timeZone: z.string(), status: Status })),
+  markets: z.array(z.object({ id: z.string(), city: z.string(), province: z.string(), timeZone: z.string(), status: Status, frenchFirst: z.boolean().nullish() })),
 });
 export type Regions = z.infer<typeof Regions>;
 
@@ -72,6 +75,44 @@ export function useZone(city?: string | null): string {
   return own ?? enclosing ?? platformTimeZone();
 }
 
+/**
+ * S-116 (Loi 96 readiness): whether a place is French-first — its market's rule (by id, else city), else its
+ * province's. Region configuration only: this app never names the place.
+ */
+export function frenchFirstPlace(regions: Regions | undefined, place: { province?: string | null; marketId?: string | null; city?: string | null }): boolean {
+  if (!regions) return false;
+  const market = regions.markets.find(m => (place.marketId && m.id === place.marketId) || (place.city && m.city.toLowerCase() === place.city.toLowerCase()));
+  if (market?.frenchFirst != null) return market.frenchFirst;
+  const province = place.province ?? market?.province;
+  return regions.provinces.find(p => p.code === province)?.frenchFirst ?? false;
+}
+
+/**
+ * Whether the visitor's place (their delivery location, else the default province) is French-first. Works outside
+ * the location provider too (registration reads the location saved in the browser).
+ */
+export function useFrenchFirst(): boolean {
+  const regions = useRegions();
+  const location = useKnownLocation();
+  if (location?.status === 'locating') return false;
+  return frenchFirstPlace(regions, { province: location?.province ?? regions?.defaultProvince, marketId: location?.marketId, city: location?.city });
+}
+
+/**
+ * Switches the page to French when the visitor's place is French-first and they haven't chosen a language (no
+ * `nl.locale` cookie, no `?lang=`). The switch is remembered like the FR/EN toggle, which always wins afterwards.
+ */
+function FrenchFirstLocale() {
+  const first = useFrenchFirst();
+  const { locale, setLocale } = useLocale();
+  useEffect(() => {
+    if (!first || locale === 'fr') return;
+    if (chosenLocale(readCookie(LOCALE_COOKIE), window.location.href)) return;
+    setLocale('fr');
+  }, [first]); // eslint-disable-line react-hooks/exhaustive-deps -- once per place
+  return null;
+}
+
 const useLawT = defineMessages({
   en: { law_pipeda: 'PIPEDA', law_pipa: 'PIPEDA and {province} PIPA', law_law25: 'PIPEDA and Law 25 ({province})', law_any: 'PIPEDA and provincial privacy law' },
   fr: { law_pipeda: 'la LPRPDE', law_pipa: 'la LPRPDE et la PIPA {provinceOf}', law_law25: 'la LPRPDE et la Loi 25 ({province})', law_any: 'la LPRPDE et la loi provinciale sur la protection des renseignements personnels' },
@@ -100,6 +141,7 @@ export function VisitorPlace({ children }: { children: ReactNode }) {
   const city = location.status !== 'locating' ? location.city : undefined;
   return (
     <MessageValues values={values}>
+      <FrenchFirstLocale />
       <MarketZone city={city}>{children}</MarketZone>
     </MessageValues>
   );
