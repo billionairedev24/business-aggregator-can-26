@@ -1,5 +1,6 @@
 package ca.northline.region.web;
 
+import ca.northline.region.api.FrenchListings;
 import ca.northline.region.api.LaunchStatus;
 import ca.northline.region.api.Markets;
 import ca.northline.region.api.PrivacyLaw;
@@ -34,7 +35,11 @@ class RegionController {
     private final Regions regions;
     private final Markets markets;
 
-    /** {@code nameIn} "in Alberta" / "au Québec", {@code nameOf} "Alberta" / "du Québec": for copy in the language. */
+    /**
+     * {@code nameIn} "in Alberta" / "au Québec", {@code nameOf} "Alberta" / "du Québec": for copy in the language.
+     * {@code frenchFirst} / {@code frenchListings}: the province's language rules (S-116) — the apps default to French
+     * there and present the Terms in French first; the Studio warns or refuses listings without French text.
+     */
     record ProvinceResponse(
             String code,
             String name,
@@ -44,8 +49,11 @@ class RegionController {
             String timeZone,
             List<String> timeZones,
             PrivacyLaw privacyLaw,
-            int taxBps) {}
+            int taxBps,
+            boolean frenchFirst,
+            FrenchListings frenchListings) {}
 
+    /** {@code frenchFirst} / {@code frenchListings}: the market's own language rules, else its province's (S-116). */
     record MarketResponse(
             String id,
             String city,
@@ -53,7 +61,9 @@ class RegionController {
             String timeZone,
             LaunchStatus status,
             @Nullable Double lat,
-            @Nullable Double lng) {}
+            @Nullable Double lng,
+            boolean frenchFirst,
+            FrenchListings frenchListings) {}
 
     record RegionsResponse(
             String platformTimeZone,
@@ -74,11 +84,21 @@ class RegionController {
                         p.zone().getId(),
                         p.timeZones().stream().map(ZoneId::getId).toList(),
                         p.privacyLaw(),
-                        p.taxBps()))
+                        p.taxBps(),
+                        p.language().frenchFirst(),
+                        p.language().frenchListings()))
                 .toList();
         var cities = regions.markets().stream()
                 .map(m -> new MarketResponse(
-                        m.id(), m.city(), m.province(), m.zone().getId(), m.status(), m.lat(), m.lng()))
+                        m.id(),
+                        m.city(),
+                        m.province(),
+                        m.zone().getId(),
+                        m.status(),
+                        m.lat(),
+                        m.lng(),
+                        m.language().frenchFirst(),
+                        m.language().frenchListings()))
                 .toList();
         return ResponseEntity.ok()
                 .cacheControl(CACHE)

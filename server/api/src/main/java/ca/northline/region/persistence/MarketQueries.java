@@ -102,6 +102,7 @@ class MarketQueries implements MarketStore {
                                r.name_i18n ->> 'fr_in' as fr_in, r.name_i18n ->> 'fr_of' as fr_of,
                                ST_Y(r.center::geometry) as lat, ST_X(r.center::geometry) as lng,
                                coalesce(r.time_zones, '{}') as time_zones, r.holidays, r.privacy_law, r.registries,
+                               r.french_first, r.french_listings,
                                (select round((coalesce(t.gst, 0) + coalesce(t.pst, 0) + coalesce(t.hst, 0)
                                               + coalesce(t.qst, 0)) * 10000)::int
                                   from region.tax_profiles t
@@ -118,7 +119,9 @@ class MarketQueries implements MarketStore {
                         texts(rs, "registries"),
                         rs.getObject("tax_bps", Integer.class),
                         rs.getString("fr_in"),
-                        rs.getString("fr_of")))
+                        rs.getString("fr_of"),
+                        rs.getObject("french_first", Boolean.class),
+                        rs.getString("french_listings")))
                 .list();
     }
 

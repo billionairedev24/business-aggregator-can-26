@@ -69,6 +69,18 @@ public interface Regions {
         return List.copyOf(out);
     }
 
+    /**
+     * The language rules of a place (S-116): its market's (a city, or a market id), else its province's, else none —
+     * an unknown place has no rule. Code never asks "is this Québec"; it asks this.
+     */
+    default LanguageRules languageRules(@Nullable String province, @Nullable String city) {
+        return marketById(city)
+                .or(() -> market(city, province))
+                .map(MarketProfile::language)
+                .or(() -> province(province).map(ProvinceProfile::language))
+                .orElse(LanguageRules.NONE);
+    }
+
     /** Re-reads the region rows now (after the console edits them); otherwise they are re-read every cache period. */
     void refresh();
 }

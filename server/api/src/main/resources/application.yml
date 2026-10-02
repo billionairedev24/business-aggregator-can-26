@@ -157,6 +157,9 @@ northline:
     default-province: ${REGION_DEFAULT_PROVINCE:${SEARCH_DEFAULT_MARKET:AB}}
     platform-zone: ${REGION_PLATFORM_ZONE:America/Edmonton}   # nightly jobs, support hours: work with no market
     cache-ttl: ${REGION_CACHE_TTL:60s}
+    # S-116 (Loi 96 readiness): provinces (codes) or market ids that are French-first with French listing text required,
+    # on top of region.regions.french_first / french_listings (V315). Blank = the rows decide.
+    french-first: ${REGION_FRENCH_FIRST:}
   # Pooled delivery runs (S-49; DeliveryProperties) in every live market of the region model. Times are the market's
   # local time; `cutoff` = shops pack by, customers order by cutoff − order-lead. A cut-off after the start belongs to
   # the day before.

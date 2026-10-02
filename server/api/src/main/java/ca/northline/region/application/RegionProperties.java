@@ -15,10 +15,14 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param platformZone the zone of work that belongs to no market: nightly jobs, support hours, account dates
  *     ({@code REGION_PLATFORM_ZONE})
  * @param cacheTtl how long region rows are kept before they are read again ({@code REGION_CACHE_TTL})
+ * @param frenchFirst provinces (two-letter codes) or market ids that are French-first whatever their row says, with
+ *     French listing text required — for an environment that must behave like a French-first place before operations
+ *     set the rows ({@code REGION_FRENCH_FIRST}, S-116); blank = the rows decide
  */
 @ConfigurationProperties("northline.region")
 record RegionProperties(
         @DefaultValue("") String provinces,
         @DefaultValue("") String defaultProvince,
         ZoneId platformZone,
-        @DefaultValue("60s") Duration cacheTtl) {}
+        @DefaultValue("60s") Duration cacheTtl,
+        @DefaultValue("") String frenchFirst) {}

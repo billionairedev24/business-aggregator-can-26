@@ -9,6 +9,7 @@ import org.jspecify.annotations.Nullable;
  * province's), its centre and launch status.
  *
  * @param registries business-registry adapter keys serving the city only (e.g. a municipal licence dataset)
+ * @param language the market's language rules: its own where the region row sets them, else its province's (S-116)
  */
 public record MarketProfile(
         String id,
@@ -18,7 +19,8 @@ public record MarketProfile(
         @Nullable Double lat,
         @Nullable Double lng,
         LaunchStatus status,
-        List<String> registries) {
+        List<String> registries,
+        LanguageRules language) {
 
     public MarketProfile {
         registries = List.copyOf(registries);

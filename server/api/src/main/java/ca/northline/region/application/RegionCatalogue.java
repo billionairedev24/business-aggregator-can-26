@@ -1,6 +1,8 @@
 package ca.northline.region.application;
 
+import ca.northline.region.api.FrenchListings;
 import ca.northline.region.api.Holiday;
+import ca.northline.region.api.LanguageRules;
 import ca.northline.region.api.LaunchStatus;
 import ca.northline.region.api.MarketProfile;
 import ca.northline.region.api.Markets;
@@ -46,6 +48,7 @@ class RegionCatalogue implements Regions, Markets {
     private final @Nullable String defaultProvince;
     private final ZoneId platformZone;
     private final long ttlNanos;
+    private final Set<String> frenchFirst;
 
     private volatile @Nullable Snapshot snapshot;
 
@@ -60,6 +63,22 @@ class RegionCatalogue implements Regions, Markets {
         this.defaultProvince = code.isEmpty() ? null : code;
         this.platformZone = properties.platformZone();
         this.ttlNanos = properties.cacheTtl().toNanos();
+        this.frenchFirst = places(properties.frenchFirst());
+    }
+
+    /** {@code QC,mkt-x} → the province codes (upper case) and market ids named. */
+    static Set<String> places(String spec) {
+        var out = new LinkedHashSet<String>();
+        for (var entry : spec.split(",")) {
+            var place = entry.strip();
+            if (!place.isEmpty()) {
+                out.add(
+                        CODE.matcher(place.toUpperCase(Locale.ROOT)).matches()
+                                ? place.toUpperCase(Locale.ROOT)
+                                : place);
+            }
+        }
+        return Collections.unmodifiableSet(out);
     }
 
     /** {@code AB=Zone/Id,BC} → code → zone override (null = the row's zone). */
@@ -275,7 +294,20 @@ class RegionCatalogue implements Regions, Markets {
                 row.holidays(),
                 row.taxBps() == null ? 0 : row.taxBps(),
                 row.frIn() == null ? "(" + r.nameEn() + ")" : row.frIn(),
-                row.frOf() == null ? "(" + r.nameEn() + ")" : row.frOf());
+                row.frOf() == null ? "(" + r.nameEn() + ")" : row.frOf(),
+                language(row, LanguageRules.NONE, r.province()));
+    }
+
+    /** The row's language rules over {@code inherited} (a market's province); REGION_FRENCH_FIRST wins. */
+    private LanguageRules language(ProfileRow row, LanguageRules inherited, String configKey) {
+        if (frenchFirst.contains(configKey)) {
+            return new LanguageRules(true, FrenchListings.REQUIRE);
+        }
+        var first = row.frenchFirst() == null ? inherited.frenchFirst() : row.frenchFirst();
+        var listings = row.frenchListings() == null
+                ? inherited.frenchListings()
+                : CodedEnum.fromCode(FrenchListings.class, row.frenchListings());
+        return new LanguageRules(first, listings);
     }
 
     private MarketProfile market(ProfileRow row, Map<String, ProvinceProfile> provinces) {
@@ -292,6 +324,7 @@ class RegionCatalogue implements Regions, Markets {
                 r.lat(),
                 r.lng(),
                 LaunchStatus.valueOf(r.stage().name()),
-                row.registries());
+                row.registries(),
+                language(row, province != null ? province.language() : LanguageRules.NONE, r.id()));
     }
 }
