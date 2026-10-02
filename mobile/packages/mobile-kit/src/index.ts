@@ -1,7 +1,7 @@
 /**
  * @northline/mobile-kit — what every Northline native app shares (S-87 builds it for the courier app; the consumer
  * app reuses it in phase 4): DPoP-bound OAuth with PKCE, the api client, secure storage, the theme from
- * `@northline/tokens` and en/fr-CA i18n.
+ * `@northline/tokens`, en/fr-CA i18n and (S-102) push registration and deep links.
  */
 export { ApiClient, type ApiAnswer, type RequestOptions } from './api/client';
 export { ApiError, NetworkError, SignedOutError, apiErrorOf, retryAfterSeconds, type FieldError } from './api/errors';
@@ -32,3 +32,18 @@ export {
   type Params,
 } from './i18n';
 export { MIN_TARGET, colors, fonts, radius, space, theme, type Theme } from './theme';
+export {
+  COURIER_SCHEME,
+  CONSUMER_SCHEME,
+  PushRegistration,
+  expoPushPlatform,
+  handleNotificationTaps,
+  parseDeepLink,
+  routeOf,
+  type DeepLink,
+  type DeviceRegistryApi,
+  type ExpoNotificationsModule,
+  type PushPermission,
+  type PushPlatform,
+  type PushRegistrationOptions,
+} from './push';
