@@ -43,7 +43,8 @@ class OrderDeliveryService implements ConfirmDelivery {
             return;
         }
         orders.markDelivered(order.id(), e.proof(), e.occurredAt());
-        events.publishEvent(new OrderDelivered(Ids.next(), e.occurredAt(), order.id(), order.type(), e.proof()));
+        events.publishEvent(new OrderDelivered(
+                Ids.next(), e.occurredAt(), order.id(), order.type(), e.proof(), orders.merchants(order.id())));
     }
 
     @Override

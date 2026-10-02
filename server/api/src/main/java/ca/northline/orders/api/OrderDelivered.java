@@ -2,6 +2,7 @@ package ca.northline.orders.api;
 
 import ca.northline.shared.DomainEvent;
 import java.time.Instant;
+import java.util.List;
 import org.springframework.modulith.events.Externalized;
 
 /**
@@ -12,7 +13,20 @@ import org.springframework.modulith.events.Externalized;
  *
  * @param orderType {@code goods} | {@code food}
  * @param proof {@code photo} | {@code signature} | {@code pin}
+ * @param merchantIds the businesses with lines on the order (one for food, one or more for a pooled goods order),
+ *     so each gets its partner webhook (S-33); added to v1 as an optional field, absent from events published before
  */
 @Externalized("orders.order::#{aggregateId()}")
-public record OrderDelivered(String eventId, Instant occurredAt, String aggregateId, String orderType, String proof)
-        implements DomainEvent {}
+public record OrderDelivered(
+        String eventId,
+        Instant occurredAt,
+        String aggregateId,
+        String orderType,
+        String proof,
+        List<String> merchantIds)
+        implements DomainEvent {
+
+    public OrderDelivered {
+        merchantIds = List.copyOf(merchantIds);
+    }
+}
