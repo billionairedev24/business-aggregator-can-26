@@ -156,7 +156,7 @@ lint: server-lint web-lint ## Static checks: Spotless, Checkstyle, Error Prone/N
 format: server-format web-format ## Format the code (Spotless; Prettier on the web files you changed)
 
 .PHONY: clean
-clean: server-clean web-clean docs-clean courier-clean ## Delete build outputs and the runner's logs (keeps node_modules, ~/.gradle, Docker volumes)
+clean: server-clean web-clean docs-clean courier-clean mobile-consumer-clean ## Delete build outputs and the runner's logs (keeps node_modules, ~/.gradle, Docker volumes)
 	rm -rf $(ROOT)/smoke-out $(ROOT)/.run/logs
 
 .PHONY: clean-all
@@ -190,6 +190,7 @@ help: ## This list, and the common variables
 include $(ROOT)/make/server.mk
 include $(ROOT)/make/web.mk
 include $(ROOT)/make/courier.mk
+include $(ROOT)/make/mobile-consumer.mk
 include $(ROOT)/make/db.mk
 include $(ROOT)/make/kafka.mk
 include $(ROOT)/make/search.mk
