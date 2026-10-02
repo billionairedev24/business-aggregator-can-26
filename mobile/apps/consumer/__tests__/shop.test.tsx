@@ -2,6 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Linking from 'expo-linking';
 import { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 
+import { parseDeepLink, routeOf } from '@northline/mobile-kit';
+
 import type { Started } from '../src/api/shop';
 import { FIXTURE_PROOF, seedOrder } from '../src/fixtures/shop';
 import { setServices } from '../src/services';
@@ -546,6 +548,14 @@ describe('B7–B9 the order: confirmed, tracking, delivered', () => {
     const again = await withOrder('delivered', '/orders/ord-1001/delivered');
     fireEvent.press(await screen.findByTestId('delivered-problem'));
     await waitFor(() => expect(again.view.getPathname()).toBe('/problem/order/ord-1001'));
+  });
+
+  it('opens from S-102’s order links (`/orders/<id>` → tracking)', async () => {
+    const link = parseDeepLink('ca.northline.app://orders/ord-1001', ['example.test']);
+    expect(link).not.toBeNull();
+    const { view } = await withOrder('picked_up', routeOf(link!));
+    await waitFor(() => expect(view.getPathname()).toBe('/orders/ord-1001/track'));
+    expect(await screen.findByText('Robin · Northline courier')).toBeTruthy();
   });
 
   it('not delivered yet, unknown orders and guests', async () => {

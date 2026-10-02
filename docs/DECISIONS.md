@@ -6174,11 +6174,13 @@ variable. One new app dependency: `@stripe/stripe-react-native` 0.64.0 (the vers
   The api's English rule messages are worded in French in the app (as the web's `SERVER_FR`).
 - **Navigation:** returning to a tab from a flow uses `backToTab()` (dismiss, then navigate): a `push`/`replace` to a
   tab path stacked a second tab navigator (found by the web smoke test). Add to cart opens the Cart tab, as the design.
+- **S-102's order links** (`routeOf` → `/orders/<id>`) land on a new route `app/orders/[id]/index.tsx` that opens the
+  order's tracking.
 - **Cart badge** (the one shared edit): `app/(tabs)/_layout.tsx` passes `useCartCount()` to the tab bar.
 - **Shared files touched beyond the plan's list:** `__tests__/journeyA.test.tsx` and `shell.test.tsx` (wait for
   `home` instead of `stub-home`), `src/fixtures/server.ts` (the shop area and its state), `e2e/smoke.mjs` (`home`, and
   a Journey B step block), `package.json` / `pnpm-lock.yaml` (the SDK).
-- **Tests:** `__tests__/shop.test.tsx`, 33 tests: every screen's loading / empty / error / offline states where it has
+- **Tests:** `__tests__/shop.test.tsx`, 34 tests: every screen's loading / empty / error / offline states where it has
   them, en + fr-CA, what is sent (filters, guest id, Idempotency-Key reuse, X-Step-Up, card method), the Stripe
   adapter against a mocked SDK. The web smoke test runs Home → Search → Product → Cart → Checkout → Payment (stand-in)
   → Order confirmed in headless Chromium.

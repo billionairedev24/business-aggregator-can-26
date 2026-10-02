@@ -157,7 +157,7 @@ signed in only. Paths are under `/api/v1` unless they start with `/api/auth` or 
 | `checkout` | `/checkout` | ✓ | `GET /me/checkout?market=`, `POST /me/checkout/quote` |
 | `pay` | `/pay` (`?kind&window&sub&address`) | ✓ | `GET /me/payment-methods`, `POST /me/checkouts` (Idempotency-Key, X-Step-Up), `POST /me/checkouts/{id}/place`; `POST /api/auth/step-up/totp`; Stripe's React Native SDK (PaymentSheet, 3-D Secure; return link `/stripe-redirect`) |
 | `confirmed` | `/orders/[id]/confirmed` | ✓ | `GET /me/orders/{id}` |
-| `track` | `/orders/[id]/track` | ✓ | `GET /me/orders/{id}`, read again every 15 s (no EventSource in React Native) |
+| `track` | `/orders/[id]/track` (and `/orders/[id]`, where S-102's order links land) | ✓ | `GET /me/orders/{id}`, read again every 15 s (no EventSource in React Native) |
 | `delivered` | `/orders/[id]/delivered` | ✓ | `GET /me/orders/{id}`, `POST /me/orders/{id}/confirm` |
 | `refund` | `/problem/[kind]/[id]` | ✓ | `GET /me/problems/{kind}/{id}`, `POST /me/problems` |
 
@@ -251,7 +251,7 @@ api above; personal stubs already show guests the sign-in prompt.
   | `https://<zone>/app/cases/<number>` | `ca.northline.app://cases/<number>` | `/cases/<number>` |
   | `https://<zone>/courier/run` | `ca.northline.courier://run` | courier app `/run` |
 
-  Journeys B–D add the screens behind `/orders/<id>`, `/bookings/<id>`, `/quotes/<id>` and `/cases/<number>` (or map
+  Journeys B–D add the screens behind `/orders/<id>` (S-99: → the order's tracking), `/bookings/<id>`, `/quotes/<id>` and `/cases/<number>` (or map
   `routeOf`'s paths onto theirs in one place).
 
 ## Working in parallel (S-99, S-100, S-101)
