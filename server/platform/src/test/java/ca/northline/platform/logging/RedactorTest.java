@@ -22,6 +22,10 @@ class RedactorTest {
             card, dashed              | pan 5555-5555-5555-4444                              | pan [CARD …4444]
             card, plain               | 378282246310005 amex                                 | [CARD …0005] amex
             not a card (Luhn)         | order 1234567890123 total                            | order 1234567890123 total
+            cvc in JSON (S-110)       | {"cvc":"123","brand":"visa"}                         | {"cvc":"[REDACTED]","brand":"visa"}
+            cvv in prose              | cvv 456 entered                                      | cvv [REDACTED] entered
+            track 2                   | swipe ;4242424242424242=29121010000000000000? done   | swipe [TRACK] done
+            track 1                   | read %B4242424242424242^DOE/JANE^2912101000000000? ok | read [TRACK] ok
             postal code               | ships to T2P 1B5, Calgary                            | ships to T2P ***, Calgary
             postal code, no space     | H2X1Y4                                               | H2X ***
             bearer                    | Authorization: Bearer abc.def-ghi_jkl123             | Authorization: [REDACTED]
@@ -56,6 +60,8 @@ class RedactorTest {
         assertThat(Redactor.redact("http.request.header.authorization", "x")).isEqualTo(Redactor.MASK);
         assertThat(Redactor.redact("otp", "123456")).isEqualTo(Redactor.MASK);
         assertThat(Redactor.redact("verification_code", "123456")).isEqualTo(Redactor.MASK);
+        assertThat(Redactor.redact("payment.cvc", "123")).isEqualTo(Redactor.MASK); // S-110
+        assertThat(Redactor.redact("card_number", "4242424242424242")).isEqualTo(Redactor.MASK);
         assertThat(Redactor.redact("message", "hello amara@example.ca")).isEqualTo("hello [EMAIL]");
     }
 
