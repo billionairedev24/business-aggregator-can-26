@@ -48,7 +48,7 @@ class StripeBankLinking implements BankLinking {
             // an unknown / used token or account: the owner links again
             throw new NotLinkable("Stripe refused the " + what + ": " + e.getCode());
         } catch (StripeException e) {
-            throw new StripeConnectGateway.StripeCallFailed(what, e);
+            throw StripeConnectGateway.failure(what, e);
         }
     }
 

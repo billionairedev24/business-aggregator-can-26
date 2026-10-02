@@ -44,6 +44,6 @@ class Secrets {
     }
 
     private static String context(String requestId) {
-        return "privacy-request:" + requestId;
+        return PrivacyRequestStore.SEALED_CONTEXT + requestId;
     }
 }

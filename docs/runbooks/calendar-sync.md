@@ -155,7 +155,9 @@ key under `local`/`test`); refused under staging/prod.
 versions for decryption, so nothing is re-sealed. Never disable or destroy a version that sealed live tokens: every
 member's calendar would drop to "reconnect". Changing `KMS_ENCRYPTION_KEY_ID` to another key: keep the old key enabled
 — tokens sealed with it still name it — until every link was re-sealed (a reconnect re-seals, and Microsoft's rotating
-refresh tokens re-seal on refresh); there is no bulk re-seal command yet.
+refresh tokens re-seal on refresh). Since S-115 the api's re-wrap job moves every stored data key to the current key
+(or key version) within the hour — [key-rotation.md § 2](key-rotation.md#2-kms-data-keys-and-envelope-re-wrap); disable
+the old one only after its check query shows nothing left.
 
 ## Rotating
 

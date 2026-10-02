@@ -15,6 +15,10 @@
 
 ## Mitigate
 
+During a Stripe outage the run fails every minute and catches up afterwards with the same idempotency keys
+([stripe-incidents.md § 1](../stripe-incidents.md#1-stripe-is-down-degrade-checkout-what-queues)); payouts stuck "in
+transit" without webhooks: [stripe-incidents.md § 2](../stripe-incidents.md#2-webhook-backlog-or-replay).
+
 Fix the cause; the next run (≤ 1 min) catches up — the run is idempotent per business and day.
 
 ## Afterwards

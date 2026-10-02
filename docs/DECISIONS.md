@@ -6753,6 +6753,97 @@ Branch `ops/s-113-alerting`. **No migration** (the V280–V284 range offered is 
   ConfigMap files are loaded with their CLIs, documented); an in-cluster Prometheus/Alertmanager add-on; per-tenant
   (per-kitchen) SLOs; a measured "order placed → shown on the screen" (the browser reports nothing back).
 
+## 2026-09-30 — S-115 Runbooks: key rotation, Stripe incidents, Kafka DLQ replay, reindex
+
+- **Where the runbooks are.** `docs/runbooks/key-rotation.md` grew from S-7's signing keys into every key (§ 1 JWKS
+  rollover, § 2 KMS data keys and envelope re-wrap, § 3 merchants' webhook secrets, § 4 Stripe keys and webhook
+  secrets, § 5 DB / Kafka / push / OpenRouter / on-call export, § 6 External Secrets commands for AWS, Google Cloud and
+  Azure). New `docs/runbooks/stripe-incidents.md` (outage, webhook backlog / replay, Stripe vs ledger, dispute spike,
+  leaked keys). `events.md § 3` rewritten as the DLQ runbook (+ "Deferred notifications"); `search.md § 9` gained a
+  reindex runbook (decision tree, partial reindex, rollback). Each section: symptoms, impact, decision tree, commands,
+  verification, rollback, comms and an **Exercised** table (date, what ran, outcome, what couldn't run). S-113's alert
+  stubs that these cover (event-dead-lettered, consumer-lag, checkout availability / latency, payout run /
+  timeliness) link to them instead of repeating them. The S-7 headings were kept word for word (anchors used by the env
+  runbooks and infrastructure.md). S-114's files (infrastructure.md, backups-dr.md, the env runbooks) got only one
+  variable row each (dev, staging, prod) and a link — no edits near S-114's hunks.
+- **"Exercised" = a scripted drill in an integration test, run on 2026-10-02** (Testcontainers: Kafka 4, PostGIS,
+  Elasticsearch 9.1, the whole worker or the whole api), through the operator's entry points (`DlqReplayCommand`,
+  `SearchReindexCommand`, the re-wrap job, the api's HTTP answer). No cloud account, Stripe account, Apple / Firebase /
+  OpenRouter account or cluster exists, so every provider-side step (rolling a Stripe key, KMS versions, `aws` /
+  `gcloud` / `az` secret commands, the cluster Jobs, MSK / Managed Kafka / Event Hubs) is written from the providers'
+  documentation and marked **not exercised** in its table.
+- **DLQ replay tool finished, not replaced** (S-26's `DlqReplayCommand` existed: list / replay / `--event` / `--limit`
+  / `--force`). Added: filters `--event=a,b`, `--type`, `--since` / `--until` (instant or age `30m`/`6h`/`2d`, on the
+  DLQ record's timestamp), `--failure=<text>`; a pace `--rate=N` records/second (default 20); **`--actor` and `--reason`
+  required for `replay`** (refused otherwise; `list` stays free) and one platform audit entry per run in
+  `developer.audit_log` (action `events.dlq_replayed`, role `operator`, `merchant_id` null, target the DLQ topic,
+  `after` = actor, reason, filters, counts, ≤ 200 event ids; `actor_id` null because no session proves who ran a
+  command — the console's audit viewer lists it under `events.`). A command rather than an admin endpoint: it needs
+  Kafka and the database, not the api; it runs where the worker runs (a one-off Job), and an HTTP surface would need
+  its own auth for a rarely used, powerful action.
+- **The deferred notifications path.** `messaging.deferred_notifications` (SMS / push held by quiet hours, customers'
+  sends after an outage) deleted a row after 10 failed attempts — an outage longer than ~50 minutes lost the message.
+  **V290** (`messaging`, additive): `dead_at`, `last_error` + a partial index; a given-up row is kept as **dead** (the
+  table's own DLQ), the job skips it, `pending()` doesn't count it, and a nightly purge (03:27 platform zone) deletes
+  dead rows older than 30 days (`northline.notifications.deferred-dead-retention`). `last_error` holds the exception
+  class only (provider messages can contain phone numbers). The same command requeues them: `list|replay --deferred`
+  with `--channel`, `--type`, `--event`, `--since`/`--until` (on `dead_at`), `--limit`, `--at=<instant>` (due time;
+  requeued rows aren't held for quiet hours again — the runbook says to requeue SMS/push by day), audit
+  `notifications.deferred_requeued`. Sending stays the job's (it re-reads the person and their matrix; channel claims
+  prevent doubles).
+- **KMS data keys: a re-wrap job** instead of a re-seal (S-32 said "no bulk re-seal command yet"). `SecretSealer`
+  gained `rewrap(sealed, context)` (unwrap with the stored key reference, wrap with the current key; the ciphertext is
+  untouched) and `currentKeyRef()` (wraps a throw-away key and reads the reference back — the same for every provider,
+  cached 5 min). Modules declare where they keep sealed values as `SealedColumn` beans (table, id, key-ref, wrapped-key,
+  ciphertext columns, context prefix): availability `calendar_links`, catalogue `integrations`, food `pos_connections`,
+  booking `access_notes` (its context prefix moved to `CustomerBookingStore.ACCESS_NOTE_CONTEXT` so the job and the
+  service share it), and after the merge with S-105 privacy `requests` (`sealed_*`, prefix
+  `PrivacyRequestStore.SEALED_CONTEXT`). S-105's export bundles (object storage, 7 days) are not re-wrapped: the old key
+  stays enabled until they expired. A failed row is reported with its table, column and id (`Outcome.failedRows`). `KeyRewrap` (shared.crypto) runs every `KMS_REWRAP_EVERY` (1 h, first after 2 min) on every
+  replica, ≤ 200 rows per table, updating only while the row still has the old reference (no coordination needed);
+  metric `northline.crypto.rewrapped{table,outcome}`; `stale()` counts what is left. **Google Cloud references are now
+  the key version** that encrypted (`EncryptResponse.name`), decrypt goes to the crypto key — so a new primary version
+  is detectable; rows written before keep the key name and still open. **Local rotation:** `KMS_LOCAL_PREVIOUS_KEYS`
+  (comma-separated, unwrap only). AWS automatic rotation keeps the ARN and needs no re-wrap; a new AWS key, a new Azure
+  version or a new local key does. New variables `KMS_LOCAL_PREVIOUS_KEYS`, `KMS_REWRAP_EVERY` (api, optional; README,
+  dev / staging / prod tables, local.md, `.env.example`; not secrets in Helm because the cloud doesn't use the local
+  key). Slot holds in Valkey are left to expire (≤ 15 min).
+- **Not rotatable yet (documented, not built):** `TOTP_KEY` and `WEBHOOK_SECRET_KEY` are single AES keys without a
+  per-row key reference — rotating them needs a re-encryption migration with both keys loaded; the runbook treats a leak
+  as an incident (re-enrolment / every business rotates its endpoint secret).
+- **Merchants' webhook secrets:** the dual-secret window already existed (S-33: `overlapHours` 0–168, both secrets sign
+  meanwhile); nothing built, only the runbook. Support can't rotate for a business (members only, by design).
+- **Stripe outage degrades checkout to 503** (before: a 500 from the generic handler). New
+  `shared.ProviderUnavailable` (code, message, Retry-After) mapped by `ApiExceptionHandler` to 503 with `Retry-After`
+  and the message localised; `StripeConnectGateway.failure()` turns a Stripe `ApiConnectionException`,
+  `RateLimitException` or any 5xx into `StripeUnavailable` (`payments_unavailable`, 60 s, "Payments are unavailable
+  right now. Nothing was charged — try again in a few minutes." / « Les paiements sont indisponibles pour le moment.
+  Rien n’a été débité — réessayez dans quelques minutes. », in the fr-CA catalogue) for the Connect, Tax and bank-linking
+  adapters; a 4xx (bad key, invalid request) stays `StripeCallFailed`. Jobs see a RuntimeException either way and retry
+  with the same idempotency key, and checkout's idempotency key is released on failure (S-51), so the same click works
+  later. No checkout kill switch or banner was added (nothing to switch: the api degrades by itself; a status banner
+  needs a mechanism that doesn't exist yet).
+- **Search:** `SearchReindexCommand --partial --merchant=<ids> [--since=<instant>]` re-reads merchants into the live
+  aliases (no new index, no swap; the live indexer's projection, lock and versions), and `--rollback` points both
+  aliases back at the newest older index left by `--keep-old` in one request, then sweeps merchants changed since the
+  newer index's creation time (parsed from its name) into it. Neither is in the chart (the `searchReindex` Job stays the
+  full reindex); the runbook gives the one-off Job.
+- **Stripe webhook backlog:** no new code. The requeue is SQL (`attempts = 0` for `failed` rows at the 10-attempt
+  cap; the payments job applies them idempotently); missed events are resent with the Stripe CLI.
+- **Tests (all run 2026-10-02):** worker `ConsumerFrameworkTest.runbookDrill_…` (filters, refusal without an operator,
+  pace, audit entry, idempotency for the bystander group, no second replay), `CustomerNotificationsTest.runbookDrill_…`
+  (dead row kept, ignored by the job, listed, requeue refused then audited, sent once), `SearchReindexTest.runbookDrill_…`
+  (partial brings back a lost document, keep-old + rollback with the sweep, refusal with nothing older), plus the
+  existing `NotificationsConsumerTest`, `WebhookDeliveryTest`; api `KeyRewrapTest` (local rotation drill on PostGIS in
+  batches, ciphertexts unchanged; the four modules' columns valid on the migrated schema), `EnvelopeSealerTest`
+  (+ local rotation, Google Cloud versions), `CryptoConfigurationTest`, `StripeOutageTest` (refused connection and a
+  500 stand-in → `payments_unavailable`; 400 → not), `ProviderUnavailableTest` (503, Retry-After, en / fr), and the
+  re-run S-7 / S-12 / S-33 / S-85 tests the runbooks cite.
+- **Not done / never run for real:** anything against a real Stripe account, AWS / Google Cloud / Azure KMS and secret
+  stores, Elastic Cloud, a managed Kafka, Apple / Firebase / OpenRouter, a Kubernetes cluster; a status banner for
+  outages; re-encryption of `TOTP_KEY` / `WEBHOOK_SECRET_KEY`; a metric and alert for dead deferred notifications (the
+  ERROR log line is the signal); submitting dispute evidence from Northline (S-12's open item).
+
 ## 2026-09-30 — S-107 Data retention jobs per the Privacy Policy retention schedule
 
 Branch `security/s-107-retention`. Runbook: [runbooks/retention.md](runbooks/retention.md) (the full table, a run, the

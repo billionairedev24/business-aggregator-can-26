@@ -334,6 +334,8 @@ northline:
   crypto:
     key-id: ${KMS_ENCRYPTION_KEY_ID:}
     local-key: ${KMS_LOCAL_KEY:}
+    local-previous-keys: ${KMS_LOCAL_PREVIOUS_KEYS:}           # S-115: old local keys that only unwrap (rotation)
+    rewrap-every: ${KMS_REWRAP_EVERY:1h}                         # S-115: re-wrap data keys sealed by an older key
     region: ${KMS_REGION:}
     endpoint: ${KMS_ENDPOINT:}
   # Transactional email (S-13, library server/email; docs/runbooks/email.md): local (SMTP to Mailpit, only logs when

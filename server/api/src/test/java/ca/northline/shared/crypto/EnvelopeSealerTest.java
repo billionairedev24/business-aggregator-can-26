@@ -61,6 +61,26 @@ class EnvelopeSealerTest {
             assertThatThrownBy(() -> new KeyWrappers.Local(new byte[16])).hasMessageContaining("32 bytes");
         }
 
+        /** S-115: KMS_LOCAL_KEY rotated, the old key in KMS_LOCAL_PREVIOUS_KEYS only unwraps; rewrap moves it over. */
+        @Test
+        void rotation_previousKeysOpen_rewrapMovesTheDataKey_andTheCiphertextStays() {
+            var rotated = new byte[32];
+            rotated[0] = 7;
+            var sealed = sealer.seal("secret", "link-1");
+            var after = new EnvelopeSealer(new KeyWrappers.Local(rotated, java.util.List.of(KEY)));
+            assertThat(after.open(sealed, "link-1")).isEqualTo("secret");
+            assertThat(after.currentKeyRef()).isNotEqualTo(sealed.keyRef()).startsWith("local:");
+
+            var rewrapped = after.rewrap(sealed, "link-1");
+            assertThat(rewrapped.keyRef()).isEqualTo(after.currentKeyRef());
+            assertThat(rewrapped.ciphertext()).isEqualTo(sealed.ciphertext());
+            assertThat(new EnvelopeSealer(new KeyWrappers.Local(rotated)).open(rewrapped, "link-1"))
+                    .isEqualTo("secret");
+            assertThatThrownBy(() -> after.rewrap(sealed, "link-2")).isInstanceOf(IllegalStateException.class);
+            assertThat(new KeyWrappers.Local(rotated, java.util.List.of(KEY)).provider())
+                    .contains("1 previous key");
+        }
+
         @Test
         void withoutAKey_nothingCanBeSealed() {
             var none = new EnvelopeSealer(new KeyWrappers.Unavailable());
@@ -74,17 +94,21 @@ class EnvelopeSealerTest {
     @Test
     void gcp_wrapsWithTheCryptoKey_andBindsTheContext() {
         var kms = mock(KeyManagementServiceClient.class);
+        var primary = new java.util.concurrent.atomic.AtomicInteger(3);
         var name = "projects/p/locations/northamerica-northeast1/keyRings/northline-dev/cryptoKeys/tokens";
         when(kms.encrypt(any(EncryptRequest.class))).thenAnswer(i -> {
             EncryptRequest r = i.getArgument(0);
             assertThat(r.getName()).isEqualTo(name);
             return EncryptResponse.newBuilder()
-                    .setName(name + "/cryptoKeyVersions/3")
+                    .setName(name + "/cryptoKeyVersions/" + primary.get())
                     .setCiphertext(reverse(r.getPlaintext().concat(r.getAdditionalAuthenticatedData())))
                     .build();
         });
         when(kms.decrypt(any(DecryptRequest.class))).thenAnswer(i -> {
             DecryptRequest r = i.getArgument(0);
+            assertThat(r.getName())
+                    .as("decrypt is called on the key, not a version")
+                    .isEqualTo(name);
             var plain = reverse(r.getCiphertext());
             var aad = r.getAdditionalAuthenticatedData();
             if (!plain.endsWith(aad)) {
@@ -98,9 +122,22 @@ class EnvelopeSealerTest {
         var sealer = new EnvelopeSealer(new KeyWrappers.Gcp(kms, name + "/cryptoKeyVersions/1"));
 
         var sealed = sealer.seal("M.fake-refresh", "link-9");
-        assertThat(sealed.keyRef()).isEqualTo(name);
+        assertThat(sealed.keyRef()).as("S-115: the version that encrypted").isEqualTo(name + "/cryptoKeyVersions/3");
         assertThat(sealer.open(sealed, "link-9")).isEqualTo("M.fake-refresh");
         assertThatThrownBy(() -> sealer.open(sealed, "link-8")).isInstanceOf(IllegalStateException.class);
+        // values sealed before S-115 carry the key name: they still open
+        var legacy = new SecretSealer.Sealed(name, sealed.wrappedKey(), sealed.ciphertext());
+        assertThat(sealer.open(legacy, "link-9")).isEqualTo("M.fake-refresh");
+
+        // a new primary version: the stored value is due for a re-wrap, which moves it to version 4
+        primary.set(4);
+        var later = new EnvelopeSealer(new KeyWrappers.Gcp(kms, name));
+        assertThat(later.currentKeyRef())
+                .isEqualTo(name + "/cryptoKeyVersions/4")
+                .isNotEqualTo(sealed.keyRef());
+        var rewrapped = later.rewrap(sealed, "link-9");
+        assertThat(rewrapped.keyRef()).isEqualTo(name + "/cryptoKeyVersions/4");
+        assertThat(later.open(rewrapped, "link-9")).isEqualTo("M.fake-refresh");
     }
 
     @Test

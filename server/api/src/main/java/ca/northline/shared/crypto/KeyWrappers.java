@@ -8,7 +8,9 @@ import com.google.protobuf.ByteString;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
@@ -27,23 +29,32 @@ final class KeyWrappers {
     /**
      * {@code KMS_PROVIDER=local}: AES-256-GCM with a 32-byte key from {@code KMS_LOCAL_KEY} (or the fixed development
      * key under {@code local}/{@code test}). The key reference is a fingerprint, so a value sealed under another local
-     * key is refused with a clear message instead of a tag mismatch.
+     * key is refused with a clear message instead of a tag mismatch. Keys from {@code KMS_LOCAL_PREVIOUS_KEYS} only
+     * unwrap (S-115: rotate by moving the old key there, let the re-wrap job finish, then drop it).
      */
     static final class Local implements KeyWrapper {
         private final byte[] key;
         private final String keyRef;
+        private final Map<String, byte[]> previous;
 
         Local(byte[] key) {
-            if (key.length != 32) {
-                throw new IllegalStateException("KMS_LOCAL_KEY must be 32 bytes (base64)");
+            this(key, List.of());
+        }
+
+        Local(byte[] key, List<byte[]> previousKeys) {
+            this.key = checked(key).clone();
+            this.keyRef = ref(key);
+            var old = new HashMap<String, byte[]>();
+            for (var p : previousKeys) {
+                old.put(ref(checked(p)), p.clone());
             }
-            this.key = key.clone();
-            this.keyRef = "local:" + fingerprint(key);
+            old.remove(keyRef);
+            this.previous = Map.copyOf(old);
         }
 
         @Override
         public String provider() {
-            return "local";
+            return previous.isEmpty() ? "local" : "local (+" + previous.size() + " previous key(s) for unwrapping)";
         }
 
         @Override
@@ -53,10 +64,26 @@ final class KeyWrappers {
 
         @Override
         public byte[] unwrap(String ref, byte[] wrappedKey, String context) {
-            if (!keyRef.equals(ref)) {
-                throw new IllegalStateException("Sealed with another key (" + ref + "), this api has " + keyRef);
+            if (keyRef.equals(ref)) {
+                return EnvelopeSealer.aesGcmOpen(key, wrappedKey, context);
             }
-            return EnvelopeSealer.aesGcmOpen(key, wrappedKey, context);
+            var old = previous.get(ref);
+            if (old == null) {
+                throw new IllegalStateException("Sealed with another key (" + ref + "), this api has " + keyRef
+                        + (previous.isEmpty() ? "" : " and " + previous.keySet()));
+            }
+            return EnvelopeSealer.aesGcmOpen(old, wrappedKey, context);
+        }
+
+        private static byte[] checked(byte[] key) {
+            if (key.length != 32) {
+                throw new IllegalStateException("KMS_LOCAL_KEY must be 32 bytes (base64)");
+            }
+            return key;
+        }
+
+        private static String ref(byte[] key) {
+            return "local:" + fingerprint(key);
         }
 
         private static String fingerprint(byte[] key) {
@@ -131,7 +158,9 @@ final class KeyWrappers {
 
     /**
      * Google Cloud KMS symmetric key ({@code GOOGLE_SYMMETRIC_ENCRYPTION}): encrypt / decrypt with the context as
-     * additional authenticated data. keyRef = the crypto key name; the ciphertext names its key version itself.
+     * additional authenticated data. keyRef = the key <b>version</b> that encrypted (the response's name, S-115), so a
+     * value wrapped before the primary version changed is found and re-wrapped; decrypt is called on the crypto key
+     * (the ciphertext names its version itself). Values stored before S-115 carry the key name — they open the same.
      */
     static final class Gcp implements KeyWrapper {
         private final KeyManagementServiceClient kms;
@@ -139,8 +168,7 @@ final class KeyWrappers {
 
         Gcp(KeyManagementServiceClient kms, String keyName) {
             this.kms = kms;
-            var version = keyName.indexOf("/cryptoKeyVersions/");
-            this.keyName = version < 0 ? keyName : keyName.substring(0, version);
+            this.keyName = cryptoKey(keyName);
         }
 
         @Override
@@ -155,18 +183,25 @@ final class KeyWrappers {
                     .setPlaintext(ByteString.copyFrom(dataKey))
                     .setAdditionalAuthenticatedData(ByteString.copyFrom(context, StandardCharsets.UTF_8))
                     .build());
-            return new Wrapped(keyName, r.getCiphertext().toByteArray());
+            return new Wrapped(
+                    r.getName().isEmpty() ? keyName : r.getName(),
+                    r.getCiphertext().toByteArray());
         }
 
         @Override
         public byte[] unwrap(String keyRef, byte[] wrappedKey, String context) {
             return kms.decrypt(com.google.cloud.kms.v1.DecryptRequest.newBuilder()
-                            .setName(keyRef)
+                            .setName(cryptoKey(keyRef))
                             .setCiphertext(ByteString.copyFrom(wrappedKey))
                             .setAdditionalAuthenticatedData(ByteString.copyFrom(context, StandardCharsets.UTF_8))
                             .build())
                     .getPlaintext()
                     .toByteArray();
+        }
+
+        private static String cryptoKey(String name) {
+            var version = name.indexOf("/cryptoKeyVersions/");
+            return version < 0 ? name : name.substring(0, version);
         }
     }
 

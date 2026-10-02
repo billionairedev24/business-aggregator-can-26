@@ -174,6 +174,9 @@ Without Terraform, the chart builds the remote names itself: `externalSecrets.re
 
 ## Rotation
 
+Step-by-step procedures per key (overlaps, verification, rollback, comms, the per-cloud commands) are in
+[key-rotation.md](key-rotation.md) (S-115); this section is the mechanics and the summary.
+
 ESO re-reads the secrets manager every `externalSecrets.refreshInterval` (1 h) and updates the Kubernetes Secret. The
 pods read their environment **at start**, so a rotation is always: new value in the secrets manager → Secret refreshed
 → restart the pods that use it. To skip the wait:
@@ -201,7 +204,8 @@ kubectl -n northline-<env> rollout restart deploy/northline-<app>
 | `EMAIL_UNSUBSCRIBE_KEY` | new value, restart api | links in emails already sent stop working (the page points to Settings) |
 | `EMAIL_API_KEY`, `SMTP_PASSWORD`, `SMS_AUTH_TOKEN` | create the new credential at the provider, update, restart, revoke the old | none |
 | `GOOGLE_CALENDAR_CLIENT_SECRET`, `MICROSOFT_CALENDAR_CLIENT_SECRET` | add a second client secret in the Google Cloud console / Entra app registration (both stay valid), update, restart api, delete the old one | none: stored refresh tokens belong to the client id, not the secret ([calendar-sync.md](calendar-sync.md#rotating)) |
-| `OPENROUTER_API_KEY` | create a new key in openrouter.ai › Keys, update the secret, restart api, then delete the old key |
+| `OPENROUTER_API_KEY` | create a new key in openrouter.ai › Keys, update the secret, restart api, then delete the old key | AI features answer 503 between a wrong value and the fix |
+| `ONCALL_EXPORT_TOKEN` | new random value, update, restart api, then give the paging tool the new token | the rota import fails (401) until the paging tool has it — one token, no overlap |
 | `SHOPIFY_CLIENT_SECRET`, `LIGHTSPEED_CLIENT_SECRET`, `SQUARE_CLIENT_SECRET`, `SQUARE_WEBHOOK_SIGNATURE_KEY` | rotate in the platform's console, update, restart api | Shopify / Lightspeed webhooks signed with the old secret fail verification until the restart (the platforms retry); Square: replace the signature key the same way. Stored tokens stay valid ([commerce-sync.md](commerce-sync.md#operations)) |
 | `CLOVER_CLIENT_SECRET`, `TOAST_CLIENT_SECRET` | rotate in the Clover dashboard / ask Toast for new partner credentials, update, restart api | none: stored Clover tokens stay valid; Toast tokens are fetched per api instance ([pos-menu-import.md](pos-menu-import.md#operations)) |
 | `GOOGLE_MAPS_API_KEY` | create a second key with the same restrictions, update, restart api, delete the old key | none (both keys work until the old one is deleted) |

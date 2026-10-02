@@ -5,7 +5,9 @@ import com.azure.security.keyvault.keys.cryptography.CryptographyClientBuilder;
 import com.google.cloud.kms.v1.KeyManagementServiceClient;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Arrays;
 import java.util.Base64;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -40,6 +42,8 @@ class CryptoConfiguration {
      * @param keyId {@code KMS_ENCRYPTION_KEY_ID}: KMS key ARN (AWS), crypto key name (Google Cloud), versioned key URL
      *     (Azure)
      * @param localKey {@code KMS_LOCAL_KEY}: base64 of 32 bytes for {@code KMS_PROVIDER=local}
+     * @param localPreviousKeys {@code KMS_LOCAL_PREVIOUS_KEYS}: comma-separated base64 keys that only unwrap (a local
+     *     key rotation, S-115)
      * @param region {@code KMS_REGION} (AWS; default: the SDK's region chain)
      * @param endpoint {@code KMS_ENDPOINT} (AWS; LocalStack)
      */
@@ -47,6 +51,7 @@ class CryptoConfiguration {
     record CryptoProperties(
             @Nullable String keyId,
             @Nullable String localKey,
+            @Nullable String localPreviousKeys,
             @Nullable String region,
             @Nullable String endpoint) {}
 
@@ -74,7 +79,14 @@ class CryptoConfiguration {
                 }
                 key = DEV_KEY;
             }
-            return new KeyWrappers.Local(Base64.getDecoder().decode(key.strip()));
+            var previous = StringUtils.hasText(props.localPreviousKeys())
+                    ? Arrays.stream(props.localPreviousKeys().split(","))
+                            .map(String::strip)
+                            .filter(k -> !k.isEmpty())
+                            .map(k -> Base64.getDecoder().decode(k))
+                            .toList()
+                    : List.<byte[]>of();
+            return new KeyWrappers.Local(Base64.getDecoder().decode(key.strip()), previous);
         }
     }
 

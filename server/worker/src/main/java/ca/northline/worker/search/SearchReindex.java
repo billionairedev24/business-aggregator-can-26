@@ -10,13 +10,18 @@ import java.sql.SQLException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -49,6 +54,7 @@ import org.springframework.transaction.support.TransactionOperations;
 public final class SearchReindex {
 
     static final String LOCK = "search-reindex";
+    private static final DateTimeFormatter STAMP = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     static final Duration HEALTH_TIMEOUT = Duration.ofMinutes(2);
     static final Duration SWEEP_OVERLAP = Duration.ofMinutes(2);
     static final Map<String, String> LOADING = Map.of(
@@ -211,6 +217,71 @@ public final class SearchReindex {
                 deleted ? "deleted" : "kept");
         listener.on(Phase.FINISHED, created);
         return result;
+    }
+
+    /**
+     * Partial reindex (S-115): re-reads the given merchants, and those whose rows changed since {@code changedSince},
+     * into the live aliases — no new index, no swap. For a handful of merchants after an indexer bug, a lost event or
+     * a restore of part of the data. The same projection, per-merchant lock and versions as the live indexer.
+     *
+     * @return how many merchants were re-read
+     */
+    public int partial(List<String> merchantIds, Optional<Instant> changedSince, int batch) {
+        var count = 0;
+        for (var merchantId : merchantIds) {
+            transactions.executeWithoutResult(
+                    _ -> projection.refresh(new Scope.Merchant(merchantId), SearchProjection.Targets.LIVE));
+            count++;
+        }
+        if (changedSince.isPresent()) {
+            count += sweep(changedSince.get(), SearchProjection.Targets.LIVE, batch);
+        }
+        log.info("Search partial reindex: {} merchant(s) re-read into the live indices", count);
+        return count;
+    }
+
+    /**
+     * Rollback after a reindex run with {@code --keep-old} (S-115): points each alias back at the newest index older
+     * than the one it serves now — both languages in one atomic request — then re-reads the merchants whose rows
+     * changed since the newer index was created (what the old index missed while it was not live). The newer indices
+     * are left in place for a look; delete them by hand.
+     *
+     * @return the indices the aliases point at now
+     */
+    public Map<SearchLanguage, String> rollback(int batch) {
+        var to = new EnumMap<SearchLanguage, String>(SearchLanguage.class);
+        var currents = new ArrayList<String>();
+        for (var language : SearchLanguage.values()) {
+            var current = indices.current(language)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "The alias " + language.alias() + " doesn't point at exactly one index; fix it by hand"));
+            var previous = indices.all(language).stream()
+                    .filter(name -> stamp(name).compareTo(stamp(current)) < 0)
+                    .max(Comparator.comparing(SearchReindex::stamp))
+                    .orElseThrow(() -> new IllegalStateException("No older " + language.alias()
+                            + " index to go back to: the reindex didn't keep it (run it with --keep-old next time)"
+                            + " — run a full reindex instead"));
+            to.put(language, previous);
+            currents.add(current);
+        }
+        var newerCreated = currents.stream()
+                .map(SearchReindex::createdAt)
+                .min(Comparator.naturalOrder())
+                .orElseThrow();
+        indices.swap(to);
+        log.info("Search rollback: aliases now point at {}", to.values());
+        var swept = sweep(newerCreated.minus(SWEEP_OVERLAP), SearchProjection.Targets.LIVE, batch);
+        log.info("Search rollback: {} changed merchant(s) re-read since {}", swept, newerCreated);
+        return Map.copyOf(to);
+    }
+
+    /** {@code yyyyMMddHHmmss} (UTC) at the end of a versioned index name. */
+    private static String stamp(String index) {
+        return index.substring(index.lastIndexOf('_') + 1);
+    }
+
+    private static Instant createdAt(String index) {
+        return LocalDateTime.parse(stamp(index), STAMP).toInstant(ZoneOffset.UTC);
     }
 
     private Map<SearchLanguage, String> createIndices(Map<SearchLanguage, List<String>> previous) {

@@ -104,6 +104,9 @@ every mutating call sends an `Idempotency-Key` and every call the pinned `Stripe
 
 ## 4. Operations
 
+Incidents — Stripe down, webhook backlog, ledger mismatch, dispute spike, leaked keys: [stripe-incidents.md](stripe-incidents.md).
+Rolling keys and webhook secrets: [key-rotation.md § 4](key-rotation.md#4-stripe-api-keys-and-webhook-secrets).
+
 - **"Payment reauthorization required"** (`payment.reauthorization_required`): Northline could not renew a card hold
   off-session (declined or 3-D Secure). The customer is asked to confirm again; the old hold stays valid until
   `lapsesAt`. If it lapses, Stripe cancels the PaymentIntent and fulfilment can no longer capture it — support
