@@ -9,12 +9,14 @@ runbook ([courier-app.md](courier-app.md)); sign-in and tokens: [mobile-auth.md]
 > where it was built. What is proven: Jest + React Native Testing Library on an in-app fixture backend, `tsc`, ESLint,
 > `expo export` of the iOS and Android bundles, `expo prebuild` of both native projects with checks of the generated
 > manifests, entitlements and permissions, and the web build in headless Chromium. Never exercised: the Keychain /
-> Keystore, the system-browser sign-in, location services, App Links / Universal Links, EAS Build and Submit, the stores.
+> Keystore, the system-browser sign-in, location services, App Links / Universal Links, EAS Build and Submit, the stores,
+> and (S-99) Stripe's React Native SDK — PaymentSheet, 3-D Secure and the bank's return link have never run, nor
+> against a real Stripe account (none exists); the Jest tests mock the SDK.
 
 ## Contents
 
 - [Layout](#layout) · [Run it](#run-it) · [Environments](#environments) · [Checks](#checks)
-- [Sign-in](#sign-in) · [App Links](#app-links) · [Variants and build variables](#variants-and-build-variables)
+- [Sign-in](#sign-in) · [Payments](#payments-s-99) · [App Links](#app-links) · [Variants and build variables](#variants-and-build-variables)
 - [EAS builds](#eas-builds) · [Store accounts](#store-accounts) · [Signing](#signing) · [Permissions](#permissions)
 - [Troubleshooting](#troubleshooting)
 
@@ -81,7 +83,7 @@ One build per environment; the EAS profile sets the variables (`eas.json`), Metr
 | `mobile-consumer-test` | Jest + RNTL: the shell, tabs, header, states, guest id, sign-in, en/fr parity, region and colour rules, the screen list against the design and MOBILE_PLAN, the native config against the auth server's client registration; the kit's tests |
 | `mobile-consumer-export` | `expo export` of the iOS and Android Hermes bundles — Metro resolves and Hermes compiles everything |
 | `mobile-consumer-native-check` | `expo prebuild` of both platforms for the development and production variants, then checks: bundle ids, the OAuth redirect scheme, the verified App Link, associated domains, location-while-in-use only, no camera / microphone / storage / backup, cleartext only in development, French localisation, privacy manifest; the generated `android/` and `ios/` are deleted |
-| `mobile-consumer-web-smoke` | the web build on the fixture backend in headless Chromium at 402 × 874: the journeys built so far, the tabs, no horizontal scroll, no page errors (screenshots in `smoke-out/`) |
+| `mobile-consumer-web-smoke` | the web build on the fixture backend in headless Chromium at 402 × 874: the journeys built so far (A; B with the payment stand-in), the tabs, no horizontal scroll, no page errors (screenshots in `smoke-out/`) |
 | `mobile-consumer-eas-build` | queues an EAS Build (`EAS_PROFILE`, `EAS_PLATFORM`, `EAS_FLAGS`) |
 
 CI: `.github/workflows/mobile-consumer.yml` (Actions › mobile-consumer › Run workflow) and
@@ -106,6 +108,28 @@ anything from a refresh answer is used; one refresh at a time.
   `ca.northline.app:/oauth2redirect`.
 - **Sign-out** (the You tab, S-98): the push hook (`PushHooks.signingOut`), then `POST /oauth2/revoke` (ends the sign-in, S-20),
   then the key and tokens are deleted. A sign-in that ends on the server (refresh refused) shows "Your sign-in ended".
+
+## Payments (S-99)
+
+Paying (Journey B's Payment screen) follows the consumer web (S-51): `POST /me/checkouts` opens one manual-capture
+PaymentIntent per order line plus one for the delivery fee, the phone authorizes them, `POST /me/checkouts/{id}/place`
+places the order. Which provider runs them is the **server's** `northline.payments` configuration
+([stripe.md](stripe.md)); the api answers it with each checkout (`payment.provider`, `payment.publishableKey`), so
+**no Stripe key or variable is built into the app** and nothing changes per environment.
+
+| api says | the app |
+|---|---|
+| `stripe` | Stripe's React Native SDK (`@stripe/stripe-react-native`, the version Expo SDK 57 pins; a native module autolinked by `expo prebuild`). New card → Stripe's PaymentSheet (card entry is native, outside the app's JS); saved card (`GET /me/payment-methods`) → its PaymentMethod id; 3-D Secure is Stripe's own native screen; a bank app returns to `ca.northline.app://stripe-redirect` (route `app/stripe-redirect.tsx` hands it to the SDK) |
+| `fake` (local, the fixture backend) | nothing is collected: the design's bank step stands in, then the order is placed |
+
+Paying with a sign-in that had no second factor asks for a **step-up** (S-51): the authenticator app's 6-digit code,
+checked by northline-auth in the app's auth session (`POST /api/auth/step-up/totp`, the platform cookie store), sent to
+the api as `X-Step-Up`. Passkeys need a native module the app doesn't have; an account with no second factor is sent
+to Security on the consumer site.
+
+Apple Pay / Google Pay: not offered — they need an Apple merchant id (and the config plugin's
+`merchantIdentifier`) and Google Pay enabled on the Stripe account. The SDK's card scanner would need the camera,
+which the app keeps out (`blockedPermissions`), so it is off.
 
 ## App Links
 
@@ -193,4 +217,6 @@ functionality only, no tracking (the privacy manifest in `app.config.ts`).
 | "Signing in didn't finish" after the code / second factor | no code on the https redirect: `EXPO_PUBLIC_SITE_ORIGIN` ≠ the auth server's `CONSUMER_ORIGIN` (the redirect isn't registered), or the platform cookie store dropped the auth session → "Finish signing in", else start again |
 | `/.well-known/apple-app-site-association` 404 | `mobileApps.appleTeamId` not set for the environment |
 | `make mobile-consumer-export` can't resolve `@northline/tokens` | `web/packages/tokens` missing from the checkout (the kit links it) |
+| "We couldn't take the payment" at once on Payment with `stripe` | the api's `STRIPE_PUBLISHABLE_KEY` is empty (the app gets no key) → set it with the secret key ([stripe.md](stripe.md)) |
+| Payment says the phone can't confirm the second factor | no auth session on this phone (signed in in the system browser, or it expired) → sign in again in the app, or pay on the site |
 | `native-check` leaves `package.json` changed | it was interrupted: `git checkout mobile/apps/consumer/package.json` (prebuild rewrites its scripts) |

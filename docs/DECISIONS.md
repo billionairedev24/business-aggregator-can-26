@@ -6028,3 +6028,79 @@ Branch `mobile/s-98-journey-a` (on S-97). **No migration** (V240–V244 unused) 
   JSON calls and the authorize request, fetch following northline-auth's redirect to the consumer site and reporting
   the landed URL (React Native's `Response.url`), SMS autofill, the location permission dialogs, the Keychain.
   The fixture backend simulates the redirect-following. **This is the first thing to try on a phone.**
+
+## 2026-10-02 — S-99 Consumer app Journey B: shop — home, search, product, cart, checkout (Stripe), confirmed, tracking, delivered, refund
+
+Branch `mobile/s-99-journey-b`. **No migration** (V250–V254 unused), **no server or web change**, no new environment
+variable. One new app dependency: `@stripe/stripe-react-native` 0.64.0 (the version Expo SDK 57 pins). Plan:
+[MOBILE_PLAN.md § B](MOBILE_PLAN.md); runbook: [runbooks/mobile.md § Payments](runbooks/mobile.md#payments-s-99).
+
+- **The existing consumer endpoints were enough**: `/public/shop`, `/public/home`, `/public/shop/departments|products`,
+  `/search`, `/cart`, `/me/checkout`, `/me/checkout/quote`, `/me/checkouts`, `/me/checkouts/{id}/place`,
+  `/me/payment-methods`, `/me/orders/{id}` (+ `/confirm`), `/me/problems`, `/me/upcoming`, `/me/account-summary`, `/me`.
+  The app calls them directly with its DPoP tokens; public reads go out anonymously for guests; the guest id rides on
+  every call, so a guest's cart is theirs and the api merges it at sign-in.
+- **Payment through a port, following the web (S-51).** `src/shop/payments.ts`: the api's `payment.provider` picks the
+  adapter. `stripe` → Stripe's React Native SDK: a **new card** is entered in Stripe's PaymentSheet for the first
+  PaymentIntent (card entry is native, outside the app's JS — the app never sees a card number), its PaymentMethod
+  (read back with `retrievePaymentIntent`) confirms the order's other PaymentIntents (`confirmPayment` with
+  `paymentMethodId`), as the web's Payment Element + `confirmCardPayment` do; a **saved card** (`GET
+  /me/payment-methods`; its id is the Stripe PaymentMethod) confirms every PaymentIntent directly. 3-D Secure is the
+  SDK's native challenge; a bank app returns through `ca.northline.app://stripe-redirect` (a new route,
+  `app/stripe-redirect.tsx`, hands it to `handleURLCallback`; Android uses `setReturnUrlSchemeOnAndroid`). `fake` (the
+  api's stand-in, local profile and the fixture backend) → nothing collected; the design's bank step (`pay3ds`) then
+  place, as the web's `BankApproval`. The **publishable key comes from the api** with each checkout — no key in the
+  build, nothing per environment. The SDK is required lazily and kept out of the web build (`stripeSdk.web.ts`): it
+  is native-only and broke the web bundle at start-up.
+- **Idempotency:** one `Idempotency-Key` per Pay attempt, kept for every retry until the payment succeeds; a refusal
+  (4xx) starts a new attempt, no answer (offline, 5xx) keeps the key so a retry replays the same checkout and can't
+  pay twice; `place` has its own key. A cancelled PaymentSheet keeps the started checkout (the replay returns it).
+- **Step-up before paying (S-51):** `step_up_required` → the authenticator app's 6-digit code, checked by
+  northline-auth's `POST /api/auth/step-up/totp` in the app's auth session (the platform cookie store, as S-98's
+  sign-in), the proof sent as `X-Step-Up`. Passkeys need a native module (S-98), so the app offers the code only;
+  `second_factor_required`, or a phone without an auth session (system-browser sign-in, expired) → the person is told
+  to add a factor / pay on the consumer site (opens `/account?tab=security`).
+- **Apple Pay / Google Pay not offered** (the design's black button): they need an Apple merchant id, the SDK's config
+  plugin and Google Pay on the Stripe account — none exist. No config plugin is used (cards need none), so
+  `app.config.ts` is unchanged; the native check still passes (the SDK's card scanner would need the camera, which
+  stays removed).
+- **Tracking polls every 15 s** (`GET /me/orders/{id}`, `refetchInterval`) instead of the SSE stream: React Native has
+  no EventSource and a polyfill is another dependency for a screen that changes every few minutes. The **map** is the
+  design's schematic drawn with react-native-svg (no map SDK), with where the courier is in words ("You're next",
+  "N stops before yours"), the courier's name and the drop-off PIN from S-88's `courier`.
+- **Delivered:** "Shops are paid when you confirm — or automatically on {date}" uses the api's `paysShopsAt` (7 days
+  for goods, CLAUDE.md); the design's "24 h" is older. All good = `POST /me/orders/{id}/confirm`. The proof photo is a
+  placeholder naming the proof kind (the api has no photo URL for the customer).
+- **Not on the phone, for lack of an api (raised in MOBILE_PLAN § API gaps):** the cart's "Promo or points code",
+  checkout's "Redeem points" and "You'll earn N points" (checkout has no points), the delivery rating and the tip (B9),
+  "Because you booked …" (Home shows the web's "Trusted near you"), photos on a report (`/me/case-uploads` needs a
+  photo picker — a native module and a permission; the case takes photos on the site), the courier's rating and
+  "Message". "Organic" is not a search chip (no data in the index, as on the web).
+- **Not used:** `/search/suggest` and `/search/interpret` (results follow the typing, debounced; the web doesn't use
+  interpret either), `/me/help/triage` (optional on the web).
+- **Home:** the design's location line is the delivery location's label (tap → Location and back); the greeting is the
+  time of day in the market's zone + the first name from `GET /me`; the pooled-run card is `/public/shop`'s `run`
+  ("Tonight's pooled run" when it is today), free with Plus (`/me/account-summary`); department tiles open Search on
+  that department (`/public/shop/departments/{slug}`, the chips applied to its products); service tiles open S-100's
+  `/services/{slug}`. "Your week" rows map the api's web paths to app routes (`appRoute`).
+- **Search** is the Shop's (`kind=product`), the province as `market`, the position when known; chips "On tonight's
+  run" (on by default, the design's), "Under $10" (`maxPrice=999`), "Master sellers", "Halal"; "sorted by" cycles
+  relevance → price ↑ → price ↓ → rating; "Show more" pages.
+- **Checkout's address:** the address saved on the phone's Location screen when complete (its "unit / buzzer / drop-off
+  note" becomes the courier's note, ≤ 200), else the account's default saved address, else "Add your delivery
+  address" (→ `/location?next=/checkout`). Taxes are listed by name and rate from the quote ("GST 5%" is not in code).
+  The api's English rule messages are worded in French in the app (as the web's `SERVER_FR`).
+- **Navigation:** returning to a tab from a flow uses `backToTab()` (dismiss, then navigate): a `push`/`replace` to a
+  tab path stacked a second tab navigator (found by the web smoke test). Add to cart opens the Cart tab, as the design.
+- **Cart badge** (the one shared edit): `app/(tabs)/_layout.tsx` passes `useCartCount()` to the tab bar.
+- **Shared files touched beyond the plan's list:** `__tests__/journeyA.test.tsx` and `shell.test.tsx` (wait for
+  `home` instead of `stub-home`), `src/fixtures/server.ts` (the shop area and its state), `e2e/smoke.mjs` (`home`, and
+  a Journey B step block), `package.json` / `pnpm-lock.yaml` (the SDK).
+- **Tests:** `__tests__/shop.test.tsx`, 33 tests: every screen's loading / empty / error / offline states where it has
+  them, en + fr-CA, what is sent (filters, guest id, Idempotency-Key reuse, X-Step-Up, card method), the Stripe
+  adapter against a mocked SDK. The web smoke test runs Home → Search → Product → Cart → Checkout → Payment (stand-in)
+  → Order confirmed in headless Chromium.
+- **Never run:** on a phone, simulator or emulator; Stripe's SDK for real (PaymentSheet, 3-D Secure, the return link,
+  saved cards) — no Stripe account exists and the tests mock the SDK; the step-up against a real northline-auth
+  session cookie on a device. **First things to try on a device with a Stripe test account:** a 3-D Secure test card
+  (4000 0027 6000 3184) through PaymentSheet, then a saved card, then an order with two shops (three PaymentIntents).
