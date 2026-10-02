@@ -97,7 +97,7 @@ those as withdrawals needs an inbound webhook (the reserved source `sms_keyword`
   opt-out link. A failing message is never sent (a bug, not a delivery problem).
 - **What a commercial message looks like:** email — the footer's sender line, "Northline Marketplace Inc. sent you
   this marketing message because you agreed…", the unsubscribe link, `List-Unsubscribe` + `List-Unsubscribe-Post`;
-  SMS — "Northline: <offer> — Northline Marketplace Inc. · Opt out: https://api…/api/v1/email/unsubscribe?t=…"
+  SMS — `Northline: <offer> — Northline Marketplace Inc. · Opt out: https://api…/api/v1/email/unsubscribe?t=…`
   (French: "Désabonnement :"); push — the title and words only (no personal data), turned off in Account ›
   Notifications.
 
