@@ -1,0 +1,61 @@
+# S-113 SLOs as code (docs/runbooks/alerting.md) — see sign-in.yaml. The kitchen display (KDS): a food order reaches
+# the kitchen's live bus quickly (StudioLiveEvents), and the bus that keeps the screens fresh delivers (LiveBusProbe:
+# every api replica times a signal to itself every 30 s; a probe not back by the next one is "lost").
+version: "prometheus/v1"
+service: "northline-kds"
+labels:
+  owner: platform
+  journey: kds
+slos:
+  - name: "ticket-delivery"
+    objective: 99.5
+    description: "Food orders signalled to the kitchen display within 5 s of being placed."
+    sli:
+      events:
+        error_query: |
+          (
+            sum(rate(northline_kds_ticket_delivery_seconds_count[{{.window}}]))
+            -
+            sum(rate(northline_kds_ticket_delivery_seconds_bucket{le=~"5(\\.0)?"}[{{.window}}]))
+          )
+        total_query: |
+          sum(rate(northline_kds_ticket_delivery_seconds_count[{{.window}}]))
+    alerting:
+      name: NorthlineKdsTicketDeliveryBurn
+      labels:
+        category: latency
+      annotations:
+        summary: "Food orders reach kitchens late (over 5 s), burning the 30-day error budget (99.5 %)"
+        runbook_url: "https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/kds-ticket-delivery.md"
+      page_alert:
+        labels:
+          severity: page
+      ticket_alert:
+        labels:
+          severity: ticket
+  - name: "freshness"
+    objective: 99.5
+    description: "Live bus probes back within 2 s: the kitchen displays' live stream is fresh."
+    sli:
+      events:
+        error_query: |
+          (
+            sum(rate(northline_studio_live_probe_seconds_count[{{.window}}]))
+            -
+            sum(rate(northline_studio_live_probe_seconds_bucket{outcome="delivered",le=~"2(\\.0)?"}[{{.window}}]))
+          )
+        total_query: |
+          sum(rate(northline_studio_live_probe_seconds_count[{{.window}}]))
+    alerting:
+      name: NorthlineKdsFreshnessBurn
+      labels:
+        category: freshness
+      annotations:
+        summary: "The kitchen displays' live bus is slow or dropping signals, burning the 30-day error budget (99.5 %)"
+        runbook_url: "https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/kds-freshness.md"
+      page_alert:
+        labels:
+          severity: page
+      ticket_alert:
+        labels:
+          severity: ticket
