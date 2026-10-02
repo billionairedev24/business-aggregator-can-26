@@ -100,6 +100,7 @@ Every app reads its configuration from environment variables; nothing environmen
 | `RATE_LIMIT_WHEN_UNAVAILABLE` | auth | no (`closed`) | leave unset (`closed`: codes and second factors answer 503 while Valkey is down); `open` only as a temporary break-glass | S-20, [README § Rate limits](README.md#rate-limits-s-9) |
 | `REPLAY_STORE` | auth | no (`redis`) | leave unset: `memory` is refused here | one-time ids (DPoP proofs) and DPoP nonces in Valkey; Valkey down = token requests with DPoP answer 503 (S-29, [mobile-auth.md](mobile-auth.md)) |
 | `DPOP_NONCE_LIFETIME` | auth | no (`5m`) | leave unset | a `DPoP-Nonce` is accepted for one to two of these (S-29) |
+| `OTP_SEND_PLATFORM_PER_HOUR` | auth | no (`1000`) | size it well above the busiest hour of sign-ups (alert on the `platform budget reached` error log); raise it rather than turning it off | texted/voice codes for everyone together per hour (S-104, SMS pumping); over it, codes pause 15 min — [README § Rate limits](README.md#rate-limits-s-9) |
 | `CLIENT_CITY_HEADER` | auth | no (empty) | `CloudFront-Viewer-City`, or the custom header your load balancer / Front Door fills with the client's city | ingress / CDN configuration; believed only from `TRUSTED_PROXIES` ([README § Sessions](README.md#sessions-s-19)) |
 | `SESSION_STEP_UP_MAX_AGE` | auth | no (`10m`) | leave unset | how recent a second factor revoking sessions / removing passkeys needs (S-19) |
 | `SESSION_CHECK_INTERVAL` | bff | no (`60s`) | leave unset | a revoked session's BFF session ends within this (S-19) |
