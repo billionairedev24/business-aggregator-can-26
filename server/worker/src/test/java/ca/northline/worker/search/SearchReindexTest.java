@@ -250,6 +250,65 @@ class SearchReindexTest extends WorkerIntegrationTest {
         }
     }
 
+    /**
+     * S-115 runbook drill (docs/runbooks/search.md § Reindex) through the operator's command: a partial reindex brings
+     * back a document the index lost, for one merchant and nothing else; a full reindex with --keep-old, then
+     * --rollback, points both aliases back at the previous indices and fills in what changed meanwhile.
+     */
+    @Test
+    void runbookDrill_partialReindex_thenRollbackAfterKeepOld() throws Exception {
+        var fx = new SearchFixtures(jdbc);
+        var m = fx.merchant("provider", "trusted", "Drill Test Co");
+        var listing = fx.service(m, "Wheel alignment", null, 8000, "live");
+        send("catalogue.listing", "catalogue.listing_published", listing(listing, m.id()));
+        await().atMost(SearchIndexerTest.INDEXED).until(() -> doc("listings_en", listing), Optional::isPresent);
+        es.delete(
+                d -> d.index("listings_en").id(listing).refresh(co.elastic.clients.elasticsearch._types.Refresh.True));
+        assertThat(doc("listings_en", listing)).isEmpty(); // drift: the index lost it
+
+        assertThatThrownBy(() -> SearchReindexCommand.partial(commandArgs("--partial")))
+                .hasMessageContaining("--merchant");
+        assertThat(SearchReindexCommand.partial(commandArgs("--partial", "--merchant=" + m.id())))
+                .isEqualTo(1);
+        await().atMost(Duration.ofSeconds(10)).until(() -> doc("listings_en", listing), Optional::isPresent);
+
+        var indices = new ListingIndices(es);
+        var before = Map.of(
+                SearchLanguage.EN, indices.current(SearchLanguage.EN).orElseThrow(),
+                SearchLanguage.FR, indices.current(SearchLanguage.FR).orElseThrow());
+        SearchReindexCommand.run(commandArgs("--keep-old"));
+        assertThat(indices.current(SearchLanguage.EN)).isNotEqualTo(Optional.of(before.get(SearchLanguage.EN)));
+        // a listing made live after the swap, without an event: only the new index gets it (from the sweep later)
+        var later = fx.service(m, "Tire rotation", null, 4000, "live");
+
+        var rolledBack = SearchReindexCommand.rollback(commandArgs("--rollback"));
+
+        assertThat(rolledBack).isEqualTo(before);
+        assertThat(indices.current(SearchLanguage.EN)).contains(before.get(SearchLanguage.EN));
+        assertThat(indices.current(SearchLanguage.FR)).contains(before.get(SearchLanguage.FR));
+        await().atMost(Duration.ofSeconds(10)).until(() -> doc("listings_en", later), Optional::isPresent);
+        assertThat(doc("listings_en", listing)).isPresent();
+        // tidy up like the runbook says: delete the newer indices left beside the live ones
+        for (var language : SearchLanguage.values()) {
+            indices.all(language).stream()
+                    .filter(index -> !index.equals(before.get(language)))
+                    .forEach(indices::delete);
+        }
+        assertThatThrownBy(() -> SearchReindexCommand.rollback(commandArgs("--rollback")))
+                .hasMessageContaining("--keep-old");
+    }
+
+    private static String[] commandArgs(String... extra) {
+        var args = new ArrayList<>(java.util.List.of(
+                "--spring.kafka.bootstrap-servers=" + KAFKA.getBootstrapServers(),
+                "--spring.datasource.url=" + WorkerContainers.POSTGRES.getJdbcUrl(),
+                "--spring.datasource.username=" + WorkerContainers.POSTGRES.getUsername(),
+                "--spring.datasource.password=" + WorkerContainers.POSTGRES.getPassword(),
+                "--spring.elasticsearch.uris=" + WorkerContainers.elasticWithIndices()));
+        args.addAll(java.util.List.of(extra));
+        return args.toArray(String[]::new);
+    }
+
     private void send(String topic, String type, String payload) {
         var id = payload.substring(payload.indexOf("\"eventId\":\"") + 11, payload.indexOf("\"eventId\":\"") + 37);
         assertThat(producer.send(Events.record(topic, id, type, 1, payload))).succeedsWithin(Duration.ofSeconds(30));
