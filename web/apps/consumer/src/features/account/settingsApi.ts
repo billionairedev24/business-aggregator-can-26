@@ -91,7 +91,6 @@ function useAccountMutation<A, R>(fn: (a: A) => Promise<R>, opts: { set?: readon
 }
 
 export const useSaveProfile = () => useAccountMutation((c: ProfileChange) => http('/api/v1/me/profile', { method: 'PATCH', body: c }, Profile), { set: profileQuery.queryKey });
-export const useRequestErasure = () => useAccountMutation(() => http('/api/v1/me/erasure-request', { method: 'POST' }, Profile), { set: profileQuery.queryKey });
 
 export const useAddAddress = () => useAccountMutation((a: AddressInput) => http('/api/v1/me/addresses', { method: 'POST', body: a }, Address), { refresh: [addressesQuery.queryKey] });
 export const useChangeAddress = () => useAccountMutation(({ id, ...c }: { id: string; label?: string; unit?: string; note?: string }) =>
@@ -118,5 +117,3 @@ export type PrefsChange = Partial<Prefs>;
 export const useSavePrefs = () => useAccountMutation((c: PrefsChange) => http('/api/v1/me/preferences', { method: 'PATCH', body: c }, Prefs),
   { set: prefsQuery.queryKey, refresh: [profileQuery.queryKey] });
 
-/** "Download my data": the JSON export (the browser saves it). */
-export const EXPORT_HREF = '/api/v1/me/export';

@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
-import { Button, Dialog, ErrorState, Field, FormGrid, Select, Skeleton, TextInput, useFormatters } from '@northline/ui';
+import { Button, ErrorState, Field, FormGrid, Select, Skeleton, TextInput, useFormatters } from '@northline/ui';
 import { serverFieldErrors } from '@northline/client';
-import { profileQuery, useRequestErasure, useSaveProfile, type Profile } from './settingsApi';
+import { profileQuery, useSaveProfile, type Profile } from './settingsApi';
+import { YourData } from './YourData';
 import { useSettingsT, type SettingsT } from './settingsMessages';
 
 const FIELDS = ['firstName', 'lastName', 'email', 'pronouns', 'birthday'] as const;
@@ -23,7 +24,7 @@ const fromProfile = (p: Profile): Values => ({
   birthday: p.birthday ? p.birthday.replace('-', ' / ') : '',
 });
 
-/** Profile (design 06 `at.profile`): name, verified mobile, receipts email, pronouns, birthday; reliability; delete. */
+/** Profile (design 06 `at.profile`): name, verified mobile, receipts email, pronouns, birthday; reliability; your data (S-105). */
 export function ProfileTab() {
   const t = useSettingsT();
   const profile = useQuery(profileQuery);
@@ -32,7 +33,7 @@ export function ProfileTab() {
       <h1 id="acct-title" className="nl-acct-h1">{t('profileTitle')}</h1>
       {profile.isPending ? <FormSkeleton label={t('loading')} />
         : profile.isError ? <ErrorState message={t('loadError')} onRetry={() => void profile.refetch()} />
-          : <ProfileForm profile={profile.data} />}
+          : <><ProfileForm profile={profile.data} /><YourData /></>}
     </>
   );
 }
@@ -41,11 +42,9 @@ function ProfileForm({ profile }: { profile: Profile }) {
   const t = useSettingsT();
   const { number, date } = useFormatters();
   const save = useSaveProfile();
-  const erase = useRequestErasure();
   const [values, setValues] = useState<Values>(() => fromProfile(profile));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const set = (k: keyof Values) => (v: string) => { setValues(x => ({ ...x, [k]: v })); setSaved(false); };
   const initials = `${values.firstName.charAt(0)}${values.lastName.charAt(0)}`.toUpperCase() || 'NL';
 
@@ -92,17 +91,8 @@ function ProfileForm({ profile }: { profile: Profile }) {
       {profile.erasureRequestedAt ? <p className="nl-acct-note" role="status">{t('deleteRequested', { date: date(profile.erasureRequestedAt, 'long') })}</p> : null}
       <div className="nl-acct-actions">
         <Button type="submit" disabled={save.isPending} aria-busy={save.isPending}>{t('saveChanges')}</Button>
-        {!profile.erasureRequestedAt ? <Button type="button" variant="ghost" className="nl-danger" onClick={() => setConfirmDelete(true)}>{t('deleteAccount')}</Button> : null}
         {saved ? <span className="nl-small nl-muted" role="status">{t('saved')}</span> : null}
       </div>
-      <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)} title={t('deleteTitle')} role="alertdialog"
-        actions={<>
-          <Button type="button" variant="ghost" onClick={() => setConfirmDelete(false)}>{t('cancel')}</Button>
-          <Button type="button" className="nl-danger-btn" disabled={erase.isPending} onClick={() => erase.mutate(undefined, { onSuccess: () => setConfirmDelete(false) })}>{t('deleteConfirm')}</Button>
-        </>}>
-        <p>{t('deleteBody')}</p>
-        {erase.isError ? <p className="nl-error" role="alert">{t('saveError')}</p> : null}
-      </Dialog>
     </form>
   );
 }
