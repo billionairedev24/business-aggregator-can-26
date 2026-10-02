@@ -1,0 +1,96 @@
+# S-103 · the store steps EAS Submit does not do, for both apps (docs/runbooks/mobile-release.md). EAS builds the
+# binaries and uploads them (eas submit: TestFlight, Play internal track); fastlane promotes, rolls out, halts and
+# pushes the Play listing text. Run by .github/workflows/mobile-release.yml and ci/gitlab/mobile-release.yml, or by
+# hand from mobile/: `NL_APP=consumer fastlane android listing`.
+#
+# Environment (CI writes the key files from its secrets into a temp directory for the run, never into the repo):
+#   NL_APP                                     consumer | courier
+#   PLAY_SERVICE_ACCOUNT_JSON_PATH             Google Play service account key (JSON)
+#   ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_PATH    App Store Connect API key (.p8)
+#   VERSION_CODE                               the Android versionCode to promote, roll out or halt
+#   BUILD_NUMBER                               the iOS build number to send to App Review
+#   ROLLOUT                                    the Play production fraction (0.1 = 10 %; 1 completes it)
+require 'json'
+
+MOBILE = File.expand_path('..', __dir__)
+APPS = {
+  'consumer' => { package: 'ca.northline.app', dir: 'apps/consumer' },
+  'courier' => { package: 'ca.northline.courier', dir: 'apps/courier' }
+}.freeze
+
+def app
+  name = ENV.fetch('NL_APP', '')
+  UI.user_error!("NL_APP must be one of #{APPS.keys.join(', ')}") unless APPS.key?(name)
+  APPS.fetch(name)
+end
+
+def app_version
+  JSON.parse(File.read(File.join(MOBILE, app[:dir], 'package.json'))).fetch('version')
+end
+
+def play_metadata
+  File.join(MOBILE, app[:dir], 'store', 'play')
+end
+
+def play_key
+  ENV.fetch('PLAY_SERVICE_ACCOUNT_JSON_PATH')
+end
+
+def version_code
+  Integer(ENV.fetch('VERSION_CODE'))
+end
+
+def rollout_fraction
+  fraction = Float(ENV.fetch('ROLLOUT', '0.1'))
+  UI.user_error!('ROLLOUT must be a fraction above 0 and at most 1') unless fraction.positive? && fraction <= 1
+  fraction
+end
+
+# Nothing but the step asked for: no binary, and never the placeholder images.
+SKIP_ALL = {
+  skip_upload_apk: true, skip_upload_aab: true, skip_upload_metadata: true, skip_upload_changelogs: true,
+  skip_upload_images: true, skip_upload_screenshots: true
+}.freeze
+
+platform :android do
+  desc 'Push the Play listing text (title, short and full description) for en-CA and fr-CA'
+  lane :listing do
+    upload_to_play_store(**SKIP_ALL, json_key: play_key, package_name: app[:package], metadata_path: play_metadata,
+                                     skip_upload_metadata: false)
+  end
+
+  desc 'Promote the tested internal build to production as a staged rollout (ROLLOUT, default 10 %), with release notes'
+  lane :promote do
+    upload_to_play_store(**SKIP_ALL, json_key: play_key, package_name: app[:package], metadata_path: play_metadata,
+                                     version_code: version_code, track: 'internal', track_promote_to: 'production',
+                                     release_status: 'inProgress', rollout: rollout_fraction.to_s,
+                                     skip_upload_changelogs: false)
+  end
+
+  desc 'Change the production rollout fraction; ROLLOUT=1 completes it'
+  lane :rollout do
+    fraction = rollout_fraction
+    upload_to_play_store(**SKIP_ALL, json_key: play_key, package_name: app[:package], version_code: version_code,
+                                     track: 'production', rollout: fraction.to_s,
+                                     release_status: fraction >= 1 ? 'completed' : 'inProgress')
+  end
+
+  desc 'Halt the production staged rollout (people who have the update keep it; nobody new gets it)'
+  lane :halt do
+    upload_to_play_store(**SKIP_ALL, json_key: play_key, package_name: app[:package], version_code: version_code,
+                                     track: 'production', release_status: 'halted')
+  end
+end
+
+platform :ios do
+  desc 'Send a TestFlight build to App Review: manual release, 7-day phased release (listing comes from eas metadata:push)'
+  lane :submit_review do
+    api_key = app_store_connect_api_key(key_id: ENV.fetch('ASC_KEY_ID'), issuer_id: ENV.fetch('ASC_ISSUER_ID'),
+                                        key_filepath: ENV.fetch('ASC_KEY_PATH'), in_house: false)
+    deliver(api_key: api_key, app_identifier: app[:package], app_version: app_version,
+            build_number: ENV.fetch('BUILD_NUMBER'), skip_binary_upload: true, skip_metadata: true,
+            skip_screenshots: true, submit_for_review: true, automatic_release: false, phased_release: true,
+            force: true, run_precheck_before_submit: false,
+            submission_information: { add_id_info_uses_idfa: false, export_compliance_uses_encryption: false })
+  end
+end

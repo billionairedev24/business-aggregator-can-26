@@ -191,6 +191,7 @@ include $(ROOT)/make/server.mk
 include $(ROOT)/make/web.mk
 include $(ROOT)/make/courier.mk
 include $(ROOT)/make/mobile-consumer.mk
+include $(ROOT)/make/mobile-release.mk
 include $(ROOT)/make/db.mk
 include $(ROOT)/make/kafka.mk
 include $(ROOT)/make/search.mk
