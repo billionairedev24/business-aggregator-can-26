@@ -40,9 +40,8 @@ import ca.northline.shared.MerchantScope;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
 import ca.northline.shared.RuleViolation.Violation;
+import ca.northline.shared.storage.ImageDecoding;
 import ca.northline.shared.storage.ObjectKeys;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -53,7 +52,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import javax.imageio.ImageIO;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.context.ApplicationEventPublisher;
@@ -641,21 +639,18 @@ class MenuBuilderService
         return menus.item(merchantId, itemId).orElseThrow(() -> new NotFound("menu item", itemId));
     }
 
-    /** "≥1000 px": JPEG / PNG are measured; WebP (no JDK reader) is accepted as uploaded. */
+    /**
+     * "≥1000 px": JPEG / PNG are measured from their header (S-104: never decoded here, so a small file that claims a
+     * huge raster costs nothing); WebP (no JDK reader) is accepted as uploaded.
+     */
     private static void checkSize(byte[] bytes, String contentType) {
         if (contentType.equals("image/webp")) {
             return;
         }
-        try {
-            var image = ImageIO.read(new ByteArrayInputStream(bytes));
-            if (image == null) {
-                throw RuleViolation.of("file", "file", KitchenMessages.PHOTO_FILE);
-            }
-            if (Math.min(image.getWidth(), image.getHeight()) < PHOTO_MIN_PX) {
-                throw RuleViolation.of("file", "size", "Use a photo at least 1000 px on the short side.");
-            }
-        } catch (IOException ex) {
-            throw RuleViolation.of("file", "file", KitchenMessages.PHOTO_FILE);
+        var size = ImageDecoding.size(bytes)
+                .orElseThrow(() -> RuleViolation.of("file", "file", KitchenMessages.PHOTO_FILE));
+        if (Math.min(size.width(), size.height()) < PHOTO_MIN_PX) {
+            throw RuleViolation.of("file", "size", "Use a photo at least 1000 px on the short side.");
         }
     }
 
