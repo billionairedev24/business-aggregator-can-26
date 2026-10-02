@@ -12,35 +12,32 @@ import org.springframework.kafka.retrytopic.TopicSuffixingStrategy;
 import org.springframework.stereotype.Component;
 
 /**
- * Consumer group {@code notifications} (deploy/kafka/topics.yaml): the money topics (S-27; since S-102 also the
- * customer's side of {@code payments.refund}), through the S-26 framework
- * (schema validation, dedupe per event, retries 10 s / 60 s / 5 min on its own retry topics, then {@code .dlq}). The
- * back-off is a property only so tests can shorten it; the catalogue test reads the defaults.
+ * Consumer group {@code personal-notifications} (S-102, deploy/kafka/topics.yaml): customers' order, delivery, booking
+ * and quote updates and couriers' runs, through the S-26 framework. It has <b>no retry topics</b> — 15 more would pass
+ * Event Hubs Premium's 100 per processing unit — because nothing it sends throws: a provider outage or throttling is
+ * written to {@code messaging.deferred_notifications} and retried by the deferred job (every 5 minutes, 10 attempts).
+ * Only an unexpected failure (a bug, the database) goes to the {@code .dlq}, for a replay.
  */
 @Component
 @RequiredArgsConstructor
-class NotificationsConsumer {
+class PersonalNotificationsConsumer {
 
-    static final String GROUP = "notifications";
+    static final String GROUP = "personal-notifications";
 
     private final EventProcessing events;
     private final Notifier notifier;
 
     @RetryableTopic(
-            attempts = "4",
-            backOff =
-                    @BackOff(
-                            delayString = "${northline.notifications.retry.delay:10000}",
-                            multiplierString = "${northline.notifications.retry.multiplier:6}",
-                            maxDelayString = "${northline.notifications.retry.max-delay:300000}"),
-            retryTopicSuffix = ".notifications.retry",
+            attempts = "1",
+            backOff = @BackOff(delay = 10_000, multiplier = 6),
+            retryTopicSuffix = ".personal-notifications.retry",
             dltTopicSuffix = ".dlq",
             topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE,
             autoCreateTopics = "false",
             exclude = PoisonEventException.class,
             traversingCauses = "true")
     @KafkaListener(
-            topics = {"payments.payout", "payments.payout_account", "payments.dispute", "payments.refund"},
+            topics = {"orders.order", "fulfilment.delivery", "fulfilment.run", "booking.booking", "booking.quote"},
             groupId = GROUP)
     void on(ConsumerRecord<String, byte[]> record) {
         events.process(GROUP, record, notifier::on);

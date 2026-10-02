@@ -25,8 +25,11 @@ CREATE UNIQUE INDEX ux_push_devices_token ON messaging.push_devices (app, platfo
 CREATE INDEX ix_push_devices_user ON messaging.push_devices (user_id, app);
 CREATE INDEX ix_push_devices_refreshed ON messaging.push_devices (refreshed_at);
 
--- Customers' SMS and push held back by their quiet hours (S-27's table, V074, was for team members only): who the
--- notification is for, and no business for an order that spans several shops.
+-- Customers' and couriers' notifications held back (S-27's table, V074, was for team members only): by quiet hours,
+-- and — since their consumer group has no Kafka retry topics (Event Hubs' 100-topic limit) — when a provider is down
+-- or throttling, email included. Who the notification is for, and no business for an order that spans several shops.
 ALTER TABLE messaging.deferred_notifications
   ADD COLUMN audience text NOT NULL DEFAULT 'team' CHECK (audience IN ('team', 'customer', 'courier')),
-  ALTER COLUMN merchant_id DROP NOT NULL;
+  ALTER COLUMN merchant_id DROP NOT NULL,
+  DROP CONSTRAINT IF EXISTS deferred_notifications_channel_check,
+  ADD CONSTRAINT deferred_notifications_channel_check CHECK (channel IN ('sms', 'push', 'email'));

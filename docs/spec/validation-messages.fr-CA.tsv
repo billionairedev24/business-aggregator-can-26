@@ -742,3 +742,10 @@ Only the person on the shift or an admin can hand it over.	Seule la personne de 
 Use a date and time like 2026-09-08T18:00:00Z.	Utilisez une date et une heure comme 2026-09-08T18:00:00Z.	new
 That page link is no longer valid. Start from the first page.	Ce lien de page n’est plus valide. Recommencez à la première page.	new
 Choose a business.	Choisissez une entreprise.	new
+Use 16 to 64 letters, digits, - or _ for the installation id.	Utilisez de 16 à 64 lettres, chiffres, - ou _ pour l’identifiant d’installation.	new
+Choose ios or android.	Choisissez ios ou android.	new
+Choose granted, provisional, denied or undetermined.	Choisissez granted, provisional, denied ou undetermined.	new
+Choose en or fr.	Choisissez en ou fr.	new
+Send the push token the platform gave this app.	Envoyez le jeton de notification que la plateforme a donné à cette appli.	new
+A device that allows notifications needs its push token.	Un appareil qui accepte les notifications doit envoyer son jeton.	new
+Send the app version (at most 32 characters).	Envoyez la version de l’appli (32 caractères au plus).	new

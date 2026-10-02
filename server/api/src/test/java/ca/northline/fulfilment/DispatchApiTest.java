@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import ca.northline.fulfilment.api.DeliveryAssigned;
 import ca.northline.fulfilment.api.DeliveryCompleted;
 import ca.northline.fulfilment.api.DeliveryPickedUp;
+import ca.northline.fulfilment.api.RunChanged;
 import ca.northline.fulfilment.api.RunPlanned;
 import ca.northline.shared.Ids;
 import ca.northline.shared.security.MerchantRole;
@@ -548,6 +549,21 @@ class DispatchApiTest extends IntegrationTest {
                                  where target_id = ? and action = 'fulfilment.run_assigned'""").params(runId).query().singleRow())
                 .containsEntry("role", "dispatch")
                 .containsEntry("platform", true);
+        // S-102: Kai's app hears that the run was taken (run.changed); Lee's that it was given (delivery.assigned)
+        var kaiCourier = jdbc.sql("select id from fulfilment.couriers where user_id = ?")
+                .params(kai)
+                .query(String.class)
+                .single();
+        assertThat(events.stream(RunChanged.class).filter(e -> e.aggregateId().equals(runId)))
+                .singleElement()
+                .satisfies(e -> {
+                    assertThat(e.courierId()).isEqualTo(kaiCourier);
+                    assertThat(e.change()).isEqualTo("unassigned");
+                });
+        assertThat(events.stream(DeliveryAssigned.class)
+                        .filter(e -> e.aggregateId().equals(runId)))
+                .extracting(DeliveryAssigned::courierId)
+                .contains(leeId);
         mvc.perform(get("/api/v1/courier/me").with(TestJwt.courier(kai)))
                 .andExpect(jsonPath("$.status").value("available"));
         mvc.perform(get("/api/v1/courier/run").with(TestJwt.courier(kai))).andExpect(status().isNoContent());

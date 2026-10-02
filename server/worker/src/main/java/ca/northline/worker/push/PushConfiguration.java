@@ -78,7 +78,7 @@ public class PushConfiguration {
         }
         var providers = List.<PushProvider>of(
                 new ApnsPushProvider(
-                        client(apns.url(), props, ApnsApi.class),
+                        client(apns.url(), props, HttpClient.Version.HTTP_2, ApnsApi.class),
                         keyId,
                         teamId,
                         key,
@@ -87,7 +87,7 @@ public class PushConfiguration {
                         json,
                         clock),
                 new FcmPushProvider(
-                        client(props.fcm().url(), props, FcmApi.class),
+                        client(props.fcm().url(), props, HttpClient.Version.HTTP_1_1, FcmApi.class),
                         account,
                         props.fcm().tokenUrl(),
                         json,
@@ -102,10 +102,10 @@ public class PushConfiguration {
         return new DevicePushSender(devices, providers, props, clock, meters);
     }
 
-    /** HTTP/2 (APNs requires it; FCM accepts it), short time-outs, no redirects. */
-    static <T> T client(String baseUrl, PushProperties props, Class<T> api) {
+    /** APNs requires HTTP/2 (FCM v1 is plain HTTPS/1.1); short time-outs, no redirects. */
+    static <T> T client(String baseUrl, PushProperties props, HttpClient.Version version, Class<T> api) {
         var http = HttpClient.newBuilder()
-                .version(HttpClient.Version.HTTP_2)
+                .version(version)
                 .connectTimeout(props.timeout())
                 .followRedirects(HttpClient.Redirect.NEVER)
                 .build();

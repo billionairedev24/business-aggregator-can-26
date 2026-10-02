@@ -18,7 +18,8 @@ import tools.jackson.databind.JsonNode;
  * off (security and courier notices ignore the matrix) — a delivery now, or, for push and SMS inside their quiet hours,
  * a deferred one at the end of the quiet hours (security and courier notices are never held). Runs inside the consumer
  * framework's transaction; each delivery is claimed separately, so a retry after a provider outage sends only what is
- * missing.
+ * missing. A team notice's outage is thrown (the event's retry topics); a customer's or courier's is deferred (their
+ * consumer group has none) and the deferred job retries it.
  */
 @Slf4j
 public final class Notifier {
@@ -102,8 +103,16 @@ public final class Notifier {
                     continue;
                 }
                 var failure = attempt(notice, person, channel, business);
-                if (failure != null) {
-                    outage = failure;
+                if (failure == null) {
+                    continue;
+                }
+                if (notice.audience() instanceof Notice.Audience.Team) {
+                    outage = failure; // the other members first; the event's retry topics send it later
+                } else {
+                    // customers and couriers: retried from the table (their consumer group has no retry topics)
+                    var asked = failure instanceof PushDeliveryFailed push ? push.retryAfter() : null;
+                    var wait = asked != null ? asked : DEFERRED_RETRY;
+                    deferred.defer(UlidCreator.getMonotonicUlid().toString(), notice, person, channel, now.plus(wait));
                 }
             }
         }

@@ -280,7 +280,7 @@ public final class PersonalNotices {
 
     // Order texts: no number (the app shows the order); booking {0} = business, {1} = start; quote {0} business,
     // {1} total, {2} valid until; refund {0} case, {1} business, {2} amount, {3} respond by; run {0} = orders.
-    // MessageFormat: '' is an apostrophe (’ is used instead).
+    // MessageFormat: '' is an apostrophe (’ is used instead). A sentence ending on a time has no period ("a.m.").
     static final Map<String, String> EN = Map.ofEntries(
             Map.entry("order.packed", "Your order is packed and ready to ship. We’ll tell you when it’s on its way."),
             Map.entry("order.packed.title", "Order packed"),
@@ -288,9 +288,9 @@ public final class PersonalNotices {
             Map.entry("order.out_for_delivery.title", "Out for delivery"),
             Map.entry("order.delivered", "Your order was delivered. Something not right? Report it from the order."),
             Map.entry("order.delivered.title", "Order delivered"),
-            Map.entry("booking.confirmed", "{0} confirmed your booking for {1}."),
+            Map.entry("booking.confirmed", "{0} confirmed your booking for {1}"),
             Map.entry("booking.confirmed.title", "Booking confirmed"),
-            Map.entry("booking.reminder", "Reminder: {0} is booked for {1}."),
+            Map.entry("booking.reminder", "Reminder: {0} is booked for {1}"),
             Map.entry("booking.reminder.title", "Your booking is tomorrow"),
             Map.entry("booking.en_route", "{0} is on the way. See the live arrival time in the app."),
             Map.entry("booking.en_route.title", "Your provider is on the way"),
@@ -326,9 +326,9 @@ public final class PersonalNotices {
             Map.entry("order.out_for_delivery.title", "En livraison"),
             Map.entry("order.delivered", "Votre commande a été livrée. Un problème? Signalez-le depuis la commande."),
             Map.entry("order.delivered.title", "Commande livrée"),
-            Map.entry("booking.confirmed", "{0} a confirmé votre réservation du {1}."),
+            Map.entry("booking.confirmed", "{0} a confirmé votre réservation du {1}"),
             Map.entry("booking.confirmed.title", "Réservation confirmée"),
-            Map.entry("booking.reminder", "Rappel : {0} est réservé pour le {1}."),
+            Map.entry("booking.reminder", "Rappel : {0} est réservé pour le {1}"),
             Map.entry("booking.reminder.title", "Votre réservation est demain"),
             Map.entry("booking.en_route", "{0} est en route. Voyez l’heure d’arrivée en direct dans l’appli."),
             Map.entry("booking.en_route.title", "Votre prestataire est en route"),
