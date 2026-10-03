@@ -235,7 +235,11 @@ class UatApiTest extends IntegrationTest {
                     .andExpect(status().isUnprocessableEntity())
                     .andExpect(jsonPath("$.errors[0].message").value("Attach the screenshot as a PNG or JPEG image."));
             mvc.perform(multipart(ME + "/screenshots")
-                            .file(new MockMultipartFile("file", "s.png", "image/png", "%PDF-1.7 fake".getBytes(java.nio.charset.StandardCharsets.US_ASCII)))
+                            .file(new MockMultipartFile(
+                                    "file",
+                                    "s.png",
+                                    "image/png",
+                                    "%PDF-1.7 fake".getBytes(java.nio.charset.StandardCharsets.US_ASCII)))
                             .with(TestJwt.customer(customer)))
                     .andExpect(status().isUnprocessableEntity());
             mvc.perform(multipart(ME + "/screenshots")

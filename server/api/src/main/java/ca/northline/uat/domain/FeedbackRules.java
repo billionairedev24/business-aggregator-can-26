@@ -1,8 +1,7 @@
 package ca.northline.uat.domain;
 
-import ca.northline.platform.logging.Redactor;
+import ca.northline.platform.Redaction;
 import java.util.Locale;
-import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -108,7 +107,7 @@ public final class FeedbackRules {
                 segments[i] = TOKEN;
             }
         }
-        var clean = Objects.requireNonNullElse(Redactor.redact(String.join("/", segments)), "");
+        var clean = Redaction.redact(String.join("/", segments));
         if (clean.isBlank()) {
             return "/";
         }
@@ -126,7 +125,7 @@ public final class FeedbackRules {
 
     /** Free text as stored: trimmed, then the log redaction. */
     public static String text(String raw) {
-        return Objects.requireNonNullElse(Redactor.redact(raw.strip()), "");
+        return Redaction.redact(raw.strip());
     }
 
     /** The browser / OS line: redacted, control characters dropped, cut to {@value #PLATFORM_MAX} characters. */
