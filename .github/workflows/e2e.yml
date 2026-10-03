@@ -1,0 +1,124 @@
+# S-117 — the end-to-end suite (web/e2e, Playwright): sign-in, onboarding, quote → booking → escrow,
+# order → pack → deliver, payout, and the Studio smoke sweep. Runbook: docs/runbooks/e2e.md.
+#
+# MANUAL ONLY: CI credits are depleted, so this workflow runs only when started from Actions › e2e › Run workflow
+# (or `gh workflow run e2e.yml -f environment=staging`). Nothing schedules it.
+#
+# To run it nightly against staging later, add this one line under `on:` (next to workflow_dispatch):
+#     schedule: [{ cron: "17 9 * * *" }]      # 09:17 UTC daily; a scheduled run has no inputs → staging
+# Every job reads the environment as `inputs.environment || 'staging'`, so nothing else changes.
+name: e2e
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Where: local = the whole stack in this runner (local profile, disposable Postgres); dev / staging = a deployed environment (its GitHub Environment holds the URLs, test data and personas)"
+        type: choice
+        default: local
+        options: [local, dev, staging]
+      grep:
+        description: "Only the tests matching this word (Playwright --grep), e.g. @smoke or payout; empty = everything"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ inputs.environment || 'staging' }}
+  cancel-in-progress: false # never two runs against one environment's data at once
+
+env:
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+  E2E_ARGS: ${{ inputs.grep && format('--grep={0}', inputs.grep) || '' }}
+
+jobs:
+  local:
+    name: e2e · local stack
+    if: ${{ (inputs.environment || 'staging') == 'local' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    services:
+      postgres: # disposable: ci/e2e.sh migrates it and loads the dev seed
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_DB: northline
+          POSTGRES_USER: northline
+          POSTGRES_PASSWORD: northline
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U northline -d northline"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      MAVEN_MIRROR_URL: ${{ vars.MAVEN_MIRROR_URL }}
+      MAVEN_MIRROR_USERNAME: ${{ secrets.MAVEN_MIRROR_USERNAME }}
+      MAVEN_MIRROR_PASSWORD: ${{ secrets.MAVEN_MIRROR_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@v5
+      - uses: ./.github/actions/pnpm-setup
+        with:
+          playwright: "true"
+      - name: make e2e
+        env:
+          DB_HOST: localhost
+          DB_PORT: "5432"
+          CI: "true"
+        run: make e2e
+      - name: Upload the report, traces, screenshots, videos and logs
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-local
+          path: e2e-out/
+          retention-days: 14
+          if-no-files-found: ignore
+
+  target:
+    name: e2e · ${{ inputs.environment || 'staging' }}
+    if: ${{ (inputs.environment || 'staging') != 'local' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: ${{ inputs.environment || 'staging' }}
+    env:
+      CI: "true"
+      # URLs: Environment variables (vars); personas: Environment secrets — docs/runbooks/e2e.md § Target an environment
+      E2E_STUDIO_URL: ${{ vars.E2E_STUDIO_URL }}
+      E2E_CONSUMER_URL: ${{ vars.E2E_CONSUMER_URL }}
+      E2E_CONSOLE_URL: ${{ vars.E2E_CONSOLE_URL }}
+      E2E_AUTH_URL: ${{ vars.E2E_AUTH_URL }}
+      E2E_COURIER_API_URL: ${{ vars.E2E_COURIER_API_URL }}
+      E2E_OWNER_IDENTIFIER: ${{ secrets.E2E_OWNER_IDENTIFIER }}
+      E2E_OWNER_TOTP_SECRET: ${{ secrets.E2E_OWNER_TOTP_SECRET }}
+      E2E_STAFF_IDENTIFIER: ${{ secrets.E2E_STAFF_IDENTIFIER }}
+      E2E_STAFF_TOTP_SECRET: ${{ secrets.E2E_STAFF_TOTP_SECRET }}
+      E2E_COURIER_IDENTIFIER: ${{ secrets.E2E_COURIER_IDENTIFIER }}
+      E2E_COURIER_TOTP_SECRET: ${{ secrets.E2E_COURIER_TOTP_SECRET }}
+      E2E_COURIER_USER_ID: ${{ vars.E2E_COURIER_USER_ID }}
+      E2E_CONSUMER_IDENTIFIER: ${{ secrets.E2E_CONSUMER_IDENTIFIER }}
+      E2E_CONSUMER_PASSKEY: ${{ secrets.E2E_CONSUMER_PASSKEY }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/pnpm-setup
+        with:
+          playwright: "true"
+      - name: Test data of the environment (Environment variable E2E_DATA_JSON, else web/e2e/data/<env>.json)
+        env:
+          E2E_DATA_JSON: ${{ vars.E2E_DATA_JSON }}
+        run: |
+          if [ -n "$E2E_DATA_JSON" ]; then printf '%s' "$E2E_DATA_JSON" > "$RUNNER_TEMP/e2e-data.json"; echo "E2E_DATA=$RUNNER_TEMP/e2e-data.json" >> "$GITHUB_ENV"; fi
+      - name: make e2e-target
+        run: make e2e-target ENV=${{ inputs.environment || 'staging' }}
+      - name: Upload the report, traces, screenshots and videos
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-${{ inputs.environment || 'staging' }}
+          path: e2e-out/
+          retention-days: 14
+          if-no-files-found: ignore

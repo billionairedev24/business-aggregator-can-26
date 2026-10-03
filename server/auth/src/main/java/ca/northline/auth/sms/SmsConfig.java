@@ -3,12 +3,15 @@ package ca.northline.auth.sms;
 import ca.northline.auth.application.SmsSender;
 import ca.northline.platform.SmsProperties;
 import ca.northline.sms.SmsTransports;
+import java.time.Clock;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.Environment;
 import software.amazon.awssdk.services.pinpointsmsvoicev2.PinpointSmsVoiceV2Client;
 
@@ -28,7 +31,7 @@ public class SmsConfig {
 
     @Bean
     @ConditionalOnProperty(name = PROVIDER, havingValue = "local", matchIfMissing = true)
-    SmsSender loggingSmsSender(Environment environment) {
+    SmsSender loggingSmsSender(Environment environment, ObjectProvider<DevOutbox> outbox) {
         if (environment.matchesProfiles("staging | prod")) {
             throw new IllegalStateException("SMS_PROVIDER=local is not allowed under staging/prod: set SMS_PROVIDER to"
                     + " twilio or aws (docs/runbooks/README.md § SMS and voice codes)");
@@ -38,7 +41,14 @@ public class SmsConfig {
             log.warn("SMS_PROVIDER=local: verification codes are neither sent nor logged (S-112) — phone verification"
                     + " can't be completed; set SMS_PROVIDER to twilio or aws");
         }
-        return new LoggingSmsSender(reveal);
+        return new LoggingSmsSender(reveal, outbox.getIfAvailable());
+    }
+
+    /** S-117: the codes the local fake "sent", readable at {@code GET /api/auth/dev/outbox} — local profile only. */
+    @Bean
+    @Profile("local")
+    DevOutbox devOutbox(ObjectProvider<Clock> clock) {
+        return new DevOutbox(clock.getIfAvailable(Clock::systemUTC));
     }
 
     @Bean
