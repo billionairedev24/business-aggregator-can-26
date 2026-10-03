@@ -62,7 +62,7 @@ test('a shop order is packed, dispatched and delivered by a courier', async ({ b
   const courierContext = await browser.newContext(contextOptions());
   const courierPage = await courierContext.newPage();
   let app!: CourierApp;
-  let courierUserId = env.personas.courier.userId ?? '';
+  let courierUserId = env.personas.courier?.userId ?? '';
   await test.step('courier: signs in to the courier app', async () => {
     if (isLocal) {
       // A new courier every run (sign-up with a phone code and a passkey), so no run left over from an earlier attempt
@@ -71,8 +71,9 @@ test('a shop order is packed, dispatched and delivered by a courier', async ({ b
       courierUserId = ((await (await courierPage.request.get(`${env.urls.consumer}/bff/session`)).json()) as { user: { id: string } }).user.id;
       app = await CourierApp.authorize(courierPage);
     } else {
-      if (!courierUserId) throw new Error('E2E_COURIER_USER_ID is not set (docs/runbooks/e2e.md)');
-      app = await CourierApp.signIn(courierPage, env.personas.courier);
+      const courier = env.personas.courier;
+      if (!courier || !courierUserId) throw new Error('E2E_COURIER_IDENTIFIER and E2E_COURIER_USER_ID are not set (docs/runbooks/e2e.md)');
+      app = await CourierApp.signIn(courierPage, courier);
     }
   });
 

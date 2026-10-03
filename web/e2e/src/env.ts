@@ -44,7 +44,8 @@ export interface TestData {
   provider: { merchantId: string; slug: string; name: string; serviceCategory: string };
   seller: { merchantId: string; name: string; departmentLevel1: string; departmentLevel2: string };
   onboarding: { type: 'seller' | 'provider'; department: string; categoryLevel1: string; categoryLevel2: string; gstNumber: string; address: string };
-  personas: { owner: Persona; staff: Persona; courier: Persona; consumer?: Persona & { passkey?: PasskeyCredential } };
+  /** courier: target mode only — locally a new courier signs up every run. */
+  personas: { owner: Persona; staff: Persona; courier?: Persona; consumer?: Persona & { passkey?: PasskeyCredential } };
 }
 
 const root = new URL('..', import.meta.url).pathname;
@@ -74,7 +75,7 @@ export function loadEnv(env: NodeJS.ProcessEnv = process.env) {
   const personas = {
     owner: personaFromEnv(env, 'E2E_OWNER', data.personas.owner)!,
     staff: personaFromEnv(env, 'E2E_STAFF', data.personas.staff)!,
-    courier: personaFromEnv(env, 'E2E_COURIER', data.personas.courier)!,
+    courier: personaFromEnv(env, 'E2E_COURIER', data.personas.courier),
     consumer: personaFromEnv(env, 'E2E_CONSUMER', data.personas.consumer) as TestData['personas']['consumer'],
   };
   if (env.E2E_CONSUMER_PASSKEY && personas.consumer) personas.consumer.passkey = JSON.parse(env.E2E_CONSUMER_PASSKEY) as PasskeyCredential;

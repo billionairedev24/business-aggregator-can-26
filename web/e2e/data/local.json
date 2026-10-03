@@ -53,11 +53,6 @@
         "priya-n-00009",
         "priya-n-00010"
       ]
-    },
-    "courier": {
-      "identifier": "jas.gill@example.com",
-      "userId": "01J9ZD3V000000000000000JAS",
-      "totpSecret": "NORTHLINEJASDEVTOTPSECRET2345672"
     }
   }
 }
