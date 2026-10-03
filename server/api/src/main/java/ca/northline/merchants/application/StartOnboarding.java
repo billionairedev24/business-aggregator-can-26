@@ -12,7 +12,19 @@ public interface StartOnboarding {
             MerchantType type,
             Province province,
             @Nullable String workEmail,
-            boolean businessTermsAccepted) {}
+            boolean businessTermsAccepted,
+            @Nullable String pilotInvite) {
+
+        /** Without a pilot invite (S-120). */
+        public Command(
+                String userId,
+                MerchantType type,
+                Province province,
+                @Nullable String workEmail,
+                boolean businessTermsAccepted) {
+            this(userId, type, province, workEmail, businessTermsAccepted, null);
+        }
+    }
 
     OnboardingView start(Command command);
 }

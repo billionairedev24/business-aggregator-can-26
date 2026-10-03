@@ -39,7 +39,10 @@ final class OnboardingRequests {
             @Nullable @Pattern(regexp = EMAIL, message = EMAIL_FORMAT) @Size(max = 254, message = TOO_LONG)
             String workEmail,
 
-            @Nullable Boolean businessTermsAccepted) {}
+            @Nullable Boolean businessTermsAccepted,
+
+            // S-120: the token of a pilot invite link (read when the business is created, ignored afterwards)
+            @Nullable @Size(max = 100, message = TOO_LONG) String pilotInvite) {}
 
     /** {@code PUT …/onboarding/business}. {@code legalDetails} uses the snake_case keys of legal-details.schema.json. */
     record BusinessRequest(

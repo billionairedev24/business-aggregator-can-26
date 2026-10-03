@@ -73,6 +73,7 @@ export function OnboardingScreen({ step, search }: { step: Step; search: Onboard
         type={type}
         onboarding={o}
         isNew={isNew}
+        pilot={search.pilot}
         onTypeChange={t2 => void navigate({ to: '.', search: s => ({ ...s, type: t2 }), replace: true })}
         onDone={(id, t2) => go('business', id, t2)}
       />);

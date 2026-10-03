@@ -19,6 +19,7 @@ import { Route as ConsoleFinanceRouteImport } from './routes/_console/finance'
 import { Route as ConsoleIntegrationsRouteImport } from './routes/_console/integrations'
 import { Route as ConsoleOnCallRouteImport } from './routes/_console/on-call'
 import { Route as ConsoleOrdersRouteImport } from './routes/_console/orders'
+import { Route as ConsolePilotRouteImport } from './routes/_console/pilot'
 import { Route as ConsolePrivacyRouteImport } from './routes/_console/privacy'
 import { Route as ConsoleProfileRouteImport } from './routes/_console/profile'
 import { Route as ConsoleProvincesRouteImport } from './routes/_console/provinces'
@@ -79,6 +80,11 @@ const ConsoleOnCallRoute = ConsoleOnCallRouteImport.update({
 const ConsoleOrdersRoute = ConsoleOrdersRouteImport.update({
   id: '/orders',
   path: '/orders',
+  getParentRoute: () => ConsoleRoute,
+} as any)
+const ConsolePilotRoute = ConsolePilotRouteImport.update({
+  id: '/pilot',
+  path: '/pilot',
   getParentRoute: () => ConsoleRoute,
 } as any)
 const ConsolePrivacyRoute = ConsolePrivacyRouteImport.update({
@@ -152,6 +158,7 @@ export interface FileRoutesByFullPath {
   '/integrations': typeof ConsoleIntegrationsRoute
   '/on-call': typeof ConsoleOnCallRoute
   '/orders': typeof ConsoleOrdersRoute
+  '/pilot': typeof ConsolePilotRoute
   '/privacy': typeof ConsolePrivacyRoute
   '/profile': typeof ConsoleProfileRoute
   '/provinces': typeof ConsoleProvincesRoute
@@ -174,6 +181,7 @@ export interface FileRoutesByTo {
   '/integrations': typeof ConsoleIntegrationsRoute
   '/on-call': typeof ConsoleOnCallRoute
   '/orders': typeof ConsoleOrdersRoute
+  '/pilot': typeof ConsolePilotRoute
   '/privacy': typeof ConsolePrivacyRoute
   '/profile': typeof ConsoleProfileRoute
   '/provinces': typeof ConsoleProvincesRoute
@@ -199,6 +207,7 @@ export interface FileRoutesById {
   '/_console/integrations': typeof ConsoleIntegrationsRoute
   '/_console/on-call': typeof ConsoleOnCallRoute
   '/_console/orders': typeof ConsoleOrdersRoute
+  '/_console/pilot': typeof ConsolePilotRoute
   '/_console/privacy': typeof ConsolePrivacyRoute
   '/_console/profile': typeof ConsoleProfileRoute
   '/_console/provinces': typeof ConsoleProvincesRoute
@@ -225,6 +234,7 @@ export interface FileRouteTypes {
     | '/integrations'
     | '/on-call'
     | '/orders'
+    | '/pilot'
     | '/privacy'
     | '/profile'
     | '/provinces'
@@ -247,6 +257,7 @@ export interface FileRouteTypes {
     | '/integrations'
     | '/on-call'
     | '/orders'
+    | '/pilot'
     | '/privacy'
     | '/profile'
     | '/provinces'
@@ -271,6 +282,7 @@ export interface FileRouteTypes {
     | '/_console/integrations'
     | '/_console/on-call'
     | '/_console/orders'
+    | '/_console/pilot'
     | '/_console/privacy'
     | '/_console/profile'
     | '/_console/provinces'
@@ -361,6 +373,13 @@ declare module '@tanstack/react-router' {
       path: '/orders'
       fullPath: '/orders'
       preLoaderRoute: typeof ConsoleOrdersRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
+    '/_console/pilot': {
+      id: '/_console/pilot'
+      path: '/pilot'
+      fullPath: '/pilot'
+      preLoaderRoute: typeof ConsolePilotRouteImport
       parentRoute: typeof ConsoleRoute
     }
     '/_console/privacy': {
@@ -458,6 +477,7 @@ interface ConsoleRouteChildren {
   ConsoleIntegrationsRoute: typeof ConsoleIntegrationsRoute
   ConsoleOnCallRoute: typeof ConsoleOnCallRoute
   ConsoleOrdersRoute: typeof ConsoleOrdersRoute
+  ConsolePilotRoute: typeof ConsolePilotRoute
   ConsolePrivacyRoute: typeof ConsolePrivacyRoute
   ConsoleProfileRoute: typeof ConsoleProfileRoute
   ConsoleProvincesRoute: typeof ConsoleProvincesRoute
@@ -481,6 +501,7 @@ const ConsoleRouteChildren: ConsoleRouteChildren = {
   ConsoleIntegrationsRoute: ConsoleIntegrationsRoute,
   ConsoleOnCallRoute: ConsoleOnCallRoute,
   ConsoleOrdersRoute: ConsoleOrdersRoute,
+  ConsolePilotRoute: ConsolePilotRoute,
   ConsolePrivacyRoute: ConsolePrivacyRoute,
   ConsoleProfileRoute: ConsoleProfileRoute,
   ConsoleProvincesRoute: ConsoleProvincesRoute,

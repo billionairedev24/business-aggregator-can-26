@@ -8,6 +8,7 @@ test('queue · verification', async ({ page }) => sweep(page, 'console', 'verifi
 test('queue · vetting', async ({ page }) => sweep(page, 'console', 'vetting', '/vetting', { signedIn: true }));
 test('queue · disputes', async ({ page }) => sweep(page, 'console', 'disputes', '/disputes', { signedIn: true }));
 test('queue · support', async ({ page }) => sweep(page, 'console', 'support', '/support', { signedIn: true }));
+test('pilot onboarding (S-120)', async ({ page }) => sweep(page, 'console', 'pilot', '/pilot', { signedIn: true }));
 test('privacy requests', async ({ page }) => sweep(page, 'console', 'privacy', '/privacy', { signedIn: true }));
 test('retention', async ({ page }) => sweep(page, 'console', 'retention', '/privacy?view=retention', { signedIn: true }));
 test('team & audit log', async ({ page }) => sweep(page, 'console', 'audit', '/team', { signedIn: true }));
