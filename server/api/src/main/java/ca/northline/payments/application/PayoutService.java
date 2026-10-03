@@ -32,7 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-class PayoutService implements ViewPayouts, MovePayouts, PayoutPlan, RecentPayouts {
+class PayoutService implements ViewPayouts, MovePayouts, RunPayouts, PayoutPlan, RecentPayouts {
 
     static final String PAYOUTS_DISABLED =
             "Stripe has paused payouts on this account. Finish the steps in Settings › Stripe & compliance.";
@@ -194,35 +194,53 @@ class PayoutService implements ViewPayouts, MovePayouts, PayoutPlan, RecentPayou
             if (payouts.pendingAccount(merchantId).isPresent()) {
                 continue; // 24 h hold after a bank change
             }
-            var connected = payouts.connectedAccount(merchantId).orElse(null);
-            var account = payouts.activeAccount(merchantId).orElse(null);
-            var amount = overview(merchantId).payableCents();
-            if (connected == null || !connected.payoutsEnabled() || account == null || amount <= 0) {
+            if (payOut(merchantId, now, StripeIdempotencyKeys.of("scheduled-payout", merchantId, today.toString()))
+                    .isEmpty()) {
                 continue;
             }
-            var result = gateway.payout(
-                    connected.stripeAccount(),
-                    amount,
-                    false,
-                    account.getExternalRef(),
-                    StripeIdempotencyKeys.of("scheduled-payout", merchantId, today.toString()));
-            var itemCount = payouts.releasedSince(
-                    merchantId, payouts.lastPayoutAt(merchantId).orElse(null));
-            record(Payout.sent(
-                    Payout.Kind.SCHEDULED,
-                    merchantId,
-                    amount,
-                    0,
-                    result.payoutId(),
-                    result.arrivesAt(),
-                    itemCount,
-                    account,
-                    null,
-                    now));
             metrics.scheduledPayoutSent(Duration.between(payoutTime, now)); // S-113 timeliness SLI
             sent++;
         }
         return sent;
+    }
+
+    @Override
+    @Transactional
+    public Optional<Payout> runNow(String merchantId) {
+        var now = clock.instant();
+        if (payouts.pendingAccount(merchantId).isPresent()) {
+            return Optional.empty();
+        }
+        return payOut(
+                merchantId,
+                now,
+                StripeIdempotencyKeys.of("payout-run-now", merchantId, String.valueOf(now.toEpochMilli())));
+    }
+
+    /** One scheduled payout of everything payable; empty when there is nothing to pay or nowhere to pay it. */
+    private Optional<Payout> payOut(String merchantId, Instant now, String idempotencyKey) {
+        var connected = payouts.connectedAccount(merchantId).orElse(null);
+        var account = payouts.activeAccount(merchantId).orElse(null);
+        var amount = overview(merchantId).payableCents();
+        if (connected == null || !connected.payoutsEnabled() || account == null || amount <= 0) {
+            return Optional.empty();
+        }
+        var result = gateway.payout(connected.stripeAccount(), amount, false, account.getExternalRef(), idempotencyKey);
+        var itemCount = payouts.releasedSince(
+                merchantId, payouts.lastPayoutAt(merchantId).orElse(null));
+        var payout = Payout.sent(
+                Payout.Kind.SCHEDULED,
+                merchantId,
+                amount,
+                0,
+                result.payoutId(),
+                result.arrivesAt(),
+                itemCount,
+                account,
+                null,
+                now);
+        record(payout);
+        return Optional.of(payout);
     }
 
     /**
