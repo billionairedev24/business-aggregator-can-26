@@ -73,7 +73,7 @@ command_of() { # command_of <service> <services being started>
     bff) gradle ":bff:bootRun --args='$profile'" ;;
     bff-consumer) gradle ":bff:bootRun --args='$profile,consumer'" ;;
     bff-console) gradle ":bff:bootRun --args='$profile,console'" ;;
-    worker) if [ "$SPRING_PROFILE" = local ]; then gradle ":worker:bootRun"; else gradle ":worker:bootRun --args='$profile'"; fi ;;
+    worker) case "$SPRING_PROFILE" in local | local,*) gradle ":worker:bootRun" ;; *) gradle ":worker:bootRun --args='$profile'" ;; esac ;;
     studio)
       if dev_auth bff "$2"; then echo "cd '$ROOT/web' && NL_DEV_USER=$DEV_USER VITE_NL_DEV_STEP_UP=1 pnpm --filter @northline/studio dev"
       else echo "cd '$ROOT/web' && pnpm --filter @northline/studio dev"; fi ;;

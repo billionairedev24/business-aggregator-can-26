@@ -32,11 +32,13 @@ db-reset: ## DROP and recreate the local database DB_NAME, then migrate + seed (
 		echo "Resetting '$(DB_NAME)' in the compose postgres container"; \
 		docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U "$${PG_USER:-northline}" -d postgres \
 			-c 'drop database if exists "$(DB_NAME)" with (force)' -c 'create database "$(DB_NAME)" owner "$(DB_OWNER)"'; \
+	else \
 		echo "Resetting '$(DB_NAME)' with psql (PGHOST=$${PGHOST:-localhost}, PGUSER=$${PGUSER:-postgres}; a superuser: postgis is not a trusted extension)"; \
 		PGUSER=$${PGUSER:-postgres} psql -v ON_ERROR_STOP=1 -d postgres \
 			-c 'drop database if exists "$(DB_NAME)" with (force)' -c 'create database "$(DB_NAME)" owner "$(DB_OWNER)"' && \
 		PGUSER=$${PGUSER:-postgres} psql -v ON_ERROR_STOP=1 -d "$(DB_NAME)" \
 			-c 'create extension if not exists postgis' -c 'create extension if not exists citext' -c 'create extension if not exists pgcrypto'; \
+	fi
 	@$(MAKE) --no-print-directory db-migrate db-seed
 
 .PHONY: db-psql

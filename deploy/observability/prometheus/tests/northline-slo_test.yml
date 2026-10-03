@@ -224,9 +224,9 @@ tests:
 - name: 'payouts: every payout run fails for 20 minutes — page'
   interval: 1m
   input_series:
-  - series: northline_jobs_runs_total{application="northline-api",job="payments.payouts",outcome="succeeded"}
+  - series: northline_jobs_runs_total{application="northline-api",task="payments.payouts",outcome="succeeded"}
     values: 0+1x10 10x20
-  - series: northline_jobs_runs_total{application="northline-api",job="payments.payouts",outcome="failed"}
+  - series: northline_jobs_runs_total{application="northline-api",task="payments.payouts",outcome="failed"}
     values: 0x10 0+1x20
   alert_rule_test:
   - eval_time: 8m

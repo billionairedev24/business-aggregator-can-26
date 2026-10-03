@@ -16,9 +16,11 @@ management:
   health:
     redis.enabled: false
     elasticsearch.enabled: false
-  logging.export.enabled: false
-  otlp.metrics.export.enabled: false
-  tracing.export.enabled: false
+  # Off unless OTEL_EXPORT_ENABLED=true (make up OBS=1, make up-all): then traces, metrics and logs go to the local
+  # Collector like every other app's (docs/runbooks/observability.md § Local).
+  logging.export.enabled: ${OTEL_EXPORT_ENABLED:false}
+  otlp.metrics.export.enabled: ${OTEL_EXPORT_ENABLED:false}
+  tracing.export.enabled: ${OTEL_EXPORT_ENABLED:false}
 logging.level:
   ca.northline: debug
   ca.northline.config.DevAuthFilter: debug

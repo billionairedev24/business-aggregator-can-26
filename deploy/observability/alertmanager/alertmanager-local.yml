@@ -1,0 +1,33 @@
+# Local Alertmanager (docker compose --profile observability; docs/runbooks/observability.md § Local alerting). The
+# S-113 severity routing of alertmanager.yml, but every receiver is the local Mailpit (http://localhost:8025): alerts
+# are visible and never page anyone. The Alertmanager UI is http://localhost:9093 (ALERTMANAGER_PORT).
+global:
+  smtp_smarthost: mailpit:1025
+  smtp_from: alertmanager@northline.localhost
+  smtp_require_tls: false
+route:
+  receiver: ticket
+  group_by: [alertname, severity, sloth_service, sloth_slo, application]
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 4h
+  routes:
+    - receiver: page
+      matchers: ['severity="page"']
+    - receiver: ticket
+      matchers: ['severity="ticket"']
+inhibit_rules:
+  - source_matchers: ['severity="page"']
+    target_matchers: ['severity="ticket"']
+    equal: [alertname, sloth_service, sloth_slo, application]
+receivers:
+  - name: page
+    email_configs:
+      - to: on-call@northline.localhost
+        send_resolved: true
+        headers: { Subject: '[PAGE {{ .Status | toUpper }}] {{ .CommonLabels.alertname }} — {{ .CommonAnnotations.summary }}' }
+  - name: ticket
+    email_configs:
+      - to: team-queue@northline.localhost
+        send_resolved: true
+        headers: { Subject: '[TICKET {{ .Status | toUpper }}] {{ .CommonLabels.alertname }} — {{ .CommonAnnotations.summary }}' }
