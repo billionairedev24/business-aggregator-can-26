@@ -179,11 +179,11 @@ class PilotOnboardingService implements PilotOnboarding {
     }
 
     private static Listings listing(ListingReadiness.@Nullable Counts c) {
-        return c == null ? Listings.NONE : new Listings(c.total(), c.submitted(), c.live());
+        return c == null ? Listings.NONE : Listings.of(c.total(), c.submitted(), c.live());
     }
 
     private static Listings menu(MenuReadiness.@Nullable Counts c) {
-        return c == null ? Listings.NONE : new Listings(c.total(), c.submitted(), c.live());
+        return c == null ? Listings.NONE : new Listings(c.total(), c.submitted(), c.live(), c.setUp());
     }
 
     /** A CSV field: quoted when it holds a comma, quote or line break; formula prefixes neutralised. */

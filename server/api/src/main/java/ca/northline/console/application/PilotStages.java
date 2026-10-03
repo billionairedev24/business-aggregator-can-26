@@ -36,8 +36,13 @@ final class PilotStages {
      * @param submitted handed to vetting, or published
      * @param live what customers see
      */
-    record Listings(int total, int submitted, int live) {
-        static final Listings NONE = new Listings(0, 0, 0);
+    record Listings(int total, int submitted, int live, boolean setUp) {
+        static final Listings NONE = new Listings(0, 0, 0, false);
+
+        /** Services and products: nothing to set up beyond the listings. */
+        static Listings of(int total, int submitted, int live) {
+            return new Listings(total, submitted, live, true);
+        }
     }
 
     static List<PilotStep> checklist(Inputs in) {
@@ -201,6 +206,10 @@ final class PilotStages {
         }
         if (!b.storefrontPublished()) {
             return step("live", TODO, "publish_page", "business", Map.of());
+        }
+        if (!c.setUp()) {
+            // a kitchen without its fulfilment and prep settings isn't in the market's kitchen list (dry-run finding)
+            return step("live", TODO, "set_up_kitchen", "business", Map.of());
         }
         if (c.live() == 0) {
             return c.submitted() > 0

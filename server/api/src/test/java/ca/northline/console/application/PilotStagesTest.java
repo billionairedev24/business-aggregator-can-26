@@ -95,7 +95,7 @@ class PilotStagesTest {
         var scheduled = new KitchenVisits.Visit(
                 "v1", "m1", AT, null, "R. Okafor", "scheduled", Map.of(), null, List.of(), null, null);
         var b = business("kitchen", "pending", true, "submitted", scheduled, false, "pilot");
-        var steps = PilotStages.checklist(new Inputs(pilot("kitchen", b), READY, new Listings(3, 3, 0), false));
+        var steps = PilotStages.checklist(new Inputs(pilot("kitchen", b), READY, Listings.of(3, 3, 0), false));
         assertThat(PilotStages.stage(steps)).isEqualTo("stripe_ready");
         assertThat(PilotStages.next(steps)).satisfies(n -> {
             assertThat(n.action()).isEqualTo("visit_on");
@@ -131,15 +131,23 @@ class PilotStagesTest {
     @Test
     void approvedAndPublished_isLiveOnlyOnceTheMarketOpens() {
         var hidden = business("seller", "active", false, null, null, true, "pilot");
-        var before = PilotStages.checklist(new Inputs(pilot("seller", hidden), READY, new Listings(4, 4, 4), false));
+        var before = PilotStages.checklist(new Inputs(pilot("seller", hidden), READY, Listings.of(4, 4, 4), false));
         assertThat(PilotStages.stage(before)).isEqualTo("approved");
         assertThat(PilotStages.next(before))
                 .satisfies(n -> assertThat(n.action()).isEqualTo("market_launch"));
 
         var shown = business("seller", "active", false, null, null, true, null);
-        var after = PilotStages.checklist(new Inputs(pilot("seller", shown), READY, new Listings(4, 4, 4), true));
+        var after = PilotStages.checklist(new Inputs(pilot("seller", shown), READY, Listings.of(4, 4, 4), true));
         assertThat(PilotStages.stage(after)).isEqualTo("live");
         assertThat(PilotStages.next(after)).isNull();
+    }
+
+    @Test
+    void aKitchenWithoutItsSettings_isNotLiveYet() {
+        var b = business("kitchen", "active", false, null, null, true, null);
+        var steps = PilotStages.checklist(new Inputs(pilot("kitchen", b), READY, new Listings(2, 2, 2, false), true));
+        assertThat(PilotStages.next(steps))
+                .satisfies(n -> assertThat(n.action()).isEqualTo("set_up_kitchen"));
     }
 
     @Test
@@ -166,7 +174,7 @@ class PilotStagesTest {
                 AT,
                 true,
                 null);
-        var steps = PilotStages.checklist(new Inputs(pilot("seller", b), READY, new Listings(1, 1, 1), true));
+        var steps = PilotStages.checklist(new Inputs(pilot("seller", b), READY, Listings.of(1, 1, 1), true));
         assertThat(PilotStages.next(steps)).satisfies(n -> {
             assertThat(n.state()).isEqualTo("blocked");
             assertThat(n.action()).isEqualTo("no_market");

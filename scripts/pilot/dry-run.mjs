@@ -171,8 +171,22 @@ async function clearReviews(m) {
   }
 }
 
+/** Trust & safety's listing vetting: what the automated checks flagged for a human is approved (the dry run's data is fake). */
+async function vet() {
+  const queue = await agent('GET', '/api/v1/console/vetting');
+  const ours = queue.items.filter(i => cohort.some(b => b.name === i.businessName) && ['pending', 'held'].includes(i.state));
+  for (const i of ours) {
+    log(`  vetting: ${i.businessName} · ${i.kind} flagged ${JSON.stringify(i.flags ?? [])} → approved by trust & safety`);
+    await agent('POST', `/api/v1/console/vetting/${i.kind === 'dish' ? 'dishes' : 'listings'}/${i.id}/decision`, { body: { decision: 'approve' } });
+  }
+  return ours.length;
+}
+
 /** What a customer sees: the business is in a market (its city) and its listing is on the public pages. */
 async function publicCheck(b) {
+  try { return await visible(b); } catch (e) { return String(e.message).slice(0, 160); }
+}
+async function visible(b) {
   const city = sql(`select coalesce(city, '') from merchants.merchants where id = ${quote(b.merchantId)}`);
   if (!city) return 'no market';
   if (b.listing.kind === 'product') {
@@ -221,18 +235,25 @@ for (const [i, [type, name, category, address]] of PLAN.entries()) {
   }
   await clearReviews(b.merchantId);
   await agent('POST', `/api/v1/console/verification/applications/${b.merchantId}/decision`, { body: { decision: 'approve' } });
-  if (type === 'kitchen') await call('POST', `/api/v1/merchants/${b.merchantId}/menus/${b.listing.menuId}/publish`, { user: owner.id });
+  if (type === 'kitchen') {
+    await call('POST', `/api/v1/merchants/${b.merchantId}/menus/${b.listing.menuId}/publish`, { user: owner.id });
+    // Kitchen › Hours: without fulfilment settings the market's kitchen list leaves the kitchen out
+    await call('PUT', `/api/v1/merchants/${b.merchantId}/kitchen/fulfilment`, { user: owner.id, body: { courier: true, pickup: true, mealKits: false, scheduled: false, scheduledDays: 7, groupOrders: false, groupMax: 10, radiusKm: 10 } });
+    await call('PUT', `/api/v1/merchants/${b.merchantId}/kitchen/hours`, { user: owner.id, body: { days: [1, 2, 3, 4, 5, 6, 7].map(weekday => ({ weekday, ranges: [['11:00', '21:00']] })) } });
+  }
   await call('POST', `/api/v1/merchants/${b.merchantId}/storefront/publish`, { user: owner.id });
   b.owner = owner;
   cohort.push(b);
   log(`  ${String(i + 1).padStart(2)} ${type.padEnd(8)} ${name.padEnd(22)} invited → approved → page published`);
 }
 
-// Vetting, Stripe's webhook and the approval's listeners run after commit: wait for the board to settle.
+// Vetting, Stripe's webhook and the approval's listeners run after commit: wait for the board to settle, vetting what
+// the automated checks hand to a human on the way.
 let board;
-for (let n = 0; n < 60; n++) {
+for (let n = 0; n < 90; n++) {
   board = await staff('GET', `/api/v1/console/pilot?market=${encodeURIComponent(MARKET)}`);
   if (board.items.filter(r => cohort.some(b => b.pilotId === r.id)).every(r => r.stage === 'live')) break;
+  if (n % 5 === 4) await vet();
   await sleep(1000);
 }
 const rows = board.items.filter(r => cohort.some(b => b.pilotId === r.id));
