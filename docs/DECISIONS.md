@@ -7351,3 +7351,77 @@ available in fr-CA before a Québec launch.
   Stripe's `preferred_locales` update (`StripeConnectGateway.receiptLocale`) has never run against Stripe — tests use
   the fake gateway and a unit test; the console has no screen for the language toggles yet (SQL or
   `REGION_FRENCH_FIRST`, runbook); marketing copy outside the repository is out of scope.
+
+## 2026-09-30 — S-117 Playwright end-to-end suite in CI (studio smoke + critical journeys)
+
+Runbook: [docs/runbooks/e2e.md](runbooks/e2e.md). Suite: `web/e2e` (`@northline/e2e`), `make e2e` / `make e2e-target ENV=…`.
+
+- **Real stack, real sign-in.** The suite drives the three web apps through their BFFs and northline-auth — no
+  `X-Dev-User`, no token helper, no new sign-in backdoor. Personas sign in once per run in a Playwright setup project
+  (the "sign-in" journey) and the journeys start from those browser states, one context per actor. TOTP codes are
+  computed in the suite (RFC 6238) and never reused within a 30-second step (auth refuses a replayed step; the suite
+  waits for the next one). Backup codes are tried in order and remembered as used.
+- **New people every run instead of a seeding endpoint.** The customer (setup) and the courier (delivery journey) sign
+  up through the consumer site with the phone code from the local SMS outbox and a passkey from Chrome's virtual
+  authenticator (CDP `WebAuthn`); the passkey is exported and re-imported for later contexts and step-ups. Everything a
+  journey creates carries the run id; the quote's visit is the provider's first free hour from its public calendar; the
+  product photo is drawn from the product's title (vetting flags a reused image). Chosen over an api seeding endpoint:
+  the sign-up is itself worth testing, and nothing new had to exist only for tests — except the three local-only routes
+  below. The seeded owner (Ravi) and console staff (Priya N.) come from the dev seed.
+- **Local-only routes (profile `local`):** `GET /api/auth/dev/outbox` (auth: the codes the SMS fake "sent", kept in a
+  bounded in-memory `DevOutbox` next to the existing log line), `GET /api/v1/dev/outbox` (api: emails and texts, recorded
+  by AOP proxies a local-only `BeanPostProcessor` puts around the `EmailSender` and `SmsTransport` beans — subclass
+  proxies where the class allows, so beans injected by class keep working), and
+  `POST /api/v1/dev/merchants/{id}/payouts/run` (owners only, through the studio-bff: `RunPayouts.runNow`, the scheduled
+  run's payout for one business without its 9:00-on-a-payout-day gate — the same code path, extracted to
+  `PayoutService.payOut`). The api outbox needs no sign-in, like the S-13 email previews. `DevOnlyRoutesTest` scans every
+  `@RestController` mapping `/api/v1/dev/**` (ArchUnit import) and requires a `@Profile` that is false under
+  `prod`/`staging`/`dev` (+`cloud`) and with no profile; it also runs the outbox configuration under `prod` (no beans, the
+  senders not wrapped), `test` and `local`. Auth's `DevOutboxTest` does the same for its bean and route.
+  `DevPayoutRunTest` covers the run (201 with what was payable, 204 when nothing is, 403 for a bookkeeper).
+- **Two product bugs found and fixed** (both would have made the suite flaky):
+  1. **BFF token refresh race.** Access tokens live 10 minutes and northline-auth rotates refresh tokens; a Studio screen
+     sends several `/api` calls at once, each refreshed with the same refresh token, all but the first got
+     `invalid_grant` and `SessionRevocationCheck` ended the session ("refresh refused") — people were signed out mid-screen
+     about every 10 minutes of use. `SerializedRefresh` wraps the `OAuth2AuthorizedClientManager`: one authorize per
+     session at a time (256 striped locks by session id), and the token pair each refresh replaced is remembered for two
+     minutes so a request holding an older copy of the session (Spring Session loads one per request) gets the new
+     client instead of refreshing again. Per replica: two replicas refreshing one session in the same instant can still
+     race (the ingress keeps a session's calls together most of the time). `SerializedRefreshTest` shows the failure
+     without it and one refresh with it, for a shared session and for per-request session copies.
+  2. **Vite proxy rewrote `Host`.** The dev servers' string proxy shorthand sets `changeOrigin`, so the BFF built its
+     OAuth redirect URI and post-login redirect on its own port (8082/8081/8083) and real sign-in through `pnpm dev`
+     ended on the BFF's 404 page (`make up SERVICES="auth api bff studio"` was affected). The three Vite configs now proxy
+     with `changeOrigin: false`.
+- **Steps without a screen use the app's own API with the person's session** (the BFF, CSRF header included): the
+  customer's sign-off (it lives in the mobile app), dispatch's courier, shift, plan, pause/resume and assign calls (the
+  console's delivery screen has no buttons for them yet), the owner's ledger check. The courier is the courier app as the
+  api sees it: `courier-app` authorization code + PKCE in the browser, DPoP-bound tokens and proofs (ES256, `node:crypto`)
+  for every courier API call. Everything else is clicked.
+- **Dispatch determinism:** automatic assignment is first-come; a run left by an earlier failed attempt on the same
+  database would reach the new courier first. The journey puts the courier on shift, pauses them while dispatch plans,
+  then resumes them and assigns this order's run by hand (`POST /console/fulfilment/runs/{id}/assign`).
+- **Stack:** `ci/e2e.sh` (boot jars, Vite dev servers — the consumer site needs the dev server's proxy; a production
+  build has no proxy) on the ports the local OAuth clients are registered with, a tmpfs PostGIS container (port 55117)
+  or `DB_HOST`, payments jobs every 5 s. `make e2e` wraps it in `flock` (`E2E_LOCK`, default `.run/stack.lock`). Workers:
+  1 (shared personas, a laptop's stack). `retries: 0`: a flake must show. Traces `retain-on-failure` for every context;
+  each actor's video and last screen attached on failure.
+- **Studio smoke:** `scripts/studio-smoke.mjs` and `ci/studio-smoke.sh` are replaced by `tests/5-studio-smoke.spec.ts`
+  (same 45 screens × 3 width/language passes, now signed in for real, so Settings › Security works too); `make e2e-smoke`
+  runs it alone. The `studio-smoke` inputs of `web.yml` / `RUN_STUDIO_SMOKE` are gone.
+- **Target mode:** URLs, the environment's test data file and personas (owner, staff and courier with authenticator keys;
+  the customer's exported passkey) from the environment / CI secrets. Skipped there with the reason: onboarding (Stripe
+  Identity), emails, the payout run (checks the latest scheduled payout instead), the Studio smoke (seeded businesses).
+  `make e2e-target` refuses `prod`.
+- **CI:** `.github/workflows/e2e.yml` (`environment`: local, dev, staging; `grep`) and `ci/gitlab/e2e.yml`
+  (`PIPELINE_PART=e2e`, `E2E_TARGET`, `E2E_GREP`), manual only. The nightly switch is one line (runbook § CI); every
+  GitHub job reads the environment as `inputs.environment || 'staging'` so a schedule needs nothing else.
+- **Observations, not changed:** the Studio's job panel shows the escrow before GST ($300.00) where the customer saw
+  $315.00 held; the consumer product page logs a React hydration mismatch on every load (the page recovers by rendering
+  on the client — the suite waits for hydration before the first click); a business approved through onboarding has no
+  market, so its product page says "No shop in … sells this right now".
+- **No schema change, no new server variable.** The e2e variables (`E2E_*`) are the runner's, listed in the runbook.
+- **Not done / never run:** the suite has never run against staging or dev (no environment, personas or passkey exist
+  yet), so "green on staging nightly" is not shown; target mode is written and unit-tested for its configuration only. The
+  CI jobs have never run. Mobile apps are covered by their own web smokes (S-87, S-97), not by this suite. Food orders
+  (KDS), refunds and disputes are not journeys here.
