@@ -1,0 +1,32 @@
+# Local Loki (docker compose --profile observability): logs arrive over OTLP from the Collector
+# (deploy/observability/collector/collector-local.yaml → http://loki:3100/otlp). Single process, filesystem storage in
+# the container's tmpfs (no data is kept), no usage reporting. Host port LOKI_PORT (default 3110: 3100 is the Studio's).
+auth_enabled: false
+server:
+  http_listen_port: 3100
+  log_level: warn
+common:
+  instance_addr: 127.0.0.1
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+schema_config:
+  configs:
+    - from: 2024-01-01
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+limits_config:
+  allow_structured_metadata: true   # OTLP attributes (trace_id, span_id, logger, …) as structured metadata
+  retention_period: 48h
+analytics:
+  reporting_enabled: false

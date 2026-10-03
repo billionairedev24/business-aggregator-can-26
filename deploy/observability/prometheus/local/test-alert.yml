@@ -1,0 +1,14 @@
+# Local only (never deployed: the chart takes rules/ only). `make obs-fire-test-alert` sends a short burst of failing
+# sign-ins to northline-auth; this alert goes pending within a minute and fires one minute later, through the local
+# Alertmanager to Mailpit (http://localhost:8025). It reads the same metric as the S-113 alert NorthlineSignInFailures,
+# which needs ten minutes of failures (`make obs-fire-test-alert SUSTAIN=12`).
+groups:
+  - name: northline-local-test
+    rules:
+      - alert: NorthlineLocalTestAlert
+        expr: sum(increase(northline_auth_sign_ins_total{outcome="failed"}[3m])) >= 5
+        for: 1m
+        labels: { severity: ticket }
+        annotations:
+          summary: "Local test alert: {{ $value | printf \"%.0f\" }} failed sign-ins in 3 minutes (make obs-fire-test-alert)"
+          runbook_url: https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/observability.md#local-alerting
