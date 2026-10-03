@@ -114,10 +114,15 @@ async function openJob(owner: Page, merchantId: string, ref: string) {
   await owner.goto(`${env.urls.studio}/b/${merchantId}/appointments`);
   await owner.getByRole('radiogroup', { name: 'Calendar view' }).getByText('List', { exact: true }).click();
   const open = owner.getByRole('button', { name: new RegExp(`^Open · .* · ${ref}$`) });
-  await expect(async () => {
-    if (!(await open.isVisible())) await owner.getByRole('button', { name: 'Next week' }).click();
-    await expect(open).toBeVisible({ timeout: 2_000 });
-  }).toPass({ timeout: 30_000 });
+  const week = owner.getByRole('heading', { level: 1 });
+  for (let weeks = 0; weeks < 4; weeks++) {
+    // the week's jobs are drawn (or its empty state) before deciding the booking isn't in it
+    await expect(owner.getByRole('button', { name: /^Open · / }).first().or(owner.getByText('No jobs this week.'))).toBeVisible();
+    if (await open.isVisible()) break;
+    const shown = await week.textContent();
+    await owner.getByRole('button', { name: 'Next week' }).click();
+    await expect(week).not.toHaveText(shown!);
+  }
   await open.click();
   const job = owner.getByRole('region', { name: new RegExp(ref) });
   await expect(job).toBeVisible();

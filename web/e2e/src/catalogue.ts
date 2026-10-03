@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { deflateSync } from 'node:zlib';
 import { expect, type Page } from '@playwright/test';
 import { env } from './env';
+import { reloadUntil } from './wait';
 
 export interface Product {
   title: string;
@@ -92,10 +93,8 @@ export async function submitProduct(page: Page, merchantId: string, product: Pro
   const listingId = page.url().match(/\/listings\/([0-9A-Z]{26})/)![1]!;
   // The automated checks run after the submit: reload until the editor shows their outcome.
   const decided = /Approved · live|In review · flagged/;
-  await expect(async () => {
-    await page.reload();
-    await expect(page.getByRole('status').filter({ hasText: decided })).toBeVisible({ timeout: 3_000 });
-  }).toPass({ timeout: 60_000 });
+  await reloadUntil(page, page.getByRole('tab', { name: /^Identity & category/ }), () =>
+    expect(page.getByRole('status').filter({ hasText: decided })).toBeVisible({ timeout: 2_000 }));
   const status = (await page.getByRole('status').filter({ hasText: decided }).textContent())!.trim();
   return { listingId, status };
 }
@@ -111,10 +110,8 @@ export async function publishProduct(owner: Page, staff: Page, merchantId: strin
     await staff.getByRole('searchbox', { name: 'Search table' }).fill(product.title);
     await staff.getByRole('button', { name: `Approve · ${product.title}` }).click();
     await expect(staff.getByRole('row').filter({ hasText: product.title })).toContainText('Approved');
-    await expect(async () => {
-      await owner.reload();
-      await expect(owner.getByRole('status').filter({ hasText: 'Approved · live' })).toBeVisible({ timeout: 3_000 });
-    }).toPass({ timeout: 60_000 });
+    await reloadUntil(owner, owner.getByRole('tab', { name: /^Identity & category/ }), () =>
+      expect(owner.getByRole('status').filter({ hasText: 'Approved · live' })).toBeVisible({ timeout: 2_000 }));
   }
   return listingId;
 }

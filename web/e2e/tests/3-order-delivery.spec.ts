@@ -7,6 +7,7 @@ import { VirtualAuthenticator } from '../src/passkey';
 import { consumerRegister, newConsumer } from '../src/signIn';
 import { expect, test, unique } from '../src/fixtures';
 import { hydrated } from '../src/hydration';
+import { reloadUntil } from '../src/wait';
 
 interface Stop { id: string; kind: 'pickup' | 'dropoff'; orderId: string; state: string }
 
@@ -129,9 +130,7 @@ test('a shop order is packed, dispatched and delivered by a courier', async ({ b
   await courierContext.close();
 
   await test.step('customer: the order is delivered', async () => {
-    await expect(async () => {
-      await consumer.reload();
-      await expect(consumer.getByText('Delivered with your PIN.')).toBeVisible({ timeout: 3_000 });
-    }).toPass({ timeout: 60_000 });
+    await reloadUntil(consumer, consumer.getByRole('heading', { level: 1 }), () =>
+      expect(consumer.getByText('Delivered with your PIN.')).toBeVisible({ timeout: 2_000 }));
   });
 });

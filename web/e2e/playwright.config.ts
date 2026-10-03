@@ -23,7 +23,7 @@ export default defineConfig({
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: 0, // a flaky step is a bug to fix, not to retry (runbook § Flake triage)
-  timeout: 5 * 60_000,
+  timeout: 8 * 60_000, // a journey on a busy machine (dev servers compiling, other builds) took 5 min
   expect: { timeout: 20_000 },
   reporter: [
     ['list'],
