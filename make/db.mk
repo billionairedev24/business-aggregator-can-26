@@ -23,6 +23,14 @@ db-seed: ## Upsert db/seed/categories.json into catalogue.categories (idempotent
 db-info: ## Flyway migration status of DB_URL
 	$(GRADLE) :api:flywayInfo
 
+# Local only, never drops: the role and database from server/.env (DB_URL, DB_USER, DB_PASSWORD) when missing, the
+# extensions, then migrate + seed. Safe to run again. psql connects as PGUSER (default postgres, a superuser).
+MIGRATE ?= 1
+.PHONY: db-create
+db-create: ## Create the role + database from server/.env on your local Postgres if missing, add PostGIS, migrate + seed (MIGRATE=0: create only)
+	@bash $(ROOT)/scripts/db-create.sh
+	@if [ "$(MIGRATE)" != 0 ]; then $(MAKE) --no-print-directory db-migrate db-seed; fi
+
 # Local only: refuses anything but a compose container or a local host, and asks first (YES=1 skips the question).
 .PHONY: db-reset
 db-reset: ## DROP and recreate the local database DB_NAME, then migrate + seed (asks first; YES=1 to skip)
