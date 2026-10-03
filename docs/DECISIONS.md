@@ -7432,3 +7432,82 @@ available in fr-CA before a Québec launch.
   quarter of the target on one replica of a shared 4-vCPU box. Not built: staging load-test data, the token harvester
   (bearer tokens for the manifest's users, renewed during a soak), the k6 image. The local runs used the in-memory live
   bus (one replica), the fake payment gateway (no Stripe latency) and dev auth (no BFF, no northline-auth).
+
+## 2026-10-03 — DX: one-command local stack with your own Postgres, Valkey and Grafana, plus local alerting
+
+- **`make up-all`** (`scripts/local-all.sh`, bash 3.2, make 3.81): every app but Storybook and the docs site, every
+  stand-in not listed in **`BYO_SERVICES`** (root `.env`; `BYO=…` on the command line for one run; any of `db cache
+  events search mail storage payments grafana`), the observability stack, `db-migrate db-seed`, `search-indices`, then
+  `scripts/stack.sh up` and one status table (`make urls`). Chosen over making `make up PROFILES=all` honour a BYO list:
+  compose's `all` profile can't subtract services, and `make up`'s current meaning stays untouched. Stand-ins are started
+  by service name (`docker compose up -d --wait postgres …`), not by profile. Kafka UI is started separately and may
+  fail (Docker Hub rate limits hit it during the check) without stopping the stack. `make up-all-check` runs only the
+  checks.
+- **Checks before anything starts:** own Postgres — local host only (the dev seed refuses others, S-16), sign-in as
+  `DB_USER`, PostGIS available and created (or the user is a superuser), version (< 17 warns); psql from `PATH`, else
+  the `postgis/postgis` image's psql (`--network host` on Linux, `host.docker.internal` elsewhere). Own Valkey — `PING`
+  (with `AUTH` when `REDIS_PASSWORD` is set) through `valkey-cli`/`redis-cli`, else bash's `/dev/tcp`; TLS without a CLI
+  only checks the port. Own Grafana — answers, and **refused on :3000 when the consumer app is started** (its OAuth
+  redirects are registered for localhost:3000; moving the consumer app would touch auth's client registrations). A
+  stand-in port already taken (e.g. your own Postgres on 5432 without `db` in `BYO_SERVICES`) stops the run naming the
+  `BYO_SERVICES` entry or `.env` port that fixes it. All failure messages print the command to run.
+- **What the apps get** (only where the environment and `server/.env` are silent): `OTEL_EXPORT_ENABLED=true` + the
+  Collector endpoint, `LIVE_BUS=redis`, Spring profile `local,valkey` (sessions, auth rate limits and replay ids in
+  Valkey — the existing add-on profile), `SEARCH_PROVIDER=elasticsearch`, `SPRING_MODULITH_EVENTS_EXTERNALIZATION_ENABLED=true`
+  (api/auth events to Kafka for the worker). Left as they are: payments (fake gateway; stripe-mock runs) and storage
+  (`server/.env.example` sets `STORAGE_PROVIDER=local` explicitly) — switching them changes app behaviour beyond
+  "use the running stand-in". The worker keeps running without a profile under `local,*` as under `local`.
+- **Observability profile rebuilt without `grafana/otel-lgtm`:** Collector → Prometheus 3.5 (OTLP receiver, the S-113
+  rule files mounted unchanged + `prometheus/local/test-alert.yml`), Loki 3.5 (OTLP), Tempo 2.8; Alertmanager 0.28 with
+  `alertmanager-local.yml` (the S-113 severity routing, both receivers = email to Mailpit; Mailpit joins the
+  `observability` profile); Grafana 12.2 bundled on :3300 unless `grafana` is in `BYO_SERVICES`. otel-lgtm can publish
+  its inner Prometheus/Loki/Tempo ports, but its Prometheus has neither our rules nor an Alertmanager and its Grafana
+  can't be left out; separate pinned images are also smaller in total. **Host ports:** Prometheus 9090, Alertmanager
+  9093, **Loki 3110 and Tempo 3210** (not 3100/3200 as asked: the Studio and the console dev servers own those), all in
+  `.env`. Data in tmpfs (`mode=1777`; the images run as non-root), so nothing is kept — as before.
+- **Grafana provisioning through the HTTP API** (`scripts/grafana-provision.py`, standard library only, `make
+  obs-grafana-provision`): data sources with fixed uids (`northline-prometheus/-loki/-tempo/-alertmanager`) linked
+  trace↔logs (Tempo `tracesToLogsV2` by trace id on Loki's `trace_id` structured metadata; Loki derived field
+  `trace_id` → Tempo), exemplars and service graph; folder `northline`; every dashboard with its `datasource` variable
+  set to Northline Prometheus. Create-or-update by uid (then by name), so re-runs update in place. The bundled Grafana is
+  provisioned by the same script (compose-network URLs) instead of file provisioning, so that code runs on every
+  `make obs-up`. Alert rules: by default visible read-only through the Prometheus data source (`manageAlerts`);
+  `GRAFANA_ALERT_RULES=1` imports every group as Grafana-managed rules through Grafana 12's Prometheus conversion API
+  (rule files split into groups without a YAML library) — off by default because Grafana would then evaluate them a
+  second time.
+- **Metric names checked against a real OTLP → Prometheus path:** Micrometer's names translate as the rules expect
+  (`http_server_requests_seconds_*`, `_total`, gauges in seconds, `le="1"`), **except the payments job metrics**: their
+  `job` tag is overwritten by the `job` label Prometheus derives from `service.namespace/service.name` (the same OTLP
+  translation Grafana Cloud/Mimir and the managed Prometheus services use), so `northline_jobs_*{job="payments.payouts"}`
+  never existed — the payout run SLO could never burn and `NorthlinePayoutRunMissing` would always fire. The tag is
+  now **`task`** (`JobRuns`), with the Sloth spec, regenerated rules, chart copies, promtool tests, dashboard and
+  runbooks following. No other metric uses `job`, `instance` or another resource-derived label.
+- **Found and fixed on the way:** the api's `application-local.yml` turned OTLP export off for good, so `make up OBS=1`
+  never showed the api — it now follows `OTEL_EXPORT_ENABLED` (default still off); `:auth:bootRun` lacked the dev-seed
+  classpath that `:api:bootRun` has, so auth refused (Flyway validation) any database `make db-migrate` had seeded — the
+  `make up SERVICES="auth api …"` path failed after the first `make up`; `make db-reset` had lost its `else`/`fi`.
+- **`make obs-fire-test-alert`** (`scripts/fire-test-alert.sh`): failed sign-ins of unknown `…@example.invalid`
+  addresses with a wrong TOTP code against northline-auth, each from a different 203.0.113.0/24 address in
+  `X-Forwarded-For` (believed from loopback only, so S-9's per-IP limits don't stop the burst; no account is locked).
+  It waits one 30 s export step after the first failures (a counter's first sample is `increase()`'s baseline), then
+  follows `NorthlineLocalTestAlert` (local-only rule on the same metric as S-113's `NorthlineSignInFailures`: ≥ 5
+  failures in 3 min, `for: 1m`) through Prometheus, Alertmanager and Mailpit. `SUSTAIN=12` keeps failing long enough
+  for `NorthlineSignInFailures` (`for: 10m`). Not an SLO burn alert: the sign-in availability SLO counts only 5xx, which
+  can't be caused from outside without breaking something; the threshold alert reads the same pipeline.
+- **Checked here (one run under the stack lock):** "own" Postgres 17 + PostGIS on :55433, "own" Valkey with a password
+  on :56380 and a scratch `grafana/grafana:12.2.0` on :3401 (service account token) stood in for the user's; `BYO=db,cache,grafana,storage`
+  (storage only to spare a 400 MB `aws-cli` pull on a full disk); apps auth, api, studio-bff, worker, Studio (memory —
+  the three web apps and three BFFs together did not fit beside other agents' builds). Seen working: the checks pass,
+  and fail with their messages on a wrong Valkey password (CLI and `/dev/tcp`), a wrong DB password, PostGIS not
+  created for a non-superuser, Grafana on :3000; the user's Grafana provisioned by token (4 data sources healthy, 16
+  dashboards, re-run = "updated", 152 rules imported with `--alert-rules`), the bundled Grafana likewise; Prometheus
+  received metrics from all apps (597 names; `northline_jobs_runs_total{task=…}`, `le="1"`), 153 rules healthy;
+  Tempo had traces of api, auth, studio-bff and worker — including api HTTP → Kafka → worker consumer in one trace
+  (kitchen pause, with externalization on) and auth spans of Valkey commands; Loki had logs of the four with
+  `trace_id`, and the trace-id query used by the Tempo → Loki link returned the span's log; `make obs-fire-test-alert
+  SUSTAIN=12`: NorthlineLocalTestAlert pending after 30 s, firing 1 min later, in Alertmanager and as
+  "[TICKET FIRING] NorthlineLocalTestAlert" in Mailpit within 10 s; NorthlineSignInFailures pending at once, firing
+  after 10 min, email in Mailpit.
+- **Not done:** never run on macOS (make 3.81 / bash 3.2 reviewed, not executed); the consumer-bff, console-bff,
+  consumer and console apps were not started in the check; the Grafana provisioning was run against Grafana 12.2 only
+  (the conversion API needs 12+; without `--alert-rules` the script uses APIs Grafana 9+ has).

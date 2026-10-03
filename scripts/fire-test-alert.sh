@@ -89,7 +89,15 @@ if [ "$SUSTAIN" -gt 0 ]; then
     s=$(state NorthlineSignInFailures)
     [ "$s" != "$last" ] && { say "NorthlineSignInFailures: $s"; last=$s; }
   done
-  [ "$last" = firing ] && say "NorthlineSignInFailures fired — Mailpit has the email" \
-    || say "NorthlineSignInFailures is $last after $SUSTAIN minutes (it needs 10 minutes of > 50 % failures)"
+  if [ "$last" = firing ]; then
+    deadline=$(( $(date +%s) + 120 ))
+    until curl -fsS --max-time 3 "$MAILPIT/api/v1/search?query=subject%3ANorthlineSignInFailures" | grep -q '"messages_count":[1-9]'; do
+      [ "$(date +%s)" -ge "$deadline" ] && die "NorthlineSignInFailures fired but no email reached Mailpit ($MAILPIT)"
+      sleep 3
+    done
+    say "NorthlineSignInFailures fired and reached Mailpit (\"[TICKET FIRING] NorthlineSignInFailures …\")"
+  else
+    say "NorthlineSignInFailures is $last after $SUSTAIN minutes (it needs 10 minutes of > 50 % failures)"
+  fi
 fi
 say "Both resolve on their own a few minutes after the failures stop (Mailpit gets the RESOLVED email)."

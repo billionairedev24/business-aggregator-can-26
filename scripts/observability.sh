@@ -131,6 +131,7 @@ ENV
     rc=0
     tool promtool "$PROMETHEUS_IMAGE" check rules $OBS/prometheus/rules/*.yml $OBS/prometheus/rules/slo/*.yaml \
       $OBS/prometheus/local/*.yml || rc=$?
+    [[ $rc -eq 0 ]] && { tool promtool "$PROMETHEUS_IMAGE" check config --syntax-only $OBS/prometheus/prometheus-local.yml || rc=$?; }
     [[ $rc -eq 0 ]] && { (cd $OBS/prometheus && tool promtool "$PROMETHEUS_IMAGE" test rules tests/*_test.yml) || rc=$?; }
     [[ $rc -eq 3 ]] && { skip promtool; exit 0; }
     exit $rc
