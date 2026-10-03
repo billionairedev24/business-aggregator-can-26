@@ -17,8 +17,8 @@ workflow:
 variables:
   PIPELINE_PART:
     value: all
-    options: [all, server, web, infra, chart, images, gitops, promote, events, openapi, pages, courier, mobile-consumer, mobile-release, security]
-    description: "Which part to build and test. `events` = the event schema contract check (S-34, also in `all`). `openapi` = Redocly lint of the committed specs (S-125, also in `all`; the code-vs-spec check runs in `server`). `images` builds and pushes the container images (S-14, never part of `all`); `chart` = Helm checks, `gitops` = Argo CD checks (S-15; both also in `all`); `promote` opens a promotion merge request (S-15, never part of `all`). `pages` publishes the public documentation site on GitLab Pages (S-126, never part of `all`). `courier` = the courier app's checks, web smoke and (manual) EAS build (S-87, never part of `all`). `mobile-consumer` = the consumer app's checks, native prebuild check, web smoke and (manual) EAS build (S-97, never part of `all`). `mobile-release` = the store release of RELEASE_APP: RELEASE_ACTION as manual jobs (S-103, never part of `all`; docs/runbooks/mobile-release.md). `security` = gitleaks, SBOM + osv-scanner, semgrep, checkov, kube-score (S-104, never part of `all`; docs/security/README.md)."
+    options: [all, server, web, infra, chart, images, gitops, promote, events, openapi, pages, courier, mobile-consumer, mobile-release, security, e2e]
+    description: "Which part to build and test. `events` = the event schema contract check (S-34, also in `all`). `openapi` = Redocly lint of the committed specs (S-125, also in `all`; the code-vs-spec check runs in `server`). `images` builds and pushes the container images (S-14, never part of `all`); `chart` = Helm checks, `gitops` = Argo CD checks (S-15; both also in `all`); `promote` opens a promotion merge request (S-15, never part of `all`). `pages` publishes the public documentation site on GitLab Pages (S-126, never part of `all`). `courier` = the courier app's checks, web smoke and (manual) EAS build (S-87, never part of `all`). `mobile-consumer` = the consumer app's checks, native prebuild check, web smoke and (manual) EAS build (S-97, never part of `all`). `mobile-release` = the store release of RELEASE_APP: RELEASE_ACTION as manual jobs (S-103, never part of `all`; docs/runbooks/mobile-release.md). `security` = gitleaks, SBOM + osv-scanner, semgrep, checkov, kube-score (S-104, never part of `all`; docs/security/README.md). `e2e` = the end-to-end suite where E2E_TARGET says (S-117, never part of `all`; docs/runbooks/e2e.md)."
   EVENT_SCHEMAS_BASE:
     value: main
     description: "events: the branch the event schemas are compared with (breaking changes need a version bump)."
@@ -92,10 +92,13 @@ variables:
   RELEASE_UPDATE_ROLLOUT:
     value: ""
     description: "mobile-release update: percentage that gets it first (empty = everyone)."
-  RUN_STUDIO_SMOKE:
-    value: "false"
-    options: ["false", "true"]
-    description: Also run the studio smoke sweep (Postgres + api + studio + Playwright; slower).
+  E2E_TARGET:
+    value: local
+    options: [local, dev, staging]
+    description: "e2e (S-117): where the end-to-end suite runs — local = the whole stack in the job (local profile, disposable Postgres), dev / staging = a deployed environment (docs/runbooks/e2e.md)."
+  E2E_GREP:
+    value: ""
+    description: "e2e: only the tests matching this word (Playwright --grep), e.g. @smoke or payout; empty = everything."
   RUN_A11Y:
     value: "false"
     options: ["false", "true"]
@@ -113,6 +116,6 @@ default:
 # ci/gitlab/deploy.yml (S-14 images and chart), ci/gitlab/gitops.yml (S-15 Argo CD checks and promotion),
 # ci/gitlab/events.yml (S-34 event schema contract), ci/gitlab/courier.yml (S-87 courier app),
 # ci/gitlab/mobile-consumer.yml (S-97 consumer app), ci/gitlab/mobile-release.yml (S-103 store releases),
-# ci/gitlab/security.yml (S-104 security scans).
+# ci/gitlab/security.yml (S-104 security scans), ci/gitlab/e2e.yml (S-117 end-to-end suite).
 include:
   - local: ci/gitlab/*.yml
