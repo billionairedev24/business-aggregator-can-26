@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -52,6 +53,17 @@ class CategorySourceAdapter implements CategorySource {
                         names(rs.getString("names")),
                         rs.getString("regulated_registry")))
                 .list();
+    }
+
+    @Override
+    public Set<String> requiringKitchenVisit(Collection<String> ids) {
+        if (ids.isEmpty()) {
+            return Set.of();
+        }
+        return Set.copyOf(jdbc.sql("select id from catalogue.categories where id in (:ids) and site_visit_required")
+                .param("ids", List.copyOf(ids))
+                .query(String.class)
+                .list());
     }
 
     private static Map<String, String> names(@Nullable String column) {

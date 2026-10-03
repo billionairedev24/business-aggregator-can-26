@@ -19,6 +19,11 @@ public record StudioLinks(@Nullable String baseUrl) {
         return origin() + "/invite/" + token;
     }
 
+    /** S-120: a pilot invite ({@code /pilot/<token>}): the Studio pre-fills the business type and market. */
+    public String pilotInvite(String token) {
+        return origin() + "/pilot/" + token;
+    }
+
     public String compliance(String merchantId) {
         return origin() + "/b/" + merchantId + "/compliance";
     }

@@ -1,6 +1,7 @@
 package ca.northline.console.application;
 
 import ca.northline.developer.api.AuditTrail;
+import ca.northline.merchants.api.PilotCohort;
 import ca.northline.region.api.LaunchStatus;
 import ca.northline.region.api.RegionEditor;
 import ca.northline.region.api.RegionEditor.ProvinceRow;
@@ -37,6 +38,7 @@ class SwitchboardService implements Switchboard {
     private final RegionEditor store;
     private final AuditTrail audit;
     private final Regions regions;
+    private final PilotCohort pilots;
 
     @Override
     @Transactional(readOnly = true)
@@ -124,6 +126,10 @@ class SwitchboardService implements Switchboard {
             }
         }
         store.stage(ref.id(), stage);
+        if (stage == LaunchStatus.LIVE) {
+            // S-120: the market's pilot businesses, hidden from search before launch, open with it
+            pilots.marketLaunched(ref.id(), new PilotCohort.Actor(actor.userId(), actor.role()));
+        }
         record(
                 actor,
                 "region.stage_changed",

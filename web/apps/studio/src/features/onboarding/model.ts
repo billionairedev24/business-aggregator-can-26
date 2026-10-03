@@ -13,7 +13,8 @@ export const stepIndex = (s: ServerStep) => (s === 'done' ? STEPS.length - 1 : S
 export const PICKER_TYPES: readonly MerchantType[] = ['seller', 'provider', 'both', 'kitchen'];
 export const isMerchantType = (s: unknown): s is MerchantType => s === 'provider' || s === 'seller' || s === 'kitchen' || s === 'both';
 
-export interface OnboardingSearch { type?: MerchantType; m?: string; new?: boolean; identity?: 'returned' }
+/** `pilot`: the token of a pilot invite link (S-120) — the Account step pre-fills the type and province from it. */
+export interface OnboardingSearch { type?: MerchantType; m?: string; new?: boolean; identity?: 'returned'; pilot?: string }
 
 export function validateOnboardingSearch(search: Record<string, unknown>): OnboardingSearch {
   return {
@@ -21,6 +22,7 @@ export function validateOnboardingSearch(search: Record<string, unknown>): Onboa
     m: typeof search.m === 'string' && /^[0-9A-HJKMNP-TV-Z]{26}$/.test(search.m) ? search.m : undefined,
     new: search.new === true || search.new === '1' || search.new === 1 ? true : undefined,
     identity: search.identity === 'returned' ? 'returned' : undefined,
+    pilot: typeof search.pilot === 'string' && /^[A-Za-z0-9_-]{20,100}$/.test(search.pilot) ? search.pilot : undefined,
   };
 }
 
