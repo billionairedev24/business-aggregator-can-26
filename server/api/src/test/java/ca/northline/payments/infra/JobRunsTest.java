@@ -24,15 +24,16 @@ class JobRunsTest {
         runs.succeeded(JobRuns.PAYOUTS);
 
         assertThat(meters.get(JobRuns.RUNS)
-                        .tag("job", "payments.payouts")
+                        .tag("task", "payments.payouts")
                         .tag("outcome", "succeeded")
                         .counter()
                         .count())
                 .isEqualTo(2);
         assertThat(meters.get(JobRuns.RUNS).tag("outcome", "failed").counter().count())
                 .isEqualTo(1);
+        assertThat(meters.find(JobRuns.RUNS).tagKeys("job").meters()).isEmpty(); // job = the service in Prometheus
         assertThat(meters.get(JobRuns.LAST_SUCCESS)
-                        .tag("job", "payments.payouts")
+                        .tag("task", "payments.payouts")
                         .gauge()
                         .value())
                 .isEqualTo((double) at.getEpochSecond());

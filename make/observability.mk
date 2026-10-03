@@ -1,20 +1,30 @@
-# S-111 observability (docs/runbooks/observability.md): the local Collector + Grafana LGTM, dashboards, alert rules.
-# Everything goes through scripts/observability.sh, which also runs without make.
+# S-111 observability (docs/runbooks/observability.md): the local Collector → Prometheus, Loki, Tempo; Alertmanager →
+# Mailpit; Grafana (yours or the bundled one), dashboards, alert rules. Everything goes through scripts/observability.sh,
+# which also runs without make.
 
 ##@ Observability
 
-.PHONY: obs-up obs-down obs-status obs-open obs-env obs-dashboards obs-check
-obs-up: ## OpenTelemetry Collector (:4317/:4318) + Grafana LGTM (:3300); then make up OBS=1 (or eval "$$(make -s obs-env)")
-	@$(ROOT)/scripts/observability.sh up
+.PHONY: obs-up obs-down obs-status obs-open obs-env obs-dashboards obs-check obs-grafana-provision obs-fire-test-alert
+obs-up: ## Collector (:4318) → Prometheus :9090, Loki :3110, Tempo :3210; Alertmanager :9093 → Mailpit; Grafana :3300 (unless BYO grafana)
+	@$(byo_arg) $(ROOT)/scripts/observability.sh up
 
 obs-down: ## Stop the observability stack (no data is kept)
-	@$(ROOT)/scripts/observability.sh down
+	@$(byo_arg) $(ROOT)/scripts/observability.sh down
 
-obs-status: ## Is the observability stack running, does Grafana answer
-	@$(ROOT)/scripts/observability.sh status
+obs-status: ## Is the observability stack running, does each backend and Grafana answer
+	@$(byo_arg) $(ROOT)/scripts/observability.sh status
 
 obs-open: ## The Northline overview dashboard in Grafana
-	@$(ROOT)/scripts/observability.sh open
+	@$(byo_arg) $(ROOT)/scripts/observability.sh open
+
+# Your own Grafana: GRAFANA_URL + GRAFANA_TOKEN (or GRAFANA_USER + GRAFANA_PASSWORD), GRAFANA_ALERT_RULES=1 to import
+# the rules as Grafana-managed ones; GRAFANA_BACKEND_HOST=host.docker.internal when that Grafana runs in Docker.
+obs-grafana-provision: ## Data sources (Prometheus, Loki, Tempo, Alertmanager), folder Northline, every dashboard into GRAFANA_URL (idempotent)
+	@$(foreach v,GRAFANA_URL GRAFANA_TOKEN GRAFANA_USER GRAFANA_PASSWORD GRAFANA_ALERT_RULES GRAFANA_BACKEND_HOST,$(if $(filter command line,$(origin $(v))),$(v)="$($(v))")) \
+		BYO=grafana $(ROOT)/scripts/observability.sh grafana-provision
+
+obs-fire-test-alert: ## Failing sign-ins until a local alert fires and reaches Mailpit (SUSTAIN=12 also trips NorthlineSignInFailures)
+	@$(if $(SUSTAIN),SUSTAIN=$(SUSTAIN)) $(ROOT)/scripts/observability.sh fire-test-alert
 
 obs-env: ## The OTEL_* variables that make an app you start yourself export to the local stack
 	@$(ROOT)/scripts/observability.sh env

@@ -8,10 +8,10 @@ groups:
   rules:
   - record: slo:sli_error:ratio_rate5m
     expr: |
-      (sum(rate(northline_jobs_runs_total{job="payments.payouts",outcome="failed"}[5m]))
+      (sum(rate(northline_jobs_runs_total{task="payments.payouts",outcome="failed"}[5m]))
       )
       /
-      (sum(rate(northline_jobs_runs_total{job="payments.payouts"}[5m]))
+      (sum(rate(northline_jobs_runs_total{task="payments.payouts"}[5m]))
       )
     labels:
       journey: payouts
@@ -22,10 +22,10 @@ groups:
       sloth_window: 5m
   - record: slo:sli_error:ratio_rate30m
     expr: |
-      (sum(rate(northline_jobs_runs_total{job="payments.payouts",outcome="failed"}[30m]))
+      (sum(rate(northline_jobs_runs_total{task="payments.payouts",outcome="failed"}[30m]))
       )
       /
-      (sum(rate(northline_jobs_runs_total{job="payments.payouts"}[30m]))
+      (sum(rate(northline_jobs_runs_total{task="payments.payouts"}[30m]))
       )
     labels:
       journey: payouts
@@ -36,10 +36,10 @@ groups:
       sloth_window: 30m
   - record: slo:sli_error:ratio_rate1h
     expr: |
-      (sum(rate(northline_jobs_runs_total{job="payments.payouts",outcome="failed"}[1h]))
+      (sum(rate(northline_jobs_runs_total{task="payments.payouts",outcome="failed"}[1h]))
       )
       /
-      (sum(rate(northline_jobs_runs_total{job="payments.payouts"}[1h]))
+      (sum(rate(northline_jobs_runs_total{task="payments.payouts"}[1h]))
       )
     labels:
       journey: payouts
@@ -50,10 +50,10 @@ groups:
       sloth_window: 1h
   - record: slo:sli_error:ratio_rate2h
     expr: |
-      (sum(rate(northline_jobs_runs_total{job="payments.payouts",outcome="failed"}[2h]))
+      (sum(rate(northline_jobs_runs_total{task="payments.payouts",outcome="failed"}[2h]))
       )
       /
-      (sum(rate(northline_jobs_runs_total{job="payments.payouts"}[2h]))
+      (sum(rate(northline_jobs_runs_total{task="payments.payouts"}[2h]))
       )
     labels:
       journey: payouts
@@ -64,10 +64,10 @@ groups:
       sloth_window: 2h
   - record: slo:sli_error:ratio_rate6h
     expr: |
-      (sum(rate(northline_jobs_runs_total{job="payments.payouts",outcome="failed"}[6h]))
+      (sum(rate(northline_jobs_runs_total{task="payments.payouts",outcome="failed"}[6h]))
       )
       /
-      (sum(rate(northline_jobs_runs_total{job="payments.payouts"}[6h]))
+      (sum(rate(northline_jobs_runs_total{task="payments.payouts"}[6h]))
       )
     labels:
       journey: payouts
@@ -78,10 +78,10 @@ groups:
       sloth_window: 6h
   - record: slo:sli_error:ratio_rate1d
     expr: |
-      (sum(rate(northline_jobs_runs_total{job="payments.payouts",outcome="failed"}[1d]))
+      (sum(rate(northline_jobs_runs_total{task="payments.payouts",outcome="failed"}[1d]))
       )
       /
-      (sum(rate(northline_jobs_runs_total{job="payments.payouts"}[1d]))
+      (sum(rate(northline_jobs_runs_total{task="payments.payouts"}[1d]))
       )
     labels:
       journey: payouts
@@ -92,10 +92,10 @@ groups:
       sloth_window: 1d
   - record: slo:sli_error:ratio_rate3d
     expr: |
-      (sum(rate(northline_jobs_runs_total{job="payments.payouts",outcome="failed"}[3d]))
+      (sum(rate(northline_jobs_runs_total{task="payments.payouts",outcome="failed"}[3d]))
       )
       /
-      (sum(rate(northline_jobs_runs_total{job="payments.payouts"}[3d]))
+      (sum(rate(northline_jobs_runs_total{task="payments.payouts"}[3d]))
       )
     labels:
       journey: payouts

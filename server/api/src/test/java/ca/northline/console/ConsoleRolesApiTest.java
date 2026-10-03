@@ -48,7 +48,8 @@ class ConsoleRolesApiTest extends IntegrationTest {
                                     "vetting",
                                     "trust",
                                     "support",
-                                    "team")))
+                                    "team",
+                                    "pilot")))
                     .andExpect(jsonPath("$.roles[0].actions")
                             .value(contains("suspend", "decide", "verify", "vet", "support")))
                     .andExpect(jsonPath("$.roles[1].screens")

@@ -7510,3 +7510,185 @@ Runbook: [docs/runbooks/e2e.md](runbooks/e2e.md). Suite: `web/e2e` (`@northline/
   quarter of the target on one replica of a shared 4-vCPU box. Not built: staging load-test data, the token harvester
   (bearer tokens for the manifest's users, renewed during a soak), the k6 image. The local runs used the in-memory live
   bus (one replica), the fake payment gateway (no Stripe latency) and dev auth (no BFF, no northline-auth).
+
+## 2026-10-03 — DX: one-command local stack with your own Postgres, Valkey and Grafana, plus local alerting
+
+- **`make up-all`** (`scripts/local-all.sh`, bash 3.2, make 3.81): every app but Storybook and the docs site, every
+  stand-in not listed in **`BYO_SERVICES`** (root `.env`; `BYO=…` on the command line for one run; any of `db cache
+  events search mail storage payments grafana`), the observability stack, `db-migrate db-seed`, `search-indices`, then
+  `scripts/stack.sh up` and one status table (`make urls`). Chosen over making `make up PROFILES=all` honour a BYO list:
+  compose's `all` profile can't subtract services, and `make up`'s current meaning stays untouched. Stand-ins are started
+  by service name (`docker compose up -d --wait postgres …`), not by profile. Kafka UI is started separately and may
+  fail (Docker Hub rate limits hit it during the check) without stopping the stack. `make up-all-check` runs only the
+  checks.
+- **Checks before anything starts:** own Postgres — local host only (the dev seed refuses others, S-16), sign-in as
+  `DB_USER`, PostGIS available and created (or the user is a superuser), version (< 17 warns); psql from `PATH`, else
+  the `postgis/postgis` image's psql (`--network host` on Linux, `host.docker.internal` elsewhere). Own Valkey — `PING`
+  (with `AUTH` when `REDIS_PASSWORD` is set) through `valkey-cli`/`redis-cli`, else bash's `/dev/tcp`; TLS without a CLI
+  only checks the port. Own Grafana — answers, and **refused on :3000 when the consumer app is started** (its OAuth
+  redirects are registered for localhost:3000; moving the consumer app would touch auth's client registrations). A
+  stand-in port already taken (e.g. your own Postgres on 5432 without `db` in `BYO_SERVICES`) stops the run naming the
+  `BYO_SERVICES` entry or `.env` port that fixes it. All failure messages print the command to run.
+- **What the apps get** (only where the environment and `server/.env` are silent): `OTEL_EXPORT_ENABLED=true` + the
+  Collector endpoint, `LIVE_BUS=redis`, Spring profile `local,valkey` (sessions, auth rate limits and replay ids in
+  Valkey — the existing add-on profile), `SEARCH_PROVIDER=elasticsearch`, `SPRING_MODULITH_EVENTS_EXTERNALIZATION_ENABLED=true`
+  (api/auth events to Kafka for the worker). Left as they are: payments (fake gateway; stripe-mock runs) and storage
+  (`server/.env.example` sets `STORAGE_PROVIDER=local` explicitly) — switching them changes app behaviour beyond
+  "use the running stand-in". The worker keeps running without a profile under `local,*` as under `local`.
+- **Observability profile rebuilt without `grafana/otel-lgtm`:** Collector → Prometheus 3.5 (OTLP receiver, the S-113
+  rule files mounted unchanged + `prometheus/local/test-alert.yml`), Loki 3.5 (OTLP), Tempo 2.8; Alertmanager 0.28 with
+  `alertmanager-local.yml` (the S-113 severity routing, both receivers = email to Mailpit; Mailpit joins the
+  `observability` profile); Grafana 12.2 bundled on :3300 unless `grafana` is in `BYO_SERVICES`. otel-lgtm can publish
+  its inner Prometheus/Loki/Tempo ports, but its Prometheus has neither our rules nor an Alertmanager and its Grafana
+  can't be left out; separate pinned images are also smaller in total. **Host ports:** Prometheus 9090, Alertmanager
+  9093, **Loki 3110 and Tempo 3210** (not 3100/3200 as asked: the Studio and the console dev servers own those), all in
+  `.env`. Data in tmpfs (`mode=1777`; the images run as non-root), so nothing is kept — as before.
+- **Grafana provisioning through the HTTP API** (`scripts/grafana-provision.py`, standard library only, `make
+  obs-grafana-provision`): data sources with fixed uids (`northline-prometheus/-loki/-tempo/-alertmanager`) linked
+  trace↔logs (Tempo `tracesToLogsV2` by trace id on Loki's `trace_id` structured metadata; Loki derived field
+  `trace_id` → Tempo), exemplars and service graph; folder `northline`; every dashboard with its `datasource` variable
+  set to Northline Prometheus. Create-or-update by uid (then by name), so re-runs update in place. The bundled Grafana is
+  provisioned by the same script (compose-network URLs) instead of file provisioning, so that code runs on every
+  `make obs-up`. Alert rules: by default visible read-only through the Prometheus data source (`manageAlerts`);
+  `GRAFANA_ALERT_RULES=1` imports every group as Grafana-managed rules through Grafana 12's Prometheus conversion API
+  (rule files split into groups without a YAML library) — off by default because Grafana would then evaluate them a
+  second time.
+- **Metric names checked against a real OTLP → Prometheus path:** Micrometer's names translate as the rules expect
+  (`http_server_requests_seconds_*`, `_total`, gauges in seconds, `le="1"`), **except the payments job metrics**: their
+  `job` tag is overwritten by the `job` label Prometheus derives from `service.namespace/service.name` (the same OTLP
+  translation Grafana Cloud/Mimir and the managed Prometheus services use), so `northline_jobs_*{job="payments.payouts"}`
+  never existed — the payout run SLO could never burn and `NorthlinePayoutRunMissing` would always fire. The tag is
+  now **`task`** (`JobRuns`), with the Sloth spec, regenerated rules, chart copies, promtool tests, dashboard and
+  runbooks following. No other metric uses `job`, `instance` or another resource-derived label.
+- **Found and fixed on the way:** the api's `application-local.yml` turned OTLP export off for good, so `make up OBS=1`
+  never showed the api — it now follows `OTEL_EXPORT_ENABLED` (default still off); `:auth:bootRun` lacked the dev-seed
+  classpath that `:api:bootRun` has, so auth refused (Flyway validation) any database `make db-migrate` had seeded — the
+  `make up SERVICES="auth api …"` path failed after the first `make up`; `make db-reset` had lost its `else`/`fi`.
+- **`make obs-fire-test-alert`** (`scripts/fire-test-alert.sh`): failed sign-ins of unknown `…@example.invalid`
+  addresses with a wrong TOTP code against northline-auth, each from a different 203.0.113.0/24 address in
+  `X-Forwarded-For` (believed from loopback only, so S-9's per-IP limits don't stop the burst; no account is locked).
+  It waits one 30 s export step after the first failures (a counter's first sample is `increase()`'s baseline), then
+  follows `NorthlineLocalTestAlert` (local-only rule on the same metric as S-113's `NorthlineSignInFailures`: ≥ 5
+  failures in 3 min, `for: 1m`) through Prometheus, Alertmanager and Mailpit. `SUSTAIN=12` keeps failing long enough
+  for `NorthlineSignInFailures` (`for: 10m`). Not an SLO burn alert: the sign-in availability SLO counts only 5xx, which
+  can't be caused from outside without breaking something; the threshold alert reads the same pipeline.
+- **Checked here (one run under the stack lock):** "own" Postgres 17 + PostGIS on :55433, "own" Valkey with a password
+  on :56380 and a scratch `grafana/grafana:12.2.0` on :3401 (service account token) stood in for the user's; `BYO=db,cache,grafana,storage`
+  (storage only to spare a 400 MB `aws-cli` pull on a full disk); apps auth, api, studio-bff, worker, Studio (memory —
+  the three web apps and three BFFs together did not fit beside other agents' builds). Seen working: the checks pass,
+  and fail with their messages on a wrong Valkey password (CLI and `/dev/tcp`), a wrong DB password, PostGIS not
+  created for a non-superuser, Grafana on :3000; the user's Grafana provisioned by token (4 data sources healthy, 16
+  dashboards, re-run = "updated", 152 rules imported with `--alert-rules`), the bundled Grafana likewise; Prometheus
+  received metrics from all apps (597 names; `northline_jobs_runs_total{task=…}`, `le="1"`), 153 rules healthy;
+  Tempo had traces of api, auth, studio-bff and worker — including api HTTP → Kafka → worker consumer in one trace
+  (kitchen pause, with externalization on) and auth spans of Valkey commands; Loki had logs of the four with
+  `trace_id`, and the trace-id query used by the Tempo → Loki link returned the span's log; `make obs-fire-test-alert
+  SUSTAIN=12`: NorthlineLocalTestAlert pending after 30 s, firing 1 min later, in Alertmanager and as
+  "[TICKET FIRING] NorthlineLocalTestAlert" in Mailpit within 10 s; NorthlineSignInFailures pending at once, firing
+  after 10 min, email in Mailpit.
+- **Not done:** never run on macOS (make 3.81 / bash 3.2 reviewed, not executed); the consumer-bff, console-bff,
+  consumer and console apps were not started in the check; the Grafana provisioning was run against Grafana 12.2 only
+  (the conversion API needs 12+; without `--alert-rules` the script uses APIs Grafana 9+ has).
+
+## 2026-09-30 — S-120 Pilot merchant onboarding (providers, sellers, kitchens)
+
+Branch `pilot/s-120-onboarding`. Runbook: [runbooks/pilot-onboarding.md](runbooks/pilot-onboarding.md). Acceptance
+criterion: at least 10 pilot businesses live on the staging-to-prod path.
+
+> **Plainly:** recruiting the businesses, their real ID checks, physical kitchen visits and live Stripe accounts are
+> real-world work this story cannot do; no accounts exist. What exists is the tooling and the process, rehearsed with a
+> dry run of 12 fake businesses on a local stack. Nothing here has met live Stripe (Connect, Identity), a real email
+> provider, or a real kitchen.
+
+- **The path (decision).** Pilot businesses onboard **directly in production**, in a market held at the region stage
+  `pilot`; staging only rehearses with fake businesses. Stripe Identity sessions, Connect accounts and bank links are
+  bound to test or live mode, so a business "verified on staging" would verify again in production; staging is test
+  mode by rule. Pre-launch safety in production is the market's stage (visitors are put on the waitlist; only live
+  markets deliver and take orders — S-84, S-134) plus **search hiding for pilot businesses** (new cause `pilot` on
+  `merchants.merchants.search_hidden_cause`, set when a business accepts a pilot invite in a market that isn't live, or
+  on enrolment), lifted for the market's pilot businesses when an admin sets the market `live` in the switchboard
+  (`PilotCohort.marketLaunched`, called by `SwitchboardService`; audit `pilot.market_launched`). Public pages stay
+  reachable by direct link (S-121's UAT uses that). The V131 data ships the first market `live`: production needs an
+  admin to lower it to `pilot` before the first invite (runbook § 1).
+- **Pilot cohort = a row per business per market, the stage derived.** `merchants.pilot_businesses` keeps only what
+  nothing else knows: market, type, working name, the linked business once it exists, the Northline owner, the
+  blocker written down (text ≤ 300, who must act: business / northline / stripe / inspector, since when), plus
+  `pilot_invites` and `pilot_notes`. The stage is computed on every read (console `PilotStages`, pure and unit-tested)
+  from the business's own records — onboarding (account, Business step), the `kyc` row and identity reviews (S-22),
+  Stripe Connect as Stripe last reported it (`payments.connected_accounts` from `account.updated`; new
+  `payments.api.ConnectReadiness`, no Stripe call on a board load), the kitchen visit, listings (new
+  `catalogue.api.ListingReadiness`: services + offers; `food.api.MenuReadiness`: dishes), approval, storefront
+  publication, search hiding and the market's stage. Steps: invited → account created → details complete → identity
+  verified → Stripe Connect ready → kitchen visit (kitchens where required; "not needed" otherwise) → catalogue ready
+  (≥ 1 listing handed to vetting / 1 published dish) → approved → live (approved, page published, ≥ 1 listing customers
+  see, a market, shown in search). The stage is the furthest step with every earlier one done; the next action is the
+  first one that isn't, as a code + who acts + parameters (the console words it, en/fr). Found blockers (expired invite,
+  checks sent back, Stripe past due, failed visit, suspended, no market) mark a row blocked besides the written one.
+- **Invites.** "Signed, expiring link" is implemented like team invitations (S-13): a random 256-bit token whose SHA-256
+  is stored, 14 days, single use, a new link revokes the previous one. A stateless signature would need a new signing
+  secret in every environment and couldn't be withdrawn. Email `pilot-invitation` (en/fr, chosen by the staff member,
+  transactional — sent only after the business agreed in a conversation; CASL note in the runbook) through the S-13
+  mailer after commit (internal `PilotInviteIssued`, token not on Kafka — same trade-off as S-13). The console response
+  includes the link too. The Studio route `/pilot/$token` (signed in) previews the invite (`GET /api/v1/pilot-invites/{token}`,
+  any signed-in person) and opens the Account step with type and province fixed; `POST /api/v1/merchants` takes
+  `pilotInvite` and refuses another type or province (422 "This invite is for another kind of business." / "…in
+  another province.") and a used / withdrawn / expired invite (409 `pilot_invite_used|revoked|expired`).
+- **Role and screen.** New console role `merchant_success` (V322 widens `identity.platform_roles`), screen `pilot`,
+  action `onboard`. Merchant success: overview, pilot, sellers, support + `onboard`; trust & safety also open `pilot`
+  read-only (they approve the businesses); admin everything. Endpoints `/api/v1/console/pilot/**` (console module, which
+  composes merchants, payments, catalogue, food and region through their `api` packages). Dev seed V323 gives Priya the
+  role.
+- **Kitchen visits extend onboarding's `site_visit` check** (V030: the owner books a slot within 14 days, which used to
+  be "confirmed" by the approval with nobody visiting). New `merchants.kitchen_visits` (date ≤ 60 days ahead, a staff
+  inspector or a named external one, status scheduled / passed / failed / cancelled, an 11-item checklist pass / fail /
+  n/a, a note, photo ids). Photos go through the merchants storage port as `verification` documents (no new storage
+  path; JPEG/PNG ≤ 10 MB, ≤ 12 per visit). Passed → the `site_visit` row verified (reference `visit:<id>`); failed
+  (needs a note) → the row rejected, the owner books again. Scheduling marks a todo/rejected row as booked. **The gate:**
+  approving a pending kitchen whose `site_visit` isn't verified is 409 `kitchen_visit_required` when the rule applies.
+  **The rule is data:** `region.regions.kitchen_visit` (`required|optional`; market → province → optional) via new
+  `region.api.KitchenVisitRules`, or any of the kitchen's categories with `catalogue.categories.site_visit_required`
+  (via `CategorySource.requiringKitchenVisit`, a default method). Nothing is required by default, so existing flows and
+  tests are unchanged; the runbook says to turn it on for the pilot market. No console UI for the rule (SQL, like time
+  zones and registry keys).
+- **S-117 finding — a business approved without a market.** A business's market is its `merchants.merchants.city`,
+  set from the Business step's free-text addresses (S-134) — an address naming no market city left it null, and the
+  shop (`ShopDirectory.shopsIn(city)`) then listed none of its offers. Fixed in onboarding: addresses are matched
+  against the markets **of the business's province** only (before: every market), a pilot business without a match
+  gets its pilot market's city, and **approval assigns** the pilot market, else the province's first live market (else
+  its first open one), when the city is still empty (`MerchantApplication.settleCity`; an address's city always wins).
+  Tested (`PilotOnboardingApiTest.aBusinessApprovedWithoutAMarketCity_getsItsProvincesDefaultMarket`, the shop then
+  lists it) and the dry run includes such a business and asserts every business has a market and its listing is
+  publicly visible. The board flags an approved business without a market (`no_market`).
+- **CSV export** server-side like S-85/S-107 (`/api/v1/console/pilot/export`): codes, not words (stage, next step and
+  action, owner), formula prefixes neutralised.
+- **Emails on visibility.** `OversightEmailNotices` skips `merchant.search_visibility_changed` with cause `pilot` (the
+  owner isn't told "you were hidden" before launch; merchant success announces the launch). The event schema's
+  `cause` enum gained `pilot` (additive).
+- **Schema (V320–V324, above main's V319):** V320 `merchants.pilot_businesses`, `pilot_invites`, `pilot_notes`, the
+  `search_hidden_cause` CHECK + `pilot`; V321 `merchants.kitchen_visits`, `region.regions.kitchen_visit`,
+  `catalogue.categories.site_visit_required`; V322 the role CHECK; dev seed V323. No new environment variable.
+- **Messages (fr in the catalogue):** "Choose a market that is open for onboarding.", "Enter a working name, 1 to 80
+  characters.", "Enter the business's email address.", "Choose English or French.", "Describe the blocker in 1 to 300
+  characters.", "Choose who has to act: …", "Write the note, 1 to 2,000 characters.", "Choose someone on the Northline
+  team.", the invite 409s and 422s above, the visit messages ("Pick the visit's date and time, within the next 60
+  days.", "Choose who visits: …", "Mark every item on the checklist.", "A visit with a failed item can't pass. Mark it
+  failed.", "Say what has to be fixed before the next visit.", …) and "Record a passed kitchen visit before approving
+  this kitchen.". The console and Studio copy is ours (no design drawing for this screen); French needs translator
+  review like the rest (S-116).
+- **Dry run** `make pilot-dry-run` (`scripts/pilot/dry-run.sh` + `dry-run.mjs`): a throwaway PostGIS container, the
+  api boot jar under `local`, 4 providers + 4 sellers + 4 kitchens (the mix is ours: no pilot plan names one; 12 leaves
+  room for two drop-outs), Stripe Connect through the fake gateway plus a **signed `account.updated` webhook** (the real
+  S-12 endpoint and processing), Identity through the fake, kitchen visits with a refused early approval, then the
+  board, the CSV and public-page checks. `STACK_LOCK=` wraps it in flock.
+- **Dry-run result (2026-10-03, local stack, market `mkt-calgary` with kitchen visits required):** 12 of 12 fake
+  businesses (4 providers, 4 sellers, 4 kitchens) live, 0 without a market, 12 publicly visible (shop product page in
+  the market, the market's kitchen list and menu, provider pages), every early kitchen approval refused with
+  `kitchen_visit_required`, 4 seller products flagged by the automated vetting (`missing_licence`, `duplicate_image`
+  on fake data) and approved by trust &amp; safety; 32 s for the pipeline. Two findings on the way, both fixed here: a
+  business whose address names no market got none (S-117's bug, above); a kitchen without fulfilment and hours
+  settings is approved and published yet missing from the market's kitchen list — the board now keeps it at
+  "Kitchen sets its fulfilment and hours" (`set_up_kitchen`, from `MenuReadiness.Counts.setUp`) instead of live.
+- **Not done:** a console form for enrolling an existing business (API only); per-region rule editing in the console;
+  reminders for expiring invites or upcoming visits; inspector scheduling across a calendar; the invite email to a
+  mobile number (SMS); a pilot-specific launch email; listing visibility outside search for hidden pilot businesses
+  (direct links still answer, by design for UAT); re-hiding pilot businesses if a live market is lowered again.

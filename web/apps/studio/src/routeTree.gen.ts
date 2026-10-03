@@ -17,6 +17,7 @@ import { Route as IdentityDoneRouteImport } from './routes/identity.done'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as OnboardingIndexRouteImport } from './routes/onboarding/index'
 import { Route as OnboardingStepRouteImport } from './routes/onboarding/$step'
+import { Route as PilotTokenRouteImport } from './routes/pilot.$token'
 import { Route as BMerchantIdIndexRouteImport } from './routes/b.$merchantId/index'
 import { Route as BMerchantIdAppointmentsRouteImport } from './routes/b.$merchantId/appointments'
 import { Route as BMerchantIdAvailabilityRouteImport } from './routes/b.$merchantId/availability'
@@ -78,6 +79,11 @@ const OnboardingIndexRoute = OnboardingIndexRouteImport.update({
 const OnboardingStepRoute = OnboardingStepRouteImport.update({
   id: '/onboarding/$step',
   path: '/onboarding/$step',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PilotTokenRoute = PilotTokenRouteImport.update({
+  id: '/pilot/$token',
+  path: '/pilot/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BMerchantIdIndexRoute = BMerchantIdIndexRouteImport.update({
@@ -202,6 +208,7 @@ export interface FileRoutesByFullPath {
   '/identity/done': typeof IdentityDoneRoute
   '/invite/$token': typeof InviteTokenRoute
   '/onboarding/$step': typeof OnboardingStepRoute
+  '/pilot/$token': typeof PilotTokenRoute
   '/onboarding/': typeof OnboardingIndexRoute
   '/b/$merchantId/appointments': typeof BMerchantIdAppointmentsRoute
   '/b/$merchantId/availability': typeof BMerchantIdAvailabilityRoute
@@ -233,6 +240,7 @@ export interface FileRoutesByTo {
   '/identity/done': typeof IdentityDoneRoute
   '/invite/$token': typeof InviteTokenRoute
   '/onboarding/$step': typeof OnboardingStepRoute
+  '/pilot/$token': typeof PilotTokenRoute
   '/onboarding': typeof OnboardingIndexRoute
   '/b/$merchantId/appointments': typeof BMerchantIdAppointmentsRoute
   '/b/$merchantId/availability': typeof BMerchantIdAvailabilityRoute
@@ -266,6 +274,7 @@ export interface FileRoutesById {
   '/identity/done': typeof IdentityDoneRoute
   '/invite/$token': typeof InviteTokenRoute
   '/onboarding/$step': typeof OnboardingStepRoute
+  '/pilot/$token': typeof PilotTokenRoute
   '/onboarding/': typeof OnboardingIndexRoute
   '/b/$merchantId/appointments': typeof BMerchantIdAppointmentsRoute
   '/b/$merchantId/availability': typeof BMerchantIdAvailabilityRoute
@@ -300,6 +309,7 @@ export interface FileRouteTypes {
     | '/identity/done'
     | '/invite/$token'
     | '/onboarding/$step'
+    | '/pilot/$token'
     | '/onboarding/'
     | '/b/$merchantId/appointments'
     | '/b/$merchantId/availability'
@@ -331,6 +341,7 @@ export interface FileRouteTypes {
     | '/identity/done'
     | '/invite/$token'
     | '/onboarding/$step'
+    | '/pilot/$token'
     | '/onboarding'
     | '/b/$merchantId/appointments'
     | '/b/$merchantId/availability'
@@ -363,6 +374,7 @@ export interface FileRouteTypes {
     | '/identity/done'
     | '/invite/$token'
     | '/onboarding/$step'
+    | '/pilot/$token'
     | '/onboarding/'
     | '/b/$merchantId/appointments'
     | '/b/$merchantId/availability'
@@ -396,6 +408,7 @@ export interface RootRouteChildren {
   IdentityDoneRoute: typeof IdentityDoneRoute
   InviteTokenRoute: typeof InviteTokenRoute
   OnboardingStepRoute: typeof OnboardingStepRoute
+  PilotTokenRoute: typeof PilotTokenRoute
   OnboardingIndexRoute: typeof OnboardingIndexRoute
 }
 
@@ -455,6 +468,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding/$step'
       fullPath: '/onboarding/$step'
       preLoaderRoute: typeof OnboardingStepRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pilot/$token': {
+      id: '/pilot/$token'
+      path: '/pilot/$token'
+      fullPath: '/pilot/$token'
+      preLoaderRoute: typeof PilotTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/b/$merchantId/': {
@@ -676,6 +696,7 @@ const rootRouteChildren: RootRouteChildren = {
   IdentityDoneRoute: IdentityDoneRoute,
   InviteTokenRoute: InviteTokenRoute,
   OnboardingStepRoute: OnboardingStepRoute,
+  PilotTokenRoute: PilotTokenRoute,
   OnboardingIndexRoute: OnboardingIndexRoute,
 }
 export const routeTree = rootRouteImport

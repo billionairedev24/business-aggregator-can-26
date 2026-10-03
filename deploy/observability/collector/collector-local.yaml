@@ -1,6 +1,8 @@
 # The local OpenTelemetry Collector (docker compose --profile observability, S-111): the same processors as the chart's
 # Collector (deploy/helm/northline/templates/_helpers.tpl → northline.collectorConfig), exporting to the local
-# Grafana LGTM stack (Tempo, Mimir/Prometheus, Loki). Apps on your machine send to localhost:4318 (OTLP/HTTP).
+# backends of the same profile: metrics to Prometheus's OTLP receiver, logs to Loki's OTLP endpoint, traces to Tempo.
+# Apps on your machine send to localhost:4318 (OTLP/HTTP). Any Grafana can read the three backends on their host ports
+# (PROMETHEUS_PORT, LOKI_PORT, TEMPO_PORT; make obs-grafana-provision).
 receivers:
   otlp:
     protocols:
@@ -49,8 +51,15 @@ processors:
   batch: { send_batch_size: 1024, timeout: 2s }
 
 exporters:
-  otlphttp/lgtm:
-    endpoint: http://lgtm:4318
+  otlphttp/prometheus:
+    endpoint: http://prometheus:9090/api/v1/otlp     # Prometheus appends /v1/metrics
+    tls: { insecure: true }
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+    tls: { insecure: true }
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls: { insecure: true }
   debug: { verbosity: basic }
 
 extensions:
@@ -58,16 +67,20 @@ extensions:
 
 service:
   extensions: [health_check]
+  telemetry:
+    metrics:                        # the Collector's own metrics, scraped by the local Prometheus
+      readers:
+        - pull: { exporter: { prometheus: { host: "0.0.0.0", port: 8888 } } }
   pipelines:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, resource, attributes/scrub, transform/redact, batch]
-      exporters: [otlphttp/lgtm]
+      exporters: [otlp/tempo]
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, resource, batch]
-      exporters: [otlphttp/lgtm]
+      exporters: [otlphttp/prometheus]
     logs:
       receivers: [otlp]
       processors: [memory_limiter, resource, attributes/scrub, transform/redact, batch]
-      exporters: [otlphttp/lgtm]
+      exporters: [otlphttp/loki]

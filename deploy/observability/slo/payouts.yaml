@@ -13,9 +13,9 @@ slos:
     sli:
       events:
         error_query: |
-          sum(rate(northline_jobs_runs_total{job="payments.payouts",outcome="failed"}[{{.window}}]))
+          sum(rate(northline_jobs_runs_total{task="payments.payouts",outcome="failed"}[{{.window}}]))
         total_query: |
-          sum(rate(northline_jobs_runs_total{job="payments.payouts"}[{{.window}}]))
+          sum(rate(northline_jobs_runs_total{task="payments.payouts"}[{{.window}}]))
     alerting:
       name: NorthlinePayoutRunFailureBurn
       labels:

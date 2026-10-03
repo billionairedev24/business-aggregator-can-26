@@ -10,7 +10,7 @@ import org.springframework.modulith.events.Externalized;
  * the business). The reason is not in the payload: {@code actionId} names the oversight action.
  *
  * @param hidden true when it is now hidden
- * @param cause {@code staff} | {@code rating_floor}
+ * @param cause {@code staff} | {@code rating_floor} | {@code pilot} (S-120: before and at a pilot market's launch)
  */
 @Externalized("merchants.merchant::#{aggregateId()}")
 public record MerchantSearchVisibilityChanged(
