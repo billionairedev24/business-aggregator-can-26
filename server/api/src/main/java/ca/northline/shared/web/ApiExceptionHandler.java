@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.MessageSourceResolvable;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -60,6 +61,8 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     private static final HttpStatus UNPROCESSABLE = HttpStatus.UNPROCESSABLE_CONTENT;
     private static final String PROBLEM_BASE = "https://northline.ca/problems/";
     private static final MessageCatalogue FRENCH = MessageCatalogue.frenchCanadian();
+    static final String OVERLOADED = "Northline is very busy right now. Try again in a moment.";
+    static final int OVERLOADED_RETRY_AFTER_S = 2;
 
     private final ObjectProvider<PlaceNames> placeNames;
 
@@ -128,6 +131,20 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
                         HttpStatus.SERVICE_UNAVAILABLE,
                         ex.getCode(),
                         localize(Objects.requireNonNullElse(ex.getMessage(), "Unavailable"), request)));
+    }
+
+    /**
+     * S-119: no database connection — every one stayed busy for {@code DB_CONNECTION_TIMEOUT_MS} (the instance is over
+     * its capacity; Spring's {@code CannotGetJdbcConnectionException}) or the database is unreachable. Shed the request
+     * (503, try again in a moment) rather than queue it: under the first local stress test the waiting requests filled
+     * the heap and the api died of OutOfMemoryError instead of answering.
+     */
+    @ExceptionHandler
+    ResponseEntity<ProblemDetail> overloaded(DataAccessResourceFailureException ex, WebRequest request) {
+        log.warn("Overloaded, request shed: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .header(HttpHeaders.RETRY_AFTER, String.valueOf(OVERLOADED_RETRY_AFTER_S))
+                .body(problem(HttpStatus.SERVICE_UNAVAILABLE, "overloaded", localize(OVERLOADED, request)));
     }
 
     @ExceptionHandler

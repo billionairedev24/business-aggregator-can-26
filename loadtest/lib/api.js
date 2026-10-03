@@ -99,13 +99,3 @@ export function customer() {
 }
 export const lang = (frShare = 0.35) => (Math.random() < frShare ? 'fr' : 'en');
 export const key = prefix => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-
-/** The millisecond timestamp in a ULID (its first ten Crockford base-32 characters). */
-export function ulidTime(id) {
-  const alphabet = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
-  let t = 0;
-  for (const c of id.slice(0, 10)) {
-    t = t * 32 + alphabet.indexOf(c);
-  }
-  return t;
-}

@@ -70,6 +70,8 @@ with gzip.open(run / "timeline.csv.gz", "rt", newline="") as f:
         scenario = row.get("scenario") or ""
         t0 = ts if t0 is None else min(t0, ts)
         t_end = max(t_end, ts)
+        if name == "http_req_duration" and row.get("name") == "/api/v1/merchants/{id}/live":
+            continue  # a live stream's request lasts as long as the stream (minutes): not a response time
         if name == "http_req_duration":
             durations[scenario].append(value)
             status = row.get("status") or "0"

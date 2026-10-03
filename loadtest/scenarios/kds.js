@@ -4,14 +4,14 @@
 // the tickets — accept the new ones, mark them ready, hand them off; whoever taps first, the others get a 409 — so
 // every ticket sends update events too. The tickets themselves come from the checkout_food scenario's customers.
 //
-// kds_ticket_delivery: from the order being placed (the board's placedAt; else the time in the order id's ULID) to its
-// first event on this screen — the KDS ticket-delivery SLI end to end, transport included. kds_stream_ready: from
+// kds_ticket_delivery: from the order being placed (the board's placedAt) to its first event on this screen — the KDS
+// ticket-delivery SLI end to end, transport included. kds_stream_ready: from
 // opening the stream to its `ready` event (the freshness side: a stream that opens slowly is a stale screen).
 import sse from 'k6/x/sse';
-import { check } from 'k6';
+import { check, sleep } from 'k6';
 import exec from 'k6/execution';
 import { API_URL } from '../lib/config.js';
-import { data, flow, get, json, post, ulidTime, who } from '../lib/api.js';
+import { data, flow, get, json, post, who } from '../lib/api.js';
 import { kdsEvents, kdsStreamReady, kdsTicketDelivery } from '../lib/slo.js';
 import { kitchensWithScreens } from '../lib/kitchens.js';
 import { SCREENS_PER_KITCHEN } from '../lib/profiles.js';
@@ -90,15 +90,21 @@ export function kdsScreen() {
       const b = refresh();
       if (ref && !seen.has(ref)) {
         seen.add(ref);
+        // a delivery is a new ticket's first event; a later step of a ticket this stream never showed (it was
+        // placed while the screen reconnected) is not one
         const ticket = b && b.items ? b.items.find(t => t.orderId === ref) : null;
-        const placedAt = ticket && ticket.placedAt ? instant(ticket.placedAt) : ulidTime(ref);
-        kdsTicketDelivery.add(Math.max(0, receivedAt - placedAt));
+        if (ticket && ticket.stage === 'new' && ticket.placedAt) {
+          kdsTicketDelivery.add(Math.max(0, receivedAt - instant(ticket.placedAt)));
+        }
       }
       if (lead() && b && b.items) work(kitchen.merchantId, owner, b.items);
     });
     client.on('error', () => {}); // closing the stream on purpose lands here
   });
-  flow(check(res, { 'live stream opened': r => r && r.status === 200 }) && ready, 'kds stream', res);
+  if (!flow(check(res, { 'live stream opened': r => r && r.status === 200 }) && ready, 'kds stream', res)) {
+    sleep(3); // EventSource waits the stream's `retry` (3 s) before reconnecting — no reconnect storm
+    return;
+  }
   // like the board's safety refresh after a reconnect: tickets that moved without an event on this stream
   if (lead()) {
     const b = board(kitchen.merchantId, owner);
