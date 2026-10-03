@@ -23,7 +23,8 @@ Gradle/pnpm/compose commands still work and are shown next to each target.
 | GNU make | 3.81+ | every `make` target (macOS's `/usr/bin/make` is 3.81). `make doctor` checks all of the above. |
 
 Ports used by default: api **8080**, northline-auth **9000**, studio-bff **8082**, Studio **3100**, Postgres 5432,
-Valkey 6379, Kafka 9092, Elasticsearch 9200, Mailpit 1025/8025, S3 storage 9100/9101, stripe-mock 12111.
+Valkey 6379, Kafka 9092, Elasticsearch 9200, Mailpit 1025/8025, S3 storage 9100/9101, stripe-mock 12111; with the
+observability profile, OTLP 4317/4318, Prometheus 9090, Alertmanager 9093, Loki 3110, Tempo 3210, Grafana 3300.
 
 ## 2. Configure
 
@@ -220,7 +221,7 @@ everything except `tools` (`make kafka-ui`, `make kibana`).
 | `storage` | S3-compatible storage (RustFS) + bucket `northline-local`; console http://localhost:9101 | `STORAGE_ENDPOINT=http://localhost:9100`, `STORAGE_ACCESS_KEY=northline`, `STORAGE_SECRET_KEY=northline-dev-secret`, `STORAGE_PATH_STYLE=true` | api with `STORAGE_PROVIDER=s3` (S-10) |
 | `payments` | stripe-mock | `STRIPE_SECRET_KEY=sk_test_123`, `STRIPE_API_BASE=http://localhost:12111` (+ `TAX_PROVIDER=stripe` for Stripe Tax, S-21) | api payments + Stripe Connect (+ Stripe Tax) instead of the fakes |
 | `tools` | Kafka UI :8190, Kibana :5601 | — | you |
-| `observability` | OpenTelemetry Collector (:4317 gRPC, :4318 HTTP) + Grafana LGTM — Grafana http://localhost:3300 (admin/admin) with Tempo, Loki, Prometheus and the Northline dashboards (S-111) | `make up OBS=1` sets `OTEL_EXPORT_ENABLED=true`, `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318` for every app it starts; own runs: `eval "$(scripts/observability.sh env)"` | traces, metrics, logs of every app ([observability.md § Local](observability.md#local)) |
+| `observability` | OpenTelemetry Collector (:4317 gRPC, :4318 HTTP) → Prometheus :9090 (the S-113 rules), Loki :3110, Tempo :3210; Alertmanager :9093 → Mailpit; Grafana http://localhost:3300 (admin/admin, folder Northline) unless you bring your own (S-111) | `make up OBS=1` sets `OTEL_EXPORT_ENABLED=true`, `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318` for every app it starts; own runs: `eval "$(scripts/observability.sh env)"` | traces, metrics, logs and local alerts of every app ([observability.md § Local](observability.md#local)) |
 
 Notes:
 - **Storage:** by default (`STORAGE_PROVIDER=local`) uploads go to folders in the temp directory. To use the bucket,
@@ -324,6 +325,83 @@ Notes:
 - Stop: `make down` stops the apps make started and every stand-in (`VOLUMES=1` also deletes the data volumes; =
   `docker compose --profile all down [-v]`).
 
+## 6a. Run everything locally with your own Postgres, Valkey and Grafana
+
+`make up-all` starts the whole platform on your machine in one command: every app (auth, api, the studio-, consumer-
+and console-bff, the worker, the Studio, the consumer web and the console), every stand-in you don't run yourself
+(Kafka + Kafka UI, Elasticsearch, Mailpit, RustFS, stripe-mock), and the observability stack with local alerting.
+It skips the services you bring, checks them first, migrates and seeds your database, and prints one table with every
+URL.
+
+**1. Say what you bring** — root `.env`:
+
+```sh
+BYO_SERVICES=db,cache,grafana
+GRAFANA_URL=http://localhost:3001       # your Grafana — not on 3000, the consumer web app needs that port
+GRAFANA_TOKEN=glsa_your_token           # a service account token with the Admin role (or GRAFANA_USER + GRAFANA_PASSWORD)
+```
+
+**2. Point the apps at your Postgres and Valkey** — `server/.env` (these are the defaults; change what differs):
+
+```sh
+DB_URL=jdbc:postgresql://localhost:5432/northline
+DB_USER=northline
+DB_PASSWORD=northline
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+```
+
+Your database needs the role, the database and the three extensions once ([§ 3](#3-postgres)).
+
+**3. One command:**
+
+```sh
+make up-all            # or, without editing .env: make up-all BYO=db,cache,grafana
+```
+
+What it does, in order:
+
+1. **Checks what you bring** (`make up-all-check` runs only this): your Postgres answers as `DB_USER`, PostGIS is
+   installed (or the user may create it), the version (17 recommended; older ones get a warning); the host is local
+   (the dev seed refuses anything else, S-16); your Valkey answers `PING` with `REDIS_USERNAME`/`REDIS_PASSWORD`; your
+   Grafana answers and isn't on :3000. Each failure says what to run. For the stand-ins it does start, a port that is
+   already taken — say by your own Postgres on 5432 when `db` isn't in `BYO_SERVICES` — stops it with the setting
+   that fixes it, instead of a half-started stack.
+2. **Starts the stand-ins** you don't bring (`docker compose up -d --wait`), then the observability stack
+   (`scripts/observability.sh up`): the Collector, Prometheus, Loki, Tempo, Alertmanager, Mailpit, and the bundled
+   Grafana on :3300 — or, with `grafana` in `BYO_SERVICES`, provisions *your* Grafana through its HTTP API (data
+   sources, folder Northline, every dashboard; [observability.md § Your own Grafana](observability.md#your-own-grafana)).
+3. **Migrates and seeds** your database (`make db-migrate db-seed`: migrations, the dev personas, the categories) and
+   creates the search indices (`make search-indices`). `SKIP_DB=1` skips the database step.
+4. **Starts every app** with telemetry on (`OTEL_EXPORT_ENABLED=true` → the Collector on :4318) and each stand-in
+   actually in use — for every setting your `server/.env` leaves open: `LIVE_BUS=redis` (the Studio's live signals and
+   couriers' positions over Valkey, S-68/S-88), the Spring profile
+   `local,valkey` (auth and BFF sessions, auth's rate limits in Valkey), `SEARCH_PROVIDER=elasticsearch`, and
+   `SPRING_MODULITH_EVENTS_EXTERNALIZATION_ENABLED=true` (the api's and auth's events go to Kafka and the worker
+   consumes them). A value in `server/.env` or the environment always wins. Payments keep the fake gateway and uploads
+   the temp folders — stripe-mock and RustFS run; switch with `STRIPE_API_BASE` / `STORAGE_PROVIDER=s3` ([§ 6](#6-optional-stand-ins)).
+5. **Prints the status table** (`make urls` prints it again): the Studio, consumer web and console with their sign-ins,
+   the api and its Swagger UI / Scalar / Redoc, auth, the three BFFs, the worker, Postgres, Valkey, Kafka and Kafka UI,
+   Elasticsearch, Mailpit, the RustFS console, stripe-mock, Grafana, Prometheus, Alertmanager, Loki, Tempo and the
+   OTLP endpoint — each marked up or down, yours or Docker.
+
+With real sign-in everywhere (the BFFs run): Studio `ravi.sandhu@example.com`, console `priya.natarajan@example.com`
+(root README § Local sign-in). `make down` stops the apps and every stand-in it started — never
+your own services; `make status` and `make logs SERVICES=api` work as usual. `SERVICES="api auth bff studio"` starts
+fewer apps. Storybook and the docs site are left out (the docs dev server and the bundled Grafana both use :3300; run
+`make docs-dev` with `GRAFANA_PORT` moved or your own Grafana).
+
+**Then:** `make obs-fire-test-alert` trips an alert on purpose and follows it from Prometheus to an email in Mailpit
+([observability.md § Local alerting](observability.md#local-alerting)).
+
+| BYO entry | instead of | what you configure |
+|---|---|---|
+| `db` | Postgres 17 + PostGIS in Docker | `DB_URL`, `DB_USER`, `DB_PASSWORD` in `server/.env` |
+| `cache` | Valkey 8 in Docker | `REDIS_HOST`, `REDIS_PORT`, `REDIS_USERNAME`, `REDIS_PASSWORD`, `REDIS_SSL` in `server/.env` |
+| `grafana` | the bundled Grafana on :3300 | `GRAFANA_URL`, `GRAFANA_TOKEN` (or `GRAFANA_USER` + `GRAFANA_PASSWORD`) in `.env`; `GRAFANA_BACKEND_HOST=host.docker.internal` when your Grafana runs in Docker |
+| `events`, `search`, `mail`, `storage`, `payments` | Kafka, Elasticsearch, Mailpit, RustFS, stripe-mock | `KAFKA_BOOTSTRAP`, `ES_URIS`, `SMTP_*`, `STORAGE_*`, `STRIPE_API_BASE` in `server/.env` (§ 6) |
+
 ## 7. Rehearse the cloud shape locally (optional)
 
 To check a `dev`/`staging`/`prod` configuration before deploying it, run the apps with that profile against the
@@ -355,7 +433,8 @@ values fill in what you meant to leave out.
 
 | symptom | fix |
 |---|---|
-| `Bind for 0.0.0.0:5432 failed: port is already allocated` | another Postgres uses the port: change `PG_PORT` in `.env` and `DB_URL` in `server/.env`, or use your own Postgres and drop `db` from the compose profiles. Same for the other ports. |
+| `Bind for 0.0.0.0:5432 failed: port is already allocated` | another Postgres uses the port: change `PG_PORT` in `.env` and `DB_URL` in `server/.env`, or use your own Postgres and drop `db` from the compose profiles (`make up-all`: add `db` to `BYO_SERVICES`). Same for the other ports. |
+| `make up-all`: `your Grafana is on :3000` | the consumer web app needs :3000 (its sign-in redirects are registered for it): move Grafana (`http_port = 3001` under `[server]` in grafana.ini, or `GF_SERVER_HTTP_PORT=3001`) and set `GRAFANA_URL` |
 | `extension "postgis" is not available` | install PostGIS for your Postgres 17 (step 3). |
 | `permission denied to create extension "postgis"` | create the three extensions once as a superuser (step 3). |
 | Flyway `Validate failed` / checksum mismatch | a local database from an older checkout: drop and recreate it, then migrate again. |

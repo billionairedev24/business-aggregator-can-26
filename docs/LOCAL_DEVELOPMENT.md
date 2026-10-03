@@ -15,14 +15,15 @@ were reviewed for it, not run on a Mac.
 ## Contents
 
 1. [The short version](#the-short-version)
-2. [Prerequisites](#prerequisites)
-3. [Start and stop](#start-and-stop)
-4. [Ports and URLs](#ports-and-urls)
-5. [Build, test, lint, format](#build-test-lint-format)
-6. [Database, Kafka, search](#database-kafka-search)
-7. [Deploy and infrastructure checks](#deploy-and-infrastructure-checks)
-8. [CI runs the same targets](#ci-runs-the-same-targets)
-9. [Troubleshooting](#troubleshooting)
+2. [Run everything locally with your own Postgres, Valkey and Grafana](#run-everything-locally-with-your-own-postgres-valkey-and-grafana)
+3. [Prerequisites](#prerequisites)
+4. [Start and stop](#start-and-stop)
+5. [Ports and URLs](#ports-and-urls)
+6. [Build, test, lint, format](#build-test-lint-format)
+7. [Database, Kafka, search](#database-kafka-search)
+8. [Deploy and infrastructure checks](#deploy-and-infrastructure-checks)
+9. [CI runs the same targets](#ci-runs-the-same-targets)
+10. [Troubleshooting](#troubleshooting)
 
 ## The short version
 
@@ -52,12 +53,51 @@ it under the `local` profile only.
 | `make up SERVICES="auth api bff-console console"` | the platform console :3200 through the console-bff :8083 (S-90; staff sign-in, README § Local sign-in) |
 | `make up SERVICES="api console"` | the console with dev auth as Priya Natarajan, staff with every console role |
 | `make up SERVICES=all PROFILES=all` | every app (incl. the worker and Storybook) and every stand-in |
+| `make up-all` | **everything, end to end**: every app, every stand-in you don't run yourself (`BYO_SERVICES` in `.env`), the observability stack with local alerting, migrations — and one table with every URL ([below](#run-everything-locally-with-your-own-postgres-valkey-and-grafana)) |
 | `make up PROFILES=none` | no containers: your own Postgres from `server/.env` ([runbooks/local.md § 3](runbooks/local.md#3-postgres)) |
 | `make run SERVICES=api` | only the api, in the foreground (also `make dev`) |
 | `make status` · `make logs` · `make restart SERVICES=api` | what runs and the useful URLs · follow the logs · restart one app |
 | `make down` · `make down SERVICES=studio` · `make down VOLUMES=1` | stop everything · one app · and delete the stand-ins' data |
 | `make all` | everything CI checks: `server-build` (tests included) and `web-check` |
 | `make db-reset` | drop and recreate the local database, migrate, seed (asks first) |
+
+## Run everything locally with your own Postgres, Valkey and Grafana
+
+Root `.env`:
+
+```sh
+BYO_SERVICES=db,cache,grafana
+GRAFANA_URL=http://localhost:3001       # your Grafana, not on 3000 (the consumer web app's port)
+GRAFANA_TOKEN=glsa_your_token           # service account token, Admin role (or GRAFANA_USER + GRAFANA_PASSWORD)
+```
+
+`server/.env` — your Postgres (with PostGIS) and Valkey:
+
+```sh
+DB_URL=jdbc:postgresql://localhost:5432/northline
+DB_USER=northline
+DB_PASSWORD=northline
+REDIS_HOST=localhost
+REDIS_PORT=6379
+```
+
+Then:
+
+```sh
+make up-all                  # = make up-all BYO=db,cache,grafana without the .env line
+make obs-fire-test-alert     # optional: watch an alert go pending → firing → Mailpit
+make down                    # stops the apps and the stand-ins; never your own services
+```
+
+`make up-all` checks your Postgres (PostGIS available, version 17 recommended), Valkey and Grafana first and says what
+to fix; starts every stand-in you didn't list (Kafka + Kafka UI, Elasticsearch, Mailpit, RustFS, stripe-mock) and the
+observability stack (Collector, Prometheus with the S-113 rules, Alertmanager → Mailpit, Loki, Tempo — Prometheus,
+Loki and Tempo on host ports for your Grafana); provisions your Grafana (data sources, folder Northline, every
+dashboard); migrates and seeds your database; starts auth, api, the three BFFs, the worker, the Studio, the consumer
+web and the console with telemetry on, `LIVE_BUS=redis` and sessions in your Valkey; and prints the status table
+(`make urls` again later). `make up-all-check` runs only the checks. Without `grafana` in `BYO_SERVICES` you get the
+bundled Grafana on http://localhost:3300 (admin / admin) instead. Details: [runbooks/local.md § 6a](runbooks/local.md#6a-run-everything-locally-with-your-own-postgres-valkey-and-grafana),
+[runbooks/observability.md § Local](runbooks/observability.md#local).
 
 ## Prerequisites
 
@@ -91,7 +131,7 @@ holds (and names the holder), and restarts an app whose command line changed (an
 | `studio` | 3100 | `pnpm --filter @northline/studio dev`; with `NL_DEV_USER=$DEV_USER` unless `bff` runs |
 | `consumer` | 3000 | `pnpm --filter @northline/consumer dev`; with `NL_DEV_USER=$CONSUMER_DEV_USER` unless `bff-consumer` runs |
 | `storybook` | 6006 | `pnpm --filter @northline/ui storybook` |
-| `docs` | 3300 | `pnpm --filter @northline/docs start` — the documentation site's dev server (internal variant, English) |
+| `docs` | 3300 | `pnpm --filter @northline/docs start` — the documentation site's dev server (internal variant, English); the bundled Grafana uses 3300 too, so not both at once |
 
 `DEV_AUTH=1` or `DEV_AUTH=0` forces dev auth on or off for the web apps; `SPRING_PROFILE=local,valkey` keeps sessions
 in Valkey (`PROFILES=db,cache`). Single apps in the foreground without the runner: `make run-api`, `run-auth`,
@@ -116,7 +156,11 @@ The profiles are docker-compose.yml's: `db`, `cache`, `events` (Kafka + topic cr
 | http://localhost:6006 | Storybook |
 | http://localhost:3300 | documentation site (`make up SERVICES=docs`, or `make docs docs-serve` for the full build with search and French; [runbooks/docs-site.md](runbooks/docs-site.md)) |
 | http://localhost:8025 | Mailpit inbox (`PROFILES=…,mail`) |
-| http://localhost:8190, :5601 | Kafka UI, Kibana (`make kafka-ui`, `make kibana`) |
+| http://localhost:8190, :5601 | Kafka UI, Kibana (`make kafka-ui`, `make kibana`; `make up-all` starts Kafka UI) |
+| http://localhost:3300 | bundled Grafana, admin / admin (`OBS=1`, `make obs-up`, `make up-all` without your own Grafana) |
+| http://localhost:9090, :9093 | Prometheus (alerts at `/alerts`), Alertmanager — alerts go to Mailpit only |
+| http://localhost:3110, :3210 | Loki, Tempo (query APIs for Grafana; not 3100/3200, which the Studio and console use) |
+| http://localhost:9101 | RustFS console (S3 storage, `northline` / `northline-dev-secret`) |
 
 `make smoke` checks every app port, whoever started it.
 

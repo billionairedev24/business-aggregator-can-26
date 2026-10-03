@@ -1,5 +1,8 @@
-# Loads deploy/observability/grafana/dashboards into the local Grafana (docker compose --profile observability).
-# Grafana Cloud / Amazon Managed Grafana / Azure Managed Grafana: import the same JSON files (docs/runbooks/observability.md).
+# File provisioning of the Northline dashboards for a Grafana you run with a provisioning directory: copy this file to
+# <grafana>/provisioning/dashboards/northline.yaml and deploy/observability/grafana/dashboards to the path below.
+# The local stack and any Grafana reachable over HTTP use the API instead: make obs-grafana-provision
+# (scripts/grafana-provision.py — data sources too). Grafana Cloud / Amazon Managed Grafana / Azure Managed Grafana:
+# the same script with a service account token, or import the JSON files (docs/runbooks/observability.md).
 apiVersion: 1
 providers:
   - name: Northline
@@ -7,5 +10,5 @@ providers:
     type: file
     disableDeletion: true
     options:
-      path: /otel-lgtm/grafana/conf/provisioning/dashboards/northline
+      path: /var/lib/grafana/dashboards/northline
       foldersFromFilesStructure: false

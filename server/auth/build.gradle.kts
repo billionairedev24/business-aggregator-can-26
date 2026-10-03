@@ -84,4 +84,5 @@ tasks.register<JavaExec>("oauthClients") {
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
     // `./gradlew :auth:bootRun --args='--spring.profiles.active=local'`
     jvmArgs("-Xmx512m")
+    classpath(devSeedClasspath) // the `local` profile applies classpath:db/seed-dev (else Flyway refuses a seeded database)
 }
