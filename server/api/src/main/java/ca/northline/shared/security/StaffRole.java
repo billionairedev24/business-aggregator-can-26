@@ -69,7 +69,8 @@ public enum StaffRole implements CodedEnum {
                         ConsoleScreen.SUPPORT,
                         ConsoleScreen.ORDERS,
                         ConsoleScreen.SELLERS,
-                        ConsoleScreen.DISPUTES);
+                        ConsoleScreen.DISPUTES,
+                        ConsoleScreen.UAT);
             // S-105: support leads take the privacy requests that arrive at the help desk
             case SUPPORT_LEAD ->
                 Set.of(
@@ -78,7 +79,8 @@ public enum StaffRole implements CodedEnum {
                         ConsoleScreen.ORDERS,
                         ConsoleScreen.SELLERS,
                         ConsoleScreen.DISPUTES,
-                        ConsoleScreen.PRIVACY);
+                        ConsoleScreen.PRIVACY,
+                        ConsoleScreen.UAT);
             case ANALYST -> Set.of(ConsoleScreen.OVERVIEW, ConsoleScreen.REPORTS);
             case PRIVACY -> Set.of(ConsoleScreen.OVERVIEW, ConsoleScreen.PRIVACY, ConsoleScreen.SUPPORT);
             case MERCHANT_SUCCESS ->
@@ -87,6 +89,7 @@ public enum StaffRole implements CodedEnum {
                         ConsoleScreen.PILOT,
                         ConsoleScreen.SELLERS,
                         ConsoleScreen.SUPPORT,
+                        ConsoleScreen.UAT,
                         ConsoleScreen.GO_LIVE);
         };
     }
@@ -104,11 +107,14 @@ public enum StaffRole implements CodedEnum {
                         ConsoleAction.SUPPORT);
             case DISPATCH -> Set.of(ConsoleAction.DISPATCH);
             case FINANCE -> Set.of(ConsoleAction.REFUND, ConsoleAction.PAYOUTS, ConsoleAction.ATTEST);
-            case SUPPORT -> Set.of(ConsoleAction.SUPPORT);
-            case SUPPORT_LEAD -> Set.of(ConsoleAction.SUPPORT, ConsoleAction.MACROS, ConsoleAction.PRIVACY);
+            // S-121: support triages the pilot group's feedback, as it does their cases
+            case SUPPORT -> Set.of(ConsoleAction.SUPPORT, ConsoleAction.UAT);
+            case SUPPORT_LEAD ->
+                Set.of(ConsoleAction.SUPPORT, ConsoleAction.MACROS, ConsoleAction.PRIVACY, ConsoleAction.UAT);
             case ANALYST -> Set.of();
             case PRIVACY -> Set.of(ConsoleAction.PRIVACY);
-            case MERCHANT_SUCCESS -> Set.of(ConsoleAction.ONBOARD, ConsoleAction.ATTEST);
+            // S-121: merchant success runs the pilot businesses' UAT with them (sign-offs, their feedback)
+            case MERCHANT_SUCCESS -> Set.of(ConsoleAction.ONBOARD, ConsoleAction.UAT, ConsoleAction.ATTEST);
         };
     }
 

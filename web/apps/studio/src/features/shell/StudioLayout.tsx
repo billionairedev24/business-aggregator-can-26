@@ -7,6 +7,7 @@ import { useSession, useSignOut } from '../../lib/session';
 import { businessesQuery, navBadgesQuery, type MerchantSummary } from './api';
 import { useShellT } from './messages';
 import { AssistantButton } from '../assistant/AssistantDrawer';
+import { PilotControl } from '../pilot/PilotControl';
 import { homeScreen, screenFromPath, screenHref } from './nav';
 import { buildNav } from './navMenu';
 
@@ -42,7 +43,7 @@ export function StudioLayout({ merchant, children }: { merchant: MerchantSummary
       pinned={pinned} groups={groups} currentKey={screenFromPath(pathname)}
       onNavigate={i => nav({ to: i.href })}
       rail={rail} onRailChange={r => { setRail(r); try { localStorage.setItem(RAIL_KEY, r ? '1' : '0'); } catch { /* private mode */ } }}
-    >{children}</AppShell>
+    >{children}<PilotControl merchantId={merchant.id} /></AppShell>
   );
 }
 

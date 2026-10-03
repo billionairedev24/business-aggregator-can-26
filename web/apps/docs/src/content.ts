@@ -133,6 +133,7 @@ export const REPO_DOCS_INCLUDE: readonly string[] = [
   'ai/**/*.{md,mdx}',
   'a11y/**/*.md',
   'perf/**/*.md',
+  'uat/**/*.md',
 ];
 export const REPO_DOCS_EXCLUDE: readonly string[] = ['WORKSTREAM_BRIEF.md', 'spec/**', 'api/**'];
 

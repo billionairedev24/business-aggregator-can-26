@@ -1,0 +1,5 @@
+/* S-121 pilot UAT screen. Token values only. */
+.nl-uat-body { white-space: pre-wrap; overflow-wrap: anywhere; padding: 12px 14px; border: 1px solid var(--color-divider); border-radius: var(--radius-md); background: var(--color-surface); }
+.nl-uat-trend { border-collapse: collapse; font-size: 14px; min-width: 100%; }
+.nl-uat-trend th, .nl-uat-trend td { text-align: start; padding: 6px 10px; border-bottom: 1px solid var(--color-divider); }
+.nl-uat-trend td { font-variant-numeric: tabular-nums; }

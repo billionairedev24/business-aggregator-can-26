@@ -127,6 +127,7 @@ member.
 | `/on-call` | `oncall` | `oncall` | every staff member | S-96 | stand-in |
 
 | `/privacy?state=open\|closed&request=` | `privacy` | `privacy` | admin, privacy, support_lead | S-105 | built |
+| `/uat?view=feedback\|participants\|report&state=&blocking=&persona=&item=` | `uat` (no design: S-121) | `uat` | admin, support, support_lead | S-121 | built |
 | `/integrations` | `api` | `api` | admin | S-96 | built |
 | `/team` | `team` | `team` | admin, trust_safety, finance | S-96 | built |
 | `/profile?tab=security\|sessions\|audit\|prefs` | `profile` | `profile` | every staff member | S-96 | built |

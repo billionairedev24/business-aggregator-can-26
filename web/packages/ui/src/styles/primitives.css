@@ -142,3 +142,18 @@
 /* ── skip link (S-109, WCAG 2.4.1): off-screen until focused, then above the sticky top bar ── */
 .nl-skip-link { position: absolute; left: 12px; top: -80px; z-index: 60; padding: 10px 14px; background: var(--color-surface); color: var(--color-accent); border-radius: var(--radius-md); box-shadow: var(--shadow-md); font-weight: 600; }
 .nl-skip-link:focus { top: 12px; }
+
+/* S-121 pilot feedback: the "Send feedback" control (pilot participants only) and its form */
+.nl-feedback-open { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; border-radius: var(--radius-pill); border: 1px solid var(--color-accent); background: var(--color-bg); color: var(--color-accent); font: inherit; font-weight: 600; cursor: pointer; }
+.nl-feedback-open:hover { background: var(--color-accent-100); }
+.nl-feedback-open:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.nl-feedback-corner { position: fixed; inset-inline-end: 16px; bottom: 16px; z-index: 40; box-shadow: var(--shadow-md); }
+.nl-feedback-form { display: grid; gap: var(--space-4, 16px); }
+.nl-feedback-kinds { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.nl-feedback-kinds legend { margin-bottom: 8px; }
+.nl-feedback-kind { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border: 1px solid var(--color-neutral-600); border-radius: var(--radius-md); cursor: pointer; }
+.nl-feedback-kind.is-selected { border-color: var(--color-accent); background: var(--color-accent-100); }
+.nl-feedback-shot { display: flex; flex-wrap: wrap; gap: 8px; }
+.nl-feedback-attached { display: flex; align-items: center; gap: 8px; margin: 0; }
+.nl-feedback-remove { min-width: 44px; min-height: 44px; border: 0; background: none; color: var(--color-text); cursor: pointer; border-radius: var(--radius-md); }
+.nl-feedback-remove:focus-visible { outline: 2px solid var(--color-accent); }

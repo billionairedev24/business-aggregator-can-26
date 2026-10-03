@@ -49,6 +49,7 @@ class SchemaOwnershipTests {
             "ai",
             "account",
             "privacy",
+            "uat",
             "golive");
 
     /**

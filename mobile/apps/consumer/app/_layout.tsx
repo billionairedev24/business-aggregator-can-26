@@ -16,6 +16,7 @@ import { AuthProvider, useAuth } from '../src/auth/AuthProvider';
 import { I18nProvider, useI18n } from '../src/i18n';
 import { DeliveryLocationProvider } from '../src/location/DeliveryLocation';
 import { FrenchFirst, LANGUAGE_KEY } from '../src/location/FrenchFirst';
+import { PilotButton } from '../src/pilot/Pilot';
 import { services } from '../src/services';
 import { Loading } from '../src/ui/states';
 
@@ -39,7 +40,12 @@ function LanguageSync({ children }: { children: ReactNode }) {
 function Routes() {
   const { status } = useAuth();
   if (status === 'loading') return <Loading />;
-  return <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />;
+  return (
+    <>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
+      <PilotButton />
+    </>
+  );
 }
 
 export default function RootLayout() {

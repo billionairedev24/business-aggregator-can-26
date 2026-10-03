@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { CaretDown, MagnifyingGlass } from '@phosphor-icons/react';
 import { Alert, AppShell, Avatar, Menu, useLocale, type MenuEntry } from '@northline/ui';
+import { PilotControl } from '../pilot/PilotControl';
 import { useSession, useSignOut } from '../../lib/session';
 import { meQuery, opens, useRegions, useSwitchRole, type Me, type RoleGrant, type Regions } from './api';
 import { useShellT, type ShellKey, type ShellT } from './messages';
@@ -61,7 +62,7 @@ export function ConsoleLayout({ children, denied }: { children: ReactNode; denie
       pinned={pinned} groups={groups} currentKey={screen ?? ''}
       onNavigate={i => nav({ to: i.href })}
       rail={rail} onRailChange={r => { setRail(r); try { localStorage.setItem(RAIL_KEY, r ? '1' : '0'); } catch { /* private mode */ } }}
-    >{allowed ? children : denied}</AppShell>
+    >{allowed ? children : denied}<PilotControl /></AppShell>
   );
 }
 

@@ -27,6 +27,7 @@ import { Route as ConsoleReportsRouteImport } from './routes/_console/reports'
 import { Route as ConsoleSupportRouteImport } from './routes/_console/support'
 import { Route as ConsoleTeamRouteImport } from './routes/_console/team'
 import { Route as ConsoleTrustRouteImport } from './routes/_console/trust'
+import { Route as ConsoleUatRouteImport } from './routes/_console/uat'
 import { Route as ConsoleVerificationRouteImport } from './routes/_console/verification'
 import { Route as ConsoleVettingRouteImport } from './routes/_console/vetting'
 import { Route as ConsoleSellersIndexRouteImport } from './routes/_console/sellers.index'
@@ -121,6 +122,11 @@ const ConsoleTrustRoute = ConsoleTrustRouteImport.update({
   path: '/trust',
   getParentRoute: () => ConsoleRoute,
 } as any)
+const ConsoleUatRoute = ConsoleUatRouteImport.update({
+  id: '/uat',
+  path: '/uat',
+  getParentRoute: () => ConsoleRoute,
+} as any)
 const ConsoleVerificationRoute = ConsoleVerificationRouteImport.update({
   id: '/verification',
   path: '/verification',
@@ -160,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/support': typeof ConsoleSupportRoute
   '/team': typeof ConsoleTeamRoute
   '/trust': typeof ConsoleTrustRoute
+  '/uat': typeof ConsoleUatRoute
   '/verification': typeof ConsoleVerificationRoute
   '/vetting': typeof ConsoleVettingRoute
   '/sellers/$sellerId': typeof ConsoleSellersSellerIdRoute
@@ -182,6 +189,7 @@ export interface FileRoutesByTo {
   '/support': typeof ConsoleSupportRoute
   '/team': typeof ConsoleTeamRoute
   '/trust': typeof ConsoleTrustRoute
+  '/uat': typeof ConsoleUatRoute
   '/verification': typeof ConsoleVerificationRoute
   '/vetting': typeof ConsoleVettingRoute
   '/': typeof ConsoleIndexRoute
@@ -207,6 +215,7 @@ export interface FileRoutesById {
   '/_console/support': typeof ConsoleSupportRoute
   '/_console/team': typeof ConsoleTeamRoute
   '/_console/trust': typeof ConsoleTrustRoute
+  '/_console/uat': typeof ConsoleUatRoute
   '/_console/verification': typeof ConsoleVerificationRoute
   '/_console/vetting': typeof ConsoleVettingRoute
   '/_console/': typeof ConsoleIndexRoute
@@ -233,6 +242,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/team'
     | '/trust'
+    | '/uat'
     | '/verification'
     | '/vetting'
     | '/sellers/$sellerId'
@@ -255,6 +265,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/team'
     | '/trust'
+    | '/uat'
     | '/verification'
     | '/vetting'
     | '/'
@@ -279,6 +290,7 @@ export interface FileRouteTypes {
     | '/_console/support'
     | '/_console/team'
     | '/_console/trust'
+    | '/_console/uat'
     | '/_console/verification'
     | '/_console/vetting'
     | '/_console/'
@@ -419,6 +431,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConsoleTrustRouteImport
       parentRoute: typeof ConsoleRoute
     }
+    '/_console/uat': {
+      id: '/_console/uat'
+      path: '/uat'
+      fullPath: '/uat'
+      preLoaderRoute: typeof ConsoleUatRouteImport
+      parentRoute: typeof ConsoleRoute
+    }
     '/_console/verification': {
       id: '/_console/verification'
       path: '/verification'
@@ -466,6 +485,7 @@ interface ConsoleRouteChildren {
   ConsoleSupportRoute: typeof ConsoleSupportRoute
   ConsoleTeamRoute: typeof ConsoleTeamRoute
   ConsoleTrustRoute: typeof ConsoleTrustRoute
+  ConsoleUatRoute: typeof ConsoleUatRoute
   ConsoleVerificationRoute: typeof ConsoleVerificationRoute
   ConsoleVettingRoute: typeof ConsoleVettingRoute
   ConsoleIndexRoute: typeof ConsoleIndexRoute
@@ -489,6 +509,7 @@ const ConsoleRouteChildren: ConsoleRouteChildren = {
   ConsoleSupportRoute: ConsoleSupportRoute,
   ConsoleTeamRoute: ConsoleTeamRoute,
   ConsoleTrustRoute: ConsoleTrustRoute,
+  ConsoleUatRoute: ConsoleUatRoute,
   ConsoleVerificationRoute: ConsoleVerificationRoute,
   ConsoleVettingRoute: ConsoleVettingRoute,
   ConsoleIndexRoute: ConsoleIndexRoute,
