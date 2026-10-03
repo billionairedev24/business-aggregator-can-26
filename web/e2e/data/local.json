@@ -1,0 +1,63 @@
+{
+  "$comment": "Test data for `make e2e` (local profile, dev seed). The pilot market's places and the seeded businesses live here, not in code (region-neutral rule). A deployed environment gets its own file through E2E_DATA (docs/runbooks/e2e.md).",
+  "market": {
+    "name": "Calgary",
+    "timeZone": "America/Edmonton",
+    "geolocation": {
+      "latitude": 51.0378,
+      "longitude": -114.087
+    },
+    "address": {
+      "street": "1204 17 Ave SW",
+      "postalCode": "T2T 0B8"
+    }
+  },
+  "provider": {
+    "merchantId": "01J9ZD3V00000000000000PWM1",
+    "slug": "prairie-wrench",
+    "name": "Prairie Wrench",
+    "serviceCategory": "mobile-mechanic"
+  },
+  "seller": {
+    "merchantId": "01J9ZD3V00000000000000PWP1",
+    "name": "Prairie Wrench Parts",
+    "departmentLevel1": "Shop › Hardware & auto",
+    "departmentLevel2": "Hardware"
+  },
+  "onboarding": {
+    "type": "seller",
+    "department": "Hardware",
+    "categoryLevel1": "Shop › Hardware & auto",
+    "categoryLevel2": "Hardware",
+    "gstNumber": "123456789 RT0001",
+    "address": "12 Test Trail SW"
+  },
+  "personas": {
+    "owner": {
+      "identifier": "ravi.sandhu@example.com",
+      "firstName": "Ravi",
+      "totpSecret": "NORTHLINERAVIDEVTOTPSECRET234567"
+    },
+    "staff": {
+      "identifier": "priya.natarajan@example.com",
+      "firstName": "Priya",
+      "backupCodes": [
+        "priya-n-00001",
+        "priya-n-00002",
+        "priya-n-00003",
+        "priya-n-00004",
+        "priya-n-00005",
+        "priya-n-00006",
+        "priya-n-00007",
+        "priya-n-00008",
+        "priya-n-00009",
+        "priya-n-00010"
+      ]
+    },
+    "courier": {
+      "identifier": "jas.gill@example.com",
+      "userId": "01J9ZD3V000000000000000JAS",
+      "totpSecret": "NORTHLINEJASDEVTOTPSECRET2345672"
+    }
+  }
+}
