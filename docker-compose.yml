@@ -161,7 +161,7 @@ services:
       - ./deploy/observability/prometheus/prometheus-local.yml:/etc/prometheus/prometheus.yml:ro
       - ./deploy/observability/prometheus/rules:/etc/prometheus/rules:ro
       - ./deploy/observability/prometheus/local:/etc/prometheus/local:ro
-    tmpfs: [/prometheus]
+    tmpfs: ["/prometheus:mode=1777"]   # the image's user (not root) writes here
     ports: ["${PROMETHEUS_PORT:-9090}:9090"]
 
   alertmanager:                               # --profile observability  (local receiver only: Mailpit)
@@ -169,7 +169,7 @@ services:
     image: prom/alertmanager:v0.28.1
     command: ["--config.file=/etc/alertmanager/alertmanager.yml", "--storage.path=/alertmanager"]
     volumes: ["./deploy/observability/alertmanager/alertmanager-local.yml:/etc/alertmanager/alertmanager.yml:ro"]
-    tmpfs: [/alertmanager]
+    tmpfs: ["/alertmanager:mode=1777"]   # the image's user (not root) writes here
     ports: ["${ALERTMANAGER_PORT:-9093}:9093"]
 
   loki:                                       # --profile observability  (OTLP logs in; 3100 on the host is the Studio's)
@@ -177,7 +177,7 @@ services:
     image: grafana/loki:3.5.5
     command: ["-config.file=/etc/loki/loki.yaml"]
     volumes: ["./deploy/observability/loki/loki-local.yaml:/etc/loki/loki.yaml:ro"]
-    tmpfs: [/loki]
+    tmpfs: ["/loki:mode=1777"]   # the image's user (not root) writes here
     ports: ["${LOKI_PORT:-3110}:3100"]
 
   tempo:                                      # --profile observability  (OTLP traces in; 3200 on the host is the console's)
@@ -185,7 +185,7 @@ services:
     image: grafana/tempo:2.8.2
     command: ["-config.file=/etc/tempo/tempo.yaml"]
     volumes: ["./deploy/observability/tempo/tempo-local.yaml:/etc/tempo/tempo.yaml:ro"]
-    tmpfs: [/var/tempo]
+    tmpfs: ["/var/tempo:mode=1777"]   # the image's user (not root) writes here
     ports: ["${TEMPO_PORT:-3210}:3200"]
 
   grafana:                                    # --profile observability  (skipped when you bring your own: BYO_SERVICES=…,grafana)
@@ -199,7 +199,7 @@ services:
       GF_NEWS_NEWS_FEED_ENABLED: "false"
     # Data sources, the Northline folder and dashboards are added through Grafana's HTTP API by
     # scripts/observability.sh up (scripts/grafana-provision.py) — the same code that provisions your own Grafana.
-    tmpfs: [/var/lib/grafana]
+    tmpfs: ["/var/lib/grafana:mode=1777"]   # the image's user (not root) writes here
     ports: ["${GRAFANA_PORT:-3300}:3000"]   # 3000 is the consumer web app's
 
 volumes: { pg: {}, es: {}, objects: {} }

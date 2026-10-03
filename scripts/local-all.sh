@@ -157,7 +157,7 @@ standin_services() {
   local s=""
   byo db || s="$s postgres"
   byo cache || s="$s valkey"
-  byo events || s="$s kafka kafka-topics kafka-ui"
+  byo events || s="$s kafka kafka-topics"
   byo search || s="$s elasticsearch"
   byo mail || s="$s mailpit"
   byo storage || s="$s storage storage-bucket"
@@ -201,6 +201,8 @@ cmd_up() {
   say ""; say "${c_b}Stand-ins${c_off} ${c_dim}$services${c_off}"
   # shellcheck disable=SC2086 # a list of compose service names
   docker compose up -d --wait $services
+  # Kafka UI is a convenience: a failed pull (Docker Hub rate limits) must not stop the stack.
+  byo events || docker compose up -d kafka-ui >/dev/null 2>&1 || warn "Kafka UI did not start (docker compose up -d kafka-ui to see why); Kafka itself runs"
   say ""; say "${c_b}Observability${c_off}"
   BYO="$BYO_LIST" "$ROOT/scripts/observability.sh" up
 
@@ -225,8 +227,11 @@ cmd_up() {
 
   say ""; say "${c_b}Apps${c_off} ${c_dim}$APPS${c_off}"
   # shellcheck disable=SC2086
-  "$ROOT/scripts/stack.sh" up $APPS || say "${c_warn}Some apps did not start — the status below shows which; make logs SERVICES=<app>${c_off}"
+  local rc=0
+  "$ROOT/scripts/stack.sh" up $APPS || rc=$?
   cmd_status
+  [ $rc = 0 ] || say "${c_bad}Some apps did not start — the table shows which; make logs SERVICES=<app>, then make up-all again${c_off}"
+  return $rc
 }
 
 # --- the status table -----------------------------------------------------------------------------------------------
