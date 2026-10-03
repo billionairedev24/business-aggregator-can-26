@@ -8,7 +8,7 @@ import { http } from '../../lib/http';
  *   GET  /api/v1/console/uat/feedback/{id}                              one item, its duplicates and history
  *   POST …/{id}/moves {to, blocking?, duplicateOf?, note?} | …/{id}/owner {ownerId} | …/{id}/tracker {url}
  *   GET  /api/v1/console/uat/owners | /participants | /scripts | /go-no-go (…/export)
- *   POST /api/v1/console/uat/participants {persona, label, contact|merchantId} | …/{id}/deactivate | …/{id}/signoffs
+ *   POST /api/v1/console/uat/participants {persona, label, contact} (businesses: S-120's cohort) | …/{id}/deactivate | …/{id}/signoffs
  */
 export const STATES = ['new', 'triaged', 'accepted', 'fixed', 'verified', 'closed', 'wont_fix', 'duplicate'] as const;
 export type State = (typeof STATES)[number];
@@ -93,7 +93,7 @@ export function useAct() {
 export function useAddParticipant() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (p: { persona: Persona; label: string; contact?: string; merchantId?: string }) => http(`${BASE}/participants`, { method: 'POST', body: p }, Participant),
+    mutationFn: (p: { persona: Persona; label: string; contact: string }) => http(`${BASE}/participants`, { method: 'POST', body: p }, Participant),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['console', 'uat'] }),
   });
 }

@@ -84,10 +84,7 @@ final class UatBodies {
             @Size(max = FeedbackRules.TRACKER_MAX, message = FeedbackRules.TRACKER_FORMAT) @Nullable
             String url) {}
 
-    /**
-     * @param contact a person's email or mobile number (customer, courier, staff)
-     * @param merchantId a business's id (provider, seller, kitchen)
-     */
+    /** @param contact a person's email or mobile number (customer, courier, staff; businesses are S-120's cohort) */
     record ParticipantBody(
             @NotBlank(message = FeedbackRules.PERSONA_REQUIRED)
             @Pattern(regexp = PERSONAS, message = FeedbackRules.PERSONA_REQUIRED)
@@ -97,8 +94,7 @@ final class UatBodies {
             @Size(max = FeedbackRules.LABEL_MAX, message = FeedbackRules.LABEL_REQUIRED)
             String label,
 
-            @Nullable String contact,
-            @Nullable String merchantId) {}
+            @Nullable String contact) {}
 
     record SignoffBody(
             @NotBlank(message = FeedbackRules.SCRIPT_REQUIRED)

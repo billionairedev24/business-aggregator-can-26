@@ -1,24 +1,21 @@
--- S-121 UAT with pilot merchants and customers; feedback triage (range V325–V329, above main's V319 and S-120's
--- V320–V324). Additive only. See docs/DECISIONS.md "S-121" and docs/uat/README.md.
+-- S-121 UAT with pilot merchants and customers; feedback triage (range V325–V329, above main's V323 — S-120's
+-- pilot cohort). Additive only. See docs/DECISIONS.md "S-121" and docs/uat/README.md.
 CREATE SCHEMA IF NOT EXISTS uat;
 
--- Who takes part in UAT. A row names a person (a customer, a courier, a staff member) or a whole business (every
--- member of it sees the feedback control in the Studio). The label is the working name staff use ("Pilot kitchen 3"),
--- not the person's name. S-120's merchants.pilot_businesses is the onboarding cohort; this is the UAT flag, which also
--- covers customers and couriers (S-120 has no notion of them).
+-- Who takes part in UAT. Businesses are S-120's pilot cohort (merchants.pilot_businesses with a business: its
+-- provider / seller / kitchen persona from the business type); this table holds the people S-120 has no notion of —
+-- pilot customers, couriers and console staff. The label is the working name staff use ("Pilot customer 3"), not the
+-- person's name.
 CREATE TABLE uat.participants (
   id          text PRIMARY KEY,
-  user_id     text,                                  -- logical ref → identity.users
-  merchant_id text,                                  -- logical ref → merchants.merchants
-  persona     text NOT NULL CHECK (persona IN ('provider', 'seller', 'kitchen', 'customer', 'courier', 'staff')),
+  user_id     text NOT NULL,                         -- logical ref → identity.users
+  persona     text NOT NULL CHECK (persona IN ('customer', 'courier', 'staff')),
   label       text NOT NULL CHECK (char_length(btrim(label)) BETWEEN 1 AND 80),
   active      boolean NOT NULL DEFAULT true,
   added_by    text NOT NULL,
-  created_at  timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT chk_participant_who CHECK ((user_id IS NULL) <> (merchant_id IS NULL))
+  created_at  timestamptz NOT NULL DEFAULT now()
 );
-CREATE UNIQUE INDEX ux_participants_user ON uat.participants (user_id, persona) WHERE user_id IS NOT NULL;
-CREATE UNIQUE INDEX ux_participants_merchant ON uat.participants (merchant_id, persona) WHERE merchant_id IS NOT NULL;
+CREATE UNIQUE INDEX ux_participants_user ON uat.participants (user_id, persona);
 
 -- The UAT scripts in docs/uat/ (one per persona). The version is the script's, so a sign-off says what was run.
 CREATE TABLE uat.scripts (
@@ -45,7 +42,9 @@ CREATE SEQUENCE uat.feedback_number_seq START 1001;
 CREATE TABLE uat.feedback (
   id               text PRIMARY KEY,
   number           bigint NOT NULL UNIQUE DEFAULT nextval('uat.feedback_number_seq'),  -- "UAT-1001"
-  participant_id   text NOT NULL REFERENCES uat.participants (id),
+  -- a uat.participants id (a person) or a merchants.pilot_businesses id (a pilot business, S-120); logical ref
+  participant_id   text NOT NULL,
+  persona          text NOT NULL CHECK (persona IN ('provider', 'seller', 'kitchen', 'customer', 'courier', 'staff')),
   user_id          text NOT NULL,                  -- who sent it (identity.users)
   merchant_id      text,                           -- the business they sent it for (Studio)
   app              text NOT NULL CHECK (app IN ('studio', 'consumer', 'console', 'mobile', 'courier')),
@@ -74,6 +73,7 @@ CREATE TABLE uat.feedback (
 );
 CREATE INDEX ix_feedback_state ON uat.feedback (state, created_at);
 CREATE INDEX ix_feedback_user ON uat.feedback (user_id, created_at DESC);
+CREATE INDEX ix_feedback_participant ON uat.feedback (participant_id);
 CREATE INDEX ix_feedback_duplicate ON uat.feedback (duplicate_of) WHERE duplicate_of IS NOT NULL;
 
 -- Screenshots uploaded before the feedback is sent (an unsent one is removed after a day).
@@ -105,7 +105,7 @@ CREATE INDEX ix_feedback_history_at ON uat.feedback_history (at);
 -- participant and script counts; earlier ones stay as history.
 CREATE TABLE uat.signoffs (
   id             text PRIMARY KEY,
-  participant_id text NOT NULL REFERENCES uat.participants (id),
+  participant_id text NOT NULL,                      -- uat.participants id or merchants.pilot_businesses id
   script_code    text NOT NULL REFERENCES uat.scripts (code),
   script_version text NOT NULL,
   outcome        text NOT NULL CHECK (outcome IN ('signed_off', 'with_comments', 'blocked')),

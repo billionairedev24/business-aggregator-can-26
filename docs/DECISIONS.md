@@ -7549,13 +7549,15 @@ story builds the tooling and the process and rehearses them; the sign-off itself
   `developer.api.AuditTrail`; `shared.security.MerchantMemberships`). It has a `PersonalDataContributor` (export; erasure
   blanks the words, device line and screenshots, replaces the person's id and keeps the triage record) and a DR mask
   (`db/dr/mask/uat.sql`). No retention job: pilot data is deleted with the pilot (a follow-up when the pilot ends).
-- **Pilot participant flag — overlap with S-120.** S-120 (branch `pilot/s-120-onboarding`, not merged) adds
-  `merchants.pilot_businesses`, the onboarding cohort of *businesses*; it has no notion of customers, couriers or staff.
-  S-121 therefore defines its own small flag, `uat.participants`: a row is a person (customer, courier, staff) **or** a
-  business (provider, seller, kitchen; every member of it counts), with a persona. Public: `uat.api.PilotParticipants
-  .isParticipant(userId, merchantId)`. When S-120 merges, enrolling a pilot business there could add its UAT row (a
-  listener on its event) — not done here; staff add businesses by id in the console for now. A business of type `both`
-  can take part as provider and as seller (one row each).
+- **Pilot participants reuse S-120's cohort.** Businesses take part as S-120's pilot cohort
+  (`merchants.api.PilotCohort`, `merchants.pilot_businesses`): every pilot business with a business on Northline is a
+  UAT participant under the pilot's id and working name, persona from its type (`both` → provider and seller: two
+  scripts to sign off), and every member of its team sees the control. There is no second flag for businesses; they
+  can't be added or removed on the UAT screen (422, 409 `pilot_business` — Pilot onboarding owns the cohort). S-120 has
+  no notion of customers, couriers or staff, so those are `uat.participants` (person + persona). `ParticipantDirectory`
+  merges the two; feedback and sign-offs reference either id (logical, no FK) and feedback keeps its persona. Public:
+  `uat.api.PilotParticipants.isParticipant(userId, merchantId)`. The cohort is read per request (`PilotCohort.list`),
+  pilot-sized, no cache.
 - **Gate:** the control shows only when `GET /api/v1/me/pilot[?merchantId=]` says `participant`; upload and send answer
   403 otherwise (`Feedback here is for pilot participants.`). In the Studio the business counts only for its team
   (`You're not on this business's team.`). The endpoints sit under `/api/v1/me/pilot` (any signed-in person: customers,
@@ -7584,7 +7586,7 @@ story builds the tooling and the process and rehearses them; the sign-off itself
   story) and `@northline/client`'s `sendPilotFeedback`; no design exists, so the copy is ours (en + fr-CA).
 - **Console:** new screen `uat` (route `/uat`, sidebar group Platform, "Pilot UAT" / « Tests du pilote ») and action
   `uat`. Screen and action for **support** and **support lead** (support already triages the pilot's cases) and admin;
-  no new role. When S-120 merges, its `merchant_success` role could be given the screen read-only — a one-line change.
+  and S-120's **merchant success** (it runs the pilot businesses' sign-offs); no new role.
   Tabs: Feedback (queue, filters, CSV, the detail drawer with triage, owner, tracker link, history, duplicates),
   Participants & sign-off, Go / no-go. Every change writes `developer.audit_log` (`uat.feedback_moved|assigned|linked`,
   `uat.participant_added|deactivated`, `uat.signoff_recorded`) with the active roles; ids and codes only.
@@ -7607,15 +7609,16 @@ story builds the tooling and the process and rehearses them; the sign-off itself
 - **Dry run:** dev seed V326 (fake pilot group, every triage stage) checked by `UatDevSeedTest` under `local`; the flow
   through the api in `UatApiTest.DryRun`; the console flow with Testing Library (S-117's `web/e2e` isn't on main —
   PR #154). Result: pass, observations in dry-run.md.
-- **Schema V325** (`uat`): `participants` (user xor merchant, persona, label, active; unique per persona),
+- **Schema V325** (`uat`, above main's V323): `participants` (people: user, persona customer|courier|staff, label,
+  active; unique per person and persona),
   `scripts` (+ six rows), `feedback` (+ `feedback_number_seq` from 1001 → "UAT-1001"; CHECKs for the states,
   screenshot pair, duplicate ⇔ `duplicate_of`, blocking decided once accepted; version column), `screenshots`,
   `feedback_history`, `signoffs` (latest per participant and script counts; blocked needs items or comments). Seed-dev
-  **V326**. Console enums: `ConsoleScreen.UAT`, `ConsoleAction.UAT`. No new configuration variable
+  **V326** (it also enrols the three persona businesses in S-120's cohort, `merchants.pilot_businesses`). Console enums: `ConsoleScreen.UAT`, `ConsoleAction.UAT`. No new configuration variable
   (`northline.uat.screenshots-dir` has a temp-dir default, local only). 32 new messages with fr-CA in
   `validation-messages.fr-CA.tsv`.
 - **Not done:** no a11y page-sweep entry for `/uat` (axe runs in its Vitest tests; the sweep's fixtures weren't
   re-recorded); no notification to the participant when their item moves (they see the state under `GET
   /me/pilot/feedback`, which no screen shows yet); no feedback control in the courier app; no screenshot from the
-  consumer app; no link from S-120's cohort to UAT participants; no retention job for `uat`; nothing exercised with a real
+  consumer app; no retention job for `uat`; nothing exercised with a real
   participant, device, browser capture prompt, or object store (local folder and the S-10 adapters' tests only).

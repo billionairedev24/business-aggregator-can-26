@@ -63,7 +63,7 @@ import org.springframework.web.bind.annotation.RestController;
  * POST /api/v1/console/uat/feedback/{id}/tracker   {url}
  * GET  /api/v1/console/uat/owners                            staff who can own an item
  * GET  /api/v1/console/uat/participants                      {items: [ParticipantView]}
- * POST /api/v1/console/uat/participants            {persona, label, contact? | merchantId?}
+ * POST /api/v1/console/uat/participants            {persona, label, contact}  (businesses: S-120's cohort)
  * POST /api/v1/console/uat/participants/{id}/deactivate
  * POST /api/v1/console/uat/participants/{id}/signoffs  {script, outcome, comments?, blockingIds?}
  * GET  /api/v1/console/uat/scripts
@@ -162,15 +162,13 @@ class UatConsoleController {
         return new ListResponse<>(triage.participants(locale));
     }
 
-    @Operation(summary = "Add a pilot participant: a person by email or mobile number, or a business by id")
+    @Operation(summary = "Add a pilot participant (a customer, courier or staff member) by email or mobile number")
     @PostMapping("/participants")
     @ResponseStatus(HttpStatus.CREATED)
     @RequiresConsole(value = ConsoleScreen.UAT, actions = ConsoleAction.UAT)
     ParticipantView add(@Valid @RequestBody ParticipantBody body, CurrentStaff staff, Locale locale) {
         return triage.addParticipant(
-                new NewParticipant(body.persona(), body.label(), body.contact(), body.merchantId()),
-                actor(staff),
-                locale);
+                new NewParticipant(body.persona(), body.label(), body.contact()), actor(staff), locale);
     }
 
     @PostMapping("/participants/{id}/deactivate")

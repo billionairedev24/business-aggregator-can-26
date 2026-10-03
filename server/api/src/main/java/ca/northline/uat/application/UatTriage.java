@@ -153,14 +153,12 @@ public interface UatTriage {
     }
 
     /**
-     * @param contact an email or mobile number (a person), when {@code merchantId} is null
-     * @param merchantId a business (provider, seller, kitchen personas)
+     * A person (customer, courier, staff). Pilot businesses take part through S-120's cohort, not here.
+     *
+     * @param contact the email or mobile number of their Northline account
      */
     record NewParticipant(
-            String persona,
-            String label,
-            @Nullable String contact,
-            @Nullable String merchantId) {}
+            String persona, String label, @Nullable String contact) {}
 
     /** @param blockingIds UAT feedback ids the participant named */
     record NewSignoff(

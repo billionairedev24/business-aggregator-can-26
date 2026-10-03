@@ -12,7 +12,7 @@ French: [fr/README.md](fr/README.md). The dry run of this process: [dry-run.md](
 
 | piece | where |
 |---|---|
-| Who takes part (the pilot participant flag) | console › Pilot UAT › Participants; `uat.participants` |
+| Who takes part | businesses: S-120's pilot cohort (console › Pilot onboarding); people: console › Pilot UAT › Participants (`uat.participants`) — both listed under Participants |
 | In-product “Send feedback” control | Studio, consumer site, console (corner button); consumer app (floating “Feedback” button) — pilot participants only |
 | Triage queue | console › Pilot UAT › Feedback; CSV export |
 | UAT scripts and sign-off forms, per persona, en/fr | this folder (below) |
@@ -41,11 +41,12 @@ records the version that was run. **Changing a script:** edit both languages, ra
 
 ## Running UAT
 
-1. **Recruit the group.** Merchants come from the pilot cohort (S-120 onboarding). Add each one in Pilot UAT ›
-   Participants: a business by its id (provider, seller or kitchen — the persona must match the business type; a
-   “provider and seller” business can take part as either, once per persona), a person by the email or mobile number of
-   their Northline account (customer, courier, staff). The label is a working name (“Pilot kitchen 3”), not the
-   person's name. At least one participant per persona.
+1. **Recruit the group.** Businesses are the pilot cohort of S-120 (console › Pilot onboarding): every pilot business
+   that has a business on Northline (invite accepted, or enrolled) takes part automatically, with the persona of its
+   type (a provider-and-seller business with both, so it signs off both scripts), under its pilot working name; every
+   member of its team sees the feedback control. People are added in Pilot UAT › Participants by the email or mobile
+   number of their Northline account (customer, courier, staff); the label is a working name (“Pilot customer 3”), not
+   the person's name. At least one participant per persona.
 2. **Hand out the script and the form** in the participant's language (print, or share the page).
 3. **Participants run the script** in the pilot environment and send feedback from the product as they go. They write
    the reference (UAT-…) next to a failed step.

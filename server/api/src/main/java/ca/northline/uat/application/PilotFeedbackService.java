@@ -44,6 +44,7 @@ class PilotFeedbackService implements PilotFeedback, PilotParticipants {
     static final Duration UNSENT_SCREENSHOT_TTL = Duration.ofDays(1);
 
     private final UatStore store;
+    private final ParticipantDirectory directory;
     private final ScreenshotStorage storage;
     private final MerchantMemberships memberships;
     private final Clock clock;
@@ -164,7 +165,7 @@ class PilotFeedbackService implements PilotFeedback, PilotParticipants {
                 merchantId != null && memberships.roleOf(merchantId, userId).isPresent()
                         ? List.of(merchantId)
                         : List.<String>of();
-        return store.activeFor(userId, merchants).stream()
+        return directory.activeFor(userId, merchants).stream()
                 .min(Comparator.comparing((Participant p) -> p.merchantId() == null));
     }
 
@@ -178,7 +179,7 @@ class PilotFeedbackService implements PilotFeedback, PilotParticipants {
                         .map(MerchantMemberships.Membership::merchantId)
                         .toList()
                 : merchantId == null ? List.<String>of() : List.of(merchantId);
-        return store.activeFor(userId, merchants).stream()
+        return directory.activeFor(userId, merchants).stream()
                 .min(Comparator.comparing((Participant p) -> p.merchantId() == null))
                 .orElseThrow(() -> new AccessDeniedException(NOT_A_PARTICIPANT));
     }

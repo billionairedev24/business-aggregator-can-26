@@ -48,8 +48,8 @@ public final class FeedbackRules {
             "Enter the tracker issue's web address (https://…), up to 500 characters.";
     public static final String PERSONA_REQUIRED = "Choose provider, seller, kitchen, customer, courier or staff.";
     public static final String LABEL_REQUIRED = "Enter a working name, 1 to 80 characters.";
-    public static final String WHO_REQUIRED = "Enter the person's email or mobile number, or the business's id.";
-    public static final String WHO_UNKNOWN = "No Northline account or business matches that.";
+    public static final String WHO_REQUIRED = "Enter the person's email or mobile number.";
+    public static final String WHO_UNKNOWN = "No Northline account matches that.";
     public static final String ALREADY_PARTICIPANT = "They already take part with this persona.";
     public static final String SCRIPT_REQUIRED = "Choose the UAT script.";
     public static final String SCRIPT_PERSONA = "That script is for another persona.";
@@ -57,7 +57,10 @@ public final class FeedbackRules {
     public static final String BLOCKED_NEEDS_ITEMS = "Name the blocking items or describe them in the comments.";
     public static final String COMMENTS_TOO_LONG = "Keep the comments under 2,000 characters.";
     public static final String BLOCKING_UNKNOWN = "Pick blocking items from the UAT feedback queue.";
-    public static final String PERSONA_BUSINESS = "Pick the persona that matches the business's type.";
+    public static final String PILOT_BUSINESS =
+            "Pilot businesses come from Pilot onboarding: invite or enrol the business there.";
+    public static final String PILOT_BUSINESS_LEAVES =
+            "A pilot business takes part while it is in the pilot cohort (Pilot onboarding).";
     public static final String STALE = "Someone else changed this item; reload it.";
     public static final String PARTICIPANT_INACTIVE = "This participant no longer takes part.";
 

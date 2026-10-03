@@ -80,7 +80,12 @@ public enum StaffRole implements CodedEnum {
             case ANALYST -> Set.of(ConsoleScreen.OVERVIEW, ConsoleScreen.REPORTS);
             case PRIVACY -> Set.of(ConsoleScreen.OVERVIEW, ConsoleScreen.PRIVACY, ConsoleScreen.SUPPORT);
             case MERCHANT_SUCCESS ->
-                Set.of(ConsoleScreen.OVERVIEW, ConsoleScreen.PILOT, ConsoleScreen.SELLERS, ConsoleScreen.SUPPORT);
+                Set.of(
+                        ConsoleScreen.OVERVIEW,
+                        ConsoleScreen.PILOT,
+                        ConsoleScreen.SELLERS,
+                        ConsoleScreen.SUPPORT,
+                        ConsoleScreen.UAT);
         };
     }
 
@@ -103,7 +108,8 @@ public enum StaffRole implements CodedEnum {
                 Set.of(ConsoleAction.SUPPORT, ConsoleAction.MACROS, ConsoleAction.PRIVACY, ConsoleAction.UAT);
             case ANALYST -> Set.of();
             case PRIVACY -> Set.of(ConsoleAction.PRIVACY);
-            case MERCHANT_SUCCESS -> Set.of(ConsoleAction.ONBOARD);
+            // S-121: merchant success runs the pilot businesses' UAT with them (sign-offs, their feedback)
+            case MERCHANT_SUCCESS -> Set.of(ConsoleAction.ONBOARD, ConsoleAction.UAT);
         };
     }
 

@@ -36,6 +36,7 @@ class UatReportService implements UatReports {
             Set.of(FeedbackState.VERIFIED, FeedbackState.CLOSED, FeedbackState.WONT_FIX, FeedbackState.DUPLICATE);
 
     private final UatStore store;
+    private final ParticipantDirectory directory;
     private final StaffDirectory staff;
     private final Regions regions;
     private final Clock clock;
@@ -216,9 +217,8 @@ class UatReportService implements UatReports {
     /** Per persona: active participants and their latest sign-off of the persona's script. */
     private List<GoNoGo.Coverage> coverage() {
         var latest = store.latestSignoffs();
-        var active = store.participants().stream()
-                .filter(UatStore.Participant::active)
-                .toList();
+        var active =
+                directory.all().stream().filter(UatStore.Participant::active).toList();
         var scripts =
                 store.scripts().stream().collect(Collectors.toMap(UatStore.Script::persona, UatStore.Script::code));
         var out = new ArrayList<GoNoGo.Coverage>();

@@ -13,7 +13,7 @@ chacun approuve, et comment se décide le feu vert. Anglais : [../README.md](../
 
 | élément | où |
 |---|---|
-| Qui participe (l’indicateur de participant au pilote) | console › Tests du pilote › Participants; `uat.participants` |
+| Qui participe | entreprises : la cohorte pilote de S-120 (console › Intégration pilote); personnes : console › Tests du pilote › Participants (`uat.participants`) |
 | Bouton « Envoyer un commentaire » dans le produit | Studio, site client, console (bouton dans le coin); application client (bouton flottant « Commentaire ») — participants seulement |
 | File de tri | console › Tests du pilote › Commentaires; export CSV |
 | Scénarios et formulaires d’approbation, par profil, en/fr | ce dossier (ci-dessous) |
@@ -41,10 +41,11 @@ participant. La version du scénario est dans `uat.scripts`; une approbation gar
 
 ## Déroulement
 
-1. **Former le groupe.** Les commerçants viennent de la cohorte pilote (intégration S-120). Ajoutez chacun dans Tests du
-   pilote › Participants : une entreprise par son identifiant (le profil doit correspondre au type d’entreprise), une
-   personne par le courriel ou le numéro de cellulaire de son compte Northline (client, livreur, personnel). Le nom de
-   travail (« Cuisine pilote 3 ») n’est pas le nom de la personne. Au moins un participant par profil.
+1. **Former le groupe.** Les entreprises sont la cohorte pilote de S-120 (console › Intégration pilote) : chaque
+   entreprise pilote présente sur Northline participe d’office, avec le profil de son type (une entreprise prestataire et
+   vendeur avec les deux), sous son nom de travail du pilote; toute son équipe voit le bouton de commentaire. Les
+   personnes sont ajoutées dans Tests du pilote › Participants par le courriel ou le numéro de cellulaire de leur compte
+   Northline (client, livreur, personnel). Au moins un participant par profil.
 2. **Remettre le scénario et le formulaire** dans la langue du participant.
 3. **Les participants suivent le scénario** dans l’environnement pilote et envoient leurs commentaires depuis le produit.
    Ils inscrivent le numéro (UAT-…) à côté d’une étape échouée.

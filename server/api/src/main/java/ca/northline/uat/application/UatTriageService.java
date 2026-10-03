@@ -10,7 +10,8 @@ import static ca.northline.uat.domain.FeedbackRules.LABEL_REQUIRED;
 import static ca.northline.uat.domain.FeedbackRules.MOVE_NOT_ALLOWED;
 import static ca.northline.uat.domain.FeedbackRules.OWNER_NOT_STAFF;
 import static ca.northline.uat.domain.FeedbackRules.PARTICIPANT_INACTIVE;
-import static ca.northline.uat.domain.FeedbackRules.PERSONA_BUSINESS;
+import static ca.northline.uat.domain.FeedbackRules.PILOT_BUSINESS;
+import static ca.northline.uat.domain.FeedbackRules.PILOT_BUSINESS_LEAVES;
 import static ca.northline.uat.domain.FeedbackRules.SCRIPT_PERSONA;
 import static ca.northline.uat.domain.FeedbackRules.SCRIPT_REQUIRED;
 import static ca.northline.uat.domain.FeedbackRules.TRACKER_FORMAT;
@@ -20,7 +21,6 @@ import static ca.northline.uat.domain.FeedbackRules.WHO_UNKNOWN;
 import ca.northline.developer.api.AuditTrail;
 import ca.northline.identity.api.PrivacyAccounts;
 import ca.northline.identity.api.StaffDirectory;
-import ca.northline.merchants.api.MerchantDirectory;
 import ca.northline.shared.Bytes;
 import ca.northline.shared.CodedEnum;
 import ca.northline.shared.Conflict;
@@ -71,7 +71,7 @@ class UatTriageService implements UatTriage {
     private final AuditTrail audit;
     private final StaffDirectory staff;
     private final PrivacyAccounts accounts;
-    private final MerchantDirectory merchants;
+    private final ParticipantDirectory directory;
     private final Clock clock;
 
     @Override
@@ -277,12 +277,15 @@ class UatTriageService implements UatTriage {
         var counts = feedbackCounts();
         var names = staffNames();
         var refs = references();
-        return store.participants().stream()
+        // a provider-and-seller pilot business is one participant with two personas (two scripts)
+        var groups = directory.all().stream()
                 .sorted(Comparator.comparing(Participant::active)
                         .reversed()
                         .thenComparing(Participant::persona)
                         .thenComparing(Participant::label))
-                .map(p -> view(p, scripts, latest, counts, names, refs, locale))
+                .collect(Collectors.groupingBy(Participant::id, LinkedHashMap::new, Collectors.toList()));
+        return groups.values().stream()
+                .map(g -> view(g, scripts, latest, counts, names, refs, locale))
                 .toList();
     }
 
@@ -294,33 +297,22 @@ class UatTriageService implements UatTriage {
         if (label.isEmpty() || label.length() > FeedbackRules.LABEL_MAX) {
             throw RuleViolation.of("label", "length", LABEL_REQUIRED);
         }
-        String userId = null;
-        String merchantId = null;
         if (persona.business()) {
-            if (n.merchantId() == null || n.merchantId().isBlank()) {
-                throw RuleViolation.of("merchantId", "required", WHO_REQUIRED);
-            }
-            var profile = merchants
-                    .profile(n.merchantId().strip())
-                    .orElseThrow(() -> RuleViolation.of("merchantId", "allowed", WHO_UNKNOWN));
-            if (!matches(persona, profile.type())) {
-                throw RuleViolation.of("persona", "allowed", PERSONA_BUSINESS);
-            }
-            merchantId = profile.merchantId();
-        } else {
-            if (n.contact() == null || n.contact().isBlank()) {
-                throw RuleViolation.of("contact", "required", WHO_REQUIRED);
-            }
-            userId = accounts.find(n.contact().strip())
-                    .orElseThrow(() -> RuleViolation.of("contact", "allowed", WHO_UNKNOWN));
+            // S-120: pilot businesses are the cohort on the Pilot onboarding screen; they take part from there
+            throw RuleViolation.of("persona", "allowed", PILOT_BUSINESS);
         }
+        if (n.contact() == null || n.contact().isBlank()) {
+            throw RuleViolation.of("contact", "required", WHO_REQUIRED);
+        }
+        var userId = accounts.find(n.contact().strip())
+                .orElseThrow(() -> RuleViolation.of("contact", "allowed", WHO_UNKNOWN));
         var participant =
-                new Participant(Ids.next(), userId, merchantId, persona, label, true, actor.userId(), clock.instant());
+                new Participant(Ids.next(), userId, null, persona, label, true, actor.userId(), clock.instant());
         if (!store.insert(participant)) {
             throw new Conflict("already_participant", ALREADY_PARTICIPANT);
         }
         audit.record(new AuditTrail.Entry(
-                        merchantId,
+                        null,
                         actor.userId(),
                         actor.role(),
                         "uat.participant_added",
@@ -335,7 +327,10 @@ class UatTriageService implements UatTriage {
     @Override
     @Transactional
     public ParticipantView deactivate(String participantId, Actor actor, Locale locale) {
-        var p = store.participant(participantId).orElseThrow(() -> new NotFound("uat_participant", participantId));
+        var p = store.participant(participantId)
+                .orElseThrow(() -> directory.byId(participantId).isEmpty()
+                        ? new NotFound("uat_participant", participantId)
+                        : new Conflict("pilot_business", PILOT_BUSINESS_LEAVES));
         if (p.active()) {
             store.deactivate(participantId);
             audit.record(new AuditTrail.Entry(
@@ -354,17 +349,21 @@ class UatTriageService implements UatTriage {
     @Override
     @Transactional
     public ParticipantView signoff(String participantId, NewSignoff n, Actor actor, Locale locale) {
-        var p = store.participant(participantId).orElseThrow(() -> new NotFound("uat_participant", participantId));
-        if (!p.active()) {
+        var group = directory.byId(participantId);
+        if (group.isEmpty()) {
+            throw new NotFound("uat_participant", participantId);
+        }
+        if (!group.getFirst().active()) {
             throw new Conflict("participant_inactive", PARTICIPANT_INACTIVE);
         }
         var script = store.scripts().stream()
                 .filter(s -> s.code().equals(n.script()))
                 .findFirst()
                 .orElseThrow(() -> RuleViolation.of("script", "allowed", SCRIPT_REQUIRED));
-        if (script.persona() != p.persona()) {
-            throw RuleViolation.of("script", "allowed", SCRIPT_PERSONA);
-        }
+        var p = group.stream()
+                .filter(g -> g.persona() == script.persona())
+                .findFirst()
+                .orElseThrow(() -> RuleViolation.of("script", "allowed", SCRIPT_PERSONA));
         var outcome = Optional.ofNullable(n.outcome())
                 .flatMap(o -> EnumSet.allOf(SignoffOutcome.class).stream()
                         .filter(v -> v.code().equals(o))
@@ -443,9 +442,23 @@ class UatTriageService implements UatTriage {
             case "all" -> Set.of();
             default -> Set.of(CodedEnum.fromCode(FeedbackState.class, filter.state()));
         };
-        return store.queue(states, filter.blocking(), QUEUE_LIMIT).stream()
+        return named(store.queue(states, filter.blocking(), QUEUE_LIMIT).stream()
                 .filter(f -> filter.persona() == null || f.persona().code().equals(filter.persona()))
                 .filter(f -> filter.app() == null || f.app().code().equals(filter.app()))
+                .toList());
+    }
+
+    /** Feedback from a pilot business carries the pilot's working name (S-120's cohort), people's their label. */
+    private List<Feedback> named(List<Feedback> items) {
+        if (items.stream().allMatch(f -> !f.participantLabel().isEmpty())) {
+            return items;
+        }
+        var labels =
+                directory.all().stream().collect(Collectors.toMap(Participant::id, Participant::label, (a, _) -> a));
+        return items.stream()
+                .map(f -> f.participantLabel().isEmpty()
+                        ? f.withParticipantLabel(labels.getOrDefault(f.participantId(), ""))
+                        : f)
                 .toList();
     }
 
@@ -473,11 +486,14 @@ class UatTriageService implements UatTriage {
         }
     }
 
-    private FeedbackDetail detail(Feedback f) {
+    private FeedbackDetail detail(Feedback raw) {
+        var f = named(List.of(raw)).getFirst();
         var names = staffNames();
-        var duplicates = store.duplicatesOf(f.id());
+        var duplicates = named(store.duplicatesOf(f.id()));
         var dupes = store.duplicateCounts(List.of(f.id()));
-        var dupOf = f.duplicateOf() == null ? Optional.<Feedback>empty() : store.feedback(f.duplicateOf());
+        var dupOf = f.duplicateOf() == null
+                ? Optional.<Feedback>empty()
+                : store.feedback(f.duplicateOf()).map(d -> named(List.of(d)).getFirst());
         return new FeedbackDetail(
                 item(f, names, dupes),
                 f.body(),
@@ -561,23 +577,29 @@ class UatTriageService implements UatTriage {
     }
 
     private ParticipantView participantView(String id, Locale locale) {
-        var p = store.participant(id).orElseThrow(() -> new NotFound("uat_participant", id));
-        return view(p, store.scripts(), latestByParticipant(), feedbackCounts(), staffNames(), references(), locale);
+        var group = directory.byId(id);
+        if (group.isEmpty()) {
+            throw new NotFound("uat_participant", id);
+        }
+        return view(
+                group, store.scripts(), latestByParticipant(), feedbackCounts(), staffNames(), references(), locale);
     }
 
     private ParticipantView view(
-            Participant p,
+            List<Participant> group,
             List<Script> scripts,
             Map<String, Map<String, Signoff>> latest,
             Map<String, Integer> counts,
             Map<String, String> names,
             Map<String, String> refs,
             Locale locale) {
+        var p = group.getFirst();
+        var personas = group.stream().map(Participant::persona).collect(Collectors.toSet());
         var history = store.signoffsOf(p.id()).stream()
                 .collect(Collectors.groupingBy(Signoff::scriptCode, Collectors.counting()));
         var own = latest.getOrDefault(p.id(), Map.of());
         var signoffs = scripts.stream()
-                .filter(s -> s.persona() == p.persona())
+                .filter(s -> personas.contains(s.persona()))
                 .map(s -> {
                     var view = scriptView(s, locale);
                     var last = own.get(s.code());
@@ -615,16 +637,6 @@ class UatTriageService implements UatTriage {
                 .filter(p -> p.code().equals(code))
                 .findFirst()
                 .orElseThrow(() -> RuleViolation.of("persona", "allowed", FeedbackRules.PERSONA_REQUIRED));
-    }
-
-    /** A business takes part with the persona of its type; a provider-and-seller ("both") with either. */
-    private static boolean matches(Persona persona, String type) {
-        return switch (persona) {
-            case PROVIDER -> type.equals("provider") || type.equals("both");
-            case SELLER -> type.equals("seller") || type.equals("both");
-            case KITCHEN -> type.equals("kitchen");
-            case CUSTOMER, COURIER, STAFF -> false;
-        };
     }
 
     static boolean webAddress(String url) {

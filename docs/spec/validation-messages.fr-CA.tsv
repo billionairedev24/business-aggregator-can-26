@@ -987,9 +987,6 @@ An item can't duplicate itself or one of its own duplicates.	Un élément ne peu
 Choose someone on the Northline team who works on UAT.	Choisissez une personne de l’équipe Northline qui travaille sur les tests d’acceptation.	new
 Enter the tracker issue's web address (https://…), up to 500 characters.	Entrez l’adresse Web du billet de suivi (https://…), jusqu’à 500 caractères.	new
 Choose provider, seller, kitchen, customer, courier or staff.	Choisissez prestataire, vendeur, cuisine, client, livreur ou personnel.	new
-Enter a working name, 1 to 80 characters.	Entrez un nom de travail, de 1 à 80 caractères.	new
-Enter the person's email or mobile number, or the business's id.	Entrez le courriel ou le numéro de cellulaire de la personne, ou l’identifiant de l’entreprise.	new
-No Northline account or business matches that.	Aucun compte ni aucune entreprise Northline ne correspond.	new
 They already take part with this persona.	Cette personne ou entreprise participe déjà avec ce profil.	new
 Choose the UAT script.	Choisissez le scénario de test.	new
 That script is for another persona.	Ce scénario est destiné à un autre profil.	new
@@ -997,6 +994,8 @@ Choose signed off, signed off with comments, or blocked.	Choisissez approuvé, a
 Name the blocking items or describe them in the comments.	Nommez les éléments bloquants ou décrivez-les dans les commentaires.	new
 Keep the comments under 2,000 characters.	Limitez les commentaires à 2 000 caractères.	new
 Pick blocking items from the UAT feedback queue.	Choisissez les éléments bloquants dans la file des commentaires du pilote.	new
-Pick the persona that matches the business's type.	Choisissez le profil qui correspond au type de l’entreprise.	new
 Someone else changed this item; reload it.	Quelqu’un d’autre a modifié cet élément; rechargez-le.	new
 This participant no longer takes part.	Ce participant ne fait plus partie du pilote.	new
+Pilot businesses come from Pilot onboarding: invite or enrol the business there.	Les entreprises pilotes viennent de l’intégration pilote : invitez ou inscrivez l’entreprise là.	new
+A pilot business takes part while it is in the pilot cohort (Pilot onboarding).	Une entreprise pilote participe tant qu’elle fait partie de la cohorte pilote (intégration pilote).	new
+No Northline account matches that.	Aucun compte Northline ne correspond.	new

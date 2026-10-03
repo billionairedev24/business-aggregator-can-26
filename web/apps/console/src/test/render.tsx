@@ -49,7 +49,7 @@ export const GRANTS: Record<RoleCode, { role: RoleCode; screens: string[]; actio
   support_lead: { role: 'support_lead', screens: ['overview', 'orders', 'disputes', 'sellers', 'support', 'privacy', 'uat'], actions: ['support', 'macros', 'privacy', 'onboard', 'uat'] },
   analyst: { role: 'analyst', screens: ['overview', 'reports'], actions: [] },
   privacy: { role: 'privacy', screens: ['overview', 'privacy', 'support'], actions: ['privacy'] },
-  merchant_success: { role: 'merchant_success', screens: ['overview', 'pilot', 'sellers', 'support'], actions: ['onboard'] },
+  merchant_success: { role: 'merchant_success', screens: ['overview', 'pilot', 'sellers', 'support', 'uat'], actions: ['onboard', 'uat'] },
 };
 
 /** A signed-in staff member holding `roles`; `extra` answers anything else first. */

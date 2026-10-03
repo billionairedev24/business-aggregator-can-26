@@ -3,16 +3,17 @@ import { useQuery } from '@tanstack/react-query';
 import { Button, Checkbox, Dialog, EmptyState, ErrorState, Field, PageSkeleton, Select, Tag, TextArea, TextInput, useFormatters } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { useGrant } from '../shell/grant';
-import { OUTCOMES, PERSONAS, participantsQuery, queueQuery, scriptsQuery, useAddParticipant, useParticipantAct, type Participant, type Persona } from './api';
+import { OUTCOMES, participantsQuery, queueQuery, scriptsQuery, useAddParticipant, useParticipantAct, type Participant, type Persona } from './api';
 import { useUatT, type UatKey, type UatT } from './messages';
 import '../shell/queues.css';
 
-const BUSINESS: readonly Persona[] = ['provider', 'seller', 'kitchen'];
+/** People added here; businesses are S-120's pilot cohort (Pilot onboarding). */
+const PEOPLE: readonly Persona[] = ['customer', 'courier', 'staff'];
 
 /**
  * Pilot participants and their sign-offs (S-121): per participant, the persona's UAT script and where its latest
- * sign-off stands (signed off, with comments, blocked with the blocking items, or pending). Staff with the `uat` grant
- * add participants (a person by email or mobile, a business by id), record sign-offs from the form and stop someone
+ * sign-off stands (signed off, with comments, blocked with the blocking items, or pending). Businesses are S-120's pilot
+ * cohort; staff with the `uat` grant add people (by email or mobile), record sign-offs from the form and stop someone
  * taking part.
  */
 export function Participants() {
@@ -58,7 +59,7 @@ export function Participants() {
               ))}
               {can('uat') && p.active ? <div className="nl-q-actions">
                 <Button type="button" variant="secondary" onClick={() => setSigning(p)}>{t('record')}</Button>
-                <Button type="button" variant="ghost" disabled={act.isPending} onClick={() => act.mutate({ id: p.id, deactivate: true })}>{t('deactivate')}</Button>
+                {p.who === 'user' ? <Button type="button" variant="ghost" disabled={act.isPending} onClick={() => act.mutate({ id: p.id, deactivate: true })}>{t('deactivate')}</Button> : null}
               </div> : null}
             </li>
           ))}
@@ -74,21 +75,19 @@ function AddDialog({ t, onClose }: { t: UatT; onClose: () => void }) {
   const add = useAddParticipant();
   const [persona, setPersona] = useState<Persona>('customer');
   const [label, setLabel] = useState('');
-  const [who, setWho] = useState('');
+  const [contact, setContact] = useState('');
   const errors = add.error instanceof ValidationError ? add.error.byField() : {};
-  const business = BUSINESS.includes(persona);
   return (
     <Dialog open onClose={onClose} title={t('add')}
       actions={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button>
-        <Button disabled={add.isPending} onClick={() => add.mutate(
-          { persona, label: label.trim(), ...(business ? { merchantId: who.trim() } : { contact: who.trim() }) },
-          { onSuccess: onClose })}>{t('save')}</Button></>}>
+        <Button disabled={add.isPending} onClick={() => add.mutate({ persona, label: label.trim(), contact: contact.trim() }, { onSuccess: onClose })}>{t('save')}</Button></>}>
+      <p className="nl-q-note">{t('businessHint')}</p>
       <Field label={t('persona')} error={errors.persona}>
-        <Select value={persona} onChange={e => setPersona(e.target.value as Persona)} options={PERSONAS.map(p => ({ value: p, label: t(`p_${p}`) }))} />
+        <Select value={persona} onChange={e => setPersona(e.target.value as Persona)} options={PEOPLE.map(p => ({ value: p, label: t(`p_${p}`) }))} />
       </Field>
       <Field label={t('label')} error={errors.label}><TextInput value={label} maxLength={80} onChange={e => setLabel(e.target.value)} /></Field>
-      <Field label={business ? t('merchantId') : t('contact')} hint={business ? t('merchantHint') : t('contactHint')} error={business ? errors.merchantId : errors.contact}>
-        <TextInput value={who} onChange={e => setWho(e.target.value)} />
+      <Field label={t('contact')} hint={t('contactHint')} error={errors.contact}>
+        <TextInput value={contact} onChange={e => setContact(e.target.value)} />
       </Field>
       {add.error && !(add.error instanceof ValidationError) ? <p role="alert" className="nl-q-error">{add.error.message}</p> : null}
     </Dialog>

@@ -32,8 +32,8 @@ import tools.jackson.databind.json.JsonMapper;
 class UatJdbc implements UatStore {
 
     private static final String FEEDBACK = """
-            select f.*, p.persona, p.label
-              from uat.feedback f join uat.participants p on p.id = f.participant_id
+            select f.*, coalesce(p.label, '') as label
+              from uat.feedback f left join uat.participants p on p.id = f.participant_id
             """;
 
     private final JdbcClient jdbc;
@@ -42,13 +42,9 @@ class UatJdbc implements UatStore {
     // participants
 
     @Override
-    public List<Participant> activeFor(String userId, Collection<String> merchantIds) {
-        return jdbc.sql("""
-                        select * from uat.participants
-                         where active and (user_id = :user or merchant_id = any(:merchants))
-                        """)
+    public List<Participant> activeFor(String userId) {
+        return jdbc.sql("select * from uat.participants where active and user_id = :user")
                 .param("user", userId)
-                .param("merchants", merchantIds.toArray(String[]::new))
                 .query(UatJdbc::participant)
                 .list();
     }
@@ -73,14 +69,13 @@ class UatJdbc implements UatStore {
         var params = new HashMap<String, @Nullable Object>();
         params.put("id", p.id());
         params.put("user", p.userId());
-        params.put("merchant", p.merchantId());
         params.put("persona", p.persona().code());
         params.put("label", p.label());
         params.put("by", p.addedBy());
         params.put("at", ts(p.createdAt()));
         return jdbc.sql("""
-                        insert into uat.participants (id, user_id, merchant_id, persona, label, added_by, created_at)
-                        values (:id, :user, :merchant, :persona, :label, :by, :at)
+                        insert into uat.participants (id, user_id, persona, label, added_by, created_at)
+                        values (:id, :user, :persona, :label, :by, :at)
                         on conflict do nothing
                         """).params(params).update() == 1;
     }
@@ -139,6 +134,7 @@ class UatJdbc implements UatStore {
         var params = new HashMap<String, @Nullable Object>();
         params.put("id", f.id());
         params.put("participant", f.participantId());
+        params.put("persona", f.persona().code());
         params.put("user", f.userId());
         params.put("merchant", f.merchantId());
         params.put("app", f.app().code());
@@ -155,10 +151,10 @@ class UatJdbc implements UatStore {
         params.put("state", f.state().code());
         params.put("at", ts(f.createdAt()));
         var number = jdbc.sql("""
-                        insert into uat.feedback (id, participant_id, user_id, merchant_id, app, category, severity,
-                            body, route, app_version, locale, platform, screenshot_key, screenshot_type,
+                        insert into uat.feedback (id, participant_id, persona, user_id, merchant_id, app, category,
+                            severity, body, route, app_version, locale, platform, screenshot_key, screenshot_type,
                             screenshot_bytes, state, created_at, updated_at)
-                        values (:id, :participant, :user, :merchant, :app, :category, :severity, :body, :route,
+                        values (:id, :participant, :persona, :user, :merchant, :app, :category, :severity, :body, :route,
                             :version, :locale, :platform, :key, :type, :bytes, :state, :at, :at)
                         returning number
                         """).params(params).query(Long.class).single();
@@ -349,7 +345,7 @@ class UatJdbc implements UatStore {
         return new Participant(
                 rs.getString("id"),
                 rs.getString("user_id"),
-                rs.getString("merchant_id"),
+                null,
                 CodedEnum.fromCode(Persona.class, rs.getString("persona")),
                 rs.getString("label"),
                 rs.getBoolean("active"),

@@ -106,6 +106,16 @@ class UatApiTest extends IntegrationTest {
                 json(post(CONSOLE + "/feedback/{id}/moves", id).with(TestJwt.staff(agent, StaffRole.SUPPORT)), body));
     }
 
+    /** S-120: a business in the pilot cohort (what Pilot onboarding's enrolment writes). */
+    private String enrol(String merchantId, String type, String label) {
+        var id = Ids.next();
+        jdbc.sql("""
+                        insert into merchants.pilot_businesses (id, market_id, business_type, label, merchant_id, created_by)
+                        values (?, 'mkt-calgary', ?, ?, ?, ?)
+                        """).params(id, type, label, merchantId, lead).update();
+        return id;
+    }
+
     static byte[] png(int w, int h) throws Exception {
         var out = new ByteArrayOutputStream();
         ImageIO.write(new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB), "png", out);
@@ -139,26 +149,41 @@ class UatApiTest extends IntegrationTest {
         }
 
         @Test
-        void aBusinessTakesPartAsAWhole_forItsMembersOnly() throws Exception {
+        void aPilotBusinessOfS120TakesPartAsAWhole_forItsMembersOnly() throws Exception {
             var biz = data.business(MerchantRole.TECHNICIAN);
             var outsider = data.user("Not on the team");
+            // businesses aren't added here: they are S-120's pilot cohort
             mvc.perform(json(
                             post(CONSOLE + "/participants").with(TestJwt.staff(lead, StaffRole.SUPPORT_LEAD)),
-                            "{\"persona\":\"kitchen\",\"label\":\"Pilot\",\"merchantId\":\"%s\"}"
-                                    .formatted(biz.merchantId())))
+                            "{\"persona\":\"provider\",\"label\":\"Pilot\",\"contact\":\"x@example.ca\"}"))
                     .andExpect(status().isUnprocessableEntity())
                     .andExpect(jsonPath("$.errors[0].message")
-                            .value("Pick the persona that matches the business's type."));
-            mvc.perform(json(
-                            post(CONSOLE + "/participants").with(TestJwt.staff(lead, StaffRole.SUPPORT_LEAD)),
-                            "{\"persona\":\"provider\",\"label\":\"Pilot provider\",\"merchantId\":\"%s\"}"
-                                    .formatted(biz.merchantId())))
-                    .andExpect(status().isCreated())
-                    .andExpect(jsonPath("$.who").value("business"));
+                            .value("Pilot businesses come from Pilot onboarding: invite or enrol the business there."));
+            mvc.perform(get(ME).param("merchantId", biz.merchantId()).with(TestJwt.member(biz.userId())))
+                    .andExpect(jsonPath("$.participant").value(false));
+            var pilot = enrol(biz.merchantId(), "both", "Pilot both " + biz.merchantId());
 
             mvc.perform(get(ME).param("merchantId", biz.merchantId()).with(TestJwt.member(biz.userId())))
                     .andExpect(jsonPath("$.participant").value(true))
                     .andExpect(jsonPath("$.persona").value("provider"));
+            mvc.perform(get(CONSOLE + "/participants").with(TestJwt.staff(agent, StaffRole.SUPPORT)))
+                    .andExpect(jsonPath("$.items[?(@.id=='%s')].who".formatted(pilot))
+                            .value("business"))
+                    .andExpect(jsonPath("$.items[?(@.id=='%s')].signoffs.length()".formatted(pilot))
+                            .value(2));
+            mvc.perform(json(
+                            post(CONSOLE + "/participants/{id}/signoffs", pilot)
+                                    .with(TestJwt.staff(lead, StaffRole.MERCHANT_SUCCESS)),
+                            "{\"script\":\"merchant-seller\",\"outcome\":\"signed_off\"}"))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.signoffs[?(@.script=='merchant-seller')].outcome")
+                            .value("signed_off"))
+                    .andExpect(jsonPath("$.signoffs[?(@.script=='merchant-provider')].outcome")
+                            .value("pending"));
+            mvc.perform(post(CONSOLE + "/participants/{id}/deactivate", pilot)
+                            .with(TestJwt.staff(lead, StaffRole.SUPPORT_LEAD)))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.code").value("pilot_business"));
             mvc.perform(get(ME).param("merchantId", biz.merchantId()).with(TestJwt.member(outsider)))
                     .andExpect(jsonPath("$.participant").value(false));
             send(TestJwt.member(outsider), feedback(",\"merchantId\":\"%s\"".formatted(biz.merchantId())))
@@ -166,6 +191,11 @@ class UatApiTest extends IntegrationTest {
                     .andExpect(jsonPath("$.detail").value("You're not on this business's team."));
             send(TestJwt.member(biz.userId()), feedback(",\"merchantId\":\"%s\"".formatted(biz.merchantId())))
                     .andExpect(status().isCreated());
+            mvc.perform(get(CONSOLE + "/feedback")
+                            .param("persona", "provider")
+                            .with(TestJwt.staff(agent, StaffRole.SUPPORT)))
+                    .andExpect(jsonPath("$.items[?(@.participant=='Pilot both %s')]".formatted(biz.merchantId()))
+                            .isNotEmpty());
         }
 
         @Test
@@ -189,7 +219,7 @@ class UatApiTest extends IntegrationTest {
                             post(CONSOLE + "/participants").with(TestJwt.staff(lead, StaffRole.SUPPORT_LEAD)),
                             "{\"persona\":\"courier\",\"label\":\"x\",\"contact\":\"nobody@example.invalid\"}"))
                     .andExpect(status().isUnprocessableEntity())
-                    .andExpect(jsonPath("$.errors[0].message").value("No Northline account or business matches that."));
+                    .andExpect(jsonPath("$.errors[0].message").value("No Northline account matches that."));
         }
 
         @Test

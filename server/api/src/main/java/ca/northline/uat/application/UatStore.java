@@ -19,14 +19,15 @@ public interface UatStore {
 
     // participants
 
-    /** Active participant rows of the person, and of the businesses given (the caller checked membership). */
-    List<Participant> activeFor(String userId, Collection<String> merchantIds);
+    /** The person's active participant rows (people only; businesses are S-120's cohort, {@code ParticipantDirectory}). */
+    List<Participant> activeFor(String userId);
 
+    /** Every person who takes part or took part. */
     List<Participant> participants();
 
     Optional<Participant> participant(String id);
 
-    /** False when the person or business already takes part with this persona. */
+    /** False when the person already takes part with this persona. */
     boolean insert(Participant participant);
 
     void deactivate(String id);
@@ -87,7 +88,10 @@ public interface UatStore {
 
     List<Signoff> signoffsOf(String participantId);
 
-    /** S-105: the person's data in this schema. */
+    /**
+     * A participant: a person ({@code userId}, a {@code uat.participants} row) or a pilot business of S-120's cohort
+     * ({@code merchantId}, id = the pilot's id).
+     */
     record Participant(
             String id,
             @Nullable String userId,
@@ -107,6 +111,7 @@ public interface UatStore {
             long number,
             String participantId,
             Persona persona,
+            // the person's label, or empty for a pilot business (the directory names it)
             String participantLabel,
             String userId,
             @Nullable String merchantId,
