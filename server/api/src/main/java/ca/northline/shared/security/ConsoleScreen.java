@@ -25,6 +25,8 @@ public enum ConsoleScreen implements CodedEnum {
     TEAM,
     /** S-105: people's privacy requests (access, correction, erasure). */
     PRIVACY,
+    /** S-121: UAT with the pilot group — feedback triage, participants' sign-offs, the go/no-go report. */
+    UAT,
     PROFILE,
     ONCALL;
 

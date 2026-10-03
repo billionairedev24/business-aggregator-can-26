@@ -54,7 +54,9 @@ class OpenApiConfig {
         "/api/v1/me/businesses",
         "/api/v1/onboarding/**",
         "/api/v1/team-invitations/**",
-        "/api/v1/ai/**"
+        "/api/v1/ai/**",
+        "/api/v1/me/pilot",
+        "/api/v1/me/pilot/**" // S-121: the Studio's pilot feedback control (also in the public group)
     };
     static final String[] CONSOLE = {"/api/v1/console/**"};
     static final String[] INTERNAL = {

@@ -20,5 +20,7 @@ public enum ConsoleAction implements CodedEnum {
     /** S-83: write the support desk's reply macros (support leads, admins). */
     MACROS,
     /** S-105: act on privacy requests (record, verify, extend, refuse, start an erasure, apply corrections). */
-    PRIVACY
+    PRIVACY,
+    /** S-121: triage pilot feedback (state, owner, tracker link, duplicates), manage participants, record sign-offs. */
+    UAT
 }
