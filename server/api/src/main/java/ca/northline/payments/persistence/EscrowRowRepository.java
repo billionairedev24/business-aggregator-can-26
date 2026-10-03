@@ -9,6 +9,10 @@ import org.springframework.data.repository.ListCrudRepository;
 interface EscrowRowRepository extends ListCrudRepository<EscrowRow, String> {
     Optional<EscrowRow> findByRefTypeAndRefId(String refType, String refId);
 
+    /** The same row, locked until the transaction ends: completion and sign-off run concurrently on one escrow. */
+    @Query("select * from payments.escrows where ref_type = :refType and ref_id = :refId for update")
+    Optional<EscrowRow> lockByRef(String refType, String refId);
+
     Optional<EscrowRow> findByPaymentIntentId(String paymentIntentId);
 
     @Query("""
