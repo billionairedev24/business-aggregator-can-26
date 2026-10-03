@@ -33,7 +33,7 @@ Docker executor that allows `docker:dind` (GitLab), plus public images and packa
 | mobile-release | `mobile-release.yml` › `eas` (actions `build`, `update`, `update-republish`, `update-rollback-embedded`, `listing`) | `mobile-release:eas` (manual, needs `EXPO_TOKEN`) | S-103: EAS Build (production → TestFlight + Play internal), EAS Update and its rollbacks, `eas metadata:push`; skipped without `EXPO_TOKEN` and the app's EAS project id. |
 | mobile-release | `mobile-release.yml` › `store` (actions `listing`, `submit-review`, `promote`, `rollout`, `halt`) | `mobile-release:store` (manual, needs the store key) | S-103: fastlane (`mobile/fastlane/Fastfile`): Play listing text, promotion to a staged rollout, rollout, halt; iOS App Review; skipped without `PLAY_SERVICE_ACCOUNT_JSON` / `ASC_API_KEY_P8`. |
 | security | `security.yml` › `scan`, `dast` (input `dast`, default off) | `security:scan` (`PIPELINE_PART=security` only, never in `all`) | S-104: `make security-tools` + `make security-scan` — gitleaks over the history (`.gitleaks.toml`), CycloneDX SBOMs + osv-scanner (Gradle and pnpm; fails on a known vulnerability), semgrep, checkov (Terraform, rendered chart), kube-score; reports in the `security-reports` artifact. `dast`: the api under `local` + `make security-dast` (negative tests, ZAP API scan). Triage: [docs/security/findings.md](../security/findings.md). |
-| web | `web.yml` › `studio-smoke` (optional) | `web:studio-smoke` (optional) | `ci/studio-smoke.sh`: PostGIS service → `:api:flywayMigrate -Pdb.devSeed=true` + `:api:seedCategories` → api and auth with the `local` profile → studio dev server (dev auth as Ravi Sandhu) → `scripts/studio-smoke.mjs` (135 screen/width/locale checks). Screenshots and logs in the `studio-smoke` artifact. |
+| e2e | `e2e.yml` › `local` / `target` (input `environment`: local, dev, staging; `grep`) | `e2e:local` / `e2e:target` (`PIPELINE_PART=e2e` only, never in `all`; `E2E_TARGET`, `E2E_GREP`) | S-117: `make e2e` — PostGIS service, `ci/e2e.sh`: migrate + dev seed, api, auth and the three BFFs under `local`, the three web apps, then the Playwright suite (sign-in, onboarding, quote → booking → escrow, order → pack → deliver, payout, the Studio smoke sweep that S-5's `studio-smoke` job ran). Against dev/staging: `make e2e-target ENV=…` with the environment's URLs and personas. Report, traces, screenshots and videos in the `e2e-<environment>` artifact ([e2e.md](e2e.md)). |
 | web | `web.yml` › `a11y` (optional) | `web:a11y` (optional) | `make a11y` (S-109): builds the Studio, console and consumer, then Playwright + axe on 32 journey screens at 1280 px (en) and 320 px (fr-CA) against a mock api replaying the apps' test fixtures — no backend. Critical/serious WCAG 2.2 A/AA violations, a wrong `<html lang>` or horizontal scroll at 320 px fail. Page reports in the `a11y-results` artifact; findings in [docs/a11y/audit.md](../a11y/audit.md). |
 
 Expected durations (hosted runners; first run in brackets, before caches are warm):
@@ -43,7 +43,7 @@ Expected durations (hosted runners; first run in brackets, before caches are war
 | server build | 6–9 min (10–12 min) — the tests take about 4 min on 2 workers |
 | web checks | 2–3 min (3–4 min) |
 | web storybook | 3–4 min (4–5 min, incl. the Chromium download) |
-| web studio smoke | 8–10 min (12–15 min) — two Spring Boot apps, the studio dev server and 135 page loads (the sweep alone is about 3 min) |
+| e2e local | 15–20 min (20–25 min) — boot jars, five Spring Boot apps, three dev servers; the suite itself is about 6–7 min (the Studio smoke sweep 4 of them) |
 | infra validate | 3–4 min (5–6 min, provider downloads: aws, google, google-beta, azurerm, random) |
 | infra tflint | about 1 min |
 
@@ -52,7 +52,8 @@ Expected durations (hosted runners; first run in brackets, before caches are war
 ### GitHub Actions
 - **UI:** repository › *Actions* › pick **server** or **web** › *Run workflow* › choose the branch and inputs › *Run workflow*.
 - **CLI:** `gh workflow run server.yml --ref <branch> [-f project=api] [-f skip-tests=true] [-f rerun-tasks=true]`
-  or `gh workflow run web.yml --ref <branch> [-f storybook=false] [-f studio-smoke=true]`,
+  or `gh workflow run web.yml --ref <branch> [-f storybook=false] [-f a11y=true]`,
+  or `gh workflow run e2e.yml --ref <branch> [-f environment=staging] [-f grep=@smoke]`,
   or `gh workflow run infra.yml --ref <branch> [-f cloud=aws] [-f tflint=false]`,
   or `gh workflow run deploy.yml --ref <branch> -f registry=<registry/path> [-f image-tag=…] [-f images=java] [-f push=false] [-f login=ghcr]`,
   or `gh workflow run gitops.yml -f action=validate` / `-f action=promote -f environment=staging -f from=dev`; follow with `gh run watch`.
@@ -63,7 +64,6 @@ Expected durations (hosted runners; first run in brackets, before caches are war
 | server | `skip-tests` | `false` | static checks and compilation only (`-x test`) |
 | server | `rerun-tasks` | `false` | ignore the Gradle build cache (`--rerun-tasks`) |
 | web | `storybook` | `true` | run the Storybook job |
-| web | `studio-smoke` | `false` | run the studio smoke sweep job |
 | web | `a11y` | `false` | run the accessibility page sweep job (S-109) |
 | infra | `cloud` | `all` | `all`, `aws`, `gcp` or `azure`: which modules and env roots to validate |
 | infra | `tflint` | `true` | run the tflint job |
@@ -137,6 +137,9 @@ Add `paths: [server/**, ci/**, .github/workflows/server.yml]` (or `web/**, scrip
 ```
 To limit jobs to what changed, add `changes: [server/**/*, ci/**/*]` (or the web paths) to the job rules in `ci/gitlab/*.yml`.
 
+**The end-to-end suite nightly on staging (S-117)** is its own one-line switch (a schedule, not a push trigger):
+[e2e.md § CI](e2e.md#ci-manual-only).
+
 ## Running the same checks locally
 The jobs call make targets (S-124), so the same targets run them on a laptop:
 
@@ -146,7 +149,7 @@ The jobs call make targets (S-124), so the same targets run them on a laptop:
 | web checks | `make web-check` (= `web-lint` + `web-test` + `web-build-studio`) |
 | web storybook | `make web-storybook-test` |
 | web a11y (S-109) | `make a11y` |
-| studio smoke | `make e2e` (disposable database!) |
+| e2e (S-117) | `make e2e` (starts its own disposable Postgres in Docker) · `make e2e-target ENV=staging` |
 | infra validate / tflint | `make tf-validate CLOUD=…` / `make tf-lint` |
 | chart / gitops validate | `make helm-validate` / `make argocd-validate` |
 | event schemas | `make server-events BASE=origin/main REQUIRE_BASE=1` |
@@ -171,9 +174,8 @@ pnpm --filter @northline/studio build
 mkdir -p ~/.terraform.d/plugin-cache && cd infra/terraform && TF_PLUGIN_CACHE_DIR=~/.terraform.d/plugin-cache scripts/validate.sh
 tflint --init --config "$PWD/.tflint.hcl" && tflint --recursive --config "$PWD/.tflint.hcl"
 
-# studio smoke sweep against a DISPOSABLE database (it migrates and seeds it)
-docker run -d --name smoke-pg -p 55432:5432 -e POSTGRES_DB=northline -e POSTGRES_USER=northline -e POSTGRES_PASSWORD=northline postgis/postgis:17-3.5
-DB_PORT=55432 API_PORT=8190 AUTH_PORT=9190 STUDIO_PORT=3190 ci/studio-smoke.sh    # results in smoke-out/
+# end-to-end suite: its own disposable Postgres (Docker), the whole stack under `local`, Playwright (docs/runbooks/e2e.md)
+ci/e2e.sh run                      # results in e2e-out/ (report/index.html, traces, videos, logs)
 ```
 
 ## The colour lint
