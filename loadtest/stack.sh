@@ -56,6 +56,7 @@ start_api() {
   if [ "${LOAD_LIVE_BUS:-memory}" = redis ]; then
     bus=(LIVE_BUS=redis REDIS_HOST=localhost REDIS_PORT="$VALKEY_PORT")
   fi
+  # the log rolls at 50 MB, 150 MB at most: an overloaded api logs every shed request (a stress run filled a disk)
   echo "api (local profile) on :$API_PORT — log $run/api.log"
   # the boot jar has no dev seed (S-16): the local profile reads it from the repository
   env DB_URL="$jdbc" DB_USER=northline DB_PASSWORD=northline SERVER_PORT="$API_PORT" SPRING_PROFILES_ACTIVE=local \
@@ -63,8 +64,10 @@ start_api() {
     SEARCH_PROVIDER=elasticsearch ES_URIS="http://localhost:$ES_PORT" \
     SEARCH_RATE_LIMIT_EXEMPT="127.0.0.1,::1" DB_POOL_SIZE="${LOAD_DB_POOL_SIZE:-10}" \
     LOGGING_LEVEL_CA_NORTHLINE=info LOGGING_LEVEL_CA_NORTHLINE_CONFIG_DEVAUTHFILTER=info "${bus[@]}" \
+    LOGGING_FILE_NAME="$run/api.log" LOGGING_LOGBACK_ROLLINGPOLICY_MAX_FILE_SIZE=50MB \
+    LOGGING_LOGBACK_ROLLINGPOLICY_TOTAL_SIZE_CAP=150MB LOGGING_LOGBACK_ROLLINGPOLICY_MAX_HISTORY=1 \
     setsid java -Xms"${LOAD_API_HEAP:-1g}" -Xmx"${LOAD_API_HEAP:-1g}" -XX:+ExitOnOutOfMemoryError \
-    -jar "$api_jar" --northline.loadtest.port="$API_PORT" >"$run/api.log" 2>&1 &
+    -jar "$api_jar" --northline.loadtest.port="$API_PORT" >/dev/null 2>&1 &
   wait_for "http://localhost:$API_PORT/actuator/health" api 240
   # the java process itself (setsid may fork): loadtest/sample.sh reads its heap with jstat
   pgrep -f -- "--northline.loadtest.port=$API_PORT" | head -1 >"$run/api.pid"
