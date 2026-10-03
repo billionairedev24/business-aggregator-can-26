@@ -72,9 +72,20 @@ class SearchConfig {
         return new MemorySearchCache(clock);
     }
 
-    /** Fixed one-minute window per client address, per api instance. */
+    /**
+     * Fixed one-minute window per client address, per api instance; S-119: the load generators named in
+     * {@code SEARCH_RATE_LIMIT_EXEMPT} are never counted (refused under prod).
+     */
     @Bean
-    SearchRateLimit searchRateLimit(SearchProperties properties, Clock clock) {
-        return new WebhookRateLimiter(properties.rateLimit(), clock)::allow;
+    SearchRateLimit searchRateLimit(SearchProperties properties, Clock clock, Environment environment) {
+        var limiter = new WebhookRateLimiter(properties.rateLimit(), clock);
+        var exempt = RateLimitExemptions.of(properties.rateLimitExempt(), environment);
+        if (exempt.ranges().isEmpty()) {
+            return limiter::allow;
+        }
+        log.warn(
+                "Search rate limit: {} is exempt (SEARCH_RATE_LIMIT_EXEMPT, for load tests only)",
+                properties.rateLimitExempt());
+        return address -> exempt.covers(address) || limiter.allow(address);
     }
 }

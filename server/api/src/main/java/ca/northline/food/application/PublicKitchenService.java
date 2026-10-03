@@ -56,6 +56,8 @@ class PublicKitchenService implements PublicKitchenUseCases, FoodCheckoutFacts {
     /** Scheduled windows offered: today and tomorrow (design: Today / Tomorrow). */
     static final int SCHEDULE_DAYS = 2;
 
+    private static final RatingQuery.RatingSummary NO_RATING = new RatingQuery.RatingSummary(0, 0);
+
     private final PublicDirectory directory;
     private final KitchenAvailability availability;
     private final KitchenCalendarStore calendars;
@@ -73,9 +75,16 @@ class PublicKitchenService implements PublicKitchenUseCases, FoodCheckoutFacts {
         var status = availability.now(
                 kitchens.stream().map(PublicKitchenService::ref).toList());
         var rows = calendarsOf(ids);
+        var rated = ratings.summaries(ids); // S-119: one query for every card's rating
         var cards = kitchens.stream()
                 .flatMap(k -> Optional.ofNullable(rows.get(k.merchantId()))
-                        .map(row -> card(k, status.getOrDefault(k.merchantId(), KitchenStatus.CLOSED), row, lat, lng))
+                        .map(row -> card(
+                                k,
+                                status.getOrDefault(k.merchantId(), KitchenStatus.CLOSED),
+                                row,
+                                lat,
+                                lng,
+                                rated.getOrDefault(k.merchantId(), NO_RATING)))
                         .stream())
                 .sorted(Comparator.comparingInt((Card c) -> c.open() ? 0 : 1)
                         .thenComparingDouble(c -> {
@@ -98,7 +107,7 @@ class PublicKitchenService implements PublicKitchenUseCases, FoodCheckoutFacts {
             throw new NotFound("kitchen", slug);
         }
         var status = availability.now(List.of(ref(business))).getOrDefault(business.merchantId(), KitchenStatus.CLOSED);
-        var card = card(business, status, row, lat, lng);
+        var card = card(business, status, row, lat, lng, ratings.summary(business.merchantId()));
         var snapshot = menus.load(business.merchantId());
         var zone = markets.zone(business.province());
         var now = clock.instant().atZone(zone);
@@ -142,7 +151,13 @@ class PublicKitchenService implements PublicKitchenUseCases, FoodCheckoutFacts {
             return Optional.empty();
         }
         var status = availability.now(List.of(ref(business.get()))).getOrDefault(merchantId, KitchenStatus.CLOSED);
-        var c = card(business.get(), status, row, lat, lng);
+        var c = card(
+                business.get(),
+                status,
+                row,
+                lat,
+                lng,
+                ratings.summary(business.get().merchantId()));
         return Optional.of(new Kitchen(
                 merchantId,
                 c.name(),
@@ -194,7 +209,13 @@ class PublicKitchenService implements PublicKitchenUseCases, FoodCheckoutFacts {
                         Math.min(SCHEDULE_DAYS, row.scheduledDays()));
     }
 
-    private Card card(PublicBusiness k, KitchenStatus s, CalendarRow row, @Nullable Double lat, @Nullable Double lng) {
+    private Card card(
+            PublicBusiness k,
+            KitchenStatus s,
+            CalendarRow row,
+            @Nullable Double lat,
+            @Nullable Double lng,
+            RatingQuery.RatingSummary rating) {
         Double km = lat == null || lng == null || k.lat() == null || k.lng() == null
                 ? null
                 : FoodFees.km(lat, lng, k.lat(), k.lng());
@@ -204,7 +225,6 @@ class PublicKitchenService implements PublicKitchenUseCases, FoodCheckoutFacts {
         Boolean delivers = km == null ? null : s.fulfilment().contains("courier") && km <= radius;
         var ride = km == null ? 10 : FoodFees.rideMinutes(km);
         var prep = s.prepMin() > 0 ? s.prepMin() : row.defaultPrepMin() + row.prepBumpMin();
-        var rating = ratings.summary(k.merchantId());
         return new Card(
                 k.merchantId(),
                 k.slug(),

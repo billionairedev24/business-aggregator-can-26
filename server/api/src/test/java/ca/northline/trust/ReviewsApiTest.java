@@ -134,6 +134,25 @@ class ReviewsApiTest extends IntegrationTest {
         }
 
         @Test
+        void ratingsOfManyBusinessesInOneCall_equalTheirSummaries() throws Exception {
+            var f = fixture(); // 5, 4, 5, 2 → 4.0 of 4
+            var other = data.business(MerchantRole.OWNER).merchantId();
+            review(other, 3, "Grace H.", "oil & filter", null, "{}", 3);
+            review(other, 4, "Kevin L.", "battery swap", null, "{}", 2);
+            var none = data.business(MerchantRole.OWNER).merchantId();
+
+            var ratings = ratingQuery.summaries(List.of(f.merchantId(), other, none, other));
+
+            assertThat(ratings)
+                    .containsOnlyKeys(f.merchantId(), other, none)
+                    .containsEntry(f.merchantId(), new RatingQuery.RatingSummary(4.0, 4))
+                    .containsEntry(other, new RatingQuery.RatingSummary(3.5, 2))
+                    .containsEntry(none, new RatingQuery.RatingSummary(0, 0));
+            assertThat(ratings.get(other)).isEqualTo(ratingQuery.summary(other));
+            assertThat(ratingQuery.summaries(List.of())).isEmpty();
+        }
+
+        @Test
         void newBusinessHasNoRatingAndNoBadge() throws Exception {
             var biz = data.business(MerchantRole.OWNER);
             mvc.perform(get(REVIEWS + "/summary", biz.merchantId()).with(TestJwt.member(biz.userId())))
@@ -384,6 +403,12 @@ class ReviewsApiTest extends IntegrationTest {
             assertThat(qualityQuery.latest(biz.merchantId()))
                     .get()
                     .satisfies(q -> assertThat(q.score()).isEqualTo(91));
+            // S-119: many businesses at once — the latest score of each, none for a business without one
+            var unscored = data.business(MerchantRole.OWNER).merchantId();
+            var scores = qualityQuery.latestOf(List.of(biz.merchantId(), unscored));
+            assertThat(scores).containsOnlyKeys(biz.merchantId());
+            assertThat(scores.get(biz.merchantId()).score()).isEqualTo(91);
+            assertThat(qualityQuery.latestOf(List.of())).isEmpty();
         }
 
         @Test

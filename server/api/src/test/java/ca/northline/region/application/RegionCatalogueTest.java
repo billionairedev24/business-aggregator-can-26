@@ -2,6 +2,7 @@ package ca.northline.region.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import ca.northline.region.api.FrenchListings;
 import ca.northline.region.api.LanguageRules;
@@ -18,6 +19,9 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
@@ -30,7 +34,7 @@ class RegionCatalogueTest {
     static final ZoneId PLATFORM = ZoneId.of("Etc/GMT+7");
 
     /** In-memory rows: what the console (or a migration) writes into region.regions. */
-    static final class Rows implements MarketStore {
+    static class Rows implements MarketStore {
         final List<ProfileRow> rows = new ArrayList<>();
 
         void province(String code, Stage stage, String zone, String... holidays) {
@@ -179,6 +183,45 @@ class RegionCatalogueTest {
         assertThat(regions.registries("XA", "Alphaville")).containsExactly("registry_xa", "licences_alphaville");
         assertThat(regions.registries("XB", "Alphaville")).containsExactly("registry_xb");
         assertThat(regions.provinceName("XB", java.util.Locale.CANADA_FRENCH)).isEqualTo("Nom XB");
+    }
+
+    /**
+     * S-119: an expired catalogue is reloaded by one caller while the others keep the rows they have — nobody waits on
+     * the reload (the waiters held database connections the reload needed: a deadlock under load).
+     */
+    @Test
+    void anExpiredCatalogueIsReloadedByOneCaller_theOthersDontWait() throws Exception {
+        var reloadStarted = new CountDownLatch(1);
+        var finishReload = new CountDownLatch(1);
+        var reads = new AtomicInteger();
+        var rows = new Rows() {
+            @Override
+            public List<ProfileRow> profiles() {
+                if (reads.incrementAndGet() == 2) {
+                    reloadStarted.countDown();
+                    try {
+                        finishReload.await(10, TimeUnit.SECONDS);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+                return super.profiles();
+            }
+        };
+        rows.province("XA", Stage.LIVE, "Etc/GMT+6");
+        var regions = new RegionCatalogue(rows, new RegionProperties("", "XA", PLATFORM, Duration.ofNanos(1), ""));
+        assertThat(regions.served()).containsExactly("XA"); // the first read
+        rows.province("XB", Stage.LIVE, "Etc/GMT+4");
+
+        var reloader = Thread.ofVirtual().start(regions::served);
+        assertThat(reloadStarted.await(5, TimeUnit.SECONDS)).isTrue();
+        assertTimeoutPreemptively(
+                Duration.ofSeconds(2),
+                () -> assertThat(regions.served()).containsExactly("XA")); // the kept rows, at once
+        finishReload.countDown();
+        reloader.join(5_000);
+        assertThat(regions.served()).containsExactly("XA", "XB");
+        assertThat(reads).hasValueGreaterThanOrEqualTo(3);
     }
 
     /** A second province by configuration alone (REGION_PROVINCES), with a zone that replaces the row's. */

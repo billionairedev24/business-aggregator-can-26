@@ -24,10 +24,13 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 /**
@@ -51,6 +54,7 @@ class RegionCatalogue implements Regions, Markets {
     private final Set<String> frenchFirst;
 
     private volatile @Nullable Snapshot snapshot;
+    private final AtomicBoolean reloading = new AtomicBoolean();
 
     RegionCatalogue(MarketStore store, RegionProperties properties) {
         this.store = store;
@@ -214,15 +218,38 @@ class RegionCatalogue implements Regions, Markets {
             List<MarketProfile> markets,
             Set<String> served) {}
 
+    /** S-119: the first read before the first request (after Flyway), so no request waits for it under load. */
+    @EventListener(ApplicationReadyEvent.class)
+    void warmUp() {
+        data();
+    }
+
+    /**
+     * The rows as last read. Only the first read waits; once a snapshot exists, an expired one is replaced by the one
+     * caller that wins {@link #reloading} while everybody else keeps using it. S-119: callers used to wait on a lock
+     * while the reloading caller waited for a database connection — under load, requests holding every connection of
+     * the pool were the ones waiting on the lock, and the api deadlocked a minute into the stress test.
+     */
     private Snapshot data() {
         var current = snapshot;
-        if (current == null || System.nanoTime() - current.loadedAt() > ttlNanos) {
+        if (current == null) {
             synchronized (this) {
                 current = snapshot;
-                if (current == null || System.nanoTime() - current.loadedAt() > ttlNanos) {
+                if (current == null) {
                     current = load();
                     snapshot = current;
                 }
+            }
+            return current;
+        }
+        if (System.nanoTime() - current.loadedAt() > ttlNanos && reloading.compareAndSet(false, true)) {
+            try {
+                current = load();
+                snapshot = current;
+            } catch (RuntimeException e) {
+                log.warn("Region rows not reloaded, the previous ones stay in use", e);
+            } finally {
+                reloading.set(false);
             }
         }
         return current;

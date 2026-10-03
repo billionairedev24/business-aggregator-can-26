@@ -67,8 +67,12 @@ spec:
           type: Utilization
           averageUtilization: {{ $app.autoscaling.targetCPUUtilizationPercentage }}
   behavior:
+    {{- with $app.autoscaling.behavior }}
+    {{- toYaml . | nindent 4 }}
+    {{- else }}
     scaleDown:
       stabilizationWindowSeconds: 300
+    {{- end }}
 {{- end }}
 {{- /* A disruption budget only makes sense with more than one replica; with one it would block node drains. */}}
 {{- if or (and $app.autoscaling.enabled (gt (int $app.autoscaling.minReplicas) 1)) (and (not $app.autoscaling.enabled) (gt (int $app.replicas) 1)) }}

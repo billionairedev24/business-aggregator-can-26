@@ -1,0 +1,31 @@
+# S-119 — load and soak tests against the local load-test stack (docs/runbooks/load-testing.md). Included from
+# .gitlab-ci.yml; pipelines exist only when started by hand: PIPELINE_PART=loadtest (never part of `all`). The stack's
+# containers must answer on localhost, so it needs a shell-executor runner with Docker, JDK 25, Go 1.24+, psql, curl and
+# Python 3, tagged `loadtest` (a Docker-in-Docker service would put them on another host). Staging is load-tested from a
+# pod in the cluster (runbook § Staging), never from CI.
+
+loadtest:local:
+  stage: check
+  needs: []
+  tags: [loadtest]
+  timeout: 120m
+  rules:
+    - if: $PIPELINE_PART == "loadtest"
+  variables:
+    GRADLE_FLAGS: "--max-workers=2 --console=plain"
+    LOAD_PROFILE: smoke             # smoke | load | stress | soak
+    LOAD_SCALE: "0.2"
+    SCENARIOS: all
+    LOAD_DURATION: 10m
+    SOAK_DURATION: 20m
+  script:
+    - (cd server && ./gradlew --init-script ../ci/gradle/maven-mirror.init.gradle.kts $GRADLE_FLAGS :api:bootJar :worker:bootJar)
+    - make load-k6
+    - make load-stack-up
+    - case "$LOAD_PROFILE" in smoke) make load-smoke ;; stress) make load-stress ;; *) make "$LOAD_PROFILE" ;; esac
+  after_script:
+    - make load-stack-down || true
+  artifacts:
+    when: always
+    paths: [loadtest/results/, loadtest/.data/api.log]
+    expire_in: 30 days

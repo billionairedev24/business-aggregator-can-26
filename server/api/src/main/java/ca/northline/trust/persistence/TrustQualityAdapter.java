@@ -4,9 +4,11 @@ import ca.northline.trust.api.QualityQuery.Component;
 import ca.northline.trust.api.QualityQuery.QualityScore;
 import ca.northline.trust.application.QualityStore;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -41,6 +43,27 @@ class TrustQualityAdapter implements QualityStore {
                         rs.getInt("score"),
                         components(rs.getString("components"))))
                 .optional();
+    }
+
+    @Override
+    public Map<String, QualityScore> latest(Collection<String> merchantIds) {
+        if (merchantIds.isEmpty()) {
+            return Map.of();
+        }
+        return jdbc
+                .sql("""
+                        select distinct on (merchant_id) merchant_id, date, score, components::text as components
+                          from trust.quality_scores where merchant_id = any(:ids) order by merchant_id, date desc
+                        """)
+                .param("ids", merchantIds.stream().distinct().toArray(String[]::new))
+                .query((rs, _) -> new QualityScore(
+                        rs.getString("merchant_id"),
+                        rs.getObject("date", LocalDate.class),
+                        rs.getInt("score"),
+                        components(rs.getString("components"))))
+                .list()
+                .stream()
+                .collect(Collectors.toUnmodifiableMap(QualityScore::merchantId, s -> s));
     }
 
     static List<Component> components(@Nullable String json) {

@@ -7429,3 +7429,84 @@ Runbook: [docs/runbooks/e2e.md](runbooks/e2e.md). Suite: `web/e2e` (`@northline/
   yet), so "green on staging nightly" is not shown; target mode is written and unit-tested for its configuration only. The
   CI jobs have never run. Mobile apps are covered by their own web smokes (S-87, S-97), not by this suite. Food orders
   (KDS), refunds and disputes are not journeys here.
+
+## 2026-09-30 — S-119 Load and soak testing (search, checkout, KDS, nav badges)
+
+- **Tool: k6 v1.3.0 + xk6-sse v0.1.12** (the last xk6-sse for k6 v1). Stock k6 has no server-sent events client and
+  the kitchen display is SSE; Gatling (JVM) would have fit the stack but needs its own build and Scala/Java DSL for
+  every scenario. `loadtest/k6.sh` builds the binary once into `loadtest/.bin` with Go, or the `grafana/xk6` image, or
+  takes `K6=`. Scenarios, profiles, thresholds and the seeding live in `loadtest/` (runbook:
+  `docs/runbooks/load-testing.md`; numbers: `docs/perf/results.md`; sizing: `docs/perf/capacity.md`).
+- **Target = the launch peak hour × 3** (`LOAD_SCALE=1`): one market, 300 businesses (100 kitchens), 20,000
+  customers, 1,200 sessions at dinner; ≈ 242 req/s of mixed traffic plus 450 KDS streams. The assumptions are written
+  out in capacity.md; nothing in the spec fixed them.
+- **Thresholds are the S-113 SLOs** (checkout 99.9 % not 5xx and 99 % within 2.5 s; KDS ticket delivery 99.5 % within
+  5 s, freshness 99.5 % within 2 s). Search and the nav badges have no SLO: they get the `NorthlineSlowRequests`
+  alert's p95 < 2 s (p99 < 2.5 s), and one 429 from search fails a run. KDS ticket delivery is measured end to end on
+  the screen: the board's `placedAt` → the ticket's first `kitchen` event on that stream; KDS freshness as stream open →
+  `ready` (the S-113 probe itself is server-side and stays the SLI in production).
+- **Scenarios** call the api as the apps do: anonymous search and landing pages (a fifth of the browsing: home, the
+  kitchens list, a category's providers, added after the first runs showed they cost more than search), food/goods/
+  booking checkouts with a saved card (the fake gateway confirms intents at once; Stripe confirms them in the browser,
+  so the api sees the same calls), kitchen screens that hold the live stream, refetch the board and the badges on each
+  event and work the tickets ("whoever taps first", others get 409), Studio badges, the consumer cart count and the
+  console shell. Locally they authenticate with dev auth (`X-Dev-User`); staging with bearer tokens from a file.
+  Each VU checks out with its own slice of customers (two VUs saving the first card of one customer at once collided).
+- **Seed data by cloning the dev seed**, not by an api script: `loadtest/seed/clone.sql` follows the personas' ids
+  through every text column of every module schema, copies each unit's rows with ids remapped to valid ULIDs starting
+  with `7`, unique texts made unique (format-preserving where a CHECK constraint fixes it), locations spread, triggers
+  and foreign keys off (`session_replication_role = replica`) while copying; rows that also name someone outside the
+  unit (other customers' orders, bookings, quotes) stay behind, and copies that would break a unique key without one of
+  the unit's ids (reviews, escrows of others' bookings, API keys) are left out with a warning. A customer clone is the
+  account only (identity, account schemas). `seed.sh` refuses non-local databases and databases without the dev seed.
+  The seed for 150 business units, 10 shop units and 3,000 customers takes ~3 min and ~0.5 GB.
+- **The local stack is separate** from `make up` (compose project `northline-load`, own ports and volumes; api on
+  :18080 from the boot jar under `local` with INFO logging, Postgres with `pg_stat_statements`, `max_wal_size` 256 MB,
+  Elasticsearch with the disk watermark off, the indices filled by `SearchReindexCommand` from the worker jar via
+  Spring Boot's PropertiesLauncher — no Gradle at run time except `seedCategories`). The api's log rolls at 50 MB
+  (150 MB cap): an overloaded api logged a stack trace per shed request and filled the disk once.
+- **Rate limits:** `SEARCH_RATE_LIMIT_EXEMPT` (api, addresses or CIDR ranges the search limit never counts; Spring
+  Security's `IpAddressMatcher`; host names refused, never resolved) — **refused under prod**. The load stack sets it to
+  loopback; staging sets it to the k6 pod range for the duration of a test. Chosen over a load-test Spring profile:
+  staging must run with its own profile.
+- **Fixes (each with tests):**
+  - **RegionCatalogue deadlock** (F1): the 60 s cache reload held a lock while waiting for a connection, and the
+    requests holding every connection waited on that lock — the api stopped answering for good under the stress test.
+    Now one caller reloads while the others keep the old rows; the first read happens at start-up
+    (`ApplicationReadyEvent`). A failed reload keeps the old rows and logs a warning (it used to throw to the caller).
+  - **Overload shedding** (F2): `DB_CONNECTION_TIMEOUT_MS` (Hikari `connection-timeout`, default 5,000 instead of
+    Hikari's 30,000) and `DataAccessResourceFailureException` → 503 `overloaded`, `Retry-After: 2`, "Northline is very
+    busy right now. Try again in a moment." (fr-CA in the TSV). Before, queued requests filled the heap → OOM.
+  - **N+1 on provider/kitchen lists** (F3, F4): `RatingQuery.summaries(ids)` (one grouped query; `summary(id)` now uses
+    it — the star total and count, not the Reviews screen's distribution and praise tags) and
+    `QualityQuery.latestOf(ids)` (`distinct on`); used by home, the kitchens list, a category's providers, quote
+    requests and the nav badges. The providers' "next free" start is kept a minute per provider and job length per
+    instance (`hire.application.NextFreeSlots`), refreshed in the background (one read per provider at a time, two at
+    once per instance), recomputed at once when the kept start has passed. A card may offer a slot taken in the last
+    minute; the calendar the customer books from is always live (`slot_taken`). An earlier version read missing
+    providers in parallel inside the request and deadlocked the pool — never read in parallel while holding a
+    connection.
+- **Helm:** `apps.<app>.autoscaling.behavior` passes an HPA `behavior` block through (default unchanged). api in
+  staging and prod: CPU target 60 %, scale up by 100 % or 2 pods a minute, down by 1 pod every 2 minutes after 5 quiet
+  minutes. `DB_POOL_SIZE` stays 10 per pod (more connections don't add database CPU; the timeout sheds instead).
+- **CI:** `.github/workflows/loadtest.yml` (workflow_dispatch only) and `ci/gitlab/loadtest.yml`
+  (`PIPELINE_PART=loadtest`, never in `all`; needs a shell runner tagged `loadtest` because the stack's containers
+  must answer on localhost). Never triggered here.
+- **Docs site:** `docs/perf/**` is published (internal variant) under a "Performance" category.
+- **Variables:** `SEARCH_RATE_LIMIT_EXEMPT`, `DB_CONNECTION_TIMEOUT_MS` (api, optional) — README, local/dev/staging/prod
+  tables, `.env.example`. No secret, no schema change (no migration was needed: the hot spots were query shapes, not
+  missing indexes; V340–V344 unused).
+- **Tests:** `RateLimitExemptionsTest`, `SearchApiTest` (an exempt range is never limited, its neighbour is),
+  `RegionCatalogueTest` (an expired catalogue is reloaded by one caller while another gets the old rows at once),
+  `OverloadedTest`, `NextFreeSlotsTest`, `ReviewsApiTest` (ratings and quality scores of many businesses equal their
+  single summaries); the page tests (`HomeApiTest`, `ServicesBrowsingApiTest`, `QuoteFlowApiTest`,
+  `FoodOrderingApiTest`, `SecondProvinceTest`) unchanged and green. The k6 scenarios ran smoke, load, stress and a
+  15-minute soak locally (results.md).
+- **Findings left open** (results.md): F5 city-wide reads per landing page (cache the city read model or put an edge
+  cache on `/api/v1/public/**`), F6 the minutely payout run's N+1, F7 a pool timeout in a servlet filter answers 403,
+  F8 a first card saved twice at once, F10 food-order calls missing from the checkout SLO's `uri` pattern (S-113's
+  file).
+- **Not done / never run for real:** no staging run — no staging exists; the acceptance criterion is shown only at a
+  quarter of the target on one replica of a shared 4-vCPU box. Not built: staging load-test data, the token harvester
+  (bearer tokens for the manifest's users, renewed during a soak), the k6 image. The local runs used the in-memory live
+  bus (one replica), the fake payment gateway (no Stripe latency) and dev auth (no BFF, no northline-auth).
