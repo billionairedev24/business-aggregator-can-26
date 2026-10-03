@@ -8,3 +8,5 @@ smoke-out/
 # S-104: pinned security scanners (make security-tools)
 .cache/security-tools/
 /build/
+pilot-dry-run/
+__pycache__/

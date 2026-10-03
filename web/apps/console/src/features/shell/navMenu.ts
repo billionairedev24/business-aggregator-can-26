@@ -1,4 +1,4 @@
-import { Briefcase, ChartBar, CurrencyCircleDollar, Gauge, GearSix, Headset, IdentificationCard, ListChecks, LockKey, MapTrifold, Package, PlugsConnected, Scales, ShieldWarning, TreeStructure, Truck, UserList, UsersThree, type Icon } from '@phosphor-icons/react';
+import { Briefcase, ChartBar, CurrencyCircleDollar, Gauge, GearSix, Headset, IdentificationCard, ListChecks, LockKey, Storefront, MapTrifold, Package, PlugsConnected, Scales, ShieldWarning, TreeStructure, Truck, UserList, UsersThree, type Icon } from '@phosphor-icons/react';
 import type { NavGroup, NavItem } from '@northline/ui';
 import { opens, type RoleGrant } from './api';
 import type { ShellT } from './messages';
@@ -6,7 +6,7 @@ import { NAV_GROUPS, PINNED, SCREEN_PATH, type NavGroupKey, type ScreenKey } fro
 
 /** The console sidebar (design 03 `allNav`, `NAV_ICON`, group icons), filtered by the active role's grant. */
 const ICON: Partial<Record<ScreenKey, Icon>> = {
-  overview: Gauge, orders: Package, disputes: Scales, delivery: Truck, sellers: UsersThree, verify: IdentificationCard, vetting: ListChecks,
+  overview: Gauge, orders: Package, disputes: Scales, delivery: Truck, sellers: UsersThree, verify: IdentificationCard, pilot: Storefront, vetting: ListChecks,
   trust: ShieldWarning, taxonomy: TreeStructure, support: Headset, regions: MapTrifold, finance: CurrencyCircleDollar, reports: ChartBar,
   privacy: LockKey, api: PlugsConnected, team: UserList,
 };

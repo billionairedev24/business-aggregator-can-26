@@ -108,8 +108,17 @@ public final class EmailTemplates {
      * Thymeleaf pre-processes {@code __…__} into the expression itself, so such a value must be a plain code — text
      * someone typed (a reviewer's reason, a note) there would be evaluated as an expression.
      */
-    static final Set<String> KEY_VARIABLES =
-            Set.of("decision", "phase", "change", "kind", "outcome", "role", "action", "rule", "settingsPlace");
+    static final Set<String> KEY_VARIABLES = Set.of(
+            "decision",
+            "phase",
+            "change",
+            "kind",
+            "outcome",
+            "role",
+            "action",
+            "rule",
+            "settingsPlace",
+            "businessType");
 
     /** Lists whose items (or items' {@code code}) become message keys: {@code reasons}, {@code checks}. */
     static final Set<String> KEY_LISTS = Set.of("reasons", "checks");

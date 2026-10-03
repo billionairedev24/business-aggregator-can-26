@@ -65,3 +65,9 @@ auth-clients: ## Compare the OAuth clients in configuration and database (ARGS=l
 .PHONY: auth-keys
 auth-keys: ## Local token signing keys (ARGS=status|rotate|…; docs/runbooks/key-rotation.md)
 	$(GRADLE) :auth:signingKeys --args='$(or $(ARGS),status)'
+
+##@ Pilot
+
+.PHONY: pilot-dry-run
+pilot-dry-run: ## S-120: 12 fake providers, sellers and kitchens from invite to live on a local market (throwaway DB + api; STACK_LOCK=file wraps it in flock)
+	$(if $(STACK_LOCK),flock $(STACK_LOCK)) $(ROOT)/scripts/pilot/dry-run.sh

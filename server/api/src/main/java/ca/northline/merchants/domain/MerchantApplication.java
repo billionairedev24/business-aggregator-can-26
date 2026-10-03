@@ -167,6 +167,18 @@ public class MerchantApplication {
         updatedAt = at;
     }
 
+    /**
+     * S-120: the market the business trades in when none of its addresses named one — its pilot market, or at approval
+     * its province's default market. Without a city the business belongs to no market: the shop doesn't list its
+     * offers and its zone falls back to the province's. Keeps a city the addresses gave.
+     */
+    public void settleCity(String marketCity, Instant at) {
+        if (city == null || city.isBlank()) {
+            city = marketCity;
+            updatedAt = at;
+        }
+    }
+
     /** Remembers how far the owner got (the wizard resumes there). */
     public void advanceTo(OnboardingStep target, Instant at) {
         if (target.needsSubmission() && status == MerchantStatus.APPLICANT) {

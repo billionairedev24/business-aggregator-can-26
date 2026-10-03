@@ -1,9 +1,10 @@
 import { useId, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Alert, Avatar, Checkbox, Field, FormGrid, OptionCard, Select, TextInput, useLocale, platformTimeZone } from '@northline/ui';
 import { useSession, useSignOut } from '../../lib/session';
 import { serverFieldErrors } from '../../lib/forms';
 import type { MerchantType } from '../shell/api';
-import { useStartOnboarding, useUpdateAccount, type Onboarding } from './api';
+import { pilotInviteQuery, useStartOnboarding, useUpdateAccount, type Onboarding } from './api';
 import { useOnboardingT } from './messages';
 import { useRegions } from '../shell/place';
 import { PICKER_TYPES } from './model';
@@ -14,18 +15,22 @@ export interface AccountStepProps {
   onboarding: Onboarding | undefined;
   /** Brand-new account (07d): Business Terms checkbox, every open province (waitlisted ones too). */
   isNew: boolean;
+  /** S-120: a pilot invite's token — its business type and province are fixed, and creating the business accepts it. */
+  pilot?: string;
   onTypeChange: (type: MerchantType) => void;
   onDone: (merchantId: string, type: MerchantType) => void;
 }
 
 /** Step 1 · Account (design 02 lines 110–138): business type, who owns it, province; creates the applicant. */
-export function AccountStep({ type, onboarding, isNew, onTypeChange, onDone }: AccountStepProps) {
+export function AccountStep({ type, onboarding, isNew, pilot, onTypeChange, onDone }: AccountStepProps) {
   const t = useOnboardingT();
   const { locale } = useLocale();
   const { data: session } = useSession();
   const signOut = useSignOut();
   const start = useStartOnboarding();
   const update = useUpdateAccount(onboarding?.merchantId ?? '');
+  const invite = useQuery({ ...pilotInviteQuery(pilot ?? ''), enabled: !!pilot && !onboarding });
+  const pilotInvite = invite.data?.state === 'pending' ? invite.data : undefined;
   const [picking, setPicking] = useState(!type);
   const regions = useRegions();
   const [chosen, setProvince] = useState<string | undefined>(onboarding?.province ?? undefined);
@@ -44,7 +49,7 @@ export function AccountStep({ type, onboarding, isNew, onTypeChange, onDone }: A
   const submit = () => {
     setTried(true);
     if (Object.keys(errors).length || !type || !province) return;
-    const body = { type, province, workEmail: workEmail.trim() || undefined, businessTermsAccepted: terms || undefined };
+    const body = { type, province, workEmail: workEmail.trim() || undefined, businessTermsAccepted: terms || undefined, pilotInvite: onboarding ? undefined : pilotInvite ? pilot : undefined };
     const opts = { onSuccess: (o: Onboarding) => onDone(o.merchantId, o.type) };
     if (onboarding) update.mutate(body, opts); else start.mutate(body, opts);
   };
@@ -53,18 +58,20 @@ export function AccountStep({ type, onboarding, isNew, onTypeChange, onDone }: A
   const contact = [user?.email, user?.phone].filter(Boolean).join(' · ');
   // the provinces Northline is open in (region model, S-134): live and pilot; a brand-new account also sees waitlists
   const provinces = (regions?.provinces ?? []).filter(p => p.status === 'live' || p.status === 'pilot' || (isNew && p.status === 'waitlist'));
-  const province = chosen ?? regions?.defaultProvince ?? provinces[0]?.code ?? '';
+  const province = pilotInvite?.province ?? chosen ?? regions?.defaultProvince ?? provinces[0]?.code ?? '';
 
   return (
     <>
       <h1 className="nl-ob-title">{t(type ? `title_${type}` : 'title_none')}</h1>
       <p className="nl-ob-intro">{t(type ? `intro_${type}` : 'intro_none')}</p>
 
+      {pilotInvite ? <div style={{ marginBottom: 14, maxWidth: 640 }}><Alert tone="info" title={t('pilotTitle', { city: pilotInvite.city })}>{t('pilotBody', { name: pilotInvite.label })}</Alert></div> : null}
+      {invite.data && !pilotInvite ? <div style={{ marginBottom: 14, maxWidth: 640 }}><Alert tone="error" role="alert">{t(`pilot_${invite.data.state}` as 'pilot_expired')}</Alert></div> : null}
       {type && !picking ? (
         <div className="nl-ob-box">
           <span className="tag tag-accent">{t(`label_${type}`)}</span>
           <span className="nl-ob-box-desc">{t(`desc_${type}`)}</span>
-          {onboarding && onboarding.status !== 'applicant' ? null : <button type="button" className="btn btn-ghost" onClick={() => setPicking(true)}>{t('change')}</button>}
+          {(onboarding && onboarding.status !== 'applicant') || pilotInvite ? null : <button type="button" className="btn btn-ghost" onClick={() => setPicking(true)}>{t('change')}</button>}
         </div>
       ) : (
         <div role="radiogroup" aria-labelledby={ids.picker} className="nl-ob-types">
@@ -94,7 +101,7 @@ export function AccountStep({ type, onboarding, isNew, onTypeChange, onDone }: A
           </Field>
         )}
         <Field label={t('province')} error={server.province}>
-          <Select id={ids.province} value={province} onChange={e => setProvince(e.target.value)} options={provinces.map(p => ({ value: p.code, label: t(p.status === 'live' ? 'prov_live' : p.status === 'pilot' ? 'prov_pilot' : 'prov_waitlist', { name: p.name }) }))} />
+          <Select id={ids.province} value={province} disabled={!!pilotInvite} onChange={e => setProvince(e.target.value)} options={provinces.map(p => ({ value: p.code, label: t(p.status === 'live' ? 'prov_live' : p.status === 'pilot' ? 'prov_pilot' : 'prov_waitlist', { name: p.name }) }))} />
         </Field>
       </FormGrid>
 

@@ -39,7 +39,8 @@
     "cause": {
       "enum": [
         "staff",
-        "rating_floor"
+        "rating_floor",
+        "pilot"
       ]
     }
   }

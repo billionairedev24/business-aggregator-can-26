@@ -44,6 +44,8 @@ platform audit log (`region.*`) and is served at once by the instance that made 
 | `EMAIL_TIME_ZONE` | `REGION_PLATFORM_ZONE` | dates and times in emails |
 | `REGION_FRENCH_FIRST` | (none) | S-116: province codes or market ids that are French-first with French listing text required, on top of the rows' `french_first` / `french_listings` (V315) — [i18n.md](i18n.md) |
 
+Kitchen visits (S-120, [pilot-onboarding.md](pilot-onboarding.md#5-kitchen-visits)): `region.regions.kitchen_visit` (`required` | `optional`; a market's `NULL` = its province's, a province's `NULL` = optional) decides whether a kitchen there is approved only after a passed visit. A pilot market is held at stage `pilot` until launch; its pilot businesses are hidden from search until an admin sets it `live`.
+
 Language rules (S-116, [i18n.md](i18n.md)): `french_first` and `french_listings` on each province row (a market row's
 `NULL` = its province's) decide where interfaces default to French, the Terms come in French first, receipts are
 French and listings need French text. V315 seeded them from each province's first official language.

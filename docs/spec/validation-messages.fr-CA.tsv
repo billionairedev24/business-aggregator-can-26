@@ -937,4 +937,34 @@ Network Authentication Required	Authentification réseau requise	new
 Enter the French name.	Entrez le nom en français.	new
 Add the French name and description first: listings in {province} need them before they go live.	Ajoutez d’abord le nom et la description en français : les annonces {province:in} en ont besoin pour être mises en ligne.	new
 Send en or fr as the language of the Terms you accepted.	Envoyez en ou fr comme langue des conditions acceptées.	review
+Choose a market that is open for onboarding.	Choisissez un marché ouvert aux inscriptions.	new
+Enter a working name, 1 to 80 characters.	Entrez un nom de travail de 1 à 80 caractères.	new
+Enter the business's email address.	Entrez l’adresse courriel de l’entreprise.	new
+Choose English or French.	Choisissez l’anglais ou le français.	new
+Describe the blocker in 1 to 300 characters.	Décrivez le blocage en 1 à 300 caractères.	new
+Choose who has to act: the business, Northline, Stripe or the inspector.	Choisissez qui doit agir : l’entreprise, Northline, Stripe ou l’inspecteur.	new
+Write the note, 1 to 2,000 characters.	Rédigez la note, de 1 à 2 000 caractères.	new
+Choose someone on the Northline team.	Choisissez une personne de l’équipe Northline.	new
+This business is already in a pilot.	Cette entreprise participe déjà à un projet pilote.	new
+This business already has an account; there is nothing to invite to.	Cette entreprise a déjà un compte; il n’y a rien à quoi l’inviter.	new
+This invite has expired. Ask Northline for a new one.	Cette invitation a expiré. Demandez-en une nouvelle à Northline.	new
+This invite was already used.	Cette invitation a déjà été utilisée.	new
+This invite was withdrawn.	Cette invitation a été retirée.	new
+This invite is for another kind of business.	Cette invitation vise un autre type d’entreprise.	new
+This invite is for a business in another province.	Cette invitation vise une entreprise d’une autre province.	new
+Pick the visit's date and time, within the next 60 days.	Choisissez la date et l’heure de la visite, dans les 60 prochains jours.	new
+Choose who visits: a team member, or an inspector's name.	Choisissez qui fait la visite : un membre de l’équipe ou le nom d’un inspecteur.	new
+The inspector's name is at most 80 characters.	Le nom de l’inspecteur compte au plus 80 caractères.	new
+Kitchen visits are for kitchens.	Les visites de cuisine sont réservées aux cuisines.	new
+Upload a JPEG or PNG photo under 10 MB.	Téléversez une photo JPEG ou PNG de moins de 10 Mo.	new
+Choose passed or failed.	Choisissez réussie ou échouée.	new
+Mark every item on the checklist.	Cochez chaque élément de la liste de vérification.	new
+A visit with a failed item can't pass. Mark it failed.	Une visite avec un élément échoué ne peut pas être réussie. Marquez-la échouée.	new
+Say what has to be fixed before the next visit.	Indiquez ce qui doit être corrigé avant la prochaine visite.	new
+The note is at most 1,000 characters.	La note compte au plus 1 000 caractères.	new
+At most 12 photos per visit.	Au plus 12 photos par visite.	new
+This visit already has an outcome or was cancelled.	Cette visite a déjà un résultat ou a été annulée.	new
+Mark each item pass, fail or n/a.	Marquez chaque élément réussi, échoué ou s.o.	new
+Record a passed kitchen visit before approving this kitchen.	Enregistrez une visite de cuisine réussie avant d’approuver cette cuisine.	new
+The business hasn't created its account yet.	L’entreprise n’a pas encore créé son compte.	new
 Northline is very busy right now. Try again in a moment.	Northline est très sollicité en ce moment. Réessayez dans un instant.	new

@@ -57,6 +57,10 @@ class OversightEmailNotices {
 
     @ApplicationModuleListener
     void on(MerchantSearchVisibilityChanged e) {
+        if ("pilot".equals(e.cause())) {
+            return; // S-120: hidden before a pilot market opens and shown at launch; merchant success tells the
+            // business
+        }
         send(
                 e.eventId(),
                 e.aggregateId(),

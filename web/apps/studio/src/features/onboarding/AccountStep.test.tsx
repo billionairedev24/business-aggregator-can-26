@@ -66,6 +66,38 @@ describe('AccountStep', () => {
   });
 });
 
+describe('AccountStep with a pilot invite (S-120)', () => {
+  const TOKEN = 'tok_0123456789abcdefghij';
+  it('fixes the type and province from the invite, says which pilot, and accepts the invite with the business', async () => {
+    const onDone = vi.fn();
+    const calls = mockFetch(c => {
+      if (c.url === '/bff/session') return { body: SESSION };
+      if (c.url === `/api/v1/pilot-invites/${TOKEN}`) return { body: { businessType: 'kitchen', label: 'Glenmore Dumplings', marketId: 'mkt-x', city: 'Pilotville', province: 'AB', expiresAt: '2026-10-15T12:00:00Z', state: 'pending' } };
+      if (c.url === '/api/v1/merchants' && c.method === 'POST') return { status: 201, body: onboarding({ type: 'kitchen' }) };
+      return undefined;
+    });
+    renderWithProviders(<AccountStep type="kitchen" onboarding={undefined} isNew={false} pilot={TOKEN} onTypeChange={() => {}} onDone={onDone} />);
+    expect(await screen.findByText('You’re joining the Northline pilot in Pilotville.')).toBeTruthy();
+    await expectNoAxeViolations(document.body);
+    expect(screen.queryByRole('button', { name: 'Change' })).toBeNull();
+    expect((screen.getByRole('combobox', { name: /province/i }) as HTMLSelectElement).disabled).toBe(true);
+    await user().click(screen.getByRole('button', { name: /Continue as/ }));
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    expect(calls.find(c => c.method === 'POST')!.body).toEqual({ type: 'kitchen', province: 'AB', pilotInvite: TOKEN });
+  });
+
+  it('an expired invite says so and is not sent', async () => {
+    mockFetch(c => {
+      if (c.url === '/bff/session') return { body: SESSION };
+      if (c.url === `/api/v1/pilot-invites/${TOKEN}`) return { body: { businessType: 'seller', label: 'X', marketId: 'mkt-x', city: 'Pilotville', province: 'AB', expiresAt: '2026-10-01T12:00:00Z', state: 'expired' } };
+      return undefined;
+    });
+    renderWithProviders(<AccountStep type="seller" onboarding={undefined} isNew={false} pilot={TOKEN} onTypeChange={() => {}} onDone={() => {}} />);
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(screen.getByText('This pilot invite has expired. Ask Northline for a new link.')).toBeTruthy();
+  });
+});
+
 describe('OnboardingLayout rail', () => {
   it('names the steps per type and only lets you reach steps you got to', () => {
     mockFetch(c => (c.url === '/bff/session' ? { body: SESSION } : undefined));

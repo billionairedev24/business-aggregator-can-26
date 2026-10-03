@@ -54,6 +54,15 @@ class StaffRoleTest {
     }
 
     @Test
+    void pilotOnboarding_isMerchantSuccesss_trustAndSafetyRead() {
+        assertThat(List.of(StaffRole.values()).stream().filter(r -> r.allows(ConsoleAction.ONBOARD)))
+                .containsExactlyInAnyOrder(StaffRole.ADMIN, StaffRole.MERCHANT_SUCCESS);
+        assertThat(List.of(StaffRole.values()).stream().filter(r -> r.opens(ConsoleScreen.PILOT)))
+                .containsExactlyInAnyOrder(StaffRole.ADMIN, StaffRole.MERCHANT_SUCCESS, StaffRole.TRUST_SAFETY);
+        assertThat(StaffRole.fromCode("merchant_success")).contains(StaffRole.MERCHANT_SUCCESS);
+    }
+
+    @Test
     void heldRoles_comeFromTheTokensPlatformRoles() {
         assertThat(StaffRole.held(List.of("staff", "TRUST_SAFETY", "finance", "partner")))
                 .containsExactlyInAnyOrder(StaffRole.TRUST_SAFETY, StaffRole.FINANCE);

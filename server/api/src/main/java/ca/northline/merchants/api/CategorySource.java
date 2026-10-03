@@ -3,6 +3,7 @@ package ca.northline.merchants.api;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -18,6 +19,14 @@ public interface CategorySource {
 
     /** The categories with these ids; unknown ids are absent. */
     List<Category> byIds(Collection<String> ids);
+
+    /**
+     * S-120: those of {@code ids} whose businesses are approved only after a passed kitchen visit
+     * ({@code catalogue.categories.site_visit_required}, staff data).
+     */
+    default Set<String> requiringKitchenVisit(Collection<String> ids) {
+        return Set.of();
+    }
 
     /**
      * @param parentId null for a group
