@@ -263,4 +263,21 @@ gates recorded by a second admin as **rehearsal stand-ins**, the on-call rota fi
 discovery checked, rollback, a second launch requested by the other admin, hypercare planned. Outputs in
 `go-live-rehearsal/` (git-ignored).
 
-REHEARSAL-RESULT
+**Result (2026-10-03, local stack, market `mkt-calgary`, dev seed + 12 fake pilot businesses): 11 of 11 steps passed.**
+
+| step | result |
+|---|---|
+| pilot dry run (S-120) | 12 of 12 fake businesses live, 0 without a market, 12 publicly visible (31 s) |
+| market back to `pilot` (rollback as the starting point) | an address at the market's centre resolves to the waitlist; 0 businesses of the market searchable, 23 hidden with cause `pilot` (the 12 pilots and the dev seed's businesses there) |
+| `make go-live-check` before any record | exit 1, 15 required gates blocking: the 13 manual ones pending; `uat_go_no_go` fail (the dev seed's UAT data has 2 blocking items and an untriaged blocker), `oncall_coverage` fail (no shift), `stripe_live` fail (fake gateway: no keys); `market_zones`, `province_live`, `pilot_businesses` (12 ready of 15 rows, 10 needed) pass; `french_coverage` not applicable. A launch request was refused (409 `not_ready`) |
+| `make go-live-check RECORD=1` | recorded from the repository: `security_findings` pass, `a11y_criticals` pass, `backup_drill` pass (a local drill counts under `ENV=local` only), `legal_signoff` **fail** (no counsel sign-off — true today); no e2e or load result on that machine, so those stayed pending |
+| manual gates recorded by the second admin | every recordable gate recorded with who and when — as **rehearsal stand-ins**, including legal, which is not passed in reality; the on-call rota filled for 18 days. Still blocking: `uat_go_no_go`, `stripe_live` |
+| two-person switch | asked with an emergency override (reason: a laptop has no live Stripe keys or signed-off UAT); the requester's own approval refused (409 `same_person`); the second admin approved: stage `live`, the address resolves to delivery, 23 businesses searchable, 0 hidden (0.7 s) |
+| rollback | `pilot` again, waitlist again, 0 searchable, 23 hidden; nothing cancelled (0.6 s) |
+| launch again | requested by the other admin, approved by the first: live, 23 searchable |
+| hypercare | 14 days planned (2026-10-03 → 2026-10-16), 28 shifts on the on-call rota |
+| audit | `golive.gate_recorded` 14, `golive.launch_requested` 2, `golive.launch_approved` 2, `golive.rolled_back` 2, `golive.hypercare_created` 1, `region.stage_changed` 4 |
+
+What it does not show: anything about production — live Stripe, a metrics store's rules API, a paging tool, real
+people, search re-indexing (no Elasticsearch or worker on the rehearsal stack; the search hiding is the database
+state the indexer reads).

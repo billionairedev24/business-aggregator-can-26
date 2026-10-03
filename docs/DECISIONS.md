@@ -7780,6 +7780,11 @@ live; a hypercare rota for two weeks.
   `GO_LIVE_PROMETHEUS_TOKEN` (secret, optional key `go-live-prometheus-token`).
 - **Region-neutral:** no place in code; the market's name, zone and language rules come from the region model. The
   runbook names the pilot market.
+- **Rehearsal (2026-10-03, local, `mkt-calgary`):** 11 of 11 steps passed — dry run 12/12 live; back to pilot hides the
+  market (waitlist, 23 businesses hidden); the check blocks with 15 gates (manual pending, UAT no-go on the dev seed's
+  data, no on-call, no Stripe keys); records by script and by a second admin (stand-ins); a refused self-approval; the
+  two-person switch with an override (Stripe, UAT); rollback; launch again; hypercare 14 days / 28 shifts.
+  Details: [go-live.md § Rehearsal](runbooks/go-live.md#rehearsal).
 - **Not done:** the launch emails aren't sent by the platform (and the S-84 "waitlist emailed on Live" stays undone);
   no per-market labels on the existing checkout / sign-in metrics; no alert rules for hypercare; the a11y page sweep has
   no `/go-live` entry (axe runs in its Vitest tests); no CSV of the checklist (the script prints it); gates and their
