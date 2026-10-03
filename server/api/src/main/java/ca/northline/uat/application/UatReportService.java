@@ -10,6 +10,7 @@ import ca.northline.uat.domain.FeedbackState;
 import ca.northline.uat.domain.GoNoGo;
 import ca.northline.uat.domain.Persona;
 import ca.northline.uat.domain.Severity;
+import ca.northline.uat.domain.SignoffOutcome;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -224,23 +225,16 @@ class UatReportService implements UatReports {
         for (var persona : Persona.values()) {
             var people = active.stream().filter(p -> p.persona() == persona).toList();
             var script = scripts.get(persona);
-            int signed = 0;
-            int comments = 0;
-            int blocked = 0;
-            for (var p : people) {
-                var last = latest.stream()
-                        .filter(s -> s.participantId().equals(p.id())
-                                && s.scriptCode().equals(script))
-                        .findFirst();
-                if (last.isEmpty()) {
-                    continue;
-                }
-                switch (last.get().outcome()) {
-                    case SIGNED_OFF -> signed++;
-                    case WITH_COMMENTS -> comments++;
-                    case BLOCKED -> blocked++;
-                }
-            }
+            var outcomes = people.stream()
+                    .flatMap(p -> latest.stream()
+                            .filter(s -> s.participantId().equals(p.id())
+                                    && s.scriptCode().equals(script))
+                            .findFirst()
+                            .stream())
+                    .collect(Collectors.groupingBy(UatStore.Signoff::outcome, Collectors.counting()));
+            var signed = outcomes.getOrDefault(SignoffOutcome.SIGNED_OFF, 0L).intValue();
+            var comments = outcomes.getOrDefault(SignoffOutcome.WITH_COMMENTS, 0L).intValue();
+            var blocked = outcomes.getOrDefault(SignoffOutcome.BLOCKED, 0L).intValue();
             out.add(new GoNoGo.Coverage(persona, people.size(), signed, comments, blocked));
         }
         return out;
