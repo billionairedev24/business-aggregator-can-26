@@ -7442,6 +7442,14 @@ criterion: at least 10 pilot businesses live on the staging-to-prod path.
   room for two drop-outs), Stripe Connect through the fake gateway plus a **signed `account.updated` webhook** (the real
   S-12 endpoint and processing), Identity through the fake, kitchen visits with a refused early approval, then the
   board, the CSV and public-page checks. `STACK_LOCK=` wraps it in flock.
+- **Dry-run result (2026-10-03, local stack, market `mkt-calgary` with kitchen visits required):** 12 of 12 fake
+  businesses (4 providers, 4 sellers, 4 kitchens) live, 0 without a market, 12 publicly visible (shop product page in
+  the market, the market's kitchen list and menu, provider pages), every early kitchen approval refused with
+  `kitchen_visit_required`, 4 seller products flagged by the automated vetting (`missing_licence`, `duplicate_image`
+  on fake data) and approved by trust &amp; safety; 32 s for the pipeline. Two findings on the way, both fixed here: a
+  business whose address names no market got none (S-117's bug, above); a kitchen without fulfilment and hours
+  settings is approved and published yet missing from the market's kitchen list — the board now keeps it at
+  "Kitchen sets its fulfilment and hours" (`set_up_kitchen`, from `MenuReadiness.Counts.setUp`) instead of live.
 - **Not done:** a console form for enrolling an existing business (API only); per-region rule editing in the console;
   reminders for expiring invites or upcoming visits; inspector scheduling across a calendar; the invite email to a
   mobile number (SMS); a pilot-specific launch email; listing visibility outside search for hidden pilot businesses

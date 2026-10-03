@@ -235,7 +235,8 @@ listing is on the public pages (the shop's product page in its market, the marke
 the provider's page). It fails unless every business is live, in a market and visible. One seller's address names no
 market city on purpose (S-117's finding: such a business used to be approved without a market).
 
-Result of the run recorded for S-120 (2026-10-03): see [DECISIONS.md § S-120](../DECISIONS.md).
+Result of the run recorded for S-120 (2026-10-03): 12 of 12 live, all in the market and publicly visible, in 32 s
+(details in DECISIONS.md, S-120).
 
 ## 9. The pilot cohort (template)
 
@@ -267,4 +268,5 @@ licence regulator) and a kitchen with alcohol test the longer checklists; includ
 | Stripe Connect "Waiting for Stripe to report" for more than an hour | check the Connect webhook endpoint and secret ([stripe-incidents.md](stripe-incidents.md)); Stripe's dashboard › Connect › the account |
 | Approved but "Business has no market" | its addresses named no market city and it has no pilot market; set `merchants.merchants.city` to the market's city (S-117 fix: approval now assigns the pilot market, else the province's first live market) |
 | Live step "Listings waiting for vetting" | Console › Listing vetting |
+| Kitchen approved but not live: "Kitchen sets its fulfilment and hours" | the owner saves Kitchen › Hours (fulfilment, opening hours); until then the market's kitchen list leaves it out |
 | A kitchen can't be approved: "Record a passed kitchen visit before approving this kitchen." | schedule and record the visit (§ 5) |
