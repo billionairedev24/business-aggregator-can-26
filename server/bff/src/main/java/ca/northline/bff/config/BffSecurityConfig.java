@@ -157,7 +157,7 @@ class BffSecurityConfig {
                 .authorizationCode()
                 .refreshToken()
                 .build());
-        return manager;
+        return new SerializedRefresh(manager, authorizedClients, Clock.systemUTC()); // S-117: parallel /api calls
     }
 
     /** Touches the deferred CSRF token so the {@code XSRF-TOKEN} cookie is written on the first response. */
