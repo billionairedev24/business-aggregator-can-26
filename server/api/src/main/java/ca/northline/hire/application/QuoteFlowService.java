@@ -46,6 +46,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -354,10 +355,13 @@ class QuoteFlowService
     }
 
     private Map<String, ProviderSummary> summaries(List<String> merchantIds, String lang) {
+        // S-119: every provider's rating and quality score in one query each, not two per provider
+        var rated = ratings.summaries(merchantIds);
+        var scores = quality.latestOf(merchantIds);
         return providers.published(merchantIds, lang).stream()
                 .collect(Collectors.toMap(PublicProviders.Provider::merchantId, p -> {
-                    var rating = ratings.summary(p.merchantId());
-                    var score = quality.latest(p.merchantId());
+                    var rating = rated.getOrDefault(p.merchantId(), new RatingQuery.RatingSummary(0, 0));
+                    var score = Optional.ofNullable(scores.get(p.merchantId()));
                     return new ProviderSummary(
                             p.merchantId(),
                             p.slug(),

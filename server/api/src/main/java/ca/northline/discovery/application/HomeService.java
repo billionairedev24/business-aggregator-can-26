@@ -67,8 +67,11 @@ class HomeService implements ViewHome {
     }
 
     private List<HomeSummary.TrustedProvider> trusted(List<PublicBusiness> providers, Locale locale) {
+        // one query for every provider's rating (S-119: it was one summary per provider)
+        var summaries = ratings.summaries(
+                providers.stream().map(PublicBusiness::merchantId).toList());
         var rated = providers.stream()
-                .map(p -> Map.entry(p, ratings.summary(p.merchantId())))
+                .map(p -> Map.entry(p, summaries.get(p.merchantId())))
                 .sorted(Comparator.<Map.Entry<PublicBusiness, RatingQuery.RatingSummary>>comparingDouble(
                                 e -> -e.getValue().average())
                         .thenComparingInt(e -> -e.getValue().count())

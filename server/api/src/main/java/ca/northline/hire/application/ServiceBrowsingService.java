@@ -1,6 +1,5 @@
 package ca.northline.hire.application;
 
-import ca.northline.availability.api.ProviderSlots;
 import ca.northline.availability.api.ServiceAreas;
 import ca.northline.availability.api.ServiceAreas.Place;
 import ca.northline.catalogue.api.ServiceOffers;
@@ -31,6 +30,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -51,12 +51,13 @@ class ServiceBrowsingService implements ListCategories, ViewCategory, ListProvid
 
     static final String ROOT = "service";
     static final int JOBS = 5;
+    static final RatingQuery.RatingSummary NO_RATING = new RatingQuery.RatingSummary(0, 0);
 
     private final CategorySource categories;
     private final ServiceOffers offers;
     private final PublicProviders providers;
     private final ServiceAreas areas;
-    private final ProviderSlots slots;
+    private final NextFreeSlots nextSlots;
     private final RatingQuery ratings;
     private final QualityQuery quality;
     private final CategoryOrder order;
@@ -121,12 +122,20 @@ class ServiceBrowsingService implements ListCategories, ViewCategory, ListProvid
                     .filter(p -> p.city() != null && p.city().equalsIgnoreCase(place.city()))
                     .forEach(p -> covering.add(p.merchantId()));
         }
-        var cards = published.values().stream()
+        var shown = published.values().stream()
                 .filter(p -> covering.contains(p.merchantId()))
+                .toList();
+        // S-119: ratings and quality scores of every card in one query each, the next free slots memoised briefly
+        var ids = shown.stream().map(PublicProviders.Provider::merchantId).toList();
+        var rated = ratings.summaries(ids);
+        var scores = quality.latestOf(ids);
+        var cards = shown.stream()
                 .map(p -> card(
                         p,
                         byMerchant.getOrDefault(p.merchantId(), List.of()),
-                        zones.getOrDefault(p.merchantId(), List.of())))
+                        zones.getOrDefault(p.merchantId(), List.of()),
+                        rated.getOrDefault(p.merchantId(), NO_RATING),
+                        Optional.ofNullable(scores.get(p.merchantId()))))
                 .sorted(TrustRank.by(c -> new TrustRank.Signals(
                         c.tier(), c.onTimePct(), c.disputePct(), c.rebookPct(), c.rating(), c.name())))
                 .toList();
@@ -143,9 +152,12 @@ class ServiceBrowsingService implements ListCategories, ViewCategory, ListProvid
                 .toList();
     }
 
-    private ProviderCard card(PublicProviders.Provider p, List<Offer> offered, List<String> zones) {
-        var rating = ratings.summary(p.merchantId());
-        var score = quality.latest(p.merchantId());
+    private ProviderCard card(
+            PublicProviders.Provider p,
+            List<Offer> offered,
+            List<String> zones,
+            RatingQuery.RatingSummary rating,
+            Optional<QualityQuery.QualityScore> score) {
         var priced = offered.stream().filter(o -> !o.quoteOnly()).toList();
         var cheapest = priced.stream().min(Comparator.comparingLong(o -> Objects.requireNonNull(o.priceCents())));
         var shortest = offered.stream().mapToInt(Offer::durationMin).min().orElse(60);
@@ -164,7 +176,7 @@ class ServiceBrowsingService implements ListCategories, ViewCategory, ListProvid
                 cheapest.map(Offer::priceCents).orElse(null),
                 cheapest.map(Offer::pricingMode).orElse("quote"),
                 offered.stream().anyMatch(Offer::instantBook),
-                slots.next(p.merchantId(), shortest).orElse(null),
+                nextSlots.next(p.merchantId(), shortest).orElse(null),
                 zones,
                 region.zone(region.province(p.province())).getId());
     }
