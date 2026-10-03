@@ -26,7 +26,9 @@ public enum StaffRole implements CodedEnum {
     SUPPORT_LEAD,
     ANALYST,
     /** S-105: the privacy officer — people's access, correction and erasure requests. */
-    PRIVACY;
+    PRIVACY,
+    /** S-120: merchant success — recruits and onboards pilot businesses, schedules and records kitchen visits. */
+    MERCHANT_SUCCESS;
 
     /** The platform role that opens the console at all ({@code /api/v1/console/**}). */
     public static final String STAFF = "staff";
@@ -44,7 +46,10 @@ public enum StaffRole implements CodedEnum {
                         ConsoleScreen.TRUST,
                         ConsoleScreen.DISPUTES,
                         ConsoleScreen.SUPPORT,
-                        ConsoleScreen.TEAM);
+                        ConsoleScreen.TEAM,
+                        // S-120: trust & safety approve pilot businesses, so they see the pipeline (no onboarding
+                        // action)
+                        ConsoleScreen.PILOT);
             case DISPATCH ->
                 Set.of(ConsoleScreen.OVERVIEW, ConsoleScreen.ORDERS, ConsoleScreen.DELIVERY, ConsoleScreen.SUPPORT);
             case FINANCE ->
@@ -72,6 +77,8 @@ public enum StaffRole implements CodedEnum {
                         ConsoleScreen.PRIVACY);
             case ANALYST -> Set.of(ConsoleScreen.OVERVIEW, ConsoleScreen.REPORTS);
             case PRIVACY -> Set.of(ConsoleScreen.OVERVIEW, ConsoleScreen.PRIVACY, ConsoleScreen.SUPPORT);
+            case MERCHANT_SUCCESS ->
+                Set.of(ConsoleScreen.OVERVIEW, ConsoleScreen.PILOT, ConsoleScreen.SELLERS, ConsoleScreen.SUPPORT);
         };
     }
 
@@ -92,6 +99,7 @@ public enum StaffRole implements CodedEnum {
             case SUPPORT_LEAD -> Set.of(ConsoleAction.SUPPORT, ConsoleAction.MACROS, ConsoleAction.PRIVACY);
             case ANALYST -> Set.of();
             case PRIVACY -> Set.of(ConsoleAction.PRIVACY);
+            case MERCHANT_SUCCESS -> Set.of(ConsoleAction.ONBOARD);
         };
     }
 

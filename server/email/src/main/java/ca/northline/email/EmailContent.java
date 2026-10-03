@@ -163,6 +163,51 @@ public sealed interface EmailContent {
         }
     }
 
+    /**
+     * S-120: Northline's merchant success team invites a business it recruited to join a market's pilot — the link
+     * opens the Studio with the business type and market filled in. Transactional: sent because the business agreed,
+     * in a conversation with the inviter, to be onboarded (docs/runbooks/pilot-onboarding.md, CASL note).
+     *
+     * @param businessName the working name staff gave the business
+     * @param businessType {@code provider | seller | kitchen | both}
+     * @param link {@code <studio>/pilot/<token>}
+     */
+    record PilotInvitation(
+            String businessName, String inviterName, String city, String businessType, URI link, Instant expiresAt)
+            implements EmailContent {
+
+        @Override
+        public String template() {
+            return "pilot-invitation";
+        }
+
+        @Override
+        public Purpose purpose() {
+            return Purpose.TRANSACTIONAL;
+        }
+
+        @Override
+        public Map<String, Object> variables(EmailFormat format) {
+            return Map.of(
+                    "businessName", businessName,
+                    "inviterName", inviterName,
+                    "city", city,
+                    "businessType", businessType,
+                    "link", link.toString(),
+                    "expiresAt", format.date(expiresAt));
+        }
+
+        @Override
+        public List<Object> subjectArgs(EmailFormat format) {
+            return List.of(city);
+        }
+
+        @Override
+        public List<Object> reasonArgs() {
+            return List.of(inviterName, businessName);
+        }
+    }
+
     // ── Finance ──────────────────────────────────────────────────────────────────────────────────────────────────
 
     /**
@@ -857,6 +902,15 @@ public sealed interface EmailContent {
                         "Ravi Sandhu",
                         "Priya Sandhu",
                         URI.create("https://verify.stripe.com/start/test_sample")));
+        all.put(
+                "pilot-invitation",
+                new PilotInvitation(
+                        "Glenmore Dumplings",
+                        "Priya Natarajan",
+                        "Riverbend",
+                        "kitchen",
+                        URI.create("http://localhost:3100/pilot/sample-token"),
+                        at.plus(Duration.ofDays(14))));
         for (var phase : BankAccountChange.Phase.values()) {
             var sample = new BankAccountChange(business, phase, at.plus(Duration.ofHours(24)), payouts);
             all.put(key(sample), sample);

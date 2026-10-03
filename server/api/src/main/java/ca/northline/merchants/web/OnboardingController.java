@@ -67,7 +67,8 @@ class OnboardingController {
                 body.type(),
                 body.province(),
                 body.workEmail(),
-                Boolean.TRUE.equals(body.businessTermsAccepted()))));
+                Boolean.TRUE.equals(body.businessTermsAccepted()),
+                body.pilotInvite())));
     }
 
     @GetMapping("/api/v1/merchants/{merchantId}/onboarding")

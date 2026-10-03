@@ -12,6 +12,7 @@ import ca.northline.merchants.domain.DisplayName;
 import ca.northline.merchants.domain.Document;
 import ca.northline.merchants.domain.GstNumber;
 import ca.northline.merchants.domain.MerchantApplication;
+import ca.northline.merchants.domain.MerchantStatus;
 import ca.northline.merchants.domain.MerchantType;
 import ca.northline.merchants.domain.OnboardingStep;
 import ca.northline.merchants.domain.Principal;
@@ -19,10 +20,12 @@ import ca.northline.merchants.domain.PrincipalRole;
 import ca.northline.merchants.domain.Province;
 import ca.northline.merchants.domain.SelectedCategory;
 import ca.northline.merchants.domain.Verification;
+import ca.northline.merchants.domain.VerificationStatus;
 import ca.northline.region.api.LaunchStatus;
 import ca.northline.region.api.MarketProfile;
 import ca.northline.region.api.MerchantPlaces;
 import ca.northline.region.api.Regions;
+import ca.northline.shared.Conflict;
 import ca.northline.shared.NotFound;
 import ca.northline.shared.RuleViolation;
 import ca.northline.shared.RuleViolation.Violation;
@@ -80,6 +83,12 @@ class OnboardingService
     private final MerchantPlaces places;
     private final Regions regions;
     private final CategoryLimitLookup categoryLimits;
+    private final PilotInviteLinks pilotInvites;
+    private final KitchenVisitPolicy kitchenVisits;
+    private final PilotStore pilots;
+
+    /** S-120: approving a kitchen that needs a visit before the visit passed. */
+    static final String VISIT_FIRST = "Record a passed kitchen visit before approving this kitchen.";
 
     /** {@code {province}} = the province's name (region model). */
     static final String PROVINCE_CLOSED = "Northline isn't open in {province} yet.";
@@ -100,6 +109,7 @@ class OnboardingService
     @Transactional
     public OnboardingView start(StartOnboarding.Command command) {
         requireOpen(command.province());
+        pilotInvites.check(command.pilotInvite(), command.type(), command.province());
         var application = MerchantApplication.start(
                 command.type(),
                 command.province(),
@@ -109,6 +119,10 @@ class OnboardingService
                 clock.instant());
         applications.insert(application, command.userId());
         syncChecklist(application);
+        var invite = command.pilotInvite();
+        if (invite != null && !invite.isBlank()) {
+            pilotInvites.accept(invite, application.getId(), command.userId(), command.type(), command.province());
+        }
         return view(application.getId());
     }
 
@@ -198,7 +212,8 @@ class OnboardingService
                         categories,
                         command.profile()),
                 clock.instant(),
-                regions.markets().stream().map(MarketProfile::city).toList());
+                marketCities(application));
+        pilotMarketCity(application.getId()).ifPresent(c -> application.settleCity(c, clock.instant()));
         applications.save(application);
         syncChecklist(application);
         storefronts.ensure(application.getId(), application.getType(), application.getDisplayName());
@@ -236,14 +251,68 @@ class OnboardingService
     public OnboardingView approve(String merchantId, String actorId) {
         var application = load(merchantId);
         var now = clock.instant();
+        var checks = verifications.listFor(merchantId);
+        if (application.getStatus() == MerchantStatus.PENDING
+                && kitchenVisitRequired(application)
+                && checks.stream()
+                        .anyMatch(v ->
+                                v.kind() == CheckKind.SITE_VISIT && v.getStatus() != VerificationStatus.VERIFIED)) {
+            throw new Conflict("kitchen_visit_required", VISIT_FIRST);
+        }
         var approved = application.approve(actorId, now);
+        // a business approved without a market would sell nowhere (S-117 found the shop listing none of its offers)
+        pilotMarketCity(merchantId)
+                .or(() -> defaultMarketCity(application))
+                .ifPresent(c -> application.settleCity(c, now));
         applications.save(application);
-        verifications.listFor(merchantId).forEach(v -> {
+        checks.forEach(v -> {
             v.confirm(now);
             verifications.save(v);
         });
         events.publishEvent(approved);
         return view(merchantId);
+    }
+
+    /** The market cities of the business's province (every market's when it has none): its addresses name one. */
+    private List<String> marketCities(MerchantApplication application) {
+        var province = application.getProvince();
+        return regions.markets().stream()
+                .filter(m -> province == null || m.province().equalsIgnoreCase(province.code()))
+                .map(MarketProfile::city)
+                .toList();
+    }
+
+    private java.util.Optional<String> pilotMarketCity(String merchantId) {
+        return pilots.byMerchant(merchantId)
+                .flatMap(p -> regions.marketById(p.marketId()))
+                .map(MarketProfile::city);
+    }
+
+    /** The province's first live market, else its first open one (region data, in its sort order). */
+    private java.util.Optional<String> defaultMarketCity(MerchantApplication application) {
+        var province = application.getProvince();
+        if (province == null) {
+            return java.util.Optional.empty();
+        }
+        var markets = regions.markets().stream()
+                .filter(m -> m.province().equalsIgnoreCase(province.code()))
+                .toList();
+        return markets.stream()
+                .filter(MarketProfile::live)
+                .findFirst()
+                .or(() -> markets.stream()
+                        .filter(m -> m.status() != LaunchStatus.OFF)
+                        .findFirst())
+                .map(MarketProfile::city);
+    }
+
+    private boolean kitchenVisitRequired(MerchantApplication application) {
+        var province = application.getProvince();
+        return kitchenVisits.required(
+                application.getId(),
+                application.getType(),
+                province == null ? null : province.code(),
+                KitchenVisitService.categoryIds(application));
     }
 
     /** Keeps the checklist equal to what type + categories require; existing rows keep their evidence. */

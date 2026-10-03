@@ -1,0 +1,12 @@
+[# th:with="typeLabel=#{__${'pilot-invitation.type.' + businessType}__}"][(#{pilot-invitation.heading(${city})})]
+
+[(#{pilot-invitation.body(${inviterName}, ${businessName}, ${city}, ${typeLabel})})]
+
+[(#{pilot-invitation.how})]
+
+[(#{pilot-invitation.cta})]: [(${link})]
+
+[(#{pilot-invitation.expires(${expiresAt}, ${inviterName})})]
+[(#{pilot-invitation.ignore})]
+[/]
+[# th:insert="~{footer.txt}" /]

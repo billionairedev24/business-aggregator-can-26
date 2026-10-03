@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout.html :: email(#{pilot-invitation.preheader}, ~{::content})}">
+<body>
+<div th:fragment="content" th:with="typeLabel=#{__${'pilot-invitation.type.' + businessType}__}">
+  <h1 th:style="${s.h1}" th:text="#{pilot-invitation.heading(${city})}">Join the pilot</h1>
+  <p th:style="${s.p}" th:text="#{pilot-invitation.body(${inviterName}, ${businessName}, ${city}, ${typeLabel})}">Body</p>
+  <p th:style="${s.p}" th:text="#{pilot-invitation.how}">How</p>
+  <th:block th:replace="~{button.html :: button(#{pilot-invitation.cta}, ${link})}"/>
+  <p th:style="${s.small}" th:text="#{pilot-invitation.expires(${expiresAt}, ${inviterName})}">Expires</p>
+  <p th:style="${s.small}" th:text="#{pilot-invitation.ignore}">Ignore</p>
+</div>
+</body>
+</html>

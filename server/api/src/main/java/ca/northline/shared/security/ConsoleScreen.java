@@ -25,6 +25,8 @@ public enum ConsoleScreen implements CodedEnum {
     TEAM,
     /** S-105: people's privacy requests (access, correction, erasure). */
     PRIVACY,
+    /** S-120: pilot merchant onboarding — the pipeline per market, invites, kitchen visits. */
+    PILOT,
     PROFILE,
     ONCALL;
 
