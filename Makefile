@@ -93,7 +93,7 @@ services_arg = $(if $(filter command line environment,$(origin SERVICES)),SERVIC
 
 .PHONY: up-all
 up-all: ## Every app + every stand-in you don't bring (BYO=db,cache,grafana) + observability and alerting; checks yours, migrates, prints every URL
-	@$(byo_arg) $(services_arg) MAKE="$(MAKE)" $(ROOT)/scripts/local-all.sh up
+	@$(byo_arg) $(services_arg) $(if $(filter file,$(origin SPRING_PROFILE)),SPRING_PROFILE=) MAKE="$(MAKE)" $(ROOT)/scripts/local-all.sh up
 
 .PHONY: up-all-check
 up-all-check: ## Only check your own Postgres (PostGIS, version), Valkey and Grafana, and the ports the stand-ins need

@@ -376,8 +376,8 @@ What it does, in order:
    creates the search indices (`make search-indices`). `SKIP_DB=1` skips the database step.
 4. **Starts every app** with telemetry on (`OTEL_EXPORT_ENABLED=true` → the Collector on :4318) and each stand-in
    actually in use — for every setting your `server/.env` leaves open: `LIVE_BUS=redis` (the Studio's live signals and
-   couriers' positions over Valkey, S-68/S-88), `RATE_LIMIT_STORE=redis`, `REPLAY_STORE=redis`, the Spring profile
-   `local,valkey` (auth and BFF sessions in Valkey), `SEARCH_PROVIDER=elasticsearch`, and
+   couriers' positions over Valkey, S-68/S-88), the Spring profile
+   `local,valkey` (auth and BFF sessions, auth's rate limits in Valkey), `SEARCH_PROVIDER=elasticsearch`, and
    `SPRING_MODULITH_EVENTS_EXTERNALIZATION_ENABLED=true` (the api's and auth's events go to Kafka and the worker
    consumes them). A value in `server/.env` or the environment always wins. Payments keep the fake gateway and uploads
    the temp folders — stripe-mock and RustFS run; switch with `STRIPE_API_BASE` / `STORAGE_PROVIDER=s3` ([§ 6](#6-optional-stand-ins)).

@@ -217,8 +217,8 @@ cmd_up() {
   export OTEL_EXPORT_ENABLED=true OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:$OTEL_HTTP_PORT"
   export OTEL_RESOURCE_ATTRIBUTES="deployment.environment.name=local"
   export_default LIVE_BUS redis                                     # Studio live signals + courier positions over Valkey
-  export_default RATE_LIMIT_STORE redis; export_default REPLAY_STORE redis
-  [ -n "${SPRING_PROFILE:-}" ] || export SPRING_PROFILE=local,valkey   # auth + BFF sessions in Valkey (application-valkey.yml)
+  # auth + BFF sessions, auth's rate limits and replay ids in Valkey (application-valkey.yml), unless SPRING_PROFILE is given
+  [ -n "${SPRING_PROFILE:-}" ] || export SPRING_PROFILE=local,valkey
   export_default SEARCH_PROVIDER elasticsearch                       # the api searches the indices the worker fills
   export_default SPRING_MODULITH_EVENTS_EXTERNALIZATION_ENABLED true # api/auth events reach Kafka, the worker consumes them
   [ -n "$WIRED" ] && say "" && say "${c_dim}For the apps (not in server/.env):$WIRED${c_off}"
