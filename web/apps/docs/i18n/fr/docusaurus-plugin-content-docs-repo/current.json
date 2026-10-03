@@ -5,5 +5,6 @@
   "sidebar.repo.category.Runbooks": { "message": "Procédures", "description": "The label for category Runbooks in sidebar repo" },
   "sidebar.repo.category.Security": { "message": "Sécurité", "description": "The label for category Security in sidebar repo" },
   "sidebar.repo.category.AI": { "message": "IA", "description": "The label for category AI in sidebar repo" },
-  "sidebar.repo.category.Accessibility": { "message": "Accessibilité", "description": "The label for category Accessibility in sidebar repo" }
+  "sidebar.repo.category.Accessibility": { "message": "Accessibilité", "description": "The label for category Accessibility in sidebar repo" },
+  "sidebar.repo.category.Performance": { "message": "Performance", "description": "The label for category Performance in sidebar repo" }
 }
