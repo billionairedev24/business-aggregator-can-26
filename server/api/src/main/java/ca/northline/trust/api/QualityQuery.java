@@ -1,7 +1,9 @@
 package ca.northline.trust.api;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -26,4 +28,7 @@ public interface QualityQuery {
     record QualityScore(String merchantId, LocalDate date, int score, List<Component> components) {}
 
     Optional<QualityScore> latest(String merchantId);
+
+    /** S-119: the latest scores of many businesses in one query; a business without a score is absent. */
+    Map<String, QualityScore> latestOf(Collection<String> merchantIds);
 }

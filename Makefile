@@ -205,3 +205,4 @@ include $(ROOT)/make/dr.mk
 include $(ROOT)/make/observability.mk
 include $(ROOT)/make/security.mk
 include $(ROOT)/make/i18n.mk
+include $(ROOT)/make/loadtest.mk

@@ -12,9 +12,12 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -44,6 +47,25 @@ class TrustReviewAdapter implements ReviewStore {
                 .param("m", merchantId)
                 .query((rs, _) -> new StarCount(rs.getInt("stars"), rs.getInt("n"), rs.getInt("percent")))
                 .list();
+    }
+
+    @Override
+    public Map<String, StarTotal> totals(Collection<String> merchantIds) {
+        if (merchantIds.isEmpty()) {
+            return Map.of();
+        }
+        return jdbc
+                .sql("""
+                        select target_id, sum(rating)::int as stars, count(*)::int as n from trust.reviews
+                         where target_type = 'merchant' and target_id = any(:ids)
+                         group by target_id
+                        """)
+                .param("ids", merchantIds.stream().distinct().toArray(String[]::new))
+                .query((rs, _) ->
+                        Map.entry(rs.getString("target_id"), new StarTotal(rs.getInt("stars"), rs.getInt("n"))))
+                .list()
+                .stream()
+                .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
     @Override

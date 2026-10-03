@@ -16,6 +16,9 @@ spring:
     username: ${DB_USER:northline}
     password: ${DB_PASSWORD:northline}
     hikari.maximum-pool-size: ${DB_POOL_SIZE:10}
+    # S-119: a request waits at most this long for a connection, then is shed with 503 `overloaded` (ApiExceptionHandler)
+    # instead of queueing for Hikari's 30 s default — queued requests filled the heap under the stress test.
+    hikari.connection-timeout: ${DB_CONNECTION_TIMEOUT_MS:5000}
   flyway:
     # db/migrations is packaged onto the classpath by :api:processResources (see api/build.gradle.kts).
     # Override with SPRING_FLYWAY_LOCATIONS=filesystem:/path/to/db/migrations if you must.
@@ -189,6 +192,7 @@ northline:
     # The markets search serves, their time zones and the default market are the region model's (northline.region).
     cache-ttl: ${SEARCH_CACHE_TTL:30s}              # identical searches answered from Redis/Valkey for this long
     rate-limit: ${SEARCH_RATE_LIMIT:120}            # requests per minute and client address (anonymous included)
+    rate-limit-exempt: ${SEARCH_RATE_LIMIT_EXEMPT:}  # S-119: load generators' addresses/CIDRs, never counted; refused in prod
   # Sales tax (S-21; docs/runbooks/stripe.md § 6): local (fixed Canadian rates, nothing reported; refused under
   # staging/prod) | stripe (Stripe Tax on the platform account, uses STRIPE_SECRET_KEY / STRIPE_API_BASE).
   tax:

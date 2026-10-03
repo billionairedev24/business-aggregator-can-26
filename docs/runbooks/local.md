@@ -293,6 +293,10 @@ Notes:
   `ONCALL_EXPORT_TOKEN` is set in `server/.env` (any string, e.g. `local-oncall-token`); then
   `curl -H 'Authorization: Bearer local-oncall-token' localhost:8080/api/v1/ops/oncall` lists the console rota's
   shifts. `LIVE_PROBE_INTERVAL` (30 s) paces the live bus probe. [alerting.md](alerting.md)
+- **Load tests (S-119):** `make load-stack-up` starts a separate stack for them (compose project `northline-load`, own
+  ports: api :18080, Postgres :55432, Elasticsearch :59200) with seeded businesses and customers; then `make load-smoke`,
+  `make load LOAD_SCALE=0.2`, `make soak`. That api runs with `SEARCH_RATE_LIMIT_EXEMPT=127.0.0.1,::1` so the load
+  generator is never rate limited; your own api needs nothing. [load-testing.md](load-testing.md)
 - **Console delivery map (S-81):** without `CONSOLE_MAP_TILES` the ops map draws the zones and couriers on a plain
   grid. To see a basemap, set an https XYZ tile template in `server/.env` ([README § Console map](README.md#console-map-s-81)).
 - **Your own Kafka:** create the topics with `make kafka-topics` (`-plan`, `-verify`; `make kafka-topics-list` prints

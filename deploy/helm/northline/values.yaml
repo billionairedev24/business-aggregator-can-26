@@ -464,6 +464,8 @@ oauthClientsJob:
 
 # ---- apps -----------------------------------------------------------------------------------------------------------
 # type: spring (Java, actuator probes, infra ConfigMap + secrets), static (nginx), node (SSR).
+# autoscaling: an HPA on CPU (targetCPUUtilizationPercentage of the request); `behavior` (S-119, optional) replaces the
+# default (scale down after 5 minutes of low CPU) with the HPA's own `behavior` block, e.g. the api's in values-prod.yaml.
 # profiles (spring): Spring profiles added after global.environment's (consumer-bff: the bff image with `consumer`).
 apps:
   api:
