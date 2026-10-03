@@ -65,6 +65,7 @@ See `docs/BACKEND_CONVENTIONS.md` (written by the backend foundation) — layeri
 | V245–V249 | push notifications and deep links (S-102: `messaging.push_devices`, customers' deferred notifications) — above V240–V244, which the mobile foundation (S-97) may use, by the ordering rule below |
 | V301–V304 | data retention (S-107: `privacy.retention_runs`, `region.privacy_laws.decision_retention_days`, the jobs' indexes) — above S-108's V300 by the ordering rule below (first assigned V295–V299) |
 | V305–V309 | security review before the penetration test (S-104: `privacy.verification_texts`) — above S-107's V301 by the ordering rule below |
+| V325–V329 | UAT with the pilot group (S-121: schema `uat`, dev seed V326) — above S-120's V320–V324 by the ordering rule below |
 
 **Ordering rule (2026-10-01):** Flyway applies versions in order and, outside the `local` profile, refuses a version lower than one already applied. A new migration must therefore be numbered **above the highest version on main** when it merges, not just inside its workstream's range. If a range is behind, take the next free range above the maximum and record it here (S-129/S-133's V125/V126 became V150/V151 for this reason).
 

@@ -1,0 +1,25 @@
+import type { pilot as en } from '../en/pilot';
+
+export const pilot: { [k in keyof typeof en]: string } = {
+  'pilot.open': 'Commentaire',
+  'pilot.openHint': 'Envoyer un commentaire sur cet écran à l’équipe Northline',
+  'pilot.title': 'Envoyer un commentaire',
+  'pilot.lede': 'Vous faites partie du pilote. Dites-nous ce qui a marché et ce qui n’a pas marché — l’équipe lit chaque note.',
+  'pilot.category': 'De quoi s’agit-il?',
+  'pilot.c.bug': 'Quelque chose est brisé',
+  'pilot.c.confusing': 'Quelque chose est déroutant',
+  'pilot.c.idea': 'Une idée',
+  'pilot.c.praise': 'Quelque chose que j’ai aimé',
+  'pilot.severity': 'À quel point cela vous a-t-il gêné?',
+  'pilot.s.blocker': 'Je n’ai pas pu terminer',
+  'pilot.s.major': 'J’ai terminé, mais difficilement',
+  'pilot.s.minor': 'Un petit irritant',
+  'pilot.s.cosmetic': 'Seulement l’apparence',
+  'pilot.body': 'Que s’est-il passé?',
+  'pilot.bodyHint': 'Ce que vous avez fait, ce que vous attendiez, ce que vous avez vu. N’incluez pas de mot de passe, de numéro de carte ni de code.',
+  'pilot.bodyRequired': 'Dites-nous ce qui s’est passé, en 1 à 4 000 caractères.',
+  'pilot.context': 'Envoyé avec : l’écran ({screen}), la version de l’application, votre langue et le système de votre téléphone — rien d’autre.',
+  'pilot.send': 'Envoyer',
+  'pilot.sent': 'Merci — nous l’avons reçu sous le numéro {reference}.',
+  'pilot.error': 'Le commentaire n’a pas été envoyé. Réessayez.',
+};

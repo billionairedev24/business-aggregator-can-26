@@ -7432,3 +7432,87 @@ available in fr-CA before a Québec launch.
   quarter of the target on one replica of a shared 4-vCPU box. Not built: staging load-test data, the token harvester
   (bearer tokens for the manifest's users, renewed during a soak), the k6 image. The local runs used the in-memory live
   bus (one replica), the fake payment gateway (no Stripe latency) and dev auth (no BFF, no northline-auth).
+
+## 2026-09-30 — S-121 UAT with pilot merchants and customers; triage feedback
+
+Process and scripts: [docs/uat/README.md](uat/README.md) (fr: `docs/uat/fr/`); dry run: [docs/uat/dry-run.md](uat/dry-run.md).
+The acceptance criteria (sign-off from the pilot group, blocking issues fixed) need people who don't exist yet: this
+story builds the tooling and the process and rehearses them; the sign-off itself happens when the pilot runs.
+
+- **New module `uat`** (schema `uat`), not part of `messaging`: feedback has its own triage flow, a launch decision and a
+  lifetime of one pilot, and shares nothing with help cases but the idea. It reads other modules only through their api
+  (`identity.api.PrivacyAccounts.find` to add a person by email or mobile — the lookup S-105 staff use;
+  `identity.api.StaffDirectory` for owners' names; `merchants.api.MerchantDirectory` for a business's type;
+  `developer.api.AuditTrail`; `shared.security.MerchantMemberships`). It has a `PersonalDataContributor` (export; erasure
+  blanks the words, device line and screenshots, replaces the person's id and keeps the triage record) and a DR mask
+  (`db/dr/mask/uat.sql`). No retention job: pilot data is deleted with the pilot (a follow-up when the pilot ends).
+- **Pilot participant flag — overlap with S-120.** S-120 (branch `pilot/s-120-onboarding`, not merged) adds
+  `merchants.pilot_businesses`, the onboarding cohort of *businesses*; it has no notion of customers, couriers or staff.
+  S-121 therefore defines its own small flag, `uat.participants`: a row is a person (customer, courier, staff) **or** a
+  business (provider, seller, kitchen; every member of it counts), with a persona. Public: `uat.api.PilotParticipants
+  .isParticipant(userId, merchantId)`. When S-120 merges, enrolling a pilot business there could add its UAT row (a
+  listener on its event) — not done here; staff add businesses by id in the console for now. A business of type `both`
+  can take part as provider and as seller (one row each).
+- **Gate:** the control shows only when `GET /api/v1/me/pilot[?merchantId=]` says `participant`; upload and send answer
+  403 otherwise (`Feedback here is for pilot participants.`). In the Studio the business counts only for its team
+  (`You're not on this business's team.`). The endpoints sit under `/api/v1/me/pilot` (any signed-in person: customers,
+  Studio members, staff, the app's DPoP tokens); OpenAPI: `public` group, and the `studio` group too.
+- **What feedback stores:** category, the participant's severity, the text, route, app version, locale, platform,
+  optional screenshot. The text, route and platform go through `platform.Redaction` (the S-112 log redaction, the same
+  call S-129's prompt redaction uses) *before* storage. The route keeps the path only: scheme, host, query string and
+  fragment are dropped (always — simpler than finding token parameters), and a path segment after `invite`,
+  `team-invitations`, `pilot-invites`, `unsubscribe`, `verify`, `reset`, `token`, `link`, `download` … or one that looks
+  like a token (24+ mixed letters and digits, not a ULID) becomes `:token`. Clients send `location.pathname` /
+  expo-router's pathname anyway. Platform is "Browser N · OS" on the web (parsed from the user agent client-side; the
+  rest of the UA is not sent), "Northline app · ios|android N" in the app. App version: web `VITE_NL_APP_VERSION` at
+  build time (not set anywhere yet → `dev`), the app's Expo version.
+- **Screenshots (web):** the browser's `getDisplayMedia` (the person chooses what to share; the dialog hides while
+  capturing; PNG, JPEG at 0.8 when the PNG is over the limit) or an attached file. PNG/JPEG only, 5 MB, and S-104's checks
+  on the server (declared type, magic bytes, `ImageDecoding.size` within the pixel ceiling). Stored through a new
+  `ScreenshotStorage` port (local folder under `local`/`test`, object storage under `uat/` with `STORAGE_PROVIDER`,
+  fail-loudly placeholder otherwise) at `customers/<userId>/<id>.<ext>` so erasure removes them by prefix. Uploaded first
+  (`POST /me/pilot/screenshots`, multipart), then referenced by id; an unsent upload is deleted on the person's next
+  upload after a day (no scheduler). Staff see it through `GET /console/uat/feedback/{id}/screenshot` (no-store,
+  `nosniff`). **The mobile app sends no screenshot** (needs a native module and a new store build) and the courier app
+  has no control (out of scope; couriers tell their pilot contact).
+- **Where the control sits:** a corner button (`position: fixed`, 44 px, bottom-end) in the Studio, the consumer site
+  (signed-in only; no request for visitors) and the console; a floating "Feedback" button above the tab bar in the app,
+  opening a `/feedback` screen with the screen it came from. One `@northline/ui` component (`PilotFeedback`, with a
+  story) and `@northline/client`'s `sendPilotFeedback`; no design exists, so the copy is ours (en + fr-CA).
+- **Console:** new screen `uat` (route `/uat`, sidebar group Platform, "Pilot UAT" / « Tests du pilote ») and action
+  `uat`. Screen and action for **support** and **support lead** (support already triages the pilot's cases) and admin;
+  no new role. When S-120 merges, its `merchant_success` role could be given the screen read-only — a one-line change.
+  Tabs: Feedback (queue, filters, CSV, the detail drawer with triage, owner, tracker link, history, duplicates),
+  Participants & sign-off, Go / no-go. Every change writes `developer.audit_log` (`uat.feedback_moved|assigned|linked`,
+  `uat.participant_added|deactivated`, `uat.signoff_recorded`) with the active roles; ids and codes only.
+- **Triage states:** new → triaged → accepted → fixed → verified → closed, or won't fix / duplicate (from new, triaged
+  or accepted). Accepting needs the blocking decision (`blocking` true/false); accepted → accepted changes it; a failed
+  verification goes fixed/verified → accepted; closed, won't fix and duplicate can be reopened to triaged. New → accepted
+  directly is refused (the spec's order). Duplicate needs `duplicateOf`; the target is resolved to its root (never itself
+  or its own duplicate) and the item's own duplicates move to the root (the merge). Owner: a staff member whose roles
+  open the screen (422 otherwise). Tracker: any http(s) address up to 500 characters. Optimistic version → 409 `stale`.
+- **Go / no-go** (`uat.domain.GoNoGo`, `uat.api.UatReadiness` for S-118): go when no blocking item is accepted-and-not-
+  fixed, none is fixed-and-not-verified, no participant-reported blocker is untriaged (new/triaged), and every persona
+  has ≥ 1 active participant whose latest sign-off of the persona's script is signed off or with comments — none
+  blocked, none pending. Reasons are codes plus a sentence in the caller's language. Trend: the last 14 days in the
+  platform zone (region model), replaying `uat.feedback_history`: reported, open blocking at day end, resolved. CSV:
+  verdict and reasons, blocking items, coverage, trend, headers in en or fr. Both CSVs quote formula-like cells.
+- **Scripts:** six personas — provider, seller, kitchen, customer, courier, console staff — one script and one printable
+  sign-off form each, en and fr (24 pages), steps derived from the S-117 journeys and SCREENS.md. `uat.scripts` holds
+  code, persona, version (1.0), titles and paths; a sign-off records the version run. The pages are on the docs site
+  (internal variant, category UAT / « Tests d'acceptation »).
+- **Dry run:** dev seed V326 (fake pilot group, every triage stage) checked by `UatDevSeedTest` under `local`; the flow
+  through the api in `UatApiTest.DryRun`; the console flow with Testing Library (S-117's `web/e2e` isn't on main —
+  PR #154). Result: pass, observations in dry-run.md.
+- **Schema V325** (`uat`): `participants` (user xor merchant, persona, label, active; unique per persona),
+  `scripts` (+ six rows), `feedback` (+ `feedback_number_seq` from 1001 → "UAT-1001"; CHECKs for the states,
+  screenshot pair, duplicate ⇔ `duplicate_of`, blocking decided once accepted; version column), `screenshots`,
+  `feedback_history`, `signoffs` (latest per participant and script counts; blocked needs items or comments). Seed-dev
+  **V326**. Console enums: `ConsoleScreen.UAT`, `ConsoleAction.UAT`. No new configuration variable
+  (`northline.uat.screenshots-dir` has a temp-dir default, local only). 32 new messages with fr-CA in
+  `validation-messages.fr-CA.tsv`.
+- **Not done:** no a11y page-sweep entry for `/uat` (axe runs in its Vitest tests; the sweep's fixtures weren't
+  re-recorded); no notification to the participant when their item moves (they see the state under `GET
+  /me/pilot/feedback`, which no screen shows yet); no feedback control in the courier app; no screenshot from the
+  consumer app; no link from S-120's cohort to UAT participants; no retention job for `uat`; nothing exercised with a real
+  participant, device, browser capture prompt, or object store (local folder and the S-10 adapters' tests only).
