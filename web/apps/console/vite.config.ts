@@ -26,10 +26,13 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, import.meta.dirname, 'NL_');
   const dev = !!env.NL_DEV_USER;
   const bff = env.NL_BFF ?? 'http://localhost:8083';
+  // S-117: keep the browser's Host (Vite's string shorthand rewrites it to the target), so the BFF builds its OAuth
+  // redirect URI and its post-login redirect on this origin instead of sending the browser to the BFF's own port.
+  const toBff: ProxyOptions = { target: bff, changeOrigin: false };
   // `^/api/` and not `/api`: a client route may start with "api" (docs/CONSOLE_PLAN.md § Routes).
   const proxy: Record<string, string | ProxyOptions> = dev
     ? { '^/api/': { target: env.NL_API ?? 'http://localhost:8080', headers: { 'X-Dev-User': env.NL_DEV_USER! } } }
-    : { '^/api/': bff, '^/bff/': bff, '^/oauth2/': bff, '^/login/': bff };
+    : { '^/api/': toBff, '^/bff/': toBff, '^/oauth2/': toBff, '^/login/': toBff };
   return {
     plugins: [tanstackRouter({
       target: 'react', autoCodeSplitting: true,

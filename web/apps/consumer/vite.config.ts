@@ -69,10 +69,13 @@ export default defineConfig(({ mode }) => {
   // Server-side code reads these from process.env (as in the container); .env feeds them to the dev server too.
   for (const key of ['NL_BFF_URL', 'NL_AUTH_ORIGIN']) if (env[key] && !process.env[key]) process.env[key] = env[key];
   const bff = env.NL_BFF ?? 'http://localhost:8081';
+  // S-117: keep the browser's Host (Vite's string shorthand rewrites it to the target), so the BFF builds its OAuth
+  // redirect URI and its post-login redirect on this origin instead of sending the browser to the BFF's own port.
+  const toBff: ProxyOptions = { target: bff, changeOrigin: false };
   const api = env.NL_API ?? 'http://localhost:8080';
   const proxy: Record<string, string | ProxyOptions> = env.NL_DEV_USER || env.NL_DEV_GUEST
     ? { '/api': { target: api, headers: env.NL_DEV_USER ? { 'X-Dev-User': env.NL_DEV_USER, 'X-Dev-Acr': 'none' } : { 'X-Northline-Guest': 'g_devguest_0000000000000' } } }
-    : { '/api': bff, '/bff': bff, '/oauth2': bff, '/login': bff };
+    : { '/api': toBff, '/bff': toBff, '/oauth2': toBff, '/login': toBff };
   return {
     // /legal/*.html: the Studio's verbatim design 09/10 pages, one copy for both apps (S-63)
     plugins: [tanstackStart(), react(), devAuth(env), legalPages(), seoFiles(env), appLinkFiles(env)],
