@@ -141,7 +141,7 @@ class PilotOnboardingService implements PilotOnboarding {
             out.add(new Row(
                     p.id(),
                     p.label(),
-                    business == null || business.displayName().isBlank() ? p.label() : business.displayName(),
+                    business == null || !business.detailsComplete() ? p.label() : business.displayName(),
                     p.businessType(),
                     p.marketId(),
                     merchantId,
