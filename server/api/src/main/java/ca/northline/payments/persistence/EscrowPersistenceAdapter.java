@@ -42,6 +42,11 @@ class EscrowPersistenceAdapter implements EscrowRepository {
     }
 
     @Override
+    public Optional<Escrow> findByRefForUpdate(String refType, String refId) {
+        return rows.lockByRef(refType, refId).map(mapper::toDomain);
+    }
+
+    @Override
     public Optional<Escrow> findByPaymentIntentId(String paymentIntentId) {
         return rows.findByPaymentIntentId(paymentIntentId).map(mapper::toDomain);
     }

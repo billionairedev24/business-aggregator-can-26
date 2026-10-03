@@ -8,6 +8,7 @@ import { GuestBanner } from './GuestBanner';
 import { Header } from './Header';
 import { useShellT } from './messages';
 import { SCREENS, screenFor } from './screens';
+import { PilotControl } from '../pilot/PilotControl';
 
 /** Header, guest banner, the screen, footer. Every consumer route renders inside it (routes/__root.tsx). */
 export function ConsumerLayout({ children, geolocation }: { children: ReactNode; geolocation?: Geolocation | null }) {
@@ -25,6 +26,7 @@ export function ConsumerLayout({ children, geolocation }: { children: ReactNode;
           {banner && <GuestBanner />}
           <main id="main" tabIndex={-1} className="nl-main">{children}</main>
           <Footer />
+          <PilotControl signedIn={!!user} />
         </div>
       </VisitorPlace>
     </DeliveryLocationProvider>

@@ -59,6 +59,7 @@ it under the `local` profile only.
 | `make status` · `make logs` · `make restart SERVICES=api` | what runs and the useful URLs · follow the logs · restart one app |
 | `make down` · `make down SERVICES=studio` · `make down VOLUMES=1` | stop everything · one app · and delete the stand-ins' data |
 | `make all` | everything CI checks: `server-build` (tests included) and `web-check` |
+| `make db-create` | create the role + database from `server/.env` on your own Postgres if missing, add PostGIS, migrate, seed (never drops; `MIGRATE=0` only creates) |
 | `make db-reset` | drop and recreate the local database, migrate, seed (asks first) |
 
 ## Run everything locally with your own Postgres, Valkey and Grafana

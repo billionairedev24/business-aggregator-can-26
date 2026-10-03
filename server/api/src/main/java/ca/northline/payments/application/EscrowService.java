@@ -354,7 +354,13 @@ class EscrowService implements EscrowLifecycle {
                                 escrow.getId()));
     }
 
+    /**
+     * Locks the row: the job's completion and the customer's sign-off arrive as separate asynchronous events, and
+     * without the lock the later writer's optimistic-lock failure dropped one of them (a sign-off lost to a concurrent
+     * completion left the money on the 48 h clock until the publication was republished on restart).
+     */
     private Escrow byRef(String refType, String refId) {
-        return escrows.findByRef(refType, refId).orElseThrow(() -> new NotFound("escrow", refType + ":" + refId));
+        return escrows.findByRefForUpdate(refType, refId)
+                .orElseThrow(() -> new NotFound("escrow", refType + ":" + refId));
     }
 }

@@ -65,6 +65,16 @@ Installing PostGIS: macOS `brew install postgresql@17 postgis`; Debian/Ubuntu (P
 **Migrate and seed** (from `server/`; the tasks read `DB_*` from `server/.env`, or take `-Pdb.url=… -Pdb.user=…
 -Pdb.password=…`):
 
+**Create the database on your own Postgres:** `make db-create` creates the role and database named in `server/.env`
+(`DB_URL`, `DB_USER`, `DB_PASSWORD`) when they are missing, adds PostGIS, citext and pgcrypto, then migrates and seeds. It
+never drops anything and is safe to run again; `MIGRATE=0` only creates. It connects with psql as `PGUSER` (default
+`postgres`, which must be a superuser because PostGIS is not a trusted extension; `PGPASSWORD` for its password) and
+refuses a host that isn't local.
+
+```sh
+PGUSER=postgres PGPASSWORD=… make db-create
+```
+
 `make db-migrate db-seed` (part of `make up`; `make db-reset` drops and recreates a local database first):
 
 ```sh

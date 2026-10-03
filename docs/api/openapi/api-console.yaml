@@ -7767,6 +7767,933 @@ paths:
           description: "Validation failed: one error per field with the exact message."
       tags:
       - trust-rules-controller
+  /api/v1/console/uat/feedback:
+    get:
+      operationId: uatConsoleQueue
+      parameters:
+      - in: query
+        name: state
+        required: false
+        schema:
+          type: string
+          default: open
+          pattern: open|all|new|triaged|accepted|fixed|verified|closed|wont_fix|duplicate
+      - in: query
+        name: blocking
+        required: false
+        schema:
+          type: boolean
+      - in: query
+        name: persona
+        required: false
+        schema:
+          type: string
+          pattern: provider|seller|kitchen|customer|courier|staff
+      - in: query
+        name: app
+        required: false
+        schema:
+          type: string
+          pattern: studio|consumer|console|mobile|courier
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ListResponseQueueItem"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      summary: "The UAT feedback queue, newest first"
+      tags:
+      - uat-console-controller
+  /api/v1/console/uat/feedback/export:
+    get:
+      operationId: uatConsoleExport
+      parameters:
+      - in: query
+        name: state
+        required: false
+        schema:
+          type: string
+          default: all
+          pattern: open|all|new|triaged|accepted|fixed|verified|closed|wont_fix|duplicate
+      - in: query
+        name: blocking
+        required: false
+        schema:
+          type: boolean
+      - in: query
+        name: persona
+        required: false
+        schema:
+          type: string
+          pattern: provider|seller|kitchen|customer|courier|staff
+      - in: query
+        name: app
+        required: false
+        schema:
+          type: string
+          pattern: studio|consumer|console|mobile|courier
+      responses:
+        "200":
+          content:
+            text/csv:
+              schema:
+                type: string
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      summary: The UAT feedback queue as CSV
+      tags:
+      - uat-console-controller
+  /api/v1/console/uat/feedback/{id}:
+    get:
+      operationId: uatConsoleDetail
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/FeedbackDetail"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - uat-console-controller
+  /api/v1/console/uat/feedback/{id}/moves:
+    post:
+      operationId: uatConsoleMove
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MoveBody"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/FeedbackDetail"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      summary: "Move a UAT feedback item on in triage (accept as blocking or not,\
+        \ fix, verify, merge…)"
+      tags:
+      - uat-console-controller
+  /api/v1/console/uat/feedback/{id}/owner:
+    post:
+      operationId: uatConsoleAssign
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OwnerBody"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/FeedbackDetail"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - uat-console-controller
+  /api/v1/console/uat/feedback/{id}/screenshot:
+    get:
+      operationId: uatConsoleScreenshot
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: byte
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      summary: The screenshot attached to a UAT feedback item
+      tags:
+      - uat-console-controller
+  /api/v1/console/uat/feedback/{id}/tracker:
+    post:
+      operationId: uatConsoleLink
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrackerBody"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/FeedbackDetail"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - uat-console-controller
+  /api/v1/console/uat/go-no-go:
+    get:
+      operationId: uatConsoleGoNoGo
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/GoNoGoReport"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      summary: "UAT go/no-go: open blocking items, sign-off coverage per persona,\
+        \ the trend"
+      tags:
+      - uat-console-controller
+  /api/v1/console/uat/go-no-go/export:
+    get:
+      operationId: uatConsoleGoNoGoCsv
+      responses:
+        "200":
+          content:
+            text/csv:
+              schema:
+                type: string
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      summary: UAT go/no-go as CSV
+      tags:
+      - uat-console-controller
+  /api/v1/console/uat/owners:
+    get:
+      operationId: uatConsoleOwners
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ListResponseOwner"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - uat-console-controller
+  /api/v1/console/uat/participants:
+    get:
+      operationId: uatConsoleParticipants
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ListResponseParticipantView"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - uat-console-controller
+    post:
+      operationId: uatConsoleAdd
+      parameters:
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ParticipantBody"
+        required: true
+      responses:
+        "201":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ParticipantView"
+          description: Created
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      summary: "Add a pilot participant (a customer, courier or staff member) by email\
+        \ or mobile number"
+      tags:
+      - uat-console-controller
+  /api/v1/console/uat/participants/{id}/deactivate:
+    post:
+      operationId: uatConsoleDeactivate
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ParticipantView"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - uat-console-controller
+  /api/v1/console/uat/participants/{id}/signoffs:
+    post:
+      operationId: uatConsoleSignoff
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignoffBody"
+        required: true
+      responses:
+        "201":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ParticipantView"
+          description: Created
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      summary: Record a participant's sign-off of their UAT script
+      tags:
+      - uat-console-controller
+  /api/v1/console/uat/scripts:
+    get:
+      operationId: uatConsoleScripts
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ListResponseScriptView"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - uat-console-controller
   /api/v1/console/verification/applications:
     get:
       operationId: verificationQueueQueue
@@ -8409,6 +9336,31 @@ components:
           type: string
         tiles:
           type: string
+    BlockingItem:
+      type: object
+      properties:
+        app:
+          type: string
+        id:
+          type: string
+        ownerName:
+          type: string
+        persona:
+          type: string
+        reference:
+          type: string
+        reportedAt:
+          type: string
+          format: date-time
+        reports:
+          type: integer
+          format: int32
+        state:
+          type: string
+        summary:
+          type: string
+        trackerUrl:
+          type: string
     Board:
       type: object
       properties:
@@ -8924,6 +9876,35 @@ components:
           pattern: volume|consultation|conversion
       required:
       - reason
+    FeedbackDetail:
+      type: object
+      properties:
+        appVersion:
+          type: string
+        body:
+          type: string
+        duplicateOfItem:
+          $ref: "#/components/schemas/QueueItem"
+        duplicates:
+          type: array
+          items:
+            $ref: "#/components/schemas/QueueItem"
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/TriageStep"
+        item:
+          $ref: "#/components/schemas/QueueItem"
+        locale:
+          type: string
+        merchantId:
+          type: string
+        next:
+          type: array
+          items:
+            type: string
+        platform:
+          type: string
     Field:
       type: object
       properties:
@@ -9032,6 +10013,51 @@ components:
         oldest:
           type: string
           format: date-time
+    GoNoGoReason:
+      type: object
+      properties:
+        code:
+          type: string
+        count:
+          type: integer
+          format: int32
+        persona:
+          type: string
+        text:
+          type: string
+    GoNoGoReport:
+      type: object
+      properties:
+        blockingItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/BlockingItem"
+        blockingOpen:
+          type: integer
+          format: int32
+        blockingUnverified:
+          type: integer
+          format: int32
+        coverage:
+          type: array
+          items:
+            $ref: "#/components/schemas/PersonaCoverage"
+        generatedAt:
+          type: string
+          format: date-time
+        reasons:
+          type: array
+          items:
+            $ref: "#/components/schemas/GoNoGoReason"
+        trend:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrendDay"
+        untriagedBlockers:
+          type: integer
+          format: int32
+        verdict:
+          type: string
     HandOverRequest:
       type: object
       properties:
@@ -9327,6 +10353,27 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/KeyRow"
+    ListResponseOwner:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Owner"
+    ListResponseParticipantView:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ParticipantView"
+    ListResponseQueueItem:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/QueueItem"
     ListResponseRecordView:
       type: object
       properties:
@@ -9362,6 +10409,13 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/RunView"
+    ListResponseScriptView:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScriptView"
     Live:
       type: object
       properties:
@@ -9560,6 +10614,23 @@ components:
         week:
           type: integer
           format: int64
+    MoveBody:
+      type: object
+      properties:
+        blocking:
+          type: boolean
+        duplicateOf:
+          type: string
+        note:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        to:
+          type: string
+          minLength: 1
+          pattern: new|triaged|accepted|fixed|verified|closed|wont_fix|duplicate
+      required:
+      - to
     Note:
       type: object
       properties:
@@ -9628,6 +10699,18 @@ components:
             $ref: "#/components/schemas/Week"
         workQueue:
           $ref: "#/components/schemas/WorkQueue"
+    Owner:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+    OwnerBody:
+      type: object
+      properties:
+        ownerId:
+          type: string
     OwnerReview:
       type: object
       properties:
@@ -9655,6 +10738,47 @@ components:
           type: string
         status:
           type: string
+    ParticipantBody:
+      type: object
+      properties:
+        contact:
+          type: string
+        label:
+          type: string
+          maxLength: 80
+          minLength: 0
+        persona:
+          type: string
+          minLength: 1
+          pattern: provider|seller|kitchen|customer|courier|staff
+      required:
+      - label
+      - persona
+    ParticipantView:
+      type: object
+      properties:
+        active:
+          type: boolean
+        feedbackCount:
+          type: integer
+          format: int32
+        id:
+          type: string
+        label:
+          type: string
+        merchantId:
+          type: string
+        persona:
+          type: string
+        signoffs:
+          type: array
+          items:
+            $ref: "#/components/schemas/SignoffView"
+        since:
+          type: string
+          format: date-time
+        who:
+          type: string
     PauseRequest:
       type: object
       properties:
@@ -9671,6 +10795,34 @@ components:
           $ref: "#/components/schemas/RefundRequest"
         ticket:
           $ref: "#/components/schemas/Ticket"
+    PersonaCoverage:
+      type: object
+      properties:
+        blocked:
+          type: integer
+          format: int32
+        complete:
+          type: boolean
+        participants:
+          type: integer
+          format: int32
+        pending:
+          type: integer
+          format: int32
+        persona:
+          type: string
+        script:
+          type: string
+        scriptTitle:
+          type: string
+        scriptVersion:
+          type: string
+        signedOff:
+          type: integer
+          format: int32
+        withComments:
+          type: integer
+          format: int32
     PickupView:
       type: object
       properties:
@@ -10093,6 +11245,50 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Item"
+    QueueItem:
+      type: object
+      properties:
+        app:
+          type: string
+        blocking:
+          type: boolean
+        category:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        duplicateOf:
+          type: string
+        duplicates:
+          type: integer
+          format: int32
+        id:
+          type: string
+        ownerId:
+          type: string
+        ownerName:
+          type: string
+        participant:
+          type: string
+        persona:
+          type: string
+        reference:
+          type: string
+        route:
+          type: string
+        screenshot:
+          type: boolean
+        severity:
+          type: string
+        state:
+          type: string
+        summary:
+          type: string
+        trackerUrl:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
     ReasonRequest:
       type: object
       properties:
@@ -10481,6 +11677,7 @@ components:
             - macros
             - privacy
             - onboard
+            - uat
         role:
           type: string
           enum:
@@ -10515,6 +11712,7 @@ components:
             - team
             - privacy
             - pilot
+            - uat
             - profile
             - oncall
     RoleRequest:
@@ -10763,6 +11961,21 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Suggestion"
+    ScriptView:
+      type: object
+      properties:
+        code:
+          type: string
+        docPath:
+          type: string
+        formPath:
+          type: string
+        persona:
+          type: string
+        title:
+          type: string
+        version:
+          type: string
     SearchRequest:
       type: object
       properties:
@@ -10838,6 +12051,54 @@ components:
         value:
           type: number
           format: double
+    SignoffBody:
+      type: object
+      properties:
+        blockingIds:
+          type: array
+          items:
+            type: string
+          maxItems: 50
+          minItems: 0
+        comments:
+          type: string
+          maxLength: 2000
+          minLength: 0
+        outcome:
+          type: string
+          minLength: 1
+          pattern: signed_off|with_comments|blocked
+        script:
+          type: string
+          minLength: 1
+      required:
+      - outcome
+      - script
+    SignoffView:
+      type: object
+      properties:
+        blockingRefs:
+          type: array
+          items:
+            type: string
+        comments:
+          type: string
+        history:
+          type: integer
+          format: int32
+        outcome:
+          type: string
+        recordedAt:
+          type: string
+          format: date-time
+        recordedByName:
+          type: string
+        script:
+          type: string
+        scriptTitle:
+          type: string
+        scriptVersion:
+          type: string
     StageRequest:
       type: object
       properties:
@@ -11029,6 +12290,13 @@ components:
           format: int64
         tier:
           type: string
+    TrackerBody:
+      type: object
+      properties:
+        url:
+          type: string
+          maxLength: 500
+          minLength: 0
     TrailEntry:
       type: object
       properties:
@@ -11048,6 +12316,39 @@ components:
         id:
           type: string
         reason:
+          type: string
+    TrendDay:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        openBlocking:
+          type: integer
+          format: int32
+        reported:
+          type: integer
+          format: int32
+        resolved:
+          type: integer
+          format: int32
+    TriageStep:
+      type: object
+      properties:
+        actorId:
+          type: string
+        actorName:
+          type: string
+        at:
+          type: string
+          format: date-time
+        blocking:
+          type: boolean
+        from:
+          type: string
+        note:
+          type: string
+        to:
           type: string
     TrustFlag:
       type: object

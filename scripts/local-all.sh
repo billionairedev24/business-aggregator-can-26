@@ -86,9 +86,8 @@ check_postgres() {
       (select rolsuper from pg_roles where rolname = current_user)" 2>&1) || rc=$?
   if [ $rc = 127 ]; then warn "Postgres answers on $PGH:$PGP; no psql or Docker to check the version and PostGIS"; return; fi
   [ $rc = 0 ] || die "cannot sign in to $DB_URL as $DB_USER: ${out}
-    Create the role and database once (docs/runbooks/local.md § 3):
-      psql -U postgres -c \"create role $DB_USER login password '…'\" -c \"create database $PGD owner $DB_USER\"
-      psql -U postgres -d $PGD -c 'create extension if not exists postgis; create extension if not exists citext; create extension if not exists pgcrypto'"
+    Create the role, database and extensions once from server/.env (as a superuser; PGPASSWORD for its password):
+      make db-create MIGRATE=0       # then make up-all again (docs/runbooks/local.md § 3)"
   local num ver installed available super
   IFS='|' read -r num ver installed available super <<EOF
 $out
@@ -98,7 +97,7 @@ EOF
   fi
   if [ "$installed" = - ] && [ "$super" != t ]; then
     die "PostGIS is available but not created in '$PGD', and $DB_USER may not create it (not a trusted extension). Once, as a superuser:
-      psql -U postgres -d $PGD -c 'create extension if not exists postgis; create extension if not exists citext; create extension if not exists pgcrypto'"
+      make db-create MIGRATE=0       # adds the extensions; changes nothing else that exists"
   fi
   if [ "$num" -lt 170000 ]; then warn "your Postgres is $ver — 17 is recommended (the cloud, CI and the Docker stand-in run 17)"; fi
   ok "your Postgres $ver at $PGH:$PGP/$PGD, PostGIS ${installed/#-/available $available}"
