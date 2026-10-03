@@ -109,21 +109,32 @@ test('a quote request becomes a booking whose escrow is released after sign-off'
   test.info().annotations.push({ type: 'booking', description: bookingRef });
 });
 
-/** Appointments › List, week by week until the booking shows up, then its job panel. */
+/**
+ * Appointments › List, week by week until the booking shows up, then its job panel. After "Next week" the list is busy
+ * until that week's jobs have arrived (it never shows the last week's under the new title, S-117): each week is judged
+ * only once it is settled, and the click re-finds the row (Playwright locators resolve on every attempt).
+ */
 async function openJob(owner: Page, merchantId: string, ref: string) {
   await owner.goto(`${env.urls.studio}/b/${merchantId}/appointments`);
   await owner.getByRole('radiogroup', { name: 'Calendar view' }).getByText('List', { exact: true }).click();
   const open = owner.getByRole('button', { name: new RegExp(`^Open · .* · ${ref}$`) });
+  const busy = owner.locator('main [aria-busy="true"]');
+  const settled = async () => {
+    await expect(busy).toHaveCount(0);
+    await expect(owner.getByRole('button', { name: /^Open · / }).first().or(owner.getByText('No jobs this week.'))).toBeVisible();
+  };
   const week = owner.getByRole('heading', { level: 1 });
   for (let weeks = 0; weeks < 4; weeks++) {
-    // the week's jobs are drawn (or its empty state) before deciding the booking isn't in it
-    await expect(owner.getByRole('button', { name: /^Open · / }).first().or(owner.getByText('No jobs this week.'))).toBeVisible();
+    await settled();
     if (await open.isVisible()) break;
     const shown = await week.textContent();
     await owner.getByRole('button', { name: 'Next week' }).click();
     await expect(week).not.toHaveText(shown!);
   }
-  await open.click();
+  await expect(async () => {
+    await settled();
+    await open.click({ timeout: 5_000 });
+  }).toPass({ timeout: 30_000 });
   const job = owner.getByRole('region', { name: new RegExp(ref) });
   await expect(job).toBeVisible();
   return job;

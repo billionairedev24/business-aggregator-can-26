@@ -57,5 +57,11 @@ export const test = base.extend<{ owner: Page; staff: Page; consumer: Page }>({
 
 export { expect };
 
-/** Names that are unique per run (titles, descriptions), so a rerun against the same database never finds the last one's. */
-export const unique = (label: string) => `${label} ${env.runId}`;
+/**
+ * Names that are unique per run (titles, descriptions), so a rerun against the same database never finds the last
+ * one's — and per repeat (`--repeat-each`) and retry within a run.
+ */
+export function unique(label: string): string {
+  const { repeatEachIndex, retry } = base.info();
+  return `${label} ${env.runId}${repeatEachIndex || retry ? `-${repeatEachIndex}.${retry}` : ''}`;
+}
