@@ -37,6 +37,7 @@ say where a step is still manual or missing.
 | [logging.md](logging.md) | structured JSON logs (ECS), the redaction layer (emails, phones, tokens, cards, postal codes, codes), shipping over OTLP through the Collector, the local SMS stand-in rule (S-112) |
 | [observability.md](observability.md) | traces, metrics and logs over OpenTelemetry: the Collector per environment and its exporters (any OTLP backend, AWS X-Ray/CloudWatch, Google Cloud Operations, Azure Monitor), sampling, business metrics, dashboards as code, alerts, the local Grafana LGTM stack (S-111) |
 | [alerting.md](alerting.md) | alerting and on-call: SLOs as code (sign-in, checkout, payouts, KDS) and their multi-window burn-rate alerts, threshold alerts, page/ticket routing to PagerDuty / Opsgenie / a webhook, the Helm toggle per metrics store, the on-call rota export, one runbook per alert in [alerts/](alerts/README.md) (S-113) |
+| [load-testing.md](load-testing.md) | load and soak tests (k6 + SSE): search, checkout, the kitchen display and the nav badges against the launch target × 3, SLO thresholds, the local load-test stack and seed data, the staging procedure, reading the results; numbers in [../perf/results.md](../perf/results.md), sizing in [../perf/capacity.md](../perf/capacity.md) (S-119) |
 | [events.md](events.md) | domain events: wire format, the worker's consumer framework (dedupe, retries, DLQ), alerts and metrics, DLQ replay with filters, rate limit and audit, dead deferred notifications (S-25/S-26, S-115) |
 | [docs-site.md](docs-site.md) | the Docusaurus documentation site: public variant on docs.<zone>, internal variant behind an IP allowlist, build, images, Pages export (S-126) |
 | [api-docs.md](api-docs.md) | OpenAPI 3.1 documents per audience (api, auth, BFFs), Swagger UI / Scalar / Redoc in local, dev and staging, the committed specs and their drift check, Redocly lint, none in prod (S-125) |
@@ -149,6 +150,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `SPRING_PROFILES_ACTIVE` | ✓ | ✓ | ✓ | ✓ | yes (`dev`, `staging` or `prod`) |
 | `DB_URL`, `DB_USER`, `DB_PASSWORD` | ✓ | ✓ | | ✓ | yes |
 | `DB_POOL_SIZE` | ✓ | ✓ | | ✓ | no (10; worker 5) |
+| `DB_CONNECTION_TIMEOUT_MS` | ✓ | | | | no (`5000`: a request waits this long for a database connection, then gets 503 `overloaded` — S-119, [load-testing.md](load-testing.md)) |
 | `REDIS_HOST` | ✓ | ✓ | ✓ | ✓ | yes |
 | `REDIS_PORT`, `REDIS_USERNAME`, `REDIS_PASSWORD`, `REDIS_SSL` | ✓ | ✓ | ✓ | ✓ | no (6379, none, none, false) |
 | `KAFKA_BOOTSTRAP` | ✓ | ✓ | | ✓ | yes (auth since S-28: user.registered) |
@@ -183,6 +185,7 @@ value comes from are in [dev.md](dev.md#environment-variables), [staging.md](sta
 | `IMPORT_IMAGES_ALLOW_LOCAL` | ✓ | | | | no (`false`; `true` only locally — bulk-import image URLs on http:// or loopback, never private or metadata addresses; refused in the cloud — S-72, [webhooks.md § SSRF rules](webhooks.md#ssrf-rules-platform-egresspolicy)) |
 | `SEARCH_PROVIDER` | ✓ | | | | no (`elasticsearch`; `local` = no index, the `local` profile's default, refused in staging/prod — [search.md § 7](search.md#7-the-search-api-s-44)) |
 | `SEARCH_CACHE_TTL`, `SEARCH_RATE_LIMIT` | ✓ | | | | no (`30s`, `120`/min per address) |
+| `SEARCH_RATE_LIMIT_EXEMPT` | ✓ | | | | no (empty; addresses or CIDR ranges the search rate limit never counts — load generators only, S-119 [load-testing.md](load-testing.md); refused under prod) |
 | `REGION_PROVINCES`, `REGION_DEFAULT_PROVINCE`, `REGION_CACHE_TTL` | ✓ | | | ✓ (`REGION_DEFAULT_PROVINCE`) | no (none extra — the live region rows are served, V131: Alberta; `AB`; `60s`) — S-134, [regions.md](regions.md); S-44's `SEARCH_MARKETS` / `SEARCH_DEFAULT_MARKET` are still read as their fallbacks |
 | `REGION_PLATFORM_ZONE` | ✓ | ✓ | | ✓ | no (`America/Edmonton`: nightly jobs, support hours, account dates — work that belongs to no market; [regions.md](regions.md)) |
 | `REGION_FRENCH_FIRST` | ✓ | | | | no (none: the region rows decide, V315) — S-116, places made French-first by configuration, [i18n.md](i18n.md) |

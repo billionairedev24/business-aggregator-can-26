@@ -1,6 +1,7 @@
 package ca.northline.search.integration;
 
 import java.time.Duration;
+import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
@@ -12,9 +13,11 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  *
  * @param cacheTtl how long an identical search is answered from the hot-query cache
  * @param rateLimit requests per minute and client address (anonymous callers included)
+ * @param rateLimitExempt S-119: addresses or CIDR ranges the rate limit never counts (load generators; refused in prod)
  */
 @ConfigurationProperties("northline.search")
 public record SearchProperties(
         @DefaultValue("elasticsearch") String provider,
         @DefaultValue("30s") Duration cacheTtl,
-        @DefaultValue("120") int rateLimit) {}
+        @DefaultValue("120") int rateLimit,
+        @DefaultValue({}) List<String> rateLimitExempt) {}

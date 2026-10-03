@@ -1,0 +1,81 @@
+# S-119 — load and soak tests (docs/runbooks/load-testing.md; results: docs/perf/results.md).
+#
+# MANUAL ONLY: CI credits are depleted, so this workflow runs only when started from
+# Actions › loadtest › Run workflow (or `gh workflow run loadtest.yml`). It is never triggered by pushes, pull requests
+# or schedules; to change that, see docs/runbooks/ci.md § Enabling automatic runs.
+#
+# It runs the local load-test stack on the runner (Postgres + Elasticsearch + Kafka for the reindex, the api jar, the
+# seeded businesses and customers) and a profile against it. A GitHub runner (4 vCPUs) is a small machine: read its
+# numbers per core, as docs/perf/results.md does. Staging is load-tested from a pod in the cluster (runbook § Staging),
+# never from here.
+name: loadtest
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: smoke (30 s), load (LOAD_DURATION at the target × scale), stress (to the knee), soak (SOAK_DURATION)
+        type: choice
+        options: [smoke, load, stress, soak]
+        default: smoke
+      scale:
+        description: LOAD_SCALE — 1 = the launch target with 3× headroom (docs/perf/capacity.md)
+        default: "0.2"
+      scenarios:
+        description: SCENARIOS — all, or e.g. search,checkout,kds,badges
+        default: all
+      duration:
+        description: LOAD_DURATION / SOAK_DURATION (k6 duration, e.g. 10m, 20m)
+        default: 10m
+
+permissions:
+  contents: read
+
+concurrency:
+  group: loadtest
+  cancel-in-progress: false
+
+jobs:
+  local:
+    name: ${{ inputs.profile }} against the local stack
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      MAVEN_MIRROR_URL: ${{ vars.MAVEN_MIRROR_URL }}
+      LOAD_SCALE: ${{ inputs.scale }}
+      SCENARIOS: ${{ inputs.scenarios }}
+      LOAD_DURATION: ${{ inputs.duration }}
+      SOAK_DURATION: ${{ inputs.duration }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache: false
+      - name: boot jars
+        run: cd server && ./gradlew --init-script ../ci/gradle/maven-mirror.init.gradle.kts --max-workers=2 :api:bootJar :worker:bootJar
+      - name: k6 with xk6-sse
+        run: make load-k6
+      - name: make load-stack-up
+        run: make load-stack-up
+      - name: make ${{ inputs.profile == 'smoke' && 'load-smoke' || inputs.profile == 'stress' && 'load-stress' || inputs.profile }}
+        run: make ${{ inputs.profile == 'smoke' && 'load-smoke' || inputs.profile == 'stress' && 'load-stress' || inputs.profile }}
+      - name: report
+        if: always()
+        run: cat loadtest/results/*/report.md >> "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: loadtest-results
+          path: |
+            loadtest/results/
+            loadtest/.data/api.log
+          retention-days: 30
+      - name: make load-stack-down
+        if: always()
+        run: make load-stack-down

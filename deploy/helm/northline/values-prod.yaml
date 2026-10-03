@@ -64,7 +64,23 @@ apps:
       # secretEnv.OPENROUTER_API_KEY: true and add it to externalSecrets.optionalKeys (docs/runbooks/ai.md).
       AI_PROVIDER: openrouter
       EMAIL_FROM: "Northline <no-reply@northline.ca>"
-    autoscaling: { enabled: true, minReplicas: 3, maxReplicas: 10 }
+    autoscaling:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 60   # S-119: latency headroom, new pods' JIT, the KDS fan-out
+      behavior:                       # S-119 (docs/perf/capacity.md): up fast for a dinner rush, down slowly (each removal
+        scaleUp:                      # reconnects its kitchen screens' streams)
+          stabilizationWindowSeconds: 0
+          selectPolicy: Max
+          policies:
+            - { type: Percent, value: 100, periodSeconds: 60 }
+            - { type: Pods, value: 2, periodSeconds: 60 }
+        scaleDown:
+          stabilizationWindowSeconds: 300
+          selectPolicy: Min
+          policies:
+            - { type: Pods, value: 1, periodSeconds: 120 }
     resources:
       requests: { cpu: "1", memory: 2Gi }
       limits: { memory: 2Gi }
