@@ -233,7 +233,8 @@ class UatReportService implements UatReports {
                             .stream())
                     .collect(Collectors.groupingBy(UatStore.Signoff::outcome, Collectors.counting()));
             var signed = outcomes.getOrDefault(SignoffOutcome.SIGNED_OFF, 0L).intValue();
-            var comments = outcomes.getOrDefault(SignoffOutcome.WITH_COMMENTS, 0L).intValue();
+            var comments =
+                    outcomes.getOrDefault(SignoffOutcome.WITH_COMMENTS, 0L).intValue();
             var blocked = outcomes.getOrDefault(SignoffOutcome.BLOCKED, 0L).intValue();
             out.add(new GoNoGo.Coverage(persona, people.size(), signed, comments, blocked));
         }
