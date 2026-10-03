@@ -7351,3 +7351,98 @@ available in fr-CA before a Québec launch.
   Stripe's `preferred_locales` update (`StripeConnectGateway.receiptLocale`) has never run against Stripe — tests use
   the fake gateway and a unit test; the console has no screen for the language toggles yet (SQL or
   `REGION_FRENCH_FIRST`, runbook); marketing copy outside the repository is out of scope.
+
+## 2026-09-30 — S-120 Pilot merchant onboarding (providers, sellers, kitchens)
+
+Branch `pilot/s-120-onboarding`. Runbook: [runbooks/pilot-onboarding.md](runbooks/pilot-onboarding.md). Acceptance
+criterion: at least 10 pilot businesses live on the staging-to-prod path.
+
+> **Plainly:** recruiting the businesses, their real ID checks, physical kitchen visits and live Stripe accounts are
+> real-world work this story cannot do; no accounts exist. What exists is the tooling and the process, rehearsed with a
+> dry run of 12 fake businesses on a local stack. Nothing here has met live Stripe (Connect, Identity), a real email
+> provider, or a real kitchen.
+
+- **The path (decision).** Pilot businesses onboard **directly in production**, in a market held at the region stage
+  `pilot`; staging only rehearses with fake businesses. Stripe Identity sessions, Connect accounts and bank links are
+  bound to test or live mode, so a business "verified on staging" would verify again in production; staging is test
+  mode by rule. Pre-launch safety in production is the market's stage (visitors are put on the waitlist; only live
+  markets deliver and take orders — S-84, S-134) plus **search hiding for pilot businesses** (new cause `pilot` on
+  `merchants.merchants.search_hidden_cause`, set when a business accepts a pilot invite in a market that isn't live, or
+  on enrolment), lifted for the market's pilot businesses when an admin sets the market `live` in the switchboard
+  (`PilotCohort.marketLaunched`, called by `SwitchboardService`; audit `pilot.market_launched`). Public pages stay
+  reachable by direct link (S-121's UAT uses that). The V131 data ships the first market `live`: production needs an
+  admin to lower it to `pilot` before the first invite (runbook § 1).
+- **Pilot cohort = a row per business per market, the stage derived.** `merchants.pilot_businesses` keeps only what
+  nothing else knows: market, type, working name, the linked business once it exists, the Northline owner, the
+  blocker written down (text ≤ 300, who must act: business / northline / stripe / inspector, since when), plus
+  `pilot_invites` and `pilot_notes`. The stage is computed on every read (console `PilotStages`, pure and unit-tested)
+  from the business's own records — onboarding (account, Business step), the `kyc` row and identity reviews (S-22),
+  Stripe Connect as Stripe last reported it (`payments.connected_accounts` from `account.updated`; new
+  `payments.api.ConnectReadiness`, no Stripe call on a board load), the kitchen visit, listings (new
+  `catalogue.api.ListingReadiness`: services + offers; `food.api.MenuReadiness`: dishes), approval, storefront
+  publication, search hiding and the market's stage. Steps: invited → account created → details complete → identity
+  verified → Stripe Connect ready → kitchen visit (kitchens where required; "not needed" otherwise) → catalogue ready
+  (≥ 1 listing handed to vetting / 1 published dish) → approved → live (approved, page published, ≥ 1 listing customers
+  see, a market, shown in search). The stage is the furthest step with every earlier one done; the next action is the
+  first one that isn't, as a code + who acts + parameters (the console words it, en/fr). Found blockers (expired invite,
+  checks sent back, Stripe past due, failed visit, suspended, no market) mark a row blocked besides the written one.
+- **Invites.** "Signed, expiring link" is implemented like team invitations (S-13): a random 256-bit token whose SHA-256
+  is stored, 14 days, single use, a new link revokes the previous one. A stateless signature would need a new signing
+  secret in every environment and couldn't be withdrawn. Email `pilot-invitation` (en/fr, chosen by the staff member,
+  transactional — sent only after the business agreed in a conversation; CASL note in the runbook) through the S-13
+  mailer after commit (internal `PilotInviteIssued`, token not on Kafka — same trade-off as S-13). The console response
+  includes the link too. The Studio route `/pilot/$token` (signed in) previews the invite (`GET /api/v1/pilot-invites/{token}`,
+  any signed-in person) and opens the Account step with type and province fixed; `POST /api/v1/merchants` takes
+  `pilotInvite` and refuses another type or province (422 "This invite is for another kind of business." / "…in
+  another province.") and a used / withdrawn / expired invite (409 `pilot_invite_used|revoked|expired`).
+- **Role and screen.** New console role `merchant_success` (V322 widens `identity.platform_roles`), screen `pilot`,
+  action `onboard`. Merchant success: overview, pilot, sellers, support + `onboard`; trust & safety also open `pilot`
+  read-only (they approve the businesses); admin everything. Endpoints `/api/v1/console/pilot/**` (console module, which
+  composes merchants, payments, catalogue, food and region through their `api` packages). Dev seed V323 gives Priya the
+  role.
+- **Kitchen visits extend onboarding's `site_visit` check** (V030: the owner books a slot within 14 days, which used to
+  be "confirmed" by the approval with nobody visiting). New `merchants.kitchen_visits` (date ≤ 60 days ahead, a staff
+  inspector or a named external one, status scheduled / passed / failed / cancelled, an 11-item checklist pass / fail /
+  n/a, a note, photo ids). Photos go through the merchants storage port as `verification` documents (no new storage
+  path; JPEG/PNG ≤ 10 MB, ≤ 12 per visit). Passed → the `site_visit` row verified (reference `visit:<id>`); failed
+  (needs a note) → the row rejected, the owner books again. Scheduling marks a todo/rejected row as booked. **The gate:**
+  approving a pending kitchen whose `site_visit` isn't verified is 409 `kitchen_visit_required` when the rule applies.
+  **The rule is data:** `region.regions.kitchen_visit` (`required|optional`; market → province → optional) via new
+  `region.api.KitchenVisitRules`, or any of the kitchen's categories with `catalogue.categories.site_visit_required`
+  (via `CategorySource.requiringKitchenVisit`, a default method). Nothing is required by default, so existing flows and
+  tests are unchanged; the runbook says to turn it on for the pilot market. No console UI for the rule (SQL, like time
+  zones and registry keys).
+- **S-117 finding — a business approved without a market.** A business's market is its `merchants.merchants.city`,
+  set from the Business step's free-text addresses (S-134) — an address naming no market city left it null, and the
+  shop (`ShopDirectory.shopsIn(city)`) then listed none of its offers. Fixed in onboarding: addresses are matched
+  against the markets **of the business's province** only (before: every market), a pilot business without a match
+  gets its pilot market's city, and **approval assigns** the pilot market, else the province's first live market (else
+  its first open one), when the city is still empty (`MerchantApplication.settleCity`; an address's city always wins).
+  Tested (`PilotOnboardingApiTest.aBusinessApprovedWithoutAMarketCity_getsItsProvincesDefaultMarket`, the shop then
+  lists it) and the dry run includes such a business and asserts every business has a market and its listing is
+  publicly visible. The board flags an approved business without a market (`no_market`).
+- **CSV export** server-side like S-85/S-107 (`/api/v1/console/pilot/export`): codes, not words (stage, next step and
+  action, owner), formula prefixes neutralised.
+- **Emails on visibility.** `OversightEmailNotices` skips `merchant.search_visibility_changed` with cause `pilot` (the
+  owner isn't told "you were hidden" before launch; merchant success announces the launch). The event schema's
+  `cause` enum gained `pilot` (additive).
+- **Schema (V320–V324, above main's V319):** V320 `merchants.pilot_businesses`, `pilot_invites`, `pilot_notes`, the
+  `search_hidden_cause` CHECK + `pilot`; V321 `merchants.kitchen_visits`, `region.regions.kitchen_visit`,
+  `catalogue.categories.site_visit_required`; V322 the role CHECK; dev seed V323. No new environment variable.
+- **Messages (fr in the catalogue):** "Choose a market that is open for onboarding.", "Enter a working name, 1 to 80
+  characters.", "Enter the business's email address.", "Choose English or French.", "Describe the blocker in 1 to 300
+  characters.", "Choose who has to act: …", "Write the note, 1 to 2,000 characters.", "Choose someone on the Northline
+  team.", the invite 409s and 422s above, the visit messages ("Pick the visit's date and time, within the next 60
+  days.", "Choose who visits: …", "Mark every item on the checklist.", "A visit with a failed item can't pass. Mark it
+  failed.", "Say what has to be fixed before the next visit.", …) and "Record a passed kitchen visit before approving
+  this kitchen.". The console and Studio copy is ours (no design drawing for this screen); French needs translator
+  review like the rest (S-116).
+- **Dry run** `make pilot-dry-run` (`scripts/pilot/dry-run.sh` + `dry-run.mjs`): a throwaway PostGIS container, the
+  api boot jar under `local`, 4 providers + 4 sellers + 4 kitchens (the mix is ours: no pilot plan names one; 12 leaves
+  room for two drop-outs), Stripe Connect through the fake gateway plus a **signed `account.updated` webhook** (the real
+  S-12 endpoint and processing), Identity through the fake, kitchen visits with a refused early approval, then the
+  board, the CSV and public-page checks. `STACK_LOCK=` wraps it in flock.
+- **Not done:** a console form for enrolling an existing business (API only); per-region rule editing in the console;
+  reminders for expiring invites or upcoming visits; inspector scheduling across a calendar; the invite email to a
+  mobile number (SMS); a pilot-specific launch email; listing visibility outside search for hidden pilot businesses
+  (direct links still answer, by design for UAT); re-hiding pilot businesses if a live market is lowered again.
