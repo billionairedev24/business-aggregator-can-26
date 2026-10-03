@@ -27,6 +27,8 @@ public enum ConsoleScreen implements CodedEnum {
     PRIVACY,
     /** S-120: pilot merchant onboarding — the pipeline per market, invites, kitchen visits. */
     PILOT,
+    /** S-118: a market's go-live checklist, the two-person switch to live, rollback and hypercare. */
+    GO_LIVE,
     PROFILE,
     ONCALL;
 

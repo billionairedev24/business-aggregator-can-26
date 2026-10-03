@@ -49,7 +49,9 @@ public enum StaffRole implements CodedEnum {
                         ConsoleScreen.TEAM,
                         // S-120: trust & safety approve pilot businesses, so they see the pipeline (no onboarding
                         // action)
-                        ConsoleScreen.PILOT);
+                        ConsoleScreen.PILOT,
+                        // S-118: they read the go-live checklist (security findings, pilot businesses)
+                        ConsoleScreen.GO_LIVE);
             case DISPATCH ->
                 Set.of(ConsoleScreen.OVERVIEW, ConsoleScreen.ORDERS, ConsoleScreen.DELIVERY, ConsoleScreen.SUPPORT);
             case FINANCE ->
@@ -58,7 +60,9 @@ public enum StaffRole implements CodedEnum {
                         ConsoleScreen.FINANCE,
                         ConsoleScreen.REPORTS,
                         ConsoleScreen.DISPUTES,
-                        ConsoleScreen.TEAM);
+                        ConsoleScreen.TEAM,
+                        // S-118: finance records the Stripe live-mode and PCI gates
+                        ConsoleScreen.GO_LIVE);
             case SUPPORT ->
                 Set.of(
                         ConsoleScreen.OVERVIEW,
@@ -78,7 +82,12 @@ public enum StaffRole implements CodedEnum {
             case ANALYST -> Set.of(ConsoleScreen.OVERVIEW, ConsoleScreen.REPORTS);
             case PRIVACY -> Set.of(ConsoleScreen.OVERVIEW, ConsoleScreen.PRIVACY, ConsoleScreen.SUPPORT);
             case MERCHANT_SUCCESS ->
-                Set.of(ConsoleScreen.OVERVIEW, ConsoleScreen.PILOT, ConsoleScreen.SELLERS, ConsoleScreen.SUPPORT);
+                Set.of(
+                        ConsoleScreen.OVERVIEW,
+                        ConsoleScreen.PILOT,
+                        ConsoleScreen.SELLERS,
+                        ConsoleScreen.SUPPORT,
+                        ConsoleScreen.GO_LIVE);
         };
     }
 
@@ -94,12 +103,12 @@ public enum StaffRole implements CodedEnum {
                         ConsoleAction.VET,
                         ConsoleAction.SUPPORT);
             case DISPATCH -> Set.of(ConsoleAction.DISPATCH);
-            case FINANCE -> Set.of(ConsoleAction.REFUND, ConsoleAction.PAYOUTS);
+            case FINANCE -> Set.of(ConsoleAction.REFUND, ConsoleAction.PAYOUTS, ConsoleAction.ATTEST);
             case SUPPORT -> Set.of(ConsoleAction.SUPPORT);
             case SUPPORT_LEAD -> Set.of(ConsoleAction.SUPPORT, ConsoleAction.MACROS, ConsoleAction.PRIVACY);
             case ANALYST -> Set.of();
             case PRIVACY -> Set.of(ConsoleAction.PRIVACY);
-            case MERCHANT_SUCCESS -> Set.of(ConsoleAction.ONBOARD);
+            case MERCHANT_SUCCESS -> Set.of(ConsoleAction.ONBOARD, ConsoleAction.ATTEST);
         };
     }
 

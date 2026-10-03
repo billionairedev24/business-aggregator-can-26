@@ -968,3 +968,26 @@ Mark each item pass, fail or n/a.	Marquez chaque élément réussi, échoué ou 
 Record a passed kitchen visit before approving this kitchen.	Enregistrez une visite de cuisine réussie avant d’approuver cette cuisine.	new
 The business hasn't created its account yet.	L’entreprise n’a pas encore créé son compte.	new
 Northline is very busy right now. Try again in a moment.	Northline est très sollicité en ce moment. Réessayez dans un instant.	new
+A market goes live from its Go-live screen: the checklist, then a second admin approves.	Un marché passe en service depuis son écran Mise en service : la liste de contrôle, puis l’approbation d’un second administrateur.	new
+Choose a gate from the checklist.	Choisissez un point de la liste de contrôle.	new
+Choose pass, fail or not applicable.	Choisissez réussi, échoué ou sans objet.	new
+Describe the evidence in 1 to 1,000 characters.	Décrivez la preuve en 1 à 1 000 caractères.	new
+Give a link that starts with https:// (500 characters at most), or none.	Donnez un lien qui commence par https:// (500 caractères au plus), ou aucun.	new
+The platform checks this gate itself; it can't be recorded by hand.	La plateforme vérifie ce point elle-même; il ne peut pas être consigné à la main.	new
+Only a market in pilot can go live.	Seul un marché en projet pilote peut passer en service.	new
+This market isn't live.	Ce marché n’est pas en service.	new
+Every required gate must pass before going live, or ask with an emergency override.	Chaque point obligatoire doit être réussi avant la mise en service, ou faites la demande avec une dérogation d’urgence.	new
+A launch request already waits for a second admin.	Une demande de mise en service attend déjà un second administrateur.	new
+Give the reason for the rollback, 10 to 500 characters.	Donnez la raison du retour au projet pilote, de 10 à 500 caractères.	new
+Hypercare starts once the market is live.	L’hypersurveillance commence une fois le marché en service.	new
+This market already has a hypercare rota for those days. Change a day from the On-call screen.	Ce marché a déjà une rotation d’hypersurveillance pour ces jours. Modifiez une journée depuis l’écran Garde.	new
+Start hypercare today or within the next 14 days.	Commencez l’hypersurveillance aujourd’hui ou dans les 14 prochains jours.	new
+Keep the note to 500 characters.	Limitez la note à 500 caractères.	new
+Give the reason for the emergency override, 20 to 500 characters.	Donnez la raison de la dérogation d’urgence, de 20 à 500 caractères.	new
+A second admin must approve: you requested this launch.	Un second administrateur doit approuver : c’est vous qui avez demandé cette mise en service.	new
+This launch request was already decided.	Cette demande de mise en service a déjà été tranchée.	new
+This launch request expired. Ask again from the checklist.	Cette demande de mise en service a expiré. Refaites-la depuis la liste de contrôle.	new
+Choose 1 to 14 people for the primary on-call.	Choisissez de 1 à 14 personnes pour la garde principale.	new
+Choose 1 to 14 people for the secondary on-call.	Choisissez de 1 à 14 personnes pour la garde secondaire.	new
+Choose 1 to 14 business contacts.	Choisissez de 1 à 14 personnes-ressources côté affaires.	new
+The primary and the secondary must be two different people each day.	La garde principale et la garde secondaire doivent être deux personnes différentes chaque jour.	new

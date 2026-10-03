@@ -277,6 +277,23 @@ class PilotJdbc implements PilotStore {
     }
 
     @Override
+    public Map<String, @Nullable String> marketBusinesses(String province, String city) {
+        var out = new java.util.LinkedHashMap<String, @Nullable String>();
+        jdbc.sql("""
+                        select id, search_hidden_cause from merchants.merchants
+                         where province = :p and lower(city) = lower(:c) order by id
+                        """)
+                .param("p", province)
+                .param("c", city)
+                .query((rs, _) -> {
+                    out.put(rs.getString("id"), rs.getString("search_hidden_cause"));
+                    return null;
+                })
+                .list();
+        return java.util.Collections.unmodifiableMap(out);
+    }
+
+    @Override
     public void hideBeforeLaunch(String merchantId, Instant at) {
         jdbc.sql("""
                         update merchants.merchants set search_hidden_at = :at, search_hidden_cause = 'pilot', updated_at = :at

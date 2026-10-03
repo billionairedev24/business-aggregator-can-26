@@ -32,6 +32,7 @@ public interface Switchboard {
     String MONEY = "Enter an amount of $0 or more.";
     String BOUNDARY = "Paste a GeoJSON polygon (lng, lat) for the boundary.";
     String LAST_ZONE = "A live market keeps at least one zone. Lower its stage first.";
+    String USE_GO_LIVE = "A market goes live from its Go-live screen: the checklist, then a second admin approves.";
 
     Board board();
 

@@ -192,11 +192,17 @@ class SwitchboardApiTest extends IntegrationTest {
                 .andExpect(jsonPath("$.zones[0].feeStdCents").value(399))
                 .andExpect(jsonPath("$.zones[0].areaKm2").isNumber());
         assertThat(audited("region.zone_updated", zone)).isEqualTo(1);
+        // S-118: a market launches from its go-live screen (checklist + a second admin), not from the switchboard
         mvc.perform(json(
                                 post("/api/v1/console/regions/markets/{id}/stage", market),
                                 "{\"stage\":\"live\",\"confirm\":\"Summerside\"}")
                         .with(TestJwt.staff(admin, StaffRole.ADMIN)))
-                .andExpect(status().isOk());
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("use_go_live"));
+        jdbc.sql("update region.regions set stage = 'live' where id = ?")
+                .param(market)
+                .update();
+        regions.refresh();
         mvc.perform(delete("/api/v1/console/regions/zones/{id}", zone).with(TestJwt.staff(admin, StaffRole.ADMIN)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("last_zone"));

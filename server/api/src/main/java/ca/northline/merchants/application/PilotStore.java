@@ -95,4 +95,10 @@ public interface PilotStore {
 
     /** Hides a business that isn't searchable yet (an applicant) from search before launch, without an event. */
     void hideBeforeLaunch(String merchantId, Instant at);
+
+    /**
+     * S-118: the businesses trading in a market (its province and city), with the cause they are hidden from search
+     * (null = shown). Every status; the caller filters.
+     */
+    Map<String, @Nullable String> marketBusinesses(String province, String city);
 }

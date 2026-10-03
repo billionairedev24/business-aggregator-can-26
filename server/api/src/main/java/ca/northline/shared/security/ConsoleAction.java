@@ -22,5 +22,7 @@ public enum ConsoleAction implements CodedEnum {
     /** S-105: act on privacy requests (record, verify, extend, refuse, start an erasure, apply corrections). */
     PRIVACY,
     /** S-120: onboard pilot businesses (invites, enrolment, owners, blockers, notes, kitchen visits). */
-    ONBOARD
+    ONBOARD,
+    /** S-118: record a manual go-live gate (pass, fail, not applicable) with its evidence. */
+    ATTEST
 }
