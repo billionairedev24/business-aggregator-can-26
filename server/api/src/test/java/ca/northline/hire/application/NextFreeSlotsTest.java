@@ -71,7 +71,11 @@ class NextFreeSlotsTest {
 
     final Moving clock = new Moving();
     final Calendar calendar = new Calendar();
-    final NextFreeSlots slots = new NextFreeSlots(calendar, clock, Runnable::run); // refreshes at once
+    final NextFreeSlots slots = new NextFreeSlots(calendar, clock);
+
+    NextFreeSlotsTest() {
+        slots.background = Runnable::run; // refreshes at once
+    }
 
     @Test
     void oneCalendarReadPerProviderAndLengthWithinTheMinute() {
@@ -109,7 +113,8 @@ class NextFreeSlotsTest {
     @Test
     void expiredCardsAreReadAgainOneAtATimePerProvider() {
         var queued = new java.util.ArrayList<Runnable>();
-        var later = new NextFreeSlots(calendar, clock, queued::add);
+        var later = new NextFreeSlots(calendar, clock);
+        later.background = queued::add;
         later.next("M1", 60);
         clock.now = NOW.plus(NextFreeSlots.TTL);
         later.next("M1", 60);

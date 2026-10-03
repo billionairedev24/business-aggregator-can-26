@@ -9,9 +9,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 import java.util.function.Consumer;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -31,6 +31,7 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 class NextFreeSlots {
 
     static final Duration TTL = Duration.ofSeconds(60);
@@ -43,22 +44,12 @@ class NextFreeSlots {
 
     private final ProviderSlots slots;
     private final Clock clock;
-    private final Consumer<Runnable> background;
     private final Semaphore readers = new Semaphore(BACKGROUND);
     private final ConcurrentHashMap<Key, Entry> entries = new ConcurrentHashMap<>();
     private final Set<Key> refreshing = ConcurrentHashMap.newKeySet();
-
-    @Autowired
-    NextFreeSlots(ProviderSlots slots, Clock clock) {
-        this(slots, clock, task -> Thread.ofVirtual().name("next-free-slot").start(task));
-    }
-
-    /** @param background runs a refresh after the answer was given (tests: at once) */
-    NextFreeSlots(ProviderSlots slots, Clock clock, Consumer<Runnable> background) {
-        this.slots = slots;
-        this.clock = clock;
-        this.background = background;
-    }
+    /** Runs a refresh after the answer was given: a virtual thread (tests: at once, or queued). */
+    Consumer<Runnable> background =
+            task -> Thread.ofVirtual().name("next-free-slot").start(task);
 
     /** The next free start for a job of {@code durationMin}; empty = none within the booking horizon. */
     Optional<Instant> next(String merchantId, int durationMin) {
