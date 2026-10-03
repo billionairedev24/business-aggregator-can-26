@@ -15,8 +15,12 @@ import ca.northline.shared.security.MerchantRole;
 import ca.northline.support.IntegrationTest;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
@@ -149,6 +153,39 @@ class EscrowLifecycleTest extends IntegrationTest {
         escrows.fulfilled("booking", job.refId(), Instant.now());
         escrows.confirmed("booking", job.refId(), Instant.now());
         assertThat(row(jobId).state()).isEqualTo("released");
+    }
+
+    @Test
+    void signOffRacingTheCompletion_stillReleasesAtOnce() throws Exception {
+        // Completion and sign-off are separate asynchronous events on the same escrow; whichever commits second used to
+        // fail on the row's version and drop its update, so a lost sign-off left the money on the 48 h clock.
+        var provider = fx.shop("provider", "master");
+        var pool = Executors.newFixedThreadPool(2);
+        try {
+            for (var i = 0; i < 10; i++) {
+                var job = hold(provider.merchantId(), EscrowKind.SERVICE, 7_900);
+                var jobId = escrows.hold(job);
+                var start = new CountDownLatch(1);
+                var done = Instant.now().truncatedTo(ChronoUnit.MICROS); // Postgres keeps microseconds
+                var completed = pool.submit(() -> {
+                    start.await();
+                    escrows.fulfilled("booking", job.refId(), done);
+                    return null;
+                });
+                var signedOff = pool.submit(() -> {
+                    start.await();
+                    escrows.confirmed("booking", job.refId(), done.plusMillis(1));
+                    return null;
+                });
+                start.countDown();
+                completed.get(10, TimeUnit.SECONDS);
+                signedOff.get(10, TimeUnit.SECONDS);
+                assertThat(row(jobId).releaseAt()).isBeforeOrEqualTo(done.plusMillis(1));
+                assertThat(row(jobId).state()).isIn("held", "released");
+            }
+        } finally {
+            pool.shutdownNow();
+        }
     }
 
     @Test

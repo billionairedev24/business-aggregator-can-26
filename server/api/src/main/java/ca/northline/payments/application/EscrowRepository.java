@@ -53,6 +53,9 @@ public interface EscrowRepository {
 
     Optional<Escrow> findByRef(String refType, String refId);
 
+    /** {@link #findByRef} with the row locked until the transaction ends (concurrent fulfil/confirm). */
+    Optional<Escrow> findByRefForUpdate(String refType, String refId);
+
     /** The escrow a PaymentIntent row currently backs. */
     Optional<Escrow> findByPaymentIntentId(String paymentIntentId);
 
