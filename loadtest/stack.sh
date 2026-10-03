@@ -6,6 +6,7 @@
 #                             dev auth, INFO logging, search on Elasticsearch, the load generator exempt from the
 #                             search rate limit), the load-test data (seed/seed.sh), the search indices filled
 #   loadtest/stack.sh api     (re)start only the api
+#   loadtest/stack.sh search  (re)create the search indices and reindex from Postgres (after loadtest/seed/seed.sh)
 #   loadtest/stack.sh statements [n]   the n statements that took the most database time (pg_stat_statements)
 #   loadtest/stack.sh status  what runs
 #   loadtest/stack.sh down    stop the api and remove the containers and their volumes
@@ -86,6 +87,10 @@ case "${1:-}" in
     "${compose[@]}" "${profiles[@]}" up -d --wait
     # pg_stat_statements: run.sh lists the statements that took the most time in each local run (hot spots, N+1s)
     psql_local -c "alter system set shared_preload_libraries = 'pg_stat_statements'" >/dev/null
+    psql_local -c "alter system set max_wal_size = '256MB'" >/dev/null # the seed writes ~2 GB of WAL otherwise
+    # a laptop's disk is often over Elasticsearch's 90 % watermark, which leaves the indices unassigned (red)
+    curl -sf -XPUT "http://localhost:$ES_PORT/_cluster/settings" -H 'Content-Type: application/json' \
+      -d '{"persistent":{"cluster.routing.allocation.disk.threshold_enabled":false}}' >/dev/null
     "${compose[@]}" restart postgres >/dev/null
     until psql_local -c "select 1" >/dev/null 2>&1; do sleep 1; done
     psql_local -c "create extension if not exists pg_stat_statements" >/dev/null
@@ -100,6 +105,12 @@ case "${1:-}" in
     echo "Ready: TARGET=local API_URL=http://localhost:$API_PORT (make load-smoke)"
     ;;
   api) start_api ;;
+  search) # (re)create the indices and fill them from Postgres (after a re-seed)
+    "${compose[@]}" --profile events up -d --wait kafka
+    worker_command ca.northline.worker.search.SearchIndicesCommand apply
+    worker_command ca.northline.worker.search.SearchReindexCommand
+    "${compose[@]}" stop kafka >/dev/null
+    ;;
   statements) # the statements that took the most database time since the last reset (run.sh resets before each run)
     psql_local -F ' | ' -c "select calls, round(total_exec_time)::int as total_ms, round(mean_exec_time::numeric, 2) as mean_ms,
                                    rows, left(regexp_replace(query, '\s+', ' ', 'g'), 220)
@@ -120,7 +131,7 @@ case "${1:-}" in
     "${compose[@]}" --profile all down -v
     ;;
   *)
-    echo "usage: loadtest/stack.sh up|api|statements|status|down" >&2
+    echo "usage: loadtest/stack.sh up|api|search|statements|status|down" >&2
     exit 2
     ;;
 esac

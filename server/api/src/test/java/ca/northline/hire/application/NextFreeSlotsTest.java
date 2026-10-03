@@ -15,7 +15,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
-/** S-119: provider cards' next free start is computed once a minute per provider and job length, not per page view. */
+/**
+ * S-119: provider cards' next free start is read once a minute per provider and job length, in the background once one
+ * is known — not per card per page view.
+ */
 class NextFreeSlotsTest {
 
     static final Instant NOW = Instant.parse("2026-10-02T15:00:00Z");
@@ -68,7 +71,7 @@ class NextFreeSlotsTest {
 
     final Moving clock = new Moving();
     final Calendar calendar = new Calendar();
-    final NextFreeSlots slots = new NextFreeSlots(calendar, clock);
+    final NextFreeSlots slots = new NextFreeSlots(calendar, clock, Runnable::run); // refreshes at once
 
     @Test
     void oneCalendarReadPerProviderAndLengthWithinTheMinute() {
@@ -81,21 +84,41 @@ class NextFreeSlotsTest {
     }
 
     @Test
-    void readAgainAfterTheMinute_orOnceTheStartHasPassed() {
+    void afterTheMinuteTheKeptAnswerIsShownWhileItIsReadAgain() {
         slots.next("M1", 60);
         clock.now = NOW.plus(NextFreeSlots.TTL).minusSeconds(1);
         calendar.next = NOW.plus(Duration.ofHours(3));
-        assertThat(slots.next("M1", 60)).contains(NOW.plus(Duration.ofHours(2))); // still the memo
+        assertThat(slots.next("M1", 60)).contains(NOW.plus(Duration.ofHours(2))); // fresh: no read
+        assertThat(calendar.reads).hasValue(1);
         clock.now = NOW.plus(NextFreeSlots.TTL);
-        assertThat(slots.next("M1", 60)).contains(NOW.plus(Duration.ofHours(3)));
+        assertThat(slots.next("M1", 60)).contains(NOW.plus(Duration.ofHours(2))); // stale: shown, read again …
         assertThat(calendar.reads).hasValue(2);
+        assertThat(slots.next("M1", 60)).contains(NOW.plus(Duration.ofHours(3))); // … and replaced
+    }
 
-        calendar.next = clock.now.plusSeconds(10);
-        clock.now = clock.now.plus(NextFreeSlots.TTL);
-        slots.next("M1", 60); // remembers a start 10 s ahead …
-        clock.now = clock.now.plusSeconds(20); // … which has passed 20 s later
-        calendar.next = clock.now.plus(Duration.ofHours(1));
-        assertThat(slots.next("M1", 60)).contains(clock.now.plus(Duration.ofHours(1)));
+    @Test
+    void aKeptStartThatHasPassedIsNeverShown() {
+        calendar.next = NOW.plusSeconds(10);
+        slots.next("M1", 60);
+        clock.now = NOW.plusSeconds(20);
+        calendar.next = NOW.plus(Duration.ofHours(1));
+        assertThat(slots.next("M1", 60)).contains(NOW.plus(Duration.ofHours(1)));
+        assertThat(calendar.reads).hasValue(2);
+    }
+
+    @Test
+    void expiredCardsAreReadAgainOneAtATimePerProvider() {
+        var queued = new java.util.ArrayList<Runnable>();
+        var later = new NextFreeSlots(calendar, clock, queued::add);
+        later.next("M1", 60);
+        clock.now = NOW.plus(NextFreeSlots.TTL);
+        later.next("M1", 60);
+        later.next("M1", 60); // already being read: not queued twice
+        assertThat(queued).hasSize(1);
+        calendar.next = NOW.plus(Duration.ofHours(5));
+        queued.getFirst().run();
+        assertThat(later.next("M1", 60)).contains(NOW.plus(Duration.ofHours(5)));
+        assertThat(calendar.reads).hasValue(2);
     }
 
     @Test

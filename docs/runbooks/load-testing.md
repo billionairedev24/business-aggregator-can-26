@@ -223,7 +223,7 @@ take one key per payment attempt.
 | `LOAD_DURATION`, `STRESS_DURATION`, `SOAK_DURATION` | `10m`, `12m`, `2h` (local soak `15m`) | how long |
 | `AUTH_MODE`, `TOKENS_FILE` | `dev`; staging `bearer` + `.data/staging-tokens.json` | who the requests are |
 | `MANIFEST` | `.data/manifest.json`; staging `.data/staging-manifest.json` | the seeded ids |
-| `KDS_STREAM`, `KDS_COOK_S` | `120s`, `20` | one stream's life before reconnecting; seconds from placed to ready (handed off at twice that) |
+| `KDS_STREAM_S`, `KDS_COOK_S` | `120`, `20` | one stream's life before reconnecting; seconds from placed to ready (handed off at twice that) |
 | `LOAD_LOCK` | — | local runs wait for this `flock` lock (a machine shared by several people or agents) |
 | `SEED_BUSINESSES`, `SEED_SHOP_UNITS`, `SEED_CUSTOMERS` | `150`, `10`, `3000` | the local seed's size |
 | `LOAD_API_PORT`, `LOAD_PG_PORT`, `LOAD_ES_PORT`, `LOAD_KAFKA_PORT` | `18080`, `55432`, `59200`, `59092` | the local stack's ports |

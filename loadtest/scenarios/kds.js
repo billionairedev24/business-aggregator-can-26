@@ -16,8 +16,12 @@ import { kdsEvents, kdsStreamReady, kdsTicketDelivery } from '../lib/slo.js';
 import { kitchensWithScreens } from '../lib/kitchens.js';
 import { SCREENS_PER_KITCHEN } from '../lib/profiles.js';
 
-/** How long one stream stays open before the screen reconnects (the server ends it after LIVE_STREAM, 10 min). */
-const STREAM = __ENV.KDS_STREAM || '120s';
+/**
+ * How long one stream stays open before the screen reconnects (seconds; the server ends it after LIVE_STREAM, 10 min).
+ * Checked on every event — the server's keep-alive comes every 25 s — and the stream closed from the client: xk6-sse's
+ * own `timeout` stops the reading but leaves the VU stuck (S-119's first runs).
+ */
+const STREAM_S = Number(__ENV.KDS_STREAM_S || 120);
 /** A ticket is marked ready this long after it was placed, and handed off twice as long after (seconds). */
 const COOK_S = Number(__ENV.KDS_COOK_S || 20);
 
@@ -63,11 +67,15 @@ export function kdsScreen() {
   };
 
   const res = sse.open(`${API_URL}/api/v1/merchants/${kitchen.merchantId}/live`, {
-    method: 'GET', headers: Object.assign({ Accept: 'text/event-stream' }, who(owner)), timeout: STREAM,
+    method: 'GET', headers: Object.assign({ Accept: 'text/event-stream' }, who(owner)), timeout: `${STREAM_S + 900}s`,
     tags: { name: '/api/v1/merchants/{id}/live', flow: 'kds' },
   }, client => {
     client.on('event', event => {
-      kdsEvents.add(1, { event: event.name || 'message' });
+      kdsEvents.add(1, { event: event.name || 'keep-alive' });
+      if (Date.now() - opened > STREAM_S * 1000) {
+        client.close(); // reconnect, as EventSource does when the server ends the stream
+        return;
+      }
       if (event.name === 'ready') {
         ready = true;
         kdsStreamReady.add(Date.now() - opened);
@@ -88,7 +96,7 @@ export function kdsScreen() {
       }
       if (lead() && b && b.items) work(kitchen.merchantId, owner, b.items);
     });
-    client.on('error', () => {}); // the timeout that ends each stream on purpose lands here
+    client.on('error', () => {}); // closing the stream on purpose lands here
   });
   flow(check(res, { 'live stream opened': r => r && r.status === 200 }) && ready, 'kds stream', res);
   // like the board's safety refresh after a reconnect: tickets that moved without an event on this stream

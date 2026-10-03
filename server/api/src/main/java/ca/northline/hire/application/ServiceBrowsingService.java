@@ -21,6 +21,7 @@ import ca.northline.merchants.api.PublicProviders;
 import ca.northline.shared.NotFound;
 import ca.northline.trust.api.QualityQuery;
 import ca.northline.trust.api.RatingQuery;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -35,6 +36,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -125,7 +127,7 @@ class ServiceBrowsingService implements ListCategories, ViewCategory, ListProvid
         var shown = published.values().stream()
                 .filter(p -> covering.contains(p.merchantId()))
                 .toList();
-        // S-119: ratings and quality scores of every card in one query each, the next free slots memoised briefly
+        // S-119: ratings and quality scores of every card in one query each; next free starts kept a minute
         var ids = shown.stream().map(PublicProviders.Provider::merchantId).toList();
         var rated = ratings.summaries(ids);
         var scores = quality.latestOf(ids);
@@ -135,7 +137,10 @@ class ServiceBrowsingService implements ListCategories, ViewCategory, ListProvid
                         byMerchant.getOrDefault(p.merchantId(), List.of()),
                         zones.getOrDefault(p.merchantId(), List.of()),
                         rated.getOrDefault(p.merchantId(), NO_RATING),
-                        Optional.ofNullable(scores.get(p.merchantId()))))
+                        Optional.ofNullable(scores.get(p.merchantId())),
+                        nextSlots
+                                .next(p.merchantId(), shortest(byMerchant.getOrDefault(p.merchantId(), List.of())))
+                                .orElse(null)))
                 .sorted(TrustRank.by(c -> new TrustRank.Signals(
                         c.tier(), c.onTimePct(), c.disputePct(), c.rebookPct(), c.rating(), c.name())))
                 .toList();
@@ -157,10 +162,10 @@ class ServiceBrowsingService implements ListCategories, ViewCategory, ListProvid
             List<Offer> offered,
             List<String> zones,
             RatingQuery.RatingSummary rating,
-            Optional<QualityQuery.QualityScore> score) {
+            Optional<QualityQuery.QualityScore> score,
+            @Nullable Instant next) {
         var priced = offered.stream().filter(o -> !o.quoteOnly()).toList();
         var cheapest = priced.stream().min(Comparator.comparingLong(o -> Objects.requireNonNull(o.priceCents())));
-        var shortest = offered.stream().mapToInt(Offer::durationMin).min().orElse(60);
         return new ProviderCard(
                 p.merchantId(),
                 p.slug(),
@@ -176,9 +181,14 @@ class ServiceBrowsingService implements ListCategories, ViewCategory, ListProvid
                 cheapest.map(Offer::priceCents).orElse(null),
                 cheapest.map(Offer::pricingMode).orElse("quote"),
                 offered.stream().anyMatch(Offer::instantBook),
-                nextSlots.next(p.merchantId(), shortest).orElse(null),
+                next,
                 zones,
                 region.zone(region.province(p.province())).getId());
+    }
+
+    /** The shortest job a provider offers: its card's "next free" is for that length. */
+    private static int shortest(List<Offer> offered) {
+        return offered.stream().mapToInt(Offer::durationMin).min().orElse(60);
     }
 
     /** Offers of published, active service businesses only. */
