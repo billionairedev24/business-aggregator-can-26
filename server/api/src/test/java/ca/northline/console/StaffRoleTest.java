@@ -63,6 +63,16 @@ class StaffRoleTest {
     }
 
     @Test
+    void pilotUat_isSupportSupportLeadsAndMerchantSuccess() {
+        assertThat(List.of(StaffRole.values()).stream().filter(r -> r.allows(ConsoleAction.UAT)))
+                .containsExactlyInAnyOrder(
+                        StaffRole.ADMIN, StaffRole.SUPPORT, StaffRole.SUPPORT_LEAD, StaffRole.MERCHANT_SUCCESS);
+        assertThat(List.of(StaffRole.values()).stream().filter(r -> r.opens(ConsoleScreen.UAT)))
+                .containsExactlyInAnyOrder(
+                        StaffRole.ADMIN, StaffRole.SUPPORT, StaffRole.SUPPORT_LEAD, StaffRole.MERCHANT_SUCCESS);
+    }
+
+    @Test
     void heldRoles_comeFromTheTokensPlatformRoles() {
         assertThat(StaffRole.held(List.of("staff", "TRUST_SAFETY", "finance", "partner")))
                 .containsExactlyInAnyOrder(StaffRole.TRUST_SAFETY, StaffRole.FINANCE);

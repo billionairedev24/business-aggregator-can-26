@@ -968,3 +968,34 @@ Mark each item pass, fail or n/a.	Marquez chaque élément réussi, échoué ou 
 Record a passed kitchen visit before approving this kitchen.	Enregistrez une visite de cuisine réussie avant d’approuver cette cuisine.	new
 The business hasn't created its account yet.	L’entreprise n’a pas encore créé son compte.	new
 Northline is very busy right now. Try again in a moment.	Northline est très sollicité en ce moment. Réessayez dans un instant.	new
+Choose bug, confusing, idea or praise.	Choisissez bogue, déroutant, idée ou bon point.	new
+Choose how much it got in your way.	Indiquez à quel point cela vous a gêné.	new
+Tell us what happened, in 1 to 4,000 characters.	Dites-nous ce qui s’est passé, en 1 à 4 000 caractères.	new
+Choose the app the feedback is about.	Choisissez l’application visée par le commentaire.	new
+The app didn't send its screen, version, language or device.	L’application n’a pas envoyé son écran, sa version, sa langue ou l’appareil.	new
+Choose a screenshot to attach.	Choisissez une capture d’écran à joindre.	new
+Attach the screenshot as a PNG or JPEG image.	Joignez la capture d’écran en image PNG ou JPEG.	new
+The screenshot must be 5 MB or smaller.	La capture d’écran doit faire 5 Mo ou moins.	new
+That screenshot isn't yours or has expired; attach it again.	Cette capture d’écran n’est pas la vôtre ou a expiré; joignez-la de nouveau.	new
+Feedback here is for pilot participants.	Les commentaires ici sont réservés aux participants du pilote.	new
+You're not on this business's team.	Vous ne faites pas partie de l’équipe de cette entreprise.	new
+Choose the new state.	Choisissez le nouvel état.	new
+This item can't move to that state from where it is.	Cet élément ne peut pas passer à cet état depuis son état actuel.	new
+Say whether it blocks the launch.	Indiquez s’il bloque le lancement.	new
+Choose the item this one duplicates.	Choisissez l’élément dont celui-ci est un doublon.	new
+An item can't duplicate itself or one of its own duplicates.	Un élément ne peut pas être le doublon de lui-même ni de l’un de ses doublons.	new
+Choose someone on the Northline team who works on UAT.	Choisissez une personne de l’équipe Northline qui travaille sur les tests d’acceptation.	new
+Enter the tracker issue's web address (https://…), up to 500 characters.	Entrez l’adresse Web du billet de suivi (https://…), jusqu’à 500 caractères.	new
+Choose provider, seller, kitchen, customer, courier or staff.	Choisissez prestataire, vendeur, cuisine, client, livreur ou personnel.	new
+They already take part with this persona.	Cette personne ou entreprise participe déjà avec ce profil.	new
+Choose the UAT script.	Choisissez le scénario de test.	new
+That script is for another persona.	Ce scénario est destiné à un autre profil.	new
+Choose signed off, signed off with comments, or blocked.	Choisissez approuvé, approuvé avec commentaires ou bloqué.	new
+Name the blocking items or describe them in the comments.	Nommez les éléments bloquants ou décrivez-les dans les commentaires.	new
+Keep the comments under 2,000 characters.	Limitez les commentaires à 2 000 caractères.	new
+Pick blocking items from the UAT feedback queue.	Choisissez les éléments bloquants dans la file des commentaires du pilote.	new
+Someone else changed this item; reload it.	Quelqu’un d’autre a modifié cet élément; rechargez-le.	new
+This participant no longer takes part.	Ce participant ne fait plus partie du pilote.	new
+Pilot businesses come from Pilot onboarding: invite or enrol the business there.	Les entreprises pilotes viennent de l’intégration pilote : invitez ou inscrivez l’entreprise là.	new
+A pilot business takes part while it is in the pilot cohort (Pilot onboarding).	Une entreprise pilote participe tant qu’elle fait partie de la cohorte pilote (intégration pilote).	new
+No Northline account matches that.	Aucun compte Northline ne correspond.	new

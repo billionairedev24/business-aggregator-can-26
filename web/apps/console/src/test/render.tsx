@@ -38,18 +38,18 @@ export const REGIONS = {
 
 export const SESSION = { user: { id: '01J9ZD3V00000000000000PNA1', firstName: 'Priya', lastName: 'Natarajan', initials: 'PN', locale: 'en-CA' }, acr: 'mfa' };
 
-const ALL = ['overview', 'orders', 'disputes', 'delivery', 'sellers', 'verify', 'pilot', 'vetting', 'trust', 'taxonomy', 'support', 'regions', 'finance', 'reports', 'privacy', 'api', 'team', 'profile', 'oncall'];
+const ALL = ['overview', 'orders', 'disputes', 'delivery', 'sellers', 'verify', 'pilot', 'vetting', 'trust', 'taxonomy', 'support', 'regions', 'finance', 'reports', 'privacy', 'uat', 'api', 'team', 'profile', 'oncall'];
 /** The api's grants (StaffRole), for `GET /api/v1/console/me`. */
 export const GRANTS: Record<RoleCode, { role: RoleCode; screens: string[]; actions: string[] }> = {
-  admin: { role: 'admin', screens: ALL, actions: ['suspend', 'decide', 'refund', 'province', 'payouts', 'keys', 'verify', 'vet', 'dispatch', 'support', 'macros', 'privacy', 'onboard'] },
+  admin: { role: 'admin', screens: ALL, actions: ['suspend', 'decide', 'refund', 'province', 'payouts', 'keys', 'verify', 'vet', 'dispatch', 'support', 'macros', 'privacy', 'onboard', 'uat'] },
   trust_safety: { role: 'trust_safety', screens: ['overview', 'disputes', 'sellers', 'verify', 'vetting', 'trust', 'support', 'team', 'pilot'], actions: ['suspend', 'decide', 'verify', 'vet', 'support'] },
   dispatch: { role: 'dispatch', screens: ['overview', 'orders', 'delivery', 'support'], actions: ['dispatch'] },
   finance: { role: 'finance', screens: ['overview', 'disputes', 'finance', 'reports', 'team'], actions: ['refund', 'payouts'] },
-  support: { role: 'support', screens: ['overview', 'orders', 'disputes', 'sellers', 'support'], actions: ['support'] },
-  support_lead: { role: 'support_lead', screens: ['overview', 'orders', 'disputes', 'sellers', 'support', 'privacy'], actions: ['support', 'macros', 'privacy', 'onboard'] },
+  support: { role: 'support', screens: ['overview', 'orders', 'disputes', 'sellers', 'support', 'uat'], actions: ['support', 'uat'] },
+  support_lead: { role: 'support_lead', screens: ['overview', 'orders', 'disputes', 'sellers', 'support', 'privacy', 'uat'], actions: ['support', 'macros', 'privacy', 'onboard', 'uat'] },
   analyst: { role: 'analyst', screens: ['overview', 'reports'], actions: [] },
   privacy: { role: 'privacy', screens: ['overview', 'privacy', 'support'], actions: ['privacy'] },
-  merchant_success: { role: 'merchant_success', screens: ['overview', 'pilot', 'sellers', 'support'], actions: ['onboard'] },
+  merchant_success: { role: 'merchant_success', screens: ['overview', 'pilot', 'sellers', 'support', 'uat'], actions: ['onboard', 'uat'] },
 };
 
 /** A signed-in staff member holding `roles`; `extra` answers anything else first. */

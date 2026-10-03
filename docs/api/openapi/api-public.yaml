@@ -3894,6 +3894,217 @@ paths:
       summary: Make a saved card the default
       tags:
       - my-payment-methods-controller
+  /api/v1/me/pilot:
+    get:
+      operationId: pilotFeedbackStatus
+      parameters:
+      - in: query
+        name: merchantId
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Status"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      summary: Whether the caller (or the business they act for) takes part in the
+        pilot
+      tags:
+      - pilot-feedback-controller
+  /api/v1/me/pilot/feedback:
+    get:
+      operationId: pilotFeedbackMine
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ListResponseMine"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      summary: "The pilot feedback the caller sent, with its triage state"
+      tags:
+      - pilot-feedback-controller
+    post:
+      operationId: pilotFeedbackSend
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeedbackBody"
+        required: true
+      responses:
+        "201":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Sent"
+          description: Created
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      summary: Send pilot feedback
+      tags:
+      - pilot-feedback-controller
+  /api/v1/me/pilot/screenshots:
+    post:
+      operationId: pilotFeedbackScreenshot
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Uploaded"
+          description: Created
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      summary: Upload a screenshot to attach to pilot feedback
+      tags:
+      - pilot-feedback-controller
   /api/v1/me/plus:
     delete:
       operationId: myAccountCancelPlus
@@ -7730,6 +7941,54 @@ components:
         visits:
           type: integer
           format: int32
+    FeedbackBody:
+      type: object
+      properties:
+        app:
+          type: string
+          minLength: 1
+          pattern: studio|consumer|console|mobile|courier
+        appVersion:
+          type: string
+          minLength: 1
+          pattern: "[A-Za-z0-9._+-]{1,40}"
+        body:
+          type: string
+          maxLength: 4000
+          minLength: 0
+        category:
+          type: string
+          minLength: 1
+          pattern: bug|confusing|idea|praise
+        locale:
+          type: string
+          minLength: 1
+          pattern: "[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8}){0,2}"
+        merchantId:
+          type: string
+        platform:
+          type: string
+          maxLength: 500
+          minLength: 0
+        route:
+          type: string
+          maxLength: 2000
+          minLength: 0
+        screenshotId:
+          type: string
+        severity:
+          type: string
+          minLength: 1
+          pattern: blocker|major|minor|cosmetic
+      required:
+      - app
+      - appVersion
+      - body
+      - category
+      - locale
+      - platform
+      - route
+      - severity
     Group:
       type: object
       properties:
@@ -8149,6 +8408,13 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Favourite"
+    ListResponseMine:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Mine"
     ListResponsePayment:
       type: object
       properties:
@@ -8321,6 +8587,22 @@ components:
         tier:
           type: string
         type:
+          type: string
+    Mine:
+      type: object
+      properties:
+        category:
+          type: string
+        id:
+          type: string
+        reference:
+          type: string
+        route:
+          type: string
+        sentAt:
+          type: string
+          format: date-time
+        state:
           type: string
     MoreItem:
       type: object
@@ -9725,6 +10007,13 @@ components:
           type: string
         name:
           type: string
+    Sent:
+      type: object
+      properties:
+        id:
+          type: string
+        reference:
+          type: string
     Service:
       type: object
       properties:
@@ -9878,6 +10167,20 @@ components:
         timeout:
           type: integer
           format: int64
+    Status:
+      type: object
+      properties:
+        participant:
+          type: boolean
+        persona:
+          type: string
+        screenshotMaxBytes:
+          type: integer
+          format: int64
+        screenshotTypes:
+          type: array
+          items:
+            type: string
     Step:
       type: object
       properties:
@@ -10230,6 +10533,16 @@ components:
           type: string
         tone:
           type: string
+    Uploaded:
+      type: object
+      properties:
+        contentType:
+          type: string
+        id:
+          type: string
+        size:
+          type: integer
+          format: int32
     ValidationError:
       type: object
       properties:
