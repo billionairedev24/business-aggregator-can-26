@@ -1,6 +1,6 @@
 package ca.northline.console.application;
 
-import ca.northline.console.application.PilotOnboarding.Detail;
+import ca.northline.console.application.PilotOnboarding.PilotDetail;
 import ca.northline.merchants.api.KitchenVisits;
 import ca.northline.merchants.api.PilotCohort;
 import ca.northline.shared.Conflict;
@@ -23,43 +23,43 @@ class PilotActionService implements PilotActions {
     private final PilotOnboarding board;
 
     @Override
-    public Invited invite(PilotCohort.NewInvite command, PilotCohort.Actor actor) {
+    public PilotInvited invite(PilotCohort.NewInvite command, PilotCohort.Actor actor) {
         var invited = cohort.invite(command, actor);
-        return new Invited(board.detail(invited.pilot().id()), invited.link(), invited.expiresAt());
+        return new PilotInvited(board.detail(invited.pilot().id()), invited.link(), invited.expiresAt());
     }
 
     @Override
-    public Invited reinvite(
+    public PilotInvited reinvite(
             String pilotId, @Nullable String email, @Nullable String language, PilotCohort.Actor actor) {
         var invited = cohort.reinvite(pilotId, email, language == null ? "en" : language, actor);
-        return new Invited(board.detail(pilotId), invited.link(), invited.expiresAt());
+        return new PilotInvited(board.detail(pilotId), invited.link(), invited.expiresAt());
     }
 
     @Override
-    public Detail enrol(String businessId, String marketId, PilotCohort.Actor actor) {
+    public PilotDetail enrol(String businessId, String marketId, PilotCohort.Actor actor) {
         return board.detail(cohort.enrol(businessId, marketId, actor).id());
     }
 
     @Override
-    public Detail assign(String pilotId, @Nullable String ownerId, PilotCohort.Actor actor) {
+    public PilotDetail assign(String pilotId, @Nullable String ownerId, PilotCohort.Actor actor) {
         cohort.assign(pilotId, ownerId, actor);
         return board.detail(pilotId);
     }
 
     @Override
-    public Detail block(String pilotId, @Nullable String text, @Nullable String owner, PilotCohort.Actor actor) {
+    public PilotDetail block(String pilotId, @Nullable String text, @Nullable String owner, PilotCohort.Actor actor) {
         cohort.block(pilotId, text, owner, actor);
         return board.detail(pilotId);
     }
 
     @Override
-    public Detail note(String pilotId, String body, PilotCohort.Actor actor) {
+    public PilotDetail note(String pilotId, String body, PilotCohort.Actor actor) {
         cohort.note(pilotId, body, actor);
         return board.detail(pilotId);
     }
 
     @Override
-    public Detail scheduleVisit(
+    public PilotDetail scheduleVisit(
             String pilotId,
             @Nullable Instant at,
             @Nullable String inspectorId,
@@ -70,13 +70,14 @@ class PilotActionService implements PilotActions {
     }
 
     @Override
-    public Detail addVisitPhoto(String pilotId, String visitId, KitchenVisits.Upload photo, PilotCohort.Actor actor) {
+    public PilotDetail addVisitPhoto(
+            String pilotId, String visitId, KitchenVisits.Upload photo, PilotCohort.Actor actor) {
         visits.addPhoto(business(pilotId), visitId, photo, actor);
         return board.detail(pilotId);
     }
 
     @Override
-    public Detail recordVisit(
+    public PilotDetail recordVisit(
             String pilotId,
             String visitId,
             boolean passed,
@@ -88,7 +89,7 @@ class PilotActionService implements PilotActions {
     }
 
     @Override
-    public Detail cancelVisit(String pilotId, String visitId, PilotCohort.Actor actor) {
+    public PilotDetail cancelVisit(String pilotId, String visitId, PilotCohort.Actor actor) {
         visits.cancel(business(pilotId), visitId, actor);
         return board.detail(pilotId);
     }

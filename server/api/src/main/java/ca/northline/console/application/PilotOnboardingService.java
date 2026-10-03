@@ -39,23 +39,23 @@ class PilotOnboardingService implements PilotOnboarding {
     private final NotificationContacts contacts;
 
     @Override
-    public Board board(@Nullable String marketId) {
+    public PilotBoard board(@Nullable String marketId) {
         var market = marketId == null || marketId.isBlank() ? null : marketId.strip();
         var rows = rows(cohort.list(market));
         var stages = new LinkedHashMap<String, Integer>();
         STEPS.forEach(s -> stages.put(s, 0));
         rows.forEach(r -> stages.merge(r.stage(), 1, Integer::sum));
-        return new Board(
+        return new PilotBoard(
                 markets(),
                 market,
                 stages,
                 (int) rows.stream().filter(r -> r.stage().equals("live")).count(),
-                (int) rows.stream().filter(Row::blocked).count(),
+                (int) rows.stream().filter(PilotRow::blocked).count(),
                 rows);
     }
 
     @Override
-    public Detail detail(String pilotId) {
+    public PilotDetail detail(String pilotId) {
         var pilot = cohort.find(pilotId).orElseThrow(() -> new NotFound("pilot business", pilotId));
         var row = rows(List.of(pilot)).getFirst();
         var notes = cohort.notes(pilotId);
@@ -65,10 +65,11 @@ class PilotOnboardingService implements PilotOnboarding {
         List<KitchenVisits.Visit> visits = merchantId != null && "kitchen".equals(pilot.businessType())
                 ? kitchenVisits.visits(merchantId)
                 : List.of();
-        return new Detail(
+        return new PilotDetail(
                 row,
                 notes.stream()
-                        .map(n -> new NoteView(n.id(), n.authorId(), names.get(n.authorId()), n.body(), n.createdAt()))
+                        .map(n -> new PilotNoteView(
+                                n.id(), n.authorId(), names.get(n.authorId()), n.body(), n.createdAt()))
                         .toList(),
                 cohort.invites(pilotId),
                 visits,
@@ -109,7 +110,7 @@ class PilotOnboardingService implements PilotOnboarding {
         return out.toString();
     }
 
-    private List<Row> rows(List<Pilot> pilots) {
+    private List<PilotRow> rows(List<Pilot> pilots) {
         var merchantIds =
                 pilots.stream().map(Pilot::merchantId).filter(Objects::nonNull).toList();
         var kitchens = pilots.stream()
@@ -122,7 +123,7 @@ class PilotOnboardingService implements PilotOnboarding {
         var accounts = stripe.of(merchantIds);
         var owners = names(
                 pilots.stream().map(Pilot::ownerId).filter(Objects::nonNull).toList());
-        var out = new ArrayList<Row>();
+        var out = new ArrayList<PilotRow>();
         for (var p : pilots) {
             var merchantId = p.merchantId();
             var counts = merchantId == null
@@ -138,7 +139,7 @@ class PilotOnboardingService implements PilotOnboarding {
             var business = p.business();
             var invite = p.invite();
             var ownerId = p.ownerId();
-            out.add(new Row(
+            out.add(new PilotRow(
                     p.id(),
                     p.label(),
                     business == null || !business.detailsComplete() ? p.label() : business.displayName(),
@@ -163,10 +164,11 @@ class PilotOnboardingService implements PilotOnboarding {
         return List.copyOf(out);
     }
 
-    private List<Market> markets() {
+    private List<PilotMarket> markets() {
         return regions.markets().stream()
                 .filter(m -> m.status() != LaunchStatus.OFF)
-                .map(m -> new Market(m.id(), m.city(), m.province(), m.status().code()))
+                .map(m -> new PilotMarket(
+                        m.id(), m.city(), m.province(), m.status().code()))
                 .toList();
     }
 

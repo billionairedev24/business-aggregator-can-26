@@ -19,7 +19,7 @@ class PilotInviteController {
     private final PilotInviteLinks links;
 
     @GetMapping("/api/v1/pilot-invites/{token}")
-    PilotInviteLinks.Preview preview(@PathVariable String token, CurrentUser user) {
+    PilotInviteLinks.PilotInvitePreview preview(@PathVariable String token, CurrentUser user) {
         return links.preview(token);
     }
 }

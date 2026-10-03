@@ -211,11 +211,11 @@ class PilotCohortService implements PilotCohort, PilotInviteLinks {
 
     @Override
     @Transactional(readOnly = true)
-    public Preview preview(String token) {
+    public PilotInvitePreview preview(String token) {
         var invite = byToken(token);
         var row = row(invite.pilotId());
         var market = regions.marketById(row.marketId()).orElseThrow(() -> new NotFound("invite", "token"));
-        return new Preview(
+        return new PilotInvitePreview(
                 row.businessType(),
                 row.label(),
                 market.id(),

@@ -2,8 +2,8 @@ package ca.northline.console.web;
 
 import ca.northline.console.application.PilotActions;
 import ca.northline.console.application.PilotOnboarding;
-import ca.northline.console.application.PilotOnboarding.Board;
-import ca.northline.console.application.PilotOnboarding.Detail;
+import ca.northline.console.application.PilotOnboarding.PilotBoard;
+import ca.northline.console.application.PilotOnboarding.PilotDetail;
 import ca.northline.merchants.api.KitchenVisits;
 import ca.northline.merchants.api.PilotCohort;
 import ca.northline.shared.Bytes;
@@ -48,12 +48,12 @@ import org.springframework.web.multipart.MultipartFile;
  * every change needs {@code onboard} (merchant success, admin).
  *
  * <pre>
- * GET  /api/v1/console/pilot[?market=]                         Board {markets, stages, live, blocked, items}
+ * GET  /api/v1/console/pilot[?market=]                         PilotBoard {markets, stages, live, blocked, items}
  * GET  /api/v1/console/pilot/export[?market=]                  text/csv, one business per line
- * GET  /api/v1/console/pilot/{pilotId}                         Detail {row, notes, invites, visits, visitItems}
- * POST /api/v1/console/pilot/invites                           {marketId, businessType, label, email, language, ownerId?} → 201 Invited
- * POST /api/v1/console/pilot/{pilotId}/invites                 {email?, language?} → Invited (the last link stops working)
- * POST /api/v1/console/pilot/enrolments                        {businessId, marketId} → 201 Detail
+ * GET  /api/v1/console/pilot/{pilotId}                         PilotDetail {row, notes, invites, visits, visitItems}
+ * POST /api/v1/console/pilot/invites                           {marketId, businessType, label, email, language, ownerId?} → 201 PilotInvited
+ * POST /api/v1/console/pilot/{pilotId}/invites                 {email?, language?} → PilotInvited (the last link stops working)
+ * POST /api/v1/console/pilot/enrolments                        {businessId, marketId} → 201 PilotDetail
  * PUT  /api/v1/console/pilot/{pilotId}/owner                   {ownerId?}
  * PUT  /api/v1/console/pilot/{pilotId}/blocker                 {text?, owner?} (no text = cleared)
  * POST /api/v1/console/pilot/{pilotId}/notes                   {body}
@@ -75,7 +75,7 @@ class PilotController {
     private final PilotOnboarding board;
     private final PilotActions actions;
 
-    record InviteRequest(
+    record PilotInviteRequest(
             @NotBlank(message = PilotCohort.MARKET_REQUIRED) String marketId,
             @NotBlank(message = PilotCohort.TYPE_REQUIRED) String businessType,
 
@@ -86,26 +86,28 @@ class PilotController {
             @Nullable String language,
             @Nullable String ownerId) {}
 
-    record ReinviteRequest(@Nullable String email, @Nullable String language) {}
+    record PilotReinviteRequest(
+            @Nullable String email, @Nullable String language) {}
 
-    record EnrolRequest(
+    record PilotEnrolRequest(
             @NotBlank(message = BUSINESS_REQUIRED) String businessId,
             @NotBlank(message = PilotCohort.MARKET_REQUIRED) String marketId) {}
 
-    record OwnerRequest(@Nullable String ownerId) {}
+    record PilotOwnerRequest(@Nullable String ownerId) {}
 
-    record BlockerRequest(@Nullable String text, @Nullable String owner) {}
+    record PilotBlockerRequest(
+            @Nullable String text, @Nullable String owner) {}
 
-    record NoteRequest(
+    record PilotNoteRequest(
             @NotBlank(message = PilotCohort.NOTE_REQUIRED) @Size(max = 2000, message = PilotCohort.NOTE_REQUIRED)
             String body) {}
 
-    record VisitRequest(
+    record PilotVisitRequest(
             @NotNull(message = KitchenVisits.WHEN_REQUIRED) Instant at,
             @Nullable String inspectorId,
             @Nullable String inspectorName) {}
 
-    record OutcomeRequest(
+    record PilotOutcomeRequest(
             @NotBlank(message = OUTCOME) @Pattern(regexp = "passed|failed", message = OUTCOME)
             String outcome,
 
@@ -115,7 +117,7 @@ class PilotController {
     @Operation(summary = "The pilot pipeline of a market (every market without one)")
     @GetMapping
     @RequiresConsole(ConsoleScreen.PILOT)
-    ResponseEntity<Board> board(@RequestParam(required = false) @Nullable String market) {
+    ResponseEntity<PilotBoard> board(@RequestParam(required = false) @Nullable String market) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(board.board(market));
     }
 
@@ -133,7 +135,7 @@ class PilotController {
     @Operation(summary = "One pilot business: checklist, notes, invites, kitchen visits")
     @GetMapping("/{pilotId}")
     @RequiresConsole(ConsoleScreen.PILOT)
-    Detail detail(@PathVariable String pilotId) {
+    PilotDetail detail(@PathVariable String pilotId) {
         return board.detail(pilotId);
     }
 
@@ -141,7 +143,7 @@ class PilotController {
     @PostMapping("/invites")
     @ResponseStatus(HttpStatus.CREATED)
     @RequiresConsole(value = ConsoleScreen.PILOT, actions = ConsoleAction.ONBOARD)
-    PilotActions.Invited invite(@Valid @RequestBody InviteRequest body, CurrentStaff staff) {
+    PilotActions.PilotInvited invite(@Valid @RequestBody PilotInviteRequest body, CurrentStaff staff) {
         return actions.invite(
                 new PilotCohort.NewInvite(
                         body.marketId(),
@@ -156,7 +158,8 @@ class PilotController {
     @Operation(summary = "Send a new invite link (the previous one stops working)")
     @PostMapping("/{pilotId}/invites")
     @RequiresConsole(value = ConsoleScreen.PILOT, actions = ConsoleAction.ONBOARD)
-    PilotActions.Invited reinvite(@PathVariable String pilotId, @RequestBody ReinviteRequest body, CurrentStaff staff) {
+    PilotActions.PilotInvited reinvite(
+            @PathVariable String pilotId, @RequestBody PilotReinviteRequest body, CurrentStaff staff) {
         return actions.reinvite(pilotId, body.email(), body.language(), actor(staff));
     }
 
@@ -164,42 +167,43 @@ class PilotController {
     @PostMapping("/enrolments")
     @ResponseStatus(HttpStatus.CREATED)
     @RequiresConsole(value = ConsoleScreen.PILOT, actions = ConsoleAction.ONBOARD)
-    Detail enrol(@Valid @RequestBody EnrolRequest body, CurrentStaff staff) {
+    PilotDetail enrol(@Valid @RequestBody PilotEnrolRequest body, CurrentStaff staff) {
         return actions.enrol(body.businessId(), body.marketId(), actor(staff));
     }
 
     @Operation(summary = "Who at Northline looks after the business")
     @PutMapping("/{pilotId}/owner")
     @RequiresConsole(value = ConsoleScreen.PILOT, actions = ConsoleAction.ONBOARD)
-    Detail owner(@PathVariable String pilotId, @RequestBody OwnerRequest body, CurrentStaff staff) {
+    PilotDetail owner(@PathVariable String pilotId, @RequestBody PilotOwnerRequest body, CurrentStaff staff) {
         return actions.assign(pilotId, body.ownerId(), actor(staff));
     }
 
     @Operation(summary = "Write down (or clear) what holds the business up and who has to act")
     @PutMapping("/{pilotId}/blocker")
     @RequiresConsole(value = ConsoleScreen.PILOT, actions = ConsoleAction.ONBOARD)
-    Detail blocker(@PathVariable String pilotId, @RequestBody BlockerRequest body, CurrentStaff staff) {
+    PilotDetail blocker(@PathVariable String pilotId, @RequestBody PilotBlockerRequest body, CurrentStaff staff) {
         return actions.block(pilotId, body.text(), body.owner(), actor(staff));
     }
 
     @Operation(summary = "Add a note")
     @PostMapping("/{pilotId}/notes")
     @RequiresConsole(value = ConsoleScreen.PILOT, actions = ConsoleAction.ONBOARD)
-    Detail note(@PathVariable String pilotId, @Valid @RequestBody NoteRequest body, CurrentStaff staff) {
+    PilotDetail note(@PathVariable String pilotId, @Valid @RequestBody PilotNoteRequest body, CurrentStaff staff) {
         return actions.note(pilotId, body.body(), actor(staff));
     }
 
     @Operation(summary = "Schedule a kitchen visit")
     @PostMapping("/{pilotId}/kitchen-visits")
     @RequiresConsole(value = ConsoleScreen.PILOT, actions = ConsoleAction.ONBOARD)
-    Detail scheduleVisit(@PathVariable String pilotId, @Valid @RequestBody VisitRequest body, CurrentStaff staff) {
+    PilotDetail scheduleVisit(
+            @PathVariable String pilotId, @Valid @RequestBody PilotVisitRequest body, CurrentStaff staff) {
         return actions.scheduleVisit(pilotId, body.at(), body.inspectorId(), body.inspectorName(), actor(staff));
     }
 
     @Operation(summary = "Add a photo to a kitchen visit (stored through the storage port)")
     @PostMapping(path = "/{pilotId}/kitchen-visits/{visitId}/photos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @RequiresConsole(value = ConsoleScreen.PILOT, actions = ConsoleAction.ONBOARD)
-    Detail addPhoto(
+    PilotDetail addPhoto(
             @PathVariable String pilotId,
             @PathVariable String visitId,
             @RequestParam(name = "file", required = false) @Nullable MultipartFile file,
@@ -243,10 +247,10 @@ class PilotController {
     @Operation(summary = "Record a kitchen visit's outcome against the checklist")
     @PostMapping("/{pilotId}/kitchen-visits/{visitId}/outcome")
     @RequiresConsole(value = ConsoleScreen.PILOT, actions = ConsoleAction.ONBOARD)
-    Detail outcome(
+    PilotDetail outcome(
             @PathVariable String pilotId,
             @PathVariable String visitId,
-            @Valid @RequestBody OutcomeRequest body,
+            @Valid @RequestBody PilotOutcomeRequest body,
             CurrentStaff staff) {
         var checklist = body.checklist();
         return actions.recordVisit(
@@ -261,7 +265,7 @@ class PilotController {
     @Operation(summary = "Cancel a scheduled kitchen visit")
     @PostMapping("/{pilotId}/kitchen-visits/{visitId}/cancel")
     @RequiresConsole(value = ConsoleScreen.PILOT, actions = ConsoleAction.ONBOARD)
-    Detail cancelVisit(@PathVariable String pilotId, @PathVariable String visitId, CurrentStaff staff) {
+    PilotDetail cancelVisit(@PathVariable String pilotId, @PathVariable String visitId, CurrentStaff staff) {
         return actions.cancelVisit(pilotId, visitId, actor(staff));
     }
 

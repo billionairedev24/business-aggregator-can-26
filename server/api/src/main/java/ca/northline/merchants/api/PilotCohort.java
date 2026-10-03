@@ -1,5 +1,6 @@
 package ca.northline.merchants.api;
 
+import ca.northline.merchants.api.KitchenVisits.Visit;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -132,7 +133,7 @@ public interface PilotCohort {
             boolean kitchenVisitRequired,
             @Nullable String siteVisit,
             @Nullable Instant siteVisitSlot,
-            KitchenVisits.@Nullable Visit visit,
+            @Nullable Visit visit,
             @Nullable Instant submittedAt,
             @Nullable Instant approvedAt,
             boolean storefrontPublished,

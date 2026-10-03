@@ -1,6 +1,6 @@
 package ca.northline.console.application;
 
-import ca.northline.console.application.PilotOnboarding.Step;
+import ca.northline.console.application.PilotOnboarding.PilotStep;
 import ca.northline.merchants.api.PilotCohort.Pilot;
 import ca.northline.payments.api.ConnectReadiness;
 import java.util.ArrayList;
@@ -40,10 +40,10 @@ final class PilotStages {
         static final Listings NONE = new Listings(0, 0, 0);
     }
 
-    static List<Step> checklist(Inputs in) {
+    static List<PilotStep> checklist(Inputs in) {
         var p = in.pilot();
         var b = p.business();
-        var steps = new ArrayList<Step>();
+        var steps = new ArrayList<PilotStep>();
         var invite = p.invite();
         if (p.merchantId() != null || invite == null) {
             steps.add(step("invited", DONE, null, null, Map.of()));
@@ -93,7 +93,7 @@ final class PilotStages {
         return List.copyOf(steps);
     }
 
-    private static Step identity(@Nullable String kyc, boolean inReview) {
+    private static PilotStep identity(@Nullable String kyc, boolean inReview) {
         if ("verified".equals(kyc)) {
             return step("identity_verified", DONE, null, null, Map.of());
         }
@@ -109,7 +109,7 @@ final class PilotStages {
         return step("identity_verified", TODO, "verify_identity", "business", Map.of());
     }
 
-    private static Step stripe(ConnectReadiness.@Nullable Account account) {
+    private static PilotStep stripe(ConnectReadiness.@Nullable Account account) {
         if (account == null) {
             return step("stripe_ready", TODO, "connect_stripe", "business", Map.of());
         }
@@ -132,7 +132,7 @@ final class PilotStages {
                 params);
     }
 
-    private static Step kitchenVisit(Pilot p) {
+    private static PilotStep kitchenVisit(Pilot p) {
         var b = p.business();
         if (b == null || !"kitchen".equals(b.type())) {
             return step("kitchen_visit", NA, null, null, Map.of());
@@ -165,7 +165,7 @@ final class PilotStages {
                 slot == null ? Map.of() : Map.of("slot", slot.toString()));
     }
 
-    private static Step approval(ca.northline.merchants.api.PilotCohort.Business b) {
+    private static PilotStep approval(ca.northline.merchants.api.PilotCohort.Business b) {
         return switch (b.status()) {
             case "active", "paused" -> step("approved", DONE, null, null, Map.of());
             case "pending" ->
@@ -192,7 +192,7 @@ final class PilotStages {
         };
     }
 
-    private static Step live(ca.northline.merchants.api.PilotCohort.Business b, Listings c, boolean marketLive) {
+    private static PilotStep live(ca.northline.merchants.api.PilotCohort.Business b, Listings c, boolean marketLive) {
         if (!"active".equals(b.status())) {
             return step("live", TODO, null, null, Map.of());
         }
@@ -217,7 +217,7 @@ final class PilotStages {
     }
 
     /** The furthest step with every step up to it done or not applicable ("invited" at least). */
-    static String stage(List<Step> steps) {
+    static String stage(List<PilotStep> steps) {
         var stage = steps.getFirst().key();
         for (var s : steps) {
             if (!DONE.equals(s.state()) && !NA.equals(s.state())) {
@@ -230,15 +230,15 @@ final class PilotStages {
         return stage;
     }
 
-    static @Nullable Step next(List<Step> steps) {
+    static @Nullable PilotStep next(List<PilotStep> steps) {
         return steps.stream()
                 .filter(s -> !DONE.equals(s.state()) && !NA.equals(s.state()))
                 .findFirst()
                 .orElse(null);
     }
 
-    private static Step step(
+    private static PilotStep step(
             String key, String state, @Nullable String action, @Nullable String owner, Map<String, String> params) {
-        return new Step(key, state, action, owner, Map.copyOf(params));
+        return new PilotStep(key, state, action, owner, Map.copyOf(params));
     }
 }

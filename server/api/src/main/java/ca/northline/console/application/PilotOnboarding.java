@@ -29,28 +29,28 @@ public interface PilotOnboarding {
             "live");
 
     /** @param marketId null = every market */
-    Board board(@Nullable String marketId);
+    PilotBoard board(@Nullable String marketId);
 
     /** The board as CSV, one business per line (codes, not words: the sheet is for people and scripts alike). */
     String csv(@Nullable String marketId);
 
-    Detail detail(String pilotId);
+    PilotDetail detail(String pilotId);
 
     /** A market a pilot can be in, with its stage ({@code off|waitlist|pilot|live}). */
-    record Market(String id, String city, String province, String stage) {}
+    record PilotMarket(String id, String city, String province, String stage) {}
 
     /**
      * @param stages how many businesses reached each stage (the furthest step all earlier ones are done)
      * @param live businesses live
      * @param blocked businesses with a blocker (written down or found)
      */
-    record Board(
-            List<Market> markets,
+    record PilotBoard(
+            List<PilotMarket> markets,
             @Nullable String marketId,
             Map<String, Integer> stages,
             int live,
             int blocked,
-            List<Row> items) {}
+            List<PilotRow> items) {}
 
     /**
      * One step of a business's checklist.
@@ -60,7 +60,7 @@ public interface PilotOnboarding {
      * @param owner who has to act: {@code business | northline | stripe | inspector}
      * @param params values the words need ({@code expiresAt}, {@code at}, {@code complete}, {@code total} …)
      */
-    record Step(
+    record PilotStep(
             String key,
             String state,
             @Nullable String action,
@@ -73,7 +73,7 @@ public interface PilotOnboarding {
      * @param businessName the business's own name once it has one, else the working label
      * @param city the market the business trades in (its city), null while it has none
      */
-    record Row(
+    record PilotRow(
             String id,
             String label,
             String businessName,
@@ -82,8 +82,8 @@ public interface PilotOnboarding {
             @Nullable String merchantId,
             @Nullable String city,
             String stage,
-            @Nullable Step next,
-            List<Step> checklist,
+            @Nullable PilotStep next,
+            List<PilotStep> checklist,
             boolean blocked,
             @Nullable String blocker,
             @Nullable String blockerOwner,
@@ -95,11 +95,12 @@ public interface PilotOnboarding {
             int listingsLive,
             Instant createdAt) {}
 
-    record NoteView(String id, String authorId, @Nullable String authorName, String body, Instant createdAt) {}
+    record PilotNoteView(
+            String id, String authorId, @Nullable String authorName, String body, Instant createdAt) {}
 
-    record Detail(
-            Row row,
-            List<NoteView> notes,
+    record PilotDetail(
+            PilotRow row,
+            List<PilotNoteView> notes,
             List<PilotCohort.Invite> invites,
             List<KitchenVisits.Visit> visits,
             List<String> visitItems,

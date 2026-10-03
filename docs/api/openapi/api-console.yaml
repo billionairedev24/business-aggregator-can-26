@@ -2888,7 +2888,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/Board"
+                $ref: "#/components/schemas/PilotBoard"
           description: OK
         "401":
           content:
@@ -2934,14 +2934,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/EnrolRequest"
+              $ref: "#/components/schemas/PilotEnrolRequest"
         required: true
       responses:
         "201":
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/Detail"
+                $ref: "#/components/schemas/PilotDetail"
           description: Created
         "401":
           content:
@@ -3047,14 +3047,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/InviteRequest"
+              $ref: "#/components/schemas/PilotInviteRequest"
         required: true
       responses:
         "201":
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/Invited"
+                $ref: "#/components/schemas/PilotInvited"
           description: Created
         "401":
           content:
@@ -3114,7 +3114,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/Detail"
+                $ref: "#/components/schemas/PilotDetail"
           description: OK
         "401":
           content:
@@ -3179,14 +3179,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/BlockerRequest"
+              $ref: "#/components/schemas/PilotBlockerRequest"
         required: true
       responses:
         "200":
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/Detail"
+                $ref: "#/components/schemas/PilotDetail"
           description: OK
         "401":
           content:
@@ -3264,14 +3264,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ReinviteRequest"
+              $ref: "#/components/schemas/PilotReinviteRequest"
         required: true
       responses:
         "200":
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/Invited"
+                $ref: "#/components/schemas/PilotInvited"
           description: OK
         "401":
           content:
@@ -3349,14 +3349,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/VisitRequest"
+              $ref: "#/components/schemas/PilotVisitRequest"
         required: true
       responses:
         "200":
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/Detail"
+                $ref: "#/components/schemas/PilotDetail"
           description: OK
         "401":
           content:
@@ -3440,7 +3440,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/Detail"
+                $ref: "#/components/schemas/PilotDetail"
           description: OK
         "401":
           content:
@@ -3510,14 +3510,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/OutcomeRequest"
+              $ref: "#/components/schemas/PilotOutcomeRequest"
         required: true
       responses:
         "200":
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/Detail"
+                $ref: "#/components/schemas/PilotDetail"
           description: OK
         "401":
           content:
@@ -3607,7 +3607,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/Detail"
+                $ref: "#/components/schemas/PilotDetail"
           description: OK
         "401":
           content:
@@ -3757,14 +3757,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/NoteRequest"
+              $ref: "#/components/schemas/PilotNoteRequest"
         required: true
       responses:
         "200":
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/Detail"
+                $ref: "#/components/schemas/PilotDetail"
           description: OK
         "401":
           content:
@@ -3842,14 +3842,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/OwnerRequest"
+              $ref: "#/components/schemas/PilotOwnerRequest"
         required: true
       responses:
         "200":
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/Detail"
+                $ref: "#/components/schemas/PilotDetail"
           description: OK
         "401":
           content:
@@ -8409,13 +8409,6 @@ components:
           type: string
         tiles:
           type: string
-    BlockerRequest:
-      type: object
-      properties:
-        owner:
-          type: string
-        text:
-          type: string
     Board:
       type: object
       properties:
@@ -8452,6 +8445,22 @@ components:
         requiresVsCheck:
           type: boolean
         root:
+          type: string
+    Check:
+      type: object
+      properties:
+        checkType:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        id:
+          type: string
+        reference:
+          type: string
+        registry:
+          type: string
+        status:
           type: string
     CheckRow:
       type: object
@@ -8821,26 +8830,43 @@ components:
     Detail:
       type: object
       properties:
-        invites:
+        approvedAt:
+          type: string
+          format: date-time
+        asOf:
+          type: string
+          format: date-time
+        checks:
           type: array
           items:
-            $ref: "#/components/schemas/Invite"
-        kitchenVisitRequired:
-          type: boolean
-        notes:
-          type: array
-          items:
-            $ref: "#/components/schemas/NoteView"
-        row:
+            $ref: "#/components/schemas/Check"
+        disputes:
+          $ref: "#/components/schemas/Measure"
+        joinedAt:
+          type: string
+          format: date-time
+        onTime:
+          $ref: "#/components/schemas/Measure"
+        quality:
+          $ref: "#/components/schemas/Measure"
+        ratingAverage:
+          type: number
+          format: double
+        ratingCount:
+          type: integer
+          format: int32
+        seller:
           $ref: "#/components/schemas/Row"
-        visitItems:
+        signals:
           type: array
           items:
-            type: string
-        visits:
+            $ref: "#/components/schemas/Signal"
+        stripeAccount:
+          type: string
+        trail:
           type: array
           items:
-            $ref: "#/components/schemas/Visit"
+            $ref: "#/components/schemas/TrailEntry"
     Directory:
       type: object
       properties:
@@ -8878,18 +8904,6 @@ components:
           type: string
         unit:
           type: string
-    EnrolRequest:
-      type: object
-      properties:
-        businessId:
-          type: string
-          minLength: 1
-        marketId:
-          type: string
-          minLength: 1
-      required:
-      - businessId
-      - marketId
     ExportView:
       type: object
       properties:
@@ -9088,16 +9102,6 @@ components:
         email:
           type: string
         role:
-          type: string
-    Invited:
-      type: object
-      properties:
-        detail:
-          $ref: "#/components/schemas/Detail"
-        expiresAt:
-          type: string
-          format: date-time
-        link:
           type: string
     IssuedKey:
       type: object
@@ -9486,6 +9490,15 @@ components:
             $ref: "#/components/schemas/RoleGrant"
         userId:
           type: string
+    Measure:
+      type: object
+      properties:
+        floor:
+          type: number
+          format: double
+        value:
+          type: number
+          format: double
     Member:
       type: object
       properties:
@@ -9566,35 +9579,6 @@ components:
           type: string
           maxLength: 1000
           minLength: 0
-    NoteView:
-      type: object
-      properties:
-        authorId:
-          type: string
-        authorName:
-          type: string
-        body:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
-        id:
-          type: string
-    OutcomeRequest:
-      type: object
-      properties:
-        checklist:
-          type: object
-          additionalProperties:
-            type: string
-        note:
-          type: string
-        outcome:
-          type: string
-          minLength: 1
-          pattern: passed|failed
-      required:
-      - outcome
     Oversight:
       type: object
       properties:
@@ -9644,11 +9628,6 @@ components:
             $ref: "#/components/schemas/Week"
         workQueue:
           $ref: "#/components/schemas/WorkQueue"
-    OwnerRequest:
-      type: object
-      properties:
-        ownerId:
-          type: string
     OwnerReview:
       type: object
       properties:
@@ -9705,6 +9684,244 @@ components:
         pickedUpAt:
           type: string
           format: date-time
+    PilotBlockerRequest:
+      type: object
+      properties:
+        owner:
+          type: string
+        text:
+          type: string
+    PilotBoard:
+      type: object
+      properties:
+        blocked:
+          type: integer
+          format: int32
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PilotRow"
+        live:
+          type: integer
+          format: int32
+        marketId:
+          type: string
+        markets:
+          type: array
+          items:
+            $ref: "#/components/schemas/PilotMarket"
+        stages:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int32
+    PilotDetail:
+      type: object
+      properties:
+        invites:
+          type: array
+          items:
+            $ref: "#/components/schemas/Invite"
+        kitchenVisitRequired:
+          type: boolean
+        notes:
+          type: array
+          items:
+            $ref: "#/components/schemas/PilotNoteView"
+        row:
+          $ref: "#/components/schemas/PilotRow"
+        visitItems:
+          type: array
+          items:
+            type: string
+        visits:
+          type: array
+          items:
+            $ref: "#/components/schemas/Visit"
+    PilotEnrolRequest:
+      type: object
+      properties:
+        businessId:
+          type: string
+          minLength: 1
+        marketId:
+          type: string
+          minLength: 1
+      required:
+      - businessId
+      - marketId
+    PilotInviteRequest:
+      type: object
+      properties:
+        businessType:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          minLength: 1
+        label:
+          type: string
+          maxLength: 80
+          minLength: 0
+        language:
+          type: string
+        marketId:
+          type: string
+          minLength: 1
+        ownerId:
+          type: string
+      required:
+      - businessType
+      - email
+      - label
+      - marketId
+    PilotInvited:
+      type: object
+      properties:
+        detail:
+          $ref: "#/components/schemas/PilotDetail"
+        expiresAt:
+          type: string
+          format: date-time
+        link:
+          type: string
+    PilotMarket:
+      type: object
+      properties:
+        city:
+          type: string
+        id:
+          type: string
+        province:
+          type: string
+        stage:
+          type: string
+    PilotNoteRequest:
+      type: object
+      properties:
+        body:
+          type: string
+          maxLength: 2000
+          minLength: 0
+      required:
+      - body
+    PilotNoteView:
+      type: object
+      properties:
+        authorId:
+          type: string
+        authorName:
+          type: string
+        body:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        id:
+          type: string
+    PilotOutcomeRequest:
+      type: object
+      properties:
+        checklist:
+          type: object
+          additionalProperties:
+            type: string
+        note:
+          type: string
+        outcome:
+          type: string
+          minLength: 1
+          pattern: passed|failed
+      required:
+      - outcome
+    PilotOwnerRequest:
+      type: object
+      properties:
+        ownerId:
+          type: string
+    PilotReinviteRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        language:
+          type: string
+    PilotRow:
+      type: object
+      properties:
+        blocked:
+          type: boolean
+        blocker:
+          type: string
+        blockerOwner:
+          type: string
+        blockerSince:
+          type: string
+          format: date-time
+        businessName:
+          type: string
+        businessType:
+          type: string
+        checklist:
+          type: array
+          items:
+            $ref: "#/components/schemas/PilotStep"
+        city:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        id:
+          type: string
+        inviteState:
+          type: string
+        label:
+          type: string
+        listings:
+          type: integer
+          format: int32
+        listingsLive:
+          type: integer
+          format: int32
+        marketId:
+          type: string
+        merchantId:
+          type: string
+        next:
+          $ref: "#/components/schemas/PilotStep"
+        ownerId:
+          type: string
+        ownerName:
+          type: string
+        stage:
+          type: string
+    PilotStep:
+      type: object
+      properties:
+        action:
+          type: string
+        key:
+          type: string
+        owner:
+          type: string
+        params:
+          type: object
+          additionalProperties:
+            type: string
+        state:
+          type: string
+    PilotVisitRequest:
+      type: object
+      properties:
+        at:
+          type: string
+          format: date-time
+        inspectorId:
+          type: string
+        inspectorName:
+          type: string
+      required:
+      - at
     Place:
       type: object
       properties:
@@ -10008,13 +10225,6 @@ components:
         province:
           type: string
         website:
-          type: string
-    ReinviteRequest:
-      type: object
-      properties:
-        email:
-          type: string
-        language:
           type: string
     RejectBody:
       type: object
@@ -10612,6 +10822,22 @@ components:
           format: date-time
         state:
           type: string
+    Signal:
+      type: object
+      properties:
+        bar:
+          type: integer
+          format: int32
+        barFloor:
+          type: integer
+          format: int32
+        inverted:
+          type: boolean
+        key:
+          type: string
+        value:
+          type: number
+          format: double
     StageRequest:
       type: object
       properties:
@@ -10803,6 +11029,26 @@ components:
           format: int64
         tier:
           type: string
+    TrailEntry:
+      type: object
+      properties:
+        action:
+          type: string
+        actorName:
+          type: string
+        actorRole:
+          type: string
+        at:
+          type: string
+          format: date-time
+        detail:
+          type: object
+          additionalProperties:
+            type: string
+        id:
+          type: string
+        reason:
+          type: string
     TrustFlag:
       type: object
       properties:
@@ -10886,18 +11132,6 @@ components:
           format: date-time
         status:
           type: string
-    VisitRequest:
-      type: object
-      properties:
-        at:
-          type: string
-          format: date-time
-        inspectorId:
-          type: string
-        inspectorName:
-          type: string
-      required:
-      - at
     Week:
       type: object
       properties:

@@ -15651,7 +15651,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/Preview"
+                $ref: "#/components/schemas/PilotInvitePreview"
           description: OK
         "401":
           content:
@@ -19189,6 +19189,24 @@ components:
         preview:
           type: string
         tool:
+          type: string
+    PilotInvitePreview:
+      type: object
+      properties:
+        businessType:
+          type: string
+        city:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        label:
+          type: string
+        marketId:
+          type: string
+        province:
+          type: string
+        state:
           type: string
     Point:
       type: object

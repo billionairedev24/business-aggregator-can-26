@@ -18,7 +18,7 @@ public interface PilotInviteLinks {
      * @param state {@code pending|expired|accepted|revoked}
      * @param city the pilot market's city
      */
-    record Preview(
+    record PilotInvitePreview(
             String businessType,
             String label,
             String marketId,
@@ -27,7 +27,7 @@ public interface PilotInviteLinks {
             Instant expiresAt,
             String state) {}
 
-    Preview preview(String token);
+    PilotInvitePreview preview(String token);
 
     /** Called inside the Account step's transaction once the business exists; refuses an unusable invite. */
     void accept(String token, String merchantId, String userId, MerchantType type, Province province);
