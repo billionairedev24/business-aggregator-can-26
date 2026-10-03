@@ -1,0 +1,27 @@
+# Local Prometheus (docker compose --profile observability; docs/runbooks/observability.md § Local). The apps' metrics
+# arrive over OTLP: app → Collector → POST /api/v1/otlp/v1/metrics (--web.enable-otlp-receiver), translated with the
+# same rules as Grafana Cloud / Mimir and the cloud's managed Prometheus (http.server.requests in seconds →
+# http_server_requests_seconds_*, counters → *_total, service.name → job). It evaluates the S-113 rule files
+# unchanged (deploy/observability/prometheus/rules, mounted read-only) plus the local-only test alert (local/), and
+# sends alerts to the local Alertmanager, whose only receiver is Mailpit — nothing pages anyone.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: local
+rule_files:
+  - /etc/prometheus/rules/*.yml
+  - /etc/prometheus/rules/slo/*.yaml
+  - /etc/prometheus/local/*.yml
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+storage:
+  tsdb:
+    out_of_order_time_window: 10m   # OTLP batches can arrive a little late
+scrape_configs:
+  - job_name: prometheus
+    static_configs: [{ targets: ["localhost:9090"] }]
+  - job_name: otel-collector     # the Collector's own metrics (accepted / refused points per pipeline)
+    static_configs: [{ targets: ["otel-collector:8888"] }]

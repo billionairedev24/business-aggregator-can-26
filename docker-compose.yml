@@ -6,7 +6,9 @@
 #   COMPOSE_PROFILES=events,search,mail docker compose up -d   # or set COMPOSE_PROFILES in .env
 #
 # Profiles: db · cache · events · search · mail · storage · payments · all · tools (Kafka UI, Kibana) ·
-# observability (S-111: OpenTelemetry Collector + Grafana LGTM — scripts/observability.sh, docs/runbooks/observability.md).
+# observability (S-111: OpenTelemetry Collector → Prometheus, Loki, Tempo; Alertmanager → Mailpit; Grafana —
+# scripts/observability.sh, docs/runbooks/observability.md). Everything with your own Postgres, Valkey or Grafana:
+# make up-all (BYO_SERVICES in .env; docs/runbooks/local.md § 6a).
 # Ports and credentials come from .env (copy .env.example); the defaults match the apps' defaults
 # (server/.env.example). Full guide: docs/runbooks/local.md. Data stays on your machine.
 name: northline
@@ -79,8 +81,8 @@ services:
       interval: 10s
       retries: 30
 
-  mailpit:                                    # --profile mail  (SMTP :1025, web UI :8025)
-    profiles: [mail, all]
+  mailpit:                                    # --profile mail  (SMTP :1025, web UI :8025; also the local alerts' inbox)
+    profiles: [mail, all, observability]
     image: axllent/mailpit:v1.29
     ports: ["${MAILPIT_SMTP_PORT:-1025}:1025", "${MAILPIT_UI_PORT:-8025}:8025"]
 
@@ -142,16 +144,62 @@ services:
     command: ["--config=/etc/otelcol/collector.yaml"]
     volumes: ["./deploy/observability/collector/collector-local.yaml:/etc/otelcol/collector.yaml:ro"]
     ports: ["${OTEL_GRPC_PORT:-4317}:4317", "${OTEL_HTTP_PORT:-4318}:4318"]
-    depends_on: [lgtm]
+    depends_on: [prometheus, loki, tempo]
 
-  lgtm:                                       # --profile observability  (Grafana :3300 with Tempo, Loki, Prometheus inside)
+  # The telemetry backends, each on a host port so any Grafana can read them — the bundled one below, or your own
+  # (make obs-grafana-provision). Data lives in tmpfs: nothing is kept after make obs-down / make down.
+  prometheus:                                 # --profile observability  (OTLP metrics in, S-113 rules evaluated locally)
     profiles: [observability]
-    image: grafana/otel-lgtm:0.34.0
-    environment:
-      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /otel-lgtm/grafana/conf/provisioning/dashboards/northline/northline-overview.json
+    image: prom/prometheus:v3.5.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=2d
+      - --web.enable-otlp-receiver
+      - --web.enable-lifecycle                 # POST /-/reload after editing a rule file
     volumes:
-      - ./deploy/observability/grafana/dashboards:/otel-lgtm/grafana/conf/provisioning/dashboards/northline:ro
-      - ./deploy/observability/grafana/provisioning.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/northline.yaml:ro
+      - ./deploy/observability/prometheus/prometheus-local.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/observability/prometheus/rules:/etc/prometheus/rules:ro
+      - ./deploy/observability/prometheus/local:/etc/prometheus/local:ro
+    tmpfs: ["/prometheus:mode=1777"]   # the image's user (not root) writes here
+    ports: ["${PROMETHEUS_PORT:-9090}:9090"]
+
+  alertmanager:                               # --profile observability  (local receiver only: Mailpit)
+    profiles: [observability]
+    image: prom/alertmanager:v0.28.1
+    command: ["--config.file=/etc/alertmanager/alertmanager.yml", "--storage.path=/alertmanager"]
+    volumes: ["./deploy/observability/alertmanager/alertmanager-local.yml:/etc/alertmanager/alertmanager.yml:ro"]
+    tmpfs: ["/alertmanager:mode=1777"]   # the image's user (not root) writes here
+    ports: ["${ALERTMANAGER_PORT:-9093}:9093"]
+
+  loki:                                       # --profile observability  (OTLP logs in; 3100 on the host is the Studio's)
+    profiles: [observability]
+    image: grafana/loki:3.5.5
+    command: ["-config.file=/etc/loki/loki.yaml"]
+    volumes: ["./deploy/observability/loki/loki-local.yaml:/etc/loki/loki.yaml:ro"]
+    tmpfs: ["/loki:mode=1777"]   # the image's user (not root) writes here
+    ports: ["${LOKI_PORT:-3110}:3100"]
+
+  tempo:                                      # --profile observability  (OTLP traces in; 3200 on the host is the console's)
+    profiles: [observability]
+    image: grafana/tempo:2.8.2
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    volumes: ["./deploy/observability/tempo/tempo-local.yaml:/etc/tempo/tempo.yaml:ro"]
+    tmpfs: ["/var/tempo:mode=1777"]   # the image's user (not root) writes here
+    ports: ["${TEMPO_PORT:-3210}:3200"]
+
+  grafana:                                    # --profile observability  (skipped when you bring your own: BYO_SERVICES=…,grafana)
+    profiles: [observability]
+    image: grafana/grafana:12.2.0
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+    # Data sources, the Northline folder and dashboards are added through Grafana's HTTP API by
+    # scripts/observability.sh up (scripts/grafana-provision.py) — the same code that provisions your own Grafana.
+    tmpfs: ["/var/lib/grafana:mode=1777"]   # the image's user (not root) writes here
     ports: ["${GRAFANA_PORT:-3300}:3000"]   # 3000 is the consumer web app's
 
 volumes: { pg: {}, es: {}, objects: {} }

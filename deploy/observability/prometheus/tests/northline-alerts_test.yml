@@ -130,7 +130,7 @@ tests:
     interval: 1m
     input_series:
       # last success at t=0 (Unix 0 in promtool time), never again
-      - series: 'northline_jobs_last_success_seconds{application="northline-api",job="payments.payouts"}'
+      - series: 'northline_jobs_last_success_seconds{application="northline-api",task="payments.payouts"}'
         values: '0x150'
     alert_rule_test:
       - eval_time: 30m
@@ -157,13 +157,13 @@ tests:
   - name: no replica reports the payout run
     interval: 1m
     input_series:
-      - series: 'northline_jobs_last_success_seconds{application="northline-api",job="payments.release_escrow"}'
+      - series: 'northline_jobs_last_success_seconds{application="northline-api",task="payments.release_escrow"}'
         values: '0+60x40'
     alert_rule_test:
       - eval_time: 35m
         alertname: NorthlinePayoutRunMissing
         exp_alerts:
-          - exp_labels: { severity: ticket, job: payments.payouts }
+          - exp_labels: { severity: ticket, task: payments.payouts }
             exp_annotations:
               summary: "No api replica has reported a successful payout run for 30 minutes (none running, or the run always fails)"
               runbook_url: https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/payout-run.md
@@ -189,7 +189,7 @@ tests:
   - name: no replica reports the retention jobs
     interval: 1m
     input_series:
-      - series: 'northline_jobs_last_success_seconds{application="northline-api",job="payments.payouts"}'
+      - series: 'northline_jobs_last_success_seconds{application="northline-api",task="payments.payouts"}'
         values: '0+60x400'
     alert_rule_test:
       - eval_time: 5h

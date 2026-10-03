@@ -37,7 +37,7 @@ browser ──traceparent──▶ BFF ──traceparent──▶ api ──▶ 
 | `northline_events_consumed_total` | worker | `consumer`, `type`, `outcome` (processed, duplicate, failed, poison) | S-26 |
 | `northline_events_dead_lettered_total` | worker | `consumer`, `topic` | S-26 DLQ — the page |
 | `northline_tracking_streams` | api | — | open order-tracking streams (SSE) on the replica (S-91: the console's "Tracking" tile) |
-| `northline_jobs_runs_total`, `northline_jobs_last_success_seconds` | api | `job` (`payments.payouts`, `payments.release_escrow`, …), `outcome` | S-113: each payments job run, and when it last succeeded ([alerting.md](alerting.md)) |
+| `northline_jobs_runs_total`, `northline_jobs_last_success_seconds` | api | `task` (`payments.payouts`, `payments.release_escrow`, …), `outcome` | S-113: each payments job run, and when it last succeeded ([alerting.md](alerting.md)) |
 | `northline_payouts_delay_seconds_*` | api | `kind` (scheduled) | S-113: a scheduled payout sent after the business's payout time |
 | `northline_kds_ticket_delivery_seconds_*` | api | — | S-113: a food order placed → its signal on the kitchen's live bus |
 | `northline_studio_live_probe_seconds_*` | api | `outcome` (delivered, lost) | S-113: each replica's live bus round trip every 30 s (KDS freshness) |
@@ -155,10 +155,11 @@ apps redact before export (S-112) and the Collector scrubs again.
 | events (Kafka: outcomes, lag, DLQ, listener and producer timings) | `northline-events` |
 | AI (S-129: model calls, outcome, latency, tokens, cost per call by feature and model — [ai.md](ai.md)) | `northline-ai` |
 
-Queries are PromQL on a `datasource` variable — any Prometheus-compatible source: the local LGTM, Grafana Cloud,
+Queries are PromQL on a `datasource` variable — any Prometheus-compatible source: the local Prometheus, Grafana Cloud,
 Amazon Managed Prometheus, Google Managed Prometheus, Azure Monitor managed Prometheus. Change a dashboard in the
 generator, then `make obs-dashboards`; `make obs-check` (and CI) fails when the JSON is stale. Import into a hosted
-Grafana with its API or the UI ("Import dashboard" → upload the JSON), or provision the folder like the local stack.
+Grafana with its API (`make obs-grafana-provision`, [§ Your own Grafana](#your-own-grafana)) or the UI ("Import
+dashboard" → upload the JSON), or with file provisioning (`deploy/observability/grafana/provisioning.yaml`).
 On CloudWatch-only AWS set-ups use CloudWatch dashboards over the `Northline` EMF namespace instead (same metric names).
 
 ## Alerts
@@ -198,17 +199,96 @@ Prometheus HTTP API documents.
 ## Local
 
 ```sh
-make up OBS=1                       # stand-ins + apps as usual, plus the Collector and Grafana; the apps export to it
+make up-all                         # everything, with your own Postgres / Valkey / Grafana (BYO_SERVICES) — local.md § 6a
+make up OBS=1                       # stand-ins + apps as usual, plus the observability stack; the apps export to it
 make obs-up                         # only the observability stack (then start apps yourself with: eval "$(make -s obs-env)")
 make obs-open                       # http://localhost:3300 — admin / admin, folder "Northline"
-make obs-down
+make obs-status · make obs-down
 ```
 
 `docker compose --profile observability` runs the same Collector processors as the chart
-(`deploy/observability/collector/collector-local.yaml`) in front of `grafana/otel-lgtm` (Grafana, Tempo, Loki,
-Prometheus). Grafana is on **3300** (the consumer web app owns 3000); ports: `GRAFANA_PORT`, `OTEL_GRPC_PORT`,
-`OTEL_HTTP_PORT` in `.env`. Explore → Tempo → search by service name, or paste a `traceparent`'s trace id from the
-browser's network panel. Without `OBS=1` nothing is exported (the apps still put trace ids in their logs).
+(`deploy/observability/collector/collector-local.yaml`) and sends each signal to its own backend, each published on a
+host port so that any Grafana can read it:
+
+| service | host port (`.env`) | what |
+|---|---|---|
+| OpenTelemetry Collector | `OTEL_HTTP_PORT` 4318, `OTEL_GRPC_PORT` 4317 | what the apps send to (`OTEL_EXPORTER_OTLP_ENDPOINT`) |
+| Prometheus 3.5 | `PROMETHEUS_PORT` 9090 | metrics, through its OTLP receiver; evaluates the S-113 rules (`/alerts`, `/rules`) |
+| Alertmanager 0.28 | `ALERTMANAGER_PORT` 9093 | the S-113 routing (page / ticket), every receiver = Mailpit |
+| Loki 3.5 | `LOKI_PORT` **3110** | logs over OTLP (the trace id is structured metadata `trace_id`) |
+| Tempo 2.8 | `TEMPO_PORT` **3210** | traces; TraceQL search |
+| Mailpit | `MAILPIT_UI_PORT` 8025 | the alert emails (the app's emails too) |
+| Grafana 12 | `GRAFANA_PORT` **3300** | bundled, admin / admin; not started when `BYO_SERVICES` has `grafana` |
+
+Loki and Tempo are not on their usual 3100 / 3200, and Grafana not on 3000: the Studio (3100), the console (3200) and
+the consumer web app (3000) own those. Data lives in the containers' tmpfs — nothing is kept after `make obs-down`.
+`grafana/otel-lgtm` (S-111's single container) could publish its Prometheus, Loki and Tempo too, but its Prometheus
+loads neither our rule files nor an Alertmanager, and it always runs a Grafana; separate containers let the same
+rules run locally and leave Grafana optional.
+
+Explore → Northline Tempo → search by service name, or paste a `traceparent`'s trace id from the browser's network
+panel; a span's "Logs for this span" opens Loki on the same trace id, a log line's "Trace" link opens Tempo. Without
+`OBS=1` (or `make up-all`) nothing is exported (the apps still put trace ids in their logs).
+
+### Your own Grafana
+
+```sh
+make obs-grafana-provision GRAFANA_URL=http://localhost:3001 GRAFANA_TOKEN=glsa_your_token
+make obs-grafana-provision GRAFANA_URL=http://localhost:3001 GRAFANA_USER=admin GRAFANA_PASSWORD=admin   # or basic auth
+```
+
+(= `scripts/grafana-provision.py`, standard-library Python.) Through Grafana's HTTP API it creates or updates — run it
+as often as you like, nothing is duplicated:
+
+- the data sources **Northline Prometheus**, **Northline Loki**, **Northline Tempo** and **Northline Alertmanager**
+  (uids `northline-prometheus`, `-loki`, `-tempo`, `-alertmanager`), linked: Tempo → Loki (logs of a span, by trace
+  id), Loki → Tempo (a log line's `trace_id`), Prometheus exemplars → Tempo, Tempo's service graph from Prometheus;
+- the folder **Northline**, and every dashboard of `deploy/observability/grafana/dashboards` in it, their `datasource`
+  variable set to Northline Prometheus;
+- the alert rules: Prometheus evaluates them, so Grafana lists them under Alerting → Alert rules (data source-managed,
+  read-only) with their state, and the Alertmanager data source shows the alerts and silences. `GRAFANA_ALERT_RULES=1`
+  also imports every rule group as **Grafana-managed** rules into the Northline folder (Grafana 12's Prometheus rule
+  conversion API) — only if you want Grafana to evaluate them as well.
+
+The token: Administration → Users and access → Service accounts → add one with the **Admin** role → add a token
+(data sources need Admin). The backend URLs are the ones Grafana itself calls: `http://localhost:9090` etc. for a
+Grafana on your machine; for a Grafana in Docker add `GRAFANA_BACKEND_HOST=host.docker.internal` (on Linux, start that
+container with `--add-host=host.docker.internal:host-gateway`, or with `--network host` and the default). Put
+`GRAFANA_URL` and `GRAFANA_TOKEN` in `.env` with `BYO_SERVICES=…,grafana` and `make up-all` / `make obs-up` provision
+it on every start.
+
+**Port:** Grafana's default is 3000, which the consumer web app needs (its OAuth redirects are registered for
+`localhost:3000`) — `make up-all` refuses to start the consumer app next to a Grafana on 3000. Move Grafana:
+`[server] http_port = 3001` in grafana.ini (Homebrew: `$(brew --prefix)/etc/grafana/grafana.ini`, then
+`brew services restart grafana`), or `GF_SERVER_HTTP_PORT=3001` for a container.
+
+### Local alerting
+
+Prometheus loads the S-113 rule files unchanged (`deploy/observability/prometheus/rules`, the SLO burn rates and the
+threshold alerts — the same files the Helm chart deploys) plus one local-only test rule
+(`deploy/observability/prometheus/local/test-alert.yml`), and sends alerts to the local Alertmanager
+(`deploy/observability/alertmanager/alertmanager-local.yml`): the S-113 routing by severity, but both receivers are
+emails to Mailpit — **nothing pages anyone**.
+
+```sh
+make obs-fire-test-alert            # ~15 failing sign-ins → NorthlineLocalTestAlert pending → firing → Alertmanager → Mailpit (~2 min)
+make obs-fire-test-alert SUSTAIN=12 # then 12 more minutes of failures: the S-113 alert NorthlineSignInFailures fires too
+```
+
+Each attempt signs in as an unknown address (`…@example.invalid`) with a wrong authenticator code against
+northline-auth, so no account is locked; it needs auth running with export on (`make up-all`, or
+`make up OBS=1 SERVICES="auth …"`). The script prints each state change; follow along at
+http://localhost:9090/alerts (pending → firing), http://localhost:9093 (Alertmanager) and http://localhost:8025 (the
+`[TICKET FIRING] NorthlineLocalTestAlert …` email, then `[TICKET RESOLVED] …` a few minutes after the failures stop).
+
+**Metric names, locally and in the cloud.** The apps export with Micrometer over OTLP (`base-time-unit: seconds`), and
+every Prometheus-compatible store — the local Prometheus, Grafana Cloud / Mimir, the managed Prometheus services —
+translates OTLP names the same way: `http.server.requests` → `http_server_requests_seconds_count` / `_bucket` /
+`_sum`, counters get `_total`, a gauge in seconds `_seconds`; dots become underscores; the bucket at 1 s is `le="1"`
+(the SLO rules match `1` and `1.0`). The resource's `service.namespace/service.name` becomes the `job` label, which
+**overwrites a metric attribute called `job`** — so the payments job counters use `task` (`northline_jobs_runs_total{task="payments.payouts"}`;
+they used `job` until this was found running the rules locally, so the payout SLO and the payout-stalled alerts never
+matched). Check a name with Prometheus's own view: http://localhost:9090/api/v1/label/__name__/values.
 
 ## Tests
 
