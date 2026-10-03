@@ -160,7 +160,7 @@ class EscrowLifecycleTest extends IntegrationTest {
         // Completion and sign-off are separate asynchronous events on the same escrow; whichever commits second used to
         // fail on the row's version and drop its update, so a lost sign-off left the money on the 48 h clock.
         var provider = fx.shop("provider", "master");
-        var pool = Executors.newFixedThreadPool(2);
+        var pool = Executors.newVirtualThreadPerTaskExecutor();
         try {
             for (var i = 0; i < 10; i++) {
                 var job = hold(provider.merchantId(), EscrowKind.SERVICE, 7_900);
