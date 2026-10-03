@@ -304,6 +304,10 @@ Notes:
   `ONCALL_EXPORT_TOKEN` is set in `server/.env` (any string, e.g. `local-oncall-token`); then
   `curl -H 'Authorization: Bearer local-oncall-token' localhost:8080/api/v1/ops/oncall` lists the console rota's
   shifts. `LIVE_PROBE_INTERVAL` (30 s) paces the live bus probe. [alerting.md](alerting.md)
+- **Go-live (S-118):** the console's Go-live screen works on the dev seed: two admins (Priya `…PNA1` and Marc `…MRC1`,
+  dev seed V334) for the two-person switch. Locally Stripe has no live keys and the alert gates have no metrics store,
+  so those gates fail or wait for a record; `GO_LIVE_*` (all optional) are in [go-live.md § Configuration](go-live.md#configuration).
+  `make go-live-check MARKET=mkt-…` against a running api; `make go-live-rehearsal` runs the whole launch on a throwaway stack.
 - **Load tests (S-119):** `make load-stack-up` starts a separate stack for them (compose project `northline-load`, own
   ports: api :18080, Postgres :55432, Elasticsearch :59200) with seeded businesses and customers; then `make load-smoke`,
   `make load LOAD_SCALE=0.2`, `make soak`. That api runs with `SEARCH_RATE_LIMIT_EXEMPT=127.0.0.1,::1` so the load

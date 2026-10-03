@@ -32,8 +32,10 @@ class UatFeedbackGauges {
     UatFeedbackGauges(UatReadiness uat, Clock clock, MeterRegistry meters) {
         this.uat = uat;
         this.clock = clock;
-        Gauge.builder("northline.uat.feedback.reported", this, g -> g.snapshot().reported()).register(meters);
-        Gauge.builder("northline.uat.blocking.open", this, g -> g.snapshot().blocking()).register(meters);
+        Gauge.builder("northline.uat.feedback.reported", this, g -> g.snapshot().reported())
+                .register(meters);
+        Gauge.builder("northline.uat.blocking.open", this, g -> g.snapshot().blocking())
+                .register(meters);
     }
 
     private Snapshot snapshot() {

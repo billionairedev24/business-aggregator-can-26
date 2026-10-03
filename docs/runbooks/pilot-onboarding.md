@@ -210,10 +210,11 @@ refused.
 
 1. The board's CSV (Export CSV) for the record; every pilot business at "Approved" with "Goes live when the market
    opens" as its next action.
-2. An admin opens Console › Provinces, raises the market to **Live** (type its name to confirm). The province must be
-   live and the market must have a delivery zone with a boundary.
+2. The market goes live from **Console › Go-live** (S-118, [go-live.md](go-live.md)): the checklist, one admin requests,
+   a second admin approves (typing the market's name). The Provinces screen no longer raises a market to Live. The
+   province must be live and the market must have a delivery zone with a boundary.
 3. The board shows the businesses **Live** within a minute (search re-indexes on the visibility event).
-4. Merchant success tells each business (no automatic email for the pilot launch).
+4. Merchant success tells each business with the launch email ([go-live/email-merchant-launch.md](go-live/email-merchant-launch.md)).
 
 ## 8. Dry run
 

@@ -300,6 +300,51 @@ def ai():
     return b
 
 
+def hypercare():
+    """S-118: the 14 days after a market launches (docs/runbooks/go-live.md § Hypercare). Market-level activity comes from
+    northline_market_activity_total (label `market` = the region market id); checkout, sign-in and payout health is
+    platform-wide (those metrics carry no place) — while one market is live, that is the market."""
+    market = {"name": "market", "label": "Market", "type": "query", "datasource": DS, "refresh": 2, "sort": 1,
+              "definition": "label_values(northline_market_activity_total, market)",
+              "query": {"query": "label_values(northline_market_activity_total, market)", "refId": "market"},
+              "current": {}, "hide": 0, "includeAll": False, "multi": False}
+    sel = 'market="$market"'
+    act = "northline_market_activity_total"
+    b = Board("northline-hypercare", "Northline · hypercare (market launch)",
+              "The first 14 days of a market: its orders, bookings, payouts and support tickets (market label), "
+              "platform checkout errors, sign-in failures and paging alerts, and the pilot group's UAT feedback (S-121). "
+              "Daily stand-up: docs/runbooks/go-live.md § Hypercare.", ["hypercare", "flow"], variables=[market])
+    b.row("The market today")
+    for title, kind in (("Orders (24 h)", "order"), ("Bookings (24 h)", "booking"),
+                        ("Support tickets (24 h)", "support_ticket"), ("Payouts failed (24 h)", "payout_failed")):
+        b.stat(title, f'sum(increase({act}{{{sel},kind="{kind}"}}[24h])) or vector(0)',
+               thresholds=[{"color": "green", "value": None}, {"color": "red", "value": 1}] if kind == "payout_failed" else None)
+    b.ts("Market activity / h", [(f"sum by (kind) (increase({act}{{{sel}}}[1h]))", "{{kind}}")], w=24, stack=True)
+    b.row("Health (platform)")
+    failed = rate("northline_checkouts_total", 'status="failed"')
+    b.ts("Checkout errors", [(failed, "failed / s"),
+                             (f"{failed} / {rate('northline_checkouts_total', '')}", "failed share")], w=8)
+    b.ts("Sign-in failures", [(rate("northline_auth_sign_ins_total", 'outcome="failed"', "method"), "{{method}}")],
+         unit="ops", w=8)
+    b.ts("Payouts", [(rate("northline_payouts_total", "", "outcome"), "{{outcome}}")], unit="ops", w=8)
+    b.stat("Paging alerts firing", 'count(ALERTS{alertstate="firing",severity="page"}) or vector(0)',
+           thresholds=[{"color": "green", "value": None}, {"color": "red", "value": 1}])
+    b.stat("Checkout SLO budget left", 'min(slo:period_error_budget_remaining:ratio{sloth_service="northline-checkout"})',
+           unit="percentunit", thresholds=BUDGET)
+    b.stat("Sign-in SLO budget left", 'min(slo:period_error_budget_remaining:ratio{sloth_service="northline-sign-in"})',
+           unit="percentunit", thresholds=BUDGET)
+    b.stat("Payouts SLO budget left", 'min(slo:period_error_budget_remaining:ratio{sloth_service="northline-payouts"})',
+           unit="percentunit", thresholds=BUDGET)
+    b.row("Feedback")
+    b.stat("UAT feedback today", "max(northline_uat_feedback_reported)")
+    b.stat("UAT blocking open", "max(northline_uat_blocking_open)",
+           thresholds=[{"color": "green", "value": None}, {"color": "red", "value": 1}])
+    b.ts("UAT feedback and blocking items", [("max(northline_uat_feedback_reported)", "reported today"),
+                                             ("max(northline_uat_blocking_open)", "blocking open")], w=12)
+    b.ts("Support tickets / h (market)", [(f'sum(increase({act}{{{sel},kind="support_ticket"}}[1h]))', "tickets")], w=12)
+    return b
+
+
 # S-113: one dashboard per SLO service (deploy/observability/slo, docs/runbooks/alerting.md) over the recording rules
 # Sloth generates (slo:*), so it reads the same numbers the burn-rate alerts use. (service, title, [(slo, what)]).
 SLOS = [
@@ -344,6 +389,7 @@ def boards():
     yield kitchens()
     yield events()
     yield ai()
+    yield hypercare()
     for service, title, slos in SLOS:
         yield slo_board(service, title, slos)
 

@@ -1488,6 +1488,625 @@ paths:
           description: "Validation failed: one error per field with the exact message."
       tags:
       - dispatch-console-controller
+  /api/v1/console/go-live:
+    get:
+      operationId: goLiveMarkets
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ListResponseMarketSummary"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+      tags:
+      - go-live-controller
+  /api/v1/console/go-live/{marketId}:
+    get:
+      operationId: goLiveChecklist
+      parameters:
+      - in: path
+        name: marketId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Checklist"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+      tags:
+      - go-live-controller
+  /api/v1/console/go-live/{marketId}/gates/{gate}:
+    post:
+      operationId: goLiveRecord
+      parameters:
+      - in: path
+        name: marketId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: path
+        name: gate
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GateRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Checklist"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - go-live-controller
+  /api/v1/console/go-live/{marketId}/hypercare:
+    post:
+      operationId: goLiveHypercare
+      parameters:
+      - in: path
+        name: marketId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HypercareBody"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Checklist"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - go-live-controller
+  /api/v1/console/go-live/{marketId}/launch-requests:
+    post:
+      operationId: goLiveRequest
+      parameters:
+      - in: path
+        name: marketId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LaunchBody"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Checklist"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - go-live-controller
+  /api/v1/console/go-live/{marketId}/launch-requests/{requestId}/approve:
+    post:
+      operationId: goLiveApprove
+      parameters:
+      - in: path
+        name: marketId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: path
+        name: requestId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApproveBody"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Checklist"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - go-live-controller
+  /api/v1/console/go-live/{marketId}/launch-requests/{requestId}/close:
+    post:
+      operationId: goLiveClose
+      parameters:
+      - in: path
+        name: marketId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: path
+        name: requestId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CloseBody"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Checklist"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - go-live-controller
+  /api/v1/console/go-live/{marketId}/rollback:
+    post:
+      operationId: goLiveRollback
+      parameters:
+      - in: path
+        name: marketId
+        required: true
+        schema:
+          $ref: "#/components/schemas/Ulid"
+      - in: query
+        name: staff
+        required: true
+        schema:
+          $ref: "#/components/schemas/CurrentStaff"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RollbackBody"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Checklist"
+          description: OK
+        "401":
+          content:
+            application/problem+json:
+              examples:
+                unauthorized:
+                  value:
+                    code: unauthorized
+                    detail: "Not signed in, or the token expired."
+                    status: 401
+                    title: "Not signed in, or the token expired."
+                    type: https://northline.ca/problems/unauthorized
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: "Not signed in, or the token expired."
+        "403":
+          content:
+            application/problem+json:
+              examples:
+                forbidden:
+                  value:
+                    code: forbidden
+                    detail: Your sign-in doesn't allow this.
+                    status: 403
+                    title: Your sign-in doesn't allow this.
+                    type: https://northline.ca/problems/forbidden
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Your sign-in doesn't allow this.
+        "404":
+          content:
+            application/problem+json:
+              examples:
+                not_found:
+                  value:
+                    code: not_found
+                    detail: Not found.
+                    status: 404
+                    title: Not found.
+                    type: https://northline.ca/problems/not-found
+              schema:
+                $ref: "#/components/schemas/Problem"
+          description: Not found.
+        "422":
+          content:
+            application/json:
+              examples:
+                length:
+                  value:
+                    errors:
+                    - field: displayName
+                      message: At least 2 characters.
+                      rule: length
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+          description: "Validation failed: one error per field with the exact message."
+      tags:
+      - go-live-controller
   /api/v1/console/me:
     get:
       operationId: staffProfileMe
@@ -9273,6 +9892,14 @@ components:
           format: date-time
         type:
           type: string
+    ApproveBody:
+      type: object
+      properties:
+        confirm:
+          type: string
+          minLength: 1
+      required:
+      - confirm
     AssignRequest:
       type: object
       properties:
@@ -9438,6 +10065,41 @@ components:
         status:
           type: string
         type:
+          type: string
+    Checklist:
+      type: object
+      properties:
+        blocking:
+          type: array
+          items:
+            type: string
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventView"
+        gates:
+          type: array
+          items:
+            $ref: "#/components/schemas/GateView"
+        generatedAt:
+          type: string
+          format: date-time
+        hypercare:
+          $ref: "#/components/schemas/Hypercare"
+        market:
+          $ref: "#/components/schemas/Market"
+        ready:
+          type: boolean
+        request:
+          $ref: "#/components/schemas/RequestView"
+        requests:
+          type: array
+          items:
+            $ref: "#/components/schemas/RequestView"
+    CloseBody:
+      type: object
+      properties:
+        reason:
           type: string
     CorrectBody:
       type: object
@@ -9856,6 +10518,20 @@ components:
           type: string
         unit:
           type: string
+    EventView:
+      type: object
+      properties:
+        at:
+          type: string
+          format: date-time
+        by:
+          $ref: "#/components/schemas/Person"
+        kind:
+          type: string
+        reason:
+          type: string
+        requestId:
+          type: string
     ExportView:
       type: object
       properties:
@@ -10013,6 +10689,56 @@ components:
         oldest:
           type: string
           format: date-time
+    GateRequest:
+      type: object
+      properties:
+        evidence:
+          type: string
+          minLength: 1
+        evidenceUrl:
+          type: string
+        source:
+          type: string
+        status:
+          type: string
+          minLength: 1
+      required:
+      - evidence
+      - status
+    GateView:
+      type: object
+      properties:
+        code:
+          type: string
+        evidence:
+          type: string
+        evidenceUrl:
+          type: string
+        key:
+          type: string
+        kind:
+          type: string
+        owner:
+          type: string
+        params:
+          type: object
+          additionalProperties:
+            type: string
+        recordable:
+          type: boolean
+        recordedAt:
+          type: string
+          format: date-time
+        recordedBy:
+          $ref: "#/components/schemas/Person"
+        required:
+          type: boolean
+        runbook:
+          type: string
+        source:
+          type: string
+        status:
+          type: string
     GoNoGoReason:
       type: object
       properties:
@@ -10089,6 +10815,53 @@ components:
         value:
           type: number
           format: double
+    Hypercare:
+      type: object
+      properties:
+        days:
+          type: array
+          items:
+            $ref: "#/components/schemas/HypercareDayView"
+        endsOn:
+          type: string
+          format: date
+        startsOn:
+          type: string
+          format: date
+    HypercareBody:
+      type: object
+      properties:
+        businessContacts:
+          type: array
+          items:
+            type: string
+        primaries:
+          type: array
+          items:
+            type: string
+        secondaries:
+          type: array
+          items:
+            type: string
+        startsOn:
+          type: string
+          format: date
+      required:
+      - businessContacts
+      - primaries
+      - secondaries
+    HypercareDayView:
+      type: object
+      properties:
+        business:
+          $ref: "#/components/schemas/Person"
+        date:
+          type: string
+          format: date
+        primary:
+          $ref: "#/components/schemas/Person"
+        secondary:
+          $ref: "#/components/schemas/Person"
     Impact:
       type: object
       properties:
@@ -10277,6 +11050,13 @@ components:
         urgent:
           type: integer
           format: int64
+    LaunchBody:
+      type: object
+      properties:
+        note:
+          type: string
+        overrideReason:
+          type: string
     LawView:
       type: object
       properties:
@@ -10353,6 +11133,13 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/KeyRow"
+    ListResponseMarketSummary:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MarketSummary"
     ListResponseOwner:
       type: object
       properties:
@@ -10535,6 +11322,22 @@ components:
       required:
       - confirm
       - stage
+    MarketSummary:
+      type: object
+      properties:
+        city:
+          type: string
+        id:
+          type: string
+        launchedAt:
+          type: string
+          format: date-time
+        province:
+          type: string
+        requestPending:
+          type: boolean
+        stage:
+          type: string
     MeResponse:
       type: object
       properties:
@@ -10795,6 +11598,13 @@ components:
           $ref: "#/components/schemas/RefundRequest"
         ticket:
           $ref: "#/components/schemas/Ticket"
+    Person:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
     PersonaCoverage:
       type: object
       properties:
@@ -11678,6 +12488,7 @@ components:
             - privacy
             - onboard
             - uat
+            - attest
         role:
           type: string
           enum:
@@ -11713,6 +12524,7 @@ components:
             - privacy
             - pilot
             - uat
+            - go_live
             - profile
             - oncall
     RoleRequest:
@@ -11744,6 +12556,18 @@ components:
           minLength: 1
       required:
       - role
+    RollbackBody:
+      type: object
+      properties:
+        confirm:
+          type: string
+          minLength: 1
+        reason:
+          type: string
+          minLength: 1
+      required:
+      - confirm
+      - reason
     Rota:
       type: object
       properties:

@@ -9,4 +9,5 @@ smoke-out/
 .cache/security-tools/
 /build/
 pilot-dry-run/
+go-live-rehearsal/
 __pycache__/
