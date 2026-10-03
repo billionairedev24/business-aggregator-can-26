@@ -143,7 +143,8 @@ A red run is a bug until shown otherwise — the suite has no retries on purpose
 |---|---|---|
 | a click on the consumer site does nothing | clicked before React hydrated the server-rendered page | `hydrated(locator)` before the first interaction on a server-rendered page |
 | a value is read too early (a total, a status) | asserting before the screen settled | a web-first assertion (`expect(locator).toHaveText(…)`) on the value, not `textContent()` right away |
-| waits on something a background job does (escrow release, payout state) | job interval | `expect(async () => { reload; expect… }).toPass()`; locally the payments jobs run every 5 s |
+| waits on something a background job does (escrow release, vetting, a delivery) | job interval | `reloadUntil(page, ready, expectation)` (`src/wait.ts`); locally the payments jobs run every 5 s |
+| a status "never shows" although the trace's last screen is blank | after each reload the dev server took longer to draw the screen than the look lasted (seen once, S-117) | `reloadUntil` waits for the screen (`ready`) with the normal patience before its short look |
 | `Your session has ended` / sign-in page mid-test | the BFF ended the session | the log says why: `refresh refused` was S-117's BFF race (fixed: `SerializedRefresh`); anything else is a bug |
 | works on a fresh stack, fails on a rerun | data left by an earlier run (a run left on a courier, a slot taken) | make the test pick fresh data (unique names, the provider's free hour, a new courier) instead of fixed ids |
 | times out only under load (CI, other builds) | a timeout too tight for a dev server's first compile | raise that one wait, with the reason in a comment |

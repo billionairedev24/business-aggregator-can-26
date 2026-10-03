@@ -7420,6 +7420,10 @@ Runbook: [docs/runbooks/e2e.md](runbooks/e2e.md). Suite: `web/e2e` (`@northline/
   $315.00 held; the consumer product page logs a React hydration mismatch on every load (the page recovers by rendering
   on the client — the suite waits for hydration before the first click); a business approved through onboarding has no
   market, so its product page says "No shop in … sells this right now".
+- **Flakes met while writing it** (both fixed in the suite, see the runbook's triage table): the vetting status "never
+  showed" when a busy dev server took longer to draw the editor after a reload than the 3-second look (`reloadUntil` now
+  waits for the screen first), and Appointments › List could page past the booking's week before the current week had
+  drawn. The two BFF bugs above were the other source.
 - **No schema change, no new server variable.** The e2e variables (`E2E_*`) are the runner's, listed in the runbook.
 - **Not done / never run:** the suite has never run against staging or dev (no environment, personas or passkey exist
   yet), so "green on staging nightly" is not shown; target mode is written and unit-tested for its configuration only. The
