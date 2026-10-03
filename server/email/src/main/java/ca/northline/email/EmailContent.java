@@ -199,7 +199,7 @@ public sealed interface EmailContent {
 
         @Override
         public List<Object> subjectArgs(EmailFormat format) {
-            return List.of(city);
+            return List.of(businessName, city);
         }
 
         @Override

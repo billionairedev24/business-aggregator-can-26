@@ -160,7 +160,7 @@ class PilotOnboardingApiTest extends IntegrationTest {
 
         await().atMost(Duration.ofSeconds(10)).until(() -> !emails.to(email).isEmpty());
         assertThat(emails.to(email)).singleElement().satisfies(mail -> {
-            assertThat(mail.subject()).isEqualTo("You’re invited to the Northline pilot in Pilotville");
+            assertThat(mail.subject()).isEqualTo("Bow River Bakery: you’re invited to the Northline pilot in Pilotville");
             assertThat(mail.text()).contains(link, "Bow River Bakery", "Mina Success", "as a shop");
             assertThat(mail.tag()).isEqualTo("pilot-invitation");
         });
