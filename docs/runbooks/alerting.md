@@ -61,7 +61,7 @@ No traffic is not an error (0/0 has no value, nothing fires). A page silences th
 | metric (Prometheus name) | app | where | used by |
 |---|---|---|---|
 | `http_server_requests_seconds_{count,bucket}` | auth, api | Spring MVC (S-111); S-113 adds exact buckets at **1 s and 2.5 s** (`management.metrics.distribution.slo` in the platform's observability defaults) | sign-in, checkout |
-| `northline_jobs_runs_total{job,outcome}`, `northline_jobs_last_success_seconds{job}` | api | `JobRuns`, every step of `PaymentsScheduler` (`payments.payouts`, `payments.release_escrow`, …) | payout run SLO, `NorthlinePayoutRunStalled/Missing` |
+| `northline_jobs_runs_total{task,outcome}`, `northline_jobs_last_success_seconds{task}` | api | `JobRuns`, every step of `PaymentsScheduler` (`payments.payouts`, `payments.release_escrow`, …) | payout run SLO, `NorthlinePayoutRunStalled/Missing` |
 | `northline_payouts_delay_seconds{kind="scheduled"}` | api | `PayoutService.runScheduled` → `PaymentMetrics` (bucket at 1 h) | payout timeliness |
 | `northline_kds_ticket_delivery_seconds` | api | `StudioLiveEvents` on a food `OrderPlaced`: placed → the kitchen's signal published (bucket at 5 s) | KDS ticket delivery |
 | `northline_studio_live_probe_seconds{outcome}` | api | `LiveBusProbe` (`LIVE_PROBE_INTERVAL`, 30 s; bucket at 2 s) | KDS freshness |
@@ -187,9 +187,11 @@ runs and payout delay (checkout and payouts), ticket delivery and live bus probe
 
 ## Local
 
-The local Grafana LGTM stack (`make obs-up`) shows the new metrics and the dashboards; its Prometheus loads no rules.
-To see the rules evaluate, use the unit tests (`make obs-rules-check`), or point a Prometheus at the OTLP metrics with
-`--web.enable-otlp-receiver` and `rule_files: [deploy/observability/prometheus/rules/**/*.y*ml]`.
+The local observability stack (`make obs-up`, `make up OBS=1`, `make up-all`) runs Prometheus with these rule files
+unchanged and an Alertmanager with this routing whose only receiver is Mailpit — alerts are visible and page no one.
+`make obs-fire-test-alert` trips one on purpose and follows it to the email
+([observability.md § Local alerting](observability.md#local-alerting)). The unit tests run offline:
+`make obs-rules-check`.
 
 ## Variables
 

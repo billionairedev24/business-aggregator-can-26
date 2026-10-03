@@ -6,7 +6,7 @@
 
 One JSON file per service (api, auth, bff, consumer-bff, console-bff, worker) and per key flow (sign-in, checkout and payouts,
 kitchens, events), plus an overview. Every query is PromQL against a Prometheus-compatible data source picked by the
-`datasource` variable: the local otel-lgtm stack, Grafana Cloud, Amazon Managed Prometheus, Google Managed Prometheus
+`datasource` variable: the local Prometheus (docker compose --profile observability), Grafana Cloud, Amazon Managed Prometheus, Google Managed Prometheus
 or Azure Monitor managed Prometheus. Metric names are the Prometheus spelling of what the apps export over OTLP
 (`http.server.requests` in seconds -> http_server_requests_seconds_*, counters -> *_total); every series carries the
 `application` label (management.metrics.tags.application = spring.application.name).
@@ -207,10 +207,10 @@ def checkout():
                                        "{{outcome}}")], unit="currencyUSD", w=12,
          description="Dollars (CAD) paid out per hour; the unit symbol is Grafana's.")
     # S-113
-    b.ts("Payments job runs", [(rate("northline_jobs_runs_total", 'job=~"payments.*"', "job, outcome"),
-                                "{{job}} {{outcome}}")], unit="ops", w=12,
+    b.ts("Payments job runs", [(rate("northline_jobs_runs_total", 'task=~"payments.*"', "task, outcome"),
+                                "{{task}} {{outcome}}")], unit="ops", w=12,
          description="Alerts: NorthlinePayoutRunFailureBurn (SLO), NorthlinePayoutRunStalled")
-    b.ts("Since the last successful run", [('time() - max by (job) (northline_jobs_last_success_seconds)', "{{job}}")],
+    b.ts("Since the last successful run", [('time() - max by (task) (northline_jobs_last_success_seconds)', "{{task}}")],
          unit="s", w=12)
     b.ts("Scheduled payout delay after the payout time", [(quantile(0.5, "northline_payouts_delay_seconds", ""), "p50"),
                                                           (quantile(0.99, "northline_payouts_delay_seconds", ""),

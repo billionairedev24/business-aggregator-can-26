@@ -9,7 +9,7 @@
 ## First checks
 
 1. The api logs: `Payments job 'payouts' failed; retrying next run` with the exception.
-2. `northline_jobs_runs_total{job=~"payments.*"}` by `outcome`: one step failing or all of them (the database, Stripe).
+2. `northline_jobs_runs_total{task=~"payments.*"}` by `outcome`: one step failing or all of them (the database, Stripe).
 3. No series at all (`NorthlinePayoutRunMissing`): are api pods running with a profile other than `test`? Is the scheduler stuck (thread dump)?
 4. Stripe Connect errors (account disabled, insufficient balance): [stripe.md](../stripe.md).
 

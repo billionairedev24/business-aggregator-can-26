@@ -14,10 +14,14 @@ import org.springframework.stereotype.Component;
  * (docs/runbooks/alerting.md):
  *
  * <ul>
- *   <li>{@code northline.jobs.runs{job, outcome}} — runs that {@code succeeded} or {@code failed};
- *   <li>{@code northline.jobs.last_success{job}} — when the job last succeeded, in Unix seconds (Prometheus:
+ *   <li>{@code northline.jobs.runs{task, outcome}} — runs that {@code succeeded} or {@code failed};
+ *   <li>{@code northline.jobs.last_success{task}} — when the job last succeeded, in Unix seconds (Prometheus:
  *       {@code northline_jobs_last_success_seconds}); absent until the first success after start-up.
  * </ul>
+ *
+ * <p>The tag is {@code task}, not {@code job}: Prometheus-compatible stores fill {@code job} from the OTLP resource
+ * ({@code service.namespace/service.name}) and drop a metric attribute of that name, so {@code job="payments.payouts"}
+ * never reached a rule.
  */
 @Component
 @RequiredArgsConstructor
@@ -33,13 +37,16 @@ class JobRuns {
     private final Clock clock;
     private final Map<String, AtomicLong> lastSuccess = new ConcurrentHashMap<>();
 
+    /** The tag naming the job (see the class comment for why it isn't {@code job}). */
+    static final String TASK = "task";
+
     void succeeded(String job) {
-        meters.counter(RUNS, "job", job, "outcome", "succeeded").increment();
+        meters.counter(RUNS, TASK, job, "outcome", "succeeded").increment();
         lastSuccess
                 .computeIfAbsent(job, j -> {
                     var at = new AtomicLong();
                     Gauge.builder(LAST_SUCCESS, at, AtomicLong::get)
-                            .tag("job", j)
+                            .tag(TASK, j)
                             .baseUnit("seconds")
                             .register(meters);
                     return at;
@@ -48,6 +55,6 @@ class JobRuns {
     }
 
     void failed(String job) {
-        meters.counter(RUNS, "job", job, "outcome", "failed").increment();
+        meters.counter(RUNS, TASK, job, "outcome", "failed").increment();
     }
 }

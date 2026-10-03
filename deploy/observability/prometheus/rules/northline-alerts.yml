@@ -87,21 +87,21 @@ groups:
       # releases and refunds wait. Failing runs burn the payout run SLO (rules/slo/payouts.yaml); these catch a job
       # that doesn't run at all.
       - alert: NorthlinePayoutRunStalled
-        expr: time() - max(northline_jobs_last_success_seconds{job="payments.payouts"}) > 1800
+        expr: time() - max(northline_jobs_last_success_seconds{task="payments.payouts"}) > 1800
         for: 5m
         labels: { severity: ticket }
         annotations:
           summary: "The payout run last succeeded {{ $value | humanizeDuration }} ago"
           runbook_url: https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/payout-run.md
       - alert: NorthlinePayoutRunStalled
-        expr: time() - max(northline_jobs_last_success_seconds{job="payments.payouts"}) > 7200
+        expr: time() - max(northline_jobs_last_success_seconds{task="payments.payouts"}) > 7200
         for: 5m
         labels: { severity: page }
         annotations:
           summary: "The payout run last succeeded {{ $value | humanizeDuration }} ago — today's payouts are late"
           runbook_url: https://github.com/billionairedev24/business-aggregator-can-26/blob/main/docs/runbooks/alerts/payout-run.md
       - alert: NorthlinePayoutRunMissing
-        expr: absent(northline_jobs_last_success_seconds{job="payments.payouts"})
+        expr: absent(northline_jobs_last_success_seconds{task="payments.payouts"})
         for: 30m
         labels: { severity: ticket }
         annotations:

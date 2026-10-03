@@ -26,7 +26,7 @@ First five minutes, whatever it is: open <https://status.stripe.com>, the **chec
 **Symptoms.** Checkout answers **503 `payments_unavailable`** with `Retry-After: 60` (since S-115: Stripe unreachable,
 429 or 5xx — before, a 500); log `Provider unavailable (payments_unavailable): …StripeCallFailed…`; the checkout
 availability / latency burn alerts ([alerts/checkout-availability.md](alerts/checkout-availability.md)); payments job
-steps failing every minute (`northline_jobs_runs_total{job=~"payments.*",outcome="failed"}`); Stripe's status page.
+steps failing every minute (`northline_jobs_runs_total{task=~"payments.*",outcome="failed"}`); Stripe's status page.
 
 **Impact.** New orders and bookings can't be paid. **Nothing already paid is at risk:** holds stay valid at Stripe
 (7 days), the ledger is Northline's, and every Stripe call is retried with the same idempotency key, so nothing is
