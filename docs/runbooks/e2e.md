@@ -146,6 +146,7 @@ A red run is a bug until shown otherwise — the suite has no retries on purpose
 | waits on something a background job does (escrow release, vetting, a delivery) | job interval | `reloadUntil(page, ready, expectation)` (`src/wait.ts`); locally the payments jobs run every 5 s |
 | a status "never shows" although the trace's last screen is blank | after each reload the dev server took longer to draw the screen than the look lasted (seen once, S-117) | `reloadUntil` waits for the screen (`ready`) with the normal patience before its short look |
 | `Your session has ended` / sign-in page mid-test | the BFF ended the session | the log says why: `refresh refused` was S-117's BFF race (fixed: `SerializedRefresh`); anything else is a bug |
+| a row's button "not visible … detached" right after paging (Next week) | the list was judged and clicked while the last page's rows were still on screen, then replaced (S-117: studio jobs kept the previous week as placeholder) | the screen marks stale data busy (`aria-busy`); the test waits for no `[aria-busy="true"]` before reading the list and re-queries the row in the click |
 | works on a fresh stack, fails on a rerun | data left by an earlier run (a run left on a courier, a slot taken) | make the test pick fresh data (unique names, the provider's free hour, a new courier) instead of fixed ids |
 | times out only under load (CI, other builds) | a timeout too tight for a dev server's first compile | raise that one wait, with the reason in a comment |
 
