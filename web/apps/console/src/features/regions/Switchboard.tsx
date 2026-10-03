@@ -142,9 +142,10 @@ function Markets({ province: p, name, allowed, onStage }: { province: Province; 
           <div className="nl-rg-mstages" role="radiogroup" aria-label={t('marketStages', { city: m.city })}>
             {STAGES.map((s, i) => (
               <button key={s} type="button" role="radio" aria-checked={m.stage === s} className="nl-rg-mstage" data-live={s === 'live' || undefined}
-                disabled={!allowed || i > ceiling || m.stage === s} onClick={() => onStage(m, s)}>{t(`st_${s}` as RegionsKey)}</button>
+                disabled={!allowed || i > ceiling || m.stage === s || s === 'live'} onClick={() => onStage(m, s)}>{t(`st_${s}` as RegionsKey)}</button>
             ))}
           </div>
+          {m.stage === 'pilot' ? <Link className="nl-rg-meta" to={SCREEN_PATH.go_live} search={{ market: m.id } as never}>{t('goLiveLink')}</Link> : null}
         </div>
       )) : <div className="nl-rg-meta">{t('noMarkets')}</div>}
       {allowed ? (

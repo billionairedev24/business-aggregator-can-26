@@ -1,0 +1,8 @@
+/* Go-live (S-118). Token values only. */
+.nl-gl-ready { color: var(--color-accent); font-weight: 600; }
+.nl-gl-gate { align-items: flex-start; }
+.nl-gl-what { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 260px; overflow-wrap: anywhere; }
+.nl-gl-people { border: 1px solid var(--color-divider); border-radius: var(--radius-md); padding: 10px 12px; margin: 12px 0 0; display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.nl-gl-people legend { font-size: 14px; padding: 0 4px; }
+.nl-gl-table { border-collapse: collapse; width: 100%; font-size: 14px; }
+.nl-gl-table th, .nl-gl-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--color-divider); }
