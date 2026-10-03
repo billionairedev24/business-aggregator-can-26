@@ -70,7 +70,19 @@ export const taxonomyQuery = (type: MerchantType, lang: string) => queryOptions(
   staleTime: 10 * 60_000,
 });
 
-export interface AccountInput { type: MerchantType; province: string; workEmail?: string; businessTermsAccepted?: boolean }
+export interface AccountInput { type: MerchantType; province: string; workEmail?: string; businessTermsAccepted?: boolean; pilotInvite?: string }
+
+/** S-120 `GET /api/v1/pilot-invites/{token}`: what a pilot invite pre-fills. */
+export const PilotInvite = z.object({
+  businessType: MerchantType, label: z.string(), marketId: z.string(), city: z.string(), province: z.string(), expiresAt: z.string(),
+  state: z.enum(['pending', 'expired', 'accepted', 'revoked']),
+});
+export type PilotInvite = z.infer<typeof PilotInvite>;
+export const pilotInviteQuery = (token: string) => queryOptions({
+  queryKey: ['pilot-invite', token],
+  queryFn: () => http(`/api/v1/pilot-invites/${encodeURIComponent(token)}`, {}, PilotInvite),
+  retry: false,
+});
 export interface PrincipalInput { legalName: string; role: PrincipalRole; ownershipPct?: number | null }
 export interface BusinessInput {
   displayName: string; legalName: string; structure: Structure; gstNumber?: string;
