@@ -1,7 +1,8 @@
-// S-119 search: what the consumer web and app send while people browse — about half browsing a kind or category with
-// no text, a third typed queries, the rest suggestions as they type; English and French (35 % fr, the market's share
-// with headroom for Québec, S-116); a tenth go on to page 2, a quarter add a filter (fewer hot-cache hits), a third
-// sort by distance from where they are. Anonymous, like most searches.
+// S-119 search and browse: what the consumer web and app send while people look around — a fifth open a landing page
+// (home, the Food page's kitchens, a service category's providers), the rest search: browsing a kind with no text,
+// typed queries, suggestions as they type; English and French (35 % fr, the market's share with headroom for Québec,
+// S-116); a tenth go on to page 2, a quarter add a filter (fewer hot-cache hits), a third search near where they are.
+// Anonymous, like most of them.
 import { check } from 'k6';
 import { data, flow, get, json, lang, pick } from '../lib/api.js';
 import { searchRateLimited } from '../lib/slo.js';
@@ -25,8 +26,38 @@ function query(params) {
     .join('&');
 }
 
+/** This VU's service category slugs (the services landing lists them), fetched once. */
+let categories = null;
+
+function browse(l) {
+  const { market, center } = data.meta;
+  const city = encodeURIComponent(market);
+  const roll = Math.random();
+  if (roll < 0.4) {
+    return get(`/api/v1/public/home?city=${city}`, null, { name: '/api/v1/public/home', flow: 'search', lang: l });
+  }
+  if (roll < 0.7) {
+    const near = center ? `&lat=${center.lat}&lng=${center.lng}` : '';
+    return get(`/api/v1/public/kitchens?city=${city}${near}`, null,
+      { name: '/api/v1/public/kitchens', flow: 'search', lang: l });
+  }
+  if (categories === null) {
+    const landing = json(get(`/api/v1/public/services?lang=${l}`, null,
+      { name: '/api/v1/public/services', flow: 'search', lang: l }));
+    categories = landing ? landing.groups.flatMap(g => g.items.filter(i => i.providers > 0).map(i => i.slug)) : [];
+  }
+  if (!categories.length) return get(`/api/v1/public/services?lang=${l}`, null, { name: '/api/v1/public/services', flow: 'search', lang: l });
+  return get(`/api/v1/public/services/${pick(categories)}/providers?city=${city}&lang=${l}`, null,
+    { name: '/api/v1/public/services/{slug}/providers', flow: 'search', lang: l });
+}
+
 export function search() {
   const l = lang();
+  if (Math.random() < 0.2) {
+    const res = browse(l);
+    flow(check(res, { 'landing page 200': r => r.status === 200 }), 'landing page', res);
+    return;
+  }
   const { province, center } = data.meta;
   const roll = Math.random();
   const params = { market: province, lang: l };
