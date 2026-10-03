@@ -10,6 +10,8 @@
 #   make up SERVICES="auth api bff studio"          real sign-in through northline-auth and the studio-bff
 #   make up SERVICES="auth api bff-consumer consumer"   the consumer web through its BFF
 #   make up SERVICES=all PROFILES=all               every app and every stand-in (Kafka, Elasticsearch, …)
+#   make up-all                                     everything incl. observability, with your own Postgres / Valkey /
+#                                                   Grafana from BYO_SERVICES in .env (e.g. db,cache,grafana)
 # `make help` lists every target; docs/LOCAL_DEVELOPMENT.md explains each workflow, docs/runbooks/local.md the stand-ins.
 #
 # Portable: GNU make 3.81 (macOS's /usr/bin/make) or later, bash 3.2+, BSD or GNU userland — no .ONESHELL,
@@ -82,12 +84,28 @@ env: ## Create .env, server/.env and the web apps' .env from their .env.example 
 .PHONY: up
 up: standins-up ## Stand-ins (PROFILES) + migrate + seed, then SERVICES in the background, waiting until each answers
 	@if [ -z "$(SKIP_DB)" ]; then $(MAKE) db-migrate db-seed; fi
-	@if [ "$(OBS)" = 1 ]; then $(ROOT)/scripts/observability.sh up; fi
+	@if [ "$(OBS)" = 1 ]; then $(byo_arg) $(ROOT)/scripts/observability.sh up; fi
 	@$(STACK) up $(SERVICES)
+
+# Everything, with the services you run yourself (docs/runbooks/local.md § 6a): BYO_SERVICES in .env, or BYO=… once.
+byo_arg = $(if $(filter command line environment,$(origin BYO)),BYO="$(BYO)")
+services_arg = $(if $(filter command line environment,$(origin SERVICES)),SERVICES="$(SERVICES)")
+
+.PHONY: up-all
+up-all: ## Every app + every stand-in you don't bring (BYO=db,cache,grafana) + observability and alerting; checks yours, migrates, prints every URL
+	@$(byo_arg) $(services_arg) MAKE="$(MAKE)" $(ROOT)/scripts/local-all.sh up
+
+.PHONY: up-all-check
+up-all-check: ## Only check your own Postgres (PostGIS, version), Valkey and Grafana, and the ports the stand-ins need
+	@$(byo_arg) $(ROOT)/scripts/local-all.sh check
+
+.PHONY: urls
+urls: ## The status table of make up-all: every app, API docs, stand-in and observability URL, and whether it answers
+	@$(byo_arg) $(ROOT)/scripts/local-all.sh status
 
 .PHONY: run
 run: ## SERVICES in the foreground with merged logs (stand-ins as make up leaves them); Ctrl-C stops what it started
-	@if [ "$(OBS)" = 1 ]; then $(ROOT)/scripts/observability.sh up; fi
+	@if [ "$(OBS)" = 1 ]; then $(byo_arg) $(ROOT)/scripts/observability.sh up; fi
 	@$(STACK) dev $(SERVICES)
 
 .PHONY: dev
@@ -181,6 +199,8 @@ help: ## This list, and the common variables
 ##> SPRING_PROFILE  Spring profile(s) of the apps (default local)
 ##> SKIP_DB  1 = make up doesn't migrate or seed
 ##> OBS  1 = make up/run also start the observability stack and the apps export to it (S-111)
+##> BYO  up-all / obs-*: the stand-ins you run yourself, e.g. db,cache,grafana (default: BYO_SERVICES in .env)
+##> GRAFANA_URL  obs-grafana-provision / up-all: your Grafana; GRAFANA_TOKEN (service account) or GRAFANA_USER + _PASSWORD
 ##> PROJECT TESTS  server-build/server-test: one Gradle project (api, auth, bff, worker), a test filter
 ##> DB_URL DB_USER DB_PASSWORD  database for db-* and the apps (default: server/.env, then localhost:5432/northline)
 ##> GRADLE_FLAGS  Gradle flags (default --max-workers=2)
