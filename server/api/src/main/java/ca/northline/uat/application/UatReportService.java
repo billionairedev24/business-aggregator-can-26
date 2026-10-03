@@ -41,7 +41,7 @@ class UatReportService implements UatReports {
 
     @Override
     @Transactional(readOnly = true)
-    public Report report(Locale locale) {
+    public GoNoGoReport report(Locale locale) {
         var all = store.queue(Set.of(), null, Integer.MAX_VALUE);
         var names = staff.members().stream()
                 .collect(Collectors.toMap(StaffDirectory.Member::id, StaffDirectory.Member::name, (a, _) -> a));
@@ -75,11 +75,11 @@ class UatReportService implements UatReports {
         var verdict = GoNoGo.decide(open.size(), unverified.size(), untriaged.size(), coverage);
         var scripts = store.scripts().stream()
                 .collect(Collectors.toMap(UatStore.Script::persona, s -> UatTriageService.scriptView(s, locale)));
-        return new Report(
+        return new GoNoGoReport(
                 clock.instant(),
                 verdict.go() ? "go" : "no_go",
                 verdict.reasons().stream()
-                        .map(r -> new Reason(
+                        .map(r -> new GoNoGoReason(
                                 r.code().code(),
                                 r.count(),
                                 r.persona() == null ? null : r.persona().code(),
@@ -98,7 +98,7 @@ class UatReportService implements UatReports {
                 coverage.stream()
                         .map(c -> {
                             var script = scripts.get(c.persona());
-                            return new Coverage(
+                            return new PersonaCoverage(
                                     c.persona().code(),
                                     script == null ? "" : script.code(),
                                     script == null ? "" : script.title(),
@@ -247,7 +247,7 @@ class UatReportService implements UatReports {
     }
 
     /** The last {@value #TREND_DAYS} days: replay every triage step to know what was open at each day's end. */
-    private List<Day> trend(ZoneId zone) {
+    private List<TrendDay> trend(ZoneId zone) {
         var today = LocalDate.ofInstant(clock.instant(), zone);
         var first = today.minusDays(TREND_DAYS - 1);
         var reported = new HashMap<LocalDate, Integer>();
@@ -259,7 +259,7 @@ class UatReportService implements UatReports {
                 .toList();
         var state = new HashMap<String, HistoryEntry>();
         var resolved = new HashMap<LocalDate, Integer>();
-        var days = new ArrayList<Day>();
+        var days = new ArrayList<TrendDay>();
         var i = 0;
         for (var day = first; !day.isAfter(today); day = day.plusDays(1)) {
             var end = day.plusDays(1).atStartOfDay(zone).toInstant();
@@ -274,7 +274,7 @@ class UatReportService implements UatReports {
                     .filter(h -> Boolean.TRUE.equals(h.blocking())
                             && (h.to() == FeedbackState.ACCEPTED || h.to() == FeedbackState.FIXED))
                     .count();
-            days.add(new Day(day, reported.getOrDefault(day, 0), openBlocking, resolved.getOrDefault(day, 0)));
+            days.add(new TrendDay(day, reported.getOrDefault(day, 0), openBlocking, resolved.getOrDefault(day, 0)));
         }
         return days;
     }

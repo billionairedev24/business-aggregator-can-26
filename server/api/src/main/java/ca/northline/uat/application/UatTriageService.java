@@ -165,7 +165,7 @@ class UatTriageService implements UatTriage {
 
     @Override
     @Transactional(readOnly = true)
-    public Detail detail(String id) {
+    public FeedbackDetail detail(String id) {
         return detail(store.feedback(id).orElseThrow(() -> new NotFound("uat_feedback", id)));
     }
 
@@ -183,7 +183,7 @@ class UatTriageService implements UatTriage {
 
     @Override
     @Transactional
-    public Detail move(String id, Move move, Actor actor) {
+    public FeedbackDetail move(String id, Move move, Actor actor) {
         var f = store.lock(id).orElseThrow(() -> new NotFound("uat_feedback", id));
         if (!f.state().canMoveTo(move.to())) {
             throw new Conflict("move_not_allowed", MOVE_NOT_ALLOWED);
@@ -233,7 +233,7 @@ class UatTriageService implements UatTriage {
 
     @Override
     @Transactional
-    public Detail assign(String id, @Nullable String ownerId, Actor actor) {
+    public FeedbackDetail assign(String id, @Nullable String ownerId, Actor actor) {
         var f = store.lock(id).orElseThrow(() -> new NotFound("uat_feedback", id));
         if (ownerId != null && owners().stream().noneMatch(o -> o.id().equals(ownerId))) {
             throw RuleViolation.of("ownerId", "allowed", OWNER_NOT_STAFF);
@@ -247,7 +247,7 @@ class UatTriageService implements UatTriage {
 
     @Override
     @Transactional
-    public Detail link(String id, @Nullable String trackerUrl, Actor actor) {
+    public FeedbackDetail link(String id, @Nullable String trackerUrl, Actor actor) {
         var f = store.lock(id).orElseThrow(() -> new NotFound("uat_feedback", id));
         var url = trackerUrl == null || trackerUrl.isBlank() ? null : trackerUrl.strip();
         if (url != null && !webAddress(url)) {
@@ -473,12 +473,12 @@ class UatTriageService implements UatTriage {
         }
     }
 
-    private Detail detail(Feedback f) {
+    private FeedbackDetail detail(Feedback f) {
         var names = staffNames();
         var duplicates = store.duplicatesOf(f.id());
         var dupes = store.duplicateCounts(List.of(f.id()));
         var dupOf = f.duplicateOf() == null ? Optional.<Feedback>empty() : store.feedback(f.duplicateOf());
-        return new Detail(
+        return new FeedbackDetail(
                 item(f, names, dupes),
                 f.body(),
                 f.appVersion(),
@@ -489,7 +489,7 @@ class UatTriageService implements UatTriage {
                 duplicates.stream().map(d -> item(d, names, Map.of())).toList(),
                 dupOf.map(d -> item(d, names, Map.of())).orElse(null),
                 store.history(f.id()).stream()
-                        .map(h -> new Step(
+                        .map(h -> new TriageStep(
                                 h.from() == null ? null : h.from().code(),
                                 h.to().code(),
                                 h.blocking(),

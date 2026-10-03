@@ -18,16 +18,16 @@ public interface UatTriage {
 
     String csv(Filter filter, Locale locale);
 
-    Detail detail(String id);
+    FeedbackDetail detail(String id);
 
     /** The screenshot's bytes and type, when it has one. */
     Optional<Screenshot> screenshot(String id);
 
-    Detail move(String id, Move move, Actor actor);
+    FeedbackDetail move(String id, Move move, Actor actor);
 
-    Detail assign(String id, @Nullable String ownerId, Actor actor);
+    FeedbackDetail assign(String id, @Nullable String ownerId, Actor actor);
 
-    Detail link(String id, @Nullable String trackerUrl, Actor actor);
+    FeedbackDetail link(String id, @Nullable String trackerUrl, Actor actor);
 
     /** Staff who can own an item: those whose roles open the UAT screen. */
     List<Owner> owners();
@@ -83,7 +83,7 @@ public interface UatTriage {
             Instant createdAt,
             Instant updatedAt) {}
 
-    record Detail(
+    record FeedbackDetail(
             QueueItem item,
             String body,
             String appVersion,
@@ -93,16 +93,16 @@ public interface UatTriage {
             List<String> next,
             List<QueueItem> duplicates,
             @Nullable QueueItem duplicateOfItem,
-            List<Step> history) {
+            List<TriageStep> history) {
 
-        public Detail {
+        public FeedbackDetail {
             next = List.copyOf(next);
             duplicates = List.copyOf(duplicates);
             history = List.copyOf(history);
         }
     }
 
-    record Step(
+    record TriageStep(
             @Nullable String from,
             String to,
             @Nullable Boolean blocking,

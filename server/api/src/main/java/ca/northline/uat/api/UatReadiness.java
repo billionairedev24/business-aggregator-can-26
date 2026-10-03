@@ -12,7 +12,7 @@ import org.jspecify.annotations.Nullable;
  */
 public interface UatReadiness {
 
-    Report report(Locale locale);
+    GoNoGoReport report(Locale locale);
 
     /**
      * @param verdict {@code go | no_go}
@@ -22,18 +22,18 @@ public interface UatReadiness {
      * @param untriagedBlockers participants said "blocker" and nobody has triaged it yet
      * @param trend the last 14 days in the platform's time zone, oldest first
      */
-    record Report(
+    record GoNoGoReport(
             Instant generatedAt,
             String verdict,
-            List<Reason> reasons,
+            List<GoNoGoReason> reasons,
             int blockingOpen,
             int blockingUnverified,
             int untriagedBlockers,
             List<BlockingItem> blockingItems,
-            List<Coverage> coverage,
-            List<Day> trend) {
+            List<PersonaCoverage> coverage,
+            List<TrendDay> trend) {
 
-        public Report {
+        public GoNoGoReport {
             reasons = List.copyOf(reasons);
             blockingItems = List.copyOf(blockingItems);
             coverage = List.copyOf(coverage);
@@ -51,7 +51,7 @@ public interface UatReadiness {
      * @param persona the persona it concerns, null for the whole pilot
      * @param text the reason in the caller's language
      */
-    record Reason(String code, int count, @Nullable String persona, String text) {}
+    record GoNoGoReason(String code, int count, @Nullable String persona, String text) {}
 
     /**
      * An open blocking item (accepted as blocking, fixed but not verified, or a reported blocker not triaged yet).
@@ -72,7 +72,7 @@ public interface UatReadiness {
             int reports) {}
 
     /** @param scriptVersion the version participants are asked to sign off */
-    record Coverage(
+    record PersonaCoverage(
             String persona,
             String script,
             String scriptTitle,
@@ -89,5 +89,5 @@ public interface UatReadiness {
      * @param openBlocking blocking items open (accepted or fixed) at the end of the day
      * @param resolved items verified, closed, won't fix or marked duplicate that day
      */
-    record Day(LocalDate date, int reported, int openBlocking, int resolved) {}
+    record TrendDay(LocalDate date, int reported, int openBlocking, int resolved) {}
 }

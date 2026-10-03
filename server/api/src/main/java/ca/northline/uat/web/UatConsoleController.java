@@ -6,11 +6,11 @@ import ca.northline.shared.security.ConsoleAction;
 import ca.northline.shared.security.ConsoleScreen;
 import ca.northline.shared.security.CurrentStaff;
 import ca.northline.shared.security.RequiresConsole;
-import ca.northline.uat.api.UatReadiness.Report;
+import ca.northline.uat.api.UatReadiness.GoNoGoReport;
 import ca.northline.uat.application.UatReports;
 import ca.northline.uat.application.UatTriage;
 import ca.northline.uat.application.UatTriage.Actor;
-import ca.northline.uat.application.UatTriage.Detail;
+import ca.northline.uat.application.UatTriage.FeedbackDetail;
 import ca.northline.uat.application.UatTriage.Filter;
 import ca.northline.uat.application.UatTriage.Move;
 import ca.northline.uat.application.UatTriage.NewParticipant;
@@ -56,7 +56,7 @@ import org.springframework.web.bind.annotation.RestController;
  * <pre>
  * GET  /api/v1/console/uat/feedback[?state=open|all|&lt;state&gt;][&amp;blocking=][&amp;persona=][&amp;app=]  {items}
  * GET  /api/v1/console/uat/feedback/export[?…]               text/csv
- * GET  /api/v1/console/uat/feedback/{id}                     Detail
+ * GET  /api/v1/console/uat/feedback/{id}                     FeedbackDetail
  * GET  /api/v1/console/uat/feedback/{id}/screenshot          the image
  * POST /api/v1/console/uat/feedback/{id}/moves     {to, blocking?, duplicateOf?, note?}
  * POST /api/v1/console/uat/feedback/{id}/owner     {ownerId}
@@ -67,7 +67,7 @@ import org.springframework.web.bind.annotation.RestController;
  * POST /api/v1/console/uat/participants/{id}/deactivate
  * POST /api/v1/console/uat/participants/{id}/signoffs  {script, outcome, comments?, blockingIds?}
  * GET  /api/v1/console/uat/scripts
- * GET  /api/v1/console/uat/go-no-go                          Report (S-118 reads the same through uat.api)
+ * GET  /api/v1/console/uat/go-no-go                          GoNoGoReport (S-118 reads the same through uat.api)
  * GET  /api/v1/console/uat/go-no-go/export                   text/csv
  * </pre>
  */
@@ -106,7 +106,7 @@ class UatConsoleController {
 
     @GetMapping("/feedback/{id}")
     @RequiresConsole(ConsoleScreen.UAT)
-    Detail detail(@PathVariable String id) {
+    FeedbackDetail detail(@PathVariable String id) {
         return triage.detail(id);
     }
 
@@ -127,7 +127,7 @@ class UatConsoleController {
     @Operation(summary = "Move a UAT feedback item on in triage (accept as blocking or not, fix, verify, merge…)")
     @PostMapping("/feedback/{id}/moves")
     @RequiresConsole(value = ConsoleScreen.UAT, actions = ConsoleAction.UAT)
-    Detail move(@PathVariable String id, @Valid @RequestBody MoveBody body, CurrentStaff staff) {
+    FeedbackDetail move(@PathVariable String id, @Valid @RequestBody MoveBody body, CurrentStaff staff) {
         return triage.move(
                 id,
                 new Move(
@@ -140,13 +140,13 @@ class UatConsoleController {
 
     @PostMapping("/feedback/{id}/owner")
     @RequiresConsole(value = ConsoleScreen.UAT, actions = ConsoleAction.UAT)
-    Detail assign(@PathVariable String id, @RequestBody OwnerBody body, CurrentStaff staff) {
+    FeedbackDetail assign(@PathVariable String id, @RequestBody OwnerBody body, CurrentStaff staff) {
         return triage.assign(id, body.ownerId(), actor(staff));
     }
 
     @PostMapping("/feedback/{id}/tracker")
     @RequiresConsole(value = ConsoleScreen.UAT, actions = ConsoleAction.UAT)
-    Detail link(@PathVariable String id, @Valid @RequestBody TrackerBody body, CurrentStaff staff) {
+    FeedbackDetail link(@PathVariable String id, @Valid @RequestBody TrackerBody body, CurrentStaff staff) {
         return triage.link(id, body.url(), actor(staff));
     }
 
@@ -205,7 +205,7 @@ class UatConsoleController {
     @Operation(summary = "UAT go/no-go: open blocking items, sign-off coverage per persona, the trend")
     @GetMapping("/go-no-go")
     @RequiresConsole(ConsoleScreen.UAT)
-    ResponseEntity<Report> goNoGo(Locale locale) {
+    ResponseEntity<GoNoGoReport> goNoGo(Locale locale) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(reports.report(locale));
     }
 
