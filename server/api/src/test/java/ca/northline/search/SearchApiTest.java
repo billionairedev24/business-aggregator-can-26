@@ -66,6 +66,7 @@ class SearchApiTest extends IntegrationTest {
         registry.add("spring.elasticsearch.uris", SearchDocs::start);
         registry.add("northline.search.provider", () -> "elasticsearch");
         registry.add("northline.search.rate-limit", () -> "60");
+        registry.add("northline.search.rate-limit-exempt", () -> "10.77.0.0/16"); // S-119: load generators
     }
 
     @BeforeAll
@@ -458,6 +459,23 @@ class SearchApiTest extends IntegrationTest {
                         .header("X-Forwarded-For", "203.0.113.8")
                         .with(from("10.9.0.5")))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void loadGeneratorsInTheExemptRangeAreNeverLimited() throws Exception {
+        for (var i = 0; i < 70; i++) {
+            mvc.perform(get("/api/v1/search/suggest").param("q", "sour").with(from("10.77.3.4")))
+                    .andExpect(status().isOk());
+        }
+        mvc.perform(get("/api/v1/search").param("q", "sour").with(from("10.77.3.4")))
+                .andExpect(status().isOk());
+        // only the range: its neighbour is counted as usual
+        for (var i = 0; i < 60; i++) {
+            mvc.perform(get("/api/v1/search/suggest").param("q", "sour").with(from("10.78.0.1")))
+                    .andExpect(status().isOk());
+        }
+        mvc.perform(get("/api/v1/search/suggest").param("q", "sour").with(from("10.78.0.1")))
+                .andExpect(status().isTooManyRequests());
     }
 
     @Test
