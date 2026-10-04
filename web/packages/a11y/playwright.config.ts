@@ -36,10 +36,11 @@ export default defineConfig({
       env: { PORT: '4630', HOST: '127.0.0.1', NL_BFF_URL: 'http://127.0.0.1:4603', NL_SITE_ORIGIN: 'http://127.0.0.1:4630' },
     },
   ],
+  // journeys.spec.ts (S-148, ARIA snapshots) runs in each app's project and skips the other apps' screens
   projects: [
-    { name: 'studio', testMatch: /studio\.spec\.ts/, use: { baseURL: 'http://127.0.0.1:4610' } },
-    { name: 'console', testMatch: /console\.spec\.ts/, use: { baseURL: 'http://127.0.0.1:4620' } },
-    { name: 'consumer', testMatch: /consumer\.spec\.ts/, use: { baseURL: 'http://127.0.0.1:4630' } },
+    { name: 'studio', testMatch: /(studio|journeys)\.spec\.ts/, use: { baseURL: 'http://127.0.0.1:4610' } },
+    { name: 'console', testMatch: /(console|journeys)\.spec\.ts/, use: { baseURL: 'http://127.0.0.1:4620' } },
+    { name: 'consumer', testMatch: /(consumer|journeys)\.spec\.ts/, use: { baseURL: 'http://127.0.0.1:4630' } },
     // S104-09: the consumer site's nonce-based CSP in a real browser (also `make csp-check`)
     { name: 'csp', testMatch: /csp\.spec\.ts/, use: { baseURL: 'http://127.0.0.1:4630' } },
   ],

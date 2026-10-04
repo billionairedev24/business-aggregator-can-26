@@ -1,0 +1,92 @@
+- main:
+  - navigation "Breadcrumb":
+    - link "Services":
+      - /url: /services
+    - link "Prairie Wrench":
+      - /url: /providers/prairie-wrench
+  - list "Booking steps":
+    - listitem:
+      - button "Job details"
+    - listitem:
+      - button "Location & access" [disabled]
+    - listitem:
+      - button "Schedule" [disabled]
+    - listitem:
+      - button "Payment" [disabled]
+  - region "What do you need done?":
+    - heading "What do you need done?" [level=1]
+    - paragraph: Pick a fixed-price service, or describe the problem and get a quote. Everything you type here goes to the provider before the visit — the more detail, the fewer surprises.
+    - group "Service":
+      - button /Brake inspection \$\d+/ [pressed]
+      - link "Something else · get a quote Describe it below; up to 3 providers quote within 2 h Quote":
+        - /url: /services/mobile-mechanic/quote
+    - text: /Describe the problem · 0\/\d+/
+    - textbox /Describe the problem · 0\/\d+/:
+      - /placeholder: What's happening, when it started, anything you've already tried. E.g. grinding noise when braking, worse when cold.
+    - group "How urgent is it?":
+      - button "As soon as possible"
+      - button "This week"
+      - button "Next week"
+      - button "Flexible"
+    - region "Vehicle":
+      - heading "Vehicle" [level=2]
+      - combobox "Year":
+        - option "Select…" [selected]
+        - option /\d+/
+        - option /\d+/
+        - option /\d+/
+        - option /\d+/
+        - option /\d+/
+        - option /\d+/
+        - option /\d+/
+        - option /\d+/
+        - option /\d+/
+        - option /\d+/
+        - option /\d+/
+        - option /\d+/
+        - option "Older"
+      - combobox "Make":
+        - option "Select…" [selected]
+        - option "Honda"
+        - option "Toyota"
+        - option "Ford"
+        - option "Chevrolet"
+        - option "Hyundai"
+        - option "Kia"
+        - option "Subaru"
+        - option "Tesla"
+        - option "Other"
+      - textbox "Model":
+        - /placeholder: e.g. Civic
+      - text: Plate (optional)
+      - textbox "Plate (optional)":
+        - /placeholder: ABC 1234
+      - group "Fuel / drivetrain":
+        - button "Gas"
+        - button "Diesel"
+        - button "Hybrid"
+        - button "Electric"
+    - button "Continue to location" [disabled]
+    - text: /Describe the problem \(\d+\+ characters\) and tell us the vehicle year, make and model\./
+  - complementary "Prairie Wrench":
+    - text: /Prairie Wrench Master · ★ 4\.9 \(\d+\) · \d+% on time/
+    - term: Service
+    - definition: Brake inspection
+    - term: Problem
+    - definition: —
+    - term: Vehicle
+    - definition: —
+    - term: Where
+    - definition: —
+    - term: When
+    - definition: —
+    - separator
+    - term: Brake inspection
+    - definition: /\$\d+\.\d+/
+    - term: Travel
+    - definition: Included
+    - term: Tax 5%
+    - definition: /\$\d+\.\d+/
+    - term: Held in escrow
+    - definition: /\$\d+\.\d+/
+    - paragraph: Released to the provider only after your sign-off.

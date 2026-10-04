@@ -1,0 +1,95 @@
+- main:
+  - text: Support desk · agents
+  - combobox "Province":
+    - option "All provinces" [selected]
+    - option "Alberta"
+    - option "British Columbia"
+    - option "Ontario"
+  - combobox "Market":
+    - option "All markets" [selected]
+    - option "Calgary"
+  - heading /\d+ open · 3 urgent · median first reply \d+ min/ [level=1]
+  - text: /\d+ open · 3 urgent \d+ min median first reply · SLA 1 h Master \/ 4 h 2 SLA at risk \d+% resolved without escalation · \d+ d 4\.7 CSAT · \d+ d \d+% in French/
+  - group "Filter cases":
+    - button /All · \d+/ [pressed]
+    - button "Urgent · 3"
+    - button "Unassigned · 6"
+    - button "Mine · 5"
+    - button "SLA at risk · 2"
+    - button "Providers"
+    - button "Sellers"
+    - button "Kitchens"
+    - button "Customers"
+  - searchbox "Search table"
+  - button "Filters"
+  - button "Columns"
+  - button "Report"
+  - text: View only · Admin
+  - table "Tickets":
+    - rowgroup:
+      - row "Select all rows Ticket Requester Priority Age Status Actions":
+        - columnheader "Select all rows":
+          - checkbox "Select all rows"
+        - columnheader "Ticket":
+          - button "Ticket"
+        - columnheader "Requester":
+          - button "Requester"
+        - columnheader "Priority":
+          - button "Priority"
+        - columnheader "Age":
+          - button "Age"
+        - columnheader "Status":
+          - button "Status"
+        - columnheader "Actions"
+    - rowgroup:
+      - row /Select HD-\d+ HD-\d+ Unassigned Prairie Wrench WCB letter uploaded — restore instant book\? High \d+\.\d+ d New Open case · HD-\d+/:
+        - cell /Select HD-\d+/:
+          - checkbox /Select HD-\d+/
+        - cell /HD-\d+ Unassigned/
+        - cell "Prairie Wrench WCB letter uploaded — restore instant book?"
+        - cell "High"
+        - cell /\d+\.\d+ d/
+        - cell "New"
+        - cell /Open case · HD-\d+/:
+          - button /Open case · HD-\d+/
+      - row /Select HD-\d+ HD-\d+ Dev K\. R\. Diaz Order NL-\d+ arrived late Urgent \d+\.\d+ d In progress Open case · HD-\d+/:
+        - cell /Select HD-\d+/:
+          - checkbox /Select HD-\d+/
+        - cell /HD-\d+ Dev K\./
+        - cell /R\. Diaz Order NL-\d+ arrived late/
+        - cell "Urgent"
+        - cell /\d+\.\d+ d/
+        - cell "In progress"
+        - cell /Open case · HD-\d+/:
+          - button /Open case · HD-\d+/
+  - navigation "Pagination · Tickets":
+    - group "Rows per page":
+      - button "5"
+      - button /\d+/ [pressed]
+      - button /\d+/
+      - button /\d+/
+    - button "Previous page" [disabled]
+    - button "Next page" [disabled]
+  - status
+  - status
+  - button "Manage macros"
+  - complementary "Prairie Wrench · master":
+    - text: Requester context · auto-attached
+    - heading "Prairie Wrench · master" [level=2]
+    - text: "/Portal: provider · tier master · role owner HD-\\d+ · Unassigned · Document · WCB clearance One-click actions · role-gated/"
+    - button "Assign to me"
+    - button "Request refund (finance approves)"
+    - list:
+      - listitem:
+        - text: /Business · \d+\.\d+ d/
+        - paragraph: Can instant book be turned back on today?
+    - combobox "Insert macro…":
+      - option "Insert macro…" [selected]
+      - option "Payout hold — policy explanation"
+    - textbox "Reply":
+      - /placeholder: Reply in the requester's language (EN/FR auto-detected)…
+    - text: Requester writes in English
+    - button "Send & keep open"
+    - button "Send & resolve"
+    - button "Escalate to T&S"
+    - paragraph: Every action is logged to the audit trail and visible to the requester as a case update. Refund requests go to finance, and someone other than the agent approves them.

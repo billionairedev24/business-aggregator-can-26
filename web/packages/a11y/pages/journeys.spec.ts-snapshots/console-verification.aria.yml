@@ -1,0 +1,78 @@
+- main:
+  - text: Seller verification
+  - combobox "Province":
+    - option "All provinces" [selected]
+    - option "Alberta"
+    - option "British Columbia"
+    - option "Ontario"
+  - combobox "Market":
+    - option "All markets" [selected]
+    - option "Calgary"
+  - heading "2 applications · median 1.4 days · SLA 2" [level=1]
+  - paragraph: Automated checks run first (KYC, registry, insurance OCR, sanctions). Humans decide the rest. Approved sellers start at Registered; a welcome call fast-tracks Trusted.
+  - searchbox "Search table"
+  - button "Filters"
+  - button "Columns"
+  - button "Report"
+  - table "Applications":
+    - rowgroup:
+      - row "Select all rows Applicant Category Region Automated checks Risk Actions":
+        - columnheader "Select all rows":
+          - checkbox "Select all rows"
+        - columnheader "Applicant":
+          - button "Applicant"
+        - columnheader "Category":
+          - button "Category"
+        - columnheader "Region":
+          - button "Region"
+        - columnheader "Automated checks":
+          - button "Automated checks"
+        - columnheader "Risk":
+          - button "Risk"
+        - columnheader "Actions"
+    - rowgroup:
+      - row "Select QuickFix Auto QuickFix Auto QuickFix Auto Inc. Mobile mechanic Alberta KYC ✓ · AMVIC ✗ High · no licence Open · QuickFix Auto Approve · QuickFix Auto Request info · QuickFix Auto":
+        - cell "Select QuickFix Auto":
+          - checkbox "Select QuickFix Auto"
+        - cell "QuickFix Auto QuickFix Auto Inc."
+        - cell "Mobile mechanic"
+        - cell "Alberta"
+        - cell "KYC ✓ · AMVIC ✗"
+        - cell "High · no licence"
+        - cell "Open · QuickFix Auto Approve · QuickFix Auto Request info · QuickFix Auto":
+          - button "Open · QuickFix Auto"
+          - button "Approve · QuickFix Auto"
+          - button "Request info · QuickFix Auto"
+      - row "Select Sable & Soda Bar Co. Sable & Soda Bar Co. Sable and Soda Ltd. Events & bar Alberta KYC ✓ · Registry ✓ · Insurance ○ Low Open · Sable & Soda Bar Co. Approve · Sable & Soda Bar Co. Request info · Sable & Soda Bar Co.":
+        - cell "Select Sable & Soda Bar Co.":
+          - checkbox "Select Sable & Soda Bar Co."
+        - cell "Sable & Soda Bar Co. Sable and Soda Ltd."
+        - cell "Events & bar"
+        - cell "Alberta"
+        - cell "KYC ✓ · Registry ✓ · Insurance ○"
+        - cell "Low"
+        - cell "Open · Sable & Soda Bar Co. Approve · Sable & Soda Bar Co. Request info · Sable & Soda Bar Co.":
+          - button "Open · Sable & Soda Bar Co."
+          - button "Approve · Sable & Soda Bar Co."
+          - button "Request info · Sable & Soda Bar Co."
+      - row "Select Fraser Electric Fraser Electric Sable and Soda Ltd. Events & bar BC pilot KYC ✓ · Registry ✓ · Insurance ○ Low Open · Fraser Electric":
+        - cell "Select Fraser Electric":
+          - checkbox "Select Fraser Electric"
+        - cell "Fraser Electric Sable and Soda Ltd."
+        - cell "Events & bar"
+        - cell "BC pilot"
+        - cell "KYC ✓ · Registry ✓ · Insurance ○"
+        - cell "Low"
+        - cell "Open · Fraser Electric":
+          - button "Open · Fraser Electric"
+  - navigation "Pagination · Applications":
+    - text: 1–3 of 3 applications · Decision, Waiting hidden to fit · open a row to see all
+    - group "Rows per page":
+      - button "5"
+      - button /\d+/ [pressed]
+      - button /\d+/
+      - button /\d+/
+    - button "Previous page" [disabled]
+    - button "Next page" [disabled]
+  - status
+  - status

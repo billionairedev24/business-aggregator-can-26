@@ -1,0 +1,53 @@
+- main:
+  - text: Payouts
+  - heading "Getting your money" [level=1]
+  - text: /Available now \$\d+\.\d+ Scheduled Sun Oct 4 → TD ··\d+ · free/
+  - button "Instant payout · 1% fee"
+  - button "Change schedule"
+  - heading "Bank account" [level=2]
+  - text: /TD Canada Trust · ··\d+ · Prairie Wrench Mobile Mechanics Ltd\./
+  - button "Change"
+  - heading "Tax documents" [level=2]
+  - text: /\d+ GST collected summary \(YTD\)/
+  - link /Download \d+ GST collected summary \(YTD\) as PDF/:
+    - /url: /api/v1/merchants/01J9ZD3V00000000000000PWM1/reports/gst-summary.pdf?year=2026&lang=en
+  - text: ·
+  - link /Download \d+ GST collected summary \(YTD\) as CSV/:
+    - /url: /api/v1/merchants/01J9ZD3V00000000000000PWM1/reports/gst-summary.csv?year=2026
+  - text: /\d+ annual statement/
+  - link /Download \d+ annual statement as PDF/:
+    - /url: /api/v1/merchants/01J9ZD3V00000000000000PWM1/reports/annual-statement.pdf?year=2025&lang=en
+  - text: ·
+  - link /Download \d+ annual statement as CSV/:
+    - /url: /api/v1/merchants/01J9ZD3V00000000000000PWM1/reports/annual-statement.csv?year=2025
+  - heading "Payout history" [level=2]
+  - searchbox "Search table"
+  - button "Filters"
+  - button "Columns"
+  - button "Report"
+  - text: View only · Owner
+  - checkbox "Select all"
+  - text: Select all Sort
+  - group "Sort":
+    - button "Date"
+    - button "Amount"
+    - button "Status"
+  - list "Payouts":
+    - listitem:
+      - checkbox "Select Sep 4"
+      - text: Sep 4 Paid
+      - term: Amount
+      - definition: /\$\d+,\d+\.\d+/
+      - term: Jobs
+      - definition: /\d+/
+      - button "View"
+  - navigation "Pagination · Payouts":
+    - group "Rows per page":
+      - button "5"
+      - button /\d+/ [pressed]
+      - button /\d+/
+      - button /\d+/
+    - button "Previous page" [disabled]
+    - button "Next page" [disabled]
+  - status
+  - status
