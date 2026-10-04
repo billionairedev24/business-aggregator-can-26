@@ -12,6 +12,7 @@
 .nl-appt-cell { cursor: default; } /* S-74: open slots and quote holds are information, not buttons */
 .nl-appt-job-who { opacity: .7; }
 .nl-appt-day { max-width: 520px; }
+.nl-appt-view[aria-busy='true'] { opacity: .55; } /* S-117: the previous week's jobs while this week's load */
 .nl-appt-empty { margin: 8px 0 0; }
 .nl-appt-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 36px clamp(28px, 4vw, 64px); margin-top: 40px; }
 .nl-appt-h2 { margin: 0 0 6px; }

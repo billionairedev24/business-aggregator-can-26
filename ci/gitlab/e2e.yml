@@ -1,0 +1,85 @@
+# S-117 — the end-to-end suite (web/e2e, Playwright). Included from .gitlab-ci.yml; runbook docs/runbooks/e2e.md.
+# Run pipeline with PIPELINE_PART=e2e (never part of `all`) and E2E_TARGET = local | dev | staging.
+# Pipelines only exist when started by hand (workflow: rules in .gitlab-ci.yml). To run it nightly against staging
+# later: CI/CD › Schedules with PIPELINE_PART=e2e, E2E_TARGET=staging, plus one line under workflow: rules —
+#     - if: $CI_PIPELINE_SOURCE == "schedule" && $PIPELINE_PART == "e2e"
+
+.e2e:
+  stage: smoke
+  image: mcr.microsoft.com/playwright:v1.56.1-noble
+  needs: []
+  variables:
+    COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+    PNPM_STORE_DIR: $CI_PROJECT_DIR/.pnpm-store
+    CI: "true"
+  cache:
+    - key:
+        prefix: pnpm
+        files: [web/pnpm-lock.yaml]
+      paths: [.pnpm-store/]
+  before_script:
+    - command -v make >/dev/null || (apt-get update -qq && apt-get install -y -qq --no-install-recommends make >/dev/null)
+    - corepack enable
+    - cd web && pnpm config set store-dir "$PNPM_STORE_DIR" && pnpm install --frozen-lockfile && cd ..
+  artifacts:
+    when: always
+    expire_in: 14 days
+    paths: [e2e-out/]
+
+# The whole stack in the job: a disposable PostGIS service, the apps under the `local` profile (ci/e2e.sh).
+e2e:local:
+  extends: .e2e
+  timeout: 60m
+  services:
+    - name: postgis/postgis:17-3.5
+      alias: postgres
+  variables:
+    POSTGRES_DB: northline
+    POSTGRES_USER: northline
+    POSTGRES_PASSWORD: northline
+    DB_HOST: postgres
+    DB_PORT: "5432"
+    GRADLE_USER_HOME: $CI_PROJECT_DIR/.gradle-home
+    GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2
+    JAVA_HOME: $CI_PROJECT_DIR/.jdk
+    # Optional (Settings › CI/CD › Variables): MAVEN_MIRROR_URL, MAVEN_MIRROR_USERNAME, MAVEN_MIRROR_PASSWORD.
+  cache:
+    - key:
+        prefix: pnpm
+        files: [web/pnpm-lock.yaml]
+      paths: [.pnpm-store/]
+    - key: temurin-25
+      paths: [.jdk/]
+    - key:
+        prefix: gradle
+        files:
+          - server/gradle/libs.versions.toml
+          - server/gradle/wrapper/gradle-wrapper.properties
+      paths: [.gradle-home/wrapper/, .gradle-home/caches/modules-2/]
+  rules:
+    - if: $PIPELINE_PART == "e2e" && ($E2E_TARGET == "local" || $E2E_TARGET == null || $E2E_TARGET == "")
+  script:
+    - command -v curl >/dev/null || (apt-get update -qq && apt-get install -y -qq curl)
+    # Temurin 25 (the Playwright image has no JDK); cached in .jdk/.
+    - |
+      if [ ! -x "$JAVA_HOME/bin/java" ]; then
+        mkdir -p "$JAVA_HOME"
+        curl -fsSL https://api.adoptium.net/v3/binary/latest/25/ga/linux/x64/jdk/hotspot/normal/eclipse \
+          | tar -xz --strip-components=1 -C "$JAVA_HOME"
+      fi
+    - export PATH="$JAVA_HOME/bin:$PATH" && java -version
+    - make e2e E2E_ARGS="${E2E_GREP:+--grep=$E2E_GREP}"
+
+# A deployed environment: URLs as CI/CD variables, personas as masked variables scoped to the environment
+# (docs/runbooks/e2e.md § Target an environment). Never prod: make e2e-target refuses it.
+e2e:target:
+  extends: .e2e
+  timeout: 45m
+  environment:
+    name: $E2E_TARGET
+    action: verify
+  rules:
+    - if: $PIPELINE_PART == "e2e" && ($E2E_TARGET == "dev" || $E2E_TARGET == "staging")
+  script:
+    - if [ -n "$E2E_DATA_JSON" ]; then printf '%s' "$E2E_DATA_JSON" > /tmp/e2e-data.json && export E2E_DATA=/tmp/e2e-data.json; fi
+    - make e2e-target ENV="$E2E_TARGET" E2E_ARGS="${E2E_GREP:+--grep=$E2E_GREP}"

@@ -152,10 +152,6 @@ smoke: ## Health of every app port, whoever started it (api, auth, bffs, worker,
 		*) printf '  \033[2mdown\033[0m  %-13s %s (%s)\n' "$$1" "$$2" "$${code:-no answer}";; esac; \
 	done
 
-.PHONY: e2e
-e2e: ## Studio smoke sweep: migrate + seed a DISPOSABLE database, start api/auth/studio, check 135 screens (ci/studio-smoke.sh)
-	cd $(ROOT) && ci/studio-smoke.sh
-
 ##@ All stacks
 
 .PHONY: all
@@ -175,7 +171,7 @@ format: server-format web-format ## Format the code (Spotless; Prettier on the w
 
 .PHONY: clean
 clean: server-clean web-clean docs-clean courier-clean mobile-consumer-clean ## Delete build outputs and the runner's logs (keeps node_modules, ~/.gradle, Docker volumes)
-	rm -rf $(ROOT)/smoke-out $(ROOT)/.run/logs
+	rm -rf $(ROOT)/smoke-out $(ROOT)/e2e-out $(ROOT)/.run/logs
 
 .PHONY: clean-all
 clean-all: clean ## clean + node_modules and the Gradle project cache
@@ -207,11 +203,13 @@ help: ## This list, and the common variables
 ##> CLOUD  tf-validate: all, aws, gcp or azure; dr-restore-*: the cloud of the environment
 ##> DR_ENV TIME DRY_RUN  dr-restore-*: environment (default prod), restore time, DRY_RUN=1 prints the commands (S-114)
 ##> REGISTRY IMAGE_TAG PUSH  images-*: registry path, tag, PUSH=1 pushes
+##> E2E_ARGS ENV  e2e: playwright arguments (e.g. --grep @smoke); e2e-target: the environment (dev, staging)
 ##> ENV MARKET RECORD  go-live-check: environment, region market id, 1 = record the repository's results on the checklist (S-118)
 ##> STRICT  i18n-check: 1 = known gaps (legal texts, French awaiting a translator) fail too — before a French-first launch
 
 include $(ROOT)/make/server.mk
 include $(ROOT)/make/web.mk
+include $(ROOT)/make/e2e.mk
 include $(ROOT)/make/compliance.mk
 include $(ROOT)/make/courier.mk
 include $(ROOT)/make/mobile-consumer.mk

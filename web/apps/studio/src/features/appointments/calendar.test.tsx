@@ -65,4 +65,37 @@ describe('Appointments calendar cells (S-74)', () => {
     expect(await screen.findByText('Plage libre')).toBeTruthy();
     expect(screen.getByText('Réservé pour un devis')).toBeTruthy();
   });
+
+  it('never shows the last week\'s jobs under the next week\'s title (S-117)', async () => {
+    const nextJob = { ...job, id: 'j2', ref: 'BK-7801', title: 'Oil & filter', startsAt: localInstant(addDays(monday, 9), '09:00'), endsAt: localInstant(addDays(monday, 9), '10:00') };
+    let release!: () => void;
+    const nextWeek = new Promise<void>(r => { release = r; });
+    const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/jobs?')) {
+        if (new URL(url, 'http://x').searchParams.get('from') === localInstant(addDays(monday, 7))) {
+          await nextWeek;
+          return json({ items: [nextJob] });
+        }
+        return json({ items: [job] });
+      }
+      if (url.includes('/calendar-cells')) return json({ openSlots: [], quoteHolds: [] });
+      if (url.includes('/time-off')) return json({ entries: [] });
+      return json({ items: [] });
+    }));
+    const user = userEvent.setup({ delay: null });
+    renderWithProviders(<AppointmentsScreen />);
+    await user.click(await screen.findByRole('radio', { name: 'List' }));
+    expect(await screen.findByText(/BK-7712/)).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Next week' }));
+    // this week's jobs are loading: the last week's rows are gone, the list says it is busy
+    expect(screen.queryByText(/BK-7712/)).toBeNull();
+    expect(document.querySelector('.nl-dt-body[aria-busy="true"]')).not.toBeNull();
+
+    release();
+    expect(await screen.findByText(/BK-7801/)).toBeTruthy();
+    expect(document.querySelector('.nl-dt-body[aria-busy="true"]')).toBeNull();
+  });
 });

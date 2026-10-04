@@ -34,6 +34,10 @@ export function AppointmentsScreen() {
   const cellsQ = useQuery(calendarCellsQuery(merchantId, range[0]!, view === 'day' ? 1 : 7));
   const cells: CalendarCells = cellsQ.data ?? NO_CELLS;
   const jobs = useMemo(() => q.data ?? [], [q.data]);
+  // S-117: after Previous/Next the query keeps the last week's jobs on screen until this week's arrive. Say so (busy,
+  // dimmed, the list's rows not clickable) instead of showing the old week's jobs under the new week's title — a click
+  // there opened a job of another week, and its rows were replaced under the pointer when the new week came in.
+  const stale = q.isPlaceholderData;
 
   useEffect(() => {
     if (selected && jobs.some(j => j.id === selected)) return;
@@ -62,9 +66,12 @@ export function AppointmentsScreen() {
 
       {q.isPending ? <div className="nl-appt-week" aria-busy="true">{Array.from({ length: 6 }, (_, i) => <div key={i}><Skeleton height={14} width={60} style={{ marginBottom: 8 }} /><Skeleton height={56} style={{ marginBottom: 6 }} /><Skeleton height={56} /></div>)}</div>
         : q.isError ? <ErrorState message={t('loadJobsError')} onRetry={() => void q.refetch()} />
-        : view === 'week' ? <WeekGrid t={t} locale={locale} monday={monday} jobs={jobs} cells={cells} selected={selected} onSelect={setSelected} blocked={blocked} />
-        : view === 'day' ? <DayList t={t} locale={locale} jobs={jobs} cells={dayCells(cells, anchor)} selected={selected} onSelect={setSelected} blocked={blocked(anchor)} />
-        : <JobTable t={t} locale={locale} jobs={jobs} onOpen={setSelected} />}
+        : view === 'list' ? <JobTable t={t} locale={locale} jobs={jobs} loading={stale} onOpen={setSelected} />
+        : <div className="nl-appt-view" aria-busy={stale || undefined} inert={stale || undefined}>
+            {view === 'week'
+              ? <WeekGrid t={t} locale={locale} monday={monday} jobs={jobs} cells={cells} selected={selected} onSelect={setSelected} blocked={blocked} />
+              : <DayList t={t} locale={locale} jobs={jobs} cells={dayCells(cells, anchor)} selected={selected} onSelect={setSelected} blocked={blocked(anchor)} />}
+          </div>}
 
       <div className="nl-appt-cols">
         <QuoteRequests />
@@ -129,10 +136,10 @@ function DayList({ t, locale, jobs, cells, selected, onSelect, blocked }: { t: T
 }
 
 interface JobRow { id: string; when: string; job: string; who: string; member: string; state: string }
-function JobTable({ t, locale, jobs, onOpen }: { t: T; locale: Locale; jobs: Job[]; onOpen: (id: string) => void }) {
+function JobTable({ t, locale, jobs, loading, onOpen }: { t: T; locale: Locale; jobs: Job[]; loading: boolean; onOpen: (id: string) => void }) {
   const rows: JobRow[] = jobs.map(j => ({ id: j.id, when: `${fmt(localDate(j.startsAt), locale, { weekday: 'short', day: 'numeric' })} · ${clock(j.startsAt, locale)}`, job: j.ref ? `${j.title} · ${j.ref}` : j.title, who: j.customerName ?? '—', member: j.memberName ?? '—', state: t(`state_${j.state}`) }));
   const columns: DataTableColumn<JobRow>[] = [
     { key: 'when', label: t('colWhen') }, { key: 'job', label: t('colJob'), primary: true }, { key: 'who', label: t('colCustomer') }, { key: 'member', label: t('colMember'), filter: 'facet' }, { key: 'state', label: t('colStatus'), type: 'tag' },
   ];
-  return <DataTable<JobRow> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} can={{ create: false, update: false, delete: false, export: true }} onOpen={r => onOpen(r.id)} emptyText={t('noJobsWeek')} />;
+  return <DataTable<JobRow> entity={t('entity')} plural={t('plural')} columns={columns} rows={rows} loading={loading} can={{ create: false, update: false, delete: false, export: true }} onOpen={r => onOpen(r.id)} emptyText={t('noJobsWeek')} />;
 }
