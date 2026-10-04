@@ -154,12 +154,13 @@ export function Search() {
               <Text style={styles.small}>{t('shop.search.count', { n: total })} </Text>
               <Pressable
                 accessibilityRole="button"
+                accessibilityLabel={t('shop.search.sortLabel', { sort: t(`shop.sort.${sort}` as MessageKey) })}
                 accessibilityHint={t('shop.search.sortHint')}
                 onPress={() => setSort((s) => SORTS[(SORTS.indexOf(s) + 1) % SORTS.length]!)}
                 style={styles.sort}
                 testID="search-sort"
               >
-                <Text style={[styles.small, styles.sortText]}>{t(`shop.sort.${sort}` as MessageKey)}</Text>
+                <Text style={[styles.small, styles.sortText]}>{t('shop.sort.shown', { sort: t(`shop.sort.${sort}` as MessageKey) })}</Text>
               </Pressable>
             </View>
             {list.map((r) => (

@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { renderConsole, staffApi, type Call } from '../../test/render';
+import { renderConsole, staffApi, type Call, screenReady } from '../../test/render';
 import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const NOW = new Date('2026-09-08T18:00:00Z');
@@ -120,7 +120,7 @@ describe('verification queue (S-79, design 03 verify)', () => {
   it('filters by province from the region model', async () => {
     const calls = api(['admin']);
     renderConsole('/verification');
-    await screen.findByRole('heading', { level: 1 });
+    await screenReady();
     await user().selectOptions(screen.getByRole('combobox', { name: 'Province' }), 'BC');
     await waitFor(() => expect(calls.some(c => c.url.endsWith('/api/v1/console/verification/applications?province=BC'))).toBe(true));
   });

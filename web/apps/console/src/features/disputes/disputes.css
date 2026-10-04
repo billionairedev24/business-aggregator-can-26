@@ -14,3 +14,5 @@
 .nl-ds-evidence { margin-top: 14px; font-size: 14px; }
 .nl-ds-outcomes { margin-top: 14px; }
 .nl-ds-note { margin-top: 12px; min-height: 70px; width: 100%; }
+/* S-143: evidence links get a 44 px hit area without moving the line */
+.nl-ds-file { display: inline-block; min-width: 44px; padding-block: 14px; margin-block: -14px; }

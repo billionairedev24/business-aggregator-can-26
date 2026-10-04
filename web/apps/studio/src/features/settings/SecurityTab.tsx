@@ -221,7 +221,7 @@ function Sessions({ security, sid, change }: { security: Security; sid: string |
       )}
       {security.signIns.length > 0 && (
         <>
-          <h3 className="nl-set-h3">{t('recentSignIns')}</h3>
+          <h2 className="nl-set-h3">{t('recentSignIns')}</h2>
           <ul className="nl-set-rows">
             {security.signIns.map(s => (
               <li key={s.id} className="nl-set-row">
@@ -335,7 +335,7 @@ function ConfirmItsYou() {
   };
   return (
     <section className="nl-set-confirm" aria-labelledby="set-confirm">
-      <h3 id="set-confirm" className="nl-set-h3">{t('confirmTitle')}</h3>
+      <h2 id="set-confirm" className="nl-set-h3">{t('confirmTitle')}</h2>
       <p className="nl-small nl-muted">{t('confirmBody')}</p>
       <div className="nl-set-confirmrow">
         <Button onClick={() => void passkey()} disabled={busy || !identifier}>{t('usePasskey')}</Button>

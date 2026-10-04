@@ -55,9 +55,20 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllGlobals(); });
 
 describe('Cart and checkout (design 06 cart)', () => {
+  it('keeps the page h1 while the cart loads (S-142)', async () => {
+    mockFetch(server);
+    const answer = globalThis.fetch;
+    vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => (String(input).startsWith('/api/v1/cart') ? new Promise(() => {}) : answer(input, init)));
+    renderApp('/cart', { routes: { cart: () => <CartPage /> } });
+    expect(await screen.findByText('Loading your cart…')).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+  });
+
   it('shows the multi-shop cart, windows, address, substitutions and the summary with tax', async () => {
     open();
-    expect(await screen.findByRole('heading', { level: 1, name: 'Checkout' })).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
+    await waitFor(() => expect(document.querySelector('.cart-grid')).not.toBeNull());
+    expect(screen.getByRole('heading', { level: 1, name: 'Checkout' })).toBeInTheDocument();
     await expectNoAxeViolations(document.body); // S-109
     expect(screen.getByText('4 items · 2 shops · one delivery')).toBeInTheDocument();
     const butcher = screen.getByRole('region', { name: 'Bridgeland Butcher' });
@@ -156,7 +167,9 @@ describe('Cart and checkout (design 06 cart)', () => {
   it('lets a guest see the cart and sign in to pay', async () => {
     user = null;
     open();
-    expect(await screen.findByRole('heading', { level: 1, name: 'Checkout' })).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
+    await waitFor(() => expect(document.querySelector('.cart-grid')).not.toBeNull());
+    expect(screen.getByRole('heading', { level: 1, name: 'Checkout' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Sign in to pay' })).toHaveAttribute('href', '/sign-in?next=%2Fcart');
     expect(screen.queryByRole('radiogroup', { name: 'Delivery window' })).not.toBeInTheDocument();
     expect(screen.getByText(/You're browsing as a guest/)).toBeInTheDocument();
@@ -171,8 +184,8 @@ describe('Cart and checkout (design 06 cart)', () => {
 
   it('is in French', async () => {
     open('fr');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Paiement' })).toBeInTheDocument();
-    expect(screen.getByText('4 articles · 2 commerces · une seule livraison')).toBeInTheDocument();
+    expect(await screen.findByText('4 articles · 2 commerces · une seule livraison')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Paiement' })).toBeInTheDocument();
     expect(await screen.findByRole('radio', { name: /Ce soir 18 h – 21 h\s*Groupé avec 5 voisins/ })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'Article similaire' })).toBeInTheDocument();
     expect(await screen.findByText('TPS 5 %')).toBeInTheDocument();
@@ -184,6 +197,7 @@ describe('Cart and checkout (design 06 cart)', () => {
     routes['GET /api/v1/cart'] = () => (fail ? { status: 500, body: { detail: 'no' } } : { body: CART });
     open();
     await waitFor(() => expect(screen.getByText('We couldn’t load your cart.')).toBeInTheDocument());
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1); // S-142: the error keeps the h1
     fail = false;
     await userEvent.setup({ delay: null }).click(screen.getByRole('button', { name: 'Retry' }));
     expect(await screen.findByText('4 items · 2 shops · one delivery')).toBeInTheDocument();

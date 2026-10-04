@@ -186,6 +186,9 @@ Sell or offer a service (S-61): `/sell` links into the Studio's onboarding at `N
 the consumer site, "Start as …" goes through the studio-bff's `/bff/login?next=/onboarding?type=…`, which completes at
 once because northline-auth already has the session.
 
+Help (S-145): `/help`, linked from every page's footer, works signed out too. `NL_SUPPORT_EMAIL` (optional, in
+`web/apps/consumer/.env`) adds a support mailbox to it; leave it unset locally.
+
 Business pages on other hosts (S-54): the built server serves `pages.<zone>/<slug>` and merchants' own domains when
 `NL_PAGES_HOST` is set (the Vite dev server doesn't). Try it with `pnpm --filter @northline/consumer build`, then
 `NL_SITE_ORIGIN=http://localhost:3000 NL_PAGES_HOST=pages.localhost NL_BFF_URL=http://localhost:8080 node

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Alert, Button, Checkbox, Field, OptionCard, StepBars, TextInput, useLocale, codeValue } from '@northline/ui';
+import { Alert, Button, Checkbox, Field, OptionCard, RadioGroup, StepBars, TextInput, useLocale, codeValue } from '@northline/ui';
 import { authApi, codeSchema, createPasskey, fieldErrors, firstIssue, flowError, isRestart, PasskeyError, passkeysSupported, RateLimitNotice, registerSchema, useRateLimit, type AuthSession, type TotpSetup } from '@northline/auth-kit';
 import { termsPresentation } from '../../lib/legal';
 import { useFrenchFirst } from '../location/regions';
@@ -208,12 +208,12 @@ function SecondFactorStep({ onCreated, onRestart }: { onCreated: (s: AuthSession
     <div>
       <div className="nl-field">
         <span className="nl-label" id="nl-mfa-label">{t('mfaLabel')}</span>
-        <div className="nl-auth-options" role="radiogroup" aria-labelledby="nl-mfa-label">
+        <RadioGroup className="nl-auth-options" aria-labelledby="nl-mfa-label">
           {options.map(o => (
             <OptionCard key={o.key} role="radio" aria-checked={method === o.key} selected={method === o.key} title={t(o.name)} description={t(o.desc)}
               onClick={() => { setMethod(o.key); setSetup(null); setFailure(''); }} />
           ))}
-        </div>
+        </RadioGroup>
       </div>
       {method === 'totp' && setup ? (
         <form noValidate onSubmit={confirmTotp}>

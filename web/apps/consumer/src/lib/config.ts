@@ -8,12 +8,13 @@ import type { PageHost } from './pages';
  * `siteOrigin` is the consumer site (the apex) — links leave a merchant's own domain for it. `studioOrigin` is the Studio
  * (NL_STUDIO_ORIGIN, the chart's urls.studio): "Sell or offer a service" enters its onboarding (S-61). `page` is set when this
  * request is a business page on `pages.<zone>` or a merchant's own domain (server/page-hosts.mjs, S-54). Read on the
- * server by `publicConfig()` (request.ts), serialized into the page, read back in the browser.
+ * server by `publicConfig()` (request.ts), serialized into the page, read back in the browser. `supportEmail` is the
+ * support mailbox the Help page names (NL_SUPPORT_EMAIL, S-145); unset, Help sends people to Help & cases only.
  */
-export interface PublicConfig { authOrigin: string; siteOrigin: string; legalEntity: string; studioOrigin: string; page?: PageHost | null }
+export interface PublicConfig { authOrigin: string; siteOrigin: string; legalEntity: string; studioOrigin: string; supportEmail?: string | null; page?: PageHost | null }
 declare global { interface Window { __NL_CONFIG__?: PublicConfig } }
 
-export const FALLBACK_CONFIG: PublicConfig = { authOrigin: 'http://localhost:9000', siteOrigin: 'http://localhost:3000', legalEntity: 'Northline Marketplace Inc.', studioOrigin: 'http://localhost:3100', page: null };
+export const FALLBACK_CONFIG: PublicConfig = { authOrigin: 'http://localhost:9000', siteOrigin: 'http://localhost:3000', legalEntity: 'Northline Marketplace Inc.', studioOrigin: 'http://localhost:3100', supportEmail: null, page: null };
 
 /** The configuration from the root route's context (a render without it — tests — gets the local defaults). */
 export function useSiteConfig(): PublicConfig {

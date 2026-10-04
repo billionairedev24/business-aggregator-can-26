@@ -1,3 +1,4 @@
+import './lib/zodJitless'; // first: before any zod schema is built (CSP without 'unsafe-eval', S104-09)
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';

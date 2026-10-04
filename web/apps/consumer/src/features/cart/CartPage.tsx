@@ -4,7 +4,7 @@ import { useRegions } from '../location/regions';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { Minus, Plus, Trash } from '@phosphor-icons/react';
-import { Alert, EmptyState, ErrorState, Field, Select, SiteLink, Skeleton, TextInput, useFormatters, useLocale, type Locale } from '@northline/ui';
+import { Alert, EmptyState, ErrorState, Field, RadioGroup, Select, SiteLink, Skeleton, TextInput, useFormatters, useLocale, type Locale } from '@northline/ui';
 import { newIdempotencyKey, ValidationError } from '@northline/client';
 import { signInHref, useViewer } from '../session/api';
 import { useDeliveryLocation } from '../location/useDeliveryLocation';
@@ -63,7 +63,8 @@ export function CartPage() {
   const { location } = useDeliveryLocation();
   const city = location.status === 'locating' ? undefined : location.city;
   if (cart.isPending || sessionLoading) return <CartSkeleton />;
-  if (cart.isError) return <div className="nl-page"><ErrorState message={t('loadError')} onRetry={() => void cart.refetch()} /></div>;
+  // S-142: the loading and error states keep the page's h1
+  if (cart.isError) return <div className="nl-page cart-page"><h1 className="cart-title">{t('title')}</h1><ErrorState message={t('loadError')} onRetry={() => void cart.refetch()} /></div>;
   if (cart.data.itemCount === 0) {
     return (
       <div className="nl-page cart-page">
@@ -259,7 +260,7 @@ function Checkout({ cart }: { cart: Cart }) {
   };
 
   if (setup.isPending) return <CartSkeleton />;
-  if (setup.isError || !data) return <div className="nl-page"><ErrorState message={t('loadError')} onRetry={() => void setup.refetch()} /></div>;
+  if (setup.isError || !data) return <div className="nl-page cart-page"><h1 className="cart-title">{t('title')}</h1><ErrorState message={t('loadError')} onRetry={() => void setup.refetch()} /></div>;
   const view = data.cart.itemCount > 0 ? data.cart : cart;
   const started = phase.step === 'pay' ? phase.started : null;
 
@@ -273,9 +274,9 @@ function Checkout({ cart }: { cart: Cart }) {
           <section className="cart-section" aria-labelledby="cart-window">
             <h2 id="cart-window" className="cart-h2">{t('window')}</h2>
             {data.options.length === 0 ? <p className="cart-muted">{t('noWindow')}</p> : (
-              <div className="cart-options" role="radiogroup" aria-labelledby="cart-window">
+              <RadioGroup className="cart-options" aria-labelledby="cart-window">
                 {data.options.map(o => <WindowOption key={o.id} option={o} selected={o.id === optionId} onPick={() => setOptionId(o.id)} disabled={!!started} />)}
-              </div>
+              </RadioGroup>
             )}
           </section>
 
@@ -293,11 +294,11 @@ function Checkout({ cart }: { cart: Cart }) {
 
           <section className="cart-section" aria-labelledby="cart-subs">
             <h2 id="cart-subs" className="cart-h2">{t('substitution')}</h2>
-            <div className="cart-chips" role="radiogroup" aria-labelledby="cart-subs">
+            <RadioGroup className="cart-chips" aria-labelledby="cart-subs">
               {(['similar', 'refund', 'ask'] as const).map(s => (
                 <button key={s} type="button" role="radio" aria-checked={substitution === s} className="shop-chip cart-chip" disabled={!!started} onClick={() => setSubstitution(s)}>{t(s)}</button>
               ))}
-            </div>
+            </RadioGroup>
           </section>
 
           <AgeCheck age={age} onChanged={refreshAge} />
@@ -431,7 +432,7 @@ export function CartSkeleton() {
       <span className="nl-sr-only">{t('loading')}</span>
       <div className="cart-grid">
         <div>
-          <Skeleton width={200} height={36} /><Skeleton width={260} height={14} style={{ marginTop: 10 }} />
+          <h1 className="cart-title">{t('title')}</h1><Skeleton width={260} height={14} style={{ marginTop: 10 }} />
           {Array.from({ length: 3 }, (_, i) => <Skeleton key={i} height={56} style={{ marginTop: 18 }} />)}
           <Skeleton width={180} height={22} style={{ marginTop: 32 }} /><Skeleton height={60} style={{ marginTop: 10 }} />
         </div>

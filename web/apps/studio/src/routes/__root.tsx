@@ -1,10 +1,14 @@
 import { createRootRouteWithContext, Outlet } from '@tanstack/react-router';
 import type { QueryClient } from '@tanstack/react-query';
-import { ErrorState } from '@northline/ui';
+import { ErrorState, PageState } from '@northline/ui';
 import { NotFound } from '../features/shell/NotFound';
+import { useShellT } from '../features/shell/messages';
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   component: () => <Outlet />,
   notFoundComponent: NotFound,
-  errorComponent: ({ error, reset }) => <div style={{ padding: 32 }}><ErrorState message={error instanceof Error ? error.message : String(error)} onRetry={reset} /></div>,
+  errorComponent: function RootError({ error, reset }) {
+    const t = useShellT();
+    return <PageState title={`Northline ${t('studio')}`}><ErrorState message={error instanceof Error ? error.message : String(error)} onRetry={reset} /></PageState>;
+  },
 });

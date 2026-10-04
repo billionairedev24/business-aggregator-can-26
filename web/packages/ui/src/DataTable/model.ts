@@ -197,13 +197,21 @@ export interface LayoutInput<C extends { key: string; primary: boolean; priority
   /** Icon-only row actions (view/open, edit, delete). */
   iconActions: number;
   hasInlineAction: boolean;
+  /**
+   * Columns to drop beyond the estimate because the rendered table still overflowed its box — user text spacing
+   * (WCAG 1.4.12), a larger font, long words (S-141). Once nothing more can be dropped: cards.
+   */
+  squeeze?: number;
 }
 
 /** Estimated width a table with `n` data columns needs (checkbox + columns + actions + padding). */
-export const tableWidthFor = (n: number, iconActions: number, hasInlineAction: boolean) => 56 + n * 112 + iconActions * 40 + (hasInlineAction ? 170 : 0) + 24;
+export const tableWidthFor = (n: number, iconActions: number, hasInlineAction: boolean) => 60 + n * 112 + iconActions * 44 + (hasInlineAction ? 170 : 0) + 24;
 
-/** Drops the lowest-priority columns until the table fits (keeping at least 3), then falls back to cards. */
-export function computeLayout<C extends { key: string; primary: boolean; priority: number }>({ width, columns, iconActions, hasInlineAction }: LayoutInput<C>) {
+/**
+ * Drops the lowest-priority columns until the table fits (keeping at least 3), then `squeeze` more when the rendered
+ * table overflowed, then falls back to cards.
+ */
+export function computeLayout<C extends { key: string; primary: boolean; priority: number }>({ width, columns, iconActions, hasInlineAction, squeeze = 0 }: LayoutInput<C>) {
   let shown = [...columns];
   const autoHidden: C[] = [];
   const dropOrder = columns
@@ -211,13 +219,16 @@ export function computeLayout<C extends { key: string; primary: boolean; priorit
     .filter(({ c }) => !c.primary)
     .sort((a, b) => a.c.priority - b.c.priority || b.i - a.i)
     .map(({ c }) => c);
-  const fits = () => tableWidthFor(shown.length, iconActions, hasInlineAction) <= width;
-  while (shown.length > MIN_TABLE_COLUMNS && !fits() && dropOrder.length) {
+  const drop = () => {
     const d = dropOrder.shift()!;
     shown = shown.filter((c) => c !== d);
     autoHidden.push(d);
-  }
-  const cardMode = width < CARD_BREAKPOINT || !fits();
+  };
+  const fits = () => tableWidthFor(shown.length, iconActions, hasInlineAction) <= width;
+  while (shown.length > MIN_TABLE_COLUMNS && !fits() && dropOrder.length) drop();
+  let extra = squeeze;
+  while (extra > 0 && shown.length > MIN_TABLE_COLUMNS && dropOrder.length) { drop(); extra--; }
+  const cardMode = width < CARD_BREAKPOINT || !fits() || extra > 0;
   return { shown, autoHidden, cardMode };
 }
 

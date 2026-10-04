@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { renderConsole, staffApi, type Call } from '../../test/render';
+import { renderConsole, staffApi, type Call, screenReady } from '../../test/render';
 import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
 const base = { merchantId: 'M1', province: 'AB', category: null, medianCents: null, deviationPct: null, regulator: null, flags: [], revetReasons: [], trustFlags: [], submittedAt: '2026-09-08T16:00:00Z', decidedAt: null, reasons: [], note: null };
@@ -50,7 +50,7 @@ describe('listing vetting (S-92, design 03 vetting)', () => {
   it('approves inline (dishes to their own endpoint) with the role header', async () => {
     const calls = api(['admin']);
     renderConsole('/vetting');
-    await screen.findByRole('heading', { level: 1 });
+    await screenReady();
     await user().click(within(row('Wagyu pho')).getByRole('button', { name: /Approve/ }));
     await waitFor(() => expect(calls.some(c => c.method === 'POST' && c.url.endsWith('/api/v1/console/vetting/dishes/D1/decision'))).toBe(true));
     const post = calls.find(c => c.method === 'POST')!;
@@ -66,7 +66,7 @@ describe('listing vetting (S-92, design 03 vetting)', () => {
       return undefined;
     });
     renderConsole('/vetting');
-    await screen.findByRole('heading', { level: 1 });
+    await screenReady();
     await user().click(within(row('Guaranteed to pass inspection')).getByRole('button', { name: /Reject/ }));
     const dialog = await screen.findByRole('dialog', { name: 'Reject “Guaranteed to pass inspection”' });
     await user().click(within(dialog).getByRole('button', { name: 'Reject listing' }));
@@ -82,7 +82,7 @@ describe('listing vetting (S-92, design 03 vetting)', () => {
   it('shows the api refusal inline', async () => {
     api(['trust_safety'], c => (c.method === 'POST' ? { status: 409, body: { code: 'not_in_review', detail: "This listing isn't waiting for a decision." } } : undefined));
     renderConsole('/vetting');
-    await screen.findByRole('heading', { level: 1 });
+    await screenReady();
     await user().click(within(row('Full brake job')).getByRole('button', { name: /Approve/ }));
     expect((await screen.findByRole('alert')).textContent).toBe("This listing isn't waiting for a decision.");
   });
@@ -90,7 +90,7 @@ describe('listing vetting (S-92, design 03 vetting)', () => {
   it('filters by province from the region model', async () => {
     const calls = api(['admin']);
     renderConsole('/vetting');
-    await screen.findByRole('heading', { level: 1 });
+    await screenReady();
     await user().selectOptions(screen.getByRole('combobox', { name: 'Province' }), 'AB');
     await waitFor(() => expect(calls.some(c => c.url.endsWith('/api/v1/console/vetting?province=AB'))).toBe(true));
   });

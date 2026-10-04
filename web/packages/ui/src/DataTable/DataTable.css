@@ -16,7 +16,7 @@
 .nl-dt-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-width: 0; }
 .nl-dt-search { display: block; flex: 1 1 200px; min-width: 0; max-width: 340px; }
 .nl-dt-search > svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--color-neutral-700); pointer-events: none; z-index: 1; }
-.nl-dt-search .input { min-height: 40px; padding-left: 36px; font-size: 14px; }
+.nl-dt-search .input { min-height: 44px; padding-left: 36px; font-size: 14px; }
 .nl-dt-count { padding: 1px 8px; }
 .nl-dt-viewonly { cursor: default; }
 .nl-dt-create { margin-left: auto; }
@@ -30,7 +30,7 @@
 .nl-dt-range .input { min-height: 38px; font-size: 14px; }
 .nl-dt-colpanel { padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .nl-dt-colpanel .nl-dt-flabel { margin-right: 6px; }
-.nl-dt-small-btn { min-height: 32px; font-size: 13px; }
+.nl-dt-small-btn { min-height: 44px; font-size: 13px; }
 
 /* ── chips ── */
 .nl-dt-chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -45,7 +45,8 @@
 .nl-dt-chip.is-on:hover { background: var(--color-accent-600); }
 .nl-dt-chip.is-locked { opacity: .7; cursor: default; }
 .nl-dt-chip.is-disabled { opacity: .45; cursor: not-allowed; }
-.nl-dt-chip-sm { min-height: 32px; padding: 3px 10px; font-size: 12px; }
+/* S-143: 44 px targets (docs/SCREENS.md) — the small chips (page size, column and filter pickers) included */
+.nl-dt-chip-sm { min-height: 44px; min-width: 44px; justify-content: center; padding: 3px 10px; font-size: 12px; }
 .nl-dt-chip-count { opacity: .65; font-weight: 400; }
 .nl-dt-chip input { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
 .nl-dt-chip:has(input:focus-visible) { outline: 2px solid var(--color-accent); outline-offset: 2px; }
@@ -53,29 +54,29 @@
 .nl-dt-chiprow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .nl-dt-active-chip { border: 0; cursor: pointer; min-height: 30px; font: inherit; font-size: 12px; font-weight: 600; }
 .nl-dt-active-chip:hover { background: var(--color-accent-200); }
-.nl-dt-chiprow .nl-dt-small-btn { min-height: 30px; }
+.nl-dt-chiprow .nl-dt-small-btn { min-height: 44px; }
 
 /* ── selection bar ── */
 .nl-dt-bulk { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 10px 8px 14px; background: var(--color-accent); color: var(--color-on-accent); border-radius: var(--radius-md); font-size: 14px; }
 /* The accent ring would vanish on the accent bar — use the on-accent colour here. */
 .nl-dt-bulk :focus-visible { outline-color: var(--color-on-accent); }
-.nl-dt-link { font: inherit; font-size: 13px; background: transparent; border: 0; color: var(--color-on-accent); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; min-height: 36px; }
-.nl-dt-bulk-btn { min-height: 36px; }
+.nl-dt-link { font: inherit; font-size: 13px; background: transparent; border: 0; color: var(--color-on-accent); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; min-height: 44px; }
+.nl-dt-bulk-btn { min-height: 44px; }
 .nl-dt-bulk-soft { background: color-mix(in oklch, white 16%, transparent); color: var(--color-on-accent); }
 .nl-dt-bulk-soft:hover { background: color-mix(in oklch, white 26%, transparent); }
 .nl-dt-bulk-danger { background: var(--color-accent-2-100); color: var(--color-accent-2-800); }
 .nl-dt-bulk-danger:hover { background: var(--color-accent-2-200); }
-.nl-dt-bulk-x { width: 36px; height: 36px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--color-on-accent); cursor: pointer; display: grid; place-items: center; padding: 0; }
+.nl-dt-bulk-x { width: 44px; height: 44px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--color-on-accent); cursor: pointer; display: grid; place-items: center; padding: 0; }
 .nl-dt-bulk-x:hover { background: color-mix(in oklch, white 16%, transparent); }
 
 /* ── checkbox ── */
-.nl-dt-check { width: 36px; height: 36px; display: inline-grid; place-items: center; cursor: pointer; flex: none; }
+.nl-dt-check { position: relative; width: 44px; height: 44px; display: inline-grid; place-items: center; cursor: pointer; flex: none; }
 .nl-dt-check input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
 .nl-dt-check-box { width: 20px; height: 20px; border-radius: 6px; display: grid; place-items: center; flex: none; box-shadow: inset 0 0 0 1.5px var(--color-neutral-500); background: var(--color-surface); color: transparent; transition: background .12s, box-shadow .12s; }
 .nl-dt-check:hover .nl-dt-check-box { box-shadow: inset 0 0 0 1.5px var(--color-accent); }
 .nl-dt-check.is-on .nl-dt-check-box { box-shadow: inset 0 0 0 1.5px var(--color-accent); background: var(--color-accent); color: var(--color-on-accent); }
 .nl-dt-check input:focus-visible + .nl-dt-check-box { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-.nl-dt-check.has-text { width: auto; min-height: 40px; display: inline-flex; align-items: center; gap: 8px; padding: 0 8px 0 4px; font-size: 13px; color: var(--color-text); }
+.nl-dt-check.has-text { width: auto; min-height: 44px; display: inline-flex; align-items: center; gap: 8px; padding: 0 8px 0 4px; font-size: 13px; color: var(--color-text); }
 
 /* ── table ── */
 .nl-dt-body { display: flex; flex-direction: column; min-width: 0; }
@@ -99,12 +100,12 @@
 .tag.nl-dt-tag-wrap { white-space: normal; max-width: 100%; } /* S-109: long French tags wrapped inside cards at 320 px */
 
 .nl-dt-row-acts { display: flex; gap: 2px; justify-content: flex-end; flex-wrap: wrap; }
-.nl-dt-act { min-height: 36px; padding: 4px 8px; font-size: 13px; white-space: nowrap; overflow-wrap: normal; }
+.nl-dt-act { min-height: 44px; min-width: 44px; padding: 4px 8px; font-size: 13px; white-space: nowrap; overflow-wrap: normal; }
 .nl-dt-act.is-labelled { padding: 4px 10px; }
 .nl-dt-act.is-danger { color: var(--color-accent-2-700); }
 .nl-dt-act.is-danger:hover { background: var(--color-accent-2-100); color: var(--color-accent-2-800); }
 .nl-dt-row-acts.is-card { gap: 4px; }
-.nl-dt-row-acts.is-card .nl-dt-act { min-height: 40px; padding: 4px 10px; }
+.nl-dt-row-acts.is-card .nl-dt-act { min-height: 44px; padding: 4px 10px; }
 
 /* ── cards (< 600px) ── */
 .nl-dt-cardmode { display: flex; flex-direction: column; gap: 8px; }

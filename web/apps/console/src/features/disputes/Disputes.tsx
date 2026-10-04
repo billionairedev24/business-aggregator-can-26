@@ -104,7 +104,7 @@ function CasePanel({ item }: { item: Item }) {
       </div>
       <p className="nl-ds-evidence"><strong>{t('evidence')}</strong>{' '}
         {d && d.detail.evidence.length
-          ? d.detail.evidence.map((e, i) => <span key={e.id}>{i ? ', ' : ''}{e.file ? <a href={evidenceUrl(row.id, e.id)} target="_blank" rel="noreferrer">{e.name}</a> : e.name}</span>)
+          ? d.detail.evidence.map((e, i) => <span key={e.id}>{i ? ', ' : ''}{e.file ? <a className="nl-ds-file" href={evidenceUrl(row.id, e.id)} target="_blank" rel="noreferrer">{e.name}</a> : e.name}</span>)
           : t('noEvidence')}
       </p>
       {row.pending ? (

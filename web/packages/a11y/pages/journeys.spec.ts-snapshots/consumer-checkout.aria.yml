@@ -1,0 +1,65 @@
+- main:
+  - heading "Checkout" [level=1]
+  - text: 4 items · 2 shops · one delivery
+  - region "Bridgeland Butcher":
+    - heading "Bridgeland Butcher" [level=2]
+    - text: /closes to run 5:\d+ p[\d,.]+[bkmBKM]+\./
+    - list:
+      - listitem:
+        - link "Ribeye, AAA":
+          - /url: /products/p-I1
+        - text: /\d+ g/
+        - group "Quantity of Ribeye, AAA":
+          - button "Remove Ribeye, AAA"
+          - button "One more Ribeye, AAA"
+        - text: /\$\d+\.\d+/
+  - region "Glenmore Bakery":
+    - heading "Glenmore Bakery" [level=2]
+    - text: /closes to run 5:\d+ p[\d,.]+[bkmBKM]+\./
+    - list:
+      - listitem:
+        - link "Country sourdough":
+          - /url: /products/p-I2
+        - text: /Sliced · \d+ g/
+        - group "Quantity of Country sourdough":
+          - button "One less Country sourdough"
+          - button "One more Country sourdough"
+        - text: /\$\d+\.\d+/
+      - listitem:
+        - link "Baguette":
+          - /url: /products/p-I3
+        - group "Quantity of Baguette":
+          - button "Remove Baguette"
+          - button "One more Baguette"
+        - text: /\$\d+\.\d+/
+  - region "Delivery window":
+    - heading "Delivery window" [level=2]
+    - radiogroup "Delivery window":
+      - radio /\S+ [^/]* Pooled with 5 neighbours \$\d+\.\d+/ [checked]
+      - radio /\S+ [^/]* Pooled run · order by [^/]* \$\d+\.\d+/
+      - radio /Now · \d+ min Direct courier \$\d+\.\d+/
+  - region "Deliver to":
+    - heading "Deliver to" [level=2]
+    - text: /\d+ \d+ Ave SW, Apt \d+ Calgary AB T2T 0B8 · Buzz \d+ · leave at door/
+    - button "Change"
+  - region "If something’s out of stock":
+    - heading "If something’s out of stock" [level=2]
+    - radiogroup "If something’s out of stock":
+      - radio "Similar item" [checked]
+      - radio "Refund it"
+      - radio "Text me"
+  - region "Payment":
+    - heading "Payment" [level=2]
+    - text: Test payments · nothing is charged Stripe isn’t configured here, so a stand-in approves every payment.
+    - term: Card number
+    - definition: /\d+ \d+ \d+ \d+/
+    - term: Expiry
+    - definition: /\d+ \/ \d+/
+    - term: Security code
+    - definition: /\d+/
+    - term: Country & postal code
+    - definition: Canada · T2R 0K3
+  - complementary "Total":
+    - text: /Items \$\d+\.\d+ Delivery \$\d+\.\d+ GST 5% \$\d+\.\d+ Total \$\d+\.\d+/
+    - button /Pay \$\d+\.\d+/
+    - paragraph: Shops are paid after you confirm delivery; anything missing is refunded automatically. Secured by Stripe.

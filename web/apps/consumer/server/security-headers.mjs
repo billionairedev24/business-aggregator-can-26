@@ -1,14 +1,18 @@
 // Response headers the consumer server sets on every answer (S-104). The Studio and console get theirs from nginx
 // (web/docker/security-headers.inc.template); this is the same policy for the SSR app, plus a Content-Security-Policy.
 //
-// script-src keeps 'unsafe-inline': the SSR document carries inline scripts (the public configuration, TanStack
-// Start's hydration state, JSON-LD) without nonces yet. The policy still pins where scripts, frames, forms and
-// connections may come from or go to, forbids plugins and <base> rewrites, and keeps the site out of frames.
+// script-src has no 'unsafe-inline' (S104-09, S-110 E7): every server-rendered page gets a fresh nonce
+// (createNonce(), 128 random bits), which node-server.mjs hands to TanStack Start (request header NONCE_HEADER → the
+// router's `ssr.nonce`, src/router.tsx); React and TanStack Start put it on every inline script they emit (the public
+// configuration, the hydration state, the route scripts, React's streaming scripts). Scripts from files come from this
+// site ('self') or the inventory below; no 'strict-dynamic' — nothing loads scripts that are neither. Answers that are
+// not pages (files, robots.txt, the app-link files) get the same policy without a nonce: no inline script at all.
 //
 // S-110 (PCI DSS SAQ A, docs/compliance/pci/payment-page-scripts.md): the third-party script origins come from
 // SCRIPT_INVENTORY — the payment-page script inventory — so no script origin can be allowed without being inventoried,
 // and every violation is reported to POST /csp-report (report-uri + Reporting API), which logs one JSON line per
 // violation (csp.violation) for the log pipeline to alert on. One policy, enforced; no second report-only policy.
+import { randomBytes } from 'node:crypto';
 
 /** Every third-party script origin the consumer web may load, with why (the payment-page script inventory). */
 export const SCRIPT_INVENTORY = Object.freeze([
@@ -21,6 +25,8 @@ export const SCRIPT_INVENTORY = Object.freeze([
 ]);
 
 export const CSP_REPORT_PATH = '/csp-report';
+/** The request header that carries a page's nonce from node-server.mjs to the app (never accepted from a client). */
+export const NONCE_HEADER = 'x-nl-csp-nonce';
 export const CSP_REPORT_MAX_BODY = 16 * 1024;
 const REPORT_GROUP = 'csp';
 
@@ -33,13 +39,16 @@ function origin(value, fallback) {
   }
 }
 
-/** The Content-Security-Policy of the consumer site for this auth origin. */
-export function contentSecurityPolicy(env = process.env) {
+/** A fresh nonce for one page: 128 random bits, base64 (CSP's nonce-source grammar). */
+export const createNonce = () => randomBytes(16).toString('base64');
+
+/** The Content-Security-Policy of the consumer site for this auth origin; `nonce` for a server-rendered page. */
+export function contentSecurityPolicy(env = process.env, nonce = undefined) {
   const auth = origin(env.NL_AUTH_ORIGIN, 'http://localhost:9000');
   const scripts = SCRIPT_INVENTORY.map(s => s.origin).join(' ');
   return [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline' ${scripts}`,
+    `script-src 'self'${nonce ? ` 'nonce-${nonce}'` : ''} ${scripts}`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: blob: https:",
@@ -54,15 +63,15 @@ export function contentSecurityPolicy(env = process.env) {
   ].join('; ');
 }
 
-/** Every answer's security headers (lower-case names, as Node writes them). */
-export function securityHeaders(env = process.env) {
+/** Every answer's security headers (lower-case names, as Node writes them); `nonce` for a server-rendered page. */
+export function securityHeaders(env = process.env, nonce = undefined) {
   return {
     'x-content-type-options': 'nosniff',
     'referrer-policy': 'strict-origin-when-cross-origin',
     'x-frame-options': 'DENY',
     'permissions-policy': 'camera=(), microphone=(), payment=(self), geolocation=(self)',
     'cross-origin-opener-policy': 'same-origin-allow-popups',
-    'content-security-policy': contentSecurityPolicy(env),
+    'content-security-policy': contentSecurityPolicy(env, nonce),
     'reporting-endpoints': `${REPORT_GROUP}="${CSP_REPORT_PATH}"`,
   };
 }

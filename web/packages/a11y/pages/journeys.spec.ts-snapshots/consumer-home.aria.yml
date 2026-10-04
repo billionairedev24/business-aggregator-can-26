@@ -1,0 +1,99 @@
+- main:
+  - region "What do you need in Calgary today?":
+    - paragraph: /Good (morning|afternoon|evening) · Calgary/
+    - heading "What do you need in Calgary today?" [level=1]
+    - search:
+      - text: Search
+      - combobox "Search"
+      - button "Search"
+    - navigation "Services, Shop and Food":
+      - link /Services \d+ pros/:
+        - /url: /services
+      - link /Shop \d+ shops/:
+        - /url: /shop
+      - link /Food \d+ open/:
+        - /url: /food
+  - heading "Shop by department" [level=2]
+  - link /All shops on \S+ run/:
+    - /url: /shop
+  - link /Groceries \d+ shops/:
+    - /url: /shop/groceries
+  - link "Butcher 0 shops":
+    - /url: /shop/butcher
+  - link "Bakery 7 shops":
+    - /url: /shop/bakery
+  - link "Produce 0 shops":
+    - /url: /shop/produce
+  - link "Clothing 0 shops":
+    - /url: /shop/clothing
+  - link "Pharmacy 0 shops":
+    - /url: /shop/pharmacy-otc
+  - link "Hardware 0 shops":
+    - /url: /shop/hardware
+  - link "Kids 0 shops":
+    - /url: /shop/kids
+  - link "Gifts 0 shops":
+    - /url: /shop/gifts-and-crafts
+  - heading "Order food" [level=2]
+  - link "All kitchens":
+    - /url: /food
+  - link "Vietnamese 4 open":
+    - /url: /food?cuisine=vietnamese
+  - link "Pizza 0 open":
+    - /url: /food?cuisine=pizza
+  - link "Indian 0 open":
+    - /url: /food?cuisine=indian
+  - link "Ramen 0 open":
+    - /url: /food?cuisine=ramen
+  - link "Dessert 0 open":
+    - /url: /food?cuisine=dessert
+  - link "Ethiopian 0 open":
+    - /url: /food?cuisine=ethiopian
+  - link "Canadian 0 open":
+    - /url: /food?cuisine=canadian
+  - link "Meal kits 1 open":
+    - /url: /food?cuisine=meal_kits
+  - heading "Book a service" [level=2]
+  - link "All categories":
+    - /url: /services
+  - link /Mobile mechanic \d+ nearby · visit/:
+    - /url: /services/mobile-mechanic
+  - link "Home cleaning 0 nearby · hourly":
+    - /url: /services/house-cleaning
+  - link "Cocktail & mocktail bar 0 nearby · quote":
+    - /url: /services/cocktail-and-mocktail-bar
+  - link "Barber & hair 0 nearby · at their shop":
+    - /url: /services/barber-and-hair
+  - link "Real-estate agent 0 nearby · consult":
+    - /url: /services/real-estate-agent
+  - link "Plumber 0 nearby · visit":
+    - /url: /services/plumber
+  - link /Tutor \d+ nearby · hourly/:
+    - /url: /services/tutor-k-12
+  - link "Movers 0 nearby · quote":
+    - /url: /services/movers
+  - link "Snow removal 0 nearby · hourly":
+    - /url: /services/snow-removal
+  - heading "Verified, not just listed" [level=3]
+  - paragraph: ID, licence, insurance and registry checks before anyone appears. Tiers earned from real jobs.
+  - heading "Paid into escrow" [level=3]
+  - paragraph: /Money is released only after the completion photo and your sign-off — or \d+ hours with no dispute\./
+  - heading "Delivery like a utility" [level=3]
+  - paragraph: Neighbours share one run; hot food goes direct. Free on pooled runs with Plus.
+  - heading "Trust both ways" [level=3]
+  - paragraph: You rate them; they rate you. Reliable customers get priority slots.
+  - heading "Trusted near you" [level=2]
+  - list:
+    - listitem:
+      - link /Prairie Wrench Master Mobile mechanic ★ 4\.9 \d+ verified reviews/:
+        - /url: /providers/prairie-wrench
+        - strong: Prairie Wrench
+        - strong: ★ 4.9
+    - listitem:
+      - strong: Sable & Soda
+      - text: Trusted
+      - strong: New
+  - heading "Your week" [level=2]
+  - text: Sign in to see your orders, bookings and quotes here.
+  - link "Sign in":
+    - /url: /sign-in?next=%2F%3Flang%3Den

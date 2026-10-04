@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { CaretDown, MagnifyingGlass } from '@phosphor-icons/react';
-import { Alert, AppShell, Avatar, Menu, useLocale, type MenuEntry } from '@northline/ui';
+import { Alert, AppShell, Avatar, Menu, PageHeadingProvider, useLocale, type MenuEntry } from '@northline/ui';
 import { PilotControl } from '../pilot/PilotControl';
 import { useSession, useSignOut } from '../../lib/session';
 import { meQuery, opens, useRegions, useSwitchRole, type Me, type RoleGrant, type Regions } from './api';
@@ -62,7 +62,11 @@ export function ConsoleLayout({ children, denied }: { children: ReactNode; denie
       pinned={pinned} groups={groups} currentKey={screen ?? ''}
       onNavigate={i => nav({ to: i.href })}
       rail={rail} onRailChange={r => { setRail(r); try { localStorage.setItem(RAIL_KEY, r ? '1' : '0'); } catch { /* private mode */ } }}
-    >{allowed ? children : denied}<PilotControl /></AppShell>
+    >
+      {/* S-142: a screen that is loading or failed keeps its name as the page's h1 */}
+      <PageHeadingProvider value={allowed && screen ? t(screen as Parameters<typeof t>[0]) : undefined}>{allowed ? children : denied}</PageHeadingProvider>
+      <PilotControl />
+    </AppShell>
   );
 }
 

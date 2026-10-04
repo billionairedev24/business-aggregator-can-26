@@ -32,7 +32,7 @@ iframe served from `js.stripe.com`) on the website, Stripe PaymentSheet (Stripe'
 | E4 | Has reviewed the TPSP's PCI DSS attestation and confirmed it covers the services used | **Not yet** — download Stripe's AOC once the account exists | [stripe-review.md](stripe-review.md) #13 | payments owner |
 | E5 | Any account data retained is on paper and not received electronically | Not Applicable — no paper records of card data | — | ops lead |
 | E6 | Every element of the payment page(s) delivered to the consumer's browser originates only and directly from a PCI DSS compliant TPSP (embedded iframe) | Yes — the card fields are Stripe's iframe; the hosting page is Northline's | `Payment.tsx`, `StripeCard.tsx`, `CardForm.tsx`; app: PaymentSheet | engineering lead |
-| E7 | The merchant has confirmed its site is not susceptible to attacks from scripts that could affect its e-commerce systems (added January 2025, in place of 6.4.3 and 11.6.1) | **Not yet** — supported by the script inventory and both apps' enforced CSPs (the consumer's from S-104, generated from the inventory, reporting to `/csp-report`); confirm once the consumer `script-src` drops `'unsafe-inline'` (nonces) and violations alert | [payment-page-scripts.md](payment-page-scripts.md) | security lead |
+| E7 | The merchant has confirmed its site is not susceptible to attacks from scripts that could affect its e-commerce systems (added January 2025, in place of 6.4.3 and 11.6.1) | **Not yet** — the code part is done: the script inventory, both apps' enforced CSPs, and since 2026-10-04 the consumer `script-src` without `'unsafe-inline'` (per-request nonces, S104-09; tested in a browser incl. checkout). Still open, with the owner: the alert on `csp.violation` lines and the weekly synthetic check of the deployed payment pages | [payment-page-scripts.md](payment-page-scripts.md) | security lead |
 
 ## Requirements
 
@@ -108,7 +108,7 @@ accounts and cluster, the source repository and CI, the container registry.
 | item | owner | needs |
 |---|---|---|
 | E4 Stripe AOC reviewed; 12.8.4 yearly | payments owner | the Stripe account |
-| E7 site not susceptible to script attacks (nonces so the consumer `script-src` drops `'unsafe-inline'`, alert on violations, weekly synthetic check) | security lead (web lead, SRE lead) | engineering work; a deployed site for the check |
+| E7 site not susceptible to script attacks (nonces: **done 2026-10-04**; alert on violations, weekly synthetic check still open) | security lead (SRE lead) | a deployed site for the check; the log backend's alert |
 | 2.2.2 vendor defaults in the cloud accounts | platform/SRE lead | the cloud accounts |
 | 6.3.1, 6.3.3 vulnerability identification and patching | security lead | a scheduled run of S-104's `security-scan`, a patch window |
 | 8.2.1, 8.2.5, 8.3.6, 8.3.7 accounts, leavers, IdP policy | platform/SRE lead, ops lead | the IdP and accounts |

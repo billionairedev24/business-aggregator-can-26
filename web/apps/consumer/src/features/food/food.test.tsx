@@ -286,6 +286,23 @@ describe('Food checkout (design 06 foodCheckout)', () => {
     expect(screen.getByText(/the alcohol goes back to the restaurant and is refunded; the rest of the meal, the fees and the tip are charged/)).toBeInTheDocument();
   });
 
+  it('"when" is one Tab stop; the arrow keys move between ASAP, schedule and pickup and select (S-140)', async () => {
+    const { calls } = open('/food/checkout');
+    const u = userEvent.setup({ delay: null });
+    const group = await screen.findByRole('radiogroup', { name: /when/i });
+    const radios = within(group).getAllByRole('radio');
+    expect(radios.filter(r => r.getAttribute('tabindex') === '0')).toHaveLength(1);
+    const first = radios.find(r => r.getAttribute('tabindex') === '0')!;
+    first.focus();
+    await u.keyboard('{End}');
+    const pickup = within(group).getByRole('radio', { name: /Pickup/ });
+    expect(pickup).toHaveFocus();
+    expect(pickup).toHaveAttribute('aria-checked', 'true');
+    await waitFor(() => expect(calls.some(c => (c.body as { mode?: string } | undefined)?.mode === 'pickup')).toBe(true));
+    await u.keyboard('{ArrowLeft}');
+    expect(within(group).getByRole('radio', { name: /Schedule/ })).toHaveAttribute('aria-checked', 'true');
+  });
+
   it('steps up with the authenticator when the sign-in was a phone code only (S-51’s rule)', async () => {
     vi.stubEnv('VITE_NL_DEV_STEP_UP', '1');
     let asked = 0;

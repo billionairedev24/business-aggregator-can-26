@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { overview } from '../../test/fixtures';
-import { renderConsole, staffApi } from '../../test/render';
+import { renderConsole, staffApi, screenReady } from '../../test/render';
 import { compactMoney } from './Overview';
 import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
@@ -47,7 +47,7 @@ describe('console overview (S-91, design 03)', () => {
     const calls = staffApi(['finance'], c => (c.url.includes('/api/v1/console/overview') ? { body: overview() } : undefined));
     const user = userEvent.setup({ delay: null });
     const { router } = renderConsole('/');
-    await screen.findByRole('heading', { level: 1 });
+    await screenReady();
     await user.selectOptions(screen.getByRole('combobox', { name: 'Province' }), 'AB');
     await waitFor(() => expect(calls.some(c => c.url.endsWith('/api/v1/console/overview?province=AB'))).toBe(true));
     expect(router.state.location.search).toEqual({ province: 'AB' });

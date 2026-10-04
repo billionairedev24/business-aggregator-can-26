@@ -32,7 +32,7 @@
 .nl-auth-social > .btn { flex: 1 1 0; min-height: 44px; gap: 8px; text-decoration: none; }
 .nl-auth-switch { text-align: center; font-size: 13px; margin-top: 14px; color: var(--color-neutral-700); }
 .nl-auth-hint { font-size: 13px; color: var(--color-neutral-700); margin-top: 6px; }
-.nl-auth-link { font: inherit; color: var(--color-accent-700); text-decoration: underline; text-underline-offset: 3px; background: none; border: 0; padding: 0; cursor: pointer; min-height: 24px; }
+.nl-auth-link { font: inherit; color: var(--color-accent-700); text-decoration: underline; text-underline-offset: 3px; background: none; border: 0; padding: 0; cursor: pointer; min-height: 44px; }
 .nl-auth-link:hover:not(:disabled) { color: var(--color-accent-800); }
 .nl-auth-link:disabled { color: var(--color-neutral-600); text-decoration: none; cursor: default; }
 .nl-auth-options { display: flex; flex-direction: column; gap: 8px; }

@@ -140,7 +140,7 @@ function Licences() {
   };
   return (
     <section className="nl-set-licences" aria-labelledby="set-lic">
-      <h3 id="set-lic" className="nl-set-h3">{t('licencesTitle')}</h3>
+      <h2 id="set-lic" className="nl-set-h3">{t('licencesTitle')}</h2>
       {q.isPending ? <PageSkeleton kpis={0} rows={3} /> : q.isError ? <ErrorState message={t('loadError')} onRetry={() => void q.refetch()} /> : (
         <>
           {q.data.documents.filter(shown).length === 0 ? <p className="nl-muted nl-small">{t('noLicences')}</p> : (
@@ -151,7 +151,7 @@ function Licences() {
               })}
             </ul>
           )}
-          <Link className="nl-small" to={screenHref(merchantId, 'compliance')}>{t('manageCompliance')}</Link>
+          <Link className="nl-small nl-set-tolink" to={screenHref(merchantId, 'compliance')}>{t('manageCompliance')}</Link>
         </>
       )}
     </section>

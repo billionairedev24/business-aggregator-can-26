@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { configureAuthOrigin } from '@northline/auth-kit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
@@ -78,4 +78,16 @@ export function renderConsole(path: string, { locale = 'en' as Locale } = {}) {
     </I18nProvider>,
   );
   return { ...result, router, queryClient };
+}
+
+/**
+ * The screen has loaded: no loading placeholder (`aria-busy`) left and its h1 shown. (While loading, a screen already
+ * shows its name as the h1 — S-142 — so waiting for "an h1" no longer means "loaded".)
+ */
+export async function screenReady(): Promise<HTMLElement> {
+  await waitFor(() => {
+    if (document.querySelector('[aria-busy="true"]')) throw new Error('still loading');
+    screen.getByRole('heading', { level: 1 });
+  });
+  return screen.getByRole('heading', { level: 1 });
 }

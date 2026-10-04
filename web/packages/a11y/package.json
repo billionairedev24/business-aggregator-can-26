@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Accessibility checks (S-109): the axe helper for the vitest component tests and the Playwright + axe page sweep of the built apps against a mock api (`make a11y`).",
+  "description": "Accessibility checks (S-109): the axe helper for the vitest component tests and the Playwright + axe page sweep of the built apps against a mock api (`make a11y`), with the consumer CSP check (`make csp-check`).",
   "exports": {
     "./vitest": "./src/vitest.ts",
     "./record": "./src/record.ts"
@@ -12,6 +12,7 @@
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
     "a11y": "playwright test",
+    "csp": "NL_A11Y_APPS=consumer playwright test --project csp",
     "record": "node scripts/record.mjs"
   },
   "devDependencies": {

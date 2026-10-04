@@ -41,6 +41,7 @@ export const shop = {
   'shop.tier.trusted': 'Trusted',
   'shop.tier.registered': 'Registered',
   'shop.rating': '★ {rating}',
+  'shop.ratingSpoken': 'rated {rating}',
 
   // Search
   'shop.search.label': 'Search the shops',
@@ -50,10 +51,13 @@ export const shop = {
   'shop.filter.halal': 'Halal',
   'shop.search.count': '{n, plural, one {# result} other {# results}} · sorted by',
   'shop.search.sortHint': 'Changes the order of the results',
-  'shop.sort.relevance': 'relevance ▾',
-  'shop.sort.price_asc': 'price, low to high ▾',
-  'shop.sort.price_desc': 'price, high to low ▾',
-  'shop.sort.rating': 'rating ▾',
+  // S-147: the sort names without the ▾ (read out as "down-pointing triangle"); `shop.sort.shown` adds it on screen only
+  'shop.sort.relevance': 'relevance',
+  'shop.sort.price_asc': 'price, low to high',
+  'shop.sort.price_desc': 'price, high to low',
+  'shop.sort.rating': 'rating',
+  'shop.sort.shown': '{sort} ▾',
+  'shop.search.sortLabel': 'Sort: {sort}',
   'shop.search.empty': 'Nothing matches “{q}” with these filters.',
   'shop.search.emptyBrowse': 'Nothing here matches these filters.',
   'shop.search.clear': 'Clear filters',

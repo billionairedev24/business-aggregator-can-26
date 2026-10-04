@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { renderConsole, staffApi, type Call } from '../../test/render';
+import { renderConsole, staffApi, type Call, screenReady } from '../../test/render';
 import { fit, project, tiles, toView } from './mapGeometry';
 import { expectNoAxeViolations } from '@northline/a11y/vitest';
 
@@ -44,8 +44,14 @@ describe('delivery ops (S-81, design 03)', () => {
     expect(calls.some(c => c.url.endsWith('/api/v1/console/fulfilment/runs?market=Calgary'))).toBe(true);
     expect(calls.some(c => c.url.endsWith('/api/v1/console/delivery/map?market=calgary'))).toBe(true);
     const map = screen.getByRole('img', { name: 'Couriers and zones in Calgary' });
-    expect(map.querySelectorAll('circle')).toHaveLength(3);
-    expect(map.querySelectorAll('circle[data-stuck="true"]')).toHaveLength(1);
+    expect(map.querySelectorAll('[data-courier]')).toHaveLength(3);
+    // S-146 (WCAG 1.4.1): a stuck courier differs by shape too (a diamond, not a dot), and the legend shows both
+    expect(map.querySelectorAll('path[data-courier][data-stuck="true"]')).toHaveLength(1);
+    expect(map.querySelectorAll('circle[data-courier][data-stuck="true"]')).toHaveLength(0);
+    const legend = map.closest('figure')!.querySelector('figcaption')!;
+    expect(legend.querySelector('svg path[data-stuck="true"]')).not.toBeNull();
+    expect(legend.querySelector('svg circle[data-stuck="false"]')).not.toBeNull();
+    expect(legend.textContent).toContain('stuck > 10 min');
     expect(within(map).getByText('Beltline')).toBeTruthy();
     expect(screen.getByText('Tonight’s pooled runs')).toBeTruthy();
     expect(screen.getByText('Stuck · 12 min overdue')).toBeTruthy();
@@ -60,7 +66,7 @@ describe('delivery ops (S-81, design 03)', () => {
     const calls = api(['dispatch'], c => (c.method === 'POST' && c.url.includes('/runs/r3/assign') ? { body: run({ id: 'r3', state: 'planned' }) } : undefined));
     const user = userEvent.setup({ delay: null });
     renderConsole('/delivery');
-    await screen.findByRole('heading', { level: 1 });
+    await screenReady();
     const row = card('R-615');
     await user.click(within(row).getByRole('button', { name: 'Reassign' }));
     const dialog = await screen.findByRole('dialog', { name: 'Reassign R-615' });
@@ -74,7 +80,7 @@ describe('delivery ops (S-81, design 03)', () => {
     api(['admin'], c => (c.method === 'POST' && c.url.includes('/assign') ? { status: 409, body: { code: 'run_started', detail: "This run has started; it can't be reassigned." } } : undefined));
     const user = userEvent.setup({ delay: null });
     renderConsole('/delivery');
-    await screen.findByRole('heading', { level: 1 });
+    await screenReady();
     const row = card('R-608');
     await user.click(within(row).getByRole('button', { name: 'Reassign' }));
     const dialog = await screen.findByRole('dialog');
@@ -92,7 +98,7 @@ describe('delivery ops (S-81, design 03)', () => {
     });
     const user = userEvent.setup({ delay: null });
     renderConsole('/delivery');
-    await screen.findByRole('heading', { level: 1 });
+    await screenReady();
     await user.click(within(card('Jordan', 'Pause')).getByRole('button', { name: 'Pause' }));
     const dialog = await screen.findByRole('dialog', { name: 'Pause Jordan' });
     await user.type(within(dialog).getByRole('textbox', { name: 'Reason' }), 'App offline mid-run');
@@ -106,7 +112,7 @@ describe('delivery ops (S-81, design 03)', () => {
     api(['dispatch'], c => (c.url.includes('/api/v1/console/me') && !c.url.includes('role-view')
       ? { body: { userId: 'u', roles: [{ role: 'dispatch', screens: ['overview', 'delivery'], actions: [] }] } } : undefined));
     const first = renderConsole('/delivery');
-    await screen.findByRole('heading', { level: 1 });
+    await screenReady();
     expect(screen.queryByRole('button', { name: 'Reassign' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Pause' })).toBeNull();
     first.unmount();

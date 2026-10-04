@@ -101,3 +101,5 @@
 .nl-track-map { aspect-ratio: 4 / 3; position: relative; border-radius: var(--radius-md); background-color: var(--color-neutral-200); background-image: linear-gradient(var(--color-neutral-300) 1px, transparent 1px), linear-gradient(90deg, var(--color-neutral-300) 1px, transparent 1px); background-size: 44px 44px; }
 .nl-track-map svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .nl-track-caption { position: absolute; left: 16px; bottom: 16px; background: var(--color-bg); padding: 8px 12px; border-radius: var(--radius-md); box-shadow: var(--shadow-md); font-size: 13px; }
+/* S-143: breadcrumb links get a 44 px target without moving the line */
+.nl-rest-crumbs a { display: inline-block; min-width: 44px; padding-block: 14px; margin-block: -14px; text-align: center; }

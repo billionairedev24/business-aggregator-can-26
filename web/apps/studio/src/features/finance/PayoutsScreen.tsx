@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Button, Chip, DataTable, Field, OptionCard, PageSkeleton, Select, Skeleton, TextInput, useFormatters, useLocale, type DataTableColumn } from '@northline/ui';
+import { Button, Chip, DataTable, Field, OptionCard, PageSkeleton, RadioGroup, Select, Skeleton, TextInput, useFormatters, useLocale, type DataTableColumn } from '@northline/ui';
 import { ValidationError } from '../../lib/http';
 import { attentionCount } from '../../lib/forms';
 import { useMerchantId, useRole } from '../shell/api';
@@ -31,7 +31,7 @@ export function PayoutsScreen() {
           <TaxDocuments />
         </div>
         <div>
-          <h3 className="fin-h3" style={{ marginTop: 0 }}>{t('payoutHistory')}</h3>
+          <h2 className="fin-h3" style={{ marginTop: 0 }}>{t('payoutHistory')}</h2>
           <History />
         </div>
       </div>
@@ -72,7 +72,7 @@ function Money({ o }: { o: PayoutOverview }) {
       </div>
       {panel === 'instant' && account ? <InstantPanel o={o} account={account} onClose={() => setPanel(null)} /> : null}
       {panel === 'schedule' ? <SchedulePanel o={o} onClose={() => setPanel(null)} /> : null}
-      <h3 className="fin-h3">{t('bankTitle')}</h3>
+      <h2 className="fin-h3">{t('bankTitle')}</h2>
       <div className="fin-rows">
         <div className="fin-row fin-row-44">
           <span>{pending?.effectiveAt
@@ -200,19 +200,19 @@ function SchedulePanel({ o, onClose }: { o: PayoutOverview; onClose: () => void 
   return (
     <section className="fin-box" aria-label={t('scheduleTitle')}>
       <div className="fin-box-k">{t('scheduleTitle')}</div>
-      <div className="fin-options" role="radiogroup" aria-label={t('scheduleTitle')}>
+      <RadioGroup className="fin-options" aria-label={t('scheduleTitle')}>
         {FREQS.map(fr => (
           <OptionCard key={fr} role="radio" aria-checked={frequency === fr} selected={frequency === fr} onClick={() => change(() => setFrequency(fr))}
             title={t(`f_${fr}` as FinanceKey)} description={t(`f_${fr}_desc` as FinanceKey)}
             trailing={<span style={{ fontSize: 13, whiteSpace: 'nowrap' }}>{t(`f_${fr}_fee` as FinanceKey)}</span>} />
         ))}
-      </div>
+      </RadioGroup>
       {frequency === 'weekly' ? (
         <div className="nl-field" style={{ marginTop: 10 }}>
           <span className="nl-label" id="fin-dow">{t('dayOfWeek')}</span>
-          <div className="fin-days" role="radiogroup" aria-labelledby="fin-dow">
+          <RadioGroup className="fin-days" aria-labelledby="fin-dow">
             {[1, 2, 3, 4, 5].map(d => <Chip key={d} role="radio" aria-checked={weekday === d} selected={weekday === d} onClick={() => change(() => setWeekday(d))}>{t(`d${d}` as FinanceKey)}</Chip>)}
-          </div>
+          </RadioGroup>
         </div>
       ) : null}
       {frequency === 'monthly' ? (
@@ -372,10 +372,10 @@ function BankPanel({ o, onClose }: { o: PayoutOverview; onClose: () => void }) {
       <div className="fin-warn"><strong>{t('security')}</strong> {t('securityText')}</div>
       {step === 'form' ? (
         <form onSubmit={next} noValidate>
-          <div className="fin-days" style={{ marginTop: 12 }} role="radiogroup" aria-label={t('bankPanelTitle')}>
+          <RadioGroup className="fin-days" style={{ marginTop: 12 }} aria-label={t('bankPanelTitle')}>
             <Chip role="radio" aria-checked={mode === 'instant'} selected={mode === 'instant'} onClick={() => setMode('instant')}>{t('connectInstantly')}</Chip>
             <Chip role="radio" aria-checked={mode === 'manual'} selected={mode === 'manual'} onClick={() => { setMode('manual'); setPicking(false); }}>{t('enterManually')}</Chip>
-          </div>
+          </RadioGroup>
           {mode === 'instant' ? (picking
             ? <FakeBankPicker busy={busy} onCancel={() => setPicking(false)} onLink={l => { setFormError(undefined); linkAccount(l).catch(failed); }} />
             : <div className="fin-dashed">{t('fcText')}</div>) : (
@@ -425,7 +425,7 @@ function TaxDocuments() {
   const year = new Date().getFullYear();
   return (
     <>
-      <h3 className="fin-h3">{t('taxDocuments')}</h3>
+      <h2 className="fin-h3">{t('taxDocuments')}</h2>
       <div className="fin-rows">
         <div className="fin-row fin-row-40"><span>{t('gstYtd', { year })}</span><span className="fin-doc-links"><a href={downloads.gstPdf(merchantId, year, locale)} download aria-label={t('downloadPdfOf', { doc: t('gstYtd', { year }) })}>{t('pdf')}</a> · <a href={downloads.gst(merchantId, year)} download aria-label={t('downloadCsvOf', { doc: t('gstYtd', { year }) })}>{t('csv')}</a></span></div>
         <div className="fin-row fin-row-40"><span>{t('annualStatement', { year: year - 1 })}</span><span className="fin-doc-links"><a href={downloads.annualPdf(merchantId, year - 1, locale)} download aria-label={t('downloadPdfOf', { doc: t('annualStatement', { year: year - 1 }) })}>{t('pdf')}</a> · <a href={downloads.annual(merchantId, year - 1)} download aria-label={t('downloadCsvOf', { doc: t('annualStatement', { year: year - 1 }) })}>{t('csv')}</a></span></div>
